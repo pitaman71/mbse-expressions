@@ -6,14 +6,14 @@ rest of your data, sent between programs, and evaluated the same way in Python a
 expressions as union discriminators, and will use them for constraints.
 
 ```python
-from mbse_expressions import Evaluators, Expressions
+from mbse.Expressions import Evaluators, Expressions
 
 senior = Expressions.from_(lambda contact: contact.age >= 65 and contact.email is not None)
 Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value is unknown
 ```
 
 ```typescript
-import { Evaluators, Expressions } from "./src/index.js";
+import { Evaluators, Expressions } from "@mbse/expressions";
 
 const contact = Expressions.variable("contact");
 const senior = contact.age.ge(65n).and_(contact.has("email"));
@@ -21,7 +21,8 @@ Evaluators.OfAny(senior, { contact: ada });
 ```
 
 Like mbse-schemas, it has two equivalent implementations, in Python and TypeScript, with the same API, the same
-messages and byte-identical JSON.
+messages and byte-identical JSON. Python imports it from `mbse.Expressions` (next to `mbse.Schemas`, in the shared `mbse`
+namespace package), TypeScript from `@mbse/expressions` (next to `@mbse/schemas`).
 
 ## Getting started
 
@@ -40,7 +41,7 @@ uv run pytest                  # test suites and the tutorial
 ```
 
 TypeScript (Node 22 or later; with [nvm](https://github.com/nvm-sh/nvm), `nvm use` picks the version in `.nvmrc`).
-`npm install` also installs the submodule's own dependencies:
+`npm install` links `@mbse/schemas` to the submodule and installs the submodule's own dependencies:
 
 ```sh
 cd typescript5
@@ -64,7 +65,7 @@ npm test                       # type-check and run the test suites and the tuto
 ```
 submodules/mbse-schemas/  the framework this package depends on
 docs/                     the design (EXPRESSIONS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
-python3/                  Python implementation: mbse_expressions (Expressions, Evaluators), tests, tutorial
+python3/                  Python implementation: mbse/Expressions (Expressions, Evaluators), tests, tutorial
 typescript5/              TypeScript implementation: src (Expressions, Evaluators), tests, tutorial
 conformance/              snapshots each implementation writes; each must read the other's
 ```

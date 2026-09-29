@@ -41,8 +41,8 @@ from collections.abc import Callable, Hashable, Iterable
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
-from mbse_schemas.Framework import Proxies, Schemas, Visitors
-from mbse_schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework import Proxies, Schemas, Visitors
+from mbse.Schemas.Framework.Visitors import Native
 
 __all__ = [
     "OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "Arguments", "Builders", "Term", "CORE",

@@ -33,8 +33,8 @@
  * `Term`s write expressions with methods: `variable('this').age.ge(18n)` is `ge(get(this, 'age'), 18)`.
  */
 
-import { Errors, Proxies, Repr, Schemas } from "./mbse-schemas.js";
-import type { Visitors } from "./mbse-schemas.js";
+import { Errors, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
+import type { Visitors } from "@mbse/schemas/Framework";
 
 const { AttributeError, KeyError, LookupError, ValueError } = Errors;
 const { isClassLike, repr, tokenName, typeName } = Repr;

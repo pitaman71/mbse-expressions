@@ -3,12 +3,12 @@
  *
  * `build()` returns the cases, name -> [root schema, root expression]. Each implementation writes its snapshots to
  * `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files
- * (see the CONF test suite). Keep this module and `python3/mbse_expressions/Conformance/Corpus.py` in lockstep: same
+ * (see the CONF test suite). Keep this module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
  * cases, same values, same order of statements.
  */
 
 import * as Expressions from "../Expressions.js";
-import type { Schemas, Visitors } from "../mbse-schemas.js";
+import type { Schemas, Visitors } from "@mbse/schemas/Framework";
 
 export const CASES = ["expression"] as const;
 

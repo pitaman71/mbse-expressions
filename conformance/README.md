@@ -1,6 +1,6 @@
 # Conformance corpus
 
-Each implementation builds the same corpus, statement for statement (`python3/mbse_expressions/Conformance/Corpus.py`,
+Each implementation builds the same corpus, statement for statement (`python3/mbse/Expressions/Conformance/Corpus.py`,
 `typescript5/src/Conformance/Corpus.ts`), and commits its snapshots here as `<implementation>/<case>.json` (reachable
 snapshot, indent 2) and `<case>.yaml`.
 
@@ -15,6 +15,6 @@ YAML 1.1 reader), and that every implementation's JSON and YAML deserialize to t
 Regenerate:
 
 ```sh
-(cd python3 && uv run python -m mbse_expressions.Conformance.write)
+(cd python3 && uv run python -m mbse.Expressions.Conformance.write)
 (cd typescript5 && npm run conformance)
 ```

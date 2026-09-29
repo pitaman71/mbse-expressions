@@ -15,8 +15,8 @@
  */
 
 import * as Expressions from "./Expressions.js";
-import { Comparison, Errors, Repr, Schemas, Validators } from "./mbse-schemas.js";
-import type { Visitors } from "./mbse-schemas.js";
+import { Comparison, Errors, Repr, Schemas, Validators } from "@mbse/schemas/Framework";
+import type { Visitors } from "@mbse/schemas/Framework";
 
 const { KeyError, NotImplementedError, ValueError } = Errors;
 const { repr, typeName } = Repr;

@@ -1,6 +1,6 @@
 # Test plan — python3
 
-Scope: everything under `python3/mbse_expressions` (Expressions, Evaluators) and cross-implementation conformance. The
+Scope: everything under `python3/mbse/Expressions` (Expressions, Evaluators) and cross-implementation conformance. The
 design reference is `../../docs/EXPRESSIONS.md`; this plan and the TypeScript one mirror each other case for case. The
 framework itself is tested in mbse-schemas.
 
@@ -9,7 +9,7 @@ framework itself is tested in mbse-schemas.
 ```sh
 uv run pytest                 # every notebook under tests/ and tutorials/
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report   # fails below 100%
-uv run python -m mbse_expressions.Conformance.write   # regenerate ../conformance/python3
+uv run python -m mbse.Expressions.Conformance.write   # regenerate ../conformance/python3
 ```
 
 ## Suites

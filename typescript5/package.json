@@ -1,9 +1,12 @@
 {
-  "name": "mbse-expressions",
+  "name": "@mbse/expressions",
   "version": "0.0.1",
   "description": "Serializable expressions and their evaluation, for mbse-schemas (TypeScript implementation)",
   "type": "module",
   "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "engines": {
     "node": ">=22"
   },
@@ -20,5 +23,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "yaml": "^2.9.1"
+  },
+  "dependencies": {
+    "@mbse/schemas": "file:../submodules/mbse-schemas/typescript5"
   }
 }

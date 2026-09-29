@@ -19,7 +19,7 @@ specific to this package.
 | | Python | TypeScript |
 |---|---|---|
 | Command | `uv run coverage run -m pytest && uv run coverage combine && uv run coverage report` | `npm run coverage` |
-| Result | 100% statements (788), 100% branches (288) | 100% statements (1162), branches (506), functions (174), lines |
+| Result | 100% statements (788), 100% branches (288) | 100% statements (1156), branches (506), functions (174), lines |
 
 ## Deliberate differences
 
@@ -31,7 +31,7 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | Evaluation scope and validation options | `Evaluators.OfAny(e, {"this": x})`, `validate(bound={"this"}, core=True)` | `Evaluators.OfAny(e, { this: x })`, `validate({ bound: ["this"], core: true })` | no keyword arguments; object literals are the idiom | EXP-10, EVL-01, EVL-04, EVL-06 |
 | Expressions from functions | `Expressions.from_(lambda this: this.age >= 18)` reads the function's source with `ast` | none; EXP-12 asserts `from_` is absent | a JavaScript function has no Python source to read; terms write the same expressions in both | EXP-12 |
 | Names on a `Term` that are not properties | names starting with `_` (Python's own probes) | `then`, `toJSON` and symbols (JavaScript's own probes) | each language probes objects with its own names | EXP-11 |
-| Importing mbse-schemas | the `mbse-schemas` package, installed from the submodule | `src/mbse-schemas.ts`, which re-exports the submodule's sources | the TypeScript package is not published yet | all |
+| Import paths | `mbse.Schemas.Framework` and `mbse.Expressions`, in the shared `mbse` namespace package; mbse-schemas is installed from the submodule | `@mbse/schemas/Framework` and `@mbse/expressions`; `@mbse/schemas` is a `file:` dependency on the submodule | a module specifier is a path, not a dotted name; a scope is the nearest equivalent | all |
 
 ## Tutorials
 

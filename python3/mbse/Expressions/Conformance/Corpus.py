@@ -8,7 +8,7 @@ same order of statements.
 
 from __future__ import annotations
 
-from mbse_expressions import Expressions
+from mbse.Expressions import Expressions
 
 CASES = ["expression"]
 

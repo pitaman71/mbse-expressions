@@ -18,8 +18,8 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse_schemas.Framework import Comparison, Schemas, Validators
-from mbse_schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework import Comparison, Schemas, Validators
+from mbse.Schemas.Framework.Visitors import Native
 
 from . import Expressions
 

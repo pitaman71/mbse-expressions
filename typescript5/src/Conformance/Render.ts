@@ -1,6 +1,6 @@
 /** The text of this implementation's conformance snapshots. */
 
-import { JSON, YAML } from "../mbse-schemas.js";
+import { JSON, YAML } from "@mbse/schemas/Framework";
 import { build } from "./Corpus.js";
 
 /** File name -> text for every case, as this implementation writes them. Pass an already built corpus to reuse it. */

@@ -1,10 +1,10 @@
 /** Shared helpers for the test notebooks. Each notebook runs in its own process, so registries start empty. */
 
-import { Plain, Reachable } from "../src/mbse-schemas.js";
-import type { PlainData, PlainMap } from "../../submodules/mbse-schemas/typescript5/src/Framework/Plain.js";
-import type { Instance } from "../../submodules/mbse-schemas/typescript5/src/Framework/Proxies.js";
-import type { OfObject } from "../../submodules/mbse-schemas/typescript5/src/Framework/Schemas.js";
-import type { Callback, OfObject as ObjectVisitor, Visitable } from "../../submodules/mbse-schemas/typescript5/src/Framework/Visitors.js";
+import { Plain, Reachable } from "@mbse/schemas/Framework";
+import type { PlainData, PlainMap } from "@mbse/schemas/Framework/Plain";
+import type { Instance } from "@mbse/schemas/Framework/Proxies";
+import type { OfObject } from "@mbse/schemas/Framework/Schemas";
+import type { Callback, OfObject as ObjectVisitor, Visitable } from "@mbse/schemas/Framework/Visitors";
 
 /** Python's `assert`. */
 export function assert(condition: unknown, message = "assertion failed"): asserts condition {

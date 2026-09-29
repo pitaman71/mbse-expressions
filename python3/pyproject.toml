@@ -14,7 +14,7 @@ dependencies = ["mbse-schemas"]
 yaml = ["mbse-schemas[yaml]"]
 
 [tool.setuptools.packages.find]
-include = ["mbse_expressions*"]
+include = ["mbse*"]
 namespaces = true
 
 [dependency-groups]
@@ -35,8 +35,8 @@ testpaths = ["tests", "tutorials"]
 addopts = "--nbmake"
 
 [tool.coverage.run]
-source = ["mbse_expressions"]
-omit = ["*/mbse_expressions/Conformance/*"]
+source = ["mbse.Expressions"]
+omit = ["*/mbse/Expressions/Conformance/*"]
 branch = true
 parallel = true
 patch = ["subprocess"]

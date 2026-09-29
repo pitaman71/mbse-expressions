@@ -1,4 +1,11 @@
 {
   "//": "For running the sources under Deno, e.g. the Deno Jupyter kernel for the tutorials: imports are written for Node ('./X.js' for X.ts).",
-  "unstable": ["sloppy-imports"]
+  "unstable": [
+    "sloppy-imports"
+  ],
+  "imports": {
+    "@mbse/schemas/Framework": "../submodules/mbse-schemas/typescript5/src/Framework/index.ts",
+    "@mbse/schemas/Framework/": "../submodules/mbse-schemas/typescript5/src/Framework/",
+    "@mbse/expressions": "./src/index.ts"
+  }
 }
