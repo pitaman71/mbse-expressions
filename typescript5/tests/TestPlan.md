@@ -17,8 +17,8 @@ npm run conformance           # regenerate ../conformance/typescript5
 | Notebook | Suite | Cases | Focus |
 |---|---|---|---|
 | `01_Expressions.ipynb` | EXP | 12 | as in Python; validation options are an object literal, and a term's probes are JavaScript's (`then`, `toJSON`, symbols); EXP-12 asserts there is no `from_` |
-| `02_Evaluators.ipynb` | EVL | 6 | as in Python; evaluation scopes are object literals |
+| `02_Evaluators.ipynb` | EVL | 7 | as in Python; evaluation scopes are object literals |
 | `03_Visitors.ipynb` | VIS | 2 | as in Python, checked at runtime by method presence and `Function.length` |
 | `04_Conformance.ipynb` | CONF | 4 | as in Python, from this side |
 
-Total: 24 cases, with the same IDs in the same order in both implementations.
+Total: 25 cases, with the same IDs in the same order in both implementations.

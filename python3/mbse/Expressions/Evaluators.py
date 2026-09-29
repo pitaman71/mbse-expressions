@@ -11,6 +11,11 @@
   types are incomparable. Arithmetic takes numbers of one type.
 - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
   variables and wrong operand types raise, as do the problems `validate()` reports.
+- `get` and `has` read any object that writes its properties through `accept`, including embedded objects, which have
+  no identity (and so compare equal to nothing).
+
+`Evaluators.predicate(predicate, value)` evaluates a union branch's predicate with `this` bound to the value tested. It
+is the evaluator mbse-schemas' validators take: `Validators.Validate(registry, Evaluators.predicate)`.
 """
 
 from __future__ import annotations
@@ -23,7 +28,7 @@ from mbse.Schemas.Framework.Visitors import Native
 
 from . import Expressions
 
-__all__ = ["OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet"]
+__all__ = ["OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "predicate"]
 
 Scope = Mapping[str, Any] | None
 
@@ -57,6 +62,14 @@ def OfVariable(expression: Expressions.OfVariable.Spec, scope: Scope = None) -> 
 def OfLet(expression: Expressions.OfLet.Spec, scope: Scope = None) -> Any:
     """The value of a let's body, with its name bound to its value and the variables in `scope` bound."""
     return _evaluate(Expressions.OfLet.resolve(expression), dict(scope or {}), set())
+
+
+def predicate(predicate: Expressions.OfAny.Spec, value: Any) -> bool | None:
+    """Whether `value` satisfies a union branch's `predicate`, evaluated with `this` bound to it; `None` if unknown."""
+    result = OfAny(predicate, {"this": value})
+    if result is not None and type(result) is not bool:
+        raise TypeError(f"a predicate must be a bool, got {_type_name(result)}")
+    return result
 
 
 def _type_name(value: object) -> str:
@@ -139,8 +152,12 @@ def _logic(name: str, first: Callable[[], bool | None], second: Callable[[], boo
     return None if a is None or b is None else name == "and"
 
 
+def _is_readable(value: Any) -> bool:
+    return callable(getattr(value, "accept", None))
+
+
 def _is_object(value: Any) -> bool:
-    return callable(getattr(value, "accept", None)) and callable(getattr(value, "identity", None))
+    return _is_readable(value) and callable(getattr(value, "identity", None))
 
 
 def _read(name: str, target: Any, property_name: Any) -> Any:
@@ -149,7 +166,7 @@ def _read(name: str, target: Any, property_name: Any) -> Any:
         raise TypeError(f"{name} expects a property name, got {_type_name(property_name)}")
     if target is None:
         return None
-    if not _is_object(target):
+    if not _is_readable(target):
         raise TypeError(f"{name} expects an object, got {_type_name(target)}")
     values = Validators.properties_of(target)
     if name == "has":

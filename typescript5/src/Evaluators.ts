@@ -12,6 +12,11 @@
  *   different types are incomparable. Arithmetic takes numbers of one type.
  * - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
  *   variables and wrong operand types raise, as do the problems `validate()` reports.
+ * - `get` and `has` read any object that writes its properties through `accept`, including embedded objects, which
+ *   have no identity (and so compare equal to nothing).
+ *
+ * `Evaluators.predicate(predicate, value)` evaluates a union branch's predicate with `this` bound to the value tested.
+ * It is the evaluator mbse-schemas' validators take: `Validators.Validate(registry, Evaluators.predicate)`.
  */
 
 import * as Expressions from "./Expressions.js";
@@ -40,6 +45,13 @@ function start(expression: unknown, scope: Scope): unknown {
 /** The value of any expression, with the variables in `scope` bound. */
 export function OfAny(expression: Expressions.OfAny.Spec, scope: Scope = {}): unknown {
   return start(Expressions.OfAny.resolve(expression), scope);
+}
+
+/** Whether `value` satisfies a union branch's `predicate`, evaluated with `this` bound to it; `null` if unknown. */
+export function predicate(predicate: unknown, value: unknown): boolean | null {
+  const result = OfAny(predicate as Expressions.OfAny.Spec, { this: value });
+  if (result !== null && typeof result !== "boolean") throw new TypeError(`a predicate must be a bool, got ${typeName(result)}`);
+  return result as boolean | null;
 }
 
 /** The value of a literal. */
@@ -138,10 +150,15 @@ function logic(name: "and" | "or" | "implies", first: () => boolean | null,
   return a === null || b === null ? null : name === "and";
 }
 
+type Readable = { accept(visitor: Visitors.OfObject): void };
+
+function isReadable(value: unknown): value is Readable {
+  return value !== null && typeof value === "object" && typeof (value as { accept?: unknown }).accept === "function";
+}
+
 function isObject(value: unknown): value is Visitors.Visitable {
-  return value !== null && typeof value === "object"
-    && typeof (value as { accept?: unknown }).accept === "function"
-    && typeof (value as { identity?: unknown }).identity === "function";
+  // `in` first: an embedded object's proxy throws on reading an attribute it lacks.
+  return isReadable(value) && "identity" in value && typeof (value as { identity?: unknown }).identity === "function";
 }
 
 /** `get`: the property's value, or `null` when absent. `has`: whether it is present. */
@@ -150,7 +167,7 @@ function read(name: string, target: unknown, propertyName: unknown): unknown {
     throw new TypeError(`${name} expects a property name, got ${typeName(propertyName)}`);
   }
   if (target === null) return null;
-  if (!isObject(target)) throw new TypeError(`${name} expects an object, got ${typeName(target)}`);
+  if (!isReadable(target)) throw new TypeError(`${name} expects an object, got ${typeName(target)}`);
   const values = Validators.properties_of(target);
   if (name === "has") return values.has(propertyName);
   return values.get(propertyName) ?? null;

@@ -40,6 +40,14 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
   types are incomparable (`lt(1, 1.5)` is unknown), and only `int`, `float`, `str` and `bytes` are ordered. Arithmetic
   takes numbers of one type (`add(1, 1.5)` is an error).
 - Unknown operations, wrong numbers of arguments, unbound variables and wrong operand types raise.
+- `get` and `has` read any object that writes its properties through `accept`, including mbse-schemas' embedded
+  objects. Embedded objects have no identity, so they compare equal to nothing.
+
+`Evaluators.predicate(predicate, value)` evaluates a union branch's predicate with `this` bound to the value tested,
+and returns `True`, `False` or unknown (`None`); a predicate whose value is not a bool raises. It is the evaluator
+mbse-schemas' validators take: `Validators.Validate(registry, Evaluators.predicate)` checks that each union value is
+written as the first branch whose predicate holds. Deserializers need no evaluator, because union values carry their
+branch on the wire.
 
 `validate(bound=(), core=False)` reports statically what evaluation would raise: missing names and values, non-native
 literals, cycles (shared sub-expressions are not cycles), wrong numbers of arguments to core operations, variables not
@@ -87,8 +95,6 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
 
 - Core expression vocabulary above is a proposal; confirm the exact set, and specify the collection operations
   (`count`, `in`, `all`, `any`).
-- Union values: mbse-schemas will evaluate union predicates through an evaluator its caller supplies. Specify that
-  interface, and how `Evaluators` provides it.
 
 ## Resolved
 
@@ -98,6 +104,8 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
 - There is no `is` operation: unions discriminate by a tag property compared with a fixed value.
 - `Expressions.from_` (Python only) reads an expression from a function's source with `ast`.
 - Evaluation is its own module, `Evaluators`, with one entry point per expression kind (`Evaluators.OfAny`, ...).
+- mbse-schemas takes an evaluator `(predicate, value) -> bool | None` from its caller; `Evaluators.predicate` is one,
+  binding the value tested to `this`.
 - Evaluation is three-valued (Kleene), never coerces, and reads properties with `get(object, name)`; variables are
   bound by `OfLet` or by the caller's scope. `Term`s write expressions with methods only (no operator overloading), so
   both bindings read the same.

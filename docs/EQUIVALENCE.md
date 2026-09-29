@@ -9,7 +9,7 @@ specific to this package.
 
 | Check | Where |
 |---|---|
-| Every test case exists in both implementations, same ID, same order (24 cases, 4 suites) | `python3/tests/*.ipynb`, `typescript5/tests/*.ipynb` |
+| Every test case exists in both implementations, same ID, same order (25 cases, 4 suites) | `python3/tests/*.ipynb`, `typescript5/tests/*.ipynb` |
 | API conformance to the visitor protocols, on classes and on live instances | VIS-01, VIS-02 |
 | JSON is byte-identical; YAML and JSON are interchangeable | the CONF suite over the shared corpus in `conformance/` |
 | Full code coverage in both | the coverage gates below |
