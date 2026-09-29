@@ -1,0 +1,24 @@
+{
+  "name": "mbse-expressions",
+  "version": "0.0.1",
+  "description": "Serializable expressions and their evaluation, for mbse-schemas (TypeScript implementation)",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "postinstall": "npm --prefix ../submodules/mbse-schemas/typescript5 install --no-audit --no-fund",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx tests/run-notebooks.ts --typecheck",
+    "conformance": "tsx src/Conformance/write.ts",
+    "coverage": "c8 --check-coverage --100 tsx tests/run-notebooks.ts --typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.4",
+    "c8": "^11.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "yaml": "^2.9.1"
+  }
+}
