@@ -10,7 +10,7 @@ them.
 
 | Check | Where |
 |---|---|
-| Every test case exists in both implementations, same ID, same order (47 cases, 7 suites) | `python3/tests/*.ipynb`, `typescript5/tests/*.ipynb` |
+| Every test case exists in both implementations, same ID, same order | `python3/tests/*.ipynb`, `typescript5/tests/*.ipynb` |
 | API conformance to the visitor protocols and the framework's protocols, on classes and on live instances | VIS-01, VIS-02, FRM-01 |
 | JSON is byte-identical, for a case of every dialect; YAML and JSON are interchangeable | the CONF suite over the shared corpus in `conformance/` |
 | The TypeScript model of Python's rules gives what Python gives | DIA-02's tables of values and errors, which the Python suite runs against Python itself |
@@ -21,7 +21,11 @@ them.
 | | Python | TypeScript |
 |---|---|---|
 | Command | `uv run coverage run -m pytest && uv run coverage combine && uv run coverage report` | `npm run coverage` |
-| Result | 100% statements (2482), 100% branches (712) | 100% statements (4658), branches (1900), functions (540), lines |
+| Required | 100% of statements and branches | 100% of statements, branches, functions and lines |
+
+The commands print the counts. They differ between the languages because the tools count differently (V8 counts `??`,
+`?.` and each `case` as branches), not because the code differs. A gap in one implementation is closed by an assertion in
+the shared case, in both suites, never by a one-language test: DIA-02's tables of Python's rules came about that way.
 
 ## Deliberate differences
 
