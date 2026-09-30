@@ -57,6 +57,7 @@ npm test                       # type-check and run the test suites and the tuto
 | [`python3/tutorials/`](python3/tutorials/README.md), [`typescript5/tutorials/`](typescript5/tutorials/README.md) | Rules as data: building, evaluating, saving, analyzing and rewriting expressions. Start here. |
 | [`docs/EXPRESSIONS.md`](docs/EXPRESSIONS.md) | The design: the expression kinds, the core vocabulary, evaluation, meta-schemas and terms |
 | [`docs/EQUIVALENCE.md`](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
+| [`AGENTS.md`](AGENTS.md), [`skills/mbse-expressions/`](skills/mbse-expressions/SKILL.md), [`llms.txt`](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
 | [`python3/tests/TestPlan.md`](python3/tests/TestPlan.md), [`typescript5/tests/TestPlan.md`](typescript5/tests/TestPlan.md) | The test suites |
 | [`conformance/`](conformance/README.md) | The shared corpus both implementations must read and write identically |
 
@@ -68,6 +69,7 @@ docs/                     the design (EXPRESSIONS.md) and how the implementation
 python3/                  Python implementation: mbse/Expressions (Framework, Dialects, Translators), tests, tutorial
 typescript5/              TypeScript implementation: src (Expressions, Evaluators), tests, tutorial
 conformance/              snapshots each implementation writes; each must read the other's
+skills/                   the agent skill (SKILL.md plus per-task references); skills/sync.sh copies it into both packages
 ```
 
 ## Dialects

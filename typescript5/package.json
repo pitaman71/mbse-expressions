@@ -1,7 +1,19 @@
 {
   "name": "@mbse/expressions",
   "version": "0.0.1",
-  "description": "Serializable expressions and their evaluation, for mbse-schemas (TypeScript implementation)",
+  "description": "Rules, predicates and constraints as language-neutral data: validated, evaluated, stored as JSON/YAML, and translated to and from Python, MATLAB and Excel (TypeScript implementation)",
+  "keywords": [
+    "expressions",
+    "rules",
+    "constraints",
+    "predicates",
+    "mbse",
+    "sysml",
+    "interface",
+    "translation",
+    "excel",
+    "matlab"
+  ],
   "type": "module",
   "private": true,
   "exports": {

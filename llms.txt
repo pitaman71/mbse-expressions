@@ -1,0 +1,25 @@
+# mbse-expressions
+
+> Rules, predicates and constraints as neutral, language-independent data: expressions with schemas, built on mbse-schemas. An expression is stored, validated, evaluated, and translated between expression languages (dialects): Basic, the core vocabulary, and Python, Matlab and Excel, each rendered as its source and evaluated by its own rules. Equivalent Python (`mbse.Expressions`) and TypeScript (`@mbse/expressions`) implementations write byte-identical JSON. Aimed at the constraints of interfaces and model-based systems engineering (MBSE) models, and at union discriminators for mbse-schemas.
+
+Basic is three-valued (an absent property is unknown) and never coerces, only its core vocabulary is guaranteed, each dialect evaluates by its own language's rules, and evaluators reach only what their scope allowlists.
+
+## Using it
+
+- [Agent skill](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/SKILL.md): when to use it, the rules that prevent most mistakes, and references loaded per task
+- [Python](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/references/python.md) and [TypeScript](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/references/typescript.md): a complete program, cheat sheet and traps
+- [Dialects](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/references/dialects.md): choosing one, its expressions, its evaluation rules and its scope
+- [Translating](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/references/translating.md): pairwise translators, and what survives a round trip
+- [Extending](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/references/extending.md): adding a dialect or a translator
+
+## Design
+
+- [EXPRESSIONS.md](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md): the Basic dialect, the framework, the dialects and the translators, plus the open questions
+
+## Optional
+
+- [Tutorial, Python](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md): rules as data, a case study
+- [Tutorial, TypeScript](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tutorials/README.md): the same case study
+- [EQUIVALENCE.md](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EQUIVALENCE.md): how the two implementations are kept identical
+- [AGENTS.md](https://github.com/pitaman71/mbse-expressions/blob/main/AGENTS.md): for agents changing this repository
+- [mbse-schemas](https://github.com/pitaman71/mbse-schemas): the schemas expressions are stored with
