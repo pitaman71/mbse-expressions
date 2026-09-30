@@ -27,17 +27,18 @@
 
 import { Errors, Repr, Schemas } from "@mbse/schemas/Framework";
 
-import * as Expressions from "./Expressions.js";
+import * as Symbolics from "./Symbolics.js";
+import * as Terms from "./Terms.js";
 
 const { ValueError } = Errors;
 const { repr } = Repr;
-type Node = Expressions.Node;
+type Node = Terms.Node;
 type Trace = [unknown, unknown][];
 
 /** Translates expressions between two dialects, in both directions. */
 export interface Translator {
-  left(): Expressions.Dialect;
-  right(): Expressions.Dialect;
+  left(): Terms.Dialect;
+  right(): Terms.Dialect;
   /** `expression`, of the left dialect, in the right one. */
   forward(expression: unknown, trace?: Trace | null): any;
   /** `expression`, of the right dialect, in the left one. */
@@ -148,16 +149,6 @@ export class Prelude {
   }
 }
 
-/** The names of the lexical references in `expression`. */
-function free(expression: Node): Set<string> {
-  const names = new Set<string>();
-  for (const node of Expressions.walk(expression)) {
-    const kind = (node as Node).kind();
-    if (kind.ROLE === Expressions.REFERENCE && kind.LEXICAL) names.add(Expressions.nameOf(node) as string);
-  }
-  return names;
-}
-
 /** Rules for operators that differ only in name: each `left` name applied to `arity` arguments is the `right` name
  * applied to the same arguments, e.g. `renames('operation', 'name', 'call', 'function', { eq: 'equal' }, 2)`. */
 export function renames(leftKind: string, leftAttribute: string, rightKind: string, rightAttribute: string,
@@ -167,12 +158,12 @@ export function renames(leftKind: string, leftAttribute: string, rightKind: stri
     new Pattern(rightKind, { [rightAttribute]: b }, ...args)));
 }
 
-function describe(dialect: Expressions.Dialect, node: Node): string {
+function describe(dialect: Terms.Dialect, node: Node): string {
   const kind = node.kind();
-  if (kind.ROLE === Expressions.APPLICATION && kind.OPERATOR !== null) {
-    return `${dialect.name()} ${kind.KIND} ${repr(Expressions.operatorOf(node))}`;
+  if (kind.ROLE === Terms.APPLICATION && kind.OPERATOR !== null) {
+    return `${dialect.name()} ${kind.KIND} ${repr(Terms.operatorOf(node))}`;
   }
-  if (kind.ROLE === Expressions.LITERAL) return `${dialect.name()} ${kind.KIND} ${repr(node.field("value"))}`;
+  if (kind.ROLE === Terms.LITERAL) return `${dialect.name()} ${kind.KIND} ${repr(node.field("value"))}`;
   return `${dialect.name()} ${kind.KIND}`;
 }
 
@@ -184,7 +175,7 @@ class Direction {
   readonly inlines: ReadonlySet<string>;
   readonly elides: ReadonlySet<string>;
 
-  constructor(readonly source: Expressions.Declared, readonly target: Expressions.Declared,
+  constructor(readonly source: Terms.Declared, readonly target: Terms.Declared,
     rules: readonly [Pattern, Pattern][], inlines: readonly string[], elides: readonly string[],
     readonly preludes: readonly Pattern[]) {
     this.inlines = new Set(inlines);
@@ -199,9 +190,9 @@ class Direction {
   run(expression: unknown, trace: Trace | null): any {
     let result = new Run(this, trace).translate(this.source.resolve(expression), new Map());
     for (const pattern of [...this.preludes].reverse()) {
-      const declared = this.target.make(new Expressions.Form(pattern.kind, pattern.attributes as Map<string, never>,
+      const declared = this.target.make(new Terms.Form(pattern.kind, pattern.attributes as Map<string, never>,
         [result])) as Node;
-      const used = free(result);
+      const used = Symbolics.free(result);
       if (declared.binds().some((name) => used.has(name))) result = declared;
     }
     return result;
@@ -235,18 +226,18 @@ class Run {
 
   private translateNode(node: Node, environment: Environment): unknown {
     const kind = node.kind();
-    const name = Expressions.nameOf(node) as string;
-    if (kind.ROLE === Expressions.REFERENCE && kind.LEXICAL && environment.has(name)) return environment.get(name);
+    const name = Terms.nameOf(node) as string;
+    if (kind.ROLE === Terms.REFERENCE && kind.LEXICAL && environment.has(name)) return environment.get(name);
     if (this.direction.elides.has(kind.KIND)) {
       const args = node.argumentsOf();
       const body = args[args.length - 1];
-      if (body === null) throw new ValueError(`${Expressions.article(kind.KIND)} needs a body`);
+      if (body === null) throw new ValueError(`${Terms.article(kind.KIND)} needs a body`);
       return this.translate(body, environment);
     }
     if (this.direction.inlines.has(kind.KIND)) {
       const [value, body] = node.argumentsOf();
       if (value === null || body === null) {
-        throw new ValueError(`${Expressions.article(kind.KIND)} needs a ${value === null ? "value" : "body"}`);
+        throw new ValueError(`${Terms.article(kind.KIND)} needs a ${value === null ? "value" : "body"}`);
       }
       const inner = new Map([...environment, [name, this.translate(value, environment)]]);
       return this.translate(body, inner);
@@ -273,10 +264,10 @@ class Run {
     for (const [name, expected] of pattern.attributes) {
       const value = form.attributes.get(name);
       if (!(expected instanceof Hole)) {
-        if (!Expressions.sameNative(expected, value)) return false;
+        if (!Terms.sameNative(expected, value)) return false;
       } else if (expected.types.length > 0 && !expected.types.some((type) => Schemas.isNativeOf(type, value))) {
         return false;
-      } else if (bindings.has(expected.name) && !Expressions.sameNative(bindings.get(expected.name), value)) {
+      } else if (bindings.has(expected.name) && !Terms.sameNative(bindings.get(expected.name), value)) {
         return false;
       } else {
         bindings.set(expected.name, value);
@@ -291,7 +282,7 @@ class Run {
     const attributes = new Map([...pattern.attributes].map(([name, value]) =>
       [name, value instanceof Hole ? bindings.get(value.name) : value] as [string, never]));
     const args = pattern.args.map((argument) => this.instantiate(argument, bindings, environment));
-    return this.direction.target.make(new Expressions.Form(pattern.kind, attributes, args));
+    return this.direction.target.make(new Terms.Form(pattern.kind, attributes, args));
   }
 }
 
@@ -302,7 +293,7 @@ export class Pairwise implements Translator {
   private readonly forwards: Direction;
   private readonly backwards: Direction;
 
-  constructor(private readonly leftDialect: Expressions.Declared, private readonly rightDialect: Expressions.Declared,
+  constructor(private readonly leftDialect: Terms.Declared, private readonly rightDialect: Terms.Declared,
     private readonly rules: readonly Declaration[]) {
     const pairs = rules.filter((rule): rule is Rule => rule instanceof Rule);
     const of = <T extends Inline | Elide | Prelude>(type: new (...a: any[]) => T, side: string): T[] =>
@@ -317,11 +308,11 @@ export class Pairwise implements Translator {
       of(Prelude, "left").map((p) => p.pattern));
   }
 
-  left(): Expressions.Declared {
+  left(): Terms.Declared {
     return this.leftDialect;
   }
 
-  right(): Expressions.Declared {
+  right(): Terms.Declared {
     return this.rightDialect;
   }
 

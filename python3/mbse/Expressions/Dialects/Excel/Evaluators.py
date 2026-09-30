@@ -25,7 +25,7 @@ import re
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F
+from mbse.Expressions.Framework import Evaluators as F, Symbolics as S
 from mbse.Schemas.Framework import Validators
 
 from . import Domains, Expressions
@@ -50,7 +50,7 @@ def _address(text: str) -> str:
 _NUMERIC = re.compile(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?")
 
 
-class Workbook(F.Variables):
+class Workbook(S.Variables):
     """A workbook, as the scope of its formulas: defined `names`, `sheets` of cells by address, the current `sheet`,
     other `books` by name, and `add_ins` by function name."""
 

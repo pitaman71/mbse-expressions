@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Dialects.Basic.Expressions import discriminator
-from mbse.Expressions.Framework import Domains as FD, Expressions as F
+from mbse.Expressions.Framework import Domains as FD, Terms as F
 from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains

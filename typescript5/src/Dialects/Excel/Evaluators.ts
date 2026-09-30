@@ -24,6 +24,7 @@
 import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Evaluators.js";
+import * as S from "../../Framework/Symbolics.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
@@ -50,14 +51,14 @@ function cellAddress(text: string): string {
 
 /** A workbook, as the scope of its formulas: defined `names`, `sheets` of cells by address, the current `sheet`,
  * other `books` by name, and `add_ins` by function name. */
-export class Workbook extends F.Variables {
+export class Workbook extends S.Variables {
   readonly name: string;
   readonly sheets: ReadonlyMap<string, ReadonlyMap<string, unknown>>;
   readonly sheet: string;
   readonly books: ReadonlyMap<string, Workbook>;
   readonly add_ins: ReadonlyMap<string, Fn>;
 
-  constructor(names: F.Bindings = {}, sheets: Record<string, Record<string, unknown>> = {}, options: {
+  constructor(names: S.Bindings = {}, sheets: Record<string, Record<string, unknown>> = {}, options: {
     name?: string; sheet?: string; books?: Record<string, Workbook>; add_ins?: Record<string, Fn>;
   } = {}) {
     super(names);
@@ -207,6 +208,6 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
 ]), { literal: numberOf, scope: (names) => new Workbook(names), extension: addIn });
 
 /** The value of a formula in a workbook, or with the defined names in an object. */
-export function OfAny(expression: unknown, scope: Workbook | F.Bindings = {}): unknown {
+export function OfAny(expression: unknown, scope: Workbook | S.Bindings = {}): unknown {
   return interpreter.run(Expressions.DIALECT.resolve(expression), scope);
 }

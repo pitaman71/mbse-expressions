@@ -22,7 +22,7 @@ import math
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F
+from mbse.Expressions.Framework import Evaluators as F, Symbolics as S
 from mbse.Schemas.Framework import Validators
 
 from . import Domains, Expressions
@@ -132,7 +132,7 @@ def _unrecognized(name: str) -> NameError:
     return NameError(f"Unrecognized function or variable '{name}'.")
 
 
-class Scope(F.Variables):
+class Scope(S.Variables):
     """MATLAB's scope for an expression: `variables`, the `functions` on the path, and the `packages` that qualified
     names and imports find functions in."""
 

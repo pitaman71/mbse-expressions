@@ -29,7 +29,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any, Protocol, runtime_checkable
 
-from . import Expressions
+from . import Symbolics, Terms
 
 __all__ = ["Translator", "Pairwise", "Rule", "Inline", "Elide", "Prelude", "Pattern", "Hole", "holes", "renames"]
 
@@ -38,9 +38,9 @@ __all__ = ["Translator", "Pairwise", "Rule", "Inline", "Elide", "Prelude", "Patt
 class Translator(Protocol):
     """Translates expressions between two dialects, in both directions."""
 
-    def left(self) -> Expressions.Dialect: ...
+    def left(self) -> Terms.Dialect: ...
 
-    def right(self) -> Expressions.Dialect: ...
+    def right(self) -> Terms.Dialect: ...
 
     def forward(self, expression: Any, trace: list[tuple[Any, Any]] | None = None) -> Any:
         """`expression`, of the left dialect, in the right one."""
@@ -141,12 +141,6 @@ class Prelude:
         self.pattern, self.side = pattern, side
 
 
-def _free(expression: Any) -> set[str]:
-    """The names of the lexical references in `expression`."""
-    return {getattr(node, next(iter(type(node).PROPERTIES))) for node in Expressions.walk(expression)
-            if type(node).ROLE == Expressions.REFERENCE and type(node).LEXICAL}
-
-
 def renames(left_kind: str, left_attribute: str, right_kind: str, right_attribute: str, names: Mapping[str, str],
             arity: int) -> list[Rule]:
     """Rules for operators that differ only in name: each `left` name applied to `arity` arguments is the `right`
@@ -157,14 +151,14 @@ def renames(left_kind: str, left_attribute: str, right_kind: str, right_attribut
 
 
 def _same_native(a: Any, b: Any) -> bool:
-    return Expressions._same_native(a, b)
+    return Terms._same_native(a, b)
 
 
-def _describe(dialect: Expressions.Dialect, node: Any) -> str:
+def _describe(dialect: Terms.Dialect, node: Any) -> str:
     kind = type(node)
-    if kind.ROLE == Expressions.APPLICATION and kind.OPERATOR is not None:
-        return f"{dialect.name()} {kind.KIND} {Expressions._operator(node)!r}"
-    if kind.ROLE == Expressions.LITERAL:
+    if kind.ROLE == Terms.APPLICATION and kind.OPERATOR is not None:
+        return f"{dialect.name()} {kind.KIND} {Terms._operator(node)!r}"
+    if kind.ROLE == Terms.LITERAL:
         return f"{dialect.name()} {kind.KIND} {node.value!r}"
     return f"{dialect.name()} {kind.KIND}"
 
@@ -172,7 +166,7 @@ def _describe(dialect: Expressions.Dialect, node: Any) -> str:
 class _Direction:
     """Translation in one direction: the co-traversal."""
 
-    def __init__(self, source: Expressions.Declared, target: Expressions.Declared,
+    def __init__(self, source: Terms.Declared, target: Terms.Declared,
                  rules: Sequence[tuple[Pattern, Pattern]], inlines: Iterable[str], elides: Iterable[str] = (),
                  preludes: Sequence[Pattern] = ()):
         self.source, self.target, self.inlines = source, target, frozenset(inlines)
@@ -184,8 +178,8 @@ class _Direction:
     def __call__(self, expression: Any, trace: list[tuple[Any, Any]] | None) -> Any:
         result = _Run(self, trace).translate(self.source.resolve(expression), {})
         for pattern in reversed(self.preludes):
-            declared = self.target.make(Expressions.Form(pattern.kind, dict(pattern.attributes), (result,)))
-            if set(declared.binds()) & _free(result):
+            declared = self.target.make(Terms.Form(pattern.kind, dict(pattern.attributes), (result,)))
+            if set(declared.binds()) & Symbolics.free(result):
                 result = declared
         return result
 
@@ -219,18 +213,18 @@ class _Run:
 
     def _translate(self, node: Any, environment: dict[str, Any]) -> Any:
         kind = type(node)
-        name = getattr(node, next(iter(kind.PROPERTIES)), None) if kind.PROPERTIES else None
-        if kind.ROLE == Expressions.REFERENCE and kind.LEXICAL and name in environment:
+        name = Terms.name_of(node)
+        if kind.ROLE == Terms.REFERENCE and kind.LEXICAL and name in environment:
             return environment[name]
         if kind.KIND in self.direction.elides:
             body = node._arguments()[-1]
             if body is None:
-                raise ValueError(f"{Expressions._article(kind.KIND)} needs a body")
+                raise ValueError(f"{Terms._article(kind.KIND)} needs a body")
             return self.translate(body, environment)
         if kind.KIND in self.direction.inlines:
             value, body = node._arguments()
             if value is None or body is None:
-                raise ValueError(f"{Expressions._article(kind.KIND)} needs a {'value' if value is None else 'body'}")
+                raise ValueError(f"{Terms._article(kind.KIND)} needs a {'value' if value is None else 'body'}")
             inner = {**environment, name: self.translate(value, environment)}
             self.environments.append(inner)
             return self.translate(body, inner)
@@ -274,13 +268,13 @@ class _Run:
         attributes = {name: bindings[value.name] if isinstance(value, Hole) else value
                       for name, value in pattern.attributes.items()}
         arguments = tuple(self._instantiate(argument, bindings, environment) for argument in pattern.arguments)
-        return self.direction.target.make(Expressions.Form(pattern.kind, attributes, arguments))
+        return self.direction.target.make(Terms.Form(pattern.kind, attributes, arguments))
 
 
 class Pairwise:
     """A `Translator` between `left` and `right`, declared by `rules` (`Rule`s, `Inline`s, `Elide`s and `Prelude`s)."""
 
-    def __init__(self, left: Expressions.Declared, right: Expressions.Declared,
+    def __init__(self, left: Terms.Declared, right: Terms.Declared,
                  rules: Sequence[Rule | Inline | Elide | Prelude]):
         self._left, self._right, self._rules = left, right, list(rules)
         pairs = [rule for rule in rules if isinstance(rule, Rule)]
@@ -295,10 +289,10 @@ class Pairwise:
                                     [i.kind for i in of(Inline, "right")], [e.kind for e in of(Elide, "right")],
                                     [p.pattern for p in of(Prelude, "left")])
 
-    def left(self) -> Expressions.Declared:
+    def left(self) -> Terms.Declared:
         return self._left
 
-    def right(self) -> Expressions.Declared:
+    def right(self) -> Terms.Declared:
         return self._right
 
     def forward(self, expression: Any, trace: list[tuple[Any, Any]] | None = None) -> Any:

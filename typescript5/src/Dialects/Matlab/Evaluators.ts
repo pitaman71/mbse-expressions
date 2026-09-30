@@ -21,6 +21,7 @@ import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
 
 import { ImportError, NameError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
+import * as S from "../../Framework/Symbolics.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
@@ -140,12 +141,12 @@ function split(name: string): [string, string] {
 
 /** MATLAB's scope for an expression: `variables`, the `functions` on the path, and the `packages` that qualified names
  * and imports find functions in. */
-export class Scope extends F.Variables {
+export class Scope extends S.Variables {
   readonly functions: ReadonlyMap<string, Fn>;
   readonly packages: ReadonlyMap<string, ReadonlyMap<string, Fn>>;
   imported: ReadonlyMap<string, Fn> = new Map();
 
-  constructor(variables: F.Bindings = {},
+  constructor(variables: S.Bindings = {},
     options: { functions?: Record<string, Fn>; packages?: Record<string, Record<string, Fn>> } = {}) {
     super(variables);
     this.functions = new Map(Object.entries(options.functions ?? {}));
@@ -201,6 +202,6 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
 ]), { literal: toDouble, scope: (variables) => new Scope(variables), extension });
 
 /** The value of an expression in `scope`, or with the variables in an object bound. */
-export function OfAny(expression: unknown, scope: Scope | F.Bindings = {}): unknown {
+export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
   return interpreter.run(Expressions.DIALECT.resolve(expression), scope);
 }

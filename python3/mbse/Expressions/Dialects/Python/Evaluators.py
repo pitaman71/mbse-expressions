@@ -23,7 +23,7 @@ import types
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F
+from mbse.Expressions.Framework import Evaluators as F, Symbolics as S
 from mbse.Schemas.Framework import Validators
 
 from . import Expressions
@@ -63,7 +63,7 @@ BUILTINS: dict[str, Any] = {
 """The builtins a scope provides by default, one per name of `Expressions.BUILTINS`."""
 
 
-class Scope(F.Variables):
+class Scope(S.Variables):
     """Python's scope for an expression: `variables`, the `modules` imports may bring in, and `builtins`."""
 
     def __init__(self, variables: Mapping[str, Any] | None = None, modules: Mapping[str, types.ModuleType] | None = None,

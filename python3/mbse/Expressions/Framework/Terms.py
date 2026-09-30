@@ -1,4 +1,4 @@
-"""Expressions: the protocols every dialect's expressions implement, and the machinery that implements them.
+"""Terms: the protocols every dialect's expressions implement, and the machinery that implements them.
 
 An expression language (a dialect) is a set of node kinds and a vocabulary of operators. Every dialect's expressions are:
 
@@ -50,7 +50,7 @@ from . import Domains
 __all__ = [
     "Form", "Expression", "Dialect", "Node", "Builder", "AnyBuilder", "Term", "Registry", "Declared",
     "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "ARGUMENTS", "Arguments", "NATIVES",
-    "walk", "fold", "same", "resolve",
+    "walk", "fold", "same", "resolve", "name_of",
 ]
 
 LITERAL, REFERENCE, APPLICATION, BINDING, IMPORT = "literal", "reference", "application", "binding", "import"
@@ -202,6 +202,12 @@ class Node:
         """Problems with this expression. References must be bound by an enclosing binding or be in `bound`. With
         `core`, every operator must be in its kind's vocabulary."""
         return self.DIALECT.validate(self, bound, core)
+
+
+def name_of(node: Any) -> Any:
+    """A reference's, binding's or import's name: the value of its first property; None if it has none."""
+    kind = type(node)
+    return getattr(node, next(iter(kind.PROPERTIES))) if kind.PROPERTIES else None
 
 
 def _operator(node: Any) -> str:
@@ -761,7 +767,7 @@ class Declared:
                     if not (name in kind.OPTIONAL and getattr(expression, name) is None)
                     for p in _property_problems(what, name, native, getattr(expression, name))]
         problems += expression.check()
-        name = getattr(expression, next(iter(kind.PROPERTIES)), None) if kind.PROPERTIES else None
+        name = name_of(expression)
         if kind.ROLE == REFERENCE:
             if kind.LEXICAL and not problems and name not in bound and name not in kind.AMBIENT:
                 problems.append(f"{kind.KIND} {name!r} is not bound")
@@ -812,7 +818,7 @@ class Declared:
         if kind.ROLE == LITERAL:
             return self._domain_of(expression.value)
         if kind.ROLE == REFERENCE:
-            name = getattr(expression, next(iter(kind.PROPERTIES)))
+            name = name_of(expression)
             return environment[name] if kind.LEXICAL and name in environment else Domains.Anything
         arguments = expression._arguments()
         if kind.ROLE == IMPORT:
@@ -820,7 +826,7 @@ class Declared:
             return self._infer(arguments[-1], inner, memo)
         if kind.ROLE == BINDING:
             value = self._infer(arguments[0], environment, memo)
-            inner = {**environment, getattr(expression, next(iter(kind.PROPERTIES))): value}
+            inner = {**environment, name_of(expression): value}
             return self._infer(arguments[-1], inner, memo)
         domains = [self._infer(argument, environment, memo) for argument in arguments]
         operator = _operator(expression)

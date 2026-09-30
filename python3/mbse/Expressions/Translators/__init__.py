@@ -5,7 +5,7 @@ is a second translator between Basic and Python, which writes NumPy's functions.
 
 from __future__ import annotations
 
-from mbse.Expressions.Framework.Expressions import Dialect
+from mbse.Expressions.Framework.Terms import Dialect
 from mbse.Expressions.Framework.Translators import Pairwise
 
 from . import Basic_Excel, Basic_Matlab, Basic_Python, Matlab_Excel, Python_Excel, Python_Matlab

@@ -23,13 +23,14 @@ import { Comparison, Repr, Schemas, Validators } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Evaluators.js";
+import * as S from "../../Framework/Symbolics.js";
 import * as Expressions from "./Expressions.js";
 
 const { typeName } = Repr;
 type Native = Visitors.Native;
 
 /** The variables an expression is evaluated with, or a scope. */
-export type Scope = F.Scope | F.Bindings;
+export type Scope = S.Scope | S.Bindings;
 
 const NATIVES: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["int", BigInt],

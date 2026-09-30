@@ -20,7 +20,7 @@ and translation how to treat it without knowing the dialect:
 from dataclasses import dataclass
 from typing import Any
 from mbse.Expressions.Dialects.Basic.Expressions import discriminator
-from mbse.Expressions.Framework import Domains as D, Expressions as F
+from mbse.Expressions.Framework import Domains as D, Terms as F
 
 @dataclass(eq=False)
 class _Frac(F.Node):                                   # LaTeX's \frac{numerator}{denominator}
@@ -35,8 +35,8 @@ DIALECT = F.Declared("Latex", (_Constant, _Symbol, _Frac), discriminator=discrim
 ```
 
 Then write `render`, and an evaluator on `Framework.Evaluators.Interpreter` with one implementation per operator (each
-takes thunks for its arguments, so it decides what to evaluate) and a scope derived from `Variables`. Evaluation is
-optional: a dialect may only render and translate.
+takes thunks for its arguments, so it decides what to evaluate) and a scope derived from
+`Framework.Symbolics.Variables`. Evaluation is optional: a dialect may only render and translate.
 
 ## A translator
 
@@ -55,6 +55,6 @@ Add a module per pair to `Translators/`, declaring `TRANSLATOR = Pairwise(left, 
 
 | Topic | Read |
 |---|---|
-| The framework: forms, roles, declarations, domains, scopes, the interpreter | [EXPRESSIONS.md, The framework](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#the-framework) |
+| The framework: terms and roles, symbolics and scopes, domains, the interpreter | [EXPRESSIONS.md, The framework](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#the-framework) |
 | A complete dialect to copy | [the Excel dialect](https://github.com/pitaman71/mbse-expressions/blob/main/python3/mbse/Expressions/Dialects/Excel) |
 | The framework, case by case | [FRM, the framework's test suite](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/05_Framework.ipynb) |

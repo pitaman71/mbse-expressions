@@ -23,6 +23,7 @@ import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
 
 import { ImportError, NameError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
+import * as S from "../../Framework/Symbolics.js";
 import * as Expressions from "./Expressions.js";
 
 const { AttributeError, KeyError, ValueError } = Errors;
@@ -300,11 +301,11 @@ function modulesOf(module: Module): Module[] {
 }
 
 /** Python's scope for an expression: `variables`, the `modules` imports may bring in, and `builtins`. */
-export class Scope extends F.Variables {
+export class Scope extends S.Variables {
   readonly modules: ReadonlyMap<string, Module>;
   readonly builtins: ReadonlyMap<string, unknown>;
 
-  constructor(variables: F.Bindings = {}, options: { modules?: Record<string, Module>; builtins?: Record<string, unknown> } = {}) {
+  constructor(variables: S.Bindings = {}, options: { modules?: Record<string, Module>; builtins?: Record<string, unknown> } = {}) {
     super(variables);
     this.modules = new Map(Object.entries(options.modules ?? {}));
     this.builtins = options.builtins === undefined ? BUILTINS : new Map(Object.entries(options.builtins));
@@ -400,6 +401,6 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
 ]), { scope: (variables) => new Scope(variables) });
 
 /** The value of an expression in `scope`, or with the variables in an object bound. */
-export function OfAny(expression: unknown, scope: Scope | F.Bindings = {}): unknown {
+export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
   return interpreter.run(Expressions.DIALECT.resolve(expression), scope);
 }

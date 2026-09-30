@@ -8,7 +8,7 @@
 - `OfLet`: binds a name to the value of one expression within another, its body.
 - `OfAny`: any of these.
 
-The dialect (`DIALECT`) is declared with the framework (`mbse.Expressions.Framework.Expressions`), which gives each
+The dialect (`DIALECT`) is declared with the framework (`mbse.Expressions.Framework.Terms`), which gives each
 kind its `Data`, a `Builder` finalized by `create()`, `clone()` or `update()` (none validate), a `Spec` (a value, or a
 callable that takes and returns the builder) and `resolve`, and a `Schema`, the meta-schema that describes its data as
 an ordinary object schema, so expressions serialize, validate and compare like any other objects:
@@ -42,7 +42,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from mbse.Expressions.Framework import Expressions as F
+from mbse.Expressions.Framework import Terms as F
 from mbse.Schemas.Framework import Schemas
 from mbse.Schemas.Framework.Visitors import Native
 

@@ -22,7 +22,7 @@ import { Errors, Repr } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
-import * as F from "../../Framework/Expressions.js";
+import * as F from "../../Framework/Terms.js";
 import { discriminator } from "../Basic/Expressions.js";
 import * as Domains from "./Domains.js";
 

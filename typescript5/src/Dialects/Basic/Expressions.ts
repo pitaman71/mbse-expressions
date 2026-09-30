@@ -9,7 +9,7 @@
  * - `OfLet`: binds a name to the value of one expression within another, its body.
  * - `OfAny`: any of these.
  *
- * The dialect (`DIALECT`) is declared with the framework (`Framework/Expressions`), which gives each kind its `Data`,
+ * The dialect (`DIALECT`) is declared with the framework (`Framework/Terms`), which gives each kind its `Data`,
  * a `Builder` finalized by `create()`, `clone()` or `update()` (none validate), a `Spec` (a value, or a callable that
  * takes and returns the builder) and `resolve`, and a `Schema`, the meta-schema that describes its data as an
  * ordinary object schema, so expressions serialize, validate and compare like any other objects:
@@ -35,7 +35,7 @@
 
 import type { Schemas, Visitors } from "@mbse/schemas/Framework";
 
-import * as F from "../../Framework/Expressions.js";
+import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
 type Native = Visitors.Native;

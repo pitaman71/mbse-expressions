@@ -79,7 +79,8 @@ Evaluators.predicate(predicate, value)                      # binds this; for Va
 
 # Storage, traversal, translation: the same calls in every dialect.
 JSON.ToJSON.Reachable(E.DIALECT.schema_of(e), e); JSON.FromJSON(E.Builders).Reachable(schema, text)
-F.walk(e); F.fold(e, lambda node, results: ...); F.same(a, b)   # from mbse.Expressions.Framework import Expressions as F
+F.walk(e); F.fold(e, lambda node, results: ...); F.same(a, b)   # from mbse.Expressions.Framework import Terms as F
+Symbolics.free(e); Symbolics.imports(e)     # the names e needs from its scope, and the imports it declares
 Translators.between(E.DIALECT, Excel.DIALECT).forward(e, trace=[]); Translators.Basic_Python.NUMPY.forward(e)
 Excel.render(e); Python.render(e); Python.parse("import math\nmath.floor(x)")    # parse is Python's only
 ```

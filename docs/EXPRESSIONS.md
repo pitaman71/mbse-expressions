@@ -110,17 +110,19 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
 
 ## The framework
 
-`mbse.Expressions.Framework` defines what every dialect implements, and implements most of it from declarations.
+`mbse.Expressions.Framework` defines what every dialect implements, and implements most of it from declarations, in
+six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics` (names, scopes and dependencies),
+`Domains`, `Evaluators`, `Translators` and `Errors`.
 
-- `Expressions.Expression` is an expression of some dialect: `Visitable`, plus `dialect()`, `form()` and
+- `Terms.Expression` is an expression of some dialect: `Visitable`, plus `dialect()`, `form()` and
   `validate()`. A `Form` is a node's structure: its `kind`, its native `attributes` and its ordered `arguments`.
   `Dialect.make(form)` is the inverse, and `walk`, `fold` (bottom-up, once per node, raising on cycles) and `same`
   (structural equality by co-traversal: natives of one type by value, NaN is NaN, -0.0 is not 0.0) work on any
   dialect through forms alone.
-- `Expressions.Dialect` is an expression language: `name()`, `kinds()`, `schema_of(expression)`, `make`, `resolve`
+- `Terms.Dialect` is an expression language: `name()`, `kinds()`, `schema_of(expression)`, `make`, `resolve`
   (specs: expressions, `Term`s, native values as literals, or callables taking the `AnyBuilder`), `validate`,
   `infer`, the union meta-schema `Schema` and the registry `Builders`.
-- `Expressions.Declared` derives a dialect from its kinds: each is a dataclass derived from `Node` whose class
+- `Terms.Declared` derives a dialect from its kinds: each is a dataclass derived from `Node` whose class
   variables give its `KIND` (the tag), its `ROLE`, a literal's `VALUE` natives, its native `PROPERTIES` (required
   unless `OPTIONAL`), its arguments (`SLOTS`, fields of one argument each, then `VARIADIC`, one field holding the
   rest) and, for an application, the property naming its `OPERATOR` (or none, when the tag names it) and its
@@ -147,14 +149,19 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
   expression's domain from them, raising `TypeError` for an operator that cannot take its arguments' domains:
   `add cannot take (int, float); it takes (T, T) -> T for T in int | float`. Inference is permissive: `Anything`, the
   domain of a value not known statically, is accepted wherever a domain is expected, and extensions give `Anything`.
-- `Evaluators` defines `Evaluator` (`(expression, scope) -> value`), `Predicate` (mbse-schemas' `(predicate, value)
-  -> bool | None`) and `Scope`, where references are resolved the dialect's way: `lookup(reference)`,
-  `bind(name, value)` (the scope within a binding) and `enter(declaration)` (the scope within an import). `Variables`
-  is the scope of names bound to values, which dialect scopes derive from, and an evaluator given a mapping makes its
-  dialect's scope from it. `Interpreter` evaluates by role and calls an implementation per operator with one thunk per
+- `Symbolics` is about names. `free(expression)` gives the names an expression needs from its scope: its lexical
+  references that no binding or import within it binds, and that are not ambient. `imports(expression)` gives the
+  imports it declares, which its scope must provide. `Scope` is where references are resolved at evaluation, the
+  dialect's way: `lookup(reference)`, `bind(name, value)` (the scope within a binding) and `enter(declaration)` (the
+  scope within an import). `Variables` is the scope of names bound to values, which dialect scopes derive from, and an
+  evaluator given a mapping makes its dialect's scope from it.
+- `Evaluators` defines `Evaluator` (`(expression, scope) -> value`) and `Predicate` (mbse-schemas' `(predicate, value)
+  -> bool | None`). `Interpreter` evaluates by role and calls an implementation per operator with one thunk per
   argument and the scope, so each dialect decides what to evaluate and when; operators outside a closed vocabulary go
   to an `extension`, which is how Matlab and Excel call the functions their scopes provide. It raises what `validate`
   reports.
+- `Errors` names the exceptions evaluation raises beyond mbse-schemas' own (`NameError`, `ImportError`,
+  `OverflowError`, `ZeroDivisionError`): Python's own in Python, and classes of the same names in TypeScript.
 
 ## Dialects
 
@@ -233,6 +240,9 @@ in Basic but true in the others.
   not parsed from source text yet (Python's are, in Python). `Expressions.from_` still reads Python functions into Basic
   directly; it could become `Python.Expressions.parse` followed by translation to Basic.
 - Excel's ranges (`A1:B3`) and structured references (`Table1[@age]`) are not modeled; they need array values.
+- `Symbolics` has imports, an expression's dependencies, but no exports. Exports would name what a unit of
+  expressions (a module of rules, a MATLAB package, a workbook's defined names) provides to others; they need a unit
+  that groups expressions, which no dialect has yet.
 - Excel's `AND` and `OR` take any number of arguments, and `IF` two or three; the dialect gives them fixed arities
   (2, 2 and 3) so that its vocabulary has one signature per name.
 

@@ -5,7 +5,7 @@
 
 import { Errors } from "@mbse/schemas/Framework";
 
-import type { Dialect } from "../Framework/Expressions.js";
+import type { Dialect } from "../Framework/Terms.js";
 import type { Pairwise } from "../Framework/Translators.js";
 import * as Basic_Excel from "./Basic_Excel.js";
 import * as Basic_Matlab from "./Basic_Matlab.js";
