@@ -1,12 +1,13 @@
 """Basic <-> Matlab. Basic operations are MATLAB operators, `get` a field, and `has` is `isfield`. `implies(a, b)` is
 written `~a || b`, which translates back as `or(not(a), b)`. MATLAB has no let expression, so lets are inlined: a
-let's translated value is shared by every use of its name. MATLAB has no bytes."""
+let's translated value is shared by every use of its name. MATLAB's imports, which Basic cannot declare, are dropped.
+MATLAB has no bytes."""
 
 from __future__ import annotations
 
 from mbse.Expressions.Dialects.Basic.Expressions import DIALECT as BASIC
 from mbse.Expressions.Dialects.Matlab.Expressions import DIALECT as MATLAB
-from mbse.Expressions.Framework.Translators import Inline, Pairwise, Rule, renames
+from mbse.Expressions.Framework.Translators import Elide, Inline, Pairwise, Rule, renames
 
 from ._Patterns import Basic, Matlab, value
 
@@ -16,6 +17,7 @@ TRANSLATOR = Pairwise(BASIC, MATLAB, [
     Rule(Basic.literal(V), Matlab.constant(V)),
     Rule(Basic.variable, Matlab.identifier),
     Inline("let", "left"),
+    Elide("import", "right"),
     Rule(Basic.get, Matlab.get),
     Rule(Basic.has, Matlab.has),
     Rule(Basic.implies, Matlab.implies, "forward"),

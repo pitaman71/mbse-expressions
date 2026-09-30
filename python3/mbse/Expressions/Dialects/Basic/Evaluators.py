@@ -54,7 +54,7 @@ def _logic(name: str) -> F.Implementation:
     """Kleene's logic, evaluating the second operand only when the first does not decide."""
     decisive = {"and": False, "or": True, "implies": False}[name]
 
-    def apply(arguments: list[F.Thunk], node: Any) -> bool | None:
+    def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> bool | None:
         a = _truth(name, arguments[0]())
         if a is decisive:
             return name != "and"
@@ -70,7 +70,7 @@ def _logic(name: str) -> F.Implementation:
 
 def _strict(function: Callable[[str, list[Any]], Any]) -> F.Implementation:
     """An operation that evaluates all its arguments."""
-    return lambda arguments, node: function(node.name, [argument() for argument in arguments])
+    return lambda arguments, node, scope: function(node.name, [argument() for argument in arguments])
 
 
 def _not(name: str, values: list[Any]) -> bool | None:

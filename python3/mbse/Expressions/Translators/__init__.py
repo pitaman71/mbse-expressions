@@ -1,5 +1,6 @@
 """The pairwise translators between the dialects, one module per pair, each with its `TRANSLATOR`. `between(a, b)`
-finds the translator from dialect `a` to dialect `b`, whichever way round its module declares it. See
+finds the translator from dialect `a` to dialect `b`, whichever way round its module declares it. `Basic_Python.NUMPY`
+is a second translator between Basic and Python, which writes NumPy's functions. See
 `mbse.Expressions.Framework.Translators`."""
 
 from __future__ import annotations
@@ -7,12 +8,12 @@ from __future__ import annotations
 from mbse.Expressions.Framework.Expressions import Dialect
 from mbse.Expressions.Framework.Translators import Pairwise
 
-from . import Basic_Excel, Basic_Matlab, Basic_Numpy, Matlab_Excel, Numpy_Excel, Numpy_Matlab
+from . import Basic_Excel, Basic_Matlab, Basic_Python, Matlab_Excel, Python_Excel, Python_Matlab
 
 __all__ = ["between", "TRANSLATORS"]
 
 TRANSLATORS: list[Pairwise] = [module.TRANSLATOR for module in (
-    Basic_Numpy, Basic_Matlab, Basic_Excel, Numpy_Matlab, Numpy_Excel, Matlab_Excel)]
+    Basic_Python, Basic_Matlab, Basic_Excel, Python_Matlab, Python_Excel, Matlab_Excel)]
 """Every pairwise translator."""
 
 

@@ -9,6 +9,11 @@ of dialects has its own, specialized to what the two have in common, and is decl
   `direction` is 'forward' or 'backward'.
 - `Inline(kind, side)` translates a binding of one side, which the other has no counterpart for, by substituting its
   value for its name in its body. The value's translation is shared by every use, so sharing is kept.
+- `Elide(kind, side)` translates an import of one side, which the other has no counterpart for, as its body: what the
+  import brought in must be translated by other rules (a NumPy call, say), or it has no counterpart.
+- `Prelude(pattern, side)` adds an import to what is translated to `side`: `pattern` is the import with its body as
+  its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds, e.g.
+  `import numpy as np` around an expression that uses `np`.
 
 Translating co-traverses: at each node, the first rule whose source pattern matches (the most specific first: the one
 with the most nodes and fixed attributes) is applied by traversing the pattern and the expression in lockstep, binding
@@ -26,7 +31,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from . import Expressions
 
-__all__ = ["Translator", "Pairwise", "Rule", "Inline", "Pattern", "Hole", "holes", "renames"]
+__all__ = ["Translator", "Pairwise", "Rule", "Inline", "Elide", "Prelude", "Pattern", "Hole", "holes", "renames"]
 
 
 @runtime_checkable
@@ -115,6 +120,33 @@ class Inline:
         self.kind, self.side = kind, side
 
 
+class Elide:
+    """Translates the imports of `kind`, on `side` ('left' or 'right'), as their bodies."""
+
+    def __init__(self, kind: str, side: str):
+        if side not in ("left", "right"):
+            raise ValueError(f"side must be 'left' or 'right', got {side!r}")
+        self.kind, self.side = kind, side
+
+
+class Prelude:
+    """Wraps translations to `side` ('left' or 'right') in the import `pattern` when they refer to a name it binds."""
+
+    def __init__(self, pattern: Pattern, side: str):
+        if side not in ("left", "right"):
+            raise ValueError(f"side must be 'left' or 'right', got {side!r}")
+        if len(pattern.arguments) != 1 or not isinstance(pattern.arguments[0], Hole) or any(
+                isinstance(value, Hole) for value in pattern.attributes.values()):
+            raise ValueError(f"a prelude is an import whose one argument is a hole, got {pattern!r}")
+        self.pattern, self.side = pattern, side
+
+
+def _free(expression: Any) -> set[str]:
+    """The names of the lexical references in `expression`."""
+    return {getattr(node, next(iter(type(node).PROPERTIES))) for node in Expressions.walk(expression)
+            if type(node).ROLE == Expressions.REFERENCE and type(node).LEXICAL}
+
+
 def renames(left_kind: str, left_attribute: str, right_kind: str, right_attribute: str, names: Mapping[str, str],
             arity: int) -> list[Rule]:
     """Rules for operators that differ only in name: each `left` name applied to `arity` arguments is the `right`
@@ -130,8 +162,8 @@ def _same_native(a: Any, b: Any) -> bool:
 
 def _describe(dialect: Expressions.Dialect, node: Any) -> str:
     kind = type(node)
-    if kind.ROLE == Expressions.APPLICATION:
-        return f"{dialect.name()} {kind.KIND} {getattr(node, kind.OPERATOR)!r}"
+    if kind.ROLE == Expressions.APPLICATION and kind.OPERATOR is not None:
+        return f"{dialect.name()} {kind.KIND} {Expressions._operator(node)!r}"
     if kind.ROLE == Expressions.LITERAL:
         return f"{dialect.name()} {kind.KIND} {node.value!r}"
     return f"{dialect.name()} {kind.KIND}"
@@ -141,14 +173,21 @@ class _Direction:
     """Translation in one direction: the co-traversal."""
 
     def __init__(self, source: Expressions.Declared, target: Expressions.Declared,
-                 rules: Sequence[tuple[Pattern, Pattern]], inlines: Iterable[str]):
+                 rules: Sequence[tuple[Pattern, Pattern]], inlines: Iterable[str], elides: Iterable[str] = (),
+                 preludes: Sequence[Pattern] = ()):
         self.source, self.target, self.inlines = source, target, frozenset(inlines)
+        self.elides, self.preludes = frozenset(elides), list(preludes)
         self.rules: dict[str, list[tuple[Pattern, Pattern]]] = {}
         for pair in sorted(rules, key=lambda pair: -pair[0].size()):
             self.rules.setdefault(pair[0].kind, []).append(pair)
 
     def __call__(self, expression: Any, trace: list[tuple[Any, Any]] | None) -> Any:
-        return _Run(self, trace).translate(self.source.resolve(expression), {})
+        result = _Run(self, trace).translate(self.source.resolve(expression), {})
+        for pattern in reversed(self.preludes):
+            declared = self.target.make(Expressions.Form(pattern.kind, dict(pattern.attributes), (result,)))
+            if set(declared.binds()) & _free(result):
+                result = declared
+        return result
 
 
 class _Run:
@@ -181,8 +220,13 @@ class _Run:
     def _translate(self, node: Any, environment: dict[str, Any]) -> Any:
         kind = type(node)
         name = getattr(node, next(iter(kind.PROPERTIES)), None) if kind.PROPERTIES else None
-        if kind.ROLE == Expressions.REFERENCE and name in environment:
+        if kind.ROLE == Expressions.REFERENCE and kind.LEXICAL and name in environment:
             return environment[name]
+        if kind.KIND in self.direction.elides:
+            body = node._arguments()[-1]
+            if body is None:
+                raise ValueError(f"{Expressions._article(kind.KIND)} needs a body")
+            return self.translate(body, environment)
         if kind.KIND in self.direction.inlines:
             value, body = node._arguments()
             if value is None or body is None:
@@ -234,16 +278,22 @@ class _Run:
 
 
 class Pairwise:
-    """A `Translator` between `left` and `right`, declared by `rules` (`Rule`s and `Inline`s)."""
+    """A `Translator` between `left` and `right`, declared by `rules` (`Rule`s, `Inline`s, `Elide`s and `Prelude`s)."""
 
-    def __init__(self, left: Expressions.Declared, right: Expressions.Declared, rules: Sequence[Rule | Inline]):
+    def __init__(self, left: Expressions.Declared, right: Expressions.Declared,
+                 rules: Sequence[Rule | Inline | Elide | Prelude]):
         self._left, self._right, self._rules = left, right, list(rules)
         pairs = [rule for rule in rules if isinstance(rule, Rule)]
-        inlines = [rule for rule in rules if isinstance(rule, Inline)]
+
+        def of(kind: type, side: str) -> list[Any]:
+            return [rule for rule in rules if isinstance(rule, kind) and rule.side == side]
+
         self._forward = _Direction(left, right, [(r.left, r.right) for r in pairs if r.direction != "backward"],
-                                   [i.kind for i in inlines if i.side == "left"])
+                                   [i.kind for i in of(Inline, "left")], [e.kind for e in of(Elide, "left")],
+                                   [p.pattern for p in of(Prelude, "right")])
         self._backward = _Direction(right, left, [(r.right, r.left) for r in pairs if r.direction != "forward"],
-                                    [i.kind for i in inlines if i.side == "right"])
+                                    [i.kind for i in of(Inline, "right")], [e.kind for e in of(Elide, "right")],
+                                    [p.pattern for p in of(Prelude, "left")])
 
     def left(self) -> Expressions.Declared:
         return self._left
@@ -259,9 +309,11 @@ class Pairwise:
 
     def inverse(self) -> Pairwise:
         swapped = {"both": "both", "forward": "backward", "backward": "forward"}
-        rules: list[Rule | Inline] = [
+        other = {"left": "right", "right": "left"}
+        rules: list[Rule | Inline | Elide | Prelude] = [
             Rule(r.right, r.left, swapped[r.direction]) if isinstance(r, Rule)
-            else Inline(r.kind, "right" if r.side == "left" else "left") for r in self._rules
+            else Prelude(r.pattern, other[r.side]) if isinstance(r, Prelude)
+            else type(r)(r.kind, other[r.side]) for r in self._rules
         ]
         return Pairwise(self._right, self._left, rules)
 

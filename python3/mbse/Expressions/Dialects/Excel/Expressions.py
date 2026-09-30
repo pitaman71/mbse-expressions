@@ -2,9 +2,11 @@
 
 - `constant`: a number (`int` or `float`), text (`str`) or a logical (`bool`).
 - `name`: the value bound to a name, by `LET` or as a defined name.
+- `cell`: a cell reference: `A1` on the current sheet, `Sheet1!A1`, or `[Book.xlsx]Sheet1!A1` in another workbook.
+  A workbook (see `Evaluators`) resolves it; it need not be bound.
 - `let`: `LET(name, value, body)`.
 - `function`: a worksheet function applied to ordered arguments, for the functions in `Domains.FUNCTIONS` (`AND`,
-  `OR`, `NOT`, `IF`, `ISERROR`).
+  `OR`, `NOT`, `IF`, `ISERROR`); other names are add-in functions, which the workbook provides.
 - `infix`: `left <operator> right`, for `=`, `<>`, `<`, `<=`, `>`, `>=`, `+`, `-` and `*`.
 - `prefix`: `-operand`.
 - `field`: `value.name`, a field of a record (Excel's data types).
@@ -16,6 +18,7 @@ The meta-schemas are registered as 'Expressions.Excel.Of<Kind>'. `render` writes
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -25,8 +28,16 @@ from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "name", "let_", "function", "infix", "prefix", "field",
-           "render"]
+__all__ = ["DIALECT", "Builders", "Schema", "constant", "name", "cell", "let_", "function", "infix", "prefix", "field",
+           "render", "address"]
+
+_ADDRESS = re.compile(r"\$?([A-Za-z]{1,3})\$?([1-9][0-9]*)")
+
+
+def address(text: str) -> str | None:
+    """A cell address without `$` and in upper case, e.g. '$b$2' is 'B2'; None if `text` is not one."""
+    match = _ADDRESS.fullmatch(text)
+    return f"{match[1].upper()}{match[2]}" if match else None
 
 
 @dataclass(eq=False)
@@ -43,6 +54,26 @@ class _Name(F.Node):
     ROLE = F.REFERENCE
     PROPERTIES = {"name": str}
     name: str | None = None
+
+
+@dataclass(eq=False)
+class _Cell(F.Node):
+    KIND = "cell"
+    ROLE = F.REFERENCE
+    LEXICAL = False
+    PROPERTIES = {"address": str, "sheet": str, "book": str}
+    OPTIONAL = frozenset({"sheet", "book"})
+    address: str | None = None
+    sheet: str | None = None
+    book: str | None = None
+
+    def check(self) -> list[str]:
+        problems = []
+        if type(self.address) is str and self.address and address(self.address) is None:
+            problems.append(f"a cell's address must be a column and a row, like A1, got {self.address!r}")
+        if self.book is not None and self.sheet is None:
+            problems.append("a cell in another book needs a sheet")
+        return problems
 
 
 @dataclass(eq=False)
@@ -105,7 +136,7 @@ class _Field(F.Node):
     value: Any = None
 
 
-DIALECT = F.Declared("Excel", (_Constant, _Name, _Let, _Function, _Infix, _Prefix, _Field),
+DIALECT = F.Declared("Excel", (_Constant, _Name, _Cell, _Let, _Function, _Infix, _Prefix, _Field),
                      discriminator=discriminator, domain_of=Domains.of)
 Builders = DIALECT.Builders
 Schema = DIALECT.Schema
@@ -117,6 +148,11 @@ def constant(value: Native) -> _Constant:
 
 def name(name: str) -> _Name:
     return _Name(name)
+
+
+def cell(address: str, sheet: str | None = None, book: str | None = None) -> _Cell:
+    """The cell at `address`, on `sheet` (by default the current one) of `book` (by default this one)."""
+    return _Cell(address, sheet, book)
 
 
 def let_(name: str, value: Any, body: Any) -> _Let:
@@ -160,6 +196,15 @@ def _field_name(name: str) -> str:
     return name if name.isidentifier() else f"[{name}]"
 
 
+def _cell(node: Any) -> str:
+    if node.sheet is None:
+        return node.address
+    prefix = f"[{node.book}]{node.sheet}" if node.book is not None else node.sheet
+    if not re.fullmatch(r"[\w.\[\]]+", prefix):
+        prefix = "'" + prefix.replace("'", "''") + "'"
+    return f"{prefix}!{node.address}"
+
+
 def render(expression: Any) -> str:
     """The expression as a formula, starting with '=' and parenthesized only where precedence requires."""
 
@@ -173,6 +218,8 @@ def render(expression: Any) -> str:
             return text, _PREFIX if text.startswith("-") else _ATOM
         if isinstance(node, _Name):
             return node.name, _ATOM
+        if isinstance(node, _Cell):
+            return _cell(node), _ATOM
         if isinstance(node, _Field):
             return f"{operand(0, _ATOM)}.{_field_name(node.name)}", _ATOM
         if isinstance(node, _Let):

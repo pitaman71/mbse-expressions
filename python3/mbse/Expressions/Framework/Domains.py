@@ -17,7 +17,8 @@ from collections.abc import Callable, Sequence
 from typing import Any, Protocol, runtime_checkable
 
 __all__ = [
-    "Domain", "Signature", "OfTypes", "OfValues", "OfUnion", "Anything", "Function", "Same", "Overloaded", "overlaps",
+    "Domain", "Signature", "OfTypes", "OfValues", "OfUnion", "Anything", "Function", "Same", "Overloaded", "Opaque",
+    "Either", "overlaps",
 ]
 
 
@@ -215,3 +216,36 @@ class Overloaded:
 
     def describe(self) -> str:
         return " | ".join(signature.describe() for signature in self.signatures)
+
+
+class Opaque:
+    """Takes any arguments and gives `result`: the signature of what cannot be known statically, such as a call to a
+    function the scope provides."""
+
+    def __init__(self, result: Domain = Anything):
+        self._result = result
+
+    def arity(self) -> int:
+        return -1  # any number
+
+    def result(self, arguments: Sequence[Domain]) -> Domain | None:
+        return self._result
+
+    def describe(self) -> str:
+        return f"(...) -> {self._result.name()}"
+
+
+class Either:
+    """Takes `arity` arguments of any domains and gives one of them, as Python's `and` and `or` do."""
+
+    def __init__(self, arity: int):
+        self._arity = arity
+
+    def arity(self) -> int:
+        return self._arity
+
+    def result(self, arguments: Sequence[Domain]) -> Domain | None:
+        return _join(arguments) if len(arguments) == self._arity else None
+
+    def describe(self) -> str:
+        return f"({', '.join(['T'] * self._arity)}) -> T"

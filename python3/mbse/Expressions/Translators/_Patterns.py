@@ -3,7 +3,7 @@ pairs two dialects' patterns into rules; the holes are shared, so the patterns o
 
 from __future__ import annotations
 
-from mbse.Expressions.Framework.Translators import Hole, Pattern as P, holes
+from mbse.Expressions.Framework.Translators import Hole, Pattern as P, Rule, holes
 
 A, B, C, X = holes("A", "B", "C", "X")
 N = Hole("N", str)  # a name: of a variable, or of a binding
@@ -24,13 +24,38 @@ class Basic:
     implies = P("operation", A, B, name="implies")
 
 
-class Numpy:
+class Python:
     constant = staticmethod(lambda V: P("constant", value=V))
     name = P("name", name=N)
+    let = P("let", A, B, name=N)
+    get = P("attribute", X, attr=K)
+    has = P("call", P("name", name="hasattr"), X, P("constant", value=K))
+    implies = P("ifexp", A, B, P("constant", value=True))
+    ifexp = P("ifexp", A, B, C)
+
+
+def _numpy(function: str) -> P:
+    """The function `np.<function>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'."""
+    callee = P("name", name="np")
+    for attr in function.split("."):
+        callee = P("attribute", callee, attr=attr)
+    return callee
+
+
+class Numpy:
+    """Python in NumPy style: columns by subscript, missing values masked, operations as numpy functions."""
+
+    call = staticmethod(lambda function, *arguments: P("call", _numpy(function), *arguments))
     get = P("subscript", X, key=K)
-    has = P("call", P("call", P("subscript", X, key=K), function="ma.getmaskarray"), function="logical_not")
-    implies = P("call", A, B, P("constant", value=True), function="where")
-    where = P("call", A, B, C, function="where")
+    has = P("call", _numpy("logical_not"), P("call", _numpy("ma.getmaskarray"), P("subscript", X, key=K)))
+    implies = P("call", _numpy("where"), A, B, P("constant", value=True))
+    prelude = P("import", Hole("B"), module="numpy", alias="np")
+
+    @staticmethod
+    def renames(kind: str, attribute: str, names: dict[str, str], arity: int) -> list[Rule]:
+        """Rules for operators that are numpy functions of the same arguments."""
+        arguments = holes(*(f"A{i}" for i in range(arity)))
+        return [Rule(P(kind, *arguments, **{attribute: a}), Numpy.call(b, *arguments)) for a, b in names.items()]
 
 
 class Matlab:

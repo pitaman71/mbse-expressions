@@ -9,6 +9,11 @@ that write their properties through `accept`). Values are Python `float` (double
   with a number compares the string with the number's text, as MATLAB converts it. `+` with a string concatenates.
 - There is no unknown: reading a field a struct does not have raises, as `isfield` exists to avoid. Unbound
   variables raise too, with MATLAB's messages.
+
+A `Scope(variables, functions, packages)` resolves variables from `variables` and functions as MATLAB does: the
+built-ins (`isfield`), then those an enclosing `import` brought in, then `functions` (the path), then qualified names
+(`pkg.fn`) from `packages`, which maps each package's name to its functions. `import pkg.fn` and `import pkg.*` import
+from `packages`, and nothing else: functions are Python callables the caller provides.
 """
 
 from __future__ import annotations
@@ -21,7 +26,7 @@ from mbse.Schemas.Framework import Validators
 
 from . import Domains, Expressions
 
-__all__ = ["OfAny"]
+__all__ = ["OfAny", "Scope"]
 
 
 def _double(value: Any) -> float | None:
@@ -49,7 +54,7 @@ def _logical(operator: str, value: Any) -> bool:
 
 
 def _compare(test: Callable[[Any, Any], bool]) -> F.Implementation:
-    def apply(arguments: list[F.Thunk], node: Any) -> bool:
+    def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> bool:
         a, b = (argument() for argument in arguments)
         x, y = _double(a), _double(b)
         if x is not None and y is not None:
@@ -60,7 +65,7 @@ def _compare(test: Callable[[Any, Any], bool]) -> F.Implementation:
 
 
 def _short_circuit(operator: str) -> F.Implementation:
-    def apply(arguments: list[F.Thunk], node: Any) -> bool:
+    def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> bool:
         first = _logical(operator, arguments[0]())
         if first == (operator == "||"):
             return first
@@ -70,7 +75,7 @@ def _short_circuit(operator: str) -> F.Implementation:
 
 
 def _arithmetic(operator: str, apply_: Callable[[float, float], float]) -> F.Implementation:
-    def apply(arguments: list[F.Thunk], node: Any) -> Any:
+    def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
         a, b = (argument() for argument in arguments)
         x, y = _double(a), _double(b)
         if x is not None and y is not None:
@@ -87,11 +92,11 @@ def _class(value: Any) -> str:
     return {bool: "logical", int: "double", float: "double", str: "string"}.get(type(value), "struct")
 
 
-def _not(arguments: list[F.Thunk], node: Any) -> bool:
+def _not(arguments: list[F.Thunk], node: Any, scope: Any) -> bool:
     return not _logical("~", arguments[0]())
 
 
-def _negate(arguments: list[F.Thunk], node: Any) -> float:
+def _negate(arguments: list[F.Thunk], node: Any, scope: Any) -> float:
     value = arguments[0]()
     number = _double(value)
     if number is None:
@@ -107,7 +112,7 @@ def _fields(value: Any) -> Mapping[str, Any]:
     return Validators.properties_of(value)
 
 
-def _field(arguments: list[F.Thunk], node: Any) -> Any:
+def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     fields = _fields(arguments[0]())
     if node.name not in fields:
         raise KeyError(f'Unrecognized field name "{node.name}".')
@@ -115,13 +120,57 @@ def _field(arguments: list[F.Thunk], node: Any) -> Any:
     return float(value) if type(value) is int else value
 
 
-def _isfield(arguments: list[F.Thunk], node: Any) -> bool:
+def _isfield(arguments: list[F.Thunk], node: Any, scope: Any) -> bool:
     value, name = (argument() for argument in arguments)
     return Domains.is_struct(value) and type(name) is str and name in _fields(value)
 
 
-def _unbound(kind: str, name: str) -> Any:
-    raise NameError(f"Unrecognized function or variable '{name}'.")
+def _unrecognized(name: str) -> NameError:
+    return NameError(f"Unrecognized function or variable '{name}'.")
+
+
+class Scope(F.Variables):
+    """MATLAB's scope for an expression: `variables`, the `functions` on the path, and the `packages` that qualified
+    names and imports find functions in."""
+
+    def __init__(self, variables: Mapping[str, Any] | None = None,
+                 functions: Mapping[str, Callable[..., Any]] | None = None,
+                 packages: Mapping[str, Mapping[str, Callable[..., Any]]] | None = None):
+        super().__init__(variables)
+        self.functions, self.packages = dict(functions or {}), {k: dict(v) for k, v in (packages or {}).items()}
+        self.imported: dict[str, Callable[..., Any]] = {}
+
+    def unbound(self, reference: Any) -> Any:
+        raise _unrecognized(reference.name)
+
+    def enter(self, declaration: Any) -> Scope:
+        package, _, name = declaration.name.rpartition(".")
+        functions = self.packages.get(package, {})
+        if name == "*" and package in self.packages:
+            found = functions
+        elif name in functions:
+            found = {name: functions[name]}
+        else:
+            raise ImportError(f"Import argument '{declaration.name}' cannot be found or cannot be imported.")
+        inner = self._copy()
+        inner.imported = {**self.imported, **found}
+        return inner
+
+    def function(self, name: str) -> Callable[..., Any]:
+        """The function `name` resolves to."""
+        for functions in (self.imported, self.functions):
+            if name in functions:
+                return functions[name]
+        package, _, short = name.rpartition(".")
+        if short in self.packages.get(package, {}):
+            return self.packages[package][short]
+        raise _unrecognized(name)
+
+
+def _extension(name: str, arguments: list[F.Thunk], node: Any, scope: Scope) -> Any:
+    function = scope.function(name)
+    value = function(*(argument() for argument in arguments))
+    return float(value) if type(value) is int else value
 
 
 _interpreter = F.Interpreter(Expressions.DIALECT, {
@@ -136,9 +185,9 @@ _interpreter = F.Interpreter(Expressions.DIALECT, {
     "unary": {"~": _not, "-": _negate},
     "call": {"isfield": _isfield},
     "field": _field,
-}, literal=lambda value: float(value) if type(value) is int else value, unbound=_unbound)
+}, literal=lambda value: float(value) if type(value) is int else value, scope=Scope, extension=_extension)
 
 
-def OfAny(expression: Any, scope: Mapping[str, Any] | None = None) -> Any:
-    """The value of an expression, with the variables in `scope` bound."""
+def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
+    """The value of an expression in `scope`, or with the variables in a mapping bound."""
     return _interpreter(Expressions.DIALECT.resolve(expression), scope)

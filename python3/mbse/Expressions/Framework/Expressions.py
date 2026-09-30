@@ -17,14 +17,20 @@ A dialect declares each kind as a dataclass derived from `Node`, whose class var
 data model and what `role` it plays, and passes the classes to `Declared`, which derives the rest. The roles are:
 
 - `LITERAL`: a native value, in the field `value`, written to the property named after its type (`int`, `str`, ...).
-- `REFERENCE`: the value bound to the name in its first property.
-- `APPLICATION`: an operator, named by the property `OPERATOR`, applied to arguments. A kind's `VOCABULARY` maps
-  operator names to signatures; operators outside it are extensions, unless the vocabulary is `None`, when any name
-  is accepted and `SIGNATURE` applies to all.
+- `REFERENCE`: a value the scope resolves. A lexical reference (`LEXICAL`, the default) is the value bound to the name
+  in its first property, by an enclosing binding or import or by the scope; others, such as Excel's cell references,
+  are resolved by the scope alone, and validation does not require them to be bound. `AMBIENT` names are bound
+  without being declared, as Python's builtins are.
+- `APPLICATION`: an operator, named by the property `OPERATOR` (or, if it is None, by the kind's tag), applied to
+  arguments. A kind's `VOCABULARY` maps operator names to signatures; operators outside it are extensions, unless the
+  vocabulary is `None`, when any name is accepted and `SIGNATURE` applies to all.
 - `BINDING`: binds the name in its first property to its first argument within the others.
+- `IMPORT`: makes what it declares (a module, a package's functions) available within its one argument, its body. The
+  scope resolves the declaration; `binds()` gives the names it binds for lexical references.
 
-Arguments are fields too: `SLOTS` names fields holding one argument each, in index order, and `VARIADIC` names one
-field holding a tuple of them. Both are written as entries of the adjacency `arguments`, to the relation `Arguments`
+Properties are required unless named in `OPTIONAL`, and `check()` adds a kind's own problems to validation. Arguments
+are fields too: `SLOTS` names fields holding one argument each, in index order, and `VARIADIC` names one field holding a
+tuple of the arguments after the slots. Both are written as entries of the adjacency `arguments`, to the relation `Arguments`
 (registered as 'Expressions.Arguments' and shared by every dialect), which links a `parent` to an `argument` with an
 `index`. Every kind also declares `used_by`, the same relation seen from the argument, which data never writes.
 """
@@ -43,11 +49,11 @@ from . import Domains
 
 __all__ = [
     "Form", "Expression", "Dialect", "Node", "Builder", "AnyBuilder", "Term", "Registry", "Declared",
-    "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "ARGUMENTS", "Arguments", "NATIVES",
+    "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "ARGUMENTS", "Arguments", "NATIVES",
     "walk", "fold", "same", "resolve",
 ]
 
-LITERAL, REFERENCE, APPLICATION, BINDING = "literal", "reference", "application", "binding"
+LITERAL, REFERENCE, APPLICATION, BINDING, IMPORT = "literal", "reference", "application", "binding", "import"
 ARGUMENTS = "Expressions.Arguments"
 NATIVES: dict[str, type[Native]] = {"int": int, "float": float, "str": str, "bool": bool, "bytes": bytes}
 
@@ -144,6 +150,9 @@ class Node:
     ROLE: ClassVar[str]
     VALUE: ClassVar[Mapping[str, type] | None] = None
     PROPERTIES: ClassVar[Mapping[str, type]] = {}
+    OPTIONAL: ClassVar[frozenset[str]] = frozenset()
+    LEXICAL: ClassVar[bool] = True
+    AMBIENT: ClassVar[frozenset[str]] = frozenset()
     SLOTS: ClassVar[tuple[str, ...]] = ()
     VARIADIC: ClassVar[str | None] = None
     OPERATOR: ClassVar[str | None] = None
@@ -173,9 +182,16 @@ class Node:
                 _write_argument(visitor, index, argument)
 
     def _arguments(self) -> tuple[Any, ...]:
-        if self.VARIADIC is not None:
-            return tuple(getattr(self, self.VARIADIC))
-        return tuple(getattr(self, slot) for slot in self.SLOTS)
+        fixed = tuple(getattr(self, slot) for slot in self.SLOTS)
+        return fixed + tuple(getattr(self, self.VARIADIC)) if self.VARIADIC is not None else fixed
+
+    def binds(self) -> tuple[str, ...]:
+        """The names an import binds within its body, for lexical references; none by default."""
+        return ()
+
+    def check(self) -> list[str]:
+        """The kind's own problems, beyond those of its role; none by default."""
+        return []
 
     def form(self) -> Form:
         attributes = {"value": self.value} if self.VALUE is not None and self.value is not None else {}  # type: ignore
@@ -186,6 +202,12 @@ class Node:
         """Problems with this expression. References must be bound by an enclosing binding or be in `bound`. With
         `core`, every operator must be in its kind's vocabulary."""
         return self.DIALECT.validate(self, bound, core)
+
+
+def _operator(node: Any) -> str:
+    """The name of an application's operator: its `OPERATOR` property, or its kind's tag."""
+    kind = type(node)
+    return kind.KIND if kind.OPERATOR is None else getattr(node, kind.OPERATOR)
 
 
 def _check_value(kind: type[Node], value: Any) -> str:
@@ -390,8 +412,10 @@ class Builder:
     def arguments(self, *specs: Any) -> Any:
         if self._data.VARIADIC is None:
             raise TypeError(f"{_article(self._data.KIND)} has no variadic arguments")
+        slots = len(self._data.SLOTS)
         for spec in specs:
-            self._arguments.append(_Argument("parent", self._data.DIALECT.resolve(spec), len(self._arguments)))
+            index = slots + sum(1 for entry in self._arguments if entry.index is None or entry.index >= slots)
+            self._arguments.append(_Argument("parent", self._data.DIALECT.resolve(spec), index))
         return self
 
     def argument(self, slot: str, spec: Any) -> Any:
@@ -434,17 +458,20 @@ class Builder:
         fields: dict[str, Any] = dict(self._values)
         if kind.VALUE is not None:
             fields["value"] = self._value
-        if kind.VARIADIC is not None:
-            last = len(self._arguments)
-            ordered = sorted(self._arguments, key=lambda entry: last if entry.index is None else entry.index)
-            fields[kind.VARIADIC] = tuple(self._check_target(entry) for entry in ordered)
-        else:
-            parts: list[Any] = [None] * len(kind.SLOTS)
-            for entry in self._arguments:
-                if entry.index not in range(len(kind.SLOTS)):
-                    raise ValueError(_slots_message(kind, entry.index))
+        parts: list[Any] = [None] * len(kind.SLOTS)
+        rest: list[_Argument] = []
+        for entry in self._arguments:
+            if entry.index in range(len(kind.SLOTS)):
                 parts[entry.index] = self._check_target(entry)
-            fields.update(zip(kind.SLOTS, parts))
+            elif kind.VARIADIC is not None:
+                rest.append(entry)
+            else:
+                raise ValueError(_slots_message(kind, entry.index))
+        fields.update(zip(kind.SLOTS, parts))
+        if kind.VARIADIC is not None:
+            last = len(self._arguments) + len(kind.SLOTS)
+            ordered = sorted(rest, key=lambda entry: last if entry.index is None else entry.index)
+            fields[kind.VARIADIC] = tuple(self._check_target(entry) for entry in ordered)
         return kind(**fields)
 
     # Visitors.OfObject
@@ -686,12 +713,14 @@ class Declared:
             if name not in allowed:
                 raise ValueError(f"{_article(kind.KIND)} has no attribute {name!r}")
         fields: dict[str, Any] = {name: form.attributes.get(name) for name in allowed}
+        slots = len(kind.SLOTS)
+        if kind.VARIADIC is None and len(form.arguments) != slots:
+            raise ValueError(f"{_article(kind.KIND)} takes {slots} arguments, got {len(form.arguments)}")
+        if len(form.arguments) < slots:
+            raise ValueError(f"{_article(kind.KIND)} takes at least {slots} arguments, got {len(form.arguments)}")
+        fields.update(zip(kind.SLOTS, form.arguments))
         if kind.VARIADIC is not None:
-            fields[kind.VARIADIC] = tuple(form.arguments)
-        elif len(form.arguments) != len(kind.SLOTS):
-            raise ValueError(f"{_article(kind.KIND)} takes {len(kind.SLOTS)} arguments, got {len(form.arguments)}")
-        else:
-            fields.update(zip(kind.SLOTS, form.arguments))
+            fields[kind.VARIADIC] = tuple(form.arguments[slots:])
         return kind(**fields)
 
     def literal(self, value: Native) -> Any:
@@ -729,10 +758,12 @@ class Declared:
                 return [str(error)]
             return []
         problems = [p for name, native in kind.PROPERTIES.items()
+                    if not (name in kind.OPTIONAL and getattr(expression, name) is None)
                     for p in _property_problems(what, name, native, getattr(expression, name))]
+        problems += expression.check()
         name = getattr(expression, next(iter(kind.PROPERTIES)), None) if kind.PROPERTIES else None
         if kind.ROLE == REFERENCE:
-            if not problems and name not in bound:
+            if kind.LEXICAL and not problems and name not in bound and name not in kind.AMBIENT:
                 problems.append(f"{kind.KIND} {name!r} is not bound")
             return problems
         if id(expression) in active:
@@ -743,16 +774,18 @@ class Declared:
         if kind.ROLE == BINDING:
             inner = bound | {name} if not problems else bound
             scopes = [bound, *[inner] * (len(arguments) - 1)]
+        elif kind.ROLE == IMPORT:
+            scopes = [bound | set(expression.binds()) if not problems else bound] * len(arguments)
         elif not problems and kind.VOCABULARY is not None:
-            operator, vocabulary = getattr(expression, kind.OPERATOR), kind.VOCABULARY  # type: ignore[arg-type]
+            operator, vocabulary = _operator(expression), kind.VOCABULARY
             if operator in vocabulary and vocabulary[operator].arity() != len(arguments):
                 problems.append(f"{operator} takes {vocabulary[operator].arity()} arguments, got {len(arguments)}")
             elif core and operator not in vocabulary:
                 problems.append(f"{operator!r} is not a core operation")
         for i, (argument, scope) in enumerate(zip(arguments, scopes)):
-            label = f"argument {i}" if kind.VARIADIC is not None else kind.SLOTS[i]
+            label = kind.SLOTS[i] if i < len(kind.SLOTS) else f"argument {i - len(kind.SLOTS)}"
             if argument is None:
-                problems.append(f"{what} needs a {label}")
+                problems.append(f"{what} needs {_article(label)}")
             else:
                 problems += [f"{label}: {problem}" for problem in self._problems(argument, scope, core, active)]
         active.discard(id(expression))
@@ -779,14 +812,18 @@ class Declared:
         if kind.ROLE == LITERAL:
             return self._domain_of(expression.value)
         if kind.ROLE == REFERENCE:
-            return environment[getattr(expression, next(iter(kind.PROPERTIES)))]
+            name = getattr(expression, next(iter(kind.PROPERTIES)))
+            return environment[name] if kind.LEXICAL and name in environment else Domains.Anything
         arguments = expression._arguments()
+        if kind.ROLE == IMPORT:
+            inner = {**environment, **{name: Domains.Anything for name in expression.binds()}}
+            return self._infer(arguments[-1], inner, memo)
         if kind.ROLE == BINDING:
             value = self._infer(arguments[0], environment, memo)
             inner = {**environment, getattr(expression, next(iter(kind.PROPERTIES))): value}
             return self._infer(arguments[-1], inner, memo)
         domains = [self._infer(argument, environment, memo) for argument in arguments]
-        operator = getattr(expression, kind.OPERATOR)  # type: ignore[arg-type]
+        operator = _operator(expression)
         signature = kind.SIGNATURE if kind.VOCABULARY is None else kind.VOCABULARY.get(operator)
         if signature is None:
             return Domains.Anything  # an extension: nothing is known about it
@@ -799,7 +836,7 @@ class Declared:
 
 def _property_problems(what: str, name: str, native: type, value: Any) -> list[str]:
     if value is None or value == "":
-        return [f"{what} needs a {name}"]
+        return [f"{what} needs {_article(name)}"]
     if type(value) is not native:
         return [f"{what}'s {name} must be a {native.__name__}, got {_type_name(value)}"]
     return []

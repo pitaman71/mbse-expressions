@@ -7,6 +7,9 @@
 - `unary`: `<operator> operand`, for `~` and `-`.
 - `call`: a function applied to ordered arguments, for the functions in `Domains.CALLS` (`isfield`).
 - `field`: `value.name`, a field of a struct.
+- `import`: `import pkg.fn` or `import pkg.*`, which make a package's functions callable by their short names within
+  its body, the rest of the expression; `render` writes it as a line before it. Functions are also found on the path
+  and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that evaluates them (see `Evaluators`).
 
 There is no binding: translators substitute a let's value for its name. The meta-schemas are registered as
 'Expressions.Matlab.Of<Kind>'. `render` writes an expression as MATLAB source, e.g. `this.age >= 18 && isfield(this,
@@ -25,7 +28,8 @@ from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "binary", "unary", "call", "field", "render"]
+__all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "binary", "unary", "call", "field", "import_",
+           "render"]
 
 
 @dataclass(eq=False)
@@ -93,7 +97,29 @@ class _Field(F.Node):
     value: Any = None
 
 
-DIALECT = F.Declared("Matlab", (_Constant, _Identifier, _Binary, _Unary, _Call, _Field),
+def _qualified(name: str, wildcard: bool = False) -> bool:
+    parts = name.split(".")
+    if wildcard and len(parts) > 1 and parts[-1] == "*":
+        parts = parts[:-1]
+    return all(part.isidentifier() for part in parts)
+
+
+@dataclass(eq=False)
+class _Import(F.Node):
+    KIND = "import"
+    ROLE = F.IMPORT
+    PROPERTIES = {"name": str}
+    SLOTS = ("body",)
+    name: str | None = None
+    body: Any = None
+
+    def check(self) -> list[str]:
+        if type(self.name) is not str or "." in self.name and _qualified(self.name, wildcard=True):
+            return []
+        return [f"an import's name must be pkg.name or pkg.*, got {self.name!r}"]
+
+
+DIALECT = F.Declared("Matlab", (_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Import),
                      discriminator=discriminator, domain_of=Domains.of)
 Builders = DIALECT.Builders
 Schema = DIALECT.Schema
@@ -125,6 +151,11 @@ def field(value: Any, name: str) -> _Field:
     return _Field(name, DIALECT.resolve(value))
 
 
+def import_(name: str, body: Any) -> _Import:
+    """`import name`, then `body`."""
+    return _Import(name, DIALECT.resolve(body))
+
+
 # MATLAB's precedence, from loosest to tightest; unary operators bind tighter than all of these but `.`.
 _PRECEDENCE = {"||": 1, "&&": 2, "==": 3, "~=": 3, "<": 3, "<=": 3, ">": 3, ">=": 3, "+": 4, "-": 4, ".*": 5}
 _UNARY, _ATOM = 6, 7
@@ -141,7 +172,12 @@ def _constant(value: Native) -> str:
 
 
 def render(expression: Any) -> str:
-    """The expression as MATLAB source, parenthesized only where precedence requires."""
+    """The expression as MATLAB source, parenthesized only where precedence requires: one line per import around it,
+    then the expression."""
+    lines = []
+    while isinstance(expression, _Import):
+        lines.append(f"import {expression.name}")
+        expression = expression.body
 
     def write(node: Any, arguments: list[tuple[str, int]]) -> tuple[str, int]:
         def operand(index: int, level: int) -> str:
@@ -157,9 +193,11 @@ def render(expression: Any) -> str:
             return f"{operand(0, _ATOM)}.{node.name}", _ATOM
         if isinstance(node, _Call):
             return f"{node.function}({', '.join(text for text, _ in arguments)})", _ATOM
+        if isinstance(node, _Import):
+            raise ValueError("an import can only enclose the whole expression")
         if isinstance(node, _Unary):
             return f"{node.operator}{operand(0, _UNARY)}", _UNARY
         level = _PRECEDENCE[node.operator]
         return f"{operand(0, level)} {node.operator} {operand(1, level + 1)}", level
 
-    return F.fold(expression, write)[0]
+    return "\n".join([*lines, F.fold(expression, write)[0]])
