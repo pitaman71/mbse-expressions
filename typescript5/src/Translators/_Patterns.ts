@@ -71,3 +71,13 @@ export const Excel = {
   implies: new P("function", { name: "IF" }, A, B, new P("constant", { value: true })),
   if_: new P("function", { name: "IF" }, A, B, C),
 };
+
+export const Latex = {
+  constant: (V: Hole) => new P("constant", { value: V }),
+  symbol: new P("symbol", { name: N }),
+  where: new P("where", { name: N }, A, B),
+  get: new P("member", { name: K }, X),
+  has: new P("function", { name: "has" }, X, new P("constant", { value: K })),
+  implies: new P("binary", { operator: "\\implies" }, A, B),
+  frac: new P("frac", {}, A, B),
+};

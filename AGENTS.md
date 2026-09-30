@@ -4,7 +4,7 @@ mbse-expressions formalizes the rules of interfaces and models (predicates, cons
 language-independent data: expressions with schemas, built on
 [mbse-schemas](https://github.com/pitaman71/mbse-schemas). An expression can be stored, validated, evaluated, and
 translated between expression languages (dialects): Basic, the core vocabulary in which mbse-schemas' union predicates
-are written, and Python, Matlab and Excel. Two equivalent implementations exist: `python3/` and `typescript5/`.
+are written, and Python, Matlab, Excel and Latex. Two equivalent implementations exist: `python3/` and `typescript5/`.
 
 ## Start here
 

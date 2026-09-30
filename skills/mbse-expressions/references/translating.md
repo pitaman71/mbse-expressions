@@ -21,10 +21,11 @@ back = Translators.between(X.DIALECT, E.DIALECT).forward(formula)
 
 | Source | Target | What changes |
 |---|---|---|
-| a let (Basic, Python, Excel) | Matlab, which has no let | its value is substituted for its name, shared by every use; it comes back without the let |
+| a let (Basic, Python, Excel, Latex `where`) | Matlab, which has no let | its value is substituted for its name, shared by every use; it comes back without the let |
 | `implies(a, b)` | Matlab | written `~a \|\| b`, which reads back as `or(not(a), b)` |
 | an import (Python, Matlab) | a dialect that cannot declare it | dropped; what it brought in must translate by other rules |
-| bytes | Matlab, Excel | no counterpart |
+| bytes | Matlab, Excel, Latex | no counterpart |
+| a Latex `\frac` | any dialect but Python, where it is `/` | no counterpart |
 | an Excel cell, a Python conditional other than `b if a else True`, an extension | a dialect without it | no counterpart |
 
 A node with no counterpart raises `ValueError` naming it: "Excel cell has no Matlab counterpart". Translating directly

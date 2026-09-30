@@ -1,6 +1,6 @@
 ---
 name: mbse-expressions
-description: Write rules, predicates and constraints once, as language-neutral data (expressions), then validate, evaluate, store (JSON/YAML), and translate them to and from Python, MATLAB and Excel, in Python or TypeScript. Use when formalizing the constraints and derived values of an interface or model (MBSE/SysML constraints, interface control documents, business rules, union discriminators for mbse-schemas), when one rule must mean the same thing in several languages or tools, when generating Excel formulas, MATLAB or Python from a rule, or when writing code that imports mbse.Expressions or @mbse/expressions.
+description: Write rules, predicates and constraints once, as language-neutral data (expressions), then validate, evaluate, store (JSON/YAML), and translate them to and from Python, MATLAB, Excel and LaTeX, in Python or TypeScript. Use when formalizing the constraints and derived values of an interface or model (MBSE/SysML constraints, interface control documents, business rules, union discriminators for mbse-schemas), when one rule must mean the same thing in several languages or tools, when generating Excel formulas, MATLAB or Python from a rule, or when writing code that imports mbse.Expressions or @mbse/expressions.
 ---
 
 # mbse-expressions
@@ -15,12 +15,13 @@ languages, called dialects:
   evaluates it, and mbse-schemas' union predicates are written in it.
 - **Python**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules.
+- **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.
 
 ## When to use it
 
 - A rule belongs to an interface or model, and several programs, languages or tools must apply it identically.
 - The rule must be stored, versioned, diffed or sent as data, then analyzed or rewritten, not just run.
-- One rule must become an Excel formula, MATLAB code or Python code, or be read back from them.
+- One rule must become an Excel formula, MATLAB code, Python code or LaTeX notation, or be read back from them.
 - You are choosing branches of an mbse-schemas union, or checking its values with `Validators.Validate`.
 
 It is a poor fit for logic that is simply part of one program; write that in the program's own language.

@@ -13,6 +13,7 @@ and `Framework.Symbolics.free(expression)` tells which names it needs from its s
 | **Python** | Python source, to run the rule in Python or read one from Python code; NumPy style evaluates over columns |
 | **Matlab** | MATLAB source, for rules that live in MATLAB code or Simulink models |
 | **Excel** | worksheet formulas, for rules that live in spreadsheets, over cells and records |
+| **Latex** | notation, for rules in documents and specifications; it has no evaluator: translate to evaluate |
 
 Write a rule in Basic, and translate it where it must run; read one written elsewhere back into Basic to analyze it.
 
@@ -31,6 +32,10 @@ M.import_("pkg.*", body); M.render(e)                    # s.age >= 18 && isfiel
 from mbse.Expressions.Dialects.Excel import Expressions as X
 X.let_("a", X.field(X.name("r"), "age"), X.function("AND", X.infix(">=", X.name("a"), 18), X.cell("B2", "Sheet1")))
 X.render(e)                                              # =LET(a, r.age, AND(a >= 18, Sheet1!B2))
+
+from mbse.Expressions.Dialects.Latex import Expressions as L
+L.where("a", L.member(L.symbol("r"), "age"), L.binary("\\geq", L.symbol("a"), L.frac(36, 2)))
+L.render(e)                                              # a \geq \frac{36}{2} \quad \text{where } a = r.\mathit{age}
 ```
 
 ## Each evaluates by its language's rules
@@ -41,6 +46,7 @@ X.render(e)                                              # =LET(a, r.age, AND(a 
 | Python | `AttributeError` | `True` | `and`/`or` give an operand | NumPy style: vectorized, missing values masked |
 | Matlab | error (`isfield` tests first) | true | two-valued, short-circuit | numbers are doubles; `+` concatenates strings |
 | Excel | `#FIELD!` | TRUE | `AND`/`OR` evaluate every argument | errors are values that propagate; text compares ignoring case |
+| Latex | no evaluator | | | translate to a dialect that evaluates |
 
 ## Scopes: names, imports and references
 

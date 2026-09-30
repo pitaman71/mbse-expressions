@@ -74,3 +74,13 @@ class Excel:
     has = P("function", P("function", P("field", X, name=K), name="ISERROR"), name="NOT")
     implies = P("function", A, B, P("constant", value=True), name="IF")
     if_ = P("function", A, B, C, name="IF")
+
+
+class Latex:
+    constant = staticmethod(lambda V: P("constant", value=V))
+    symbol = P("symbol", name=N)
+    where = P("where", A, B, name=N)
+    get = P("member", X, name=K)
+    has = P("function", X, P("constant", value=K), name="has")
+    implies = P("binary", A, B, operator="\\implies")
+    frac = P("frac", A, B)

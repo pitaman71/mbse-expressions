@@ -10,6 +10,7 @@ snapshot, indent 2) and `<case>.yaml`.
 | `python` | a Python expression with every kind, imports included, and shared names |
 | `matlab` | a MATLAB expression with every kind, an import included, and shared identifiers |
 | `excel` | an Excel formula with every kind, cells in other sheets and books included, and shared names |
+| `latex` | a LaTeX formula with every kind, a `where` included, and shared symbols |
 
 Each case is rebuilt with its own dialect's builders.
 

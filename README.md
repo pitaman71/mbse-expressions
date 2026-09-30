@@ -76,7 +76,7 @@ skills/                   the agent skill (SKILL.md plus per-task references); s
 
 Expressions come in dialects that implement one framework: each is serializable, traversable, validatable and
 evaluatable, and pairwise translators convert between them. Basic, above, is the core vocabulary. Python (with NumPy
-as a module it imports), Matlab and Excel model those languages' expressions, render as their source, resolve names,
+as a module it imports), Matlab, Excel and Latex (notation, without evaluation) model those languages' expressions, render as their source, resolve names,
 imports and cell references as those languages do, and evaluate by their rules:
 
 ```python
@@ -90,7 +90,7 @@ Excel.render(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email)))'
 ## Status
 
 Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Basic,
-Python, Matlab and Excel dialects, and translators between every pair; in the Basic dialect, literals, operations, variables and lets, with builders and meta-schemas; terms (and, in
+Python, Matlab, Excel and Latex dialects, and translators between every pair; in the Basic dialect, literals, operations, variables and lets, with builders and meta-schemas; terms (and, in
 Python, `Expressions.from_`); `validate()`; evaluation of the core operations with three-valued logic. Not built yet:
 the collection operations (`count`, `in`, `all`, `any`), and the evaluator interface through which mbse-schemas will
 choose union branches and check constraints.

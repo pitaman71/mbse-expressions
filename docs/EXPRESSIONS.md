@@ -8,7 +8,7 @@ framework; this document covers expressions only.
 Expressions come in dialects: expression languages that implement one framework, so that each is serializable,
 structurally traversable, validatable, evaluatable, and translatable into the others. The Basic dialect is the core
 vocabulary below, in which mbse-schemas' union predicates are written; `from mbse.Expressions import Expressions,
-Evaluators` imports it. The Python, Matlab and Excel dialects model those languages' expressions (see
+Evaluators` imports it. The Python, Matlab, Excel and Latex dialects model those languages' expressions (see
 [Dialects](#dialects)); the framework is described under [The framework](#the-framework), and translation under
 [Translators](#translators). Both implementations have all of them (see [`EQUIVALENCE.md`](EQUIVALENCE.md)).
 
@@ -16,7 +16,7 @@ Evaluators` imports it. The Python, Matlab and Excel dialects model those langua
 python3/mbse/Expressions/, typescript5/src/
   Framework/     Expressions, Domains, Evaluators, Translators (and, in TypeScript, Errors): the protocols, and the
                  machinery that implements them
-  Dialects/      Basic, Python, Matlab, Excel: each with Expressions, Domains and Evaluators
+  Dialects/      Basic, Python, Matlab, Excel, Latex: each with Expressions and Domains, and all but Latex Evaluators
   Translators/   one module per pair of dialects, e.g. Basic_Excel
 ```
 
@@ -171,10 +171,12 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 | Python | `constant`, `name`, `attribute`, `subscript`, `call`, `compare`, `boolop`, `binop`, `unaryop`, `ifexp`, `let` (`(lambda a: body)(value)`), `import`, `importfrom`: Python's `ast` | Python's | Python's: `and`/`or` give an operand, `1 == 1.0`, `True + 1` is 2; absent attributes raise |
 | Matlab | `constant`, `identifier`, `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (`isfield`, and functions of the scope), `field` (`s.age`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; absent fields raise |
 | Excel | `constant`, `name`, `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`), `function` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`) | number, text, logical, error, record | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case |
+| Latex | `constant` (numbers, `\text{...}`, `\mathrm{true}`), `symbol` (`a`, `\mathit{age}`), `binary` (`=`, `\neq`, `<` ... `\land`, `\lor`, `\implies`, `+`, `-`, `\cdot`), `unary` (`\lnot`, `-`), `frac`, `member` (`x.\mathit{age}`), `function` (`\operatorname{has}`), `where` | number, text, truth | none: notation is written, rendered, checked and translated, and evaluated in the dialects it is translated to |
 
-Python, Matlab and Excel each have `render(expression)`, their source text (`hasattr(this, 'email') if this.age >= 18
-else True`, `this.age >= 18 && isfield(this, "email")`, `=AND(this.age >= 18, NOT(ISERROR(this.email)))`), with
-imports as the lines before the expression, and constructors for their kinds (`Excel.Expressions.function('AND', a,
+Python, Matlab, Excel and Latex each have `render(expression)`, their source text (`hasattr(this, 'email') if
+this.age >= 18 else True`, `this.age >= 18 && isfield(this, "email")`, `=AND(this.age >= 18, NOT(ISERROR(this.email)))`,
+`\mathit{this}.\mathit{age} \geq 18 \land \operatorname{has}(\mathit{this}, \text{email})`), with imports as the
+lines before the expression, and constructors for their kinds (`Excel.Expressions.function('AND', a,
 b)`, ...). In Python, the Python dialect also has `parse(source)`: imports, then one expression. The Matlab and Excel
 evaluators are models of those languages' rules for scalars, not calls into MATLAB or Excel, and so is the TypeScript
 implementation's evaluator of Python expressions.

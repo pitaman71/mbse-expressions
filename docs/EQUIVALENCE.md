@@ -3,8 +3,8 @@
 `python3/` and `typescript5/` implement the same package, and follow mbse-schemas' rules for equivalence
 ([`EQUIVALENCE.md`](../submodules/mbse-schemas/docs/EQUIVALENCE.md)): the same API and messages, byte-identical JSON,
 interchangeable data, the same test cases under the same IDs, and full coverage in both. This document covers what is
-specific to this package: the framework, the Basic, Python, Matlab and Excel dialects, and the translators between
-them.
+specific to this package: the framework, the Basic, Python, Matlab, Excel and Latex dialects, and the translators
+between them.
 
 ## How it is checked
 

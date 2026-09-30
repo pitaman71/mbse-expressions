@@ -10,14 +10,15 @@ from __future__ import annotations
 
 from mbse.Expressions import Expressions
 from mbse.Expressions.Dialects.Excel import Expressions as Excel
+from mbse.Expressions.Dialects.Latex import Expressions as Latex
 from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
 from mbse.Expressions.Dialects.Python import Expressions as Python
 
-CASES = ["expression", "python", "matlab", "excel"]
+CASES = ["expression", "python", "matlab", "excel", "latex"]
 
 
 def build():
-    E, P, M, X = Expressions, Python, Matlab, Excel
+    E, P, M, X, L = Expressions, Python, Matlab, Excel, Latex
 
     # --- expression: every kind and literal type, shared sub-expressions, each operation once ---
     this, age = E.variable("this"), E.variable("age")
@@ -46,9 +47,16 @@ def build():
         X.infix("-", X.infix("*", a, 2), X.cell("B2", "Sheet1")),
         X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")))
 
+    # --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
+    # \frac{a}{2} > 1.5) \quad \text{where } a = this.age
+    this_, a = L.symbol("this"), L.symbol("a")
+    latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
+        "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
+
     return {
         "expression": (E.OfLet.Schema, expression, E.Builders),
         "python": (P.DIALECT.schema_of(python), python, P.Builders),
         "matlab": (M.DIALECT.schema_of(matlab), matlab, M.Builders),
         "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
+        "latex": (L.DIALECT.schema_of(latex), latex, L.Builders),
     }

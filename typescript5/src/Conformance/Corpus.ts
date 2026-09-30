@@ -10,16 +10,17 @@
 
 import * as Expressions from "../Dialects/Basic/Expressions.js";
 import * as Excel from "../Dialects/Excel/Expressions.js";
+import * as Latex from "../Dialects/Latex/Expressions.js";
 import * as Matlab from "../Dialects/Matlab/Expressions.js";
 import * as Python from "../Dialects/Python/Expressions.js";
 import type { Schemas, Visitors } from "@mbse/schemas/Framework";
 
-export const CASES = ["expression", "python", "matlab", "excel"] as const;
+export const CASES = ["expression", "python", "matlab", "excel", "latex"] as const;
 
 type Case = [Schemas.OfObject.Data, Visitors.Visitable, unknown];
 
 export function build(): Map<string, Case> {
-  const [E, P, M, X] = [Expressions, Python, Matlab, Excel];
+  const [E, P, M, X, L] = [Expressions, Python, Matlab, Excel, Latex];
 
   // --- expression: every kind and literal type, shared sub-expressions, each operation once ---
   const [self, age] = [E.variable("this"), E.variable("age")];
@@ -49,10 +50,17 @@ export function build(): Map<string, Case> {
     X.infix("-", X.infix("*", aX, 2n), X.cell("B2", "Sheet1")),
     X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")));
 
+  // --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
+  // \frac{a}{2} > 1.5) \quad \text{where } a = this.age
+  const [thisL, aL] = [L.symbol("this"), L.symbol("a")];
+  const latex = L.where("a", L.member(thisL, "age"), L.binary("\\land", L.binary("\\geq", aL, 18n), L.binary(
+    "\\lor", L.unary("\\lnot", L.function("has", thisL, "email")), L.binary(">", L.frac(aL, 2n), 1.5))));
+
   return new Map<string, Case>([
     ["expression", [E.OfLet.Schema, expression, E.Builders]],
     ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
     ["matlab", [M.DIALECT.schema_of(matlab), matlab, M.Builders]],
     ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
+    ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],
   ]);
 }
