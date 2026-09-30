@@ -1,0 +1,147 @@
+root: s0
+objects:
+  s0:
+    kind: import
+    module: numpy
+    alias: np
+    arguments:
+    - argument:
+        $ref: s1
+        $schema: Expressions.Python.OfImportFrom
+      index: 0
+  s1:
+    kind: importfrom
+    module: math
+    name: floor
+    arguments:
+    - argument:
+        $ref: s2
+        $schema: Expressions.Python.OfLet
+      index: 0
+  s2:
+    kind: let
+    name: a
+    arguments:
+    - argument:
+        $ref: s3
+        $schema: Expressions.Python.OfName
+      index: 0
+    - argument:
+        $ref: s4
+        $schema: Expressions.Python.OfIfExp
+      index: 1
+  s3:
+    kind: name
+    name: this
+  s4:
+    kind: ifexp
+    arguments:
+    - argument:
+        $ref: s5
+        $schema: Expressions.Python.OfBoolOp
+      index: 0
+    - argument:
+        $ref: s6
+        $schema: Expressions.Python.OfCall
+      index: 1
+    - argument:
+        $ref: s7
+        $schema: Expressions.Python.OfConstant
+      index: 2
+  s5:
+    kind: boolop
+    operator: or
+    arguments:
+    - argument:
+        $ref: s8
+        $schema: Expressions.Python.OfUnaryOp
+      index: 0
+    - argument:
+        $ref: s9
+        $schema: Expressions.Python.OfAttribute
+      index: 1
+  s6:
+    kind: call
+    arguments:
+    - argument:
+        $ref: s10
+        $schema: Expressions.Python.OfName
+      index: 0
+    - argument:
+        $ref: s11
+        $schema: Expressions.Python.OfBinOp
+      index: 1
+  s7:
+    kind: constant
+    bytes: 'AA=='
+  s8:
+    kind: unaryop
+    operator: not
+    arguments:
+    - argument:
+        $ref: s12
+        $schema: Expressions.Python.OfCompare
+      index: 0
+  s9:
+    kind: attribute
+    attr: pi
+    arguments:
+    - argument:
+        $ref: s13
+        $schema: Expressions.Python.OfName
+      index: 0
+  s10:
+    kind: name
+    name: floor
+  s11:
+    kind: binop
+    operator: '*'
+    arguments:
+    - argument:
+        $ref: s14
+        $schema: Expressions.Python.OfAttribute
+      index: 0
+    - argument:
+        $ref: s15
+        $schema: Expressions.Python.OfConstant
+      index: 1
+  s12:
+    kind: compare
+    operator: '>='
+    arguments:
+    - argument:
+        $ref: s16
+        $schema: Expressions.Python.OfSubscript
+      index: 0
+    - argument:
+        $ref: s17
+        $schema: Expressions.Python.OfConstant
+      index: 1
+  s13:
+    kind: name
+    name: np
+  s14:
+    kind: attribute
+    attr: x
+    arguments:
+    - argument:
+        $ref: s18
+        $schema: Expressions.Python.OfName
+      index: 0
+  s15:
+    kind: constant
+    float: 2.5
+  s16:
+    kind: subscript
+    key: k
+    arguments:
+    - argument:
+        $ref: s18
+        $schema: Expressions.Python.OfName
+      index: 0
+  s17:
+    kind: constant
+    int: 18
+  s18:
+    kind: name
+    name: a

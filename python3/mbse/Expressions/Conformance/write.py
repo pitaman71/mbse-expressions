@@ -18,7 +18,7 @@ def render(corpus: dict | None = None) -> dict[str, str]:
     """File name -> text for every case, as this implementation writes them. Pass an already built corpus to avoid
     registering its schemas twice."""
     files = {}
-    for case, (schema, root) in (corpus if corpus is not None else build()).items():
+    for case, (schema, root, _) in (corpus if corpus is not None else build()).items():
         files[f"{case}.json"] = JSON.ToJSON.Reachable(schema, root, indent=2) + "\n"
         files[f"{case}.yaml"] = YAML.ToYAML.Reachable(schema, root)
     return files

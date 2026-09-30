@@ -1,0 +1,73 @@
+/** The patterns the pairwise translators share: each dialect's forms for the concepts they translate. A translator
+ * pairs two dialects' patterns into rules; the holes are shared, so the patterns of any two dialects pair up. */
+
+import { Hole, Pattern as P, Rule, holes } from "../Framework/Translators.js";
+
+export const [A, B, C, X] = holes("A", "B", "C", "X") as [Hole, Hole, Hole, Hole];
+/** A name: of a variable, or of a binding. */
+export const N = new Hole("N", String);
+/** The name of a property, field or column. */
+export const K = new Hole("K", String);
+
+/** A literal's value, of `types`: the native types both dialects of a pair hold. */
+export function value(...types: unknown[]): Hole {
+  return new Hole("V", ...types);
+}
+
+export const Basic = {
+  literal: (V: Hole) => new P("literal", { value: V }),
+  variable: new P("variable", { name: N }),
+  let: new P("let", { name: N }, A, B),
+  get: new P("operation", { name: "get" }, X, new P("literal", { value: K })),
+  has: new P("operation", { name: "has" }, X, new P("literal", { value: K })),
+  implies: new P("operation", { name: "implies" }, A, B),
+};
+
+export const Python = {
+  constant: (V: Hole) => new P("constant", { value: V }),
+  name: new P("name", { name: N }),
+  let: new P("let", { name: N }, A, B),
+  get: new P("attribute", { attr: K }, X),
+  has: new P("call", {}, new P("name", { name: "hasattr" }), X, new P("constant", { value: K })),
+  implies: new P("ifexp", {}, A, B, new P("constant", { value: true })),
+  ifexp: new P("ifexp", {}, A, B, C),
+};
+
+/** The function `np.<fn>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'. */
+function numpy(fn: string): P {
+  let callee = new P("name", { name: "np" });
+  for (const attr of fn.split(".")) callee = new P("attribute", { attr }, callee);
+  return callee;
+}
+
+/** Python in NumPy style: columns by subscript, missing values masked, operations as numpy functions. */
+export const Numpy = {
+  call: (fn: string, ...args: (P | Hole)[]) => new P("call", {}, numpy(fn), ...args),
+  get: new P("subscript", { key: K }, X),
+  has: new P("call", {}, numpy("logical_not"), new P("call", {}, numpy("ma.getmaskarray"), new P("subscript", { key: K }, X))),
+  implies: new P("call", {}, numpy("where"), A, B, new P("constant", { value: true })),
+  prelude: new P("import", { module: "numpy", alias: "np" }, new Hole("B")),
+  /** Rules for operators that are numpy functions of the same arguments. */
+  renames(kind: string, attribute: string, names: Record<string, string>, arity: number): Rule[] {
+    const args = holes(...Array.from({ length: arity }, (_, i) => `A${i}`));
+    return Object.entries(names).map(([a, b]) => new Rule(new P(kind, { [attribute]: a }, ...args), Numpy.call(b, ...args)));
+  },
+};
+
+export const Matlab = {
+  constant: (V: Hole) => new P("constant", { value: V }),
+  identifier: new P("identifier", { name: N }),
+  get: new P("field", { name: K }, X),
+  has: new P("call", { function: "isfield" }, X, new P("constant", { value: K })),
+  implies: new P("binary", { operator: "||" }, new P("unary", { operator: "~" }, A), B),
+};
+
+export const Excel = {
+  constant: (V: Hole) => new P("constant", { value: V }),
+  name: new P("name", { name: N }),
+  let: new P("let", { name: N }, A, B),
+  get: new P("field", { name: K }, X),
+  has: new P("function", { name: "NOT" }, new P("function", { name: "ISERROR" }, new P("field", { name: K }, X))),
+  implies: new P("function", { name: "IF" }, A, B, new P("constant", { value: true })),
+  if_: new P("function", { name: "IF" }, A, B, C),
+};

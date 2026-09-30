@@ -1,8 +1,9 @@
 # Test plan — typescript5
 
-Scope: everything under `typescript5/src` (Expressions, Evaluators) and cross-implementation conformance. The design
-reference is `../../docs/EXPRESSIONS.md`; this plan and the Python one mirror each other case for case. The framework
-itself is tested in mbse-schemas.
+Scope: everything under `typescript5/src` (the framework, the Basic, Python, Matlab and Excel dialects, and the
+translators between them) and cross-implementation conformance. The design reference is `../../docs/EXPRESSIONS.md`;
+this plan and the Python one mirror each other case for case, with the deliberate differences of
+`../../docs/EQUIVALENCE.md`. mbse-schemas is tested in mbse-schemas.
 
 ## Running
 
@@ -20,5 +21,8 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `02_Evaluators.ipynb` | EVL | 7 | as in Python; evaluation scopes are object literals |
 | `03_Visitors.ipynb` | VIS | 2 | as in Python, checked at runtime by method presence and `Function.length` |
 | `04_Conformance.ipynb` | CONF | 4 | as in Python, from this side |
+| `05_Framework.ipynb` | FRM | 8 | as in Python; protocols are checked by method presence and `Function.length`, and options objects stand for keyword arguments |
+| `06_Dialects.ipynb` | DIA | 8 | as in Python, with Python expressions written by constructors (DIA-01 asserts there is no `parse`), Python's rules checked against the same tables of values and errors as the Python suite, and a `Module` in place of numpy |
+| `07_Translators.ipynb` | TRN | 6 | as in Python, but for evaluating the NumPy style over columns |
 
-Total: 25 cases, with the same IDs in the same order in both implementations.
+Total: 47 cases, with the same IDs in the same order in both implementations.

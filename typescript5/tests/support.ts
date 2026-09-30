@@ -174,6 +174,13 @@ export const PROTOCOLS: Record<string, Record<string, number>> = {
   OfUnion: { branch: 0, value: 1 },
   OfIntersection: { value: 1 },
   Visitable: { identity: 0, schema_name: 0, accept: 1 },
+  // The framework's protocols, with TypeScript's parameters: options objects and defaults are not counted.
+  Expression: { dialect: 0, form: 0, validate: 0 },
+  Dialect: { name: 0, kinds: 0, schema_of: 1, make: 1, resolve: 1, validate: 1, infer: 1 },
+  Translator: { left: 0, right: 0, forward: 1, backward: 1, inverse: 0 },
+  Scope: { lookup: 1, bind: 2, enter: 1 },
+  Domain: { name: 0, contains: 1, includes: 1 },
+  Signature: { arity: 0, result: 1, describe: 0 },
 };
 
 /** Methods of `protocol` that `implementation` lacks, or declares with a different number of parameters. */

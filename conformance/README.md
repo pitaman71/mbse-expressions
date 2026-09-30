@@ -6,7 +6,12 @@ snapshot, indent 2) and `<case>.yaml`.
 
 | Case | Covers |
 |---|---|
-| `expression` | an expression through its tagged meta-schemas: every kind and literal type, a let, shared variables, an extension operation; rebuilt with `Expressions.Builders` |
+| `expression` | a Basic expression through its tagged meta-schemas: every kind and literal type, a let, shared variables, an extension operation; rebuilt with `Expressions.Builders` |
+| `python` | a Python expression with every kind, imports included, and shared names |
+| `matlab` | a MATLAB expression with every kind, an import included, and shared identifiers |
+| `excel` | an Excel formula with every kind, cells in other sheets and books included, and shared names |
+
+Each case is rebuilt with its own dialect's builders.
 
 The CONF test suite in each implementation checks that its own files are current, that the JSON files are
 byte-identical across implementations, that every implementation's YAML reads back to the same snapshot (also under a

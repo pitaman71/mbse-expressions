@@ -18,6 +18,7 @@ from `packages`, and nothing else: functions are Python callables the caller pro
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -41,6 +42,8 @@ def _text(value: Any) -> str:
     if type(value) is bool:
         return "true" if value else "false"
     number = float(value)
+    if not math.isfinite(number):
+        return "NaN" if math.isnan(number) else "Inf" if number > 0 else "-Inf"
     return str(int(number)) if number.is_integer() else f"{number:.5g}"
 
 
@@ -139,6 +142,10 @@ class Scope(F.Variables):
         super().__init__(variables)
         self.functions, self.packages = dict(functions or {}), {k: dict(v) for k, v in (packages or {}).items()}
         self.imported: dict[str, Callable[..., Any]] = {}
+
+    def lookup(self, reference: Any) -> Any:
+        value = super().lookup(reference)
+        return float(value) if type(value) is int else value  # numbers are doubles
 
     def unbound(self, reference: Any) -> Any:
         raise _unrecognized(reference.name)

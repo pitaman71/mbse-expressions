@@ -1,0 +1,154 @@
+root: s0
+objects:
+  s0:
+    kind: let
+    name: a
+    arguments:
+    - argument:
+        $ref: s1
+        $schema: Expressions.Excel.OfField
+      index: 0
+    - argument:
+        $ref: s2
+        $schema: Expressions.Excel.OfFunction
+      index: 1
+  s1:
+    kind: field
+    name: age
+    arguments:
+    - argument:
+        $ref: s3
+        $schema: Expressions.Excel.OfName
+      index: 0
+  s2:
+    kind: function
+    name: IF
+    arguments:
+    - argument:
+        $ref: s4
+        $schema: Expressions.Excel.OfFunction
+      index: 0
+    - argument:
+        $ref: s5
+        $schema: Expressions.Excel.OfInfix
+      index: 1
+    - argument:
+        $ref: s6
+        $schema: Expressions.Excel.OfInfix
+      index: 2
+  s3:
+    kind: name
+    name: this
+  s4:
+    kind: function
+    name: AND
+    arguments:
+    - argument:
+        $ref: s7
+        $schema: Expressions.Excel.OfInfix
+      index: 0
+    - argument:
+        $ref: s8
+        $schema: Expressions.Excel.OfFunction
+      index: 1
+  s5:
+    kind: infix
+    operator: '-'
+    arguments:
+    - argument:
+        $ref: s9
+        $schema: Expressions.Excel.OfInfix
+      index: 0
+    - argument:
+        $ref: s10
+        $schema: Expressions.Excel.OfCell
+      index: 1
+  s6:
+    kind: infix
+    operator: +
+    arguments:
+    - argument:
+        $ref: s11
+        $schema: Expressions.Excel.OfPrefix
+      index: 0
+    - argument:
+        $ref: s12
+        $schema: Expressions.Excel.OfConstant
+      index: 1
+  s7:
+    kind: infix
+    operator: '>='
+    arguments:
+    - argument:
+        $ref: s13
+        $schema: Expressions.Excel.OfName
+      index: 0
+    - argument:
+        $ref: s14
+        $schema: Expressions.Excel.OfConstant
+      index: 1
+  s8:
+    kind: function
+    name: NOT
+    arguments:
+    - argument:
+        $ref: s15
+        $schema: Expressions.Excel.OfFunction
+      index: 0
+  s9:
+    kind: infix
+    operator: '*'
+    arguments:
+    - argument:
+        $ref: s13
+        $schema: Expressions.Excel.OfName
+      index: 0
+    - argument:
+        $ref: s16
+        $schema: Expressions.Excel.OfConstant
+      index: 1
+  s10:
+    kind: cell
+    address: B2
+    sheet: Sheet1
+  s11:
+    kind: prefix
+    operator: '-'
+    arguments:
+    - argument:
+        $ref: s17
+        $schema: Expressions.Excel.OfCell
+      index: 0
+  s12:
+    kind: constant
+    str: x
+  s13:
+    kind: name
+    name: a
+  s14:
+    kind: constant
+    int: 18
+  s15:
+    kind: function
+    name: ISERROR
+    arguments:
+    - argument:
+        $ref: s18
+        $schema: Expressions.Excel.OfField
+      index: 0
+  s16:
+    kind: constant
+    int: 2
+  s17:
+    kind: cell
+    address: C3
+    sheet: Rates
+    book: Book.xlsx
+  s18:
+    kind: field
+    name: email
+    arguments:
+    - argument:
+        $ref: s3
+        $schema: Expressions.Excel.OfName
+      index: 0

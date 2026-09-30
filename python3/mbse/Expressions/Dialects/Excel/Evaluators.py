@@ -21,6 +21,7 @@ function is `#NAME?`. An evaluator given a mapping makes a workbook whose define
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Mapping
 from typing import Any
 
@@ -39,6 +40,16 @@ def _number_of(value: Any) -> Any:
     return float(value) if type(value) is int else value
 
 
+def _address(text: str) -> str:
+    found = Expressions.address(text)
+    if found is None:
+        raise ValueError(f"not a cell address: {text!r}")
+    return found
+
+
+_NUMERIC = re.compile(r"[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?")
+
+
 class Workbook(F.Variables):
     """A workbook, as the scope of its formulas: defined `names`, `sheets` of cells by address, the current `sheet`,
     other `books` by name, and `add_ins` by function name."""
@@ -48,7 +59,7 @@ class Workbook(F.Variables):
                  add_ins: Mapping[str, Callable[..., Any]] | None = None):
         super().__init__(names)
         self.name = name
-        self.sheets = {sheet_name: {Expressions.address(a) or a: v for a, v in cells.items()}
+        self.sheets = {sheet_name: {_address(a): v for a, v in cells.items()}
                        for sheet_name, cells in (sheets or {}).items()}
         self.sheet = sheet if sheet is not None else next(iter(self.sheets), "Sheet1")
         self.books = dict(books or {})
@@ -85,10 +96,9 @@ def _number(value: Any) -> float | Error:
         return value
     if type(value) in (bool, int, float):
         return float(value)
-    try:
-        return float(value)
-    except (TypeError, ValueError):
-        return _VALUE
+    if type(value) is str and _NUMERIC.fullmatch(value.strip()):
+        return float(value)  # decimal text, as Excel reads it
+    return _VALUE
 
 
 def _truth(value: Any) -> bool | Error:

@@ -5,7 +5,11 @@
   "type": "module",
   "private": true,
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./Framework": "./src/Framework/index.ts",
+    "./Dialects/*": "./src/Dialects/*/index.ts",
+    "./Translators": "./src/Translators/index.ts",
+    "./Framework/*": "./src/Framework/*.ts"
   },
   "engines": {
     "node": ">=22"

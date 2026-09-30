@@ -1,0 +1,124 @@
+root: s0
+objects:
+  s0:
+    kind: import
+    name: geo.*
+    arguments:
+    - argument:
+        $ref: s1
+        $schema: Expressions.Matlab.OfBinary
+      index: 0
+  s1:
+    kind: binary
+    operator: '||'
+    arguments:
+    - argument:
+        $ref: s2
+        $schema: Expressions.Matlab.OfBinary
+      index: 0
+    - argument:
+        $ref: s3
+        $schema: Expressions.Matlab.OfConstant
+      index: 1
+  s2:
+    kind: binary
+    operator: '>='
+    arguments:
+    - argument:
+        $ref: s4
+        $schema: Expressions.Matlab.OfBinary
+      index: 0
+    - argument:
+        $ref: s5
+        $schema: Expressions.Matlab.OfConstant
+      index: 1
+  s3:
+    kind: constant
+    bool: true
+  s4:
+    kind: binary
+    operator: +
+    arguments:
+    - argument:
+        $ref: s6
+        $schema: Expressions.Matlab.OfCall
+      index: 0
+    - argument:
+        $ref: s7
+        $schema: Expressions.Matlab.OfBinary
+      index: 1
+  s5:
+    kind: constant
+    int: 0
+  s6:
+    kind: call
+    function: dist
+    arguments:
+    - argument:
+        $ref: s8
+        $schema: Expressions.Matlab.OfField
+      index: 0
+    - argument:
+        $ref: s9
+        $schema: Expressions.Matlab.OfConstant
+      index: 1
+  s7:
+    kind: binary
+    operator: .*
+    arguments:
+    - argument:
+        $ref: s10
+        $schema: Expressions.Matlab.OfUnary
+      index: 0
+    - argument:
+        $ref: s11
+        $schema: Expressions.Matlab.OfUnary
+      index: 1
+  s8:
+    kind: field
+    name: age
+    arguments:
+    - argument:
+        $ref: s12
+        $schema: Expressions.Matlab.OfIdentifier
+      index: 0
+  s9:
+    kind: constant
+    int: 3
+  s10:
+    kind: unary
+    operator: '~'
+    arguments:
+    - argument:
+        $ref: s13
+        $schema: Expressions.Matlab.OfCall
+      index: 0
+  s11:
+    kind: unary
+    operator: '-'
+    arguments:
+    - argument:
+        $ref: s14
+        $schema: Expressions.Matlab.OfConstant
+      index: 0
+  s12:
+    kind: identifier
+    name: this
+  s13:
+    kind: call
+    function: isfield
+    arguments:
+    - argument:
+        $ref: s12
+        $schema: Expressions.Matlab.OfIdentifier
+      index: 0
+    - argument:
+        $ref: s15
+        $schema: Expressions.Matlab.OfConstant
+      index: 1
+  s14:
+    kind: constant
+    float: 1.5
+  s15:
+    kind: constant
+    str: email

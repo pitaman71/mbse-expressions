@@ -10,11 +10,12 @@ structurally traversable, validatable, evaluatable, and translatable into the ot
 vocabulary below, in which mbse-schemas' union predicates are written; `from mbse.Expressions import Expressions,
 Evaluators` imports it. The Python, Matlab and Excel dialects model those languages' expressions (see
 [Dialects](#dialects)); the framework is described under [The framework](#the-framework), and translation under
-[Translators](#translators). They are built in Python only so far.
+[Translators](#translators). Both implementations have all of them (see [`EQUIVALENCE.md`](EQUIVALENCE.md)).
 
 ```
-python3/mbse/Expressions/
-  Framework/     Expressions, Domains, Evaluators, Translators: the protocols, and the machinery that implements them
+python3/mbse/Expressions/, typescript5/src/
+  Framework/     Expressions, Domains, Evaluators, Translators (and, in TypeScript, Errors): the protocols, and the
+                 machinery that implements them
   Dialects/      Basic, Python, Matlab, Excel: each with Expressions, Domains and Evaluators
   Translators/   one module per pair of dialects, e.g. Basic_Excel
 ```
@@ -167,8 +168,9 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
 Python, Matlab and Excel each have `render(expression)`, their source text (`hasattr(this, 'email') if this.age >= 18
 else True`, `this.age >= 18 && isfield(this, "email")`, `=AND(this.age >= 18, NOT(ISERROR(this.email)))`), with
 imports as the lines before the expression, and constructors for their kinds (`Excel.Expressions.function('AND', a,
-b)`, ...). Python also has `parse(source)`: imports, then one expression. The Matlab and Excel evaluators are Python
-models of those languages' rules for scalars, not calls into MATLAB or Excel.
+b)`, ...). In Python, the Python dialect also has `parse(source)`: imports, then one expression. The Matlab and Excel
+evaluators are models of those languages' rules for scalars, not calls into MATLAB or Excel, and so is the TypeScript
+implementation's evaluator of Python expressions.
 
 NumPy is not a dialect but a vocabulary of the Python dialect: `import numpy as np\nnp.greater_equal(t['age'], 18)`
 is a Python expression, which evaluates vectorized, with missing values masked, when its scope allows numpy.
@@ -227,10 +229,8 @@ in Basic but true in the others.
 
 - Core expression vocabulary above is a proposal; confirm the exact set, and specify the collection operations
   (`count`, `in`, `all`, `any`).
-- The dialects and the framework are built in Python only; the TypeScript implementation still has Basic alone (its
-  wire format is unchanged, so the two remain interchangeable).
 - Matlab and Excel expressions are written as data or through constructors and rendered as source text; they are
-  not parsed from source text yet (Python's are). `Expressions.from_` still reads Python functions into Basic
+  not parsed from source text yet (Python's are, in Python). `Expressions.from_` still reads Python functions into Basic
   directly; it could become `Python.Expressions.parse` followed by translation to Basic.
 - Excel's ranges (`A1:B3`) and structured references (`Table1[@age]`) are not modeled; they need array values.
 - Excel's `AND` and `OR` take any number of arguments, and `IF` two or three; the dialect gives them fixed arities
