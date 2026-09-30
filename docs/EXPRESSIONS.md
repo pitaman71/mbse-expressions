@@ -108,6 +108,60 @@ is unknown. TypeScript has no counterpart, since a JavaScript function has no Py
 adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None)
 ```
 
+## Value domains
+
+Designed, not yet implemented. Today Basic's domains are its natives (`Bool`, `Int`, `Float`, `Str`, `Bytes`) and
+`Object`. The domains below make representation part of the type, as C, C++ and SystemVerilog need, and as an interface
+control document describes a data word. Each is parameterized, and today's natives become their defaults.
+
+| Domain | Properties | Default (today's native) |
+|---|---|---|
+| `Float` | `mantissa` and `exponent` widths; presence of the `hidden` bit, `subnormals`, the `sign` bit, `nans` and `infinities`; `overflow`; `rounding` | IEEE binary64 (`Float`) |
+| `Integer` | `width`, optional (unbounded without it); `encoding`: unsigned, two's complement, ones' complement or sign-magnitude; `overflow` | unbounded (`Int`) |
+| `Decimal` | signed, string-encoded, of variable length; `rounding` | |
+| `Bits` | `width`, fixed or variable; `states`, an `Enum` of the values of one bit | `{0, 1}` states |
+| `Bytes` | `width`, fixed or variable | variable (`Bytes`) |
+| `Unicode` | `encoding`: one of the UTF encodings | UTF-8 (`Str`) |
+| `Enum` | its members, each with a `printable` value (its name as written) | |
+| `Packed` | a domain, a fixed-size domain that represents it (`Integer`, `Float`, `Bits` or `Bytes` of a fixed width), and the representation of each value | |
+| `Bool`, `Object` | unchanged | |
+
+- **Basic has no implied promotions.** An operation takes its arguments' domains as they are: `add` of an
+  `Integer(8)` and an `Integer(16)` does not apply until one is converted explicitly. A dialect's translator writes out
+  its language's promotions as conversions.
+- **Literals carry their domain.** Over the wire a literal refers to its domain explicitly, so `1` as an `Integer(8)`
+  and `1` as a `Float` are different literals.
+- **Domains are mbse-schemas objects, as expressions are.** Every property above is data, so each domain kind is a
+  dataclass with a builder and a registered meta-schema (`Expressions.Domains.Of<Kind>`, e.g. `OfInteger`), and a
+  literal's domain is an ordinary `$ref` to a domain object in the same snapshot. Signatures stay code: they are a
+  dialect's vocabulary, not values on the wire. So do `Anything` and `OfValues`, which serve inference only and are
+  never stored; the Python types that `OfTypes` holds give way to the domains' own properties.
+- **Overflow and rounding are the domain's.** Rounding is to nearest (ties to even or away from zero), toward zero, up
+  or down, for `Float` and `Decimal`. An `Integer` wraps, saturates or raises; a `Float` goes to infinity, saturates, gives
+  NaN or raises. Where a language leaves overflow undefined (C's signed integers), its translator chooses one.
+- **The hidden bit and subnormals are separate properties.** The hidden bit is the implicit leading 1 of normal numbers
+  (one more bit of precision); subnormals are the values of exponent 0 (range toward zero). IEEE formats have both;
+  x87's 80-bit format has subnormals without a hidden bit; fp8 E4M3 has NaN but no infinities.
+- **Ones' complement and sign-magnitude have a negative zero, equal to zero.**
+- **`Integer` and `Decimal` are separate domains.** Every unbounded integer is a decimal (`Decimal` includes
+  `Integer`), but their operations differ: integer division truncates and integers have bitwise operations, while
+  decimal division gives a fraction and needs a rounding rule.
+- **`Bits` and `Bytes` are unformatted.** `Bytes(n)` and `Bits(8n)` hold the same patterns, but they are separate
+  domains and convert explicitly, as `Integer` interprets bits explicitly. Bits whose states are `{0, 1, X, Z}` are
+  SystemVerilog's `logic`, and VHDL's nine-valued `std_logic` is another `Enum` of states.
+- **`Unicode` values are sequences of code points, compared by code point.** The encoding is representation only, for
+  rendering (`char16_t`) and the wire: equal code points are equal strings in any encoding. Canonical equivalence is
+  not equality; normalization is an explicit operation. A lone surrogate is not a value of `Unicode`. A `Unicode`
+  domain has no width: a maximum length is a constraint of the data, and belongs in the schema.
+- **`Enum` is a domain in its own right**: a C or SystemVerilog `enum`, one bit's states, or an enumeration of
+  mbse-schemas.
+- **Packing is its own domain.** A `Packed` domain pairs a domain (an `Enum`, a record) with a fixed-size domain and the
+  representation of each value in it: SystemVerilog's `enum logic [1:0] {IDLE, RUN}` is an `Enum` packed as `Bits(2)`.
+  `pack(value, packed)` gives the representation and `unpack(representation, packed)` the value, so one `Enum` can be
+  packed several ways.
+- **Widths belong in mbse-schemas too**, at least in its natives, so that a schema's field and an expression over it
+  have one type system. That is a change to mbse-schemas, made there first.
+
 ## The framework
 
 `mbse.Expressions.Framework` defines what every dialect implements, and implements most of it from declarations, in
@@ -236,6 +290,9 @@ in Basic but true in the others.
 
 ## Open questions
 
+- Value domains (above): the names of the conversion operations; what a literal stored without a domain (today's
+  corpora) means; whether an `Enum`'s members are ordered,
+  or only a `Packed` enum's (by representation, as in C); and the shape of widths in mbse-schemas' natives.
 - Core expression vocabulary above is a proposal; confirm the exact set, and specify the collection operations
   (`count`, `in`, `all`, `any`).
 - Matlab and Excel expressions are written as data or through constructors and rendered as source text; they are
