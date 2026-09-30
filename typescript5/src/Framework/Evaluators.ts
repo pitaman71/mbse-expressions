@@ -2,8 +2,7 @@
  * Evaluators: the protocols for computing an expression's value, and an interpreter that dialects build theirs on.
  *
  * An `Evaluator` computes the value of any expression of its dialect in a scope; each dialect's `Evaluators.OfAny` is
- * one. A `Predicate` is what mbse-schemas' validators take to test union branches: `(predicate, value) => boolean |
- * null`. The value domains, the treatment of unknown values and the rules of each operator are the dialect's own:
+ * one. A `Predicate` evaluates a rule about a value, with `this` bound to it: `(rule, value) => boolean | null`. The value domains, the treatment of unknown values and the rules of each operator are the dialect's own:
  * evaluation is where dialects differ most.
  *
  * Evaluation resolves references in a scope (see `Symbolics`): an evaluator given an object of variables instead of a
@@ -33,7 +32,7 @@ export type Implementation = (args: Thunk[], node: any, scope: any) => any;
 /** Computes the value of an expression in `scope`, or with the variables in an object bound. */
 export type Evaluator = (expression: any, scope?: Scope | Bindings) => any;
 
-/** Whether `value` satisfies a union branch's `predicate`: true, false, or null when unknown. */
+/** Whether `value` satisfies `rule`, evaluated with `this` bound to it: true, false, or null when unknown. */
 export type Predicate = (predicate: any, value: unknown) => boolean | null;
 
 /** Evaluates the expressions of `dialect`. `operations` maps each application kind's tag to its implementations by

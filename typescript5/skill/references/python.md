@@ -6,7 +6,7 @@ from `mbse.Expressions`, the others from `mbse.Expressions.Dialects.<Name>`, and
 
 ## A complete program
 
-A rule about contacts, evaluated, stored, translated to Excel and Python, and used as a union predicate.
+A rule about contacts, evaluated, stored, translated to Excel and Python, and applied to a union value.
 
 ```python
 from mbse.Expressions import Evaluators, Expressions as E, Translators
@@ -47,16 +47,16 @@ assert ExcelEvaluators.OfAny(formula, {"contact": eve}) == ExcelEvaluators.Error
 code = Translators.between(E.DIALECT, Python.DIALECT).forward(rule)
 assert Python.render(code) == "contact.age >= 65 and hasattr(contact, 'email')"
 
-# Union predicates for mbse-schemas are Basic expressions over `this`.
+# A union value is a record of its one branch, by name, so a rule reads it like any object.
 this = E.variable("this")
-Phone = S.OfObject.Builder().properties(native("kind", str), native("number", str)).create()
-Email = S.OfObject.Builder().properties(native("kind", str), native("address", str)).create()
-Reach = S.OfUnion.Builder().branches(lambda b: b.of(Phone).when(this.kind.eq("phone")),
-                                     lambda b: b.of(Email).when(this.kind.eq("email"))).create()
+Phone = S.OfObject.Builder().properties(native("number", str)).create()
+Email = S.OfObject.Builder().properties(native("address", str)).create()
+Reach = S.OfUnion.Builder().branches(lambda b: b.name("phone").of(Phone), lambda b: b.name("email").of(Email)).create()
 Card = S.OfObject.Builder().properties(lambda p: p.name("reach").of(Reach)).create()
 Proxies.register("Card", Card)
-card = B.Card().reach(lambda u: u.of(Email, lambda r: r.kind("email").address("ada@example.com"))).create()
-assert Validators.Validate(B, Evaluators.predicate)(Card, card) == []
+card = B.Card().reach(lambda u: u.email(lambda r: r.address("ada@example.com"))).create()
+assert Validators.Validate(B)(Card, card) == []
+assert Evaluators.predicate(this.reach.has("email"), card) is True
 ```
 
 ## Cheat sheet
@@ -75,7 +75,7 @@ E.DIALECT.infer(expression, {"this": Domains.Object})       # from mbse.Expressi
 
 # Evaluation: a scope, or a mapping of variables.
 Evaluators.OfAny(expression, {"this": value})               # True, False, a value, or None when unknown
-Evaluators.predicate(predicate, value)                      # binds this; for Validators.Validate(registry, predicate)
+Evaluators.predicate(rule, value)                           # binds this; True, False, or None when unknown
 
 # Storage, traversal, translation: the same calls in every dialect.
 JSON.ToJSON.Reachable(E.DIALECT.schema_of(e), e); JSON.FromJSON(E.Builders).Reachable(schema, text)

@@ -15,8 +15,7 @@
  * - `get` and `has` read any object that writes its properties through `accept`, including embedded objects, which
  *   have no identity (and so compare equal to nothing).
  *
- * `Evaluators.predicate(predicate, value)` evaluates a union branch's predicate with `this` bound to the value tested.
- * It is the evaluator mbse-schemas' validators take: `Validators.Validate(registry, Evaluators.predicate)`.
+ * `Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, as a truth value.
  */
 
 import { Comparison, Repr, Schemas, Validators } from "@mbse/schemas/Framework";
@@ -182,7 +181,7 @@ export function OfLet(expression: Expressions.OfLet.Spec, scope: Scope = {}): un
   return interpreter.run(Expressions.OfLet.resolve(expression), scope);
 }
 
-/** Whether `value` satisfies a union branch's `predicate`, evaluated with `this` bound to it; `null` if unknown. */
+/** Whether `value` satisfies the rule `predicate`, evaluated with `this` bound to it; `null` if unknown. */
 export function predicate(predicate: unknown, value: unknown): boolean | null {
   const result = OfAny(predicate as Expressions.OfAny.Spec, { this: value });
   if (result !== null && typeof result !== "boolean") throw new TypeError(`a predicate must be a bool, got ${typeName(result)}`);

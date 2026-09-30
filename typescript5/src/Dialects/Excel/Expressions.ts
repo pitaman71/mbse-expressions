@@ -20,7 +20,6 @@ import { Repr } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
-import { discriminator } from "../Basic/Expressions.js";
 import { isIdentifier } from "../Python/Expressions.js";
 import * as Domains from "./Domains.js";
 
@@ -129,7 +128,6 @@ class _Field extends F.Node {
 }
 
 export const DIALECT = new F.Declared("Excel", [_Constant, _Name, _Cell, _Let, _Function, _Infix, _Prefix, _Field], {
-  discriminator,
   domain_of: Domains.of,
 });
 export const Builders = DIALECT.Builders;

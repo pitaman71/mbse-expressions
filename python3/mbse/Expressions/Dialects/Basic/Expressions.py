@@ -1,4 +1,4 @@
-"""Expressions of the Basic dialect: the core vocabulary, for union discriminators and, later, constraints.
+"""Expressions of the Basic dialect: the core vocabulary, for rules and constraints.
 `Evaluators` evaluates them.
 
 - `OfLiteral`: a native value.
@@ -50,7 +50,7 @@ from . import Domains
 
 __all__ = [
     "OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "Arguments", "Builders", "Term", "CORE", "DIALECT",
-    "variable", "literal", "let_", "operation", "from_", "discriminator",
+    "variable", "literal", "let_", "operation", "from_",
     "LITERAL", "OPERATION", "VARIABLE", "LET", "ARGUMENTS",
 ]
 
@@ -181,17 +181,8 @@ class _AnyBuilder(F.AnyBuilder):
 
 # --- The dialect and its meta-schemas ---
 
-
-_THIS = _VariableData("this")
-
-
-def discriminator(kind: str) -> _OperationData:
-    """`eq(get(this, 'kind'), kind)`: the discriminator of a union of meta-schemas, in every dialect."""
-    return _OperationData("eq", (_OperationData("get", (_THIS, _LiteralData("kind"))), _LiteralData(kind)))
-
-
 DIALECT = F.Declared(
-    "Basic", _KINDS, discriminator=discriminator, domain_of=Domains.of, any_builder=_AnyBuilder,
+    "Basic", _KINDS, domain_of=Domains.of, any_builder=_AnyBuilder,
     builders={"literal": _LiteralBuilder, "operation": _OperationBuilder, "variable": _VariableBuilder,
               "let": _LetBuilder},
     schema_names={"literal": LITERAL, "operation": OPERATION, "variable": VARIABLE, "let": LET},

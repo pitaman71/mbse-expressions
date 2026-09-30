@@ -1,13 +1,13 @@
 # Expressions
 
-Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas): the predicates that choose a
-union's branch and, later, constraints such as "at least one phone". This package depends on mbse-schemas (a submodule
+Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas): rules about its data and,
+later, its constraints such as "at least one phone". This package depends on mbse-schemas (a submodule
 at `submodules/mbse-schemas`), whose [`FRAMEWORK.md`](../submodules/mbse-schemas/docs/FRAMEWORK.md) describes the
 framework; this document covers expressions only.
 
 Expressions come in dialects: expression languages that implement one framework, so that each is serializable,
 structurally traversable, validatable, evaluatable, and translatable into the others. The Basic dialect is the core
-vocabulary below, in which mbse-schemas' union predicates are written; `from mbse.Expressions import Expressions,
+vocabulary below, in which rules about mbse-schemas' data are written; `from mbse.Expressions import Expressions,
 Evaluators` imports it. The Python, Matlab, Excel and Latex dialects model those languages' expressions (see
 [Dialects](#dialects)); the framework is described under [The framework](#the-framework), and translation under
 [Translators](#translators). Both implementations have all of them (see [`EQUIVALENCE.md`](EQUIVALENCE.md)).
@@ -42,9 +42,9 @@ deterministic, and total, with no side effects or unbounded iteration.
 | Arithmetic | `add`, `sub`, `mul` (2), `neg` (1) |
 | Collections (not built yet) | `count`, `in`, and bounded quantifiers `all` / `any` over an object's adjacency entries |
 
-Union discriminator predicates must use only the core vocabulary. Operation names outside it are extensions that a
-binding may or may not support. A union is discriminated by a tag property compared with a fixed value, e.g.
-`eq(get(this, 'kind'), 'cat')`, where `this` is the value tested.
+Rules that every binding must evaluate use only the core vocabulary. Operation names outside it are extensions that a
+binding may or may not support. A union value is a record of its one branch, by name, so a rule tests which branch it
+holds with `has`, e.g. `has(get(this, 'reach'), 'email')`.
 
 Evaluation is the concern of `Evaluators`: `Evaluators.OfAny(expression, scope)` binds the variables in `scope` and
 returns a native value, an object, or unknown (`None`), and `Evaluators.OfLiteral`, `OfOperation`, `OfVariable` and
@@ -60,11 +60,9 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
 - `get` and `has` read any object that writes its properties through `accept`, including mbse-schemas' embedded
   objects. Embedded objects have no identity, so they compare equal to nothing.
 
-`Evaluators.predicate(predicate, value)` evaluates a union branch's predicate with `this` bound to the value tested,
-and returns `True`, `False` or unknown (`None`); a predicate whose value is not a bool raises. It is the evaluator
-mbse-schemas' validators take: `Validators.Validate(registry, Evaluators.predicate)` checks that each union value is
-written as the first branch whose predicate holds. Deserializers need no evaluator, because union values carry their
-branch on the wire.
+`Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, and returns `True`,
+`False` or unknown (`None`); a rule whose value is not a bool raises. mbse-schemas needs no evaluator: its union values
+name their branch, so neither decoding nor validation evaluates anything.
 
 `validate(bound=(), core=False)` reports statically what evaluation would raise: missing names and values, non-native
 literals, cycles (shared sub-expressions are not cycles), wrong numbers of arguments to core operations, variables not
@@ -209,8 +207,8 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
   dialect's way: `lookup(reference)`, `bind(name, value)` (the scope within a binding) and `enter(declaration)` (the
   scope within an import). `Variables` is the scope of names bound to values, which dialect scopes derive from, and an
   evaluator given a mapping makes its dialect's scope from it.
-- `Evaluators` defines `Evaluator` (`(expression, scope) -> value`) and `Predicate` (mbse-schemas' `(predicate, value)
-  -> bool | None`). `Interpreter` evaluates by role and calls an implementation per operator with one thunk per
+- `Evaluators` defines `Evaluator` (`(expression, scope) -> value`) and `Predicate` (`(rule, value) -> bool | None`,
+  with `this` bound to the value). `Interpreter` evaluates by role and calls an implementation per operator with one thunk per
   argument and the scope, so each dialect decides what to evaluate and when; operators outside a closed vocabulary go
   to an `extension`, which is how Matlab and Excel call the functions their scopes provide. It raises what `validate`
   reports.
@@ -315,8 +313,8 @@ in Basic but true in the others.
 - Evaluation is its own module, `Evaluators`, with one entry point per expression kind (`Evaluators.OfAny`, ...).
 - Expressions are partitioned into dialects over one framework (`Framework`), each declared by its kinds' roles;
   translators are pairwise, declared as bidirectional pattern rules, and applied by co-traversal.
-- mbse-schemas takes an evaluator `(predicate, value) -> bool | None` from its caller; `Evaluators.predicate` is one,
-  binding the value tested to `this`.
+- mbse-schemas' unions name their branches, and it takes no evaluator; `Evaluators.predicate` evaluates a rule about a
+  value, binding it to `this`. Each dialect's union of meta-schemas names its branches by the kinds' tags.
 - Evaluation is three-valued (Kleene), never coerces, and reads properties with `get(object, name)`; variables are
   bound by `OfLet` or by the caller's scope. `Term`s write expressions with methods only (no operator overloading), so
   both bindings read the same.

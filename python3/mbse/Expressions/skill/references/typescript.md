@@ -47,16 +47,16 @@ check(Excel.Evaluators.OfAny(formula, { contact: eve }) === Excel.Evaluators.Err
 const code = Translators.between(E.DIALECT, Python.Expressions.DIALECT).forward(rule);
 check(Python.Expressions.render(code) === "contact.age >= 65 and hasattr(contact, 'email')", "python");
 
-// Union predicates for mbse-schemas are Basic expressions over `this`.
+// A union value is a record of its one branch, by name, so a rule reads it like any object.
 const self = E.variable("this");
-const Phone = new S.OfObject.Builder().properties(native("kind", String), native("number", String)).create();
-const Email = new S.OfObject.Builder().properties(native("kind", String), native("address", String)).create();
-const Reach = new S.OfUnion.Builder().branches((b) => b.of(Phone).when(self.kind.eq("phone")),
-  (b) => b.of(Email).when(self.kind.eq("email"))).create();
+const Phone = new S.OfObject.Builder().properties(native("number", String)).create();
+const Email = new S.OfObject.Builder().properties(native("address", String)).create();
+const Reach = new S.OfUnion.Builder().branches((b) => b.name("phone").of(Phone), (b) => b.name("email").of(Email)).create();
 const Card = new S.OfObject.Builder().properties((p) => p.name("reach").of(Reach)).create();
 Proxies.register("Card", Card);
-const card = B.Card().reach((u: any) => u.of(Email, (r: any) => r.kind("email").address("ada@example.com"))).create();
-check(Validators.Validate(B, Evaluators.predicate)(Card, card).length === 0, "card");
+const card = B.Card().reach((u: any) => u.email((r: any) => r.address("ada@example.com"))).create();
+check(Validators.Validate(B)(Card, card).length === 0, "card");
+check(Evaluators.predicate(self.reach.has("email"), card) === true, "by email");
 ```
 
 ## Differences from Python

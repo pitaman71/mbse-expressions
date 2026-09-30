@@ -22,7 +22,6 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from mbse.Expressions.Dialects.Basic.Expressions import discriminator
 from mbse.Expressions.Framework import Terms as F
 from mbse.Schemas.Framework.Visitors import Native
 
@@ -137,7 +136,7 @@ class _Field(F.Node):
 
 
 DIALECT = F.Declared("Excel", (_Constant, _Name, _Cell, _Let, _Function, _Infix, _Prefix, _Field),
-                     discriminator=discriminator, domain_of=Domains.of)
+                     domain_of=Domains.of)
 Builders = DIALECT.Builders
 Schema = DIALECT.Schema
 

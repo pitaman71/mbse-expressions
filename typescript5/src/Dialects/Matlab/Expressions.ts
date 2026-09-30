@@ -22,7 +22,6 @@ import { Errors, Repr } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
-import { discriminator } from "../Basic/Expressions.js";
 import { isIdentifier } from "../Python/Expressions.js";
 import * as Domains from "./Domains.js";
 
@@ -113,7 +112,6 @@ class _Import extends F.Node {
 }
 
 export const DIALECT = new F.Declared("Matlab", [_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Import], {
-  discriminator,
   domain_of: Domains.of,
 });
 export const Builders = DIALECT.Builders;

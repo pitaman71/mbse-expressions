@@ -23,7 +23,6 @@ import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
-import { discriminator } from "../Basic/Expressions.js";
 import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
@@ -230,7 +229,6 @@ const AST_NAMES: Record<string, string> = {
 };
 
 export const DIALECT = new F.Declared("Python", KINDS, {
-  discriminator,
   domain_of: Domains.of,
   schemaNames: new Map(KINDS.map((k) => [k.KIND,
     `Expressions.Python.Of${AST_NAMES[k.KIND] ?? k.KIND.charAt(0).toUpperCase() + k.KIND.slice(1)}`])),

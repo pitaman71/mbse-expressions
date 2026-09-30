@@ -9,7 +9,7 @@ and `Framework.Symbolics.free(expression)` tells which names it needs from its s
 
 | Use | For |
 |---|---|
-| **Basic** (`mbse.Expressions`) | the rule itself: the neutral form to store, share and analyze. mbse-schemas' union predicates must be Basic, over `this`, using only the core vocabulary |
+| **Basic** (`mbse.Expressions`) | the rule itself: the neutral form to store, share and analyze. rules every binding evaluates are Basic, over `this`, using only the core vocabulary |
 | **Python** | Python source, to run the rule in Python or read one from Python code; NumPy style evaluates over columns |
 | **Matlab** | MATLAB source, for rules that live in MATLAB code or Simulink models |
 | **Excel** | worksheet formulas, for rules that live in spreadsheets, over cells and records |

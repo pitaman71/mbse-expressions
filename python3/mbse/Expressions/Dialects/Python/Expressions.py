@@ -26,7 +26,6 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from mbse.Expressions.Dialects.Basic.Expressions import discriminator
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 from mbse.Schemas.Framework.Visitors import Native
 
@@ -195,7 +194,7 @@ _KINDS = (_Constant, _Name, _Attribute, _Subscript, _Call, _Compare, _BoolOp, _B
 _AST_NAMES = {"boolop": "BoolOp", "binop": "BinOp", "unaryop": "UnaryOp", "ifexp": "IfExp",
               "importfrom": "ImportFrom"}
 DIALECT = F.Declared(
-    "Python", _KINDS, discriminator=discriminator, domain_of=Domains.of,
+    "Python", _KINDS, domain_of=Domains.of,
     schema_names={k.KIND: f"Expressions.Python.Of{_AST_NAMES.get(k.KIND, k.KIND.capitalize())}" for k in _KINDS})
 Builders = DIALECT.Builders
 Schema = DIALECT.Schema

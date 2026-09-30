@@ -21,7 +21,6 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from mbse.Expressions.Dialects.Basic.Expressions import discriminator
 from mbse.Expressions.Framework import Terms as F
 from mbse.Schemas.Framework.Visitors import Native
 
@@ -118,7 +117,7 @@ class _Where(F.Node):
 
 
 DIALECT = F.Declared("Latex", (_Constant, _Symbol, _Binary, _Unary, _Frac, _Member, _Function, _Where),
-                     discriminator=discriminator, domain_of=Domains.of)
+                     domain_of=Domains.of)
 Builders = DIALECT.Builders
 Schema = DIALECT.Schema
 

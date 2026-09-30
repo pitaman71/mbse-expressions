@@ -1,5 +1,5 @@
 /**
- * Expressions of the Basic dialect: the core vocabulary, for union discriminators and, later, constraints.
+ * Expressions of the Basic dialect: the core vocabulary, for rules and constraints.
  * `Evaluators` evaluates them.
  *
  * - `OfLiteral`: a native value.
@@ -217,15 +217,7 @@ class _AnyBuilder extends F.AnyBuilder {
 
 // --- The dialect and its meta-schemas ---
 
-const THIS = new _VariableData("this");
-
-/** `eq(get(this, 'kind'), kind)`: the discriminator of a union of meta-schemas, in every dialect. */
-export function discriminator(kind: string): _OperationData {
-  return new _OperationData("eq", [new _OperationData("get", [THIS, new _LiteralData("kind")]), new _LiteralData(kind)]);
-}
-
 export const DIALECT = new F.Declared("Basic", [_LiteralData, _OperationData, _VariableData, _LetData], {
-  discriminator,
   domain_of: Domains.of,
   anyBuilder: _AnyBuilder,
   builders: new Map<string, typeof F.Builder>([["literal", _LiteralBuilder], ["operation", _OperationBuilder],

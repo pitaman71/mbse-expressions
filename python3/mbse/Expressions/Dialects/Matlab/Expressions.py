@@ -22,7 +22,6 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from mbse.Expressions.Dialects.Basic.Expressions import discriminator
 from mbse.Expressions.Framework import Terms as F
 from mbse.Schemas.Framework.Visitors import Native
 
@@ -120,7 +119,7 @@ class _Import(F.Node):
 
 
 DIALECT = F.Declared("Matlab", (_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Import),
-                     discriminator=discriminator, domain_of=Domains.of)
+                     domain_of=Domains.of)
 Builders = DIALECT.Builders
 Schema = DIALECT.Schema
 

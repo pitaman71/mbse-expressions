@@ -1,7 +1,7 @@
 """Evaluators: the protocols for computing an expression's value, and an interpreter that dialects build theirs on.
 
 An `Evaluator` computes the value of any expression of its dialect in a scope; each dialect's `Evaluators.OfAny` is
-one. A `Predicate` is what mbse-schemas' validators take to test union branches: `(predicate, value) -> bool | None`.
+one. A `Predicate` evaluates a rule about a value, with `this` bound to it: `(rule, value) -> bool | None`.
 The value domains, the treatment of unknown values and the rules of each operator are the dialect's own: evaluation is
 where dialects differ most.
 
@@ -41,7 +41,7 @@ class Evaluator(Protocol):
 
 @runtime_checkable
 class Predicate(Protocol):
-    """Whether `value` satisfies a union branch's `predicate`: True, False, or None when unknown."""
+    """Whether `value` satisfies `rule`, evaluated with `this` bound to it: True, False, or None when unknown."""
 
     def __call__(self, predicate: Any, value: Any) -> bool | None: ...
 

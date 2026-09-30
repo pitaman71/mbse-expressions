@@ -662,12 +662,11 @@ class Registry:
 
 class Declared:
     """A dialect declared by its kinds' data classes, from which it derives their builders (unless given), meta-schemas
-    (registered with `Proxies` as `schema_names`, by default 'Expressions.<name>.Of<Kind>'), the union `Schema`,
-    discriminated by `discriminator(tag)`, the registry `Builders`, and `make`, `resolve`, `validate` and `infer`.
-    `domain_of` gives a literal's domain. The union's predicates are evaluated by mbse-schemas' validators with the
-    Basic dialect's `Evaluators.predicate`, so `discriminator` returns a Basic expression."""
+    (registered with `Proxies` as `schema_names`, by default 'Expressions.<name>.Of<Kind>'), the union `Schema`, whose
+    branches are named by the kinds' tags, the registry `Builders`, and `make`, `resolve`, `validate` and `infer`.
+    `domain_of` gives a literal's domain."""
 
-    def __init__(self, name: str, kinds: Sequence[type[Node]], *, discriminator: Callable[[str], Any],
+    def __init__(self, name: str, kinds: Sequence[type[Node]], *,
                  domain_of: Callable[[Native], Domains.Domain], builders: Mapping[str, type[Builder]] | None = None,
                  any_builder: type[AnyBuilder] | None = None, schema_names: Mapping[str, str] | None = None):
         self._name, self._domain_of = name, domain_of
@@ -689,7 +688,7 @@ class Declared:
         self.AnyBuilder = any_builder or type(f"{name}AnyBuilder", (AnyBuilder,), {})
         self.AnyBuilder._dialect = self
         self.Schema = Schemas.OfUnion.Builder().branches(
-            *(lambda b, kind=kind: b.of(kind.Schema).when(discriminator(kind.KIND)) for kind in kinds)
+            *(lambda b, kind=kind: b.name(kind.KIND).of(kind.Schema) for kind in kinds)
         ).create()
         self.Builders = Registry(schemas, registered)
 

@@ -20,7 +20,6 @@ import { Repr } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
-import { discriminator } from "../Basic/Expressions.js";
 import * as Domains from "./Domains.js";
 
 type Native = Visitors.Native;
@@ -108,7 +107,7 @@ class _Where extends F.Node {
 }
 
 export const DIALECT = new F.Declared("Latex",
-  [_Constant, _Symbol, _Binary, _Unary, _Frac, _Member, _Function, _Where], { discriminator, domain_of: Domains.of });
+  [_Constant, _Symbol, _Binary, _Unary, _Frac, _Member, _Function, _Where], { domain_of: Domains.of });
 export const Builders = DIALECT.Builders;
 export const Schema = DIALECT.Schema;
 

@@ -19,7 +19,6 @@ and translation how to treat it without knowing the dialect:
 ```python fragment
 from dataclasses import dataclass
 from typing import Any
-from mbse.Expressions.Dialects.Basic.Expressions import discriminator
 from mbse.Expressions.Framework import Domains as D, Terms as F
 
 @dataclass(eq=False)
@@ -31,7 +30,7 @@ class _Frac(F.Node):                                   # LaTeX's \frac{numerator
     numerator: Any = None
     denominator: Any = None
 
-DIALECT = F.Declared("Latex", (_Constant, _Symbol, _Frac), discriminator=discriminator, domain_of=Domains.of)
+DIALECT = F.Declared("Latex", (_Constant, _Symbol, _Frac), domain_of=Domains.of)
 ```
 
 Then write `render`, and an evaluator on `Framework.Evaluators.Interpreter` with one implementation per operator (each

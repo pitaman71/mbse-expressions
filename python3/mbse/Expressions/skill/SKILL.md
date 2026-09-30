@@ -1,6 +1,6 @@
 ---
 name: mbse-expressions
-description: Write rules, predicates and constraints once, as language-neutral data (expressions), then validate, evaluate, store (JSON/YAML), and translate them to and from Python, MATLAB, Excel and LaTeX, in Python or TypeScript. Use when formalizing the constraints and derived values of an interface or model (MBSE/SysML constraints, interface control documents, business rules, union discriminators for mbse-schemas), when one rule must mean the same thing in several languages or tools, when generating Excel formulas, MATLAB or Python from a rule, or when writing code that imports mbse.Expressions or @mbse/expressions.
+description: Write rules, predicates and constraints once, as language-neutral data (expressions), then validate, evaluate, store (JSON/YAML), and translate them to and from Python, MATLAB, Excel and LaTeX, in Python or TypeScript. Use when formalizing the constraints and derived values of an interface or model (MBSE/SysML constraints, interface control documents, business rules, rules about mbse-schemas data), when one rule must mean the same thing in several languages or tools, when generating Excel formulas, MATLAB or Python from a rule, or when writing code that imports mbse.Expressions or @mbse/expressions.
 ---
 
 # mbse-expressions
@@ -12,7 +12,7 @@ the same way in Python (`mbse.Expressions`) and TypeScript (`@mbse/expressions`)
 languages, called dialects:
 
 - **Basic**, the core vocabulary: comparisons, Kleene logic, arithmetic, property access, lets. Every binding
-  evaluates it, and mbse-schemas' union predicates are written in it.
+  evaluates it, and it is the neutral form of every rule.
 - **Python**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules.
 - **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.

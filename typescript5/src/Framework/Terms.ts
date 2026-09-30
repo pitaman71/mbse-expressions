@@ -738,9 +738,6 @@ export class Registry {
 
 /** How a dialect is declared, beyond its kinds. */
 export interface Declaration {
-  /** The union's discriminator for a tag: a Basic expression, since mbse-schemas' validators evaluate the union's
-   * predicates with the Basic dialect's `Evaluators.predicate`. */
-  discriminator(tag: string): unknown;
   /** A literal's domain. */
   domain_of(value: Native): Domains.Domain;
   /** Builders by tag; derived where not given. */
@@ -759,7 +756,7 @@ function capitalize(text: string): string {
 type Environment = Record<string, Domains.Domain>;
 
 /** A dialect declared by its kinds' data classes, from which it derives their builders (unless given), meta-schemas
- * (registered with `Proxies`), the union `Schema`, the registry `Builders`, and `make`, `resolve`, `validate` and
+ * (registered with `Proxies`), the union `Schema`, whose branches are named by the kinds' tags, the registry `Builders`, and `make`, `resolve`, `validate` and
  * `infer`. */
 export class Declared implements Dialect {
   readonly classes: readonly NodeClass[];
@@ -797,7 +794,7 @@ export class Declared implements Dialect {
     this.AnyBuilder = declaration.anyBuilder ?? class extends AnyBuilder {};
     this.AnyBuilder.DIALECT = this;
     this.Schema = new Schemas.OfUnion.Builder().branches(
-      ...kinds.map((kind) => (b: BranchBuilder) => b.of(kind.Schema).when(declaration.discriminator(kind.KIND))),
+      ...kinds.map((kind) => (b: BranchBuilder) => b.name(kind.KIND).of(kind.Schema)),
     ).create();
     this.Builders = new Registry(schemas, registered);
   }

@@ -2,8 +2,8 @@
 
 Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas), and their evaluation. An
 expression, such as "65 or older, with an email address on file", is data with a schema: it can be stored with the
-rest of your data, sent between programs, and evaluated the same way in Python and TypeScript. mbse-schemas uses
-expressions as union discriminators, and will use them for constraints.
+rest of your data, sent between programs, and evaluated the same way in Python and TypeScript. mbse-schemas will use
+them for constraints.
 
 ```python
 from mbse.Expressions import Evaluators, Expressions

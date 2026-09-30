@@ -14,8 +14,7 @@
 - `get` and `has` read any object that writes its properties through `accept`, including embedded objects, which have
   no identity (and so compare equal to nothing).
 
-`Evaluators.predicate(predicate, value)` evaluates a union branch's predicate with `this` bound to the value tested. It
-is the evaluator mbse-schemas' validators take: `Validators.Validate(registry, Evaluators.predicate)`.
+`Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, as a truth value.
 """
 
 from __future__ import annotations
@@ -182,7 +181,7 @@ def OfLet(expression: Expressions.OfLet.Spec, scope: Scope = None) -> Any:
 
 
 def predicate(predicate: Expressions.OfAny.Spec, value: Any) -> bool | None:
-    """Whether `value` satisfies a union branch's `predicate`, evaluated with `this` bound to it; `None` if unknown."""
+    """Whether `value` satisfies the rule `predicate`, evaluated with `this` bound to it; `None` if unknown."""
     result = OfAny(predicate, {"this": value})
     if result is not None and type(result) is not bool:
         raise TypeError(f"a predicate must be a bool, got {_type_name(result)}")
