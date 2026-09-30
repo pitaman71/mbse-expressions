@@ -12,6 +12,7 @@ dependencies = ["mbse-schemas"]
 
 [project.optional-dependencies]
 yaml = ["mbse-schemas[yaml]"]
+numpy = ["numpy>=2.4.6"]
 
 [tool.setuptools.packages.find]
 include = ["mbse*"]

@@ -65,14 +65,29 @@ npm test                       # type-check and run the test suites and the tuto
 ```
 submodules/mbse-schemas/  the framework this package depends on
 docs/                     the design (EXPRESSIONS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
-python3/                  Python implementation: mbse/Expressions (Expressions, Evaluators), tests, tutorial
+python3/                  Python implementation: mbse/Expressions (Framework, Dialects, Translators), tests, tutorial
 typescript5/              TypeScript implementation: src (Expressions, Evaluators), tests, tutorial
 conformance/              snapshots each implementation writes; each must read the other's
 ```
 
+## Dialects
+
+Expressions come in dialects that implement one framework: each is serializable, traversable, validatable and
+evaluatable, and pairwise translators convert between them. Basic, above, is the core vocabulary. Numpy, Matlab and
+Excel model those languages' expressions, render as their source, and evaluate by their rules (Python only, so far):
+
+```python
+from mbse.Expressions import Translators
+from mbse.Expressions.Dialects.Excel import Expressions as Excel
+
+formula = Translators.between(Expressions.DIALECT, Excel.DIALECT).forward(senior)
+Excel.render(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email)))'
+```
+
 ## Status
 
-Built in both languages: literals, operations, variables and lets, with builders and meta-schemas; terms (and, in
+Built in Python: the framework (protocols for expressions, domains, evaluation and translation), the Basic, Numpy,
+Matlab and Excel dialects, and translators between every pair. Built in both languages: literals, operations, variables and lets, with builders and meta-schemas; terms (and, in
 Python, `Expressions.from_`); `validate()`; evaluation of the core operations with three-valued logic. Not built yet:
 the collection operations (`count`, `in`, `all`, `any`), and the evaluator interface through which mbse-schemas will
 choose union branches and check constraints.
