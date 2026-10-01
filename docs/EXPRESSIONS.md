@@ -154,6 +154,14 @@ control document describes a data word. Each is parameterized, and today's nativ
   domain has no width: a maximum length is a constraint of the data, and belongs in the schema.
 - **`Enum` is a domain in its own right**: a C or SystemVerilog `enum`, one bit's states, or an enumeration of
   mbse-schemas.
+- **Conversions are explicit, and of two kinds.** `convert(value, domain)` keeps the value, applying the target
+  domain's overflow and rounding; `reinterpret(value, domain)` keeps the bit pattern, between fixed-width domains of
+  the same size (C++'s `bit_cast`). `pack` and `unpack` convert to and from a `Packed` domain's representation.
+- **A literal without a domain has its native's default**: an `int` is an unbounded `Integer`, a `float` an IEEE
+  binary64 `Float`, a `str` a UTF-8 `Unicode`, `bytes` variable `Bytes`, a `bool` a `Bool`. Writers leave a default
+  domain out, so expressions stored before domains keep their meaning and their text.
+- **An `Enum`'s members are unordered**: `eq` and `ne` only. A `Packed` enum orders by its representation, as C
+  compares enums by their integers.
 - **Packing is its own domain.** A `Packed` domain pairs a domain (an `Enum`, a record) with a fixed-size domain and the
   representation of each value in it: SystemVerilog's `enum logic [1:0] {IDLE, RUN}` is an `Enum` packed as `Bits(2)`.
   `pack(value, packed)` gives the representation and `unpack(representation, packed)` the value, so one `Enum` can be
@@ -293,8 +301,6 @@ in Basic but true in the others.
 - Lists (mbse-schemas' `OfIndexed`, positional or keyed): `get` of a list property gives an opaque value, whose items
   Basic cannot read and which equals nothing. Basic has no list or map domain or operations yet (length, item by
   position or key, membership, quantifiers), nor a tensor domain over keyed and extended lists.
-- Value domains (above): the names of the conversion operations; what a literal stored without a domain (today's
-  corpora) means; whether an `Enum`'s members are ordered, or only a `Packed` enum's (by representation, as in C).
 - Core expression vocabulary above is a proposal; confirm the exact set, and specify the collection operations
   (`count`, `in`, `all`, `any`).
 - Matlab and Excel expressions are written as data or through constructors and rendered as source text; they are
@@ -308,6 +314,10 @@ in Basic but true in the others.
   (2, 2 and 3) so that its vocabulary has one signature per name.
 
 ## Resolved
+
+- Value domains: conversions are `convert` (keeps the value) and `reinterpret` (keeps the bit pattern), with `pack` and
+  `unpack` for packed domains; a literal stored without a domain has its native's default domain, and writers leave
+  defaults out; an `Enum` is unordered unless packed, when it orders by its representation.
 
 - Expressions are `Expressions.OfAny`, `OfLiteral`, `OfOperation`, `OfVariable` and `OfLet`, each with `Data`,
   `Builder`, `Spec` and a meta-schema `Schema` that is an ordinary registered object schema tagged by `kind`. Arguments
