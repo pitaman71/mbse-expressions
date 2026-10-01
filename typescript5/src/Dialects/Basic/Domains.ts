@@ -29,18 +29,26 @@
  * `{"named": {"name": "uint8"}}`, and any other by value, `{"integer": {"width": 8, "signed": false, ...}}`: `Schema`
  * is the union of the kinds' meta-schemas and `named`, and `to_plain` and `from_plain` convert.
  *
+ * A value of another domain than its native's default is a typed value, `Value(domain, value)`; `value(domain,
+ * native)` gives the bare native for a default domain and a typed value otherwise, and `of(value)` gives any value's
+ * domain. A domain compares two of its values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a
+ * result into itself by its overflow (`fit`).
+ *
  * `SIGNATURES` gives each core operation's signature, following the evaluator's rules: comparisons take two values of
- * one domain, ordered only for int, float, str and bytes; logic takes bools; arithmetic takes two numbers of one domain
- * and gives that domain.
+ * one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes bools;
+ * arithmetic takes two numbers of one domain and gives that domain, and the bitwise operations two integers or bits of
+ * one domain.
  */
 
-import { Errors, Repr, Schemas } from "@mbse/schemas/Framework";
-import type { Plain } from "@mbse/schemas/Framework";
+import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";
+import type { Plain, Visitors } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
+import { OverflowError } from "../../Framework/Errors.js";
 
 type PlainData = Plain.PlainData;
 type PlainMap = Plain.PlainMap;
+type Native = Visitors.Native;
 
 /** IEEE 754-2019's interchange formats. */
 export const FORMATS = ["binary16", "binary32", "binary64", "binary128", "decimal64", "decimal128"] as const;
@@ -69,6 +77,7 @@ function oneOf(name: string, value: unknown, allowed: readonly string[]): string
 export abstract class Domain implements D.Domain {
   static KIND: string;
   static NATIVE: unknown;
+  static ORDERED = false;
   /** The fields, in order, as the plain form writes them. */
   static FIELDS: readonly string[] = [];
 
@@ -96,6 +105,13 @@ export abstract class Domain implements D.Domain {
   includes(other: D.Domain): boolean {
     if (other instanceof D.OfUnion) return other.members.every((member) => this.includes(member));
     return this.equals(other);
+  }
+
+  /** How two values of this domain compare: -1, 0 or 1, or null when they are incomparable. An unordered domain's
+   * values are equal or incomparable. */
+  compare(a: unknown, b: unknown): number | null {
+    const schema = new Schemas.OfNative.Data(this.native());
+    return new Comparison.OfNative(schema, a as Native).compare(new Comparison.OfNative(schema, b as Native));
   }
 
   /** Structural equality: the same kind, with equal fields. */
@@ -131,6 +147,7 @@ class BoolDomain extends Domain {
 class IntegerDomain extends Domain {
   static override KIND = "integer";
   static override NATIVE = BigInt;
+  static override ORDERED = true;
   static override FIELDS = ["width", "signed", "overflow"];
 
   constructor(public width: bigint | null = null, public signed: boolean = true, public overflow: string = "raise") {
@@ -141,23 +158,43 @@ class IntegerDomain extends Domain {
     return `${this.signed ? "" : "u"}int${this.width === null ? "" : this.width}`;
   }
 
-  protected override fits(value: unknown): boolean {
-    const v = value as bigint;
-    if (!positive(this.width)) return this.signed || v >= 0n;
+  /** The least and the greatest value, null where there is no bound. */
+  bounds(): [bigint | null, bigint | null] {
+    if (!positive(this.width)) return [this.signed ? null : 0n, null];
     const width = this.width as bigint;
-    const [low, high] = this.signed ? [-(1n << (width - 1n)), 1n << (width - 1n)] : [0n, 1n << width];
-    return low <= v && v < high;
+    return this.signed ? [-(1n << (width - 1n)), (1n << (width - 1n)) - 1n] : [0n, (1n << width) - 1n];
+  }
+
+  protected override fits(value: unknown): boolean {
+    const [low, high] = this.bounds();
+    return (low === null || low <= (value as bigint)) && (high === null || (value as bigint) <= high);
+  }
+
+  /** `value` when the domain holds it; otherwise what the domain's overflow makes of it, from `operation`: wrapped into
+   * the width, saturated to the nearer bound, or `OverflowError`. */
+  fit(operation: string, value: bigint): bigint {
+    if (this.fits(value)) return value;
+    const [low, high] = this.bounds();
+    if (this.overflow === "wrap" && positive(this.width)) {
+      const modulus = 1n << (this.width as bigint);
+      return ((value - (low as bigint)) % modulus + modulus) % modulus + (low as bigint);
+    }
+    if (this.overflow === "saturate") return low !== null && value < low ? low : high as bigint;
+    throw new OverflowError(`${operation} overflows ${this.name()}: ${value}`);
   }
 
   override validate(): string[] {
     const problems = this.width === null || positive(this.width) ? [] : [`a width must be a positive int, got ${repr(this.width)}`];
     if (typeof this.signed !== "boolean") problems.push(`signed must be a bool, got ${repr(this.signed)}`);
-    return [...problems, ...oneOf("overflow", this.overflow, OVERFLOWS)];
+    problems.push(...oneOf("overflow", this.overflow, OVERFLOWS));
+    if (this.overflow === "wrap" && this.width === null) problems.push("an integer without a width cannot wrap");
+    return problems;
   }
 }
 
 class Ieee754Domain extends Domain {
   static override KIND = "ieee754";
+  static override ORDERED = true;
   static override FIELDS = ["format", "rounding"];
 
   constructor(public format: string = "binary64", public rounding: string = "roundTiesToEven") {
@@ -172,6 +209,11 @@ class Ieee754Domain extends Domain {
   /** A binary format's values are floats; a decimal format's are their decimal text. */
   override native(): unknown {
     return String(this.format).startsWith("decimal") ? String : Number;
+  }
+
+  override compare(a: unknown, b: unknown): number | null {
+    if (typeof a === "string") throw new Errors.NotImplementedError(`values of ${this.name()} are not compared yet`);
+    return super.compare(a, b);
   }
 
   override validate(): string[] {
@@ -209,6 +251,7 @@ class BitsDomain extends Domain {
 class BytesDomain extends Domain {
   static override KIND = "bytes";
   static override NATIVE = Uint8Array;
+  static override ORDERED = true;
   static override FIELDS = ["width"];
 
   constructor(public width: bigint | null = null) {
@@ -233,6 +276,7 @@ const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[
 class UnicodeDomain extends Domain {
   static override KIND = "unicode";
   static override NATIVE = String;
+  static override ORDERED = true;
 
   override name(): string {
     return "str";
@@ -289,6 +333,7 @@ class EnumDomain extends Domain {
 class PackedDomain extends Domain {
   static override KIND = "packed";
   static override NATIVE = String;
+  static override ORDERED = true;
   static override FIELDS = ["domain", "representation", "codes"];
 
   constructor(public domain: unknown = null, public representation: unknown = null, public codes: readonly bigint[] = []) {
@@ -301,6 +346,17 @@ class PackedDomain extends Domain {
 
   protected override fits(value: unknown): boolean {
     return this.domain instanceof EnumDomain && this.domain.contains(value);
+  }
+
+  /** The code of a member: its representation. */
+  code(member: string): bigint {
+    return this.codes[(this.domain as EnumDomain).members.indexOf(member)] as bigint;
+  }
+
+  /** By code, as C compares enums by their integers. */
+  override compare(a: unknown, b: unknown): number | null {
+    const [x, y] = [this.code(a as string), this.code(b as string)];
+    return x < y ? -1 : x > y ? 1 : 0;
   }
 
   override validate(): string[] {
@@ -572,6 +628,35 @@ export function from_plain(plain: PlainMap): Domain {
   }));
 }
 
+// --- Typed values ---
+
+/** A value of a domain other than its native's default: the `domain`, and the `value`, a native it holds. */
+export class Value {
+  constructor(readonly domain: Domain, readonly value: unknown) {
+    if (!(domain instanceof Domain)) throw new TypeError(`not a value domain: ${repr(domain)}`);
+    if (!domain.contains(value)) throw new Errors.ValueError(`${domain.name()} cannot hold ${repr(value)}`);
+  }
+
+  /** The same domain, and the same native. */
+  equals(other: unknown): boolean {
+    return other instanceof Value && other.domain.equals(this.domain) && sameNative(other.value, this.value);
+  }
+
+  toString(): string {
+    return `${repr(this.value)} as ${this.domain.name()}`;
+  }
+}
+
+function sameNative(a: unknown, b: unknown): boolean {
+  if (a instanceof Uint8Array && b instanceof Uint8Array) return a.length === b.length && a.every((x, i) => x === b[i]);
+  return a === b;
+}
+
+/** A value of `domain`: the bare native when `domain` is its native's default, otherwise a typed value. */
+export function value(domain: Domain, native: unknown): unknown {
+  return nativeDomain(native)?.equals(domain) ? native : new Value(domain, native);
+}
+
 // --- The defaults and the core operations' signatures ---
 
 export const Anything = D.Anything;
@@ -584,29 +669,94 @@ const ObjectDomain = new D.OfValues("object", (value) =>
   value !== null && typeof value === "object" && typeof (value as { accept?: unknown }).accept === "function");
 export { ObjectDomain as Object };
 
+const NATIVES: ReadonlyMap<string, Domain> = new Map<string, Domain>([
+  ["bool", Bool], ["int", Int], ["float", Float], ["str", Str], ["bytes", Bytes],
+]);
+
+/** A native's default domain, or null when `value` is not a native. */
+export function nativeDomain(value: unknown): Domain | null {
+  const native = NATIVES.get(Repr.typeName(value));
+  return native !== undefined && Schemas.isNativeOf(native.native(), value) ? native : null;
+}
+
+type DomainKind = abstract new (...args: never[]) => Domain;
+
+/** Every value domain of some kinds, for signatures: it includes each of them. */
+class Family implements D.Domain {
+  readonly kinds: readonly DomainKind[];
+
+  constructor(private readonly familyName: string, ...kinds: DomainKind[]) {
+    this.kinds = kinds;
+  }
+
+  name(): string {
+    return this.familyName;
+  }
+
+  private has(domain: unknown): boolean {
+    return this.kinds.some((kind) => domain instanceof kind);
+  }
+
+  contains(value: unknown): boolean {
+    return this.has(value instanceof Value ? value.domain : nativeDomain(value));
+  }
+
+  includes(other: D.Domain): boolean {
+    if (other instanceof D.OfUnion) return other.members.every((member) => this.includes(member));
+    return this.has(other);
+  }
+
+  toString(): string {
+    return this.familyName;
+  }
+}
+
+const VALUES = new Family("value domain", Domain);
+const ORDERED_KINDS = new Family("integer, ieee754, bytes, unicode or packed domain", IntegerDomain, Ieee754Domain,
+  BytesDomain, UnicodeDomain, PackedDomain);
+const NUMERIC = new Family("integer or ieee754 domain", IntegerDomain, Ieee754Domain);
+const BITWISE = new Family("integer or bits domain", IntegerDomain, BitsDomain);
+const INTEGERS = new Family("integer domain", IntegerDomain);
 const COMPARABLE = [Bool, Int, Float, Str, Bytes, ObjectDomain];
 const ORDERED = [Int, Float, Str, Bytes];
 const NUMBERS = [Int, Float];
 const LOGIC = new D.Function([Bool, Bool], Bool);
 
+/** `shl` and `shr`: an integer or bits value and a count of any integer domain, giving the value's domain. */
+class Shift implements D.Signature {
+  private readonly valueSignature = new D.Same(1, [Int], null, BITWISE);
+
+  arity(): number {
+    return 2;
+  }
+
+  result(args: readonly D.Domain[]): D.Domain | null {
+    if (args.length !== 2 || !D.overlaps(INTEGERS, args[1] as D.Domain)) return null;
+    return this.valueSignature.result(args.slice(0, 1));
+  }
+
+  describe(): string {
+    return `(T, any ${INTEGERS.name()}) -> T for T in int or any ${BITWISE.name()}`;
+  }
+}
+
 /** The core operations' signatures. */
 export const SIGNATURES: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
   ["get", new D.Function([ObjectDomain, Str], Anything)], ["has", new D.Function([ObjectDomain, Str], Bool)],
-  ...["eq", "ne"].map((name) => [name, new D.Same(2, COMPARABLE, Bool)] as [string, D.Signature]),
-  ...["lt", "le", "gt", "ge"].map((name) => [name, new D.Same(2, ORDERED, Bool)] as [string, D.Signature]),
+  ...["eq", "ne"].map((name) => [name, new D.Same(2, COMPARABLE, Bool, VALUES)] as [string, D.Signature]),
+  ...["lt", "le", "gt", "ge"].map((name) => [name, new D.Same(2, ORDERED, Bool, ORDERED_KINDS)] as [string, D.Signature]),
   ["and", LOGIC], ["or", LOGIC], ["not", new D.Function([Bool], Bool)], ["implies", LOGIC],
-  ...["add", "sub", "mul"].map((name) => [name, new D.Same(2, NUMBERS)] as [string, D.Signature]),
-  ["neg", new D.Same(1, NUMBERS)],
+  ...["add", "sub", "mul"].map((name) => [name, new D.Same(2, NUMBERS, null, NUMERIC)] as [string, D.Signature]),
+  ["neg", new D.Same(1, NUMBERS, null, NUMERIC)],
+  ...["bitand", "bitor", "bitxor"].map((name) => [name, new D.Same(2, [Int], null, BITWISE)] as [string, D.Signature]),
+  ["bitnot", new D.Same(1, [Int], null, BITWISE)], ["shl", new Shift()], ["shr", new Shift()],
 ]);
 
-const NATIVES: ReadonlyMap<string, Domain> = new Map<string, Domain>([
-  ["bool", Bool], ["int", Int], ["float", Float], ["str", Str], ["bytes", Bytes],
-]);
-
-/** The domain of a value: its native type's default, or `Object`. */
+/** The domain of a value: a typed value's own, its native type's default, or `Object`. */
 export function of(value: unknown): D.Domain {
-  const native = NATIVES.get(Repr.typeName(value));
-  if (native !== undefined && Schemas.isNativeOf(native.native(), value)) return native;
+  if (value instanceof Value) return value.domain;
+  const native = nativeDomain(value);
+  if (native !== null) return native;
   if (ObjectDomain.contains(value)) return ObjectDomain;
   throw new TypeError(`a ${Repr.typeName(value)} is not a value of the Basic dialect`);
 }

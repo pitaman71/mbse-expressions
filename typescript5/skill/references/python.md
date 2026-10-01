@@ -65,9 +65,11 @@ assert Evaluators.predicate(this.reach.has("email"), card) is True
 # Terms: methods that build expressions. .data is the expression; a term is accepted wherever an expression is.
 this = E.variable("this"); E.literal(1); E.let_("a", value, body); E.operation("name", *arguments)
 E.literal(200, Domains.OfInteger.Builder().width(8).signed(False).create())   # a literal of a value domain
-Domains.register("uint8", domain)          # a registered domain is written by name; evaluating other domains comes later
+Domains.register("uint8", domain)          # a registered domain is written by name
+Domains.Value(domain, 200)                 # a value of a non-default domain, as evaluation gives it; overflow applies
 this.age; this.get("eq"); this.has("email")                 # .name is get(this, 'name'); get() for names like eq
 t.eq(x) .ne .lt .le .gt .ge .and_(x) .or_(x) .not_() .implies(x) .add(x) .sub(x) .mul(x) .neg()
+E.operation("bitand", a, b); E.operation("shl", a, 3)       # bitand bitor bitxor bitnot shl shr, on integers and bits
 E.from_(lambda this: this.age >= 18 and this.email is not None)    # a lambda, or a def whose body is one return
 
 # Data and builders: create() / clone() / update(), none validate.

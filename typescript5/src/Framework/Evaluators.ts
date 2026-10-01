@@ -8,8 +8,8 @@
  * Evaluation resolves references in a scope (see `Symbolics`): an evaluator given an object of variables instead of a
  * scope makes its dialect's scope from it, so `Evaluators.OfAny(expression, { this: value })` binds `this`.
  *
- * `Interpreter` evaluates by role (see `Terms`): a literal gives its value (through `literal`), a reference what
- * the scope resolves, a binding its body in the scope with its name bound, and an import its body in the scope it
+ * `Interpreter` evaluates by role (see `Terms`): a literal gives its value (through `literal`, or `typed` when it
+ * carries a domain of its own), a reference what the scope resolves, a binding its body in the scope with its name bound, and an import its body in the scope it
  * declares. An application calls its operator's implementation from `operations`, with one thunk per argument, so
  * that implementations decide which arguments to evaluate and when; the implementation of a kind whose vocabulary is
  * open is one function for every name, and operators outside a closed vocabulary go to `extension`, if given. It
@@ -37,10 +37,12 @@ export type Predicate = (predicate: any, value: unknown) => boolean | null;
 
 /** Evaluates the expressions of `dialect`. `operations` maps each application kind's tag to its implementations by
  * operator name, or, for a kind whose vocabulary is open, to one implementation. `literal` converts a literal's value
- * into the dialect's domain of values, `scope` makes the dialect's scope from an object of variables, and
- * `extension(operator, args, node, scope)` evaluates operators outside a kind's vocabulary. */
+ * into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal that carries a domain of
+ * its own (without it, evaluating one throws `NotImplementedError`); `scope` makes the dialect's scope from an object
+ * of variables, and `extension(operator, args, node, scope)` evaluates operators outside a kind's vocabulary. */
 export class Interpreter {
   private readonly literal: (value: unknown) => unknown;
+  private readonly typed: ((domain: any, value: unknown) => unknown) | null;
   private readonly scope: (variables: Bindings) => Scope;
   private readonly extension: ((operator: string, args: Thunk[], node: any, scope: any) => any) | null;
 
@@ -48,10 +50,12 @@ export class Interpreter {
     readonly operations: ReadonlyMap<string, ReadonlyMap<string, Implementation> | Implementation>,
     options: {
       literal?: (value: unknown) => unknown;
+      typed?: (domain: any, value: unknown) => unknown;
       scope?: (variables: Bindings) => Scope;
       extension?: (operator: string, args: Thunk[], node: any, scope: any) => any;
     } = {}) {
     this.literal = options.literal ?? ((value) => value);
+    this.typed = options.typed ?? null;
     this.scope = options.scope ?? ((variables) => new Variables(variables));
     this.extension = options.extension ?? null;
   }
@@ -68,8 +72,9 @@ export class Interpreter {
       const value = expression.field("value");
       if (value === null) throw new ValueError(`${Terms.article(kind.KIND)} needs a value`);
       const typed = expression.typed();
-      if (typed !== null) throw new NotImplementedError(`literals of ${typed.name()} are not evaluated yet`);
-      return this.literal(value);
+      if (typed === null) return this.literal(value);
+      if (this.typed === null) throw new NotImplementedError(`this evaluator has no values of ${typed.name()}`);
+      return this.typed(typed, value);
     }
     if (kind.ROLE === Terms.REFERENCE) return scope.lookup(expression);
     if (active.has(expression)) throw new ValueError("the expression contains a cycle");

@@ -40,6 +40,8 @@ deterministic, and total, with no side effects or unbounded iteration.
 | Comparison | `eq`, `ne`, `lt`, `le`, `gt`, `ge` (2) |
 | Boolean | `and`, `or`, `implies` (2), `not` (1) |
 | Arithmetic | `add`, `sub`, `mul` (2), `neg` (1) |
+| Bitwise | `bitand`, `bitor`, `bitxor` (2), `bitnot` (1); `shl`, `shr` (a value and a count) |
+| Conversion | `convert`, `reinterpret`, `unpack` (1, with the operation's `domain`); `pack` (1) |
 | Collections (not built yet) | `count`, `in`, and bounded quantifiers `all` / `any` over an object's adjacency entries |
 
 Rules that every binding must evaluate use only the core vocabulary. Operation names outside it are extensions that a
@@ -55,7 +57,8 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
   evaluated only when the first does not decide.
 - No coercion. Comparisons follow mbse-schemas' [`EQUALITY.md`](../submodules/mbse-schemas/docs/EQUALITY.md): natives of one type by value, objects by identity; values of different
   types are incomparable (`lt(1, 1.5)` is unknown), and only `int`, `float`, `str` and `bytes` are ordered. Arithmetic
-  takes numbers of one type (`add(1, 1.5)` is an error).
+  takes numbers of one domain (`add(1, 1.5)` is an error). Values of other domains than the natives' defaults follow
+  the same rules by domain (see Value domains).
 - Unknown operations, wrong numbers of arguments, unbound variables and wrong operand types raise.
 - `get` and `has` read any object that writes its properties through `accept`, including mbse-schemas' value
   objects, whose identity does not take part in equality, so they compare equal to nothing; reference objects
@@ -110,11 +113,11 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
 ## Value domains
 
 Domains as data are implemented: the kinds below, their validation, the registry, and literals that carry them.
-Evaluating literals of other domains than the natives' defaults, and the conversions, are designed, not yet
-implemented: evaluating such a literal raises `NotImplementedError`. The domains below make representation part of the
-type, as C, C++ and SystemVerilog need, and as an interface
-control document describes a data word. Each names a published standard where one exists, with only the parameters
-that standard defines, and today's natives become their defaults.
+Evaluation in them is decided below and lands in stages: typed values, comparisons, `Integer` arithmetic and the bitwise
+operations first, then IEEE 754 arithmetic in every format, then the conversions. Until a stage lands, what it covers
+raises `NotImplementedError`. The domains make representation part of the type, as C, C++ and SystemVerilog need, and
+as an interface control document describes a data word. Each names a published standard where one exists, with only
+the parameters that standard defines, and today's natives become their defaults.
 
 | Domain | Parameters | Default (today's native) |
 |---|---|---|
@@ -160,9 +163,9 @@ that standard defines, and today's natives become their defaults.
   `Unicode`. A `Unicode` domain has no width: a maximum length is a constraint of the data, and belongs in the schema.
 - **`Enum` is a domain in its own right**: a C or SystemVerilog `enum`, one bit's states, or an enumeration of
   mbse-schemas.
-- **Conversions are explicit, and of two kinds.** `convert(value, domain)` keeps the value, applying the target
-  domain's overflow and rounding; `reinterpret(value, domain)` keeps the bit pattern, between fixed-width domains of
-  the same size (C++'s `bit_cast`). `pack` and `unpack` convert to and from a `Packed` domain's representation.
+- **Conversions are explicit, and of two kinds.** `convert` keeps the value, applying the target domain's overflow and
+  rounding; `reinterpret` keeps the bit pattern, between fixed-width domains of the same size (C++'s `bit_cast`).
+  `pack` gives a packed value's representation and `unpack` the packed value a representation stands for.
 - **A literal without a domain has its native's default**: an `int` is an unbounded `Integer`, a `float` an `Ieee754`
   `binary64` rounding ties to even, a `str` a `Unicode`, `bytes` variable `Bytes`, a `bool` a `Bool`. A literal given its
   native's default domain holds none, so writers leave it out, and expressions stored before domains keep their meaning
@@ -177,6 +180,49 @@ that standard defines, and today's natives become their defaults.
   representation of each value in it: SystemVerilog's `enum logic [1:0] {IDLE, RUN}` is an `Enum` packed as `Bits(2)`.
   `pack(value, packed)` gives the representation and `unpack(representation, packed)` the value, so one `Enum` can be
   packed several ways.
+- **A value of another domain than its native's default is a typed value**, `Domains.Value(domain, value)`, whose
+  value is a native its domain holds (constructing one that it does not hold raises). Evaluating a literal of such a
+  domain gives one, operations give one whenever their result's domain is not a default, and a scope may bind a
+  variable to one; a value of a default domain is always the bare native, so rules over natives are unchanged.
+  `Domains.of(value)` gives a value's domain, a typed value's own.
+- **Comparisons take two values of one domain**; values of different domains are incomparable (unknown), so
+  `eq(1 as int8, 1)` is unknown. Every domain has `eq` and `ne`. `Integer`, `Ieee754`, `Bytes`, `Unicode` and
+  `Packed` are ordered; `Bool`, `Bits`, `Ieee1164` and `Enum` are not. `Ieee754` values compare as mbse-schemas
+  compares floats: by IEEE 754's `totalOrder`, so `-0` comes before `0` and a decimal format's members of one cohort
+  order by exponent (among positives the smaller first, so `1.50` before `1.5`), except that NaNs equal each other
+  and are incomparable with numbers. A `Packed` value orders by its code.
+- **Arithmetic takes two values of one domain, `Integer` or `Ieee754`, and gives that domain.** An `Integer` result
+  outside the domain wraps (into the width, two's complement), saturates (to the nearer bound) or raises
+  `OverflowError` (`"add overflows int8: 128"`); `wrap` needs a width. An `Ieee754` result is the exact one rounded to
+  the format with the domain's rounding direction, with IEEE 754's default exception handling: overflow gives an
+  infinity or, for directed roundings away from it, the largest finite number; invalid operations (`inf - inf`) give
+  NaN; an exact zero sum is `+0`, or `-0` rounding toward negative. A decimal result keeps IEEE 754's preferred
+  exponent (the smaller of the operands' for `add` and `sub`, their sum for `mul`) when it is exact.
+- **An `Ieee754` value is a float in the binary formats up to `binary64`, and text otherwise.** `binary16`, `binary32`
+  and `binary64` values are floats, which hold each of them exactly. `binary128` and the decimal formats are text in
+  the General Decimal Arithmetic specification's scientific form (`1.5`, `1.50`, `1E+40`, `-0`, `Infinity`, `NaN`):
+  a decimal value's text gives its coefficient and exponent, so cohort members differ, and a `binary128` value's is the
+  shortest that rounds back to it. A value holds only its canonical text. NaN payloads and signaling NaNs are not
+  values.
+- **The bitwise operations take `Integer` and `Bits` values of one domain** (the default `int` among them).
+  `bitand`, `bitor`, `bitxor` and `bitnot` work on two's complement patterns: of the width, so that results always fit,
+  or infinite without one (as Python's ints), when a result outside the domain (`bitnot` of an unsigned) applies the
+  domain's overflow. `shl` and `shr` take a value and a non-negative count of any `Integer` domain: on an `Integer`,
+  `shl` multiplies by a power of two with the domain's overflow and `shr` divides rounding toward negative infinity (an
+  arithmetic shift); on `Bits` both are logical within the width.
+- **An operation's `domain` is the domain of its result.** `convert`, `reinterpret` and `unpack` need one, and other
+  operations take none, as validation reports; unlike a literal's, it is kept when it is a native's default
+  (`convert(x)` to `int` must say so), and inference gives it.
+- **What converts.** `convert` keeps the value: from an `Integer` to an `Integer` (the target's overflow) or an
+  `Ieee754` (the target's rounding); from an `Ieee754` to an `Ieee754` (the target's rounding) or to an `Integer`
+  (rounded to an integer in the source's rounding direction, then the target's overflow; NaN raises `ValueError`, and
+  an infinity overflows); between `Bytes` domains when the value fits; between an `Enum` and a `Packed` domain of it;
+  and from any domain to itself. `reinterpret` keeps the bit pattern, big-endian, between `Integer`s of a width (two's
+  complement), the binary `Ieee754` formats (their interchange encoding; a NaN is the canonical quiet NaN) and `Bits`
+  and `Bytes` of a width, of the same number of bits; the decimal formats have two encodings (binary and densely
+  packed decimal), and IEEE 754 leaves the choice open, so they do not reinterpret. `pack` takes a value of a `Packed`
+  domain and gives its code in the representation; `unpack` takes a representation and gives the `Packed` value of
+  that code, raising `ValueError` when no member has it. Anything else raises `TypeError`.
 - **Widths are in mbse-schemas too**, in its natives, so that a schema's field and an expression over it have one type
   system. An `OfNative` holds a token `{format, name}` (`basic` is the neutral format, with Basic's names) and
   optionally a width in bits or in bytes; a domain interprets that width.
@@ -343,6 +389,11 @@ in Basic but true in the others.
   standard defines, rather than free representation parameters: no float format by widths and flags, no ones'
   complement or sign-magnitude integers, no `Decimal` apart from IEEE 754's decimal formats. The dialect keeps its
   name, Basic, which mbse-schemas' neutral token format (`basic`) shares.
+- Evaluation in value domains: a value of a non-default domain is a typed value (`Domains.Value`), and a default
+  domain's value stays the bare native; an operation's optional `domain` is the domain of its result, which `convert`,
+  `reinterpret` and `unpack` need and `pack` does not; the bitwise operations (`bitand`, `bitor`, `bitxor`, `bitnot`,
+  `shl`, `shr`) join the core vocabulary; every IEEE 754 format is evaluated, `binary128` and the decimal formats as
+  canonical text.
 - Expressions are a program's own classes bound to their meta-schemas with mbse-schemas' `Bindings`, not builders of
   their own: what is generic to any schema (visitor protocols over a state, finalizing, the registry, value objects in
   properties) lives once, in mbse-schemas, and `Terms` gives only `read`, `make` and the DSL.

@@ -11,8 +11,8 @@ is stored with the rest of the data ([mbse-schemas](https://github.com/pitaman71
 the same way in Python (`mbse.Expressions`) and TypeScript (`@mbse/expressions`), and translated between expression
 languages, called dialects:
 
-- **Basic**, the core vocabulary: comparisons, Kleene logic, arithmetic, property access, lets. Every binding
-  evaluates it, and it is the neutral form of every rule.
+- **Basic**, the core vocabulary: comparisons, Kleene logic, arithmetic and bitwise operations over value domains,
+  property access, lets. Every binding evaluates it, and it is the neutral form of every rule.
 - **Python**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules.
 - **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.

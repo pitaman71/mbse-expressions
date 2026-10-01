@@ -172,27 +172,41 @@ class Function:
 
 class Same:
     """Takes `arity` arguments of one of the `candidates` domains, all of the same one, and gives `result`, or that
-    domain when `result` is None: `Same(2, (Int, Float))` is add, `Same(2, (Int, Float, Str), Bool)` is lt."""
+    domain when `result` is None: `Same(2, (Int, Float))` is add, `Same(2, (Int, Float, Str), Bool)` is lt. With a
+    `family`, a domain that includes whole domains (every integer domain, say), each argument's domain in the family is
+    a candidate too."""
 
-    def __init__(self, arity: int, candidates: Sequence[Domain], result: Domain | None = None):
-        self._arity, self.candidates, self._result = arity, tuple(candidates), result
+    def __init__(self, arity: int, candidates: Sequence[Domain], result: Domain | None = None,
+                 family: Domain | None = None):
+        self._arity, self.candidates, self._result, self.family = arity, tuple(candidates), result, family
 
     def arity(self) -> int:
         return self._arity
 
+    def _candidates(self, arguments: Sequence[Domain]) -> list[Domain]:
+        found = list(self.candidates)
+        for argument in arguments:
+            if (self.family is not None and not isinstance(argument, OfUnion) and self.family.includes(argument)
+                    and not any(c.includes(argument) and argument.includes(c) for c in found)):
+                found.append(argument)
+        return found
+
     def result(self, arguments: Sequence[Domain]) -> Domain | None:
         if len(arguments) != self._arity:
             return None
-        matches = [c for c in self.candidates if all(overlaps(c, argument) for argument in arguments)]
+        matches = [c for c in self._candidates(arguments) if all(overlaps(c, argument) for argument in arguments)]
         if not matches:
             return None
         return _join([self._result or match for match in matches])
 
     def exact(self, arguments: Sequence[Domain]) -> bool:
-        return len(arguments) == self._arity and any(all(c.includes(a) for a in arguments) for c in self.candidates)
+        return len(arguments) == self._arity and any(
+            all(c.includes(a) for a in arguments) for c in self._candidates(arguments))
 
     def describe(self) -> str:
         names = " | ".join(c.name() for c in self.candidates)
+        if self.family is not None:
+            names += f" or any {self.family.name()}"
         parameters = ", ".join(["T"] * self._arity)
         return f"({parameters}) -> {self._result.name() if self._result else 'T'} for T in {names}"
 

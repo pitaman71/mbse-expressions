@@ -27,9 +27,14 @@ Domains are registered by name with `register`. Over the wire a domain that is r
 `{"named": {"name": "uint8"}}`, and any other by value, `{"integer": {"width": 8, "signed": false, ...}}`: `Schema` is
 the union of the kinds' meta-schemas and `named`, and `to_plain` and `from_plain` convert.
 
+A value of another domain than its native's default is a typed value, `Value(domain, value)`; `value(domain, native)`
+gives the bare native for a default domain and a typed value otherwise, and `of(value)` gives any value's domain. A
+domain compares two of its values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into
+itself by its overflow (`fit`).
+
 `SIGNATURES` gives each core operation's signature, following the evaluator's rules: comparisons take two values of
-one domain, ordered only for `int`, `float`, `str` and `bytes`; logic takes bools; arithmetic takes two numbers of one
-domain and gives that domain.
+one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes bools; arithmetic
+takes two numbers of one domain and gives that domain, and the bitwise operations two integers or bits of one domain.
 """
 
 from __future__ import annotations
@@ -41,13 +46,13 @@ from typing import Any, ClassVar
 
 from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
-from mbse.Schemas.Framework import Schemas
+from mbse.Schemas.Framework import Comparison, Schemas
 
 __all__ = [
     "OfBool", "OfInteger", "OfIeee754", "OfBits", "OfBytes", "OfUnicode", "OfIeee1164", "OfEnum", "OfPacked",
     "FORMATS", "ROUNDINGS", "OVERFLOWS", "STATES", "Schema",
     "Bool", "Int", "Float", "Str", "Bytes", "Object", "Anything", "SIGNATURES",
-    "of", "register", "registered", "name_of", "to_plain", "from_plain", "Domain",
+    "of", "register", "registered", "name_of", "to_plain", "from_plain", "Domain", "Value", "value",
 ]
 
 FORMATS = ("binary16", "binary32", "binary64", "binary128", "decimal64", "decimal128")
@@ -78,6 +83,7 @@ class _Domain:
 
     KIND: ClassVar[str]
     NATIVE: ClassVar[type]
+    ORDERED: ClassVar[bool] = False
 
     def name(self) -> str:
         return self.KIND
@@ -97,6 +103,12 @@ class _Domain:
             return all(self.includes(member) for member in other.members)
         return other == self
 
+    def compare(self, a: Any, b: Any) -> int | None:
+        """How two values of this domain compare: -1, 0 or 1, or None when they are incomparable. An unordered domain's
+        values are equal or incomparable."""
+        schema = Schemas.OfNative.Data(type(a))
+        return Comparison.OfNative(schema, a).compare(Comparison.OfNative(schema, b))
+
     def validate(self) -> list[str]:
         return []
 
@@ -111,7 +123,7 @@ class _Bool(_Domain):
 
 @dataclass(eq=True, repr=False)
 class _Integer(_Domain):
-    KIND, NATIVE = "integer", int
+    KIND, NATIVE, ORDERED = "integer", int, True
     width: int | None = None
     signed: bool = True
     overflow: str = "raise"
@@ -119,23 +131,44 @@ class _Integer(_Domain):
     def name(self) -> str:
         return f"{'' if self.signed else 'u'}int{'' if self.width is None else self.width}"
 
-    def _fits(self, value: int) -> bool:
+    def bounds(self) -> tuple[int | None, int | None]:
+        """The least and the greatest value, None where there is no bound."""
         if not _positive(self.width):
-            return self.signed or value >= 0
-        low, high = (-(1 << (self.width - 1)), 1 << (self.width - 1)) if self.signed else (0, 1 << self.width)
-        return low <= value < high
+            return (None if self.signed else 0), None
+        if self.signed:
+            return -(1 << (self.width - 1)), (1 << (self.width - 1)) - 1
+        return 0, (1 << self.width) - 1
+
+    def _fits(self, value: int) -> bool:
+        low, high = self.bounds()
+        return (low is None or low <= value) and (high is None or value <= high)
+
+    def fit(self, operation: str, value: int) -> int:
+        """`value` when the domain holds it; otherwise what the domain's overflow makes of it, from `operation`: wrapped
+        into the width, saturated to the nearer bound, or `OverflowError`."""
+        if self._fits(value):
+            return value
+        low, high = self.bounds()
+        if self.overflow == "wrap" and _positive(self.width):
+            return (value - low) % (1 << self.width) + low  # type: ignore[operator]
+        if self.overflow == "saturate":
+            return low if low is not None and value < low else high  # type: ignore[return-value]
+        raise OverflowError(f"{operation} overflows {self.name()}: {value}")
 
     def validate(self) -> list[str]:
         problems = [] if self.width is None or _positive(self.width) else [
             f"a width must be a positive int, got {self.width!r}"]
         if type(self.signed) is not bool:
             problems.append(f"signed must be a bool, got {self.signed!r}")
-        return problems + _one_of("overflow", self.overflow, OVERFLOWS)
+        problems += _one_of("overflow", self.overflow, OVERFLOWS)
+        if self.overflow == "wrap" and self.width is None:
+            problems.append("an integer without a width cannot wrap")
+        return problems
 
 
 @dataclass(eq=True, repr=False)
 class _Ieee754(_Domain):
-    KIND = "ieee754"
+    KIND, ORDERED = "ieee754", True
     format: str = "binary64"
     rounding: str = "roundTiesToEven"
 
@@ -147,6 +180,11 @@ class _Ieee754(_Domain):
     def native(self) -> type:
         """A binary format's values are floats; a decimal format's are their decimal text."""
         return str if str(self.format).startswith("decimal") else float
+
+    def compare(self, a: Any, b: Any) -> int | None:
+        if type(a) is str:
+            raise NotImplementedError(f"values of {self.name()} are not compared yet")
+        return super().compare(a, b)
 
     def validate(self) -> list[str]:
         return _one_of("format", self.format, FORMATS) + _one_of("rounding", self.rounding, ROUNDINGS)
@@ -174,7 +212,7 @@ class _Bits(_Domain):
 
 @dataclass(eq=True, repr=False)
 class _Bytes(_Domain):
-    KIND, NATIVE = "bytes", bytes
+    KIND, NATIVE, ORDERED = "bytes", bytes, True
     width: int | None = None
 
     def name(self) -> str:
@@ -190,7 +228,7 @@ class _Bytes(_Domain):
 
 @dataclass(eq=True, repr=False)
 class _Unicode(_Domain):
-    KIND, NATIVE = "unicode", str
+    KIND, NATIVE, ORDERED = "unicode", str, True
 
     def name(self) -> str:
         return "str"
@@ -236,7 +274,7 @@ class _Enum(_Domain):
 
 @dataclass(eq=True, repr=False)
 class _Packed(_Domain):
-    KIND, NATIVE = "packed", str
+    KIND, NATIVE, ORDERED = "packed", str, True
     domain: Any = None  # an enum
     representation: Any = None  # a fixed-width integer or bits
     codes: tuple[int, ...] = ()
@@ -246,6 +284,15 @@ class _Packed(_Domain):
 
     def _fits(self, value: str) -> bool:
         return isinstance(self.domain, _Enum) and self.domain.contains(value)
+
+    def code(self, member: str) -> int:
+        """The code of a member: its representation."""
+        return self.codes[self.domain.members.index(member)]
+
+    def compare(self, a: Any, b: Any) -> int | None:
+        """By code, as C compares enums by their integers."""
+        x, y = self.code(a), self.code(b)
+        return (x > y) - (x < y)
 
     def validate(self) -> list[str]:
         if not isinstance(self.domain, _Enum):
@@ -499,29 +546,108 @@ def from_plain(plain: dict[str, Any]) -> _Domain:
     return _KINDS[kind](**fields)
 
 
+# --- Typed values ---
+
+
+@dataclass(frozen=True)
+class Value:
+    """A value of a domain other than its native's default: the `domain`, and the `value`, a native it holds."""
+
+    domain: _Domain
+    value: Any
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.domain, _Domain):
+            raise TypeError(f"not a value domain: {self.domain!r}")
+        if not self.domain.contains(self.value):
+            raise ValueError(f"{self.domain.name()} cannot hold {self.value!r}")
+
+    def __repr__(self) -> str:
+        return f"{self.value!r} as {self.domain.name()}"
+
+
+def value(domain: _Domain, native: Any) -> Any:
+    """A value of `domain`: the bare native when `domain` is its native's default, otherwise a typed value."""
+    return native if _NATIVES.get(type(native)) == domain else Value(domain, native)
+
+
 # --- The defaults and the core operations' signatures ---
 
 Bool, Int, Float, Str, Bytes = _Bool(), _Integer(), _Ieee754(), _Unicode(), _Bytes()
 Object = D.OfValues("object", lambda value: callable(getattr(value, "accept", None)))
 
 _NATIVES: dict[type, _Domain] = {bool: Bool, int: Int, float: Float, str: Str, bytes: Bytes}
+
+
+class _Family:
+    """Every value domain of some kinds, for signatures: it includes each of them."""
+
+    def __init__(self, name: str, *kinds: type[_Domain]):
+        self._name, self.kinds = name, kinds
+
+    def name(self) -> str:
+        return self._name
+
+    def contains(self, value: Any) -> bool:
+        domain = value.domain if isinstance(value, Value) else _NATIVES.get(type(value))
+        return isinstance(domain, self.kinds)
+
+    def includes(self, other: D.Domain) -> bool:
+        if isinstance(other, D.OfUnion):
+            return all(self.includes(member) for member in other.members)
+        return isinstance(other, self.kinds)
+
+    def __repr__(self) -> str:
+        return self._name
+
+
+_VALUES = _Family("value domain", _Domain)
+_ORDERED_KINDS = _Family("integer, ieee754, bytes, unicode or packed domain", _Integer, _Ieee754, _Bytes, _Unicode,
+                         _Packed)
+_NUMERIC = _Family("integer or ieee754 domain", _Integer, _Ieee754)
+_BITWISE = _Family("integer or bits domain", _Integer, _Bits)
+_INTEGERS = _Family("integer domain", _Integer)
 _COMPARABLE = (Bool, Int, Float, Str, Bytes, Object)
 _ORDERED = (Int, Float, Str, Bytes)
 _NUMBERS = (Int, Float)
 _LOGIC = D.Function((Bool, Bool), Bool)
 
+
+class _Shift:
+    """`shl` and `shr`: an integer or bits value and a count of any integer domain, giving the value's domain."""
+
+    def __init__(self) -> None:
+        self._value = D.Same(1, (Int,), None, _BITWISE)
+
+    def arity(self) -> int:
+        return 2
+
+    def result(self, arguments: Any) -> D.Domain | None:
+        if len(arguments) != 2 or not D.overlaps(_INTEGERS, arguments[1]):
+            return None
+        return self._value.result(arguments[:1])
+
+    def describe(self) -> str:
+        return f"(T, any {_INTEGERS.name()}) -> T for T in int or any {_BITWISE.name()}"
+
+
 SIGNATURES: dict[str, D.Signature] = {
     "get": D.Function((Object, Str), Anything), "has": D.Function((Object, Str), Bool),
-    **{name: D.Same(2, _COMPARABLE, Bool) for name in ("eq", "ne")},
-    **{name: D.Same(2, _ORDERED, Bool) for name in ("lt", "le", "gt", "ge")},
+    **{name: D.Same(2, _COMPARABLE, Bool, _VALUES) for name in ("eq", "ne")},
+    **{name: D.Same(2, _ORDERED, Bool, _ORDERED_KINDS) for name in ("lt", "le", "gt", "ge")},
     "and": _LOGIC, "or": _LOGIC, "not": D.Function((Bool,), Bool), "implies": _LOGIC,
-    **{name: D.Same(2, _NUMBERS) for name in ("add", "sub", "mul")}, "neg": D.Same(1, _NUMBERS),
+    **{name: D.Same(2, _NUMBERS, None, _NUMERIC) for name in ("add", "sub", "mul")},
+    "neg": D.Same(1, _NUMBERS, None, _NUMERIC),
+    **{name: D.Same(2, (Int,), None, _BITWISE) for name in ("bitand", "bitor", "bitxor")},
+    "bitnot": D.Same(1, (Int,), None, _BITWISE), "shl": _Shift(), "shr": _Shift(),
 }
 """The core operations' signatures."""
 
 
 def of(value: Any) -> D.Domain:
-    """The domain of a value: its native type's default, or `Object`."""
+    """The domain of a value: a typed value's own, its native type's default, or `Object`."""
+    if isinstance(value, Value):
+        return value.domain
     if type(value) in _NATIVES:
         return _NATIVES[type(value)]
     if Object.contains(value):

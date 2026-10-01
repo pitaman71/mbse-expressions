@@ -9,7 +9,10 @@
  *   unknown. `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the
  *   first does not decide.
  * - No coercion. Comparisons follow mbse-schemas' EQUALITY.md: natives of one type by value, objects by identity; values of
- *   different types are incomparable. Arithmetic takes numbers of one type.
+ *   different types are incomparable. Arithmetic takes numbers of one domain.
+ * - Values of other domains than the natives' defaults are typed values (`Domains.Value`): a literal of such a domain
+ *   evaluates to one, and the operations take them by domain. Values of different domains are incomparable; arithmetic
+ *   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
  * - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
  *   variables and wrong operand types raise, as do the problems `validate()` reports.
  * - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
@@ -18,14 +21,16 @@
  * `Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, as a truth value.
  */
 
-import { Comparison, Repr, Schemas, Validators } from "@mbse/schemas/Framework";
+import { Comparison, Errors, Repr, Schemas, Validators } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Evaluators.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
 const { typeName } = Repr;
+const { NotImplementedError, ValueError } = Errors;
 type Native = Visitors.Native;
 
 /** The variables an expression is evaluated with, or a scope. */
@@ -105,9 +110,24 @@ function sameNativeType(a: unknown, b: unknown): boolean {
   return NATIVES.has(name) && Schemas.isNativeOf(NATIVES.get(name), a) && Schemas.isNativeOf(NATIVES.get(name), b);
 }
 
-/** Whether `a` equals `b`: natives of one type by value, objects by identity; `null` if unknown or incomparable. */
+/** Whether either value is typed; then they compare only within one domain. */
+function typed(a: unknown, b: unknown): boolean {
+  return a instanceof Domains.Value || b instanceof Domains.Value;
+}
+
+function sameDomain(a: unknown, b: unknown): boolean {
+  return a instanceof Domains.Value && b instanceof Domains.Value && a.domain.equals(b.domain);
+}
+
+/** Whether `a` equals `b`: natives of one type by value, typed values of one domain by its comparison, objects by
+ * identity; `null` if unknown or incomparable. */
 function equal(a: unknown, b: unknown): boolean | null {
   if (a === null || b === null) return null;
+  if (typed(a, b)) {
+    if (!sameDomain(a, b)) return null;
+    const [x, y] = [a as Domains.Value, b as Domains.Value];
+    return x.domain.compare(x.value, y.value) === 0;
+  }
   if (sameNativeType(a, b)) return compare(a as Native, b as Native) === 0;
   if (isObject(a) && isObject(b)) return a.identity() === b.identity();
   return null;
@@ -121,29 +141,120 @@ function equality(name: string, values: unknown[]): boolean | null {
 /** Ordered natives of one type; `null` if unknown or incomparable. */
 function order(name: string, values: unknown[]): boolean | null {
   const [a, b] = values;
-  if (a === null || b === null || !sameNativeType(a, b)) return null;
-  const o = compare(a as Native, b as Native);
+  if (a === null || b === null) return null;
+  let o: number | null;
+  if (typed(a, b)) {
+    if (!sameDomain(a, b) || !(a as Domains.Value).domain.kind().ORDERED) return null;
+    const [x, y] = [a as Domains.Value, b as Domains.Value];
+    o = x.domain.compare(x.value, y.value);
+  } else if (!sameNativeType(a, b)) {
+    return null;
+  } else {
+    o = compare(a as Native, b as Native);
+  }
   if (o === null) return null;
   return { lt: o < 0, le: o <= 0, gt: o > 0, ge: o >= 0 }[name as "lt"];
 }
 
-function isNumber(value: unknown): value is bigint | number {
-  return typeof value === "bigint" || typeof value === "number";
+/** A value's domain, or null when it is not a value of one (an object). */
+function domainOf(value: unknown): Domains.Domain | null {
+  return value instanceof Domains.Value ? value.domain : Domains.nativeDomain(value);
 }
+
+function nativeOf(value: unknown): any {
+  return value instanceof Domains.Value ? value.value : value;
+}
+
+/** A value's domain's name when it is typed, otherwise its type's. */
+function describe(value: unknown): string {
+  return value instanceof Domains.Value ? value.domain.name() : typeName(value);
+}
+
+type Kind = abstract new (...args: never[]) => Domains.Domain;
+
+/** The one domain of `values`, which must be of `kinds`; throws naming `what` they must be. */
+function operands(name: string, values: unknown[], kinds: readonly Kind[], what: readonly [string, string]): any {
+  const domains = values.map(domainOf);
+  const first = domains[0];
+  if (!kinds.some((kind) => first instanceof kind) || domains.some((domain) => !(domain as Domains.Domain).equals(first))) {
+    if (values.length === 1) throw new TypeError(`${name} expects ${what[0]}, got ${describe(values[0])}`);
+    throw new TypeError(`${name} expects ${what[1]} of one domain, got ${describe(values[0])} and ${describe(values[1])}`);
+  }
+  return first;
+}
+
+const INTEGER: any = Domains.OfInteger.Data;
+const IEEE754: any = Domains.OfIeee754.Data;
+const BITS: any = Domains.OfBits.Data;
 
 function arithmetic(name: string, values: unknown[]): unknown {
   if (values.some((value) => value === null)) return null;
+  const domain = operands(name, values, [INTEGER, IEEE754], ["a number", "numbers"]);
+  const natives = values.map(nativeOf);
+  if (domain instanceof IEEE754 && !domain.equals(Domains.Float)) {
+    throw new NotImplementedError(`arithmetic in ${domain.name()} is not evaluated yet`);
+  }
+  let result: any;
   if (name === "neg") {
-    const [a] = values;
-    if (!isNumber(a)) throw new TypeError(`neg expects a number, got ${typeName(a)}`);
-    return -a;
+    result = -natives[0];
+  } else {
+    const [a, b] = natives;
+    result = name === "add" ? a + b : name === "sub" ? a - b : a * b;
   }
-  const [a, b] = values;
-  if (!isNumber(a) || typeof a !== typeof b) {
-    throw new TypeError(`${name} expects numbers of one type, got ${typeName(a)} and ${typeName(b)}`);
+  return Domains.value(domain, domain instanceof INTEGER ? domain.fit(name, result) : result);
+}
+
+/** An integer's value, or a bits value's pattern as an unsigned int. */
+function pattern(domain: unknown, native: any): bigint {
+  if (!(domain instanceof BITS)) return native;
+  let result = 0n;
+  for (const byte of native as Uint8Array) result = (result << 8n) | BigInt(byte);
+  return result;
+}
+
+/** The bits value of a pattern, the bits beyond its width dropped. */
+function bits(domain: any, value: bigint): Domains.Value {
+  const width = domain.width as bigint;
+  let rest = value & ((1n << width) - 1n);
+  const out = new Uint8Array(Number((width + 7n) / 8n));
+  for (let i = out.length - 1; i >= 0; i--) {
+    out[i] = Number(rest & 0xffn);
+    rest >>= 8n;
   }
-  const [x, y] = [a as number, b as number]; // both bigint or both number
-  return name === "add" ? x + y : name === "sub" ? x - y : x * y;
+  return new Domains.Value(domain, out);
+}
+
+/** On two's complement patterns: of the width, or infinite without one. */
+function bitwise(name: string, values: unknown[]): unknown {
+  if (values.some((value) => value === null)) return null;
+  const domain = operands(name, values, [INTEGER, BITS], ["an integer or bits", "integers or bits"]);
+  const patterns = values.map((value) => pattern(domain, nativeOf(value)));
+  let result: bigint;
+  if (name === "bitnot") {
+    result = ~(patterns[0] as bigint);
+  } else {
+    const [a, b] = patterns as [bigint, bigint];
+    result = name === "bitand" ? a & b : name === "bitor" ? a | b : a ^ b;
+  }
+  if (domain instanceof BITS) return bits(domain, result);
+  const high = domain.bounds()[1];
+  if (!domain.signed && high !== null) result &= high; // an unsigned width's mask
+  return Domains.value(domain, domain.fit(name, result));
+}
+
+/** `shl` and `shr`: on an integer, multiplying or dividing (toward negative infinity) by a power of two, with the
+ * domain's overflow; on bits, logical within the width. */
+function shift(name: string, values: unknown[]): unknown {
+  const [value, count] = values;
+  if (value === null || count === null) return null;
+  const domain = operands(name, [value], [INTEGER, BITS], ["an integer or bits", ""]);
+  if (!(domainOf(count) instanceof INTEGER)) throw new TypeError(`${name} expects an integer count, got ${describe(count)}`);
+  const n = nativeOf(count) as bigint;
+  if (n < 0n) throw new ValueError(`${name} needs a non-negative count, got ${n}`);
+  const p = pattern(domain, nativeOf(value));
+  const result = name === "shl" ? p << n : p >> n;
+  if (domain instanceof BITS) return bits(domain, result);
+  return Domains.value(domain, domain.fit(name, result));
 }
 
 /** The implementation of each core operation. */
@@ -154,9 +265,12 @@ export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string,
   ...(["and", "or", "implies"] as const).map((name) => [name, logic(name)] as [string, F.Implementation]),
   ["not", strict(not)],
   ...["add", "sub", "mul", "neg"].map((name) => [name, strict(arithmetic)] as [string, F.Implementation]),
+  ...["bitand", "bitor", "bitxor", "bitnot"].map((name) => [name, strict(bitwise)] as [string, F.Implementation]),
+  ...["shl", "shr"].map((name) => [name, strict(shift)] as [string, F.Implementation]),
 ]);
 
-const interpreter = new F.Interpreter(Expressions.DIALECT, new Map([["operation", OPERATIONS]]));
+const interpreter = new F.Interpreter(Expressions.DIALECT, new Map([["operation", OPERATIONS]]),
+  { typed: (domain, value) => new Domains.Value(domain, value) });
 
 /** The value of any expression, with the variables in `scope` bound. */
 export function OfAny(expression: Expressions.OfAny.Spec, scope: Scope = {}): unknown {

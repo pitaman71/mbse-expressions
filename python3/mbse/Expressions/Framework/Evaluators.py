@@ -8,7 +8,8 @@ where dialects differ most.
 Evaluation resolves references in a scope (see `Symbolics`): an evaluator given a mapping instead of a scope makes its
 dialect's scope from it, so `Evaluators.OfAny(expression, {'this': value})` binds `this`.
 
-`Interpreter` evaluates by role (see `Terms`): a literal gives its value (through `literal`), a reference what
+`Interpreter` evaluates by role (see `Terms`): a literal gives its value (through `literal`, or `typed` when it carries
+a domain of its own), a reference what
 the scope resolves, a binding its body in the scope with its name bound, and an import its body in the scope it
 declares. An application calls its operator's implementation from `operations`, with one thunk per argument, so that
 implementations decide which arguments to evaluate and when; the implementation of a kind whose vocabulary is open is
@@ -49,14 +50,17 @@ class Predicate(Protocol):
 class Interpreter:
     """Evaluates the expressions of `dialect`. `operations` maps each application kind's tag to its implementations
     by operator name, or, for a kind whose vocabulary is open, to one implementation. `literal` converts a literal's
-    value into the dialect's domain of values, `scope` makes the dialect's scope from a mapping of variables, and
-    `extension(operator, arguments, node, scope)` evaluates operators outside a kind's vocabulary."""
+    value into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal that carries a
+    domain of its own (without it, evaluating one raises `NotImplementedError`); `scope` makes the dialect's scope from
+    a mapping of variables, and `extension(operator, arguments, node, scope)` evaluates operators outside a kind's
+    vocabulary."""
 
     def __init__(self, dialect: Terms.Declared, operations: Mapping[str, Any], *,
                  literal: Callable[[Any], Any] = lambda value: value,
+                 typed: Callable[[Any, Any], Any] | None = None,
                  scope: Callable[[Mapping[str, Any]], Scope] = Variables,
                  extension: Callable[[str, list[Thunk], Any, Any], Any] | None = None):
-        self.dialect, self.operations, self._literal = dialect, operations, literal
+        self.dialect, self.operations, self._literal, self._typed = dialect, operations, literal, typed
         self._scope, self._extension = scope, extension
 
     def __call__(self, expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
@@ -73,9 +77,11 @@ class Interpreter:
             if expression.value is None:
                 raise ValueError(f"{Terms._article(kind.KIND)} needs a value")
             typed = expression.typed()
-            if typed is not None:
-                raise NotImplementedError(f"literals of {typed.name()} are not evaluated yet")
-            return self._literal(expression.value)
+            if typed is None:
+                return self._literal(expression.value)
+            if self._typed is None:
+                raise NotImplementedError(f"this evaluator has no values of {typed.name()}")
+            return self._typed(typed, expression.value)
         if kind.ROLE == Terms.REFERENCE:
             return scope.lookup(expression)
         if id(expression) in active:

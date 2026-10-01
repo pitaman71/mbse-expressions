@@ -25,6 +25,6 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `06_Dialects.ipynb` | DIA | 9 | as in Python, with Python expressions written by constructors (DIA-01 asserts there is no `parse`), Python's rules checked against the same tables of values and errors as the Python suite, and a `Module` in place of numpy |
 | `07_Translators.ipynb` | TRN | 6 | as in Python, but for evaluating the NumPy style over columns |
 | `08_Skill.ipynb` | SKL | 3 | as in Python; SKL-02 type-checks the skill's TypeScript program strictly, then runs it |
-| `09_Domains.ipynb` | DOM | 5 | as in Python; domains compare with `equals()`, widths and codes are `bigint`s, and builders are classes (`new D.OfInteger.Builder()`) |
+| `09_Domains.ipynb` | DOM | 9 | as in Python; domains compare with `equals()`, widths and codes are `bigint`s, and builders are classes (`new D.OfInteger.Builder()`); typed values compare with `equals()` |
 
 Total: 57 cases, with the same IDs in the same order in both implementations.
