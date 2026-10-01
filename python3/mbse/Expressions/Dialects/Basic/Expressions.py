@@ -72,12 +72,23 @@ _type_name = F._type_name
 # --- Data ---
 
 
+_DOMAIN = F.ValueProperty(Domains.Schema, Domains.to_plain, Domains.from_plain)
+_TYPED = ("convert", "reinterpret", "unpack")  # the operations that need a domain: their result's
+
+
+def _domain_problems(what: str, domain: Any) -> list[str]:
+    """The problems of a domain that a literal or an operation carries."""
+    if not isinstance(domain, Domains.Domain):
+        return [f"{what} domain must be a value domain, got {_type_name(domain)}"]
+    return [f"domain: {problem}" for problem in domain.validate()]
+
+
 @dataclass(eq=False)
 class _LiteralData(F.Node):
     KIND = "literal"
     ROLE = F.LITERAL
     VALUE = F.NATIVES
-    VALUES = {"domain": F.ValueProperty(Domains.Schema, Domains.to_plain, Domains.from_plain)}
+    VALUES = {"domain": _DOMAIN}
     value: Native | None = None
     domain: Any = None  # a value domain, or None for the value's native's default
 
@@ -92,9 +103,7 @@ class _LiteralData(F.Node):
         """A literal's domain is valid and holds its value."""
         if self.domain is None:
             return []
-        if not isinstance(self.domain, Domains.Domain):
-            return [f"a literal's domain must be a value domain, got {_type_name(self.domain)}"]
-        problems = [f"domain: {problem}" for problem in self.domain.validate()]
+        problems = _domain_problems("a literal's", self.domain)
         if not problems and not self.domain.contains(self.value):
             problems.append(f"a literal of {self.domain.name()} cannot hold {self.value!r}")
         return problems
@@ -108,8 +117,21 @@ class _OperationData(F.Node):
     VARIADIC = "arguments"
     OPERATOR = "name"
     VOCABULARY = Domains.SIGNATURES
+    VALUES = {"domain": _DOMAIN}
     name: str | None = None
     arguments: tuple[Any, ...] = ()  # OfAny.Data
+    domain: Any = None  # the domain of the result, which the conversions need, kept even when it is a default
+
+    def typed(self) -> Any:
+        return self.domain
+
+    def check(self) -> list[str]:
+        """A conversion needs a domain, which must be valid; other core operations take none."""
+        if self.domain is None:
+            return [f"{self.name} needs a domain"] if self.name in _TYPED else []
+        if self.name in Domains.SIGNATURES and self.name not in _TYPED:
+            return [f"{self.name} takes no domain"]
+        return _domain_problems("an operation's", self.domain)
 
 
 @dataclass(eq=False)
@@ -158,10 +180,14 @@ class _NamedBuilder(F.Builder):
 
 
 class _OperationBuilder(_NamedBuilder):
-    """Builds an `OfOperation.Data`. DSL: `.name(str)` and `.arguments(*specs)`, which appends `OfAny.Spec`s (a native
-    value is a literal). As a `Visitors.OfObject`, arguments are `arguments` entries, ordered by `index`."""
+    """Builds an `OfOperation.Data`. DSL: `.name(str)`, `.arguments(*specs)`, which appends `OfAny.Spec`s (a native
+    value is a literal), and `.domain(domain)`, its result's. As a `Visitors.OfObject`, arguments are `arguments` entries,
+    ordered by `index`."""
 
     _data = _OperationData
+
+    def domain(self, domain: Any) -> _OperationBuilder:
+        return self.set("domain", domain)
 
 
 class _VariableBuilder(_NamedBuilder):
@@ -348,6 +374,40 @@ class Term(F.Term):
 
     def neg(self) -> Term:
         return operation("neg", self)
+
+    def bitand(self, other: OfAny.Spec) -> Term:
+        return operation("bitand", self, other)
+
+    def bitor(self, other: OfAny.Spec) -> Term:
+        return operation("bitor", self, other)
+
+    def bitxor(self, other: OfAny.Spec) -> Term:
+        return operation("bitxor", self, other)
+
+    def bitnot(self) -> Term:
+        return operation("bitnot", self)
+
+    def shl(self, count: OfAny.Spec) -> Term:
+        return operation("shl", self, count)
+
+    def shr(self, count: OfAny.Spec) -> Term:
+        return operation("shr", self, count)
+
+    def convert(self, domain: Any) -> Term:
+        """The value in `domain`, kept: rounded or overflowing as `domain` does."""
+        return Term(_OperationData("convert", (self.data,), domain))
+
+    def reinterpret(self, domain: Any) -> Term:
+        """The bit pattern in `domain`, of the same width."""
+        return Term(_OperationData("reinterpret", (self.data,), domain))
+
+    def pack(self) -> Term:
+        """A packed value's representation."""
+        return operation("pack", self)
+
+    def unpack(self, domain: Any) -> Term:
+        """The value of the packed `domain` that a representation stands for."""
+        return Term(_OperationData("unpack", (self.data,), domain))
 
 
 def variable(name: str) -> Term:

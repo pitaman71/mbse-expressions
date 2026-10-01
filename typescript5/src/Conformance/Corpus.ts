@@ -57,18 +57,24 @@ export function build(): Map<string, Case> {
   const latex = L.where("a", L.member(thisL, "age"), L.binary("\\land", L.binary("\\geq", aL, 18n), L.binary(
     "\\lor", L.unary("\\lnot", L.function("has", thisL, "email")), L.binary(">", L.frac(aL, 2n), 1.5))));
 
-  // --- domains: literals of value domains, by value and by name, a packed enum among them; defaults left out ---
+  // --- domains: literals of value domains, by value and by name, a packed enum among them; defaults left out;
+  // decimal and binary128 text; a conversion's domain, a bitwise operation and pack ---
   const D = Domains;
   const uint8 = new D.OfInteger.Builder().width(8n).signed(false).overflow("wrap").create();
   if (D.name_of(uint8) === null) D.register("uint8", uint8);
   const state = new D.OfPacked.Builder().domain(new D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
     new D.OfBits.Builder().width(2n).create()).codes(0n, 1n).create();
   const binary32 = new D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create();
-  const [mode, count, gain, line, mask, size] = ["mode", "count", "gain", "line", "mask", "size"].map((name) => E.variable(name));
+  const decimal64 = new D.OfIeee754.Builder().format("decimal64").create();
+  const bits2 = new D.OfBits.Builder().width(2n).create();
+  const [mode, count, gain, line, mask, size, price, ratio] = ["mode", "count", "gain", "line", "mask", "size", "price", "ratio"]
+    .map((name) => E.variable(name));
   const domains = E.operation(
     "all", mode!.eq(E.literal("RUN", state)), count!.le(E.literal(200n, uint8)), gain!.ne(E.literal(1.5, binary32)),
-    line!.ge(E.literal("Z", new D.OfIeee1164.Builder().create())),
-    mask!.gt(E.literal(new Uint8Array([3]), new D.OfBits.Builder().width(2n).create())), size!.lt(E.literal(5n, D.Int))).data;
+    line!.ge(E.literal("Z", new D.OfIeee1164.Builder().create())), mask!.gt(E.literal(new Uint8Array([3]), bits2)),
+    size!.lt(E.literal(5n, D.Int)), price!.convert(decimal64).sub(E.literal("1.50", decimal64)),
+    ratio!.mul(E.literal("0.1", new D.OfIeee754.Builder().format("binary128").create())),
+    mask!.bitand(E.literal(new Uint8Array([1]), bits2)), mode!.pack()).data; // each operation once, for CONF-04
 
   return new Map<string, Case>([
     ["expression", [E.OfLet.Schema, expression, E.Builders]],

@@ -13,6 +13,8 @@
  * - Values of other domains than the natives' defaults are typed values (`Domains.Value`): a literal of such a domain
  *   evaluates to one, and the operations take them by domain. Values of different domains are incomparable; arithmetic
  *   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
+ *   `convert` keeps a value in the operation's domain, `reinterpret` keeps its bit pattern, and `pack` and `unpack` go
+ *   to and from a packed domain's representation.
  * - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
  *   variables and wrong operand types raise, as do the problems `validate()` reports.
  * - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
@@ -24,6 +26,7 @@
 import { Comparison, Errors, Repr, Schemas, Validators } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
+import { OverflowError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Domains from "./Domains.js";
@@ -187,6 +190,8 @@ function operands(name: string, values: unknown[], kinds: readonly Kind[], what:
 const INTEGER: any = Domains.OfInteger.Data;
 const IEEE754: any = Domains.OfIeee754.Data;
 const BITS: any = Domains.OfBits.Data;
+const BYTES: any = Domains.OfBytes.Data;
+const PACKED: any = Domains.OfPacked.Data;
 
 function arithmetic(name: string, values: unknown[]): unknown {
   if (values.some((value) => value === null)) return null;
@@ -207,22 +212,31 @@ function arithmetic(name: string, values: unknown[]): unknown {
 
 /** An integer's value, or a bits value's pattern as an unsigned int. */
 function pattern(domain: unknown, native: any): bigint {
-  if (!(domain instanceof BITS)) return native;
+  return domain instanceof BITS ? fromBytes(native) : native;
+}
+
+/** Big-endian bytes as an unsigned bigint. */
+function fromBytes(bytes: Uint8Array): bigint {
   let result = 0n;
-  for (const byte of native as Uint8Array) result = (result << 8n) | BigInt(byte);
+  for (const byte of bytes) result = (result << 8n) | BigInt(byte);
   return result;
+}
+
+/** An unsigned bigint as `length` big-endian bytes. */
+function bytesOf(value: bigint, length: number): Uint8Array {
+  let rest = value;
+  const out = new Uint8Array(length);
+  for (let i = length - 1; i >= 0; i--) {
+    out[i] = Number(rest & 0xffn);
+    rest >>= 8n;
+  }
+  return out;
 }
 
 /** The bits value of a pattern, the bits beyond its width dropped. */
 function bits(domain: any, value: bigint): Domains.Value {
   const width = domain.width as bigint;
-  let rest = value & ((1n << width) - 1n);
-  const out = new Uint8Array(Number((width + 7n) / 8n));
-  for (let i = out.length - 1; i >= 0; i--) {
-    out[i] = Number(rest & 0xffn);
-    rest >>= 8n;
-  }
-  return new Domains.Value(domain, out);
+  return new Domains.Value(domain, bytesOf(value & ((1n << width) - 1n), Number((width + 7n) / 8n)));
 }
 
 /** On two's complement patterns: of the width, or infinite without one. */
@@ -258,6 +272,100 @@ function shift(name: string, values: unknown[]): unknown {
   return Domains.value(domain, domain.fit(name, result));
 }
 
+/** An integer rounded from an IEEE 754 value, in `target`: an infinity saturates or overflows. */
+function integer(target: any, value: bigint | number): bigint {
+  if (typeof value === "number") {
+    const bound = target.bounds()[value < 0 ? 0 : 1];
+    if (target.overflow === "saturate" && bound !== null) return bound;
+    throw new OverflowError(`convert overflows ${target.name()}: ${value < 0 ? "-" : ""}Infinity`);
+  }
+  return target.fit("convert", value);
+}
+
+/** The native of `target` that keeps `value`. */
+function converted(value: unknown, target: any): unknown {
+  const source: any = domainOf(value);
+  const native = nativeOf(value);
+  if (source !== null && source.equals(target)) return native;
+  if (source instanceof INTEGER && target instanceof INTEGER) return target.fit("convert", native);
+  if (source instanceof INTEGER && target instanceof IEEE754) return Ieee754.from_integer(native, target.format, target.rounding);
+  if (source instanceof IEEE754 && target instanceof IEEE754) {
+    return Ieee754.convert(source.format, native, target.format, target.rounding);
+  }
+  if (source instanceof IEEE754 && target instanceof INTEGER) {
+    return integer(target, Ieee754.to_integer(source.format, native, source.rounding));
+  }
+  if (source instanceof BYTES && target instanceof BYTES) return native; // a value of the target's width, or none
+  if ((target instanceof PACKED && target.domain.equals(source)) || (source instanceof PACKED && source.domain.equals(target))) {
+    return native;
+  }
+  throw new TypeError(`cannot convert ${describe(value)} to ${target.name()}`);
+}
+
+function convert(args: F.Thunk[], node: any): unknown {
+  const value = args[0]?.();
+  return value === null ? null : Domains.value(node.domain, converted(value, node.domain));
+}
+
+/** The width in bits of a fixed-width domain, or null. */
+function width(domain: any): number | null {
+  if ((domain instanceof INTEGER || domain instanceof BITS) && typeof domain.width === "bigint" && domain.width > 0n) {
+    return Number(domain.width);
+  }
+  if (domain instanceof BYTES && domain.width !== null) return 8 * Number(domain.width);
+  return domain instanceof IEEE754 ? Ieee754.WIDTHS.get(domain.format) ?? null : null;
+}
+
+/** A fixed-width value's bit pattern, as an unsigned bigint. */
+function toPattern(domain: any, native: any, bits: number): bigint {
+  if (domain instanceof INTEGER) return BigInt.asUintN(bits, native); // two's complement
+  if (domain instanceof IEEE754) return Ieee754.to_bits(domain.format, native);
+  return fromBytes(native);
+}
+
+/** The native of a fixed-width domain with a bit pattern. */
+function fromPattern(domain: any, value: bigint, bits: number): unknown {
+  if (domain instanceof INTEGER) return domain.signed ? BigInt.asIntN(bits, value) : value;
+  if (domain instanceof IEEE754) return Ieee754.from_bits(domain.format, value);
+  return bytesOf(value, Math.ceil(bits / 8));
+}
+
+/** The same bit pattern, big-endian, in a domain of the same width. */
+function reinterpret(args: F.Thunk[], node: any): unknown {
+  const value = args[0]?.();
+  if (value === null) return null;
+  const [source, target] = [domainOf(value), node.domain];
+  const [m, n] = [width(source), width(target)];
+  if (m === null || n === null) throw new TypeError(`cannot reinterpret ${describe(value)} as ${target.name()}`);
+  if (m !== n) throw new TypeError(`cannot reinterpret ${describe(value)} as ${target.name()}: ${m} bits and ${n}`);
+  return Domains.value(target, fromPattern(target, toPattern(source, nativeOf(value), m), n));
+}
+
+/** A packed value's code, in its representation. */
+function pack(args: F.Thunk[]): unknown {
+  const value = args[0]?.();
+  if (value === null) return null;
+  const domain: any = domainOf(value);
+  if (!(domain instanceof PACKED)) throw new TypeError(`pack expects a packed value, got ${describe(value)}`);
+  const [representation, code] = [domain.representation, domain.code(nativeOf(value))];
+  const native = representation instanceof INTEGER ? code : fromPattern(representation, code, Number(representation.width));
+  return Domains.value(representation, native);
+}
+
+/** The value of the packed domain whose code a representation holds. */
+function unpack(args: F.Thunk[], node: any): unknown {
+  const value = args[0]?.();
+  if (value === null) return null;
+  const target = node.domain;
+  if (!(target instanceof PACKED)) throw new TypeError(`unpack needs a packed domain, got ${target.name()}`);
+  const representation = target.representation;
+  if (!representation.equals(domainOf(value))) throw new TypeError(`unpack expects ${representation.name()}, got ${describe(value)}`);
+  const code: bigint = representation instanceof INTEGER ? nativeOf(value) : fromBytes(nativeOf(value));
+  const index = target.codes.indexOf(code);
+  if (index < 0) throw new ValueError(`no member of ${target.name()} has code ${code}`);
+  return new Domains.Value(target, target.domain.members[index]);
+}
+
 /** The implementation of each core operation. */
 export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string, F.Implementation>([
   ["get", strict(read)], ["has", strict(read)],
@@ -268,6 +376,7 @@ export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string,
   ...["add", "sub", "mul", "neg"].map((name) => [name, strict(arithmetic)] as [string, F.Implementation]),
   ...["bitand", "bitor", "bitxor", "bitnot"].map((name) => [name, strict(bitwise)] as [string, F.Implementation]),
   ...["shl", "shr"].map((name) => [name, strict(shift)] as [string, F.Implementation]),
+  ["convert", convert], ["reinterpret", reinterpret], ["pack", pack], ["unpack", unpack],
 ]);
 
 const interpreter = new F.Interpreter(Expressions.DIALECT, new Map([["operation", OPERATIONS]]),

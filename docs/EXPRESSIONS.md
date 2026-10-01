@@ -112,9 +112,9 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
 
 ## Value domains
 
-Domains as data are implemented: the kinds below, their validation, the registry, and literals that carry them.
-Evaluation in them is decided below and lands in stages: typed values, comparisons, `Integer` and IEEE 754 arithmetic
-in every format and the bitwise operations are implemented; the conversions and an operation's `domain` are not yet. The domains make representation part of the type, as C, C++ and SystemVerilog need, and
+Domains are implemented as data and in evaluation: the kinds below, their validation, the registry, literals and
+operations that carry them, typed values, comparisons, `Integer` and IEEE 754 arithmetic in every format, the bitwise
+operations and the conversions. The domains make representation part of the type, as C, C++ and SystemVerilog need, and
 as an interface control document describes a data word. Each names a published standard where one exists, with only
 the parameters that standard defines, and today's natives become their defaults.
 
@@ -215,7 +215,8 @@ the parameters that standard defines, and today's natives become their defaults.
 - **What converts.** `convert` keeps the value: from an `Integer` to an `Integer` (the target's overflow) or an
   `Ieee754` (the target's rounding); from an `Ieee754` to an `Ieee754` (the target's rounding) or to an `Integer`
   (rounded to an integer in the source's rounding direction, then the target's overflow; NaN raises `ValueError`, and
-  an infinity overflows); between `Bytes` domains when the value fits; between an `Enum` and a `Packed` domain of it;
+  an infinity overflows, or saturates to the bound it overflows); a decimal result that is exact keeps an exponent: the
+  source's from a decimal, 0 from an integer, and from a binary number the greatest at which it is exact, but at most 0; between `Bytes` domains when the value fits; between an `Enum` and a `Packed` domain of it;
   and from any domain to itself. `reinterpret` keeps the bit pattern, big-endian, between `Integer`s of a width (two's
   complement), the binary `Ieee754` formats (their interchange encoding; a NaN is the canonical quiet NaN) and `Bits`
   and `Bytes` of a width, of the same number of bits; the decimal formats have two encodings (binary and densely

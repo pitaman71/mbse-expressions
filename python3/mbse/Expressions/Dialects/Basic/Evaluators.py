@@ -12,6 +12,8 @@
 - Values of other domains than the natives' defaults are typed values (`Domains.Value`): a literal of such a domain
   evaluates to one, and the operations take them by domain. Values of different domains are incomparable; arithmetic
   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
+  `convert` keeps a value in the operation's domain, `reinterpret` keeps its bit pattern, and `pack` and `unpack` go
+  to and from a packed domain's representation.
 - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
   variables and wrong operand types raise, as do the problems `validate()` reports.
 - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
@@ -178,6 +180,7 @@ def _operands(name: str, values: list[Any], kinds: tuple[type, ...], what: str) 
 
 
 _INTEGER, _IEEE754, _BITS = Domains.OfInteger.Data, Domains.OfIeee754.Data, Domains.OfBits.Data
+_BYTES, _ENUM, _PACKED = Domains.OfBytes.Data, Domains.OfEnum.Data, Domains.OfPacked.Data
 
 
 def _arithmetic(name: str, values: list[Any]) -> Any:
@@ -243,6 +246,112 @@ def _shift(name: str, values: list[Any]) -> Any:
     return Domains.value(domain, domain.fit(name, result))
 
 
+def _integer(target: Any, value: int | float) -> int:
+    """An integer rounded from an IEEE 754 value, in `target`: an infinity saturates or overflows."""
+    if isinstance(value, float):
+        bound = target.bounds()[0 if value < 0 else 1]
+        if target.overflow == "saturate" and bound is not None:
+            return bound
+        raise OverflowError(f"convert overflows {target.name()}: {'-' if value < 0 else ''}Infinity")
+    return target.fit("convert", value)
+
+
+def _converted(value: Any, target: Any) -> Any:
+    """The native of `target` that keeps `value`."""
+    source, native = _domain(value), _native(value)
+    if source == target:
+        return native
+    if isinstance(source, _INTEGER) and isinstance(target, _INTEGER):
+        return target.fit("convert", native)
+    if isinstance(source, _INTEGER) and isinstance(target, _IEEE754):
+        return Ieee754.from_integer(native, target.format, target.rounding)
+    if isinstance(source, _IEEE754) and isinstance(target, _IEEE754):
+        return Ieee754.convert(source.format, native, target.format, target.rounding)
+    if isinstance(source, _IEEE754) and isinstance(target, _INTEGER):
+        return _integer(target, Ieee754.to_integer(source.format, native, source.rounding))
+    if isinstance(source, _BYTES) and isinstance(target, _BYTES):
+        return native  # a value of the target's width, or none
+    if (isinstance(target, _PACKED) and source == target.domain) or (isinstance(source, _PACKED) and source.domain == target):
+        return native
+    raise TypeError(f"cannot convert {_describe(value)} to {target.name()}")
+
+
+def _convert(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
+    value = arguments[0]()
+    return None if value is None else Domains.value(node.domain, _converted(value, node.domain))
+
+
+def _width(domain: Any) -> int | None:
+    """The width in bits of a fixed-width domain, or None."""
+    if isinstance(domain, (_INTEGER, _BITS)) and isinstance(domain.width, int) and domain.width > 0:
+        return domain.width
+    if isinstance(domain, _BYTES) and domain.width is not None:
+        return 8 * domain.width
+    return Ieee754.WIDTHS.get(domain.format) if isinstance(domain, _IEEE754) else None
+
+
+def _to_pattern(domain: Any, native: Any, width: int) -> int:
+    """A fixed-width value's bit pattern, as an unsigned int."""
+    if isinstance(domain, _INTEGER):
+        return native % (1 << width)  # two's complement
+    if isinstance(domain, _IEEE754):
+        return Ieee754.to_bits(domain.format, native)
+    return int.from_bytes(native, "big")
+
+
+def _from_pattern(domain: Any, pattern: int, width: int) -> Any:
+    """The native of a fixed-width domain with a bit pattern."""
+    if isinstance(domain, _INTEGER):
+        return pattern - (1 << width) if domain.signed and pattern >> (width - 1) else pattern
+    if isinstance(domain, _IEEE754):
+        return Ieee754.from_bits(domain.format, pattern)
+    return pattern.to_bytes((width + 7) // 8, "big")
+
+
+def _reinterpret(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
+    """The same bit pattern, big-endian, in a domain of the same width."""
+    value = arguments[0]()
+    if value is None:
+        return None
+    source, target = _domain(value), node.domain
+    m, n = _width(source), _width(target)
+    if m is None or n is None:
+        raise TypeError(f"cannot reinterpret {_describe(value)} as {target.name()}")
+    if m != n:
+        raise TypeError(f"cannot reinterpret {_describe(value)} as {target.name()}: {m} bits and {n}")
+    return Domains.value(target, _from_pattern(target, _to_pattern(source, _native(value), m), n))
+
+
+def _pack(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
+    """A packed value's code, in its representation."""
+    value = arguments[0]()
+    if value is None:
+        return None
+    domain = _domain(value)
+    if not isinstance(domain, _PACKED):
+        raise TypeError(f"pack expects a packed value, got {_describe(value)}")
+    representation, code = domain.representation, domain.code(value.value)
+    native = code if isinstance(representation, _INTEGER) else _from_pattern(representation, code, representation.width)
+    return Domains.value(representation, native)
+
+
+def _unpack(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
+    """The value of the packed domain whose code a representation holds."""
+    value = arguments[0]()
+    if value is None:
+        return None
+    target = node.domain
+    if not isinstance(target, _PACKED):
+        raise TypeError(f"unpack needs a packed domain, got {target.name()}")
+    representation = target.representation
+    if _domain(value) != representation:
+        raise TypeError(f"unpack expects {representation.name()}, got {_describe(value)}")
+    code = _native(value) if isinstance(representation, _INTEGER) else int.from_bytes(value.value, "big")
+    if code not in target.codes:
+        raise ValueError(f"no member of {target.name()} has code {code}")
+    return Domains.Value(target, target.domain.members[target.codes.index(code)])
+
+
 OPERATIONS: dict[str, F.Implementation] = {
     "get": _strict(_read), "has": _strict(_read),
     **{name: _strict(_equality) for name in ("eq", "ne")},
@@ -251,6 +360,7 @@ OPERATIONS: dict[str, F.Implementation] = {
     **{name: _strict(_arithmetic) for name in ("add", "sub", "mul", "neg")},
     **{name: _strict(_bitwise) for name in ("bitand", "bitor", "bitxor", "bitnot")},
     **{name: _strict(_shift) for name in ("shl", "shr")},
+    "convert": _convert, "reinterpret": _reinterpret, "pack": _pack, "unpack": _unpack,
 }
 """The implementation of each core operation."""
 

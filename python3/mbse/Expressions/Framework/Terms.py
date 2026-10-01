@@ -663,7 +663,8 @@ class Declared:
         if result is None:
             names = ", ".join(domain.name() for domain in domains)
             raise TypeError(f"{operator} cannot take ({names}); it takes {signature.describe()}")
-        return result
+        typed = expression.typed()
+        return result if typed is None else typed  # an application of a domain of its own gives it
 
 
 def _property_problems(what: str, name: str, native: type, value: Any) -> list[str]:

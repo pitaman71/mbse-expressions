@@ -69,7 +69,8 @@ Domains.register("uint8", domain)          # a registered domain is written by n
 Domains.Value(domain, 200)                 # a value of a non-default domain, as evaluation gives it; overflow applies
 this.age; this.get("eq"); this.has("email")                 # .name is get(this, 'name'); get() for names like eq
 t.eq(x) .ne .lt .le .gt .ge .and_(x) .or_(x) .not_() .implies(x) .add(x) .sub(x) .mul(x) .neg()
-E.operation("bitand", a, b); E.operation("shl", a, 3)       # bitand bitor bitxor bitnot shl shr, on integers and bits
+t.bitand(x) .bitor(x) .bitxor(x) .bitnot() .shl(n) .shr(n)  # on integers and bits of one domain
+t.convert(domain) .reinterpret(domain) .pack() .unpack(packed)  # an operation's domain is its result's
 E.from_(lambda this: this.age >= 18 and this.email is not None)    # a lambda, or a def whose body is one return
 
 # Data and builders: create() / clone() / update(), none validate.

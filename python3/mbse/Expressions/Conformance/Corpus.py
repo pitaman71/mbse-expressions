@@ -53,7 +53,8 @@ def build():
     latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
         "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
 
-    # --- domains: literals of value domains, by value and by name, a packed enum among them; defaults left out ---
+    # --- domains: literals of value domains, by value and by name, a packed enum among them; defaults left out;
+    # decimal and binary128 text; a conversion's domain, a bitwise operation and pack ---
     D = Domains
     uint8 = D.OfInteger.Builder().width(8).signed(False).overflow("wrap").create()
     if D.name_of(uint8) is None:
@@ -61,11 +62,16 @@ def build():
     state = D.OfPacked.Builder().domain(D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
         D.OfBits.Builder().width(2).create()).codes(0, 1).create()
     binary32 = D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create()
-    mode, count, gain, line, mask, size = (E.variable(name) for name in ("mode", "count", "gain", "line", "mask", "size"))
+    decimal64 = D.OfIeee754.Builder().format("decimal64").create()
+    bits2 = D.OfBits.Builder().width(2).create()
+    mode, count, gain, line, mask, size, price, ratio = (
+        E.variable(name) for name in ("mode", "count", "gain", "line", "mask", "size", "price", "ratio"))
     domains = E.operation(
         "all", mode.eq(E.literal("RUN", state)), count.le(E.literal(200, uint8)), gain.ne(E.literal(1.5, binary32)),
-        line.ge(E.literal("Z", D.OfIeee1164.Builder().create())),
-        mask.gt(E.literal(b"\x03", D.OfBits.Builder().width(2).create())), size.lt(E.literal(5, D.Int))).data
+        line.ge(E.literal("Z", D.OfIeee1164.Builder().create())), mask.gt(E.literal(b"\x03", bits2)),
+        size.lt(E.literal(5, D.Int)), price.convert(decimal64).sub(E.literal("1.50", decimal64)),
+        ratio.mul(E.literal("0.1", D.OfIeee754.Builder().format("binary128").create())),
+        mask.bitand(E.literal(b"\x01", bits2)), mode.pack()).data  # each operation once, for CONF-04
 
     return {
         "expression": (E.OfLet.Schema, expression, E.Builders),

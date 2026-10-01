@@ -57,12 +57,22 @@ const NAME: ReadonlyMap<string, unknown> = new Map([["name", String]]);
 
 // --- Data ---
 
+const DOMAIN = new Map([["domain", new F.ValueProperty(Domains.Schema, Domains.to_plain,
+  (plain) => Domains.from_plain(plain as Map<string, never>))]]);
+/** The operations that need a domain: their result's. */
+const TYPED = ["convert", "reinterpret", "unpack"];
+
+/** The problems of a domain that a literal or an operation carries. */
+function domainProblems(what: string, domain: unknown): string[] {
+  if (!(domain instanceof Domains.Domain)) return [`${what} domain must be a value domain, got ${Repr.typeName(domain)}`];
+  return domain.validate().map((problem) => `domain: ${problem}`);
+}
+
 class _LiteralData extends F.Node {
   static override KIND = "literal";
   static override ROLE = F.LITERAL;
   static override VALUE = F.NATIVES;
-  static override VALUES = new Map([["domain", new F.ValueProperty(Domains.Schema, Domains.to_plain,
-    (plain) => Domains.from_plain(plain as Map<string, never>))]]);
+  static override VALUES = DOMAIN;
   declare value: unknown;
   /** A value domain, or null for the value's native's default. */
   declare domain: unknown;
@@ -83,10 +93,9 @@ class _LiteralData extends F.Node {
   override check(): string[] {
     const domain = this.domain;
     if (domain === null) return [];
-    if (!(domain instanceof Domains.Domain)) return [`a literal's domain must be a value domain, got ${Repr.typeName(domain)}`];
-    const problems = domain.validate().map((problem) => `domain: ${problem}`);
-    if (problems.length === 0 && !domain.contains(this.value)) {
-      problems.push(`a literal of ${domain.name()} cannot hold ${Repr.repr(this.value)}`);
+    const problems = domainProblems("a literal's", domain);
+    if (problems.length === 0 && !(domain as Domains.Domain).contains(this.value)) {
+      problems.push(`a literal of ${(domain as Domains.Domain).name()} cannot hold ${Repr.repr(this.value)}`);
     }
     return problems;
   }
@@ -99,11 +108,26 @@ class _OperationData extends F.Node {
   static override VARIADIC = "arguments";
   static override OPERATOR = "name";
   static override VOCABULARY = Domains.SIGNATURES;
+  static override VALUES = DOMAIN;
   declare name: unknown;
   declare arguments: readonly unknown[];
+  /** The domain of the result, which the conversions need, kept even when it is a default. */
+  declare domain: unknown;
 
-  constructor(name: unknown = null, args: readonly unknown[] = []) {
-    super(name, args);
+  constructor(name: unknown = null, args: readonly unknown[] = [], domain: unknown = null) {
+    super(name, args, domain);
+  }
+
+  override typed(): Domains.Domain | null {
+    return this.domain as Domains.Domain | null;
+  }
+
+  /** A conversion needs a domain, which must be valid; other core operations take none. */
+  override check(): string[] {
+    const name = this.name as string;
+    if (this.domain === null) return TYPED.includes(name) ? [`${name} needs a domain`] : [];
+    if (Domains.SIGNATURES.has(name) && !TYPED.includes(name)) return [`${name} takes no domain`];
+    return domainProblems("an operation's", this.domain);
   }
 }
 
@@ -165,13 +189,18 @@ class _NamedBuilder extends F.Builder {
   }
 }
 
-/** Builds an `OfOperation.Data`. DSL: `.name(str)` and `.arguments(...specs)`, which appends `OfAny.Spec`s (a native
- * value is a literal). As a `Visitors.OfObject`, arguments are `arguments` entries, ordered by `index`. */
+/** Builds an `OfOperation.Data`. DSL: `.name(str)`, `.arguments(...specs)`, which appends `OfAny.Spec`s (a native
+ * value is a literal), and `.domain(domain)`, its result's. As a `Visitors.OfObject`, arguments are `arguments`
+ * entries, ordered by `index`. */
 class _OperationBuilder extends _NamedBuilder {
   static override DATA = _OperationData;
 
   constructor(instance?: _OperationData) {
     super(instance);
+  }
+
+  domain(domain: unknown): this {
+    return this.set("domain", domain as Native);
   }
 
   override create(...args: unknown[]): _OperationData {
@@ -404,6 +433,50 @@ class TermTarget extends F.Term {
 
   neg(): Term {
     return operation("neg", this as unknown as Term);
+  }
+
+  bitand(other: OfAny.Spec): Term {
+    return operation("bitand", this as unknown as Term, other);
+  }
+
+  bitor(other: OfAny.Spec): Term {
+    return operation("bitor", this as unknown as Term, other);
+  }
+
+  bitxor(other: OfAny.Spec): Term {
+    return operation("bitxor", this as unknown as Term, other);
+  }
+
+  bitnot(): Term {
+    return operation("bitnot", this as unknown as Term);
+  }
+
+  shl(count: OfAny.Spec): Term {
+    return operation("shl", this as unknown as Term, count);
+  }
+
+  shr(count: OfAny.Spec): Term {
+    return operation("shr", this as unknown as Term, count);
+  }
+
+  /** The value in `domain`, kept: rounded or overflowing as `domain` does. */
+  convert(domain: unknown): Term {
+    return term(new _OperationData("convert", [this.data], domain));
+  }
+
+  /** The bit pattern in `domain`, of the same width. */
+  reinterpret(domain: unknown): Term {
+    return term(new _OperationData("reinterpret", [this.data], domain));
+  }
+
+  /** A packed value's representation. */
+  pack(): Term {
+    return operation("pack", this as unknown as Term);
+  }
+
+  /** The value of the packed `domain` that a representation stands for. */
+  unpack(domain: unknown): Term {
+    return term(new _OperationData("unpack", [this.data], domain));
   }
 }
 

@@ -34,7 +34,8 @@ itself by its overflow (`fit`).
 
 `SIGNATURES` gives each core operation's signature, following the evaluator's rules: comparisons take two values of
 one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes bools; arithmetic
-takes two numbers of one domain and gives that domain, and the bitwise operations two integers or bits of one domain.
+takes two numbers of one domain and gives that domain, and the bitwise operations two integers or bits of one domain;
+`convert`, `reinterpret` and `unpack` give the operation's own domain, and `pack` a packed domain's representation.
 """
 
 from __future__ import annotations
@@ -610,6 +611,7 @@ _ORDERED_KINDS = _Family("integer, ieee754, bytes, unicode or packed domain", _I
 _NUMERIC = _Family("integer or ieee754 domain", _Integer, _Ieee754)
 _BITWISE = _Family("integer or bits domain", _Integer, _Bits)
 _INTEGERS = _Family("integer domain", _Integer)
+_PACKED = _Family("packed domain", _Packed)
 _COMPARABLE = (Bool, Int, Float, Str, Bytes, Object)
 _ORDERED = (Int, Float, Str, Bytes)
 _NUMBERS = (Int, Float)
@@ -634,6 +636,35 @@ class _Shift:
         return f"(T, any {_INTEGERS.name()}) -> T for T in int or any {_BITWISE.name()}"
 
 
+class _Conversion:
+    """`convert`, `reinterpret` and `unpack`: a value of any domain, giving the operation's own domain, which inference
+    takes from the operation."""
+
+    def arity(self) -> int:
+        return 1
+
+    def result(self, arguments: Any) -> D.Domain | None:
+        return Anything if len(arguments) == 1 and D.overlaps(_VALUES, arguments[0]) else None
+
+    def describe(self) -> str:
+        return "(T) -> the operation's domain"
+
+
+class _Pack:
+    """`pack`: a value of a packed domain, giving its representation."""
+
+    def arity(self) -> int:
+        return 1
+
+    def result(self, arguments: Any) -> D.Domain | None:
+        if len(arguments) != 1 or not D.overlaps(_PACKED, arguments[0]):
+            return None
+        return arguments[0].representation if isinstance(arguments[0], _Packed) else Anything
+
+    def describe(self) -> str:
+        return "(packed) -> its representation"
+
+
 SIGNATURES: dict[str, D.Signature] = {
     "get": D.Function((Object, Str), Anything), "has": D.Function((Object, Str), Bool),
     **{name: D.Same(2, _COMPARABLE, Bool, _VALUES) for name in ("eq", "ne")},
@@ -643,6 +674,7 @@ SIGNATURES: dict[str, D.Signature] = {
     "neg": D.Same(1, _NUMBERS, None, _NUMERIC),
     **{name: D.Same(2, (Int,), None, _BITWISE) for name in ("bitand", "bitor", "bitxor")},
     "bitnot": D.Same(1, (Int,), None, _BITWISE), "shl": _Shift(), "shr": _Shift(),
+    **{name: _Conversion() for name in ("convert", "reinterpret", "unpack")}, "pack": _Pack(),
 }
 """The core operations' signatures."""
 

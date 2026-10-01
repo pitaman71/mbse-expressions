@@ -37,7 +37,8 @@
  * `SIGNATURES` gives each core operation's signature, following the evaluator's rules: comparisons take two values of
  * one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes bools;
  * arithmetic takes two numbers of one domain and gives that domain, and the bitwise operations two integers or bits of
- * one domain.
+ * one domain; `convert`, `reinterpret` and `unpack` give the operation's own domain, and `pack` a packed domain's
+ * representation.
  */
 
 import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";
@@ -721,6 +722,7 @@ const ORDERED_KINDS = new Family("integer, ieee754, bytes, unicode or packed dom
 const NUMERIC = new Family("integer or ieee754 domain", IntegerDomain, Ieee754Domain);
 const BITWISE = new Family("integer or bits domain", IntegerDomain, BitsDomain);
 const INTEGERS = new Family("integer domain", IntegerDomain);
+const PACKED = new Family("packed domain", PackedDomain);
 const COMPARABLE = [Bool, Int, Float, Str, Bytes, ObjectDomain];
 const ORDERED = [Int, Float, Str, Bytes];
 const NUMBERS = [Int, Float];
@@ -744,6 +746,38 @@ class Shift implements D.Signature {
   }
 }
 
+/** `convert`, `reinterpret` and `unpack`: a value of any domain, giving the operation's own domain, which inference
+ * takes from the operation. */
+class Conversion implements D.Signature {
+  arity(): number {
+    return 1;
+  }
+
+  result(args: readonly D.Domain[]): D.Domain | null {
+    return args.length === 1 && D.overlaps(VALUES, args[0] as D.Domain) ? Anything : null;
+  }
+
+  describe(): string {
+    return "(T) -> the operation's domain";
+  }
+}
+
+/** `pack`: a value of a packed domain, giving its representation. */
+class Pack implements D.Signature {
+  arity(): number {
+    return 1;
+  }
+
+  result(args: readonly D.Domain[]): D.Domain | null {
+    if (args.length !== 1 || !D.overlaps(PACKED, args[0] as D.Domain)) return null;
+    return args[0] instanceof PackedDomain ? args[0].representation as D.Domain : Anything;
+  }
+
+  describe(): string {
+    return "(packed) -> its representation";
+  }
+}
+
 /** The core operations' signatures. */
 export const SIGNATURES: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
   ["get", new D.Function([ObjectDomain, Str], Anything)], ["has", new D.Function([ObjectDomain, Str], Bool)],
@@ -754,6 +788,7 @@ export const SIGNATURES: ReadonlyMap<string, D.Signature> = new Map<string, D.Si
   ["neg", new D.Same(1, NUMBERS, null, NUMERIC)],
   ...["bitand", "bitor", "bitxor"].map((name) => [name, new D.Same(2, [Int], null, BITWISE)] as [string, D.Signature]),
   ["bitnot", new D.Same(1, [Int], null, BITWISE)], ["shl", new Shift()], ["shr", new Shift()],
+  ...["convert", "reinterpret", "unpack"].map((name) => [name, new Conversion()] as [string, D.Signature]), ["pack", new Pack()],
 ]);
 
 /** The domain of a value: a typed value's own, its native type's default, or `Object`. */

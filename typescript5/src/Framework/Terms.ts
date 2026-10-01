@@ -43,7 +43,7 @@
  * Both are written as entries of the adjacency `arguments`, to the relation `Arguments` (registered as
  * 'Expressions.Arguments' and shared by every dialect), which links a `parent` to an `argument` with an `index`. Every
  * kind also declares `used_by`, the same relation seen from the argument, which data never writes. A kind's fields
- * are, in order, `value` (a literal's), its properties, its value properties, its slots and its variadic field, and its
+ * are, in order, `value` (a literal's), its properties, its slots, its variadic field and its value properties, and its
  * constructor takes them in that order.
  */
 
@@ -139,8 +139,8 @@ export type NodeClass = typeof Node;
 
 /** The fields of a kind, in constructor order. */
 export function fieldsOf(kind: NodeClass): string[] {
-  return [...(kind.VALUE !== null ? ["value"] : []), ...kind.PROPERTIES.keys(), ...kind.VALUES.keys(), ...kind.SLOTS,
-    ...(kind.VARIADIC !== null ? [kind.VARIADIC] : [])];
+  return [...(kind.VALUE !== null ? ["value"] : []), ...kind.PROPERTIES.keys(), ...kind.SLOTS,
+    ...(kind.VARIADIC !== null ? [kind.VARIADIC] : []), ...kind.VALUES.keys()];
 }
 
 /** A property that holds a value object rather than a native: the `schema` of its value, and the conversions between
@@ -804,7 +804,7 @@ export class Declared implements Dialect {
       const names = domains.map((domain) => domain.name()).join(", ");
       throw new TypeError(`${operator} cannot take (${names}); it takes ${signature.describe()}`);
     }
-    return result;
+    return expression.typed() ?? result; // an application of a domain of its own gives it
   }
 }
 

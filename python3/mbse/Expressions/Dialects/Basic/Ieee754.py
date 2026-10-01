@@ -12,6 +12,12 @@ Values are natives: floats for `binary16`, `binary32` and `binary64`, which hold
 for `binary128` and the decimal formats, in General Decimal Arithmetic's scientific form (`1.5`, `1.50`, `1E+40`, `-0`,
 `Infinity`, `NaN`). A decimal value's text gives its coefficient and exponent; a `binary128` value's is the shortest
 that rounds back to it. A format holds only canonical text (`contains`), and `decode` and `encode` convert.
+
+Conversions keep the value: `convert` between formats and `from_integer` round by the target's direction, keeping the
+exponent of an exact decimal result (the source's from a decimal, 0 from an integer, and from a binary number the
+greatest exponent at which it is exact, but at most 0); `to_integer` rounds to an integer by the source's direction.
+`to_bits` and `from_bits` convert a binary format's values to and from their interchange encoding, a NaN to the
+canonical quiet NaN.
 """
 
 from __future__ import annotations
@@ -20,13 +26,16 @@ import math
 import re
 from dataclasses import dataclass, replace
 
-__all__ = ["FORMATS", "Datum", "NAN", "decode", "encode", "contains", "round_to", "operate", "compare", "text"]
+__all__ = ["FORMATS", "WIDTHS", "Datum", "NAN", "decode", "encode", "contains", "round_to", "operate", "compare", "text",
+           "convert", "from_integer", "to_integer", "to_bits", "from_bits"]
 
 FORMATS: dict[str, tuple[int, int, int]] = {
     "binary16": (2, 11, 15), "binary32": (2, 24, 127), "binary64": (2, 53, 1023), "binary128": (2, 113, 16383),
     "decimal64": (10, 16, 384), "decimal128": (10, 34, 6144),
 }
 """Each format's base, precision in digits of that base, and greatest exponent."""
+WIDTHS: dict[str, int] = {"binary16": 16, "binary32": 32, "binary64": 64, "binary128": 128}
+"""The width in bits of each binary format's interchange encoding."""
 
 EVEN, AWAY, POSITIVE, NEGATIVE = "roundTiesToEven", "roundTiesToAway", "roundTowardPositive", "roundTowardNegative"
 
@@ -301,3 +310,87 @@ def contains(format: str, value: object) -> bool:
         return encode(format, decode(format, value)) == value
     except ValueError:
         return False
+
+
+# --- Conversions ---
+
+
+def _normalized(datum: Datum, base: int) -> Datum:
+    """The same number with the fewest digits in its coefficient."""
+    coefficient, exponent = datum.coefficient, datum.exponent
+    while coefficient and coefficient % base == 0:
+        coefficient, exponent = coefficient // base, exponent + 1
+    return replace(datum, coefficient=coefficient, exponent=exponent)
+
+
+def convert(source: str, value: object, target: str, rounding: str) -> object:
+    """A value of `source` as a value of `target`, rounded by `rounding`."""
+    datum = decode(source, value)
+    if datum.special:
+        return encode(target, datum)
+    base = FORMATS[source][0]
+    ideal = None
+    if FORMATS[target][0] == 10:
+        ideal = datum.exponent if base == 10 else min(0, _normalized(datum, 2).exponent)
+    return encode(target, round_to(target, rounding, datum.negative, *_rational(datum, base), ideal))
+
+
+def from_integer(value: int, target: str, rounding: str) -> object:
+    """An integer as a value of `target`, rounded by `rounding`."""
+    ideal = 0 if FORMATS[target][0] == 10 else None
+    return encode(target, round_to(target, rounding, value < 0, abs(value), 1, ideal))
+
+
+def to_integer(source: str, value: object, rounding: str) -> int | float:
+    """A value of `source` rounded to an integer by `rounding`: an int, or an infinity as a float. Raises ValueError for
+    NaN."""
+    datum = decode(source, value)
+    if datum.special == "nan":
+        raise ValueError("NaN has no integer value")
+    if datum.special:
+        return -math.inf if datum.negative else math.inf
+    num, den = _rational(datum, FORMATS[source][0])
+    whole, rest = divmod(num, den)
+    whole += _up(rounding, datum.negative, whole, 2 * rest, den)
+    return -whole if datum.negative else whole
+
+
+def _fields(format: str) -> tuple[int, int, int]:
+    """A binary format's width, its fraction's width, and its greatest exponent."""
+    _, precision, emax = FORMATS[format]
+    return WIDTHS[format], precision - 1, emax
+
+
+def to_bits(format: str, value: object) -> int:
+    """A binary format's value as its interchange encoding: sign, biased exponent and fraction, as an unsigned int."""
+    width, fraction, emax = _fields(format)
+    ones = (1 << (width - 1 - fraction)) - 1
+    datum = decode(format, value)
+    if datum.special == "nan":
+        return (ones << fraction) | (1 << (fraction - 1))
+    sign = int(datum.negative) << (width - 1)
+    if datum.special:
+        return sign | (ones << fraction)
+    if datum.coefficient == 0:
+        return sign
+    shift = fraction + 1 - datum.coefficient.bit_length()  # the coefficient's leading bit at the fraction's top
+    coefficient = datum.coefficient << shift if shift >= 0 else datum.coefficient >> -shift
+    exponent = datum.exponent - shift + fraction
+    if exponent < 1 - emax:  # subnormal
+        return sign | (coefficient >> (1 - emax - exponent))
+    return sign | ((exponent + emax) << fraction) | (coefficient - (1 << fraction))
+
+
+def from_bits(format: str, pattern: int) -> object:
+    """The value of a binary format that an interchange encoding holds."""
+    width, fraction, emax = _fields(format)
+    ones = (1 << (width - 1 - fraction)) - 1
+    negative = bool(pattern >> (width - 1))
+    biased, bits = (pattern >> fraction) & ones, pattern & ((1 << fraction) - 1)
+    if biased == ones:
+        datum = NAN if bits else Datum("inf", negative)
+    elif biased == 0:
+        datum = Datum(None, negative, bits, 1 - emax - fraction)
+    else:
+        datum = Datum(None, negative, bits | (1 << fraction), biased - emax - fraction)
+    return encode(format, datum)

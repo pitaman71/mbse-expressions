@@ -15,6 +15,12 @@
  * `1E+40`, `-0`, `Infinity`, `NaN`). A decimal value's text gives its coefficient and exponent; a `binary128` value's
  * is the shortest that rounds back to it. A format holds only canonical text (`contains`), and `decode` and `encode`
  * convert.
+ *
+ * Conversions keep the value: `convert` between formats and `from_integer` round by the target's direction, keeping
+ * the exponent of an exact decimal result (the source's from a decimal, 0 from an integer, and from a binary number the
+ * greatest exponent at which it is exact, but at most 0); `to_integer` rounds to an integer by the source's direction.
+ * `to_bits` and `from_bits` convert a binary format's values to and from their interchange encoding, a NaN to the
+ * canonical quiet NaN.
  */
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
@@ -26,6 +32,9 @@ export const FORMATS: ReadonlyMap<string, readonly [bigint, number, number]> = n
   ["binary16", [2n, 11, 15]], ["binary32", [2n, 24, 127]], ["binary64", [2n, 53, 1023]], ["binary128", [2n, 113, 16383]],
   ["decimal64", [10n, 16, 384]], ["decimal128", [10n, 34, 6144]],
 ]);
+
+/** The width in bits of each binary format's interchange encoding. */
+export const WIDTHS: ReadonlyMap<string, number> = new Map([["binary16", 16], ["binary32", 32], ["binary64", 64], ["binary128", 128]]);
 
 const EVEN = "roundTiesToEven";
 const AWAY = "roundTiesToAway";
@@ -296,4 +305,84 @@ export function contains(format: string, value: unknown): boolean {
   } catch { // decode throws only ValueError
     return false;
   }
+}
+
+// --- Conversions ---
+
+/** The same number with the fewest digits in its coefficient. */
+function normalized(datum: Datum, base: bigint): Datum {
+  let [coefficient, exponent] = [datum.coefficient, datum.exponent];
+  while (coefficient !== 0n && coefficient % base === 0n) {
+    coefficient /= base;
+    exponent += 1;
+  }
+  return new Datum(datum.special, datum.negative, coefficient, exponent);
+}
+
+function baseOf(format: string): bigint {
+  return (FORMATS.get(format) as readonly [bigint, number, number])[0];
+}
+
+/** A value of `source` as a value of `target`, rounded by `rounding`. */
+export function convert(source: string, value: unknown, target: string, rounding: string): unknown {
+  const datum = decode(source, value);
+  if (datum.special !== null) return encode(target, datum);
+  const base = baseOf(source);
+  let ideal: number | null = null;
+  if (baseOf(target) === 10n) ideal = base === 10n ? datum.exponent : Math.min(0, normalized(datum, 2n).exponent);
+  return encode(target, round_to(target, rounding, datum.negative, ...rational(datum, base), ideal));
+}
+
+/** An integer as a value of `target`, rounded by `rounding`. */
+export function from_integer(value: bigint, target: string, rounding: string): unknown {
+  const ideal = baseOf(target) === 10n ? 0 : null;
+  return encode(target, round_to(target, rounding, value < 0n, value < 0n ? -value : value, 1n, ideal));
+}
+
+/** A value of `source` rounded to an integer by `rounding`: a bigint, or an infinity as a number. Throws ValueError for
+ * NaN. */
+export function to_integer(source: string, value: unknown, rounding: string): bigint | number {
+  const datum = decode(source, value);
+  if (datum.special === "nan") throw new ValueError("NaN has no integer value");
+  if (datum.special !== null) return datum.negative ? -Infinity : Infinity;
+  const [num, den] = rational(datum, baseOf(source));
+  let whole = num / den;
+  if (up(rounding, datum.negative, whole, 2n * (num % den), den)) whole += 1n;
+  return datum.negative ? -whole : whole;
+}
+
+/** A binary format's width, its fraction's width, and its greatest exponent. */
+function fields(format: string): [number, number, number] {
+  const [, precision, emax] = FORMATS.get(format) as readonly [bigint, number, number];
+  return [WIDTHS.get(format) as number, precision - 1, emax];
+}
+
+/** A binary format's value as its interchange encoding: sign, biased exponent and fraction, as an unsigned bigint. */
+export function to_bits(format: string, value: unknown): bigint {
+  const [width, fraction, emax] = fields(format);
+  const ones = (1n << BigInt(width - 1 - fraction)) - 1n;
+  const datum = decode(format, value);
+  if (datum.special === "nan") return (ones << BigInt(fraction)) | (1n << BigInt(fraction - 1));
+  const sign = (datum.negative ? 1n : 0n) << BigInt(width - 1);
+  if (datum.special !== null) return sign | (ones << BigInt(fraction));
+  if (datum.coefficient === 0n) return sign;
+  const shift = fraction + 1 - bitLength(datum.coefficient); // the coefficient's leading bit at the fraction's top
+  const coefficient = shift >= 0 ? datum.coefficient << BigInt(shift) : datum.coefficient >> BigInt(-shift);
+  const exponent = datum.exponent - shift + fraction;
+  if (exponent < 1 - emax) return sign | (coefficient >> BigInt(1 - emax - exponent)); // subnormal
+  return sign | (BigInt(exponent + emax) << BigInt(fraction)) | (coefficient - (1n << BigInt(fraction)));
+}
+
+/** The value of a binary format that an interchange encoding holds. */
+export function from_bits(format: string, pattern: bigint): unknown {
+  const [width, fraction, emax] = fields(format);
+  const ones = (1n << BigInt(width - 1 - fraction)) - 1n;
+  const negative = (pattern >> BigInt(width - 1)) !== 0n;
+  const biased = (pattern >> BigInt(fraction)) & ones;
+  const bits = pattern & ((1n << BigInt(fraction)) - 1n);
+  let datum: Datum;
+  if (biased === ones) datum = bits !== 0n ? NAN : new Datum("inf", negative);
+  else if (biased === 0n) datum = new Datum(null, negative, bits, 1 - emax - fraction);
+  else datum = new Datum(null, negative, bits | (1n << BigInt(fraction)), Number(biased) - emax - fraction);
+  return encode(format, datum);
 }
