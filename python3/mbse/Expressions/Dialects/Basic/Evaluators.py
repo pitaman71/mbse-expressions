@@ -29,7 +29,7 @@ from mbse.Expressions.Framework import Evaluators as F
 from mbse.Schemas.Framework import Comparison, Schemas, Validators
 from mbse.Schemas.Framework.Visitors import Native
 
-from . import Domains, Expressions
+from . import Domains, Expressions, Ieee754
 
 __all__ = ["OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "predicate", "OPERATIONS"]
 
@@ -185,8 +185,8 @@ def _arithmetic(name: str, values: list[Any]) -> Any:
         return None
     domain = _operands(name, values, (_INTEGER, _IEEE754), ("a number", "numbers"))
     natives = [_native(value) for value in values]
-    if isinstance(domain, _IEEE754) and domain != Domains.Float:
-        raise NotImplementedError(f"arithmetic in {domain.name()} is not evaluated yet")
+    if isinstance(domain, _IEEE754) and domain != Domains.Float:  # the default's is the host's own
+        return Domains.Value(domain, Ieee754.operate(name, domain.format, domain.rounding, natives))
     if name == "neg":
         result = -natives[0]
     else:

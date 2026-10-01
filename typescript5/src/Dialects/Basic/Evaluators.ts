@@ -28,9 +28,10 @@ import * as F from "../../Framework/Evaluators.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
+import * as Ieee754 from "./Ieee754.js";
 
 const { typeName } = Repr;
-const { NotImplementedError, ValueError } = Errors;
+const { ValueError } = Errors;
 type Native = Visitors.Native;
 
 /** The variables an expression is evaluated with, or a scope. */
@@ -191,8 +192,8 @@ function arithmetic(name: string, values: unknown[]): unknown {
   if (values.some((value) => value === null)) return null;
   const domain = operands(name, values, [INTEGER, IEEE754], ["a number", "numbers"]);
   const natives = values.map(nativeOf);
-  if (domain instanceof IEEE754 && !domain.equals(Domains.Float)) {
-    throw new NotImplementedError(`arithmetic in ${domain.name()} is not evaluated yet`);
+  if (domain instanceof IEEE754 && !domain.equals(Domains.Float)) { // the default's is the host's own
+    return new Domains.Value(domain, Ieee754.operate(name, domain.format, domain.rounding, natives));
   }
   let result: any;
   if (name === "neg") {

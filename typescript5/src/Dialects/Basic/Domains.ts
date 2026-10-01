@@ -45,6 +45,7 @@ import type { Plain, Visitors } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
 import { OverflowError } from "../../Framework/Errors.js";
+import * as Ieee754 from "./Ieee754.js";
 
 type PlainData = Plain.PlainData;
 type PlainMap = Plain.PlainMap;
@@ -206,14 +207,17 @@ class Ieee754Domain extends Domain {
     return this.rounding === "roundTiesToEven" ? this.format : `${this.format} ${this.rounding}`;
   }
 
-  /** A binary format's values are floats; a decimal format's are their decimal text. */
+  /** `binary16`, `binary32` and `binary64` values are floats; `binary128` and decimal values are their text. */
   override native(): unknown {
-    return String(this.format).startsWith("decimal") ? String : Number;
+    return ["binary16", "binary32", "binary64"].includes(this.format) ? Number : String;
+  }
+
+  protected override fits(value: unknown): boolean {
+    return Ieee754.FORMATS.has(this.format) && Ieee754.contains(this.format, value);
   }
 
   override compare(a: unknown, b: unknown): number | null {
-    if (typeof a === "string") throw new Errors.NotImplementedError(`values of ${this.name()} are not compared yet`);
-    return super.compare(a, b);
+    return Ieee754.compare(this.format, a, b);
   }
 
   override validate(): string[] {

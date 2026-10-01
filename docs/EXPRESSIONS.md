@@ -113,9 +113,8 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
 ## Value domains
 
 Domains as data are implemented: the kinds below, their validation, the registry, and literals that carry them.
-Evaluation in them is decided below and lands in stages: typed values, comparisons, `Integer` arithmetic and the bitwise
-operations first, then IEEE 754 arithmetic in every format, then the conversions. Until a stage lands, what it covers
-raises `NotImplementedError`. The domains make representation part of the type, as C, C++ and SystemVerilog need, and
+Evaluation in them is decided below and lands in stages: typed values, comparisons, `Integer` and IEEE 754 arithmetic
+in every format and the bitwise operations are implemented; the conversions and an operation's `domain` are not yet. The domains make representation part of the type, as C, C++ and SystemVerilog need, and
 as an interface control document describes a data word. Each names a published standard where one exists, with only
 the parameters that standard defines, and today's natives become their defaults.
 

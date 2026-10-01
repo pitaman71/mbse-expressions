@@ -48,6 +48,8 @@ from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 from mbse.Schemas.Framework import Comparison, Schemas
 
+from . import Ieee754
+
 __all__ = [
     "OfBool", "OfInteger", "OfIeee754", "OfBits", "OfBytes", "OfUnicode", "OfIeee1164", "OfEnum", "OfPacked",
     "FORMATS", "ROUNDINGS", "OVERFLOWS", "STATES", "Schema",
@@ -178,13 +180,14 @@ class _Ieee754(_Domain):
         return self.format if self.rounding == "roundTiesToEven" else f"{self.format} {self.rounding}"
 
     def native(self) -> type:
-        """A binary format's values are floats; a decimal format's are their decimal text."""
-        return str if str(self.format).startswith("decimal") else float
+        """`binary16`, `binary32` and `binary64` values are floats; `binary128` and decimal values are their text."""
+        return float if self.format in ("binary16", "binary32", "binary64") else str
+
+    def _fits(self, value: Any) -> bool:
+        return self.format in Ieee754.FORMATS and Ieee754.contains(self.format, value)
 
     def compare(self, a: Any, b: Any) -> int | None:
-        if type(a) is str:
-            raise NotImplementedError(f"values of {self.name()} are not compared yet")
-        return super().compare(a, b)
+        return Ieee754.compare(self.format, a, b)
 
     def validate(self) -> list[str]:
         return _one_of("format", self.format, FORMATS) + _one_of("rounding", self.rounding, ROUNDINGS)
