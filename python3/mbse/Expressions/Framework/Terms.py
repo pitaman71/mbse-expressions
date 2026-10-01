@@ -25,6 +25,9 @@ data model and what `role` it plays, and passes the classes to `Declared`, which
   arguments. A kind's `VOCABULARY` maps operator names to signatures; operators outside it are extensions, unless the
   vocabulary is `None`, when any name is accepted and `SIGNATURE` applies to all.
 - `BINDING`: binds the name in its first property to its first argument within the others.
+- `QUANTIFIER`: binds the name in its first property to each item of its first argument, a collection, within its
+  second, and combines the results by its operator (named as an application's is), such as `all`. Its signature also
+  gives the domain of a collection's items, `items(domain)`, for inference.
 - `IMPORT`: makes what it declares (a module, a package's functions) available within its one argument, its body. The
   scope resolves the declaration; `binds()` gives the names it binds for lexical references.
 
@@ -57,11 +60,12 @@ from . import Domains
 
 __all__ = [
     "Form", "Expression", "Dialect", "Node", "Builder", "AnyBuilder", "Term", "Declared", "ValueProperty",
-    "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "ARGUMENTS", "Arguments", "NATIVES",
+    "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER", "ARGUMENTS", "Arguments", "NATIVES",
     "walk", "fold", "same", "resolve", "name_of",
 ]
 
 LITERAL, REFERENCE, APPLICATION, BINDING, IMPORT = "literal", "reference", "application", "binding", "import"
+QUANTIFIER = "quantifier"
 ARGUMENTS = "Expressions.Arguments"
 NATIVES: dict[str, type[Native]] = {"int": int, "float": float, "str": str, "bool": bool, "bytes": bytes}
 
@@ -227,7 +231,7 @@ def name_of(node: Any) -> Any:
 
 
 def _operator(node: Any) -> str:
-    """The name of an application's operator: its `OPERATOR` property, or its kind's tag."""
+    """The name of an application's or a quantifier's operator: its `OPERATOR` property, or its kind's tag."""
     kind = type(node)
     return kind.KIND if kind.OPERATOR is None else getattr(node, kind.OPERATOR)
 
@@ -603,12 +607,12 @@ class Declared:
         active.add(id(expression))
         arguments = expression._arguments()
         scopes = [bound] * len(arguments)
-        if kind.ROLE == BINDING:
+        if kind.ROLE in (BINDING, QUANTIFIER):
             inner = bound | {name} if not problems else bound
             scopes = [bound, *[inner] * (len(arguments) - 1)]
         elif kind.ROLE == IMPORT:
             scopes = [bound | set(expression.binds()) if not problems else bound] * len(arguments)
-        elif not problems and kind.VOCABULARY is not None:
+        if kind.ROLE in (APPLICATION, QUANTIFIER) and not problems and kind.VOCABULARY is not None:
             operator, vocabulary = _operator(expression), kind.VOCABULARY
             if operator in vocabulary and vocabulary[operator].arity() != len(arguments):
                 problems.append(f"{operator} takes {vocabulary[operator].arity()} arguments, got {len(arguments)}")
@@ -654,9 +658,14 @@ class Declared:
             value = self._infer(arguments[0], environment, memo)
             inner = {**environment, name_of(expression): value}
             return self._infer(arguments[-1], inner, memo)
-        domains = [self._infer(argument, environment, memo) for argument in arguments]
         operator = _operator(expression)
         signature = kind.SIGNATURE if kind.VOCABULARY is None else kind.VOCABULARY.get(operator)
+        if kind.ROLE == QUANTIFIER:  # its name has the domain of the collection's items
+            collection = self._infer(arguments[0], environment, memo)
+            item = Domains.Anything if signature is None else signature.items(collection)  # type: ignore[attr-defined]
+            domains = [collection, self._infer(arguments[1], {**environment, name_of(expression): item}, memo)]
+        else:
+            domains = [self._infer(argument, environment, memo) for argument in arguments]
         if signature is None:
             return Domains.Anything  # an extension: nothing is known about it
         result = signature.result(domains)

@@ -56,6 +56,7 @@ __all__ = [
     "FORMATS", "ROUNDINGS", "OVERFLOWS", "STATES", "Schema",
     "Bool", "Int", "Float", "Str", "Bytes", "Object", "Anything", "SIGNATURES",
     "of", "register", "registered", "name_of", "to_plain", "from_plain", "Domain", "Value", "value",
+    "Collection", "Record", "List", "Keyed", "Records", "items_of",
 ]
 
 FORMATS = ("binary16", "binary32", "binary64", "binary128", "decimal64", "decimal128")
@@ -575,6 +576,82 @@ def value(domain: _Domain, native: Any) -> Any:
     return native if _NATIVES.get(type(native)) == domain else Value(domain, native)
 
 
+# --- Collections ---
+
+
+@dataclass(frozen=True)
+class Collection:
+    """A collection's items, in order, and for a keyed list their `keys` (None for a positional one)."""
+
+    items: tuple[Any, ...]
+    keys: tuple[Any, ...] | None = None
+
+    def __repr__(self) -> str:
+        if self.keys is None:
+            return f"[{', '.join(map(repr, self.items))}]"
+        return "{" + ", ".join(f"{k!r}: {v!r}" for k, v in zip(self.keys, self.items)) + "}"
+
+
+@dataclass(frozen=True)
+class Record:
+    """An entry, as `entries` gives it: the targets of its other links and its property values, by name."""
+
+    fields: dict[str, Any]
+
+    def __repr__(self) -> str:
+        return f"record({', '.join(f'{k}={v!r}' for k, v in self.fields.items())})"
+
+
+@dataclass(frozen=True)
+class List:
+    """The domain of positional collections of `item`, for inference."""
+
+    item: Any
+
+    def name(self) -> str:
+        return f"list({self.item.name()})"
+
+    def contains(self, value: Any) -> bool:
+        return (isinstance(value, Collection) and value.keys is None and all(map(self.item.contains, value.items))) or (
+            isinstance(value, (list, tuple)) and all(map(self.item.contains, value)))
+
+    def includes(self, other: Any) -> bool:
+        if isinstance(other, D.OfUnion):
+            return all(self.includes(member) for member in other.members)
+        return other == self
+
+    def __repr__(self) -> str:
+        return self.name()
+
+
+@dataclass(frozen=True)
+class Keyed:
+    """The domain of keyed collections from `key` to `item`, for inference."""
+
+    key: Any
+    item: Any
+
+    def name(self) -> str:
+        return f"keyed({self.key.name()}, {self.item.name()})"
+
+    def contains(self, value: Any) -> bool:
+        return isinstance(value, Collection) and value.keys is not None and all(map(self.key.contains, value.keys)) and all(
+            map(self.item.contains, value.items))
+
+    def includes(self, other: Any) -> bool:
+        if isinstance(other, D.OfUnion):
+            return all(self.includes(member) for member in other.members)
+        return other == self
+
+    def __repr__(self) -> str:
+        return self.name()
+
+
+def items_of(domain: Any) -> D.Domain:
+    """The domain of a collection's items: a list's or a keyed list's item domain, otherwise unknown."""
+    return domain.item if isinstance(domain, (List, Keyed)) else Anything
+
+
 # --- The defaults and the core operations' signatures ---
 
 Bool, Int, Float, Str, Bytes = _Bool(), _Integer(), _Ieee754(), _Unicode(), _Bytes()
@@ -612,6 +689,8 @@ _NUMERIC = _Family("integer or ieee754 domain", _Integer, _Ieee754)
 _BITWISE = _Family("integer or bits domain", _Integer, _Bits)
 _INTEGERS = _Family("integer domain", _Integer)
 _PACKED = _Family("packed domain", _Packed)
+Records = D.OfValues("record", lambda value: isinstance(value, Record))
+_COLLECTIONS = D.OfValues("collection", lambda value: isinstance(value, (Collection, list, tuple)))
 _COMPARABLE = (Bool, Int, Float, Str, Bytes, Object)
 _ORDERED = (Int, Float, Str, Bytes)
 _NUMBERS = (Int, Float)
@@ -665,8 +744,57 @@ class _Pack:
         return "(packed) -> its representation"
 
 
+class _Collective:
+    """An operation on a collection: `parameters` after the collection, and its result, or (`result` None) the item
+    domain when the items are in `items`."""
+
+    def __init__(self, before: int, after: int, result: D.Domain | None, items: D.Domain = Anything, label: str = "T"):
+        self._before, self._after, self._result, self._items, self._label = before, after, result, items, label
+
+    def arity(self) -> int:
+        return self._before + 1 + self._after
+
+    def result(self, arguments: Any) -> D.Domain | None:
+        collection = arguments[self._before]  # validation has checked their number
+        if not (D.overlaps(_COLLECTIONS, collection) or isinstance(collection, (List, Keyed))):
+            return None
+        item = items_of(collection)
+        if not D.overlaps(self._items, item):
+            return None
+        return item if self._result is None else self._result
+
+    def describe(self) -> str:
+        parameters = ["T"] * self._before + [f"collection of {self._label}"] + ["T"] * self._after
+        return f"({', '.join(parameters)}) -> {self._label if self._result is None else self._result.name()}"
+
+
+class _Quantified:
+    """A quantifier: a collection and a bool body, giving `result`."""
+
+    def __init__(self, result: D.Domain):
+        self._result = result
+
+    def arity(self) -> int:
+        return 2
+
+    def result(self, arguments: Any) -> D.Domain | None:
+        if len(arguments) != 2 or not (D.overlaps(_COLLECTIONS, arguments[0]) or isinstance(arguments[0], (List, Keyed))):
+            return None
+        return self._result if D.overlaps(Bool, arguments[1]) else None
+
+    def items(self, collection: D.Domain) -> D.Domain:
+        """The domain the quantifier's name has: the collection's items'."""
+        return items_of(collection)
+
+    def describe(self) -> str:
+        return f"(collection, bool) -> {self._result.name()}"
+
+
+QUANTIFIERS: dict[str, D.Signature] = {"all": _Quantified(Bool), "any": _Quantified(Bool), "count": _Quantified(Int)}
+"""The quantifiers' signatures."""
+
 SIGNATURES: dict[str, D.Signature] = {
-    "get": D.Function((Object, Str), Anything), "has": D.Function((Object, Str), Bool),
+    "get": D.Function((D.OfUnion(Object, Records), Str), Anything), "has": D.Function((D.OfUnion(Object, Records), Str), Bool),
     **{name: D.Same(2, _COMPARABLE, Bool, _VALUES) for name in ("eq", "ne")},
     **{name: D.Same(2, _ORDERED, Bool, _ORDERED_KINDS) for name in ("lt", "le", "gt", "ge")},
     "and": _LOGIC, "or": _LOGIC, "not": D.Function((Bool,), Bool), "implies": _LOGIC,
@@ -675,6 +803,10 @@ SIGNATURES: dict[str, D.Signature] = {
     **{name: D.Same(2, (Int,), None, _BITWISE) for name in ("bitand", "bitor", "bitxor")},
     "bitnot": D.Same(1, (Int,), None, _BITWISE), "shl": _Shift(), "shr": _Shift(),
     **{name: _Conversion() for name in ("convert", "reinterpret", "unpack")}, "pack": _Pack(),
+    "count": _Collective(0, 0, Int), "item": _Collective(0, 1, None), "in": _Collective(1, 0, Bool),
+    "sum": _Collective(0, 0, None, _NUMERIC, "number"), "min": _Collective(0, 0, None, _ORDERED_KINDS, "ordered value"),
+    "max": _Collective(0, 0, None, _ORDERED_KINDS, "ordered value"), "unique": _Collective(0, 0, Bool),
+    "entries": D.Function((Object, Str), List(Records)),
 }
 """The core operations' signatures."""
 

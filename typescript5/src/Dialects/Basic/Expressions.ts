@@ -7,6 +7,8 @@
  *   the core operations (`CORE`) are the ones every binding evaluates. See docs/EXPRESSIONS.md.
  * - `OfVariable`: the value bound to a name.
  * - `OfLet`: binds a name to the value of one expression within another, its body.
+ * - `OfQuantifier`: binds a name to each item of a collection within a body, and gives whether it holds for `all` or
+ *   `any` of them, or for how many (`count`).
  * - `OfAny`: any of these.
  *
  * The dialect (`DIALECT`) is declared with the framework (`Framework/Terms`), which gives each kind its `Data`,
@@ -46,6 +48,7 @@ export const LITERAL = "Expressions.OfLiteral";
 export const OPERATION = "Expressions.OfOperation";
 export const VARIABLE = "Expressions.OfVariable";
 export const LET = "Expressions.OfLet";
+export const QUANTIFIER = "Expressions.OfQuantifier";
 export const ARGUMENTS = F.ARGUMENTS;
 export const Arguments = F.Arguments;
 
@@ -156,7 +159,26 @@ class _LetData extends F.Node {
   }
 }
 
-type AnyData = _LiteralData | _OperationData | _VariableData | _LetData;
+class _QuantifierData extends F.Node {
+  static override KIND = "quantifier";
+  static override ROLE = F.QUANTIFIER;
+  static override PROPERTIES = new Map<string, unknown>([["name", String], ["quantifier", String]]);
+  static override SLOTS = ["collection", "body"];
+  static override OPERATOR = "quantifier";
+  static override VOCABULARY = Domains.QUANTIFIERS;
+  declare name: unknown;
+  /** all, any or count. */
+  declare quantifier: unknown;
+  declare collection: any;
+  /** With `name` bound to each item. */
+  declare body: any;
+
+  constructor(name: unknown = null, quantifier: unknown = null, collection: unknown = null, body: unknown = null) {
+    super(name, quantifier, collection, body);
+  }
+}
+
+type AnyData = _LiteralData | _OperationData | _VariableData | _LetData | _QuantifierData;
 
 // --- Builders: Visitors that build Data ---
 
@@ -243,6 +265,32 @@ class _LetBuilder extends _NamedBuilder {
   }
 }
 
+/** Builds an `OfQuantifier.Data`. DSL: `.name(str)`, `.quantifier(str)`, `.collection(spec)` and `.body(spec)`. As a
+ * `Visitors.OfObject`, the collection is the `arguments` entry with index 0 and the body the one with index 1. */
+class _QuantifierBuilder extends _NamedBuilder {
+  static override DATA = _QuantifierData;
+
+  constructor(instance?: _QuantifierData) {
+    super(instance);
+  }
+
+  quantifier(quantifier: string): this {
+    return this.set("quantifier", quantifier);
+  }
+
+  collection(spec: OfAny.Spec): this {
+    return this.argument("collection", spec);
+  }
+
+  body(spec: OfAny.Spec): this {
+    return this.argument("body", spec);
+  }
+
+  override create(...args: unknown[]): _QuantifierData {
+    return super.create(...args);
+  }
+}
+
 /** Selects a kind through `as_<kind>(spec)`. Finalizing yields that kind's data. */
 class _AnyBuilder extends F.AnyBuilder {
   constructor(instance?: AnyData) {
@@ -269,6 +317,11 @@ class _AnyBuilder extends F.AnyBuilder {
     return this;
   }
 
+  as_quantifier(spec: OfQuantifier.Spec): _AnyBuilder {
+    this.selected = OfQuantifier.resolve(spec);
+    return this;
+  }
+
   override create(...args: unknown[]): AnyData {
     return super.create(...args);
   }
@@ -276,12 +329,13 @@ class _AnyBuilder extends F.AnyBuilder {
 
 // --- The dialect and its meta-schemas ---
 
-export const DIALECT = new F.Declared("Basic", [_LiteralData, _OperationData, _VariableData, _LetData], {
+export const DIALECT = new F.Declared("Basic", [_LiteralData, _OperationData, _VariableData, _LetData, _QuantifierData], {
   domain_of: Domains.of,
   anyBuilder: _AnyBuilder,
   builders: new Map<string, typeof F.Builder>([["literal", _LiteralBuilder], ["operation", _OperationBuilder],
-    ["variable", _VariableBuilder], ["let", _LetBuilder]]),
-  schemaNames: new Map([["literal", LITERAL], ["operation", OPERATION], ["variable", VARIABLE], ["let", LET]]),
+    ["variable", _VariableBuilder], ["let", _LetBuilder], ["quantifier", _QuantifierBuilder]]),
+  schemaNames: new Map([["literal", LITERAL], ["operation", OPERATION], ["variable", VARIABLE], ["let", LET],
+    ["quantifier", QUANTIFIER]]),
 });
 
 /** Builds expressions from snapshots: `Builders['Expressions.OfLiteral'](instance)` returns a builder, as
@@ -334,6 +388,21 @@ export namespace OfVariable {
     if (typeof spec === "string") return new _VariableData(spec);
     return F.resolve(spec, (v): v is _VariableData => v instanceof _VariableData, () => new _VariableBuilder(),
       "a name, a variable");
+  }
+}
+
+export namespace OfQuantifier {
+  /** Binds a name to each item of a collection within a body: whether it holds for `all` or `any` of them, or for
+   * how many (`count`). */
+  export const Data = _QuantifierData;
+  export type Data = _QuantifierData;
+  export const Builder = _QuantifierBuilder;
+  export type Builder = _QuantifierBuilder;
+  export type Spec = _QuantifierData | Term | ((builder: _QuantifierBuilder) => _QuantifierBuilder);
+  export const Schema: Schemas.OfObject.Data = _QuantifierData.Schema;
+
+  export function resolve(spec: Spec | unknown): _QuantifierData {
+    return F.resolve(spec, (v): v is _QuantifierData => v instanceof _QuantifierData, () => new _QuantifierBuilder(), "a quantifier");
   }
 }
 
@@ -478,6 +547,58 @@ class TermTarget extends F.Term {
   unpack(domain: unknown): Term {
     return term(new _OperationData("unpack", [this.data], domain));
   }
+
+  /** The number of items of a collection. */
+  count(): Term {
+    return operation("count", this as unknown as Term);
+  }
+
+  /** The item at a position, or at a key of a keyed list. */
+  item(index: OfAny.Spec): Term {
+    return operation("item", this as unknown as Term, index);
+  }
+
+  /** Whether this equals one of the items of `collection`. */
+  in_(collection: OfAny.Spec): Term {
+    return operation("in", this as unknown as Term, collection);
+  }
+
+  sum(): Term {
+    return operation("sum", this as unknown as Term);
+  }
+
+  min(): Term {
+    return operation("min", this as unknown as Term);
+  }
+
+  max(): Term {
+    return operation("max", this as unknown as Term);
+  }
+
+  /** Whether no two items are equal. */
+  unique(): Term {
+    return operation("unique", this as unknown as Term);
+  }
+
+  /** An object's entries in an adjacency, as records. */
+  entries(adjacency: string): Term {
+    return operation("entries", this as unknown as Term, adjacency);
+  }
+
+  /** Whether `body` holds for every item, bound to `name`. */
+  all(name: string, body: OfAny.Spec): Term {
+    return quantifier("all", name, this as unknown as Term, body);
+  }
+
+  /** Whether `body` holds for some item, bound to `name`. */
+  any(name: string, body: OfAny.Spec): Term {
+    return quantifier("any", name, this as unknown as Term, body);
+  }
+
+  /** How many items, bound to `name`, `body` holds for. */
+  count_where(name: string, body: OfAny.Spec): Term {
+    return quantifier("count", name, this as unknown as Term, body);
+  }
 }
 
 /** An expression written with methods. `.name` reads a property (`get`); use `.get(name)` for names that are also
@@ -508,6 +629,11 @@ export function literal(value: Native, domain: unknown = null): Term {
 /** `body`, with `name` bound to the value of `value`. */
 export function let_(name: string, value: OfAny.Spec, body: OfAny.Spec): Term {
   return term(new _LetData(name, OfAny.resolve(value), OfAny.resolve(body)));
+}
+
+/** The quantifier `quantifier` (`all`, `any` or `count`) of `body`, with `name` bound to each item of `collection`. */
+export function quantifier(quantifier: string, name: string, collection: OfAny.Spec, body: OfAny.Spec): Term {
+  return term(new _QuantifierData(name, quantifier, OfAny.resolve(collection), OfAny.resolve(body)));
 }
 
 /** The operation `name` applied to `args`; for operations outside the core, or without a method. */

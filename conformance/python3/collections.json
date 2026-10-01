@@ -1,0 +1,200 @@
+{
+  "root": "s0",
+  "objects": {
+    "s0": {
+      "kind": "let",
+      "name": "ports",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s1",
+            "$schema": "Expressions.OfOperation"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s2",
+            "$schema": "Expressions.OfOperation"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s1": {
+      "kind": "operation",
+      "name": "entries",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s3",
+            "$schema": "Expressions.OfVariable"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s4",
+            "$schema": "Expressions.OfLiteral"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s2": {
+      "kind": "operation",
+      "name": "and",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s5",
+            "$schema": "Expressions.OfQuantifier"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s6",
+            "$schema": "Expressions.OfOperation"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s3": {
+      "kind": "variable",
+      "name": "this"
+    },
+    "s4": {
+      "kind": "literal",
+      "str": "ports"
+    },
+    "s5": {
+      "kind": "quantifier",
+      "name": "p",
+      "quantifier": "all",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s7",
+            "$schema": "Expressions.OfVariable"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s8",
+            "$schema": "Expressions.OfOperation"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s6": {
+      "kind": "operation",
+      "name": "le",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s9",
+            "$schema": "Expressions.OfOperation"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s10",
+            "$schema": "Expressions.OfOperation"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s7": {
+      "kind": "variable",
+      "name": "ports"
+    },
+    "s8": {
+      "kind": "operation",
+      "name": "in",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s11",
+            "$schema": "Expressions.OfOperation"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s12",
+            "$schema": "Expressions.OfVariable"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s9": {
+      "kind": "operation",
+      "name": "sum",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s13",
+            "$schema": "Expressions.OfVariable"
+          },
+          "index": 0
+        }
+      ]
+    },
+    "s10": {
+      "kind": "operation",
+      "name": "count",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s7",
+            "$schema": "Expressions.OfVariable"
+          },
+          "index": 0
+        }
+      ]
+    },
+    "s11": {
+      "kind": "operation",
+      "name": "get",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s14",
+            "$schema": "Expressions.OfVariable"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s15",
+            "$schema": "Expressions.OfLiteral"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s12": {
+      "kind": "variable",
+      "name": "pins"
+    },
+    "s13": {
+      "kind": "variable",
+      "name": "sizes"
+    },
+    "s14": {
+      "kind": "variable",
+      "name": "p"
+    },
+    "s15": {
+      "kind": "literal",
+      "str": "pin"
+    }
+  }
+}

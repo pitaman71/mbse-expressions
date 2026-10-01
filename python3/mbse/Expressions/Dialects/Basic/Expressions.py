@@ -6,6 +6,8 @@
   core operations (`CORE`) are the ones every binding evaluates. See docs/EXPRESSIONS.md.
 - `OfVariable`: the value bound to a name.
 - `OfLet`: binds a name to the value of one expression within another, its body.
+- `OfQuantifier`: binds a name to each item of a collection within a body, and gives whether it holds for `all` or
+  `any` of them, or for how many (`count`).
 - `OfAny`: any of these.
 
 The dialect (`DIALECT`) is declared with the framework (`mbse.Expressions.Framework.Terms`), which gives each
@@ -50,15 +52,16 @@ from mbse.Schemas.Framework.Visitors import Native
 from . import Domains
 
 __all__ = [
-    "OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "Arguments", "Builders", "Term", "CORE", "DIALECT",
-    "variable", "literal", "let_", "operation", "from_",
-    "LITERAL", "OPERATION", "VARIABLE", "LET", "ARGUMENTS",
+    "OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "OfQuantifier", "Arguments", "Builders", "Term", "CORE",
+    "DIALECT", "variable", "literal", "let_", "operation", "quantifier", "from_",
+    "LITERAL", "OPERATION", "VARIABLE", "LET", "QUANTIFIER", "ARGUMENTS",
 ]
 
 LITERAL = "Expressions.OfLiteral"
 OPERATION = "Expressions.OfOperation"
 VARIABLE = "Expressions.OfVariable"
 LET = "Expressions.OfLet"
+QUANTIFIER = "Expressions.OfQuantifier"
 ARGUMENTS = F.ARGUMENTS
 Arguments = F.Arguments
 
@@ -153,7 +156,21 @@ class _LetData(F.Node):
     body: Any = None  # OfAny.Data
 
 
-_KINDS = (_LiteralData, _OperationData, _VariableData, _LetData)
+@dataclass(eq=False)
+class _QuantifierData(F.Node):
+    KIND = "quantifier"
+    ROLE = F.QUANTIFIER
+    PROPERTIES = {"name": str, "quantifier": str}
+    SLOTS = ("collection", "body")
+    OPERATOR = "quantifier"
+    VOCABULARY = Domains.QUANTIFIERS
+    name: str | None = None
+    quantifier: str | None = None  # all, any or count
+    collection: Any = None  # OfAny.Data
+    body: Any = None  # OfAny.Data, with `name` bound to each item
+
+
+_KINDS = (_LiteralData, _OperationData, _VariableData, _LetData, _QuantifierData)
 
 
 # --- Builders: Visitors that build Data ---
@@ -209,6 +226,22 @@ class _LetBuilder(_NamedBuilder):
         return self.argument("body", spec)
 
 
+class _QuantifierBuilder(_NamedBuilder):
+    """Builds an `OfQuantifier.Data`. DSL: `.name(str)`, `.quantifier(str)`, `.collection(spec)` and `.body(spec)`. As a
+    `Visitors.OfObject`, the collection is the `arguments` entry with index 0 and the body the one with index 1."""
+
+    _data = _QuantifierData
+
+    def quantifier(self, quantifier: str) -> _QuantifierBuilder:
+        return self.set("quantifier", quantifier)
+
+    def collection(self, spec: OfAny.Spec) -> _QuantifierBuilder:
+        return self.argument("collection", spec)
+
+    def body(self, spec: OfAny.Spec) -> _QuantifierBuilder:
+        return self.argument("body", spec)
+
+
 class _AnyBuilder(F.AnyBuilder):
     """Selects a kind through `as_<kind>(spec)`. Finalizing yields that kind's data."""
 
@@ -228,14 +261,19 @@ class _AnyBuilder(F.AnyBuilder):
         self._selected = OfLet.resolve(spec)
         return self
 
+    def as_quantifier(self, spec: OfQuantifier.Spec) -> _AnyBuilder:
+        self._selected = OfQuantifier.resolve(spec)
+        return self
+
 
 # --- The dialect and its meta-schemas ---
 
 DIALECT = F.Declared(
     "Basic", _KINDS, domain_of=Domains.of, any_builder=_AnyBuilder,
     builders={"literal": _LiteralBuilder, "operation": _OperationBuilder, "variable": _VariableBuilder,
-              "let": _LetBuilder},
-    schema_names={"literal": LITERAL, "operation": OPERATION, "variable": VARIABLE, "let": LET},
+              "let": _LetBuilder, "quantifier": _QuantifierBuilder},
+    schema_names={"literal": LITERAL, "operation": OPERATION, "variable": VARIABLE, "let": LET,
+                  "quantifier": QUANTIFIER},
 )
 Builders = DIALECT.Builders
 
@@ -299,11 +337,25 @@ class OfLet:
         return F.resolve(spec, _LetData, _LetBuilder, "a let")
 
 
+class OfQuantifier:
+    """Binds a name to each item of a collection within a body: whether it holds for `all` or `any` of them, or for how
+    many (`count`)."""
+
+    Data = _QuantifierData
+    Builder = _QuantifierBuilder
+    Spec = _QuantifierData | Callable[[_QuantifierBuilder], _QuantifierBuilder]
+    Schema: Schemas.OfObject.Data = _QuantifierData.Schema  # type: ignore[attr-defined]
+
+    @staticmethod
+    def resolve(spec: OfQuantifier.Spec) -> _QuantifierData:
+        return F.resolve(spec, _QuantifierData, _QuantifierBuilder, "a quantifier")
+
+
 class OfAny:
     """Any expression. `Spec` is a native value (a literal), an expression, a `Term`, or a callable taking the
     builder."""
 
-    Data = _LiteralData | _OperationData | _VariableData | _LetData
+    Data = _LiteralData | _OperationData | _VariableData | _LetData | _QuantifierData
     Builder = _AnyBuilder
     Spec = Native | Data | Callable[[_AnyBuilder], _AnyBuilder]
     Schema: Schemas.OfUnion.Data = DIALECT.Schema
@@ -409,6 +461,47 @@ class Term(F.Term):
         """The value of the packed `domain` that a representation stands for."""
         return Term(_OperationData("unpack", (self.data,), domain))
 
+    def count(self) -> Term:
+        """The number of items of a collection."""
+        return operation("count", self)
+
+    def item(self, index: OfAny.Spec) -> Term:
+        """The item at a position, or at a key of a keyed list."""
+        return operation("item", self, index)
+
+    def in_(self, collection: OfAny.Spec) -> Term:
+        """Whether this equals one of the items of `collection`."""
+        return operation("in", self, collection)
+
+    def sum(self) -> Term:
+        return operation("sum", self)
+
+    def min(self) -> Term:
+        return operation("min", self)
+
+    def max(self) -> Term:
+        return operation("max", self)
+
+    def unique(self) -> Term:
+        """Whether no two items are equal."""
+        return operation("unique", self)
+
+    def entries(self, adjacency: str) -> Term:
+        """An object's entries in an adjacency, as records."""
+        return operation("entries", self, adjacency)
+
+    def all(self, name: str, body: OfAny.Spec) -> Term:
+        """Whether `body` holds for every item, bound to `name`."""
+        return quantifier("all", name, self, body)
+
+    def any(self, name: str, body: OfAny.Spec) -> Term:
+        """Whether `body` holds for some item, bound to `name`."""
+        return quantifier("any", name, self, body)
+
+    def count_where(self, name: str, body: OfAny.Spec) -> Term:
+        """How many items, bound to `name`, `body` holds for."""
+        return quantifier("count", name, self, body)
+
 
 def variable(name: str) -> Term:
     """The variable `name`."""
@@ -423,6 +516,11 @@ def literal(value: Native, domain: Any = None) -> Term:
 def let_(name: str, value: OfAny.Spec, body: OfAny.Spec) -> Term:
     """`body`, with `name` bound to the value of `value`."""
     return Term(_LetData(name, OfAny.resolve(value), OfAny.resolve(body)))
+
+
+def quantifier(quantifier: str, name: str, collection: OfAny.Spec, body: OfAny.Spec) -> Term:
+    """The quantifier `quantifier` (`all`, `any` or `count`) of `body`, with `name` bound to each item of `collection`."""
+    return Term(_QuantifierData(name, quantifier, OfAny.resolve(collection), OfAny.resolve(body)))
 
 
 def operation(name: str, *arguments: OfAny.Spec) -> Term:

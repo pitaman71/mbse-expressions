@@ -11,7 +11,8 @@
  * `Interpreter` evaluates by role (see `Terms`): a literal gives its value (through `literal`, or `typed` when it
  * carries a domain of its own), a reference what the scope resolves, a binding its body in the scope with its name bound, and an import its body in the scope it
  * declares. An application calls its operator's implementation from `operations`, with one thunk per argument, so
- * that implementations decide which arguments to evaluate and when; the implementation of a kind whose vocabulary is
+ * that implementations decide which arguments to evaluate and when, and so does a quantifier, whose second thunk takes
+ * an item and evaluates the body with the name bound to it; the implementation of a kind whose vocabulary is
  * open is one function for every name, and operators outside a closed vocabulary go to `extension`, if given. It
  * throws on what `Dialect.validate` reports: operations outside the vocabulary, wrong numbers of arguments, unbound
  * references, missing values and cycles.
@@ -81,10 +82,11 @@ export class Interpreter {
     active.add(expression);
     try {
       const args = expression.argumentsOf();
-      if (kind.ROLE === Terms.BINDING || kind.ROLE === Terms.IMPORT) {
+      if (kind.ROLE === Terms.BINDING || kind.ROLE === Terms.IMPORT || kind.ROLE === Terms.QUANTIFIER) {
         kind.SLOTS.forEach((slot, i) => {
           if (args[i] === null) throw new ValueError(`${Terms.article(kind.KIND)} needs ${Terms.article(slot)}`);
         });
+        if (kind.ROLE === Terms.QUANTIFIER) return this.apply(expression, args, scope, active);
         if (kind.ROLE === Terms.IMPORT) return this.evaluate(args[0], scope.enter(expression), active);
         const bound = this.evaluate(args[0], scope, active);
         return this.evaluate(args[1], scope.bind(Terms.nameOf(expression) as string, bound), active);
@@ -99,7 +101,11 @@ export class Interpreter {
     const kind = expression.kind();
     const operator = Terms.operatorOf(expression);
     const implementations = this.operations.get(kind.KIND);
-    const thunks = args.map((argument) => () => this.evaluate(argument, scope, active));
+    const thunks: any[] = args.map((argument) => () => this.evaluate(argument, scope, active));
+    if (kind.ROLE === Terms.QUANTIFIER) { // the body, of an item: evaluated with the name bound to it
+      const name = Terms.nameOf(expression) as string;
+      thunks[1] = (item: unknown) => this.evaluate(args[1], scope.bind(name, item), active);
+    }
     if (kind.VOCABULARY === null) return (implementations as Implementation)(thunks, expression, scope);
     const implementation = (implementations as ReadonlyMap<string, Implementation>).get(operator);
     if (implementation === undefined) {

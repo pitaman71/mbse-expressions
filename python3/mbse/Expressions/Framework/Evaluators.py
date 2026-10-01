@@ -12,7 +12,8 @@ dialect's scope from it, so `Evaluators.OfAny(expression, {'this': value})` bind
 a domain of its own), a reference what
 the scope resolves, a binding its body in the scope with its name bound, and an import its body in the scope it
 declares. An application calls its operator's implementation from `operations`, with one thunk per argument, so that
-implementations decide which arguments to evaluate and when; the implementation of a kind whose vocabulary is open is
+implementations decide which arguments to evaluate and when, and so does a quantifier, whose second thunk takes an item
+and evaluates the body with the name bound to it; the implementation of a kind whose vocabulary is open is
 one callable for every name, and operators outside a closed vocabulary go to `extension`, if given. It raises on what
 `Dialect.validate` reports: operations outside the vocabulary, wrong numbers of arguments, unbound references, missing
 values and cycles.
@@ -89,10 +90,12 @@ class Interpreter:
         active.add(id(expression))
         try:
             arguments = expression._arguments()
-            if kind.ROLE in (Terms.BINDING, Terms.IMPORT):
+            if kind.ROLE in (Terms.BINDING, Terms.IMPORT, Terms.QUANTIFIER):
                 for slot, argument in zip(kind.SLOTS, arguments):
                     if argument is None:
                         raise ValueError(f"{Terms._article(kind.KIND)} needs {Terms._article(slot)}")
+                if kind.ROLE == Terms.QUANTIFIER:
+                    return self._apply(expression, arguments, scope, active)
                 if kind.ROLE == Terms.IMPORT:
                     return self.evaluate(arguments[0], scope.enter(expression), active)
                 bound = self.evaluate(arguments[0], scope, active)
@@ -106,6 +109,9 @@ class Interpreter:
         operator = Terms._operator(expression)
         implementations = self.operations[kind.KIND]
         thunks = [lambda argument=argument: self.evaluate(argument, scope, active) for argument in arguments]
+        if kind.ROLE == Terms.QUANTIFIER:  # the body, of an item: evaluated with the name bound to it
+            name = Terms.name_of(expression)
+            thunks[1] = lambda item: self.evaluate(arguments[1], scope.bind(name, item), active)  # type: ignore[assignment]
         if kind.VOCABULARY is None:
             return implementations(thunks, expression, scope)
         if operator not in implementations:

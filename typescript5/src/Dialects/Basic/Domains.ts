@@ -662,6 +662,105 @@ export function value(domain: Domain, native: unknown): unknown {
   return nativeDomain(native)?.equals(domain) ? native : new Value(domain, native);
 }
 
+// --- Collections ---
+
+function sameItem(a: unknown, b: unknown): boolean {
+  if (a instanceof Collection) return a.equals(b);
+  if (a instanceof Value) return a.equals(b);
+  if (a instanceof Uint8Array && b instanceof Uint8Array) return a.length === b.length && a.every((x, i) => x === b[i]);
+  return a === b;
+}
+
+/** A collection's items, in order, and for a keyed list their `keys` (null for a positional one). */
+export class Collection {
+  constructor(readonly items: readonly unknown[], readonly keys: readonly unknown[] | null = null) {}
+
+  /** The same items and keys. */
+  equals(other: unknown): boolean {
+    const same = (a: readonly unknown[], b: readonly unknown[]) => a.length === b.length && a.every((x, i) => sameItem(x, b[i]));
+    return other instanceof Collection && same(this.items, other.items) && (this.keys === null ? other.keys === null
+      : other.keys !== null && same(this.keys, other.keys));
+  }
+
+  toString(): string {
+    const keys = this.keys;
+    if (keys === null) return `[${this.items.map((item) => repr(item)).join(", ")}]`;
+    return `{${this.items.map((item, i) => `${repr(keys[i])}: ${repr(item)}`).join(", ")}}`;
+  }
+}
+
+/** An entry, as `entries` gives it: the targets of its other links and its property values, by name. */
+class RecordData {
+  constructor(readonly fields: ReadonlyMap<string, unknown>) {}
+
+  toString(): string {
+    return `record(${[...this.fields].map(([k, v]) => `${k}=${repr(v)}`).join(", ")})`;
+  }
+}
+
+/** The domain of positional collections of `item`, for inference. */
+export class List implements D.Domain {
+  constructor(readonly item: D.Domain) {}
+
+  name(): string {
+    return `list(${this.item.name()})`;
+  }
+
+  contains(value: unknown): boolean {
+    return (value instanceof Collection && value.keys === null && value.items.every((item) => this.item.contains(item)))
+      || (Array.isArray(value) && value.every((item) => this.item.contains(item)));
+  }
+
+  includes(other: D.Domain): boolean {
+    if (other instanceof D.OfUnion) return other.members.every((member) => this.includes(member));
+    return this.equals(other);
+  }
+
+  equals(other: unknown): boolean {
+    return other instanceof List && sameDomain(other.item, this.item);
+  }
+
+  toString(): string {
+    return this.name();
+  }
+}
+
+/** The domain of keyed collections from `key` to `item`, for inference. */
+export class Keyed implements D.Domain {
+  constructor(readonly key: D.Domain, readonly item: D.Domain) {}
+
+  name(): string {
+    return `keyed(${this.key.name()}, ${this.item.name()})`;
+  }
+
+  contains(value: unknown): boolean {
+    return value instanceof Collection && value.keys !== null && value.keys.every((key) => this.key.contains(key))
+      && value.items.every((item) => this.item.contains(item));
+  }
+
+  includes(other: D.Domain): boolean {
+    if (other instanceof D.OfUnion) return other.members.every((member) => this.includes(member));
+    return this.equals(other);
+  }
+
+  equals(other: unknown): boolean {
+    return other instanceof Keyed && sameDomain(other.key, this.key) && sameDomain(other.item, this.item);
+  }
+
+  toString(): string {
+    return this.name();
+  }
+}
+
+function sameDomain(a: D.Domain, b: D.Domain): boolean {
+  return a === b || (a.includes(b) && b.includes(a));
+}
+
+/** The domain of a collection's items: a list's or a keyed list's item domain, otherwise unknown. */
+export function items_of(domain: D.Domain): D.Domain {
+  return domain instanceof List || domain instanceof Keyed ? domain.item : D.Anything;
+}
+
 // --- The defaults and the core operations' signatures ---
 
 export const Anything = D.Anything;
@@ -723,6 +822,9 @@ const NUMERIC = new Family("integer or ieee754 domain", IntegerDomain, Ieee754Do
 const BITWISE = new Family("integer or bits domain", IntegerDomain, BitsDomain);
 const INTEGERS = new Family("integer domain", IntegerDomain);
 const PACKED = new Family("packed domain", PackedDomain);
+export { RecordData as Record };
+export const Records = new D.OfValues("record", (value) => value instanceof RecordData);
+const COLLECTIONS = new D.OfValues("collection", (value) => value instanceof Collection || Array.isArray(value));
 const COMPARABLE = [Bool, Int, Float, Str, Bytes, ObjectDomain];
 const ORDERED = [Int, Float, Str, Bytes];
 const NUMBERS = [Int, Float];
@@ -778,9 +880,67 @@ class Pack implements D.Signature {
   }
 }
 
+function isCollection(domain: D.Domain): boolean {
+  return D.overlaps(COLLECTIONS, domain) || domain instanceof List || domain instanceof Keyed;
+}
+
+/** An operation on a collection: `before` and `after` other arguments, and its result, or (`result` null) the item
+ * domain when the items are in `items`. */
+class Collective implements D.Signature {
+  constructor(private readonly before: number, private readonly after: number, private readonly resultDomain: D.Domain | null,
+    private readonly itemDomain: D.Domain = Anything, private readonly label = "T") {}
+
+  arity(): number {
+    return this.before + 1 + this.after;
+  }
+
+  result(args: readonly D.Domain[]): D.Domain | null {
+    const collection = args[this.before] as D.Domain; // validation has checked their number
+    if (!isCollection(collection)) return null;
+    const item = items_of(collection);
+    if (!D.overlaps(this.itemDomain, item)) return null;
+    return this.resultDomain ?? item;
+  }
+
+  describe(): string {
+    const parameters = [...Array(this.before).fill("T"), `collection of ${this.label}`, ...Array(this.after).fill("T")];
+    return `(${parameters.join(", ")}) -> ${this.resultDomain === null ? this.label : this.resultDomain.name()}`;
+  }
+}
+
+/** A quantifier: a collection and a bool body, giving `result`. */
+class Quantified implements D.Signature {
+  constructor(private readonly resultDomain: D.Domain) {}
+
+  arity(): number {
+    return 2;
+  }
+
+  result(args: readonly D.Domain[]): D.Domain | null {
+    if (args.length !== 2 || !isCollection(args[0] as D.Domain)) return null;
+    return D.overlaps(Bool, args[1] as D.Domain) ? this.resultDomain : null;
+  }
+
+  /** The domain the quantifier's name has: the collection's items'. */
+  items(collection: D.Domain): D.Domain {
+    return items_of(collection);
+  }
+
+  describe(): string {
+    return `(collection, bool) -> ${this.resultDomain.name()}`;
+  }
+}
+
+/** The quantifiers' signatures. */
+export const QUANTIFIERS: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
+  ["all", new Quantified(Bool)], ["any", new Quantified(Bool)], ["count", new Quantified(Int)],
+]);
+
+const READABLE = new D.OfUnion(ObjectDomain, Records);
+
 /** The core operations' signatures. */
 export const SIGNATURES: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
-  ["get", new D.Function([ObjectDomain, Str], Anything)], ["has", new D.Function([ObjectDomain, Str], Bool)],
+  ["get", new D.Function([READABLE, Str], Anything)], ["has", new D.Function([READABLE, Str], Bool)],
   ...["eq", "ne"].map((name) => [name, new D.Same(2, COMPARABLE, Bool, VALUES)] as [string, D.Signature]),
   ...["lt", "le", "gt", "ge"].map((name) => [name, new D.Same(2, ORDERED, Bool, ORDERED_KINDS)] as [string, D.Signature]),
   ["and", LOGIC], ["or", LOGIC], ["not", new D.Function([Bool], Bool)], ["implies", LOGIC],
@@ -789,6 +949,10 @@ export const SIGNATURES: ReadonlyMap<string, D.Signature> = new Map<string, D.Si
   ...["bitand", "bitor", "bitxor"].map((name) => [name, new D.Same(2, [Int], null, BITWISE)] as [string, D.Signature]),
   ["bitnot", new D.Same(1, [Int], null, BITWISE)], ["shl", new Shift()], ["shr", new Shift()],
   ...["convert", "reinterpret", "unpack"].map((name) => [name, new Conversion()] as [string, D.Signature]), ["pack", new Pack()],
+  ["count", new Collective(0, 0, Int)], ["item", new Collective(0, 1, null)], ["in", new Collective(1, 0, Bool)],
+  ["sum", new Collective(0, 0, null, NUMERIC, "number")], ["min", new Collective(0, 0, null, ORDERED_KINDS, "ordered value")],
+  ["max", new Collective(0, 0, null, ORDERED_KINDS, "ordered value")], ["unique", new Collective(0, 0, Bool)],
+  ["entries", new D.Function([ObjectDomain, Str], new List(Records))],
 ]);
 
 /** The domain of a value: a typed value's own, its native type's default, or `Object`. */

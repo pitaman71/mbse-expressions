@@ -14,6 +14,9 @@
   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
   `convert` keeps a value in the operation's domain, `reinterpret` keeps its bit pattern, and `pack` and `unpack` go
   to and from a packed domain's representation.
+- Collections: a list property reads as a `Domains.Collection`, and `entries` gives an object's entries as one of
+  `Domains.Record`s, which `get` and `has` read. The collection operations and the quantifiers (`all`, `any`, `count`)
+  follow Kleene's logic over the items; an unknown collection gives unknown.
 - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
   variables and wrong operand types raise, as do the problems `validate()` reports.
 - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
@@ -33,7 +36,8 @@ from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains, Expressions, Ieee754
 
-__all__ = ["OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "predicate", "OPERATIONS"]
+__all__ = ["OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "OfQuantifier", "predicate", "OPERATIONS",
+           "QUANTIFIERS"]
 
 Scope = Mapping[str, Any] | None
 
@@ -91,19 +95,32 @@ def _is_object(value: Any) -> bool:
     return _is_readable(value) and callable(getattr(value, "identity", None)) and value.owner() is None
 
 
+def _value_of(value: Any) -> Any:
+    """A property's value as Basic reads it: a list as a collection."""
+    if isinstance(value, Validators.ListRecord):
+        keyed = any(key is not None for key in value.keys)
+        return Domains.Collection(tuple(map(_value_of, value.values)),
+                                  tuple(map(_value_of, value.keys)) if keyed else None)
+    return value
+
+
 def _read(name: str, values: list[Any]) -> Any:
-    """`get`: the property's value, or `None` when absent. `has`: whether it is present."""
+    """`get`: the property's value, or `None` when absent. `has`: whether it is present. A record's fields are its
+    properties."""
     target, property_name = values
     if type(property_name) is not str:
         raise TypeError(f"{name} expects a property name, got {_type_name(property_name)}")
     if target is None:
         return None
-    if not _is_readable(target):
+    if isinstance(target, Domains.Record):
+        properties = target.fields
+    elif _is_readable(target):
+        properties = Validators.properties_of(target)
+    else:
         raise TypeError(f"{name} expects an object, got {_type_name(target)}")
-    properties = Validators.properties_of(target)
     if name == "has":
         return property_name in properties
-    return properties.get(property_name)
+    return _value_of(properties.get(property_name))
 
 
 def _compare(a: Native, b: Native) -> Comparison.Result:
@@ -183,18 +200,20 @@ _INTEGER, _IEEE754, _BITS = Domains.OfInteger.Data, Domains.OfIeee754.Data, Doma
 _BYTES, _ENUM, _PACKED = Domains.OfBytes.Data, Domains.OfEnum.Data, Domains.OfPacked.Data
 
 
-def _arithmetic(name: str, values: list[Any]) -> Any:
+def _arithmetic(name: str, values: list[Any], operator: str | None = None) -> Any:
+    """`operator` (by default `name`) on numbers of one domain; errors and overflows name `name`."""
     if any(value is None for value in values):
         return None
+    operator = operator or name
     domain = _operands(name, values, (_INTEGER, _IEEE754), ("a number", "numbers"))
     natives = [_native(value) for value in values]
     if isinstance(domain, _IEEE754) and domain != Domains.Float:  # the default's is the host's own
-        return Domains.Value(domain, Ieee754.operate(name, domain.format, domain.rounding, natives))
-    if name == "neg":
+        return Domains.Value(domain, Ieee754.operate(operator, domain.format, domain.rounding, natives))
+    if operator == "neg":
         result = -natives[0]
     else:
         a, b = natives
-        result = a + b if name == "add" else a - b if name == "sub" else a * b
+        result = a + b if operator == "add" else a - b if operator == "sub" else a * b
     return Domains.value(domain, domain.fit(name, result) if isinstance(domain, _INTEGER) else result)
 
 
@@ -352,6 +371,143 @@ def _unpack(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     return Domains.Value(target, target.domain.members[target.codes.index(code)])
 
 
+def _collection(name: str, value: Any) -> Domains.Collection | None:
+    """A collection, a list or tuple as a positional one, or None when unknown."""
+    if value is None or isinstance(value, Domains.Collection):
+        return value
+    if isinstance(value, (list, tuple)):
+        return Domains.Collection(tuple(value))
+    raise TypeError(f"{name} expects a collection, got {_type_name(value)}")
+
+
+def _count(name: str, values: list[Any]) -> int | None:
+    collection = _collection(name, values[0])
+    return None if collection is None else len(collection.items)
+
+
+def _item(name: str, values: list[Any]) -> Any:
+    """The item at a position, from 0, or at a key; unknown when there is none."""
+    collection, index = _collection(name, values[0]), values[1]
+    if collection is None or index is None:
+        return None
+    if collection.keys is not None:
+        return next((item for key, item in zip(collection.keys, collection.items) if _equal(key, index)), None)
+    if not isinstance(_domain(index), _INTEGER):
+        raise TypeError(f"item expects an integer position, got {_describe(index)}")
+    position = _native(index)
+    return collection.items[position] if 0 <= position < len(collection.items) else None
+
+
+def _in(name: str, values: list[Any]) -> bool | None:
+    """Kleene's or of `eq(x, item)` over the items."""
+    value, collection = values[0], _collection(name, values[1])
+    if collection is None or value is None:
+        return None
+    result: bool | None = False
+    for item in collection.items:
+        equal = _equal(value, item)
+        if equal:
+            return True
+        if equal is None:
+            result = None
+    return result
+
+
+def _unique(name: str, values: list[Any]) -> bool | None:
+    """Kleene's and of `ne` over every two items."""
+    collection = _collection(name, values[0])
+    if collection is None:
+        return None
+    result: bool | None = True
+    items = collection.items
+    for i, a in enumerate(items):
+        for b in items[i + 1:]:
+            equal = _equal(a, b)
+            if equal:
+                return False
+            if equal is None:
+                result = None
+    return result
+
+
+def _sum(name: str, values: list[Any]) -> Any:
+    """The items added in order, as `add` adds; an empty sum is the int 0."""
+    collection = _collection(name, values[0])
+    if collection is None or any(item is None for item in collection.items):
+        return None
+    if not collection.items:
+        return 0
+    total = collection.items[0]
+    _operands(name, [total], (_INTEGER, _IEEE754), ("numbers", ""))
+    for item in collection.items[1:]:
+        total = _arithmetic(name, [total, item], "add")
+    return total
+
+
+def _ordered(value: Any) -> bool:
+    return value.domain.ORDERED if isinstance(value, Domains.Value) else type(value) in (int, float, str, bytes)
+
+
+def _extreme(name: str, values: list[Any]) -> Any:
+    """`min` or `max`: the least or greatest item of an ordered domain; unknown when there is none, or two items are
+    incomparable."""
+    collection = _collection(name, values[0])
+    if collection is None or not collection.items or any(item is None for item in collection.items):
+        return None
+    first = collection.items[0]
+    for item in collection.items:
+        if not _ordered(item) or _domain(item) != _domain(first):
+            raise TypeError(f"{name} expects ordered values of one domain, got {_describe(first)} and {_describe(item)}")
+    best = first
+    for item in collection.items[1:]:
+        better = _order("lt" if name == "min" else "gt", [item, best])
+        if better is None:
+            return None
+        if better:
+            best = item
+    return best
+
+
+def _entries(name: str, values: list[Any]) -> Domains.Collection | None:
+    """An object's entries in an adjacency, as records of their other links' targets and their property values."""
+    target, adjacency = values
+    if type(adjacency) is not str:
+        raise TypeError(f"entries expects an adjacency name, got {_type_name(adjacency)}")
+    if target is None:
+        return None
+    if not _is_readable(target):
+        raise TypeError(f"entries expects an object, got {_type_name(target)}")
+    entries = Validators.entries_of(target).get(adjacency, [])
+    return Domains.Collection(tuple(Domains.Record({**entry.targets, **{k: _value_of(v) for k, v in entry.values.items()}})
+                                    for entry in entries))
+
+
+def _quantifier(name: str) -> F.Implementation:
+    """`all`, `any` or `count` of the body over the items, by Kleene's logic, deciding as early as it can."""
+
+    def apply(arguments: list[Any], node: Any, scope: Any) -> Any:
+        collection = _collection(name, arguments[0]())
+        if collection is None:
+            return None
+        result: Any = {"all": True, "any": False, "count": 0}[name]
+        for item in collection.items:
+            truth = _truth(name, arguments[1](item))
+            if truth is None:
+                if name == "count":
+                    return None
+                result = None
+            elif truth == (name == "any") and name != "count":
+                return truth
+            elif truth and name == "count":
+                result += 1
+        return result
+
+    return apply
+
+
+QUANTIFIERS: dict[str, F.Implementation] = {name: _quantifier(name) for name in ("all", "any", "count")}
+"""The implementation of each quantifier."""
+
 OPERATIONS: dict[str, F.Implementation] = {
     "get": _strict(_read), "has": _strict(_read),
     **{name: _strict(_equality) for name in ("eq", "ne")},
@@ -361,10 +517,13 @@ OPERATIONS: dict[str, F.Implementation] = {
     **{name: _strict(_bitwise) for name in ("bitand", "bitor", "bitxor", "bitnot")},
     **{name: _strict(_shift) for name in ("shl", "shr")},
     "convert": _convert, "reinterpret": _reinterpret, "pack": _pack, "unpack": _unpack,
+    "count": _strict(_count), "item": _strict(_item), "in": _strict(_in), "unique": _strict(_unique),
+    "sum": _strict(_sum), "min": _strict(_extreme), "max": _strict(_extreme), "entries": _strict(_entries),
 }
 """The implementation of each core operation."""
 
-_interpreter = F.Interpreter(Expressions.DIALECT, {"operation": OPERATIONS}, typed=Domains.Value)
+_interpreter = F.Interpreter(Expressions.DIALECT, {"operation": OPERATIONS, "quantifier": QUANTIFIERS},
+                             typed=Domains.Value)
 
 
 def OfAny(expression: Expressions.OfAny.Spec, scope: Scope = None) -> Any:
@@ -390,6 +549,11 @@ def OfVariable(expression: Expressions.OfVariable.Spec, scope: Scope = None) -> 
 def OfLet(expression: Expressions.OfLet.Spec, scope: Scope = None) -> Any:
     """The value of a let's body, with its name bound to its value and the variables in `scope` bound."""
     return _interpreter(Expressions.OfLet.resolve(expression), scope)
+
+
+def OfQuantifier(expression: Expressions.OfQuantifier.Spec, scope: Scope = None) -> Any:
+    """The value of a quantifier, with the variables in `scope` bound."""
+    return _interpreter(Expressions.OfQuantifier.resolve(expression), scope)
 
 
 def predicate(predicate: Expressions.OfAny.Spec, value: Any) -> bool | None:

@@ -71,6 +71,8 @@ this.age; this.get("eq"); this.has("email")                 # .name is get(this,
 t.eq(x) .ne .lt .le .gt .ge .and_(x) .or_(x) .not_() .implies(x) .add(x) .sub(x) .mul(x) .neg()
 t.bitand(x) .bitor(x) .bitxor(x) .bitnot() .shl(n) .shr(n)  # on integers and bits of one domain
 t.convert(domain) .reinterpret(domain) .pack() .unpack(packed)  # an operation's domain is its result's
+this.ports.all("p", E.variable("p").width.ge(8))   # .any .count_where; .count() .item(i) .in_(xs) .sum() .min() .max() .unique()
+this.entries("wires")                              # an object's entries in an adjacency, as records that get reads
 E.from_(lambda this: this.age >= 18 and this.email is not None)    # a lambda, or a def whose body is one return
 
 # Data and builders: create() / clone() / update(), none validate.

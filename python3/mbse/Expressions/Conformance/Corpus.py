@@ -14,7 +14,7 @@ from mbse.Expressions.Dialects.Latex import Expressions as Latex
 from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
 from mbse.Expressions.Dialects.Python import Expressions as Python
 
-CASES = ["expression", "python", "matlab", "excel", "latex", "domains"]
+CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections"]
 
 
 def build():
@@ -73,11 +73,17 @@ def build():
         ratio.mul(E.literal("0.1", D.OfIeee754.Builder().format("binary128").create())),
         mask.bitand(E.literal(b"\x01", bits2)), mode.pack()).data  # each operation once, for CONF-04
 
+    # --- collections: a quantifier over entries, and collection operations, each once ---
+    ports, p, pins, sizes = (E.variable(name) for name in ("ports", "p", "pins", "sizes"))
+    collections = E.let_("ports", this.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
+        sizes.sum().le(ports.count()))).data
+
     return {
         "expression": (E.OfLet.Schema, expression, E.Builders),
         "python": (P.DIALECT.schema_of(python), python, P.Builders),
         "matlab": (M.DIALECT.schema_of(matlab), matlab, M.Builders),
         "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
         "domains": (E.OfOperation.Schema, domains, E.Builders),
+        "collections": (E.OfLet.Schema, collections, E.Builders),
         "latex": (L.DIALECT.schema_of(latex), latex, L.Builders),
     }

@@ -111,7 +111,7 @@ export function free(expression: unknown): Set<string> {
     }
     const args = node.argumentsOf();
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
-    if (kind.ROLE === Terms.BINDING) scopes = args.map((_, i) => (i === 0 ? bound : new Set([...bound, name])));
+    if (kind.ROLE === Terms.BINDING || kind.ROLE === Terms.QUANTIFIER) scopes = args.map((_, i) => (i === 0 ? bound : new Set([...bound, name])));
     else if (kind.ROLE === Terms.IMPORT) scopes = args.map(() => new Set([...bound, ...node.binds()]));
     args.forEach((argument, i) => visit(argument, scopes[i] as ReadonlySet<string>));
   };

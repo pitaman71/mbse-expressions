@@ -15,6 +15,9 @@
  *   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
  *   `convert` keeps a value in the operation's domain, `reinterpret` keeps its bit pattern, and `pack` and `unpack` go
  *   to and from a packed domain's representation.
+ * - Collections: a list property reads as a `Domains.Collection`, and `entries` gives an object's entries as one of
+ *   `Domains.Record`s, which `get` and `has` read. The collection operations and the quantifiers (`all`, `any`,
+ *   `count`) follow Kleene's logic over the items; an unknown collection gives unknown.
  * - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
  *   variables and wrong operand types raise, as do the problems `validate()` reports.
  * - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
@@ -91,17 +94,29 @@ function isObject(value: unknown): value is Visitors.Visitable {
     && (value as Visitors.Visitable).owner() === null;
 }
 
-/** `get`: the property's value, or `null` when absent. `has`: whether it is present. */
+/** A property's value as Basic reads it: a list as a collection. */
+function valueOf(value: unknown): unknown {
+  if (value instanceof Validators.ListRecord) {
+    const keyed = value.keys.some((key) => key !== null && key !== undefined);
+    return new Domains.Collection(value.values.map(valueOf), keyed ? value.keys.map(valueOf) : null);
+  }
+  return value;
+}
+
+/** `get`: the property's value, or `null` when absent. `has`: whether it is present. A record's fields are its
+ * properties. */
 function read(name: string, values: unknown[]): unknown {
   const [target, propertyName] = values;
   if (typeof propertyName !== "string") {
     throw new TypeError(`${name} expects a property name, got ${typeName(propertyName)}`);
   }
   if (target === null) return null;
-  if (!isReadable(target)) throw new TypeError(`${name} expects an object, got ${typeName(target)}`);
-  const properties = Validators.properties_of(target);
+  let properties: ReadonlyMap<string, unknown>;
+  if (target instanceof Domains.Record) properties = target.fields;
+  else if (isReadable(target)) properties = Validators.properties_of(target);
+  else throw new TypeError(`${name} expects an object, got ${typeName(target)}`);
   if (name === "has") return properties.has(propertyName);
-  return properties.get(propertyName) ?? null;
+  return valueOf(properties.get(propertyName) ?? null);
 }
 
 function compare(a: Native, b: Native): Comparison.Result {
@@ -193,19 +208,20 @@ const BITS: any = Domains.OfBits.Data;
 const BYTES: any = Domains.OfBytes.Data;
 const PACKED: any = Domains.OfPacked.Data;
 
-function arithmetic(name: string, values: unknown[]): unknown {
+/** `operator` (by default `name`) on numbers of one domain; errors and overflows name `name`. */
+function arithmetic(name: string, values: unknown[], operator: string = name): unknown {
   if (values.some((value) => value === null)) return null;
   const domain = operands(name, values, [INTEGER, IEEE754], ["a number", "numbers"]);
   const natives = values.map(nativeOf);
   if (domain instanceof IEEE754 && !domain.equals(Domains.Float)) { // the default's is the host's own
-    return new Domains.Value(domain, Ieee754.operate(name, domain.format, domain.rounding, natives));
+    return new Domains.Value(domain, Ieee754.operate(operator, domain.format, domain.rounding, natives));
   }
   let result: any;
-  if (name === "neg") {
+  if (operator === "neg") {
     result = -natives[0];
   } else {
     const [a, b] = natives;
-    result = name === "add" ? a + b : name === "sub" ? a - b : a * b;
+    result = operator === "add" ? a + b : operator === "sub" ? a - b : a * b;
   }
   return Domains.value(domain, domain instanceof INTEGER ? domain.fit(name, result) : result);
 }
@@ -366,6 +382,133 @@ function unpack(args: F.Thunk[], node: any): unknown {
   return new Domains.Value(target, target.domain.members[index]);
 }
 
+/** A collection, an array as a positional one, or null when unknown. */
+function collectionOf(name: string, value: unknown): Domains.Collection | null {
+  if (value === null || value instanceof Domains.Collection) return value;
+  if (Array.isArray(value)) return new Domains.Collection(value);
+  throw new TypeError(`${name} expects a collection, got ${typeName(value)}`);
+}
+
+function count(name: string, values: unknown[]): bigint | null {
+  const collection = collectionOf(name, values[0]);
+  return collection === null ? null : BigInt(collection.items.length);
+}
+
+/** The item at a position, from 0, or at a key; unknown when there is none. */
+function item(name: string, values: unknown[]): unknown {
+  const [collection, index] = [collectionOf(name, values[0]), values[1]];
+  if (collection === null || index === null) return null;
+  const keys = collection.keys;
+  if (keys !== null) {
+    const found = keys.findIndex((key) => equal(key, index) === true);
+    return found < 0 ? null : collection.items[found];
+  }
+  if (!(domainOf(index) instanceof INTEGER)) throw new TypeError(`item expects an integer position, got ${describe(index)}`);
+  const position = nativeOf(index) as bigint;
+  return position >= 0n && position < BigInt(collection.items.length) ? collection.items[Number(position)] : null;
+}
+
+/** Kleene's or of `eq(x, item)` over the items. */
+function inCollection(name: string, values: unknown[]): boolean | null {
+  const [value, collection] = [values[0], collectionOf(name, values[1])];
+  if (collection === null || value === null) return null;
+  let result: boolean | null = false;
+  for (const each of collection.items) {
+    const same = equal(value, each);
+    if (same) return true;
+    if (same === null) result = null;
+  }
+  return result;
+}
+
+/** Kleene's and of `ne` over every two items. */
+function unique(name: string, values: unknown[]): boolean | null {
+  const collection = collectionOf(name, values[0]);
+  if (collection === null) return null;
+  let result: boolean | null = true;
+  const items = collection.items;
+  for (let i = 0; i < items.length; i++) {
+    for (const b of items.slice(i + 1)) {
+      const same = equal(items[i], b);
+      if (same) return false;
+      if (same === null) result = null;
+    }
+  }
+  return result;
+}
+
+/** The items added in order, as `add` adds; an empty sum is the int 0. */
+function sum(name: string, values: unknown[]): unknown {
+  const collection = collectionOf(name, values[0]);
+  if (collection === null || collection.items.some((each) => each === null)) return null;
+  if (collection.items.length === 0) return 0n;
+  let total = collection.items[0];
+  operands(name, [total], [INTEGER, IEEE754], ["numbers", ""]);
+  for (const each of collection.items.slice(1)) total = arithmetic(name, [total, each], "add");
+  return total;
+}
+
+function ordered(value: unknown): boolean {
+  if (value instanceof Domains.Value) return value.domain.kind().ORDERED;
+  return ["bigint", "number", "string"].includes(typeof value) || Schemas.isNativeOf(Uint8Array, value);
+}
+
+/** `min` or `max`: the least or greatest item of an ordered domain; unknown when there is none, or two items are
+ * incomparable. */
+function extreme(name: string, values: unknown[]): unknown {
+  const collection = collectionOf(name, values[0]);
+  if (collection === null || collection.items.length === 0 || collection.items.some((each) => each === null)) return null;
+  const first = collection.items[0];
+  for (const each of collection.items) {
+    if (!ordered(each) || !(domainOf(each) as Domains.Domain).equals(domainOf(first))) {
+      throw new TypeError(`${name} expects ordered values of one domain, got ${describe(first)} and ${describe(each)}`);
+    }
+  }
+  let best = first;
+  for (const each of collection.items.slice(1)) {
+    const better = order(name === "min" ? "lt" : "gt", [each, best]);
+    if (better === null) return null;
+    if (better) best = each;
+  }
+  return best;
+}
+
+/** An object's entries in an adjacency, as records of their other links' targets and their property values. */
+function entries(name: string, values: unknown[]): Domains.Collection | null {
+  const [target, adjacency] = values;
+  if (typeof adjacency !== "string") throw new TypeError(`entries expects an adjacency name, got ${typeName(adjacency)}`);
+  if (target === null) return null;
+  if (!isReadable(target)) throw new TypeError(`entries expects an object, got ${typeName(target)}`);
+  const found = Validators.entries_of(target).get(adjacency) ?? [];
+  return new Domains.Collection(found.map((entry) => new Domains.Record(new Map<string, unknown>([...entry.targets,
+    ...[...entry.values].map(([k, v]) => [k, valueOf(v)] as [string, unknown])]))));
+}
+
+/** `all`, `any` or `count` of the body over the items, by Kleene's logic, deciding as early as it can. */
+function quantifier(name: string): F.Implementation {
+  return (args) => {
+    const collection = collectionOf(name, (args[0] as F.Thunk)());
+    if (collection === null) return null;
+    let result: any = name === "all" ? true : name === "any" ? false : 0n;
+    for (const each of collection.items) {
+      const t = truth(name, (args[1] as (item: unknown) => unknown)(each));
+      if (t === null) {
+        if (name === "count") return null;
+        result = null;
+      } else if (t === (name === "any") && name !== "count") {
+        return t;
+      } else if (t && name === "count") {
+        result += 1n;
+      }
+    }
+    return result;
+  };
+}
+
+/** The implementation of each quantifier. */
+export const QUANTIFIERS: ReadonlyMap<string, F.Implementation> = new Map(["all", "any", "count"].map((name) =>
+  [name, quantifier(name)] as [string, F.Implementation]));
+
 /** The implementation of each core operation. */
 export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string, F.Implementation>([
   ["get", strict(read)], ["has", strict(read)],
@@ -377,9 +520,11 @@ export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string,
   ...["bitand", "bitor", "bitxor", "bitnot"].map((name) => [name, strict(bitwise)] as [string, F.Implementation]),
   ...["shl", "shr"].map((name) => [name, strict(shift)] as [string, F.Implementation]),
   ["convert", convert], ["reinterpret", reinterpret], ["pack", pack], ["unpack", unpack],
+  ["count", strict(count)], ["item", strict(item)], ["in", strict(inCollection)], ["unique", strict(unique)],
+  ["sum", strict(sum)], ["min", strict(extreme)], ["max", strict(extreme)], ["entries", strict(entries)],
 ]);
 
-const interpreter = new F.Interpreter(Expressions.DIALECT, new Map([["operation", OPERATIONS]]),
+const interpreter = new F.Interpreter(Expressions.DIALECT, new Map([["operation", OPERATIONS], ["quantifier", QUANTIFIERS]]),
   { typed: (domain, value) => new Domains.Value(domain, value) });
 
 /** The value of any expression, with the variables in `scope` bound. */
@@ -405,6 +550,11 @@ export function OfVariable(expression: Expressions.OfVariable.Spec, scope: Scope
 /** The value of a let's body, with its name bound to its value and the variables in `scope` bound. */
 export function OfLet(expression: Expressions.OfLet.Spec, scope: Scope = {}): unknown {
   return interpreter.run(Expressions.OfLet.resolve(expression), scope);
+}
+
+/** The value of a quantifier, with the variables in `scope` bound. */
+export function OfQuantifier(expression: Expressions.OfQuantifier.Spec, scope: Scope = {}): unknown {
+  return interpreter.run(Expressions.OfQuantifier.resolve(expression), scope);
 }
 
 /** Whether `value` satisfies the rule `predicate`, evaluated with `this` bound to it; `null` if unknown. */

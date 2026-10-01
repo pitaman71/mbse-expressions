@@ -160,7 +160,7 @@ export function renames(leftKind: string, leftAttribute: string, rightKind: stri
 
 function describe(dialect: Terms.Dialect, node: Node): string {
   const kind = node.kind();
-  if (kind.ROLE === Terms.APPLICATION && kind.OPERATOR !== null) {
+  if ((kind.ROLE === Terms.APPLICATION || kind.ROLE === Terms.QUANTIFIER) && kind.OPERATOR !== null) {
     return `${dialect.name()} ${kind.KIND} ${repr(Terms.operatorOf(node))}`;
   }
   if (kind.ROLE === Terms.LITERAL) {

@@ -16,7 +16,7 @@ import * as Matlab from "../Dialects/Matlab/Expressions.js";
 import * as Python from "../Dialects/Python/Expressions.js";
 import type { Schemas, Visitors } from "@mbse/schemas/Framework";
 
-export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains"] as const;
+export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections"] as const;
 
 type Case = [Schemas.OfObject.Data, Visitors.Visitable, unknown];
 
@@ -76,12 +76,18 @@ export function build(): Map<string, Case> {
     ratio!.mul(E.literal("0.1", new D.OfIeee754.Builder().format("binary128").create())),
     mask!.bitand(E.literal(new Uint8Array([1]), bits2)), mode!.pack()).data; // each operation once, for CONF-04
 
+  // --- collections: a quantifier over entries, and collection operations, each once ---
+  const [ports, p, pins, sizes] = ["ports", "p", "pins", "sizes"].map((name) => E.variable(name)) as [any, any, any, any];
+  const collections = E.let_("ports", self.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
+    sizes.sum().le(ports.count()))).data;
+
   return new Map<string, Case>([
     ["expression", [E.OfLet.Schema, expression, E.Builders]],
     ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
     ["matlab", [M.DIALECT.schema_of(matlab), matlab, M.Builders]],
     ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
     ["domains", [E.OfOperation.Schema, domains, E.Builders]],
+    ["collections", [E.OfLet.Schema, collections, E.Builders]],
     ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],
   ]);
 }

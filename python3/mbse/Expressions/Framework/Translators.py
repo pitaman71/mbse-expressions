@@ -156,7 +156,7 @@ def _same_native(a: Any, b: Any) -> bool:
 
 def _describe(dialect: Terms.Dialect, node: Any) -> str:
     kind = type(node)
-    if kind.ROLE == Terms.APPLICATION and kind.OPERATOR is not None:
+    if kind.ROLE in (Terms.APPLICATION, Terms.QUANTIFIER) and kind.OPERATOR is not None:
         return f"{dialect.name()} {kind.KIND} {Terms._operator(node)!r}"
     if kind.ROLE == Terms.LITERAL:
         typed = node.typed()

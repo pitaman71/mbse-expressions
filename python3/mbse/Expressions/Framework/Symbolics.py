@@ -92,7 +92,7 @@ def free(expression: Any) -> set[str]:
             return
         arguments = node._arguments()
         scopes = [bound] * len(arguments)
-        if kind.ROLE == Terms.BINDING:
+        if kind.ROLE in (Terms.BINDING, Terms.QUANTIFIER):
             scopes = [bound, *[bound | {name}] * (len(arguments) - 1)]
         elif kind.ROLE == Terms.IMPORT:
             scopes = [bound | set(node.binds())] * len(arguments)

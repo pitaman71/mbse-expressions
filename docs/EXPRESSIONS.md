@@ -29,6 +29,8 @@ python3/mbse/Expressions/, typescript5/src/
 - `Expressions.OfVariable` : the value bound to a name
 - `Expressions.OfLet` : binds a name to the value of one expression within another, its body; nest lets for several
   names
+- `Expressions.OfQuantifier` : binds a name to each item of a collection within a body: `all`, `any` or `count` of the
+  items for which the body holds
 
 Every binding must implement a core vocabulary of operations. The core vocabulary is chosen so that any core expression
 can also be interpreted as a constraint (e.g. by a solver or as a SystemVerilog constraint): operations are pure,
@@ -42,7 +44,7 @@ deterministic, and total, with no side effects or unbounded iteration.
 | Arithmetic | `add`, `sub`, `mul` (2), `neg` (1) |
 | Bitwise | `bitand`, `bitor`, `bitxor` (2), `bitnot` (1); `shl`, `shr` (a value and a count) |
 | Conversion | `convert`, `reinterpret`, `unpack` (1, with the operation's `domain`); `pack` (1) |
-| Collections (not built yet) | `count`, `in`, and bounded quantifiers `all` / `any` over an object's adjacency entries |
+| Collections | `count(xs)`, `item(xs, i)`, `in(x, xs)`, `sum`, `min`, `max`, `unique` (1, but `item` and `in` 2); `entries(object, adjacency)` (2); the quantifiers `all`, `any`, `count` (`OfQuantifier`) |
 
 Rules that every binding must evaluate use only the core vocabulary. Operation names outside it are extensions that a
 binding may or may not support. A union value is a record of its one branch, by name, so a rule tests which branch it
@@ -109,6 +111,29 @@ is unknown. TypeScript has no counterpart, since a JavaScript function has no Py
 ```python
 adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None)
 ```
+
+### Collections
+
+- **A collection is a list or an object's entries.** `get` of a list property (mbse-schemas' `OfIndexed`) gives a
+  `Domains.Collection`: its items in order and, for a keyed list, their keys. `entries(object, adjacency)` gives an
+  object's entries in an adjacency as a collection of `Domains.Record`s, each holding the targets of the entry's other
+  links and its property values, which `get` and `has` read as they read an object's properties. A scope may bind a
+  variable to a collection, or to a list (a tuple in Python, an array in TypeScript), which is a positional one.
+- **A collection's items are its values**, a keyed list's too; keys only address them. `count(xs)` is the number of
+  items, `item(xs, i)` the item at a position (from 0) or, in a keyed list, at a key, unknown when there is none, and
+  `in(x, xs)` whether `x` equals one of the items (Kleene's or of `eq`). `sum(xs)` adds the items in order, as `add`
+  does (an empty sum is the int 0); `min` and `max` give the least and greatest item of an ordered domain, unknown when
+  the collection is empty or two items are incomparable; `unique(xs)` is whether no two items are equal (Kleene's and of
+  `ne`). Items of different domains raise, as they would in `add` or `lt`.
+- **Quantifiers bind a name to each item.** `OfQuantifier` is a binding kind: `quantifier` (`all`, `any` or `count`)
+  names it, `name` is bound to each item of its first argument, the `collection`, within its second, the `body`.
+  `all` and `any` follow Kleene's logic, deciding at the first false or true body and true or false for an empty
+  collection; `count` is the number of items whose body is true, unknown if any is unknown. Bodies are bools; the
+  collection, like every argument, may be unknown, and then so is the result. Quantifiers are bounded by the data, so
+  core expressions stay constraints.
+- **Collections have domains for inference only**: `Domains.List(item)` and `Domains.Keyed(key, item)`, from the
+  environment a rule is inferred in. A quantifier's name has its collection's item domain, and `item`, `sum`, `min` and
+  `max` give it. There are no collection literals: collections come from data.
 
 ## Value domains
 
@@ -261,9 +286,10 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
   `Terms` keeps what is the framework's own: roles, forms, validation, inference and dialect declaration.
 - The roles are what validation, inference, evaluation and translation understand without knowing the dialect:
   `literal` (a native value), `reference` (what the scope resolves: the value bound to a name, or a cell), `application`
-  (an operator applied to arguments), `binding` (binds a name to its first argument within the others) and `import`
-  (makes what it declares available within its body: a module, a package's functions; `binds()` names what it binds
-  for references). `validate` reports what the Basic
+  (an operator applied to arguments), `binding` (binds a name to its first argument within the others), `quantifier`
+  (binds a name to each item of its first argument within its second, combined by its operator; its signature gives the
+  items' domain, `items(domain)`) and `import` (makes what it declares available within its body: a module, a package's
+  functions; `binds()` names what it binds for references). `validate` reports what the Basic
   section below lists, with the same messages in every dialect ("a field needs a value", "identifier 'x' is not
   bound", "'**' is not a core operation"), where `core` means the dialect's vocabulary.
 - `Domains` defines `Domain` (`contains(value)`, `includes(domain)`) and `Signature` (`arity()`, `result(domains)`,
@@ -293,7 +319,7 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 
 | Dialect | Kinds | Values | Evaluation |
 |---|---|---|---|
-| Basic | `literal`, `operation`, `variable`, `let` | natives, objects | three-valued (Kleene), no coercion; absent is unknown |
+| Basic | `literal`, `operation`, `variable`, `let`, `quantifier` | natives, typed values, objects, collections | three-valued (Kleene), no coercion; absent is unknown |
 | Python | `constant`, `name`, `attribute`, `subscript`, `call`, `compare`, `boolop`, `binop` (arithmetic and bitwise), `unaryop` (`not`, `-`, `+`, `~`), `ifexp`, `let` (`(lambda a: body)(value)`), `import`, `importfrom`: Python's `ast` | Python's | Python's: `and`/`or` give an operand, `1 == 1.0`, `True + 1` is 2; absent attributes raise |
 | Matlab | `constant`, `identifier`, `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`, and functions of the scope), `field` (`s.age`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; the bit functions take integers from 0 to 2^53; absent fields raise |
 | Excel | `constant`, `name`, `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`), `function` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, `BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`) | number, text, logical, error, record | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case; the bit functions take integers from 0 to 2^48 - 1, else `#NUM!` |
@@ -367,11 +393,9 @@ alike only there.
 
 ## Open questions
 
-- Lists (mbse-schemas' `OfIndexed`, positional or keyed): `get` of a list property gives an opaque value, whose items
-  Basic cannot read and which equals nothing. Basic has no list or map domain or operations yet (length, item by
-  position or key, membership, quantifiers), nor a tensor domain over keyed and extended lists.
-- Core expression vocabulary above is a proposal; confirm the exact set, and specify the collection operations
-  (`count`, `in`, `all`, `any`).
+- Collections have no literals, and Basic has no tensor domain over keyed and extended lists, nor `map` or `filter`.
+- Collections translate to no other dialect yet: Python's generator expressions, MATLAB's `arrayfun` and Excel's `MAP`
+  and `LAMBDA` would be their counterparts.
 - Matlab and Excel expressions are written as data or through constructors and rendered as source text; they are
   not parsed from source text yet (Python's are, in Python). `Expressions.from_` still reads Python functions into Basic
   directly; it could become `Python.Expressions.parse` followed by translation to Basic.
@@ -394,6 +418,10 @@ alike only there.
   standard defines, rather than free representation parameters: no float format by widths and flags, no ones'
   complement or sign-magnitude integers, no `Decimal` apart from IEEE 754's decimal formats. The dialect keeps its
   name, Basic, which mbse-schemas' neutral token format (`basic`) shares.
+- Collections: lists and an object's entries (`entries`), read as `Domains.Collection`s whose items are their values
+  and keys address them; the quantifiers are a binding kind, `OfQuantifier` (`all`, `any`, `count`), and the operations
+  `count`, `item`, `in`, `sum`, `min`, `max` and `unique` join the core; collection domains (`List`, `Keyed`) serve
+  inference only, and there are no collection literals.
 - Evaluation in value domains: a value of a non-default domain is a typed value (`Domains.Value`), and a default
   domain's value stays the bare native; an operation's optional `domain` is the domain of its result, which `convert`,
   `reinterpret` and `unpack` need and `pack` does not; the bitwise operations (`bitand`, `bitor`, `bitxor`, `bitnot`,

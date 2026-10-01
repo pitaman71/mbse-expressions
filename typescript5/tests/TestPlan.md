@@ -26,5 +26,6 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `07_Translators.ipynb` | TRN | 7 | as in Python, but for evaluating the NumPy style over columns |
 | `08_Skill.ipynb` | SKL | 3 | as in Python; SKL-02 type-checks the skill's TypeScript program strictly, then runs it |
 | `09_Domains.ipynb` | DOM | 16 | as in Python; domains compare with `equals()`, widths and codes are `bigint`s, and builders are classes (`new D.OfInteger.Builder()`); typed values compare with `equals()`; the IEEE 754 table is checked against `decimal` and the host's floats in Python only |
+| `10_Collections.ipynb` | COL | 7 | as in Python; collections, records and collection domains compare with `equals()`, and a record's fields are a `Map` |
 
 Total: 57 cases, with the same IDs in the same order in both implementations.

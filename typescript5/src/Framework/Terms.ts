@@ -27,6 +27,9 @@
  *   arguments. A kind's `VOCABULARY` maps operator names to signatures; operators outside it are extensions, unless
  *   the vocabulary is `null`, when any name is accepted and `SIGNATURE` applies to all.
  * - `BINDING`: binds the name in its first property to its first argument within the others.
+ * - `QUANTIFIER`: binds the name in its first property to each item of its first argument, a collection, within its
+ *   second, and combines the results by its operator (named as an application's is), such as `all`. Its signature
+ *   also gives the domain of a collection's items, `items(domain)`, for inference.
  * - `IMPORT`: makes what it declares (a module, a package's functions) available within its one argument, its body.
  *   The scope resolves the declaration; `binds()` gives the names it binds for lexical references.
  *
@@ -62,6 +65,7 @@ export const REFERENCE = "reference";
 export const APPLICATION = "application";
 export const BINDING = "binding";
 export const IMPORT = "import";
+export const QUANTIFIER = "quantifier";
 export const ARGUMENTS = "Expressions.Arguments";
 
 export const NATIVES: ReadonlyMap<string, unknown> = new Map<string, unknown>([
@@ -259,7 +263,7 @@ export abstract class Node implements Expression {
   }
 }
 
-/** The name of an application's operator: its `OPERATOR` property, or its kind's tag. */
+/** The name of an application's or a quantifier's operator: its `OPERATOR` property, or its kind's tag. */
 export function operatorOf(node: Node): string {
   const kind = node.kind();
   return kind.OPERATOR === null ? kind.KIND : node.field(kind.OPERATOR) as string;
@@ -571,6 +575,11 @@ function schemaOf(kind: NodeClass): Schemas.OfObject.Data {
     .relations(...relations).create();
 }
 
+/** A quantifier's signature: it also gives the domain of a collection's items. */
+interface Quantified {
+  items(collection: Domains.Domain): Domains.Domain;
+}
+
 /** How a dialect is declared, beyond its kinds. */
 export interface Declaration {
   /** A literal's domain. */
@@ -739,13 +748,14 @@ export class Declared implements Dialect {
     active.add(expression);
     const args = expression.argumentsOf();
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
-    if (kind.ROLE === BINDING) {
+    if (kind.ROLE === BINDING || kind.ROLE === QUANTIFIER) {
       const inner = found.length === 0 ? new Set([...bound, name]) : bound;
       scopes = args.map((_, i) => (i === 0 ? bound : inner));
     } else if (kind.ROLE === IMPORT) {
       const inner = found.length === 0 ? new Set([...bound, ...expression.binds()]) : bound;
       scopes = args.map(() => inner);
-    } else if (found.length === 0 && kind.VOCABULARY !== null) {
+    }
+    if ((kind.ROLE === APPLICATION || kind.ROLE === QUANTIFIER) && found.length === 0 && kind.VOCABULARY !== null) {
       const operator = operatorOf(expression);
       const signature = kind.VOCABULARY.get(operator);
       if (signature !== undefined && signature.arity() !== args.length) {
@@ -795,9 +805,16 @@ export class Declared implements Dialect {
       const value = this.inferIn(args[0] as Node, environment, memo);
       return this.inferIn(args[args.length - 1] as Node, { ...environment, [nameOf(expression) as string]: value }, memo);
     }
-    const domains = args.map((argument) => this.inferIn(argument, environment, memo));
     const operator = operatorOf(expression);
     const signature = kind.VOCABULARY === null ? kind.SIGNATURE : kind.VOCABULARY.get(operator) ?? null;
+    let domains: Domains.Domain[];
+    if (kind.ROLE === QUANTIFIER) { // its name has the domain of the collection's items
+      const collection = this.inferIn(args[0] as Node, environment, memo);
+      const item = signature === null ? Domains.Anything : (signature as unknown as Quantified).items(collection);
+      domains = [collection, this.inferIn(args[1] as Node, { ...environment, [nameOf(expression) as string]: item }, memo)];
+    } else {
+      domains = args.map((argument) => this.inferIn(argument, environment, memo));
+    }
     if (signature === null) return Domains.Anything; // an extension: nothing is known about it
     const result = signature.result(domains);
     if (result === null) {
