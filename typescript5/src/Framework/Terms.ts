@@ -330,6 +330,10 @@ class _Field implements Visitors.OfProperty, Visitors.OfAny, Visitors.OfNative {
   as_intersection(_callback: Callback<Visitors.OfIntersection>): _Field {
     throw new TypeError(`property ${repr(this.fieldName)} is native`);
   }
+
+  as_indexed(_callback: Callback<Visitors.OfIndexed>): _Field {
+    throw new TypeError(`property ${repr(this.fieldName)} is native`);
+  }
 }
 
 /** `Visitors.OfLink` over the one link an argument entry sets. */

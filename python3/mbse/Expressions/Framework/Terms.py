@@ -286,6 +286,9 @@ class _Field:
     def as_intersection(self, callback: Callable[[Visitors.OfIntersection], Any]) -> _Field:
         raise TypeError(f"property {self._name!r} is native")
 
+    def as_indexed(self, callback: Callable[[Visitors.OfIndexed], Any]) -> _Field:
+        raise TypeError(f"property {self._name!r} is native")
+
 
 class _Link:
     """`Visitors.OfLink` over the one link an argument entry sets."""
