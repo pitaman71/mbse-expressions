@@ -1,7 +1,8 @@
 /** Basic <-> Matlab. Basic operations are MATLAB operators, `get` a field, and `has` is `isfield`. `implies(a, b)` is
  * written `~a || b`, which translates back as `or(not(a), b)`. MATLAB has no let expression, so lets are inlined: a
  * let's translated value is shared by every use of its name. MATLAB's imports, which Basic cannot declare, are
- * dropped. MATLAB has no bytes. */
+ * dropped. MATLAB has no bytes. The bitwise operations are MATLAB's bit functions, `shr(a, n)` being
+ * `bitshift(a, -n)`; MATLAB has no `bitnot` for doubles. */
 
 import { DIALECT as BASIC } from "../Dialects/Basic/Expressions.js";
 import { DIALECT as MATLAB } from "../Dialects/Matlab/Expressions.js";
@@ -22,4 +23,6 @@ export const TRANSLATOR = new Pairwise(BASIC, MATLAB, [
     eq: "==", ne: "~=", lt: "<", le: "<=", gt: ">", ge: ">=", and: "&&", or: "||",
     add: "+", sub: "-", mul: ".*" }, 2),
   ...renames("operation", "name", "unary", "operator", { not: "~", neg: "-" }, 1),
+  ...renames("operation", "name", "call", "function", { bitand: "bitand", bitor: "bitor", bitxor: "bitxor", shl: "bitshift" }, 2),
+  new Rule(Basic.shr, Matlab.shr),
 ]);

@@ -9,9 +9,11 @@ that write their properties through `accept`). Values are Python `float` (double
   with a number compares the string with the number's text, as MATLAB converts it. `+` with a string concatenates.
 - There is no unknown: reading a field a struct does not have raises, as `isfield` exists to avoid. Unbound
   variables raise too, with MATLAB's messages.
+- The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
+  53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
 
 A `Scope(variables, functions, packages)` resolves variables from `variables` and functions as MATLAB does: the
-built-ins (`isfield`), then those an enclosing `import` brought in, then `functions` (the path), then qualified names
+built-ins (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`), then those an enclosing `import` brought in, then `functions` (the path), then qualified names
 (`pkg.fn`) from `packages`, which maps each package's name to its functions. `import pkg.fn` and `import pkg.*` import
 from `packages`, and nothing else: functions are Python callables the caller provides.
 """
@@ -128,6 +130,30 @@ def _isfield(arguments: list[F.Thunk], node: Any, scope: Any) -> bool:
     return Domains.is_struct(value) and type(name) is str and name in _fields(value)
 
 
+_FLINTMAX = 1 << 53
+
+
+def _bit_operand(name: str, value: Any, signed: bool = False) -> int:
+    """A bit function's operand: an integer of 53 bits, or of any sign for a shift."""
+    number = _double(value)
+    if number is None:
+        raise TypeError(f"Undefined function '{name}' for input arguments of type '{_class(value)}'.")
+    if not number.is_integer() or abs(number) > _FLINTMAX or (number < 0 and not signed):
+        raise ValueError("Double inputs must have integer values in the range of ASSUMEDTYPE.")
+    return int(number)
+
+
+def _bit(name: str) -> F.Implementation:
+    def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> float:
+        a = _bit_operand(name, arguments[0]())
+        b = _bit_operand(name, arguments[1](), name == "bitshift")
+        if name == "bitshift":
+            return float(((a << b) & (_FLINTMAX - 1)) if b >= 0 else a >> -b)
+        return float(a & b if name == "bitand" else a | b if name == "bitor" else a ^ b)
+
+    return apply
+
+
 def _unrecognized(name: str) -> NameError:
     return NameError(f"Unrecognized function or variable '{name}'.")
 
@@ -190,7 +216,7 @@ _interpreter = F.Interpreter(Expressions.DIALECT, {
         ".*": _arithmetic(".*", lambda a, b: a * b),
     },
     "unary": {"~": _not, "-": _negate},
-    "call": {"isfield": _isfield},
+    "call": {"isfield": _isfield, **{name: _bit(name) for name in ("bitand", "bitor", "bitxor", "bitshift")}},
     "field": _field,
 }, literal=lambda value: float(value) if type(value) is int else value, scope=Scope, extension=_extension)
 

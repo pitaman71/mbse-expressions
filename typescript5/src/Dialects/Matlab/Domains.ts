@@ -50,8 +50,9 @@ export const UNARY: ReadonlyMap<string, D.Signature> = new Map([
 ]);
 
 /** The functions. */
-export const CALLS: ReadonlyMap<string, D.Signature> = new Map([
+export const CALLS: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
   ["isfield", new D.Function([Anything, StringDomain], Logical)],
+  ...["bitand", "bitor", "bitxor", "bitshift"].map((name) => [name, ARITHMETIC] as [string, D.Signature]),
 ]);
 
 /** A field of a struct. */

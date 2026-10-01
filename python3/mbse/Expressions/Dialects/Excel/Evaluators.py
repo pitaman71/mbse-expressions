@@ -8,6 +8,9 @@ write their properties through `accept`). Values are Python `float` (number), `s
   wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for them,
   and `IF`, which evaluates only the branch it takes.
 - Two-valued logic: `AND` and `OR` evaluate every argument; numbers are true when nonzero, and text is `#VALUE!`.
+- The bit functions (`BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`) convert their arguments as arithmetic
+  does, and give `#NUM!` for a number that is not an integer from 0 to 2^48 - 1, a shift that is not an integer of at
+  most 53 either way, and a result beyond 2^48 - 1.
 - Coercion: arithmetic converts logicals (TRUE is 1) and numeric text to numbers. Comparisons never coerce: values
   of different types are ordered numbers, then text, then logicals (`"a" > 1` is TRUE), and text compares ignoring
   case (`"a" = "A"` is TRUE).
@@ -33,7 +36,8 @@ from .Domains import Error
 
 __all__ = ["OfAny", "Error", "Workbook"]
 
-_VALUE, _FIELD, _NAME, _REF = Error("#VALUE!"), Error("#FIELD!"), Error("#NAME?"), Error("#REF!")
+_VALUE, _FIELD, _NAME, _REF, _NUM = Error("#VALUE!"), Error("#FIELD!"), Error("#NAME?"), Error("#REF!"), Error("#NUM!")
+_BITS = 1 << 48
 
 
 def _number_of(value: Any) -> Any:
@@ -171,6 +175,32 @@ def _negate(arguments: list[F.Thunk], node: Any, scope: Any) -> float | Error:
     return number if isinstance(number, Error) else -number
 
 
+def _integer(value: Any, limit: int, signed: bool) -> int | Error:
+    """A bit function's argument: an integer below `limit`, of either sign when `signed`; otherwise `#NUM!`."""
+    number = _number(value)
+    if isinstance(number, Error):
+        return number
+    if not number.is_integer() or abs(number) >= limit or (number < 0 and not signed):
+        return _NUM
+    return int(number)
+
+
+def _bit(name: str) -> F.Implementation:
+    def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> float | Error:
+        shift = name.endswith("SHIFT")
+        a, b = _integer(arguments[0](), _BITS, False), _integer(arguments[1](), 54 if shift else _BITS, shift)
+        for value in (a, b):
+            if isinstance(value, Error):
+                return value
+        if shift:
+            left = b if name == "BITLSHIFT" else -b  # type: ignore[operator]
+            result = a << left if left >= 0 else a >> -left  # type: ignore[operator]
+            return _NUM if result >= _BITS else float(result)
+        return float(a & b if name == "BITAND" else a | b if name == "BITOR" else a ^ b)  # type: ignore[operator]
+
+    return apply
+
+
 def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     record = arguments[0]()
     if isinstance(record, Error):
@@ -187,6 +217,7 @@ _interpreter = F.Interpreter(Expressions.DIALECT, {
     "function": {
         "AND": _logic(all), "OR": _logic(any), "NOT": _not, "IF": _if,
         "ISERROR": lambda arguments, node, scope: isinstance(arguments[0](), Error),
+        **{name: _bit(name) for name in ("BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT")},
     },
     "infix": {
         "=": _compare(lambda a, b: a == b), "<>": _compare(lambda a, b: a != b),

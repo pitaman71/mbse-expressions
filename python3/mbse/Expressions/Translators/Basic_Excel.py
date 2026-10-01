@@ -1,5 +1,6 @@
 """Basic <-> Excel. Comparisons and arithmetic are Excel operators, logic is Excel's functions, `get` a field, `has`
-is `NOT(ISERROR(x.name))`, `implies(a, b)` is `IF(a, b, TRUE)`, and a let is `LET`. Excel has no bytes."""
+is `NOT(ISERROR(x.name))`, `implies(a, b)` is `IF(a, b, TRUE)`, and a let is `LET`. Excel has no bytes. The bitwise
+operations are Excel's bit functions, which have no `bitnot`."""
 
 from __future__ import annotations
 
@@ -23,4 +24,6 @@ TRANSLATOR = Pairwise(BASIC, EXCEL, [
     *renames("operation", "name", "function", "name", {"and": "AND", "or": "OR"}, 2),
     *renames("operation", "name", "function", "name", {"not": "NOT"}, 1),
     *renames("operation", "name", "prefix", "operator", {"neg": "-"}, 1),
+    *renames("operation", "name", "function", "name", {
+        "bitand": "BITAND", "bitor": "BITOR", "bitxor": "BITXOR", "shl": "BITLSHIFT", "shr": "BITRSHIFT"}, 2),
 ])

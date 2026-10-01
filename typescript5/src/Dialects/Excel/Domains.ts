@@ -60,6 +60,7 @@ const ARITHMETIC = new D.Function([Scalar, Scalar], NumberDomain);
 export const FUNCTIONS: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
   ["AND", LOGIC], ["OR", LOGIC], ["NOT", new D.Function([Scalar], Logical)],
   ["IF", new D.Function([Scalar, Anything, Anything], Anything)], ["ISERROR", new D.Function([Anything], Logical)],
+  ...["BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT"].map((name) => [name, ARITHMETIC] as [string, D.Signature]),
 ]);
 
 /** The infix operators. */

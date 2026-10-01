@@ -1,7 +1,7 @@
 /** Matlab <-> Excel. MATLAB's comparison and arithmetic operators are Excel's, `&&`, `||` and `~` are `AND`, `OR` and
  * `NOT`, a field is a field, and `isfield(x, "name")` is `NOT(ISERROR(x.name))`. MATLAB has no let expression, so
  * `LET`s are inlined: a let's translated value is shared by every use of its name. MATLAB's imports, which Excel
- * cannot declare, are dropped. */
+ * cannot declare, are dropped. MATLAB's bit functions are Excel's, `bitshift(a, -n)` being `BITRSHIFT(a, n)`. */
 
 import { DIALECT as EXCEL } from "../Dialects/Excel/Expressions.js";
 import { DIALECT as MATLAB } from "../Dialects/Matlab/Expressions.js";
@@ -22,4 +22,6 @@ export const TRANSLATOR = new Pairwise(MATLAB, EXCEL, [
   ...renames("binary", "operator", "function", "name", { "&&": "AND", "||": "OR" }, 2),
   ...renames("unary", "operator", "function", "name", { "~": "NOT" }, 1),
   ...renames("unary", "operator", "prefix", "operator", { "-": "-" }, 1),
+  ...renames("call", "function", "function", "name", { bitand: "BITAND", bitor: "BITOR", bitxor: "BITXOR", bitshift: "BITLSHIFT" }, 2),
+  new Rule(Matlab.shr, Excel.shr),
 ]);

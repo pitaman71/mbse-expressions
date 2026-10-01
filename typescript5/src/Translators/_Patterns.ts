@@ -21,6 +21,7 @@ export const Basic = {
   get: new P("operation", { name: "get" }, X, new P("literal", { value: K })),
   has: new P("operation", { name: "has" }, X, new P("literal", { value: K })),
   implies: new P("operation", { name: "implies" }, A, B),
+  shr: new P("operation", { name: "shr" }, A, B),
 };
 
 export const Python = {
@@ -31,6 +32,7 @@ export const Python = {
   has: new P("call", {}, new P("name", { name: "hasattr" }), X, new P("constant", { value: K })),
   implies: new P("ifexp", {}, A, B, new P("constant", { value: true })),
   ifexp: new P("ifexp", {}, A, B, C),
+  shr: new P("binop", { operator: ">>" }, A, B),
 };
 
 /** The function `np.<fn>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'. */
@@ -60,6 +62,7 @@ export const Matlab = {
   get: new P("field", { name: K }, X),
   has: new P("call", { function: "isfield" }, X, new P("constant", { value: K })),
   implies: new P("binary", { operator: "||" }, new P("unary", { operator: "~" }, A), B),
+  shr: new P("call", { function: "bitshift" }, A, new P("unary", { operator: "-" }, B)), // a negative shift is to the right
 };
 
 export const Excel = {
@@ -70,6 +73,7 @@ export const Excel = {
   has: new P("function", { name: "NOT" }, new P("function", { name: "ISERROR" }, new P("field", { name: K }, X))),
   implies: new P("function", { name: "IF" }, A, B, new P("constant", { value: true })),
   if_: new P("function", { name: "IF" }, A, B, C),
+  shr: new P("function", { name: "BITRSHIFT" }, A, B),
 };
 
 export const Latex = {

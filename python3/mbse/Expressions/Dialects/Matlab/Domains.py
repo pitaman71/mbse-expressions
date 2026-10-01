@@ -43,8 +43,11 @@ BINARY: dict[str, D.Signature] = {
 UNARY: dict[str, D.Signature] = {"~": D.Function((Numeric,), Logical), "-": D.Function((Numeric,), Double)}
 """The unary operators."""
 
-CALLS: dict[str, D.Signature] = {"isfield": D.Function((Anything, String), Logical)}
-"""The functions."""
+CALLS: dict[str, D.Signature] = {
+    "isfield": D.Function((Anything, String), Logical),
+    **{name: _ARITHMETIC for name in ("bitand", "bitor", "bitxor", "bitshift")},
+}
+"""The functions: `isfield`, and the bit functions on doubles."""
 
 FIELD = D.Function((Struct,), Anything)
 """A field of a struct."""

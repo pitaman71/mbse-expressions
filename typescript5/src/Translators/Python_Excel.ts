@@ -1,6 +1,7 @@
 /** Python <-> Excel. Comparisons and arithmetic are Excel's operators, `and`, `or` and `not` are `AND`, `OR` and
  * `NOT`, an attribute is a field, `hasattr(x, 'name')` is `NOT(ISERROR(x.name))`, a conditional expression is `IF`,
- * and a let is `LET`. Python's imports, which Excel cannot declare, are dropped. Excel has no bytes. */
+ * and a let is `LET`. Python's imports, which Excel cannot declare, are dropped. Excel has no bytes. Python's bitwise
+ * operators are Excel's bit functions; `~` has no counterpart. */
 
 import { DIALECT as EXCEL } from "../Dialects/Excel/Expressions.js";
 import { DIALECT as PYTHON } from "../Dialects/Python/Expressions.js";
@@ -24,4 +25,6 @@ export const TRANSLATOR = new Pairwise(PYTHON, EXCEL, [
   ...renames("boolop", "operator", "function", "name", { and: "AND", or: "OR" }, 2),
   ...renames("unaryop", "operator", "function", "name", { not: "NOT" }, 1),
   ...renames("unaryop", "operator", "prefix", "operator", { "-": "-" }, 1),
+  ...renames("binop", "operator", "function", "name", {
+    "&": "BITAND", "|": "BITOR", "^": "BITXOR", "<<": "BITLSHIFT", ">>": "BITRSHIFT" }, 2),
 ]);

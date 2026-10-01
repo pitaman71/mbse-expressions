@@ -47,6 +47,7 @@ _ARITHMETIC = D.Function((Scalar, Scalar), Number)
 FUNCTIONS: dict[str, D.Signature] = {
     "AND": _LOGIC, "OR": _LOGIC, "NOT": D.Function((Scalar,), Logical),
     "IF": D.Function((Scalar, Anything, Anything), Anything), "ISERROR": D.Function((Anything,), Logical),
+    **{name: _ARITHMETIC for name in ("BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT")},
 }
 """The worksheet functions, each with the fixed number of arguments the dialect gives it."""
 

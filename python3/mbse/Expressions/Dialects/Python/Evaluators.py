@@ -137,8 +137,9 @@ def _strict(function: Callable[..., Any]) -> F.Implementation:
 _COMPARE = {"==": operator.eq, "!=": operator.ne, "<": operator.lt, "<=": operator.le, ">": operator.gt,
             ">=": operator.ge}
 _BINOP = {"+": operator.add, "-": operator.sub, "*": operator.mul, "/": operator.truediv, "//": operator.floordiv,
-          "%": operator.mod, "**": operator.pow}
-_UNARYOP = {"not": operator.not_, "-": operator.neg, "+": operator.pos}
+          "%": operator.mod, "**": operator.pow, "&": operator.and_, "|": operator.or_, "^": operator.xor,
+          "<<": operator.lshift, ">>": operator.rshift}
+_UNARYOP = {"not": operator.not_, "-": operator.neg, "+": operator.pos, "~": operator.invert}
 
 _interpreter = F.Interpreter(Expressions.DIALECT, {
     "attribute": lambda arguments, node, scope: attribute(arguments[0](), node.attr),

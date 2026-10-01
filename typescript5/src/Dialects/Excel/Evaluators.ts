@@ -9,6 +9,9 @@
  *   the wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for
  *   them, and `IF`, which evaluates only the branch it takes.
  * - Two-valued logic: `AND` and `OR` evaluate every argument; numbers are true when nonzero, and text is `#VALUE!`.
+ * - The bit functions (`BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`) convert their arguments as arithmetic
+ *   does, and give `#NUM!` for a number that is not an integer from 0 to 2^48 - 1, a shift that is not an integer of
+ *   at most 53 either way, and a result beyond 2^48 - 1.
  * - Coercion: arithmetic converts logicals (TRUE is 1) and numeric text to numbers. Comparisons never coerce: values
  *   of different types are ordered numbers, then text, then logicals (`"a" > 1` is TRUE), and text compares ignoring
  *   case (`"a" = "A"` is TRUE).
@@ -38,6 +41,8 @@ const VALUE = Domains.Error.of("#VALUE!");
 const FIELD = Domains.Error.of("#FIELD!");
 const NAME = Domains.Error.of("#NAME?");
 const REF = Domains.Error.of("#REF!");
+const NUM = Domains.Error.of("#NUM!");
+const BITS = 2n ** 48n;
 
 function numberOf(value: unknown): unknown {
   return typeof value === "bigint" ? Number(value) : value;
@@ -118,6 +123,30 @@ function number(value: unknown): number | ExcelError {
   return VALUE;
 }
 
+/** A bit function's argument: an integer below `limit`, of either sign when `signed`; otherwise `#NUM!`. */
+function integer(value: unknown, limit: bigint, signed: boolean): bigint | ExcelError {
+  const n = number(value);
+  if (isError(n)) return n;
+  if (!Number.isInteger(n) || Math.abs(n) >= Number(limit) || (n < 0 && !signed)) return NUM;
+  return BigInt(n);
+}
+
+function bit(name: string): F.Implementation {
+  return (args) => {
+    const shift = name.endsWith("SHIFT");
+    const a = integer((args[0] as F.Thunk)(), BITS, false);
+    const b = integer((args[1] as F.Thunk)(), shift ? 54n : BITS, shift);
+    for (const value of [a, b]) if (isError(value)) return value;
+    const [x, y] = [a as bigint, b as bigint];
+    if (shift) {
+      const left = name === "BITLSHIFT" ? y : -y;
+      const result = left >= 0n ? x << left : x >> -left;
+      return result >= BITS ? NUM : Number(result);
+    }
+    return Number(name === "BITAND" ? x & y : name === "BITOR" ? x | y : x ^ y);
+  };
+}
+
 /** A value as a logical, for AND, OR, NOT and IF: numbers are true when nonzero; text is an error. */
 function truth(value: unknown): boolean | ExcelError {
   if (isError(value)) return value;
@@ -196,6 +225,7 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
   ["function", new Map<string, F.Implementation>([
     ["AND", logic((truths) => truths.every(Boolean))], ["OR", logic((truths) => truths.some(Boolean))],
     ["NOT", not], ["IF", if_], ["ISERROR", (args) => isError((args[0] as F.Thunk)())],
+    ...["BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT"].map((name) => [name, bit(name)] as [string, F.Implementation]),
   ])],
   ["infix", new Map<string, F.Implementation>([
     ["=", compare((o) => o === 0)], ["<>", compare((o) => o !== 0)],

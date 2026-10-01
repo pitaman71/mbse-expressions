@@ -35,11 +35,13 @@ export const COMPARE: ReadonlyMap<string, D.Signature> = new Map<string, D.Signa
 /** The boolean operators, which give one of their operands. */
 export const BOOLOP: ReadonlyMap<string, D.Signature> = new Map([["and", new D.Either(2)], ["or", new D.Either(2)]]);
 
-/** The arithmetic operators. */
+/** The arithmetic and bitwise operators. */
 export const BINOP: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
   ["+", new D.Overloaded(new D.Same(2, [Str, Bytes]), INTEGRAL, FLOAT)],
   ...["-", "*", "//", "%"].map((operator) => [operator, new D.Overloaded(INTEGRAL, FLOAT)] as Entry),
   ["/", FLOAT], ["**", new D.Overloaded(new D.Function([Integral, Integral], new D.OfUnion(Int, Float)), FLOAT)],
+  ...["&", "|", "^"].map((operator) => [operator, new D.Overloaded(new D.Function([Bool, Bool], Bool), INTEGRAL)] as Entry),
+  ["<<", INTEGRAL], [">>", INTEGRAL],
 ]);
 
 /** The unary operators. */
@@ -47,6 +49,7 @@ export const UNARYOP: ReadonlyMap<string, D.Signature> = new Map<string, D.Signa
   ["not", new D.Function([Anything], Bool)],
   ...["-", "+"].map((operator) => [operator,
     new D.Overloaded(new D.Function([Integral], Int), new D.Function([Float], Float))] as Entry),
+  ["~", new D.Function([Integral], Int)],
 ]);
 
 const NATIVES: ReadonlyMap<string, D.Domain> = new Map([

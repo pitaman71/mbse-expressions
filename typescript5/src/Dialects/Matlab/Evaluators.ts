@@ -10,9 +10,11 @@
  *   with a number compares the string with the number's text, as MATLAB converts it. `+` with a string concatenates.
  * - There is no unknown: reading a field a struct does not have throws, as `isfield` exists to avoid. Unbound
  *   variables throw too, with MATLAB's messages.
+ * - The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
+ *   53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
  *
  * A `new Scope(variables, { functions, packages })` resolves variables from `variables` and functions as MATLAB
- * does: the built-ins (`isfield`), then those an enclosing `import` brought in, then `functions` (the path), then
+ * does: the built-ins (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`), then those an enclosing `import` brought in, then `functions` (the path), then
  * qualified names (`pkg.fn`) from `packages`, which maps each package's name to its functions. `import pkg.fn` and
  * `import pkg.*` import from `packages`, and nothing else: functions are functions the caller provides.
  */
@@ -130,6 +132,27 @@ function isfield(args: F.Thunk[]): boolean {
   return Domains.is_struct(value) && typeof name === "string" && fieldsOf(value).has(name);
 }
 
+const FLINTMAX = 2n ** 53n;
+
+/** A bit function's operand: an integer of 53 bits, or of any sign for a shift. */
+function bitOperand(name: string, value: unknown, signed = false): bigint {
+  const number = double(value);
+  if (number === null) throw new TypeError(`Undefined function '${name}' for input arguments of type '${classOf(value)}'.`);
+  if (!Number.isInteger(number) || Math.abs(number) > Number(FLINTMAX) || (number < 0 && !signed)) {
+    throw new ValueError("Double inputs must have integer values in the range of ASSUMEDTYPE.");
+  }
+  return BigInt(number);
+}
+
+function bit(name: string): F.Implementation {
+  return (args) => {
+    const a = bitOperand(name, (args[0] as F.Thunk)());
+    const b = bitOperand(name, (args[1] as F.Thunk)(), name === "bitshift");
+    if (name === "bitshift") return Number(b >= 0n ? (a << b) & (FLINTMAX - 1n) : a >> -b);
+    return Number(name === "bitand" ? a & b : name === "bitor" ? a | b : a ^ b);
+  };
+}
+
 function unrecognized(name: string): NameError {
   return new NameError(`Unrecognized function or variable '${name}'.`);
 }
@@ -197,7 +220,9 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
     [".*", arithmetic(".*", (a, b) => a * b)],
   ])],
   ["unary", new Map<string, F.Implementation>([["~", not], ["-", negate]])],
-  ["call", new Map<string, F.Implementation>([["isfield", isfield]])],
+  ["call", new Map<string, F.Implementation>([
+    ["isfield", isfield], ...["bitand", "bitor", "bitxor", "bitshift"].map((name) => [name, bit(name)] as [string, F.Implementation]),
+  ])],
   ["field", field],
 ]), { literal: toDouble, scope: (variables) => new Scope(variables), extension });
 

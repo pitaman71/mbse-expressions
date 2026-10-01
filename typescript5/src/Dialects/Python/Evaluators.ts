@@ -207,6 +207,28 @@ function arithmetic(operator: string, a: unknown, b: unknown): unknown {
   }
 }
 
+/** Python's bitwise operators, on ints and bools (`&`, `|` and `^` of two bools give a bool). */
+function bitwise(operator: string, a: unknown, b: unknown): unknown {
+  if (!isIntegral(a) || !isIntegral(b)) throw unsupported(operator, a, b);
+  if (typeof a === "boolean" && typeof b === "boolean" && ["&", "|", "^"].includes(operator)) {
+    return operator === "&" ? a && b : operator === "|" ? a || b : a !== b;
+  }
+  const [x, y] = [int(a), int(b)];
+  if ((operator === "<<" || operator === ">>") && y < 0n) throw new ValueError("negative shift count");
+  switch (operator) {
+    case "&": return x & y;
+    case "|": return x | y;
+    case "^": return x ^ y;
+    case "<<": return x << y;
+    default: return x >> y;
+  }
+}
+
+function invert(value: unknown): bigint {
+  if (isIntegral(value)) return ~int(value);
+  throw new TypeError(`bad operand type for unary ~: ${repr(typeName(value))}`);
+}
+
 function negate(operator: string, value: unknown): unknown {
   if (isIntegral(value)) return operator === "-" ? -int(value) : int(value);
   if (typeof value === "number") return operator === "-" ? -value : value;
@@ -392,10 +414,15 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
     const decided = name === "and" ? !truthy(first) : truthy(first);
     return decided ? first : (args[1] as F.Thunk)();
   }]))],
-  ["binop", new Map<string, F.Implementation>(["+", "-", "*", "/", "//", "%", "**"].map((operator) =>
-    [operator, strict((a, b) => arithmetic(operator, a, b))]))],
+  ["binop", new Map<string, F.Implementation>([
+    ...["+", "-", "*", "/", "//", "%", "**"].map((operator) =>
+      [operator, strict((a, b) => arithmetic(operator, a, b))] as [string, F.Implementation]),
+    ...["&", "|", "^", "<<", ">>"].map((operator) =>
+      [operator, strict((a, b) => bitwise(operator, a, b))] as [string, F.Implementation]),
+  ])],
   ["unaryop", new Map<string, F.Implementation>([
     ["not", strict((a) => !truthy(a))], ["-", strict((a) => negate("-", a))], ["+", strict((a) => negate("+", a))],
+    ["~", strict((a) => invert(a))],
   ])],
   ["ifexp", (args: F.Thunk[]) => (truthy((args[0] as F.Thunk)()) ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)())],
 ]), { scope: (variables) => new Scope(variables) });

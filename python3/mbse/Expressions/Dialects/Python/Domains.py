@@ -37,12 +37,15 @@ BINOP: dict[str, D.Signature] = {
     "+": D.Overloaded(D.Same(2, (Str, Bytes)), _INTEGRAL, _FLOAT),
     **{operator: D.Overloaded(_INTEGRAL, _FLOAT) for operator in ("-", "*", "//", "%")},
     "/": _FLOAT, "**": D.Overloaded(D.Function((Integral, Integral), D.OfUnion(Int, Float)), _FLOAT),
+    **{operator: D.Overloaded(D.Function((Bool, Bool), Bool), _INTEGRAL) for operator in "&|^"},
+    "<<": _INTEGRAL, ">>": _INTEGRAL,
 }
-"""The arithmetic operators."""
+"""The arithmetic and bitwise operators."""
 
 UNARYOP: dict[str, D.Signature] = {
     "not": D.Function((Anything,), Bool),
     **{operator: D.Overloaded(D.Function((Integral,), Int), D.Function((Float,), Float)) for operator in "-+"},
+    "~": D.Function((Integral,), Int),
 }
 """The unary operators."""
 

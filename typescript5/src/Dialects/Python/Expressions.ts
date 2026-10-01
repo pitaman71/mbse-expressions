@@ -6,7 +6,7 @@
  *   applied to ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal`
  *   of the name `np`.
  * - `compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`), `boolop` (`and`, `or`), `binop` (`+`, `-`, `*`, `/`, `//`, `%`,
- *   `**`) and `unaryop` (`not`, `-`, `+`), each with one operator and two operands (one for `unaryop`).
+ *   `**`, `&`, `|`, `^`, `<<`, `>>`) and `unaryop` (`not`, `-`, `+`, `~`), each with one operator and two operands (one for `unaryop`).
  * - `ifexp`: `body if test else orelse`.
  * - `let`: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
  * - `import` (`import module` or `import module as alias`) and `importfrom` (`from module import name` or `... as
@@ -307,9 +307,11 @@ export function importfrom(module: string, name: string, body: unknown, alias: s
 // --- Rendering ---
 
 // Python's precedence, from loosest to tightest (lambda is 0).
-const IF = 1, OR = 2, AND = 3, NOT = 4, COMPARE = 5, SUM = 6, PRODUCT = 7, UNARY = 8, POWER = 9, PRIMARY = 10;
+const IF = 1, OR = 2, AND = 3, NOT = 4, COMPARE = 5, BITOR = 6, BITXOR = 7, BITAND = 8, SHIFT = 9, SUM = 10,
+  PRODUCT = 11, UNARY = 12, POWER = 13, PRIMARY = 14;
 const BINOP_LEVELS: Record<string, number> = {
   "+": SUM, "-": SUM, "*": PRODUCT, "/": PRODUCT, "//": PRODUCT, "%": PRODUCT, "**": POWER,
+  "|": BITOR, "^": BITXOR, "&": BITAND, "<<": SHIFT, ">>": SHIFT,
 };
 
 function constantText(value: unknown): [string, number] {

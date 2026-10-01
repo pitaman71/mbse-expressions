@@ -5,7 +5,7 @@
   applied to ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of
   the name `np`.
 - `compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`), `boolop` (`and`, `or`), `binop` (`+`, `-`, `*`, `/`, `//`, `%`,
-  `**`) and `unaryop` (`not`, `-`, `+`), each with one operator and two operands (one for `unaryop`).
+  `**`, `&`, `|`, `^`, `<<`, `>>`) and `unaryop` (`not`, `-`, `+`, `~`), each with one operator and two operands (one for `unaryop`).
 - `ifexp`: `body if test else orelse`.
 - `let`: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
 - `import` (`import module` or `import module as alias`) and `importfrom` (`from module import name` or `... as
@@ -271,8 +271,10 @@ def importfrom(module: str, name: str, body: Any, alias: str | None = None) -> _
 
 # --- Rendering ---
 
-_LAMBDA, _IF, _OR, _AND, _NOT, _COMPARE, _SUM, _PRODUCT, _UNARY, _POWER, _PRIMARY = range(11)
-_BINOP_LEVELS = {"+": _SUM, "-": _SUM, "*": _PRODUCT, "/": _PRODUCT, "//": _PRODUCT, "%": _PRODUCT, "**": _POWER}
+(_LAMBDA, _IF, _OR, _AND, _NOT, _COMPARE, _BITOR, _BITXOR, _BITAND, _SHIFT, _SUM, _PRODUCT, _UNARY, _POWER,
+ _PRIMARY) = range(15)
+_BINOP_LEVELS = {"+": _SUM, "-": _SUM, "*": _PRODUCT, "/": _PRODUCT, "//": _PRODUCT, "%": _PRODUCT, "**": _POWER,
+                 "|": _BITOR, "^": _BITXOR, "&": _BITAND, "<<": _SHIFT, ">>": _SHIFT}
 
 
 def _constant(value: Native) -> tuple[str, int]:
@@ -340,7 +342,8 @@ def render(expression: Any) -> str:
 _AST_OPERATORS: dict[type, str] = {
     ast.Eq: "==", ast.NotEq: "!=", ast.Lt: "<", ast.LtE: "<=", ast.Gt: ">", ast.GtE: ">=", ast.And: "and",
     ast.Or: "or", ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/", ast.FloorDiv: "//", ast.Mod: "%",
-    ast.Pow: "**", ast.Not: "not", ast.USub: "-", ast.UAdd: "+",
+    ast.Pow: "**", ast.Not: "not", ast.USub: "-", ast.UAdd: "+", ast.BitAnd: "&", ast.BitOr: "|", ast.BitXor: "^",
+    ast.LShift: "<<", ast.RShift: ">>", ast.Invert: "~",
 }
 
 

@@ -22,6 +22,7 @@ class Basic:
     get = P("operation", X, P("literal", value=K), name="get")
     has = P("operation", X, P("literal", value=K), name="has")
     implies = P("operation", A, B, name="implies")
+    shr = P("operation", A, B, name="shr")
 
 
 class Python:
@@ -32,6 +33,7 @@ class Python:
     has = P("call", P("name", name="hasattr"), X, P("constant", value=K))
     implies = P("ifexp", A, B, P("constant", value=True))
     ifexp = P("ifexp", A, B, C)
+    shr = P("binop", A, B, operator=">>")
 
 
 def _numpy(function: str) -> P:
@@ -64,6 +66,7 @@ class Matlab:
     get = P("field", X, name=K)
     has = P("call", X, P("constant", value=K), function="isfield")
     implies = P("binary", P("unary", A, operator="~"), B, operator="||")
+    shr = P("call", A, P("unary", B, operator="-"), function="bitshift")  # a negative shift is to the right
 
 
 class Excel:
@@ -74,6 +77,7 @@ class Excel:
     has = P("function", P("function", P("field", X, name=K), name="ISERROR"), name="NOT")
     implies = P("function", A, B, P("constant", value=True), name="IF")
     if_ = P("function", A, B, C, name="IF")
+    shr = P("function", A, B, name="BITRSHIFT")
 
 
 class Latex:

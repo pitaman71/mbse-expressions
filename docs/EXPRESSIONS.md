@@ -294,9 +294,9 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 | Dialect | Kinds | Values | Evaluation |
 |---|---|---|---|
 | Basic | `literal`, `operation`, `variable`, `let` | natives, objects | three-valued (Kleene), no coercion; absent is unknown |
-| Python | `constant`, `name`, `attribute`, `subscript`, `call`, `compare`, `boolop`, `binop`, `unaryop`, `ifexp`, `let` (`(lambda a: body)(value)`), `import`, `importfrom`: Python's `ast` | Python's | Python's: `and`/`or` give an operand, `1 == 1.0`, `True + 1` is 2; absent attributes raise |
-| Matlab | `constant`, `identifier`, `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (`isfield`, and functions of the scope), `field` (`s.age`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; absent fields raise |
-| Excel | `constant`, `name`, `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`), `function` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`) | number, text, logical, error, record | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case |
+| Python | `constant`, `name`, `attribute`, `subscript`, `call`, `compare`, `boolop`, `binop` (arithmetic and bitwise), `unaryop` (`not`, `-`, `+`, `~`), `ifexp`, `let` (`(lambda a: body)(value)`), `import`, `importfrom`: Python's `ast` | Python's | Python's: `and`/`or` give an operand, `1 == 1.0`, `True + 1` is 2; absent attributes raise |
+| Matlab | `constant`, `identifier`, `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`, and functions of the scope), `field` (`s.age`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; the bit functions take integers from 0 to 2^53; absent fields raise |
+| Excel | `constant`, `name`, `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`), `function` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, `BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`) | number, text, logical, error, record | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case; the bit functions take integers from 0 to 2^48 - 1, else `#NUM!` |
 | Latex | `constant` (numbers, `\text{...}`, `\mathrm{true}`), `symbol` (`a`, `\mathit{age}`), `binary` (`=`, `\neq`, `<` ... `\land`, `\lor`, `\implies`, `+`, `-`, `\cdot`), `unary` (`\lnot`, `-`), `frac`, `member` (`x.\mathit{age}`), `function` (`\operatorname{has}`), `where` | number, text, truth | none: notation is written, rendered, checked and translated, and evaluated in the dialects it is translated to |
 
 Python, Matlab, Excel and Latex each have `render(expression)`, their source text (`hasattr(this, 'email') if
@@ -359,6 +359,11 @@ same expression; and a translation keeps an expression's form, not always its va
 agree (operands of one type, values present), translations evaluate alike; elsewhere they do not: a missing property
 is unknown in Basic, masked in NumPy, `#FIELD!` in Excel and an error in Python and MATLAB, and `1 == 1.0` is unknown
 in Basic but true in the others.
+
+The bitwise operations translate to Python's operators and to MATLAB's and Excel's bit functions (`shr(a, n)` is
+MATLAB's `bitshift(a, -n)`); `bitnot` has no MATLAB or Excel counterpart, and the conversions and typed values have none
+in any other dialect yet. MATLAB's and Excel's bit functions take only non-negative integers, so translations evaluate
+alike only there.
 
 ## Open questions
 
