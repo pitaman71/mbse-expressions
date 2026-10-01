@@ -157,8 +157,9 @@ control document describes a data word. Each is parameterized, and today's nativ
   representation of each value in it: SystemVerilog's `enum logic [1:0] {IDLE, RUN}` is an `Enum` packed as `Bits(2)`.
   `pack(value, packed)` gives the representation and `unpack(representation, packed)` the value, so one `Enum` can be
   packed several ways.
-- **Widths belong in mbse-schemas too**, at least in its natives, so that a schema's field and an expression over it
-  have one type system. That is a change to mbse-schemas, made there first.
+- **Widths are in mbse-schemas too**, in its natives, so that a schema's field and an expression over it have one type
+  system. An `OfNative` holds a token `{format, name}` (`basic` is the neutral format, with Basic's names) and
+  optionally a width in bits or in bytes; a domain interprets that width.
 
 ## The framework
 
@@ -289,8 +290,7 @@ in Basic but true in the others.
 ## Open questions
 
 - Value domains (above): the names of the conversion operations; what a literal stored without a domain (today's
-  corpora) means; whether an `Enum`'s members are ordered,
-  or only a `Packed` enum's (by representation, as in C); and the shape of widths in mbse-schemas' natives.
+  corpora) means; whether an `Enum`'s members are ordered, or only a `Packed` enum's (by representation, as in C).
 - Core expression vocabulary above is a proposal; confirm the exact set, and specify the collection operations
   (`count`, `in`, `all`, `any`).
 - Matlab and Excel expressions are written as data or through constructors and rendered as source text; they are
