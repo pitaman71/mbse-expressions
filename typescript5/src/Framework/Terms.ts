@@ -705,7 +705,7 @@ const USED_BY = (r: Schemas.OfAdjacency.Builder) => r.name("used_by").of(Argumen
 function schemaOf(kind: NodeClass): Schemas.OfObject.Data {
   const natives = [...(kind.VALUE ?? new Map()), ...kind.PROPERTIES];
   const relations = kind.SLOTS.length > 0 || kind.VARIADIC !== null ? [ARGUMENTS_ADJACENCY, USED_BY] : [USED_BY];
-  return new Schemas.OfObject.Builder()
+  return new Schemas.OfObject.Builder().ref()
     .properties(nativeProperty("kind", String), ...natives.map(([name, native]) => nativeProperty(name, native)))
     .relations(...relations).create();
 }

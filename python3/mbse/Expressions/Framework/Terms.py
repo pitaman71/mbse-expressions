@@ -630,7 +630,7 @@ def _schema(kind: type[Node]) -> Schemas.OfObject.Data:
     adjacencies `arguments` (if it has arguments) and `used_by`."""
     natives = {**(kind.VALUE or {}), **kind.PROPERTIES}
     relations = [_ARGUMENTS, _USED_BY] if kind.SLOTS or kind.VARIADIC is not None else [_USED_BY]
-    return (Schemas.OfObject.Builder().properties(_native("kind", str), *(_native(n, t) for n, t in natives.items()))
+    return (Schemas.OfObject.Builder().ref().properties(_native("kind", str), *(_native(n, t) for n, t in natives.items()))
             .relations(*relations).create())
 
 

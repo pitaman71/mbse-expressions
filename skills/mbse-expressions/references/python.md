@@ -19,7 +19,7 @@ def native(name, type_):
     return lambda p: p.name(name).of(lambda t: t.as_native(type_))
 
 
-Contact = S.OfObject.Builder().properties(native("name", str), native("age", int), native("email", str)).create()
+Contact = S.OfObject.Builder().ref().properties(native("name", str), native("age", int), native("email", str)).create()
 Proxies.register("Contact", Contact)
 B = Proxies.Builders
 ada = B.Contact().name("Ada").age(70).email("ada@example.com").create()
@@ -52,7 +52,7 @@ this = E.variable("this")
 Phone = S.OfObject.Builder().properties(native("number", str)).create()
 Email = S.OfObject.Builder().properties(native("address", str)).create()
 Reach = S.OfUnion.Builder().branches(lambda b: b.name("phone").of(Phone), lambda b: b.name("email").of(Email)).create()
-Card = S.OfObject.Builder().properties(lambda p: p.name("reach").of(Reach)).create()
+Card = S.OfObject.Builder().ref().properties(lambda p: p.name("reach").of(Reach)).create()
 Proxies.register("Card", Card)
 card = B.Card().reach(lambda u: u.email(lambda r: r.address("ada@example.com"))).create()
 assert Validators.Validate(B)(Card, card) == []

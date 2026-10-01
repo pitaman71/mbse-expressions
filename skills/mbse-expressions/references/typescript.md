@@ -18,7 +18,7 @@ import { JSON, Proxies, Schemas as S, Validators } from "@mbse/schemas/Framework
 const native = (name: string, type: S.OfNative.Spec) => (p: S.OfProperty.Builder) => p.name(name).of((t) => t.as_native(type));
 const check = (condition: boolean, message: string) => { if (!condition) throw new Error(message); };
 
-const Contact = new S.OfObject.Builder().properties(native("name", String), native("age", BigInt), native("email", String)).create();
+const Contact = new S.OfObject.Builder().ref().properties(native("name", String), native("age", BigInt), native("email", String)).create();
 Proxies.register("Contact", Contact);
 const B = Proxies.Builders;
 const ada = B.Contact().name("Ada").age(70n).email("ada@example.com").create();
@@ -52,7 +52,7 @@ const self = E.variable("this");
 const Phone = new S.OfObject.Builder().properties(native("number", String)).create();
 const Email = new S.OfObject.Builder().properties(native("address", String)).create();
 const Reach = new S.OfUnion.Builder().branches((b) => b.name("phone").of(Phone), (b) => b.name("email").of(Email)).create();
-const Card = new S.OfObject.Builder().properties((p) => p.name("reach").of(Reach)).create();
+const Card = new S.OfObject.Builder().ref().properties((p) => p.name("reach").of(Reach)).create();
 Proxies.register("Card", Card);
 const card = B.Card().reach((u: any) => u.email((r: any) => r.address("ada@example.com"))).create();
 check(Validators.Validate(B)(Card, card).length === 0, "card");
