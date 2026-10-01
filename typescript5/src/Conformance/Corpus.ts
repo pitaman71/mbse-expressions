@@ -15,9 +15,10 @@ import * as Excel from "../Dialects/Excel/Expressions.js";
 import * as Latex from "../Dialects/Latex/Expressions.js";
 import * as Matlab from "../Dialects/Matlab/Expressions.js";
 import * as Python from "../Dialects/Python/Expressions.js";
+import * as SystemVerilog from "../Dialects/SystemVerilog/Expressions.js";
 import type { Schemas, Visitors } from "@mbse/schemas/Framework";
 
-export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp"] as const;
+export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp", "systemverilog"] as const;
 
 type Case = [Schemas.OfObject.Data, Visitors.Visitable, unknown];
 
@@ -88,6 +89,14 @@ export function build(): Map<string, Case> {
     ">", Ccpp.subscript(Ccpp.member(me, "b", "->"), 0n), Ccpp.constant(1.5, "float"))),
     Ccpp.cast("uint8_t", Ccpp.call("f", 1n)), Ccpp.constant(5n, "unsigned int"));
 
+  // --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
+  // this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(1.5)) + 4'(8'shff)
+  const [sv, that] = [SystemVerilog, SystemVerilog.identifier("this")];
+  const systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1n, sv.span(2n, 5n)), sv.conditional(
+    sv.unary("!", sv.select(that, 0n)),
+    sv.concatenation(sv.replication(6n, sv.vector("10")), sv.range_(sv.member(that, "b"), 7n, 4n)),
+    sv.binary("+", sv.cast("byte", sv.call("$clog2", 1.5)), sv.cast(4n, sv.vector("11111111", true, "h")))));
+
   return new Map<string, Case>([
     ["expression", [E.OfLet.Schema, expression, E.Builders]],
     ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
@@ -96,6 +105,7 @@ export function build(): Map<string, Case> {
     ["domains", [E.OfOperation.Schema, domains, E.Builders]],
     ["collections", [E.OfLet.Schema, collections, E.Builders]],
     ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],
+    ["systemverilog", [SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders]],
     ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],
   ]);
 }

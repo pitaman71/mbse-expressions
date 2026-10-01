@@ -72,6 +72,13 @@ export const Ccpp = {
   implies: new P("binary", { operator: "||" }, new P("unary", { operator: "!" }, A), B),
 };
 
+export const SystemVerilog = {
+  constant: (V: Hole) => new P("constant", { value: V }),
+  identifier: new P("identifier", { name: N }),
+  get: new P("member", { name: K }, X),
+  implies: new P("binary", { operator: "->" }, A, B),
+};
+
 export const Excel = {
   constant: (V: Hole) => new P("constant", { value: V }),
   name: new P("name", { name: N }),

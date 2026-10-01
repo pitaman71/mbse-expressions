@@ -1,0 +1,323 @@
+{
+  "root": "s0",
+  "objects": {
+    "s0": {
+      "kind": "binary",
+      "operator": "->",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s1",
+            "$schema": "Expressions.SystemVerilog.OfInside"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s2",
+            "$schema": "Expressions.SystemVerilog.OfConditional"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s1": {
+      "kind": "inside",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s3",
+            "$schema": "Expressions.SystemVerilog.OfMember"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s4",
+            "$schema": "Expressions.SystemVerilog.OfConstant"
+          },
+          "index": 1
+        },
+        {
+          "argument": {
+            "$ref": "s5",
+            "$schema": "Expressions.SystemVerilog.OfSpan"
+          },
+          "index": 2
+        }
+      ]
+    },
+    "s2": {
+      "kind": "conditional",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s6",
+            "$schema": "Expressions.SystemVerilog.OfUnary"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s7",
+            "$schema": "Expressions.SystemVerilog.OfConcatenation"
+          },
+          "index": 1
+        },
+        {
+          "argument": {
+            "$ref": "s8",
+            "$schema": "Expressions.SystemVerilog.OfBinary"
+          },
+          "index": 2
+        }
+      ]
+    },
+    "s3": {
+      "kind": "member",
+      "name": "a",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s9",
+            "$schema": "Expressions.SystemVerilog.OfIdentifier"
+          },
+          "index": 0
+        }
+      ]
+    },
+    "s4": {
+      "kind": "constant",
+      "int": 1
+    },
+    "s5": {
+      "kind": "span",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s10",
+            "$schema": "Expressions.SystemVerilog.OfConstant"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s11",
+            "$schema": "Expressions.SystemVerilog.OfConstant"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s6": {
+      "kind": "unary",
+      "operator": "!",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s12",
+            "$schema": "Expressions.SystemVerilog.OfSelect"
+          },
+          "index": 0
+        }
+      ]
+    },
+    "s7": {
+      "kind": "concatenation",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s13",
+            "$schema": "Expressions.SystemVerilog.OfReplication"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s14",
+            "$schema": "Expressions.SystemVerilog.OfRange"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s8": {
+      "kind": "binary",
+      "operator": "+",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s15",
+            "$schema": "Expressions.SystemVerilog.OfCast"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s16",
+            "$schema": "Expressions.SystemVerilog.OfCast"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s9": {
+      "kind": "identifier",
+      "name": "this"
+    },
+    "s10": {
+      "kind": "constant",
+      "int": 2
+    },
+    "s11": {
+      "kind": "constant",
+      "int": 5
+    },
+    "s12": {
+      "kind": "select",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s9",
+            "$schema": "Expressions.SystemVerilog.OfIdentifier"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s17",
+            "$schema": "Expressions.SystemVerilog.OfConstant"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s13": {
+      "kind": "replication",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s18",
+            "$schema": "Expressions.SystemVerilog.OfConstant"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s19",
+            "$schema": "Expressions.SystemVerilog.OfVector"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s14": {
+      "kind": "range",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s20",
+            "$schema": "Expressions.SystemVerilog.OfMember"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s21",
+            "$schema": "Expressions.SystemVerilog.OfConstant"
+          },
+          "index": 1
+        },
+        {
+          "argument": {
+            "$ref": "s22",
+            "$schema": "Expressions.SystemVerilog.OfConstant"
+          },
+          "index": 2
+        }
+      ]
+    },
+    "s15": {
+      "kind": "cast",
+      "type": "byte",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s23",
+            "$schema": "Expressions.SystemVerilog.OfCall"
+          },
+          "index": 0
+        }
+      ]
+    },
+    "s16": {
+      "kind": "cast",
+      "width": 4,
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s24",
+            "$schema": "Expressions.SystemVerilog.OfVector"
+          },
+          "index": 0
+        }
+      ]
+    },
+    "s17": {
+      "kind": "constant",
+      "int": 0
+    },
+    "s18": {
+      "kind": "constant",
+      "int": 6
+    },
+    "s19": {
+      "kind": "vector",
+      "str": "10"
+    },
+    "s20": {
+      "kind": "member",
+      "name": "b",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s9",
+            "$schema": "Expressions.SystemVerilog.OfIdentifier"
+          },
+          "index": 0
+        }
+      ]
+    },
+    "s21": {
+      "kind": "constant",
+      "int": 7
+    },
+    "s22": {
+      "kind": "constant",
+      "int": 4
+    },
+    "s23": {
+      "kind": "call",
+      "function": "$clog2",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s25",
+            "$schema": "Expressions.SystemVerilog.OfConstant"
+          },
+          "index": 0
+        }
+      ]
+    },
+    "s24": {
+      "kind": "vector",
+      "str": "11111111",
+      "signed": true,
+      "base": "h"
+    },
+    "s25": {
+      "kind": "constant",
+      "float": 1.5
+    }
+  }
+}

@@ -12,6 +12,7 @@ import * as Basic_Excel from "./Basic_Excel.js";
 import * as Basic_Latex from "./Basic_Latex.js";
 import * as Basic_Matlab from "./Basic_Matlab.js";
 import * as Basic_Python from "./Basic_Python.js";
+import * as Basic_SystemVerilog from "./Basic_SystemVerilog.js";
 import * as Excel_Latex from "./Excel_Latex.js";
 import * as Matlab_Excel from "./Matlab_Excel.js";
 import * as Matlab_Latex from "./Matlab_Latex.js";
@@ -20,13 +21,13 @@ import * as Python_Latex from "./Python_Latex.js";
 import * as Python_Matlab from "./Python_Matlab.js";
 
 export {
-  Basic_Ccpp, Basic_Excel, Basic_Latex, Basic_Matlab, Basic_Python, Excel_Latex, Matlab_Excel, Matlab_Latex, Python_Excel,
-  Python_Latex, Python_Matlab,
+  Basic_Ccpp, Basic_Excel, Basic_Latex, Basic_Matlab, Basic_Python, Basic_SystemVerilog, Excel_Latex, Matlab_Excel, Matlab_Latex,
+  Python_Excel, Python_Latex, Python_Matlab,
 };
 
 /** Every pairwise translator. */
 export const TRANSLATORS: readonly Pairwise[] = [Basic_Python, Basic_Matlab, Basic_Excel, Basic_Latex, Basic_Ccpp,
-  Python_Matlab, Python_Excel, Python_Latex, Matlab_Excel, Matlab_Latex, Excel_Latex].map((module) => module.TRANSLATOR);
+  Basic_SystemVerilog, Python_Matlab, Python_Excel, Python_Latex, Matlab_Excel, Matlab_Latex, Excel_Latex].map((module) => module.TRANSLATOR);
 
 /** The translator whose `forward` translates from `source` to `target`. */
 export function between(source: Dialect, target: Dialect): Pairwise {

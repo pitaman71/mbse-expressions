@@ -18,6 +18,8 @@ languages, called dialects:
 - **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.
 - **Ccpp**, C and C++ expressions over their arithmetic types: it renders as C source and evaluates by C's rules
   (promotions, wrapping unsigned arithmetic, undefined behavior raising); it translates to and from Basic.
+- **SystemVerilog**, hardware expressions and constraints over 4-state vectors and reals: it renders as SystemVerilog
+  source and evaluates by IEEE 1800's rules (sizing by context, x and z propagating); it translates to and from Basic.
 
 ## When to use it
 

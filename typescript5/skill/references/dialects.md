@@ -15,6 +15,7 @@ and `Framework.Symbolics.free(expression)` tells which names it needs from its s
 | **Excel** | worksheet formulas, for rules that live in spreadsheets, over cells and records |
 | **Latex** | notation, for rules in documents and specifications; it has no evaluator: translate to evaluate |
 | **Ccpp** | C and C++ source, for rules over the types of embedded software and interface control documents (`uint8_t`, `float`) |
+| **SystemVerilog** | SystemVerilog source, for rules over hardware signals and registers: assertions, constraints and checks on vectors whose bits may be x or z |
 
 Write a rule in Basic, and translate it where it must run; read one written elsewhere back into Basic to analyze it.
 
@@ -49,6 +50,7 @@ L.render(e)                                              # a \geq \frac{36}{2} \
 | Excel | `#FIELD!` | TRUE | `AND`/`OR` evaluate every argument | errors are values that propagate; text compares ignoring case |
 | Latex | no evaluator | | | translate to a dialect that evaluates |
 | Ccpp | `KeyError` (no member) | true, after the usual conversions | `&&`/`\|\|` short-circuit, give `bool` | unsigned wraps; undefined behavior (signed overflow, ...) raises |
+| SystemVerilog | `KeyError` (no member) | `1'b1`, compared as reals | 1, 0 or x (`1'bx`) by the truth of each operand | values are sized vectors; x and z propagate; division by zero gives x |
 
 ## Scopes: names, imports and references
 

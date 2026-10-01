@@ -14,6 +14,7 @@ snapshot, indent 2) and `<case>.yaml`.
 | `domains` | Basic literals of value domains, by value and by name, decimal and `binary128` text, a conversion's domain, a bitwise operation and `pack` |
 | `collections` | a Basic quantifier over an object's entries, and the collection operations |
 | `ccpp` | a C expression with every kind, typed constants and a shared identifier |
+| `systemverilog` | a SystemVerilog expression with every kind, sized vectors, casts and a shared identifier |
 
 Each case is rebuilt with its own dialect's builders.
 

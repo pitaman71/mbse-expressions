@@ -76,6 +76,13 @@ class Ccpp:
     implies = P("binary", P("unary", A, operator="!"), B, operator="||")
 
 
+class SystemVerilog:
+    constant = staticmethod(lambda V: P("constant", value=V))
+    identifier = P("identifier", name=N)
+    get = P("member", X, name=K)
+    implies = P("binary", A, B, operator="->")
+
+
 class Excel:
     constant = staticmethod(lambda V: P("constant", value=V))
     name = P("name", name=N)
