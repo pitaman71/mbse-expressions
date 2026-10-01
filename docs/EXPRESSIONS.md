@@ -8,7 +8,7 @@ framework; this document covers expressions only.
 Expressions come in dialects: expression languages that implement one framework, so that each is serializable,
 structurally traversable, validatable, evaluatable, and translatable into the others. The Basic dialect is the core
 vocabulary below, in which rules about mbse-schemas' data are written; `from mbse.Expressions import Expressions,
-Evaluators` imports it. The Python, Matlab, Excel and Latex dialects model those languages' expressions (see
+Evaluators` imports it. The Python, Matlab, Excel, Latex and Ccpp (C and C++) dialects model those languages' expressions (see
 [Dialects](#dialects)); the framework is described under [The framework](#the-framework), and translation under
 [Translators](#translators). Both implementations have all of them (see [`EQUIVALENCE.md`](EQUIVALENCE.md)).
 
@@ -16,7 +16,7 @@ Evaluators` imports it. The Python, Matlab, Excel and Latex dialects model those
 python3/mbse/Expressions/, typescript5/src/
   Framework/     Expressions, Domains, Evaluators, Translators (and, in TypeScript, Errors): the protocols, and the
                  machinery that implements them
-  Dialects/      Basic, Python, Matlab, Excel, Latex: each with Expressions and Domains, and all but Latex Evaluators
+  Dialects/      Basic, Python, Matlab, Excel, Latex, Ccpp: each with Expressions and Domains, and all but Latex Evaluators
   Translators/   one module per pair of dialects, e.g. Basic_Excel
 ```
 
@@ -331,9 +331,10 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 | Python | `constant`, `name`, `attribute`, `subscript`, `call`, `compare`, `boolop`, `binop` (arithmetic and bitwise), `unaryop` (`not`, `-`, `+`, `~`), `ifexp`, `let` (`(lambda a: body)(value)`), `import`, `importfrom`: Python's `ast` | Python's | Python's: `and`/`or` give an operand, `1 == 1.0`, `True + 1` is 2; absent attributes raise |
 | Matlab | `constant`, `identifier`, `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`, and functions of the scope), `field` (`s.age`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; the bit functions take integers from 0 to 2^53; absent fields raise |
 | Excel | `constant`, `name`, `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`), `function` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, `BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`) | number, text, logical, error, record | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case; the bit functions take integers from 0 to 2^48 - 1, else `#NUM!` |
+| Ccpp | `constant` (with an optional type: `5u`, `1.5f`, `(uint8_t)5`), `identifier`, `unary` (`+`, `-`, `!`, `~`), `binary` (`*` ... `\|\|`, with C's precedence), `conditional` (`?:`), `cast` (`(type)x`), `member` (`x.a`, `x->a`), `subscript` (`a[i]`), `call` (functions of the scope) | C's arithmetic types under LP64 (`bool`, `char` ... `unsigned long long`, `int8_t` ... `uint64_t`, `size_t`, `float`, `double`, `long double` as IEEE 754 `binary128`), strings, structs, arrays | C's: the integer promotions and the usual arithmetic conversions; unsigned arithmetic wraps; what C leaves undefined (signed overflow, division by zero, shifts out of range, casts of floats out of range) raises; casts to integers wrap; comparisons give `bool`, as in C++; `?:` keeps its chosen operand's type |
 | Latex | `constant` (numbers, `\text{...}`, `\mathrm{true}`), `symbol` (`a`, `\mathit{age}`), `binary` (`=`, `\neq`, `<` ... `\land`, `\lor`, `\implies`, `+`, `-`, `\cdot`), `unary` (`\lnot`, `-`), `frac`, `member` (`x.\mathit{age}`), `function` (`\operatorname{has}`), `where` | number, text, truth | none: notation is written, rendered, checked and translated, and evaluated in the dialects it is translated to |
 
-Python, Matlab, Excel and Latex each have `render(expression)`, their source text (`hasattr(this, 'email') if
+Python, Matlab, Excel, Latex and Ccpp each have `render(expression)`, their source text (`hasattr(this, 'email') if
 this.age >= 18 else True`, `this.age >= 18 && isfield(this, "email")`, `=AND(this.age >= 18, NOT(ISERROR(this.email)))`,
 `\mathit{this}.\mathit{age} \geq 18 \land \operatorname{has}(\mathit{this}, \text{email})`), with imports as the
 lines before the expression, and constructors for their kinds (`Excel.Expressions.function('AND', a,
@@ -352,6 +353,7 @@ Each dialect resolves names, imports and references its own way, through its sco
 | Python | `Scope(variables, modules, builtins)` | the innermost let or import, then the variable, then the builtin (`abs`, `hasattr`, `len`, ...) | `import m`, `import m as a`, `from m import n`: only a module in `modules` or a submodule of one. Private attributes (`_x`) are refused, and a call may call only a builtin, a variable's value or a function of an allowed module |
 | Matlab | `Scope(variables, functions, packages)` | the variable | a function is a built-in, then imported (`import pkg.fn`, `import pkg.*` from `packages`), then on the path (`functions`), then qualified (`pkg.fn`) |
 | Excel | `Workbook(names, sheets, sheet=, name=, books=, add_ins=)` | the innermost `LET`, then the defined name, else `#NAME?`; a cell is its value on its sheet and book, 0 if empty, `#REF!` if the sheet or book does not exist | a function is a built-in, then an add-in, else `#NAME?` |
+| Ccpp | `Scope(variables, functions=)` | the variable, typed by its value | a function is one the scope provides |
 
 Expressions may come from data, so nothing is imported or called unless the caller's scope provides it: an import
 resolves only what the scope allowlists, never by loading code.
@@ -393,6 +395,10 @@ same expression; and a translation keeps an expression's form, not always its va
 agree (operands of one type, values present), translations evaluate alike; elsewhere they do not: a missing property
 is unknown in Basic, masked in NumPy, `#FIELD!` in Excel and an error in Python and MATLAB, and `1 == 1.0` is unknown
 in Basic but true in the others.
+
+Basic and Ccpp translate into each other: Basic's operations are C's operators, `get` a member with `.`, and lets are
+inlined; `has`, members with `->`, typed constants and Basic's literals of value domains have no counterpart yet, and
+Ccpp translates to the other dialects through Basic, not directly.
 
 The bitwise operations translate to Python's operators and to MATLAB's and Excel's bit functions (`shr(a, n)` is
 MATLAB's `bitshift(a, -n)`); `bitnot` has no MATLAB or Excel counterpart, and the conversions and typed values have none

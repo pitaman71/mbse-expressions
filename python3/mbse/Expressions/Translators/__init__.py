@@ -8,14 +8,14 @@ from __future__ import annotations
 from mbse.Expressions.Framework.Terms import Dialect
 from mbse.Expressions.Framework.Translators import Pairwise
 
-from . import (Basic_Excel, Basic_Latex, Basic_Matlab, Basic_Python, Excel_Latex, Matlab_Excel, Matlab_Latex,
+from . import (Basic_Ccpp, Basic_Excel, Basic_Latex, Basic_Matlab, Basic_Python, Excel_Latex, Matlab_Excel, Matlab_Latex,
                Python_Excel, Python_Latex, Python_Matlab)
 
 __all__ = ["between", "TRANSLATORS"]
 
 TRANSLATORS: list[Pairwise] = [module.TRANSLATOR for module in (
-    Basic_Python, Basic_Matlab, Basic_Excel, Basic_Latex, Python_Matlab, Python_Excel, Python_Latex, Matlab_Excel,
-    Matlab_Latex, Excel_Latex)]
+    Basic_Python, Basic_Matlab, Basic_Excel, Basic_Latex, Basic_Ccpp, Python_Matlab, Python_Excel, Python_Latex,
+    Matlab_Excel, Matlab_Latex, Excel_Latex)]
 """Every pairwise translator."""
 
 

@@ -9,12 +9,13 @@ same order of statements.
 from __future__ import annotations
 
 from mbse.Expressions import Domains, Expressions
+from mbse.Expressions.Dialects.Ccpp import Expressions as Ccpp
 from mbse.Expressions.Dialects.Excel import Expressions as Excel
 from mbse.Expressions.Dialects.Latex import Expressions as Latex
 from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
 from mbse.Expressions.Dialects.Python import Expressions as Python
 
-CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections"]
+CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp"]
 
 
 def build():
@@ -78,6 +79,12 @@ def build():
     collections = E.let_("ports", this.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
         sizes.sum().le(ports.count()))).data
 
+    # --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+    me = Ccpp.identifier("this")
+    ccpp = Ccpp.conditional(Ccpp.binary("&&", Ccpp.unary("!", Ccpp.member(me, "a")), Ccpp.binary(
+        ">", Ccpp.subscript(Ccpp.member(me, "b", "->"), 0), Ccpp.constant(1.5, "float"))),
+        Ccpp.cast("uint8_t", Ccpp.call("f", 1)), Ccpp.constant(5, "unsigned int"))
+
     return {
         "expression": (E.OfLet.Schema, expression, E.Builders),
         "python": (P.DIALECT.schema_of(python), python, P.Builders),
@@ -85,5 +92,6 @@ def build():
         "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
         "domains": (E.OfOperation.Schema, domains, E.Builders),
         "collections": (E.OfLet.Schema, collections, E.Builders),
+        "ccpp": (Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders),
         "latex": (L.DIALECT.schema_of(latex), latex, L.Builders),
     }

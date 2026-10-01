@@ -3,7 +3,7 @@
 `python3/` and `typescript5/` implement the same package, and follow mbse-schemas' rules for equivalence
 ([`EQUIVALENCE.md`](../submodules/mbse-schemas/docs/EQUIVALENCE.md)): the same API and messages, byte-identical JSON,
 interchangeable data, the same test cases under the same IDs, and full coverage in both. This document covers what is
-specific to this package: the framework, the Basic, Python, Matlab, Excel and Latex dialects, and the translators
+specific to this package: the framework, the Basic, Python, Matlab, Excel, Latex and Ccpp dialects, and the translators
 between them.
 
 ## How it is checked
@@ -36,7 +36,7 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 |---|---|---|---|---|
 | Unknown | `None` | `null` | the respective "no value" | EVL-01..06 |
 | Evaluation scope and validation options | `Evaluators.OfAny(e, {"this": x})`, `validate(bound={"this"}, core=True)` | `Evaluators.OfAny(e, { this: x })`, `validate({ bound: ["this"], core: true })` | no keyword arguments; object literals are the idiom | EXP-10, EVL-01, EVL-04, EVL-06, FRM-05 |
-| Keyword arguments of the framework and dialects | `Pattern("operation", A, B, name="eq")`, `Python.Scope(variables, modules=..., builtins=...)`, `Matlab.Scope(variables, functions=..., packages=...)`, `Workbook(names, sheets, name=..., books=..., add_ins=...)`, `import_(module, body, alias=...)` | `new Pattern("operation", { name: "eq" }, A, B)`, `new Scope(variables, { modules, builtins })`, `new Scope(variables, { functions, packages })`, `new Workbook(names, sheets, { name, books, add_ins })`, `import_(module, body, alias)` | no keyword arguments: options objects, or positions for a single optional argument | TRN-01, DIA-02, DIA-05, DIA-08 |
+| Keyword arguments of the framework and dialects | `Pattern("operation", A, B, name="eq")`, `Python.Scope(variables, modules=..., builtins=...)`, `Matlab.Scope(variables, functions=..., packages=...)`, `Ccpp.Scope(variables, functions=...)`, `Workbook(names, sheets, name=..., books=..., add_ins=...)`, `import_(module, body, alias=...)` | `new Pattern("operation", { name: "eq" }, A, B)`, `new Scope(variables, { modules, builtins })`, `new Scope(variables, { functions, packages })` and `new Scope(variables, { functions })`, `new Workbook(names, sheets, { name, books, add_ins })`, `import_(module, body, alias)` | no keyword arguments: options objects, or positions for a single optional argument | TRN-01, DIA-02, DIA-05, DIA-08 |
 | Kinds and their structure | dataclasses with class variables; `kinds()`, `builders`, `Form.attributes` and `infer`'s environment are dicts | classes with static members; `kinds()`, `builders` and `Form.attributes` are `Map`s, `infer`'s environment an object | each language's idiom for records and maps | FRM-02..07 |
 | Expressions from functions | `Expressions.from_(lambda this: this.age >= 18)` reads the function's source with `ast` | none; EXP-12 asserts `from_` is absent | a JavaScript function has no Python source to read; terms write the same expressions in both | EXP-12 |
 | Reading Python source | `Python.Expressions.parse(source)`, with `ast` | none; DIA-01 asserts `parse` is absent | reading Python source needs Python's parser; constructors write the same expressions in both, and render the same source | DIA-01 |

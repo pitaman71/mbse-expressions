@@ -69,6 +69,13 @@ class Matlab:
     shr = P("call", A, P("unary", B, operator="-"), function="bitshift")  # a negative shift is to the right
 
 
+class Ccpp:
+    constant = staticmethod(lambda V: P("constant", value=V))  # untyped
+    identifier = P("identifier", name=N)
+    get = P("member", X, name=K)  # with '.'
+    implies = P("binary", P("unary", A, operator="!"), B, operator="||")
+
+
 class Excel:
     constant = staticmethod(lambda V: P("constant", value=V))
     name = P("name", name=N)

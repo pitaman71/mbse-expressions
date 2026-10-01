@@ -167,13 +167,63 @@ def _multiply(format: str, rounding: str, a: Datum, b: Datum) -> Datum:
                     exponent if base == 10 else None)
 
 
+def _multiplicity(n: int, factor: int) -> int:
+    """How many times `factor` divides `n > 0`, by squaring: a few divisions however many times it does."""
+    powers = []
+    power = factor
+    while n % power == 0:
+        powers.append(power)
+        power *= power
+    count = 0
+    for k, power in reversed(list(enumerate(powers))):
+        if n % power == 0:
+            n, count = n // power, count + (1 << k)
+    return count
+
+
+def _exact_exponent(num: int, den: int) -> int | None:
+    """The greatest exponent at which the positive quotient `num / den` is a whole coefficient, or None when its decimal
+    expansion does not end."""
+    common = math.gcd(num, den)
+    num, den = num // common, den // common
+    twos, fives = _multiplicity(den, 2), _multiplicity(den, 5)
+    if den != 2 ** twos * 5 ** fives:
+        return None
+    shift = max(twos, fives)
+    coefficient = num * 10 ** shift // den
+    return _multiplicity(coefficient, 10) - shift
+
+
+def _divide(format: str, rounding: str, a: Datum, b: Datum) -> Datum:
+    """The quotient; a decimal one that is exact keeps the exponent nearest the ideal one (the dividend's less the
+    divisor's) at which it is exact, as the General Decimal Arithmetic specification's divide does."""
+    negative = a.negative != b.negative
+    base, _, qmin, _ = _limits(format)
+    if a.special == "nan" or b.special == "nan" or (a.special and b.special):
+        return NAN
+    if a.special:
+        return Datum("inf", negative)
+    if b.special:  # a finite number over an infinity: a zero, of the least exponent
+        return round_to(format, rounding, negative, 0, 1, qmin)
+    if b.coefficient == 0:
+        return NAN if a.coefficient == 0 else Datum("inf", negative)
+    ideal = a.exponent - b.exponent
+    num, den = _scale(a.coefficient, b.coefficient, base, ideal)
+    if base == 2:
+        return round_to(format, rounding, negative, num, den)
+    exact = _exact_exponent(num, den) if num else ideal
+    return round_to(format, rounding, negative, num, den, None if exact is None else min(ideal, exact))
+
+
 def operate(name: str, format: str, rounding: str, values: list[object]) -> object:
-    """The value of the arithmetic operation `name` (`add`, `sub`, `mul` or `neg`) on values of `format`."""
+    """The value of the arithmetic operation `name` (`add`, `sub`, `mul`, `div` or `neg`) on values of `format`."""
     data = [decode(format, value) for value in values]
     if name == "neg":
         result = _negate(data[0])
     elif name == "mul":
         result = _multiply(format, rounding, data[0], data[1])
+    elif name == "div":
+        result = _divide(format, rounding, data[0], data[1])
     else:
         result = _add(format, rounding, data[0], data[1] if name == "add" else _negate(data[1]))
     return encode(format, result)

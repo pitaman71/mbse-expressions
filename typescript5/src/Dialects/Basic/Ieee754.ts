@@ -161,12 +161,60 @@ function multiply(format: string, rounding: string, a: Datum, b: Datum): Datum {
     base === 10n ? exponent : null);
 }
 
-/** The value of the arithmetic operation `name` (`add`, `sub`, `mul` or `neg`) on values of `format`. */
+function gcd(a: bigint, b: bigint): bigint {
+  while (b !== 0n) [a, b] = [b, a % b];
+  return a;
+}
+
+/** How many times `factor` divides `n > 0`, by squaring: a few divisions however many times it does. */
+function multiplicity(n: bigint, factor: bigint): number {
+  const powers: bigint[] = [];
+  for (let power = factor; n % power === 0n; power *= power) powers.push(power);
+  let count = 0;
+  for (let k = powers.length - 1; k >= 0; k--) {
+    const power = powers[k] as bigint;
+    if (n % power === 0n) {
+      n /= power;
+      count += 2 ** k;
+    }
+  }
+  return count;
+}
+
+/** The greatest exponent at which the positive quotient `num / den` is a whole coefficient, or null when its decimal
+ * expansion does not end. */
+function exactExponent(num: bigint, den: bigint): number | null {
+  const common = gcd(num, den);
+  [num, den] = [num / common, den / common];
+  const [twos, fives] = [multiplicity(den, 2n), multiplicity(den, 5n)];
+  if (den !== 2n ** BigInt(twos) * 5n ** BigInt(fives)) return null;
+  const shift = Math.max(twos, fives);
+  return multiplicity(num * 10n ** BigInt(shift) / den, 10n) - shift;
+}
+
+/** The quotient; a decimal one that is exact keeps the exponent nearest the ideal one (the dividend's less the
+ * divisor's) at which it is exact, as the General Decimal Arithmetic specification's divide does. */
+function divide(format: string, rounding: string, a: Datum, b: Datum): Datum {
+  const negative = a.negative !== b.negative;
+  const [base, , qmin] = limits(format);
+  if (a.special === "nan" || b.special === "nan" || (a.special !== null && b.special !== null)) return NAN;
+  if (a.special !== null) return new Datum("inf", negative);
+  if (b.special !== null) return round_to(format, rounding, negative, 0n, 1n, qmin); // a finite number over an infinity
+  if (b.coefficient === 0n) return a.coefficient === 0n ? NAN : new Datum("inf", negative);
+  const ideal = a.exponent - b.exponent;
+  const [num, den] = scale(a.coefficient, b.coefficient, base, ideal);
+  if (base === 2n) return round_to(format, rounding, negative, num, den);
+  const exact = num !== 0n ? exactExponent(num, den) : ideal;
+  return round_to(format, rounding, negative, num, den, exact === null ? null : Math.min(ideal, exact));
+}
+
+/** The value of the arithmetic operation `name` (`add`, `sub`, `mul`, `div` or `neg`) on values of `format`. */
 export function operate(name: string, format: string, rounding: string, values: readonly unknown[]): unknown {
   const data = values.map((value) => decode(format, value)) as Datum[];
   let result: Datum;
   if (name === "neg") result = negate(data[0] as Datum);
   else if (name === "mul") result = multiply(format, rounding, data[0] as Datum, data[1] as Datum);
+  else if (name === "div") result = divide(format, rounding, data[0] as Datum, data[1] as Datum);
   else result = add(format, rounding, data[0] as Datum, name === "add" ? data[1] as Datum : negate(data[1] as Datum));
   return encode(format, result);
 }

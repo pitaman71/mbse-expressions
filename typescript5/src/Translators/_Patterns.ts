@@ -65,6 +65,13 @@ export const Matlab = {
   shr: new P("call", { function: "bitshift" }, A, new P("unary", { operator: "-" }, B)), // a negative shift is to the right
 };
 
+export const Ccpp = {
+  constant: (V: Hole) => new P("constant", { value: V }), // untyped
+  identifier: new P("identifier", { name: N }),
+  get: new P("member", { name: K }, X), // with '.'
+  implies: new P("binary", { operator: "||" }, new P("unary", { operator: "!" }, A), B),
+};
+
 export const Excel = {
   constant: (V: Hole) => new P("constant", { value: V }),
   name: new P("name", { name: N }),

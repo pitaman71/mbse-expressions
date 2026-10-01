@@ -10,13 +10,14 @@
 
 import * as Domains from "../Dialects/Basic/Domains.js";
 import * as Expressions from "../Dialects/Basic/Expressions.js";
+import * as Ccpp from "../Dialects/Ccpp/Expressions.js";
 import * as Excel from "../Dialects/Excel/Expressions.js";
 import * as Latex from "../Dialects/Latex/Expressions.js";
 import * as Matlab from "../Dialects/Matlab/Expressions.js";
 import * as Python from "../Dialects/Python/Expressions.js";
 import type { Schemas, Visitors } from "@mbse/schemas/Framework";
 
-export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections"] as const;
+export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp"] as const;
 
 type Case = [Schemas.OfObject.Data, Visitors.Visitable, unknown];
 
@@ -81,6 +82,12 @@ export function build(): Map<string, Case> {
   const collections = E.let_("ports", self.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
     sizes.sum().le(ports.count()))).data;
 
+  // --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+  const me = Ccpp.identifier("this");
+  const ccpp = Ccpp.conditional(Ccpp.binary("&&", Ccpp.unary("!", Ccpp.member(me, "a")), Ccpp.binary(
+    ">", Ccpp.subscript(Ccpp.member(me, "b", "->"), 0n), Ccpp.constant(1.5, "float"))),
+    Ccpp.cast("uint8_t", Ccpp.call("f", 1n)), Ccpp.constant(5n, "unsigned int"));
+
   return new Map<string, Case>([
     ["expression", [E.OfLet.Schema, expression, E.Builders]],
     ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
@@ -88,6 +95,7 @@ export function build(): Map<string, Case> {
     ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
     ["domains", [E.OfOperation.Schema, domains, E.Builders]],
     ["collections", [E.OfLet.Schema, collections, E.Builders]],
+    ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],
     ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],
   ]);
 }

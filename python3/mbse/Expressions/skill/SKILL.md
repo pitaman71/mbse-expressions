@@ -16,6 +16,8 @@ languages, called dialects:
 - **Python**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules.
 - **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.
+- **Ccpp**, C and C++ expressions over their arithmetic types: it renders as C source and evaluates by C's rules
+  (promotions, wrapping unsigned arithmetic, undefined behavior raising); it translates to and from Basic.
 
 ## When to use it
 

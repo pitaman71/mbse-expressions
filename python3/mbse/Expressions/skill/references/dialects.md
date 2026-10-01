@@ -14,6 +14,7 @@ and `Framework.Symbolics.free(expression)` tells which names it needs from its s
 | **Matlab** | MATLAB source, for rules that live in MATLAB code or Simulink models |
 | **Excel** | worksheet formulas, for rules that live in spreadsheets, over cells and records |
 | **Latex** | notation, for rules in documents and specifications; it has no evaluator: translate to evaluate |
+| **Ccpp** | C and C++ source, for rules over the types of embedded software and interface control documents (`uint8_t`, `float`) |
 
 Write a rule in Basic, and translate it where it must run; read one written elsewhere back into Basic to analyze it.
 
@@ -47,6 +48,7 @@ L.render(e)                                              # a \geq \frac{36}{2} \
 | Matlab | error (`isfield` tests first) | true | two-valued, short-circuit | numbers are doubles; `+` concatenates strings |
 | Excel | `#FIELD!` | TRUE | `AND`/`OR` evaluate every argument | errors are values that propagate; text compares ignoring case |
 | Latex | no evaluator | | | translate to a dialect that evaluates |
+| Ccpp | `KeyError` (no member) | true, after the usual conversions | `&&`/`\|\|` short-circuit, give `bool` | unsigned wraps; undefined behavior (signed overflow, ...) raises |
 
 ## Scopes: names, imports and references
 
