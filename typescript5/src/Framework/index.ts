@@ -4,6 +4,7 @@
 export * as Domains from "./Domains.js";
 export * as Errors from "./Errors.js";
 export * as Evaluators from "./Evaluators.js";
+export * as Partials from "./Partials.js";
 export * as Symbolics from "./Symbolics.js";
 export * as Terms from "./Terms.js";
 export * as Translators from "./Translators.js";

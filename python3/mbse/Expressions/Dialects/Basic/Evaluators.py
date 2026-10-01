@@ -37,7 +37,7 @@ from mbse.Schemas.Framework.Visitors import Native
 from . import Domains, Expressions, Ieee754
 
 __all__ = ["OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "OfQuantifier", "predicate", "OPERATIONS",
-           "QUANTIFIERS"]
+           "QUANTIFIERS", "INTERPRETER"]
 
 Scope = Mapping[str, Any] | None
 
@@ -522,38 +522,39 @@ OPERATIONS: dict[str, F.Implementation] = {
 }
 """The implementation of each core operation."""
 
-_interpreter = F.Interpreter(Expressions.DIALECT, {"operation": OPERATIONS, "quantifier": QUANTIFIERS},
-                             typed=Domains.Value)
+INTERPRETER = F.Interpreter(Expressions.DIALECT, {"operation": OPERATIONS, "quantifier": QUANTIFIERS},
+                            typed=Domains.Value)
+"""The interpreter of the Basic dialect, which `Partials` reduces with."""
 
 
 def OfAny(expression: Expressions.OfAny.Spec, scope: Scope = None) -> Any:
     """The value of any expression, with the variables in `scope` bound."""
-    return _interpreter(Expressions.OfAny.resolve(expression), scope)
+    return INTERPRETER(Expressions.OfAny.resolve(expression), scope)
 
 
 def OfLiteral(expression: Expressions.OfLiteral.Spec, scope: Scope = None) -> Any:
     """The value of a literal."""
-    return _interpreter(Expressions.OfLiteral.resolve(expression), scope)
+    return INTERPRETER(Expressions.OfLiteral.resolve(expression), scope)
 
 
 def OfOperation(expression: Expressions.OfOperation.Spec, scope: Scope = None) -> Any:
     """The value of an operation, with the variables in `scope` bound."""
-    return _interpreter(Expressions.OfOperation.resolve(expression), scope)
+    return INTERPRETER(Expressions.OfOperation.resolve(expression), scope)
 
 
 def OfVariable(expression: Expressions.OfVariable.Spec, scope: Scope = None) -> Any:
     """The value `scope` binds to a variable."""
-    return _interpreter(Expressions.OfVariable.resolve(expression), scope)
+    return INTERPRETER(Expressions.OfVariable.resolve(expression), scope)
 
 
 def OfLet(expression: Expressions.OfLet.Spec, scope: Scope = None) -> Any:
     """The value of a let's body, with its name bound to its value and the variables in `scope` bound."""
-    return _interpreter(Expressions.OfLet.resolve(expression), scope)
+    return INTERPRETER(Expressions.OfLet.resolve(expression), scope)
 
 
 def OfQuantifier(expression: Expressions.OfQuantifier.Spec, scope: Scope = None) -> Any:
     """The value of a quantifier, with the variables in `scope` bound."""
-    return _interpreter(Expressions.OfQuantifier.resolve(expression), scope)
+    return INTERPRETER(Expressions.OfQuantifier.resolve(expression), scope)
 
 
 def predicate(predicate: Expressions.OfAny.Spec, value: Any) -> bool | None:

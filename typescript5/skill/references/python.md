@@ -83,6 +83,7 @@ E.DIALECT.infer(expression, {"this": Domains.Object})       # from mbse.Expressi
 # Evaluation: a scope, or a mapping of variables.
 Evaluators.OfAny(expression, {"this": value})               # True, False, a value, or None when unknown
 Evaluators.predicate(rule, value)                           # binds this; True, False, or None when unknown
+Partials.OfAny(rule, {"this": value})                       # the residual: what is known evaluated, the rest an expression
 
 # Storage, traversal, translation: the same calls in every dialect.
 JSON.ToJSON.Reachable(E.DIALECT.schema_of(e), e); JSON.FromJSON(E.Builders).Reachable(schema, text)

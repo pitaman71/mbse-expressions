@@ -524,37 +524,38 @@ export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string,
   ["sum", strict(sum)], ["min", strict(extreme)], ["max", strict(extreme)], ["entries", strict(entries)],
 ]);
 
-const interpreter = new F.Interpreter(Expressions.DIALECT, new Map([["operation", OPERATIONS], ["quantifier", QUANTIFIERS]]),
+/** The interpreter of the Basic dialect, which `Partials` reduces with. */
+export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map([["operation", OPERATIONS], ["quantifier", QUANTIFIERS]]),
   { typed: (domain, value) => new Domains.Value(domain, value) });
 
 /** The value of any expression, with the variables in `scope` bound. */
 export function OfAny(expression: Expressions.OfAny.Spec, scope: Scope = {}): unknown {
-  return interpreter.run(Expressions.OfAny.resolve(expression), scope);
+  return INTERPRETER.run(Expressions.OfAny.resolve(expression), scope);
 }
 
 /** The value of a literal. */
 export function OfLiteral(expression: Expressions.OfLiteral.Spec, scope: Scope = {}): unknown {
-  return interpreter.run(Expressions.OfLiteral.resolve(expression), scope);
+  return INTERPRETER.run(Expressions.OfLiteral.resolve(expression), scope);
 }
 
 /** The value of an operation, with the variables in `scope` bound. */
 export function OfOperation(expression: Expressions.OfOperation.Spec, scope: Scope = {}): unknown {
-  return interpreter.run(Expressions.OfOperation.resolve(expression), scope);
+  return INTERPRETER.run(Expressions.OfOperation.resolve(expression), scope);
 }
 
 /** The value `scope` binds to a variable. */
 export function OfVariable(expression: Expressions.OfVariable.Spec, scope: Scope = {}): unknown {
-  return interpreter.run(Expressions.OfVariable.resolve(expression), scope);
+  return INTERPRETER.run(Expressions.OfVariable.resolve(expression), scope);
 }
 
 /** The value of a let's body, with its name bound to its value and the variables in `scope` bound. */
 export function OfLet(expression: Expressions.OfLet.Spec, scope: Scope = {}): unknown {
-  return interpreter.run(Expressions.OfLet.resolve(expression), scope);
+  return INTERPRETER.run(Expressions.OfLet.resolve(expression), scope);
 }
 
 /** The value of a quantifier, with the variables in `scope` bound. */
 export function OfQuantifier(expression: Expressions.OfQuantifier.Spec, scope: Scope = {}): unknown {
-  return interpreter.run(Expressions.OfQuantifier.resolve(expression), scope);
+  return INTERPRETER.run(Expressions.OfQuantifier.resolve(expression), scope);
 }
 
 /** Whether `value` satisfies the rule `predicate`, evaluated with `this` bound to it; `null` if unknown. */

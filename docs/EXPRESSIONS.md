@@ -312,6 +312,14 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
   argument and the scope, so each dialect decides what to evaluate and when; operators outside a closed vocabulary go
   to an `extension`, which is how Matlab and Excel call the functions their scopes provide. It raises what `validate`
   reports.
+- `Partials` is partial evaluation, a peer of `Evaluators`: `Reducer(interpreter, literal, simplify)` evaluates every
+  subexpression whose references the given variables determine and replaces it with the literal of its value, when the
+  dialect has one (an object, a collection or an unknown value has none, and its subexpression stays); a binding of a
+  known value binds it in its body and stays only while the body refers to it; other nodes are rebuilt from their
+  reduced arguments unless the dialect's `simplify` decides them from what is known. The result, the residual, is an
+  expression of the same dialect that agrees with the original wherever the original evaluates without raising.
+  Basic's `Partials.OfAny(expression, variables)` simplifies with Kleene's logic (`and(false, x)` is false, `and(true,
+  x)` is `x`, `implies(false, x)` is true).
 - `Errors` names the exceptions evaluation raises beyond mbse-schemas' own (`NameError`, `ImportError`,
   `OverflowError`, `ZeroDivisionError`): Python's own in Python, and classes of the same names in TypeScript.
 
@@ -418,6 +426,8 @@ alike only there.
   standard defines, rather than free representation parameters: no float format by widths and flags, no ones'
   complement or sign-magnitude integers, no `Decimal` apart from IEEE 754's decimal formats. The dialect keeps its
   name, Basic, which mbse-schemas' neutral token format (`basic`) shares.
+- Partial evaluation gives a residual expression, never only a value: a literal when everything is known, otherwise
+  the simplified remainder, which serializes and translates like any expression.
 - Collections: lists and an object's entries (`entries`), read as `Domains.Collection`s whose items are their values
   and keys address them; the quantifiers are a binding kind, `OfQuantifier` (`all`, `any`, `count`), and the operations
   `count`, `item`, `in`, `sum`, `min`, `max` and `unique` join the core; collection domains (`List`, `Keyed`) serve

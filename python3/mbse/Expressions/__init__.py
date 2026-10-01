@@ -10,6 +10,6 @@ most mistakes, and which reference to load for a task.
 framework is `mbse.Expressions.Framework`, the dialects are under `mbse.Expressions.Dialects`, and the translators
 between them under `mbse.Expressions.Translators`."""
 
-from .Dialects.Basic import Domains, Evaluators, Expressions
+from .Dialects.Basic import Domains, Evaluators, Expressions, Partials
 
-__all__ = ["Expressions", "Evaluators", "Domains"]
+__all__ = ["Expressions", "Evaluators", "Domains", "Partials"]

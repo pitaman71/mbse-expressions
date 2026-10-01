@@ -13,3 +13,4 @@
 export * as Domains from "./Dialects/Basic/Domains.js";
 export * as Evaluators from "./Dialects/Basic/Evaluators.js";
 export * as Expressions from "./Dialects/Basic/Expressions.js";
+export * as Partials from "./Dialects/Basic/Partials.js";
