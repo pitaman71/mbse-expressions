@@ -206,6 +206,13 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
   `Expressions.<Dialect>.Of<Kind>` (Basic keeps its names), the union discriminated by Basic's
   `eq(get(this, 'kind'), tag)`, the registry, validation and inference. Every dialect shares the relation
   `Expressions.Arguments`.
+- **Expressions are typed bindings of their meta-schemas.** A kind's meta-schema is the source of truth for its
+  data, and `Declared` binds the kind's data class to it with mbse-schemas' `Bindings`: the kind gives `read` and
+  `make`, between its fields and the schema's properties and the `arguments` entries, and declares `kind` fixed, a
+  literal's native properties exclusive and `used_by` implied. Builders, `accept` and the registry are then
+  mbse-schemas' generic ones, and every property kind the schema declares is supported alike: a literal's `domain` is
+  an ordinary property holding a value object (a `ValueProperty`), with no holder schema.
+  `Terms` keeps what is the framework's own: roles, forms, validation, inference and dialect declaration.
 - The roles are what validation, inference, evaluation and translation understand without knowing the dialect:
   `literal` (a native value), `reference` (what the scope resolves: the value bound to a name, or a cell), `application`
   (an operator applied to arguments), `binding` (binds a name to its first argument within the others) and `import`
@@ -336,6 +343,9 @@ in Basic but true in the others.
   standard defines, rather than free representation parameters: no float format by widths and flags, no ones'
   complement or sign-magnitude integers, no `Decimal` apart from IEEE 754's decimal formats. The dialect keeps its
   name, Basic, which mbse-schemas' neutral token format (`basic`) shares.
+- Expressions are a program's own classes bound to their meta-schemas with mbse-schemas' `Bindings`, not builders of
+  their own: what is generic to any schema (visitor protocols over a state, finalizing, the registry, value objects in
+  properties) lives once, in mbse-schemas, and `Terms` gives only `read`, `make` and the DSL.
 
 - Expressions are `Expressions.OfAny`, `OfLiteral`, `OfOperation`, `OfVariable` and `OfLet`, each with `Data`,
   `Builder`, `Spec` and a meta-schema `Schema` that is an ordinary registered object schema tagged by `kind`. Arguments

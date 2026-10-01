@@ -77,7 +77,7 @@ class _LiteralData(F.Node):
     KIND = "literal"
     ROLE = F.LITERAL
     VALUE = F.NATIVES
-    VALUES = {"domain": F.ValueField(Domains.Schema, Domains.to_plain, Domains.from_plain)}
+    VALUES = {"domain": F.ValueProperty(Domains.Schema, Domains.to_plain, Domains.from_plain)}
     value: Native | None = None
     domain: Any = None  # a value domain, or None for the value's native's default
 

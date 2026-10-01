@@ -61,7 +61,7 @@ class _LiteralData extends F.Node {
   static override KIND = "literal";
   static override ROLE = F.LITERAL;
   static override VALUE = F.NATIVES;
-  static override VALUES = new Map([["domain", new F.ValueField(Domains.Schema, Domains.to_plain,
+  static override VALUES = new Map([["domain", new F.ValueProperty(Domains.Schema, Domains.to_plain,
     (plain) => Domains.from_plain(plain as Map<string, never>))]]);
   declare value: unknown;
   /** A value domain, or null for the value's native's default. */

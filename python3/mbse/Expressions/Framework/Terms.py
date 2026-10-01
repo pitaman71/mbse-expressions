@@ -29,9 +29,14 @@ data model and what `role` it plays, and passes the classes to `Declared`, which
   scope resolves the declaration; `binds()` gives the names it binds for lexical references.
 
 Properties are required unless named in `OPTIONAL`, and `check()` adds a kind's own problems to validation. `VALUES`
-names fields that hold a value object rather than a native, each described by a `ValueField` (its schema and plain
-form), such as a literal's domain; they are written and read through mbse-schemas' proxies of a holder schema,
-registered as '<kind's schema name>.<field>'. `typed()` gives a literal's own domain, if it has one. Arguments
+names properties that hold a value object rather than a native, each described by a `ValueProperty` (its schema, and the
+conversions between the field's data and the value's plain form), such as a literal's domain. `typed()` gives a
+literal's own domain, if it has one.
+
+Each kind's data is bound to its meta-schema with mbse-schemas' `Bindings`: the kind's fields are read into a
+`Bindings.State` (its properties, and its `arguments` entries) and made from one, with `kind` fixed, a literal's native
+properties exclusive and `used_by` implied. `accept`, the builders' visitor protocols and the registry `Builders` are
+the generic ones; `Builder` adds the DSL. Arguments
 are fields too: `SLOTS` names fields holding one argument each, in index order, and `VARIADIC` names one field holding a
 tuple of the arguments after the slots. Both are written as entries of the adjacency `arguments`, to the relation `Arguments`
 (registered as 'Expressions.Arguments' and shared by every dialect), which links a `parent` to an `argument` with an
@@ -45,13 +50,13 @@ import math
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from typing import Any, ClassVar, Protocol, runtime_checkable
 
-from mbse.Schemas.Framework import Plain, Proxies, Schemas, Visitors
+from mbse.Schemas.Framework import Bindings, Proxies, Schemas, Visitors
 from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains
 
 __all__ = [
-    "Form", "Expression", "Dialect", "Node", "Builder", "AnyBuilder", "Term", "Registry", "Declared", "ValueField",
+    "Form", "Expression", "Dialect", "Node", "Builder", "AnyBuilder", "Term", "Declared", "ValueProperty",
     "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "ARGUMENTS", "Arguments", "NATIVES",
     "walk", "fold", "same", "resolve", "name_of",
 ]
@@ -73,10 +78,6 @@ def _native_name(value: object) -> str | None:
 
 def _article(noun: str) -> str:
     return f"{'an' if noun[0] in 'aeiou' else 'a'} {noun}"
-
-
-def _set(visitor: Any, name: str, value: Native) -> None:
-    visitor.property(name, lambda p: p.value(lambda a: a.as_native(lambda n: n.set(value))))
 
 
 # --- Protocols ---
@@ -108,7 +109,7 @@ class Dialect(Protocol):
     """An expression language: its kinds, their meta-schemas and builders, and its static checks."""
 
     Schema: Schemas.OfUnion.Data
-    Builders: Registry
+    Builders: Bindings.Registry
 
     def name(self) -> str: ...
 
@@ -142,18 +143,12 @@ class Dialect(Protocol):
 # --- Data ---
 
 
-class ValueField:
-    """A field that holds a value object rather than a native: the `schema` of its value, and the conversions between
+class ValueProperty:
+    """A property that holds a value object rather than a native: the `schema` of its value, and the conversions between
     the field's data and the value's plain form."""
 
     def __init__(self, schema: Schemas.OfAny.Data, to_plain: Callable[[Any], Any], from_plain: Callable[[Any], Any]):
         self.schema, self.to_plain, self.from_plain = schema, to_plain, from_plain
-
-
-def _holder(kind: type[Node], name: str, value: Any) -> Any:
-    """A proxy of the holder schema of `kind`'s field `name`, holding `value`."""
-    plain = {"root": "s0", "objects": {"s0": {name: kind.VALUES[name].to_plain(value)}}}
-    return Plain.FromPlain(Proxies.Builders)(kind.HOLDERS[name], plain)
 
 
 class Node:
@@ -175,8 +170,8 @@ class Node:
     OPERATOR: ClassVar[str | None] = None
     VOCABULARY: ClassVar[Mapping[str, Domains.Signature] | None] = None
     SIGNATURE: ClassVar[Domains.Signature | None] = None
-    VALUES: ClassVar[Mapping[str, ValueField]] = {}
-    HOLDERS: ClassVar[Mapping[str, Schemas.OfObject.Data]] = {}
+    VALUES: ClassVar[Mapping[str, ValueProperty]] = {}
+    BINDING: ClassVar[Bindings.Binding]
 
     def identity(self) -> Hashable:
         return id(self)
@@ -194,18 +189,9 @@ class Node:
     def accept(self, visitor: Visitors.OfObject) -> None:
         """Writes the tag, the value into the property named after its native type, the other properties, then one
         `arguments` entry per argument, in order, with its index."""
-        _set(visitor, "kind", self.KIND)
         if self.VALUE is not None and self.value is not None:  # type: ignore[attr-defined]
-            _set(visitor, _check_value(type(self), self.value), self.value)  # type: ignore[attr-defined]
-        for name in self.PROPERTIES:
-            if getattr(self, name) is not None:
-                _set(visitor, name, getattr(self, name))
-        for name in self.VALUES:
-            if getattr(self, name) is not None:
-                _holder(type(self), name, getattr(self, name)).accept(visitor)  # writes the property `name`
-        for index, argument in enumerate(self._arguments()):
-            if argument is not None:
-                _write_argument(visitor, index, argument)
+            _check_value(type(self), self.value)  # type: ignore[attr-defined]
+        Bindings.accept(self.BINDING, self, visitor)
 
     def _arguments(self) -> tuple[Any, ...]:
         fixed = tuple(getattr(self, slot) for slot in self.SLOTS)
@@ -256,185 +242,86 @@ def _check_value(kind: type[Node], value: Any) -> str:
     return name
 
 
-def _write_argument(visitor: Visitors.OfObject, index: int, argument: Any) -> None:
-    def fill(entry: Visitors.OfEntry) -> None:
-        entry.link("argument", lambda k: k.set(argument))
-        _set(entry, "index", index)
-
-    visitor.adjacency("arguments", lambda a: a.add(fill))
+# --- Bindings: a kind's fields in its meta-schema's terms ---
 
 
-# --- Builders: Visitors that build Data ---
+def _read(instance: Node) -> Bindings.State:
+    """A node's state: its value under the property named after its native type (under `value` when it has none), its
+    other properties, its value properties in their plain form, and its arguments as `arguments` entries."""
+    kind = type(instance)
+    values: dict[str, Any] = {}
+    if kind.VALUE is not None and instance.value is not None:  # type: ignore[attr-defined]
+        name = _native_name(instance.value)  # type: ignore[attr-defined]
+        values[name if name in kind.VALUE else "value"] = instance.value  # type: ignore[attr-defined, operator]
+    values.update({name: getattr(instance, name) for name in kind.PROPERTIES})
+    for name, field in kind.VALUES.items():
+        if getattr(instance, name) is not None:
+            values[name] = field.to_plain(getattr(instance, name))
+    arguments = [Bindings.Entry({"argument": argument}, {"index": index})
+                 for index, argument in enumerate(instance._arguments()) if argument is not None]
+    return Bindings.State(values, {"arguments": arguments} if _parent(kind) else {})
 
 
-class _Field:
-    """`Visitors.OfProperty`, `OfAny` and `OfNative` over one native-typed field of a builder."""
-
-    def __init__(self, name: str, native: type[Native], read: Callable[[], Any], write: Callable[[Any], None]):
-        self._name, self._native, self._read, self._write = name, native, read, write
-
-    def name(self) -> str:
-        return self._name
-
-    def has(self) -> bool:
-        return type(self._read()) is self._native
-
-    def get(self) -> Native:
-        if not self.has():
-            raise AttributeError(f"property {self._name!r} is not set")
-        return self._read()
-
-    def set(self, value: Native) -> _Field:
-        if type(value) is not self._native:
-            raise TypeError(f"expected {self._native.__name__}, got {_type_name(value)}")
-        self._write(value)
-        return self
-
-    def clear(self) -> _Field:
-        if self.has():
-            self._write(None)
-        return self
-
-    def value(self, callback: Callable[[Visitors.OfAny], Any]) -> _Field:
-        callback(self)
-        return self
-
-    def as_native(self, callback: Callable[[Visitors.OfNative], Any]) -> _Field:
-        callback(self)
-        return self
-
-    def as_object(self, callback: Callable[[Visitors.OfObject], Any]) -> _Field:
-        raise TypeError(f"property {self._name!r} is native")
-
-    def as_union(self, callback: Callable[[Visitors.OfUnion], Any]) -> _Field:
-        raise TypeError(f"property {self._name!r} is native")
-
-    def as_intersection(self, callback: Callable[[Visitors.OfIntersection], Any]) -> _Field:
-        raise TypeError(f"property {self._name!r} is native")
-
-    def as_indexed(self, callback: Callable[[Visitors.OfIndexed], Any]) -> _Field:
-        raise TypeError(f"property {self._name!r} is native")
+def _parent(kind: type[Node]) -> bool:
+    return bool(kind.SLOTS) or kind.VARIADIC is not None
 
 
-class _ValueSlot:
-    """`Visitors.OfProperty` over a builder's field that holds a value object, such as a literal's domain: written and
-    read through a proxy of the field's holder schema, whose builders do the work."""
-
-    def __init__(self, builder: Builder, name: str):
-        self._builder, self._name = builder, name
-
-    def name(self) -> str:
-        return self._name
-
-    def has(self) -> bool:
-        return self._builder._values.get(self._name) is not None
-
-    def value(self, callback: Callable[[Visitors.OfAny], Any]) -> _ValueSlot:
-        kind, name = self._builder._data, self._name
-        current = self._builder._values.get(name)
-        holder = None if current is None else _holder(kind, name, current)
-        builder = getattr(Proxies.Builders, f"{kind.NAME}.{name}")(holder)
-        builder.property(name, lambda p: p.value(callback))
-        made = builder.create() if holder is None else builder.update()
-        plain = Plain.ToPlain(kind.HOLDERS[name], made)["objects"]["s0"].get(name)  # type: ignore[index, union-attr]
-        self._builder._values[name] = None if plain is None else kind.VALUES[name].from_plain(plain)
-        return self
-
-    def clear(self) -> _ValueSlot:
-        self._builder._values[self._name] = None
-        return self
+def _value(kind: type[Node], values: Mapping[str, Any]) -> Any:
+    """A literal's value: the one native property it holds, or the value it holds under `value`."""
+    return next((values[name] for name in kind.VALUE if values.get(name) is not None), values.get("value"))  # type: ignore[union-attr]
 
 
-class _Link:
-    """`Visitors.OfLink` over the one link an argument entry sets."""
-
-    def __init__(self, entry: _Argument):
-        self._entry = entry
-
-    def name(self) -> str:
-        return self._entry.other
-
-    def target(self, callback: Callable[[Visitors.Visitable], Any]) -> _Link:
-        if self._entry.target is None:
-            raise ValueError(f"link {self._entry.other!r} is not set")
-        callback(self._entry.target)
-        return self
-
-    def set(self, target: Visitors.Visitable) -> _Link:
-        self._entry.target = target
-        return self
+def _check_target(kind: type[Node], entry: Bindings.Entry) -> Any:
+    target = entry.links.get("argument")
+    if target is None:
+        raise ValueError("link 'argument' is not set")
+    if not isinstance(target, kind.DIALECT.classes):
+        raise TypeError(f"an argument must be an expression, got {_type_name(target)}")
+    return target
 
 
-class _Argument:
-    """`Visitors.OfEntry` for one entry of `Arguments`, seen from the end that fills `me`: it sets the other link and
-    the `index`."""
-
-    def __init__(self, me: str, target: Any = None, index: int | None = None):
-        self.other = "argument" if me == "parent" else "parent"
-        self.target, self.index = target, index
-
-    def _index(self) -> _Field:
-        return _Field("index", int, lambda: self.index, lambda value: setattr(self, "index", value))
-
-    def links(self, callback: Callable[[Visitors.OfLink], Any]) -> _Argument:
-        callback(_Link(self))
-        return self
-
-    def link(self, name: str, callback: Callable[[Visitors.OfLink], Any]) -> _Argument:
-        if name != self.other:
-            raise KeyError(f"{name!r} is not a link this entry can set")
-        callback(_Link(self))
-        return self
-
-    def properties(self, callback: Callable[[Visitors.OfProperty], Any]) -> _Argument:
-        if self.index is not None:
-            callback(self._index())
-        return self
-
-    def has(self, name: str) -> bool:
-        return name == "index" and self.index is not None
-
-    def property(self, name: str, callback: Callable[[Visitors.OfProperty], Any]) -> _Argument:
-        if name != "index":
-            raise KeyError(f"unknown property {name!r}")
-        callback(self._index())
-        return self
-
-    def clear(self, name: str) -> _Argument:
-        if name == "index":
-            self.index = None
-        return self
+def _make(kind: type[Node], state: Bindings.State) -> Any:
+    """The node a state holds: its fields from the properties, and its arguments from the `arguments` entries, the
+    slots by index and the variadic ones in index order."""
+    values = state.values
+    fields: dict[str, Any] = {name: values.get(name) for name in kind.PROPERTIES}
+    if kind.VALUE is not None:
+        fields["value"] = _value(kind, values)
+    for name, field in kind.VALUES.items():
+        fields[name] = None if values.get(name) is None else field.from_plain(values[name])
+    entries = state.entries.get("arguments", [])
+    parts: list[Any] = [None] * len(kind.SLOTS)
+    rest: list[Bindings.Entry] = []
+    for entry in entries:
+        index = entry.properties.get("index")
+        if index in range(len(kind.SLOTS)):
+            parts[index] = _check_target(kind, entry)
+        elif kind.VARIADIC is not None:
+            rest.append(entry)
+        else:
+            raise ValueError(_slots_message(kind, index))
+    fields.update(zip(kind.SLOTS, parts))
+    if kind.VARIADIC is not None:
+        last = len(entries) + len(kind.SLOTS)
+        ordered = sorted(rest, key=lambda entry: last if entry.properties.get("index") is None else entry.properties["index"])
+        fields[kind.VARIADIC] = tuple(_check_target(kind, entry) for entry in ordered)
+    return kind(**fields)
 
 
-class _Adjacency:
-    """`Visitors.OfAdjacency` over a parent's `arguments`, or over `used_by`, whose entries are ignored (the parents'
-    arguments imply them)."""
+def _assign(kind: type[Node], instance: Any, state: Bindings.State) -> Any:
+    made = _make(kind, state)
+    for name in kind.FIELDS:
+        setattr(instance, name, getattr(made, name))
+    return instance
 
-    def __init__(self, name: str, me: str, entries: list[_Argument] | None):
-        self._name, self._me, self._entries = name, me, entries
 
-    def name(self) -> str:
-        return self._name
+def _binding(kind: type[Node]) -> Bindings.Binding:
+    return Bindings.Binding(kind.Schema, _read, lambda state: _make(kind, state),  # type: ignore[attr-defined]
+                            lambda instance, state: _assign(kind, instance, state), fixed={"kind": kind.KIND},
+                            exclusive=[(*kind.VALUE, "value")] if kind.VALUE is not None else (), implied=["used_by"])
 
-    def me(self) -> str:
-        return self._me
 
-    def entries(self, callback: Callable[[Visitors.OfEntry], Any]) -> _Adjacency:
-        for entry in list(self._entries or []):
-            callback(entry)
-        return self
-
-    def add(self, callback: Callable[[Visitors.OfEntry], Any]) -> _Adjacency:
-        entry = _Argument(self._me)
-        callback(entry)
-        if self._entries is not None:
-            self._entries.append(entry)
-        return self
-
-    def remove(self, entry: Visitors.OfEntry) -> _Adjacency:
-        if self._entries is not None:
-            self._entries[:] = [e for e in self._entries if e is not entry]
-        return self
+# --- Builders ---
 
 
 def _slots_message(kind: type[Node], index: Any) -> str:
@@ -444,163 +331,55 @@ def _slots_message(kind: type[Node], index: Any) -> str:
     return f"{_article(kind.KIND)}'s {listed}, got index {index}"
 
 
-class Builder:
-    """Shared by every kind's builder: `create()` / `clone()` / `update()` with the rules and messages of every
-    builder, and `Visitors.OfObject` over the tag `kind`, the kind's native properties and its `arguments` entries.
-    None of them validate. DSL: `.set(name, native)` sets a property ('value' is a literal's value),
-    `.arguments(*specs)` appends arguments to a variadic kind and `.argument(slot, spec)` fills a slot; specs are
-    resolved by the dialect."""
+class Builder(Bindings.Builder):
+    """A kind's builder: mbse-schemas' generic `Bindings.Builder` over the kind's binding, so `create()` / `clone()` /
+    `update()` and `Visitors.OfObject`, with the DSL. None of them validate. DSL: `.set(name, native)` sets a property
+    ('value' is a literal's value), `.arguments(*specs)` appends arguments to a variadic kind and `.argument(slot, spec)`
+    fills a slot; specs are resolved by the dialect."""
 
     _data: ClassVar[type[Node]]
 
     def __init__(self, instance: Any = None):
         if instance is not None and type(instance) is not self._data:
             raise TypeError(f"expected {self._data.KIND} data to build from, got {_type_name(instance)}")
-        self._source = instance
-        self._value: Any = None
-        self._values: dict[str, Any] = {}
-        self._arguments: list[_Argument] = []
-        if instance is not None:
-            self._value = instance.value if self._data.VALUE is not None else None
-            self._values = {name: getattr(instance, name) for name in (*self._data.PROPERTIES, *self._data.VALUES)}
-            self._arguments = [_Argument("parent", argument, index)
-                               for index, argument in enumerate(instance._arguments()) if argument is not None]
+        super().__init__(self._data.BINDING, instance)
 
     # DSL
 
-    def set(self, name: str, value: Native) -> Any:
-        if name == "value" and self._data.VALUE is not None:
-            self._value = value
-        elif name in self._data.PROPERTIES or name in self._data.VALUES:
-            self._values[name] = value
+    def set(self, name: str, value: Any) -> Any:
+        kind, values = self._data, self.state.values
+        if name == "value" and kind.VALUE is not None:
+            for other in (*kind.VALUE, "value"):
+                values.pop(other, None)
+            native = _native_name(value)
+            values[native if native in kind.VALUE else "value"] = value  # None, or a non-native, is held as `value`
+        elif name in kind.PROPERTIES:
+            values[name] = value
+        elif name in kind.VALUES:
+            values[name] = None if value is None else kind.VALUES[name].to_plain(value)
         else:
-            raise KeyError(f"{_article(self._data.KIND)} has no attribute {name!r}")
+            raise KeyError(f"{_article(kind.KIND)} has no attribute {name!r}")
         return self
+
+    def _entries(self) -> list[Bindings.Entry]:
+        return self.state.entries.setdefault("arguments", [])
 
     def arguments(self, *specs: Any) -> Any:
         if self._data.VARIADIC is None:
             raise TypeError(f"{_article(self._data.KIND)} has no variadic arguments")
         slots = len(self._data.SLOTS)
         for spec in specs:
-            index = slots + sum(1 for entry in self._arguments if entry.index is None or entry.index >= slots)
-            self._arguments.append(_Argument("parent", self._data.DIALECT.resolve(spec), index))
+            index = slots + sum(1 for entry in self._entries()
+                                if entry.properties.get("index") is None or entry.properties["index"] >= slots)
+            self._entries().append(Bindings.Entry({"argument": self._data.DIALECT.resolve(spec)}, {"index": index}))
         return self
 
     def argument(self, slot: str, spec: Any) -> Any:
         if slot not in self._data.SLOTS:
             raise KeyError(f"{_article(self._data.KIND)} has no argument {slot!r}")
         index = self._data.SLOTS.index(slot)
-        self._arguments = [entry for entry in self._arguments if entry.index != index]
-        self._arguments.append(_Argument("parent", self._data.DIALECT.resolve(spec), index))
-        return self
-
-    # Finalizing
-
-    def create(self) -> Any:
-        if self._source is not None:
-            raise ValueError("create() is only valid without a source instance; use clone() or update()")
-        return self._make()
-
-    def clone(self) -> Any:
-        if self._source is None:
-            raise ValueError("clone() is only valid with a source instance")
-        return self._make()
-
-    def update(self) -> Any:
-        if self._source is None:
-            raise ValueError("update() is only valid with a source instance")
-        made = self._make()
-        for name in self._data.FIELDS:
-            setattr(self._source, name, getattr(made, name))
-        return self._source
-
-    def _check_target(self, entry: _Argument) -> Any:
-        if entry.target is None:
-            raise ValueError("link 'argument' is not set")
-        if not isinstance(entry.target, self._data.DIALECT.classes):
-            raise TypeError(f"an argument must be an expression, got {_type_name(entry.target)}")
-        return entry.target
-
-    def _make(self) -> Any:
-        kind = self._data
-        fields: dict[str, Any] = dict(self._values)
-        if kind.VALUE is not None:
-            fields["value"] = self._value
-        parts: list[Any] = [None] * len(kind.SLOTS)
-        rest: list[_Argument] = []
-        for entry in self._arguments:
-            if entry.index in range(len(kind.SLOTS)):
-                parts[entry.index] = self._check_target(entry)
-            elif kind.VARIADIC is not None:
-                rest.append(entry)
-            else:
-                raise ValueError(_slots_message(kind, entry.index))
-        fields.update(zip(kind.SLOTS, parts))
-        if kind.VARIADIC is not None:
-            last = len(self._arguments) + len(kind.SLOTS)
-            ordered = sorted(rest, key=lambda entry: last if entry.index is None else entry.index)
-            fields[kind.VARIADIC] = tuple(self._check_target(entry) for entry in ordered)
-        return kind(**fields)
-
-    # Visitors.OfObject
-
-    def _check_kind(self, kind: Any) -> None:
-        if kind is not None and kind != self._data.KIND:
-            raise ValueError(f"expected kind {self._data.KIND!r}, got {kind!r}")
-
-    def _names(self) -> list[str]:
-        return ["kind", *(self._data.VALUE or {}), *self._data.PROPERTIES, *self._data.VALUES]
-
-    def _field(self, name: str) -> _Field | _ValueSlot:
-        if name in self._data.VALUES:
-            return _ValueSlot(self, name)
-        if name == "kind":
-            return _Field("kind", str, lambda: self._data.KIND, self._check_kind)
-        if name in self._data.PROPERTIES:
-            return _Field(name, self._data.PROPERTIES[name], lambda: self._values.get(name),
-                          lambda value: self._values.__setitem__(name, value))
-        return _Field(name, self._data.VALUE[name], lambda: self._value,  # type: ignore[index]
-                      lambda value: setattr(self, "_value", value))
-
-    def properties(self, callback: Callable[[Visitors.OfProperty], Any]) -> Builder:
-        for name in self._names():
-            if self.has(name):
-                callback(self._field(name))
-        return self
-
-    def has(self, name: str) -> bool:
-        return name == "kind" or (name in self._names() and self._field(name).has())
-
-    def property(self, name: str, callback: Callable[[Visitors.OfProperty], Any]) -> Builder:
-        if name not in self._names():
-            raise KeyError(f"unknown property {name!r}")
-        callback(self._field(name))
-        return self
-
-    def clear(self, name: str) -> Builder:
-        if name != "kind" and name in self._names():
-            self._field(name).clear()
-        return self
-
-    def _parent(self) -> bool:
-        return bool(self._data.SLOTS) or self._data.VARIADIC is not None
-
-    def adjacencies(self, callback: Callable[[Visitors.OfAdjacency], Any]) -> Builder:
-        for name in ["arguments", "used_by"] if self._parent() else ["used_by"]:
-            self.adjacency(name, callback)
-        return self
-
-    def adjacency(self, name: str, callback: Callable[[Visitors.OfAdjacency], Any]) -> Builder:
-        if name == "arguments" and self._parent():
-            callback(_Adjacency("arguments", "parent", self._arguments))
-        elif name == "used_by":
-            callback(_Adjacency("used_by", "argument", None))
-        else:
-            raise KeyError(f"unknown adjacency {name!r}")
-        return self
-
-    def identify(self, value: Visitors.Visitable) -> Builder:
-        """Expressions hold no value objects, so there is nothing to identify."""
+        self._entries()[:] = [entry for entry in self._entries() if entry.properties.get("index") != index]
+        self._entries().append(Bindings.Entry({"argument": self._data.DIALECT.resolve(spec)}, {"index": index}))
         return self
 
 
@@ -703,33 +482,6 @@ def _schema(kind: type[Node]) -> Schemas.OfObject.Data:
                                                         *values).relations(*relations).create())
 
 
-class Registry:
-    """Builds a dialect's expressions from snapshots: `getattr(registry, 'Expressions.OfLiteral')(instance)` returns a
-    builder, as `Plain.FromPlain` expects. `schema` and `name_of` look the meta-schemas up."""
-
-    def __init__(self, schemas: Mapping[str, Any], builders: Mapping[str, type]):
-        self._schemas = {**schemas, ARGUMENTS: Arguments}
-        for name, builder in builders.items():
-            setattr(self, name, builder)
-
-    def schema(self, name: str) -> Schemas.OfObject.Data:
-        if name == ARGUMENTS:
-            raise TypeError(f"{name!r} is a relation; no relation builder is exposed")
-        if name not in self._schemas:
-            raise AttributeError(f"no schema registered as {name!r}")
-        return self._schemas[name]
-
-    def name_of(self, schema: Any) -> str:
-        for name, registered in self._schemas.items():
-            if registered is schema:
-                return name
-        raise LookupError("schema is not registered")
-
-    def member(self, instance: Any, name: str) -> Any:
-        """The value an expression holds in its property `name`."""
-        return getattr(instance, name)
-
-
 # --- Dialects declared by their kinds ---
 
 
@@ -754,11 +506,8 @@ class Declared:
             kind.FIELDS = tuple(field.name for field in dataclasses.fields(kind))  # type: ignore[arg-type]
             builder = builders.get(kind.KIND) or type(f"{kind.__name__}Builder", (Builder,), {"_data": kind})
             kind.Schema = schemas[kind.NAME] = _schema(kind)  # type: ignore[attr-defined]
+            kind.BINDING = _binding(kind)
             registered[kind.NAME] = builders[kind.KIND] = builder
-            kind.HOLDERS = {name: Schemas.OfObject.Builder().ref().properties(lambda p, n=name, f=field: p.name(n).of(f.schema))
-                            .create() for name, field in kind.VALUES.items()}
-            for name, holder in kind.HOLDERS.items():
-                Proxies.register(f"{kind.NAME}.{name}", holder)
         for schema_name, schema in schemas.items():
             Proxies.register(schema_name, schema)
         self.builders = builders
@@ -767,7 +516,8 @@ class Declared:
         self.Schema = Schemas.OfUnion.Builder().branches(
             *(lambda b, kind=kind: b.name(kind.KIND).of(kind.Schema) for kind in kinds)
         ).create()
-        self.Builders = Registry(schemas, registered)
+        self.Builders = Bindings.Registry({name: (schemas[name], builder) for name, builder in registered.items()},
+                                          {ARGUMENTS: Arguments})
 
     def name(self) -> str:
         return self._name

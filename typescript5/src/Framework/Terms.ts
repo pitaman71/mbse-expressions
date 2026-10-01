@@ -31,18 +31,23 @@
  *   The scope resolves the declaration; `binds()` gives the names it binds for lexical references.
  *
  * Properties are required unless named in `OPTIONAL`, and `check()` adds a kind's own problems to validation. `VALUES`
- * names fields that hold a value object rather than a native, each described by a `ValueField` (its schema and plain
- * form), such as a literal's domain; they are written and read through mbse-schemas' proxies of a holder schema,
- * registered as '<kind's schema name>.<field>'. `typed()` gives a literal's own domain, if it has one.
- * Arguments are fields too: `SLOTS` names fields holding one argument each, in index order, and `VARIADIC` names one
- * field holding an array of the arguments after the slots. Both are written as entries of the adjacency `arguments`,
- * to the relation `Arguments` (registered as 'Expressions.Arguments' and shared by every dialect), which links a
- * `parent` to an `argument` with an `index`. Every kind also declares `used_by`, the same relation seen from the
- * argument, which data never writes. A kind's fields are, in order, `value` (a literal's), its properties, its slots
- * and its variadic field, and its constructor takes them in that order.
+ * names properties that hold a value object rather than a native, each described by a `ValueProperty` (its schema, and
+ * the conversions between the field's data and the value's plain form), such as a literal's domain. `typed()` gives a
+ * literal's own domain, if it has one.
+ *
+ * Each kind's data is bound to its meta-schema with mbse-schemas' `Bindings`: the kind's fields are read into a
+ * `Bindings.State` (its properties, and its `arguments` entries) and made from one, with `kind` fixed, a literal's
+ * native properties exclusive and `used_by` implied. `accept`, the builders' visitor protocols and the registry
+ * `Builders` are the generic ones; `Builder` adds the DSL. Arguments are fields too: `SLOTS` names fields holding one
+ * argument each, in index order, and `VARIADIC` names one field holding an array of the arguments after the slots.
+ * Both are written as entries of the adjacency `arguments`, to the relation `Arguments` (registered as
+ * 'Expressions.Arguments' and shared by every dialect), which links a `parent` to an `argument` with an `index`. Every
+ * kind also declares `used_by`, the same relation seen from the argument, which data never writes. A kind's fields
+ * are, in order, `value` (a literal's), its properties, its value properties, its slots and its variadic field, and its
+ * constructor takes them in that order.
  */
 
-import { Errors, Plain, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
+import { Bindings, Errors, Plain, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as Domains from "./Domains.js";
@@ -77,14 +82,6 @@ export function article(noun: string): string {
   return `${"aeiou".includes(noun[0] as string) ? "an" : "a"} ${noun}`;
 }
 
-interface HasProperty {
-  property(name: string, callback: Callback<Visitors.OfProperty>): unknown;
-}
-
-function setNative(visitor: HasProperty, name: string, value: Native): void {
-  visitor.property(name, (p) => p.value((a) => a.as_native((n) => n.set(value))));
-}
-
 /** Validation options: references in `bound` are bound, and with `core`, every operator must be in its kind's
  * vocabulary. */
 export interface ValidateOptions {
@@ -115,7 +112,7 @@ export interface Expression extends Visitors.Visitable {
 /** An expression language: its kinds, their meta-schemas and builders, and its static checks. */
 export interface Dialect {
   readonly Schema: Schemas.OfUnion.Data;
-  readonly Builders: Registry;
+  readonly Builders: Bindings.Registry;
   name(): string;
   /** The data class of each kind, by tag. */
   kinds(): ReadonlyMap<string, NodeClass>;
@@ -146,18 +143,11 @@ export function fieldsOf(kind: NodeClass): string[] {
     ...(kind.VARIADIC !== null ? [kind.VARIADIC] : [])];
 }
 
-/** A field that holds a value object rather than a native: the `schema` of its value, and the conversions between the
- * field's data and the value's plain form. */
-export class ValueField {
+/** A property that holds a value object rather than a native: the `schema` of its value, and the conversions between
+ * the field's data and the value's plain form. */
+export class ValueProperty {
   constructor(readonly schema: Schemas.OfAny.Data, readonly to_plain: (value: unknown) => Plain.PlainData,
     readonly from_plain: (plain: Plain.PlainData) => unknown) {}
-}
-
-/** A proxy of the holder schema of `kind`'s field `name`, holding `value`. */
-function holder(kind: NodeClass, name: string, value: unknown): any {
-  const plain = new Map<string, Plain.PlainData>([["root", "s0"], ["objects", new Map([["s0",
-    new Map([[name, (kind.VALUES.get(name) as ValueField).to_plain(value)]])]])]]);
-  return Plain.FromPlain(Proxies.Builders as never)(kind.HOLDERS.get(name) as Schemas.OfObject.Data, plain);
 }
 
 /** Shared by every kind's data: identity, schema name, writing through `accept`, and the structural view. `Declared`
@@ -179,8 +169,8 @@ export abstract class Node implements Expression {
   static OPERATOR: string | null = null;
   static VOCABULARY: ReadonlyMap<string, Domains.Signature> | null = null;
   static SIGNATURE: Domains.Signature | null = null;
-  static VALUES: ReadonlyMap<string, ValueField> = new Map();
-  static HOLDERS: ReadonlyMap<string, Schemas.OfObject.Data> = new Map();
+  static VALUES: ReadonlyMap<string, ValueProperty> = new Map();
+  static BINDING: Bindings.Binding;
   private readonly nodeIdentity = ++nextIdentity;
 
   constructor(...fields: unknown[]) {
@@ -225,18 +215,9 @@ export abstract class Node implements Expression {
    * `arguments` entry per argument, in order, with its index. */
   accept(visitor: Visitors.OfObject): void {
     const kind = this.kind();
-    setNative(visitor, "kind", kind.KIND);
     const value = this.field("value");
-    if (kind.VALUE !== null && value !== null) setNative(visitor, checkValue(kind, value), value as Native);
-    for (const name of kind.PROPERTIES.keys()) {
-      if (this.field(name) !== null) setNative(visitor, name, this.field(name) as Native);
-    }
-    for (const name of kind.VALUES.keys()) {
-      if (this.field(name) !== null) holder(kind, name, this.field(name)).accept(visitor); // writes the property `name`
-    }
-    this.argumentsOf().forEach((argument, index) => {
-      if (argument !== null) writeArgument(visitor, index, argument);
-    });
+    if (kind.VALUE !== null && value !== null) checkValue(kind, value);
+    Bindings.accept(kind.BINDING, this, visitor);
   }
 
   /** The node's arguments: its slots, then its variadic arguments. */
@@ -298,203 +279,98 @@ function checkValue(kind: NodeClass, value: unknown): string {
   return name;
 }
 
-function writeArgument(visitor: Visitors.OfObject, index: number, argument: unknown): void {
-  visitor.adjacency("arguments", (a) => a.add((entry) => {
-    entry.link("argument", (k) => k.set(argument as Visitors.Visitable));
-    setNative(entry, "index", BigInt(index));
-  }));
+// --- Bindings: a kind's fields in its meta-schema's terms ---
+
+/** A node's state: its value under the property named after its native type (under `value` when it has none), its
+ * other properties, its value properties in their plain form, and its arguments as `arguments` entries. */
+function read(instance: Node): Bindings.State {
+  const kind = instance.kind();
+  const values = new Map<string, unknown>();
+  const value = instance.field("value");
+  if (kind.VALUE !== null && value !== null) {
+    const name = nativeName(value);
+    values.set(kind.VALUE.has(name as string) ? name as string : "value", value);
+  }
+  for (const name of kind.PROPERTIES.keys()) values.set(name, instance.field(name));
+  for (const [name, field] of kind.VALUES) {
+    if (instance.field(name) !== null) values.set(name, field.to_plain(instance.field(name)));
+  }
+  const args = instance.argumentsOf().flatMap((argument, index) => (argument === null ? []
+    : [new Bindings.Entry(new Map([["argument", argument]]), new Map([["index", BigInt(index)]]))]));
+  return new Bindings.State(values, new Map(parent(kind) ? [["arguments", args]] : []));
 }
 
-// --- Builders: Visitors that build Data ---
-
-/** `Visitors.OfProperty`, `OfAny` and `OfNative` over one native-typed field of a builder. */
-class _Field implements Visitors.OfProperty, Visitors.OfAny, Visitors.OfNative {
-  constructor(private readonly fieldName: string, private readonly native: unknown,
-    private readonly read: () => unknown, private readonly write: (value: unknown) => void) {}
-
-  name(): string {
-    return this.fieldName;
-  }
-
-  has(): boolean {
-    return Schemas.isNativeOf(this.native, this.read());
-  }
-
-  get(): Native {
-    if (!this.has()) throw new AttributeError(`property ${repr(this.fieldName)} is not set`);
-    return this.read() as Native;
-  }
-
-  set(value: Native): _Field {
-    if (!Schemas.isNativeOf(this.native, value)) {
-      throw new TypeError(`expected ${tokenName(this.native)}, got ${typeName(value)}`);
-    }
-    this.write(value);
-    return this;
-  }
-
-  clear(): _Field {
-    if (this.has()) this.write(null);
-    return this;
-  }
-
-  value(callback: Callback<Visitors.OfAny>): _Field {
-    callback(this);
-    return this;
-  }
-
-  as_native(callback: Callback<Visitors.OfNative>): _Field {
-    callback(this);
-    return this;
-  }
-
-  as_object(_callback: Callback<Visitors.OfObject>): _Field {
-    throw new TypeError(`property ${repr(this.fieldName)} is native`);
-  }
-
-  as_union(_callback: Callback<Visitors.OfUnion>): _Field {
-    throw new TypeError(`property ${repr(this.fieldName)} is native`);
-  }
-
-  as_intersection(_callback: Callback<Visitors.OfIntersection>): _Field {
-    throw new TypeError(`property ${repr(this.fieldName)} is native`);
-  }
-
-  as_indexed(_callback: Callback<Visitors.OfIndexed>): _Field {
-    throw new TypeError(`property ${repr(this.fieldName)} is native`);
-  }
+function parent(kind: NodeClass): boolean {
+  return kind.SLOTS.length > 0 || kind.VARIADIC !== null;
 }
 
-/** `Visitors.OfLink` over the one link an argument entry sets. */
-/** `Visitors.OfProperty` over a builder's field that holds a value object, such as a literal's domain: written and read
- * through a proxy of the field's holder schema, whose builders do the work. */
-class _ValueSlot implements Visitors.OfProperty {
-  constructor(private readonly kindOf: NodeClass, private readonly values: Map<string, unknown>,
-    private readonly fieldName: string) {}
-
-  name(): string {
-    return this.fieldName;
+/** A literal's value: the one native property it holds, or the value it holds under `value`. */
+function valueOf(kind: NodeClass, values: ReadonlyMap<string, unknown>): unknown {
+  for (const name of (kind.VALUE as ReadonlyMap<string, unknown>).keys()) {
+    if ((values.get(name) ?? null) !== null) return values.get(name);
   }
-
-  has(): boolean {
-    return (this.values.get(this.fieldName) ?? null) !== null;
-  }
-
-  value(callback: Callback<Visitors.OfAny>): this {
-    const kind = this.kindOf;
-    const name = this.fieldName;
-    const current = this.values.get(name) ?? null;
-    const held = current === null ? undefined : holder(kind, name, current);
-    const builder = (Proxies.Builders as Record<string, (instance?: unknown) => any>)[`${kind.NAME}.${name}`]!(held);
-    builder.property(name, (p: Visitors.OfProperty) => p.value(callback));
-    const made = held === undefined ? builder.create() : builder.update();
-    const plain = Plain.ToPlain(kind.HOLDERS.get(name) as Schemas.OfObject.Data, made) as Plain.PlainMap;
-    const value = ((plain.get("objects") as Plain.PlainMap).get("s0") as Plain.PlainMap).get(name);
-    this.values.set(name, value === undefined ? null : (kind.VALUES.get(name) as ValueField).from_plain(value));
-    return this;
-  }
-
-  clear(): this {
-    this.values.set(this.fieldName, null);
-    return this;
-  }
+  return values.get("value") ?? null;
 }
 
-class _Link implements Visitors.OfLink {
-  constructor(private readonly entry: _Argument) {}
-
-  name(): string {
-    return this.entry.other;
-  }
-
-  target(callback: Callback<Visitors.Visitable>): _Link {
-    if (this.entry.target === null) throw new ValueError(`link ${repr(this.entry.other)} is not set`);
-    callback(this.entry.target as Visitors.Visitable);
-    return this;
-  }
-
-  set(target: Visitors.Visitable): _Link {
-    this.entry.target = target;
-    return this;
-  }
+function indexOf(entry: Bindings.Entry): bigint | null {
+  return (entry.properties.get("index") ?? null) as bigint | null;
 }
 
-/** `Visitors.OfEntry` for one entry of `Arguments`, seen from the end that fills `me`: it sets the other link and the
- * `index`. */
-class _Argument implements Visitors.OfEntry {
-  readonly other: string;
-
-  constructor(me: string, public target: unknown = null, public index: bigint | null = null) {
-    this.other = me === "parent" ? "argument" : "parent";
-  }
-
-  private indexField(): _Field {
-    return new _Field("index", BigInt, () => this.index, (value) => { this.index = value as bigint | null; });
-  }
-
-  links(callback: Callback<Visitors.OfLink>): _Argument {
-    callback(new _Link(this));
-    return this;
-  }
-
-  link(name: string, callback: Callback<Visitors.OfLink>): _Argument {
-    if (name !== this.other) throw new KeyError(`${repr(name)} is not a link this entry can set`);
-    callback(new _Link(this));
-    return this;
-  }
-
-  properties(callback: Callback<Visitors.OfProperty>): _Argument {
-    if (this.index !== null) callback(this.indexField());
-    return this;
-  }
-
-  has(name: string): boolean {
-    return name === "index" && this.index !== null;
-  }
-
-  property(name: string, callback: Callback<Visitors.OfProperty>): _Argument {
-    if (name !== "index") throw new KeyError(`unknown property ${repr(name)}`);
-    callback(this.indexField());
-    return this;
-  }
-
-  clear(name: string): _Argument {
-    if (name === "index") this.index = null;
-    return this;
-  }
+function checkTarget(kind: NodeClass, entry: Bindings.Entry): unknown {
+  const target = entry.links.get("argument") ?? null;
+  if (target === null) throw new ValueError("link 'argument' is not set");
+  if (!kind.DIALECT.isExpression(target)) throw new TypeError(`an argument must be an expression, got ${typeName(target)}`);
+  return target;
 }
 
-/** `Visitors.OfAdjacency` over a parent's `arguments`, or over `used_by`, whose entries are ignored (the parents'
- * arguments imply them). */
-class _Adjacency implements Visitors.OfAdjacency {
-  constructor(private readonly adjacencyName: string, private readonly own: string,
-    private readonly list: _Argument[] | null) {}
-
-  name(): string {
-    return this.adjacencyName;
+/** The node a state holds: its fields from the properties, and its arguments from the `arguments` entries, the
+ * slots by index and the variadic ones in index order. */
+function make(kind: NodeClass, state: Bindings.State): Node {
+  const values = state.values;
+  const fields: Record<string, unknown> = {};
+  for (const name of kind.PROPERTIES.keys()) fields[name] = values.get(name) ?? null;
+  if (kind.VALUE !== null) fields["value"] = valueOf(kind, values);
+  for (const [name, field] of kind.VALUES) {
+    const plain = values.get(name) ?? null;
+    fields[name] = plain === null ? null : field.from_plain(plain as Plain.PlainData);
   }
-
-  me(): string {
-    return this.own;
+  const entries = state.entries.get("arguments") ?? [];
+  const slots = kind.SLOTS.length;
+  const parts: unknown[] = Array(slots).fill(null);
+  const rest: Bindings.Entry[] = [];
+  for (const entry of entries) {
+    const index = indexOf(entry);
+    if (index !== null && index >= 0n && index < BigInt(slots)) parts[Number(index)] = checkTarget(kind, entry);
+    else if (kind.VARIADIC !== null) rest.push(entry);
+    else throw new ValueError(slotsMessage(kind, index));
   }
-
-  entries(callback: Callback<Visitors.OfEntry>): _Adjacency {
-    for (const entry of [...(this.list ?? [])]) callback(entry);
-    return this;
+  kind.SLOTS.forEach((slot, i) => { fields[slot] = parts[i]; });
+  if (kind.VARIADIC !== null) {
+    const last = BigInt(entries.length + slots);
+    const key = (entry: Bindings.Entry) => indexOf(entry) ?? last;
+    const ordered = [...rest].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+    fields[kind.VARIADIC] = ordered.map((entry) => checkTarget(kind, entry));
   }
-
-  add(callback: Callback<Visitors.OfEntry>): _Adjacency {
-    const entry = new _Argument(this.own);
-    callback(entry);
-    this.list?.push(entry);
-    return this;
-  }
-
-  remove(entry: Visitors.OfEntry): _Adjacency {
-    if (this.list !== null) this.list.splice(0, this.list.length, ...this.list.filter((e) => e !== entry));
-    return this;
-  }
+  return new (kind as unknown as new (...f: unknown[]) => Node)(...fieldsOf(kind).map((name) => fields[name]));
 }
+
+function assign(kind: NodeClass, instance: Node, state: Bindings.State): Node {
+  const made = make(kind, state);
+  const target = instance as unknown as Record<string, unknown>;
+  for (const name of fieldsOf(kind)) target[name] = made.field(name);
+  return instance;
+}
+
+function bindingOf(kind: NodeClass): Bindings.Binding {
+  return new Bindings.Binding(kind.Schema, read, (state) => make(kind, state),
+    (instance, state) => assign(kind, instance, state), {
+      fixed: new Map([["kind", kind.KIND]]),
+      exclusive: kind.VALUE !== null ? [[...kind.VALUE.keys(), "value"]] : [],
+      implied: ["used_by"],
+    });
+}
+
+// --- Builders ---
 
 /** E.g. "a let's value is argument 0 and its body argument 1, got index 2". */
 export function slotsMessage(kind: { KIND: string; SLOTS: readonly string[] }, index: unknown): string {
@@ -508,30 +384,20 @@ function noArguments(method: string, args: unknown[]): void {
 }
 
 /**
- * Shared by every kind's builder: `create()` / `clone()` / `update()` with the rules and messages of every builder,
- * and `Visitors.OfObject` over the tag `kind`, the kind's native properties and its `arguments` entries. None of them
- * validate. DSL: `.set(name, native)` sets a property ('value' is a literal's value), `.arguments(...specs)` appends
- * arguments to a variadic kind and `.argument(slot, spec)` fills a slot; specs are resolved by the dialect.
+ * A kind's builder: mbse-schemas' generic `Bindings.Builder` over the kind's binding, so `create()` / `clone()` /
+ * `update()` and `Visitors.OfObject`, with the DSL. None of them validate. DSL: `.set(name, native)` sets a property
+ * ('value' is a literal's value), `.arguments(...specs)` appends arguments to a variadic kind and `.argument(slot,
+ * spec)` fills a slot; specs are resolved by the dialect.
  */
-export class Builder implements Visitors.OfObject {
+export class Builder extends Bindings.Builder {
   static DATA: NodeClass;
-  protected readonly source: Node | undefined;
-  protected recorded: unknown = null;
-  protected readonly values = new Map<string, unknown>();
-  protected list: _Argument[] = [];
 
   constructor(instance?: Node) {
-    const data = this.data;
+    const data = (new.target as typeof Builder).DATA;
     if (instance !== undefined && (instance as object | null)?.constructor !== data) {
       throw new TypeError(`expected ${data.KIND} data to build from, got ${typeName(instance)}`);
     }
-    this.source = instance;
-    if (instance !== undefined) {
-      this.recorded = data.VALUE !== null ? instance.field("value") : null;
-      for (const name of [...data.PROPERTIES.keys(), ...data.VALUES.keys()]) this.values.set(name, instance.field(name));
-      this.list = instance.argumentsOf().flatMap((argument, index) =>
-        (argument === null ? [] : [new _Argument("parent", argument, BigInt(index))]));
-    }
+    super(data.BINDING, instance);
   }
 
   protected get data(): NodeClass {
@@ -541,18 +407,40 @@ export class Builder implements Visitors.OfObject {
   // DSL
 
   set(name: string, value: Native): this {
-    if (name === "value" && this.data.VALUE !== null) this.recorded = value;
-    else if (this.data.PROPERTIES.has(name) || this.data.VALUES.has(name)) this.values.set(name, value);
-    else throw new KeyError(`${article(this.data.KIND)} has no attribute ${repr(name)}`);
+    const kind = this.data;
+    const values = this.state.values;
+    if (name === "value" && kind.VALUE !== null) {
+      for (const other of [...kind.VALUE.keys(), "value"]) values.delete(other);
+      const native = nativeName(value);
+      values.set(kind.VALUE.has(native as string) ? native as string : "value", value); // null, or a non-native, is held as `value`
+    } else if (kind.PROPERTIES.has(name)) {
+      values.set(name, value);
+    } else if (kind.VALUES.has(name)) {
+      values.set(name, value === null ? null : (kind.VALUES.get(name) as ValueProperty).to_plain(value));
+    } else {
+      throw new KeyError(`${article(kind.KIND)} has no attribute ${repr(name)}`);
+    }
     return this;
+  }
+
+  private entries(): Bindings.Entry[] {
+    if (!this.state.entries.has("arguments")) this.state.entries.set("arguments", []);
+    return this.state.entries.get("arguments") as Bindings.Entry[];
+  }
+
+  private entry(spec: unknown, index: bigint): Bindings.Entry {
+    return new Bindings.Entry(new Map([["argument", this.data.DIALECT.resolve(spec)]]), new Map([["index", index]]));
   }
 
   arguments(...specs: unknown[]): this {
     if (this.data.VARIADIC === null) throw new TypeError(`${article(this.data.KIND)} has no variadic arguments`);
     const slots = BigInt(this.data.SLOTS.length);
     for (const spec of specs) {
-      const index = slots + BigInt(this.list.filter((entry) => entry.index === null || entry.index >= slots).length);
-      this.list.push(new _Argument("parent", this.data.DIALECT.resolve(spec), index));
+      const index = slots + BigInt(this.entries().filter((entry) => {
+        const at = indexOf(entry);
+        return at === null || at >= slots;
+      }).length);
+      this.entries().push(this.entry(spec, index));
     }
     return this;
   }
@@ -560,132 +448,26 @@ export class Builder implements Visitors.OfObject {
   argument(slot: string, spec: unknown): this {
     if (!this.data.SLOTS.includes(slot)) throw new KeyError(`${article(this.data.KIND)} has no argument ${repr(slot)}`);
     const index = BigInt(this.data.SLOTS.indexOf(slot));
-    this.list = this.list.filter((entry) => entry.index !== index);
-    this.list.push(new _Argument("parent", this.data.DIALECT.resolve(spec), index));
+    const kept = this.entries().filter((entry) => indexOf(entry) !== index);
+    this.entries().splice(0, this.entries().length, ...kept, this.entry(spec, index));
     return this;
   }
 
   // Finalizing
 
-  create(...args: unknown[]): any {
+  override create(...args: unknown[]): any {
     noArguments("create", args);
-    if (this.source !== undefined) {
-      throw new ValueError("create() is only valid without a source instance; use clone() or update()");
-    }
-    return this.make();
+    return super.create();
   }
 
-  clone(...args: unknown[]): any {
+  override clone(...args: unknown[]): any {
     noArguments("clone", args);
-    if (this.source === undefined) throw new ValueError("clone() is only valid with a source instance");
-    return this.make();
+    return super.clone();
   }
 
-  update(...args: unknown[]): any {
+  override update(...args: unknown[]): any {
     noArguments("update", args);
-    if (this.source === undefined) throw new ValueError("update() is only valid with a source instance");
-    const made = this.make();
-    const target = this.source as unknown as Record<string, unknown>;
-    for (const name of fieldsOf(this.data)) target[name] = made.field(name);
-    return this.source;
-  }
-
-  private checkTarget(entry: _Argument): unknown {
-    if (entry.target === null) throw new ValueError("link 'argument' is not set");
-    if (!this.data.DIALECT.isExpression(entry.target)) {
-      throw new TypeError(`an argument must be an expression, got ${typeName(entry.target)}`);
-    }
-    return entry.target;
-  }
-
-  protected make(): Node {
-    const kind = this.data;
-    const slots = kind.SLOTS.length;
-    const parts: unknown[] = Array(slots).fill(null);
-    const rest: _Argument[] = [];
-    for (const entry of this.list) {
-      if (entry.index !== null && entry.index >= 0n && entry.index < BigInt(slots)) {
-        parts[Number(entry.index)] = this.checkTarget(entry);
-      } else if (kind.VARIADIC !== null) {
-        rest.push(entry);
-      } else {
-        throw new ValueError(slotsMessage(kind, entry.index));
-      }
-    }
-    const fields: Record<string, unknown> = { value: this.recorded };
-    for (const name of [...kind.PROPERTIES.keys(), ...kind.VALUES.keys()]) fields[name] = this.values.get(name) ?? null;
-    kind.SLOTS.forEach((slot, i) => { fields[slot] = parts[i]; });
-    if (kind.VARIADIC !== null) {
-      const last = BigInt(this.list.length + slots);
-      const key = (entry: _Argument) => entry.index ?? last;
-      const ordered = [...rest].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
-      fields[kind.VARIADIC] = ordered.map((entry) => this.checkTarget(entry));
-    }
-    return new (kind as unknown as new (...f: unknown[]) => Node)(...fieldsOf(kind).map((name) => fields[name]));
-  }
-
-  // Visitors.OfObject
-
-  private checkKind(kind: unknown): void {
-    if (kind !== null && kind !== this.data.KIND) {
-      throw new ValueError(`expected kind ${repr(this.data.KIND)}, got ${repr(kind)}`);
-    }
-  }
-
-  private names(): string[] {
-    return ["kind", ...(this.data.VALUE ?? new Map()).keys(), ...this.data.PROPERTIES.keys(), ...this.data.VALUES.keys()];
-  }
-
-  private fieldOf(name: string): _Field | _ValueSlot {
-    if (this.data.VALUES.has(name)) return new _ValueSlot(this.data, this.values, name);
-    if (name === "kind") return new _Field("kind", String, () => this.data.KIND, (kind) => this.checkKind(kind));
-    if (this.data.PROPERTIES.has(name)) {
-      return new _Field(name, this.data.PROPERTIES.get(name), () => this.values.get(name) ?? null,
-        (value) => { this.values.set(name, value); });
-    }
-    return new _Field(name, (this.data.VALUE as ReadonlyMap<string, unknown>).get(name), () => this.recorded,
-      (value) => { this.recorded = value; });
-  }
-
-  properties(callback: Callback<Visitors.OfProperty>): this {
-    for (const name of this.names()) if (this.has(name)) callback(this.fieldOf(name));
-    return this;
-  }
-
-  has(name: string): boolean {
-    return name === "kind" || (this.names().includes(name) && this.fieldOf(name).has());
-  }
-
-  property(name: string, callback: Callback<Visitors.OfProperty>): this {
-    if (!this.names().includes(name)) throw new KeyError(`unknown property ${repr(name)}`);
-    callback(this.fieldOf(name));
-    return this;
-  }
-
-  clear(name: string): this {
-    if (name !== "kind" && this.names().includes(name)) this.fieldOf(name).clear();
-    return this;
-  }
-
-  private parent(): boolean {
-    return this.data.SLOTS.length > 0 || this.data.VARIADIC !== null;
-  }
-
-  adjacencies(callback: Callback<Visitors.OfAdjacency>): this {
-    for (const name of this.parent() ? ["arguments", "used_by"] : ["used_by"]) this.adjacency(name, callback);
-    return this;
-  }
-
-  adjacency(name: string, callback: Callback<Visitors.OfAdjacency>): this {
-    if (name === "arguments" && this.parent()) callback(new _Adjacency("arguments", "parent", this.list));
-    else if (name === "used_by") callback(new _Adjacency("used_by", "argument", null));
-    else throw new KeyError(`unknown adjacency ${repr(name)}`);
-    return this;
-  }
-
-  /** Expressions hold no value objects, so there is nothing to identify. */
-  identify(_value: Visitors.Visitable): this {
-    return this;
+    return super.update();
   }
 }
 
@@ -789,37 +571,6 @@ function schemaOf(kind: NodeClass): Schemas.OfObject.Data {
     .relations(...relations).create();
 }
 
-/** Builds a dialect's expressions from snapshots: `registry['Expressions.OfLiteral'](instance)` returns a builder, as
- * `Plain.FromPlain` expects. `schema` and `name_of` look the meta-schemas up. */
-export class Registry {
-  private readonly schemas: Map<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>;
-  readonly [name: string]: unknown;
-
-  constructor(schemas: ReadonlyMap<string, Schemas.OfObject.Data>, builders: ReadonlyMap<string, typeof Builder>) {
-    this.schemas = new Map<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>([...schemas, [ARGUMENTS, Arguments]]);
-    for (const [name, builder] of builders) {
-      (this as Record<string, unknown>)[name] = (instance?: Node) => new builder(instance);
-    }
-  }
-
-  schema(name: string): Schemas.OfObject.Data {
-    if (name === ARGUMENTS) throw new TypeError(`${repr(name)} is a relation; no relation builder is exposed`);
-    const found = this.schemas.get(name);
-    if (found === undefined) throw new AttributeError(`no schema registered as ${repr(name)}`);
-    return found as Schemas.OfObject.Data;
-  }
-
-  name_of(schema: unknown): string {
-    for (const [name, registered] of this.schemas) if (registered === schema) return name;
-    throw new LookupError("schema is not registered");
-  }
-
-  /** The value an expression holds in its property `name`. */
-  member(instance: unknown, name: string): unknown {
-    return (instance as Record<string, unknown>)[name];
-  }
-}
-
 /** How a dialect is declared, beyond its kinds. */
 export interface Declaration {
   /** A literal's domain. */
@@ -847,7 +598,7 @@ export class Declared implements Dialect {
   readonly builders: Map<string, typeof Builder>;
   readonly AnyBuilder: typeof AnyBuilder;
   readonly Schema: Schemas.OfUnion.Data;
-  readonly Builders: Registry;
+  readonly Builders: Bindings.Registry;
   private readonly byTag: Map<string, NodeClass>;
   private readonly domainOf: (value: Native) => Domains.Domain;
 
@@ -871,9 +622,7 @@ export class Declared implements Dialect {
       }
       kind.Schema = schemaOf(kind);
       schemas.set(kind.NAME, kind.Schema);
-      kind.HOLDERS = new Map([...kind.VALUES].map(([name, field]) => [name,
-        new Schemas.OfObject.Builder().ref().properties((p) => p.name(name).of(field.schema)).create()]));
-      for (const [name, held] of kind.HOLDERS) Proxies.register(`${kind.NAME}.${name}`, held);
+      kind.BINDING = bindingOf(kind);
       registered.set(kind.NAME, builder);
       this.builders.set(kind.KIND, builder);
     }
@@ -883,7 +632,9 @@ export class Declared implements Dialect {
     this.Schema = new Schemas.OfUnion.Builder().branches(
       ...kinds.map((kind) => (b: BranchBuilder) => b.name(kind.KIND).of(kind.Schema)),
     ).create();
-    this.Builders = new Registry(schemas, registered);
+    this.Builders = new Bindings.Registry(new Map([...registered].map(([name, builder]) =>
+      [name, [schemas.get(name) as Schemas.OfObject.Data, (instance?: Node) => new builder(instance)] as const])),
+      new Map([[ARGUMENTS, Arguments]]));
   }
 
   name(): string {
@@ -1132,6 +883,3 @@ export function same(a: unknown, b: unknown): boolean {
   };
   return visit(a, b);
 }
-
-/** Internals, for the protocol conformance tests. */
-export const _internals = { _Adjacency, _Argument, _Field, _Link, _ValueSlot };
