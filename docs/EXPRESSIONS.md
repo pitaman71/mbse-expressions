@@ -111,55 +111,55 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
 
 Designed, not yet implemented. Today Basic's domains are its natives (`Bool`, `Int`, `Float`, `Str`, `Bytes`) and
 `Object`. The domains below make representation part of the type, as C, C++ and SystemVerilog need, and as an interface
-control document describes a data word. Each is parameterized, and today's natives become their defaults.
+control document describes a data word. Each names a published standard where one exists, with only the parameters
+that standard defines, and today's natives become their defaults.
 
-| Domain | Properties | Default (today's native) |
+| Domain | Parameters | Default (today's native) |
 |---|---|---|
-| `Float` | `mantissa` and `exponent` widths; presence of the `hidden` bit, `subnormals`, the `sign` bit, `nans` and `infinities`; `overflow`; `rounding` | IEEE binary64 (`Float`) |
-| `Integer` | `width`, optional (unbounded without it); `encoding`: unsigned, two's complement, ones' complement or sign-magnitude; `overflow` | unbounded (`Int`) |
-| `Decimal` | signed, string-encoded, of variable length; `rounding` | |
-| `Bits` | `width`, fixed or variable; `states`, an `Enum` of the values of one bit | `{0, 1}` states |
+| `Ieee754` | `format`: `binary16`, `binary32`, `binary64`, `binary128`, `decimal64` or `decimal128`; `rounding`: one of the standard's rounding-direction attributes, `roundTiesToEven`, `roundTiesToAway`, `roundTowardPositive`, `roundTowardNegative` or `roundTowardZero` | `binary64`, `roundTiesToEven` (`Float`) |
+| `Integer` | `width`, optional (unbounded without it); `signed`; `overflow`: `wrap`, `saturate` or `raise` | unbounded (`Int`) |
+| `Bits` | `width` | |
 | `Bytes` | `width`, fixed or variable | variable (`Bytes`) |
-| `Unicode` | `encoding`: one of the UTF encodings | UTF-8 (`Str`) |
+| `Unicode` | none | `Str` |
+| `Ieee1164` | none | |
 | `Enum` | its members, each with a `printable` value (its name as written) | |
-| `Packed` | a domain, a fixed-size domain that represents it (`Integer`, `Float`, `Bits` or `Bytes` of a fixed width), and the representation of each value | |
+| `Packed` | a domain, a fixed-size domain that represents it (`Integer`, `Ieee754`, `Bits` or `Bytes` of a fixed width), and the representation of each value | |
 | `Bool`, `Object` | unchanged | |
 
+- **Domains name standards.** `Ieee754` is IEEE 754-2019's interchange formats, with their values, special values and
+  overflow (to infinity, with its exceptions) as the standard defines them; a format outside it (fp8, `bfloat16`, x87's
+  80-bit format) would be a domain of its own, named for its specification, and none is defined yet. `Ieee1164` is
+  VHDL's nine-valued `std_logic`; SystemVerilog's four-state `logic` is its subset `{0, 1, X, Z}`, an `Enum` of states.
+  `Integer` is two's complement, the only signed representation C23 and C++20 allow, so ones' complement and
+  sign-magnitude are not domains.
 - **Basic has no implied promotions.** An operation takes its arguments' domains as they are: `add` of an
   `Integer(8)` and an `Integer(16)` does not apply until one is converted explicitly. A dialect's translator writes out
   its language's promotions as conversions.
 - **Literals carry their domain.** Over the wire a literal refers to its domain explicitly, so `1` as an `Integer(8)`
-  and `1` as a `Float` are different literals.
-- **Domains are mbse-schemas objects, as expressions are.** Every property above is data, so each domain kind is a
+  and `1` as an `Ieee754` are different literals.
+- **Domains are mbse-schemas objects, as expressions are.** Every parameter above is data, so each domain kind is a
   dataclass with a builder and a registered meta-schema (`Expressions.Domains.Of<Kind>`, e.g. `OfInteger`), and a
   literal's domain is an ordinary `$ref` to a domain object in the same snapshot. Signatures stay code: they are a
   dialect's vocabulary, not values on the wire. So do `Anything` and `OfValues`, which serve inference only and are
   never stored; the Python types that `OfTypes` holds give way to the domains' own properties.
-- **Overflow and rounding are the domain's.** Rounding is to nearest (ties to even or away from zero), toward zero, up
-  or down, for `Float` and `Decimal`. An `Integer` wraps, saturates or raises; a `Float` goes to infinity, saturates, gives
-  NaN or raises. Where a language leaves overflow undefined (C's signed integers), its translator chooses one.
-- **The hidden bit and subnormals are separate properties.** The hidden bit is the implicit leading 1 of normal numbers
-  (one more bit of precision); subnormals are the values of exponent 0 (range toward zero). IEEE formats have both;
-  x87's 80-bit format has subnormals without a hidden bit; fp8 E4M3 has NaN but no infinities.
-- **Ones' complement and sign-magnitude have a negative zero, equal to zero.**
-- **`Integer` and `Decimal` are separate domains.** Every unbounded integer is a decimal (`Decimal` includes
-  `Integer`), but their operations differ: integer division truncates and integers have bitwise operations, while
-  decimal division gives a fraction and needs a rounding rule.
+- **Arithmetic is exact, then rounded.** An `Ieee754` operation computes its exact result and rounds it to the format
+  with the domain's rounding attribute, as the standard specifies; the formats with a host type (`binary32`,
+  `binary64`) may take a shortcut that gives the same result. An `Integer` with a width wraps, saturates or raises on
+  overflow; where a language leaves overflow undefined (C's signed integers), its translator chooses one.
 - **`Bits` and `Bytes` are unformatted.** `Bytes(n)` and `Bits(8n)` hold the same patterns, but they are separate
-  domains and convert explicitly, as `Integer` interprets bits explicitly. Bits whose states are `{0, 1, X, Z}` are
-  SystemVerilog's `logic`, and VHDL's nine-valued `std_logic` is another `Enum` of states.
-- **`Unicode` values are sequences of code points, compared by code point.** The encoding is representation only, for
-  rendering (`char16_t`) and the wire: equal code points are equal strings in any encoding. Canonical equivalence is
-  not equality; normalization is an explicit operation. A lone surrogate is not a value of `Unicode`. A `Unicode`
-  domain has no width: a maximum length is a constraint of the data, and belongs in the schema.
+  domains and convert explicitly, as `Integer` interprets bits explicitly.
+- **`Unicode` values are sequences of code points, compared by code point.** An encoding (UTF-8, UTF-16, UTF-32) is
+  representation only, for rendering (`char16_t`) and the wire: equal code points are equal strings in any encoding.
+  Canonical equivalence is not equality; normalization is an explicit operation. A lone surrogate is not a value of
+  `Unicode`. A `Unicode` domain has no width: a maximum length is a constraint of the data, and belongs in the schema.
 - **`Enum` is a domain in its own right**: a C or SystemVerilog `enum`, one bit's states, or an enumeration of
   mbse-schemas.
 - **Conversions are explicit, and of two kinds.** `convert(value, domain)` keeps the value, applying the target
   domain's overflow and rounding; `reinterpret(value, domain)` keeps the bit pattern, between fixed-width domains of
   the same size (C++'s `bit_cast`). `pack` and `unpack` convert to and from a `Packed` domain's representation.
-- **A literal without a domain has its native's default**: an `int` is an unbounded `Integer`, a `float` an IEEE
-  binary64 `Float`, a `str` a UTF-8 `Unicode`, `bytes` variable `Bytes`, a `bool` a `Bool`. Writers leave a default
-  domain out, so expressions stored before domains keep their meaning and their text.
+- **A literal without a domain has its native's default**: an `int` is an unbounded `Integer`, a `float` an `Ieee754`
+  `binary64` rounding ties to even, a `str` a `Unicode`, `bytes` variable `Bytes`, a `bool` a `Bool`. Writers leave a
+  default domain out, so expressions stored before domains keep their meaning and their text.
 - **An `Enum`'s members are unordered**: `eq` and `ne` only. A `Packed` enum orders by its representation, as C
   compares enums by their integers.
 - **Packing is its own domain.** A `Packed` domain pairs a domain (an `Enum`, a record) with a fixed-size domain and the
@@ -318,6 +318,10 @@ in Basic but true in the others.
 - Value domains: conversions are `convert` (keeps the value) and `reinterpret` (keeps the bit pattern), with `pack` and
   `unpack` for packed domains; a literal stored without a domain has its native's default domain, and writers leave
   defaults out; an `Enum` is unordered unless packed, when it orders by its representation.
+- Value domains name published standards where one exists (`Ieee754`, `Ieee1164`), with only the parameters the
+  standard defines, rather than free representation parameters: no float format by widths and flags, no ones'
+  complement or sign-magnitude integers, no `Decimal` apart from IEEE 754's decimal formats. The dialect keeps its
+  name, Basic, which mbse-schemas' neutral token format (`basic`) shares.
 
 - Expressions are `Expressions.OfAny`, `OfLiteral`, `OfOperation`, `OfVariable` and `OfLet`, each with `Data`,
   `Builder`, `Spec` and a meta-schema `Schema` that is an ordinary registered object schema tagged by `kind`. Arguments
