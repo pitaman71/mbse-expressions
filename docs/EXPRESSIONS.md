@@ -57,9 +57,9 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
   types are incomparable (`lt(1, 1.5)` is unknown), and only `int`, `float`, `str` and `bytes` are ordered. Arithmetic
   takes numbers of one type (`add(1, 1.5)` is an error).
 - Unknown operations, wrong numbers of arguments, unbound variables and wrong operand types raise.
-- `get` and `has` read any object that writes its properties through `accept`, including mbse-schemas' embedded
-  objects. Embedded objects are value objects, whose identity does not take part in equality, so they compare equal
-  to nothing; reference objects compare by identity.
+- `get` and `has` read any object that writes its properties through `accept`, including mbse-schemas' value
+  objects, whose identity does not take part in equality, so they compare equal to nothing; reference objects
+  compare by identity.
 
 `Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, and returns `True`,
 `False` or unknown (`None`); a rule whose value is not a bool raises. mbse-schemas needs no evaluator: its union values

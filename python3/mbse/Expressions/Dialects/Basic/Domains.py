@@ -2,7 +2,7 @@
 
 The values are mbse-schemas' natives, each its own domain (`Bool`, `Int`, `Float`, `Str`, `Bytes`; a `bool` is not an
 `int`), and objects (`Object`): anything that writes its properties through `accept`, including expressions and
-embedded objects. `Anything` is the domain of a value not known statically, such as a property read with `get`.
+value objects. `Anything` is the domain of a value not known statically, such as a property read with `get`.
 Unknown (`None`) is not a domain: any value may be unknown at run time.
 
 `SIGNATURES` gives each core operation's signature, following the evaluator's rules: comparisons take two values of

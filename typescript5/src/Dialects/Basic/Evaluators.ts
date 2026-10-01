@@ -12,8 +12,8 @@
  *   different types are incomparable. Arithmetic takes numbers of one type.
  * - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
  *   variables and wrong operand types raise, as do the problems `validate()` reports.
- * - `get` and `has` read any object that writes its properties through `accept`, including embedded objects (value
- *   objects), whose identity does not take part in equality (and so they compare equal to nothing).
+ * - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
+ *   identity does not take part in equality (and so they compare equal to nothing).
  *
  * `Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, as a truth value.
  */
@@ -77,7 +77,7 @@ function isReadable(value: unknown): value is Readable {
 
 /** A reference object, compared by identity; a value object's identity does not take part in equality. */
 function isObject(value: unknown): value is Visitors.Visitable {
-  // `in` first: an embedded object's proxy throws on reading an attribute it lacks.
+  // `in` first: a value object's proxy throws on reading an attribute it lacks.
   return isReadable(value) && "identity" in value && typeof (value as { identity?: unknown }).identity === "function"
     && (value as Visitors.Visitable).owner() === null;
 }
