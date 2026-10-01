@@ -2,7 +2,7 @@
  * Expressions of the Basic dialect: the core vocabulary, for rules and constraints.
  * `Evaluators` evaluates them.
  *
- * - `OfLiteral`: a native value.
+ * - `OfLiteral`: a native value, and its value domain when that is not the native's default (see `Domains`).
  * - `OfOperation`: a named operation applied to ordered arguments, e.g. `eq(a, b)`. The vocabulary of names is open;
  *   the core operations (`CORE`) are the ones every binding evaluates. See docs/EXPRESSIONS.md.
  * - `OfVariable`: the value bound to a name.
@@ -16,7 +16,8 @@
  *
  * - Every kind's schema declares `kind`, a tag with a fixed value: 'literal', 'operation', 'variable' or 'let'.
  * - `OfLiteral.Schema` declares one optional property per native type (`int`, `float`, `str`, `bool`, `bytes`); a
- *   literal sets exactly one.
+ *   literal sets exactly one. Its `domain`, a value of `Domains.Schema`, is written only when it is not the native's
+ *   default: by name when the domain is registered, otherwise by value.
  * - `OfOperation.Schema`, `OfVariable.Schema` and `OfLet.Schema` declare `name`.
  * - Operations and lets declare the adjacency `arguments` to `Arguments`, a relation linking a `parent` to an
  *   `argument` with an `index`; `unique(argument)` makes the parent and index determine the argument. A let's value is
@@ -33,6 +34,7 @@
  * `Term`s write expressions with methods: `variable('this').age.ge(18n)` is `ge(get(this, 'age'), 18)`.
  */
 
+import { Repr } from "@mbse/schemas/Framework";
 import type { Schemas, Visitors } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
@@ -59,10 +61,34 @@ class _LiteralData extends F.Node {
   static override KIND = "literal";
   static override ROLE = F.LITERAL;
   static override VALUE = F.NATIVES;
+  static override VALUES = new Map([["domain", new F.ValueField(Domains.Schema, Domains.to_plain,
+    (plain) => Domains.from_plain(plain as Map<string, never>))]]);
   declare value: unknown;
+  /** A value domain, or null for the value's native's default. */
+  declare domain: unknown;
 
-  constructor(value: unknown = null) {
-    super(value);
+  constructor(value: unknown = null, domain: unknown = null) {
+    super(value, domain);
+    if (this.domain !== null && F.nativeName(this.value) !== null && Domains.of(this.value) instanceof Domains.Domain &&
+      (Domains.of(this.value) as Domains.Domain).equals(this.domain)) {
+      this.domain = null; // a native's default domain is no domain at all
+    }
+  }
+
+  override typed(): Domains.Domain | null {
+    return this.domain as Domains.Domain | null;
+  }
+
+  /** A literal's domain is valid and holds its value. */
+  override check(): string[] {
+    const domain = this.domain;
+    if (domain === null) return [];
+    if (!(domain instanceof Domains.Domain)) return [`a literal's domain must be a value domain, got ${Repr.typeName(domain)}`];
+    const problems = domain.validate().map((problem) => `domain: ${problem}`);
+    if (problems.length === 0 && !domain.contains(this.value)) {
+      problems.push(`a literal of ${domain.name()} cannot hold ${Repr.repr(this.value)}`);
+    }
+    return problems;
   }
 }
 
@@ -110,8 +136,8 @@ type AnyData = _LiteralData | _OperationData | _VariableData | _LetData;
 
 // --- Builders: Visitors that build Data ---
 
-/** Builds an `OfLiteral.Data`. DSL: `.value(native)`. As a `Visitors.OfObject`, it has one property per native type,
- * and setting one replaces the value. */
+/** Builds an `OfLiteral.Data`. DSL: `.value(native)` and `.domain(domain)`. As a `Visitors.OfObject`, it has one
+ * property per native type, and setting one replaces the value, and the property `domain`. */
 class _LiteralBuilder extends F.Builder {
   static override DATA = _LiteralData;
 
@@ -121,6 +147,10 @@ class _LiteralBuilder extends F.Builder {
 
   value(value: Native): this {
     return this.set("value", value);
+  }
+
+  domain(domain: unknown): this {
+    return this.set("domain", domain as Native);
   }
 
   override create(...args: unknown[]): _LiteralData {
@@ -397,9 +427,9 @@ export function variable(name: string): Term {
   return term(new _VariableData(name));
 }
 
-/** The literal `value`. */
-export function literal(value: Native): Term {
-  return term(new _LiteralData(value));
+/** The literal `value`, of `domain` (by default, its native's). */
+export function literal(value: Native, domain: unknown = null): Term {
+  return term(new _LiteralData(value, domain));
 }
 
 /** `body`, with `name` bound to the value of `value`. */

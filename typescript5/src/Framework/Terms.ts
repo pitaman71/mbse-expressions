@@ -30,7 +30,10 @@
  * - `IMPORT`: makes what it declares (a module, a package's functions) available within its one argument, its body.
  *   The scope resolves the declaration; `binds()` gives the names it binds for lexical references.
  *
- * Properties are required unless named in `OPTIONAL`, and `check()` adds a kind's own problems to validation.
+ * Properties are required unless named in `OPTIONAL`, and `check()` adds a kind's own problems to validation. `VALUES`
+ * names fields that hold a value object rather than a native, each described by a `ValueField` (its schema and plain
+ * form), such as a literal's domain; they are written and read through mbse-schemas' proxies of a holder schema,
+ * registered as '<kind's schema name>.<field>'. `typed()` gives a literal's own domain, if it has one.
  * Arguments are fields too: `SLOTS` names fields holding one argument each, in index order, and `VARIADIC` names one
  * field holding an array of the arguments after the slots. Both are written as entries of the adjacency `arguments`,
  * to the relation `Arguments` (registered as 'Expressions.Arguments' and shared by every dialect), which links a
@@ -39,7 +42,7 @@
  * and its variadic field, and its constructor takes them in that order.
  */
 
-import { Errors, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
+import { Errors, Plain, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as Domains from "./Domains.js";
@@ -139,8 +142,22 @@ export type NodeClass = typeof Node;
 
 /** The fields of a kind, in constructor order. */
 export function fieldsOf(kind: NodeClass): string[] {
-  return [...(kind.VALUE !== null ? ["value"] : []), ...kind.PROPERTIES.keys(), ...kind.SLOTS,
+  return [...(kind.VALUE !== null ? ["value"] : []), ...kind.PROPERTIES.keys(), ...kind.VALUES.keys(), ...kind.SLOTS,
     ...(kind.VARIADIC !== null ? [kind.VARIADIC] : [])];
+}
+
+/** A field that holds a value object rather than a native: the `schema` of its value, and the conversions between the
+ * field's data and the value's plain form. */
+export class ValueField {
+  constructor(readonly schema: Schemas.OfAny.Data, readonly to_plain: (value: unknown) => Plain.PlainData,
+    readonly from_plain: (plain: Plain.PlainData) => unknown) {}
+}
+
+/** A proxy of the holder schema of `kind`'s field `name`, holding `value`. */
+function holder(kind: NodeClass, name: string, value: unknown): any {
+  const plain = new Map<string, Plain.PlainData>([["root", "s0"], ["objects", new Map([["s0",
+    new Map([[name, (kind.VALUES.get(name) as ValueField).to_plain(value)]])]])]]);
+  return Plain.FromPlain(Proxies.Builders as never)(kind.HOLDERS.get(name) as Schemas.OfObject.Data, plain);
 }
 
 /** Shared by every kind's data: identity, schema name, writing through `accept`, and the structural view. `Declared`
@@ -162,6 +179,8 @@ export abstract class Node implements Expression {
   static OPERATOR: string | null = null;
   static VOCABULARY: ReadonlyMap<string, Domains.Signature> | null = null;
   static SIGNATURE: Domains.Signature | null = null;
+  static VALUES: ReadonlyMap<string, ValueField> = new Map();
+  static HOLDERS: ReadonlyMap<string, Schemas.OfObject.Data> = new Map();
   private readonly nodeIdentity = ++nextIdentity;
 
   constructor(...fields: unknown[]) {
@@ -183,8 +202,10 @@ export abstract class Node implements Expression {
     return (this as unknown as Record<string, unknown>)[name];
   }
 
+  /** A text of its own, `expression <n>`, never reused, so that it never equals the identity of another implementation's
+   * objects (mbse-schemas' proxies count theirs as numbers), as Python's `id()` never does. */
   identity(): unknown {
-    return this.nodeIdentity;
+    return `expression ${this.nodeIdentity}`;
   }
 
   schema_name(): string {
@@ -210,6 +231,9 @@ export abstract class Node implements Expression {
     for (const name of kind.PROPERTIES.keys()) {
       if (this.field(name) !== null) setNative(visitor, name, this.field(name) as Native);
     }
+    for (const name of kind.VALUES.keys()) {
+      if (this.field(name) !== null) holder(kind, name, this.field(name)).accept(visitor); // writes the property `name`
+    }
     this.argumentsOf().forEach((argument, index) => {
       if (argument !== null) writeArgument(visitor, index, argument);
     });
@@ -232,11 +256,16 @@ export abstract class Node implements Expression {
     return [];
   }
 
+  /** A literal's own domain, when it carries one; null for its value's default, and for other kinds. */
+  typed(): Domains.Domain | null {
+    return null;
+  }
+
   form(): Form {
     const kind = this.kind();
     const attributes = new Map<string, Native>();
     if (kind.VALUE !== null && this.field("value") !== null) attributes.set("value", this.field("value") as Native);
-    for (const name of kind.PROPERTIES.keys()) {
+    for (const name of [...kind.PROPERTIES.keys(), ...kind.VALUES.keys()]) {
       if (this.field(name) !== null) attributes.set(name, this.field(name) as Native);
     }
     return new Form(kind.KIND, attributes, this.argumentsOf());
@@ -337,6 +366,40 @@ class _Field implements Visitors.OfProperty, Visitors.OfAny, Visitors.OfNative {
 }
 
 /** `Visitors.OfLink` over the one link an argument entry sets. */
+/** `Visitors.OfProperty` over a builder's field that holds a value object, such as a literal's domain: written and read
+ * through a proxy of the field's holder schema, whose builders do the work. */
+class _ValueSlot implements Visitors.OfProperty {
+  constructor(private readonly kindOf: NodeClass, private readonly values: Map<string, unknown>,
+    private readonly fieldName: string) {}
+
+  name(): string {
+    return this.fieldName;
+  }
+
+  has(): boolean {
+    return (this.values.get(this.fieldName) ?? null) !== null;
+  }
+
+  value(callback: Callback<Visitors.OfAny>): this {
+    const kind = this.kindOf;
+    const name = this.fieldName;
+    const current = this.values.get(name) ?? null;
+    const held = current === null ? undefined : holder(kind, name, current);
+    const builder = (Proxies.Builders as Record<string, (instance?: unknown) => any>)[`${kind.NAME}.${name}`]!(held);
+    builder.property(name, (p: Visitors.OfProperty) => p.value(callback));
+    const made = held === undefined ? builder.create() : builder.update();
+    const plain = Plain.ToPlain(kind.HOLDERS.get(name) as Schemas.OfObject.Data, made) as Plain.PlainMap;
+    const value = ((plain.get("objects") as Plain.PlainMap).get("s0") as Plain.PlainMap).get(name);
+    this.values.set(name, value === undefined ? null : (kind.VALUES.get(name) as ValueField).from_plain(value));
+    return this;
+  }
+
+  clear(): this {
+    this.values.set(this.fieldName, null);
+    return this;
+  }
+}
+
 class _Link implements Visitors.OfLink {
   constructor(private readonly entry: _Argument) {}
 
@@ -465,7 +528,7 @@ export class Builder implements Visitors.OfObject {
     this.source = instance;
     if (instance !== undefined) {
       this.recorded = data.VALUE !== null ? instance.field("value") : null;
-      for (const name of data.PROPERTIES.keys()) this.values.set(name, instance.field(name));
+      for (const name of [...data.PROPERTIES.keys(), ...data.VALUES.keys()]) this.values.set(name, instance.field(name));
       this.list = instance.argumentsOf().flatMap((argument, index) =>
         (argument === null ? [] : [new _Argument("parent", argument, BigInt(index))]));
     }
@@ -479,7 +542,7 @@ export class Builder implements Visitors.OfObject {
 
   set(name: string, value: Native): this {
     if (name === "value" && this.data.VALUE !== null) this.recorded = value;
-    else if (this.data.PROPERTIES.has(name)) this.values.set(name, value);
+    else if (this.data.PROPERTIES.has(name) || this.data.VALUES.has(name)) this.values.set(name, value);
     else throw new KeyError(`${article(this.data.KIND)} has no attribute ${repr(name)}`);
     return this;
   }
@@ -550,7 +613,7 @@ export class Builder implements Visitors.OfObject {
       }
     }
     const fields: Record<string, unknown> = { value: this.recorded };
-    for (const name of kind.PROPERTIES.keys()) fields[name] = this.values.get(name) ?? null;
+    for (const name of [...kind.PROPERTIES.keys(), ...kind.VALUES.keys()]) fields[name] = this.values.get(name) ?? null;
     kind.SLOTS.forEach((slot, i) => { fields[slot] = parts[i]; });
     if (kind.VARIADIC !== null) {
       const last = BigInt(this.list.length + slots);
@@ -570,10 +633,11 @@ export class Builder implements Visitors.OfObject {
   }
 
   private names(): string[] {
-    return ["kind", ...(this.data.VALUE ?? new Map()).keys(), ...this.data.PROPERTIES.keys()];
+    return ["kind", ...(this.data.VALUE ?? new Map()).keys(), ...this.data.PROPERTIES.keys(), ...this.data.VALUES.keys()];
   }
 
-  private fieldOf(name: string): _Field {
+  private fieldOf(name: string): _Field | _ValueSlot {
+    if (this.data.VALUES.has(name)) return new _ValueSlot(this.data, this.values, name);
     if (name === "kind") return new _Field("kind", String, () => this.data.KIND, (kind) => this.checkKind(kind));
     if (this.data.PROPERTIES.has(name)) {
       return new _Field(name, this.data.PROPERTIES.get(name), () => this.values.get(name) ?? null,
@@ -714,13 +778,14 @@ Proxies.register(ARGUMENTS, Arguments);
 const ARGUMENTS_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("arguments").of(Arguments).me("parent");
 const USED_BY = (r: Schemas.OfAdjacency.Builder) => r.name("used_by").of(Arguments).me("argument");
 
-/** A kind's meta-schema: the tag, one property per native type its value may have, its properties, and the
- * adjacencies `arguments` (if it has arguments) and `used_by`. */
+/** A kind's meta-schema: the tag, one property per native type its value may have, its properties, its value fields,
+ * and the adjacencies `arguments` (if it has arguments) and `used_by`. */
 function schemaOf(kind: NodeClass): Schemas.OfObject.Data {
   const natives = [...(kind.VALUE ?? new Map()), ...kind.PROPERTIES];
+  const values = [...kind.VALUES].map(([name, field]) => (p: Schemas.OfProperty.Builder) => p.name(name).of(field.schema));
   const relations = kind.SLOTS.length > 0 || kind.VARIADIC !== null ? [ARGUMENTS_ADJACENCY, USED_BY] : [USED_BY];
   return new Schemas.OfObject.Builder().ref()
-    .properties(nativeProperty("kind", String), ...natives.map(([name, native]) => nativeProperty(name, native)))
+    .properties(nativeProperty("kind", String), ...natives.map(([name, native]) => nativeProperty(name, native)), ...values)
     .relations(...relations).create();
 }
 
@@ -806,6 +871,9 @@ export class Declared implements Dialect {
       }
       kind.Schema = schemaOf(kind);
       schemas.set(kind.NAME, kind.Schema);
+      kind.HOLDERS = new Map([...kind.VALUES].map(([name, field]) => [name,
+        new Schemas.OfObject.Builder().ref().properties((p) => p.name(name).of(field.schema)).create()]));
+      for (const [name, held] of kind.HOLDERS) Proxies.register(`${kind.NAME}.${name}`, held);
       registered.set(kind.NAME, builder);
       this.builders.set(kind.KIND, builder);
     }
@@ -845,7 +913,7 @@ export class Declared implements Dialect {
   make(form: Form): any {
     const kind = this.byTag.get(form.kind);
     if (kind === undefined) throw new ValueError(`${this.dialectName} has no kind ${repr(form.kind)}`);
-    const allowed = [...(kind.VALUE !== null ? ["value"] : []), ...kind.PROPERTIES.keys()];
+    const allowed = [...(kind.VALUE !== null ? ["value"] : []), ...kind.PROPERTIES.keys(), ...kind.VALUES.keys()];
     for (const name of form.attributes.keys()) {
       if (!allowed.includes(name)) throw new ValueError(`${article(kind.KIND)} has no attribute ${repr(name)}`);
     }
@@ -901,7 +969,7 @@ export class Declared implements Dialect {
       } catch (error) {
         return [(error as Error).message];
       }
-      return [];
+      return expression.check();
     }
     const found: string[] = [];
     for (const [name, native] of kind.PROPERTIES) {
@@ -961,7 +1029,7 @@ export class Declared implements Dialect {
 
   private inferNode(expression: Node, environment: Environment, memo: Map<Environment, Map<Node, Domains.Domain>>): Domains.Domain {
     const kind = expression.kind();
-    if (kind.ROLE === LITERAL) return this.domainOf(expression.field("value") as Native);
+    if (kind.ROLE === LITERAL) return expression.typed() ?? this.domainOf(expression.field("value") as Native);
     if (kind.ROLE === REFERENCE) {
       const name = nameOf(expression) as string;
       return kind.LEXICAL && Object.hasOwn(environment, name) ? environment[name] as Domains.Domain : Domains.Anything;
@@ -1034,8 +1102,10 @@ export function fold<R>(expression: Node, fn: (node: any, results: any[]) => R):
 }
 
 /** Natives of one type by value; NaN is NaN, and -0.0 is not 0.0. */
+/** Natives of one type by value (NaN is NaN, -0.0 is not 0.0); a value field's data, such as a domain, by `equals`. */
 export function sameNative(a: unknown, b: unknown): boolean {
   if (typeName(a) !== typeName(b)) return false;
+  if (typeof (a as { equals?: unknown } | null)?.equals === "function") return (a as { equals(other: unknown): boolean }).equals(b);
   if (typeof a === "number") return Object.is(a, b);
   if (a instanceof Uint8Array) {
     const other = b as Uint8Array;
@@ -1064,4 +1134,4 @@ export function same(a: unknown, b: unknown): boolean {
 }
 
 /** Internals, for the protocol conformance tests. */
-export const _internals = { _Adjacency, _Argument, _Field, _Link };
+export const _internals = { _Adjacency, _Argument, _Field, _Link, _ValueSlot };

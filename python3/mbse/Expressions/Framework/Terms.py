@@ -28,7 +28,10 @@ data model and what `role` it plays, and passes the classes to `Declared`, which
 - `IMPORT`: makes what it declares (a module, a package's functions) available within its one argument, its body. The
   scope resolves the declaration; `binds()` gives the names it binds for lexical references.
 
-Properties are required unless named in `OPTIONAL`, and `check()` adds a kind's own problems to validation. Arguments
+Properties are required unless named in `OPTIONAL`, and `check()` adds a kind's own problems to validation. `VALUES`
+names fields that hold a value object rather than a native, each described by a `ValueField` (its schema and plain
+form), such as a literal's domain; they are written and read through mbse-schemas' proxies of a holder schema,
+registered as '<kind's schema name>.<field>'. `typed()` gives a literal's own domain, if it has one. Arguments
 are fields too: `SLOTS` names fields holding one argument each, in index order, and `VARIADIC` names one field holding a
 tuple of the arguments after the slots. Both are written as entries of the adjacency `arguments`, to the relation `Arguments`
 (registered as 'Expressions.Arguments' and shared by every dialect), which links a `parent` to an `argument` with an
@@ -42,13 +45,13 @@ import math
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from typing import Any, ClassVar, Protocol, runtime_checkable
 
-from mbse.Schemas.Framework import Proxies, Schemas, Visitors
+from mbse.Schemas.Framework import Plain, Proxies, Schemas, Visitors
 from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains
 
 __all__ = [
-    "Form", "Expression", "Dialect", "Node", "Builder", "AnyBuilder", "Term", "Registry", "Declared",
+    "Form", "Expression", "Dialect", "Node", "Builder", "AnyBuilder", "Term", "Registry", "Declared", "ValueField",
     "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "ARGUMENTS", "Arguments", "NATIVES",
     "walk", "fold", "same", "resolve", "name_of",
 ]
@@ -139,6 +142,20 @@ class Dialect(Protocol):
 # --- Data ---
 
 
+class ValueField:
+    """A field that holds a value object rather than a native: the `schema` of its value, and the conversions between
+    the field's data and the value's plain form."""
+
+    def __init__(self, schema: Schemas.OfAny.Data, to_plain: Callable[[Any], Any], from_plain: Callable[[Any], Any]):
+        self.schema, self.to_plain, self.from_plain = schema, to_plain, from_plain
+
+
+def _holder(kind: type[Node], name: str, value: Any) -> Any:
+    """A proxy of the holder schema of `kind`'s field `name`, holding `value`."""
+    plain = {"root": "s0", "objects": {"s0": {name: kind.VALUES[name].to_plain(value)}}}
+    return Plain.FromPlain(Proxies.Builders)(kind.HOLDERS[name], plain)
+
+
 class Node:
     """Shared by every kind's data (a dataclass per kind): identity, schema name, writing through `accept`, and the
     structural view. `Declared` sets `DIALECT`, `NAME` and `FIELDS`."""
@@ -158,6 +175,8 @@ class Node:
     OPERATOR: ClassVar[str | None] = None
     VOCABULARY: ClassVar[Mapping[str, Domains.Signature] | None] = None
     SIGNATURE: ClassVar[Domains.Signature | None] = None
+    VALUES: ClassVar[Mapping[str, ValueField]] = {}
+    HOLDERS: ClassVar[Mapping[str, Schemas.OfObject.Data]] = {}
 
     def identity(self) -> Hashable:
         return id(self)
@@ -181,6 +200,9 @@ class Node:
         for name in self.PROPERTIES:
             if getattr(self, name) is not None:
                 _set(visitor, name, getattr(self, name))
+        for name in self.VALUES:
+            if getattr(self, name) is not None:
+                _holder(type(self), name, getattr(self, name)).accept(visitor)  # writes the property `name`
         for index, argument in enumerate(self._arguments()):
             if argument is not None:
                 _write_argument(visitor, index, argument)
@@ -197,9 +219,13 @@ class Node:
         """The kind's own problems, beyond those of its role; none by default."""
         return []
 
+    def typed(self) -> Domains.Domain | None:
+        """A literal's own domain, when it carries one; None for its value's default, and for other kinds."""
+        return None
+
     def form(self) -> Form:
         attributes = {"value": self.value} if self.VALUE is not None and self.value is not None else {}  # type: ignore
-        attributes.update({n: getattr(self, n) for n in self.PROPERTIES if getattr(self, n) is not None})
+        attributes.update({n: getattr(self, n) for n in (*self.PROPERTIES, *self.VALUES) if getattr(self, n) is not None})
         return Form(self.KIND, attributes, self._arguments())
 
     def validate(self, bound: Iterable[str] = (), core: bool = False) -> list[str]:
@@ -288,6 +314,35 @@ class _Field:
 
     def as_indexed(self, callback: Callable[[Visitors.OfIndexed], Any]) -> _Field:
         raise TypeError(f"property {self._name!r} is native")
+
+
+class _ValueSlot:
+    """`Visitors.OfProperty` over a builder's field that holds a value object, such as a literal's domain: written and
+    read through a proxy of the field's holder schema, whose builders do the work."""
+
+    def __init__(self, builder: Builder, name: str):
+        self._builder, self._name = builder, name
+
+    def name(self) -> str:
+        return self._name
+
+    def has(self) -> bool:
+        return self._builder._values.get(self._name) is not None
+
+    def value(self, callback: Callable[[Visitors.OfAny], Any]) -> _ValueSlot:
+        kind, name = self._builder._data, self._name
+        current = self._builder._values.get(name)
+        holder = None if current is None else _holder(kind, name, current)
+        builder = getattr(Proxies.Builders, f"{kind.NAME}.{name}")(holder)
+        builder.property(name, lambda p: p.value(callback))
+        made = builder.create() if holder is None else builder.update()
+        plain = Plain.ToPlain(kind.HOLDERS[name], made)["objects"]["s0"].get(name)  # type: ignore[index, union-attr]
+        self._builder._values[name] = None if plain is None else kind.VALUES[name].from_plain(plain)
+        return self
+
+    def clear(self) -> _ValueSlot:
+        self._builder._values[self._name] = None
+        return self
 
 
 class _Link:
@@ -407,7 +462,7 @@ class Builder:
         self._arguments: list[_Argument] = []
         if instance is not None:
             self._value = instance.value if self._data.VALUE is not None else None
-            self._values = {name: getattr(instance, name) for name in self._data.PROPERTIES}
+            self._values = {name: getattr(instance, name) for name in (*self._data.PROPERTIES, *self._data.VALUES)}
             self._arguments = [_Argument("parent", argument, index)
                                for index, argument in enumerate(instance._arguments()) if argument is not None]
 
@@ -416,7 +471,7 @@ class Builder:
     def set(self, name: str, value: Native) -> Any:
         if name == "value" and self._data.VALUE is not None:
             self._value = value
-        elif name in self._data.PROPERTIES:
+        elif name in self._data.PROPERTIES or name in self._data.VALUES:
             self._values[name] = value
         else:
             raise KeyError(f"{_article(self._data.KIND)} has no attribute {name!r}")
@@ -494,9 +549,11 @@ class Builder:
             raise ValueError(f"expected kind {self._data.KIND!r}, got {kind!r}")
 
     def _names(self) -> list[str]:
-        return ["kind", *(self._data.VALUE or {}), *self._data.PROPERTIES]
+        return ["kind", *(self._data.VALUE or {}), *self._data.PROPERTIES, *self._data.VALUES]
 
-    def _field(self, name: str) -> _Field:
+    def _field(self, name: str) -> _Field | _ValueSlot:
+        if name in self._data.VALUES:
+            return _ValueSlot(self, name)
         if name == "kind":
             return _Field("kind", str, lambda: self._data.KIND, self._check_kind)
         if name in self._data.PROPERTIES:
@@ -637,12 +694,13 @@ _USED_BY = lambda r: r.name("used_by").of(Arguments).me("argument")  # noqa: E73
 
 
 def _schema(kind: type[Node]) -> Schemas.OfObject.Data:
-    """A kind's meta-schema: the tag, one property per native type its value may have, its properties, and the
-    adjacencies `arguments` (if it has arguments) and `used_by`."""
+    """A kind's meta-schema: the tag, one property per native type its value may have, its properties, its value
+    fields, and the adjacencies `arguments` (if it has arguments) and `used_by`."""
     natives = {**(kind.VALUE or {}), **kind.PROPERTIES}
+    values = [lambda p, n=n, f=f: p.name(n).of(f.schema) for n, f in kind.VALUES.items()]
     relations = [_ARGUMENTS, _USED_BY] if kind.SLOTS or kind.VARIADIC is not None else [_USED_BY]
-    return (Schemas.OfObject.Builder().ref().properties(_native("kind", str), *(_native(n, t) for n, t in natives.items()))
-            .relations(*relations).create())
+    return (Schemas.OfObject.Builder().ref().properties(_native("kind", str), *(_native(n, t) for n, t in natives.items()),
+                                                        *values).relations(*relations).create())
 
 
 class Registry:
@@ -697,6 +755,10 @@ class Declared:
             builder = builders.get(kind.KIND) or type(f"{kind.__name__}Builder", (Builder,), {"_data": kind})
             kind.Schema = schemas[kind.NAME] = _schema(kind)  # type: ignore[attr-defined]
             registered[kind.NAME] = builders[kind.KIND] = builder
+            kind.HOLDERS = {name: Schemas.OfObject.Builder().ref().properties(lambda p, n=name, f=field: p.name(n).of(f.schema))
+                            .create() for name, field in kind.VALUES.items()}
+            for name, holder in kind.HOLDERS.items():
+                Proxies.register(f"{kind.NAME}.{name}", holder)
         for schema_name, schema in schemas.items():
             Proxies.register(schema_name, schema)
         self.builders = builders
@@ -728,7 +790,7 @@ class Declared:
         if form.kind not in self._kinds:
             raise ValueError(f"{self._name} has no kind {form.kind!r}")
         kind = self._kinds[form.kind]
-        allowed = [*(["value"] if kind.VALUE is not None else []), *kind.PROPERTIES]
+        allowed = [*(["value"] if kind.VALUE is not None else []), *kind.PROPERTIES, *kind.VALUES]
         for name in form.attributes:
             if name not in allowed:
                 raise ValueError(f"{_article(kind.KIND)} has no attribute {name!r}")
@@ -776,7 +838,7 @@ class Declared:
                 _check_value(kind, expression.value)
             except TypeError as error:
                 return [str(error)]
-            return []
+            return expression.check()
         problems = [p for name, native in kind.PROPERTIES.items()
                     if not (name in kind.OPTIONAL and getattr(expression, name) is None)
                     for p in _property_problems(what, name, native, getattr(expression, name))]
@@ -830,7 +892,7 @@ class Declared:
                     memo: dict[tuple[int, int], Domains.Domain]) -> Domains.Domain:
         kind = type(expression)
         if kind.ROLE == LITERAL:
-            return self._domain_of(expression.value)
+            return expression.typed() or self._domain_of(expression.value)
         if kind.ROLE == REFERENCE:
             name = name_of(expression)
             return environment[name] if kind.LEXICAL and name in environment else Domains.Anything
@@ -904,6 +966,7 @@ def fold(expression: Expression, function: Callable[[Any, list[Any]], Any]) -> A
 
 
 def _same_native(a: Any, b: Any) -> bool:
+    """Natives of one type by value (NaN is NaN, -0.0 is not 0.0); a value field's data, such as a domain, by `==`."""
     if type(a) is not type(b):
         return False
     if type(a) is float:

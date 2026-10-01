@@ -8,6 +8,7 @@
  * cases, same values, same order of statements.
  */
 
+import * as Domains from "../Dialects/Basic/Domains.js";
 import * as Expressions from "../Dialects/Basic/Expressions.js";
 import * as Excel from "../Dialects/Excel/Expressions.js";
 import * as Latex from "../Dialects/Latex/Expressions.js";
@@ -15,7 +16,7 @@ import * as Matlab from "../Dialects/Matlab/Expressions.js";
 import * as Python from "../Dialects/Python/Expressions.js";
 import type { Schemas, Visitors } from "@mbse/schemas/Framework";
 
-export const CASES = ["expression", "python", "matlab", "excel", "latex"] as const;
+export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains"] as const;
 
 type Case = [Schemas.OfObject.Data, Visitors.Visitable, unknown];
 
@@ -56,11 +57,25 @@ export function build(): Map<string, Case> {
   const latex = L.where("a", L.member(thisL, "age"), L.binary("\\land", L.binary("\\geq", aL, 18n), L.binary(
     "\\lor", L.unary("\\lnot", L.function("has", thisL, "email")), L.binary(">", L.frac(aL, 2n), 1.5))));
 
+  // --- domains: literals of value domains, by value and by name, a packed enum among them; defaults left out ---
+  const D = Domains;
+  const uint8 = new D.OfInteger.Builder().width(8n).signed(false).overflow("wrap").create();
+  if (D.name_of(uint8) === null) D.register("uint8", uint8);
+  const state = new D.OfPacked.Builder().domain(new D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
+    new D.OfBits.Builder().width(2n).create()).codes(0n, 1n).create();
+  const binary32 = new D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create();
+  const [mode, count, gain, line, mask, size] = ["mode", "count", "gain", "line", "mask", "size"].map((name) => E.variable(name));
+  const domains = E.operation(
+    "all", mode!.eq(E.literal("RUN", state)), count!.le(E.literal(200n, uint8)), gain!.ne(E.literal(1.5, binary32)),
+    line!.ge(E.literal("Z", new D.OfIeee1164.Builder().create())),
+    mask!.gt(E.literal(new Uint8Array([3]), new D.OfBits.Builder().width(2n).create())), size!.lt(E.literal(5n, D.Int))).data;
+
   return new Map<string, Case>([
     ["expression", [E.OfLet.Schema, expression, E.Builders]],
     ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
     ["matlab", [M.DIALECT.schema_of(matlab), matlab, M.Builders]],
     ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
+    ["domains", [E.OfOperation.Schema, domains, E.Builders]],
     ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],
   ]);
 }

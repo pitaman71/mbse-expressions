@@ -8,13 +8,13 @@ same order of statements.
 
 from __future__ import annotations
 
-from mbse.Expressions import Expressions
+from mbse.Expressions import Domains, Expressions
 from mbse.Expressions.Dialects.Excel import Expressions as Excel
 from mbse.Expressions.Dialects.Latex import Expressions as Latex
 from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
 from mbse.Expressions.Dialects.Python import Expressions as Python
 
-CASES = ["expression", "python", "matlab", "excel", "latex"]
+CASES = ["expression", "python", "matlab", "excel", "latex", "domains"]
 
 
 def build():
@@ -53,10 +53,25 @@ def build():
     latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
         "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
 
+    # --- domains: literals of value domains, by value and by name, a packed enum among them; defaults left out ---
+    D = Domains
+    uint8 = D.OfInteger.Builder().width(8).signed(False).overflow("wrap").create()
+    if D.name_of(uint8) is None:
+        D.register("uint8", uint8)
+    state = D.OfPacked.Builder().domain(D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
+        D.OfBits.Builder().width(2).create()).codes(0, 1).create()
+    binary32 = D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create()
+    mode, count, gain, line, mask, size = (E.variable(name) for name in ("mode", "count", "gain", "line", "mask", "size"))
+    domains = E.operation(
+        "all", mode.eq(E.literal("RUN", state)), count.le(E.literal(200, uint8)), gain.ne(E.literal(1.5, binary32)),
+        line.ge(E.literal("Z", D.OfIeee1164.Builder().create())),
+        mask.gt(E.literal(b"\x03", D.OfBits.Builder().width(2).create())), size.lt(E.literal(5, D.Int))).data
+
     return {
         "expression": (E.OfLet.Schema, expression, E.Builders),
         "python": (P.DIALECT.schema_of(python), python, P.Builders),
         "matlab": (M.DIALECT.schema_of(matlab), matlab, M.Builders),
         "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
+        "domains": (E.OfOperation.Schema, domains, E.Builders),
         "latex": (L.DIALECT.schema_of(latex), latex, L.Builders),
     }

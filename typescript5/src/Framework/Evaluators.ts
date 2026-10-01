@@ -67,6 +67,8 @@ export class Interpreter {
     if (kind.ROLE === Terms.LITERAL) {
       const value = expression.field("value");
       if (value === null) throw new ValueError(`${Terms.article(kind.KIND)} needs a value`);
+      const typed = expression.typed();
+      if (typed !== null) throw new NotImplementedError(`literals of ${typed.name()} are not evaluated yet`);
       return this.literal(value);
     }
     if (kind.ROLE === Terms.REFERENCE) return scope.lookup(expression);

@@ -72,6 +72,9 @@ class Interpreter:
         if kind.ROLE == Terms.LITERAL:
             if expression.value is None:
                 raise ValueError(f"{Terms._article(kind.KIND)} needs a value")
+            typed = expression.typed()
+            if typed is not None:
+                raise NotImplementedError(f"literals of {typed.name()} are not evaluated yet")
             return self._literal(expression.value)
         if kind.ROLE == Terms.REFERENCE:
             return scope.lookup(expression)

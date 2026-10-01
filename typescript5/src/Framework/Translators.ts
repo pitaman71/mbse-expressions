@@ -163,7 +163,10 @@ function describe(dialect: Terms.Dialect, node: Node): string {
   if (kind.ROLE === Terms.APPLICATION && kind.OPERATOR !== null) {
     return `${dialect.name()} ${kind.KIND} ${repr(Terms.operatorOf(node))}`;
   }
-  if (kind.ROLE === Terms.LITERAL) return `${dialect.name()} ${kind.KIND} ${repr(node.field("value"))}`;
+  if (kind.ROLE === Terms.LITERAL) {
+    const typed = node.typed();
+    return `${dialect.name()} ${kind.KIND} ${repr(node.field("value"))}${typed === null ? "" : ` of ${typed.name()}`}`;
+  }
   return `${dialect.name()} ${kind.KIND}`;
 }
 

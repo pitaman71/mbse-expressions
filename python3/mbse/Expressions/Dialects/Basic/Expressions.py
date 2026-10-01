@@ -1,7 +1,7 @@
 """Expressions of the Basic dialect: the core vocabulary, for rules and constraints.
 `Evaluators` evaluates them.
 
-- `OfLiteral`: a native value.
+- `OfLiteral`: a native value, and its value domain when that is not the native's default (see `Domains`).
 - `OfOperation`: a named operation applied to ordered arguments, e.g. `eq(a, b)`. The vocabulary of names is open; the
   core operations (`CORE`) are the ones every binding evaluates. See docs/EXPRESSIONS.md.
 - `OfVariable`: the value bound to a name.
@@ -15,7 +15,8 @@ an ordinary object schema, so expressions serialize, validate and compare like a
 
 - Every kind's schema declares `kind`, a tag with a fixed value: 'literal', 'operation', 'variable' or 'let'.
 - `OfLiteral.Schema` declares one optional property per native type (`int`, `float`, `str`, `bool`, `bytes`); a literal
-  sets exactly one.
+  sets exactly one. Its `domain`, a value of `Domains.Schema`, is written only when it is not the native's default: by
+  name when the domain is registered, otherwise by value.
 - `OfOperation.Schema`, `OfVariable.Schema` and `OfLet.Schema` declare `name`.
 - Operations and lets declare the adjacency `arguments` to `Arguments`, a relation linking a `parent` to an `argument`
   with an `index`; `unique(argument)` makes the parent and index determine the argument. A let's value is its argument
@@ -76,7 +77,27 @@ class _LiteralData(F.Node):
     KIND = "literal"
     ROLE = F.LITERAL
     VALUE = F.NATIVES
+    VALUES = {"domain": F.ValueField(Domains.Schema, Domains.to_plain, Domains.from_plain)}
     value: Native | None = None
+    domain: Any = None  # a value domain, or None for the value's native's default
+
+    def __post_init__(self) -> None:
+        if self.domain is not None and _native_name(self.value) is not None and self.domain == Domains.of(self.value):
+            self.domain = None  # a native's default domain is no domain at all
+
+    def typed(self) -> Any:
+        return self.domain
+
+    def check(self) -> list[str]:
+        """A literal's domain is valid and holds its value."""
+        if self.domain is None:
+            return []
+        if not isinstance(self.domain, Domains.Domain):
+            return [f"a literal's domain must be a value domain, got {_type_name(self.domain)}"]
+        problems = [f"domain: {problem}" for problem in self.domain.validate()]
+        if not problems and not self.domain.contains(self.value):
+            problems.append(f"a literal of {self.domain.name()} cannot hold {self.value!r}")
+        return problems
 
 
 @dataclass(eq=False)
@@ -117,13 +138,16 @@ _KINDS = (_LiteralData, _OperationData, _VariableData, _LetData)
 
 
 class _LiteralBuilder(F.Builder):
-    """Builds an `OfLiteral.Data`. DSL: `.value(native)`. As a `Visitors.OfObject`, it has one property per native type,
-    and setting one replaces the value."""
+    """Builds an `OfLiteral.Data`. DSL: `.value(native)` and `.domain(domain)`. As a `Visitors.OfObject`, it has one
+    property per native type, and setting one replaces the value, and the property `domain`."""
 
     _data = _LiteralData
 
     def value(self, value: Native) -> _LiteralBuilder:
         return self.set("value", value)
+
+    def domain(self, domain: Any) -> _LiteralBuilder:
+        return self.set("domain", domain)
 
 
 class _NamedBuilder(F.Builder):
@@ -331,9 +355,9 @@ def variable(name: str) -> Term:
     return Term(_VariableData(name))
 
 
-def literal(value: Native) -> Term:
-    """The literal `value`."""
-    return Term(_LiteralData(value))
+def literal(value: Native, domain: Any = None) -> Term:
+    """The literal `value`, of `domain` (by default, its native's)."""
+    return Term(_LiteralData(value, domain))
 
 
 def let_(name: str, value: OfAny.Spec, body: OfAny.Spec) -> Term:

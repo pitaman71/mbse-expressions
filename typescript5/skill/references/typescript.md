@@ -66,6 +66,7 @@ check(Evaluators.predicate(self.reach.has("email"), card) === true, "by email");
 | `int`, `float` values (`18`, `18.0`) | `bigint` and `number` (`18n`, `18`): `18` is a float, and `ge(get(x, 'age'), 18)` against an int age is unknown |
 | `None` | `null` |
 | `E.from_(lambda this: ...)` | none: write terms. `this` is reserved, so name that term `self` |
+| `Domains.OfInteger.Builder().width(8)`, domains compared with `==` | `new Domains.OfInteger.Builder().width(8n)`, compared with `.equals()` |
 | `validate(bound={"this"}, core=True)`, keyword arguments | options objects: `validate({ bound: ["this"], core: true })`, `new Scope(variables, { modules })` |
 | `Pattern("operation", A, B, name="eq")` | `new Pattern("operation", { name: "eq" }, A, B)` |
 | `Python.parse(source)` | none: build Python expressions with constructors (`P.compare(">=", P.attribute(P.name("x"), "age"), 18n)`) |

@@ -6,9 +6,10 @@
  * For AI agents: read `skill/SKILL.md` at the root of this package first. It says when to use this package, the rules
  * that prevent most mistakes, and which reference to load for a task.
  *
- * `Expressions` and `Evaluators` are the Basic dialect's, the neutral form of every rule. The
+ * `Expressions`, `Evaluators` and `Domains` are the Basic dialect's, the neutral form of every rule. The
  * framework is `@mbse/expressions/Framework`, the dialects are under `@mbse/expressions/Dialects/<name>`, and the
  * translators between them are `@mbse/expressions/Translators`. */
 
+export * as Domains from "./Dialects/Basic/Domains.js";
 export * as Evaluators from "./Dialects/Basic/Evaluators.js";
 export * as Expressions from "./Dialects/Basic/Expressions.js";

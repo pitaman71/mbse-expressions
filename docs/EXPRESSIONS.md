@@ -109,8 +109,10 @@ adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None
 
 ## Value domains
 
-Designed, not yet implemented. Today Basic's domains are its natives (`Bool`, `Int`, `Float`, `Str`, `Bytes`) and
-`Object`. The domains below make representation part of the type, as C, C++ and SystemVerilog need, and as an interface
+Domains as data are implemented: the kinds below, their validation, the registry, and literals that carry them.
+Evaluating literals of other domains than the natives' defaults, and the conversions, are designed, not yet
+implemented: evaluating such a literal raises `NotImplementedError`. The domains below make representation part of the
+type, as C, C++ and SystemVerilog need, and as an interface
 control document describes a data word. Each names a published standard where one exists, with only the parameters
 that standard defines, and today's natives become their defaults.
 
@@ -123,7 +125,7 @@ that standard defines, and today's natives become their defaults.
 | `Unicode` | none | `Str` |
 | `Ieee1164` | none | |
 | `Enum` | its members, each with a `printable` value (its name as written) | |
-| `Packed` | a domain, a fixed-size domain that represents it (`Integer`, `Ieee754`, `Bits` or `Bytes` of a fixed width), and the representation of each value | |
+| `Packed` | an `Enum` (its `domain`), a fixed-width `Integer` or `Bits` that represents it (its `representation`), and an integer `code` per member, the representation of each value | |
 | `Bool`, `Object` | unchanged | |
 
 - **Domains name standards.** `Ieee754` is IEEE 754-2019's interchange formats, with their values, special values and
@@ -135,13 +137,17 @@ that standard defines, and today's natives become their defaults.
 - **Basic has no implied promotions.** An operation takes its arguments' domains as they are: `add` of an
   `Integer(8)` and an `Integer(16)` does not apply until one is converted explicitly. A dialect's translator writes out
   its language's promotions as conversions.
-- **Literals carry their domain.** Over the wire a literal refers to its domain explicitly, so `1` as an `Integer(8)`
-  and `1` as an `Ieee754` are different literals.
-- **Domains are mbse-schemas objects, as expressions are.** Every parameter above is data, so each domain kind is a
-  dataclass with a builder and a registered meta-schema (`Expressions.Domains.Of<Kind>`, e.g. `OfInteger`), and a
-  literal's domain is an ordinary `$ref` to a domain object in the same snapshot. Signatures stay code: they are a
-  dialect's vocabulary, not values on the wire. So do `Anything` and `OfValues`, which serve inference only and are
-  never stored; the Python types that `OfTypes` holds give way to the domains' own properties.
+- **Literals carry their domain.** A literal's `domain` is a value object, so `1` as an `Integer(8)` and `1` as an
+  `Ieee754` are different literals, and two literals of equal domains are the same wherever their domains came from.
+- **Domains are data, compared by structure, and registered by name.** Each kind is `Domains.Of<Kind>`, with `Data`
+  (a dataclass in Python, a class with `equals` in TypeScript), a `Builder` and the meta-schema `Schema` of its value;
+  `Domains.Schema` is their union, with the branch `named`. `Domains.register(name, domain)` registers a domain, once,
+  under one name. Over the wire a literal of a registered domain carries its name, `{"named": {"name": "uint8"}}`, and
+  any other its value, `{"integer": {"width": 8, "signed": true, "overflow": "raise"}}`; a name resolves in the
+  registry. Signatures stay code: they are a dialect's vocabulary, not values on the wire. So do `Anything` and
+  `OfValues`, which serve inference only and are never stored. Today's natives are the domains' defaults (`Int` is an
+  unbounded `Integer`, and so on), and a domain includes only domains equal to it, so the core operations' signatures
+  apply to no other domain until arithmetic takes them.
 - **Arithmetic is exact, then rounded.** An `Ieee754` operation computes its exact result and rounds it to the format
   with the domain's rounding attribute, as the standard specifies; the formats with a host type (`binary32`,
   `binary64`) may take a shortcut that gives the same result. An `Integer` with a width wraps, saturates or raises on
@@ -158,8 +164,13 @@ that standard defines, and today's natives become their defaults.
   domain's overflow and rounding; `reinterpret(value, domain)` keeps the bit pattern, between fixed-width domains of
   the same size (C++'s `bit_cast`). `pack` and `unpack` convert to and from a `Packed` domain's representation.
 - **A literal without a domain has its native's default**: an `int` is an unbounded `Integer`, a `float` an `Ieee754`
-  `binary64` rounding ties to even, a `str` a `Unicode`, `bytes` variable `Bytes`, a `bool` a `Bool`. Writers leave a
-  default domain out, so expressions stored before domains keep their meaning and their text.
+  `binary64` rounding ties to even, a `str` a `Unicode`, `bytes` variable `Bytes`, a `bool` a `Bool`. A literal given its
+  native's default domain holds none, so writers leave it out, and expressions stored before domains keep their meaning
+  and their text.
+- **A literal's value is a native of its domain**: an `int` for an `Integer`, a `float` for a binary `Ieee754` and the
+  decimal text (a `str`) for a decimal one, `bytes` for `Bits` (big-endian, in the fewest bytes, the unused leading bits
+  zero) and `Bytes`, a `str` for `Unicode`, `Ieee1164` (one of `U X 0 1 Z W L H -`), an `Enum` and a `Packed` enum (a
+  member's name), and a `bool` for `Bool`. Validation reports a value its domain does not hold.
 - **An `Enum`'s members are unordered**: `eq` and `ne` only. A `Packed` enum orders by its representation, as C
   compares enums by their integers.
 - **Packing is its own domain.** A `Packed` domain pairs a domain (an `Enum`, a record) with a fixed-size domain and the
@@ -318,6 +329,9 @@ in Basic but true in the others.
 - Value domains: conversions are `convert` (keeps the value) and `reinterpret` (keeps the bit pattern), with `pack` and
   `unpack` for packed domains; a literal stored without a domain has its native's default domain, and writers leave
   defaults out; an `Enum` is unordered unless packed, when it orders by its representation.
+- A literal holds its domain by value, as a value object, written by name when the domain is registered and by value
+  otherwise; domains compare by structure. A packed domain packs an enum into a fixed-width integer or bits, with an
+  integer code per member.
 - Value domains name published standards where one exists (`Ieee754`, `Ieee1164`), with only the parameters the
   standard defines, rather than free representation parameters: no float format by widths and flags, no ones'
   complement or sign-magnitude integers, no `Decimal` apart from IEEE 754's decimal formats. The dialect keeps its
