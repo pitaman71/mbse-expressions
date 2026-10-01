@@ -290,8 +290,9 @@ in Basic but true in the others.
 
 ## Open questions
 
-- Lists (mbse-schemas' `OfIndexed`): `get` of a list property gives an opaque value, whose items Basic cannot read
-  and which equals nothing. Basic has no list domain or operations yet (length, item, membership, quantifiers).
+- Lists (mbse-schemas' `OfIndexed`, positional or keyed): `get` of a list property gives an opaque value, whose items
+  Basic cannot read and which equals nothing. Basic has no list or map domain or operations yet (length, item by
+  position or key, membership, quantifiers), nor a tensor domain over keyed and extended lists.
 - Value domains (above): the names of the conversion operations; what a literal stored without a domain (today's
   corpora) means; whether an `Enum`'s members are ordered, or only a `Packed` enum's (by representation, as in C).
 - Core expression vocabulary above is a proposal; confirm the exact set, and specify the collection operations
