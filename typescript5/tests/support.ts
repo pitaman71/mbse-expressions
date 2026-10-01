@@ -146,6 +146,10 @@ export class Fake implements Visitable {
     return this.schemaName;
   }
 
+  owner(): null {
+    return null;
+  }
+
   accept(visitor: ObjectVisitor): void {
     for (const [name, value] of this.values) set_property(visitor, name, value);
     for (const [name, items] of this.adjacencies) {
@@ -166,14 +170,14 @@ export const PROTOCOLS: Record<string, Record<string, number>> = {
   OfAny: { as_native: 1, as_object: 1, as_union: 1, as_intersection: 1 },
   OfNative: { has: 0, get: 0, set: 1, clear: 0 },
   OfProperty: { name: 0, has: 0, value: 1, clear: 0 },
-  OfObject: { properties: 1, has: 1, property: 2, clear: 1, adjacencies: 1, adjacency: 2 },
+  OfObject: { properties: 1, has: 1, property: 2, clear: 1, adjacencies: 1, adjacency: 2, identify: 1 },
   OfAdjacency: { name: 0, me: 0, entries: 1, add: 1, remove: 1 },
   OfEntry: { links: 1, link: 2, properties: 1, has: 1, property: 2, clear: 1 },
   OfLink: { name: 0, target: 1, set: 1 },
   OfRelation: { links: 1, entries: 1 },
   OfUnion: { branch: 0, value: 1 },
   OfIntersection: { value: 1 },
-  Visitable: { identity: 0, schema_name: 0, accept: 1 },
+  Visitable: { identity: 0, schema_name: 0, owner: 0, accept: 1 },
   // The framework's protocols, with TypeScript's parameters: options objects and defaults are not counted.
   Expression: { dialect: 0, form: 0, validate: 0 },
   Dialect: { name: 0, kinds: 0, schema_of: 1, make: 1, resolve: 1, validate: 1, infer: 1 },

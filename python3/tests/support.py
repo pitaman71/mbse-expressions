@@ -92,6 +92,9 @@ class Fake:
     def schema_name(self) -> str:
         return self._schema_name
 
+    def owner(self) -> Any:
+        return None
+
     def accept(self, visitor: Any) -> None:
         for name, value in self.values.items():
             set_property(visitor, name, value)

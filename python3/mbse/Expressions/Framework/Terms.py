@@ -165,6 +165,10 @@ class Node:
     def schema_name(self) -> str:
         return self.NAME
 
+    def owner(self) -> None:
+        """Expressions are reference objects, linked by their arguments."""
+        return None
+
     def dialect(self) -> Declared:
         return self.DIALECT
 
@@ -535,6 +539,10 @@ class Builder:
             raise KeyError(f"unknown adjacency {name!r}")
         return self
 
+    def identify(self, value: Visitors.Visitable) -> Builder:
+        """Expressions hold no value objects, so there is nothing to identify."""
+        return self
+
 
 class AnyBuilder:
     """Selects an expression of the dialect: `.select(spec)`, or a dialect's `as_<kind>(spec)` methods. Finalizing
@@ -655,6 +663,10 @@ class Registry:
             if registered is schema:
                 return name
         raise LookupError("schema is not registered")
+
+    def member(self, instance: Any, name: str) -> Any:
+        """The value an expression holds in its property `name`."""
+        return getattr(instance, name)
 
 
 # --- Dialects declared by their kinds ---

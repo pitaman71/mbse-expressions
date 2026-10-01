@@ -191,6 +191,11 @@ export abstract class Node implements Expression {
     return this.kind().NAME;
   }
 
+  /** Expressions are reference objects, linked by their arguments. */
+  owner(): null {
+    return null;
+  }
+
   dialect(): Declared {
     return this.kind().DIALECT;
   }
@@ -609,6 +614,11 @@ export class Builder implements Visitors.OfObject {
     else throw new KeyError(`unknown adjacency ${repr(name)}`);
     return this;
   }
+
+  /** Expressions hold no value objects, so there is nothing to identify. */
+  identify(_value: Visitors.Visitable): this {
+    return this;
+  }
 }
 
 /** Selects an expression of the dialect: `.select(spec)`, or a dialect's `as_<kind>(spec)` methods. Finalizing
@@ -733,6 +743,11 @@ export class Registry {
   name_of(schema: unknown): string {
     for (const [name, registered] of this.schemas) if (registered === schema) return name;
     throw new LookupError("schema is not registered");
+  }
+
+  /** The value an expression holds in its property `name`. */
+  member(instance: unknown, name: string): unknown {
+    return (instance as Record<string, unknown>)[name];
   }
 }
 

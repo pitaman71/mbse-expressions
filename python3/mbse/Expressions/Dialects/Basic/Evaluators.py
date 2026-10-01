@@ -11,8 +11,8 @@
   types are incomparable. Arithmetic takes numbers of one type.
 - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
   variables and wrong operand types raise, as do the problems `validate()` reports.
-- `get` and `has` read any object that writes its properties through `accept`, including embedded objects, which have
-  no identity (and so compare equal to nothing).
+- `get` and `has` read any object that writes its properties through `accept`, including embedded objects (value
+  objects), whose identity does not take part in equality (and so they compare equal to nothing).
 
 `Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, as a truth value.
 """
@@ -82,7 +82,8 @@ def _is_readable(value: Any) -> bool:
 
 
 def _is_object(value: Any) -> bool:
-    return _is_readable(value) and callable(getattr(value, "identity", None))
+    """A reference object, compared by identity; a value object's identity does not take part in equality."""
+    return _is_readable(value) and callable(getattr(value, "identity", None)) and value.owner() is None
 
 
 def _read(name: str, values: list[Any]) -> Any:
