@@ -11,6 +11,12 @@ that write their properties through `accept`). Values are Python `float` (double
   variables raise too, with MATLAB's messages.
 - The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
   53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
+- An array is a list: a list property's values, or a variable's list. Operators take scalars. `numel` counts
+  elements (a scalar is one), `xs(i)` indexes from 1, and `arrayfun(@(p) body, xs)` gives the body's value for each
+  element, an array of logicals if all are, else of doubles; each must be a numeric or logical scalar. `all`, `any`
+  and `nnz` test elements as nonzero (`any` ignores NaN), `sum` adds them from the first, `min` and `max` ignore NaN
+  and give an empty array of none, `unique` gives the distinct elements in order, and `ismember(x, xs)` tests `x`
+  against each element as `==` does.
 
 A `Scope(variables, functions, packages)` resolves variables from `variables` and functions as MATLAB does: the
 built-ins (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`), then those an enclosing `import` brought in, then `functions` (the path), then qualified names
@@ -58,9 +64,25 @@ def _logical(operator: str, value: Any) -> bool:
     return number != 0
 
 
-def _compare(test: Callable[[Any, Any], bool]) -> F.Implementation:
+def _scalar(value: Any) -> bool:
+    return type(value) in (bool, int, float, str)
+
+
+def _unsupported(operator: str, a: Any, b: Any) -> TypeError:
+    return TypeError(f"Operator '{operator}' is not supported for operands of type '{_class(a)}' and '{_class(b)}'.")
+
+
+def _equal(a: Any, b: Any) -> bool:
+    """`a == b` of two scalars, as MATLAB converts them."""
+    x, y = _double(a), _double(b)
+    return x == y if x is not None and y is not None else _text(a) == _text(b)
+
+
+def _compare(operator: str, test: Callable[[Any, Any], bool]) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> bool:
         a, b = (argument() for argument in arguments)
+        if not (_scalar(a) and _scalar(b)):
+            raise _unsupported(operator, a, b)
         x, y = _double(a), _double(b)
         if x is not None and y is not None:
             return test(x, y)
@@ -85,16 +107,15 @@ def _arithmetic(operator: str, apply_: Callable[[float, float], float]) -> F.Imp
         x, y = _double(a), _double(b)
         if x is not None and y is not None:
             return apply_(x, y)
-        if operator == "+":
+        if operator == "+" and _scalar(a) and _scalar(b):
             return _text(a) + _text(b)
-        raise TypeError(f"Operator '{operator}' is not supported for operands of type "
-                        f"'{_class(a)}' and '{_class(b)}'.")
+        raise _unsupported(operator, a, b)
 
     return apply
 
 
 def _class(value: Any) -> str:
-    return {bool: "logical", int: "double", float: "double", str: "string"}.get(type(value), "struct")
+    return {bool: "logical", int: "double", float: "double", str: "string", list: "array"}.get(type(value), "struct")
 
 
 def _not(arguments: list[F.Thunk], node: Any, scope: Any) -> bool:
@@ -121,7 +142,15 @@ def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     fields = _fields(arguments[0]())
     if node.name not in fields:
         raise KeyError(f'Unrecognized field name "{node.name}".')
-    value = fields[node.name]
+    return _value(fields[node.name])
+
+
+def _value(value: Any) -> Any:
+    """A value as MATLAB reads it: a number as a double, and a list (a list property's too) as an array."""
+    if isinstance(value, Validators.ListRecord):
+        value = value.values
+    if isinstance(value, (list, tuple)):
+        return [_value(item) for item in value]
     return float(value) if type(value) is int else value
 
 
@@ -154,6 +183,93 @@ def _bit(name: str) -> F.Implementation:
     return apply
 
 
+# --- Arrays ---
+
+
+def _elements(value: Any) -> list[Any]:
+    """An array's elements; a scalar or a struct is an array of one."""
+    return value if isinstance(value, list) else [value]
+
+
+def _numbers(value: Any) -> list[float]:
+    numbers = [_double(element) for element in _elements(value)]
+    if any(number is None for number in numbers):
+        raise TypeError("Invalid data type. First argument must be numeric or logical.")
+    return numbers  # type: ignore[return-value]
+
+
+def _logicals(values: list[Any]) -> list[Any]:
+    """Elements concatenated: logicals if all are, else doubles."""
+    return values if all(type(value) is bool for value in values) else [float(value) for value in values]
+
+
+def _extreme(name: str) -> F.Implementation:
+    def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
+        value = arguments[0]()
+        numbers = _numbers(value)
+        present = [number for number in numbers if number == number]
+        if not numbers:
+            return []
+        if not present:
+            return math.nan
+        best = min(present) if name == "min" else max(present)
+        return bool(best) if all(type(element) is bool for element in _elements(value)) else best
+
+    return apply
+
+
+def _unique(arguments: list[F.Thunk], node: Any, scope: Any) -> list[Any]:
+    elements = _elements(arguments[0]())
+    if all(type(element) is str for element in elements):
+        return sorted(set(elements))
+    numbers = _numbers(elements)
+    distinct = sorted({number for number in numbers if number == number}) + [number for number in numbers if number != number]
+    return [bool(number) for number in distinct] if all(type(element) is bool for element in elements) else distinct
+
+
+def _ismember(arguments: list[F.Thunk], node: Any, scope: Any) -> bool:
+    value, array = (argument() for argument in arguments)
+    elements = _elements(array)
+    if not _scalar(value) or not all(_scalar(element) for element in elements):
+        raise TypeError("ismember takes a scalar and an array of scalars.")
+    return any(_equal(value, element) for element in elements)
+
+
+def _index(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
+    elements = _elements(arguments[0]())
+    index = arguments[1]()
+    if type(index) is bool:  # a logical index: true selects the first element, false none
+        return elements[0] if index else []
+    number = _double(index)
+    if number is None or not math.isfinite(number) or not number.is_integer() or number < 1:
+        raise ValueError("Array indices must be positive integers or logical values.")
+    if number > len(elements):
+        raise ValueError(f"Index exceeds the number of array elements. Index must not exceed {len(elements)}.")
+    return elements[int(number) - 1]
+
+
+def _arrayfun(arguments: list[F.Thunk], node: Any, scope: Any) -> list[Any]:
+    body = arguments[1]
+    values = []
+    for position, element in enumerate(_elements(arguments[0]()), 1):
+        value = body(element)  # type: ignore[call-arg]
+        if _double(value) is None:
+            raise ValueError(f"Non-scalar in Uniform output, at index {position}, output 1. Set 'UniformOutput' to false.")
+        values.append(value)
+    return _logicals(values)
+
+
+def _reduction(reduce: Callable[[list[float]], Any]) -> F.Implementation:
+    return lambda arguments, node, scope: reduce(_numbers(arguments[0]()))
+
+
+def _sum(numbers: list[float]) -> float:
+    total = 0.0
+    for number in numbers:
+        total += number
+    return total
+
+
 def _unrecognized(name: str) -> NameError:
     return NameError(f"Unrecognized function or variable '{name}'.")
 
@@ -170,8 +286,7 @@ class Scope(S.Variables):
         self.imported: dict[str, Callable[..., Any]] = {}
 
     def lookup(self, reference: Any) -> Any:
-        value = super().lookup(reference)
-        return float(value) if type(value) is int else value  # numbers are doubles
+        return _value(super().lookup(reference))  # numbers are doubles, lists arrays
 
     def unbound(self, reference: Any) -> Any:
         raise _unrecognized(reference.name)
@@ -208,16 +323,26 @@ def _extension(name: str, arguments: list[F.Thunk], node: Any, scope: Scope) -> 
 
 _interpreter = F.Interpreter(Expressions.DIALECT, {
     "binary": {
-        "==": _compare(lambda a, b: a == b), "~=": _compare(lambda a, b: a != b),
-        "<": _compare(lambda a, b: a < b), "<=": _compare(lambda a, b: a <= b),
-        ">": _compare(lambda a, b: a > b), ">=": _compare(lambda a, b: a >= b),
+        "==": _compare("==", lambda a, b: a == b), "~=": _compare("~=", lambda a, b: a != b),
+        "<": _compare("<", lambda a, b: a < b), "<=": _compare("<=", lambda a, b: a <= b),
+        ">": _compare(">", lambda a, b: a > b), ">=": _compare(">=", lambda a, b: a >= b),
         "&&": _short_circuit("&&"), "||": _short_circuit("||"),
         "+": _arithmetic("+", lambda a, b: a + b), "-": _arithmetic("-", lambda a, b: a - b),
         ".*": _arithmetic(".*", lambda a, b: a * b),
     },
     "unary": {"~": _not, "-": _negate},
-    "call": {"isfield": _isfield, **{name: _bit(name) for name in ("bitand", "bitor", "bitxor", "bitshift")}},
+    "call": {
+        "isfield": _isfield, **{name: _bit(name) for name in ("bitand", "bitor", "bitxor", "bitshift")},
+        "all": _reduction(lambda numbers: all(number != 0 for number in numbers)),
+        "any": _reduction(lambda numbers: any(number != 0 and number == number for number in numbers)),
+        "nnz": _reduction(lambda numbers: float(sum(number != 0 for number in numbers))),
+        "numel": lambda arguments, node, scope: float(len(_elements(arguments[0]()))),
+        "sum": _reduction(_sum), "min": _extreme("min"), "max": _extreme("max"), "unique": _unique,
+        "ismember": _ismember,
+    },
     "field": _field,
+    "index": _index,
+    "arrayfun": _arrayfun,
 }, literal=lambda value: float(value) if type(value) is int else value, scope=Scope, extension=_extension)
 
 

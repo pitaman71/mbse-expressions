@@ -329,7 +329,7 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 |---|---|---|---|
 | Basic | `literal`, `operation`, `variable`, `let`, `quantifier` | natives, typed values, objects, collections | three-valued (Kleene), no coercion; absent is unknown |
 | Python | `constant`, `name`, `attribute`, `subscript` (`x['k']`), `index` (`xs[i]`), `call`, `compare` (with `in`, `not in`), `boolop`, `binop` (arithmetic and bitwise), `unaryop` (`not`, `-`, `+`, `~`), `ifexp`, `generator` (`(e for p in xs if c)`), `let` (`(lambda a: body)(value)`), `import`, `importfrom`: Python's `ast` | Python's; a list property is a list of its values | Python's: `and`/`or` give an operand, `1 == 1.0`, `True + 1` is 2; absent attributes raise |
-| Matlab | `constant`, `identifier`, `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`, and functions of the scope), `field` (`s.age`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; the bit functions take integers from 0 to 2^53; absent fields raise |
+| Matlab | `constant`, `identifier`, `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`, `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique`, `ismember`, and functions of the scope), `field` (`s.age`), `index` (`xs(i)`, from 1), `arrayfun` (`arrayfun(@(p) body, xs)`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct, arrays of them | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; the bit functions take integers from 0 to 2^53; absent fields raise |
 | Excel | `constant`, `name`, `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`), `function` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, `BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`) | number, text, logical, error, record | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case; the bit functions take integers from 0 to 2^48 - 1, else `#NUM!` |
 | Ccpp | `constant` (with an optional type: `5u`, `1.5f`, `(uint8_t)5`), `identifier`, `unary` (`+`, `-`, `!`, `~`), `binary` (`*` ... `\|\|`, with C's precedence), `conditional` (`?:`), `cast` (`(type)x`), `member` (`x.a`, `x->a`), `subscript` (`a[i]`), `call` (functions of the scope) | C's arithmetic types under LP64 (`bool`, `char` ... `unsigned long long`, `int8_t` ... `uint64_t`, `size_t`, `float`, `double`, `long double` as IEEE 754 `binary128`), strings, structs, arrays | C's: the integer promotions and the usual arithmetic conversions; unsigned arithmetic wraps; what C leaves undefined (signed overflow, division by zero, shifts out of range, casts of floats out of range) raises; casts to integers wrap; comparisons give `bool`, as in C++; `?:` keeps its chosen operand's type |
 | SystemVerilog | `constant` (unsized integers, reals, strings), `vector` (sized literals: `8'hff`, `4'b10x1`, `8'sd5`), `identifier`, `unary` (`+`, `-`, `!`, `~` and the reductions `&`, `~&`, `\|`, `~\|`, `^`, `~^`), `binary` (`**` ... `\|\|`, `===`, `==?`, `->`, `<->`, with IEEE 1800's precedence), `conditional`, `concatenation` (`{a, b}`), `replication` (`{n{a}}`), `select` (`a[i]`), `range` (`a[7:4]`), `inside` (with `span`s, `[lo:hi]`), `cast` (`int'(x)`, `signed'(x)`, `8'(x)`), `member`, `call` (system functions and functions of the scope), `method` (`xs.size()`, `xs.sum()`, `xs.min()`), `iterate` (`xs.and(p) with (p > 0)`) | 4-state and 2-state vectors of any width and signedness (`logic`, `bit`, `byte` ... `longint`, `integer`, `time`), `real` and `shortreal`, structs, arrays | IEEE 1800's: operands sized by context or by themselves, extended by signedness; x and z propagate through arithmetic and comparisons, and follow the truth tables of the bitwise and logical operators; `===` and `==?` compare exactly and with wildcards; division by zero gives x; casts convert as assignments do |
@@ -423,7 +423,10 @@ as `x in xs`, and `sum`, `min` and `max` as the builtins of one argument, all re
 SystemVerilog writes them as array methods: `xs.and(p) with (body)` and `xs.or(p) with (body)`, the quantifier `count`
 as `xs.sum(p) with (int'(body))`, `count(xs)` as `xs.size()`, `sum(xs)` as `xs.sum()`, `min` and `max` as
 `xs.min()[0]` and `xs.max()[0]`, `item(xs, i)` as `xs[i]`, `in(x, xs)` as `x inside {xs}`, and `unique(xs)` as
-`xs.unique().size() == xs.size()`, forward only.
+`xs.unique().size() == xs.size()`, forward only. MATLAB uses `arrayfun`: `all(arrayfun(@(p) body, xs))`,
+`any(...)`, the quantifier `count` as `nnz(arrayfun(...))`, `count(xs)` as `numel(xs)`, `item(xs, i)` as `xs(i + 1)`
+(it counts from 1), `in(x, xs)` as `ismember(x, xs)`, `sum`, `min` and `max` as its functions, and `unique(xs)` as
+`numel(unique(xs)) == numel(xs)`, forward only.
 
 The bitwise operations translate to Python's operators and to MATLAB's and Excel's bit functions (`shr(a, n)` is
 MATLAB's `bitshift(a, -n)`); `bitnot` has no MATLAB or Excel counterpart, and the conversions and typed values have none
@@ -433,8 +436,8 @@ alike only there.
 ## Open questions
 
 - Collections have no literals, and Basic has no tensor domain over keyed and extended lists, nor `map` or `filter`.
-- Collections translate to Python and SystemVerilog only: MATLAB's `arrayfun` and Excel's `MAP` and `LAMBDA` would be
-  their counterparts, once those dialects evaluate arrays. `unique` is written as an idiom that does not read back, and
+- Collections translate to Python, SystemVerilog and MATLAB, not yet to Excel, whose `MAP` and `LAMBDA` would be their
+  counterparts once it evaluates arrays. `unique` is written as an idiom that does not read back, and
   `entries` has no counterpart.
 - SystemVerilog's reductions of no items give their identities (0, 1, `1'b1`, `1'b0`), which IEEE 1800 leaves to
   tools; `min()[0]` of an empty array raises, where Basic's `min` is unknown.
@@ -455,6 +458,9 @@ alike only there.
   like its element, see the bound name; the framework binds the name in every argument after the collection. A
   list property is a list of its values in Python, a keyed list's too, so that iteration, `in` and `sum` see values as
   Basic's collections do. `unique`, which has no single call in Python, is written as an idiom, forward only.
+- In MATLAB, collections are arrays (a list property's values, as doubles), which operators do not take: they are
+  counted, reduced, indexed from 1 and iterated by `arrayfun`, a quantifier kind for `arrayfun(@(p) body, xs)`, whose
+  body must give a numeric or logical scalar.
 - In SystemVerilog, collections are arrays and their operations IEEE 1800's array methods; a reduction's `with` clause
   is `iterate`, a quantifier kind, and `inside` takes an array among its items as its elements.
 

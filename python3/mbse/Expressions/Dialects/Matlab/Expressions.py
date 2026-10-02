@@ -5,8 +5,11 @@
 - `binary`: `left <operator> right`, for the operators in `Domains.BINARY` (`==`, `~=`, `<`, ..., `&&`, `||`, `+`,
   `-`, `.*`).
 - `unary`: `<operator> operand`, for `~` and `-`.
-- `call`: a function applied to ordered arguments, for the functions in `Domains.CALLS` (`isfield`).
+- `call`: a function applied to ordered arguments, for the functions in `Domains.CALLS` (`isfield`, the bit
+  functions, and `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique` and `ismember` of arrays).
 - `field`: `value.name`, a field of a struct.
+- `index`: `value(index)`, an element of an array, from 1.
+- `arrayfun`: `arrayfun(@(name) body, array)`, the body's values for each element of the array, bound to `name`.
 - `import`: `import pkg.fn` or `import pkg.*`, which make a package's functions callable by their short names within
   its body, the rest of the expression; `render` writes it as a line before it. Functions are also found on the path
   and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that evaluates them (see `Evaluators`).
@@ -19,6 +22,7 @@ There is no binding: translators substitute a let's value for its name. The meta
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,8 +31,8 @@ from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "binary", "unary", "call", "field", "import_",
-           "render"]
+__all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "binary", "unary", "call", "field", "index",
+           "arrayfun", "import_", "render"]
 
 
 @dataclass(eq=False)
@@ -96,6 +100,32 @@ class _Field(F.Node):
     value: Any = None
 
 
+@dataclass(eq=False)
+class _Index(F.Node):
+    KIND = "index"
+    ROLE = F.APPLICATION
+    SLOTS = ("value", "index")
+    SIGNATURE = Domains.INDEX
+    value: Any = None
+    index: Any = None
+
+
+@dataclass(eq=False)
+class _Arrayfun(F.Node):
+    KIND = "arrayfun"
+    ROLE = F.QUANTIFIER
+    PROPERTIES = {"name": str}
+    SLOTS = ("array", "body")
+    SIGNATURE = Domains.ARRAYFUN
+    name: str | None = None
+    array: Any = None
+    body: Any = None  # with `name` bound to each element
+
+    def check(self) -> list[str]:
+        return [] if type(self.name) is not str or re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", self.name) else [
+            f"an arrayfun's parameter must be an identifier, got {self.name!r}"]
+
+
 def _qualified(name: str, wildcard: bool = False) -> bool:
     parts = name.split(".")
     if wildcard and len(parts) > 1 and parts[-1] == "*":
@@ -118,7 +148,7 @@ class _Import(F.Node):
         return [f"an import's name must be pkg.name or pkg.*, got {self.name!r}"]
 
 
-DIALECT = F.Declared("Matlab", (_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Import),
+DIALECT = F.Declared("Matlab", (_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Index, _Arrayfun, _Import),
                      domain_of=Domains.of)
 Builders = DIALECT.Builders
 Schema = DIALECT.Schema
@@ -148,6 +178,16 @@ def call(function: str, *arguments: Any) -> _Call:
 def field(value: Any, name: str) -> _Field:
     """`value.name`."""
     return _Field(name, DIALECT.resolve(value))
+
+
+def index(value: Any, index: Any) -> _Index:
+    """`value(index)`, from 1."""
+    return _Index(DIALECT.resolve(value), DIALECT.resolve(index))
+
+
+def arrayfun(name: str, array: Any, body: Any) -> _Arrayfun:
+    """`arrayfun(@(name) body, array)`."""
+    return _Arrayfun(name, DIALECT.resolve(array), DIALECT.resolve(body))
 
 
 def import_(name: str, body: Any) -> _Import:
@@ -192,6 +232,10 @@ def render(expression: Any) -> str:
             return f"{operand(0, _ATOM)}.{node.name}", _ATOM
         if isinstance(node, _Call):
             return f"{node.function}({', '.join(text for text, _ in arguments)})", _ATOM
+        if isinstance(node, _Index):
+            return f"{operand(0, _ATOM)}({arguments[1][0]})", _ATOM
+        if isinstance(node, _Arrayfun):
+            return f"arrayfun(@({node.name}) {arguments[1][0]}, {arguments[0][0]})", _ATOM
         if isinstance(node, _Import):
             raise ValueError("an import can only enclose the whole expression")
         if isinstance(node, _Unary):

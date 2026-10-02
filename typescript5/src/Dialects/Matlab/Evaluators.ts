@@ -12,6 +12,12 @@
  *   variables throw too, with MATLAB's messages.
  * - The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
  *   53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
+ * - An array is a JavaScript array: a list property's values, or a variable's array. Operators take scalars. `numel`
+ *   counts elements (a scalar is one), `xs(i)` indexes from 1, and `arrayfun(@(p) body, xs)` gives the body's value
+ *   for each element, an array of logicals if all are, else of doubles; each must be a numeric or logical scalar.
+ *   `all`, `any` and `nnz` test elements as nonzero (`any` ignores NaN), `sum` adds them from the first, `min` and
+ *   `max` ignore NaN and give an empty array of none, `unique` gives the distinct elements in order, and
+ *   `ismember(x, xs)` tests `x` against each element as `==` does.
  *
  * A `new Scope(variables, { functions, packages })` resolves variables from `variables` and functions as MATLAB
  * does: the built-ins (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`), then those an enclosing `import` brought in, then `functions` (the path), then
@@ -66,9 +72,24 @@ function logical(operator: string, value: unknown): boolean {
   return number !== 0;
 }
 
-function compare(test: (order: number) => boolean): F.Implementation {
+function isScalar(value: unknown): boolean {
+  return ["boolean", "number", "bigint", "string"].includes(typeof value);
+}
+
+function unsupported(operator: string, a: unknown, b: unknown): TypeError {
+  return new TypeError(`Operator '${operator}' is not supported for operands of type '${classOf(a)}' and '${classOf(b)}'.`);
+}
+
+/** `a == b` of two scalars, as MATLAB converts them. */
+function equal(a: unknown, b: unknown): boolean {
+  const [x, y] = [double(a), double(b)];
+  return x !== null && y !== null ? x === y : text(a) === text(b);
+}
+
+function compare(operator: string, test: (order: number) => boolean): F.Implementation {
   return (args) => {
     const [a, b] = args.map((argument) => argument());
+    if (!isScalar(a) || !isScalar(b)) throw unsupported(operator, a, b);
     const [x, y] = [double(a), double(b)];
     if (x !== null && y !== null) return test(x === y ? 0 : Math.sign(x - y));
     return test(Math.sign(compareStrings(text(a), text(b))));
@@ -86,6 +107,7 @@ function shortCircuit(operator: string): F.Implementation {
 function classOf(value: unknown): string {
   if (typeof value === "boolean") return "logical";
   if (typeof value === "bigint" || typeof value === "number") return "double";
+  if (Array.isArray(value)) return "array";
   return typeof value === "string" ? "string" : "struct";
 }
 
@@ -94,8 +116,8 @@ function arithmetic(operator: string, apply: (a: number, b: number) => number): 
     const [a, b] = args.map((argument) => argument());
     const [x, y] = [double(a), double(b)];
     if (x !== null && y !== null) return apply(x, y);
-    if (operator === "+") return text(a) + text(b);
-    throw new TypeError(`Operator '${operator}' is not supported for operands of type '${classOf(a)}' and '${classOf(b)}'.`);
+    if (operator === "+" && isScalar(a) && isScalar(b)) return text(a) + text(b);
+    throw unsupported(operator, a, b);
   };
 }
 
@@ -117,7 +139,10 @@ function fieldsOf(value: unknown): Map<string, unknown> {
   return Validators.properties_of(value as never);
 }
 
+/** A value as MATLAB reads it: a number as a double, and a list (a list property's too) as an array. */
 function toDouble(value: unknown): unknown {
+  if (value instanceof Validators.ListRecord) return value.values.map(toDouble);
+  if (Array.isArray(value)) return value.map(toDouble);
   return typeof value === "bigint" ? Number(value) : value;
 }
 
@@ -151,6 +176,89 @@ function bit(name: string): F.Implementation {
     if (name === "bitshift") return Number(b >= 0n ? (a << b) & (FLINTMAX - 1n) : a >> -b);
     return Number(name === "bitand" ? a & b : name === "bitor" ? a | b : a ^ b);
   };
+}
+
+// --- Arrays ---
+
+/** An array's elements; a scalar or a struct is an array of one. */
+function elements(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [value];
+}
+
+function numbers(value: unknown): number[] {
+  const found = elements(value).map(double);
+  if (found.some((number) => number === null)) throw new TypeError("Invalid data type. First argument must be numeric or logical.");
+  return found as number[];
+}
+
+/** Elements concatenated: logicals if all are, else doubles. */
+function logicals(values: unknown[]): unknown[] {
+  return values.every((value) => typeof value === "boolean") ? values : values.map((value) => double(value));
+}
+
+function extreme(name: string): F.Implementation {
+  return (args) => {
+    const value = (args[0] as F.Thunk)();
+    const found = numbers(value);
+    const present = found.filter((number) => !Number.isNaN(number));
+    if (found.length === 0) return [];
+    if (present.length === 0) return NaN;
+    const best = present.reduce((a, b) => (name === "min" ? (b < a ? b : a) : (b > a ? b : a)));
+    return elements(value).every((element) => typeof element === "boolean") ? best !== 0 : best;
+  };
+}
+
+function unique(args: F.Thunk[]): unknown[] {
+  const all = elements((args[0] as F.Thunk)());
+  if (all.every((element) => typeof element === "string")) {
+    return [...new Set(all as string[])].sort((a, b) => Repr.compareStrings(a, b));
+  }
+  const found = numbers(all);
+  const distinct: number[] = [];
+  for (const number of found) if (!Number.isNaN(number) && !distinct.some((other) => other === number)) distinct.push(number);
+  const sorted = [...distinct.sort((a, b) => a - b), ...found.filter((number) => Number.isNaN(number))];
+  return all.every((element) => typeof element === "boolean") ? sorted.map((number) => number !== 0) : sorted;
+}
+
+function ismember(args: F.Thunk[]): boolean {
+  const [value, array] = args.map((argument) => argument());
+  const found = elements(array);
+  if (!isScalar(value) || !found.every(isScalar)) throw new TypeError("ismember takes a scalar and an array of scalars.");
+  return found.some((element) => equal(value, element));
+}
+
+function index(args: F.Thunk[]): unknown {
+  const found = elements((args[0] as F.Thunk)());
+  const position = (args[1] as F.Thunk)();
+  if (typeof position === "boolean") return position ? found[0] : []; // a logical index: true selects the first element, false none
+  const number = double(position);
+  if (number === null || !Number.isInteger(number) || number < 1) {
+    throw new ValueError("Array indices must be positive integers or logical values.");
+  }
+  if (number > found.length) throw new ValueError(`Index exceeds the number of array elements. Index must not exceed ${found.length}.`);
+  return found[number - 1];
+}
+
+function arrayfun(args: F.Thunk[]): unknown[] {
+  const body = args[1] as unknown as (element: unknown) => unknown;
+  const values = elements((args[0] as F.Thunk)()).map((element, i) => {
+    const value = body(element);
+    if (double(value) === null) {
+      throw new ValueError(`Non-scalar in Uniform output, at index ${i + 1}, output 1. Set 'UniformOutput' to false.`);
+    }
+    return value;
+  });
+  return logicals(values);
+}
+
+function reduction(reduce: (values: number[]) => unknown): F.Implementation {
+  return (args) => reduce(numbers((args[0] as F.Thunk)()));
+}
+
+function sum(values: number[]): number {
+  let total = 0;
+  for (const value of values) total += value;
+  return total;
 }
 
 function unrecognized(name: string): NameError {
@@ -212,9 +320,9 @@ function extension(name: string, args: F.Thunk[], _node: unknown, scope: Scope):
 
 const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
   ["binary", new Map<string, F.Implementation>([
-    ["==", compare((o) => o === 0)], ["~=", compare((o) => o !== 0)],
-    ["<", compare((o) => o < 0)], ["<=", compare((o) => o <= 0)],
-    [">", compare((o) => o > 0)], [">=", compare((o) => o >= 0)],
+    ["==", compare("==", (o) => o === 0)], ["~=", compare("~=", (o) => o !== 0)],
+    ["<", compare("<", (o) => o < 0)], ["<=", compare("<=", (o) => o <= 0)],
+    [">", compare(">", (o) => o > 0)], [">=", compare(">=", (o) => o >= 0)],
     ["&&", shortCircuit("&&")], ["||", shortCircuit("||")],
     ["+", arithmetic("+", (a, b) => a + b)], ["-", arithmetic("-", (a, b) => a - b)],
     [".*", arithmetic(".*", (a, b) => a * b)],
@@ -222,8 +330,15 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
   ["unary", new Map<string, F.Implementation>([["~", not], ["-", negate]])],
   ["call", new Map<string, F.Implementation>([
     ["isfield", isfield], ...["bitand", "bitor", "bitxor", "bitshift"].map((name) => [name, bit(name)] as [string, F.Implementation]),
+    ["all", reduction((values) => values.every((value) => value !== 0))],
+    ["any", reduction((values) => values.some((value) => value !== 0 && !Number.isNaN(value)))],
+    ["nnz", reduction((values) => values.filter((value) => value !== 0).length)],
+    ["numel", (args: F.Thunk[]) => elements((args[0] as F.Thunk)()).length],
+    ["sum", reduction(sum)], ["min", extreme("min")], ["max", extreme("max")], ["unique", unique], ["ismember", ismember],
   ])],
   ["field", field],
+  ["index", index],
+  ["arrayfun", arrayfun],
 ]), { literal: toDouble, scope: (variables) => new Scope(variables), extension });
 
 /** The value of an expression in `scope`, or with the variables in an object bound. */

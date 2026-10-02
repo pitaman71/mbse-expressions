@@ -6,8 +6,11 @@
  * - `binary`: `left <operator> right`, for the operators in `Domains.BINARY` (`==`, `~=`, `<`, ..., `&&`, `||`, `+`,
  *   `-`, `.*`).
  * - `unary`: `<operator> operand`, for `~` and `-`.
- * - `call`: a function applied to ordered arguments, for the functions in `Domains.CALLS` (`isfield`).
+ * - `call`: a function applied to ordered arguments, for the functions in `Domains.CALLS` (`isfield`, the bit
+ *   functions, and `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique` and `ismember` of arrays).
  * - `field`: `value.name`, a field of a struct.
+ * - `index`: `value(index)`, an element of an array, from 1.
+ * - `arrayfun`: `arrayfun(@(name) body, array)`, the body's values for each element of the array, bound to `name`.
  * - `import`: `import pkg.fn` or `import pkg.*`, which make a package's functions callable by their short names
  *   within its body, the rest of the expression; `render` writes it as a line before it. Functions are also found on
  *   the path and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that evaluates them (see
@@ -91,6 +94,32 @@ class _Field extends F.Node {
   declare value: any;
 }
 
+class _Index extends F.Node {
+  static override KIND = "index";
+  static override ROLE = F.APPLICATION;
+  static override SLOTS = ["value", "index"];
+  static override SIGNATURE = Domains.INDEX;
+  declare value: any;
+  declare index: any;
+}
+
+class _Arrayfun extends F.Node {
+  static override KIND = "arrayfun";
+  static override ROLE = F.QUANTIFIER;
+  static override PROPERTIES = new Map([["name", STR]]);
+  static override SLOTS = ["array", "body"];
+  static override SIGNATURE = Domains.ARRAYFUN;
+  declare name: string;
+  declare array: any;
+  /** With `name` bound to each element. */
+  declare body: any;
+
+  override check(): string[] {
+    return typeof this.name !== "string" || /^[A-Za-z][A-Za-z0-9_]*$/.test(this.name) ? []
+      : [`an arrayfun's parameter must be an identifier, got ${repr(this.name)}`];
+  }
+}
+
 function qualified(name: string, wildcard = false): boolean {
   let parts = name.split(".");
   if (wildcard && parts.length > 1 && parts[parts.length - 1] === "*") parts = parts.slice(0, -1);
@@ -111,7 +140,7 @@ class _Import extends F.Node {
   }
 }
 
-export const DIALECT = new F.Declared("Matlab", [_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Import], {
+export const DIALECT = new F.Declared("Matlab", [_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Index, _Arrayfun, _Import], {
   domain_of: Domains.of,
 });
 export const Builders = DIALECT.Builders;
@@ -144,6 +173,16 @@ export function field(value: unknown, name: string): _Field {
 }
 
 /** `import name`, then `body`. */
+/** `value(index)`, from 1. */
+export function index(value: unknown, index: unknown): _Index {
+  return new _Index(DIALECT.resolve(value), DIALECT.resolve(index));
+}
+
+/** `arrayfun(@(name) body, array)`. */
+export function arrayfun(name: string, array: unknown, body: unknown): _Arrayfun {
+  return new _Arrayfun(name, DIALECT.resolve(array), DIALECT.resolve(body));
+}
+
 export function import_(name: string, body: unknown): _Import {
   return new _Import(name, DIALECT.resolve(body));
 }
@@ -183,6 +222,8 @@ export function render(expression: F.Node): string {
     if (node instanceof _Identifier) return [node.name, ATOM];
     if (node instanceof _Field) return [`${operand(0, ATOM)}.${node.name}`, ATOM];
     if (node instanceof _Call) return [`${node.function}(${args.map(([text]) => text).join(", ")})`, ATOM];
+    if (node instanceof _Index) return [`${operand(0, ATOM)}(${args[1]?.[0]})`, ATOM];
+    if (node instanceof _Arrayfun) return [`arrayfun(@(${node.name}) ${args[1]?.[0]}, ${args[0]?.[0]})`, ATOM];
     if (node instanceof _Import) throw new Errors.ValueError("an import can only enclose the whole expression");
     if (node instanceof _Unary) return [`${node.operator}${operand(0, UNARY)}`, UNARY];
     const binary = node as _Binary;

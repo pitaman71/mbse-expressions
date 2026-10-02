@@ -36,11 +36,11 @@ def build():
         P.generator("p", P.attribute(a, "y"), P.index(item, b"\x00"), item)))), alias="np")
 
     # --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
-    # >= 0) || true
+    # >= arrayfun(@(k) k, this.ports)(2)) || true
     this_ = M.identifier("this")
     matlab = M.import_("geo.*", M.binary("||", M.binary(">=", M.binary(
         "+", M.call("dist", M.field(this_, "age"), 3),
-        M.binary(".*", M.unary("~", M.call("isfield", this_, "email")), M.unary("-", 1.5))), 0), True))
+        M.binary(".*", M.unary("~", M.call("isfield", this_, "email")), M.unary("-", 1.5))), M.index(M.arrayfun("k", M.field(this_, "ports"), M.identifier("k")), 2)), True))
 
     # --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
     # a * 2 - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))

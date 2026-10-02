@@ -82,6 +82,11 @@ class Matlab:
     has = P("call", X, P("constant", value=K), function="isfield")
     implies = P("binary", P("unary", A, operator="~"), B, operator="||")
     shr = P("call", A, P("unary", B, operator="-"), function="bitshift")  # a negative shift is to the right
+    over = staticmethod(lambda function: P("call", P("arrayfun", A, B, name=N), function=function))  # all(arrayfun(@(n) b, a))
+    function = staticmethod(lambda name: P("call", A, function=name))  # numel, sum, min, max
+    index = P("index", A, P("binary", B, P("constant", value=1), operator="+"))  # a(b + 1): MATLAB counts from 1
+    ismember = P("call", A, B, function="ismember")
+    unique = P("binary", P("call", P("call", A, function="unique"), function="numel"), P("call", A, function="numel"), operator="==")
 
 
 class Ccpp:

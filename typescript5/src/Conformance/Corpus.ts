@@ -40,11 +40,11 @@ export function build(): Map<string, Case> {
     P.generator("p", P.attribute(a, "y"), P.index(item, new Uint8Array([0x00])), item)))), "np");
 
   // --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
-  // >= 0) || true
+  // >= arrayfun(@(k) k, this.ports)(2)) || true
   const thisM = M.identifier("this");
   const matlab = M.import_("geo.*", M.binary("||", M.binary(">=", M.binary(
     "+", M.call("dist", M.field(thisM, "age"), 3n),
-    M.binary(".*", M.unary("~", M.call("isfield", thisM, "email")), M.unary("-", 1.5))), 0n), true));
+    M.binary(".*", M.unary("~", M.call("isfield", thisM, "email")), M.unary("-", 1.5))), M.index(M.arrayfun("k", M.field(thisM, "ports"), M.identifier("k")), 2n)), true));
 
   // --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
   // a * 2 - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))

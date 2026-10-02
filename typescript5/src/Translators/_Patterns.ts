@@ -81,6 +81,15 @@ export const Matlab = {
   has: new P("call", { function: "isfield" }, X, new P("constant", { value: K })),
   implies: new P("binary", { operator: "||" }, new P("unary", { operator: "~" }, A), B),
   shr: new P("call", { function: "bitshift" }, A, new P("unary", { operator: "-" }, B)), // a negative shift is to the right
+  /** all(arrayfun(@(n) b, a)). */
+  over: (fn: string) => new P("call", { function: fn }, new P("arrayfun", { name: N }, A, B)),
+  /** numel, sum, min, max. */
+  function: (name: string) => new P("call", { function: name }, A),
+  /** a(b + 1): MATLAB counts from 1. */
+  index: new P("index", {}, A, new P("binary", { operator: "+" }, B, new P("constant", { value: 1n }))),
+  ismember: new P("call", { function: "ismember" }, A, B),
+  unique: new P("binary", { operator: "==" }, new P("call", { function: "numel" }, new P("call", { function: "unique" }, A)),
+    new P("call", { function: "numel" }, A)),
 };
 
 export const Ccpp = {
