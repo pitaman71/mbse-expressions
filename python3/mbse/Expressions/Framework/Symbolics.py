@@ -70,18 +70,18 @@ class Variables:
 
 
 def _data(expression: Any) -> Any:
-    """An expression, or a `Term`'s."""
-    return expression.data if isinstance(expression, Terms.Term) else expression
+    """An expression, or a `Writer`'s."""
+    return expression.data if isinstance(expression, Terms.Writer) else expression
 
 
 def free(expression: Any) -> set[str]:
-    """The names `expression` (an expression or a `Term`) needs from its scope: its lexical references that no binding or import within it binds,
+    """The names `expression` (an expression or a `Writer`) needs from its scope: its lexical references that no binding or import within it binds,
     and that are not ambient. Shared sub-expressions and cycles are visited once per set of bound names."""
     found: set[str] = set()
     seen: set[tuple[int, frozenset[str]]] = set()
 
     def visit(node: Any, bound: frozenset[str]) -> None:
-        if not isinstance(node, Terms.Node) or (id(node), bound) in seen:
+        if not isinstance(node, Terms.Term) or (id(node), bound) in seen:
             return
         seen.add((id(node), bound))
         kind = type(node)
@@ -104,5 +104,5 @@ def free(expression: Any) -> set[str]:
 
 
 def imports(expression: Any) -> list[Any]:
-    """The imports `expression` (an expression or a `Term`) declares, each once, in the order `Terms.walk` visits them."""
+    """The imports `expression` (an expression or a `Writer`) declares, each once, in the order `Terms.walk` visits them."""
     return [node for node in Terms.walk(_data(expression)) if type(node).ROLE == Terms.IMPORT]

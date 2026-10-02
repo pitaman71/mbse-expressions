@@ -2,7 +2,7 @@
 
 `Evaluators.OfAny(expression, scope)` evaluates any expression with the variables in `scope` bound, and
 `Evaluators.OfLiteral`, `OfOperation`, `OfVariable` and `OfLet` evaluate one kind; each accepts that kind's `Spec`
-(see `Expressions`), including `Term`s. The value is a native value, an object, or `None` when it is unknown.
+(see `Expressions`), including `Writer`s. The value is a native value, an object, or `None` when it is unknown.
 
 - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are unknown.
   `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the first does not

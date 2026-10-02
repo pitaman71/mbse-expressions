@@ -42,7 +42,7 @@ def _type_problems(what: str, name: Any) -> list[str]:
 
 
 @dataclass(eq=False)
-class _Constant(F.Node):
+class _Constant(F.Term):
     KIND = "constant"
     ROLE = F.LITERAL
     VALUE = {"int": int, "float": float, "str": str, "bool": bool}
@@ -65,7 +65,7 @@ class _Constant(F.Node):
 
 
 @dataclass(eq=False)
-class _Identifier(F.Node):
+class _Identifier(F.Term):
     KIND = "identifier"
     ROLE = F.REFERENCE
     PROPERTIES = {"name": str}
@@ -73,7 +73,7 @@ class _Identifier(F.Node):
 
 
 @dataclass(eq=False)
-class _Unary(F.Node):
+class _Unary(F.Term):
     KIND = "unary"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -85,7 +85,7 @@ class _Unary(F.Node):
 
 
 @dataclass(eq=False)
-class _Binary(F.Node):
+class _Binary(F.Term):
     KIND = "binary"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -98,7 +98,7 @@ class _Binary(F.Node):
 
 
 @dataclass(eq=False)
-class _Conditional(F.Node):
+class _Conditional(F.Term):
     KIND = "conditional"
     ROLE = F.APPLICATION
     SLOTS = ("condition", "consequent", "alternative")
@@ -109,7 +109,7 @@ class _Conditional(F.Node):
 
 
 @dataclass(eq=False)
-class _Cast(F.Node):
+class _Cast(F.Term):
     KIND = "cast"
     ROLE = F.APPLICATION
     PROPERTIES = {"type": str}
@@ -126,7 +126,7 @@ class _Cast(F.Node):
 
 
 @dataclass(eq=False)
-class _Member(F.Node):
+class _Member(F.Term):
     KIND = "member"
     ROLE = F.APPLICATION
     PROPERTIES = {"name": str, "operator": str}
@@ -142,7 +142,7 @@ class _Member(F.Node):
 
 
 @dataclass(eq=False)
-class _Subscript(F.Node):
+class _Subscript(F.Term):
     KIND = "subscript"
     ROLE = F.APPLICATION
     SLOTS = ("array", "index")
@@ -152,7 +152,7 @@ class _Subscript(F.Node):
 
 
 @dataclass(eq=False)
-class _Call(F.Node):
+class _Call(F.Term):
     KIND = "call"
     ROLE = F.APPLICATION
     PROPERTIES = {"function": str}

@@ -53,14 +53,14 @@ function identifierProblems(what: string, value: unknown): string[] {
 
 const STR = String;
 
-class _Constant extends F.Node {
+class _Constant extends F.Term {
   static override KIND = "constant";
   static override ROLE = F.LITERAL;
   static override VALUE = F.NATIVES;
   declare value: unknown;
 }
 
-class _Name extends F.Node {
+class _Name extends F.Term {
   static override KIND = "name";
   static override ROLE = F.REFERENCE;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -72,7 +72,7 @@ class _Name extends F.Node {
   }
 }
 
-class _Attribute extends F.Node {
+class _Attribute extends F.Term {
   static override KIND = "attribute";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["attr", STR]]);
@@ -87,7 +87,7 @@ class _Attribute extends F.Node {
   }
 }
 
-class _Subscript extends F.Node {
+class _Subscript extends F.Term {
   static override KIND = "subscript";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["key", STR]]);
@@ -98,7 +98,7 @@ class _Subscript extends F.Node {
   declare value: any;
 }
 
-class _Index extends F.Node {
+class _Index extends F.Term {
   static override KIND = "index";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["value", "index"];
@@ -107,7 +107,7 @@ class _Index extends F.Node {
   declare index: any;
 }
 
-class _Call extends F.Node {
+class _Call extends F.Term {
   static override KIND = "call";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["function"];
@@ -119,7 +119,7 @@ class _Call extends F.Node {
 
 const OPERATOR = new Map([["operator", STR]]);
 
-class _Compare extends F.Node {
+class _Compare extends F.Term {
   static override KIND = "compare";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = OPERATOR;
@@ -131,7 +131,7 @@ class _Compare extends F.Node {
   declare right: any;
 }
 
-class _Boolop extends F.Node {
+class _Boolop extends F.Term {
   static override KIND = "boolop";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = OPERATOR;
@@ -143,7 +143,7 @@ class _Boolop extends F.Node {
   declare right: any;
 }
 
-class _Binop extends F.Node {
+class _Binop extends F.Term {
   static override KIND = "binop";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = OPERATOR;
@@ -155,7 +155,7 @@ class _Binop extends F.Node {
   declare right: any;
 }
 
-class _Unaryop extends F.Node {
+class _Unaryop extends F.Term {
   static override KIND = "unaryop";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = OPERATOR;
@@ -166,7 +166,7 @@ class _Unaryop extends F.Node {
   declare operand: any;
 }
 
-class _IfExp extends F.Node {
+class _IfExp extends F.Term {
   static override KIND = "ifexp";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["test", "body", "orelse"];
@@ -176,7 +176,7 @@ class _IfExp extends F.Node {
   declare orelse: any;
 }
 
-class _Generator extends F.Node {
+class _Generator extends F.Term {
   static override KIND = "generator";
   static override ROLE = F.QUANTIFIER;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -194,7 +194,7 @@ class _Generator extends F.Node {
   }
 }
 
-class _Let extends F.Node {
+class _Let extends F.Term {
   static override KIND = "let";
   static override ROLE = F.BINDING;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -208,7 +208,7 @@ class _Let extends F.Node {
   }
 }
 
-class _Import extends F.Node {
+class _Import extends F.Term {
   static override KIND = "import";
   static override ROLE = F.IMPORT;
   static override PROPERTIES = new Map([["module", STR], ["alias", STR]]);
@@ -229,7 +229,7 @@ class _Import extends F.Node {
   }
 }
 
-class _ImportFrom extends F.Node {
+class _ImportFrom extends F.Term {
   static override KIND = "importfrom";
   static override ROLE = F.IMPORT;
   static override PROPERTIES = new Map([["module", STR], ["name", STR], ["alias", STR]]);
@@ -296,7 +296,7 @@ export function index(value: unknown, index: unknown): _Index {
 export function call(fn: unknown, ...args: unknown[]): _Call {
   if (typeof fn === "string") {
     const [first, ...rest] = fn.split(".");
-    let callee: F.Node = new _Name(first);
+    let callee: F.Term = new _Name(first);
     for (const attr of rest) callee = new _Attribute(attr, callee);
     fn = callee;
   }
@@ -371,13 +371,13 @@ function importLine(node: _Import | _ImportFrom): string {
 }
 
 /** The expression as Python source: one line per import around it, then the expression. */
-export function render(expression: F.Node): string {
+export function render(expression: F.Term): string {
   const lines: string[] = [];
   while (expression instanceof _Import || expression instanceof _ImportFrom) {
     lines.push(importLine(expression));
     expression = expression.body;
   }
-  const write = (node: F.Node, args: [string, number][]): [string, number] => {
+  const write = (node: F.Term, args: [string, number][]): [string, number] => {
     const operand = (index: number, level: number): string => {
       const [text, precedence] = args[index] as [string, number];
       return precedence >= level ? text : `(${text})`;

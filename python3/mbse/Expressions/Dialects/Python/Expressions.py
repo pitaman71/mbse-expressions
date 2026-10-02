@@ -55,7 +55,7 @@ def _identifier_problems(what: str, value: Any) -> list[str]:
 
 
 @dataclass(eq=False)
-class _Constant(F.Node):
+class _Constant(F.Term):
     KIND = "constant"
     ROLE = F.LITERAL
     VALUE = F.NATIVES
@@ -63,7 +63,7 @@ class _Constant(F.Node):
 
 
 @dataclass(eq=False)
-class _Name(F.Node):
+class _Name(F.Term):
     KIND = "name"
     ROLE = F.REFERENCE
     PROPERTIES = {"name": str}
@@ -75,7 +75,7 @@ class _Name(F.Node):
 
 
 @dataclass(eq=False)
-class _Attribute(F.Node):
+class _Attribute(F.Term):
     KIND = "attribute"
     ROLE = F.APPLICATION
     PROPERTIES = {"attr": str}
@@ -90,7 +90,7 @@ class _Attribute(F.Node):
 
 
 @dataclass(eq=False)
-class _Subscript(F.Node):
+class _Subscript(F.Term):
     KIND = "subscript"
     ROLE = F.APPLICATION
     PROPERTIES = {"key": str}
@@ -102,7 +102,7 @@ class _Subscript(F.Node):
 
 
 @dataclass(eq=False)
-class _Index(F.Node):
+class _Index(F.Term):
     KIND = "index"
     ROLE = F.APPLICATION
     SLOTS = ("value", "index")
@@ -112,7 +112,7 @@ class _Index(F.Node):
 
 
 @dataclass(eq=False)
-class _Call(F.Node):
+class _Call(F.Term):
     KIND = "call"
     ROLE = F.APPLICATION
     SLOTS = ("function",)
@@ -122,13 +122,13 @@ class _Call(F.Node):
     arguments: tuple[Any, ...] = ()
 
 
-def _operator_kind(tag: str, vocabulary: dict[str, FD.Signature], slots: tuple[str, ...]) -> type[F.Node]:
+def _operator_kind(tag: str, vocabulary: dict[str, FD.Signature], slots: tuple[str, ...]) -> type[F.Term]:
     """A kind with one operator from `vocabulary` and fixed operands."""
     fields = {"operator": str | None, **{slot: Any for slot in slots}}
     namespace = {"KIND": tag, "ROLE": F.APPLICATION, "PROPERTIES": {"operator": str}, "SLOTS": slots,
                  "OPERATOR": "operator", "VOCABULARY": vocabulary, "__annotations__": fields,
                  **{name: None for name in fields}}
-    return dataclass(eq=False)(type(f"_{tag.capitalize()}", (F.Node,), namespace))
+    return dataclass(eq=False)(type(f"_{tag.capitalize()}", (F.Term,), namespace))
 
 
 _Compare = _operator_kind("compare", Domains.COMPARE, ("left", "right"))
@@ -138,7 +138,7 @@ _UnaryOp = _operator_kind("unaryop", Domains.UNARYOP, ("operand",))
 
 
 @dataclass(eq=False)
-class _IfExp(F.Node):
+class _IfExp(F.Term):
     KIND = "ifexp"
     ROLE = F.APPLICATION
     SLOTS = ("test", "body", "orelse")
@@ -149,7 +149,7 @@ class _IfExp(F.Node):
 
 
 @dataclass(eq=False)
-class _Generator(F.Node):
+class _Generator(F.Term):
     KIND = "generator"
     ROLE = F.QUANTIFIER
     PROPERTIES = {"name": str}
@@ -166,7 +166,7 @@ class _Generator(F.Node):
 
 
 @dataclass(eq=False)
-class _Let(F.Node):
+class _Let(F.Term):
     KIND = "let"
     ROLE = F.BINDING
     PROPERTIES = {"name": str}
@@ -180,7 +180,7 @@ class _Let(F.Node):
 
 
 @dataclass(eq=False)
-class _Import(F.Node):
+class _Import(F.Term):
     KIND = "import"
     ROLE = F.IMPORT
     PROPERTIES = {"module": str, "alias": str}
@@ -200,7 +200,7 @@ class _Import(F.Node):
 
 
 @dataclass(eq=False)
-class _ImportFrom(F.Node):
+class _ImportFrom(F.Term):
     KIND = "importfrom"
     ROLE = F.IMPORT
     PROPERTIES = {"module": str, "name": str, "alias": str}

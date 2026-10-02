@@ -37,7 +37,7 @@ function typeProblems(what: string, name: unknown): string[] {
   return Domains.TYPES.has(name as string) ? [] : [`${what} type must be one of C's arithmetic types, got ${repr(name)}`];
 }
 
-class _Constant extends F.Node {
+class _Constant extends F.Term {
   static override KIND = "constant";
   static override ROLE = F.LITERAL;
   static override VALUE = new Map<string, unknown>([["int", BigInt], ["float", Number], ["str", String], ["bool", Boolean]]);
@@ -62,14 +62,14 @@ class _Constant extends F.Node {
   }
 }
 
-class _Identifier extends F.Node {
+class _Identifier extends F.Term {
   static override KIND = "identifier";
   static override ROLE = F.REFERENCE;
   static override PROPERTIES = new Map([["name", STR]]);
   declare name: string;
 }
 
-class _Unary extends F.Node {
+class _Unary extends F.Term {
   static override KIND = "unary";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -80,7 +80,7 @@ class _Unary extends F.Node {
   declare operand: any;
 }
 
-class _Binary extends F.Node {
+class _Binary extends F.Term {
   static override KIND = "binary";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -92,7 +92,7 @@ class _Binary extends F.Node {
   declare right: any;
 }
 
-class _Conditional extends F.Node {
+class _Conditional extends F.Term {
   static override KIND = "conditional";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["condition", "consequent", "alternative"];
@@ -102,7 +102,7 @@ class _Conditional extends F.Node {
   declare alternative: any;
 }
 
-class _Cast extends F.Node {
+class _Cast extends F.Term {
   static override KIND = "cast";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["type", STR]]);
@@ -120,7 +120,7 @@ class _Cast extends F.Node {
   }
 }
 
-class _Member extends F.Node {
+class _Member extends F.Term {
   static override KIND = "member";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["name", STR], ["operator", STR]]);
@@ -137,7 +137,7 @@ class _Member extends F.Node {
   }
 }
 
-class _Subscript extends F.Node {
+class _Subscript extends F.Term {
   static override KIND = "subscript";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["array", "index"];
@@ -146,7 +146,7 @@ class _Subscript extends F.Node {
   declare index: any;
 }
 
-class _Call extends F.Node {
+class _Call extends F.Term {
   static override KIND = "call";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["function", STR]]);
@@ -271,5 +271,5 @@ export function render(expression: unknown): string {
     const level = LEVELS[node.operator] as number;
     return [`${operand(0, level)} ${node.operator} ${operand(1, level + 1)}`, level];
   };
-  return F.fold(expression as F.Node, write)[0];
+  return F.fold(expression as F.Term, write)[0];
 }

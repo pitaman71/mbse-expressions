@@ -27,7 +27,7 @@ const { NotImplementedError, ValueError } = Errors;
 const { repr } = Repr;
 
 export type Thunk = () => any;
-/** Computes an operation's value from thunks for its arguments, the node (for its attributes) and the scope. */
+/** Computes an operation's value from thunks for its arguments, the term (for its attributes) and the scope. */
 export type Implementation = (args: Thunk[], node: any, scope: any) => any;
 
 /** Computes the value of an expression in `scope`, or with the variables in an object bound. */
@@ -97,7 +97,7 @@ export class Interpreter {
     }
   }
 
-  private apply(expression: Terms.Node, args: unknown[], scope: Scope, active: Set<unknown>): any {
+  private apply(expression: Terms.Term, args: unknown[], scope: Scope, active: Set<unknown>): any {
     const kind = expression.kind();
     const operator = Terms.operatorOf(expression);
     const implementations = this.operations.get(kind.KIND);

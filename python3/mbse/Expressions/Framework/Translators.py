@@ -19,11 +19,11 @@ of dialects has its own, specialized to what the two have in common, and is decl
   its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds, e.g.
   `import numpy as np` around an expression that uses `np`.
 
-Translating co-traverses: at each node, the first rule whose source pattern matches (the most specific first: the one
-with the most nodes and fixed attributes) is applied by traversing the pattern and the expression in lockstep, binding
+Translating co-traverses: at each term, the first rule whose source pattern matches (the most specific first: the one
+with the most terms and fixed attributes) is applied by traversing the pattern and the expression in lockstep, binding
 holes to arguments and attributes; then its target pattern is instantiated with the bound attributes and the
-translations of the bound arguments. Every node is translated once, so shared sub-expressions stay shared, and pairs of
-corresponding source and target nodes are appended to `trace`, if given. A node that no rule matches raises
+translations of the bound arguments. Every term is translated once, so shared sub-expressions stay shared, and pairs of
+corresponding source and target terms are appended to `trace`, if given. A term that no rule matches raises
 `ValueError` naming it. A translation preserves the expression's form, not always its value: dialects evaluate by their
 own rules (see each dialect's `Evaluators`).
 """
@@ -82,7 +82,7 @@ class Pattern:
         self.kind, self.arguments, self.attributes = kind, arguments, attributes
 
     def size(self) -> int:
-        """How specific the pattern is: its nodes and fixed attributes."""
+        """How specific the pattern is: its terms and fixed attributes."""
         fixed = sum(not isinstance(value, Hole) for value in self.attributes.values())
         return 1 + fixed + sum(a.size() for a in self.arguments if isinstance(a, Pattern))
 

@@ -193,7 +193,7 @@ def _number(value: Logic) -> int:
 
 
 class _Evaluation:
-    """One evaluation in a scope: each node's self-determined type, then its value in a context."""
+    """One evaluation in a scope: each term's self-determined type, then its value in a context."""
 
     def __init__(self, scope: Scope):
         self.scope = scope
@@ -201,7 +201,7 @@ class _Evaluation:
         self._values: dict[int, Any] = {}
 
     def type(self, node: Any) -> SvType | None:
-        """The node's self-determined type (None for an object)."""
+        """The term's self-determined type (None for an object)."""
         if id(node) not in self._types:
             self._types[id(node)] = self._type_of(node)
         return self._types[id(node)]
@@ -255,7 +255,7 @@ class _Evaluation:
         return Domains.TYPES[cast.type]
 
     def own(self, node: Any) -> Any:
-        """A self-determined node's value, of its own type, once."""
+        """A self-determined term's value, of its own type, once."""
         if id(node) not in self._values:
             self._values[id(node)] = self._own(node)
         return self._values[id(node)]
@@ -285,7 +285,7 @@ class _Evaluation:
         return self._call(node)
 
     def value(self, node: Any, context: SvType | None = None) -> Any:
-        """The node's value in a context: its own type's, unless the context gives another."""
+        """The term's value in a context: its own type's, unless the context gives another."""
         ctype = self.type(node)
         target = context if context is not None else ctype
         if isinstance(node, X._Unary) and node.operator in ("+", "-", "~"):
@@ -462,7 +462,7 @@ class _Evaluation:
         return _make(target, a1 & b1, a0 & b0)  # bits that agree keep their value; the others are x
 
     def _inside(self, node: Any) -> Logic:
-        items: list[tuple[Any, ...]] = []  # a node, a span's ends, or an array's element
+        items: list[tuple[Any, ...]] = []  # a term, a span's ends, or an array's element
         for item in node.items:
             if isinstance(item, X._Span):
                 items.append((item.low, item.high))

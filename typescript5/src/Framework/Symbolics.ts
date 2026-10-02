@@ -86,19 +86,19 @@ export class Variables implements Scope {
   }
 }
 
-/** An expression, or a `Term`'s. */
-function dataOf(expression: unknown): Terms.Node {
-  return (expression instanceof Terms.Term ? expression.data : expression) as Terms.Node;
+/** An expression, or a `Writer`'s. */
+function dataOf(expression: unknown): Terms.Term {
+  return (expression instanceof Terms.Writer ? expression.data : expression) as Terms.Term;
 }
 
-/** The names `expression` (an expression or a `Term`) needs from its scope: its lexical references that no binding or
+/** The names `expression` (an expression or a `Writer`) needs from its scope: its lexical references that no binding or
  * import within it binds, and that are not ambient. Shared sub-expressions and cycles are visited once per set of
  * bound names. */
 export function free(expression: unknown): Set<string> {
   const found = new Set<string>();
   const seen = new Map<unknown, Set<string>>();
   const visit = (node: unknown, bound: ReadonlySet<string>): void => {
-    if (!(node instanceof Terms.Node)) return;
+    if (!(node instanceof Terms.Term)) return;
     const key = [...bound].sort().join("\u0000");
     const visited = seen.get(node) ?? new Set<string>();
     if (visited.has(key)) return;
@@ -119,7 +119,7 @@ export function free(expression: unknown): Set<string> {
   return found;
 }
 
-/** The imports `expression` (an expression or a `Term`) declares, each once, in the order `Terms.walk` visits
+/** The imports `expression` (an expression or a `Writer`) declares, each once, in the order `Terms.walk` visits
  * them. */
 export function imports(expression: unknown): any[] {
   return [...Terms.walk(dataOf(expression))].filter((node) => node.kind().ROLE === Terms.IMPORT);

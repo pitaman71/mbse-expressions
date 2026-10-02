@@ -42,7 +42,7 @@ def address(text: str) -> str | None:
 
 
 @dataclass(eq=False)
-class _Constant(F.Node):
+class _Constant(F.Term):
     KIND = "constant"
     ROLE = F.LITERAL
     VALUE = {"int": int, "float": float, "str": str, "bool": bool}
@@ -50,7 +50,7 @@ class _Constant(F.Node):
 
 
 @dataclass(eq=False)
-class _Name(F.Node):
+class _Name(F.Term):
     KIND = "name"
     ROLE = F.REFERENCE
     PROPERTIES = {"name": str}
@@ -58,7 +58,7 @@ class _Name(F.Node):
 
 
 @dataclass(eq=False)
-class _Cell(F.Node):
+class _Cell(F.Term):
     KIND = "cell"
     ROLE = F.REFERENCE
     LEXICAL = False
@@ -78,7 +78,7 @@ class _Cell(F.Node):
 
 
 @dataclass(eq=False)
-class _Let(F.Node):
+class _Let(F.Term):
     KIND = "let"
     ROLE = F.BINDING
     PROPERTIES = {"name": str}
@@ -89,7 +89,7 @@ class _Let(F.Node):
 
 
 @dataclass(eq=False)
-class _Map(F.Node):
+class _Map(F.Term):
     KIND = "map"
     ROLE = F.QUANTIFIER
     PROPERTIES = {"name": str}
@@ -101,7 +101,7 @@ class _Map(F.Node):
 
 
 @dataclass(eq=False)
-class _Function(F.Node):
+class _Function(F.Term):
     KIND = "function"
     ROLE = F.APPLICATION
     PROPERTIES = {"name": str}
@@ -113,7 +113,7 @@ class _Function(F.Node):
 
 
 @dataclass(eq=False)
-class _Infix(F.Node):
+class _Infix(F.Term):
     KIND = "infix"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -126,7 +126,7 @@ class _Infix(F.Node):
 
 
 @dataclass(eq=False)
-class _Prefix(F.Node):
+class _Prefix(F.Term):
     KIND = "prefix"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -138,7 +138,7 @@ class _Prefix(F.Node):
 
 
 @dataclass(eq=False)
-class _Field(F.Node):
+class _Field(F.Term):
     KIND = "field"
     ROLE = F.APPLICATION
     PROPERTIES = {"name": str}

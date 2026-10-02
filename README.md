@@ -55,7 +55,7 @@ npm test                       # type-check and run the test suites and the tuto
 | Read | For |
 |---|---|
 | [`python3/tutorials/`](python3/tutorials/README.md), [`typescript5/tutorials/`](typescript5/tutorials/README.md) | Rules as data: building, evaluating, saving, analyzing and rewriting expressions. Start here. |
-| [`docs/EXPRESSIONS.md`](docs/EXPRESSIONS.md) | The design: the expression kinds, the core vocabulary, evaluation, meta-schemas and terms |
+| [`docs/EXPRESSIONS.md`](docs/EXPRESSIONS.md) | The design: the expression kinds, the core vocabulary, evaluation, meta-schemas and writers |
 | [`docs/EQUIVALENCE.md`](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [`AGENTS.md`](AGENTS.md), [`skills/mbse-expressions/`](skills/mbse-expressions/SKILL.md), [`llms.txt`](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
 | [`python3/tests/TestPlan.md`](python3/tests/TestPlan.md), [`typescript5/tests/TestPlan.md`](typescript5/tests/TestPlan.md) | The test suites |
@@ -90,7 +90,8 @@ Excel.render(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email)))'
 ## Status
 
 Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Basic,
-Python, Matlab, Excel and Latex dialects, and translators between every pair; in the Basic dialect, literals, operations, variables and lets, with builders and meta-schemas; terms (and, in
-Python, `Expressions.from_`); `validate()`; evaluation of the core operations with three-valued logic. Not built yet:
-the collection operations (`count`, `in`, `all`, `any`), and the evaluator interface through which mbse-schemas will
-choose union branches and check constraints.
+Python, Matlab, Excel and Latex dialects, and translators between every pair; in the Basic dialect, literals,
+operations, variables and lets, with builders and meta-schemas; writers (and, in Python, `Expressions.from_`);
+`validate()`; evaluation of the core operations with three-valued logic. Not built yet: the collection operations
+(`count`, `in`, `all`, `any`), and the evaluator interface through which mbse-schemas will choose union branches and
+check constraints.

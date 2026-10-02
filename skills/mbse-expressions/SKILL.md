@@ -32,7 +32,7 @@ It is a poor fit for logic that is simply part of one program; write that in the
 
 ## Rules that prevent most mistakes
 
-1. **Terms build data; nothing evaluates until asked.** `variable("this").age.ge(18)` is the expression
+1. **Writers build data; nothing evaluates until asked.** `variable("this").age.ge(18)` is the expression
    `ge(get(this, 'age'), 18)`. Evaluate it with a dialect's `Evaluators.OfAny(expression, scope)`.
 2. **Basic is three-valued and never coerces.** An absent property is unknown (`None`/`null`), and `and`/`or` follow
    Kleene. `1 == 1.0` is unknown, since int and float are different types; in TypeScript, an int is a `bigint` (`18n`).

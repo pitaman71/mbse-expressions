@@ -6,7 +6,7 @@ given known. A subexpression whose references are all known is evaluated by the 
 of its value, when `literal(value)` gives one; otherwise (an object, a collection, an unknown value) it stays as it is,
 still referring to the variables it needs. A binding of a known value binds it within its body, and stays only while
 the reduced body still refers to its name; a binding of an unknown value hides any known variable of its name, and so
-does a quantifier, whose collection and body are reduced. Any other node is rebuilt from its reduced arguments, unless
+does a quantifier, whose collection and body are reduced. Any other term is rebuilt from its reduced arguments, unless
 `simplify(node, results)` gives a simpler result from what is known of them (Kleene's short-circuits, in Basic). A
 reference the scope does not know stays.
 

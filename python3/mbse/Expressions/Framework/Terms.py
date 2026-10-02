@@ -1,11 +1,11 @@
 """Terms: the protocols every dialect's expressions implement, and the machinery that implements them.
 
-An expression language (a dialect) is a set of node kinds and a vocabulary of operators. Every dialect's expressions are:
+An expression language (a dialect) is a set of term kinds and a vocabulary of operators. Every dialect's expressions are:
 
 - Serializable. Each kind has a meta-schema, an ordinary mbse-schemas object schema tagged by `kind`, and its data has a
   builder (`create()` / `clone()` / `update()`) that implements `Visitors.OfObject`. `Dialect.Builders` rebuilds data
   from snapshots and `Dialect.Schema` is the union of the kinds' meta-schemas.
-- Structurally traversable. `Expression.form()` gives a node's `Form`: its kind, its native attributes and its ordered
+- Structurally traversable. `Expression.form()` gives a term's `Form`: its kind, its native attributes and its ordered
   arguments, which are expressions of the same dialect. `Dialect.make(form)` is the inverse. `walk`, `fold` and `same`
   traverse any dialect's expressions through forms alone.
 - Validatable. `Dialect.validate` reports what evaluation would raise, and `Dialect.infer` finds an expression's domain
@@ -13,7 +13,7 @@ An expression language (a dialect) is a set of node kinds and a vocabulary of op
 - Evaluatable, by the dialect's own evaluator (see `Evaluators`), and translatable to other dialects (see
   `Translators`).
 
-A dialect declares each kind as a dataclass derived from `Node`, whose class variables say how its fields map to the
+A dialect declares each kind as a dataclass derived from `Term`, whose class variables say how its fields map to the
 data model and what `role` it plays, and passes the classes to `Declared`, which derives the rest. The roles are:
 
 - `LITERAL`: a native value, in the field `value`, written to the property named after its type (`int`, `str`, ...).
@@ -59,7 +59,7 @@ from mbse.Schemas.Framework.Visitors import Native
 from . import Domains
 
 __all__ = [
-    "Form", "Expression", "Dialect", "Node", "Builder", "AnyBuilder", "Term", "Declared", "ValueProperty",
+    "Form", "Expression", "Dialect", "Term", "Builder", "AnyBuilder", "Writer", "Declared", "ValueProperty",
     "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER", "ARGUMENTS", "Arguments", "NATIVES",
     "walk", "fold", "same", "resolve", "name_of",
 ]
@@ -89,7 +89,7 @@ def _article(noun: str) -> str:
 
 @dataclasses.dataclass(frozen=True)
 class Form:
-    """A node's structure: its `kind`, its native `attributes` by name, and its ordered `arguments` (None where a slot
+    """A term's structure: its `kind`, its native `attributes` by name, and its ordered `arguments` (None where a slot
     is empty)."""
 
     kind: str
@@ -130,7 +130,7 @@ class Dialect(Protocol):
         ...
 
     def resolve(self, spec: Any) -> Expression:
-        """The expression a spec denotes: an expression, a `Term`, a native value (a literal) or a callable taking the
+        """The expression a spec denotes: an expression, a `Writer`, a native value (a literal) or a callable taking the
         dialect's `AnyBuilder`."""
         ...
 
@@ -155,7 +155,7 @@ class ValueProperty:
         self.schema, self.to_plain, self.from_plain = schema, to_plain, from_plain
 
 
-class Node:
+class Term:
     """Shared by every kind's data (a dataclass per kind): identity, schema name, writing through `accept`, and the
     structural view. `Declared` sets `DIALECT`, `NAME` and `FIELDS`."""
 
@@ -236,7 +236,7 @@ def _operator(node: Any) -> str:
     return kind.KIND if kind.OPERATOR is None else getattr(node, kind.OPERATOR)
 
 
-def _check_value(kind: type[Node], value: Any) -> str:
+def _check_value(kind: type[Term], value: Any) -> str:
     """The property that holds a literal's value; raises if the kind cannot hold it."""
     name = _native_name(value)
     if name is None:
@@ -246,11 +246,11 @@ def _check_value(kind: type[Node], value: Any) -> str:
     return name
 
 
-# --- Bindings: a kind's fields in its meta-schema's terms ---
+# --- Bindings: a kind's fields bound to its meta-schema ---
 
 
-def _read(instance: Node) -> Bindings.State:
-    """A node's state: its value under the property named after its native type (under `value` when it has none), its
+def _read(instance: Term) -> Bindings.State:
+    """A term's state: its value under the property named after its native type (under `value` when it has none), its
     other properties, its value properties in their plain form, and its arguments as `arguments` entries."""
     kind = type(instance)
     values: dict[str, Any] = {}
@@ -266,16 +266,16 @@ def _read(instance: Node) -> Bindings.State:
     return Bindings.State(values, {"arguments": arguments} if _parent(kind) else {})
 
 
-def _parent(kind: type[Node]) -> bool:
+def _parent(kind: type[Term]) -> bool:
     return bool(kind.SLOTS) or kind.VARIADIC is not None
 
 
-def _value(kind: type[Node], values: Mapping[str, Any]) -> Any:
+def _value(kind: type[Term], values: Mapping[str, Any]) -> Any:
     """A literal's value: the one native property it holds, or the value it holds under `value`."""
     return next((values[name] for name in kind.VALUE if values.get(name) is not None), values.get("value"))  # type: ignore[union-attr]
 
 
-def _check_target(kind: type[Node], entry: Bindings.Entry) -> Any:
+def _check_target(kind: type[Term], entry: Bindings.Entry) -> Any:
     target = entry.links.get("argument")
     if target is None:
         raise ValueError("link 'argument' is not set")
@@ -284,8 +284,8 @@ def _check_target(kind: type[Node], entry: Bindings.Entry) -> Any:
     return target
 
 
-def _make(kind: type[Node], state: Bindings.State) -> Any:
-    """The node a state holds: its fields from the properties, and its arguments from the `arguments` entries, the
+def _make(kind: type[Term], state: Bindings.State) -> Any:
+    """The term a state holds: its fields from the properties, and its arguments from the `arguments` entries, the
     slots by index and the variadic ones in index order."""
     values = state.values
     fields: dict[str, Any] = {name: values.get(name) for name in kind.PROPERTIES}
@@ -312,14 +312,14 @@ def _make(kind: type[Node], state: Bindings.State) -> Any:
     return kind(**fields)
 
 
-def _assign(kind: type[Node], instance: Any, state: Bindings.State) -> Any:
+def _assign(kind: type[Term], instance: Any, state: Bindings.State) -> Any:
     made = _make(kind, state)
     for name in kind.FIELDS:
         setattr(instance, name, getattr(made, name))
     return instance
 
 
-def _binding(kind: type[Node]) -> Bindings.Binding:
+def _binding(kind: type[Term]) -> Bindings.Binding:
     return Bindings.Binding(kind.Schema, _read, lambda state: _make(kind, state),  # type: ignore[attr-defined]
                             lambda instance, state: _assign(kind, instance, state), fixed={"kind": kind.KIND},
                             exclusive=[(*kind.VALUE, "value")] if kind.VALUE is not None else (), implied=["used_by"])
@@ -328,7 +328,7 @@ def _binding(kind: type[Node]) -> Bindings.Binding:
 # --- Builders ---
 
 
-def _slots_message(kind: type[Node], index: Any) -> str:
+def _slots_message(kind: type[Term], index: Any) -> str:
     """E.g. "a let's value is argument 0 and its body argument 1, got index 2"."""
     parts = [f"{slot} is argument 0" if i == 0 else f"its {slot} argument {i}" for i, slot in enumerate(kind.SLOTS)]
     listed = parts[0] if len(parts) == 1 else f"{', '.join(parts[:-1])} and {parts[-1]}"
@@ -341,7 +341,7 @@ class Builder(Bindings.Builder):
     ('value' is a literal's value), `.arguments(*specs)` appends arguments to a variadic kind and `.argument(slot, spec)`
     fills a slot; specs are resolved by the dialect."""
 
-    _data: ClassVar[type[Node]]
+    _data: ClassVar[type[Term]]
 
     def __init__(self, instance: Any = None):
         if instance is not None and type(instance) is not self._data:
@@ -433,8 +433,8 @@ class AnyBuilder:
 # --- Specs ---
 
 
-class Term:
-    """An expression written with methods; each dialect derives its own. A `Term` is a spec; `.data` is its
+class Writer:
+    """An expression written with methods; each dialect derives its own. A `Writer` is a spec; `.data` is its
     expression."""
 
     __slots__ = ("data",)
@@ -444,9 +444,9 @@ class Term:
 
 
 def resolve(spec: Any, data: type | tuple[type, ...], builder: Callable[[], Any], expected: str) -> Any:
-    """Resolves a spec: data is used as is, a `Term` gives its data, and a callable is given a new builder and must
+    """Resolves a spec: data is used as is, a `Writer` gives its data, and a callable is given a new builder and must
     return it."""
-    if isinstance(spec, Term):
+    if isinstance(spec, Writer):
         spec = spec.data
     if isinstance(spec, data):
         return spec
@@ -476,7 +476,7 @@ _ARGUMENTS = lambda r: r.name("arguments").of(Arguments).me("parent")  # noqa: E
 _USED_BY = lambda r: r.name("used_by").of(Arguments).me("argument")  # noqa: E731
 
 
-def _schema(kind: type[Node]) -> Schemas.OfObject.Data:
+def _schema(kind: type[Term]) -> Schemas.OfObject.Data:
     """A kind's meta-schema: the tag, one property per native type its value may have, its properties, its value
     fields, and the adjacencies `arguments` (if it has arguments) and `used_by`."""
     natives = {**(kind.VALUE or {}), **kind.PROPERTIES}
@@ -495,7 +495,7 @@ class Declared:
     branches are named by the kinds' tags, the registry `Builders`, and `make`, `resolve`, `validate` and `infer`.
     `domain_of` gives a literal's domain."""
 
-    def __init__(self, name: str, kinds: Sequence[type[Node]], *,
+    def __init__(self, name: str, kinds: Sequence[type[Term]], *,
                  domain_of: Callable[[Native], Domains.Domain], builders: Mapping[str, type[Builder]] | None = None,
                  any_builder: type[AnyBuilder] | None = None, schema_names: Mapping[str, str] | None = None):
         self._name, self._domain_of = name, domain_of
@@ -526,7 +526,7 @@ class Declared:
     def name(self) -> str:
         return self._name
 
-    def kinds(self) -> Mapping[str, type[Node]]:
+    def kinds(self) -> Mapping[str, type[Term]]:
         return dict(self._kinds)
 
     def schema_of(self, expression: Any) -> Schemas.OfObject.Data:
@@ -639,10 +639,10 @@ class Declared:
                memo: dict[tuple[int, int], Domains.Domain]) -> Domains.Domain:
         key = (id(expression), id(environment))
         if key not in memo:
-            memo[key] = self._infer_node(expression, environment, memo)
+            memo[key] = self._infer_term(expression, environment, memo)
         return memo[key]
 
-    def _infer_node(self, expression: Any, environment: dict[str, Domains.Domain],
+    def _infer_term(self, expression: Any, environment: dict[str, Domains.Domain],
                     memo: dict[tuple[int, int], Domains.Domain]) -> Domains.Domain:
         kind = type(expression)
         if kind.ROLE == LITERAL:
@@ -707,7 +707,7 @@ def walk(expression: Expression) -> Iterator[Any]:
 
 
 def fold(expression: Expression, function: Callable[[Any, list[Any]], Any]) -> Any:
-    """Combines an expression bottom-up: `function(node, results)` is called once per node, shared ones included, with
+    """Combines an expression bottom-up: `function(node, results)` is called once per term, shared ones included, with
     the results for its arguments (None for empty slots). Raises on cycles."""
     memo: dict[int, Any] = {}
     active: set[int] = set()

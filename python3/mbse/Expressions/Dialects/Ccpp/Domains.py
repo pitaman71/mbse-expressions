@@ -179,4 +179,4 @@ CALL = D.Opaque()
 CONDITIONAL = D.Function((Anything, Anything, Anything), Anything)
 """`condition ? a : b`."""
 CAST = D.Function((Anything,), Anything)
-"""`(type) operand`, whose domain is its type (the node's own)."""
+"""`(type) operand`, whose domain is its type (the term's own)."""

@@ -20,11 +20,11 @@
  *   as its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds,
  *   e.g. `import numpy as np` around an expression that uses `np`.
  *
- * Translating co-traverses: at each node, the first rule whose source pattern matches (the most specific first: the
- * one with the most nodes and fixed attributes) is applied by traversing the pattern and the expression in lockstep,
+ * Translating co-traverses: at each term, the first rule whose source pattern matches (the most specific first: the
+ * one with the most terms and fixed attributes) is applied by traversing the pattern and the expression in lockstep,
  * binding holes to arguments and attributes; then its target pattern is instantiated with the bound attributes and
- * the translations of the bound arguments. Every node is translated once, so shared sub-expressions stay shared, and
- * pairs of corresponding source and target nodes are appended to `trace`, if given. A node that no rule matches
+ * the translations of the bound arguments. Every term is translated once, so shared sub-expressions stay shared, and
+ * pairs of corresponding source and target terms are appended to `trace`, if given. A term that no rule matches
  * throws `ValueError` naming it. A translation preserves the expression's form, not always its value: dialects
  * evaluate by their own rules (see each dialect's `Evaluators`).
  */
@@ -36,7 +36,7 @@ import * as Terms from "./Terms.js";
 
 const { ValueError } = Errors;
 const { repr } = Repr;
-type Node = Terms.Node;
+type Term = Terms.Term;
 type Trace = [unknown, unknown][];
 
 /** Translates expressions between two dialects, in both directions. */
@@ -80,7 +80,7 @@ export class Pattern {
     this.args = args;
   }
 
-  /** How specific the pattern is: its nodes and fixed attributes. */
+  /** How specific the pattern is: its terms and fixed attributes. */
   size(): number {
     const fixed = [...this.attributes.values()].filter((value) => !(value instanceof Hole)).length;
     return 1 + fixed + this.args.reduce((sum, a) => sum + (a instanceof Pattern ? a.size() : 0), 0);
@@ -173,7 +173,7 @@ export function renames(leftKind: string, leftAttribute: string, rightKind: stri
     new Pattern(rightKind, { [rightAttribute]: b }, ...args)));
 }
 
-function describe(dialect: Terms.Dialect, node: Node): string {
+function describe(dialect: Terms.Dialect, node: Term): string {
   const kind = node.kind();
   if ((kind.ROLE === Terms.APPLICATION || kind.ROLE === Terms.QUANTIFIER) && kind.OPERATOR !== null) {
     return `${dialect.name()} ${kind.KIND} ${repr(Terms.operatorOf(node))}`;
@@ -219,7 +219,7 @@ class Direction {
     let result = new Run(this, trace).translate(this.source.resolve(expression), new Map());
     for (const pattern of [...this.preludes].reverse()) {
       const declared = this.target.make(new Terms.Form(pattern.kind, pattern.attributes as Map<string, never>,
-        [result])) as Node;
+        [result])) as Term;
       const used = Symbolics.free(result);
       if (declared.binds().some((name) => used.has(name))) result = declared;
     }
@@ -243,7 +243,7 @@ class Run {
     this.active.add(node);
     let result: unknown;
     try {
-      result = this.translateNode(node, environment);
+      result = this.translateTerm(node, environment);
     } finally {
       this.active.delete(node);
     }
@@ -252,7 +252,7 @@ class Run {
     return result;
   }
 
-  private translateNode(node: Node, environment: Environment): unknown {
+  private translateTerm(node: Term, environment: Environment): unknown {
     const kind = node.kind();
     const name = Terms.nameOf(node) as string;
     if (kind.ROLE === Terms.REFERENCE && kind.LEXICAL && environment.has(name)) return environment.get(name);

@@ -26,7 +26,7 @@ ada = B.Contact().name("Ada").age(70).email("ada@example.com").create()
 bob = B.Contact().name("Bob").age(30).create()
 eve = B.Contact().name("Eve").email("eve@example.com").create()  # no age
 
-# A rule, read from a Python lambda into data. Terms write the same: contact.age.ge(65).and_(contact.has("email")).
+# A rule, read from a Python lambda into data. Writers build the same: contact.age.ge(65).and_(contact.has("email")).
 senior = E.from_(lambda contact: contact.age >= 65 and contact.email is not None).data
 assert senior.validate(bound={"contact"}, core=True) == []
 
@@ -62,7 +62,7 @@ assert Evaluators.predicate(this.reach.has("email"), card) is True
 ## Cheat sheet
 
 ```python fragment
-# Terms: methods that build expressions. .data is the expression; a term is accepted wherever an expression is.
+# Writers: methods that build expressions. .data is the expression; a writer is accepted wherever an expression is.
 this = E.variable("this"); E.literal(1); E.let_("a", value, body); E.operation("name", *arguments)
 E.literal(200, Domains.OfInteger.Builder().width(8).signed(False).create())   # a literal of a value domain
 Domains.register("uint8", domain)          # a registered domain is written by name
@@ -87,7 +87,7 @@ Partials.OfAny(rule, {"this": value})                       # the residual: what
 
 # Storage, traversal, translation: the same calls in every dialect.
 JSON.ToJSON.Reachable(E.DIALECT.schema_of(e), e); JSON.FromJSON(E.Builders).Reachable(schema, text)
-F.walk(e); F.fold(e, lambda node, results: ...); F.same(a, b)   # from mbse.Expressions.Framework import Terms as F
+F.walk(e); F.fold(e, lambda term, results: ...); F.same(a, b)   # from mbse.Expressions.Framework import Terms as F
 Symbolics.free(e); Symbolics.imports(e)     # the names e needs from its scope, and the imports it declares
 Translators.between(E.DIALECT, Excel.DIALECT).forward(e, trace=[]); Translators.Basic_Python.NUMPY.forward(e)
 Excel.render(e); Python.render(e); Python.parse("import math\nmath.floor(x)")    # parse is Python's only
@@ -95,7 +95,7 @@ Excel.render(e); Python.render(e); Python.parse("import math\nmath.floor(x)")   
 
 ## Traps
 
-- `from_` reads the function's source file, so it fails in `python -c`, `eval` and some REPLs. Use terms there.
+- `from_` reads the function's source file, so it fails in `python -c`, `eval` and some REPLs. Use writers there.
 - `1 == 1.0` is unknown in Basic, and `True` is not an `int`. Write literals of the type the data has.
 - In `from_`, `x.email is not None` means `has(x, 'email')`; `x.email` alone is `get`, unknown when absent.
 - Evaluating an operation outside the core raises `NotImplementedError`: validate with `core=True` first.
@@ -107,5 +107,5 @@ Excel.render(e); Python.render(e); Python.parse("import math\nmath.floor(x)")   
 | Topic | Read |
 |---|---|
 | Rules as data: building, evaluating, saving, analyzing and rewriting | [the tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/01_Rules_As_Data.ipynb) |
-| The Basic dialect: kinds, core vocabulary, evaluation, meta-schemas, terms, `from_` | [EXPRESSIONS.md, The Basic dialect](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#the-basic-dialect) |
+| The Basic dialect: kinds, core vocabulary, evaluation, meta-schemas, writers, `from_` | [EXPRESSIONS.md, The Basic dialect](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#the-basic-dialect) |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/TestPlan.md) |

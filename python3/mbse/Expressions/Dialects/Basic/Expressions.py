@@ -32,7 +32,7 @@ The meta-schemas are registered with `Proxies` as 'Expressions.OfLiteral', 'Expr
 rebuilds `Data` from snapshots, e.g. `JSON.FromJSON(Expressions.Builders).Reachable(Expressions.OfLet.Schema, text)`.
 `Data` is `Visitable`; builders implement `Visitors.OfObject`.
 
-`Term`s write expressions with methods: `variable('this').age.ge(18)` is `ge(get(this, 'age'), 18)`. `from_` reads one
+`Writer`s write expressions with methods: `variable('this').age.ge(18)` is `ge(get(this, 'age'), 18)`. `from_` reads one
 from a Python function's source instead: `from_(lambda this: this.age >= 18)` is the same expression.
 """
 
@@ -52,8 +52,8 @@ from mbse.Schemas.Framework.Visitors import Native
 from . import Domains
 
 __all__ = [
-    "OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "OfQuantifier", "Arguments", "Builders", "Term", "CORE",
-    "DIALECT", "variable", "literal", "let_", "operation", "quantifier", "from_",
+    "OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "OfQuantifier", "Arguments", "Builders", "Writer",
+    "CORE", "DIALECT", "variable", "literal", "let_", "operation", "quantifier", "from_",
     "LITERAL", "OPERATION", "VARIABLE", "LET", "QUANTIFIER", "ARGUMENTS",
 ]
 
@@ -87,7 +87,7 @@ def _domain_problems(what: str, domain: Any) -> list[str]:
 
 
 @dataclass(eq=False)
-class _LiteralData(F.Node):
+class _LiteralData(F.Term):
     KIND = "literal"
     ROLE = F.LITERAL
     VALUE = F.NATIVES
@@ -113,7 +113,7 @@ class _LiteralData(F.Node):
 
 
 @dataclass(eq=False)
-class _OperationData(F.Node):
+class _OperationData(F.Term):
     KIND = "operation"
     ROLE = F.APPLICATION
     PROPERTIES = {"name": str}
@@ -138,7 +138,7 @@ class _OperationData(F.Node):
 
 
 @dataclass(eq=False)
-class _VariableData(F.Node):
+class _VariableData(F.Term):
     KIND = "variable"
     ROLE = F.REFERENCE
     PROPERTIES = {"name": str}
@@ -146,7 +146,7 @@ class _VariableData(F.Node):
 
 
 @dataclass(eq=False)
-class _LetData(F.Node):
+class _LetData(F.Term):
     KIND = "let"
     ROLE = F.BINDING
     PROPERTIES = {"name": str}
@@ -157,7 +157,7 @@ class _LetData(F.Node):
 
 
 @dataclass(eq=False)
-class _QuantifierData(F.Node):
+class _QuantifierData(F.Term):
     KIND = "quantifier"
     ROLE = F.QUANTIFIER
     PROPERTIES = {"name": str, "quantifier": str}
@@ -352,7 +352,7 @@ class OfQuantifier:
 
 
 class OfAny:
-    """Any expression. `Spec` is a native value (a literal), an expression, a `Term`, or a callable taking the
+    """Any expression. `Spec` is a native value (a literal), an expression, a `Writer`, or a callable taking the
     builder."""
 
     Data = _LiteralData | _OperationData | _VariableData | _LetData | _QuantifierData
@@ -368,164 +368,164 @@ class OfAny:
 # --- Terms: writing expressions with methods ---
 
 
-class Term(F.Term):
+class Writer(F.Writer):
     """An expression written with methods. `.name` reads a property (`get`); use `.get(name)` for names that are also
-    methods, such as `eq`. A `Term` is an `OfAny.Spec`; `.data` is its expression."""
+    methods, such as `eq`. A `Writer` is an `OfAny.Spec`; `.data` is its expression."""
 
     __slots__ = ()
 
-    def __getattr__(self, name: str) -> Term:
+    def __getattr__(self, name: str) -> Writer:
         if name.startswith("_"):
             raise AttributeError(name)
         return self.get(name)
 
-    def get(self, name: str) -> Term:
+    def get(self, name: str) -> Writer:
         return operation("get", self, name)
 
-    def has(self, name: str) -> Term:
+    def has(self, name: str) -> Writer:
         return operation("has", self, name)
 
-    def eq(self, other: OfAny.Spec) -> Term:
+    def eq(self, other: OfAny.Spec) -> Writer:
         return operation("eq", self, other)
 
-    def ne(self, other: OfAny.Spec) -> Term:
+    def ne(self, other: OfAny.Spec) -> Writer:
         return operation("ne", self, other)
 
-    def lt(self, other: OfAny.Spec) -> Term:
+    def lt(self, other: OfAny.Spec) -> Writer:
         return operation("lt", self, other)
 
-    def le(self, other: OfAny.Spec) -> Term:
+    def le(self, other: OfAny.Spec) -> Writer:
         return operation("le", self, other)
 
-    def gt(self, other: OfAny.Spec) -> Term:
+    def gt(self, other: OfAny.Spec) -> Writer:
         return operation("gt", self, other)
 
-    def ge(self, other: OfAny.Spec) -> Term:
+    def ge(self, other: OfAny.Spec) -> Writer:
         return operation("ge", self, other)
 
-    def and_(self, other: OfAny.Spec) -> Term:
+    def and_(self, other: OfAny.Spec) -> Writer:
         return operation("and", self, other)
 
-    def or_(self, other: OfAny.Spec) -> Term:
+    def or_(self, other: OfAny.Spec) -> Writer:
         return operation("or", self, other)
 
-    def not_(self) -> Term:
+    def not_(self) -> Writer:
         return operation("not", self)
 
-    def implies(self, other: OfAny.Spec) -> Term:
+    def implies(self, other: OfAny.Spec) -> Writer:
         return operation("implies", self, other)
 
-    def add(self, other: OfAny.Spec) -> Term:
+    def add(self, other: OfAny.Spec) -> Writer:
         return operation("add", self, other)
 
-    def sub(self, other: OfAny.Spec) -> Term:
+    def sub(self, other: OfAny.Spec) -> Writer:
         return operation("sub", self, other)
 
-    def mul(self, other: OfAny.Spec) -> Term:
+    def mul(self, other: OfAny.Spec) -> Writer:
         return operation("mul", self, other)
 
-    def neg(self) -> Term:
+    def neg(self) -> Writer:
         return operation("neg", self)
 
-    def bitand(self, other: OfAny.Spec) -> Term:
+    def bitand(self, other: OfAny.Spec) -> Writer:
         return operation("bitand", self, other)
 
-    def bitor(self, other: OfAny.Spec) -> Term:
+    def bitor(self, other: OfAny.Spec) -> Writer:
         return operation("bitor", self, other)
 
-    def bitxor(self, other: OfAny.Spec) -> Term:
+    def bitxor(self, other: OfAny.Spec) -> Writer:
         return operation("bitxor", self, other)
 
-    def bitnot(self) -> Term:
+    def bitnot(self) -> Writer:
         return operation("bitnot", self)
 
-    def shl(self, count: OfAny.Spec) -> Term:
+    def shl(self, count: OfAny.Spec) -> Writer:
         return operation("shl", self, count)
 
-    def shr(self, count: OfAny.Spec) -> Term:
+    def shr(self, count: OfAny.Spec) -> Writer:
         return operation("shr", self, count)
 
-    def convert(self, domain: Any) -> Term:
+    def convert(self, domain: Any) -> Writer:
         """The value in `domain`, kept: rounded or overflowing as `domain` does."""
-        return Term(_OperationData("convert", (self.data,), domain))
+        return Writer(_OperationData("convert", (self.data,), domain))
 
-    def reinterpret(self, domain: Any) -> Term:
+    def reinterpret(self, domain: Any) -> Writer:
         """The bit pattern in `domain`, of the same width."""
-        return Term(_OperationData("reinterpret", (self.data,), domain))
+        return Writer(_OperationData("reinterpret", (self.data,), domain))
 
-    def pack(self) -> Term:
+    def pack(self) -> Writer:
         """A packed value's representation."""
         return operation("pack", self)
 
-    def unpack(self, domain: Any) -> Term:
+    def unpack(self, domain: Any) -> Writer:
         """The value of the packed `domain` that a representation stands for."""
-        return Term(_OperationData("unpack", (self.data,), domain))
+        return Writer(_OperationData("unpack", (self.data,), domain))
 
-    def count(self) -> Term:
+    def count(self) -> Writer:
         """The number of items of a collection."""
         return operation("count", self)
 
-    def item(self, index: OfAny.Spec) -> Term:
+    def item(self, index: OfAny.Spec) -> Writer:
         """The item at a position, or at a key of a keyed list."""
         return operation("item", self, index)
 
-    def in_(self, collection: OfAny.Spec) -> Term:
+    def in_(self, collection: OfAny.Spec) -> Writer:
         """Whether this equals one of the items of `collection`."""
         return operation("in", self, collection)
 
-    def sum(self) -> Term:
+    def sum(self) -> Writer:
         return operation("sum", self)
 
-    def min(self) -> Term:
+    def min(self) -> Writer:
         return operation("min", self)
 
-    def max(self) -> Term:
+    def max(self) -> Writer:
         return operation("max", self)
 
-    def unique(self) -> Term:
+    def unique(self) -> Writer:
         """Whether no two items are equal."""
         return operation("unique", self)
 
-    def entries(self, adjacency: str) -> Term:
+    def entries(self, adjacency: str) -> Writer:
         """An object's entries in an adjacency, as records."""
         return operation("entries", self, adjacency)
 
-    def all(self, name: str, body: OfAny.Spec) -> Term:
+    def all(self, name: str, body: OfAny.Spec) -> Writer:
         """Whether `body` holds for every item, bound to `name`."""
         return quantifier("all", name, self, body)
 
-    def any(self, name: str, body: OfAny.Spec) -> Term:
+    def any(self, name: str, body: OfAny.Spec) -> Writer:
         """Whether `body` holds for some item, bound to `name`."""
         return quantifier("any", name, self, body)
 
-    def count_where(self, name: str, body: OfAny.Spec) -> Term:
+    def count_where(self, name: str, body: OfAny.Spec) -> Writer:
         """How many items, bound to `name`, `body` holds for."""
         return quantifier("count", name, self, body)
 
 
-def variable(name: str) -> Term:
+def variable(name: str) -> Writer:
     """The variable `name`."""
-    return Term(_VariableData(name))
+    return Writer(_VariableData(name))
 
 
-def literal(value: Native, domain: Any = None) -> Term:
+def literal(value: Native, domain: Any = None) -> Writer:
     """The literal `value`, of `domain` (by default, its native's)."""
-    return Term(_LiteralData(value, domain))
+    return Writer(_LiteralData(value, domain))
 
 
-def let_(name: str, value: OfAny.Spec, body: OfAny.Spec) -> Term:
+def let_(name: str, value: OfAny.Spec, body: OfAny.Spec) -> Writer:
     """`body`, with `name` bound to the value of `value`."""
-    return Term(_LetData(name, OfAny.resolve(value), OfAny.resolve(body)))
+    return Writer(_LetData(name, OfAny.resolve(value), OfAny.resolve(body)))
 
 
-def quantifier(quantifier: str, name: str, collection: OfAny.Spec, body: OfAny.Spec) -> Term:
+def quantifier(quantifier: str, name: str, collection: OfAny.Spec, body: OfAny.Spec) -> Writer:
     """The quantifier `quantifier` (`all`, `any` or `count`) of `body`, with `name` bound to each item of `collection`."""
-    return Term(_QuantifierData(name, quantifier, OfAny.resolve(collection), OfAny.resolve(body)))
+    return Writer(_QuantifierData(name, quantifier, OfAny.resolve(collection), OfAny.resolve(body)))
 
 
-def operation(name: str, *arguments: OfAny.Spec) -> Term:
+def operation(name: str, *arguments: OfAny.Spec) -> Writer:
     """The operation `name` applied to `arguments`; for operations outside the core, or without a method."""
-    return Term(_OperationData(name, tuple(OfAny.resolve(argument) for argument in arguments)))
+    return Writer(_OperationData(name, tuple(OfAny.resolve(argument) for argument in arguments)))
 
 
 # --- From Python functions ---
@@ -538,7 +538,7 @@ _ARITHMETIC: dict[type, str] = {ast.Add: "add", ast.Sub: "sub", ast.Mult: "mul"}
 _FUNCTIONS = (ast.Lambda, ast.FunctionDef)
 
 
-def from_(function: Callable[..., Any]) -> Term:
+def from_(function: Callable[..., Any]) -> Writer:
     """The expression a Python function computes, read from its source: a lambda, or a `def` whose body is one `return`
     (after an optional docstring). Each parameter becomes a variable of the same name, e.g. `from_(lambda this:
     this.age >= 18)` is `ge(get(this, 'age'), 18)`.
@@ -549,7 +549,7 @@ def from_(function: Callable[..., Any]) -> Term:
       `or`, `not` are the logic operations; `+`, `-`, `*` and unary `-` are `add`, `sub`, `mul` and `neg`.
     - `(lambda name: body)(value)` is a let.
     - Other names are read when `from_` runs, from the function's closure and globals: a native value becomes a literal,
-      and a `Term` or expression is used as it is.
+      and a `Writer` or expression is used as it is.
 
     The expression is evaluated by `Evaluators`, with three-valued logic and no coercion, not by Python's rules: for
     example, `1 == 1.0` is True in Python but unknown as an expression. Anything else raises `ValueError`.
@@ -560,7 +560,7 @@ def from_(function: Callable[..., Any]) -> Term:
     node = _function_node(code)
     captured = inspect.getclosurevars(function)
     names = {**captured.builtins, **captured.globals, **captured.nonlocals}
-    return Term(_convert(_body(node), {name: _VariableData(name) for name in _parameters(node)}, names))
+    return Writer(_convert(_body(node), {name: _VariableData(name) for name in _parameters(node)}, names))
 
 
 def _function_node(code: Any) -> ast.Lambda | ast.FunctionDef:
@@ -627,7 +627,7 @@ def _convert(node: ast.expr, bound: dict[str, _VariableData], names: dict[str, A
         if node.id not in names:
             raise _unsupported(node, "the name is not defined")
         value = names[node.id]
-        if isinstance(value, Term):
+        if isinstance(value, Writer):
             return value.data
         if isinstance(value, _KINDS) or _native_name(value) is not None:
             return OfAny.resolve(value)

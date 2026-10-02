@@ -33,7 +33,7 @@
  * rebuilds `Data` from snapshots, e.g. `Json.FromJSON(Expressions.Builders).Reachable(Expressions.OfLet.Schema, text)`.
  * `Data` is `Visitable`; builders implement `Visitors.OfObject`.
  *
- * `Term`s write expressions with methods: `variable('this').age.ge(18n)` is `ge(get(this, 'age'), 18)`.
+ * `Writer`s write expressions with methods: `variable('this').age.ge(18n)` is `ge(get(this, 'age'), 18)`.
  */
 
 import { Repr } from "@mbse/schemas/Framework";
@@ -71,7 +71,7 @@ function domainProblems(what: string, domain: unknown): string[] {
   return domain.validate().map((problem) => `domain: ${problem}`);
 }
 
-class _LiteralData extends F.Node {
+class _LiteralData extends F.Term {
   static override KIND = "literal";
   static override ROLE = F.LITERAL;
   static override VALUE = F.NATIVES;
@@ -104,7 +104,7 @@ class _LiteralData extends F.Node {
   }
 }
 
-class _OperationData extends F.Node {
+class _OperationData extends F.Term {
   static override KIND = "operation";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = NAME;
@@ -134,7 +134,7 @@ class _OperationData extends F.Node {
   }
 }
 
-class _VariableData extends F.Node {
+class _VariableData extends F.Term {
   static override KIND = "variable";
   static override ROLE = F.REFERENCE;
   static override PROPERTIES = NAME;
@@ -145,7 +145,7 @@ class _VariableData extends F.Node {
   }
 }
 
-class _LetData extends F.Node {
+class _LetData extends F.Term {
   static override KIND = "let";
   static override ROLE = F.BINDING;
   static override PROPERTIES = NAME;
@@ -159,7 +159,7 @@ class _LetData extends F.Node {
   }
 }
 
-class _QuantifierData extends F.Node {
+class _QuantifierData extends F.Term {
   static override KIND = "quantifier";
   static override ROLE = F.QUANTIFIER;
   static override PROPERTIES = new Map<string, unknown>([["name", String], ["quantifier", String]]);
@@ -350,7 +350,7 @@ export namespace OfLiteral {
   export type Data = _LiteralData;
   export const Builder = _LiteralBuilder;
   export type Builder = _LiteralBuilder;
-  export type Spec = Native | _LiteralData | Term | ((builder: _LiteralBuilder) => _LiteralBuilder);
+  export type Spec = Native | _LiteralData | Writer | ((builder: _LiteralBuilder) => _LiteralBuilder);
   export const Schema: Schemas.OfObject.Data = _LiteralData.Schema;
 
   export function resolve(spec: Spec | unknown): _LiteralData {
@@ -366,7 +366,7 @@ export namespace OfOperation {
   export type Data = _OperationData;
   export const Builder = _OperationBuilder;
   export type Builder = _OperationBuilder;
-  export type Spec = _OperationData | Term | ((builder: _OperationBuilder) => _OperationBuilder);
+  export type Spec = _OperationData | Writer | ((builder: _OperationBuilder) => _OperationBuilder);
   export const Schema: Schemas.OfObject.Data = _OperationData.Schema;
 
   export function resolve(spec: Spec | unknown): _OperationData {
@@ -381,7 +381,7 @@ export namespace OfVariable {
   export type Data = _VariableData;
   export const Builder = _VariableBuilder;
   export type Builder = _VariableBuilder;
-  export type Spec = string | _VariableData | Term | ((builder: _VariableBuilder) => _VariableBuilder);
+  export type Spec = string | _VariableData | Writer | ((builder: _VariableBuilder) => _VariableBuilder);
   export const Schema: Schemas.OfObject.Data = _VariableData.Schema;
 
   export function resolve(spec: Spec | unknown): _VariableData {
@@ -398,7 +398,7 @@ export namespace OfQuantifier {
   export type Data = _QuantifierData;
   export const Builder = _QuantifierBuilder;
   export type Builder = _QuantifierBuilder;
-  export type Spec = _QuantifierData | Term | ((builder: _QuantifierBuilder) => _QuantifierBuilder);
+  export type Spec = _QuantifierData | Writer | ((builder: _QuantifierBuilder) => _QuantifierBuilder);
   export const Schema: Schemas.OfObject.Data = _QuantifierData.Schema;
 
   export function resolve(spec: Spec | unknown): _QuantifierData {
@@ -412,7 +412,7 @@ export namespace OfLet {
   export type Data = _LetData;
   export const Builder = _LetBuilder;
   export type Builder = _LetBuilder;
-  export type Spec = _LetData | Term | ((builder: _LetBuilder) => _LetBuilder);
+  export type Spec = _LetData | Writer | ((builder: _LetBuilder) => _LetBuilder);
   export const Schema: Schemas.OfObject.Data = _LetData.Schema;
 
   export function resolve(spec: Spec | unknown): _LetData {
@@ -421,12 +421,12 @@ export namespace OfLet {
 }
 
 export namespace OfAny {
-  /** Any expression. `Spec` is a native value (a literal), an expression, a `Term`, or a callable taking the
+  /** Any expression. `Spec` is a native value (a literal), an expression, a `Writer`, or a callable taking the
    * builder. */
   export type Data = AnyData;
   export const Builder = _AnyBuilder;
   export type Builder = _AnyBuilder;
-  export type Spec = Native | AnyData | Term | ((builder: _AnyBuilder) => _AnyBuilder);
+  export type Spec = Native | AnyData | Writer | ((builder: _AnyBuilder) => _AnyBuilder);
   export const Schema: Schemas.OfUnion.Data = DIALECT.Schema;
 
   export function resolve(spec: Spec | unknown): AnyData {
@@ -436,207 +436,207 @@ export namespace OfAny {
 
 // --- Terms: writing expressions with methods ---
 
-/** The methods of a `Term`. */
-class TermTarget extends F.Term {
+/** The methods of a `Writer`. */
+class TermTarget extends F.Writer {
   declare readonly data: AnyData;
 
-  get(name: string): Term {
-    return operation("get", this as unknown as Term, name);
+  get(name: string): Writer {
+    return operation("get", this as unknown as Writer, name);
   }
 
-  has(name: string): Term {
-    return operation("has", this as unknown as Term, name);
+  has(name: string): Writer {
+    return operation("has", this as unknown as Writer, name);
   }
 
-  eq(other: OfAny.Spec): Term {
-    return operation("eq", this as unknown as Term, other);
+  eq(other: OfAny.Spec): Writer {
+    return operation("eq", this as unknown as Writer, other);
   }
 
-  ne(other: OfAny.Spec): Term {
-    return operation("ne", this as unknown as Term, other);
+  ne(other: OfAny.Spec): Writer {
+    return operation("ne", this as unknown as Writer, other);
   }
 
-  lt(other: OfAny.Spec): Term {
-    return operation("lt", this as unknown as Term, other);
+  lt(other: OfAny.Spec): Writer {
+    return operation("lt", this as unknown as Writer, other);
   }
 
-  le(other: OfAny.Spec): Term {
-    return operation("le", this as unknown as Term, other);
+  le(other: OfAny.Spec): Writer {
+    return operation("le", this as unknown as Writer, other);
   }
 
-  gt(other: OfAny.Spec): Term {
-    return operation("gt", this as unknown as Term, other);
+  gt(other: OfAny.Spec): Writer {
+    return operation("gt", this as unknown as Writer, other);
   }
 
-  ge(other: OfAny.Spec): Term {
-    return operation("ge", this as unknown as Term, other);
+  ge(other: OfAny.Spec): Writer {
+    return operation("ge", this as unknown as Writer, other);
   }
 
-  and_(other: OfAny.Spec): Term {
-    return operation("and", this as unknown as Term, other);
+  and_(other: OfAny.Spec): Writer {
+    return operation("and", this as unknown as Writer, other);
   }
 
-  or_(other: OfAny.Spec): Term {
-    return operation("or", this as unknown as Term, other);
+  or_(other: OfAny.Spec): Writer {
+    return operation("or", this as unknown as Writer, other);
   }
 
-  not_(): Term {
-    return operation("not", this as unknown as Term);
+  not_(): Writer {
+    return operation("not", this as unknown as Writer);
   }
 
-  implies(other: OfAny.Spec): Term {
-    return operation("implies", this as unknown as Term, other);
+  implies(other: OfAny.Spec): Writer {
+    return operation("implies", this as unknown as Writer, other);
   }
 
-  add(other: OfAny.Spec): Term {
-    return operation("add", this as unknown as Term, other);
+  add(other: OfAny.Spec): Writer {
+    return operation("add", this as unknown as Writer, other);
   }
 
-  sub(other: OfAny.Spec): Term {
-    return operation("sub", this as unknown as Term, other);
+  sub(other: OfAny.Spec): Writer {
+    return operation("sub", this as unknown as Writer, other);
   }
 
-  mul(other: OfAny.Spec): Term {
-    return operation("mul", this as unknown as Term, other);
+  mul(other: OfAny.Spec): Writer {
+    return operation("mul", this as unknown as Writer, other);
   }
 
-  neg(): Term {
-    return operation("neg", this as unknown as Term);
+  neg(): Writer {
+    return operation("neg", this as unknown as Writer);
   }
 
-  bitand(other: OfAny.Spec): Term {
-    return operation("bitand", this as unknown as Term, other);
+  bitand(other: OfAny.Spec): Writer {
+    return operation("bitand", this as unknown as Writer, other);
   }
 
-  bitor(other: OfAny.Spec): Term {
-    return operation("bitor", this as unknown as Term, other);
+  bitor(other: OfAny.Spec): Writer {
+    return operation("bitor", this as unknown as Writer, other);
   }
 
-  bitxor(other: OfAny.Spec): Term {
-    return operation("bitxor", this as unknown as Term, other);
+  bitxor(other: OfAny.Spec): Writer {
+    return operation("bitxor", this as unknown as Writer, other);
   }
 
-  bitnot(): Term {
-    return operation("bitnot", this as unknown as Term);
+  bitnot(): Writer {
+    return operation("bitnot", this as unknown as Writer);
   }
 
-  shl(count: OfAny.Spec): Term {
-    return operation("shl", this as unknown as Term, count);
+  shl(count: OfAny.Spec): Writer {
+    return operation("shl", this as unknown as Writer, count);
   }
 
-  shr(count: OfAny.Spec): Term {
-    return operation("shr", this as unknown as Term, count);
+  shr(count: OfAny.Spec): Writer {
+    return operation("shr", this as unknown as Writer, count);
   }
 
   /** The value in `domain`, kept: rounded or overflowing as `domain` does. */
-  convert(domain: unknown): Term {
-    return term(new _OperationData("convert", [this.data], domain));
+  convert(domain: unknown): Writer {
+    return writer(new _OperationData("convert", [this.data], domain));
   }
 
   /** The bit pattern in `domain`, of the same width. */
-  reinterpret(domain: unknown): Term {
-    return term(new _OperationData("reinterpret", [this.data], domain));
+  reinterpret(domain: unknown): Writer {
+    return writer(new _OperationData("reinterpret", [this.data], domain));
   }
 
   /** A packed value's representation. */
-  pack(): Term {
-    return operation("pack", this as unknown as Term);
+  pack(): Writer {
+    return operation("pack", this as unknown as Writer);
   }
 
   /** The value of the packed `domain` that a representation stands for. */
-  unpack(domain: unknown): Term {
-    return term(new _OperationData("unpack", [this.data], domain));
+  unpack(domain: unknown): Writer {
+    return writer(new _OperationData("unpack", [this.data], domain));
   }
 
   /** The number of items of a collection. */
-  count(): Term {
-    return operation("count", this as unknown as Term);
+  count(): Writer {
+    return operation("count", this as unknown as Writer);
   }
 
   /** The item at a position, or at a key of a keyed list. */
-  item(index: OfAny.Spec): Term {
-    return operation("item", this as unknown as Term, index);
+  item(index: OfAny.Spec): Writer {
+    return operation("item", this as unknown as Writer, index);
   }
 
   /** Whether this equals one of the items of `collection`. */
-  in_(collection: OfAny.Spec): Term {
-    return operation("in", this as unknown as Term, collection);
+  in_(collection: OfAny.Spec): Writer {
+    return operation("in", this as unknown as Writer, collection);
   }
 
-  sum(): Term {
-    return operation("sum", this as unknown as Term);
+  sum(): Writer {
+    return operation("sum", this as unknown as Writer);
   }
 
-  min(): Term {
-    return operation("min", this as unknown as Term);
+  min(): Writer {
+    return operation("min", this as unknown as Writer);
   }
 
-  max(): Term {
-    return operation("max", this as unknown as Term);
+  max(): Writer {
+    return operation("max", this as unknown as Writer);
   }
 
   /** Whether no two items are equal. */
-  unique(): Term {
-    return operation("unique", this as unknown as Term);
+  unique(): Writer {
+    return operation("unique", this as unknown as Writer);
   }
 
   /** An object's entries in an adjacency, as records. */
-  entries(adjacency: string): Term {
-    return operation("entries", this as unknown as Term, adjacency);
+  entries(adjacency: string): Writer {
+    return operation("entries", this as unknown as Writer, adjacency);
   }
 
   /** Whether `body` holds for every item, bound to `name`. */
-  all(name: string, body: OfAny.Spec): Term {
-    return quantifier("all", name, this as unknown as Term, body);
+  all(name: string, body: OfAny.Spec): Writer {
+    return quantifier("all", name, this as unknown as Writer, body);
   }
 
   /** Whether `body` holds for some item, bound to `name`. */
-  any(name: string, body: OfAny.Spec): Term {
-    return quantifier("any", name, this as unknown as Term, body);
+  any(name: string, body: OfAny.Spec): Writer {
+    return quantifier("any", name, this as unknown as Writer, body);
   }
 
   /** How many items, bound to `name`, `body` holds for. */
-  count_where(name: string, body: OfAny.Spec): Term {
-    return quantifier("count", name, this as unknown as Term, body);
+  count_where(name: string, body: OfAny.Spec): Writer {
+    return quantifier("count", name, this as unknown as Writer, body);
   }
 }
 
 /** An expression written with methods. `.name` reads a property (`get`); use `.get(name)` for names that are also
- * methods, such as `eq`. A `Term` is an `OfAny.Spec`; `.data` is its expression. Property names come from schemas at
+ * methods, such as `eq`. A `Writer` is an `OfAny.Spec`; `.data` is its expression. Property names come from schemas at
  * runtime, so they are typed loosely, like proxy properties. */
-export type Term = TermTarget & { readonly [property: string]: any };
+export type Writer = TermTarget & { readonly [property: string]: any };
 
-function term(data: AnyData): Term {
+function writer(data: AnyData): Writer {
   return new Proxy(new TermTarget(data), {
     get(target, property, receiver) {
       if (typeof property === "symbol" || property in target) return Reflect.get(target, property, receiver);
       if (property === "then" || property === "toJSON") return undefined; // probes by `await` and `JSON.stringify`
       return target.get(property);
     },
-  }) as Term;
+  }) as Writer;
 }
 
 /** The variable `name`. */
-export function variable(name: string): Term {
-  return term(new _VariableData(name));
+export function variable(name: string): Writer {
+  return writer(new _VariableData(name));
 }
 
 /** The literal `value`, of `domain` (by default, its native's). */
-export function literal(value: Native, domain: unknown = null): Term {
-  return term(new _LiteralData(value, domain));
+export function literal(value: Native, domain: unknown = null): Writer {
+  return writer(new _LiteralData(value, domain));
 }
 
 /** `body`, with `name` bound to the value of `value`. */
-export function let_(name: string, value: OfAny.Spec, body: OfAny.Spec): Term {
-  return term(new _LetData(name, OfAny.resolve(value), OfAny.resolve(body)));
+export function let_(name: string, value: OfAny.Spec, body: OfAny.Spec): Writer {
+  return writer(new _LetData(name, OfAny.resolve(value), OfAny.resolve(body)));
 }
 
 /** The quantifier `quantifier` (`all`, `any` or `count`) of `body`, with `name` bound to each item of `collection`. */
-export function quantifier(quantifier: string, name: string, collection: OfAny.Spec, body: OfAny.Spec): Term {
-  return term(new _QuantifierData(name, quantifier, OfAny.resolve(collection), OfAny.resolve(body)));
+export function quantifier(quantifier: string, name: string, collection: OfAny.Spec, body: OfAny.Spec): Writer {
+  return writer(new _QuantifierData(name, quantifier, OfAny.resolve(collection), OfAny.resolve(body)));
 }
 
 /** The operation `name` applied to `args`; for operations outside the core, or without a method. */
-export function operation(name: string, ...args: OfAny.Spec[]): Term {
-  return term(new _OperationData(name, args.map((arg) => OfAny.resolve(arg))));
+export function operation(name: string, ...args: OfAny.Spec[]): Writer {
+  return writer(new _OperationData(name, args.map((arg) => OfAny.resolve(arg))));
 }

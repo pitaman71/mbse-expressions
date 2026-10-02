@@ -40,21 +40,21 @@ export function address(text: string): string | null {
   return match ? `${(match[1] as string).toUpperCase()}${match[2]}` : null;
 }
 
-class _Constant extends F.Node {
+class _Constant extends F.Term {
   static override KIND = "constant";
   static override ROLE = F.LITERAL;
   static override VALUE = SCALARS;
   declare value: unknown;
 }
 
-class _Name extends F.Node {
+class _Name extends F.Term {
   static override KIND = "name";
   static override ROLE = F.REFERENCE;
   static override PROPERTIES = new Map([["name", STR]]);
   declare name: string;
 }
 
-class _Cell extends F.Node {
+class _Cell extends F.Term {
   static override KIND = "cell";
   static override ROLE = F.REFERENCE;
   static override LEXICAL = false;
@@ -74,7 +74,7 @@ class _Cell extends F.Node {
   }
 }
 
-class _Let extends F.Node {
+class _Let extends F.Term {
   static override KIND = "let";
   static override ROLE = F.BINDING;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -84,7 +84,7 @@ class _Let extends F.Node {
   declare body: any;
 }
 
-class _Function extends F.Node {
+class _Function extends F.Term {
   static override KIND = "function";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -95,7 +95,7 @@ class _Function extends F.Node {
   declare arguments: any[];
 }
 
-class _Infix extends F.Node {
+class _Infix extends F.Term {
   static override KIND = "infix";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -107,7 +107,7 @@ class _Infix extends F.Node {
   declare right: any;
 }
 
-class _Prefix extends F.Node {
+class _Prefix extends F.Term {
   static override KIND = "prefix";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -118,7 +118,7 @@ class _Prefix extends F.Node {
   declare operand: any;
 }
 
-class _Field extends F.Node {
+class _Field extends F.Term {
   static override KIND = "field";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -129,7 +129,7 @@ class _Field extends F.Node {
   declare value: any;
 }
 
-class _Map extends F.Node {
+class _Map extends F.Term {
   static override KIND = "map";
   static override ROLE = F.QUANTIFIER;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -211,8 +211,8 @@ function cellText(node: _Cell): string {
 }
 
 /** The expression as a formula, starting with '=' and parenthesized only where precedence requires. */
-export function render(expression: F.Node): string {
-  const write = (node: F.Node, args: [string, number][]): [string, number] => {
+export function render(expression: F.Term): string {
+  const write = (node: F.Term, args: [string, number][]): [string, number] => {
     const operand = (index: number, level: number): string => {
       const [text, precedence] = args[index] as [string, number];
       return precedence >= level ? text : `(${text})`;

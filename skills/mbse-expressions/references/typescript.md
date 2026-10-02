@@ -6,7 +6,7 @@ mirrors Python name for name, snake_case included (`schema_of`, `name_of`), and 
 
 ## A complete program
 
-The same rule as in Python, written with terms, which TypeScript uses in place of `from_`.
+The same rule as in Python, built with writers, which TypeScript uses in place of `from_`.
 
 ```typescript
 import { Evaluators, Expressions as E } from "@mbse/expressions";
@@ -25,7 +25,7 @@ const ada = B.Contact().name("Ada").age(70n).email("ada@example.com").create();
 const bob = B.Contact().name("Bob").age(30n).create();
 const eve = B.Contact().name("Eve").email("eve@example.com").create(); // no age
 
-// A rule, written with terms: methods that build data. (Python can also read one from a lambda.)
+// A rule, built with writers: methods that build data. (Python can also read one from a lambda.)
 const contact = E.variable("contact");
 const senior = contact.age.ge(65n).and_(contact.has("email")).data;
 check(senior.validate({ bound: ["contact"], core: true }).length === 0, "invalid");
@@ -65,7 +65,7 @@ check(Evaluators.predicate(self.reach.has("email"), card) === true, "by email");
 |---|---|
 | `int`, `float` values (`18`, `18.0`) | `bigint` and `number` (`18n`, `18`): `18` is a float, and `ge(get(x, 'age'), 18)` against an int age is unknown |
 | `None` | `null` |
-| `E.from_(lambda this: ...)` | none: write terms. `this` is reserved, so name that term `self` |
+| `E.from_(lambda this: ...)` | none: use writers. `this` is reserved, so name that variable `self` |
 | `Domains.OfInteger.Builder().width(8)`, domains and typed values compared with `==` | `new Domains.OfInteger.Builder().width(8n)`, compared with `.equals()` |
 | `validate(bound={"this"}, core=True)`, keyword arguments | options objects: `validate({ bound: ["this"], core: true })`, `new Scope(variables, { modules })` |
 | `Pattern("operation", A, B, name="eq")` | `new Pattern("operation", { name: "eq" }, A, B)` |
@@ -79,6 +79,6 @@ check(Evaluators.predicate(self.reach.has("email"), card) === true, "by email");
 
 | Topic | Read |
 |---|---|
-| The same case study as the Python tutorial, written with terms | [typescript5/tutorials/](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tutorials/README.md) |
+| The same case study as the Python tutorial, built with writers | [typescript5/tutorials/](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tutorials/README.md) |
 | Where the languages deliberately differ, and why | [EQUIVALENCE.md, Deliberate differences](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EQUIVALENCE.md#deliberate-differences) |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tests/TestPlan.md) |

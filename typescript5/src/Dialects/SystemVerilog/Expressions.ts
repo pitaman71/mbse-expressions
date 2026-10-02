@@ -46,14 +46,14 @@ export const REDUCTIONS: readonly string[] = ["sum", "product", "and", "or", "xo
 export const METHODS: readonly string[] = ["size", ...REDUCTIONS, "min", "max", "unique"];
 const BASES: Record<string, number> = { b: 1, o: 3, h: 4, d: 0 };
 
-class _Constant extends F.Node {
+class _Constant extends F.Term {
   static override KIND = "constant";
   static override ROLE = F.LITERAL;
   static override VALUE = new Map<string, unknown>([["int", BigInt], ["float", Number], ["str", String]]);
   declare value: unknown;
 }
 
-class _Vector extends F.Node {
+class _Vector extends F.Term {
   static override KIND = "vector";
   static override ROLE = F.LITERAL;
   static override VALUE = new Map<string, unknown>([["str", String]]);
@@ -76,14 +76,14 @@ class _Vector extends F.Node {
   }
 }
 
-class _Identifier extends F.Node {
+class _Identifier extends F.Term {
   static override KIND = "identifier";
   static override ROLE = F.REFERENCE;
   static override PROPERTIES = new Map([["name", STR]]);
   declare name: string;
 }
 
-class _Unary extends F.Node {
+class _Unary extends F.Term {
   static override KIND = "unary";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -94,7 +94,7 @@ class _Unary extends F.Node {
   declare operand: any;
 }
 
-class _Binary extends F.Node {
+class _Binary extends F.Term {
   static override KIND = "binary";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -106,7 +106,7 @@ class _Binary extends F.Node {
   declare right: any;
 }
 
-class _Conditional extends F.Node {
+class _Conditional extends F.Term {
   static override KIND = "conditional";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["condition", "consequent", "alternative"];
@@ -116,7 +116,7 @@ class _Conditional extends F.Node {
   declare alternative: any;
 }
 
-class _Concatenation extends F.Node {
+class _Concatenation extends F.Term {
   static override KIND = "concatenation";
   static override ROLE = F.APPLICATION;
   static override VARIADIC = "parts";
@@ -124,7 +124,7 @@ class _Concatenation extends F.Node {
   declare parts: any[];
 }
 
-class _Replication extends F.Node {
+class _Replication extends F.Term {
   static override KIND = "replication";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["count", "value"];
@@ -133,7 +133,7 @@ class _Replication extends F.Node {
   declare value: any;
 }
 
-class _Select extends F.Node {
+class _Select extends F.Term {
   static override KIND = "select";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["value", "index"];
@@ -142,7 +142,7 @@ class _Select extends F.Node {
   declare index: any;
 }
 
-class _Range extends F.Node {
+class _Range extends F.Term {
   static override KIND = "range";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["value", "msb", "lsb"];
@@ -152,7 +152,7 @@ class _Range extends F.Node {
   declare lsb: any;
 }
 
-class _Inside extends F.Node {
+class _Inside extends F.Term {
   static override KIND = "inside";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["value"];
@@ -162,7 +162,7 @@ class _Inside extends F.Node {
   declare items: any[];
 }
 
-class _Span extends F.Node {
+class _Span extends F.Term {
   static override KIND = "span";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["low", "high"];
@@ -171,7 +171,7 @@ class _Span extends F.Node {
   declare high: any;
 }
 
-class _Cast extends F.Node {
+class _Cast extends F.Term {
   static override KIND = "cast";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map<string, unknown>([["type", STR], ["width", BigInt]]);
@@ -193,7 +193,7 @@ class _Cast extends F.Node {
   }
 }
 
-class _Member extends F.Node {
+class _Member extends F.Term {
   static override KIND = "member";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -203,7 +203,7 @@ class _Member extends F.Node {
   declare object: any;
 }
 
-class _Call extends F.Node {
+class _Call extends F.Term {
   static override KIND = "call";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["function", STR]]);
@@ -214,7 +214,7 @@ class _Call extends F.Node {
   declare arguments: any[];
 }
 
-class _Method extends F.Node {
+class _Method extends F.Term {
   static override KIND = "method";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -229,7 +229,7 @@ class _Method extends F.Node {
   }
 }
 
-class _Iterate extends F.Node {
+class _Iterate extends F.Term {
   static override KIND = "iterate";
   static override ROLE = F.QUANTIFIER;
   static override PROPERTIES = new Map([["name", STR], ["method", STR]]);
@@ -416,5 +416,5 @@ export function render(expression: unknown): string {
     if (level === IMPLY) return [`${operand(0, level + 1)} ${node.operator} ${operand(1, level)}`, level]; // right-associative, the loosest
     return [`${operand(0, level)} ${node.operator} ${operand(1, level + 1)}`, level];
   };
-  return F.fold(expression as F.Node, write)[0];
+  return F.fold(expression as F.Term, write)[0];
 }

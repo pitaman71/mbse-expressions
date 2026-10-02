@@ -31,7 +31,7 @@ __all__ = ["DIALECT", "Builders", "Schema", "constant", "symbol", "binary", "una
 
 
 @dataclass(eq=False)
-class _Constant(F.Node):
+class _Constant(F.Term):
     KIND = "constant"
     ROLE = F.LITERAL
     VALUE = {"int": int, "float": float, "str": str, "bool": bool}
@@ -39,7 +39,7 @@ class _Constant(F.Node):
 
 
 @dataclass(eq=False)
-class _Symbol(F.Node):
+class _Symbol(F.Term):
     KIND = "symbol"
     ROLE = F.REFERENCE
     PROPERTIES = {"name": str}
@@ -47,7 +47,7 @@ class _Symbol(F.Node):
 
 
 @dataclass(eq=False)
-class _Binary(F.Node):
+class _Binary(F.Term):
     KIND = "binary"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -60,7 +60,7 @@ class _Binary(F.Node):
 
 
 @dataclass(eq=False)
-class _Unary(F.Node):
+class _Unary(F.Term):
     KIND = "unary"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -72,7 +72,7 @@ class _Unary(F.Node):
 
 
 @dataclass(eq=False)
-class _Frac(F.Node):
+class _Frac(F.Term):
     KIND = "frac"
     ROLE = F.APPLICATION
     SLOTS = ("numerator", "denominator")
@@ -82,7 +82,7 @@ class _Frac(F.Node):
 
 
 @dataclass(eq=False)
-class _Member(F.Node):
+class _Member(F.Term):
     KIND = "member"
     ROLE = F.APPLICATION
     PROPERTIES = {"name": str}
@@ -94,7 +94,7 @@ class _Member(F.Node):
 
 
 @dataclass(eq=False)
-class _Function(F.Node):
+class _Function(F.Term):
     KIND = "function"
     ROLE = F.APPLICATION
     PROPERTIES = {"name": str}
@@ -106,7 +106,7 @@ class _Function(F.Node):
 
 
 @dataclass(eq=False)
-class _Where(F.Node):
+class _Where(F.Term):
     KIND = "where"
     ROLE = F.BINDING
     PROPERTIES = {"name": str}

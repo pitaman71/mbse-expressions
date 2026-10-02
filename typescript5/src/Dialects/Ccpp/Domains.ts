@@ -164,5 +164,5 @@ export const SUBSCRIPT = new D.Function([Anything, Anything], Anything);
 export const CALL = new D.Opaque();
 /** `condition ? a : b`. */
 export const CONDITIONAL = new D.Function([Anything, Anything, Anything], Anything);
-/** `(type) operand`, whose domain is its type (the node's own). */
+/** `(type) operand`, whose domain is its type (the term's own). */
 export const CAST = new D.Function([Anything], Anything);

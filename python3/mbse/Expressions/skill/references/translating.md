@@ -16,7 +16,7 @@ back = Translators.between(X.DIALECT, E.DIALECT).forward(formula)
 
 - **The form, not always the value.** Each dialect evaluates by its own rules (see [dialects.md](dialects.md)), so a
   translated rule can give a different answer on the same data: missing values, `1 == 1.0`, case in text.
-- **Sharing.** Each node is translated once, so a shared sub-expression stays shared.
+- **Sharing.** Each term is translated once, so a shared sub-expression stays shared.
 - **Round trips, where both dialects can say it.** The exceptions:
 
 | Source | Target | What changes |
@@ -33,7 +33,7 @@ back = Translators.between(X.DIALECT, E.DIALECT).forward(formula)
 | a quantifier or a collection operation | Excel | `MAP` and `LAMBDA` and array functions (`AND(MAP(xs, LAMBDA(p, p > 0)))`, `ROWS(xs)`, `INDEX(xs, i + 1)`); `unique(xs)` is written `ROWS(UNIQUE(xs)) = ROWS(xs)`, which does not read back |
 | a quantifier or a collection operation | Latex, Ccpp | no counterpart; between two dialects other than Basic, translate through Basic |
 
-A node with no counterpart raises `ValueError` naming it: "Excel cell has no Matlab counterpart". Translating directly
+A term with no counterpart raises `ValueError` naming it: "Excel cell has no Matlab counterpart". Translating directly
 or through a third dialect gives the same expression, so pick the pair you need.
 
 ## How translators are written

@@ -28,21 +28,21 @@ const SCALARS: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["int", BigInt], ["float", Number], ["str", String], ["bool", Boolean],
 ]);
 
-class _Constant extends F.Node {
+class _Constant extends F.Term {
   static override KIND = "constant";
   static override ROLE = F.LITERAL;
   static override VALUE = SCALARS;
   declare value: unknown;
 }
 
-class _Symbol extends F.Node {
+class _Symbol extends F.Term {
   static override KIND = "symbol";
   static override ROLE = F.REFERENCE;
   static override PROPERTIES = new Map([["name", STR]]);
   declare name: string;
 }
 
-class _Binary extends F.Node {
+class _Binary extends F.Term {
   static override KIND = "binary";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -54,7 +54,7 @@ class _Binary extends F.Node {
   declare right: any;
 }
 
-class _Unary extends F.Node {
+class _Unary extends F.Term {
   static override KIND = "unary";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -65,7 +65,7 @@ class _Unary extends F.Node {
   declare operand: any;
 }
 
-class _Frac extends F.Node {
+class _Frac extends F.Term {
   static override KIND = "frac";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["numerator", "denominator"];
@@ -74,7 +74,7 @@ class _Frac extends F.Node {
   declare denominator: any;
 }
 
-class _Member extends F.Node {
+class _Member extends F.Term {
   static override KIND = "member";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -85,7 +85,7 @@ class _Member extends F.Node {
   declare value: any;
 }
 
-class _Function extends F.Node {
+class _Function extends F.Term {
   static override KIND = "function";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -96,7 +96,7 @@ class _Function extends F.Node {
   declare arguments: any[];
 }
 
-class _Where extends F.Node {
+class _Where extends F.Term {
   static override KIND = "where";
   static override ROLE = F.BINDING;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -192,8 +192,8 @@ function constantText(value: unknown): [string, number] {
 }
 
 /** The expression as math-mode LaTeX. */
-export function render(expression: F.Node): string {
-  const write = (node: F.Node, args: [string, number][]): [string, number] => {
+export function render(expression: F.Term): string {
+  const write = (node: F.Term, args: [string, number][]): [string, number] => {
     const operand = (index: number, level: number): string => {
       const [written, precedence] = args[index] as [string, number];
       return precedence >= level ? written : `(${written})`;

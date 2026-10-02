@@ -35,21 +35,21 @@ const SCALARS: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["int", BigInt], ["float", Number], ["str", String], ["bool", Boolean],
 ]);
 
-class _Constant extends F.Node {
+class _Constant extends F.Term {
   static override KIND = "constant";
   static override ROLE = F.LITERAL;
   static override VALUE = SCALARS;
   declare value: unknown;
 }
 
-class _Identifier extends F.Node {
+class _Identifier extends F.Term {
   static override KIND = "identifier";
   static override ROLE = F.REFERENCE;
   static override PROPERTIES = new Map([["name", STR]]);
   declare name: string;
 }
 
-class _Binary extends F.Node {
+class _Binary extends F.Term {
   static override KIND = "binary";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -61,7 +61,7 @@ class _Binary extends F.Node {
   declare right: any;
 }
 
-class _Unary extends F.Node {
+class _Unary extends F.Term {
   static override KIND = "unary";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["operator", STR]]);
@@ -72,7 +72,7 @@ class _Unary extends F.Node {
   declare operand: any;
 }
 
-class _Call extends F.Node {
+class _Call extends F.Term {
   static override KIND = "call";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["function", STR]]);
@@ -83,7 +83,7 @@ class _Call extends F.Node {
   declare arguments: any[];
 }
 
-class _Field extends F.Node {
+class _Field extends F.Term {
   static override KIND = "field";
   static override ROLE = F.APPLICATION;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -94,7 +94,7 @@ class _Field extends F.Node {
   declare value: any;
 }
 
-class _Index extends F.Node {
+class _Index extends F.Term {
   static override KIND = "index";
   static override ROLE = F.APPLICATION;
   static override SLOTS = ["value", "index"];
@@ -103,7 +103,7 @@ class _Index extends F.Node {
   declare index: any;
 }
 
-class _Arrayfun extends F.Node {
+class _Arrayfun extends F.Term {
   static override KIND = "arrayfun";
   static override ROLE = F.QUANTIFIER;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -126,7 +126,7 @@ function qualified(name: string, wildcard = false): boolean {
   return parts.every(isIdentifier);
 }
 
-class _Import extends F.Node {
+class _Import extends F.Term {
   static override KIND = "import";
   static override ROLE = F.IMPORT;
   static override PROPERTIES = new Map([["name", STR]]);
@@ -204,13 +204,13 @@ function constantText(value: unknown): string {
 
 /** The expression as MATLAB source, parenthesized only where precedence requires: one line per import around it, then
  * the expression. */
-export function render(expression: F.Node): string {
+export function render(expression: F.Term): string {
   const lines: string[] = [];
   while (expression instanceof _Import) {
     lines.push(`import ${expression.name}`);
     expression = expression.body;
   }
-  const write = (node: F.Node, args: [string, number][]): [string, number] => {
+  const write = (node: F.Term, args: [string, number][]): [string, number] => {
     const operand = (index: number, level: number): string => {
       const [text, precedence] = args[index] as [string, number];
       return precedence >= level ? text : `(${text})`;

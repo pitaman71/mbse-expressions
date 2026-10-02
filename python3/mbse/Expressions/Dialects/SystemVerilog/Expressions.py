@@ -52,7 +52,7 @@ _BASES = {"b": 1, "o": 3, "h": 4, "d": 0}
 
 
 @dataclass(eq=False)
-class _Constant(F.Node):
+class _Constant(F.Term):
     KIND = "constant"
     ROLE = F.LITERAL
     VALUE = {"int": int, "float": float, "str": str}
@@ -60,7 +60,7 @@ class _Constant(F.Node):
 
 
 @dataclass(eq=False)
-class _Vector(F.Node):
+class _Vector(F.Term):
     KIND = "vector"
     ROLE = F.LITERAL
     VALUE = {"str": str}
@@ -82,7 +82,7 @@ class _Vector(F.Node):
 
 
 @dataclass(eq=False)
-class _Identifier(F.Node):
+class _Identifier(F.Term):
     KIND = "identifier"
     ROLE = F.REFERENCE
     PROPERTIES = {"name": str}
@@ -90,7 +90,7 @@ class _Identifier(F.Node):
 
 
 @dataclass(eq=False)
-class _Unary(F.Node):
+class _Unary(F.Term):
     KIND = "unary"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -102,7 +102,7 @@ class _Unary(F.Node):
 
 
 @dataclass(eq=False)
-class _Binary(F.Node):
+class _Binary(F.Term):
     KIND = "binary"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -115,7 +115,7 @@ class _Binary(F.Node):
 
 
 @dataclass(eq=False)
-class _Conditional(F.Node):
+class _Conditional(F.Term):
     KIND = "conditional"
     ROLE = F.APPLICATION
     SLOTS = ("condition", "consequent", "alternative")
@@ -126,7 +126,7 @@ class _Conditional(F.Node):
 
 
 @dataclass(eq=False)
-class _Concatenation(F.Node):
+class _Concatenation(F.Term):
     KIND = "concatenation"
     ROLE = F.APPLICATION
     VARIADIC = "parts"
@@ -135,7 +135,7 @@ class _Concatenation(F.Node):
 
 
 @dataclass(eq=False)
-class _Replication(F.Node):
+class _Replication(F.Term):
     KIND = "replication"
     ROLE = F.APPLICATION
     SLOTS = ("count", "value")
@@ -145,7 +145,7 @@ class _Replication(F.Node):
 
 
 @dataclass(eq=False)
-class _Select(F.Node):
+class _Select(F.Term):
     KIND = "select"
     ROLE = F.APPLICATION
     SLOTS = ("value", "index")
@@ -155,7 +155,7 @@ class _Select(F.Node):
 
 
 @dataclass(eq=False)
-class _Range(F.Node):
+class _Range(F.Term):
     KIND = "range"
     ROLE = F.APPLICATION
     SLOTS = ("value", "msb", "lsb")
@@ -166,7 +166,7 @@ class _Range(F.Node):
 
 
 @dataclass(eq=False)
-class _Inside(F.Node):
+class _Inside(F.Term):
     KIND = "inside"
     ROLE = F.APPLICATION
     SLOTS = ("value",)
@@ -177,7 +177,7 @@ class _Inside(F.Node):
 
 
 @dataclass(eq=False)
-class _Span(F.Node):
+class _Span(F.Term):
     KIND = "span"
     ROLE = F.APPLICATION
     SLOTS = ("low", "high")
@@ -187,7 +187,7 @@ class _Span(F.Node):
 
 
 @dataclass(eq=False)
-class _Cast(F.Node):
+class _Cast(F.Term):
     KIND = "cast"
     ROLE = F.APPLICATION
     PROPERTIES = {"type": str, "width": int}
@@ -210,7 +210,7 @@ class _Cast(F.Node):
 
 
 @dataclass(eq=False)
-class _Member(F.Node):
+class _Member(F.Term):
     KIND = "member"
     ROLE = F.APPLICATION
     PROPERTIES = {"name": str}
@@ -221,7 +221,7 @@ class _Member(F.Node):
 
 
 @dataclass(eq=False)
-class _Call(F.Node):
+class _Call(F.Term):
     KIND = "call"
     ROLE = F.APPLICATION
     PROPERTIES = {"function": str}
@@ -233,7 +233,7 @@ class _Call(F.Node):
 
 
 @dataclass(eq=False)
-class _Method(F.Node):
+class _Method(F.Term):
     KIND = "method"
     ROLE = F.APPLICATION
     PROPERTIES = {"name": str}
@@ -248,7 +248,7 @@ class _Method(F.Node):
 
 
 @dataclass(eq=False)
-class _Iterate(F.Node):
+class _Iterate(F.Term):
     KIND = "iterate"
     ROLE = F.QUANTIFIER
     PROPERTIES = {"name": str, "method": str}

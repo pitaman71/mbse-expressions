@@ -90,10 +90,11 @@ format:
   `Expressions.OfVariable`, `Expressions.OfLet` and `Expressions.Arguments`, so snapshots, validation and comparison
   work on expressions as on any objects. Proxies can build them too (as proxies), which then also write `used_by`.
 
-`Term`s write expressions with methods; they build data and evaluate nothing. `.name` reads a property (`get`), and
+`Writer`s build expressions, which are data, with methods, and evaluate nothing. `.name` reads a property (`get`), and
 methods build the operations: `.eq(x)` ... `.ge(x)`, `.and_(x)`, `.or_(x)`, `.not_()`, `.implies(x)`, `.add(x)`,
 `.sub(x)`, `.mul(x)`, `.neg()`, `.has(name)`, `.get(name)`. `variable(name)`, `literal(value)`, `let_(name, value,
-body)` and `operation(name, *arguments)` start terms, and a term is accepted wherever an `Expressions.OfAny.Spec` is:
+body)` and `operation(name, *arguments)` start writers, and a writer is accepted wherever an `Expressions.OfAny.Spec`
+is:
 
 ```python
 this = Expressions.variable('this')
@@ -248,8 +249,8 @@ the parameters that standard defines, and today's natives become their defaults.
   packed decimal), and IEEE 754 leaves the choice open, so they do not reinterpret. `pack` takes a value of a `Packed`
   domain and gives its code in the representation; `unpack` takes a representation and gives the `Packed` value of
   that code, raising `ValueError` when no member has it. Anything else raises `TypeError`.
-- **Widths are in mbse-schemas too**, in its natives, so that a schema's field and an expression over it have one type
-  system. An `OfNative` holds a token `{format, name}` (`basic` is the neutral format, with Basic's names) and
+- **Widths are in mbse-schemas too**, in its natives, so that a schema's property and an expression over it have one
+  type system. An `OfNative` holds a token `{format, name}` (`basic` is the neutral format, with Basic's names) and
   optionally a width in bits or in bytes; a domain interprets that width.
 
 ## The framework
@@ -259,14 +260,14 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 `Domains`, `Evaluators`, `Translators` and `Errors`.
 
 - `Terms.Expression` is an expression of some dialect: `Visitable`, plus `dialect()`, `form()` and
-  `validate()`. A `Form` is a node's structure: its `kind`, its native `attributes` and its ordered `arguments`.
-  `Dialect.make(form)` is the inverse, and `walk`, `fold` (bottom-up, once per node, raising on cycles) and `same`
+  `validate()`. A `Form` is a term's structure: its `kind`, its native `attributes` and its ordered `arguments`.
+  `Dialect.make(form)` is the inverse, and `walk`, `fold` (bottom-up, once per term, raising on cycles) and `same`
   (structural equality by co-traversal: natives of one type by value, NaN is NaN, -0.0 is not 0.0) work on any
   dialect through forms alone.
 - `Terms.Dialect` is an expression language: `name()`, `kinds()`, `schema_of(expression)`, `make`, `resolve`
-  (specs: expressions, `Term`s, native values as literals, or callables taking the `AnyBuilder`), `validate`,
+  (specs: expressions, `Writer`s, native values as literals, or callables taking the `AnyBuilder`), `validate`,
   `infer`, the union meta-schema `Schema` and the registry `Builders`.
-- `Terms.Declared` derives a dialect from its kinds: each is a dataclass derived from `Node` whose class
+- `Terms.Declared` derives a dialect from its kinds: each is a dataclass derived from `Term` whose class
   variables give its `KIND` (the tag), its `ROLE`, a literal's `VALUE` natives, its native `PROPERTIES` (required
   unless `OPTIONAL`), its arguments (`SLOTS`, fields of one argument each, then `VARIADIC`, one field holding the
   rest) and, for an application, the property naming its `OPERATOR` (or none, when the tag names it) and its
@@ -290,7 +291,7 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
   (binds a name to each item of its first argument within its second, combined by its operator; its signature gives the
   items' domain, `items(domain)`) and `import` (makes what it declares available within its body: a module, a package's
   functions; `binds()` names what it binds for references). `validate` reports what the Basic
-  section below lists, with the same messages in every dialect ("a field needs a value", "identifier 'x' is not
+  section below lists, with the same messages in every dialect ("a literal needs a value", "identifier 'x' is not
   bound", "'**' is not a core operation"), where `core` means the dialect's vocabulary.
 - `Domains` defines `Domain` (`contains(value)`, `includes(domain)`) and `Signature` (`arity()`, `result(domains)`,
   `describe()`), with generic implementations: `OfTypes`, `OfValues`, `OfUnion`, `Anything`, `Function`, `Same` (one
@@ -315,7 +316,7 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 - `Partials` is partial evaluation, a peer of `Evaluators`: `Reducer(interpreter, literal, simplify)` evaluates every
   subexpression whose references the given variables determine and replaces it with the literal of its value, when the
   dialect has one (an object, a collection or an unknown value has none, and its subexpression stays); a binding of a
-  known value binds it in its body and stays only while the body refers to it; other nodes are rebuilt from their
+  known value binds it in its body and stays only while the body refers to it; other terms are rebuilt from their
   reduced arguments unless the dialect's `simplify` decides them from what is known. The result, the residual, is an
   expression of the same dialect that agrees with the original wherever the original evaluates without raising.
   Basic's `Partials.OfAny(expression, variables)` simplifies with Kleene's logic (`and(false, x)` is false, `and(true,
@@ -373,7 +374,7 @@ A pairwise translator (`Pairwise`) is declared as rules:
   `Rule(Pattern('operation', X, Pattern('literal', value=K), name='has'), Pattern('function', Pattern('function',
   Pattern('field', X, name=K), name='ISERROR'), name='NOT'))` translates Basic `has(x, 'email')` to and from Excel
   `NOT(ISERROR(x.email))`. A hole in an attribute binds a native value, of the types it names; one bound twice must
-  bind the same node or equal values. A rule may apply `forward` or `backward` only, when its other direction would
+  bind the same term or equal values. A rule may apply `forward` or `backward` only, when its other direction would
   capture expressions it should not (Matlab writes `implies(a, b)` as `~a || b`, which reads back as `or(not(a),
   b)`). `renames` declares the rules for operators that differ only in name.
 - `Inline(kind, side)` translates a binding that the other dialect has no counterpart for by substituting its value
@@ -387,12 +388,12 @@ A pairwise translator (`Pairwise`) is declared as rules:
   `8'd200`. A function gives None where there is no counterpart, and conversions are tried after the rules of their
   kind.
 
-Translation co-traverses. At each node, the rules whose source pattern has the node's kind are tried, the most
-specific first (the most nodes and fixed attributes), by traversing pattern and expression in lockstep to bind the
+Translation co-traverses. At each term, the rules whose source pattern has the term's kind are tried, the most
+specific first (the most terms and fixed attributes), by traversing pattern and expression in lockstep to bind the
 holes; the first that matches is applied by instantiating its target pattern with the bound attributes and the
-translations of the bound arguments. Each node is translated once (per binding environment), so shared
+translations of the bound arguments. Each term is translated once (per binding environment), so shared
 sub-expressions stay shared, and an inlined value is shared by every use of its name. `trace`, if given, receives
-the pairs of corresponding source and target nodes. A node no rule matches raises `ValueError` naming it ("Basic
+the pairs of corresponding source and target terms. A term no rule matches raises `ValueError` naming it ("Basic
 literal b'\x00' has no Excel counterpart", "Excel function 'ISERROR' has no Basic counterpart").
 
 What translation guarantees, and what the TRN suite checks: every pair round-trips expressions that both dialects
@@ -458,6 +459,9 @@ alike only there.
 
 ## Resolved
 
+- The vocabulary is shared with mbse-schemas and mbse-programs: an element of an expression's tree is a *term* (every
+  kind derives from `Terms.Term`), never a bare node, and the objects that build expressions with methods are
+  *writers* (`Writer`). A kind's named values are *properties*; "field" means only a dataclass's or class's field.
 - Collections translate to Python as generator expressions, a quantifier kind of the Python dialect whose conditions,
   like its element, see the bound name; the framework binds the name in every argument after the collection. A
   list property is a list of its values in Python, a keyed list's too, so that iteration, `in` and `sum` see values as
@@ -519,5 +523,5 @@ alike only there.
 - mbse-schemas' unions name their branches, and it takes no evaluator; `Evaluators.predicate` evaluates a rule about a
   value, binding it to `this`. Each dialect's union of meta-schemas names its branches by the kinds' tags.
 - Evaluation is three-valued (Kleene), never coerces, and reads properties with `get(object, name)`; variables are
-  bound by `OfLet` or by the caller's scope. `Term`s write expressions with methods only (no operator overloading), so
+  bound by `OfLet` or by the caller's scope. `Writer`s build expressions with methods only (no operator overloading), so
   both bindings read the same.

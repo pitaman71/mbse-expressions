@@ -36,7 +36,7 @@ __all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "binary", 
 
 
 @dataclass(eq=False)
-class _Constant(F.Node):
+class _Constant(F.Term):
     KIND = "constant"
     ROLE = F.LITERAL
     VALUE = {"int": int, "float": float, "str": str, "bool": bool}
@@ -44,7 +44,7 @@ class _Constant(F.Node):
 
 
 @dataclass(eq=False)
-class _Identifier(F.Node):
+class _Identifier(F.Term):
     KIND = "identifier"
     ROLE = F.REFERENCE
     PROPERTIES = {"name": str}
@@ -52,7 +52,7 @@ class _Identifier(F.Node):
 
 
 @dataclass(eq=False)
-class _Binary(F.Node):
+class _Binary(F.Term):
     KIND = "binary"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -65,7 +65,7 @@ class _Binary(F.Node):
 
 
 @dataclass(eq=False)
-class _Unary(F.Node):
+class _Unary(F.Term):
     KIND = "unary"
     ROLE = F.APPLICATION
     PROPERTIES = {"operator": str}
@@ -77,7 +77,7 @@ class _Unary(F.Node):
 
 
 @dataclass(eq=False)
-class _Call(F.Node):
+class _Call(F.Term):
     KIND = "call"
     ROLE = F.APPLICATION
     PROPERTIES = {"function": str}
@@ -89,7 +89,7 @@ class _Call(F.Node):
 
 
 @dataclass(eq=False)
-class _Field(F.Node):
+class _Field(F.Term):
     KIND = "field"
     ROLE = F.APPLICATION
     PROPERTIES = {"name": str}
@@ -101,7 +101,7 @@ class _Field(F.Node):
 
 
 @dataclass(eq=False)
-class _Index(F.Node):
+class _Index(F.Term):
     KIND = "index"
     ROLE = F.APPLICATION
     SLOTS = ("value", "index")
@@ -111,7 +111,7 @@ class _Index(F.Node):
 
 
 @dataclass(eq=False)
-class _Arrayfun(F.Node):
+class _Arrayfun(F.Term):
     KIND = "arrayfun"
     ROLE = F.QUANTIFIER
     PROPERTIES = {"name": str}
@@ -134,7 +134,7 @@ def _qualified(name: str, wildcard: bool = False) -> bool:
 
 
 @dataclass(eq=False)
-class _Import(F.Node):
+class _Import(F.Term):
     KIND = "import"
     ROLE = F.IMPORT
     PROPERTIES = {"name": str}

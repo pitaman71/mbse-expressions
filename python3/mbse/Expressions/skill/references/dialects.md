@@ -1,6 +1,6 @@
 # Dialects
 
-A dialect is an expression language: its node kinds, its vocabulary of operators, the domains of its values, its
+A dialect is an expression language: its term kinds, its vocabulary of operators, the domains of its values, its
 source text (`render`), its evaluator, and the scope that resolves its names. Every dialect serializes, validates,
 infers domains and traverses the same way (see `DIALECT.schema_of`, `validate`, `DIALECT.infer`, `Framework.Terms.walk`),
 and `Framework.Symbolics.free(expression)` tells which names it needs from its scope.

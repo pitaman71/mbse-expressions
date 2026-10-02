@@ -5,7 +5,7 @@ inference and traversal. A new dialect writes its kinds, its domains, its evalua
 
 ## A dialect
 
-Declare each kind as a `Node` whose class variables say what it is. Its role tells validation, inference, evaluation
+Declare each kind as a `Term` whose class variables say what it is. Its role tells validation, inference, evaluation
 and translation how to treat it without knowing the dialect:
 
 | Role | Is | Declares |
@@ -22,7 +22,7 @@ from typing import Any
 from mbse.Expressions.Framework import Domains as D, Terms as F
 
 @dataclass(eq=False)
-class _Frac(F.Node):                                   # LaTeX's \frac{numerator}{denominator}
+class _Frac(F.Term):                                   # LaTeX's \frac{numerator}{denominator}
     KIND = "frac"
     ROLE = F.APPLICATION
     SLOTS = ("numerator", "denominator")

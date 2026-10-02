@@ -213,14 +213,14 @@ const kindOf = (node: any): string => node.kind().KIND;
 const COMPARISONS = ["<", "<=", ">", ">=", "==", "!=", "===", "!==", "==?", "!=?"];
 const SHIFTS = ["<<", ">>", "<<<", ">>>"];
 
-/** One evaluation in a scope: each node's self-determined type, then its value in a context. */
+/** One evaluation in a scope: each term's self-determined type, then its value in a context. */
 class Evaluation {
   private readonly types = new Map<object, SvType | null>();
   private readonly values = new Map<object, unknown>();
 
   constructor(readonly scope: Scope) {}
 
-  /** The node's self-determined type (null for an object). */
+  /** The term's self-determined type (null for an object). */
   type(node: any): SvType | null {
     if (!this.types.has(node)) this.types.set(node, this.typeOf(node));
     return this.types.get(node) as SvType | null;
@@ -267,7 +267,7 @@ class Evaluation {
     return Domains.TYPES.get(node.type) as SvType;
   }
 
-  /** A self-determined node's value, of its own type, once. */
+  /** A self-determined term's value, of its own type, once. */
   own(node: any): unknown {
     if (!this.values.has(node)) this.values.set(node, this.ownOf(node));
     return this.values.get(node);
@@ -292,7 +292,7 @@ class Evaluation {
     }
   }
 
-  /** The node's value in a context: its own type's, unless the context gives another. */
+  /** The term's value in a context: its own type's, unless the context gives another. */
   value(node: any, context: SvType | null = null): unknown {
     const ctype = this.type(node);
     const target = (context ?? ctype) as SvType;
@@ -462,7 +462,7 @@ class Evaluation {
   }
 
   private inside(node: any): Logic {
-    const items: any[][] = []; // a node, a span's ends, or an array's element
+    const items: any[][] = []; // a term, a span's ends, or an array's element
     for (const item of node.items) {
       if (kindOf(item) === "span") items.push([item.low, item.high]);
       else if (this.type(item) === null && Array.isArray(this.own(item))) { // an array: each of its elements

@@ -31,7 +31,7 @@ __all__ = ["Evaluator", "Predicate", "Interpreter", "Thunk", "Implementation"]
 
 Thunk = Callable[[], Any]
 Implementation = Callable[[list[Thunk], Any, Any], Any]
-"""Computes an operation's value from thunks for its arguments, the node (for its attributes) and the scope."""
+"""Computes an operation's value from thunks for its arguments, the term (for its attributes) and the scope."""
 
 
 @runtime_checkable
