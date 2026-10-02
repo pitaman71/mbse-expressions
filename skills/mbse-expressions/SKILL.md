@@ -1,6 +1,6 @@
 ---
 name: mbse-expressions
-description: Write rules, predicates and constraints once, as language-neutral data (expressions), then validate, evaluate, store (JSON/YAML), and translate them to and from Python, MATLAB, Excel and LaTeX, in Python or TypeScript. Use when formalizing the constraints and derived values of an interface or model (MBSE/SysML constraints, interface control documents, business rules, rules about mbse-schemas data), when one rule must mean the same thing in several languages or tools, when generating Excel formulas, MATLAB or Python from a rule, or when writing code that imports mbse.Expressions or @mbse/expressions.
+description: Write rules, predicates and constraints once, as language-neutral data (expressions), then validate, evaluate, store (JSON/YAML), and translate them to and from Python, MATLAB, Excel, LaTeX, C/C++ and SystemVerilog, in Python or TypeScript. Use when formalizing the constraints and derived values of an interface or model (MBSE/SysML constraints, interface control documents, business rules, rules about mbse-schemas data), when one rule must mean the same thing in several languages or tools, when generating Excel formulas, MATLAB, Python, C or SystemVerilog from a rule (embedded software, hardware assertions and constraints), or when writing code that imports mbse.Expressions or @mbse/expressions.
 ---
 
 # mbse-expressions
