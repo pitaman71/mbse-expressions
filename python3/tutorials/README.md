@@ -1,7 +1,7 @@
 # Tutorial: rules as data
 
 One case study, continuing mbse-schemas' tutorial
-([`../../submodules/mbse-schemas/python3/tutorials/`](../../submodules/mbse-schemas/python3/tutorials/README.md)):
+([mbse-schemas' `python3/tutorials/`](https://github.com/pitaman71/mbse-schemas/blob/main/python3/tutorials/README.md)):
 
 | # | Notebook | The problem | What you learn |
 |---|---|---|---|

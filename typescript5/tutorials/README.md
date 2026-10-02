@@ -1,7 +1,7 @@
 # Tutorial: rules as data (TypeScript)
 
 One case study, continuing mbse-schemas' tutorial
-([`../../submodules/mbse-schemas/typescript5/tutorials/`](../../submodules/mbse-schemas/typescript5/tutorials/README.md)):
+([mbse-schemas' `typescript5/tutorials/`](https://github.com/pitaman71/mbse-schemas/blob/main/typescript5/tutorials/README.md)):
 
 | # | Notebook | The problem | What you learn |
 |---|---|---|---|

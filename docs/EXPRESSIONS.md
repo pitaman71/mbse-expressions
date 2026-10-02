@@ -1,8 +1,8 @@
 # Expressions
 
 Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas): rules about its data and,
-later, its constraints such as "at least one phone". This package depends on mbse-schemas (a submodule
-at `submodules/mbse-schemas`), whose [`FRAMEWORK.md`](../submodules/mbse-schemas/docs/FRAMEWORK.md) describes the
+later, its constraints such as "at least one phone". This package depends on mbse-schemas (a sibling
+checkout, pinned in `siblings.json`), whose [`FRAMEWORK.md`](https://github.com/pitaman71/mbse-schemas/blob/main/docs/FRAMEWORK.md) describes the
 framework; this document covers expressions only.
 
 Expressions come in dialects: expression languages that implement one framework, so that each is serializable,
@@ -57,7 +57,7 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
 - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are unknown.
   `and`, `or`, `not` and `implies` follow Kleene's logic (`False and unknown` is `False`); the second operand is
   evaluated only when the first does not decide.
-- No coercion. Comparisons follow mbse-schemas' [`EQUALITY.md`](../submodules/mbse-schemas/docs/EQUALITY.md): natives of one type by value, objects by identity; values of different
+- No coercion. Comparisons follow mbse-schemas' [`EQUALITY.md`](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUALITY.md): natives of one type by value, objects by identity; values of different
   types are incomparable (`lt(1, 1.5)` is unknown), and only `int`, `float`, `str` and `bytes` are ordered. Arithmetic
   takes numbers of one domain (`add(1, 1.5)` is an error). Values of other domains than the natives' defaults follow
   the same rules by domain (see Value domains).
@@ -459,6 +459,11 @@ alike only there.
 
 ## Resolved
 
+- The mbse repositories stay separate, beside each other as sibling checkouts. A dependent installs its siblings as
+  they are (`../../mbse-schemas/python3`, `file:../../mbse-schemas/typescript5`), so a change in one is seen at once by
+  the others, and pins the versions it was tested with in `siblings.json`: a sibling is compatible at the same minor
+  version below 1.0 and no older, `pyproject.toml` requires that range, and a release is the tag `v<version>`.
+  `scripts/siblings.py` checks the siblings, clones those missing at their pinned tags, and pins new versions.
 - The vocabulary is shared with mbse-schemas and mbse-programs: an element of an expression's tree is a *term* (every
   kind derives from `Terms.Term`), never a bare node, and the objects that build expressions with methods are
   *writers* (`Writer`). A kind's named values are *properties*; "field" means only a dataclass's or class's field.

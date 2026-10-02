@@ -14,7 +14,7 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 | Understand a design rule or an open question | [docs/EXPRESSIONS.md](docs/EXPRESSIONS.md), by section |
 | Change the framework, a dialect or a translator | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
-| Model the data the rules refer to | [mbse-schemas' AGENTS.md](submodules/mbse-schemas/AGENTS.md), in the submodule |
+| Model the data the rules refer to | [mbse-schemas' AGENTS.md](https://github.com/pitaman71/mbse-schemas/blob/main/AGENTS.md), in the sibling checkout |
 
 ## Invariants when changing code
 
@@ -38,7 +38,8 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 ## Commands
 
 ```sh
-git submodule update --init                  # mbse-schemas, which both implementations install from the submodule
+python3 scripts/siblings.py clone            # mbse-schemas, beside this repository, at its pinned tag
+python3 scripts/siblings.py check            # the siblings are present and compatible with siblings.json
 cd python3 && uv sync --all-extras           # Python: use uv, never pip
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report
 uv run python -m mbse.Expressions.Conformance.write
@@ -51,4 +52,4 @@ npm run conformance
 ## Related repositories
 
 - [mbse-schemas](https://github.com/pitaman71/mbse-schemas): the schemas expressions are stored with and refer to. It
-  is a git submodule here, at `submodules/mbse-schemas`.
+  is a sibling checkout, `../mbse-schemas`, pinned by version in `siblings.json` (see `scripts/siblings.py`).

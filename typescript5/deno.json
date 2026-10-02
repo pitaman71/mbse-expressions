@@ -4,8 +4,8 @@
     "sloppy-imports"
   ],
   "imports": {
-    "@mbse/schemas/Framework": "../submodules/mbse-schemas/typescript5/src/Framework/index.ts",
-    "@mbse/schemas/Framework/": "../submodules/mbse-schemas/typescript5/src/Framework/",
+    "@mbse/schemas/Framework": "../../mbse-schemas/typescript5/src/Framework/index.ts",
+    "@mbse/schemas/Framework/": "../../mbse-schemas/typescript5/src/Framework/",
     "@mbse/expressions": "./src/index.ts",
     "@mbse/expressions/Framework": "./src/Framework/index.ts",
     "@mbse/expressions/Dialects/": "./src/Dialects/",

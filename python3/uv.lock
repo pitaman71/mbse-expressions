@@ -464,7 +464,7 @@ wheels = [
 
 [[package]]
 name = "mbse-expressions"
-version = "0.0.1"
+version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "mbse-schemas" },
@@ -491,8 +491,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mbse-schemas", editable = "../submodules/mbse-schemas/python3" },
-    { name = "mbse-schemas", extras = ["yaml"], marker = "extra == 'yaml'", editable = "../submodules/mbse-schemas/python3" },
+    { name = "mbse-schemas", editable = "../../mbse-schemas/python3" },
+    { name = "mbse-schemas", extras = ["yaml"], marker = "extra == 'yaml'", editable = "../../mbse-schemas/python3" },
     { name = "numpy", marker = "extra == 'numpy'", specifier = ">=2.4.6" },
 ]
 provides-extras = ["yaml", "numpy"]
@@ -509,8 +509,8 @@ dev = [
 
 [[package]]
 name = "mbse-schemas"
-version = "0.0.1"
-source = { editable = "../submodules/mbse-schemas/python3" }
+version = "0.1.0"
+source = { editable = "../../mbse-schemas/python3" }
 
 [package.optional-dependencies]
 yaml = [
