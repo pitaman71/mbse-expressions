@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mbse-expressions"
-version = "0.2.0"
+version = "0.2.1"
 description = "Rules, predicates and constraints as language-neutral data: validated, evaluated, stored as JSON/YAML, and translated to and from Python, MATLAB and Excel"
 keywords = ["expressions", "rules", "constraints", "predicates", "mbse", "sysml", "interface", "translation", "excel", "matlab"]
 readme = "README.md"
