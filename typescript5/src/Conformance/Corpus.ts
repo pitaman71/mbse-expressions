@@ -91,12 +91,13 @@ export function build(): Map<string, Case> {
     Ccpp.cast("uint8_t", Ccpp.call("f", 1n)), Ccpp.constant(5n, "unsigned int"));
 
   // --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
-  // this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(1.5)) + 4'(8'shff)
+  // this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(this.unique().sum(q) with (q))) + 4'(8'shff)
   const [sv, that] = [SystemVerilog, SystemVerilog.identifier("this")];
   const systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1n, sv.span(2n, 5n)), sv.conditional(
     sv.unary("!", sv.select(that, 0n)),
     sv.concatenation(sv.replication(6n, sv.vector("10")), sv.range_(sv.member(that, "b"), 7n, 4n)),
-    sv.binary("+", sv.cast("byte", sv.call("$clog2", 1.5)), sv.cast(4n, sv.vector("11111111", true, "h")))));
+    sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
+      sv.cast(4n, sv.vector("11111111", true, "h")))));
 
   return new Map<string, Case>([
     ["expression", [E.OfLet.Schema, expression, E.Builders]],

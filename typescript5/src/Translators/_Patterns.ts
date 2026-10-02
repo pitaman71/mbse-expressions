@@ -90,11 +90,24 @@ export const Ccpp = {
   implies: new P("binary", { operator: "||" }, new P("unary", { operator: "!" }, A), B),
 };
 
+const method = (name: string, array: P | Hole) => new P("method", { name }, array);
+
 export const SystemVerilog = {
   constant: (V: Hole) => new P("constant", { value: V }),
   identifier: new P("identifier", { name: N }),
   get: new P("member", { name: K }, X),
   implies: new P("binary", { operator: "->" }, A, B),
+  /** a.method(n) with (b). */
+  iterate: (name: string) => new P("iterate", { method: name, name: N }, A, B),
+  /** a.sum(n) with (int'(b)). */
+  count_where: new P("iterate", { method: "sum", name: N }, A, new P("cast", { type: "int" }, B)),
+  /** size, sum. */
+  method: (name: string) => method(name, A),
+  /** a.min()[0]. */
+  locate: (name: string) => new P("select", {}, method(name, A), new P("constant", { value: 0n })),
+  select: new P("select", {}, A, B),
+  inside: new P("inside", {}, A, B),
+  unique: new P("binary", { operator: "==" }, method("size", method("unique", A)), method("size", A)),
 };
 
 export const Excel = {

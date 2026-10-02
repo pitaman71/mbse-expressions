@@ -3,6 +3,12 @@
 translated value is shared by every use of its name. It has no `has`, and the logical `>>` and the 4-state comparisons
 (`===`, `==?`) have no Basic counterpart yet.
 
+Collections are arrays, and their operations array methods: `all` and `any` are `xs.and(p) with (body)` and
+`xs.or(p) with (body)`, the quantifier `count` is `xs.sum(p) with (int'(body))`, `count(xs)` is `xs.size()`, `sum(xs)`
+is `xs.sum()`, `min(xs)` and `max(xs)` are `xs.min()[0]` and `xs.max()[0]`, `item(xs, i)` is `xs[i]`, and `in(x, xs)`
+is `x inside {xs}`. `unique(xs)` is written `xs.unique().size() == xs.size()`, which does not read back as `unique`,
+and `entries` has no counterpart.
+
 A sized vector is a Basic literal of a value domain, its base telling which: a literal of an `Integer` domain of a
 width is a decimal vector of that width and signedness (`8'd200`, `8'sd251` for -5), of a `Bits` domain a hexadecimal
 one (`12'habc`), and of `Ieee1164` a single binary bit (`1'b1`, `1'bx`: 0, 1, X and Z, the levels SystemVerilog has).
@@ -65,4 +71,13 @@ TRANSLATOR = Pairwise(BASIC, SYSTEMVERILOG, [
         "eq": "==", "ne": "!=", "lt": "<", "le": "<=", "gt": ">", "ge": ">=", "and": "&&", "or": "||", "add": "+",
         "sub": "-", "mul": "*", "bitand": "&", "bitor": "|", "bitxor": "^", "shl": "<<", "shr": ">>>"}, 2),
     *renames("operation", "name", "unary", "operator", {"not": "!", "neg": "-", "bitnot": "~"}, 1),
+    Rule(Basic.quantifier("all"), SystemVerilog.iterate("and")),
+    Rule(Basic.quantifier("any"), SystemVerilog.iterate("or")),
+    Rule(Basic.quantifier("count"), SystemVerilog.count_where),
+    Rule(Basic.unary("count"), SystemVerilog.method("size")),
+    Rule(Basic.unary("sum"), SystemVerilog.method("sum")),
+    *[Rule(Basic.unary(name), SystemVerilog.locate(name)) for name in ("min", "max")],
+    Rule(Basic.item, SystemVerilog.select),
+    Rule(Basic.in_, SystemVerilog.inside),
+    Rule(Basic.unary("unique"), SystemVerilog.unique, "forward"),
 ])

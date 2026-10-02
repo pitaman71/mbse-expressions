@@ -96,6 +96,13 @@ class SystemVerilog:
     identifier = P("identifier", name=N)
     get = P("member", X, name=K)
     implies = P("binary", A, B, operator="->")
+    iterate = staticmethod(lambda method: P("iterate", A, B, method=method, name=N))  # a.method(n) with (b)
+    count_where = P("iterate", A, P("cast", B, type="int"), method="sum", name=N)  # a.sum(n) with (int'(b))
+    method = staticmethod(lambda name: P("method", A, name=name))  # size, sum
+    locate = staticmethod(lambda name: P("select", P("method", A, name=name), P("constant", value=0)))  # a.min()[0]
+    select = P("select", A, B)
+    inside = P("inside", A, B)
+    unique = P("binary", P("method", P("method", A, name="unique"), name="size"), P("method", A, name="size"), operator="==")
 
 
 class Excel:

@@ -16,6 +16,10 @@
 - `member`: `object.name`.
 - `call`: a system function (`$signed`, `$unsigned`, `$clog2`, `$bits`, `$countones`, `$onehot`, `$onehot0`,
   `$isunknown`) or a function the scope provides.
+- `method`: an array method of no arguments, `array.name()`: `size`, the reductions `sum`, `product`, `and`, `or` and
+  `xor`, and the locators `min`, `max` and `unique`, which give queues.
+- `iterate`: a reduction with a `with` clause, `array.method(name) with (body)`, which binds `name` (the iterator) to
+  each item of the array within the body and reduces the body's values: `ports.and(p) with (p.pin > 0)`.
 
 There is no binding: translators substitute a let's value for its name. The meta-schemas are registered as
 'Expressions.SystemVerilog.Of<Kind>'. `render` writes an expression as SystemVerilog source, with its precedence.
@@ -33,13 +37,17 @@ from mbse.Schemas.Framework.Visitors import Native
 from . import Domains
 
 __all__ = ["DIALECT", "Builders", "Schema", "constant", "vector", "identifier", "unary", "binary", "conditional",
-           "concatenation", "replication", "select", "range_", "inside", "span", "cast", "member", "call", "render",
-           "CASTS", "SYSTEM"]
+           "concatenation", "replication", "select", "range_", "inside", "span", "cast", "member", "call", "method",
+           "iterate", "render", "CASTS", "SYSTEM", "METHODS", "REDUCTIONS"]
 
 CASTS = (*Domains.TYPES, "signed", "unsigned")
 """What a cast may name: a built-in type, or a signedness."""
 SYSTEM = ("$signed", "$unsigned", "$clog2", "$bits", "$countones", "$onehot", "$onehot0", "$isunknown")
 """The system functions."""
+REDUCTIONS = ("sum", "product", "and", "or", "xor")
+"""The array reduction methods, which may have a `with` clause."""
+METHODS = ("size", *REDUCTIONS, "min", "max", "unique")
+"""The array methods of no arguments."""
 _BASES = {"b": 1, "o": 3, "h": 4, "d": 0}
 
 
@@ -224,9 +232,43 @@ class _Call(F.Node):
     arguments: tuple[Any, ...] = ()
 
 
+@dataclass(eq=False)
+class _Method(F.Node):
+    KIND = "method"
+    ROLE = F.APPLICATION
+    PROPERTIES = {"name": str}
+    SLOTS = ("array",)
+    OPERATOR = "name"
+    SIGNATURE = Domains.METHOD
+    name: str | None = None
+    array: Any = None
+
+    def check(self) -> list[str]:
+        return [] if self.name in METHODS else [f"an array method must be one of {', '.join(METHODS)}, got {self.name!r}"]
+
+
+@dataclass(eq=False)
+class _Iterate(F.Node):
+    KIND = "iterate"
+    ROLE = F.QUANTIFIER
+    PROPERTIES = {"name": str, "method": str}
+    SLOTS = ("array", "body")
+    OPERATOR = "method"
+    SIGNATURE = Domains.ITERATE
+    name: str | None = None  # the iterator
+    method: str | None = None
+    array: Any = None
+    body: Any = None  # the `with` clause, with `name` bound to each item
+
+    def check(self) -> list[str]:
+        if self.method not in REDUCTIONS:
+            return [f"an iteration's method must be one of {', '.join(REDUCTIONS)}, got {self.method!r}"]
+        return []
+
+
 DIALECT = F.Declared("SystemVerilog", (
     _Constant, _Vector, _Identifier, _Unary, _Binary, _Conditional, _Concatenation, _Replication, _Select, _Range,
-    _Inside, _Span, _Cast, _Member, _Call), domain_of=Domains.of)
+    _Inside, _Span, _Cast, _Member, _Call, _Method, _Iterate), domain_of=Domains.of)
 Builders = DIALECT.Builders
 Schema = DIALECT.Schema
 
@@ -296,6 +338,16 @@ def member(object: Any, name: str) -> _Member:
 
 def call(function: str, *arguments: Any) -> _Call:
     return _Call(function, tuple(DIALECT.resolve(argument) for argument in arguments))
+
+
+def method(array: Any, name: str) -> _Method:
+    """`array.name()`."""
+    return _Method(name, DIALECT.resolve(array))
+
+
+def iterate(array: Any, method: str, name: str, body: Any) -> _Iterate:
+    """`array.method(name) with (body)`."""
+    return _Iterate(name, method, DIALECT.resolve(array), DIALECT.resolve(body))
 
 
 # SystemVerilog's precedence, from loosest to tightest (IEEE 1800, table 11-2).
@@ -376,6 +428,10 @@ def render(expression: Any) -> str:
             return "{" + texts[0] + "{" + texts[1] + "}}", _PRIMARY
         if isinstance(node, _Call):
             return f"{node.function}({', '.join(texts)})", _PRIMARY
+        if isinstance(node, _Method):
+            return f"{operand(0, _PRIMARY)}.{node.name}()", _PRIMARY
+        if isinstance(node, _Iterate):
+            return f"{operand(0, _PRIMARY)}.{node.method}({node.name}) with ({texts[1]})", _PRIMARY
         if isinstance(node, _Cast):
             return f"{node.type or node.width}'({texts[0]})", _PRIMARY
         if isinstance(node, _Inside):

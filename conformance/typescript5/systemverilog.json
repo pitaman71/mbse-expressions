@@ -303,7 +303,7 @@
         {
           "argument": {
             "$ref": "s25",
-            "$schema": "Expressions.SystemVerilog.OfConstant"
+            "$schema": "Expressions.SystemVerilog.OfIterate"
           },
           "index": 0
         }
@@ -316,8 +316,42 @@
       "base": "h"
     },
     "s25": {
-      "kind": "constant",
-      "float": 1.5
+      "kind": "iterate",
+      "name": "q",
+      "method": "sum",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s26",
+            "$schema": "Expressions.SystemVerilog.OfMethod"
+          },
+          "index": 0
+        },
+        {
+          "argument": {
+            "$ref": "s27",
+            "$schema": "Expressions.SystemVerilog.OfIdentifier"
+          },
+          "index": 1
+        }
+      ]
+    },
+    "s26": {
+      "kind": "method",
+      "name": "unique",
+      "arguments": [
+        {
+          "argument": {
+            "$ref": "s9",
+            "$schema": "Expressions.SystemVerilog.OfIdentifier"
+          },
+          "index": 0
+        }
+      ]
+    },
+    "s27": {
+      "kind": "identifier",
+      "name": "q"
     }
   }
 }

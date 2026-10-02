@@ -193,3 +193,13 @@ export const SPAN = new D.Function([Anything, Anything], Anything);
 export const CAST = new D.Function([Anything], Anything);
 export const MEMBER = new D.Function([Anything], Anything);
 export const CALL = new D.Opaque();
+
+/** An array method's `with` clause: the domain of an array's items is not known statically. */
+class Iterated extends D.Opaque {
+  items(_domain: D.Domain): D.Domain {
+    return Anything;
+  }
+}
+
+export const METHOD = new D.Function([Anything], Anything);
+export const ITERATE = new Iterated();

@@ -17,6 +17,10 @@
  * - `member`: `object.name`.
  * - `call`: a system function (`$signed`, `$unsigned`, `$clog2`, `$bits`, `$countones`, `$onehot`, `$onehot0`,
  *   `$isunknown`) or a function the scope provides.
+ * - `method`: an array method of no arguments, `array.name()`: `size`, the reductions `sum`, `product`, `and`, `or` and
+ *   `xor`, and the locators `min`, `max` and `unique`, which give queues.
+ * - `iterate`: a reduction with a `with` clause, `array.method(name) with (body)`, which binds `name` (the iterator) to
+ *   each item of the array within the body and reduces the body's values: `ports.and(p) with (p.pin > 0)`.
  *
  * There is no binding: translators substitute a let's value for its name. The meta-schemas are registered as
  * 'Expressions.SystemVerilog.Of<Kind>'. `render` writes an expression as SystemVerilog source, with its precedence.
@@ -36,6 +40,10 @@ const STR = String;
 export const CASTS: readonly string[] = [...Domains.TYPES.keys(), "signed", "unsigned"];
 /** The system functions. */
 export const SYSTEM: readonly string[] = ["$signed", "$unsigned", "$clog2", "$bits", "$countones", "$onehot", "$onehot0", "$isunknown"];
+/** The array reduction methods, which may have a `with` clause. */
+export const REDUCTIONS: readonly string[] = ["sum", "product", "and", "or", "xor"];
+/** The array methods of no arguments. */
+export const METHODS: readonly string[] = ["size", ...REDUCTIONS, "min", "max", "unique"];
 const BASES: Record<string, number> = { b: 1, o: 3, h: 4, d: 0 };
 
 class _Constant extends F.Node {
@@ -206,9 +214,44 @@ class _Call extends F.Node {
   declare arguments: any[];
 }
 
+class _Method extends F.Node {
+  static override KIND = "method";
+  static override ROLE = F.APPLICATION;
+  static override PROPERTIES = new Map([["name", STR]]);
+  static override SLOTS = ["array"];
+  static override OPERATOR = "name";
+  static override SIGNATURE = Domains.METHOD;
+  declare name: string;
+  declare array: any;
+
+  override check(): string[] {
+    return METHODS.includes(this.name) ? [] : [`an array method must be one of ${METHODS.join(", ")}, got ${repr(this.name)}`];
+  }
+}
+
+class _Iterate extends F.Node {
+  static override KIND = "iterate";
+  static override ROLE = F.QUANTIFIER;
+  static override PROPERTIES = new Map([["name", STR], ["method", STR]]);
+  static override SLOTS = ["array", "body"];
+  static override OPERATOR = "method";
+  static override SIGNATURE = Domains.ITERATE;
+  /** The iterator. */
+  declare name: string;
+  declare method: string;
+  declare array: any;
+  /** The `with` clause, with `name` bound to each item. */
+  declare body: any;
+
+  override check(): string[] {
+    if (!REDUCTIONS.includes(this.method)) return [`an iteration's method must be one of ${REDUCTIONS.join(", ")}, got ${repr(this.method)}`];
+    return [];
+  }
+}
+
 export const DIALECT = new F.Declared("SystemVerilog", [
   _Constant, _Vector, _Identifier, _Unary, _Binary, _Conditional, _Concatenation, _Replication, _Select, _Range,
-  _Inside, _Span, _Cast, _Member, _Call], { domain_of: Domains.of });
+  _Inside, _Span, _Cast, _Member, _Call, _Method, _Iterate], { domain_of: Domains.of });
 export const Builders = DIALECT.Builders;
 export const Schema = DIALECT.Schema;
 
@@ -276,6 +319,16 @@ export function member(object: unknown, name: string): _Member {
 
 export function call(fn: string, ...args: unknown[]): _Call {
   return new _Call(fn, args.map((argument) => DIALECT.resolve(argument)));
+}
+
+/** `array.name()`. */
+export function method(array: unknown, name: string): _Method {
+  return new _Method(name, DIALECT.resolve(array));
+}
+
+/** `array.method(name) with (body)`. */
+export function iterate(array: unknown, method: string, name: string, body: unknown): _Iterate {
+  return new _Iterate(name, method, DIALECT.resolve(array), DIALECT.resolve(body));
 }
 
 // SystemVerilog's precedence, from loosest to tightest (IEEE 1800, table 11-2).
@@ -348,6 +401,8 @@ export function render(expression: unknown): string {
     if (node instanceof _Concatenation) return [`{${texts.join(", ")}}`, PRIMARY];
     if (node instanceof _Replication) return [`{${texts[0]}{${texts[1]}}}`, PRIMARY];
     if (node instanceof _Call) return [`${node.function}(${texts.join(", ")})`, PRIMARY];
+    if (node instanceof _Method) return [`${operand(0, PRIMARY)}.${node.name}()`, PRIMARY];
+    if (node instanceof _Iterate) return [`${operand(0, PRIMARY)}.${node.method}(${node.name}) with (${texts[1]})`, PRIMARY];
     if (node instanceof _Cast) return [`${node.type ?? node.width}'(${texts[0]})`, PRIMARY];
     if (node instanceof _Inside) return [`${operand(0, RELATIONAL + 1)} inside {${texts.slice(1).join(", ")}}`, RELATIONAL];
     if (node instanceof _Unary) { // `- -x`, not the decrement `--x`, and `& &x`

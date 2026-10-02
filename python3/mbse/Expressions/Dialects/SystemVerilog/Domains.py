@@ -25,7 +25,8 @@ from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 
 __all__ = ["SvType", "Logic", "TYPES", "Real", "Integer", "Bit", "Anything", "vector", "common", "of", "BINARY", "UNARY",
-           "CONDITIONAL", "CONCATENATION", "REPLICATION", "SELECT", "RANGE", "INSIDE", "SPAN", "CAST", "MEMBER", "CALL"]
+           "CONDITIONAL", "CONCATENATION", "REPLICATION", "SELECT", "RANGE", "INSIDE", "SPAN", "CAST", "MEMBER", "CALL",
+           "METHOD", "ITERATE"]
 
 
 @dataclass(frozen=True)
@@ -202,3 +203,14 @@ SPAN = D.Function((Anything, Anything), Anything)
 CAST = D.Function((Anything,), Anything)
 MEMBER = D.Function((Anything,), Anything)
 CALL = D.Opaque()
+
+
+class _Iterated(D.Opaque):
+    """An array method's `with` clause: the domain of an array's items is not known statically."""
+
+    def items(self, domain: D.Domain) -> D.Domain:
+        return Anything
+
+
+METHOD = D.Function((Anything,), Anything)
+ITERATE = _Iterated()

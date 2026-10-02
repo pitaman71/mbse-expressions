@@ -16,13 +16,19 @@
  *   `!=?` treat x and z in the right operand as wildcards. Division by zero gives x.
  * - `&&`, `||`, `!`, `->` and `<->` give 1, 0 or x by the truth of their operands (any 1 bit is true, all 0 false,
  *   otherwise x); a conditional with an x condition merges its operands bit by bit.
- * - `inside` holds when the value equals (`==?`) an item or lies in a span; otherwise it is x when a comparison is.
+ * - `inside` holds when the value equals (`==?`) an item, an element of an array among the items, or lies in a span;
+ *   otherwise it is x when a comparison is.
  * - A cast converts as an assignment would: integral values are extended by their own signedness or truncated, a
  *   2-state type maps x and z to 0, a real rounds to the nearest integer (ties away from zero), and an integer becomes
  *   a real.
  * - `select` gives a bit (x out of range, or for an x index) or an array's element; `range` bits `[msb:lsb]`.
  * - System functions: `$signed`, `$unsigned`, `$clog2`, `$bits`, `$countones`, `$onehot`, `$onehot0`, `$isunknown`;
  *   other functions are the scope's, and nothing else.
+ * - Array methods: `size()` is an `int`; `sum()`, `product()`, `and()`, `or()` and `xor()` reduce the items, or the
+ *   values of a `with` clause, in their common type by `+`, `*`, `&`, `|` and `^` (x and z as those operators take
+ *   them); of no items they give 0, 1, `1'b1`, `1'b0` and `1'b0`. `min()` and `max()` give a queue of the least or
+ *   greatest item (none when there are none), and `unique()` a queue of the first of each set of identical (`===`)
+ *   items.
  */
 
 import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
@@ -234,7 +240,7 @@ class Evaluation {
 
   private typeOf(node: any): SvType | null {
     const kind = kindOf(node);
-    if (["constant", "vector", "identifier", "member", "select", "call"].includes(kind)) return typeOfValue(this.own(node));
+    if (["constant", "vector", "identifier", "member", "select", "call", "method", "iterate"].includes(kind)) return typeOfValue(this.own(node));
     if (kind === "unary") {
       if (node.operator === "+" || node.operator === "-") return this.type(node.operand);
       if (node.operator === "~") return this.integral(node.operand, "~");
@@ -277,6 +283,11 @@ class Evaluation {
       case "range": return this.range(node);
       case "concatenation": return this.concatenation(node.parts.map((part: any) => this.value(part)));
       case "replication": return this.replication(node);
+      case "method": return this.method(node);
+      case "iterate": {
+        const items = this.items(this.value(node.array), `${node.method}()`);
+        return this.reduce(node.method, items.map((item) => new Evaluation(this.scope.bind(node.name, item)).value(node.body)));
+      }
       default: return this.call(node);
     }
   }
@@ -451,13 +462,28 @@ class Evaluation {
   }
 
   private inside(node: any): Logic {
-    const items: any[][] = node.items.map((item: any) => (kindOf(item) === "span" ? [item.low, item.high] : [item]));
-    const shared = Domains.common([this.type(node.value) as SvType, ...items.flat().map((end) => this.type(end) as SvType)]);
+    const items: any[][] = []; // a node, a span's ends, or an array's element
+    for (const item of node.items) {
+      if (kindOf(item) === "span") items.push([item.low, item.high]);
+      else if (this.type(item) === null && Array.isArray(this.own(item))) { // an array: each of its elements
+        for (const element of this.items(this.own(item), "inside")) items.push(["element", element]);
+      } else items.push([item]);
+    }
+    const types = [this.numeric(node.value, "inside")];
+    for (const item of items) {
+      if (item[0] === "element") types.push(elementType(item[1]));
+      else types.push(...item.map((end) => this.numeric(end, "inside")));
+    }
+    const shared = Domains.common(types);
     const value = this.value(node.value, shared);
     let found: number | null = 0;
     for (const item of items) {
       let match: Logic;
-      if (item.length === 1) {
+      if (item[0] === "element") {
+        const element = item[1];
+        const signed = element instanceof Logic && element.type.signed && shared.signed;
+        match = this.compare("==?", value, convert(element, shared, signed), shared);
+      } else if (item.length === 1) {
         match = this.compare("==?", value, this.value(item[0], shared), shared);
       } else {
         const low = truth(this.compare(">=", value, this.value(item[0], shared), shared));
@@ -469,6 +495,45 @@ class Evaluation {
       if (t === null) found = null;
     }
     return bit(found);
+  }
+
+  /** An array's items, typed. */
+  private items(value: unknown, what: string): unknown[] {
+    if (!Array.isArray(value)) throw new TypeError(`${what} is a method of arrays, not of ${typeName(value)}`);
+    return value.map(typed);
+  }
+
+  private method(node: any): unknown {
+    const items = this.items(this.value(node.array), `${node.name}()`);
+    if (node.name === "size") return Logic.number(Domains.TYPES.get("int") as SvType, BigInt(items.length));
+    if (node.name === "min" || node.name === "max") {
+      if (items.length === 0) return [];
+      const shared = Domains.common(items.map(elementType));
+      let best = items[0];
+      for (const item of items.slice(1)) {
+        if (truth(this.compare(node.name === "min" ? "<" : ">", convert(item, shared), convert(best, shared), shared)) === 1) best = item;
+      }
+      return [best];
+    }
+    if (node.name === "unique") {
+      const distinct: unknown[] = [];
+      for (const item of items) if (!distinct.some((other) => identical(item, other))) distinct.push(item);
+      return distinct;
+    }
+    return this.reduce(node.name, items);
+  }
+
+  /** The values reduced by a reduction method, in their common type. */
+  private reduce(method: string, values: unknown[]): unknown {
+    if (values.length === 0) {
+      if (method === "sum" || method === "product") return Logic.number(Domains.Integer, method === "sum" ? 0n : 1n);
+      return bit(BOOLEAN(method === "and"));
+    }
+    const ctype = Domains.common(values.map(elementType));
+    const operator = ({ sum: "+", product: "*", and: "&", or: "|", xor: "^" } as Record<string, string>)[method] as string;
+    let result = convert(values[0], ctype);
+    for (const value of values.slice(1)) result = this.arithmetic(operator, result, convert(value, ctype), ctype);
+    return result;
   }
 
   private member(node: any): unknown {
@@ -542,6 +607,19 @@ class Evaluation {
     }
     return typed(this.scope.function(name)(...node.arguments.map((argument: any) => this.value(argument))));
   }
+}
+
+/** An array element's type: it must be integral or real. */
+function elementType(value: unknown): SvType {
+  const ctype = typeOfValue(value);
+  if (ctype === null) throw new TypeError(`an array's elements must be numbers, got ${typeName(value)}`);
+  return ctype;
+}
+
+/** Whether two elements are identical, as `===` compares them: of one value, bit for bit, x and z too. */
+function identical(a: unknown, b: unknown): boolean {
+  if (a instanceof Logic && b instanceof Logic) return a.aval === b.aval && a.bval === b.bval;
+  return typeof a === typeof b && a === b;
 }
 
 /** A member's value: a list as an array of its items, lists of lists too. */

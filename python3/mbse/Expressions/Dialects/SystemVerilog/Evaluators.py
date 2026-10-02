@@ -15,12 +15,17 @@ IEEE 1800's rules apply:
   treat x and z in the right operand as wildcards. Division by zero gives x.
 - `&&`, `||`, `!`, `->` and `<->` give 1, 0 or x by the truth of their operands (any 1 bit is true, all 0 false,
   otherwise x); a conditional with an x condition merges its operands bit by bit.
-- `inside` holds when the value equals (`==?`) an item or lies in a span; otherwise it is x when a comparison is.
+- `inside` holds when the value equals (`==?`) an item, an element of an array among the items, or lies in a span;
+  otherwise it is x when a comparison is.
 - A cast converts as an assignment would: integral values are extended by their own signedness or truncated, a 2-state
   type maps x and z to 0, a real rounds to the nearest integer (ties away from zero), and an integer becomes a real.
 - `select` gives a bit (x out of range, or for an x index) or an array's element; `range` bits `[msb:lsb]`.
 - System functions: `$signed`, `$unsigned`, `$clog2`, `$bits`, `$countones`, `$onehot`, `$onehot0`, `$isunknown`;
   other functions are the scope's, and nothing else.
+- Array methods: `size()` is an `int`; `sum()`, `product()`, `and()`, `or()` and `xor()` reduce the items, or the
+  values of a `with` clause, in their common type by `+`, `*`, `&`, `|` and `^` (x and z as those operators take
+  them); of no items they give 0, 1, `1'b1`, `1'b0` and `1'b0`. `min()` and `max()` give a queue of the least or
+  greatest item (none when there are none), and `unique()` a queue of the first of each set of identical (`===`) items.
 """
 
 from __future__ import annotations
@@ -214,7 +219,7 @@ class _Evaluation:
         return ctype
 
     def _type_of(self, node: Any) -> SvType | None:
-        if isinstance(node, (X._Constant, X._Vector, X._Identifier, X._Member, X._Select, X._Call)):
+        if isinstance(node, (X._Constant, X._Vector, X._Identifier, X._Member, X._Select, X._Call, X._Method, X._Iterate)):
             return _type(self.own(node))
         if isinstance(node, X._Unary):
             if node.operator in ("+", "-"):
@@ -272,6 +277,11 @@ class _Evaluation:
             return self._concatenation([self.value(part) for part in node.parts])
         if isinstance(node, X._Replication):
             return self._replication(node)
+        if isinstance(node, X._Method):
+            return self._method(node)
+        if isinstance(node, X._Iterate):
+            items = self._items(self.value(node.array), f"{node.method}()")
+            return self._reduce(node.method, [_Evaluation(self.scope.bind(node.name, item)).value(node.body) for item in items])
         return self._call(node)
 
     def value(self, node: Any, context: SvType | None = None) -> Any:
@@ -452,12 +462,26 @@ class _Evaluation:
         return _make(target, a1 & b1, a0 & b0)  # bits that agree keep their value; the others are x
 
     def _inside(self, node: Any) -> Logic:
-        items = [(item.low, item.high) if isinstance(item, X._Span) else (item,) for item in node.items]
-        shared = Domains.common([self.type(node.value), *(self.type(end) for item in items for end in item)])
+        items: list[tuple[Any, ...]] = []  # a node, a span's ends, or an array's element
+        for item in node.items:
+            if isinstance(item, X._Span):
+                items.append((item.low, item.high))
+            elif self.type(item) is None and isinstance(self.own(item), list):  # an array: each of its elements
+                items.extend(("element", element) for element in self._items(self.own(item), "inside"))
+            else:
+                items.append((item,))
+        types = [self._numeric(node.value, "inside")]
+        for item in items:
+            types += [_element_type(item[1])] if item[0] == "element" else [self._numeric(end, "inside") for end in item]
+        shared = Domains.common(types)
         value = self.value(node.value, shared)
         found: int | None = 0
         for item in items:
-            if len(item) == 1:
+            if item[0] == "element":
+                element = item[1]
+                signed = isinstance(element, Logic) and element.type.signed and shared.signed
+                match = self._compare("==?", value, _convert(element, shared, signed), shared)
+            elif len(item) == 1:
                 match = self._compare("==?", value, self.value(item[0], shared), shared)
             else:
                 low = self._compare(">=", value, self.value(item[0], shared), shared)
@@ -469,6 +493,46 @@ class _Evaluation:
             if truth is None:
                 found = None
         return _bit(found)
+
+    def _items(self, value: Any, what: str) -> list[Any]:
+        """An array's items, typed."""
+        if not isinstance(value, list):
+            raise TypeError(f"{what} is a method of arrays, not of {type(value).__name__}")
+        return [typed(item) for item in value]
+
+    def _method(self, node: Any) -> Any:
+        items = self._items(self.value(node.array), f"{node.name}()")
+        if node.name == "size":
+            return Logic.number(Domains.TYPES["int"], len(items))
+        if node.name in ("min", "max"):
+            if not items:
+                return []
+            shared = Domains.common([_element_type(item) for item in items])
+            best = items[0]
+            for item in items[1:]:
+                if _truth(self._compare("<" if node.name == "min" else ">", _convert(item, shared), _convert(best, shared),
+                                        shared)) == 1:
+                    best = item
+            return [best]
+        if node.name == "unique":
+            distinct: list[Any] = []
+            for item in items:
+                if not any(_identical(item, other) for other in distinct):
+                    distinct.append(item)
+            return distinct
+        return self._reduce(node.name, items)
+
+    def _reduce(self, method: str, values: list[Any]) -> Any:
+        """The values reduced by a reduction method, in their common type."""
+        if not values:
+            return {"sum": Logic.number(Domains.Integer, 0), "product": Logic.number(Domains.Integer, 1)}.get(
+                method, _bit(int(method == "and")))
+        ctype = Domains.common([_element_type(value) for value in values])
+        operator = {"sum": "+", "product": "*", "and": "&", "or": "|", "xor": "^"}[method]
+        result = _convert(values[0], ctype)
+        for value in values[1:]:
+            result = self._arithmetic(operator, result, _convert(value, ctype), ctype)
+        return result
 
     def _cast(self, node: Any) -> Any:
         operand = self.value(node.operand)
@@ -543,6 +607,21 @@ class _Evaluation:
                 return Logic.number(Domains.Integer, self._numeric(node.arguments[0], name).width)
             return _system(name, self.value(node.arguments[0]))
         return typed(self.scope.function(name)(*[self.value(argument) for argument in node.arguments]))
+
+
+def _element_type(value: Any) -> SvType:
+    """An array element's type: it must be integral or real."""
+    ctype = _type(value)
+    if ctype is None:
+        raise TypeError(f"an array's elements must be numbers, got {type(value).__name__}")
+    return ctype
+
+
+def _identical(a: Any, b: Any) -> bool:
+    """Whether two elements are identical, as `===` compares them: of one value, bit for bit, x and z too."""
+    if isinstance(a, Logic) and isinstance(b, Logic):
+        return a.aval == b.aval and a.bval == b.bval
+    return type(a) is type(b) and a == b
 
 
 def _array(value: Any) -> Any:

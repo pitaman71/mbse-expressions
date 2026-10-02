@@ -88,12 +88,13 @@ def build():
         Ccpp.cast("uint8_t", Ccpp.call("f", 1)), Ccpp.constant(5, "unsigned int"))
 
     # --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
-    # this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(1.5)) + 4'(8'shff)
+    # this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(this.unique().sum(q) with (q))) + 4'(8'shff)
     sv, that = SystemVerilog, SystemVerilog.identifier("this")
     systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1, sv.span(2, 5)), sv.conditional(
         sv.unary("!", sv.select(that, 0)),
         sv.concatenation(sv.replication(6, sv.vector("10")), sv.range_(sv.member(that, "b"), 7, 4)),
-        sv.binary("+", sv.cast("byte", sv.call("$clog2", 1.5)), sv.cast(4, sv.vector("11111111", True, "h")))))
+        sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
+                  sv.cast(4, sv.vector("11111111", True, "h")))))
 
     return {
         "expression": (E.OfLet.Schema, expression, E.Builders),
