@@ -15,12 +15,12 @@ DEFAULT = Path(__file__).resolve().parents[4] / "conformance" / "python3"
 
 
 def render(corpus: dict | None = None) -> dict[str, str]:
-    """File name -> text for every case, as this implementation writes them. Pass an already built corpus to avoid
-    registering its schemas twice."""
+    """File name -> text for every case, as this implementation writes them, each in the store of its dialect. Pass an
+    already built corpus to reuse it."""
     files = {}
-    for case, (schema, root, _) in (corpus if corpus is not None else build()).items():
-        files[f"{case}.json"] = JSON.ToJSON.Reachable(schema, root, indent=2) + "\n"
-        files[f"{case}.yaml"] = YAML.ToYAML.Reachable(schema, root)
+    for case, (schema, root, store) in (corpus if corpus is not None else build()).items():
+        files[f"{case}.json"] = JSON.ToJSON(store).Reachable(schema, root, indent=2) + "\n"
+        files[f"{case}.yaml"] = YAML.ToYAML(store).Reachable(schema, root)
     return files
 
 

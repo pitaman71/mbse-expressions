@@ -20,8 +20,9 @@ def native(name, type_):
 
 
 Contact = S.OfObject.Builder().ref().properties(native("name", str), native("age", int), native("email", str)).create()
-Proxies.register("Contact", Contact)
-B = Proxies.Builders
+store = Proxies.OfStore()  # an mbse-schemas store: the program's schemas, and the objects built with them
+store.register("Contact", Contact)
+B = store
 ada = B.Contact().name("Ada").age(70).email("ada@example.com").create()
 bob = B.Contact().name("Bob").age(30).create()
 eve = B.Contact().name("Eve").email("eve@example.com").create()  # no age
@@ -37,7 +38,7 @@ assert Evaluators.OfAny(senior, {"contact": eve}) is None
 
 # It is data: store it and read it back.
 schema = E.DIALECT.schema_of(senior)
-text = JSON.ToJSON.Reachable(schema, senior)
+text = JSON.ToJSON(E.Builders).Reachable(schema, senior)  # E.Builders: the store of Basic's expression classes
 rule = JSON.FromJSON(E.Builders).Reachable(schema, text)
 
 # Translate it into other languages; each evaluates by its own rules.
@@ -53,7 +54,7 @@ Phone = S.OfObject.Builder().properties(native("number", str)).create()
 Email = S.OfObject.Builder().properties(native("address", str)).create()
 Reach = S.OfUnion.Builder().branches(lambda b: b.name("phone").of(Phone), lambda b: b.name("email").of(Email)).create()
 Card = S.OfObject.Builder().ref().properties(lambda p: p.name("reach").of(Reach)).create()
-Proxies.register("Card", Card)
+store.register("Card", Card)
 card = B.Card().reach(lambda u: u.email(lambda r: r.address("ada@example.com"))).create()
 assert Validators.Validate(B)(Card, card) == []
 assert Evaluators.predicate(this.reach.has("email"), card) is True
@@ -86,7 +87,8 @@ Evaluators.predicate(rule, value)                           # binds this; True, 
 Partials.OfAny(rule, {"this": value})                       # the residual: what is known evaluated, the rest an expression
 
 # Storage, traversal, translation: the same calls in every dialect.
-JSON.ToJSON.Reachable(E.DIALECT.schema_of(e), e); JSON.FromJSON(E.Builders).Reachable(schema, text)
+JSON.ToJSON(E.Builders).Reachable(E.DIALECT.schema_of(e), e); JSON.FromJSON(E.Builders).Reachable(schema, text)
+register(Proxies.OfStore())                 # from mbse.Expressions import register: a store with every dialect's schemas
 F.walk(e); F.fold(e, lambda term, results: ...); F.same(a, b)   # from mbse.Expressions.Framework import Terms as F
 Symbolics.free(e); Symbolics.imports(e)     # the names e needs from its scope, and the imports it declares
 Translators.between(E.DIALECT, Excel.DIALECT).forward(e, trace=[]); Translators.Basic_Python.NUMPY.forward(e)
@@ -99,7 +101,7 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 - `1 == 1.0` is unknown in Basic, and `True` is not an `int`. Write literals of the type the data has.
 - In `FromFunction`, `x.email is not None` means `has(x, 'email')`; `x.email` alone is `get`, unknown when absent.
 - Evaluating an operation outside the core raises `NotImplementedError`: validate with `core=True` first.
-- mbse-schemas' proxy registry is global to the process: register each schema name once.
+- Each mbse-schemas store has its own schemas: register a schema name once per store.
 - A Python-dialect scope imports nothing by default: `Python.Evaluators.Scope(variables, modules={"numpy": numpy})`.
 
 ## Go deeper

@@ -1,9 +1,9 @@
 """The conformance corpus: the same cases, built statement for statement in every implementation.
 
-`build()` returns `{case: (root schema, root expression, registry)}`, the registry being the case's dialect's builders. Each implementation writes its snapshots to
-`conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
-the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values,
-same order of statements.
+`build()` returns `{case: (root schema, root expression, store)}`, the store being the case's dialect's `Builders`, a
+store of its bound classes. Each implementation writes its snapshots to `conformance/<implementation>/<case>.json` and
+`.yaml`, and checks them against every other implementation's files (see the CONF test suite). Keep this module and
+`typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values, same order of statements.
 """
 
 from __future__ import annotations

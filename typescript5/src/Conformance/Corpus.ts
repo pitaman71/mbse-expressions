@@ -1,8 +1,8 @@
 /**
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
- * `build()` returns the cases, name -> [root schema, root expression, registry], the registry being the case's dialect's
- * builders. Each implementation writes its snapshots to
+ * `build()` returns the cases, name -> [root schema, root expression, store], the store being the case's dialect's
+ * `Builders`, a store of its bound classes. Each implementation writes its snapshots to
  * `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files
  * (see the CONF test suite). Keep this module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
  * cases, same values, same order of statements.
@@ -16,11 +16,11 @@ import * as Latex from "../Dialects/Latex/Expressions.js";
 import * as Matlab from "../Dialects/Matlab/Expressions.js";
 import * as Python from "../Dialects/Python/Expressions.js";
 import * as SystemVerilog from "../Dialects/SystemVerilog/Expressions.js";
-import type { Schemas, Visitors } from "@mbse/schemas/Framework";
+import type { Schemas, Stores, Visitors } from "@mbse/schemas/Framework";
 
 export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp", "systemverilog"] as const;
 
-type Case = [Schemas.OfObject.Data, Visitors.Visitable, unknown];
+type Case = [Schemas.OfObject.Data, Visitors.Visitable, Stores.Store];
 
 export function build(): Map<string, Case> {
   const [E, P, M, X, L] = [Expressions, Python, Matlab, Excel, Latex];

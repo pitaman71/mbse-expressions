@@ -3,8 +3,9 @@
 An expression language (a dialect) is a set of term kinds and a vocabulary of operators. Every dialect's expressions are:
 
 - Serializable. Each kind has a meta-schema, an ordinary mbse-schemas object schema tagged by `kind`, and its data has a
-  builder (`create()` / `clone()` / `update()`) that implements `Visitors.OfObject`. `Dialect.Builders` rebuilds data
-  from snapshots and `Dialect.Schema` is the union of the kinds' meta-schemas.
+  builder (`create()` / `clone()` / `update()`) that implements `Visitors.OfObject`. `Dialect.Builders`, a store of the
+  dialect's bound classes (an mbse-schemas `Bindings.OfStore`), rebuilds data from snapshots; `Dialect.register(store)`
+  registers the meta-schemas in any other store; and `Dialect.Schema` is the union of the kinds' meta-schemas.
 - Structurally traversable. `Expression.form()` gives a term's `Form`: its kind, its native attributes and its ordered
   arguments, which are expressions of the same dialect. `Dialect.make(form)` is the inverse. `walk`, `fold` and `same`
   traverse any dialect's expressions through forms alone.
@@ -38,7 +39,7 @@ literal's own domain, if it has one.
 
 Each kind's data is bound to its meta-schema with mbse-schemas' `Bindings`: the kind's fields are read into a
 `Bindings.State` (its properties, and its `arguments` entries) and made from one, with `kind` fixed, a literal's native
-properties exclusive and `used_by` implied. `accept`, the builders' visitor protocols and the registry `Builders` are
+properties exclusive and `used_by` implied. `accept`, the builders' visitor protocols and the store `Builders` are
 the generic ones; `Builder` adds the DSL. Arguments
 are fields too: `SLOTS` names fields holding one argument each, in index order, and `VARIADIC` names one field holding a
 tuple of the arguments after the slots. Both are written as entries of the adjacency `arguments`, to the relation `Arguments`
@@ -53,7 +54,7 @@ import math
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from typing import Any, ClassVar, Protocol, runtime_checkable
 
-from mbse.Schemas.Framework import Bindings, Proxies, Schemas, Visitors
+from mbse.Schemas.Framework import Bindings, Schemas, Visitors
 from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains
@@ -113,7 +114,7 @@ class Dialect(Protocol):
     """An expression language: its kinds, their meta-schemas and builders, and its static checks."""
 
     Schema: Schemas.OfUnion.Data
-    Builders: Bindings.Registry
+    Builders: Bindings.OfStore
 
     def name(self) -> str: ...
 
@@ -460,7 +461,7 @@ def resolve(spec: Any, data: type | tuple[type, ...], builder: Callable[[], Any]
     raise TypeError(f"expected {expected} or a callable taking its builder, got {spec!r}")
 
 
-# --- Meta-schemas and the registry ---
+# --- Meta-schemas and the store ---
 
 
 def _native(name: str, native: type) -> Callable[[Any], Any]:
@@ -471,7 +472,6 @@ Arguments = (
     Schemas.OfRelation.Builder().links("parent", "argument").properties(_native("index", int)).unique("argument")
     .create()
 )
-Proxies.register(ARGUMENTS, Arguments)
 _ARGUMENTS = lambda r: r.name("arguments").of(Arguments).me("parent")  # noqa: E731
 _USED_BY = lambda r: r.name("used_by").of(Arguments).me("argument")  # noqa: E731
 
@@ -488,12 +488,24 @@ def _schema(kind: type[Term]) -> Schemas.OfObject.Data:
 
 # --- Dialects declared by their kinds ---
 
+DIALECTS: list[Declared] = []
+"""Every dialect declared so far, in declaration order."""
+
+
+def register(store: Any) -> Any:
+    """Registers the meta-schemas of every dialect declared so far in `store`, e.g. a `Proxies.OfStore` that writes and
+    reads expressions of several dialects. Returns the store."""
+    for dialect in DIALECTS:
+        dialect.register(store)
+    return store
+
+
 
 class Declared:
     """A dialect declared by its kinds' data classes, from which it derives their builders (unless given), meta-schemas
-    (registered with `Proxies` as `schema_names`, by default 'Expressions.<name>.Of<Kind>'), the union `Schema`, whose
-    branches are named by the kinds' tags, the registry `Builders`, and `make`, `resolve`, `validate` and `infer`.
-    `domain_of` gives a literal's domain."""
+    (named by `schema_names`, by default 'Expressions.<name>.Of<Kind>'), the union `Schema`, whose branches are named by
+    the kinds' tags, the store `Builders` of its bound classes, `register(store)`, which registers its meta-schemas in
+    another store, and `make`, `resolve`, `validate` and `infer`. `domain_of` gives a literal's domain."""
 
     def __init__(self, name: str, kinds: Sequence[type[Term]], *,
                  domain_of: Callable[[Native], Domains.Domain], builders: Mapping[str, type[Builder]] | None = None,
@@ -512,16 +524,24 @@ class Declared:
             kind.Schema = schemas[kind.NAME] = _schema(kind)  # type: ignore[attr-defined]
             kind.BINDING = _binding(kind)
             registered[kind.NAME] = builders[kind.KIND] = builder
-        for schema_name, schema in schemas.items():
-            Proxies.register(schema_name, schema)
+        self.schemas = {ARGUMENTS: Arguments, **schemas}
+        DIALECTS.append(self)
         self.builders = builders
         self.AnyBuilder = any_builder or type(f"{name}AnyBuilder", (AnyBuilder,), {})
         self.AnyBuilder._dialect = self
         self.Schema = Schemas.OfUnion.Builder().branches(
             *(lambda b, kind=kind: b.name(kind.KIND).of(kind.Schema) for kind in kinds)
         ).create()
-        self.Builders = Bindings.Registry({name: (schemas[name], builder) for name, builder in registered.items()},
-                                          {ARGUMENTS: Arguments})
+        self.Builders = Bindings.OfStore({name: (schemas[name], builder) for name, builder in registered.items()},
+                                         {ARGUMENTS: Arguments})
+
+    def register(self, store: Any) -> Any:
+        """Registers the dialect's meta-schemas, and the relation `Arguments` they share, in `store` (e.g. a
+        `Proxies.OfStore`, to build expressions as proxies), skipping those it already holds. Returns the store."""
+        for schema_name, schema in self.schemas.items():
+            if schema_name not in store.names():
+                store.register(schema_name, schema)
+        return store
 
     def name(self) -> str:
         return self._name

@@ -1,6 +1,6 @@
-/** Shared helpers for the test notebooks. Each notebook runs in its own process, so registries start empty. */
+/** Shared helpers for the test notebooks. Each notebook runs in its own process and makes its own stores. */
 
-import { Plain, Reachable } from "@mbse/schemas/Framework";
+import { Plain, Proxies, Reachable } from "@mbse/schemas/Framework";
 import type { PlainData, PlainMap } from "@mbse/schemas/Framework/Plain";
 import type { Instance } from "@mbse/schemas/Framework/Proxies";
 import type { OfObject } from "@mbse/schemas/Framework/Schemas";
@@ -81,7 +81,7 @@ export function same(a: readonly unknown[], b: readonly unknown[]): boolean {
 /** An object's entries with references resolved to objects, read from a Reachable snapshot (symbols follow
  * `Reachable.of` order). */
 export function entries(schema: OfObject.Data, obj: Visitable, adjacency: string): Map<string, any>[] {
-  const graph = Plain.ToPlain.Reachable(schema, obj);
+  const graph = Plain.ToPlain(Proxies.store_of(obj)).Reachable(schema, obj);
   const objects = Reachable.of(obj);
   const root = (graph.get("objects") as PlainMap).get(graph.get("root") as string) as PlainMap;
   const resolve = (value: PlainData): unknown => (value instanceof Map ? objects[Number(String(value.get("$ref")).slice(1))] : value);

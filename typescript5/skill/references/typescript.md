@@ -19,8 +19,9 @@ const native = (name: string, type: S.OfNative.Spec) => (p: S.OfProperty.Builder
 const check = (condition: boolean, message: string) => { if (!condition) throw new Error(message); };
 
 const Contact = new S.OfObject.Builder().ref().properties(native("name", String), native("age", BigInt), native("email", String)).create();
-Proxies.register("Contact", Contact);
-const B = Proxies.Builders;
+const store = new Proxies.OfStore(); // an mbse-schemas store: the program's schemas, and the objects built with them
+store.register("Contact", Contact);
+const B = store;
 const ada = B.Contact().name("Ada").age(70n).email("ada@example.com").create();
 const bob = B.Contact().name("Bob").age(30n).create();
 const eve = B.Contact().name("Eve").email("eve@example.com").create(); // no age
@@ -37,7 +38,7 @@ check(Evaluators.OfAny(senior, { contact: eve }) === null, "eve");
 
 // It is data: store it and read it back.
 const schema = E.DIALECT.schema_of(senior);
-const text = JSON.ToJSON.Reachable(schema, senior);
+const text = JSON.ToJSON(E.Builders).Reachable(schema, senior); // E.Builders: the store of Basic's expression classes
 const rule = JSON.FromJSON(E.Builders).Reachable(schema, text) as E.OfAny.Data; // decoders return unknown
 
 // Translate it into other languages; each evaluates by its own rules.
@@ -53,7 +54,7 @@ const Phone = new S.OfObject.Builder().properties(native("number", String)).crea
 const Email = new S.OfObject.Builder().properties(native("address", String)).create();
 const Reach = new S.OfUnion.Builder().branches((b) => b.name("phone").of(Phone), (b) => b.name("email").of(Email)).create();
 const Card = new S.OfObject.Builder().ref().properties((p) => p.name("reach").of(Reach)).create();
-Proxies.register("Card", Card);
+store.register("Card", Card);
 const card = B.Card().reach((u: any) => u.email((r: any) => r.address("ada@example.com"))).create();
 check(Validators.Validate(B)(Card, card).length === 0, "card");
 check(Evaluators.predicate(self.reach.has("email"), card) === true, "by email");

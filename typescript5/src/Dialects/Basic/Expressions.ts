@@ -28,7 +28,7 @@
  *   never writes it and builders ignore entries added to it.
  * - `OfAny.Schema` is the union of the four, discriminated by the tag: `eq(get(this, 'kind'), 'literal')`, and so on.
  *
- * The meta-schemas are registered with `Proxies` as 'Expressions.OfLiteral', 'Expressions.OfOperation',
+ * The meta-schemas are named 'Expressions.OfLiteral', 'Expressions.OfOperation',
  * 'Expressions.OfVariable', 'Expressions.OfLet' and 'Expressions.Arguments', the names snapshots carry. `Builders`
  * rebuilds `Data` from snapshots, e.g. `Json.FromJSON(Expressions.Builders).Reachable(Expressions.OfLet.Schema, text)`.
  * `Data` is `Visitable`; builders implement `Visitors.OfObject`.

@@ -86,9 +86,12 @@ format:
   `Expressions.Arguments`, a relation linking a `parent` to an `argument` with an `index` and `unique(argument)`; a
   let's value is its argument 0 and its body its argument 1. Every kind declares `used_by`, the same relation seen from
   the argument, which the arguments imply: data never writes it, and builders ignore it.
-- The meta-schemas are registered with `Proxies` as `Expressions.OfLiteral`, `Expressions.OfOperation`,
-  `Expressions.OfVariable`, `Expressions.OfLet` and `Expressions.Arguments`, so snapshots, validation and comparison
-  work on expressions as on any objects. Proxies can build them too (as proxies), which then also write `used_by`.
+- The meta-schemas are named `Expressions.OfLiteral`, `Expressions.OfOperation`, `Expressions.OfVariable`,
+  `Expressions.OfLet` and `Expressions.Arguments`, the names snapshots carry. `Builders` is an mbse-schemas store of the
+  bound classes (`Bindings.OfStore`), so snapshots, validation and comparison work on expressions as on any objects.
+  `DIALECT.register(store)` registers the meta-schemas in another store, and `mbse.Expressions.register(store)` every
+  dialect's, so that a `Proxies.OfStore` can build expressions as proxies (which then also write `used_by`) or write
+  expressions of several dialects.
 
 `Writer`s build expressions, which are data, with methods, and evaluate nothing. `.name` reads a property (`get`), and
 methods build the operations: `.eq(x)` ... `.ge(x)`, `.and_(x)`, `.or_(x)`, `.not_()`, `.implies(x)`, `.add(x)`,
@@ -266,7 +269,7 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
   dialect through forms alone.
 - `Terms.Dialect` is an expression language: `name()`, `kinds()`, `schema_of(expression)`, `make`, `resolve`
   (specs: expressions, `Writer`s, native values as literals, or callables taking the `AnyBuilder`), `validate`,
-  `infer`, the union meta-schema `Schema` and the registry `Builders`.
+  `infer`, the union meta-schema `Schema` and the store `Builders` of its bound classes.
 - `Terms.Declared` derives a dialect from its kinds: each is a dataclass derived from `Term` whose class
   variables give its `KIND` (the tag), its `ROLE`, a literal's `VALUE` natives, its native `PROPERTIES` (required
   unless `OPTIONAL`), its arguments (`SLOTS`, fields of one argument each, then `VARIADIC`, one field holding the
@@ -274,14 +277,14 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
   `VOCABULARY` (operator names to signatures; `None` accepts any name, with `SIGNATURE`). A kind may add its own
   problems (`check()`), and a reference kind may be non-`LEXICAL` (resolved by the scope, never unbound) or have
   `AMBIENT` names, bound without a declaration. From these it derives builders (`create()` / `clone()` / `update()`, `Visitors.OfObject`, and the DSL
-  `.set(name, value)`, `.arguments(*specs)`, `.argument(slot, spec)`), meta-schemas registered as
-  `Expressions.<Dialect>.Of<Kind>` (Basic keeps its names), the union discriminated by Basic's
-  `eq(get(this, 'kind'), tag)`, the registry, validation and inference. Every dialect shares the relation
+  `.set(name, value)`, `.arguments(*specs)`, `.argument(slot, spec)`), meta-schemas named
+  `Expressions.<Dialect>.Of<Kind>` (Basic keeps its names) with `register(store)`, the union discriminated by Basic's
+  `eq(get(this, 'kind'), tag)`, the store `Builders`, validation and inference. Every dialect shares the relation
   `Expressions.Arguments`.
 - **Expressions are typed bindings of their meta-schemas.** A kind's meta-schema is the source of truth for its
   data, and `Declared` binds the kind's data class to it with mbse-schemas' `Bindings`: the kind gives `read` and
   `make`, between its fields and the schema's properties and the `arguments` entries, and declares `kind` fixed, a
-  literal's native properties exclusive and `used_by` implied. Builders, `accept` and the registry are then
+  literal's native properties exclusive and `used_by` implied. Builders, `accept` and the store `Builders` are then
   mbse-schemas' generic ones, and every property kind the schema declares is supported alike: a literal's `domain` is
   an ordinary property holding a value object (a `ValueProperty`), with no holder schema.
   `Terms` keeps what is the framework's own: roles, forms, validation, inference and dialect declaration.
@@ -531,7 +534,7 @@ alike only there.
   `shl`, `shr`) join the core vocabulary; every IEEE 754 format is evaluated, `binary128` and the decimal formats as
   canonical text.
 - Expressions are a program's own classes bound to their meta-schemas with mbse-schemas' `Bindings`, not builders of
-  their own: what is generic to any schema (visitor protocols over a state, finalizing, the registry, value objects in
+  their own: what is generic to any schema (visitor protocols over a state, finalizing, the store, value objects in
   properties) lives once, in mbse-schemas, and `Terms` gives only `read`, `make` and the DSL.
 
 - Expressions are `Expressions.OfAny`, `OfLiteral`, `OfOperation`, `OfVariable` and `OfLet`, each with `Data`,

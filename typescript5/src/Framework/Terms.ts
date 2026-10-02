@@ -40,7 +40,7 @@
  *
  * Each kind's data is bound to its meta-schema with mbse-schemas' `Bindings`: the kind's fields are read into a
  * `Bindings.State` (its properties, and its `arguments` entries) and made from one, with `kind` fixed, a literal's
- * native properties exclusive and `used_by` implied. `accept`, the builders' visitor protocols and the registry
+ * native properties exclusive and `used_by` implied. `accept`, the builders' visitor protocols and the store
  * `Builders` are the generic ones; `Builder` adds the DSL. Arguments are fields too: `SLOTS` names fields holding one
  * argument each, in index order, and `VARIADIC` names one field holding an array of the arguments after the slots.
  * Both are written as entries of the adjacency `arguments`, to the relation `Arguments` (registered as
@@ -50,7 +50,7 @@
  * constructor takes them in that order.
  */
 
-import { Bindings, Errors, Plain, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
+import { Bindings, Errors, Plain, Repr, Schemas } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as Domains from "./Domains.js";
@@ -116,7 +116,7 @@ export interface Expression extends Visitors.Visitable {
 /** An expression language: its kinds, their meta-schemas and builders, and its static checks. */
 export interface Dialect {
   readonly Schema: Schemas.OfUnion.Data;
-  readonly Builders: Bindings.Registry;
+  readonly Builders: Bindings.OfStore;
   name(): string;
   /** The data class of each kind, by tag. */
   kinds(): ReadonlyMap<string, TermClass>;
@@ -551,7 +551,7 @@ export function resolve<D>(spec: unknown, isData: (value: unknown) => value is D
   throw new TypeError(`expected ${expected} or a callable taking its builder, got ${repr(spec)}`);
 }
 
-// --- Meta-schemas and the registry ---
+// --- Meta-schemas and the store ---
 
 type BranchBuilder = Parameters<Parameters<Schemas.OfUnion.Builder["branches"]>[0]>[0];
 
@@ -561,7 +561,6 @@ function nativeProperty(name: string, native: unknown) {
 
 export const Arguments = new Schemas.OfRelation.Builder().links("parent", "argument")
   .properties(nativeProperty("index", BigInt)).unique("argument").create();
-Proxies.register(ARGUMENTS, Arguments);
 const ARGUMENTS_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("arguments").of(Arguments).me("parent");
 const USED_BY = (r: Schemas.OfAdjacency.Builder) => r.name("used_by").of(Arguments).me("argument");
 
@@ -600,15 +599,26 @@ function capitalize(text: string): string {
 
 type Environment = Record<string, Domains.Domain>;
 
-/** A dialect declared by its kinds' data classes, from which it derives their builders (unless given), meta-schemas
- * (registered with `Proxies`), the union `Schema`, whose branches are named by the kinds' tags, the registry
- * `Builders`, and `make`, `resolve`, `validate` and `infer`. */
+/** Every dialect declared so far, in declaration order. */
+export const DIALECTS: Declared[] = [];
+
+/** Registers the meta-schemas of every dialect declared so far in `store`, e.g. a `Proxies.OfStore` that writes and
+ * reads expressions of several dialects. Returns the store. */
+export function register<S extends { names(): readonly string[]; register(name: string, schema: never): void }>(store: S): S {
+  for (const dialect of DIALECTS) dialect.register(store);
+  return store;
+}
+
+/** A dialect declared by its kinds' data classes, from which it derives their builders (unless given), meta-schemas,
+ * the union `Schema`, whose branches are named by the kinds' tags, the store `Builders` of its bound classes,
+ * `register(store)`, which registers its meta-schemas in another store, and `make`, `resolve`, `validate` and `infer`. */
 export class Declared implements Dialect {
   readonly classes: readonly TermClass[];
   readonly builders: Map<string, typeof Builder>;
   readonly AnyBuilder: typeof AnyBuilder;
   readonly Schema: Schemas.OfUnion.Data;
-  readonly Builders: Bindings.Registry;
+  readonly Builders: Bindings.OfStore;
+  readonly schemas: ReadonlyMap<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>;
   private readonly byTag: Map<string, TermClass>;
   private readonly domainOf: (value: Native) => Domains.Domain;
 
@@ -636,15 +646,23 @@ export class Declared implements Dialect {
       registered.set(kind.NAME, builder);
       this.builders.set(kind.KIND, builder);
     }
-    for (const [schemaName, schema] of schemas) Proxies.register(schemaName, schema);
+    this.schemas = new Map<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>([[ARGUMENTS, Arguments], ...schemas]);
+    DIALECTS.push(this);
     this.AnyBuilder = declaration.anyBuilder ?? class extends AnyBuilder {};
     this.AnyBuilder.DIALECT = this;
     this.Schema = new Schemas.OfUnion.Builder().branches(
       ...kinds.map((kind) => (b: BranchBuilder) => b.name(kind.KIND).of(kind.Schema)),
     ).create();
-    this.Builders = new Bindings.Registry(new Map([...registered].map(([name, builder]) =>
+    this.Builders = new Bindings.OfStore(new Map([...registered].map(([name, builder]) =>
       [name, [schemas.get(name) as Schemas.OfObject.Data, (instance?: Term) => new builder(instance)] as const])),
       new Map([[ARGUMENTS, Arguments]]));
+  }
+
+  /** Registers the dialect's meta-schemas, and the relation `Arguments` they share, in `store` (e.g. a
+   * `Proxies.OfStore`, to build expressions as proxies), skipping those it already holds. Returns the store. */
+  register<S extends { names(): readonly string[]; register(name: string, schema: never): void }>(store: S): S {
+    for (const [schemaName, schema] of this.schemas) if (!store.names().includes(schemaName)) store.register(schemaName, schema as never);
+    return store;
   }
 
   name(): string {
