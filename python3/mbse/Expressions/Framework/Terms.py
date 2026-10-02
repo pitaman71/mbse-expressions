@@ -469,8 +469,8 @@ def _native(name: str, native: type) -> Callable[[Any], Any]:
 
 
 Arguments = (
-    Schemas.OfRelation.Builder().links("parent", "argument").properties(_native("index", int)).unique("argument")
-    .create()
+    Schemas.OfRelation.Builder().name(ARGUMENTS).links("parent", "argument").properties(_native("index", int))
+    .unique("argument").create()
 )
 _ARGUMENTS = lambda r: r.name("arguments").of(Arguments).me("parent")  # noqa: E731
 _USED_BY = lambda r: r.name("used_by").of(Arguments).me("argument")  # noqa: E731
@@ -482,8 +482,8 @@ def _schema(kind: type[Term]) -> Schemas.OfObject.Data:
     natives = {**(kind.VALUE or {}), **kind.PROPERTIES}
     values = [lambda p, n=n, f=f: p.name(n).of(f.schema) for n, f in kind.VALUES.items()]
     relations = [_ARGUMENTS, _USED_BY] if kind.SLOTS or kind.VARIADIC is not None else [_USED_BY]
-    return (Schemas.OfObject.Builder().ref().properties(_native("kind", str), *(_native(n, t) for n, t in natives.items()),
-                                                        *values).relations(*relations).create())
+    return (Schemas.OfObject.Builder().name(kind.NAME).ref().properties(
+        _native("kind", str), *(_native(n, t) for n, t in natives.items()), *values).relations(*relations).create())
 
 
 # --- Dialects declared by their kinds ---
@@ -532,15 +532,14 @@ class Declared:
         self.Schema = Schemas.OfUnion.Builder().branches(
             *(lambda b, kind=kind: b.name(kind.KIND).of(kind.Schema) for kind in kinds)
         ).create()
-        self.Builders = Bindings.OfStore({name: (schemas[name], builder) for name, builder in registered.items()},
-                                         {ARGUMENTS: Arguments})
+        self.Builders = Bindings.OfStore([(schemas[name], builder) for name, builder in registered.items()], [Arguments])
 
     def register(self, store: Any) -> Any:
         """Registers the dialect's meta-schemas, and the relation `Arguments` they share, in `store` (e.g. a
         `Proxies.OfStore`, to build expressions as proxies), skipping those it already holds. Returns the store."""
         for schema_name, schema in self.schemas.items():
             if schema_name not in store.names():
-                store.register(schema_name, schema)
+                store.register(schema)
         return store
 
     def name(self) -> str:

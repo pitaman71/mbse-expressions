@@ -559,7 +559,7 @@ function nativeProperty(name: string, native: unknown) {
   return (p: Schemas.OfProperty.Builder) => p.name(name).of((t) => t.as_native(native as Schemas.OfNative.Spec));
 }
 
-export const Arguments = new Schemas.OfRelation.Builder().links("parent", "argument")
+export const Arguments = new Schemas.OfRelation.Builder().name(ARGUMENTS).links("parent", "argument")
   .properties(nativeProperty("index", BigInt)).unique("argument").create();
 const ARGUMENTS_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("arguments").of(Arguments).me("parent");
 const USED_BY = (r: Schemas.OfAdjacency.Builder) => r.name("used_by").of(Arguments).me("argument");
@@ -570,7 +570,7 @@ function schemaOf(kind: TermClass): Schemas.OfObject.Data {
   const natives = [...(kind.VALUE ?? new Map()), ...kind.PROPERTIES];
   const values = [...kind.VALUES].map(([name, field]) => (p: Schemas.OfProperty.Builder) => p.name(name).of(field.schema));
   const relations = kind.SLOTS.length > 0 || kind.VARIADIC !== null ? [ARGUMENTS_ADJACENCY, USED_BY] : [USED_BY];
-  return new Schemas.OfObject.Builder().ref()
+  return new Schemas.OfObject.Builder().name(kind.NAME).ref()
     .properties(nativeProperty("kind", String), ...natives.map(([name, native]) => nativeProperty(name, native)), ...values)
     .relations(...relations).create();
 }
@@ -604,7 +604,7 @@ export const DIALECTS: Declared[] = [];
 
 /** Registers the meta-schemas of every dialect declared so far in `store`, e.g. a `Proxies.OfStore` that writes and
  * reads expressions of several dialects. Returns the store. */
-export function register<S extends { names(): readonly string[]; register(name: string, schema: never): void }>(store: S): S {
+export function register<S extends { names(): readonly string[]; register(schema: never): void }>(store: S): S {
   for (const dialect of DIALECTS) dialect.register(store);
   return store;
 }
@@ -653,15 +653,14 @@ export class Declared implements Dialect {
     this.Schema = new Schemas.OfUnion.Builder().branches(
       ...kinds.map((kind) => (b: BranchBuilder) => b.name(kind.KIND).of(kind.Schema)),
     ).create();
-    this.Builders = new Bindings.OfStore(new Map([...registered].map(([name, builder]) =>
-      [name, [schemas.get(name) as Schemas.OfObject.Data, (instance?: Term) => new builder(instance)] as const])),
-      new Map([[ARGUMENTS, Arguments]]));
+    this.Builders = new Bindings.OfStore([...registered].map(([name, builder]) =>
+      [schemas.get(name) as Schemas.OfObject.Data, (instance?: Term) => new builder(instance)] as const), [Arguments]);
   }
 
   /** Registers the dialect's meta-schemas, and the relation `Arguments` they share, in `store` (e.g. a
    * `Proxies.OfStore`, to build expressions as proxies), skipping those it already holds. Returns the store. */
-  register<S extends { names(): readonly string[]; register(name: string, schema: never): void }>(store: S): S {
-    for (const [schemaName, schema] of this.schemas) if (!store.names().includes(schemaName)) store.register(schemaName, schema as never);
+  register<S extends { names(): readonly string[]; register(schema: never): void }>(store: S): S {
+    for (const [schemaName, schema] of this.schemas) if (!store.names().includes(schemaName)) store.register(schema as never);
     return store;
   }
 
