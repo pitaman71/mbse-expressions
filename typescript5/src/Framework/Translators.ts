@@ -12,6 +12,10 @@
  *   its value for its name in its body. The value's translation is shared by every use, so sharing is kept.
  * - `new Elide(kind, side)` translates an import of one side, which the other has no counterpart for, as its body:
  *   what the import brought in must be translated by other rules, or it has no counterpart.
+ * - `new Convert(leftKind, rightKind, forward, backward)` translates literals whose values the two sides write
+ *   differently: a `leftKind` literal is the `rightKind` literal of the attributes `forward(attributes)` gives, and
+ *   `backward` maps the other way. A function gives null for the attributes it has no counterpart for (a value domain
+ *   the other side lacks, say). Conversions are tried after the rules of their kind.
  * - `new Prelude(pattern, side)` adds an import to what is translated to `side`: `pattern` is the import with its body
  *   as its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds,
  *   e.g. `import numpy as np` around an expression that uses `np`.
@@ -138,6 +142,17 @@ export class Elide {
   }
 }
 
+/** A literal's attributes, by name. */
+export type Attributes = Record<string, unknown>;
+type Conversion = (attributes: Attributes) => Attributes | null;
+
+/** Translates `leftKind` literals into `rightKind` ones by `forward(attributes)`, and back by `backward`; each gives
+ * the other side's attributes, or null where it has no counterpart. */
+export class Convert {
+  constructor(readonly leftKind: string, readonly rightKind: string, readonly forward: Conversion,
+    readonly backward: Conversion) {}
+}
+
 /** Wraps translations to `side` ('left' or 'right') in the import `pattern` when they refer to a name it binds. */
 export class Prelude {
   constructor(readonly pattern: Pattern, readonly side: string) {
@@ -177,12 +192,22 @@ class Direction {
   readonly rules = new Map<string, [Pattern, Pattern][]>();
   readonly inlines: ReadonlySet<string>;
   readonly elides: ReadonlySet<string>;
+  readonly converts = new Map<string, [string, Conversion][]>();
 
   constructor(readonly source: Terms.Declared, readonly target: Terms.Declared,
     rules: readonly [Pattern, Pattern][], inlines: readonly string[], elides: readonly string[],
-    readonly preludes: readonly Pattern[]) {
+    readonly preludes: readonly Pattern[], converts: readonly [string, string, Conversion][]) {
     this.inlines = new Set(inlines);
     this.elides = new Set(elides);
+    for (const [kind, targetKind, convert] of converts) {
+      for (const [dialect, name] of [[source, kind], [target, targetKind]] as const) {
+        const literal = dialect.kinds().get(name);
+        if (literal === undefined || literal.ROLE !== Terms.LITERAL) {
+          throw new ValueError(`a conversion translates literals, and ${dialect.name()} ${repr(name)} is not one`);
+        }
+      }
+      this.converts.set(kind, [...(this.converts.get(kind) ?? []), [targetKind, convert]]);
+    }
     for (const pair of [...rules].sort((a, b) => b[0].size() - a[0].size())) {
       const list = this.rules.get(pair[0].kind) ?? [];
       list.push(pair);
@@ -249,6 +274,11 @@ class Run {
       const bindings = new Map<string, unknown>();
       if (this.match(source, node, bindings)) return this.instantiate(target, bindings, environment);
     }
+    for (const [targetKind, convert] of this.direction.converts.get(kind.KIND) ?? []) {
+      const attributes = convert(Object.fromEntries(node.form().attributes));
+      if (attributes === null) continue;
+      return this.direction.target.make(new Terms.Form(targetKind, new Map(Object.entries(attributes)) as Map<string, never>, []));
+    }
     throw new ValueError(`${describe(this.direction.source, node)} has no ${this.direction.target.name()} counterpart`);
   }
 
@@ -289,9 +319,10 @@ class Run {
   }
 }
 
-type Declaration = Rule | Inline | Elide | Prelude;
+type Declaration = Rule | Inline | Elide | Convert | Prelude;
 
-/** A `Translator` between `left` and `right`, declared by `rules` (`Rule`s, `Inline`s, `Elide`s and `Prelude`s). */
+/** A `Translator` between `left` and `right`, declared by `rules` (`Rule`s, `Inline`s, `Elide`s, `Convert`s and
+ * `Prelude`s). */
 export class Pairwise implements Translator {
   private readonly forwards: Direction;
   private readonly backwards: Direction;
@@ -299,16 +330,17 @@ export class Pairwise implements Translator {
   constructor(private readonly leftDialect: Terms.Declared, private readonly rightDialect: Terms.Declared,
     private readonly rules: readonly Declaration[]) {
     const pairs = rules.filter((rule): rule is Rule => rule instanceof Rule);
+    const converts = rules.filter((rule): rule is Convert => rule instanceof Convert);
     const of = <T extends Inline | Elide | Prelude>(type: new (...a: any[]) => T, side: string): T[] =>
       rules.filter((rule): rule is T => rule instanceof type && rule.side === side);
     this.forwards = new Direction(leftDialect, rightDialect,
       pairs.filter((r) => r.direction !== "backward").map((r) => [r.left, r.right]),
       of(Inline, "left").map((i) => i.kind), of(Elide, "left").map((e) => e.kind),
-      of(Prelude, "right").map((p) => p.pattern));
+      of(Prelude, "right").map((p) => p.pattern), converts.map((c) => [c.leftKind, c.rightKind, c.forward]));
     this.backwards = new Direction(rightDialect, leftDialect,
       pairs.filter((r) => r.direction !== "forward").map((r) => [r.right, r.left]),
       of(Inline, "right").map((i) => i.kind), of(Elide, "right").map((e) => e.kind),
-      of(Prelude, "left").map((p) => p.pattern));
+      of(Prelude, "left").map((p) => p.pattern), converts.map((c) => [c.rightKind, c.leftKind, c.backward]));
   }
 
   left(): Terms.Declared {
@@ -333,6 +365,7 @@ export class Pairwise implements Translator {
     return new Pairwise(this.rightDialect, this.leftDialect, this.rules.map((r) => {
       if (r instanceof Rule) return new Rule(r.right, r.left, swapped[r.direction]);
       if (r instanceof Prelude) return new Prelude(r.pattern, other(r.side));
+      if (r instanceof Convert) return new Convert(r.rightKind, r.leftKind, r.backward, r.forward);
       return new (r.constructor as typeof Inline)(r.kind, other(r.side));
     }));
   }

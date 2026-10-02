@@ -382,6 +382,10 @@ A pairwise translator (`Pairwise`) is declared as rules:
   be translated by other rules, or has no counterpart. `Prelude(pattern, side)` adds an import to translations that
   refer to a name it binds: `Translators.Basic_Python.NUMPY`, a second translator between Basic and Python, writes
   NumPy's functions (`np.greater_equal(this['age'], 18)`) and adds `import numpy as np`.
+- `Convert(left_kind, right_kind, forward, backward)` translates literals whose values the dialects write
+  differently, by functions of their attributes: a Basic literal of `uint8` is C's `(uint8_t)200` and SystemVerilog's
+  `8'd200`. A function gives None where there is no counterpart, and conversions are tried after the rules of their
+  kind.
 
 Translation co-traverses. At each node, the rules whose source pattern has the node's kind are tried, the most
 specific first (the most nodes and fixed attributes), by traversing pattern and expression in lockstep to bind the
@@ -399,17 +403,22 @@ is unknown in Basic, masked in NumPy, `#FIELD!` in Excel and an error in Python 
 in Basic but true in the others.
 
 Basic and Ccpp translate into each other: Basic's operations are C's operators, `get` a member with `.`, and lets are
-inlined; `has`, members with `->`, typed constants and Basic's literals of value domains have no counterpart yet, and
-Ccpp translates to the other dialects through Basic, not directly.
+inlined; `has` and members with `->` have no counterpart, and Ccpp translates to the other dialects through Basic, not
+directly. A typed constant is a literal of a value domain: C's integer types are `Integer` domains of 8, 16, 32 and
+64 bits, written with `<stdint.h>`'s names (`5u` reads as `uint32` and writes back as `(uint32_t)5`), and its floating
+types the binary IEEE 754 formats; other domains have no C counterpart.
 
 Basic and SystemVerilog translate into each other likewise: `implies` is `->`, `shr` the arithmetic `>>>`, a bool
-`1'b1` or `1'b0`, and lets are inlined; `has`, other sized vectors, the logical `>>`, the 4-state comparisons and
-Basic's literals of value domains have no counterpart yet. On integers both dialects represent, translations evaluate
-alike, a SystemVerilog truth being a single bit.
+`1'b1` or `1'b0`, and lets are inlined; `has`, the logical `>>` and the 4-state comparisons have no counterpart yet.
+A sized vector is a literal of a value domain, its base telling which: `Integer` domains are decimal vectors of their
+width and signedness (`8'd200`, `8'sd251` for -5), `Bits` hexadecimal ones (`12'habc`), and `Ieee1164`'s 0, 1, X and
+Z single binary bits (`1'bx`); its other levels, the IEEE 754 formats and wider vectors with x or z bits have no
+counterpart. On integers both dialects represent, translations evaluate alike, a SystemVerilog truth being a single
+bit.
 
 The bitwise operations translate to Python's operators and to MATLAB's and Excel's bit functions (`shr(a, n)` is
 MATLAB's `bitshift(a, -n)`); `bitnot` has no MATLAB or Excel counterpart, and the conversions and typed values have none
-in any other dialect yet. MATLAB's and Excel's bit functions take only non-negative integers, so translations evaluate
+in Python, MATLAB, Excel or Latex yet. MATLAB's and Excel's bit functions take only non-negative integers, so translations evaluate
 alike only there.
 
 ## Open questions
@@ -424,12 +433,17 @@ alike only there.
 - `Symbolics` has imports, an expression's dependencies, but no exports. Exports would name what a unit of
   expressions (a module of rules, a MATLAB package, a workbook's defined names) provides to others; they need a unit
   that groups expressions, which no dialect has yet.
-- SystemVerilog's sized vectors translate to Basic's integer and bits domains only as single bits; a vector of a
-  width could become a literal of an `Integer` or `Bits` domain, with x and z through `Ieee1164`.
+- A wider SystemVerilog vector with x or z bits has no Basic counterpart: Basic has no vector of `Ieee1164` levels.
 - Excel's `AND` and `OR` take any number of arguments, and `IF` two or three; the dialect gives them fixed arities
   (2, 2 and 3) so that its vocabulary has one signature per name.
 
 ## Resolved
+
+- Typed literals translate by `Convert`, a rule of functions over a literal's attributes, rather than by patterns,
+  which only copy values. A dialect's literal names its type by the other dialect's convention where the two differ:
+  C's `<stdint.h>` names, SystemVerilog's base (decimal for integers, hexadecimal for bits, binary for single
+  `Ieee1164` bits). Translations from Basic round-trip; from C or SystemVerilog they keep the type and the value, not
+  the spelling.
 
 - SystemVerilog's integral values are 4-state (`Domains.Logic`, its bits encoded as VPI's `aval` and `bval`) whatever
   their type, a 2-state type keeping x and z at 0; evaluation sizes operands as IEEE 1800 does, rather than in Basic's

@@ -1,16 +1,54 @@
 """Basic <-> SystemVerilog. Basic operations are SystemVerilog's operators, `implies` its `->`, `shr` its arithmetic
 `>>>`, `get` a member, and a bool `1'b1` or `1'b0`. SystemVerilog has no let expression, so lets are inlined: a let's
-translated value is shared by every use of its name. It has no `has`; its sized vectors other than single bits, the
-logical `>>` and the 4-state comparisons (`===`, `==?`) have no Basic counterpart yet, nor Basic's literals of value
-domains a SystemVerilog one."""
+translated value is shared by every use of its name. It has no `has`, and the logical `>>` and the 4-state comparisons
+(`===`, `==?`) have no Basic counterpart yet.
+
+A sized vector is a Basic literal of a value domain, its base telling which: a literal of an `Integer` domain of a
+width is a decimal vector of that width and signedness (`8'd200`, `8'sd251` for -5), of a `Bits` domain a hexadecimal
+one (`12'habc`), and of `Ieee1164` a single binary bit (`1'b1`, `1'bx`: 0, 1, X and Z, the levels SystemVerilog has).
+Back, a decimal or signed vector is an `Integer`, a single binary bit or one of x or z an `Ieee1164` level, and any
+other vector of known bits `Bits`; a wider vector with x or z bits has no Basic counterpart. A vector without a base
+of a single 0 or 1 is a bool."""
 
 from __future__ import annotations
 
+from typing import Any
+
+from mbse.Expressions.Dialects.Basic import Domains as D
 from mbse.Expressions.Dialects.Basic.Expressions import DIALECT as BASIC
 from mbse.Expressions.Dialects.SystemVerilog.Expressions import DIALECT as SYSTEMVERILOG
-from mbse.Expressions.Framework.Translators import Inline, Pairwise, Pattern, Rule, renames
+from mbse.Expressions.Framework.Translators import Convert, Inline, Pairwise, Pattern, Rule, renames
 
 from ._Patterns import Basic, SystemVerilog, value
+
+_LEVELS = {"0": "0", "1": "1", "X": "x", "Z": "z"}
+
+
+def _to_vector(attributes: dict[str, Any]) -> dict[str, Any] | None:
+    """A typed Basic literal's vector."""
+    domain, value = attributes.get("domain"), attributes["value"]
+    if isinstance(domain, D.OfInteger.Data) and domain.width and domain.overflow == "raise":
+        bits = format(value % (1 << domain.width), f"0{domain.width}b")
+        return {"value": bits, "signed": True, "base": "d"} if domain.signed else {"value": bits, "base": "d"}
+    if isinstance(domain, D.OfBits.Data):
+        return {"value": format(int.from_bytes(value, "big"), f"0{domain.width}b"), "base": "h"}
+    if isinstance(domain, D.OfIeee1164.Data) and value in _LEVELS:
+        return {"value": _LEVELS[value], "base": "b"}
+    return None
+
+
+def _from_vector(attributes: dict[str, Any]) -> dict[str, Any] | None:
+    """A vector's typed Basic literal."""
+    bits, signed, base = attributes["value"], attributes.get("signed", False), attributes.get("base")
+    if any(b in "xz" for b in bits) or (len(bits) == 1 and base == "b"):
+        return {"value": bits.upper(), "domain": D.OfIeee1164.Data()} if len(bits) == 1 else None
+    if base == "d" or signed:
+        number = int(bits, 2)
+        if signed and bits[0] == "1":
+            number -= 1 << len(bits)
+        return {"value": number, "domain": D.OfInteger.Data(len(bits), bool(signed))}
+    return {"value": int(bits, 2).to_bytes((len(bits) + 7) // 8, "big"), "domain": D.OfBits.Data(len(bits))}
+
 
 V = value(int, float, str)
 
@@ -18,6 +56,7 @@ TRANSLATOR = Pairwise(BASIC, SYSTEMVERILOG, [
     Rule(Basic.literal(V), SystemVerilog.constant(V)),
     Rule(Pattern("literal", value=True), Pattern("vector", value="1")),
     Rule(Pattern("literal", value=False), Pattern("vector", value="0")),
+    Convert("literal", "vector", _to_vector, _from_vector),
     Rule(Basic.variable, SystemVerilog.identifier),
     Inline("let", "left"),
     Rule(Basic.get, SystemVerilog.get),

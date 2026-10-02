@@ -44,7 +44,8 @@ renames("operation", "name", "infix", "operator", {"eq": "=", "ne": "<>"}, 2)
 ```
 
 Applying a rule co-traverses its pattern with the expression, binding the holes, then builds the other pattern. The
-most specific rule wins. `Inline`, `Elide` and `Prelude` declare substituting lets, dropping imports and adding them.
+most specific rule wins. `Inline`, `Elide` and `Prelude` declare substituting lets, dropping imports and adding them;
+`Convert` maps literals whose values the dialects write differently (a `uint8` literal is C's `(uint8_t)200`).
 A translator between a dialect and itself is a rewriting: `Pairwise(E.DIALECT, E.DIALECT, rules)`.
 
 ## Go deeper
