@@ -4,7 +4,13 @@
 True`, and a let is `(lambda name: body)(value)`. `NUMPY` writes NumPy's functions, for columns of values: `get` is a
 subscript, `has` is a test that the subscript is not masked, operations are numpy functions (`np.greater_equal`), and
 `implies(a, b)` is `np.where(a, b, True)`; it adds `import numpy as np`, which it drops translating back. Each reads
-back its own style. The bitwise operations are Python's (`&`, `|`, `^`, `~`, `<<`, `>>`), or NumPy's functions."""
+back its own style. The bitwise operations are Python's (`&`, `|`, `^`, `~`, `<<`, `>>`), or NumPy's functions.
+
+`TRANSLATOR` writes collections with Python's builtins and generator expressions: `all` and `any` are `all(body for
+name in collection)` and `any(...)`, the quantifier `count` is `sum(1 for name in collection if body)`, `count(xs)` is
+`len(xs)`, `item(xs, i)` is `xs[i]`, `in(x, xs)` is `x in xs`, and `sum`, `min` and `max` are the builtins of one
+argument. `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back as `unique`. `entries` has no
+Python counterpart, and `NUMPY` writes no collections."""
 
 from __future__ import annotations
 
@@ -36,6 +42,14 @@ TRANSLATOR = Pairwise(BASIC, PYTHON, [
     *renames("operation", "name", "binop", "operator", {
         "bitand": "&", "bitor": "|", "bitxor": "^", "shl": "<<", "shr": ">>"}, 2),
     *renames("operation", "name", "unaryop", "operator", {"bitnot": "~"}, 1),
+    Rule(Basic.quantifier("all"), Python.all_),
+    Rule(Basic.quantifier("any"), Python.any_),
+    Rule(Basic.quantifier("count"), Python.count_where),
+    Rule(Basic.unary("count"), Python.builtin("len")),
+    *[Rule(Basic.unary(name), Python.builtin(name)) for name in ("sum", "min", "max")],
+    Rule(Basic.item, Python.index),
+    Rule(Basic.in_, Python.in_),
+    Rule(Basic.unary("unique"), Python.unique, "forward"),
 ])
 
 NUMPY = Pairwise(BASIC, PYTHON, [

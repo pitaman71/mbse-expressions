@@ -23,6 +23,14 @@ class Basic:
     has = P("operation", X, P("literal", value=K), name="has")
     implies = P("operation", A, B, name="implies")
     shr = P("operation", A, B, name="shr")
+    quantifier = staticmethod(lambda name: P("quantifier", A, B, name=N, quantifier=name))
+    unary = staticmethod(lambda name: P("operation", A, name=name))  # count, sum, min, max, unique
+    item = P("operation", A, B, name="item")
+    in_ = P("operation", A, B, name="in")
+
+
+def _call(function: str, *arguments: P | Hole) -> P:
+    return P("call", P("name", name=function), *arguments)
 
 
 class Python:
@@ -34,6 +42,13 @@ class Python:
     implies = P("ifexp", A, B, P("constant", value=True))
     ifexp = P("ifexp", A, B, C)
     shr = P("binop", A, B, operator=">>")
+    all_ = _call("all", P("generator", A, B, name=N))
+    any_ = _call("any", P("generator", A, B, name=N))
+    count_where = _call("sum", P("generator", A, P("constant", value=1), B, name=N))  # sum(1 for n in a if b)
+    builtin = staticmethod(lambda function: _call(function, A))  # len, sum, min, max
+    index = P("index", A, B)
+    in_ = P("compare", A, B, operator="in")
+    unique = P("compare", _call("len", _call("set", A)), _call("len", A), operator="==")
 
 
 def _numpy(function: str) -> P:

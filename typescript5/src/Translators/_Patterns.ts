@@ -22,7 +22,16 @@ export const Basic = {
   has: new P("operation", { name: "has" }, X, new P("literal", { value: K })),
   implies: new P("operation", { name: "implies" }, A, B),
   shr: new P("operation", { name: "shr" }, A, B),
+  quantifier: (name: string) => new P("quantifier", { name: N, quantifier: name }, A, B),
+  /** count, sum, min, max, unique. */
+  unary: (name: string) => new P("operation", { name }, A),
+  item: new P("operation", { name: "item" }, A, B),
+  in_: new P("operation", { name: "in" }, A, B),
 };
+
+function call(fn: string, ...args: (P | Hole)[]): P {
+  return new P("call", {}, new P("name", { name: fn }), ...args);
+}
 
 export const Python = {
   constant: (V: Hole) => new P("constant", { value: V }),
@@ -33,6 +42,15 @@ export const Python = {
   implies: new P("ifexp", {}, A, B, new P("constant", { value: true })),
   ifexp: new P("ifexp", {}, A, B, C),
   shr: new P("binop", { operator: ">>" }, A, B),
+  all_: call("all", new P("generator", { name: N }, A, B)),
+  any_: call("any", new P("generator", { name: N }, A, B)),
+  /** sum(1 for n in a if b). */
+  count_where: call("sum", new P("generator", { name: N }, A, new P("constant", { value: 1n }), B)),
+  /** len, sum, min, max. */
+  builtin: (fn: string) => call(fn, A),
+  index: new P("index", {}, A, B),
+  in_: new P("compare", { operator: "in" }, A, B),
+  unique: new P("compare", { operator: "==" }, call("len", call("set", A)), call("len", A)),
 };
 
 /** The function `np.<fn>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'. */

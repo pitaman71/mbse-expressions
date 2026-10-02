@@ -3,6 +3,8 @@
  * implementations raise errors of the same names with the same messages. (mbse-schemas' `Errors` has the others.)
  */
 
+import { Errors } from "@mbse/schemas/Framework";
+
 /** A name that is not bound: Python's `NameError`. */
 export class NameError extends Error {
   override name = "NameError";
@@ -11,6 +13,11 @@ export class NameError extends Error {
 /** An import that cannot be resolved: Python's `ImportError`. */
 export class ImportError extends Error {
   override name = "ImportError";
+}
+
+/** A position outside a sequence: Python's `IndexError`, a `LookupError` as `KeyError` is. */
+export class IndexError extends Errors.LookupError {
+  override name = "IndexError";
 }
 
 /** A number too large for its conversion: Python's `OverflowError`. */

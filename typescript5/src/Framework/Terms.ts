@@ -27,8 +27,8 @@
  *   arguments. A kind's `VOCABULARY` maps operator names to signatures; operators outside it are extensions, unless
  *   the vocabulary is `null`, when any name is accepted and `SIGNATURE` applies to all.
  * - `BINDING`: binds the name in its first property to its first argument within the others.
- * - `QUANTIFIER`: binds the name in its first property to each item of its first argument, a collection, within its
- *   second, and combines the results by its operator (named as an application's is), such as `all`. Its signature
+ * - `QUANTIFIER`: binds the name in its first property to each item of its first argument, a collection, within the
+ *   others (a body, and any conditions), and combines the results by its operator (named as an application's is), such as `all`. Its signature
  *   also gives the domain of a collection's items, `items(domain)`, for inference.
  * - `IMPORT`: makes what it declares (a module, a package's functions) available within its one argument, its body.
  *   The scope resolves the declaration; `binds()` gives the names it binds for lexical references.
@@ -811,7 +811,8 @@ export class Declared implements Dialect {
     if (kind.ROLE === QUANTIFIER) { // its name has the domain of the collection's items
       const collection = this.inferIn(args[0] as Node, environment, memo);
       const item = signature === null ? Domains.Anything : (signature as unknown as Quantified).items(collection);
-      domains = [collection, this.inferIn(args[1] as Node, { ...environment, [nameOf(expression) as string]: item }, memo)];
+      const inner = { ...environment, [nameOf(expression) as string]: item };
+      domains = [collection, ...args.slice(1).map((argument) => this.inferIn(argument as Node, inner, memo))];
     } else {
       domains = args.map((argument) => this.inferIn(argument, environment, memo));
     }

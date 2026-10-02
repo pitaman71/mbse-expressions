@@ -46,7 +46,7 @@ objects:
       index: 1
     - argument:
         $ref: s7
-        $schema: Expressions.Python.OfConstant
+        $schema: Expressions.Python.OfGeneratorExp
       index: 2
   s5:
     kind: boolop
@@ -72,14 +72,27 @@ objects:
         $schema: Expressions.Python.OfBinOp
       index: 1
   s7:
-    kind: constant
-    bytes: AA==
+    kind: generator
+    name: p
+    arguments:
+    - argument:
+        $ref: s12
+        $schema: Expressions.Python.OfAttribute
+      index: 0
+    - argument:
+        $ref: s13
+        $schema: Expressions.Python.OfIndex
+      index: 1
+    - argument:
+        $ref: s14
+        $schema: Expressions.Python.OfName
+      index: 2
   s8:
     kind: unaryop
     operator: not
     arguments:
     - argument:
-        $ref: s12
+        $ref: s15
         $schema: Expressions.Python.OfCompare
       index: 0
   s9:
@@ -87,7 +100,7 @@ objects:
     attr: pi
     arguments:
     - argument:
-        $ref: s13
+        $ref: s16
         $schema: Expressions.Python.OfName
       index: 0
   s10:
@@ -98,50 +111,75 @@ objects:
     operator: '*'
     arguments:
     - argument:
-        $ref: s14
+        $ref: s17
         $schema: Expressions.Python.OfAttribute
       index: 0
     - argument:
-        $ref: s15
+        $ref: s18
         $schema: Expressions.Python.OfConstant
       index: 1
   s12:
+    kind: attribute
+    attr: 'y'
+    arguments:
+    - argument:
+        $ref: s19
+        $schema: Expressions.Python.OfName
+      index: 0
+  s13:
+    kind: index
+    arguments:
+    - argument:
+        $ref: s14
+        $schema: Expressions.Python.OfName
+      index: 0
+    - argument:
+        $ref: s20
+        $schema: Expressions.Python.OfConstant
+      index: 1
+  s14:
+    kind: name
+    name: p
+  s15:
     kind: compare
     operator: '>='
     arguments:
     - argument:
-        $ref: s16
+        $ref: s21
         $schema: Expressions.Python.OfSubscript
       index: 0
     - argument:
-        $ref: s17
+        $ref: s22
         $schema: Expressions.Python.OfConstant
       index: 1
-  s13:
+  s16:
     kind: name
     name: np
-  s14:
+  s17:
     kind: attribute
     attr: x
     arguments:
     - argument:
-        $ref: s18
+        $ref: s19
         $schema: Expressions.Python.OfName
       index: 0
-  s15:
+  s18:
     kind: constant
     float: 2.5
-  s16:
+  s19:
+    kind: name
+    name: a
+  s20:
+    kind: constant
+    bytes: AA==
+  s21:
     kind: subscript
     key: k
     arguments:
     - argument:
-        $ref: s18
+        $ref: s19
         $schema: Expressions.Python.OfName
       index: 0
-  s17:
+  s22:
     kind: constant
     int: 18
-  s18:
-    kind: name
-    name: a

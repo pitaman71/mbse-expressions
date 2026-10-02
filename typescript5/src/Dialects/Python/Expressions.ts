@@ -2,12 +2,15 @@
  * Expressions of the Python dialect: Python expressions, with the imports they need, as Python's `ast` has them.
  *
  * - `constant`: a native value. `name`: the value bound to a name; the names of `BUILTINS` are always bound.
- * - `attribute`: `value.attr`. `subscript`: `value[key]`, for a str key. `call`: a function, the slot `function`,
- *   applied to ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal`
- *   of the name `np`.
- * - `compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`), `boolop` (`and`, `or`), `binop` (`+`, `-`, `*`, `/`, `//`, `%`,
+ * - `attribute`: `value.attr`. `subscript`: `value[key]`, for a str key, and `index`: `value[index]`, for an index
+ *   that is an expression. `call`: a function, the slot `function`, applied to ordered `arguments`, e.g.
+ *   `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of the name `np`.
+ * - `compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`), `boolop` (`and`, `or`), `binop` (`+`, `-`, `*`, `/`, `//`, `%`,
  *   `**`, `&`, `|`, `^`, `<<`, `>>`) and `unaryop` (`not`, `-`, `+`, `~`), each with one operator and two operands (one for `unaryop`).
  * - `ifexp`: `body if test else orelse`.
+ * - `generator`: `(element for name in iterable if condition ...)`, a generator expression of one `for` and any number
+ *   of conditions, which binds `name` to each item of `iterable` within the element and the conditions. As the only
+ *   argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
  * - `let`: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
  * - `import` (`import module` or `import module as alias`) and `importfrom` (`from module import name` or `... as
  *   alias`) bind a name within their body, which is the rest of the expression; `render` writes them as the lines
@@ -30,7 +33,7 @@ type Native = Visitors.Native;
 
 /** The builtins an expression may use without importing them: the default builtins of a scope (see `Evaluators`). */
 export const BUILTINS: ReadonlySet<string> = new Set([
-  "abs", "bool", "float", "getattr", "hasattr", "int", "len", "max", "min", "round", "str"]);
+  "abs", "all", "any", "bool", "float", "getattr", "hasattr", "int", "len", "max", "min", "round", "set", "str", "sum"]);
 
 /** Python's `str.isidentifier()`. */
 export function isIdentifier(text: string): boolean {
@@ -93,6 +96,15 @@ class _Subscript extends F.Node {
   static override SIGNATURE = new FD.Function([FD.Anything], FD.Anything);
   declare key: string;
   declare value: any;
+}
+
+class _Index extends F.Node {
+  static override KIND = "index";
+  static override ROLE = F.APPLICATION;
+  static override SLOTS = ["value", "index"];
+  static override SIGNATURE = new FD.Function([FD.Anything, FD.Anything], FD.Anything);
+  declare value: any;
+  declare index: any;
 }
 
 class _Call extends F.Node {
@@ -164,6 +176,24 @@ class _IfExp extends F.Node {
   declare orelse: any;
 }
 
+class _Generator extends F.Node {
+  static override KIND = "generator";
+  static override ROLE = F.QUANTIFIER;
+  static override PROPERTIES = new Map([["name", STR]]);
+  static override SLOTS = ["iterable", "element"];
+  static override VARIADIC = "conditions";
+  static override SIGNATURE = Domains.GENERATOR;
+  declare name: string;
+  declare iterable: any;
+  /** With `name` bound to each item, as the conditions are. */
+  declare element: any;
+  declare conditions: any[];
+
+  override check(): string[] {
+    return identifierProblems("a generator's name", this.name);
+  }
+}
+
 class _Let extends F.Node {
   static override KIND = "let";
   static override ROLE = F.BINDING;
@@ -222,10 +252,10 @@ class _ImportFrom extends F.Node {
   }
 }
 
-const KINDS = [_Constant, _Name, _Attribute, _Subscript, _Call, _Compare, _Boolop, _Binop, _Unaryop, _IfExp, _Let,
-  _Import, _ImportFrom];
+const KINDS = [_Constant, _Name, _Attribute, _Subscript, _Index, _Call, _Compare, _Boolop, _Binop, _Unaryop, _IfExp,
+  _Generator, _Let, _Import, _ImportFrom];
 const AST_NAMES: Record<string, string> = {
-  boolop: "BoolOp", binop: "BinOp", unaryop: "UnaryOp", ifexp: "IfExp", importfrom: "ImportFrom",
+  boolop: "BoolOp", binop: "BinOp", unaryop: "UnaryOp", ifexp: "IfExp", generator: "GeneratorExp", importfrom: "ImportFrom",
 };
 
 export const DIALECT = new F.Declared("Python", KINDS, {
@@ -254,6 +284,11 @@ export function attribute(value: unknown, attr: string): _Attribute {
 /** `value[key]`. */
 export function subscript(value: unknown, key: string): _Subscript {
   return new _Subscript(key, spec(value));
+}
+
+/** `value[index]`. */
+export function index(value: unknown, index: unknown): _Index {
+  return new _Index(spec(value), spec(index));
 }
 
 /** `fn(...args)`. A dotted name as the function is a chain of attributes: `call('np.add', 1n, 2n)` is
@@ -287,6 +322,11 @@ export function unaryop(operator: string, operand: unknown): _Unaryop {
 /** `body if test else orelse`. */
 export function ifexp(test: unknown, body: unknown, orelse: unknown): _IfExp {
   return new _IfExp(spec(test), spec(body), spec(orelse));
+}
+
+/** `(element for name in iterable if condition ...)`. */
+export function generator(name: string, iterable: unknown, element: unknown, ...conditions: unknown[]): _Generator {
+  return new _Generator(name, spec(iterable), spec(element), conditions.map(spec));
 }
 
 /** `(lambda name: body)(value)`. */
@@ -346,7 +386,16 @@ export function render(expression: F.Node): string {
     if (node instanceof _Name) return [node.name, PRIMARY];
     if (node instanceof _Attribute) return [`${operand(0, PRIMARY)}.${node.attr}`, PRIMARY];
     if (node instanceof _Subscript) return [`${operand(0, PRIMARY)}[${repr(node.key)}]`, PRIMARY];
-    if (node instanceof _Call) return [`${operand(0, PRIMARY)}(${args.slice(1).map(([text]) => text).join(", ")})`, PRIMARY];
+    if (node instanceof _Index) return [`${operand(0, PRIMARY)}[${args[1]?.[0]}]`, PRIMARY];
+    if (node instanceof _Call) {
+      let texts = args.slice(1).map(([text]) => text);
+      if (node.arguments.length === 1 && node.arguments[0] instanceof _Generator) texts = [(texts[0] as string).slice(1, -1)]; // without its parentheses
+      return [`${operand(0, PRIMARY)}(${texts.join(", ")})`, PRIMARY];
+    }
+    if (node instanceof _Generator) {
+      const conditions = args.slice(2).map((_, i) => ` if ${operand(i + 2, OR)}`).join("");
+      return [`(${operand(1, IF)} for ${node.name} in ${operand(0, OR)}${conditions})`, PRIMARY];
+    }
     if (node instanceof _Let) return [`(lambda ${node.name}: ${args[1]?.[0]})(${args[0]?.[0]})`, PRIMARY];
     if (node instanceof _IfExp) return [`${operand(1, OR)} if ${operand(0, OR)} else ${operand(2, IF)}`, IF];
     if (node instanceof _Import || node instanceof _ImportFrom) {

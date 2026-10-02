@@ -1,12 +1,16 @@
 """Expressions of the Python dialect: Python expressions, with the imports they need, as Python's `ast` has them.
 
 - `constant`: a native value. `name`: the value bound to a name; the names of `BUILTINS` are always bound.
-- `attribute`: `value.attr`. `subscript`: `value[key]`, for a `str` key. `call`: a function, the slot `function`,
+- `attribute`: `value.attr`. `subscript`: `value[key]`, for a `str` key, and `index`: `value[index]`, for an index
+  that is an expression. `call`: a function, the slot `function`,
   applied to ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of
   the name `np`.
-- `compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`), `boolop` (`and`, `or`), `binop` (`+`, `-`, `*`, `/`, `//`, `%`,
+- `compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`), `boolop` (`and`, `or`), `binop` (`+`, `-`, `*`, `/`, `//`, `%`,
   `**`, `&`, `|`, `^`, `<<`, `>>`) and `unaryop` (`not`, `-`, `+`, `~`), each with one operator and two operands (one for `unaryop`).
 - `ifexp`: `body if test else orelse`.
+- `generator`: `(element for name in iterable if condition ...)`, a generator expression of one `for` and any number
+  of conditions, which binds `name` to each item of `iterable` within the element and the conditions. As the only
+  argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
 - `let`: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
 - `import` (`import module` or `import module as alias`) and `importfrom` (`from module import name` or `... as
   alias`) bind a name within their body, which is the rest of the expression; `render` writes them as the lines before
@@ -35,7 +39,8 @@ __all__ = ["DIALECT", "BUILTINS", "Builders", "Schema", "constant", "name", "att
            "binop", "unaryop", "ifexp", "let_", "import_", "importfrom", "render", "parse"]
 
 
-BUILTINS = frozenset({"abs", "bool", "float", "getattr", "hasattr", "int", "len", "max", "min", "round", "str"})
+BUILTINS = frozenset({"abs", "all", "any", "bool", "float", "getattr", "hasattr", "int", "len", "max", "min", "round", "set",
+                      "str", "sum"})
 """The builtins an expression may use without importing them: the default builtins of a scope (see `Evaluators`)."""
 
 
@@ -97,6 +102,16 @@ class _Subscript(F.Node):
 
 
 @dataclass(eq=False)
+class _Index(F.Node):
+    KIND = "index"
+    ROLE = F.APPLICATION
+    SLOTS = ("value", "index")
+    SIGNATURE = FD.Function((FD.Anything, FD.Anything), FD.Anything)
+    value: Any = None
+    index: Any = None
+
+
+@dataclass(eq=False)
 class _Call(F.Node):
     KIND = "call"
     ROLE = F.APPLICATION
@@ -131,6 +146,23 @@ class _IfExp(F.Node):
     test: Any = None
     body: Any = None
     orelse: Any = None
+
+
+@dataclass(eq=False)
+class _Generator(F.Node):
+    KIND = "generator"
+    ROLE = F.QUANTIFIER
+    PROPERTIES = {"name": str}
+    SLOTS = ("iterable", "element")
+    VARIADIC = "conditions"
+    SIGNATURE = Domains.GENERATOR
+    name: str | None = None
+    iterable: Any = None
+    element: Any = None  # with `name` bound to each item, as the conditions are
+    conditions: tuple[Any, ...] = ()
+
+    def check(self) -> list[str]:
+        return _identifier_problems("a generator's name", self.name)
 
 
 @dataclass(eq=False)
@@ -189,9 +221,9 @@ class _ImportFrom(F.Node):
             "an importfrom's alias", self.alias)
 
 
-_KINDS = (_Constant, _Name, _Attribute, _Subscript, _Call, _Compare, _BoolOp, _BinOp, _UnaryOp, _IfExp, _Let,
-          _Import, _ImportFrom)
-_AST_NAMES = {"boolop": "BoolOp", "binop": "BinOp", "unaryop": "UnaryOp", "ifexp": "IfExp",
+_KINDS = (_Constant, _Name, _Attribute, _Subscript, _Index, _Call, _Compare, _BoolOp, _BinOp, _UnaryOp, _IfExp,
+          _Generator, _Let, _Import, _ImportFrom)
+_AST_NAMES = {"boolop": "BoolOp", "binop": "BinOp", "unaryop": "UnaryOp", "ifexp": "IfExp", "generator": "GeneratorExp",
               "importfrom": "ImportFrom"}
 DIALECT = F.Declared(
     "Python", _KINDS, domain_of=Domains.of,
@@ -220,6 +252,11 @@ def attribute(value: Any, attr: str) -> _Attribute:
 def subscript(value: Any, key: str) -> _Subscript:
     """`value[key]`."""
     return _Subscript(key, _spec(value))
+
+
+def index(value: Any, index: Any) -> _Index:
+    """`value[index]`."""
+    return _Index(_spec(value), _spec(index))
 
 
 def call(function: Any, *arguments: Any) -> _Call:
@@ -252,6 +289,11 @@ def unaryop(operator: str, operand: Any) -> Any:
 def ifexp(test: Any, body: Any, orelse: Any) -> _IfExp:
     """`body if test else orelse`."""
     return _IfExp(_spec(test), _spec(body), _spec(orelse))
+
+
+def generator(name: str, iterable: Any, element: Any, *conditions: Any) -> _Generator:
+    """`(element for name in iterable if condition ...)`."""
+    return _Generator(name, _spec(iterable), _spec(element), tuple(_spec(condition) for condition in conditions))
 
 
 def let_(name: str, value: Any, body: Any) -> _Let:
@@ -312,8 +354,16 @@ def render(expression: Any) -> str:
             return f"{operand(0, _PRIMARY)}.{node.attr}", _PRIMARY
         if isinstance(node, _Subscript):
             return f"{operand(0, _PRIMARY)}[{node.key!r}]", _PRIMARY
+        if isinstance(node, _Index):
+            return f"{operand(0, _PRIMARY)}[{arguments[1][0]}]", _PRIMARY
         if isinstance(node, _Call):
-            return f"{operand(0, _PRIMARY)}({', '.join(text for text, _ in arguments[1:])})", _PRIMARY
+            texts = [text for text, _ in arguments[1:]]
+            if len(node.arguments) == 1 and isinstance(node.arguments[0], _Generator):
+                texts = [texts[0][1:-1]]  # a generator, the only argument, without its parentheses
+            return f"{operand(0, _PRIMARY)}({', '.join(texts)})", _PRIMARY
+        if isinstance(node, _Generator):
+            conditions = "".join(f" if {operand(i, _OR)}" for i in range(2, len(arguments)))
+            return f"({operand(1, _IF)} for {node.name} in {operand(0, _OR)}{conditions})", _PRIMARY
         if isinstance(node, _Let):
             return f"(lambda {node.name}: {arguments[1][0]})({arguments[0][0]})", _PRIMARY
         if isinstance(node, _IfExp):
@@ -343,7 +393,7 @@ _AST_OPERATORS: dict[type, str] = {
     ast.Eq: "==", ast.NotEq: "!=", ast.Lt: "<", ast.LtE: "<=", ast.Gt: ">", ast.GtE: ">=", ast.And: "and",
     ast.Or: "or", ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/", ast.FloorDiv: "//", ast.Mod: "%",
     ast.Pow: "**", ast.Not: "not", ast.USub: "-", ast.UAdd: "+", ast.BitAnd: "&", ast.BitOr: "|", ast.BitXor: "^",
-    ast.LShift: "<<", ast.RShift: ">>", ast.Invert: "~",
+    ast.LShift: "<<", ast.RShift: ">>", ast.Invert: "~", ast.In: "in", ast.NotIn: "not in",
 }
 
 
@@ -367,9 +417,17 @@ def _expression(node: ast.expr) -> Any:
     if isinstance(node, ast.Attribute):
         return _Attribute(node.attr, _expression(node.value))
     if isinstance(node, ast.Subscript):
-        if not (isinstance(node.slice, ast.Constant) and type(node.slice.value) is str):
-            raise _unsupported(node, "a subscript's key must be a str")
-        return _Subscript(node.slice.value, _expression(node.value))
+        if isinstance(node.slice, ast.Constant) and type(node.slice.value) is str:
+            return _Subscript(node.slice.value, _expression(node.value))
+        if isinstance(node.slice, (ast.Slice, ast.Tuple)):
+            raise _unsupported(node, "slices are not supported")
+        return _Index(_expression(node.value), _expression(node.slice))
+    if isinstance(node, ast.GeneratorExp):
+        if len(node.generators) != 1 or not isinstance(node.generators[0].target, ast.Name):
+            raise _unsupported(node, "a generator has one for, over a name")
+        clause = node.generators[0]
+        return _Generator(clause.target.id, _expression(clause.iter), _expression(node.elt),
+                          tuple(_expression(condition) for condition in clause.ifs))
     if isinstance(node, ast.Call):
         if node.keywords:
             raise _unsupported(node, "keyword arguments are not supported")

@@ -102,9 +102,9 @@ export class Interpreter {
     const operator = Terms.operatorOf(expression);
     const implementations = this.operations.get(kind.KIND);
     const thunks: any[] = args.map((argument) => () => this.evaluate(argument, scope, active));
-    if (kind.ROLE === Terms.QUANTIFIER) { // the body, of an item: evaluated with the name bound to it
+    if (kind.ROLE === Terms.QUANTIFIER) { // the arguments after the collection, of an item: evaluated with the name bound to it
       const name = Terms.nameOf(expression) as string;
-      thunks[1] = (item: unknown) => this.evaluate(args[1], scope.bind(name, item), active);
+      for (let i = 1; i < args.length; i++) thunks[i] = (item: unknown) => this.evaluate(args[i], scope.bind(name, item), active);
     }
     if (kind.VOCABULARY === null) return (implementations as Implementation)(thunks, expression, scope);
     const implementation = (implementations as ReadonlyMap<string, Implementation>).get(operator);

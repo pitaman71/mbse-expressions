@@ -9,9 +9,10 @@
  * mbse-schemas' data, have their properties as attributes; a `Module` has its members as attributes.
  *
  * A `new Scope(variables, { modules, builtins })` resolves names as Python does, innermost first: names bound by lets
- * and imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `bool`, `float`,
- * `getattr`, `hasattr`, `int`, `len`, `max`, `min`, `round`, `str`). Nothing else is reachable from an expression,
- * since expressions may come from data:
+ * and imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`,
+ * `float`, `getattr`, `hasattr`, `int`, `len`, `max`, `min`, `round`, `set`, `str`, `sum`). A list property is an
+ * array of its values, a keyed list's too. Nothing else is reachable from an expression, since expressions may come
+ * from data:
  *
  * - An import resolves only a module in `modules`, or a submodule of one (a `Module` among its members), and every
  *   other import throws `ImportError`.
@@ -21,7 +22,7 @@
 
 import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
 
-import { ImportError, NameError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
+import { ImportError, IndexError, NameError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Expressions from "./Expressions.js";
@@ -54,14 +55,50 @@ export function attribute(value: unknown, name: unknown): unknown {
   let what = typeName(value);
   if (isReadable(value)) {
     const properties = Validators.properties_of(value);
-    if (properties.has(name)) return properties.get(name);
+    if (properties.has(name)) return listed(properties.get(name));
     const schemaName = (value as { schema_name?: unknown }).schema_name;
     if (typeof schemaName === "function") what = schemaName.call(value) as string; // its type, for expressions
   }
   throw new AttributeError(`${repr(what)} object has no attribute ${repr(name)}`);
 }
 
+/** A property's value as Python reads it: a list as an array of its values, lists of lists too. */
+function listed(value: unknown): unknown {
+  return value instanceof Validators.ListRecord ? value.values.map(listed) : value;
+}
+
 // --- Python's rules over JavaScript values ---
+
+/** What a generator expression makes: its items, consumed once. */
+class PyGenerator {
+  constructor(private readonly items: Iterator<unknown>) {}
+
+  [Symbol.iterator](): Iterator<unknown> {
+    return this.items;
+  }
+}
+Object.defineProperty(PyGenerator, "name", { value: "generator" }); // its type's name, as Python's
+
+function isDict(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype;
+}
+
+/** Python's `iter(value)`: a str's characters, bytes' ints, a list's or a set's items, a dict's keys. */
+function iterate(value: unknown): Iterable<unknown> {
+  if (typeof value === "string") return [...value];
+  if (value instanceof Uint8Array) return [...value].map(BigInt);
+  if (Array.isArray(value) || value instanceof Set || value instanceof PyGenerator) return value;
+  if (value instanceof Map) return value.keys();
+  if (isDict(value)) return Object.keys(value);
+  throw new TypeError(`${repr(typeName(value))} object is not iterable`);
+}
+
+/** Throws unless `value` is hashable, as `what` (a set element, a dict key) must be. */
+function hashable(value: unknown, what: string): void {
+  if (Array.isArray(value) || value instanceof Map || value instanceof Set || isDict(value)) {
+    throw new TypeError(`cannot use ${repr(typeName(value))} as ${what} (unhashable type: ${repr(typeName(value))})`);
+  }
+}
 
 type Integral = bigint | boolean;
 
@@ -81,6 +118,13 @@ function float(value: Integral | number): number {
   return typeof value === "number" ? value : Number(int(value));
 }
 
+/** An int as a float, as Python converts one: rounded, or `OverflowError` beyond the largest float. */
+function intToFloat(value: Integral): number {
+  const converted = Number(int(value));
+  if (!Number.isFinite(converted)) throw new OverflowError("int too large to convert to float");
+  return converted;
+}
+
 /** Python's `bool(value)`. */
 export function truthy(value: unknown): boolean {
   if (value === null || value === undefined) return false;
@@ -88,7 +132,7 @@ export function truthy(value: unknown): boolean {
   if (typeof value === "bigint") return value !== 0n;
   if (typeof value === "number") return value !== 0;
   if (typeof value === "string" || value instanceof Uint8Array || Array.isArray(value)) return value.length > 0;
-  if (value instanceof Map) return value.size > 0;
+  if (value instanceof Map || value instanceof Set) return value.size > 0;
   if (Object.getPrototypeOf(value) === Object.prototype) return Object.keys(value).length > 0; // a dict
   return true;
 }
@@ -123,6 +167,7 @@ function compareBytes(a: Uint8Array, b: Uint8Array): number {
 export function equals(a: unknown, b: unknown): boolean {
   if (isNumeric(a) && isNumeric(b)) return compareNumbers(a, b) === 0;
   if (a instanceof Uint8Array && b instanceof Uint8Array) return compareBytes(a, b) === 0;
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((item, i) => equals(item, b[i]));
   return a === b;
 }
 
@@ -273,15 +318,146 @@ function toInt(value: unknown): bigint {
 function len(value: unknown): bigint {
   if (typeof value === "string") return BigInt([...value].length);
   if (value instanceof Uint8Array || Array.isArray(value)) return BigInt(value.length);
-  if (value instanceof Map) return BigInt(value.size);
+  if (value instanceof Map || value instanceof Set) return BigInt(value.size);
   if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
     return BigInt(Object.keys(value).length); // a dict
   }
   throw new TypeError(`object of type ${repr(typeName(value))} has no len()`);
 }
 
-function extreme(operator: string): (...values: unknown[]) => unknown {
-  return (...values) => values.reduce((best, value) => (ORDERS[operator]?.(order(operator, value, best)) ? value : best));
+/** Python's `min` and `max`: of their arguments, or of the items of their one argument. */
+function extreme(name: string, operator: string): (...values: unknown[]) => unknown {
+  return (...values) => {
+    if (values.length === 0) throw new TypeError(`${name} expected at least 1 argument, got 0`);
+    const candidates = values.length === 1 ? [...iterate(values[0])] : values;
+    if (candidates.length === 0) throw new ValueError(`${name}() iterable argument is empty`);
+    return candidates.reduce((best, value) => (ORDERS[operator]?.(order(operator, value, best)) ? value : best));
+  };
+}
+
+function all(value: unknown): boolean {
+  for (const item of iterate(value)) if (!truthy(item)) return false;
+  return true;
+}
+
+function any(value: unknown): boolean {
+  for (const item of iterate(value)) if (truthy(item)) return true;
+  return false;
+}
+
+const LONG = 1n << 63n;
+const isLong = (value: bigint) => -LONG <= value && value < LONG;
+
+/** Neumaier's compensated sum, as CPython's `sum` keeps it for floats: the sum so far and its compensation. */
+function compensated(total: [number, number], x: number): [number, number] {
+  const [f, c] = total;
+  const t = f + x;
+  return [t, c + (Math.abs(f) >= Math.abs(x) ? (f - t) + x : (x - t) + f)];
+}
+
+function finished([f, c]: [number, number]): number {
+  return c !== 0 && Number.isFinite(c) ? f + c : f;
+}
+
+/** Python's `sum(iterable, start)`, as CPython computes it: ints exactly while they fit a C long, then floats, and
+ * ints as floats, with compensation, and anything else by `+`. */
+function sum(iterable: unknown, start: unknown = 0n): unknown {
+  if (typeof start === "string") throw new TypeError("sum() can't sum strings [use ''.join(seq) instead]");
+  if (start instanceof Uint8Array) throw new TypeError("sum() can't sum bytes [use b''.join(seq) instead]");
+  const items = iterate(iterable)[Symbol.iterator]();
+  let result = start;
+  let next = items.next();
+  if (typeof result === "bigint" && isLong(result)) { // ints and bools, while the total fits
+    let total: bigint = result;
+    for (; !next.done; next = items.next()) {
+      const item = next.value;
+      if (!isIntegral(item) || !isLong(int(item)) || !isLong(total + int(item))) break;
+      total += int(item);
+    }
+    result = next.done ? total : arithmetic("+", total, next.value);
+    if (!next.done) next = items.next();
+  }
+  if (typeof result === "number") { // floats, and ints that fit, compensated
+    let total: [number, number] = [result, 0];
+    for (; !next.done; next = items.next()) {
+      const item = next.value;
+      if (typeof item === "number") total = compensated(total, item);
+      else if (isIntegral(item)) total = compensated(total, intToFloat(item));
+      else break;
+    }
+    result = finished(total);
+    if (!next.done) {
+      result = arithmetic("+", result, next.value);
+      next = items.next();
+    }
+  }
+  for (; !next.done; next = items.next()) result = arithmetic("+", result, next.value);
+  return result;
+}
+
+/** Python's `set(iterable)`: its distinct items, the first of equal ones. */
+function set(...values: unknown[]): Set<unknown> {
+  const distinct: unknown[] = [];
+  for (const item of values.length === 0 ? [] : iterate(values[0])) {
+    hashable(item, "a set element");
+    if (!distinct.some((other) => equals(other, item))) distinct.push(item);
+  }
+  return new Set(distinct);
+}
+
+/** Python's `item in container`. */
+function contains(container: unknown, item: unknown): boolean {
+  if (typeof container === "string") {
+    if (typeof item !== "string") throw new TypeError(`'in <string>' requires string as left operand, not ${typeName(item)}`);
+    return container.includes(item);
+  }
+  if (container instanceof Uint8Array) {
+    if (isIntegral(item)) {
+      const byte = int(item);
+      if (byte < 0n || byte > 255n) throw new ValueError("byte must be in range(0, 256)");
+      return container.includes(Number(byte));
+    }
+    if (!(item instanceof Uint8Array)) throw new TypeError(`a bytes-like object is required, not ${repr(typeName(item))}`);
+    return Array.from({ length: container.length - item.length + 1 }, (_, i) => i)
+      .some((i) => compareBytes(container.subarray(i, i + item.length), item) === 0);
+  }
+  if (container instanceof Map || isDict(container)) {
+    hashable(item, "a dict key");
+    return [...iterate(container)].some((key) => equals(key, item));
+  }
+  if (container instanceof Set) hashable(item, "a set element");
+  if (Array.isArray(container) || container instanceof Set || container instanceof PyGenerator) {
+    for (const other of container) if (equals(other, item)) return true;
+    return false;
+  }
+  throw new TypeError(`argument of type ${repr(typeName(container))} is not a container or iterable`);
+}
+
+const SEQUENCES: [string, string, string][] = [ // a sequence's name, its message for a non-int index, for an index out of range
+  ["list", "list indices must be integers or slices, not ", "list index out of range"],
+  ["str", "string indices must be integers, not ", "string index out of range"],
+  ["bytes", "byte indices must be integers or slices, not ", "index out of range"],
+];
+
+/** Python's `value[key]`: an item of a sequence, from the end for a negative index, or a dict's value. */
+function index(value: unknown, key: unknown): unknown {
+  if (Array.isArray(value) || typeof value === "string" || value instanceof Uint8Array) {
+    const [, invalid, outside] = SEQUENCES[Array.isArray(value) ? 0 : typeof value === "string" ? 1 : 2] as [string, string, string];
+    if (!isIntegral(key)) throw new TypeError(invalid + (typeof value === "string" ? repr(typeName(key)) : typeName(key)));
+    const items: unknown[] = typeof value === "string" ? [...value] : value instanceof Uint8Array ? [...value].map(BigInt) : value;
+    let position = int(key);
+    if (!isLong(position)) throw new IndexError("cannot fit 'int' into an index-sized integer");
+    if (position < 0n) position += BigInt(items.length);
+    if (position < 0n || position >= BigInt(items.length)) throw new IndexError(outside);
+    return items[Number(position)];
+  }
+  if (value instanceof Map || isDict(value)) {
+    hashable(key, "a dict key");
+    const found = [...iterate(value)].find((other) => equals(other, key));
+    if (found === undefined) throw new KeyError(repr(key));
+    return value instanceof Map ? value.get(found) : value[found as string];
+  }
+  throw new TypeError(`${repr(typeName(value))} object is not subscriptable`);
 }
 
 /** Python's `round(value)`: to the nearest int, halves to even. */
@@ -313,7 +489,8 @@ function hasattr(value: unknown, name: unknown): boolean {
 /** The builtins a scope provides by default, one per name of `Expressions.BUILTINS`. */
 export const BUILTINS: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["abs", abs], ["bool", truthy], ["float", toFloat], ["getattr", attribute], ["hasattr", hasattr], ["int", toInt],
-  ["len", len], ["max", extreme(">")], ["min", extreme("<")], ["round", round], ["str", str],
+  ["len", len], ["max", extreme("max", ">")], ["min", extreme("min", "<")], ["round", round], ["str", str],
+  ["all", all], ["any", any], ["set", set], ["sum", sum],
 ]);
 
 // --- The scope ---
@@ -396,6 +573,16 @@ function subscript(value: unknown, key: string): unknown {
   throw new TypeError(`${repr(typeName(value))} object is not subscriptable`);
 }
 
+/** A generator, as Python makes one: its iterable evaluated now, its element and conditions as it is consumed. */
+function generator(args: F.Thunk[]): PyGenerator {
+  const items = iterate((args[0] as F.Thunk)());
+  const [element, ...conditions] = args.slice(1) as unknown as ((item: unknown) => unknown)[];
+  function* produce(): Generator<unknown> {
+    for (const item of items) if (conditions.every((condition) => truthy(condition(item)))) yield (element as (item: unknown) => unknown)(item);
+  }
+  return new PyGenerator(produce());
+}
+
 function strict(fn: (...values: unknown[]) => unknown): F.Implementation {
   return (args) => fn(...args.map((argument) => argument()));
 }
@@ -403,9 +590,12 @@ function strict(fn: (...values: unknown[]) => unknown): F.Implementation {
 const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
   ["attribute", (args: F.Thunk[], node: any) => attribute((args[0] as F.Thunk)(), node.attr)],
   ["subscript", (args: F.Thunk[], node: any) => subscript((args[0] as F.Thunk)(), node.key)],
+  ["index", strict((value, key) => index(value, key))],
+  ["generator", generator],
   ["call", call],
   ["compare", new Map<string, F.Implementation>([
     ["==", strict((a, b) => equals(a, b))], ["!=", strict((a, b) => !equals(a, b))],
+    ["in", strict((a, b) => contains(b, a))], ["not in", strict((a, b) => !contains(b, a))],
     ...Object.entries(ORDERS).map(([operator, test]) =>
       [operator, strict((a, b) => test(order(operator, a, b)))] as [string, F.Implementation]),
   ])],

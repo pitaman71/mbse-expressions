@@ -5,6 +5,6 @@ Evaluating a Python expression raises them as Python would, and the MATLAB diale
 `ImportError` for unrecognized names and imports.
 """
 
-from builtins import ImportError, NameError, OverflowError, ZeroDivisionError
+from builtins import ImportError, IndexError, NameError, OverflowError, ZeroDivisionError
 
-__all__ = ["ImportError", "NameError", "OverflowError", "ZeroDivisionError"]
+__all__ = ["ImportError", "IndexError", "NameError", "OverflowError", "ZeroDivisionError"]

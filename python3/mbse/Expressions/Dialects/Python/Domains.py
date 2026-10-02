@@ -14,7 +14,7 @@ from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 
 __all__ = ["Bool", "Int", "Float", "Str", "Bytes", "Integral", "Numeric", "Anything", "COMPARE", "BOOLOP", "BINOP",
-           "UNARYOP", "of"]
+           "UNARYOP", "GENERATOR", "of"]
 
 Bool, Int, Float, Str, Bytes = (D.OfTypes(t.__name__, t) for t in (bool, int, float, str, bytes))
 Integral = D.OfUnion(Bool, Int)
@@ -27,8 +27,9 @@ _FLOAT = D.Function((Numeric, Numeric), Float)
 
 COMPARE: dict[str, D.Signature] = {
     "==": _EQUAL, "!=": _EQUAL, **{operator: _ORDER for operator in ("<", "<=", ">", ">=")},
+    "in": _EQUAL, "not in": _EQUAL,
 }
-"""The comparison operators."""
+"""The comparison operators, membership among them."""
 
 BOOLOP: dict[str, D.Signature] = {"and": D.Either(2), "or": D.Either(2)}
 """The boolean operators, which give one of their operands."""
@@ -48,6 +49,16 @@ UNARYOP: dict[str, D.Signature] = {
     "~": D.Function((Integral,), Int),
 }
 """The unary operators."""
+
+class _Generated(D.Opaque):
+    """A generator expression's signature: what it iterates and yields is not known statically."""
+
+    def items(self, domain: D.Domain) -> D.Domain:
+        return Anything
+
+
+GENERATOR = _Generated()
+"""`(element for name in iterable if condition)`."""
 
 _NATIVES = {bool: Bool, int: Int, float: Float, str: Str, bytes: Bytes}
 

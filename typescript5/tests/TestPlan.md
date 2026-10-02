@@ -23,7 +23,7 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `04_Conformance.ipynb` | CONF | 4 | as in Python, from this side |
 | `05_Framework.ipynb` | FRM | 9 | as in Python; protocols are checked by method presence and `Function.length`, and options objects stand for keyword arguments |
 | `06_Dialects.ipynb` | DIA | 14 | as in Python, with Python expressions written by constructors (DIA-01 asserts there is no `parse`), Python's rules checked against the same tables of values and errors as the Python suite, and a `Module` in place of numpy |
-| `07_Translators.ipynb` | TRN | 9 | as in Python, but for evaluating the NumPy style over columns |
+| `07_Translators.ipynb` | TRN | 10 | as in Python, but for evaluating the NumPy style over columns |
 | `08_Skill.ipynb` | SKL | 3 | as in Python; SKL-02 type-checks the skill's TypeScript program strictly, then runs it |
 | `09_Domains.ipynb` | DOM | 16 | as in Python; domains compare with `equals()`, widths and codes are `bigint`s, and builders are classes (`new D.OfInteger.Builder()`); typed values compare with `equals()`; the IEEE 754 table is checked against `decimal` and the host's floats in Python only |
 | `10_Collections.ipynb` | COL | 7 | as in Python; collections, records and collection domains compare with `equals()`, and a record's fields are a `Map` |

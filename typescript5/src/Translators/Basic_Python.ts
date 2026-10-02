@@ -5,7 +5,13 @@
  * a subscript, `has` is a test that the subscript is not masked, operations are numpy functions (`np.greater_equal`),
  * and `implies(a, b)` is `np.where(a, b, True)`; it adds `import numpy as np`, which it drops translating back. Each
  * reads back its own style. The bitwise operations are Python's (`&`, `|`, `^`, `~`, `<<`, `>>`), or NumPy's
- * functions. */
+ * functions.
+ *
+ * `TRANSLATOR` writes collections with Python's builtins and generator expressions: `all` and `any` are `all(body for
+ * name in collection)` and `any(...)`, the quantifier `count` is `sum(1 for name in collection if body)`, `count(xs)`
+ * is `len(xs)`, `item(xs, i)` is `xs[i]`, `in(x, xs)` is `x in xs`, and `sum`, `min` and `max` are the builtins of one
+ * argument. `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back as `unique`. `entries` has no
+ * Python counterpart, and `NUMPY` writes no collections. */
 
 import { DIALECT as BASIC } from "../Dialects/Basic/Expressions.js";
 import { DIALECT as PYTHON } from "../Dialects/Python/Expressions.js";
@@ -33,6 +39,14 @@ export const TRANSLATOR = new Pairwise(BASIC, PYTHON, [
   ...renames("operation", "name", "unaryop", "operator", { not: "not", neg: "-" }, 1),
   ...renames("operation", "name", "binop", "operator", { bitand: "&", bitor: "|", bitxor: "^", shl: "<<", shr: ">>" }, 2),
   ...renames("operation", "name", "unaryop", "operator", { bitnot: "~" }, 1),
+  new Rule(Basic.quantifier("all"), Python.all_),
+  new Rule(Basic.quantifier("any"), Python.any_),
+  new Rule(Basic.quantifier("count"), Python.count_where),
+  new Rule(Basic.unary("count"), Python.builtin("len")),
+  ...["sum", "min", "max"].map((name) => new Rule(Basic.unary(name), Python.builtin(name))),
+  new Rule(Basic.item, Python.index),
+  new Rule(Basic.in_, Python.in_),
+  new Rule(Basic.unary("unique"), Python.unique, "forward"),
 ]);
 
 export const NUMPY = new Pairwise(BASIC, PYTHON, [

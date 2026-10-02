@@ -27,6 +27,8 @@ back = Translators.between(X.DIALECT, E.DIALECT).forward(formula)
 | bytes | Matlab, Excel, Latex | no counterpart |
 | a Latex `\frac` | any dialect but Python, where it is `/` | no counterpart |
 | an Excel cell, a Python conditional other than `b if a else True`, an extension | a dialect without it | no counterpart |
+| a quantifier or a collection operation | Python | a generator expression or a builtin (`all(p > 0 for p in xs)`, `len(xs)`, `xs[i]`); `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back |
+| a quantifier or a collection operation | any dialect but Python | no counterpart |
 
 A node with no counterpart raises `ValueError` naming it: "Excel cell has no Matlab counterpart". Translating directly
 or through a third dialect gives the same expression, so pick the pair you need.

@@ -109,9 +109,11 @@ class Interpreter:
         operator = Terms._operator(expression)
         implementations = self.operations[kind.KIND]
         thunks = [lambda argument=argument: self.evaluate(argument, scope, active) for argument in arguments]
-        if kind.ROLE == Terms.QUANTIFIER:  # the body, of an item: evaluated with the name bound to it
+        if kind.ROLE == Terms.QUANTIFIER:  # the arguments after the collection, of an item: evaluated with the name bound to it
             name = Terms.name_of(expression)
-            thunks[1] = lambda item: self.evaluate(arguments[1], scope.bind(name, item), active)  # type: ignore[assignment]
+            for i in range(1, len(arguments)):
+                thunks[i] = lambda item, argument=arguments[i]: self.evaluate(  # type: ignore[assignment]
+                    argument, scope.bind(name, item), active)
         if kind.VOCABULARY is None:
             return implementations(thunks, expression, scope)
         if operator not in implementations:

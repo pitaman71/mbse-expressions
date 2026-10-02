@@ -25,8 +25,8 @@ data model and what `role` it plays, and passes the classes to `Declared`, which
   arguments. A kind's `VOCABULARY` maps operator names to signatures; operators outside it are extensions, unless the
   vocabulary is `None`, when any name is accepted and `SIGNATURE` applies to all.
 - `BINDING`: binds the name in its first property to its first argument within the others.
-- `QUANTIFIER`: binds the name in its first property to each item of its first argument, a collection, within its
-  second, and combines the results by its operator (named as an application's is), such as `all`. Its signature also
+- `QUANTIFIER`: binds the name in its first property to each item of its first argument, a collection, within the
+  others (a body, and any conditions), and combines the results by its operator (named as an application's is), such as `all`. Its signature also
   gives the domain of a collection's items, `items(domain)`, for inference.
 - `IMPORT`: makes what it declares (a module, a package's functions) available within its one argument, its body. The
   scope resolves the declaration; `binds()` gives the names it binds for lexical references.
@@ -663,7 +663,8 @@ class Declared:
         if kind.ROLE == QUANTIFIER:  # its name has the domain of the collection's items
             collection = self._infer(arguments[0], environment, memo)
             item = Domains.Anything if signature is None else signature.items(collection)  # type: ignore[attr-defined]
-            domains = [collection, self._infer(arguments[1], {**environment, name_of(expression): item}, memo)]
+            inner = {**environment, name_of(expression): item}
+            domains = [collection, *(self._infer(argument, inner, memo) for argument in arguments[1:])]
         else:
             domains = [self._infer(argument, environment, memo) for argument in arguments]
         if signature is None:

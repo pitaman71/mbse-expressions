@@ -27,10 +27,21 @@ const FLOAT = new D.Function([Numeric, Numeric], Float);
 
 type Entry = [string, D.Signature];
 
-/** The comparison operators. */
+/** The comparison operators, membership among them. */
 export const COMPARE: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
   ["==", EQUAL], ["!=", EQUAL], ...["<", "<=", ">", ">="].map((operator) => [operator, ORDER] as Entry),
+  ["in", EQUAL], ["not in", EQUAL],
 ]);
+
+/** A generator expression's signature: what it iterates and yields is not known statically. */
+class Generated extends D.Opaque {
+  items(_domain: D.Domain): D.Domain {
+    return Anything;
+  }
+}
+
+/** `(element for name in iterable if condition)`. */
+export const GENERATOR = new Generated();
 
 /** The boolean operators, which give one of their operands. */
 export const BOOLOP: ReadonlyMap<string, D.Signature> = new Map([["and", new D.Either(2)], ["or", new D.Either(2)]]);

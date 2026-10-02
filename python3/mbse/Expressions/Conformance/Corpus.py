@@ -28,11 +28,12 @@ def build():
         age.lt(65.5).or_(this.has("email").not_()).implies(E.operation("in", "x", b"\x00\xff", True)))).data
 
     # --- python: every kind, shared names --- import numpy as np / from math import floor /
-    # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else b'\x00')(this)
-    a = P.name("a")
+    # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
+    a, item = P.name("a"), P.name("p")
     python = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("this"), P.ifexp(
         P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18)), P.attribute(P.name("np"), "pi")),
-        P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)), b"\x00"))), alias="np")
+        P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
+        P.generator("p", P.attribute(a, "y"), P.index(item, b"\x00"), item)))), alias="np")
 
     # --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
     # >= 0) || true

@@ -6,8 +6,9 @@ missing attribute raises `AttributeError`. Objects that write their properties t
 mbse-schemas' data, have their properties as attributes.
 
 A `Scope(variables, modules, builtins)` resolves names as Python does, innermost first: names bound by lets and
-imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `bool`, `float`, `getattr`,
-`hasattr`, `int`, `len`, `max`, `min`, `round`, `str`). Nothing else is reachable from an expression, since expressions
+imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`, `float`,
+`getattr`, `hasattr`, `int`, `len`, `max`, `min`, `round`, `set`, `str`, `sum`). A list property is a list of its
+values, a keyed list's too. Nothing else is reachable from an expression, since expressions
 may come from data:
 
 - An import resolves only a module in `modules`, or a submodule of one: `Scope(modules={'numpy': numpy})` allows
@@ -44,8 +45,13 @@ def attribute(value: Any, name: str) -> Any:
         if name not in properties:  # named by its schema, the type it has for expressions
             what = value.schema_name() if callable(getattr(value, "schema_name", None)) else type(value).__name__
             raise AttributeError(f"{what!r} object has no attribute {name!r}")
-        return properties[name]
+        return _listed(properties[name])
     return getattr(value, name)
+
+
+def _listed(value: Any) -> Any:
+    """A property's value as Python reads it: a list as a list of its values, lists of lists too."""
+    return [_listed(item) for item in value.values] if isinstance(value, Validators.ListRecord) else value
 
 
 def _hasattr(value: Any, name: str) -> bool:
@@ -57,8 +63,8 @@ def _hasattr(value: Any, name: str) -> bool:
 
 
 BUILTINS: dict[str, Any] = {
-    "abs": abs, "bool": bool, "float": float, "getattr": attribute, "hasattr": _hasattr, "int": int, "len": len,
-    "max": max, "min": min, "round": round, "str": str,
+    "abs": abs, "all": all, "any": any, "bool": bool, "float": float, "getattr": attribute, "hasattr": _hasattr,
+    "int": int, "len": len, "max": max, "min": min, "round": round, "set": set, "str": str, "sum": sum,
 }
 """The builtins a scope provides by default, one per name of `Expressions.BUILTINS`."""
 
@@ -121,6 +127,12 @@ def _call(arguments: list[F.Thunk], node: Any, scope: Scope) -> Any:
     return function(*(argument() for argument in arguments[1:]))
 
 
+def _generator(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
+    """A generator, as Python makes one: its iterable evaluated now, its element and conditions as it is consumed."""
+    element, conditions = arguments[1], arguments[2:]
+    return (element(item) for item in arguments[0]() if all(condition(item) for condition in conditions))
+
+
 def _boolop(name: str) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
         first = arguments[0]()
@@ -135,7 +147,7 @@ def _strict(function: Callable[..., Any]) -> F.Implementation:
 
 
 _COMPARE = {"==": operator.eq, "!=": operator.ne, "<": operator.lt, "<=": operator.le, ">": operator.gt,
-            ">=": operator.ge}
+            ">=": operator.ge, "in": lambda a, b: a in b, "not in": lambda a, b: a not in b}
 _BINOP = {"+": operator.add, "-": operator.sub, "*": operator.mul, "/": operator.truediv, "//": operator.floordiv,
           "%": operator.mod, "**": operator.pow, "&": operator.and_, "|": operator.or_, "^": operator.xor,
           "<<": operator.lshift, ">>": operator.rshift}
@@ -144,6 +156,8 @@ _UNARYOP = {"not": operator.not_, "-": operator.neg, "+": operator.pos, "~": ope
 _interpreter = F.Interpreter(Expressions.DIALECT, {
     "attribute": lambda arguments, node, scope: attribute(arguments[0](), node.attr),
     "subscript": lambda arguments, node, scope: arguments[0]()[node.key],
+    "index": lambda arguments, node, scope: arguments[0]()[arguments[1]()],
+    "generator": _generator,
     "call": _call,
     "compare": {name: _strict(function) for name, function in _COMPARE.items()},
     "boolop": {name: _boolop(name) for name in ("and", "or")},
