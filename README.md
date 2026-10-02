@@ -27,18 +27,18 @@ namespace package), TypeScript from `@mbse/expressions` (next to `@mbse/schemas`
 ## Getting started
 
 mbse-expressions depends on [mbse-schemas](https://github.com/pitaman71/mbse-schemas), which lives beside it as a
-sibling checkout. Clone this repository, then the siblings at the versions it pins (`siblings.json`):
+sibling checkout. Clone this repository, then the siblings at the commits it pins (`siblings.json`):
 
 ```sh
 git clone git@github.com:pitaman71/mbse-expressions.git
-python3 mbse-expressions/scripts/siblings.py clone   # mbse-schemas, beside it, at its pinned tag
+python3 mbse-expressions/scripts/siblings.py clone   # mbse-schemas, beside it, at its pinned commit
 cd mbse-expressions
 ```
 
 `clone` skips a sibling that is already there, so repositories cloned side by side by hand are used as they are.
-A sibling it clones is checked out at its tag, in detached HEAD; to change it, switch to a branch first
+A sibling it clones is checked out at its pinned commit, in detached HEAD; to change it, switch to a branch first
 (`git -C ../mbse-schemas switch main`). `python3 scripts/siblings.py check` reports when it has moved past its
-pinned tag, which is expected while developing; see `scripts/siblings.py` for `check --strict` and `pin`.
+pinned commit, which is expected while developing; see `scripts/siblings.py` for `check --strict` and `pin`.
 
 For parallel work (several agents, or several tasks at once), give each its own workspace: worktrees of this
 repository and of its siblings, side by side, so that each installs its own siblings and none sees another's

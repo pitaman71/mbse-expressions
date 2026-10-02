@@ -42,7 +42,7 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 ## Commands
 
 ```sh
-python3 scripts/siblings.py clone            # mbse-schemas, beside this repository, at its pinned tag
+python3 scripts/siblings.py clone            # mbse-schemas, beside this repository, at its pinned commit
 python3 scripts/siblings.py check            # the siblings are present and compatible with siblings.json
 cd python3 && uv sync --all-extras           # Python: use uv, never pip
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report
@@ -56,4 +56,4 @@ npm run conformance
 ## Related repositories
 
 - [mbse-schemas](https://github.com/pitaman71/mbse-schemas): the schemas expressions are stored with and refer to. It
-  is a sibling checkout, `../mbse-schemas`, pinned by version in `siblings.json` (see `scripts/siblings.py`).
+  is a sibling checkout, `../mbse-schemas`, pinned by version and commit in `siblings.json` (see `scripts/siblings.py`).
