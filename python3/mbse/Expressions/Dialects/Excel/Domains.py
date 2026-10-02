@@ -17,7 +17,7 @@ from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 
 __all__ = ["Error", "Number", "Text", "Logical", "Errors", "Record", "Scalar", "Anything", "FUNCTIONS", "INFIX",
-           "PREFIX", "FIELD", "MAP", "of", "is_record"]
+           "PREFIX", "FIELD", "MAP", "ARITIES", "of", "is_record", "arity_problem"]
 
 
 @dataclass(frozen=True)
@@ -47,14 +47,27 @@ _ARITHMETIC = D.Function((Scalar, Scalar), Number)
 
 FUNCTIONS: dict[str, D.Signature] = {
     "AND": D.Opaque(Logical), "OR": D.Opaque(Logical), "NOT": D.Function((Scalar,), Logical),
-    "IF": D.Function((Scalar, Anything, Anything), Anything), "ISERROR": D.Function((Anything,), Logical),
+    "IF": D.Opaque(), "ISERROR": D.Function((Anything,), Logical),
     **{name: _ARITHMETIC for name in ("BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT")},
     "ROWS": D.Function((Anything,), Number), "INDEX": D.Function((Anything, Scalar), Anything),
     "MATCH": D.Function((Anything, Anything, Scalar), Number), "ISNUMBER": D.Function((Anything,), Logical),
-    **{name: D.Function((Anything,), Number) for name in ("SUM", "MIN", "MAX")}, "UNIQUE": D.Function((Anything,), Anything),
+    **{name: D.Opaque(Number) for name in ("SUM", "MIN", "MAX")}, "UNIQUE": D.Function((Anything,), Anything),
 }
-"""The worksheet functions: `AND` and `OR` of any number of arguments, the others of the fixed number the dialect
-gives them."""
+"""The worksheet functions: `IF`, `AND`, `OR`, `SUM`, `MIN` and `MAX` take a range of numbers of arguments (see
+`ARITIES`), the others a fixed number."""
+
+ARITIES: dict[str, tuple[int, int]] = {"IF": (2, 3), **{name: (1, 255) for name in ("AND", "OR", "SUM", "MIN", "MAX")}}
+"""The least and the most arguments of the functions that take a range of numbers of them, as Excel's do."""
+
+
+def arity_problem(name: str, count: int) -> str | None:
+    """What is wrong with a function of `ARITIES` applied to `count` arguments, or None."""
+    if name not in ARITIES:
+        return None
+    low, high = ARITIES[name]
+    if low <= count <= high:
+        return None
+    return f"{name} takes {low} {'or' if high == low + 1 else 'to'} {high} arguments, got {count}"
 
 INFIX: dict[str, D.Signature] = {
     **{operator: _LOGIC for operator in ("=", "<>", "<", "<=", ">", ">=")},

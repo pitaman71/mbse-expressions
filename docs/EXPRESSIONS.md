@@ -151,7 +151,7 @@ the parameters that standard defines, and today's natives become their defaults.
 | `Bits` | `width` | |
 | `Bytes` | `width`, fixed or variable | variable (`Bytes`) |
 | `Unicode` | none | `Str` |
-| `Ieee1164` | none | |
+| `Ieee1164` | `width`, optional: one state without it (`std_logic`), that many with it (`std_logic_vector`) | |
 | `Enum` | its members, each with a `printable` value (its name as written) | |
 | `Packed` | an `Enum` (its `domain`), a fixed-width `Integer` or `Bits` that represents it (its `representation`), and an integer `code` per member, the representation of each value | |
 | `Bool`, `Object` | unchanged | |
@@ -197,7 +197,7 @@ the parameters that standard defines, and today's natives become their defaults.
   and their text.
 - **A literal's value is a native of its domain**: an `int` for an `Integer`, a `float` for a binary `Ieee754` and the
   decimal text (a `str`) for a decimal one, `bytes` for `Bits` (big-endian, in the fewest bytes, the unused leading bits
-  zero) and `Bytes`, a `str` for `Unicode`, `Ieee1164` (one of `U X 0 1 Z W L H -`), an `Enum` and a `Packed` enum (a
+  zero) and `Bytes`, a `str` for `Unicode`, `Ieee1164` (one of `U X 0 1 Z W L H -`, or as many as its width, the most significant first), an `Enum` and a `Packed` enum (a
   member's name), and a `bool` for `Bool`. Validation reports a value its domain does not hold.
 - **An `Enum`'s members are unordered**: `eq` and `ne` only. A `Packed` enum orders by its representation, as C
   compares enums by their integers.
@@ -331,7 +331,7 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 | Basic | `literal`, `operation`, `variable`, `let`, `quantifier` | natives, typed values, objects, collections | three-valued (Kleene), no coercion; absent is unknown |
 | Python | `constant`, `name`, `attribute`, `subscript` (`x['k']`), `index` (`xs[i]`), `call`, `compare` (with `in`, `not in`), `boolop`, `binop` (arithmetic and bitwise), `unaryop` (`not`, `-`, `+`, `~`), `ifexp`, `generator` (`(e for p in xs if c)`), `let` (`(lambda a: body)(value)`), `import`, `importfrom`: Python's `ast` | Python's; a list property is a list of its values | Python's: `and`/`or` give an operand, `1 == 1.0`, `True + 1` is 2; absent attributes raise |
 | Matlab | `constant`, `identifier`, `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`, `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique`, `ismember`, and functions of the scope), `field` (`s.age`), `index` (`xs(i)`, from 1), `arrayfun` (`arrayfun(@(p) body, xs)`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct, arrays of them | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; the bit functions take integers from 0 to 2^53; absent fields raise |
-| Excel | `constant`, `name`, `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`), `function` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, `BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`, `ROWS`, `INDEX`, `MATCH`, `ISNUMBER`, `SUM`, `MIN`, `MAX`, `UNIQUE`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`), `map` (`MAP(xs, LAMBDA(p, body))`) | number, text, logical, error, record, arrays of them | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case; the bit functions take integers from 0 to 2^48 - 1, else `#NUM!` |
+| Excel | `constant`, `name`, `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`), `function` (`AND`, `OR`, `NOT`, `IF` (2 or 3 arguments; `AND`, `OR`, `SUM`, `MIN` and `MAX` 1 to 255), `ISERROR`, `BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`, `ROWS`, `INDEX`, `MATCH`, `ISNUMBER`, `SUM`, `MIN`, `MAX`, `UNIQUE`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`), `map` (`MAP(xs, LAMBDA(p, body))`) | number, text, logical, error, record, arrays of them | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case; the bit functions take integers from 0 to 2^48 - 1, else `#NUM!` |
 | Ccpp | `constant` (with an optional type: `5u`, `1.5f`, `(uint8_t)5`), `identifier`, `unary` (`+`, `-`, `!`, `~`), `binary` (`*` ... `\|\|`, with C's precedence), `conditional` (`?:`), `cast` (`(type)x`), `member` (`x.a`, `x->a`), `subscript` (`a[i]`), `call` (functions of the scope) | C's arithmetic types under LP64 (`bool`, `char` ... `unsigned long long`, `int8_t` ... `uint64_t`, `size_t`, `float`, `double`, `long double` as IEEE 754 `binary128`), strings, structs, arrays | C's: the integer promotions and the usual arithmetic conversions; unsigned arithmetic wraps; what C leaves undefined (signed overflow, division by zero, shifts out of range, casts of floats out of range) raises; casts to integers wrap; comparisons give `bool`, as in C++; `?:` keeps its chosen operand's type |
 | SystemVerilog | `constant` (unsized integers, reals, strings), `vector` (sized literals: `8'hff`, `4'b10x1`, `8'sd5`), `identifier`, `unary` (`+`, `-`, `!`, `~` and the reductions `&`, `~&`, `\|`, `~\|`, `^`, `~^`), `binary` (`**` ... `\|\|`, `===`, `==?`, `->`, `<->`, with IEEE 1800's precedence), `conditional`, `concatenation` (`{a, b}`), `replication` (`{n{a}}`), `select` (`a[i]`), `range` (`a[7:4]`), `inside` (with `span`s, `[lo:hi]`), `cast` (`int'(x)`, `signed'(x)`, `8'(x)`), `member`, `call` (system functions and functions of the scope), `method` (`xs.size()`, `xs.sum()`, `xs.min()`), `iterate` (`xs.and(p) with (p > 0)`) | 4-state and 2-state vectors of any width and signedness (`logic`, `bit`, `byte` ... `longint`, `integer`, `time`), `real` and `shortreal`, structs, arrays | IEEE 1800's: operands sized by context or by themselves, extended by signedness; x and z propagate through arithmetic and comparisons, and follow the truth tables of the bitwise and logical operators; `===` and `==?` compare exactly and with wildcards; division by zero gives x; casts convert as assignments do |
 | Latex | `constant` (numbers, `\text{...}`, `\mathrm{true}`), `symbol` (`a`, `\mathit{age}`), `binary` (`=`, `\neq`, `<` ... `\land`, `\lor`, `\implies`, `+`, `-`, `\cdot`), `unary` (`\lnot`, `-`), `frac`, `member` (`x.\mathit{age}`), `function` (`\operatorname{has}`), `where` | number, text, truth | none: notation is written, rendered, checked and translated, and evaluated in the dialects it is translated to |
@@ -413,8 +413,8 @@ Basic and SystemVerilog translate into each other likewise: `implies` is `->`, `
 `1'b1` or `1'b0`, and lets are inlined; `has`, the logical `>>` and the 4-state comparisons have no counterpart yet.
 A sized vector is a literal of a value domain, its base telling which: `Integer` domains are decimal vectors of their
 width and signedness (`8'd200`, `8'sd251` for -5), `Bits` hexadecimal ones (`12'habc`), and `Ieee1164`'s 0, 1, X and
-Z single binary bits (`1'bx`); its other levels, the IEEE 754 formats and wider vectors with x or z bits have no
-counterpart. On integers both dialects represent, translations evaluate alike, a SystemVerilog truth being a single
+Z binary ones (`1'bx` for a `std_logic`, `4'b10xz` for a `std_logic_vector`); back, a vector with x or z bits, or an
+unsigned binary one, is an `Ieee1164` value. Its other levels and the IEEE 754 formats have no counterpart. On integers both dialects represent, translations evaluate alike, a SystemVerilog truth being a single
 bit.
 
 Collections translate to Python's builtins and generator expressions: `all(p.pin > 0 for p in this.ports)`, `any(...)`,
@@ -441,9 +441,9 @@ alike only there.
 ## Open questions
 
 - Collections have no literals, and Basic has no tensor domain over keyed and extended lists, nor `map` or `filter`.
-- Collections translate between Basic and Python, SystemVerilog, MATLAB and Excel, not between those dialects
-  directly (Python and MATLAB, say), nor to Latex or Ccpp; a translation between two of them goes through Basic. `unique` is written as an idiom that does not read back, and
-  `entries` has no counterpart.
+- Collections translate between Basic and Python, SystemVerilog, MATLAB and Excel, and directly between Python,
+  MATLAB and Excel; not to Latex or Ccpp, nor directly between SystemVerilog and the others, which have no translator
+  of their own. `unique` is written as an idiom that does not read back, and `entries` has no counterpart.
 - SystemVerilog's reductions of no items give their identities (0, 1, `1'b1`, `1'b0`), which IEEE 1800 leaves to
   tools; `min()[0]` of an empty array raises, where Basic's `min` is unknown.
 - Matlab and Excel expressions are written as data or through constructors and rendered as source text; they are
@@ -453,11 +453,17 @@ alike only there.
 - `Symbolics` has imports, an expression's dependencies, but no exports. Exports would name what a unit of
   expressions (a module of rules, a MATLAB package, a workbook's defined names) provides to others; they need a unit
   that groups expressions, which no dialect has yet.
-- A wider SystemVerilog vector with x or z bits has no Basic counterpart: Basic has no vector of `Ieee1164` levels.
-- Excel's `IF` takes two or three arguments, and `SUM`, `MIN` and `MAX` any number; the dialect gives them fixed
-  arities (3, and 1) so that its vocabulary has one signature per name. `AND` and `OR` take any number, as Excel's do.
 
 ## Resolved
+
+- An `Ieee1164` domain of a `width` is VHDL's `std_logic_vector`, its value that many states, the most significant
+  first; without one it is a single `std_logic`. SystemVerilog's binary vectors and those with x or z bits are its
+  counterparts.
+- A function may take a range of numbers of arguments: its signature takes any number (arity -1) and its kind checks
+  the range, in validation and in evaluation alike. Excel's `IF` takes 2 or 3 (FALSE without an alternative), and
+  `AND`, `OR`, `SUM`, `MIN` and `MAX` 1 to 255, as Excel's do.
+- The direct translators between Python, MATLAB and Excel write collections as their translators with Basic do, from
+  one table of each dialect's forms (`_Patterns.COLLECTIONS`), so that every route gives the same expression.
 
 - The mbse repositories stay separate, beside each other as sibling checkouts. A dependent installs its siblings as
   they are (`../../mbse-schemas/python3`, `file:../../mbse-schemas/typescript5`), so a change in one is seen at once by

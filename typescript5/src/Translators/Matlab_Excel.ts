@@ -6,7 +6,7 @@
 import { DIALECT as EXCEL } from "../Dialects/Excel/Expressions.js";
 import { DIALECT as MATLAB } from "../Dialects/Matlab/Expressions.js";
 import { Elide, Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
-import { Excel, Matlab, value } from "./_Patterns.js";
+import { Excel, Matlab, collections, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean);
 
@@ -24,4 +24,5 @@ export const TRANSLATOR = new Pairwise(MATLAB, EXCEL, [
   ...renames("unary", "operator", "prefix", "operator", { "-": "-" }, 1),
   ...renames("call", "function", "function", "name", { bitand: "BITAND", bitor: "BITOR", bitxor: "BITXOR", bitshift: "BITLSHIFT" }, 2),
   new Rule(Matlab.shr, Excel.shr),
+  ...collections("Matlab", "Excel"),
 ]);

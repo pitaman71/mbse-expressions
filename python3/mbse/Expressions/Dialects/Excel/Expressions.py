@@ -111,6 +111,10 @@ class _Function(F.Term):
     name: str | None = None
     arguments: tuple[Any, ...] = ()
 
+    def check(self) -> list[str]:
+        problem = Domains.arity_problem(self.name, len(self.arguments))  # type: ignore[arg-type]
+        return [] if problem is None else [problem]
+
 
 @dataclass(eq=False)
 class _Infix(F.Term):

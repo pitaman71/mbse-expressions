@@ -5,9 +5,9 @@
  * write their properties through `accept`). Values are `number`, `string` (text), `boolean` (logical) and
  * `Domains.Error`. Excel's rules apply, not Basic's:
  *
- * - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of
- *   the wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for
- *   them, and `IF`, which evaluates only the branch it takes.
+ * - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
+ *   wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for them,
+ *   and `IF`, which evaluates only the branch it takes (FALSE without an alternative).
  * - Two-valued logic: `AND` and `OR` evaluate every argument; numbers are true when nonzero, and text is `#VALUE!`.
  *   An array among their arguments gives its numbers and logicals, its text ignored; with no value at all, they are
  *   `#VALUE!`.
@@ -16,9 +16,9 @@
  *   value is one); `INDEX(xs, n)` is the element at `n`, from 1 and truncated, else `#REF!` (`#NUM!` for no number);
  *   `MATCH(x, xs, 0)` is the position of the first element equal to `x` (text ignoring case), else `#N/A`, and supports
  *   exact matching only (another match type is `#VALUE!`); `SUM`, `MIN` and `MAX` take an array's numbers, ignoring its
- *   text and logicals (`MIN` and `MAX` of none are 0), or one value as arithmetic converts it; `UNIQUE` gives the
- *   distinct elements, the first of each. An error among an array's elements is the result of these functions but
- *   `MAP`, `ROWS`, `INDEX` and `UNIQUE`.
+ *   text and logicals (`MIN` and `MAX` of none are 0), or a value given alone as arithmetic converts it, over all their
+ *   arguments; `UNIQUE` gives the distinct elements, the first of each. An error among an array's elements is the
+ *   result of these functions but `MAP`, `ROWS`, `INDEX` and `UNIQUE`.
  * - The bit functions (`BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`) convert their arguments as arithmetic
  *   does, and give `#NUM!` for a number that is not an integer from 0 to 2^48 - 1, a shift that is not an integer of
  *   at most 53 either way, and a result beyond 2^48 - 1.
@@ -205,8 +205,15 @@ function arithmetic(apply: (a: number, b: number) => number): F.Implementation {
   };
 }
 
-function logic(combine: (truths: boolean[]) => boolean): F.Implementation {
+/** Throws TypeError when a function of a range of numbers of arguments has another number of them. */
+function counted(name: string, args: F.Thunk[]): void {
+  const problem = Domains.arity_problem(name, args.length);
+  if (problem !== null) throw new TypeError(problem);
+}
+
+function logic(name: string, combine: (truths: boolean[]) => boolean): F.Implementation {
   return (args) => {
+    counted(name, args);
     const truths: (boolean | ExcelError)[] = [];
     for (const value of args.map((argument) => argument())) {
       if (Array.isArray(value)) { // an array's numbers and logicals; its text is ignored
@@ -266,10 +273,16 @@ function numbers(value: unknown): number[] | ExcelError {
   return isError(n) ? n : [n];
 }
 
-function aggregate(combine: (values: number[]) => number): F.Implementation {
+function aggregate(name: string, combine: (values: number[]) => number): F.Implementation {
   return (args) => {
-    const found = numbers((args[0] as F.Thunk)());
-    return isError(found) ? found : combine(found);
+    counted(name, args);
+    const all: number[] = [];
+    for (const argument of args) {
+      const found = numbers(argument());
+      if (isError(found)) return found;
+      all.push(...found);
+    }
+    return combine(all);
   };
 }
 
@@ -311,9 +324,11 @@ function not(args: F.Thunk[]): boolean | ExcelError {
 }
 
 function if_(args: F.Thunk[]): unknown {
+  counted("IF", args);
   const t = truth((args[0] as F.Thunk)());
   if (isError(t)) return t;
-  return t ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)();
+  if (t) return (args[1] as F.Thunk)();
+  return args.length === 3 ? (args[2] as F.Thunk)() : false; // without an alternative, FALSE
 }
 
 function negate(args: F.Thunk[]): number | ExcelError {
@@ -333,12 +348,12 @@ function field(args: F.Thunk[], node: any): unknown {
 
 const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
   ["function", new Map<string, F.Implementation>([
-    ["AND", logic((truths) => truths.every(Boolean))], ["OR", logic((truths) => truths.some(Boolean))],
+    ["AND", logic("AND", (truths) => truths.every(Boolean))], ["OR", logic("OR", (truths) => truths.some(Boolean))],
     ["NOT", not], ["IF", if_], ["ISERROR", (args) => isError((args[0] as F.Thunk)())],
     ...["BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT"].map((name) => [name, bit(name)] as [string, F.Implementation]),
     ["ROWS", rows], ["INDEX", index], ["MATCH", match], ["UNIQUE", unique],
     ["ISNUMBER", (args) => typeof (args[0] as F.Thunk)() === "number"],
-    ["SUM", aggregate(sum)], ["MIN", aggregate(extreme((a, b) => a < b))], ["MAX", aggregate(extreme((a, b) => a > b))],
+    ["SUM", aggregate("SUM", sum)], ["MIN", aggregate("MIN", extreme((a, b) => a < b))], ["MAX", aggregate("MAX", extreme((a, b) => a > b))],
   ])],
   ["infix", new Map<string, F.Implementation>([
     ["=", compare((o) => o === 0)], ["<>", compare((o) => o !== 0)],

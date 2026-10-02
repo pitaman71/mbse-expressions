@@ -3,10 +3,10 @@
  *
  * `Evaluators.OfAny(expression, scope)` evaluates in a `new Scope(variables, { functions })` and gives a
  * `Domains.Logic` for an integral result or a number for a real one. A variable's type is its value's: a `Logic` its
- * own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32 bits), a number a `real`, a string a vector of
- * its bytes (in UTF-8), and a Basic typed value (`Domains.Value`) of an integer domain a 2-state vector of its width and
- * signedness, of bits a 2-state vector, of std_logic a `logic` bit (U, X, W and - as x, L as 0, H as 1), and of a
- * binary IEEE 754 format a `real` or `shortreal`. IEEE 1800's rules apply:
+ * own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32 bits), a number a `real`, a string a vector
+ * of its bytes (in UTF-8), and a Basic typed value (`Domains.Value`) of an integer domain a 2-state vector of its width
+ * and signedness, of bits a 2-state vector, of std_logic a `logic` bit, or a vector of a std_logic_vector's width (U,
+ * X, W and - as x, L as 0, H as 1), and of a binary IEEE 754 format a `real` or `shortreal`. IEEE 1800's rules apply:
  *
  * - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
  *   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its
@@ -94,7 +94,7 @@ function typed(value: unknown): unknown {
       return Logic.number(Domains.vector(Number(domain.width), domain.signed, 2), value.value as bigint);
     }
     if (domain instanceof BD.OfBits.Data) return new Logic(Domains.vector(Number(domain.width), false, 2), fromBytes(value.value as Uint8Array));
-    if (domain instanceof BD.OfIeee1164.Data) return Logic.of(STD_LOGIC[value.value as string] ?? "x");
+    if (domain instanceof BD.OfIeee1164.Data) return Logic.of([...(value.value as string)].map((state) => STD_LOGIC[state] ?? "x").join(""));
     if (domain instanceof BD.OfIeee754.Data && ["binary32", "binary64"].includes(domain.format)) return value.value;
     throw new TypeError(`${domain.name()} has no SystemVerilog type`);
   }

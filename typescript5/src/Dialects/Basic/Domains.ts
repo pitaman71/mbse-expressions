@@ -10,7 +10,8 @@
  * - `OfIeee754`: an IEEE 754-2019 interchange `format`, with a `rounding`-direction attribute.
  * - `OfBits` and `OfBytes`: unformatted patterns, of a `width` in bits, or of a `width` in bytes or of any length.
  * - `OfUnicode`: sequences of code points.
- * - `OfIeee1164`: VHDL's nine-valued logic, one state a value.
+ * - `OfIeee1164`: VHDL's nine-valued logic: one state a value (`std_logic`), or, of a `width`, that many states, the
+ *   most significant first (`std_logic_vector`).
  * - `OfEnum`: one of its `members`, by name; unordered.
  * - `OfPacked`: an enum (its `domain`) represented in a fixed-width integer or bits (its `representation`), member `i`
  *   by `codes[i]`.
@@ -296,13 +297,25 @@ class UnicodeDomain extends Domain {
 class Ieee1164Domain extends Domain {
   static override KIND = "ieee1164";
   static override NATIVE = String;
+  static override FIELDS = ["width"];
+
+  /** Null for one state, a std_logic; a std_logic_vector of `width` states otherwise. */
+  constructor(public width: bigint | null = null) {
+    super();
+  }
 
   override name(): string {
-    return "std_logic";
+    return this.width === null ? "std_logic" : `std_logic_vector${this.width}`;
   }
 
   protected override fits(value: unknown): boolean {
-    return (STATES as readonly unknown[]).includes(value);
+    const states = STATES as readonly string[];
+    if (this.width === null) return states.includes(value as string);
+    return BigInt((value as string).length) === this.width && [...(value as string)].every((state) => states.includes(state));
+  }
+
+  override validate(): string[] {
+    return this.width === null || positive(this.width) ? [] : [`a width must be a positive int, got ${repr(this.width)}`];
   }
 }
 
@@ -505,6 +518,10 @@ class UnicodeBuilder extends DomainBuilder {
 
 class Ieee1164Builder extends DomainBuilder {
   static override DATA = Ieee1164Domain as DomainClass;
+
+  width(width: bigint | null): this {
+    return this.setField("width", width);
+  }
 }
 
 class EnumBuilder extends DomainBuilder {
@@ -547,7 +564,7 @@ const SCHEMAS = new Map<string, Schemas.OfObject.Data>([
   ["bits", new Schemas.OfObject.Builder().properties(integer("width")).create()],
   ["bytes", new Schemas.OfObject.Builder().properties(integer("width")).create()],
   ["unicode", new Schemas.OfObject.Builder().create()],
-  ["ieee1164", new Schemas.OfObject.Builder().create()],
+  ["ieee1164", new Schemas.OfObject.Builder().properties(integer("width")).create()],
   ["enum", new Schemas.OfObject.Builder().properties((p) => p.name("members").of(listOf(String))).create()],
   ["packed", new Schemas.OfObject.Builder().properties((p) => p.name("domain").of(Schema),
     (p) => p.name("representation").of(Schema), (p) => p.name("codes").of(listOf(BigInt))).create()],

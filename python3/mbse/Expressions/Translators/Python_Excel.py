@@ -9,7 +9,7 @@ from mbse.Expressions.Dialects.Excel.Expressions import DIALECT as EXCEL
 from mbse.Expressions.Dialects.Python.Expressions import DIALECT as PYTHON
 from mbse.Expressions.Framework.Translators import Elide, Pairwise, Rule, renames
 
-from ._Patterns import Excel, Python, value
+from ._Patterns import Excel, Python, collections, value
 
 V = value(int, float, str, bool)
 
@@ -30,4 +30,5 @@ TRANSLATOR = Pairwise(PYTHON, EXCEL, [
     *renames("unaryop", "operator", "prefix", "operator", {"-": "-"}, 1),
     *renames("binop", "operator", "function", "name", {
         "&": "BITAND", "|": "BITOR", "^": "BITXOR", "<<": "BITLSHIFT", ">>": "BITRSHIFT"}, 2),
+    *collections("Python", "Excel"),
 ])

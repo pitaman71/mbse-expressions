@@ -10,11 +10,11 @@
  * as `unique`, and `entries` has no counterpart.
  *
  * A sized vector is a Basic literal of a value domain, its base telling which: a literal of an `Integer` domain of a
- * width is a decimal vector of that width and signedness (`8'd200`, `8'sd251` for -5), of a `Bits` domain a
- * hexadecimal one (`12'habc`), and of `Ieee1164` a single binary bit (`1'b1`, `1'bx`: 0, 1, X and Z, the levels
- * SystemVerilog has). Back, a decimal or signed vector is an `Integer`, a single binary bit or one of x or z an
- * `Ieee1164` level, and any other vector of known bits `Bits`; a wider vector with x or z bits has no Basic
- * counterpart. A vector without a base of a single 0 or 1 is a bool. */
+ * width is a decimal vector of that width and signedness (`8'd200`, `8'sd251` for -5), of a `Bits` domain a hexadecimal
+ * one (`12'habc`), and of `Ieee1164` a binary one, a bit for a `std_logic` and a vector of its width for a
+ * `std_logic_vector` (`1'bx`, `4'b10xz`), of the levels SystemVerilog has: 0, 1, X and Z. Back, a vector with x or z
+ * bits or an unsigned binary one is an `Ieee1164` level, or a `std_logic_vector` when wider than a bit; a decimal or
+ * signed vector is an `Integer`, and any other `Bits`. A vector without a base of a single 0 or 1 is a bool. */
 
 import * as D from "../Dialects/Basic/Domains.js";
 import { DIALECT as BASIC } from "../Dialects/Basic/Expressions.js";
@@ -42,15 +42,17 @@ function toVector(attributes: Attributes): Attributes | null {
     const number = (value as Uint8Array).reduce((total, byte) => (total << 8n) | BigInt(byte), 0n);
     return { value: bitsOf(number, Number(domain.width)), base: "h" };
   }
-  if (domain instanceof D.OfIeee1164.Data && (value as string) in LEVELS) return { value: LEVELS[value as string], base: "b" };
+  if (domain instanceof D.OfIeee1164.Data && [...(value as string)].every((state) => state in LEVELS)) {
+    return { value: [...(value as string)].map((state) => LEVELS[state]).join(""), base: "b" };
+  }
   return null;
 }
 
 /** A vector's typed Basic literal. */
 function fromVector(attributes: Attributes): Attributes | null {
   const [bits, signed, base] = [attributes.value as string, Boolean(attributes.signed), attributes.base];
-  if (/[xz]/.test(bits) || (bits.length === 1 && base === "b")) {
-    return bits.length === 1 ? { value: bits.toUpperCase(), domain: new D.OfIeee1164.Data() } : null;
+  if (/[xz]/.test(bits) || (base === "b" && !signed)) {
+    return { value: bits.toUpperCase(), domain: new D.OfIeee1164.Data(bits.length === 1 ? null : BigInt(bits.length)) };
   }
   let number = BigInt("0b" + bits);
   if (base === "d" || signed) {

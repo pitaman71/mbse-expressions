@@ -8,7 +8,8 @@ Value domains name the standard they implement, with only its parameters (see do
 - `OfIeee754`: an IEEE 754-2019 interchange `format`, with a `rounding`-direction attribute.
 - `OfBits` and `OfBytes`: unformatted patterns, of a `width` in bits, or of a `width` in bytes or of any length.
 - `OfUnicode`: sequences of code points.
-- `OfIeee1164`: VHDL's nine-valued logic, one state a value.
+- `OfIeee1164`: VHDL's nine-valued logic: one state a value (`std_logic`), or, of a `width`, that many states, the
+  most significant first (`std_logic_vector`).
 - `OfEnum`: one of its `members`, by name; unordered.
 - `OfPacked`: an enum (its `domain`) represented in a fixed-width integer or bits (its `representation`), member `i`
   by `codes[i]`.
@@ -246,12 +247,19 @@ class _Unicode(_Domain):
 @dataclass(eq=True, repr=False)
 class _Ieee1164(_Domain):
     KIND, NATIVE = "ieee1164", str
+    width: int | None = None  # none for one state, a std_logic; a std_logic_vector of `width` states otherwise
 
     def name(self) -> str:
-        return "std_logic"
+        return "std_logic" if self.width is None else f"std_logic_vector{self.width}"
 
     def _fits(self, value: str) -> bool:
-        return value in STATES
+        if self.width is None:
+            return value in STATES
+        return len(value) == self.width and all(state in STATES for state in value)
+
+    def validate(self) -> list[str]:
+        return [] if self.width is None or _positive(self.width) else [
+            f"a width must be a positive int, got {self.width!r}"]
 
 
 @dataclass(eq=True, repr=False)
@@ -418,6 +426,9 @@ class _UnicodeBuilder(_Builder):
 class _Ieee1164Builder(_Builder):
     _data = _Ieee1164
 
+    def width(self, width: int | None) -> _Ieee1164Builder:
+        return self._set("width", width)
+
 
 class _EnumBuilder(_Builder):
     _data = _Enum
@@ -459,7 +470,7 @@ _SCHEMAS = {
     "bits": Schemas.OfObject.Builder().properties(_int("width")).create(),
     "bytes": Schemas.OfObject.Builder().properties(_int("width")).create(),
     "unicode": Schemas.OfObject.Builder().create(),
-    "ieee1164": Schemas.OfObject.Builder().create(),
+    "ieee1164": Schemas.OfObject.Builder().properties(_int("width")).create(),
     "enum": Schemas.OfObject.Builder().properties(
         lambda p: p.name("members").of(lambda t: t.as_indexed(lambda i: i.of(lambda t: t.as_native(str))))).create(),
     "packed": Schemas.OfObject.Builder().properties(

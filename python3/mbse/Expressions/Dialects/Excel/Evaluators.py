@@ -5,8 +5,8 @@ write their properties through `accept`). Values are Python `float` (number), `s
 `Domains.Error`. Excel's rules apply, not Basic's:
 
 - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
-  wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for them,
-  and `IF`, which evaluates only the branch it takes.
+  wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for them, and
+  `IF`, which evaluates only the branch it takes (FALSE without an alternative).
 - Two-valued logic: `AND` and `OR` evaluate every argument; numbers are true when nonzero, and text is `#VALUE!`.
   An array among their arguments gives its numbers and logicals, its text ignored; with no value at all, they are
   `#VALUE!`.
@@ -15,9 +15,9 @@ write their properties through `accept`). Values are Python `float` (number), `s
   is one); `INDEX(xs, n)` is the element at `n`, from 1 and truncated, else `#REF!` (`#NUM!` for no number); `MATCH(x,
   xs, 0)` is the position of the first element equal to `x` (text ignoring case), else `#N/A`, and supports exact
   matching only (another match type is `#VALUE!`); `SUM`, `MIN` and `MAX` take an array's numbers, ignoring its text and
-  logicals (`MIN` and `MAX` of none are 0), or one value as arithmetic converts it; `UNIQUE` gives the distinct
-  elements, the first of each. An error among an array's elements is the result of these functions but `MAP`, `ROWS`,
-  `INDEX` and `UNIQUE`.
+  logicals (`MIN` and `MAX` of none are 0), or a value given alone as arithmetic converts it, over all their arguments;
+  `UNIQUE` gives the distinct elements, the first of each. An error among an array's elements is the result of these
+  functions but `MAP`, `ROWS`, `INDEX` and `UNIQUE`.
 - The bit functions (`BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`) convert their arguments as arithmetic
   does, and give `#NUM!` for a number that is not an integer from 0 to 2^48 - 1, a shift that is not an integer of at
   most 53 either way, and a result beyond 2^48 - 1.
@@ -167,8 +167,16 @@ def _arithmetic(apply_: Callable[[float, float], float]) -> F.Implementation:
     return apply
 
 
-def _logic(combine: Callable[[list[bool]], bool]) -> F.Implementation:
+def _counted(name: str, arguments: list[F.Thunk]) -> None:
+    """Raises TypeError when a function of a range of numbers of arguments has another number of them."""
+    problem = Domains.arity_problem(name, len(arguments))
+    if problem is not None:
+        raise TypeError(problem)
+
+
+def _logic(name: str, combine: Callable[[list[bool]], bool]) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> bool | Error:
+        _counted(name, arguments)
         truths: list[Any] = []
         for value in [argument() for argument in arguments]:
             if isinstance(value, list):  # an array's numbers and logicals; its text is ignored
@@ -236,10 +244,16 @@ def _numbers(value: Any) -> list[float] | Error:
     return number if isinstance(number, Error) else [number]
 
 
-def _aggregate(combine: Callable[[list[float]], float]) -> F.Implementation:
+def _aggregate(name: str, combine: Callable[[list[float]], float]) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
-        numbers = _numbers(arguments[0]())
-        return numbers if isinstance(numbers, Error) else combine(numbers)
+        _counted(name, arguments)
+        numbers: list[float] = []
+        for argument in arguments:
+            found = _numbers(argument())
+            if isinstance(found, Error):
+                return found
+            numbers += found
+        return combine(numbers)
 
     return apply
 
@@ -273,10 +287,13 @@ def _not(arguments: list[F.Thunk], node: Any, scope: Any) -> bool | Error:
 
 
 def _if(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
+    _counted("IF", arguments)
     truth = _truth(arguments[0]())
     if isinstance(truth, Error):
         return truth
-    return arguments[1]() if truth else arguments[2]()
+    if truth:
+        return arguments[1]()
+    return arguments[2]() if len(arguments) == 3 else False  # without an alternative, FALSE
 
 
 def _negate(arguments: list[F.Thunk], node: Any, scope: Any) -> float | Error:
@@ -324,13 +341,13 @@ def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
 
 _interpreter = F.Interpreter(Expressions.DIALECT, {
     "function": {
-        "AND": _logic(all), "OR": _logic(any), "NOT": _not, "IF": _if,
+        "AND": _logic("AND", all), "OR": _logic("OR", any), "NOT": _not, "IF": _if,
         "ISERROR": lambda arguments, node, scope: isinstance(arguments[0](), Error),
         **{name: _bit(name) for name in ("BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT")},
         "ROWS": _rows, "INDEX": _index, "MATCH": _match, "UNIQUE": _unique,
         "ISNUMBER": lambda arguments, node, scope: type(arguments[0]()) is float,
-        "SUM": _aggregate(_sum), "MIN": _aggregate(lambda numbers: min(numbers, default=0.0)),
-        "MAX": _aggregate(lambda numbers: max(numbers, default=0.0)),
+        "SUM": _aggregate("SUM", _sum), "MIN": _aggregate("MIN", lambda numbers: min(numbers, default=0.0)),
+        "MAX": _aggregate("MAX", lambda numbers: max(numbers, default=0.0)),
     },
     "infix": {
         "=": _compare(lambda a, b: a == b), "<>": _compare(lambda a, b: a != b),

@@ -9,7 +9,7 @@ from mbse.Expressions.Dialects.Excel.Expressions import DIALECT as EXCEL
 from mbse.Expressions.Dialects.Matlab.Expressions import DIALECT as MATLAB
 from mbse.Expressions.Framework.Translators import Elide, Inline, Pairwise, Rule, renames
 
-from ._Patterns import Excel, Matlab, value
+from ._Patterns import Excel, Matlab, collections, value
 
 V = value(int, float, str, bool)
 
@@ -28,4 +28,5 @@ TRANSLATOR = Pairwise(MATLAB, EXCEL, [
     *renames("call", "function", "function", "name", {
         "bitand": "BITAND", "bitor": "BITOR", "bitxor": "BITXOR", "bitshift": "BITLSHIFT"}, 2),
     Rule(Matlab.shr, Excel.shr),
+    *collections("Matlab", "Excel"),
 ])

@@ -6,7 +6,7 @@
 import { DIALECT as EXCEL } from "../Dialects/Excel/Expressions.js";
 import { DIALECT as PYTHON } from "../Dialects/Python/Expressions.js";
 import { Elide, Pairwise, Rule, renames } from "../Framework/Translators.js";
-import { Excel, Python, value } from "./_Patterns.js";
+import { Excel, Python, collections, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean);
 
@@ -27,4 +27,5 @@ export const TRANSLATOR = new Pairwise(PYTHON, EXCEL, [
   ...renames("unaryop", "operator", "prefix", "operator", { "-": "-" }, 1),
   ...renames("binop", "operator", "function", "name", {
     "&": "BITAND", "|": "BITOR", "^": "BITXOR", "<<": "BITLSHIFT", ">>": "BITRSHIFT" }, 2),
+  ...collections("Python", "Excel"),
 ]);

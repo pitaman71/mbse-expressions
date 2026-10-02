@@ -152,3 +152,26 @@ export const Latex = {
   implies: new P("binary", { operator: "\\implies" }, A, B),
   frac: new P("frac", {}, A, B),
 };
+
+/** Each dialect's forms of the collection concepts: the quantifiers `all`, `any` and `count where`, and `count`, `sum`,
+ * `min`, `max`, `item` and `in`. `unique`, written as an idiom that does not read back, is not among them. */
+export const COLLECTIONS: Record<string, Record<string, P>> = {
+  Python: {
+    all: Python.all_, any: Python.any_, "count where": Python.count_where, count: Python.builtin("len"),
+    ...Object.fromEntries(["sum", "min", "max"].map((name) => [name, Python.builtin(name)])), item: Python.index, in: Python.in_,
+  },
+  Matlab: {
+    all: Matlab.over("all"), any: Matlab.over("any"), "count where": Matlab.over("nnz"), count: Matlab.function("numel"),
+    ...Object.fromEntries(["sum", "min", "max"].map((name) => [name, Matlab.function(name)])), item: Matlab.index, in: Matlab.ismember,
+  },
+  Excel: {
+    all: Excel.over("AND"), any: Excel.over("OR"), "count where": Excel.count_where, count: Excel.function("ROWS"),
+    ...Object.fromEntries(["sum", "min", "max"].map((name) => [name, Excel.function(name.toUpperCase())])), item: Excel.index, in: Excel.match,
+  },
+};
+
+/** Rules that translate the collection concepts of the dialect `left` into those of `right`, and back. */
+export function collections(left: string, right: string): Rule[] {
+  return Object.entries(COLLECTIONS[left] as Record<string, P>).map(([concept, pattern]) =>
+    new Rule(pattern, (COLLECTIONS[right] as Record<string, P>)[concept] as P));
+}

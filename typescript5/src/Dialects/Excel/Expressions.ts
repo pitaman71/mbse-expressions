@@ -93,6 +93,11 @@ class _Function extends F.Term {
   static override VOCABULARY = Domains.FUNCTIONS;
   declare name: string;
   declare arguments: any[];
+
+  override check(): string[] {
+    const problem = Domains.arity_problem(this.name, this.arguments.length);
+    return problem === null ? [] : [problem];
+  }
 }
 
 class _Infix extends F.Term {

@@ -9,12 +9,12 @@ is `xs.sum()`, `min(xs)` and `max(xs)` are `xs.min()[0]` and `xs.max()[0]`, `ite
 is `x inside {xs}`. `unique(xs)` is written `xs.unique().size() == xs.size()`, which does not read back as `unique`,
 and `entries` has no counterpart.
 
-A sized vector is a Basic literal of a value domain, its base telling which: a literal of an `Integer` domain of a
-width is a decimal vector of that width and signedness (`8'd200`, `8'sd251` for -5), of a `Bits` domain a hexadecimal
-one (`12'habc`), and of `Ieee1164` a single binary bit (`1'b1`, `1'bx`: 0, 1, X and Z, the levels SystemVerilog has).
-Back, a decimal or signed vector is an `Integer`, a single binary bit or one of x or z an `Ieee1164` level, and any
-other vector of known bits `Bits`; a wider vector with x or z bits has no Basic counterpart. A vector without a base
-of a single 0 or 1 is a bool."""
+A sized vector is a Basic literal of a value domain, its base telling which: a literal of an `Integer` domain of a width
+is a decimal vector of that width and signedness (`8'd200`, `8'sd251` for -5), of a `Bits` domain a hexadecimal one
+(`12'habc`), and of `Ieee1164` a binary one, a bit for a `std_logic` and a vector of its width for a `std_logic_vector`
+(`1'bx`, `4'b10xz`), of the levels SystemVerilog has: 0, 1, X and Z. Back, a vector with x or z bits or an unsigned
+binary one is an `Ieee1164` level, or a `std_logic_vector` when wider than a bit; a decimal or signed vector is an
+`Integer`, and any other `Bits`. A vector without a base of a single 0 or 1 is a bool."""
 
 from __future__ import annotations
 
@@ -38,16 +38,16 @@ def _to_vector(attributes: dict[str, Any]) -> dict[str, Any] | None:
         return {"value": bits, "signed": True, "base": "d"} if domain.signed else {"value": bits, "base": "d"}
     if isinstance(domain, D.OfBits.Data):
         return {"value": format(int.from_bytes(value, "big"), f"0{domain.width}b"), "base": "h"}
-    if isinstance(domain, D.OfIeee1164.Data) and value in _LEVELS:
-        return {"value": _LEVELS[value], "base": "b"}
+    if isinstance(domain, D.OfIeee1164.Data) and all(state in _LEVELS for state in value):
+        return {"value": "".join(_LEVELS[state] for state in value), "base": "b"}
     return None
 
 
 def _from_vector(attributes: dict[str, Any]) -> dict[str, Any] | None:
     """A vector's typed Basic literal."""
     bits, signed, base = attributes["value"], attributes.get("signed", False), attributes.get("base")
-    if any(b in "xz" for b in bits) or (len(bits) == 1 and base == "b"):
-        return {"value": bits.upper(), "domain": D.OfIeee1164.Data()} if len(bits) == 1 else None
+    if any(b in "xz" for b in bits) or (base == "b" and not signed):
+        return {"value": bits.upper(), "domain": D.OfIeee1164.Data(None if len(bits) == 1 else len(bits))}
     if base == "d" or signed:
         number = int(bits, 2)
         if signed and bits[0] == "1":

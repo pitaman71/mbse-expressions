@@ -136,3 +136,22 @@ class Latex:
     has = P("function", X, P("constant", value=K), name="has")
     implies = P("binary", A, B, operator="\\implies")
     frac = P("frac", A, B)
+
+
+COLLECTIONS: dict[str, dict[str, P]] = {
+    "Python": {"all": Python.all_, "any": Python.any_, "count where": Python.count_where, "count": Python.builtin("len"),
+               **{name: Python.builtin(name) for name in ("sum", "min", "max")}, "item": Python.index, "in": Python.in_},
+    "Matlab": {"all": Matlab.over("all"), "any": Matlab.over("any"), "count where": Matlab.over("nnz"),
+               "count": Matlab.function("numel"), **{name: Matlab.function(name) for name in ("sum", "min", "max")},
+               "item": Matlab.index, "in": Matlab.ismember},
+    "Excel": {"all": Excel.over("AND"), "any": Excel.over("OR"), "count where": Excel.count_where,
+              "count": Excel.function("ROWS"), **{name: Excel.function(name.upper()) for name in ("sum", "min", "max")},
+              "item": Excel.index, "in": Excel.match},
+}
+"""Each dialect's forms of the collection concepts: the quantifiers `all`, `any` and `count where`, and `count`, `sum`,
+`min`, `max`, `item` and `in`. `unique`, written as an idiom that does not read back, is not among them."""
+
+
+def collections(left: str, right: str) -> list[Rule]:
+    """Rules that translate the collection concepts of the dialect `left` into those of `right`, and back."""
+    return [Rule(pattern, COLLECTIONS[right][concept]) for concept, pattern in COLLECTIONS[left].items()]

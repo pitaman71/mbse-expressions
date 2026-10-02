@@ -2,10 +2,10 @@
 
 `Evaluators.OfAny(expression, scope)` evaluates in a `Scope(variables, functions)` and gives a `Domains.Logic` for an
 integral result or a float for a real one. A variable's type is its value's: a `Logic` its own, a bool a `bit`, an int
-an `integer` (or a `longint` beyond 32 bits), a float a `real`, a string a vector of its bytes (in UTF-8), and a Basic typed value
-(`Domains.Value`) of an integer domain a 2-state vector of its width and signedness, of bits a 2-state vector, of
-std_logic a `logic` bit (U, X, W and - as x, L as 0, H as 1), and of a binary IEEE 754 format a `real` or `shortreal`.
-IEEE 1800's rules apply:
+an `integer` (or a `longint` beyond 32 bits), a float a `real`, a string a vector of its bytes (in UTF-8), and a Basic
+typed value (`Domains.Value`) of an integer domain a 2-state vector of its width and signedness, of bits a 2-state
+vector, of std_logic a `logic` bit, or a vector of a std_logic_vector's width (U, X, W and - as x, L as 0, H as 1), and
+of a binary IEEE 754 format a `real` or `shortreal`. IEEE 1800's rules apply:
 
 - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its
@@ -88,7 +88,7 @@ def typed(value: Any) -> Any:
         if isinstance(domain, BD.OfBits.Data):
             return Logic(Domains.vector(domain.width, False, 2), int.from_bytes(value.value, "big"))
         if isinstance(domain, BD.OfIeee1164.Data):
-            return Logic.of(_STD_LOGIC.get(value.value, "x"))
+            return Logic.of("".join(_STD_LOGIC.get(state, "x") for state in value.value))
         if isinstance(domain, BD.OfIeee754.Data) and domain.format in ("binary32", "binary64"):
             return value.value
         raise TypeError(f"{domain.name()} has no SystemVerilog type")

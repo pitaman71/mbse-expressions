@@ -7,7 +7,7 @@
 import { DIALECT as MATLAB } from "../Dialects/Matlab/Expressions.js";
 import { DIALECT as PYTHON } from "../Dialects/Python/Expressions.js";
 import { Elide, Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
-import { Matlab, Python, value } from "./_Patterns.js";
+import { Matlab, Python, collections, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean);
 
@@ -28,4 +28,5 @@ export const TRANSLATOR = new Pairwise(PYTHON, MATLAB, [
   ...renames("unaryop", "operator", "unary", "operator", { not: "~", "-": "-" }, 1),
   ...renames("binop", "operator", "call", "function", { "&": "bitand", "|": "bitor", "^": "bitxor", "<<": "bitshift" }, 2),
   new Rule(Python.shr, Matlab.shr),
+  ...collections("Python", "Matlab"),
 ]);

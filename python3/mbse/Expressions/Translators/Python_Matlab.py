@@ -10,7 +10,7 @@ from mbse.Expressions.Dialects.Matlab.Expressions import DIALECT as MATLAB
 from mbse.Expressions.Dialects.Python.Expressions import DIALECT as PYTHON
 from mbse.Expressions.Framework.Translators import Elide, Inline, Pairwise, Rule, renames
 
-from ._Patterns import Matlab, Python, value
+from ._Patterns import Matlab, Python, collections, value
 
 V = value(int, float, str, bool)
 
@@ -31,4 +31,5 @@ TRANSLATOR = Pairwise(PYTHON, MATLAB, [
     *renames("unaryop", "operator", "unary", "operator", {"not": "~", "-": "-"}, 1),
     *renames("binop", "operator", "call", "function", {"&": "bitand", "|": "bitor", "^": "bitxor", "<<": "bitshift"}, 2),
     Rule(Python.shr, Matlab.shr),
+    *collections("Python", "Matlab"),
 ])
