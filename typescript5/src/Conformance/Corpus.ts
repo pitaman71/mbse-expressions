@@ -47,11 +47,11 @@ export function build(): Map<string, Case> {
     M.binary(".*", M.unary("~", M.call("isfield", thisM, "email")), M.unary("-", 1.5))), M.index(M.arrayfun("k", M.field(thisM, "ports"), M.identifier("k")), 2n)), true));
 
   // --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
-  // a * 2 - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
+  // a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
   const [thisX, aX] = [X.name("this"), X.name("a")];
   const excel = X.let_("a", X.field(thisX, "age"), X.function(
     "IF", X.function("AND", X.infix(">=", aX, 18n), X.function("NOT", X.function("ISERROR", X.field(thisX, "email")))),
-    X.infix("-", X.infix("*", aX, 2n), X.cell("B2", "Sheet1")),
+    X.infix("-", X.infix("*", aX, X.function("SUM", X.map_("q", X.field(thisX, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
     X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")));
 
   // --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor

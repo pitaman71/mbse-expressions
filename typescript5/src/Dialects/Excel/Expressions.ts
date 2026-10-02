@@ -7,7 +7,9 @@
  *   A workbook (see `Evaluators`) resolves it; it need not be bound.
  * - `let`: `LET(name, value, body)`.
  * - `function`: a worksheet function applied to ordered arguments, for the functions in `Domains.FUNCTIONS` (`AND`,
- *   `OR`, `NOT`, `IF`, `ISERROR`); other names are add-in functions, which the workbook provides.
+ *   `OR`, `NOT`, `IF`, `ISERROR`, the bit functions, and `ROWS`, `INDEX`, `MATCH`, `ISNUMBER`, `SUM`, `MIN`, `MAX` and
+ *   `UNIQUE` of arrays); other names are add-in functions, which the workbook provides.
+ * - `map`: `MAP(array, LAMBDA(name, body))`, the body's values for each element of the array, bound to `name`.
  * - `infix`: `left <operator> right`, for `=`, `<>`, `<`, `<=`, `>`, `>=`, `+`, `-` and `*`.
  * - `prefix`: `-operand`.
  * - `field`: `value.name`, a field of a record (Excel's data types).
@@ -127,7 +129,19 @@ class _Field extends F.Node {
   declare value: any;
 }
 
-export const DIALECT = new F.Declared("Excel", [_Constant, _Name, _Cell, _Let, _Function, _Infix, _Prefix, _Field], {
+class _Map extends F.Node {
+  static override KIND = "map";
+  static override ROLE = F.QUANTIFIER;
+  static override PROPERTIES = new Map([["name", STR]]);
+  static override SLOTS = ["array", "body"];
+  static override SIGNATURE = Domains.MAP;
+  declare name: string;
+  declare array: any;
+  /** The LAMBDA's, with `name` bound to each element. */
+  declare body: any;
+}
+
+export const DIALECT = new F.Declared("Excel", [_Constant, _Name, _Cell, _Let, _Function, _Infix, _Prefix, _Field, _Map], {
   domain_of: Domains.of,
 });
 export const Builders = DIALECT.Builders;
@@ -170,6 +184,11 @@ export function field(value: unknown, name: string): _Field {
 }
 
 // Excel's precedence, from loosest to tightest: comparison, then + and -, then *, then prefix -.
+/** `MAP(array, LAMBDA(name, body))`. */
+export function map_(name: string, array: unknown, body: unknown): _Map {
+  return new _Map(name, DIALECT.resolve(array), DIALECT.resolve(body));
+}
+
 const PRECEDENCE: Record<string, number> = { "=": 1, "<>": 1, "<": 1, "<=": 1, ">": 1, ">=": 1, "+": 2, "-": 2, "*": 3 };
 const PREFIX = 4, ATOM = 5;
 
@@ -207,6 +226,7 @@ export function render(expression: F.Node): string {
     if (node instanceof _Field) return [`${operand(0, ATOM)}.${fieldName(node.name)}`, ATOM];
     if (node instanceof _Let) return [`LET(${node.name}, ${args[0]?.[0]}, ${args[1]?.[0]})`, ATOM];
     if (node instanceof _Function) return [`${node.name}(${args.map(([text]) => text).join(", ")})`, ATOM];
+    if (node instanceof _Map) return [`MAP(${args[0]?.[0]}, LAMBDA(${node.name}, ${args[1]?.[0]}))`, ATOM];
     if (node instanceof _Prefix) return [`${node.operator}${operand(0, PREFIX)}`, PREFIX];
     const infix = node as _Infix;
     const level = PRECEDENCE[infix.operator] as number;

@@ -105,7 +105,7 @@ objects:
       index: 0
     - argument:
         $ref: s16
-        $schema: Expressions.Excel.OfConstant
+        $schema: Expressions.Excel.OfFunction
       index: 1
   s10:
     kind: cell
@@ -137,8 +137,13 @@ objects:
         $schema: Expressions.Excel.OfField
       index: 0
   s16:
-    kind: constant
-    int: 2
+    kind: function
+    name: SUM
+    arguments:
+    - argument:
+        $ref: s19
+        $schema: Expressions.Excel.OfMap
+      index: 0
   s17:
     kind: cell
     address: C3
@@ -152,3 +157,26 @@ objects:
         $ref: s3
         $schema: Expressions.Excel.OfName
       index: 0
+  s19:
+    kind: map
+    name: q
+    arguments:
+    - argument:
+        $ref: s20
+        $schema: Expressions.Excel.OfField
+      index: 0
+    - argument:
+        $ref: s21
+        $schema: Expressions.Excel.OfName
+      index: 1
+  s20:
+    kind: field
+    name: ports
+    arguments:
+    - argument:
+        $ref: s3
+        $schema: Expressions.Excel.OfName
+      index: 0
+  s21:
+    kind: name
+    name: q

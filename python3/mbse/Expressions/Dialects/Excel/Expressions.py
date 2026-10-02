@@ -6,7 +6,9 @@
   A workbook (see `Evaluators`) resolves it; it need not be bound.
 - `let`: `LET(name, value, body)`.
 - `function`: a worksheet function applied to ordered arguments, for the functions in `Domains.FUNCTIONS` (`AND`,
-  `OR`, `NOT`, `IF`, `ISERROR`); other names are add-in functions, which the workbook provides.
+  `OR`, `NOT`, `IF`, `ISERROR`, the bit functions, and `ROWS`, `INDEX`, `MATCH`, `ISNUMBER`, `SUM`, `MIN`, `MAX` and
+  `UNIQUE` of arrays); other names are add-in functions, which the workbook provides.
+- `map`: `MAP(array, LAMBDA(name, body))`, the body's values for each element of the array, bound to `name`.
 - `infix`: `left <operator> right`, for `=`, `<>`, `<`, `<=`, `>`, `>=`, `+`, `-` and `*`.
 - `prefix`: `-operand`.
 - `field`: `value.name`, a field of a record (Excel's data types).
@@ -28,7 +30,7 @@ from mbse.Schemas.Framework.Visitors import Native
 from . import Domains
 
 __all__ = ["DIALECT", "Builders", "Schema", "constant", "name", "cell", "let_", "function", "infix", "prefix", "field",
-           "render", "address"]
+           "map_", "render", "address"]
 
 _ADDRESS = re.compile(r"\$?([A-Za-z]{1,3})\$?([1-9][0-9]*)")
 
@@ -87,6 +89,18 @@ class _Let(F.Node):
 
 
 @dataclass(eq=False)
+class _Map(F.Node):
+    KIND = "map"
+    ROLE = F.QUANTIFIER
+    PROPERTIES = {"name": str}
+    SLOTS = ("array", "body")
+    SIGNATURE = Domains.MAP
+    name: str | None = None
+    array: Any = None
+    body: Any = None  # the LAMBDA's, with `name` bound to each element
+
+
+@dataclass(eq=False)
 class _Function(F.Node):
     KIND = "function"
     ROLE = F.APPLICATION
@@ -135,7 +149,7 @@ class _Field(F.Node):
     value: Any = None
 
 
-DIALECT = F.Declared("Excel", (_Constant, _Name, _Cell, _Let, _Function, _Infix, _Prefix, _Field),
+DIALECT = F.Declared("Excel", (_Constant, _Name, _Cell, _Let, _Function, _Infix, _Prefix, _Field, _Map),
                      domain_of=Domains.of)
 Builders = DIALECT.Builders
 Schema = DIALECT.Schema
@@ -174,6 +188,11 @@ def prefix(operator: str, operand: Any) -> _Prefix:
 def field(value: Any, name: str) -> _Field:
     """`value.name`."""
     return _Field(name, DIALECT.resolve(value))
+
+
+def map_(name: str, array: Any, body: Any) -> _Map:
+    """`MAP(array, LAMBDA(name, body))`."""
+    return _Map(name, DIALECT.resolve(array), DIALECT.resolve(body))
 
 
 # Excel's precedence, from loosest to tightest: comparison, then + and -, then *, then prefix -.
@@ -225,6 +244,8 @@ def render(expression: Any) -> str:
             return f"LET({node.name}, {arguments[0][0]}, {arguments[1][0]})", _ATOM
         if isinstance(node, _Function):
             return f"{node.name}({', '.join(text for text, _ in arguments)})", _ATOM
+        if isinstance(node, _Map):
+            return f"MAP({arguments[0][0]}, LAMBDA({node.name}, {arguments[1][0]}))", _ATOM
         if isinstance(node, _Prefix):
             return f"{node.operator}{operand(0, _PREFIX)}", _PREFIX
         level = _PRECEDENCE[node.operator]

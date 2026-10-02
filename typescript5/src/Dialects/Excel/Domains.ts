@@ -56,11 +56,16 @@ export const Scalar = new D.OfUnion(NumberDomain, Text, Logical);
 const LOGIC = new D.Function([Scalar, Scalar], Logical);
 const ARITHMETIC = new D.Function([Scalar, Scalar], NumberDomain);
 
-/** The worksheet functions, each with the fixed number of arguments the dialect gives it. */
+/** The worksheet functions: `AND` and `OR` of any number of arguments, the others of the fixed number the dialect
+ * gives them. */
 export const FUNCTIONS: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
-  ["AND", LOGIC], ["OR", LOGIC], ["NOT", new D.Function([Scalar], Logical)],
+  ["AND", new D.Opaque(Logical)], ["OR", new D.Opaque(Logical)], ["NOT", new D.Function([Scalar], Logical)],
   ["IF", new D.Function([Scalar, Anything, Anything], Anything)], ["ISERROR", new D.Function([Anything], Logical)],
   ...["BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT"].map((name) => [name, ARITHMETIC] as [string, D.Signature]),
+  ["ROWS", new D.Function([Anything], NumberDomain)], ["INDEX", new D.Function([Anything, Scalar], Anything)],
+  ["MATCH", new D.Function([Anything, Anything, Scalar], NumberDomain)], ["ISNUMBER", new D.Function([Anything], Logical)],
+  ...["SUM", "MIN", "MAX"].map((name) => [name, new D.Function([Anything], NumberDomain)] as [string, D.Signature]),
+  ["UNIQUE", new D.Function([Anything], Anything)],
 ]);
 
 /** The infix operators. */
@@ -74,6 +79,16 @@ export const PREFIX: ReadonlyMap<string, D.Signature> = new Map([["-", new D.Fun
 
 /** A field of a record. */
 export const FIELD = new D.Function([RecordDomain], Anything);
+
+/** `MAP`'s signature: the domain of an array's elements is not known statically. */
+class Iterated extends D.Opaque {
+  items(_domain: D.Domain): D.Domain {
+    return Anything;
+  }
+}
+
+/** `MAP(array, LAMBDA(name, body))`. */
+export const MAP = new Iterated();
 
 const NATIVES: ReadonlyMap<string, D.Domain> = new Map([
   ["bool", Logical], ["int", NumberDomain], ["float", NumberDomain], ["str", Text],

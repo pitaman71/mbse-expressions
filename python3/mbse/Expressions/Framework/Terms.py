@@ -614,7 +614,7 @@ class Declared:
             scopes = [bound | set(expression.binds()) if not problems else bound] * len(arguments)
         if kind.ROLE in (APPLICATION, QUANTIFIER) and not problems and kind.VOCABULARY is not None:
             operator, vocabulary = _operator(expression), kind.VOCABULARY
-            if operator in vocabulary and vocabulary[operator].arity() != len(arguments):
+            if operator in vocabulary and vocabulary[operator].arity() not in (-1, len(arguments)):  # -1: any number
                 problems.append(f"{operator} takes {vocabulary[operator].arity()} arguments, got {len(arguments)}")
             elif core and operator not in vocabulary:
                 problems.append(f"{operator!r} is not a core operation")

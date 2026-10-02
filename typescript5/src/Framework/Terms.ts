@@ -758,7 +758,7 @@ export class Declared implements Dialect {
     if ((kind.ROLE === APPLICATION || kind.ROLE === QUANTIFIER) && found.length === 0 && kind.VOCABULARY !== null) {
       const operator = operatorOf(expression);
       const signature = kind.VOCABULARY.get(operator);
-      if (signature !== undefined && signature.arity() !== args.length) {
+      if (signature !== undefined && ![-1, args.length].includes(signature.arity())) { // -1: any number
         found.push(`${operator} takes ${signature.arity()} arguments, got ${args.length}`);
       } else if (core && signature === undefined) {
         found.push(`${repr(operator)} is not a core operation`);

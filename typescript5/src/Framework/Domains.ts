@@ -24,6 +24,7 @@ export interface Domain {
 
 /** The domains an operator takes and gives. */
 export interface Signature {
+  /** The number of arguments it takes, or -1 for any number. */
   arity(): number;
   /** The domain of the result for arguments of these domains; `null` if the operator does not apply to them. */
   result(args: readonly Domain[]): Domain | null;

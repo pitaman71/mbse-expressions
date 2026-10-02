@@ -121,6 +121,6 @@ class Interpreter:
                 return self._extension(operator, thunks, expression, scope)
             raise NotImplementedError(f"{operator!r} is not a core operation")
         arity = kind.VOCABULARY[operator].arity()
-        if len(arguments) != arity:
+        if arity >= 0 and len(arguments) != arity:  # a negative arity takes any number
             raise TypeError(f"{operator} takes {arity} arguments, got {len(arguments)}")
         return implementations[operator](thunks, expression, scope)

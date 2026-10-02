@@ -128,6 +128,19 @@ export const Excel = {
   implies: new P("function", { name: "IF" }, A, B, new P("constant", { value: true })),
   if_: new P("function", { name: "IF" }, A, B, C),
   shr: new P("function", { name: "BITRSHIFT" }, A, B),
+  /** AND(MAP(a, LAMBDA(n, b))). */
+  over: (fn: string) => new P("function", { name: fn }, new P("map", { name: N }, A, B)),
+  /** SUM(MAP(a, LAMBDA(n, IF(b, 1, 0)))). */
+  count_where: new P("function", { name: "SUM" }, new P("map", { name: N }, A,
+    new P("function", { name: "IF" }, B, new P("constant", { value: 1n }), new P("constant", { value: 0n })))),
+  /** ROWS, SUM, MIN, MAX. */
+  function: (name: string) => new P("function", { name }, A),
+  /** INDEX(a, b + 1). */
+  index: new P("function", { name: "INDEX" }, A, new P("infix", { operator: "+" }, B, new P("constant", { value: 1n }))),
+  /** ISNUMBER(MATCH(a, b, 0)). */
+  match: new P("function", { name: "ISNUMBER" }, new P("function", { name: "MATCH" }, A, B, new P("constant", { value: 0n }))),
+  unique: new P("infix", { operator: "=" }, new P("function", { name: "ROWS" }, new P("function", { name: "UNIQUE" }, A)),
+    new P("function", { name: "ROWS" }, A)),
 };
 
 export const Latex = {

@@ -43,11 +43,11 @@ def build():
         M.binary(".*", M.unary("~", M.call("isfield", this_, "email")), M.unary("-", 1.5))), M.index(M.arrayfun("k", M.field(this_, "ports"), M.identifier("k")), 2)), True))
 
     # --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
-    # a * 2 - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
+    # a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
     this_, a = X.name("this"), X.name("a")
     excel = X.let_("a", X.field(this_, "age"), X.function(
         "IF", X.function("AND", X.infix(">=", a, 18), X.function("NOT", X.function("ISERROR", X.field(this_, "email")))),
-        X.infix("-", X.infix("*", a, 2), X.cell("B2", "Sheet1")),
+        X.infix("-", X.infix("*", a, X.function("SUM", X.map_("q", X.field(this_, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
         X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")))
 
     # --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor

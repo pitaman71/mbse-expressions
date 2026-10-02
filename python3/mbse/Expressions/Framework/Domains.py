@@ -41,7 +41,9 @@ class Domain(Protocol):
 class Signature(Protocol):
     """The domains an operator takes and gives."""
 
-    def arity(self) -> int: ...
+    def arity(self) -> int:
+        """The number of arguments it takes, or -1 for any number."""
+        ...
 
     def result(self, arguments: Sequence[Domain]) -> Domain | None:
         """The domain of the result for arguments of these domains; `None` if the operator does not apply to them."""

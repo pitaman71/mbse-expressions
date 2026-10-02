@@ -119,6 +119,13 @@ class Excel:
     implies = P("function", A, B, P("constant", value=True), name="IF")
     if_ = P("function", A, B, C, name="IF")
     shr = P("function", A, B, name="BITRSHIFT")
+    over = staticmethod(lambda function: P("function", P("map", A, B, name=N), name=function))  # AND(MAP(a, LAMBDA(n, b)))
+    count_where = P("function", P("map", A, P("function", B, P("constant", value=1), P("constant", value=0), name="IF"), name=N),
+                    name="SUM")  # SUM(MAP(a, LAMBDA(n, IF(b, 1, 0))))
+    function = staticmethod(lambda name: P("function", A, name=name))  # ROWS, SUM, MIN, MAX
+    index = P("function", A, P("infix", B, P("constant", value=1), operator="+"), name="INDEX")  # INDEX(a, b + 1)
+    match = P("function", P("function", A, B, P("constant", value=0), name="MATCH"), name="ISNUMBER")  # ISNUMBER(MATCH(a, b, 0))
+    unique = P("infix", P("function", P("function", A, name="UNIQUE"), name="ROWS"), P("function", A, name="ROWS"), operator="=")
 
 
 class Latex:

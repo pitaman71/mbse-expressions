@@ -113,7 +113,7 @@ export class Interpreter {
       throw new NotImplementedError(`${repr(operator)} is not a core operation`);
     }
     const arity = (kind.VOCABULARY.get(operator) as { arity(): number }).arity();
-    if (args.length !== arity) throw new TypeError(`${operator} takes ${arity} arguments, got ${args.length}`);
+    if (arity >= 0 && args.length !== arity) throw new TypeError(`${operator} takes ${arity} arguments, got ${args.length}`);
     return implementation(thunks, expression, scope);
   }
 }
