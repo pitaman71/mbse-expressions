@@ -44,7 +44,6 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 ```sh
 python3 scripts/siblings.py clone            # mbse-schemas, beside this repository, at its pinned commit
 python3 scripts/siblings.py check            # the siblings are present and compatible with siblings.json
-python3 -m unittest discover -s scripts      # siblings.py itself, in scratch repositories
 cd python3 && uv sync --all-extras           # Python: use uv, never pip
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report
 uv run python -m mbse.Expressions.Conformance.write
