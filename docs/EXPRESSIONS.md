@@ -446,15 +446,19 @@ alike only there.
   of their own. `unique` is written as an idiom that does not read back, and `entries` has no counterpart.
 - SystemVerilog's reductions of no items give their identities (0, 1, `1'b1`, `1'b0`), which IEEE 1800 leaves to
   tools; `min()[0]` of an empty array raises, where Basic's `min` is unknown.
-- Matlab and Excel expressions are written as data or through constructors and rendered as source text; they are
-  not parsed from source text yet (Python's are, in Python). `Expressions.from_` still reads Python functions into Basic
-  directly; it could become `Python.Expressions.parse` followed by translation to Basic.
+- Reading rules from source text and writing them back is the work of a bridge between mbse-programs' syntax trees
+  and the dialects' terms (see Resolved). Until it exists, every dialect's `render`, `Python.Expressions.parse` and
+  `Expressions.from_` stay here; whether they move to the bridge or delegate to it is undecided.
 - Excel's ranges (`A1:B3`) and structured references (`Table1[@age]`) are not modeled; they need array values.
 - `Symbolics` has imports, an expression's dependencies, but no exports. Exports would name what a unit of
   expressions (a module of rules, a MATLAB package, a workbook's defined names) provides to others; they need a unit
   that groups expressions, which no dialect has yet.
 
 ## Resolved
+
+- Parsing and printing source code belong in mbse-programs, which holds each language's complete syntax tree with an
+  established parser and printer, not in mbse-expressions, whose dialects hold the terms of rules. No dialect gains a
+  parser here; a rule in source text is read by mbse-programs and translated to a dialect.
 
 - An `Ieee1164` domain of a `width` is VHDL's `std_logic_vector`, its value that many states, the most significant
   first; without one it is a single `std_logic`. SystemVerilog's binary vectors and those with x or z bits are its
