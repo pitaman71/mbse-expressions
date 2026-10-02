@@ -7,8 +7,9 @@ them for constraints.
 
 ```python
 from mbse.Expressions import Evaluators, Expressions
+from mbse.Expressions.Dialects import Python
 
-senior = Expressions.from_(lambda contact: contact.age >= 65 and contact.email is not None)
+senior = Python.Text.FromFunction(lambda contact: contact.age >= 65 and contact.email is not None)
 Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value is unknown
 ```
 
@@ -98,17 +99,17 @@ imports and cell references as those languages do, and evaluate by their rules:
 
 ```python
 from mbse.Expressions import Translators
-from mbse.Expressions.Dialects.Excel import Expressions as Excel
+from mbse.Expressions.Dialects.Excel import Expressions as Excel, Text as ExcelText
 
 formula = Translators.between(Expressions.DIALECT, Excel.DIALECT).forward(senior)
-Excel.render(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email)))'
+ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email)))'
 ```
 
 ## Status
 
 Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Basic,
 Python, Matlab, Excel and Latex dialects, and translators between every pair; in the Basic dialect, literals,
-operations, variables and lets, with builders and meta-schemas; writers (and, in Python, `Expressions.from_`);
+operations, variables and lets, with builders and meta-schemas; writers (and, in Python, `Python.Text.FromFunction`);
 `validate()`; evaluation of the core operations with three-valued logic. Not built yet: the collection operations
 (`count`, `in`, `all`, `any`), and the evaluator interface through which mbse-schemas will choose union branches and
 check constraints.

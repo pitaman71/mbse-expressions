@@ -10,18 +10,17 @@
 - `field`: `value.name`, a field of a struct.
 - `index`: `value(index)`, an element of an array, from 1.
 - `arrayfun`: `arrayfun(@(name) body, array)`, the body's values for each element of the array, bound to `name`.
-- `import`: `import pkg.fn` or `import pkg.*`, which make a package's functions callable by their short names within
-  its body, the rest of the expression; `render` writes it as a line before it. Functions are also found on the path
+- `import`: `import pkg.fn` or `import pkg.*`, which make a package's functions callable by their short names within its
+  body, the rest of the expression; `Text.ToText` writes it as a line before it. Functions are also found on the path
   and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that evaluates them (see `Evaluators`).
 
 There is no binding: translators substitute a let's value for its name. The meta-schemas are registered as
-'Expressions.Matlab.Of<Kind>'. `render` writes an expression as MATLAB source, e.g. `this.age >= 18 && isfield(this,
-"email")`.
+'Expressions.Matlab.Of<Kind>'. `Text.ToText` writes an expression as MATLAB source, e.g. `this.age >= 18 &&
+isfield(this, "email")`.
 """
 
 from __future__ import annotations
 
-import math
 import re
 from dataclasses import dataclass
 from typing import Any
@@ -32,7 +31,7 @@ from mbse.Schemas.Framework.Visitors import Native
 from . import Domains
 
 __all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "binary", "unary", "call", "field", "index",
-           "arrayfun", "import_", "render"]
+           "arrayfun", "import_"]
 
 
 @dataclass(eq=False)
@@ -193,54 +192,3 @@ def arrayfun(name: str, array: Any, body: Any) -> _Arrayfun:
 def import_(name: str, body: Any) -> _Import:
     """`import name`, then `body`."""
     return _Import(name, DIALECT.resolve(body))
-
-
-# MATLAB's precedence, from loosest to tightest; unary operators bind tighter than all of these but `.`.
-_PRECEDENCE = {"||": 1, "&&": 2, "==": 3, "~=": 3, "<": 3, "<=": 3, ">": 3, ">=": 3, "+": 4, "-": 4, ".*": 5}
-_UNARY, _ATOM = 6, 7
-
-
-def _constant(value: Native) -> str:
-    if type(value) is bool:
-        return "true" if value else "false"
-    if type(value) is str:
-        return '"' + value.replace('"', '""') + '"'
-    if type(value) is float and not math.isfinite(value):
-        return "NaN" if math.isnan(value) else "Inf" if value > 0 else "-Inf"
-    return repr(value)
-
-
-def render(expression: Any) -> str:
-    """The expression as MATLAB source, parenthesized only where precedence requires: one line per import around it,
-    then the expression."""
-    lines = []
-    while isinstance(expression, _Import):
-        lines.append(f"import {expression.name}")
-        expression = expression.body
-
-    def write(node: Any, arguments: list[tuple[str, int]]) -> tuple[str, int]:
-        def operand(index: int, level: int) -> str:
-            text, precedence = arguments[index]
-            return text if precedence >= level else f"({text})"
-
-        if isinstance(node, _Constant):
-            text = _constant(node.value)
-            return text, _UNARY if text.startswith("-") else _ATOM
-        if isinstance(node, _Identifier):
-            return node.name, _ATOM
-        if isinstance(node, _Field):
-            return f"{operand(0, _ATOM)}.{node.name}", _ATOM
-        if isinstance(node, _Call):
-            return f"{node.function}({', '.join(text for text, _ in arguments)})", _ATOM
-        if isinstance(node, _Index):
-            return f"{operand(0, _ATOM)}({arguments[1][0]})", _ATOM
-        if isinstance(node, _Arrayfun):
-            return f"arrayfun(@({node.name}) {arguments[1][0]}, {arguments[0][0]})", _ATOM
-        if isinstance(node, _Import):
-            raise ValueError("an import can only enclose the whole expression")
-        if isinstance(node, _Unary):
-            return f"{node.operator}{operand(0, _UNARY)}", _UNARY
-        level = _PRECEDENCE[node.operator]
-        return f"{operand(0, level)} {node.operator} {operand(1, level + 1)}", level
-
-    return "\n".join([*lines, F.fold(expression, write)[0]])

@@ -3,3 +3,4 @@
 
 export * as Domains from "./Domains.js";
 export * as Expressions from "./Expressions.js";
+export * as Text from "./Text.js";

@@ -6,7 +6,7 @@ mirrors Python name for name, snake_case included (`schema_of`, `name_of`), and 
 
 ## A complete program
 
-The same rule as in Python, built with writers, which TypeScript uses in place of `from_`.
+The same rule as in Python, built with writers, which TypeScript uses in place of Python's `Text.FromFunction`.
 
 ```typescript
 import { Evaluators, Expressions as E } from "@mbse/expressions";
@@ -42,10 +42,10 @@ const rule = JSON.FromJSON(E.Builders).Reachable(schema, text) as E.OfAny.Data; 
 
 // Translate it into other languages; each evaluates by its own rules.
 const formula = Translators.between(E.DIALECT, Excel.Expressions.DIALECT).forward(rule);
-check(Excel.Expressions.render(formula) === "=AND(contact.age >= 65, NOT(ISERROR(contact.email)))", "formula");
+check(Excel.Text.ToText(formula) === "=AND(contact.age >= 65, NOT(ISERROR(contact.email)))", "formula");
 check(Excel.Evaluators.OfAny(formula, { contact: eve }) === Excel.Evaluators.Error.of("#FIELD!"), "an error value, not unknown");
 const code = Translators.between(E.DIALECT, Python.Expressions.DIALECT).forward(rule);
-check(Python.Expressions.render(code) === "contact.age >= 65 and hasattr(contact, 'email')", "python");
+check(Python.Text.ToText(code) === "contact.age >= 65 and hasattr(contact, 'email')", "python");
 
 // A union value is a record of its one branch, by name, so a rule reads it like any object.
 const self = E.variable("this");
@@ -65,11 +65,11 @@ check(Evaluators.predicate(self.reach.has("email"), card) === true, "by email");
 |---|---|
 | `int`, `float` values (`18`, `18.0`) | `bigint` and `number` (`18n`, `18`): `18` is a float, and `ge(get(x, 'age'), 18)` against an int age is unknown |
 | `None` | `null` |
-| `E.from_(lambda this: ...)` | none: use writers. `this` is reserved, so name that variable `self` |
+| `Python.Text.FromFunction(lambda this: ...)` | none: use writers. `this` is reserved, so name that variable `self` |
 | `Domains.OfInteger.Builder().width(8)`, domains and typed values compared with `==` | `new Domains.OfInteger.Builder().width(8n)`, compared with `.equals()` |
 | `validate(bound={"this"}, core=True)`, keyword arguments | options objects: `validate({ bound: ["this"], core: true })`, `new Scope(variables, { modules })` |
 | `Pattern("operation", A, B, name="eq")` | `new Pattern("operation", { name: "eq" }, A, B)` |
-| `Python.parse(source)` | none: build Python expressions with constructors (`P.compare(">=", P.attribute(P.name("x"), "age"), 18n)`) |
+| `Python.Text.FromText(source)` | none: build Python expressions with constructors (`P.compare(">=", P.attribute(P.name("x"), "age"), 18n)`) |
 | Python expressions evaluated by Python, with real modules | a model of Python's rules; modules are `new Python.Evaluators.Module(name, { members })`; no numpy |
 | `NameError`, `ImportError`, `ZeroDivisionError`, `OverflowError` | classes of the same names in `@mbse/expressions/Framework`'s `Errors` |
 | Excel's `Error("#FIELD!")`, equal by value | `Error.of("#FIELD!")`, one instance per code, compared with `===` |

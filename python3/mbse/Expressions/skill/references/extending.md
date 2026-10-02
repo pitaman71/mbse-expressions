@@ -33,7 +33,7 @@ class _Frac(F.Term):                                   # LaTeX's \frac{numerator
 DIALECT = F.Declared("Latex", (_Constant, _Symbol, _Frac), domain_of=Domains.of)
 ```
 
-Then write `render`, and an evaluator on `Framework.Evaluators.Interpreter` with one implementation per operator (each
+Then write its `Text` module, with `ToText(expression)`, and an evaluator on `Framework.Evaluators.Interpreter` with one implementation per operator (each
 takes thunks for its arguments, so it decides what to evaluate) and a scope derived from
 `Framework.Symbolics.Variables`. Evaluation is optional: a dialect may only render and translate.
 

@@ -17,12 +17,12 @@ npm run conformance           # regenerate ../conformance/typescript5
 
 | Notebook | Suite | Cases | Focus |
 |---|---|---|---|
-| `01_Expressions.ipynb` | EXP | 12 | as in Python; validation options are an object literal, and a writer's probes are JavaScript's (`then`, `toJSON`, symbols); EXP-12 asserts there is no `from_` |
+| `01_Expressions.ipynb` | EXP | 12 | as in Python; validation options are an object literal, and a writer's probes are JavaScript's (`then`, `toJSON`, symbols); EXP-12 asserts `Python.Text` has no `FromFunction` |
 | `02_Evaluators.ipynb` | EVL | 7 | as in Python; evaluation scopes are object literals |
 | `03_Visitors.ipynb` | VIS | 2 | as in Python, checked at runtime by method presence and `Function.length` |
 | `04_Conformance.ipynb` | CONF | 4 | as in Python, from this side |
 | `05_Framework.ipynb` | FRM | 9 | as in Python; protocols are checked by method presence and `Function.length`, and options objects stand for keyword arguments |
-| `06_Dialects.ipynb` | DIA | 17 | as in Python, with Python expressions written by constructors (DIA-01 asserts there is no `parse`), Python's rules checked against the same tables of values and errors as the Python suite, and a `Module` in place of numpy |
+| `06_Dialects.ipynb` | DIA | 17 | as in Python, with Python expressions written by constructors (DIA-01 asserts `Python.Text` has no `FromText`), Python's rules checked against the same tables of values and errors as the Python suite, and a `Module` in place of numpy |
 | `07_Translators.ipynb` | TRN | 14 | as in Python, but for evaluating the NumPy style over columns |
 | `08_Skill.ipynb` | SKL | 3 | as in Python; SKL-02 type-checks the skill's TypeScript program strictly, then runs it |
 | `09_Domains.ipynb` | DOM | 16 | as in Python; domains compare with `equals()`, widths and codes are `bigint`s, and builders are classes (`new D.OfInteger.Builder()`); typed values compare with `equals()`; the IEEE 754 table is checked against `decimal` and the host's floats in Python only |

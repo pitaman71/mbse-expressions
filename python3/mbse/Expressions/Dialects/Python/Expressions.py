@@ -12,21 +12,19 @@
   of conditions, which binds `name` to each item of `iterable` within the element and the conditions. As the only
   argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
 - `let`: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
-- `import` (`import module` or `import module as alias`) and `importfrom` (`from module import name` or `... as
-  alias`) bind a name within their body, which is the rest of the expression; `render` writes them as the lines before
-  it. What they may import is up to the scope that evaluates them (see `Evaluators`).
+- `import` (`import module` or `import module as alias`) and `importfrom` (`from module import name` or `... as alias`)
+  bind a name within their body, which is the rest of the expression; `Text.ToText` writes them as the lines before it.
+  What they may import is up to the scope that evaluates them (see `Evaluators`).
 
 A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of calls, not a dialect.
 
-The meta-schemas are registered as 'Expressions.Python.Of<ast class>' ('Expressions.Python.OfBinOp', ...). `render`
-writes an expression as Python source, parenthesized only where precedence requires, and `parse` reads one back:
+The meta-schemas are registered as 'Expressions.Python.Of<ast class>' ('Expressions.Python.OfBinOp', ...). `Text.ToText`
+writes an expression as Python source, parenthesized only where precedence requires, and `Text.FromText` reads one back:
 imports, then one expression.
 """
 
 from __future__ import annotations
 
-import ast
-import math
 from dataclasses import dataclass
 from typing import Any
 
@@ -36,7 +34,7 @@ from mbse.Schemas.Framework.Visitors import Native
 from . import Domains
 
 __all__ = ["DIALECT", "BUILTINS", "Builders", "Schema", "constant", "name", "attribute", "subscript", "call", "compare", "boolop",
-           "binop", "unaryop", "ifexp", "let_", "import_", "importfrom", "render", "parse"]
+           "binop", "unaryop", "ifexp", "let_", "import_", "importfrom"]
 
 
 BUILTINS = frozenset({"abs", "all", "any", "bool", "float", "getattr", "hasattr", "int", "len", "max", "min", "round", "set",
@@ -309,168 +307,3 @@ def import_(module: str, body: Any, alias: str | None = None) -> _Import:
 def importfrom(module: str, name: str, body: Any, alias: str | None = None) -> _ImportFrom:
     """`from module import name [as alias]`, then `body`."""
     return _ImportFrom(module, name, alias, _spec(body))
-
-
-# --- Rendering ---
-
-(_LAMBDA, _IF, _OR, _AND, _NOT, _COMPARE, _BITOR, _BITXOR, _BITAND, _SHIFT, _SUM, _PRODUCT, _UNARY, _POWER,
- _PRIMARY) = range(15)
-_BINOP_LEVELS = {"+": _SUM, "-": _SUM, "*": _PRODUCT, "/": _PRODUCT, "//": _PRODUCT, "%": _PRODUCT, "**": _POWER,
-                 "|": _BITOR, "^": _BITXOR, "&": _BITAND, "<<": _SHIFT, ">>": _SHIFT}
-
-
-def _constant(value: Native) -> tuple[str, int]:
-    if type(value) is float and not math.isfinite(value):
-        text = "float('nan')" if math.isnan(value) else "float('inf')" if value > 0 else "-float('inf')"
-    else:
-        text = repr(value)
-    return text, _UNARY if text.startswith("-") else _PRIMARY
-
-
-def _import_line(node: Any) -> str:
-    alias = f" as {node.alias}" if node.alias else ""
-    if isinstance(node, _Import):
-        return f"import {node.module}{alias}"
-    return f"from {node.module} import {node.name}{alias}"
-
-
-def render(expression: Any) -> str:
-    """The expression as Python source: one line per import around it, then the expression."""
-    lines = []
-    while isinstance(expression, (_Import, _ImportFrom)):
-        lines.append(_import_line(expression))
-        expression = expression.body
-
-    def write(node: Any, arguments: list[tuple[str, int]]) -> tuple[str, int]:
-        def operand(index: int, level: int) -> str:
-            text, precedence = arguments[index]
-            return text if precedence >= level else f"({text})"
-
-        if isinstance(node, _Constant):
-            return _constant(node.value)
-        if isinstance(node, _Name):
-            return node.name, _PRIMARY
-        if isinstance(node, _Attribute):
-            return f"{operand(0, _PRIMARY)}.{node.attr}", _PRIMARY
-        if isinstance(node, _Subscript):
-            return f"{operand(0, _PRIMARY)}[{node.key!r}]", _PRIMARY
-        if isinstance(node, _Index):
-            return f"{operand(0, _PRIMARY)}[{arguments[1][0]}]", _PRIMARY
-        if isinstance(node, _Call):
-            texts = [text for text, _ in arguments[1:]]
-            if len(node.arguments) == 1 and isinstance(node.arguments[0], _Generator):
-                texts = [texts[0][1:-1]]  # a generator, the only argument, without its parentheses
-            return f"{operand(0, _PRIMARY)}({', '.join(texts)})", _PRIMARY
-        if isinstance(node, _Generator):
-            conditions = "".join(f" if {operand(i, _OR)}" for i in range(2, len(arguments)))
-            return f"({operand(1, _IF)} for {node.name} in {operand(0, _OR)}{conditions})", _PRIMARY
-        if isinstance(node, _Let):
-            return f"(lambda {node.name}: {arguments[1][0]})({arguments[0][0]})", _PRIMARY
-        if isinstance(node, _IfExp):
-            return f"{operand(1, _OR)} if {operand(0, _OR)} else {operand(2, _IF)}", _IF
-        if isinstance(node, (_Import, _ImportFrom)):
-            raise ValueError("an import can only enclose the whole expression")
-        if isinstance(node, _UnaryOp):
-            if node.operator == "not":
-                return f"not {operand(0, _NOT)}", _NOT
-            return f"{node.operator}{operand(0, _UNARY)}", _UNARY
-        if isinstance(node, _Compare):
-            return f"{operand(0, _COMPARE + 1)} {node.operator} {operand(1, _COMPARE + 1)}", _COMPARE
-        if isinstance(node, _BoolOp):
-            level = _AND if node.operator == "and" else _OR
-            return f"{operand(0, level)} {node.operator} {operand(1, level + 1)}", level
-        level = _BINOP_LEVELS[node.operator]
-        if node.operator == "**":  # right-associative, binding tighter than unary operators on its left
-            return f"{operand(0, _PRIMARY)} ** {operand(1, _UNARY)}", _POWER
-        return f"{operand(0, level)} {node.operator} {operand(1, level + 1)}", level
-
-    return "\n".join([*lines, F.fold(expression, write)[0]])
-
-
-# --- Parsing ---
-
-_AST_OPERATORS: dict[type, str] = {
-    ast.Eq: "==", ast.NotEq: "!=", ast.Lt: "<", ast.LtE: "<=", ast.Gt: ">", ast.GtE: ">=", ast.And: "and",
-    ast.Or: "or", ast.Add: "+", ast.Sub: "-", ast.Mult: "*", ast.Div: "/", ast.FloorDiv: "//", ast.Mod: "%",
-    ast.Pow: "**", ast.Not: "not", ast.USub: "-", ast.UAdd: "+", ast.BitAnd: "&", ast.BitOr: "|", ast.BitXor: "^",
-    ast.LShift: "<<", ast.RShift: ">>", ast.Invert: "~", ast.In: "in", ast.NotIn: "not in",
-}
-
-
-def _unsupported(node: ast.AST, reason: str = "not supported in an expression") -> ValueError:
-    return ValueError(f"cannot parse {ast.unparse(node)!r}: {reason}")
-
-
-def _operator(node: ast.AST, op: ast.AST) -> str:
-    if type(op) not in _AST_OPERATORS:
-        raise _unsupported(node)
-    return _AST_OPERATORS[type(op)]
-
-
-def _expression(node: ast.expr) -> Any:
-    if isinstance(node, ast.Constant):
-        if F._native_name(node.value) is None:
-            raise _unsupported(node, "only native constants are supported")
-        return _Constant(node.value)
-    if isinstance(node, ast.Name):
-        return _Name(node.id)
-    if isinstance(node, ast.Attribute):
-        return _Attribute(node.attr, _expression(node.value))
-    if isinstance(node, ast.Subscript):
-        if isinstance(node.slice, ast.Constant) and type(node.slice.value) is str:
-            return _Subscript(node.slice.value, _expression(node.value))
-        if isinstance(node.slice, (ast.Slice, ast.Tuple)):
-            raise _unsupported(node, "slices are not supported")
-        return _Index(_expression(node.value), _expression(node.slice))
-    if isinstance(node, ast.GeneratorExp):
-        if len(node.generators) != 1 or not isinstance(node.generators[0].target, ast.Name):
-            raise _unsupported(node, "a generator has one for, over a name")
-        clause = node.generators[0]
-        return _Generator(clause.target.id, _expression(clause.iter), _expression(node.elt),
-                          tuple(_expression(condition) for condition in clause.ifs))
-    if isinstance(node, ast.Call):
-        if node.keywords:
-            raise _unsupported(node, "keyword arguments are not supported")
-        if isinstance(node.func, ast.Lambda):
-            parameters = node.func.args
-            if len(parameters.args) != 1 or len(node.args) != 1 or parameters.vararg or parameters.kwarg or \
-                    parameters.kwonlyargs or parameters.posonlyargs or parameters.defaults:
-                raise _unsupported(node, "a let binds one name")
-            return _Let(parameters.args[0].arg, _expression(node.args[0]), _expression(node.func.body))
-        return _Call(_expression(node.func), tuple(_expression(argument) for argument in node.args))
-    if isinstance(node, ast.Compare):
-        if len(node.ops) != 1:
-            raise _unsupported(node, "a comparison has one operator")
-        return _Compare(_operator(node, node.ops[0]), _expression(node.left), _expression(node.comparators[0]))
-    if isinstance(node, ast.BoolOp):
-        result = _expression(node.values[0])
-        for value in node.values[1:]:
-            result = _BoolOp(_operator(node, node.op), result, _expression(value))
-        return result
-    if isinstance(node, ast.BinOp):
-        return _BinOp(_operator(node, node.op), _expression(node.left), _expression(node.right))
-    if isinstance(node, ast.UnaryOp):
-        return _UnaryOp(_operator(node, node.op), _expression(node.operand))
-    if isinstance(node, ast.IfExp):
-        return _IfExp(_expression(node.test), _expression(node.body), _expression(node.orelse))
-    raise _unsupported(node)
-
-
-def parse(source: str) -> Any:
-    """The expression that Python `source` writes: `import` and `from ... import` statements, then one expression."""
-    statements = ast.parse(source).body
-    if not statements or not isinstance(statements[-1], ast.Expr):
-        raise ValueError("the source must end with an expression")
-    result = _expression(statements[-1].value)
-    for statement in reversed(statements[:-1]):
-        if isinstance(statement, ast.Import):
-            for alias in reversed(statement.names):
-                result = _Import(alias.name, alias.asname, result)
-        elif isinstance(statement, ast.ImportFrom) and statement.level == 0 and statement.module:
-            for alias in reversed(statement.names):
-                if alias.name == "*":
-                    raise _unsupported(statement, "import * binds names that cannot be known")
-                result = _ImportFrom(statement.module, alias.name, alias.asname, result)
-        else:
-            raise _unsupported(statement, "only imports may precede the expression")
-    return result

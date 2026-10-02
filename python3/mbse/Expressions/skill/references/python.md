@@ -10,8 +10,8 @@ A rule about contacts, evaluated, stored, translated to Excel and Python, and ap
 
 ```python
 from mbse.Expressions import Evaluators, Expressions as E, Translators
-from mbse.Expressions.Dialects.Excel import Evaluators as ExcelEvaluators, Expressions as Excel
-from mbse.Expressions.Dialects.Python import Expressions as Python
+from mbse.Expressions.Dialects.Excel import Evaluators as ExcelEvaluators, Expressions as Excel, Text as ExcelText
+from mbse.Expressions.Dialects.Python import Expressions as Python, Text as PythonText
 from mbse.Schemas.Framework import JSON, Proxies, Schemas as S, Validators
 
 
@@ -27,7 +27,7 @@ bob = B.Contact().name("Bob").age(30).create()
 eve = B.Contact().name("Eve").email("eve@example.com").create()  # no age
 
 # A rule, read from a Python lambda into data. Writers build the same: contact.age.ge(65).and_(contact.has("email")).
-senior = E.from_(lambda contact: contact.age >= 65 and contact.email is not None).data
+senior = PythonText.FromFunction(lambda contact: contact.age >= 65 and contact.email is not None).data
 assert senior.validate(bound={"contact"}, core=True) == []
 
 # Basic evaluates with three-valued logic: an absent property is unknown (None), and nothing is coerced.
@@ -42,10 +42,10 @@ rule = JSON.FromJSON(E.Builders).Reachable(schema, text)
 
 # Translate it into other languages; each evaluates by its own rules.
 formula = Translators.between(E.DIALECT, Excel.DIALECT).forward(rule)
-assert Excel.render(formula) == "=AND(contact.age >= 65, NOT(ISERROR(contact.email)))"
+assert ExcelText.ToText(formula) == "=AND(contact.age >= 65, NOT(ISERROR(contact.email)))"
 assert ExcelEvaluators.OfAny(formula, {"contact": eve}) == ExcelEvaluators.Error("#FIELD!")  # an error value, not unknown
 code = Translators.between(E.DIALECT, Python.DIALECT).forward(rule)
-assert Python.render(code) == "contact.age >= 65 and hasattr(contact, 'email')"
+assert PythonText.ToText(code) == "contact.age >= 65 and hasattr(contact, 'email')"
 
 # A union value is a record of its one branch, by name, so a rule reads it like any object.
 this = E.variable("this")
@@ -73,7 +73,7 @@ t.bitand(x) .bitor(x) .bitxor(x) .bitnot() .shl(n) .shr(n)  # on integers and bi
 t.convert(domain) .reinterpret(domain) .pack() .unpack(packed)  # an operation's domain is its result's
 this.ports.all("p", E.variable("p").width.ge(8))   # .any .count_where; .count() .item(i) .in_(xs) .sum() .min() .max() .unique()
 this.entries("wires")                              # an object's entries in an adjacency, as records that get reads
-E.from_(lambda this: this.age >= 18 and this.email is not None)    # a lambda, or a def whose body is one return
+PythonText.FromFunction(lambda this: this.age >= 18 and this.email is not None)  # a lambda, or a def of one return
 
 # Data and builders: create() / clone() / update(), none validate.
 E.OfOperation.Builder().name("f").arguments(1, "x").create(); E.OfLet.Builder(let).body(2).clone()
@@ -90,14 +90,14 @@ JSON.ToJSON.Reachable(E.DIALECT.schema_of(e), e); JSON.FromJSON(E.Builders).Reac
 F.walk(e); F.fold(e, lambda term, results: ...); F.same(a, b)   # from mbse.Expressions.Framework import Terms as F
 Symbolics.free(e); Symbolics.imports(e)     # the names e needs from its scope, and the imports it declares
 Translators.between(E.DIALECT, Excel.DIALECT).forward(e, trace=[]); Translators.Basic_Python.NUMPY.forward(e)
-Excel.render(e); Python.render(e); Python.parse("import math\nmath.floor(x)")    # parse is Python's only
+ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmath.floor(x)")  # FromText: Python only
 ```
 
 ## Traps
 
-- `from_` reads the function's source file, so it fails in `python -c`, `eval` and some REPLs. Use writers there.
+- `FromFunction` reads the function's source file, so it fails in `python -c`, `eval` and some REPLs. Use writers there.
 - `1 == 1.0` is unknown in Basic, and `True` is not an `int`. Write literals of the type the data has.
-- In `from_`, `x.email is not None` means `has(x, 'email')`; `x.email` alone is `get`, unknown when absent.
+- In `FromFunction`, `x.email is not None` means `has(x, 'email')`; `x.email` alone is `get`, unknown when absent.
 - Evaluating an operation outside the core raises `NotImplementedError`: validate with `core=True` first.
 - mbse-schemas' proxy registry is global to the process: register each schema name once.
 - A Python-dialect scope imports nothing by default: `Python.Evaluators.Scope(variables, modules={"numpy": numpy})`.
@@ -107,5 +107,5 @@ Excel.render(e); Python.render(e); Python.parse("import math\nmath.floor(x)")   
 | Topic | Read |
 |---|---|
 | Rules as data: building, evaluating, saving, analyzing and rewriting | [the tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/01_Rules_As_Data.ipynb) |
-| The Basic dialect: kinds, core vocabulary, evaluation, meta-schemas, writers, `from_` | [EXPRESSIONS.md, The Basic dialect](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#the-basic-dialect) |
+| The Basic dialect: kinds, core vocabulary, evaluation, meta-schemas, writers, `Python.Text.FromFunction` | [EXPRESSIONS.md, The Basic dialect](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#the-basic-dialect) |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/TestPlan.md) |

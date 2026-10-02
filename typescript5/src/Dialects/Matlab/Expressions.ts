@@ -11,13 +11,13 @@
  * - `field`: `value.name`, a field of a struct.
  * - `index`: `value(index)`, an element of an array, from 1.
  * - `arrayfun`: `arrayfun(@(name) body, array)`, the body's values for each element of the array, bound to `name`.
- * - `import`: `import pkg.fn` or `import pkg.*`, which make a package's functions callable by their short names
- *   within its body, the rest of the expression; `render` writes it as a line before it. Functions are also found on
- *   the path and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that evaluates them (see
+ * - `import`: `import pkg.fn` or `import pkg.*`, which make a package's functions callable by their short names within
+ *   its body, the rest of the expression; `Text.ToText` writes it as a line before it. Functions are also found on the
+ *   path and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that evaluates them (see
  *   `Evaluators`).
  *
  * There is no binding: translators substitute a let's value for its name. The meta-schemas are registered as
- * 'Expressions.Matlab.Of<Kind>'. `render` writes an expression as MATLAB source, e.g. `this.age >= 18 &&
+ * 'Expressions.Matlab.Of<Kind>'. `Text.ToText` writes an expression as MATLAB source, e.g. `this.age >= 18 &&
  * isfield(this, "email")`.
  */
 
@@ -187,48 +187,5 @@ export function import_(name: string, body: unknown): _Import {
   return new _Import(name, DIALECT.resolve(body));
 }
 
-// MATLAB's precedence, from loosest to tightest; unary operators bind tighter than all of these but `.`.
-const PRECEDENCE: Record<string, number> = {
-  "||": 1, "&&": 2, "==": 3, "~=": 3, "<": 3, "<=": 3, ">": 3, ">=": 3, "+": 4, "-": 4, ".*": 5,
-};
-const UNARY = 6, ATOM = 7;
-
-function constantText(value: unknown): string {
-  if (typeof value === "boolean") return value ? "true" : "false";
-  if (typeof value === "string") return `"${value.replaceAll('"', '""')}"`;
-  if (typeof value === "number" && !Number.isFinite(value)) {
-    return Number.isNaN(value) ? "NaN" : value > 0 ? "Inf" : "-Inf";
-  }
-  return repr(value);
-}
-
-/** The expression as MATLAB source, parenthesized only where precedence requires: one line per import around it, then
- * the expression. */
-export function render(expression: F.Term): string {
-  const lines: string[] = [];
-  while (expression instanceof _Import) {
-    lines.push(`import ${expression.name}`);
-    expression = expression.body;
-  }
-  const write = (node: F.Term, args: [string, number][]): [string, number] => {
-    const operand = (index: number, level: number): string => {
-      const [text, precedence] = args[index] as [string, number];
-      return precedence >= level ? text : `(${text})`;
-    };
-    if (node instanceof _Constant) {
-      const text = constantText(node.value);
-      return [text, text.startsWith("-") ? UNARY : ATOM];
-    }
-    if (node instanceof _Identifier) return [node.name, ATOM];
-    if (node instanceof _Field) return [`${operand(0, ATOM)}.${node.name}`, ATOM];
-    if (node instanceof _Call) return [`${node.function}(${args.map(([text]) => text).join(", ")})`, ATOM];
-    if (node instanceof _Index) return [`${operand(0, ATOM)}(${args[1]?.[0]})`, ATOM];
-    if (node instanceof _Arrayfun) return [`arrayfun(@(${node.name}) ${args[1]?.[0]}, ${args[0]?.[0]})`, ATOM];
-    if (node instanceof _Import) throw new Errors.ValueError("an import can only enclose the whole expression");
-    if (node instanceof _Unary) return [`${node.operator}${operand(0, UNARY)}`, UNARY];
-    const binary = node as _Binary;
-    const level = PRECEDENCE[binary.operator] as number;
-    return [`${operand(0, level)} ${binary.operator} ${operand(1, level + 1)}`, level];
-  };
-  return [...lines, F.fold(expression, write)[0]].join("\n");
-}
+/** For `Text`. */
+export { _Arrayfun, _Binary, _Call, _Constant, _Field, _Identifier, _Import, _Index, _Unary };

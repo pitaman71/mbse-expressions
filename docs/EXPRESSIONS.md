@@ -102,15 +102,15 @@ adult = this.age.ge(18).and_(this.has('email'))
 Evaluators.OfAny(adult, {'this': ann})   # True, False, or None when age is absent
 ```
 
-In Python, `Expressions.from_(function)` reads the same expression from a function's source (a lambda, or a `def` whose
-body is one `return`); each parameter becomes a variable. `.name` and `getattr` are `get`, `hasattr` is `has`,
+In Python, `Python.Text.FromFunction(function)` reads the same expression from a function's source (a lambda, or a `def`
+whose body is one `return`); each parameter becomes a variable. `.name` and `getattr` are `get`, `hasattr` is `has`,
 `x.name is None` / `is not None` test presence, comparisons (including chains), `and` / `or` / `not`, `+` / `-` / `*`
 and unary `-` map to the core operations, and `(lambda name: body)(value)` is a let. Other names are read from the
-function's closure and globals when `from_` runs. The result follows the expression's rules, not Python's: `1 == 1.0`
-is unknown. TypeScript has no counterpart, since a JavaScript function has no Python source to read.
+function's closure and globals when `FromFunction` runs. The result follows the expression's rules, not Python's: `1 ==
+1.0` is unknown. TypeScript has no counterpart, since a JavaScript function has no Python source to read.
 
 ```python
-adult = Expressions.from_(lambda this: this.age >= 18 and this.email is not None)
+adult = Python.Text.FromFunction(lambda this: this.age >= 18 and this.email is not None)
 ```
 
 ### Collections
@@ -336,11 +336,12 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 | SystemVerilog | `constant` (unsized integers, reals, strings), `vector` (sized literals: `8'hff`, `4'b10x1`, `8'sd5`), `identifier`, `unary` (`+`, `-`, `!`, `~` and the reductions `&`, `~&`, `\|`, `~\|`, `^`, `~^`), `binary` (`**` ... `\|\|`, `===`, `==?`, `->`, `<->`, with IEEE 1800's precedence), `conditional`, `concatenation` (`{a, b}`), `replication` (`{n{a}}`), `select` (`a[i]`), `range` (`a[7:4]`), `inside` (with `span`s, `[lo:hi]`), `cast` (`int'(x)`, `signed'(x)`, `8'(x)`), `member`, `call` (system functions and functions of the scope), `method` (`xs.size()`, `xs.sum()`, `xs.min()`), `iterate` (`xs.and(p) with (p > 0)`) | 4-state and 2-state vectors of any width and signedness (`logic`, `bit`, `byte` ... `longint`, `integer`, `time`), `real` and `shortreal`, structs, arrays | IEEE 1800's: operands sized by context or by themselves, extended by signedness; x and z propagate through arithmetic and comparisons, and follow the truth tables of the bitwise and logical operators; `===` and `==?` compare exactly and with wildcards; division by zero gives x; casts convert as assignments do |
 | Latex | `constant` (numbers, `\text{...}`, `\mathrm{true}`), `symbol` (`a`, `\mathit{age}`), `binary` (`=`, `\neq`, `<` ... `\land`, `\lor`, `\implies`, `+`, `-`, `\cdot`), `unary` (`\lnot`, `-`), `frac`, `member` (`x.\mathit{age}`), `function` (`\operatorname{has}`), `where` | number, text, truth | none: notation is written, rendered, checked and translated, and evaluated in the dialects it is translated to |
 
-Python, Matlab, Excel, Latex, Ccpp and SystemVerilog each have `render(expression)`, their source text (`hasattr(this, 'email') if
-this.age >= 18 else True`, `this.age >= 18 && isfield(this, "email")`, `=AND(this.age >= 18, NOT(ISERROR(this.email)))`,
-`\mathit{this}.\mathit{age} \geq 18 \land \operatorname{has}(\mathit{this}, \text{email})`), with imports as the
-lines before the expression, and constructors for their kinds (`Excel.Expressions.function('AND', a,
-b)`, ...). In Python, the Python dialect also has `parse(source)`: imports, then one expression. The Matlab and Excel
+Python, Matlab, Excel, Latex, Ccpp and SystemVerilog each have a `Text` module, as every mbse framework names a
+dialect's source text: `Text.ToText(expression)` is their source text (`hasattr(this, 'email') if this.age >= 18 else
+True`, `this.age >= 18 && isfield(this, "email")`, `=AND(this.age >= 18, NOT(ISERROR(this.email)))`,
+`\mathit{this}.\mathit{age} \geq 18 \land \operatorname{has}(\mathit{this}, \text{email})`), with imports as the lines
+before the expression, and constructors for their kinds (`Excel.Expressions.function('AND', a, b)`, ...). In Python, the
+Python dialect's `Text.FromText(source)` reads source text back: imports, then one expression. The Matlab and Excel
 evaluators are models of those languages' rules for scalars, not calls into MATLAB or Excel, and so is the TypeScript
 implementation's evaluator of Python expressions.
 
@@ -447,14 +448,19 @@ alike only there.
 - SystemVerilog's reductions of no items give their identities (0, 1, `1'b1`, `1'b0`), which IEEE 1800 leaves to
   tools; `min()[0]` of an empty array raises, where Basic's `min` is unknown.
 - Reading rules from source text and writing them back is the work of a bridge between mbse-programs' syntax trees
-  and the dialects' terms (see Resolved). Until it exists, every dialect's `render`, `Python.Expressions.parse` and
-  `Expressions.from_` stay here; whether they move to the bridge or delegate to it is undecided.
+  and the dialects' terms (see Resolved). Until it exists, every dialect's `Text.ToText`, and Python's `Text.FromText`
+  and `Text.FromFunction`, stay here; whether they move to the bridge or delegate to it is undecided.
 - Excel's ranges (`A1:B3`) and structured references (`Table1[@age]`) are not modeled; they need array values.
 - `Symbolics` has imports, an expression's dependencies, but no exports. Exports would name what a unit of
   expressions (a module of rules, a MATLAB package, a workbook's defined names) provides to others; they need a unit
   that groups expressions, which no dialect has yet.
 
 ## Resolved
+
+- A dialect's source text is its `Text` module, as in every mbse framework, where text is one more dialect or variant:
+  `Text.ToText(expression)` writes it, and `Text.FromText(source)` reads it back (Python's, in Python only), replacing
+  `render` and `parse`. Python's `Text.FromFunction(function)` reads a function's source into a Basic expression,
+  replacing Basic's `Expressions.from_`.
 
 - Parsing and printing source code belong in mbse-programs, which holds each language's complete syntax tree with an
   established parser and printer, not in mbse-expressions, whose dialects hold the terms of rules. No dialect gains a
@@ -532,7 +538,7 @@ alike only there.
   `Builder`, `Spec` and a meta-schema `Schema` that is an ordinary registered object schema tagged by `kind`. Arguments
   are an ordered relation (`index`, `unique(argument)`); a literal's schema has one property per native type.
 - There is no `is` operation: unions discriminate by a tag property compared with a fixed value.
-- `Expressions.from_` (Python only) reads an expression from a function's source with `ast`.
+- `Python.Text.FromFunction` (Python only) reads an expression from a function's source with `ast`.
 - Evaluation is its own module, `Evaluators`, with one entry point per expression kind (`Evaluators.OfAny`, ...).
 - Expressions are partitioned into dialects over one framework (`Framework`), each declared by its kinds' roles;
   translators are pairwise, declared as bidirectional pattern rules, and applied by co-traversal.
