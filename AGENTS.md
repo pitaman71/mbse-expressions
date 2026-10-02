@@ -20,8 +20,8 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 
 - **Parallel work happens in workspaces.** Agents working at the same time each get a workspace from
   `python3 scripts/siblings.py workspace <dir> --branch <name>` (with `--edit <sibling>` for a change that spans
-  repositories), and install there. A worktree of this repository alone, such as an agent's built-in worktree
-  isolation, breaks the relative paths to the siblings.
+  repositories), install there, and `land` it when done. A worktree of this repository alone, such as an agent's
+  built-in worktree isolation, breaks the relative paths to the siblings.
 - **The two implementations are equivalent.** Change both in the same commit, with the same names, the same error
   classes and byte-identical messages. JSON output must be byte-identical: regenerate the corpora and let CONF-02
   compare them, and add a corpus case for a new dialect. A difference not listed in `docs/EQUIVALENCE.md` is a bug.
@@ -44,6 +44,7 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 ```sh
 python3 scripts/siblings.py clone            # mbse-schemas, beside this repository, at its pinned commit
 python3 scripts/siblings.py check            # the siblings are present and compatible with siblings.json
+python3 -m unittest discover -s scripts      # siblings.py itself, in scratch repositories
 cd python3 && uv sync --all-extras           # Python: use uv, never pip
 uv run coverage run -m pytest && uv run coverage combine && uv run coverage report
 uv run python -m mbse.Expressions.Conformance.write
