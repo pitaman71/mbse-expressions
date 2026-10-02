@@ -1,7 +1,7 @@
 # Expressions
 
-Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas): rules about its data and,
-later, its constraints such as "at least one phone". This package depends on mbse-schemas (a sibling
+Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas): rules about its data, which
+[mbse-patterns](https://github.com/pitaman71/mbse-patterns) keeps as constraints, such as "at least one phone", and uses as queries. This package depends on mbse-schemas (a sibling
 checkout, pinned in `siblings.json`), whose [`FRAMEWORK.md`](https://github.com/pitaman71/mbse-schemas/blob/main/docs/FRAMEWORK.md) describes the
 framework; this document covers expressions only.
 
