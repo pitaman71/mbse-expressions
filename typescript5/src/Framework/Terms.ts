@@ -323,7 +323,7 @@ function indexOf(entry: Bindings.Entry): bigint | null {
 function checkTarget(kind: TermClass, entry: Bindings.Entry): unknown {
   const target = entry.links.get("argument") ?? null;
   if (target === null) throw new ValueError("link 'argument' is not set");
-  if (!kind.DIALECT.isExpression(target)) throw new TypeError(`an argument must be an expression, got ${typeName(target)}`);
+  if (!kind.DIALECT.accepts(target)) throw new TypeError(`an argument must be an expression, got ${typeName(target)}`);
   return target;
 }
 
@@ -589,6 +589,8 @@ export interface Declaration {
   anyBuilder?: typeof AnyBuilder;
   /** Schema names by tag; by default 'Expressions.<name>.Of<Kind>'. */
   schemaNames?: ReadonlyMap<string, string>;
+  /** The dialect this one extends: its kinds are the base's and its own. */
+  extends?: Declared;
 }
 
 function capitalize(text: string): string {
@@ -614,6 +616,10 @@ export function register<S extends { names(): readonly string[]; register(schema
  * `register(store)`, which registers its meta-schemas in another store, and `make`, `resolve`, `validate` and `infer`. */
 export class Declared implements Dialect {
   readonly classes: readonly TermClass[];
+  /** The dialect this one extends, or null. */
+  readonly base: Declared | null;
+  /** The dialects that extend this one. */
+  readonly extensions: Declared[] = [];
   readonly builders: Map<string, typeof Builder>;
   readonly AnyBuilder: typeof AnyBuilder;
   readonly Schema: Schemas.OfUnion.Data;
@@ -624,11 +630,18 @@ export class Declared implements Dialect {
 
   constructor(private readonly dialectName: string, kinds: readonly TermClass[], declaration: Declaration) {
     this.domainOf = declaration.domain_of;
-    this.classes = kinds;
-    this.byTag = new Map(kinds.map((kind) => [kind.KIND, kind]));
-    this.builders = new Map(declaration.builders ?? []);
-    const schemas = new Map<string, Schemas.OfObject.Data>();
-    const registered = new Map<string, typeof Builder>();
+    const base = declaration.extends ?? null;
+    this.base = base;
+    const inherited = base?.kinds() ?? new Map<string, TermClass>();
+    const clashes = kinds.map((kind) => kind.KIND).filter((tag) => inherited.has(tag)).sort();
+    if (clashes.length > 0) {
+      throw new ValueError(`${dialectName} would declare ${clashes.map((tag) => repr(tag)).join(", ")}, which ${(base as Declared).name()} has`);
+    }
+    this.classes = [...(base?.classes ?? []), ...kinds];
+    this.byTag = new Map([...inherited, ...kinds.map((kind) => [kind.KIND, kind] as const)]);
+    this.builders = new Map([...(base?.builders ?? []), ...(declaration.builders ?? [])]);
+    const schemas = new Map<string, Schemas.OfObject.Data>([...(base?.schemas ?? [])]
+      .filter(([name]) => name !== ARGUMENTS) as [string, Schemas.OfObject.Data][]);
     for (const kind of kinds) {
       kind.DIALECT = this;
       kind.NAME = declaration.schemaNames?.get(kind.KIND) ?? `Expressions.${dialectName}.Of${capitalize(kind.KIND)}`;
@@ -643,18 +656,30 @@ export class Declared implements Dialect {
       kind.Schema = schemaOf(kind);
       schemas.set(kind.NAME, kind.Schema);
       kind.BINDING = bindingOf(kind);
-      registered.set(kind.NAME, builder);
       this.builders.set(kind.KIND, builder);
     }
     this.schemas = new Map<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>([[ARGUMENTS, Arguments], ...schemas]);
     DIALECTS.push(this);
+    base?.extensions.push(this);
     this.AnyBuilder = declaration.anyBuilder ?? class extends AnyBuilder {};
     this.AnyBuilder.DIALECT = this;
     this.Schema = new Schemas.OfUnion.Builder().branches(
-      ...kinds.map((kind) => (b: BranchBuilder) => b.name(kind.KIND).of(kind.Schema)),
+      ...this.classes.map((kind) => (b: BranchBuilder) => b.name(kind.KIND).of(kind.Schema)),
     ).create();
-    this.Builders = new Bindings.OfStore([...registered].map(([name, builder]) =>
-      [schemas.get(name) as Schemas.OfObject.Data, (instance?: Term) => new builder(instance)] as const), [Arguments]);
+    this.Builders = new Bindings.OfStore(this.classes.map((kind) => {
+      const builder = this.builders.get(kind.KIND) as typeof Builder;
+      return [kind.Schema, (instance?: Term) => new builder(instance)] as const;
+    }), [Arguments]);
+  }
+
+  /** The kinds whose expressions this dialect accepts as arguments: its own, and its extensions'. */
+  terms(): readonly TermClass[] {
+    return [...new Set([...this.classes, ...this.extensions.flatMap((extension) => extension.terms())])];
+  }
+
+  /** Whether `value` is an expression this dialect accepts as an argument: of its own kinds, or its extensions'. */
+  accepts(value: unknown): value is Term {
+    return value instanceof Term && this.terms().includes(value.kind());
   }
 
   /** Registers the dialect's meta-schemas, and the relation `Arguments` they share, in `store` (e.g. a
@@ -724,7 +749,7 @@ export class Declared implements Dialect {
       const made = this.literal(spec as Native);
       if (made !== null) return made;
     }
-    return resolve(spec, (v): v is Term => this.isExpression(v), () => new this.AnyBuilder(),
+    return resolve(spec, (v): v is Term => this.accepts(v), () => new this.AnyBuilder(),
       "an expression, a native value");
   }
 

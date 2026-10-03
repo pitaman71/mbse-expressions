@@ -281,6 +281,13 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
   `Expressions.<Dialect>.Of<Kind>` (Basic keeps its names) with `register(store)`, the union discriminated by Basic's
   `eq(get(this, 'kind'), tag)`, the store `Builders`, validation and inference. Every dialect shares the relation
   `Expressions.Arguments`.
+- **A dialect may extend another**: `Terms.Declared(name, kinds, extends=base)`. Its kinds are the base's and its own,
+  whose tags must differ from the base's ("Clash would declare 'literal', which Basic has"); its classes, schemas,
+  union and store of bound classes include the base's, so every expression of the base is one of the extension, and the
+  extension validates, infers and evaluates trees that mix them. The base accepts its extensions' terms as arguments
+  (`terms()`, in specs, writers and snapshots), so a base's writer can hold an extension's term (`x.add(Twice(x))`);
+  such a tree is the extension's to validate and evaluate, and the base reports its extensions' terms as "not an
+  expression". mbse-patterns' predicates extend Basic this way.
 - **Expressions are typed bindings of their meta-schemas.** A kind's meta-schema is the source of truth for its
   data, and `Declared` binds the kind's data class to it with mbse-schemas' `Bindings`: the kind gives `read` and
   `make`, between its fields and the schema's properties and the `arguments` entries, and declares `kind` fixed, a
@@ -459,6 +466,10 @@ alike only there.
   that groups expressions, which no dialect has yet.
 
 ## Resolved
+
+- A dialect may extend another, inheriting its kinds; a base accepts its extensions' terms as arguments, and the
+  extension validates and evaluates the trees that mix them, so that a dialect such as mbse-patterns' predicates adds
+  proper terms (quantifiers over a store's objects, links) to Basic without copying it.
 
 - A dialect's source text is its `Text` module, as in every mbse framework, where text is one more dialect or variant:
   `Text.ToText(expression)` writes it, and `Text.FromText(source)` reads it back (Python's, in Python only), replacing

@@ -280,7 +280,7 @@ def _check_target(kind: type[Term], entry: Bindings.Entry) -> Any:
     target = entry.links.get("argument")
     if target is None:
         raise ValueError("link 'argument' is not set")
-    if not isinstance(target, kind.DIALECT.classes):
+    if not isinstance(target, kind.DIALECT.terms()):
         raise TypeError(f"an argument must be an expression, got {_type_name(target)}")
     return target
 
@@ -505,17 +505,27 @@ class Declared:
     """A dialect declared by its kinds' data classes, from which it derives their builders (unless given), meta-schemas
     (named by `schema_names`, by default 'Expressions.<name>.Of<Kind>'), the union `Schema`, whose branches are named by
     the kinds' tags, the store `Builders` of its bound classes, `register(store)`, which registers its meta-schemas in
-    another store, and `make`, `resolve`, `validate` and `infer`. `domain_of` gives a literal's domain."""
+    another store, and `make`, `resolve`, `validate` and `infer`. `domain_of` gives a literal's domain.
+
+    A dialect may extend another, `extends`: its kinds are the base's and its own, whose tags must differ from the base's,
+    so every expression of the base is one of the extension, and the extension validates, infers and evaluates trees
+    that mix them. The base accepts its extensions' terms as arguments (in specs, writers and snapshots), so that a
+    base's writer can hold an extension's term; such a tree is the extension's to validate and evaluate."""
 
     def __init__(self, name: str, kinds: Sequence[type[Term]], *,
                  domain_of: Callable[[Native], Domains.Domain], builders: Mapping[str, type[Builder]] | None = None,
-                 any_builder: type[AnyBuilder] | None = None, schema_names: Mapping[str, str] | None = None):
+                 any_builder: type[AnyBuilder] | None = None, schema_names: Mapping[str, str] | None = None,
+                 extends: Declared | None = None):
         self._name, self._domain_of = name, domain_of
-        self._kinds = {kind.KIND: kind for kind in kinds}
-        self.classes = tuple(kinds)
-        builders = dict(builders or {})
-        schemas: dict[str, Any] = {}
-        registered: dict[str, type] = {}
+        self.base, self.extensions = extends, []
+        inherited = {} if extends is None else extends.kinds()
+        clashes = sorted(kind.KIND for kind in kinds if kind.KIND in inherited)
+        if clashes:
+            raise ValueError(f"{name} would declare {', '.join(map(repr, clashes))}, which {extends.name()} has")  # type: ignore[union-attr]
+        self._kinds = {**inherited, **{kind.KIND: kind for kind in kinds}}
+        self.classes = (*(() if extends is None else extends.classes), *kinds)
+        builders = {**({} if extends is None else extends.builders), **dict(builders or {})}
+        schemas: dict[str, Any] = {} if extends is None else {n: s for n, s in extends.schemas.items() if n != ARGUMENTS}
         for kind in kinds:
             kind.DIALECT = self
             kind.NAME = (schema_names or {}).get(kind.KIND, f"Expressions.{name}.Of{kind.KIND.capitalize()}")
@@ -523,16 +533,22 @@ class Declared:
             builder = builders.get(kind.KIND) or type(f"{kind.__name__}Builder", (Builder,), {"_data": kind})
             kind.Schema = schemas[kind.NAME] = _schema(kind)  # type: ignore[attr-defined]
             kind.BINDING = _binding(kind)
-            registered[kind.NAME] = builders[kind.KIND] = builder
+            builders[kind.KIND] = builder
         self.schemas = {ARGUMENTS: Arguments, **schemas}
         DIALECTS.append(self)
+        if extends is not None:
+            extends.extensions.append(self)
         self.builders = builders
         self.AnyBuilder = any_builder or type(f"{name}AnyBuilder", (AnyBuilder,), {})
         self.AnyBuilder._dialect = self
         self.Schema = Schemas.OfUnion.Builder().branches(
-            *(lambda b, kind=kind: b.name(kind.KIND).of(kind.Schema) for kind in kinds)
+            *(lambda b, kind=kind: b.name(kind.KIND).of(kind.Schema) for kind in self.classes)
         ).create()
-        self.Builders = Bindings.OfStore([(schemas[name], builder) for name, builder in registered.items()], [Arguments])
+        self.Builders = Bindings.OfStore([(kind.Schema, builders[kind.KIND]) for kind in self.classes], [Arguments])
+
+    def terms(self) -> tuple[type[Term], ...]:
+        """The kinds whose expressions this dialect accepts as arguments: its own, and its extensions'."""
+        return tuple(dict.fromkeys([*self.classes, *(kind for e in self.extensions for kind in e.terms())]))
 
     def register(self, store: Any) -> Any:
         """Registers the dialect's meta-schemas, and the relation `Arguments` they share, in `store` (e.g. a
@@ -591,7 +607,7 @@ class Declared:
             made = self.literal(spec)
             if made is not None:
                 return made
-        return resolve(spec, self.classes, self.AnyBuilder, "an expression, a native value")
+        return resolve(spec, self.terms(), self.AnyBuilder, "an expression, a native value")
 
     # Checks
 
