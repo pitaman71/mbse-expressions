@@ -606,8 +606,9 @@ class TermTarget extends F.Writer {
  * runtime, so they are typed loosely, like proxy properties. */
 export type Writer = TermTarget & { readonly [property: string]: any };
 
-function writer(data: AnyData): Writer {
-  return new Proxy(new TermTarget(data), {
+/** A writer of `data`, an expression of Basic or of a dialect extending it, as Python's `Writer(data)`. */
+export function writer(data: unknown): Writer {
+  return new Proxy(new TermTarget(data as AnyData), {
     get(target, property, receiver) {
       if (typeof property === "symbol" || property in target) return Reflect.get(target, property, receiver);
       if (property === "then" || property === "toJSON") return undefined; // probes by `await` and `JSON.stringify`
