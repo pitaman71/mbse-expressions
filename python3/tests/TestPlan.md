@@ -1,3 +1,6 @@
+<!-- nav -->
+[← Python package](../README.md) · [Home](../../README.md) · [TypeScript package →](../../typescript5/README.md)
+
 # Test plan — python3
 
 Scope: everything under `python3/mbse/Expressions` (the framework, the Basic, Python, Matlab, Excel and Latex dialects, and
@@ -31,3 +34,8 @@ uv run python -m mbse.Expressions.Conformance.write   # regenerate ../conformanc
 | `11_Partials.ipynb` | PAR | 4 | Partial evaluation: known subexpressions become literals (typed ones with their domains), unknown variables stay, values without literals keep their subexpressions; Kleene's short-circuits and neutral operands for `and`, `or` and `implies`, unknown values deciding nothing, extensions rebuilt; lets of known values bound and dropped once unused, objects kept, names hiding known variables, quantifiers evaluated or reduced; residuals agreeing with evaluation over every split of a scope, serialized and translated; errors, cycles and non-expressions raising |
 
 Total: 58 cases, with the same IDs in the same order in both implementations.
+
+---
+
+<!-- nav -->
+[← Python package](../README.md) · [Home](../../README.md) · [TypeScript package →](../../typescript5/README.md)

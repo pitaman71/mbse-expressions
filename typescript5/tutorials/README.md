@@ -1,3 +1,6 @@
+<!-- nav -->
+[← 8 · Rules for firmware and hardware (Python)](../../python3/tutorials/08_Rules_For_Firmware_And_Hardware.ipynb) · [Home](../../README.md) · [1 · Rules as data →](01_Rules_As_Data.ipynb)
+
 # Tutorial: rules as data, in eight case studies (TypeScript)
 
 This tutorial teaches mbse-expressions by solving real problems, one per notebook, each building on the ones before
@@ -7,8 +10,8 @@ programmer starts, with a rule written in code, and ends with that rule running 
 
 It's written for TypeScript programmers who keep rules about their data in more than one place or language. It's a
 port of the [Python tutorial](../../python3/tutorials/README.md), with the same case studies, the same reasoning and the
-same answers; the JSON of case study 1 is byte for byte Python's. The design document,
-[`../../docs/EXPRESSIONS.md`](../../docs/EXPRESSIONS.md), is the reference for everything here.
+same answers; the JSON of case study 1 is byte for byte Python's. The [design document](../../docs/EXPRESSIONS.md)
+is the reference for everything here.
 
 Where the bindings differ, the code follows TypeScript idioms:
 
@@ -48,3 +51,8 @@ as text (case study 6 explains it).
 | 6 | [Analyzing and rewriting rules](06_Analyzing_And_Rewriting_Rules.ipynb) | Which rules read a property; one way to write each rule | Forms; `walk`, `fold`, `same` and `free`; rewriting with patterns and holes |
 | 7 | [One rule, many languages](07_One_Rule_Many_Languages.ipynb) | The rule in Excel, Python, MATLAB and LaTeX | Dialects and translators; each language's own evaluation; reading rules back; scopes as allowlists |
 | 8 | [Rules for firmware and hardware](08_Rules_For_Firmware_And_Hardware.ipynb) | The packet rule in C and SystemVerilog | C's promotions and undefined behavior; sized literals; `x` and `z`; what has no counterpart |
+
+---
+
+<!-- nav -->
+[← 8 · Rules for firmware and hardware (Python)](../../python3/tutorials/08_Rules_For_Firmware_And_Hardware.ipynb) · [Home](../../README.md) · [1 · Rules as data →](01_Rules_As_Data.ipynb)

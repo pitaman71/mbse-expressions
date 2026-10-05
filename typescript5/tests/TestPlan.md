@@ -1,3 +1,6 @@
+<!-- nav -->
+[← TypeScript package](../README.md) · [Home](../../README.md)
+
 # Test plan — typescript5
 
 Scope: everything under `typescript5/src` (the framework, the Basic, Python, Matlab, Excel and Latex dialects, and the
@@ -30,3 +33,8 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `11_Partials.ipynb` | PAR | 4 | as in Python; the reducer is called with `run` |
 
 Total: 58 cases, with the same IDs in the same order in both implementations.
+
+---
+
+<!-- nav -->
+[← TypeScript package](../README.md) · [Home](../../README.md)

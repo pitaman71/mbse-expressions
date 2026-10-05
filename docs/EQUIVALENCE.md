@@ -1,7 +1,10 @@
+<!-- nav -->
+[← Expressions design](EXPRESSIONS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+
 # Equivalence of the implementations
 
 `python3/` and `typescript5/` implement the same package, and follow mbse-schemas' rules for equivalence
-([`EQUIVALENCE.md`](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUIVALENCE.md)): the same API and messages, byte-identical JSON,
+([mbse-schemas' equivalence](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUIVALENCE.md)): the same API and messages, byte-identical JSON,
 interchangeable data, the same test cases under the same IDs, and full coverage in both. This document covers what is
 specific to this package: the framework, the Basic, Python, Matlab, Excel, Latex, Ccpp and SystemVerilog dialects, and the translators
 between them.
@@ -64,3 +67,8 @@ writers throughout, sharing a writer where `FromFunction` shares a term, so that
 the same. Each toolkit's `show` writes floats as Python does (`2.0`), so the rules print alike; values printed by each
 language's own means (`4n`, `4.0` against `4`) follow that language. Both are
 run as tests and committed with outputs (Python's from its kernel, TypeScript's from Deno's Jupyter kernel).
+
+---
+
+<!-- nav -->
+[← Expressions design](EXPRESSIONS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)

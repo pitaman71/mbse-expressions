@@ -1,3 +1,6 @@
+<!-- nav -->
+[Why the mbse repositories exist →](MBSE.md)
+
 # mbse-expressions
 
 `mbse-expressions` makes the rules of a specification executable: constraints, derived values and the conditions an
@@ -90,12 +93,12 @@ npm test                       # type-check and run the test suites and the tuto
 
 | Read | For |
 |---|---|
-| [`python3/tutorials/`](python3/tutorials/README.md), [`typescript5/tutorials/`](typescript5/tutorials/README.md) | Eight case studies, from a rule written in code to the same rule in C and SystemVerilog: rules as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
-| [`docs/EXPRESSIONS.md`](docs/EXPRESSIONS.md) | The design: the expression kinds, the core vocabulary, evaluation, meta-schemas and writers |
-| [`docs/EQUIVALENCE.md`](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
-| [`AGENTS.md`](AGENTS.md), [`skills/mbse-expressions/`](skills/mbse-expressions/SKILL.md), [`llms.txt`](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
-| [`python3/tests/TestPlan.md`](python3/tests/TestPlan.md), [`typescript5/tests/TestPlan.md`](typescript5/tests/TestPlan.md) | The test suites |
-| [`conformance/`](conformance/README.md) | The shared corpus both implementations must read and write identically |
+| [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Eight case studies, from a rule written in code to the same rule in C and SystemVerilog: rules as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
+| [Expressions design](docs/EXPRESSIONS.md) | The design: the expression kinds, the core vocabulary, evaluation, meta-schemas and writers |
+| [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
+| [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-expressions/SKILL.md), [Summary for LLMs](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
+| [Python test plan](python3/tests/TestPlan.md), [TypeScript test plan](typescript5/tests/TestPlan.md) | The test suites |
+| [Conformance corpus](conformance/README.md) | The shared corpus both implementations must read and write identically |
 
 ## Repository layout
 
@@ -130,3 +133,8 @@ operations, variables and lets, with builders and meta-schemas; writers (and, in
 `validate()`; evaluation of the core operations with three-valued logic. Not built yet: the collection operations
 (`count`, `in`, `all`, `any`), and the evaluator interface through which mbse-schemas will choose union branches and
 check constraints.
+
+---
+
+<!-- nav -->
+[Why the mbse repositories exist →](MBSE.md)

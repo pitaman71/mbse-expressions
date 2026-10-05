@@ -1,8 +1,11 @@
+<!-- nav -->
+[← 8 · Rules for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Rules_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+
 # Expressions
 
 Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas): rules about its data, which
 [mbse-patterns](https://github.com/pitaman71/mbse-patterns) keeps as constraints, such as "at least one phone", and uses as queries. This package depends on mbse-schemas (a sibling
-checkout, pinned in `siblings.json`), whose [`FRAMEWORK.md`](https://github.com/pitaman71/mbse-schemas/blob/main/docs/FRAMEWORK.md) describes the
+checkout, pinned in `siblings.json`), whose [framework design](https://github.com/pitaman71/mbse-schemas/blob/main/docs/FRAMEWORK.md) describes the
 framework; this document covers expressions only.
 
 Expressions come in dialects: expression languages that implement one framework, so that each is serializable,
@@ -10,7 +13,7 @@ structurally traversable, validatable, evaluatable, and translatable into the ot
 vocabulary below, in which rules about mbse-schemas' data are written; `from mbse.Expressions import Expressions,
 Evaluators` imports it. The Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog dialects model those languages' expressions (see
 [Dialects](#dialects)); the framework is described under [The framework](#the-framework), and translation under
-[Translators](#translators). Both implementations have all of them (see [`EQUIVALENCE.md`](EQUIVALENCE.md)).
+[Translators](#translators). Both implementations have all of them (see [Equivalence](EQUIVALENCE.md)).
 
 ```
 python3/mbse/Expressions/, typescript5/src/
@@ -57,7 +60,7 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
 - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are unknown.
   `and`, `or`, `not` and `implies` follow Kleene's logic (`False and unknown` is `False`); the second operand is
   evaluated only when the first does not decide.
-- No coercion. Comparisons follow mbse-schemas' [`EQUALITY.md`](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUALITY.md): natives of one type by value, objects by identity; values of different
+- No coercion. Comparisons follow mbse-schemas' [equality rules](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUALITY.md): natives of one type by value, objects by identity; values of different
   types are incomparable (`lt(1, 1.5)` is unknown), and only `int`, `float`, `str` and `bytes` are ordered. Arithmetic
   takes numbers of one domain (`add(1, 1.5)` is an error). Values of other domains than the natives' defaults follow
   the same rules by domain (see Value domains).
@@ -570,3 +573,8 @@ alike only there.
 - Evaluation is three-valued (Kleene), never coerces, and reads properties with `get(object, name)`; variables are
   bound by `OfLet` or by the caller's scope. `Writer`s build expressions with methods only (no operator overloading), so
   both bindings read the same.
+
+---
+
+<!-- nav -->
+[← 8 · Rules for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Rules_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
