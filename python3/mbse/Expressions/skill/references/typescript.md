@@ -80,6 +80,6 @@ check(Evaluators.predicate(self.reach.has("email"), card) === true, "by email");
 
 | Topic | Read |
 |---|---|
-| The same case study as the Python tutorial, built with writers | [typescript5/tutorials/](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tutorials/README.md) |
+| The Python tutorial's eight case studies, built with writers | [typescript5/tutorials/](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tutorials/README.md) |
 | Where the languages deliberately differ, and why | [EQUIVALENCE.md, Deliberate differences](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EQUIVALENCE.md#deliberate-differences) |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tests/TestPlan.md) |

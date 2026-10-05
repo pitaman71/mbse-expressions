@@ -58,7 +58,9 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 
 ## Tutorials
 
-`python3/tutorials/` and `typescript5/tutorials/` are the same case study, with the same outputs wherever the bindings
-agree. The Python notebook writes its main body with lambdas read by `Python.Text.FromFunction` and shows writers and builders
-in an appendix; the TypeScript notebook uses writers throughout. The expressions, and their JSON, are the same. Both are
+`python3/tutorials/` and `typescript5/tutorials/` are the same eight case studies, with the same answers. Python writes
+scalar rules with lambdas read by `Python.Text.FromFunction` and Python source with `Text.FromText`; TypeScript uses
+writers throughout, sharing a writer where `FromFunction` shares a term, so that the expressions, and their JSON, are
+the same. Each toolkit's `show` writes floats as Python does (`2.0`), so the rules print alike; values printed by each
+language's own means (`4n`, `4.0` against `4`) follow that language. Both are
 run as tests and committed with outputs (Python's from its kernel, TypeScript's from Deno's Jupyter kernel).

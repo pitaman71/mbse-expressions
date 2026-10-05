@@ -11,6 +11,7 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 | You want to | Read |
 |---|---|
 | Use the library: write, evaluate, store or translate rules | [skills/mbse-expressions/SKILL.md](skills/mbse-expressions/SKILL.md), a skill. It loads its references only as needed |
+| Learn it by example, from a first rule to C and SystemVerilog | [python3/tutorials/README.md](python3/tutorials/README.md), eight case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
 | Understand a design rule or an open question | [docs/EXPRESSIONS.md](docs/EXPRESSIONS.md), by section |
 | Change the framework, a dialect or a translator | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
@@ -25,6 +26,9 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 - **The two implementations are equivalent.** Change both in the same commit, with the same names, the same error
   classes and byte-identical messages. JSON output must be byte-identical: regenerate the corpora and let CONF-02
   compare them, and add a corpus case for a new dialect. A difference not listed in `docs/EQUIVALENCE.md` is a bug.
+- **Tutorials are tested too.** `pytest` and `npm test` run `tutorials/` beside `tests/`; the two languages tell the
+  same case studies with the same answers. Re-execute a tutorial after a change that alters its output, and commit it
+  with its outputs.
 - **Tests are Jupyter notebooks**, one suite per notebook, with the same case IDs in the same order in both
   languages. Each case is a markdown cell `## ID · title` followed by one code cell. Notebooks are JSON written with
   `indent=1`, `sort_keys=True` and `ensure_ascii=False`.

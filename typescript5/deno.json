@@ -10,6 +10,13 @@
     "@mbse/expressions/Framework": "./src/Framework/index.ts",
     "@mbse/expressions/Dialects/": "./src/Dialects/",
     "@mbse/expressions/Translators": "./src/Translators/index.ts",
-    "@mbse/expressions/Framework/": "./src/Framework/"
+    "@mbse/expressions/Framework/": "./src/Framework/",
+    "@mbse/expressions/Dialects/Basic": "./src/Dialects/Basic/index.ts",
+    "@mbse/expressions/Dialects/Python": "./src/Dialects/Python/index.ts",
+    "@mbse/expressions/Dialects/Matlab": "./src/Dialects/Matlab/index.ts",
+    "@mbse/expressions/Dialects/Excel": "./src/Dialects/Excel/index.ts",
+    "@mbse/expressions/Dialects/Latex": "./src/Dialects/Latex/index.ts",
+    "@mbse/expressions/Dialects/Ccpp": "./src/Dialects/Ccpp/index.ts",
+    "@mbse/expressions/Dialects/SystemVerilog": "./src/Dialects/SystemVerilog/index.ts"
   }
 }

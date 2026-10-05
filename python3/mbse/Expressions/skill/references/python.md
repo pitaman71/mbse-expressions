@@ -108,6 +108,6 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 
 | Topic | Read |
 |---|---|
-| Rules as data: building, evaluating, saving, analyzing and rewriting | [the tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/01_Rules_As_Data.ipynb) |
+| Learning it by example: rules as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog | [the tutorial, eight case studies](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) |
 | The Basic dialect: kinds, core vocabulary, evaluation, meta-schemas, writers, `Python.Text.FromFunction` | [EXPRESSIONS.md, The Basic dialect](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#the-basic-dialect) |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/TestPlan.md) |

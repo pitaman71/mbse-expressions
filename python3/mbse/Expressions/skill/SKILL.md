@@ -56,6 +56,7 @@ It is a poor fit for logic that is simply part of one program; write that in the
 | Add a dialect or a translator | [references/extending.md](references/extending.md) |
 | Model the schemas the expressions refer to | the [mbse-schemas skill](https://github.com/pitaman71/mbse-schemas/blob/main/skills/mbse-schemas/SKILL.md) |
 
-Deeper material is in the repository: `docs/EXPRESSIONS.md` holds the design, every rule and the open questions, and a
-tutorial works through one case study. Links use `https://github.com/pitaman71/mbse-expressions/blob/main/<path>`; in a
+Deeper material is in the repository: `docs/EXPRESSIONS.md` holds the design, every rule and the open questions, and eight
+tutorial case studies (`python3/tutorials/`, `typescript5/tutorials/`) teach it from a first rule to C and
+SystemVerilog. Links use `https://github.com/pitaman71/mbse-expressions/blob/main/<path>`; in a
 checkout, `<path>` is relative to the repository root.

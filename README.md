@@ -67,7 +67,7 @@ Python (3.11+, managed with [uv](https://docs.astral.sh/uv/)); mbse-schemas is i
 ```sh
 cd python3
 uv sync --all-extras
-uv run pytest                  # test suites and the tutorial
+uv run pytest                  # test suites and the tutorials
 ```
 
 TypeScript (Node 22 or later; with [nvm](https://github.com/nvm-sh/nvm), `nvm use` picks the version in `.nvmrc`).
@@ -77,14 +77,14 @@ TypeScript (Node 22 or later; with [nvm](https://github.com/nvm-sh/nvm), `nvm us
 cd typescript5
 nvm use
 npm install
-npm test                       # type-check and run the test suites and the tutorial
+npm test                       # type-check and run the test suites and the tutorials
 ```
 
 ## Documentation
 
 | Read | For |
 |---|---|
-| [`python3/tutorials/`](python3/tutorials/README.md), [`typescript5/tutorials/`](typescript5/tutorials/README.md) | Rules as data: building, evaluating, saving, analyzing and rewriting expressions. Start here. |
+| [`python3/tutorials/`](python3/tutorials/README.md), [`typescript5/tutorials/`](typescript5/tutorials/README.md) | Eight case studies, from a rule written in code to the same rule in C and SystemVerilog: rules as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
 | [`docs/EXPRESSIONS.md`](docs/EXPRESSIONS.md) | The design: the expression kinds, the core vocabulary, evaluation, meta-schemas and writers |
 | [`docs/EQUIVALENCE.md`](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [`AGENTS.md`](AGENTS.md), [`skills/mbse-expressions/`](skills/mbse-expressions/SKILL.md), [`llms.txt`](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
@@ -95,8 +95,8 @@ npm test                       # type-check and run the test suites and the tuto
 
 ```
 docs/                     the design (EXPRESSIONS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
-python3/                  Python implementation: mbse/Expressions (Framework, Dialects, Translators), tests, tutorial
-typescript5/              TypeScript implementation: src (Expressions, Evaluators), tests, tutorial
+python3/                  Python implementation: mbse/Expressions (Framework, Dialects, Translators), tests, tutorials
+typescript5/              TypeScript implementation: src (Expressions, Evaluators), tests, tutorials
 conformance/              snapshots each implementation writes; each must read the other's
 skills/                   the agent skill (SKILL.md plus per-task references); skills/sync.sh copies it into both packages
 ```
