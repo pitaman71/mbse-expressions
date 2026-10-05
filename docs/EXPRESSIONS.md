@@ -108,7 +108,11 @@ Evaluators.OfAny(adult, {'this': ann})   # True, False, or None when age is abse
 In Python, `Python.Text.FromFunction(function)` reads the same expression from a function's source (a lambda, or a `def`
 whose body is one `return`); each parameter becomes a variable. `.name` and `getattr` are `get`, `hasattr` is `has`,
 `x.name is None` / `is not None` test presence, comparisons (including chains), `and` / `or` / `not`, `+` / `-` / `*`
-and unary `-` map to the core operations, and `(lambda name: body)(value)` is a let. Other names are read from the
+and unary `-` map to the core operations, and `(lambda name: body)(value)` is a let. Collections are read in the forms
+the Basic-to-Python translator writes, so that its text reads back: `len(xs)`, `xs[i]`, `x in xs` (and `not in`),
+`sum(xs)`, `min(xs)` and `max(xs)` are `count`, `item`, `in`, `sum`, `min` and `max`; `all(body for x in xs)` and
+`any(...)` are the quantifiers, an `if` restricting the items (`implies` in `all`, `and` in `any`), and `sum(1 for x in
+xs if condition)` is `count`. The builtins are read only under their own names; `unique` has no Python spelling. Other names are read from the
 function's closure and globals when `FromFunction` runs. The result follows the expression's rules, not Python's: `1 ==
 1.0` is unknown. TypeScript has no counterpart, since a JavaScript function has no Python source to read.
 
@@ -351,7 +355,8 @@ dialect's source text: `Text.ToText(expression)` is their source text (`hasattr(
 True`, `this.age >= 18 && isfield(this, "email")`, `=AND(this.age >= 18, NOT(ISERROR(this.email)))`,
 `\mathit{this}.\mathit{age} \geq 18 \land \operatorname{has}(\mathit{this}, \text{email})`), with imports as the lines
 before the expression, and constructors for their kinds (`Excel.Expressions.function('AND', a, b)`, ...). In Python, the
-Python dialect's `Text.FromText(source)` reads source text back: imports, then one expression. The Matlab and Excel
+Python dialect's `Text.FromText(source)` reads source text back: imports, then one expression, a chained comparison
+`a < b < c` as `a < b and b < c` with `b` one shared term (which writes back unchained). The Matlab and Excel
 evaluators are models of those languages' rules for scalars, not calls into MATLAB or Excel, and so is the TypeScript
 implementation's evaluator of Python expressions.
 
@@ -466,6 +471,10 @@ alike only there.
   that groups expressions, which no dialect has yet.
 
 ## Resolved
+
+- `Python.Text.FromFunction` reads collections in the forms the Basic-to-Python translator writes (`len`, indexing,
+  `in`, `sum`, `min`, `max`, and `all`, `any` and `sum(1 for ...)` over a generator expression), so a translated rule
+  reads back, and `Text.FromText` reads a chained comparison as `and` of comparisons sharing the middle operand.
 
 - A dialect may extend another, inheriting its kinds; a base accepts its extensions' terms as arguments, and the
   extension validates and evaluates the trees that mix them, so that a dialect such as mbse-patterns' predicates adds

@@ -75,6 +75,7 @@ t.convert(domain) .reinterpret(domain) .pack() .unpack(packed)  # an operation's
 this.ports.all("p", E.variable("p").width.ge(8))   # .any .count_where; .count() .item(i) .in_(xs) .sum() .min() .max() .unique()
 this.entries("wires")                              # an object's entries in an adjacency, as records that get reads
 PythonText.FromFunction(lambda this: this.age >= 18 and this.email is not None)  # a lambda, or a def of one return
+PythonText.FromFunction(lambda this: all(p.width >= 8 for p in this.ports) and len(this.ports) > 0)  # collections too
 
 # Data and builders: create() / clone() / update(), none validate.
 E.OfOperation.Builder().name("f").arguments(1, "x").create(); E.OfLet.Builder(let).body(2).clone()

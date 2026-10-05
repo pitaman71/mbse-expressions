@@ -7,6 +7,7 @@ Basic's rules (see `FromFunction`)."""
 from __future__ import annotations
 
 import ast
+import builtins
 import inspect
 import linecache
 import math
@@ -17,7 +18,8 @@ from mbse.Expressions.Framework import Terms as F
 from mbse.Schemas.Framework.Visitors import Native
 
 from ..Basic.Expressions import (
-    OfAny, Writer, _KINDS, _LetData, _LiteralData, _OperationData, _VariableData, _native_name, _type_name)
+    OfAny, Writer, _KINDS, _LetData, _LiteralData, _OperationData, _QuantifierData, _VariableData, _native_name,
+    _type_name)
 from .Expressions import (
     _Attribute, _BinOp, _BoolOp, _Call, _Compare, _Constant, _Generator, _IfExp,
     _Import, _ImportFrom, _Index, _Let, _Name, _Subscript, _UnaryOp)
@@ -152,10 +154,13 @@ def _expression(node: ast.expr) -> Any:
                 raise _unsupported(node, "a let binds one name")
             return _Let(parameters.args[0].arg, _expression(node.args[0]), _expression(node.func.body))
         return _Call(_expression(node.func), tuple(_expression(argument) for argument in node.args))
-    if isinstance(node, ast.Compare):
-        if len(node.ops) != 1:
-            raise _unsupported(node, "a comparison has one operator")
-        return _Compare(_operator(node, node.ops[0]), _expression(node.left), _expression(node.comparators[0]))
+    if isinstance(node, ast.Compare):  # a chain a < b < c is a < b and b < c, the middle operand shared
+        operands = [_expression(operand) for operand in (node.left, *node.comparators)]
+        result = None
+        for op, left, right in zip(node.ops, operands, operands[1:]):
+            compare = _Compare(_operator(node, op), left, right)
+            result = compare if result is None else _BoolOp("and", result, compare)
+        return result
     if isinstance(node, ast.BoolOp):
         result = _expression(node.values[0])
         for value in node.values[1:]:
@@ -171,7 +176,8 @@ def _expression(node: ast.expr) -> Any:
 
 
 def FromText(source: str) -> Any:
-    """The expression that Python `source` writes: `import` and `from ... import` statements, then one expression."""
+    """The expression that Python `source` writes: `import` and `from ... import` statements, then one expression. A
+    chained comparison `a < b < c` is `a < b and b < c`, with `b` one shared term."""
     statements = ast.parse(source).body
     if not statements or not isinstance(statements[-1], ast.Expr):
         raise ValueError("the source must end with an expression")
@@ -210,6 +216,12 @@ def FromFunction(function: Callable[..., Any]) -> Writer:
     - `==`, `!=`, `<`, `<=`, `>`, `>=` are the comparisons (a chain `a < b < c` is `and(lt(a, b), lt(b, c))`); `and`,
       `or`, `not` are the logic operations; `+`, `-`, `*` and unary `-` are `add`, `sub`, `mul` and `neg`.
     - `(lambda name: body)(value)` is a let.
+    - Collections are read in the forms the Basic-to-Python translator writes: `len(xs)` is `count`, `xs[i]` is `item`,
+      `x in xs` is `in` (`not in` its negation), and `sum(xs)`, `min(xs)` and `max(xs)` are `sum`, `min` and `max`. The
+      quantifiers are generator expressions over one name: `all(body for x in xs)` and `any(...)` are `all` and `any`,
+      and `sum(1 for x in xs if condition)` is `count`; an `if` in `all` or `any` restricts the items, so `all(b for x
+      in xs if c)` is `all(xs, x => implies(c, b))` and `any(...)` is `any(xs, x => and(c, b))`. These builtins are
+      read only when their names are Python's own; `unique` has no Python spelling.
     - Other names are read when `FromFunction` runs, from the function's closure and globals: a native value becomes a literal,
       and a `Writer` or expression is used as it is.
 
@@ -296,6 +308,10 @@ def _convert(node: ast.expr, bound: dict[str, _VariableData], names: dict[str, A
         raise _unconvertible(node, f"a {_type_name(value)} is not a native value or an expression")
     if isinstance(node, ast.Attribute):
         return _OperationData("get", (convert(node.value), _LiteralData(node.attr)))
+    if isinstance(node, ast.Subscript):
+        if isinstance(node.slice, (ast.Slice, ast.Tuple)):
+            raise _unconvertible(node, "slices are not supported")
+        return operation("item", node.value, node.slice)
     if isinstance(node, ast.BoolOp):
         name = "and" if isinstance(node.op, ast.And) else "or"
         result = convert(node.values[0])
@@ -331,10 +347,14 @@ def _compare(node: ast.Compare, convert: Callable[[ast.expr], Any]) -> Any:
     pairs = []
     left = convert(node.left)
     for op, comparator in zip(node.ops, node.comparators):
-        if type(op) not in _COMPARISONS:
+        if not isinstance(op, (ast.In, ast.NotIn)) and type(op) not in _COMPARISONS:
             raise _unconvertible(node)
         right = convert(comparator)
-        pairs.append(_OperationData(_COMPARISONS[type(op)], (left, right)))
+        if isinstance(op, (ast.In, ast.NotIn)):
+            within = _OperationData("in", (left, right))
+            pairs.append(within if isinstance(op, ast.In) else _OperationData("not", (within,)))
+        else:
+            pairs.append(_OperationData(_COMPARISONS[type(op)], (left, right)))
         left = right
     result = pairs[0]
     for pair in pairs[1:]:
@@ -358,5 +378,41 @@ def _call(node: ast.Call, bound: dict[str, _VariableData], names: dict[str, Any]
             raise _unconvertible(node, f"{function.id} takes an object and a property name")
         name = "has" if function.id == "hasattr" else "get"
         return _OperationData(name, (_convert(arguments[0], bound, names), _LiteralData(arguments[1].value)))
+    if isinstance(function, ast.Name) and function.id in _COLLECTIONS and function.id not in bound \
+            and names.get(function.id, getattr(builtins, function.id)) is getattr(builtins, function.id):
+        if len(arguments) != 1:
+            raise _unconvertible(node, f"{function.id} takes one collection")
+        if isinstance(arguments[0], ast.GeneratorExp):
+            return _quantifier(node, function.id, arguments[0], bound, names)
+        if function.id in ("all", "any"):
+            raise _unconvertible(node, f"{function.id} takes a generator expression")
+        return _OperationData(_COLLECTIONS[function.id], (_convert(arguments[0], bound, names),))
     raise _unconvertible(node)
+
+
+_COLLECTIONS = {"len": "count", "sum": "sum", "min": "min", "max": "max", "all": "all", "any": "any"}
+
+
+def _quantifier(node: ast.Call, function: str, generator: ast.GeneratorExp, bound: dict[str, _VariableData],
+                names: dict[str, Any]) -> Any:
+    """`all(...)`, `any(...)` or `sum(1 for ...)` of a generator expression over one name, as a quantifier."""
+    clauses = generator.generators
+    if len(clauses) != 1 or not isinstance(clauses[0].target, ast.Name):
+        raise _unconvertible(node, "a generator has one for, over a name")
+    clause, name = clauses[0], clauses[0].target.id
+    counted = isinstance(generator.elt, ast.Constant) and type(generator.elt.value) is int and generator.elt.value == 1
+    if function not in ("all", "any") and not (function == "sum" and counted):
+        raise _unconvertible(node, "a quantifier is all(...), any(...) or sum(1 for ...)")
+    inner = {**bound, name: _VariableData(name)}
+    conditions = [_convert(condition, inner, names) for condition in clause.ifs]
+    condition = None
+    for each in conditions:
+        condition = each if condition is None else _OperationData("and", (condition, each))
+    if function == "sum":
+        body, quantifier = (_LiteralData(True) if condition is None else condition), "count"
+    else:
+        body, quantifier = _convert(generator.elt, inner, names), function
+        if condition is not None:
+            body = _OperationData("implies" if function == "all" else "and", (condition, body))
+    return _QuantifierData(name, quantifier, _convert(clause.iter, bound, names), body)
 
