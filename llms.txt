@@ -4,6 +4,10 @@
 
 Basic is three-valued (an absent property is unknown) and never coerces, only its core vocabulary is guaranteed, each dialect evaluates by its own language's rules, and evaluators reach only what their scope allowlists.
 
+## Why
+
+- [MBSE.md](https://github.com/pitaman71/mbse-expressions/blob/main/MBSE.md): executable specifications, and each mbse repository's part in them
+
 ## Using it
 
 - [Agent skill](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/SKILL.md): when to use it, the rules that prevent most mistakes, and references loaded per task

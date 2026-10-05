@@ -10,6 +10,7 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 
 | You want to | Read |
 |---|---|
+| Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
 | Use the library: write, evaluate, store or translate rules | [skills/mbse-expressions/SKILL.md](skills/mbse-expressions/SKILL.md), a skill. It loads its references only as needed |
 | Learn it by example, from a first rule to C and SystemVerilog | [python3/tutorials/README.md](python3/tutorials/README.md), eight case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
 | Understand a design rule or an open question | [docs/EXPRESSIONS.md](docs/EXPRESSIONS.md), by section |

@@ -1,5 +1,11 @@
 # mbse-expressions
 
+`mbse-expressions` makes the rules of a specification executable: constraints, derived values and the conditions an
+interface promises are written once, as data, instead of once per spreadsheet, document and implementation language.
+A rule can start partly formalized and be tightened as the design matures; it is evaluated alike in Python and TypeScript
+and translated into each implementation language, from Excel and MATLAB to C and SystemVerilog. It is the rules layer of
+the mbse repositories' [executable specifications](MBSE.md).
+
 Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas), and their evaluation. An
 expression, such as "65 or older, with an email address on file", is data with a schema: it can be stored with the
 rest of your data, sent between programs, and evaluated the same way in Python and TypeScript.
