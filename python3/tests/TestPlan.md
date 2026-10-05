@@ -33,7 +33,7 @@ uv run python -m mbse.Expressions.Conformance.write   # regenerate ../conformanc
 | `10_Collections.ipynb` | COL | 7 | Collections: list properties read as collections (positional, keyed, nested) and scope lists as positional ones; `count`, `item` (positions from 0, keys, unknown where none), `in` (items, Kleene's or); `sum` (in order, overflow, empty is 0), `min`, `max` (ordered domains, incomparable is unknown), `unique`; `entries` as records that `get` and `has` read, linked objects kept; the quantifiers `all`, `any` and `count` by Kleene's logic, deciding early, nested and shadowing; the quantifier kind built, validated as a binding (scopes, vocabulary, missing slots), serialized, made from forms, and refused by translators; collection domains `List` and `Keyed` for inference, the items' domain for a quantifier's name, signatures and their refusals |
 | `11_Partials.ipynb` | PAR | 4 | Partial evaluation: known subexpressions become literals (typed ones with their domains), unknown variables stay, values without literals keep their subexpressions; Kleene's short-circuits and neutral operands for `and`, `or` and `implies`, unknown values deciding nothing, extensions rebuilt; lets of known values bound and dropped once unused, objects kept, names hiding known variables, quantifiers evaluated or reduced; residuals agreeing with evaluation over every split of a scope, serialized and translated; errors, cycles and non-expressions raising |
 
-Total: 58 cases, with the same IDs in the same order in both implementations.
+Total: 96 cases, with the same IDs in the same order in both implementations.
 
 ---
 

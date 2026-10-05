@@ -32,7 +32,7 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `10_Collections.ipynb` | COL | 7 | as in Python; collections, records and collection domains compare with `equals()`, and a record's fields are a `Map` |
 | `11_Partials.ipynb` | PAR | 4 | as in Python; the reducer is called with `run` |
 
-Total: 58 cases, with the same IDs in the same order in both implementations.
+Total: 96 cases, with the same IDs in the same order in both implementations.
 
 ---
 

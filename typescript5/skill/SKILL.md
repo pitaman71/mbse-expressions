@@ -30,6 +30,8 @@ languages, called dialects:
 
 It is a poor fit for logic that is simply part of one program; write that in the program's own language.
 
+Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.com/pitaman71/mbse-expressions/blob/main/MBSE.md).
+
 ## Rules that prevent most mistakes
 
 1. **Writers build data; nothing evaluates until asked.** `variable("this").age.ge(18)` is the expression
