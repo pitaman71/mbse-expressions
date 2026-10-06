@@ -1,16 +1,17 @@
 <!-- nav -->
-[← 8 · Rules for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Rules_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+[← 8 · Constraints for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
 
 # Expressions
 
-Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas): rules about its data, which
-[mbse-patterns](https://github.com/pitaman71/mbse-patterns) keeps as constraints, such as "at least one phone", and uses as queries. This package depends on mbse-schemas (a sibling
-checkout, pinned in `siblings.json`), whose [framework design](https://github.com/pitaman71/mbse-schemas/blob/main/docs/FRAMEWORK.md) describes the
-framework; this document covers expressions only.
+Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas): constraints about its data,
+which [mbse-patterns](https://github.com/pitaman71/mbse-patterns) keeps as constraints, such as "at least one phone",
+and uses as queries. This package depends on mbse-schemas (a sibling checkout, pinned in `siblings.json`), whose
+[framework design](https://github.com/pitaman71/mbse-schemas/blob/main/docs/FRAMEWORK.md) describes the framework; this
+document covers expressions only.
 
 Expressions come in dialects: expression languages that implement one framework, so that each is serializable,
 structurally traversable, validatable, evaluatable, and translatable into the others. The Basic dialect is the core
-vocabulary below, in which rules about mbse-schemas' data are written; `from mbse.Expressions import Expressions,
+vocabulary below, in which constraints about mbse-schemas' data are written; `from mbse.Expressions import Expressions,
 Evaluators` imports it. The Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog dialects model those languages' expressions (see
 [Dialects](#dialects)); the framework is described under [The framework](#the-framework), and translation under
 [Translators](#translators). Both implementations have all of them (see [Equivalence](EQUIVALENCE.md)).
@@ -49,9 +50,9 @@ deterministic, and total, with no side effects or unbounded iteration.
 | Conversion | `convert`, `reinterpret`, `unpack` (1, with the operation's `domain`); `pack` (1) |
 | Collections | `count(xs)`, `item(xs, i)`, `in(x, xs)`, `sum`, `min`, `max`, `unique` (1, but `item` and `in` 2); `entries(object, adjacency)` (2); the quantifiers `all`, `any`, `count` (`OfQuantifier`) |
 
-Rules that every binding must evaluate use only the core vocabulary. Operation names outside it are extensions that a
-binding may or may not support. A union value is a record of its one branch, by name, so a rule tests which branch it
-holds with `has`, e.g. `has(get(this, 'reach'), 'email')`.
+Constraints that every binding must evaluate use only the core vocabulary. Operation names outside it are extensions
+that a binding may or may not support. A union value is a record of its one branch, by name, so a constraint tests which
+branch it holds with `has`, e.g. `has(get(this, 'reach'), 'email')`.
 
 Evaluation is the concern of `Evaluators`: `Evaluators.OfAny(expression, scope)` binds the variables in `scope` and
 returns a native value, an object, or unknown (`None`), and `Evaluators.OfLiteral`, `OfOperation`, `OfVariable` and
@@ -60,18 +61,19 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
 - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are unknown.
   `and`, `or`, `not` and `implies` follow Kleene's logic (`False and unknown` is `False`); the second operand is
   evaluated only when the first does not decide.
-- No coercion. Comparisons follow mbse-schemas' [equality rules](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUALITY.md): natives of one type by value, objects by identity; values of different
-  types are incomparable (`lt(1, 1.5)` is unknown), and only `int`, `float`, `str` and `bytes` are ordered. Arithmetic
-  takes numbers of one domain (`add(1, 1.5)` is an error). Values of other domains than the natives' defaults follow
-  the same rules by domain (see Value domains).
+- No coercion. Comparisons follow mbse-schemas'
+  [equality](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUALITY.md): natives of one type by value,
+  objects by identity; values of different types are incomparable (`lt(1, 1.5)` is unknown), and only `int`, `float`,
+  `str` and `bytes` are ordered. Arithmetic takes numbers of one domain (`add(1, 1.5)` is an error). Values of other
+  domains than the natives' defaults follow the same semantics by domain (see Value domains).
 - Unknown operations, wrong numbers of arguments, unbound variables and wrong operand types raise.
 - `get` and `has` read any object that writes its properties through `accept`, including mbse-schemas' value
   objects, whose identity does not take part in equality, so they compare equal to nothing; reference objects
   compare by identity.
 
-`Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, and returns `True`,
-`False` or unknown (`None`); a rule whose value is not a bool raises. mbse-schemas needs no evaluator: its union values
-name their branch, so neither decoding nor validation evaluates anything.
+`Evaluators.predicate(constraint, value)` evaluates a constraint about a value with `this` bound to it, and returns
+`True`, `False` or unknown (`None`); a constraint whose value is not a bool raises. mbse-schemas needs no evaluator: its
+union values name their branch, so neither decoding nor validation evaluates anything.
 
 `validate(bound=(), core=False)` reports statically what evaluation would raise: missing names and values, non-native
 literals, cycles (shared sub-expressions are not cycles), wrong numbers of arguments to core operations, variables not
@@ -143,8 +145,8 @@ adult = Python.Text.FromFunction(lambda this: this.age >= 18 and this.email is n
   collection, like every argument, may be unknown, and then so is the result. Quantifiers are bounded by the data, so
   core expressions stay constraints.
 - **Collections have domains for inference only**: `Domains.List(item)` and `Domains.Keyed(key, item)`, from the
-  environment a rule is inferred in. A quantifier's name has its collection's item domain, and `item`, `sum`, `min` and
-  `max` give it. There are no collection literals: collections come from data.
+  environment a constraint is inferred in. A quantifier's name has its collection's item domain, and `item`, `sum`,
+  `min` and `max` give it. There are no collection literals: collections come from data.
 
 ## Value domains
 
@@ -218,7 +220,7 @@ the parameters that standard defines, and today's natives become their defaults.
 - **A value of another domain than its native's default is a typed value**, `Domains.Value(domain, value)`, whose
   value is a native its domain holds (constructing one that it does not hold raises). Evaluating a literal of such a
   domain gives one, operations give one whenever their result's domain is not a default, and a scope may bind a
-  variable to one; a value of a default domain is always the bare native, so rules over natives are unchanged.
+  variable to one; a value of a default domain is always the bare native, so constraints over natives are unchanged.
   `Domains.of(value)` gives a value's domain, a typed value's own.
 - **Comparisons take two values of one domain**; values of different domains are incomparable (unknown), so
   `eq(1 as int8, 1)` is unknown. Every domain has `eq` and `ne`. `Integer`, `Ieee754`, `Bytes`, `Unicode` and
@@ -325,11 +327,11 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
   dialect's way: `lookup(reference)`, `bind(name, value)` (the scope within a binding) and `enter(declaration)` (the
   scope within an import). `Variables` is the scope of names bound to values, which dialect scopes derive from, and an
   evaluator given a mapping makes its dialect's scope from it.
-- `Evaluators` defines `Evaluator` (`(expression, scope) -> value`) and `Predicate` (`(rule, value) -> bool | None`,
-  with `this` bound to the value). `Interpreter` evaluates by role and calls an implementation per operator with one thunk per
-  argument and the scope, so each dialect decides what to evaluate and when; operators outside a closed vocabulary go
-  to an `extension`, which is how Matlab and Excel call the functions their scopes provide. It raises what `validate`
-  reports.
+- `Evaluators` defines `Evaluator` (`(expression, scope) -> value`) and `Predicate` (`(constraint, value) -> bool |
+  None`, with `this` bound to the value). `Interpreter` evaluates by role and calls an implementation per operator with
+  one thunk per argument and the scope, so each dialect decides what to evaluate and when; operators outside a closed
+  vocabulary go to an `extension`, which is how Matlab and Excel call the functions their scopes provide. It raises what
+  `validate` reports.
 - `Partials` is partial evaluation, a peer of `Evaluators`: `Reducer(interpreter, literal, simplify)` evaluates every
   subexpression whose references the given variables determine and replaces it with the literal of its value, when the
   dialect has one (an object, a collection or an unknown value has none, and its subexpression stays); a binding of a
@@ -459,25 +461,36 @@ alike only there.
 
 ## Open questions
 
+- **Resolving constraints.** A constraint binds variables and is resolvable in any direction
+  ([MBSE.md](../MBSE.md#what-a-specification-is-made-of)): `total = sum(items)` determines `total` from `items`, and
+  restricts `items` given `total`. The evaluators compute only forward, from values bound to every variable an
+  expression reads, and partial evaluation simplifies what is known; nothing determines or restricts a variable from a
+  constraint that binds it, and `eq` is checked, never used to determine. Open: how a constraint is resolved, how a
+  restriction that does not determine a variable is represented, and which operations are invertible.
+- **How hard a check tries.** Checking gives true, false or unknown (`Evaluators.predicate`), and should make a best
+  effort to prove a constraint true or false when its variables are restricted by other constraints but not
+  determined. Today it proves what three-valued logic and partial evaluation prove (`false and unknown` is false), and
+  nothing from the restrictions other constraints place on a variable.
 - Collections have no literals, and Basic has no tensor domain over keyed and extended lists, nor `map` or `filter`.
 - Collections translate between Basic and Python, SystemVerilog, MATLAB and Excel, and directly between Python,
   MATLAB and Excel; not to Latex or Ccpp, nor directly between SystemVerilog and the others, which have no translator
   of their own. `unique` is written as an idiom that does not read back, and `entries` has no counterpart.
 - SystemVerilog's reductions of no items give their identities (0, 1, `1'b1`, `1'b0`), which IEEE 1800 leaves to
   tools; `min()[0]` of an empty array raises, where Basic's `min` is unknown.
-- Reading rules from source text and writing them back is the work of a bridge between mbse-programs' syntax trees
+- Reading constraints from source text and writing them back is the work of a bridge between mbse-programs' syntax trees
   and the dialects' terms (see Resolved). Until it exists, every dialect's `Text.ToText`, and Python's `Text.FromText`
   and `Text.FromFunction`, stay here; whether they move to the bridge or delegate to it is undecided.
 - Excel's ranges (`A1:B3`) and structured references (`Table1[@age]`) are not modeled; they need array values.
 - `Symbolics` has imports, an expression's dependencies, but no exports. Exports would name what a unit of
-  expressions (a module of rules, a MATLAB package, a workbook's defined names) provides to others; they need a unit
-  that groups expressions, which no dialect has yet.
+  expressions (a module of constraints, a MATLAB package, a workbook's defined names) provides to others; they need a
+  unit that groups expressions, which no dialect has yet.
 
 ## Resolved
 
 - `Python.Text.FromFunction` reads collections in the forms the Basic-to-Python translator writes (`len`, indexing,
-  `in`, `sum`, `min`, `max`, and `all`, `any` and `sum(1 for ...)` over a generator expression), so a translated rule
-  reads back, and `Text.FromText` reads a chained comparison as `and` of comparisons sharing the middle operand.
+  `in`, `sum`, `min`, `max`, and `all`, `any` and `sum(1 for ...)` over a generator expression), so a translated
+  constraint reads back, and `Text.FromText` reads a chained comparison as `and` of comparisons sharing the middle
+  operand.
 
 - A dialect may extend another, inheriting its kinds; a base accepts its extensions' terms as arguments, and the
   extension validates and evaluates the trees that mix them, so that a dialect such as mbse-patterns' predicates adds
@@ -489,8 +502,8 @@ alike only there.
   replacing Basic's `Expressions.from_`.
 
 - Parsing and printing source code belong in mbse-programs, which holds each language's complete syntax tree with an
-  established parser and printer, not in mbse-expressions, whose dialects hold the terms of rules. No dialect gains a
-  parser here; a rule in source text is read by mbse-programs and translated to a dialect.
+  established parser and printer, not in mbse-expressions, whose dialects hold the terms of constraints. No dialect
+  gains a parser here; a constraint in source text is read by mbse-programs and translated to a dialect.
 
 - An `Ieee1164` domain of a `width` is VHDL's `std_logic_vector`, its value that many states, the most significant
   first; without one it is a single `std_logic`. SystemVerilog's binary vectors and those with x or z bits are its
@@ -568,8 +581,8 @@ alike only there.
 - Evaluation is its own module, `Evaluators`, with one entry point per expression kind (`Evaluators.OfAny`, ...).
 - Expressions are partitioned into dialects over one framework (`Framework`), each declared by its kinds' roles;
   translators are pairwise, declared as bidirectional pattern rules, and applied by co-traversal.
-- mbse-schemas' unions name their branches, and it takes no evaluator; `Evaluators.predicate` evaluates a rule about a
-  value, binding it to `this`. Each dialect's union of meta-schemas names its branches by the kinds' tags.
+- mbse-schemas' unions name their branches, and it takes no evaluator; `Evaluators.predicate` evaluates a constraint
+  about a value, binding it to `this`. Each dialect's union of meta-schemas names its branches by the kinds' tags.
 - Evaluation is three-valued (Kleene), never coerces, and reads properties with `get(object, name)`; variables are
   bound by `OfLet` or by the caller's scope. `Writer`s build expressions with methods only (no operator overloading), so
   both bindings read the same.
@@ -577,4 +590,4 @@ alike only there.
 ---
 
 <!-- nav -->
-[← 8 · Rules for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Rules_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)
+[← 8 · Constraints for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Equivalence of the implementations →](EQUIVALENCE.md)

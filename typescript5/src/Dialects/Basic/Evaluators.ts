@@ -23,7 +23,8 @@
  * - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
  *   identity does not take part in equality (and so they compare equal to nothing).
  *
- * `Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, as a truth value.
+ * `Evaluators.predicate(constraint, value)` evaluates a constraint about a value with `this` bound to it, as a truth
+ * value.
  */
 
 import { Comparison, Errors, Repr, Schemas, Validators } from "@mbse/schemas/Framework";
@@ -558,9 +559,9 @@ export function OfQuantifier(expression: Expressions.OfQuantifier.Spec, scope: S
   return INTERPRETER.run(Expressions.OfQuantifier.resolve(expression), scope);
 }
 
-/** Whether `value` satisfies the rule `predicate`, evaluated with `this` bound to it; `null` if unknown. */
-export function predicate(predicate: unknown, value: unknown): boolean | null {
-  const result = OfAny(predicate as Expressions.OfAny.Spec, { this: value });
-  if (result !== null && typeof result !== "boolean") throw new TypeError(`a predicate must be a bool, got ${typeName(result)}`);
+/** Whether `value` satisfies `constraint`, evaluated with `this` bound to it; `null` if unknown. */
+export function predicate(constraint: unknown, value: unknown): boolean | null {
+  const result = OfAny(constraint as Expressions.OfAny.Spec, { this: value });
+  if (result !== null && typeof result !== "boolean") throw new TypeError(`a constraint must be a bool, got ${typeName(result)}`);
   return result as boolean | null;
 }

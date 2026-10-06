@@ -8,14 +8,14 @@ translator between Basic and Python that writes NumPy's functions over columns a
 from mbse.Expressions import Expressions as E, Translators
 from mbse.Expressions.Dialects.Excel import Expressions as X
 trace = []
-formula = Translators.between(E.DIALECT, X.DIALECT).forward(rule, trace)   # trace: (source node, target node) pairs
+formula = Translators.between(E.DIALECT, X.DIALECT).forward(constraint, trace)   # trace: (source node, target node) pairs
 back = Translators.between(X.DIALECT, E.DIALECT).forward(formula)
 ```
 
 ## What a translation keeps
 
 - **The form, not always the value.** Each dialect evaluates by its own rules (see [dialects.md](dialects.md)), so a
-  translated rule can give a different answer on the same data: missing values, `1 == 1.0`, case in text.
+  translated constraint can give a different answer on the same data: missing values, `1 == 1.0`, case in text.
 - **Sharing.** Each term is translated once, so a shared sub-expression stays shared.
 - **Round trips, where both dialects can say it.** The exceptions:
 

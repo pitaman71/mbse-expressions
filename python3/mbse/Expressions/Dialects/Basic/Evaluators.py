@@ -22,8 +22,8 @@
 - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
   identity does not take part in equality (and so they compare equal to nothing).
 
-`Evaluators.predicate(rule, value)` evaluates a rule about a value with `this` bound to it, as a truth value.
-"""
+`Evaluators.predicate(constraint, value)` evaluates a constraint about a value with `this` bound to it, as a truth
+value. """
 
 from __future__ import annotations
 
@@ -557,9 +557,9 @@ def OfQuantifier(expression: Expressions.OfQuantifier.Spec, scope: Scope = None)
     return INTERPRETER(Expressions.OfQuantifier.resolve(expression), scope)
 
 
-def predicate(predicate: Expressions.OfAny.Spec, value: Any) -> bool | None:
-    """Whether `value` satisfies the rule `predicate`, evaluated with `this` bound to it; `None` if unknown."""
-    result = OfAny(predicate, {"this": value})
+def predicate(constraint: Expressions.OfAny.Spec, value: Any) -> bool | None:
+    """Whether `value` satisfies `constraint`, evaluated with `this` bound to it; `None` if unknown."""
+    result = OfAny(constraint, {"this": value})
     if result is not None and type(result) is not bool:
-        raise TypeError(f"a predicate must be a bool, got {_type_name(result)}")
+        raise TypeError(f"a constraint must be a bool, got {_type_name(result)}")
     return result

@@ -6,7 +6,7 @@ mirrors Python name for name, snake_case included (`schema_of`, `name_of`), and 
 
 ## A complete program
 
-The same rule as in Python, built with writers, which TypeScript uses in place of Python's `Text.FromFunction`.
+The same constraint as in Python, built with writers, which TypeScript uses in place of Python's `Text.FromFunction`.
 
 ```typescript
 import { Evaluators, Expressions as E } from "@mbse/expressions";
@@ -26,7 +26,7 @@ const ada = B.Contact().name("Ada").age(70n).email("ada@example.com").create();
 const bob = B.Contact().name("Bob").age(30n).create();
 const eve = B.Contact().name("Eve").email("eve@example.com").create(); // no age
 
-// A rule, built with writers: methods that build data. (Python can also read one from a lambda.)
+// A constraint, built with writers: methods that build data. (Python can also read one from a lambda.)
 const contact = E.variable("contact");
 const senior = contact.age.ge(65n).and_(contact.has("email")).data;
 check(senior.validate({ bound: ["contact"], core: true }).length === 0, "invalid");
@@ -39,16 +39,16 @@ check(Evaluators.OfAny(senior, { contact: eve }) === null, "eve");
 // It is data: store it and read it back.
 const schema = E.DIALECT.schema_of(senior);
 const text = JSON.ToJSON(E.Builders).Reachable(schema, senior); // E.Builders: the store of Basic's expression classes
-const rule = JSON.FromJSON(E.Builders).Reachable(schema, text) as E.OfAny.Data; // decoders return unknown
+const constraint = JSON.FromJSON(E.Builders).Reachable(schema, text) as E.OfAny.Data; // decoders return unknown
 
 // Translate it into other languages; each evaluates by its own rules.
-const formula = Translators.between(E.DIALECT, Excel.Expressions.DIALECT).forward(rule);
+const formula = Translators.between(E.DIALECT, Excel.Expressions.DIALECT).forward(constraint);
 check(Excel.Text.ToText(formula) === "=AND(contact.age >= 65, NOT(ISERROR(contact.email)))", "formula");
 check(Excel.Evaluators.OfAny(formula, { contact: eve }) === Excel.Evaluators.Error.of("#FIELD!"), "an error value, not unknown");
-const code = Translators.between(E.DIALECT, Python.Expressions.DIALECT).forward(rule);
+const code = Translators.between(E.DIALECT, Python.Expressions.DIALECT).forward(constraint);
 check(Python.Text.ToText(code) === "contact.age >= 65 and hasattr(contact, 'email')", "python");
 
-// A union value is a record of its one branch, by name, so a rule reads it like any object.
+// A union value is a record of its one branch, by name, so a constraint reads it like any object.
 const self = E.variable("this");
 const Phone = new S.OfObject.Builder().properties(native("number", String)).create();
 const Email = new S.OfObject.Builder().properties(native("address", String)).create();

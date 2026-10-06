@@ -1,12 +1,12 @@
-/** mbse-expressions: rules, predicates and constraints as neutral, language-independent data.
+/** mbse-expressions: constraints as neutral, language-independent data.
  *
  * Expression languages (dialects) that are serializable, traversable, validatable, evaluatable and translatable into
  * each other. See docs/EXPRESSIONS.md at https://github.com/pitaman71/mbse-expressions.
  *
- * For AI agents: read `skill/SKILL.md` at the root of this package first. It says when to use this package, the rules
- * that prevent most mistakes, and which reference to load for a task.
+ * For AI agents: read `skill/SKILL.md` at the root of this package first. It says when to use this package, the
+ * practices that prevent most mistakes, and which reference to load for a task.
  *
- * `Expressions`, `Evaluators` and `Domains` are the Basic dialect's, the neutral form of every rule. The
+ * `Expressions`, `Evaluators` and `Domains` are the Basic dialect's, the neutral form of every constraint. The
  * framework is `@mbse/expressions/Framework`, the dialects are under `@mbse/expressions/Dialects/<name>`, and the
  * translators between them are `@mbse/expressions/Translators`. */
 

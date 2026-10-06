@@ -117,11 +117,11 @@ def of(value: Any) -> D.Domain:
 
 
 class _Typed:
-    """A signature over arithmetic types: `rule` gives the result type of the argument types, or None when they do not
+    """A signature over arithmetic types: `result_type` gives the result type of the argument types, or None when they do not
     apply; an argument of unknown domain makes the result unknown, or `known` when given."""
 
-    def __init__(self, arity: int, rule: Callable[[Sequence[CType]], CType | None], text: str, known: D.Domain | None = None):
-        self._arity, self._rule, self._text, self._known = arity, rule, text, known
+    def __init__(self, arity: int, result_type: Callable[[Sequence[CType]], CType | None], text: str, known: D.Domain | None = None):
+        self._arity, self._result_type, self._text, self._known = arity, result_type, text, known
 
     def arity(self) -> int:
         return self._arity
@@ -130,7 +130,7 @@ class _Typed:
         unknown = [a for a in arguments if not isinstance(a, CType)]
         if unknown:  # an argument of unknown domain: the result is too, unless the signature knows it
             return (self._known or Anything) if all(a is Anything for a in unknown) else None
-        result = self._rule(arguments)  # type: ignore[arg-type]
+        result = self._result_type(arguments)  # type: ignore[arg-type]
         return None if result is None else _named(result)
 
     def describe(self) -> str:

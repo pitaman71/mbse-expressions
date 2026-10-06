@@ -9,15 +9,16 @@ and `Framework.Symbolics.free(expression)` tells which names it needs from its s
 
 | Use | For |
 |---|---|
-| **Basic** (`mbse.Expressions`) | the rule itself: the neutral form to store, share and analyze. rules every binding evaluates are Basic, over `this`, using only the core vocabulary |
-| **Python** | Python source, to run the rule in Python or read one from Python code; NumPy style evaluates over columns |
-| **Matlab** | MATLAB source, for rules that live in MATLAB code or Simulink models |
-| **Excel** | worksheet formulas, for rules that live in spreadsheets, over cells and records |
-| **Latex** | notation, for rules in documents and specifications; it has no evaluator: translate to evaluate |
-| **Ccpp** | C and C++ source, for rules over the types of embedded software and interface control documents (`uint8_t`, `float`) |
-| **SystemVerilog** | SystemVerilog source, for rules over hardware signals and registers: assertions, constraints and checks on vectors whose bits may be x or z |
+| **Basic** (`mbse.Expressions`) | the constraint itself: the neutral form to store, share and analyze. Constraints every binding evaluates are Basic, over `this`, using only the core vocabulary |
+| **Python** | Python source, to check the constraint in Python or read one from Python code; NumPy style evaluates over columns |
+| **Matlab** | MATLAB source, for constraints that live in MATLAB code or Simulink models |
+| **Excel** | worksheet formulas, for constraints that live in spreadsheets, over cells and records |
+| **Latex** | notation, for constraints in documents and specifications; it has no evaluator: translate to evaluate |
+| **Ccpp** | C and C++ source, for constraints over the types of embedded software and interface control documents (`uint8_t`, `float`) |
+| **SystemVerilog** | SystemVerilog source, for constraints over hardware signals and registers, as assertions and checks on vectors whose bits may be x or z |
 
-Write a rule in Basic, and translate it where it must run; read one written elsewhere back into Basic to analyze it.
+Write a constraint in Basic, and translate it where it must be checked; read one written elsewhere back into Basic to
+analyze it.
 
 ## Constructors and source text
 

@@ -110,10 +110,10 @@ export function of(value: unknown): D.Domain {
   return typeof value === "string" ? StringDomain : Anything;
 }
 
-/** A signature over arithmetic types: `rule` gives the result type of the argument types, or null when they do not
- * apply; an argument of unknown domain makes the result unknown, or `known` when given. */
+/** A signature over arithmetic types: `resultType` gives the result type of the argument types, or null when they
+ * do not apply; an argument of unknown domain makes the result unknown, or `known` when given. */
 class Typed implements D.Signature {
-  constructor(private readonly count: number, private readonly rule: (types: CType[]) => CType | null,
+  constructor(private readonly count: number, private readonly resultType: (types: CType[]) => CType | null,
     private readonly text: string, private readonly known: D.Domain | null = null) {}
 
   arity(): number {
@@ -125,7 +125,7 @@ class Typed implements D.Signature {
     if (unknown.length > 0) { // an argument of unknown domain: the result is too, unless the signature knows it
       return unknown.every((a) => a === Anything) ? this.known ?? Anything : null;
     }
-    const result = this.rule(args as CType[]);
+    const result = this.resultType(args as CType[]);
     return result === null ? null : named(result);
   }
 

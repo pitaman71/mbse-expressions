@@ -136,10 +136,10 @@ export function of(value: unknown): D.Domain {
   return typeof value === "number" ? Real : Anything;
 }
 
-/** A signature over SystemVerilog types: `rule` gives the result type of the argument types, or null when they do not
- * apply; an argument of unknown domain makes the result unknown, or `known` when given. */
+/** A signature over SystemVerilog types: `resultType` gives the result type of the argument types, or null when they
+ * do not apply; an argument of unknown domain makes the result unknown, or `known` when given. */
 class Sized implements D.Signature {
-  constructor(private readonly count: number, private readonly rule: (types: SvType[]) => SvType | null,
+  constructor(private readonly count: number, private readonly resultType: (types: SvType[]) => SvType | null,
     private readonly text: string, private readonly known: D.Domain | null = null) {}
 
   arity(): number {
@@ -149,7 +149,7 @@ class Sized implements D.Signature {
   result(args: readonly D.Domain[]): D.Domain | null {
     const unknown = args.filter((a) => !(a instanceof SvType));
     if (unknown.length > 0) return unknown.every((a) => a === Anything) ? this.known ?? Anything : null;
-    return this.rule(args as SvType[]);
+    return this.resultType(args as SvType[]);
   }
 
   describe(): string {

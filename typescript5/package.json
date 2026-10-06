@@ -1,10 +1,9 @@
 {
   "name": "@mbse/expressions",
-  "version": "0.2.5",
-  "description": "Rules, predicates and constraints as language-neutral data: validated, evaluated, stored as JSON/YAML, and translated to and from Python, MATLAB and Excel (TypeScript implementation)",
+  "version": "0.2.6",
+  "description": "Constraints as language-neutral data: validated, evaluated, stored as JSON/YAML, and translated to and from Python, MATLAB and Excel (TypeScript implementation)",
   "keywords": [
     "expressions",
-    "rules",
     "constraints",
     "predicates",
     "mbse",

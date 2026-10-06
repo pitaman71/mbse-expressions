@@ -6,7 +6,7 @@ from `mbse.Expressions`, the others from `mbse.Expressions.Dialects.<Name>`, and
 
 ## A complete program
 
-A rule about contacts, evaluated, stored, translated to Excel and Python, and applied to a union value.
+A constraint about contacts, evaluated, stored, translated to Excel and Python, and applied to a union value.
 
 ```python
 from mbse.Expressions import Evaluators, Expressions as E, Translators
@@ -27,7 +27,7 @@ ada = B.Contact().name("Ada").age(70).email("ada@example.com").create()
 bob = B.Contact().name("Bob").age(30).create()
 eve = B.Contact().name("Eve").email("eve@example.com").create()  # no age
 
-# A rule, read from a Python lambda into data. Writers build the same: contact.age.ge(65).and_(contact.has("email")).
+# A constraint, read from a Python lambda into data. Writers build the same: contact.age.ge(65).and_(contact.has("email")).
 senior = PythonText.FromFunction(lambda contact: contact.age >= 65 and contact.email is not None).data
 assert senior.validate(bound={"contact"}, core=True) == []
 
@@ -39,16 +39,16 @@ assert Evaluators.OfAny(senior, {"contact": eve}) is None
 # It is data: store it and read it back.
 schema = E.DIALECT.schema_of(senior)
 text = JSON.ToJSON(E.Builders).Reachable(schema, senior)  # E.Builders: the store of Basic's expression classes
-rule = JSON.FromJSON(E.Builders).Reachable(schema, text)
+constraint = JSON.FromJSON(E.Builders).Reachable(schema, text)
 
 # Translate it into other languages; each evaluates by its own rules.
-formula = Translators.between(E.DIALECT, Excel.DIALECT).forward(rule)
+formula = Translators.between(E.DIALECT, Excel.DIALECT).forward(constraint)
 assert ExcelText.ToText(formula) == "=AND(contact.age >= 65, NOT(ISERROR(contact.email)))"
 assert ExcelEvaluators.OfAny(formula, {"contact": eve}) == ExcelEvaluators.Error("#FIELD!")  # an error value, not unknown
-code = Translators.between(E.DIALECT, Python.DIALECT).forward(rule)
+code = Translators.between(E.DIALECT, Python.DIALECT).forward(constraint)
 assert PythonText.ToText(code) == "contact.age >= 65 and hasattr(contact, 'email')"
 
-# A union value is a record of its one branch, by name, so a rule reads it like any object.
+# A union value is a record of its one branch, by name, so a constraint reads it like any object.
 this = E.variable("this")
 Phone = S.OfObject.Builder().properties(native("number", str)).create()
 Email = S.OfObject.Builder().properties(native("address", str)).create()
@@ -84,8 +84,8 @@ E.DIALECT.infer(expression, {"this": Domains.Object})       # from mbse.Expressi
 
 # Evaluation: a scope, or a mapping of variables.
 Evaluators.OfAny(expression, {"this": value})               # True, False, a value, or None when unknown
-Evaluators.predicate(rule, value)                           # binds this; True, False, or None when unknown
-Partials.OfAny(rule, {"this": value})                       # the residual: what is known evaluated, the rest an expression
+Evaluators.predicate(constraint, value)                           # binds this; True, False, or None when unknown
+Partials.OfAny(constraint, {"this": value})                       # the residual: what is known evaluated, the rest an expression
 
 # Storage, traversal, translation: the same calls in every dialect.
 JSON.ToJSON(E.Builders).Reachable(E.DIALECT.schema_of(e), e); JSON.FromJSON(E.Builders).Reachable(schema, text)
@@ -109,6 +109,6 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 
 | Topic | Read |
 |---|---|
-| Learning it by example: rules as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog | [the tutorial, eight case studies](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) |
+| Learning it by example: constraints as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog | [the tutorial, eight case studies](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) |
 | The Basic dialect: kinds, core vocabulary, evaluation, meta-schemas, writers, `Python.Text.FromFunction` | [EXPRESSIONS.md, The Basic dialect](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#the-basic-dialect) |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/TestPlan.md) |

@@ -1,4 +1,4 @@
-"""Expressions of the Basic dialect: the core vocabulary, for rules and constraints.
+"""Expressions of the Basic dialect: the core vocabulary, for constraints.
 `Evaluators` evaluates them.
 
 - `OfLiteral`: a native value, and its value domain when that is not the native's default (see `Domains`).

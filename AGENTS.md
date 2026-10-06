@@ -1,6 +1,6 @@
 # Guide for AI agents
 
-mbse-expressions formalizes the rules of interfaces and models (predicates, constraints, derived values) as neutral,
+mbse-expressions formalizes what interfaces and models require, their constraints, as neutral,
 language-independent data: expressions with schemas, built on
 [mbse-schemas](https://github.com/pitaman71/mbse-schemas). An expression can be stored, validated, evaluated, and
 translated between expression languages (dialects): Basic, the core vocabulary that every binding
@@ -11,19 +11,21 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 | You want to | Read |
 |---|---|
 | Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
-| Use the library: write, evaluate, store or translate rules | [skills/mbse-expressions/SKILL.md](skills/mbse-expressions/SKILL.md), a skill. It loads its references only as needed |
-| Learn it by example, from a first rule to C and SystemVerilog | [python3/tutorials/README.md](python3/tutorials/README.md), eight case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
-| Understand a design rule or an open question | [docs/EXPRESSIONS.md](docs/EXPRESSIONS.md), by section |
+| Use the library: write, evaluate, store or translate constraints | [skills/mbse-expressions/SKILL.md](skills/mbse-expressions/SKILL.md), a skill. It loads its references only as needed |
+| Learn it by example, from a first constraint to C and SystemVerilog | [python3/tutorials/README.md](python3/tutorials/README.md), eight case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
+| Understand a design decision or an open question | [docs/EXPRESSIONS.md](docs/EXPRESSIONS.md), by section |
 | Change the framework, a dialect or a translator | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
-| Model the data the rules refer to | [mbse-schemas' AGENTS.md](https://github.com/pitaman71/mbse-schemas/blob/main/AGENTS.md), in the sibling checkout |
+| Model the data the constraints refer to | [mbse-schemas' AGENTS.md](https://github.com/pitaman71/mbse-schemas/blob/main/AGENTS.md), in the sibling checkout |
 
 ## Invariants when changing code
 
 - **One vocabulary across the mbse repositories.** A kind's or schema's named members are *properties*, never
   "fields" (a field is only the host language's class member that holds one). An element of an expression tree is
   a *term* (mbse-expressions), and of a program tree a *syntax node* (mbse-programs); never a bare "node" in code,
-  docs or messages.
+  docs or messages. What a specification requires is a *constraint*, never a "rule"; a constraint is checked,
+  resolved or generated from, never executed ([MBSE.md, What a specification is made
+  of](MBSE.md#what-a-specification-is-made-of)).
 - **The README opens with why.** Its first sentence or paragraph says, TL;DR style, why this repository exists, in
   the terms of `MBSE.md`; what it is comes after. Keep that opening true as the repository changes.
 - **Every human-facing document has navigation.** A `{previous, home, next}` line heads and ends each document in
