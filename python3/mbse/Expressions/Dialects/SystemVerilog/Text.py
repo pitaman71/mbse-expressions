@@ -99,9 +99,8 @@ def ToText(expression: Any) -> str:
             return f"{node.type or node.width}'({texts[0]})", _PRIMARY
         if isinstance(node, _Inside):
             return f"{operand(0, _RELATIONAL + 1)} inside {{{', '.join(texts[1:])}}}", _RELATIONAL
-        if isinstance(node, _Unary):  # `- -x`, not the decrement `--x`, and `& &x`
-            text = operand(0, _UNARY)
-            return f"{node.operator}{' ' if text[0] in '+-&|^~!' else ''}{text}", _UNARY
+        if isinstance(node, _Unary):  # its operand is a primary (A.8.3): `-(-x)`, `&(&x)`
+            return f"{node.operator}{operand(0, _PRIMARY)}", _UNARY
         if isinstance(node, _Conditional):  # right-associative
             return f"{operand(0, _OR)} ? {operand(1, _CONDITIONAL)} : {operand(2, _CONDITIONAL)}", _CONDITIONAL
         level = _LEVELS[node.operator]

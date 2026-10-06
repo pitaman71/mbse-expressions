@@ -86,10 +86,7 @@ export function ToText(expression: unknown): string {
     if (node instanceof _Iterate) return [`${operand(0, PRIMARY)}.${node.method}(${node.name}) with (${texts[1]})`, PRIMARY];
     if (node instanceof _Cast) return [`${node.type ?? node.width}'(${texts[0]})`, PRIMARY];
     if (node instanceof _Inside) return [`${operand(0, RELATIONAL + 1)} inside {${texts.slice(1).join(", ")}}`, RELATIONAL];
-    if (node instanceof _Unary) { // `- -x`, not the decrement `--x`, and `& &x`
-      const written = operand(0, UNARY);
-      return [`${node.operator}${"+-&|^~!".includes(written[0] as string) ? " " : ""}${written}`, UNARY];
-    }
+    if (node instanceof _Unary) return [`${node.operator}${operand(0, PRIMARY)}`, UNARY]; // its operand is a primary (A.8.3): `-(-x)`
     if (node instanceof _Conditional) { // right-associative
       return [`${operand(0, OR)} ? ${operand(1, CONDITIONAL)} : ${operand(2, CONDITIONAL)}`, CONDITIONAL];
     }
