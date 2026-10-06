@@ -23,7 +23,7 @@
  * - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
  *   identity does not take part in equality (and so they compare equal to nothing).
  *
- * `Evaluators.predicate(constraint, value)` evaluates a constraint about a value with `this` bound to it, as a truth
+ * `Evaluators.OfPredicate(constraint, value)` evaluates a constraint about a value with `this` bound to it, as a truth
  * value.
  */
 
@@ -560,7 +560,7 @@ export function OfQuantifier(expression: Expressions.OfQuantifier.Spec, scope: S
 }
 
 /** Whether `value` satisfies `constraint`, evaluated with `this` bound to it; `null` if unknown. */
-export function predicate(constraint: unknown, value: unknown): boolean | null {
+export function OfPredicate(constraint: unknown, value: unknown): boolean | null {
   const result = OfAny(constraint as Expressions.OfAny.Spec, { this: value });
   if (result !== null && typeof result !== "boolean") throw new TypeError(`a constraint must be a bool, got ${typeName(result)}`);
   return result as boolean | null;

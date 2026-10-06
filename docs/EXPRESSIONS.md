@@ -71,7 +71,7 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
   objects, whose identity does not take part in equality, so they compare equal to nothing; reference objects
   compare by identity.
 
-`Evaluators.predicate(constraint, value)` evaluates a constraint about a value with `this` bound to it, and returns
+`Evaluators.OfPredicate(constraint, value)` evaluates a constraint about a value with `this` bound to it, and returns
 `True`, `False` or unknown (`None`); a constraint whose value is not a bool raises. mbse-schemas needs no evaluator: its
 union values name their branch, so neither decoding nor validation evaluates anything.
 
@@ -467,7 +467,7 @@ alike only there.
   expression reads, and partial evaluation simplifies what is known; nothing determines or restricts a variable from a
   constraint that binds it, and `eq` is checked, never used to determine. Open: how a constraint is resolved, how a
   restriction that does not determine a variable is represented, and which operations are invertible.
-- **How hard a check tries.** Checking gives true, false or unknown (`Evaluators.predicate`), and should make a best
+- **How hard a check tries.** Checking gives true, false or unknown (`Evaluators.OfPredicate`), and should make a best
   effort to prove a constraint true or false when its variables are restricted by other constraints but not
   determined. Today it proves what three-valued logic and partial evaluation prove (`false and unknown` is false), and
   nothing from the restrictions other constraints place on a variable.
@@ -581,7 +581,7 @@ alike only there.
 - Evaluation is its own module, `Evaluators`, with one entry point per expression kind (`Evaluators.OfAny`, ...).
 - Expressions are partitioned into dialects over one framework (`Framework`), each declared by its kinds' roles;
   translators are pairwise, declared as bidirectional pattern rules, and applied by co-traversal.
-- mbse-schemas' unions name their branches, and it takes no evaluator; `Evaluators.predicate` evaluates a constraint
+- mbse-schemas' unions name their branches, and it takes no evaluator; `Evaluators.OfPredicate` evaluates a constraint
   about a value, binding it to `this`. Each dialect's union of meta-schemas names its branches by the kinds' tags.
 - Evaluation is three-valued (Kleene), never coerces, and reads properties with `get(object, name)`; variables are
   bound by `OfLet` or by the caller's scope. `Writer`s build expressions with methods only (no operator overloading), so

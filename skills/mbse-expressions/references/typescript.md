@@ -57,7 +57,7 @@ const Card = new S.OfObject.Builder().name("Card").ref().properties((p) => p.nam
 store.register(Card);
 const card = B.Card().reach((u: any) => u.email((r: any) => r.address("ada@example.com"))).create();
 check(Validators.Validate(B)(Card, card).length === 0, "card");
-check(Evaluators.predicate(self.reach.has("email"), card) === true, "by email");
+check(Evaluators.OfPredicate(self.reach.has("email"), card) === true, "by email");
 ```
 
 ## Differences from Python
