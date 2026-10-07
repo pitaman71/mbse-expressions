@@ -249,7 +249,7 @@ def _function_node(code: Any) -> ast.Lambda | ast.FunctionDef:
     ]
     for node in sorted((n for n in ast.walk(tree) if isinstance(n, _FUNCTIONS)), key=_span, reverse=True):
         start, end = _span(node)
-        nested = [_span(_body(n)) for n in ast.walk(node) if n is not node and isinstance(n, _FUNCTIONS)]
+        nested = [_inside(n) for n in ast.walk(node) if n is not node and isinstance(n, _FUNCTIONS)]
         if positions and all(start <= (l1, c1) and (l2, c2) <= end for l1, c1, l2, c2 in positions) and not any(
             s <= (l1, c1) and (l2, c2) <= e for l1, c1, l2, c2 in positions for s, e in nested
         ):
@@ -259,6 +259,13 @@ def _function_node(code: Any) -> ast.Lambda | ast.FunctionDef:
 
 def _span(node: ast.AST) -> tuple[tuple[int, int], tuple[int, int]]:
     return (node.lineno, node.col_offset), (node.end_lineno, node.end_col_offset)  # type: ignore[attr-defined]
+
+
+def _inside(node: ast.Lambda | ast.FunctionDef) -> tuple[tuple[int, int], tuple[int, int]]:
+    """The span of a function's body, whatever its statements: what a function nested in it runs, not its defaults."""
+    if isinstance(node, ast.Lambda):
+        return _span(node.body)
+    return _span(node.body[0])[0], _span(node.body[-1])[1]
 
 
 def _body(node: ast.Lambda | ast.FunctionDef) -> ast.expr:
