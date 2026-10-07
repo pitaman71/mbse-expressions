@@ -88,14 +88,9 @@ def _article(noun: str) -> str:
 # --- Protocols ---
 
 
-@dataclasses.dataclass(frozen=True)
-class Form:
-    """A term's structure: its `kind`, its native `attributes` by name, and its ordered `arguments` (None where a slot
-    is empty)."""
-
-    kind: str
-    attributes: Mapping[str, Native] = dataclasses.field(default_factory=dict)
-    arguments: tuple[Any, ...] = ()
+Form = Schemas.Form.Data
+"""A term's structure: its `kind`, its native `attributes` by name, and its ordered `arguments` (None where a slot is
+empty). It is mbse-schemas' neutral form of a term, which a schema holds where a literal would stand."""
 
 
 @runtime_checkable

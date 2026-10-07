@@ -273,8 +273,9 @@ six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics`
 `Domains`, `Evaluators`, `Translators` and `Errors`.
 
 - `Terms.Expression` is an expression of some dialect: `Visitable`, plus `dialect()`, `form()` and
-  `validate()`. A `Form` is a term's structure: its `kind`, its native `attributes` and its ordered `arguments`.
-  `Dialect.make(form)` is the inverse, and `walk`, `fold` (bottom-up, once per term, raising on cycles) and `same`
+  `validate()`. A `Form` is a term's structure: its `kind`, its native `attributes` and its ordered `arguments`. It is
+  mbse-schemas' `Schemas.Form.Data`, the neutral form of a term that a schema holds where a literal would stand
+  (mbse-schemas' `docs/FRAMEWORK.md`, Parametrics). `Dialect.make(form)` is the inverse, and `walk`, `fold` (bottom-up, once per term, raising on cycles) and `same`
   (structural equality by co-traversal: natives of one type by value, NaN is NaN, -0.0 is not 0.0) work on any
   dialect through forms alone.
 - `Terms.Dialect` is an expression language: `name()`, `kinds()`, `schema_of(expression)`, `make`, `resolve`

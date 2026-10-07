@@ -96,15 +96,9 @@ export interface ValidateOptions {
 // --- Protocols ---
 
 /** A term's structure: its `kind`, its native `attributes` by name, and its ordered `arguments` (null where a slot is
- * empty). */
-export class Form {
-  readonly arguments: readonly unknown[];
-
-  constructor(readonly kind: string, readonly attributes: ReadonlyMap<string, Native> = new Map(),
-    args: readonly unknown[] = []) {
-    this.arguments = args;
-  }
-}
+ * empty). It is mbse-schemas' neutral form of a term, which a schema holds where a literal would stand. */
+export const Form = Schemas.Form.Data;
+export type Form = Schemas.Form.Data;
 
 /** An expression of some dialect: `Visitable`, so it serializes like any object, and structurally traversable. */
 export interface Expression extends Visitors.Visitable {
