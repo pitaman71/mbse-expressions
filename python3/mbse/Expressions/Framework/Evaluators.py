@@ -1,8 +1,7 @@
 """Evaluators: the protocols for computing an expression's value, and an interpreter that dialects build theirs on.
 
 An `Evaluator` computes the value of any expression of its dialect in a scope; each dialect's `Evaluators.OfAny` is
-one. A `Predicate` evaluates a constraint about a value, with `this` bound to it: `(constraint, value) -> bool | None`.
-The value domains, the treatment of unknown values and the rules of each operator are the dialect's own: evaluation is
+one. The value domains, the treatment of unknown values and the rules of each operator are the dialect's own: evaluation is
 where dialects differ most.
 
 Evaluation resolves references in a scope (see `Symbolics`): an evaluator given a mapping instead of a scope makes its
@@ -39,13 +38,6 @@ class Evaluator(Protocol):
     """Computes the value of an expression in `scope`, or with the variables in a mapping bound."""
 
     def __call__(self, expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any: ...
-
-
-@runtime_checkable
-class Predicate(Protocol):
-    """Whether `value` satisfies `constraint`, evaluated with `this` bound to it: True, False, or None when unknown."""
-
-    def __call__(self, constraint: Any, value: Any) -> bool | None: ...
 
 
 class Interpreter:

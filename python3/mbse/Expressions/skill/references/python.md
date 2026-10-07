@@ -57,7 +57,7 @@ Card = S.OfObject.Builder().name("Card").ref().properties(lambda p: p.name("reac
 store.register(Card)
 card = B.Card().reach(lambda u: u.email(lambda r: r.address("ada@example.com"))).create()
 assert Validators.Validate(B)(Card, card) == []
-assert Evaluators.OfPredicate(this.reach.has("email"), card) is True
+assert Evaluators.OfAny(this.reach.has("email"), {"this": card}) is True
 ```
 
 ## Cheat sheet
@@ -84,7 +84,7 @@ E.DIALECT.infer(expression, {"this": Domains.Object})       # from mbse.Expressi
 
 # Evaluation: a scope, or a mapping of variables.
 Evaluators.OfAny(expression, {"this": value})               # True, False, a value, or None when unknown
-Evaluators.OfPredicate(constraint, value)                           # binds this; True, False, or None when unknown
+Evaluators.OfAny(constraint, {"this": value})                     # a constraint about a value: True, False, or None when unknown
 Partials.OfAny(constraint, {"this": value})                       # the residual: what is known evaluated, the rest an expression
 
 # Storage, traversal, translation: the same calls in every dialect.

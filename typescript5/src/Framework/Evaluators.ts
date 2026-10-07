@@ -2,8 +2,7 @@
  * Evaluators: the protocols for computing an expression's value, and an interpreter that dialects build theirs on.
  *
  * An `Evaluator` computes the value of any expression of its dialect in a scope; each dialect's `Evaluators.OfAny` is
- * one. A `Predicate` evaluates a constraint about a value, with `this` bound to it: `(constraint, value) => boolean |
- * null`. The value domains, the treatment of unknown values and the rules of each operator are the dialect's own:
+ * one. The value domains, the treatment of unknown values and the rules of each operator are the dialect's own:
  * evaluation is where dialects differ most.
  *
  * Evaluation resolves references in a scope (see `Symbolics`): an evaluator given an object of variables instead of a
@@ -33,9 +32,6 @@ export type Implementation = (args: Thunk[], node: any, scope: any) => any;
 
 /** Computes the value of an expression in `scope`, or with the variables in an object bound. */
 export type Evaluator = (expression: any, scope?: Scope | Bindings) => any;
-
-/** Whether `value` satisfies `constraint`, evaluated with `this` bound to it: true, false, or null when unknown. */
-export type Predicate = (constraint: any, value: unknown) => boolean | null;
 
 /** Evaluates the expressions of `dialect`. `operations` maps each application kind's tag to its implementations by
  * operator name, or, for a kind whose vocabulary is open, to one implementation. `literal` converts a literal's value
