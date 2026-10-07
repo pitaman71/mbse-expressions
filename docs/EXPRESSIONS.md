@@ -63,13 +63,16 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
   evaluated only when the first does not decide.
 - No coercion. Comparisons follow mbse-schemas'
   [equality](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUALITY.md): natives of one type by value,
-  objects by identity; values of different types are incomparable (`lt(1, 1.5)` is unknown), and only `int`, `float`,
+  reference objects by identity, everything else deeply; values of different types are incomparable (`lt(1, 1.5)` is unknown), and only `int`, `float`,
   `str` and `bytes` are ordered. Arithmetic takes numbers of one domain (`add(1, 1.5)` is an error). Values of other
   domains than the natives' defaults follow the same semantics by domain (see Value domains).
 - Unknown operations, wrong numbers of arguments, unbound variables and wrong operand types raise.
 - `get` and `has` read any object that writes its properties through `accept`, including mbse-schemas' value
-  objects, whose identity does not take part in equality, so they compare equal to nothing; reference objects
-  compare by identity.
+  objects. Equality is deep for everything but reference objects, which compare by identity: value objects, union and
+  intersection values and entries' records by the properties each writes, read through the visitor protocols (absent
+  in both or equal in both; present in one only is incomparable); positional collections item by item (another length
+  is unequal), keyed ones by key in any order (other keys are incomparable). Equal is Kleene's and of the parts'
+  equalities.
 
 A constraint about a value is evaluated with `this` bound to it, `Evaluators.OfAny(constraint, {"this": value})`, and
 gives `True`, `False` or unknown (`None`). Checking constraints against data, by the symbols they bind, is
@@ -145,6 +148,9 @@ adult = Python.Text.FromFunction(lambda this: this.age >= 18 and this.email is n
   collection; `count` is the number of items whose body is true, unknown if any is unknown. Bodies are bools; the
   collection, like every argument, may be unknown, and then so is the result. Quantifiers are bounded by the data, so
   core expressions stay constraints.
+- **Collections and records compare deeply.** `eq(xs, ys)` compares a positional collection item by item (one of
+  another length is unequal) and a keyed one by key, in any order (one with other keys is incomparable); records by
+  their fields. So `in` and `unique` find equal lists and records as they find equal natives.
 - **Collections have domains for inference only**: `Domains.List(item)` and `Domains.Keyed(key, item)`, from the
   environment a constraint is inferred in. A quantifier's name has its collection's item domain, and `item`, `sum`,
   `min` and `max` give it. There are no collection literals: collections come from data.
@@ -487,6 +493,12 @@ alike only there.
   unit that groups expressions, which no dialect has yet.
 
 ## Resolved
+
+- Basic compares everything but reference objects deeply, through the visitor protocols, as mbse-schemas' equality
+  does under a schema: value objects, union and intersection values, records and collections are equal when what each
+  writes is equal (0.5). Before, they compared equal to nothing, so a constraint could not compare a value with
+  another, e.g. a schema's property with an expected one (mbse-schemas' `Reflection`). Without a schema, values of two
+  schemas that write the same properties compare equal.
 
 - `Python.Text.FromFunction` reads collections in the forms the Basic-to-Python translator writes (`len`, indexing,
   `in`, `sum`, `min`, `max`, and `all`, `any` and `sum(1 for ...)` over a generator expression), so a translated

@@ -8,8 +8,9 @@
  * - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are
  *   unknown. `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the
  *   first does not decide.
- * - No coercion. Comparisons follow mbse-schemas' EQUALITY.md: natives of one type by value, objects by identity; values of
- *   different types are incomparable. Arithmetic takes numbers of one domain.
+ * - No coercion. Comparisons follow mbse-schemas' EQUALITY.md: natives of one type by value, reference objects by
+ *   identity, everything else deeply (see Deep equality); values of different types are incomparable. Arithmetic takes
+ *   numbers of one domain.
  * - Values of other domains than the natives' defaults are typed values (`Domains.Value`): a literal of such a domain
  *   evaluates to one, and the operations take them by domain. Values of different domains are incomparable; arithmetic
  *   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
@@ -20,8 +21,13 @@
  *   `count`) follow Kleene's logic over the items; an unknown collection gives unknown.
  * - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
  *   variables and wrong operand types raise, as do the problems `validate()` reports.
- * - `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
- *   identity does not take part in equality (and so they compare equal to nothing).
+ * - `get` and `has` read any object that writes its properties through `accept`, including value objects.
+ * - Deep equality: a value object, a union or intersection value, or an entry's record is equal to another when the
+ *   properties each writes (a union's branch, an intersection's parts) are absent in both or equal in both, read
+ *   through the visitor protocols, so without a schema; a property present in one and absent in the other is
+ *   incomparable. A positional collection is equal to another of the same length whose items are equal in order, and
+ *   unequal to one of another length; a keyed collection to another with the same keys and equal values, in any
+ *   order, and incomparable to one with other keys. Equal is Kleene's and of the parts' equalities.
  *
  * A constraint about a value is evaluated with `this` bound to it: `Evaluators.OfAny(constraint, { this: value })`.
  */
@@ -94,6 +100,12 @@ function isObject(value: unknown): value is Visitors.Visitable {
     && (value as Visitors.Visitable).owner() === null;
 }
 
+/** A record's fields, or the properties a value writes, as Basic reads them. */
+function fieldsOf(value: unknown): ReadonlyMap<string, unknown> {
+  if (value instanceof Domains.Record) return value.fields;
+  return new Map([...Validators.properties_of(value as Readable)].map(([name, v]) => [name, valueOf(v)]));
+}
+
 /** A property's value as Basic reads it: a list as a collection. */
 function valueOf(value: unknown): unknown {
   if (value instanceof Validators.ListRecord) {
@@ -148,8 +160,45 @@ function equal(a: unknown, b: unknown): boolean | null {
     return x.domain.compare(x.value, y.value) === 0;
   }
   if (sameNativeType(a, b)) return compare(a as Native, b as Native) === 0;
-  if (isObject(a) && isObject(b)) return a.identity() === b.identity();
+  if (isObject(a) || isObject(b)) return isObject(a) && isObject(b) ? a.identity() === b.identity() : null;
+  if (isCollection(a) && isCollection(b)) {
+    return equalCollections(collectionOf("eq", a) as Domains.Collection, collectionOf("eq", b) as Domains.Collection);
+  }
+  if (isValue(a) && isValue(b)) {
+    const [x, y] = [fieldsOf(a), fieldsOf(b)];
+    if (x.size !== y.size || [...x.keys()].some((name) => !y.has(name))) return null;
+    return all([...x].map(([name, value]) => equal(value, y.get(name) as unknown)));
+  }
   return null;
+}
+
+function isCollection(value: unknown): boolean {
+  return value instanceof Domains.Collection || Array.isArray(value);
+}
+
+/** A record, or a value that writes its properties: compared deeply. */
+function isValue(value: unknown): boolean {
+  return value instanceof Domains.Record || isReadable(value);
+}
+
+/** Kleene's and. */
+function all(results: (boolean | null)[]): boolean | null {
+  if (results.includes(false)) return false;
+  return results.includes(null) ? null : true;
+}
+
+function equalCollections(a: Domains.Collection, b: Domains.Collection): boolean | null {
+  if (a.keys === null && b.keys === null) {
+    return a.items.length !== b.items.length ? false : all(a.items.map((item, i) => equal(item, b.items[i])));
+  }
+  if (a.keys === null || b.keys === null || a.keys.length !== b.keys.length) return null;
+  const pairs: [unknown, unknown][] = [];
+  for (const [i, key] of a.keys.entries()) {
+    const found = b.keys.findIndex((k) => equal(key, k) === true);
+    if (found < 0) return null;
+    pairs.push([a.items[i], b.items[found]]);
+  }
+  return all(pairs.map(([x, y]) => equal(x, y)));
 }
 
 function equality(name: string, values: unknown[]): boolean | null {

@@ -7,8 +7,8 @@
 - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are unknown.
   `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the first does not
   decide.
-- No coercion. Comparisons follow mbse-schemas' EQUALITY.md: natives of one type by value, objects by identity; values of different
-  types are incomparable. Arithmetic takes numbers of one domain.
+- No coercion. Comparisons follow mbse-schemas' EQUALITY.md: natives of one type by value, reference objects by identity,
+  everything else deeply (see Deep equality); values of different types are incomparable. Arithmetic takes numbers of one domain.
 - Values of other domains than the natives' defaults are typed values (`Domains.Value`): a literal of such a domain
   evaluates to one, and the operations take them by domain. Values of different domains are incomparable; arithmetic
   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
@@ -19,14 +19,19 @@
   follow Kleene's logic over the items; an unknown collection gives unknown.
 - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
   variables and wrong operand types raise, as do the problems `validate()` reports.
-- `get` and `has` read any object that writes its properties through `accept`, including value objects, whose
-  identity does not take part in equality (and so they compare equal to nothing).
+- `get` and `has` read any object that writes its properties through `accept`, including value objects.
+- Deep equality: a value object, a union or intersection value, or an entry's record is equal to another when the
+  properties each writes (a union's branch, an intersection's parts) are absent in both or equal in both, read through
+  the visitor protocols, so without a schema; a property present in one and absent in the other is incomparable. A
+  positional collection is equal to another of the same length whose items are equal in order, and unequal to one of
+  another length; a keyed collection to another with the same keys and equal values, in any order, and incomparable to
+  one with other keys. Equal is Kleene's and of the parts' equalities.
 
 A constraint about a value is evaluated with `this` bound to it: `Evaluators.OfAny(constraint, {"this": value})`. """
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
 from mbse.Expressions.Framework import Evaluators as F
@@ -94,6 +99,13 @@ def _is_object(value: Any) -> bool:
     return _is_readable(value) and callable(getattr(value, "identity", None)) and value.owner() is None
 
 
+def _fields(value: Any) -> dict[str, Any]:
+    """A record's fields, or the properties a value writes, as Basic reads them."""
+    if isinstance(value, Domains.Record):
+        return value.fields
+    return {name: _value_of(v) for name, v in Validators.properties_of(value).items()}
+
+
 def _value_of(value: Any) -> Any:
     """A property's value as Basic reads it: a list as a collection."""
     if isinstance(value, Validators.ListRecord):
@@ -137,17 +149,58 @@ def _same_domain(a: Any, b: Any) -> bool:
 
 
 def _equal(a: Any, b: Any) -> bool | None:
-    """Whether `a` equals `b`: natives of one type by value, typed values of one domain by its comparison, objects by
-    identity; `None` if unknown or incomparable."""
+    """Whether `a` equals `b`: natives of one type by value, typed values of one domain by its comparison, reference
+    objects by identity, collections, records and values deeply; `None` if unknown or incomparable."""
     if a is None or b is None:
         return None
     if _typed(a, b):
         return a.domain.compare(a.value, b.value) == 0 if _same_domain(a, b) else None
     if _is_native(a) and type(a) is type(b):
         return _compare(a, b) == 0
-    if _is_object(a) and _is_object(b):
-        return a.identity() == b.identity()
+    if _is_object(a) or _is_object(b):
+        return a.identity() == b.identity() if _is_object(a) and _is_object(b) else None
+    if _is_collection(a) and _is_collection(b):
+        return _equal_collections(_collection("eq", a), _collection("eq", b))  # type: ignore[arg-type]
+    if _is_value(a) and _is_value(b):
+        x, y = _fields(a), _fields(b)
+        if x.keys() != y.keys():
+            return None
+        return _all(_equal(x[name], y[name]) for name in x)
     return None
+
+
+def _is_collection(value: Any) -> bool:
+    return isinstance(value, (Domains.Collection, list, tuple))
+
+
+def _is_value(value: Any) -> bool:
+    """A record, or a value that writes its properties: compared deeply."""
+    return isinstance(value, Domains.Record) or _is_readable(value)
+
+
+def _all(results: Iterable[bool | None]) -> bool | None:
+    """Kleene's and."""
+    result: bool | None = True
+    for equal in results:
+        if equal is False:
+            return False
+        if equal is None:
+            result = None
+    return result
+
+
+def _equal_collections(a: Domains.Collection, b: Domains.Collection) -> bool | None:
+    if a.keys is None and b.keys is None:
+        return False if len(a.items) != len(b.items) else _all(map(_equal, a.items, b.items))
+    if a.keys is None or b.keys is None or len(a.keys) != len(b.keys):
+        return None
+    pairs = []
+    for key, item in zip(a.keys, a.items):
+        found = [other for k, other in zip(b.keys, b.items) if _equal(key, k)]
+        if not found:
+            return None
+        pairs.append((item, found[0]))
+    return _all(_equal(x, y) for x, y in pairs)
 
 
 def _equality(name: str, values: list[Any]) -> bool | None:
