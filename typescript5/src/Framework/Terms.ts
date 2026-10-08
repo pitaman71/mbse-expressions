@@ -48,6 +48,10 @@
  * kind also declares `used_by`, the same relation seen from the argument, which data never writes. A kind's fields
  * are, in order, `value` (a literal's), its properties, its slots, its variadic field and its value properties, and its
  * constructor takes them in that order.
+ *
+ * A slot named in `REFERS` holds a definition the term refers to, such as the predicate an application applies, not a
+ * part of it. A definition may refer to itself, through such a slot, directly or not: that is recursion, not a cycle,
+ * and checking stops where it reaches a definition it is already checking. Any other cycle is a problem.
  */
 
 import { Bindings, Errors, Plain, Repr, Schemas } from "@mbse/schemas/Framework";
@@ -163,6 +167,7 @@ export abstract class Term implements Expression {
   static LEXICAL = true;
   static AMBIENT: ReadonlySet<string> = new Set();
   static SLOTS: readonly string[] = [];
+  static REFERS: ReadonlySet<string> = new Set();
   static VARIADIC: string | null = null;
   static OPERATOR: string | null = null;
   static VOCABULARY: ReadonlyMap<string, Domains.Signature> | null = null;
@@ -804,6 +809,7 @@ export class Declared implements Dialect {
     args.forEach((argument, i) => {
       const label = i < kind.SLOTS.length ? kind.SLOTS[i] as string : `argument ${i - kind.SLOTS.length}`;
       if (argument === null) found.push(`${what} needs ${article(label)}`);
+      else if (kind.REFERS.has(label) && active.has(argument)) return; // recursion: a definition referred to while it is being checked
       else found.push(...this.problems(argument, scopes[i] as ReadonlySet<string>, core, active).map((p) => `${label}: ${p}`));
     });
     active.delete(expression);

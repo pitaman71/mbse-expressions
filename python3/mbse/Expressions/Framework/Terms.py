@@ -45,6 +45,10 @@ are fields too: `SLOTS` names fields holding one argument each, in index order, 
 tuple of the arguments after the slots. Both are written as entries of the adjacency `arguments`, to the relation `Arguments`
 (registered as 'Expressions.Arguments' and shared by every dialect), which links a `parent` to an `argument` with an
 `index`. Every kind also declares `used_by`, the same relation seen from the argument, which data never writes.
+
+A slot named in `REFERS` holds a definition the term refers to, such as the predicate an application applies, not a
+part of it. A definition may refer to itself, through such a slot, directly or not: that is recursion, not a cycle,
+and checking stops where it reaches a definition it is already checking. Any other cycle is a problem.
 """
 
 from __future__ import annotations
@@ -166,6 +170,7 @@ class Term:
     LEXICAL: ClassVar[bool] = True
     AMBIENT: ClassVar[frozenset[str]] = frozenset()
     SLOTS: ClassVar[tuple[str, ...]] = ()
+    REFERS: ClassVar[frozenset[str]] = frozenset()
     VARIADIC: ClassVar[str | None] = None
     OPERATOR: ClassVar[str | None] = None
     VOCABULARY: ClassVar[Mapping[str, Domains.Signature] | None] = None
@@ -652,6 +657,8 @@ class Declared:
             label = kind.SLOTS[i] if i < len(kind.SLOTS) else f"argument {i - len(kind.SLOTS)}"
             if argument is None:
                 problems.append(f"{what} needs {_article(label)}")
+            elif label in kind.REFERS and id(argument) in active:
+                continue  # recursion: a definition referred to while it is being checked
             else:
                 problems += [f"{label}: {problem}" for problem in self._problems(argument, scope, core, active)]
         active.discard(id(expression))

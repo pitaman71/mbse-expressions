@@ -80,7 +80,8 @@ mbse-patterns' (`Predicates.holds`). mbse-schemas needs no evaluator: its union 
 decoding nor validation evaluates anything.
 
 `validate(bound=(), core=False)` reports statically what evaluation would raise: missing names and values, non-native
-literals, cycles (shared sub-expressions are not cycles), wrong numbers of arguments to core operations, variables not
+literals, cycles (shared sub-expressions are not cycles, nor is recursion: a definition that refers to itself
+through a slot its kind names in `REFERS`, as mbse-patterns' application refers to its predicate), wrong numbers of arguments to core operations, variables not
 bound by an enclosing let or in `bound`, and, with `core`, operations outside the core vocabulary.
 
 Expressions are serializable and therefore follow the `Expressions.X.Data` `Expressions.X.Schema` `Expressions.X.Builder`
