@@ -495,7 +495,13 @@ alike only there.
 
 ## Resolved
 
-- **Basic's collection operations go now**, with mbse-schemas' meta-schemas overhaul (its FRAMEWORK.md, Resolved, "The
+- **Superseded by mbse-schemas' visitor pattern** (its FRAMEWORK.md, Resolved, "The visitor pattern"), as the user
+  decided: "Relation operators do not belong in Expressions.Basic. They never did. They belong in
+  Visitors.OfAdjacency, Visitors.OfEntry, ..."; and "the evaluator binds each *symbol* to a Visitors.OfObject". The
+  first step built for it (`get` and `has` of an adjacency, `project`) is reverted. What follows is kept as it was
+  decided, until Basic's reading of relations is redesigned on the protocol.
+
+  **Basic's collection operations go now**, with mbse-schemas' meta-schemas overhaul (its FRAMEWORK.md, Resolved, "The
   meta-schemas overhaul"), in which lists become relations' entries, as the user decided ("C"), applying in advance
   the decision of the exploration on the `scalars` branch, "the quantifier stays, over an adjacency or a projection;
   other aggregate operations come from standards' or languages' dialects":
