@@ -462,6 +462,12 @@ def _int(name: str) -> Callable[[Any], Any]:
 
 
 Schema = Schemas.OfUnion.Builder().create()  # a domain, by value or by name; its branches are added below
+def _listing(name: str, native: type) -> Callable[[Any], Any]:
+    """An adjacency listing natives in order: a one-link relation of its own, each entry holding a `value`."""
+    return lambda r: r.name(name).me("owner").of(
+        lambda rel: rel.links("owner").properties(lambda p: p.name("value").of(lambda t: t.as_native(native))))
+
+
 _SCHEMAS = {
     "bool": Schemas.OfObject.Builder().create(),
     "integer": Schemas.OfObject.Builder().properties(
@@ -471,11 +477,10 @@ _SCHEMAS = {
     "bytes": Schemas.OfObject.Builder().properties(_int("width")).create(),
     "unicode": Schemas.OfObject.Builder().create(),
     "ieee1164": Schemas.OfObject.Builder().properties(_int("width")).create(),
-    "enum": Schemas.OfObject.Builder().properties(
-        lambda p: p.name("members").of(lambda t: t.as_indexed(lambda i: i.of(lambda t: t.as_native(str))))).create(),
+    "enum": Schemas.OfObject.Builder().relations(_listing("members", str)).create(),
     "packed": Schemas.OfObject.Builder().properties(
-        lambda p: p.name("domain").of(Schema), lambda p: p.name("representation").of(Schema),
-        lambda p: p.name("codes").of(lambda t: t.as_indexed(lambda i: i.of(lambda t: t.as_native(int))))).create(),
+        lambda p: p.name("domain").of(Schema), lambda p: p.name("representation").of(Schema)).relations(
+        _listing("codes", int)).create(),
     "named": Schemas.OfObject.Builder().properties(_text("name")).create(),
 }
 Schemas.OfUnion.Builder(Schema).branches(
@@ -544,8 +549,8 @@ def to_plain(domain: _Domain) -> dict[str, Any]:
         value = getattr(domain, field.name)
         if isinstance(value, _Domain):
             contents[field.name] = to_plain(value)
-        elif isinstance(value, tuple):
-            contents[field.name] = list(value)
+        elif isinstance(value, tuple):  # a list: a one-link relation's entries, each holding a value
+            contents[field.name] = [{"value": item} for item in value]
         elif value is not None:
             contents[field.name] = value
     return {domain.KIND: contents}
@@ -558,7 +563,8 @@ def from_plain(plain: dict[str, Any]) -> _Domain:
         return registered(contents["name"])
     fields: dict[str, Any] = {}
     for name, value in contents.items():
-        fields[name] = from_plain(value) if isinstance(value, dict) else tuple(value) if isinstance(value, list) else value
+        fields[name] = (from_plain(value) if isinstance(value, dict) else
+                        tuple(entry["value"] for entry in value) if isinstance(value, list) else value)
     return _KINDS[kind](**fields)
 
 
