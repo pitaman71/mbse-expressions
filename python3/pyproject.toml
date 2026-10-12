@@ -33,7 +33,7 @@ dev = [
 ]
 
 [tool.uv.sources]
-mbse-schemas = { path = "../../mbse-schemas/python3", editable = true }  # the sibling checkout: scripts/siblings.py
+mbse-schemas = { path = "../../mbse-schemas/python3", editable = true }  # the sibling checkout: ../mbse-basis/scripts/polyrepo.py
 
 [tool.pytest.ini_options]
 testpaths = ["tests", "tutorials"]
