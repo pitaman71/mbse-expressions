@@ -970,6 +970,7 @@ export const SIGNATURES: ReadonlyMap<string, D.Signature> = new Map<string, D.Si
   ["sum", new Collective(0, 0, null, NUMERIC, "number")], ["min", new Collective(0, 0, null, ORDERED_KINDS, "ordered value")],
   ["max", new Collective(0, 0, null, ORDERED_KINDS, "ordered value")], ["unique", new Collective(0, 0, Bool)],
   ["entries", new D.Function([ObjectDomain, Str], new List(Records))],
+  ["project", new D.Function([new List(Records), Str], new List(Anything))],
 ]);
 
 /** The domain of a value: a typed value's own, its native type's default, or `Object`. */

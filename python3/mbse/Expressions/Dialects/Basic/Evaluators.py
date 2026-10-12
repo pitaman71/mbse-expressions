@@ -117,7 +117,8 @@ def _value_of(value: Any) -> Any:
 
 def _read(name: str, values: list[Any]) -> Any:
     """`get`: the property's value, or `None` when absent. `has`: whether it is present. A record's fields are its
-    properties."""
+    properties. A name an object's adjacency has rather than a property reads as that adjacency: `get` gives its
+    entries, and `has` is whether it holds one."""
     target, property_name = values
     if type(property_name) is not str:
         raise TypeError(f"{name} expects a property name, got {_type_name(property_name)}")
@@ -129,6 +130,10 @@ def _read(name: str, values: list[Any]) -> Any:
         properties = Validators.properties_of(target)
     else:
         raise TypeError(f"{name} expects an object, got {_type_name(target)}")
+    if property_name not in properties and not isinstance(target, Domains.Record):
+        entries = Validators.entries_of(target).get(property_name)
+        if entries:  # an adjacency that holds none is not written, as an empty list was not
+            return True if name == "has" else _records(entries)
     if name == "has":
         return property_name in properties
     return _value_of(properties.get(property_name))
@@ -529,9 +534,25 @@ def _entries(name: str, values: list[Any]) -> Domains.Collection | None:
         return None
     if not _is_readable(target):
         raise TypeError(f"entries expects an object, got {_type_name(target)}")
-    entries = Validators.entries_of(target).get(adjacency, [])
+    return _records(Validators.entries_of(target).get(adjacency, []))
+
+
+def _records(entries: list[Any]) -> Domains.Collection:
+    """Entries as records of their other links' targets and their property values, in order."""
     return Domains.Collection(tuple(Domains.Record({**entry.targets, **{k: _value_of(v) for k, v in entry.values.items()}})
                                     for entry in entries))
+
+
+def _project(name: str, values: list[Any]) -> Domains.Collection | None:
+    """Each entry's link target or property value `field`, in order: None where an entry has none."""
+    entries, field = values
+    if type(field) is not str:
+        raise TypeError(f"project expects a link or property name, got {_type_name(field)}")
+    if entries is None:
+        return None
+    if not isinstance(entries, Domains.Collection) or not all(isinstance(e, Domains.Record) for e in entries.items):
+        raise TypeError(f"project expects entries, got {_type_name(entries)}")
+    return Domains.Collection(tuple(entry.fields.get(field) for entry in entries.items), entries.keys)
 
 
 def _quantifier(name: str) -> F.Implementation:
@@ -571,6 +592,7 @@ OPERATIONS: dict[str, F.Implementation] = {
     "convert": _convert, "reinterpret": _reinterpret, "pack": _pack, "unpack": _unpack,
     "count": _strict(_count), "item": _strict(_item), "in": _strict(_in), "unique": _strict(_unique),
     "sum": _strict(_sum), "min": _strict(_extreme), "max": _strict(_extreme), "entries": _strict(_entries),
+    "project": _strict(_project),
 }
 """The implementation of each core operation."""
 

@@ -42,13 +42,13 @@ deterministic, and total, with no side effects or unbounded iteration.
 
 | Group | Operations (arguments) |
 |---|---|
-| Access | `get(object, name)`: a property's value, unknown if absent; `has(object, name)`: whether it is present |
+| Access | `get(object, name)`: a property's value, unknown if absent, or an adjacency's entries; `has(object, name)`: whether it is present, or whether an adjacency holds an entry |
 | Comparison | `eq`, `ne`, `lt`, `le`, `gt`, `ge` (2) |
 | Boolean | `and`, `or`, `implies` (2), `not` (1) |
 | Arithmetic | `add`, `sub`, `mul` (2), `neg` (1) |
 | Bitwise | `bitand`, `bitor`, `bitxor` (2), `bitnot` (1); `shl`, `shr` (a value and a count) |
 | Conversion | `convert`, `reinterpret`, `unpack` (1, with the operation's `domain`); `pack` (1) |
-| Collections | `count(xs)`, `item(xs, i)`, `in(x, xs)`, `sum`, `min`, `max`, `unique` (1, but `item` and `in` 2); `entries(object, adjacency)` (2); the quantifiers `all`, `any`, `count` (`OfQuantifier`) |
+| Collections | `count(xs)`, `item(xs, i)`, `in(x, xs)`, `sum`, `min`, `max`, `unique` (1, but `item` and `in` 2); `entries(object, adjacency)`, `project(entries, name)` (2); the quantifiers `all`, `any`, `count` (`OfQuantifier`) |
 
 Constraints that every binding must evaluate use only the core vocabulary. Operation names outside it are extensions
 that a binding may or may not support. A union value is a record of its one branch, by name, so a constraint tests which
@@ -137,6 +137,11 @@ adult = Python.Text.FromFunction(lambda this: this.age >= 18 and this.email is n
   object's entries in an adjacency as a collection of `Domains.Record`s, each holding the targets of the entry's other
   links and its property values, which `get` and `has` read as they read an object's properties. A scope may bind a
   variable to a collection, or to a list (a tuple in Python, an array in TypeScript), which is a positional one.
+- **An adjacency's name reads as its entries.** `get(object, name)` of a name that is no property of the object but
+  an adjacency of it gives what `entries` does, and `has(object, name)` is whether the adjacency holds an entry. An
+  adjacency that holds none is not written, as an empty list was not, so its `get` is unknown and its `has` false.
+  `project(entries, name)` gives each entry's link target or property value `name`, in order, unknown where an entry
+  has none: `this.ports.project("pin").all("p", p.gt(0))`. A record has no adjacencies.
 - **A collection's items are its values**, a keyed list's too; keys only address them. `count(xs)` is the number of
   items, `item(xs, i)` the item at a position (from 0) or, in a keyed list, at a key, unknown when there is none, and
   `in(x, xs)` whether `x` equals one of the items (Kleene's or of `eq`). `sum(xs)` adds the items in order, as `add`
@@ -479,6 +484,10 @@ alike only there.
   effort to prove a constraint true or false when its variables are restricted by other constraints but not
   determined. Today it proves what three-valued logic and partial evaluation prove (`false and unknown` is false), and
   nothing from the restrictions other constraints place on a variable.
+- `at(entries, key)`, decided with `project` (Resolved, Basic's collection operations go now), needs an adjacency's key,
+  which its relation's `unique` clauses give; Basic reads entries through the visitor protocols, which do not carry
+  the relation. How Basic learns the key (from the store that registers the object's schema, or from the entries
+  themselves) is undecided.
 - Collections have no literals, and Basic has no tensor domain over keyed and extended lists, nor `map` or `filter`.
 - Collections translate between Basic and Python, SystemVerilog, MATLAB and Excel, and directly between Python,
   MATLAB and Excel; not to Latex or Ccpp, nor directly between SystemVerilog and the others, which have no translator
@@ -509,7 +518,13 @@ alike only there.
   - `count(xs)`, `item`, `in`, `sum`, `min`, `max` and `unique` go, with their translator rules, until a standard's or
     a language's dialect supplies them.
 
-  Nothing of it is built. Basic itself stays until the open-world and scalars overhaul.
+  Amended as the user decided: `has(object, adjacency)` is whether the adjacency holds an entry; a predicate over
+  the entries was considered and dropped as not necessary, since `any` over them says it. Built in two steps, so that
+  the dependents' predicates keep evaluating while they are rewritten: first `get` and `has` of an adjacency and
+  `project` (built: Collections, below), then the removals, with the rewriting of mbse-patterns' and
+  mbse-codegen-python's predicates (mbse-schemas' META_SCHEMAS.md, phase 6). `at` is not built: Basic reads entries
+  through the visitor protocols, which do not carry the relation, so it does not know an adjacency's key (Open
+  questions). Basic itself stays until the open-world and scalars overhaul.
 
 - Basic compares everything but reference objects deeply, through the visitor protocols, as mbse-schemas' equality
   does under a schema: value objects, union and intersection values, records and collections are equal when what each

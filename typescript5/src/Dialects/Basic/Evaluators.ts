@@ -116,7 +116,8 @@ function valueOf(value: unknown): unknown {
 }
 
 /** `get`: the property's value, or `null` when absent. `has`: whether it is present. A record's fields are its
- * properties. */
+ * properties. A name an object's adjacency has rather than a property reads as that adjacency: `get` gives its
+ * entries, and `has` is whether it holds one. */
 function read(name: string, values: unknown[]): unknown {
   const [target, propertyName] = values;
   if (typeof propertyName !== "string") {
@@ -127,6 +128,10 @@ function read(name: string, values: unknown[]): unknown {
   if (target instanceof Domains.Record) properties = target.fields;
   else if (isReadable(target)) properties = Validators.properties_of(target);
   else throw new TypeError(`${name} expects an object, got ${typeName(target)}`);
+  if (!properties.has(propertyName) && !(target instanceof Domains.Record)) {
+    const found = Validators.entries_of(target as Readable).get(propertyName);
+    if (found !== undefined && found.length > 0) return name === "has" ? true : records(found); // an adjacency that holds none is not written, as an empty list was not
+  }
   if (name === "has") return properties.has(propertyName);
   return valueOf(properties.get(propertyName) ?? null);
 }
@@ -528,9 +533,24 @@ function entries(name: string, values: unknown[]): Domains.Collection | null {
   if (typeof adjacency !== "string") throw new TypeError(`entries expects an adjacency name, got ${typeName(adjacency)}`);
   if (target === null) return null;
   if (!isReadable(target)) throw new TypeError(`entries expects an object, got ${typeName(target)}`);
-  const found = Validators.entries_of(target).get(adjacency) ?? [];
+  return records(Validators.entries_of(target).get(adjacency) ?? []);
+}
+
+/** Entries as records of their other links' targets and their property values, in order. */
+function records(found: Validators.EntryRecord[]): Domains.Collection {
   return new Domains.Collection(found.map((entry) => new Domains.Record(new Map<string, unknown>([...entry.targets,
     ...[...entry.values].map(([k, v]) => [k, valueOf(v)] as [string, unknown])]))));
+}
+
+/** Each entry's link target or property value `field`, in order: null where an entry has none. */
+function project(_name: string, values: unknown[]): Domains.Collection | null {
+  const [found, field] = values;
+  if (typeof field !== "string") throw new TypeError(`project expects a link or property name, got ${typeName(field)}`);
+  if (found === null) return null;
+  if (!(found instanceof Domains.Collection) || !found.items.every((e) => e instanceof Domains.Record)) {
+    throw new TypeError(`project expects entries, got ${typeName(found)}`);
+  }
+  return new Domains.Collection(found.items.map((entry) => (entry as Domains.Record).fields.get(field) ?? null), found.keys);
 }
 
 /** `all`, `any` or `count` of the body over the items, by Kleene's logic, deciding as early as it can. */
@@ -571,6 +591,7 @@ export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string,
   ["convert", convert], ["reinterpret", reinterpret], ["pack", pack], ["unpack", unpack],
   ["count", strict(count)], ["item", strict(item)], ["in", strict(inCollection)], ["unique", strict(unique)],
   ["sum", strict(sum)], ["min", strict(extreme)], ["max", strict(extreme)], ["entries", strict(entries)],
+  ["project", strict(project)],
 ]);
 
 /** The interpreter of the Basic dialect, which `Partials` reduces with. */

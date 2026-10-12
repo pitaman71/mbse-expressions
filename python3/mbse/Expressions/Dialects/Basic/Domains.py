@@ -818,6 +818,7 @@ SIGNATURES: dict[str, D.Signature] = {
     "sum": _Collective(0, 0, None, _NUMERIC, "number"), "min": _Collective(0, 0, None, _ORDERED_KINDS, "ordered value"),
     "max": _Collective(0, 0, None, _ORDERED_KINDS, "ordered value"), "unique": _Collective(0, 0, Bool),
     "entries": D.Function((Object, Str), List(Records)),
+    "project": D.Function((List(Records), Str), List(Anything)),
 }
 """The core operations' signatures."""
 
