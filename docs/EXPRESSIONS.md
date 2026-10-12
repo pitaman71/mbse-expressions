@@ -495,6 +495,22 @@ alike only there.
 
 ## Resolved
 
+- **Basic's collection operations go now**, with mbse-schemas' meta-schemas overhaul (its FRAMEWORK.md, Resolved, "The
+  meta-schemas overhaul"), in which lists become relations' entries, as the user decided ("C"), applying in advance
+  the decision of the exploration on the `scalars` branch, "the quantifier stays, over an adjacency or a projection;
+  other aggregate operations come from standards' or languages' dialects":
+  - `get` of an adjacency's name gives its entries, as a proxy's adjacency member does, and `entries(object,
+    adjacency)` stays as its explicit form; entries are keyed by the adjacency's key (mbse-schemas' `at`), positional
+    for an open relation;
+  - `project(entries, name)` gives the named link's targets or property's values of each entry, in order, as a proxy's
+    `project(name)` does, and `at(entries, key)` the entry under a key, unknown when there is none;
+  - the quantifiers `all`, `any` and `count` stay, over entries or a projection: `me.pins.project("value").all("p",
+    p.gt(0))`, `me.limits.at("vdd").value.le(3.6)`, and `in` written as `any` of `eq`;
+  - `count(xs)`, `item`, `in`, `sum`, `min`, `max` and `unique` go, with their translator rules, until a standard's or
+    a language's dialect supplies them.
+
+  Nothing of it is built. Basic itself stays until the open-world and scalars overhaul.
+
 - Basic compares everything but reference objects deeply, through the visitor protocols, as mbse-schemas' equality
   does under a schema: value objects, union and intersection values, records and collections are equal when what each
   writes is equal (0.5). Before, they compared equal to nothing, so a constraint could not compare a value with
