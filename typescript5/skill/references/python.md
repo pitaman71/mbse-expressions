@@ -74,7 +74,6 @@ t.bitand(x) .bitor(x) .bitxor(x) .bitnot() .shl(n) .shr(n)  # on integers and bi
 t.convert(domain) .reinterpret(domain) .pack() .unpack(packed)  # an operation's domain is its result's
 this.ports.all("p", E.variable("p").width.ge(8))   # .any .count_where; .count() .item(i) .in_(xs) .sum() .min() .max() .unique()
 this.entries("wires")                              # an object's entries in an adjacency, as records that get reads
-this.wires.project("target").any("t", t.eq(port))  # an adjacency's name reads as its entries; has(name): it holds one
 PythonText.FromFunction(lambda this: this.age >= 18 and this.email is not None)  # a lambda, or a def of one return
 PythonText.FromFunction(lambda this: all(p.width >= 8 for p in this.ports) and len(this.ports) > 0)  # collections too
 

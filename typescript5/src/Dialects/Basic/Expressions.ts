@@ -585,11 +585,6 @@ class TermTarget extends F.Writer {
     return operation("entries", this as unknown as Writer, adjacency);
   }
 
-  /** Each entry's link target or property value `name`, in order. */
-  project(name: string): Writer {
-    return operation("project", this as unknown as Writer, name);
-  }
-
   /** Whether `body` holds for every item, bound to `name`. */
   all(name: string, body: OfAny.Spec): Writer {
     return quantifier("all", name, this as unknown as Writer, body);

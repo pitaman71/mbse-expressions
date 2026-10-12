@@ -488,10 +488,6 @@ class Writer(F.Writer):
         """An object's entries in an adjacency, as records."""
         return operation("entries", self, adjacency)
 
-    def project(self, name: str) -> Writer:
-        """Each entry's link target or property value `name`, in order."""
-        return operation("project", self, name)
-
     def all(self, name: str, body: OfAny.Spec) -> Writer:
         """Whether `body` holds for every item, bound to `name`."""
         return quantifier("all", name, self, body)
