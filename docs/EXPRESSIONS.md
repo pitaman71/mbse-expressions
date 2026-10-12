@@ -470,7 +470,7 @@ alike only there.
 ## Open questions
 
 - **Resolving constraints.** A constraint binds variables and is resolvable in any direction
-  ([MBSE.md](../MBSE.md#what-a-specification-is-made-of)): `total = sum(items)` determines `total` from `items`, and
+  ([MBSE.md](https://github.com/pitaman71/mbse-basis/blob/main/MBSE.md#what-a-specification-is-made-of)): `total = sum(items)` determines `total` from `items`, and
   restricts `items` given `total`. The evaluators compute only forward, from values bound to every variable an
   expression reads, and partial evaluation simplifies what is known; nothing determines or restricts a variable from a
   constraint that binds it, and `eq` is checked, never used to determine. Open: how a constraint is resolved, how a
