@@ -468,17 +468,13 @@ alike only there.
 
 ## Open questions
 
-- **Dialects as pure model** (mbse-basis P-018: "No model should need code to read or write. Ever."). mbse-expressions
-  reads and writes expressions through code written for them, not through mbse-schemas' generic machinery: term
-  classes, one per kind, whose class variables (`KIND`, `ROLE`, `PROPERTIES`, `SLOTS`, `VARIADIC`, `REFERS`, ...)
-  `Declared` derives the kinds' schemas from, losing the slots' names; `Writer`s and the builders' `set`, `argument`
-  and `arguments`; the conversion between terms and their plain form in `Terms`; `ValueProperty`, the domain classes
-  and the domains' `to_plain` and `from_plain`. The direction the user has given: the framework is a model of schemas
-  (`Term`, a union of its subtypes `Call`, `Literal`, `Let`, ...; `Callable`, a reference object; `HasArguments`, a
-  relation from a `Callable` to its parameters); each dialect refines it, by intersection ("1-way intersection is
-  trivial refinement"), its vocabulary being `Callable` objects (`Basic.Operators.Add`); and an expression is the
-  only instance. Terms are reference objects again, "why I made terms reference objects", built only in a store. The
-  design is to be drafted for the user's review before any code.
+- **The framework and dialects as model.** How the decision "Expressions are built and read only through
+  mbse-schemas" (Resolved) is designed. The direction the user has given: the framework is a model of schemas (`Term`,
+  a union of its subtypes `Call`, `Literal`, `Let`, ...; `Callable`, a reference object; `HasArguments`, a relation
+  from a `Callable` to its parameters); each dialect refines it, by intersection ("1-way intersection is trivial
+  refinement"), its vocabulary being `Callable` objects (`Basic.Operators.Add`); and an expression is the only
+  instance. Terms are reference objects again ("this is why I made terms reference objects"), so built only in a
+  store. To be drafted for the user's review before any code.
 
 - **Resolving constraints.** A constraint binds variables and is resolvable in any direction
   ([MBSE.md](https://github.com/pitaman71/mbse-basis/blob/main/MBSE.md#what-a-specification-is-made-of)): `total = sum(items)` determines `total` from `items`, and
@@ -505,6 +501,15 @@ alike only there.
   unit that groups expressions, which no dialect has yet.
 
 ## Resolved
+
+- **Expressions are built and read only through mbse-schemas** (2026-10-14), applying mbse-basis P-018 ("No model
+  should need code to read or write. Ever."). The user: reading or writing an expression through code that knows each
+  kind's shape "violates P-018 and must be fixed"; `Writer`s and the builders' `set`, `argument` and `arguments`
+  "should go away. You don't write bespoke builders or data classes either. You use mbse-schema proxies or generated
+  classes as sourced in Visitor form." So mbse-expressions keeps no term classes, builders, writers or conversions of
+  its own: expressions are proxies (or generated classes) of their dialects' schemas, built and read through their
+  visitors, and so are value domains. This supersedes "Terms after mbse-schemas' visitor pattern and containers"
+  (below) in its decision 1 = A and its building choices, and "Expressions are typed bindings of their meta-schemas".
 
 - **Terms after mbse-schemas' visitor pattern and containers** (2026-10-14), as the user decided, of the options put
   to them, "1 = A" and "2 = Y":
