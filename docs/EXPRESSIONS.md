@@ -474,7 +474,10 @@ alike only there.
   parameters); each dialect refines it by intersection ("1-way intersection is trivial refinement"), its vocabulary
   being `Callable` objects (`Basic.Operators.Add`); and an expression is the only instance. Terms are reference
   objects again ("this is why I made terms reference objects"), so built only in a store. To be drafted for the
-  user's review before any code.
+  user's review before any code. Stopped, as the user decided ("stop mbse-expressions work because it cannot be
+  written correctly without it"), until mbse-schemas' schema builders align with their meta-schemas (its
+  FRAMEWORK.md, Resolved). A draft of the framework's and Basic's schemas is in `docs/proposals/framework-model/`,
+  reviewed in part: it refers to links, schemas and domains by name, against mbse-basis P-015.
 
 - **Resolving constraints.** A constraint binds variables and is resolvable in any direction
   ([MBSE.md](https://github.com/pitaman71/mbse-basis/blob/main/MBSE.md#what-a-specification-is-made-of)): `total = sum(items)` determines `total` from `items`, and
