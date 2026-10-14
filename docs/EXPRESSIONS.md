@@ -468,6 +468,18 @@ alike only there.
 
 ## Open questions
 
+- **Dialects as pure model** (mbse-basis P-018: "No model should need code to read or write. Ever."). mbse-expressions
+  reads and writes expressions through code written for them, not through mbse-schemas' generic machinery: term
+  classes, one per kind, whose class variables (`KIND`, `ROLE`, `PROPERTIES`, `SLOTS`, `VARIADIC`, `REFERS`, ...)
+  `Declared` derives the kinds' schemas from, losing the slots' names; `Writer`s and the builders' `set`, `argument`
+  and `arguments`; the conversion between terms and their plain form in `Terms`; `ValueProperty`, the domain classes
+  and the domains' `to_plain` and `from_plain`. The direction the user has given: the framework is a model of schemas
+  (`Term`, a union of its subtypes `Call`, `Literal`, `Let`, ...; `Callable`, a reference object; `HasArguments`, a
+  relation from a `Callable` to its parameters); each dialect refines it, by intersection ("1-way intersection is
+  trivial refinement"), its vocabulary being `Callable` objects (`Basic.Operators.Add`); and an expression is the
+  only instance. Terms are reference objects again, "why I made terms reference objects", built only in a store. The
+  design is to be drafted for the user's review before any code.
+
 - **Resolving constraints.** A constraint binds variables and is resolvable in any direction
   ([MBSE.md](https://github.com/pitaman71/mbse-basis/blob/main/MBSE.md#what-a-specification-is-made-of)): `total = sum(items)` determines `total` from `items`, and
   restricts `items` given `total`. The evaluators compute only forward, from values bound to every variable an
