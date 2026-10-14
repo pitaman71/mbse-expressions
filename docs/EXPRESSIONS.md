@@ -67,8 +67,8 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
   `str` and `bytes` are ordered. Arithmetic takes numbers of one domain (`add(1, 1.5)` is an error). Values of other
   domains than the natives' defaults follow the same semantics by domain (see Value domains).
 - Unknown operations, wrong numbers of arguments, unbound variables and wrong operand types raise.
-- `get` and `has` read any object that writes its properties through `accept`, including mbse-schemas' value
-  objects. Equality is deep for everything but reference objects, which compare by identity: value objects, union and
+- `get` and `has` read any data object, read through mbse-schemas' visitor protocol (`Readers`; `Framework.Objects`),
+  including value objects and union values. Equality is deep for everything but reference objects, which compare by identity: value objects, union and
   intersection values and entries' records by the properties each writes, read through the visitor protocols (absent
   in both or equal in both; present in one only is incomparable); positional collections item by item (another length
   is unequal), keyed ones by key in any order (other keys are incomparable). Equal is Kleene's and of the parts'
@@ -84,24 +84,24 @@ literals, cycles (shared sub-expressions are not cycles, nor is recursion: a def
 through a slot its kind names in `REFERS`, as mbse-patterns' application refers to its predicate), wrong numbers of arguments to core operations, variables not
 bound by an enclosing let or in `bound`, and, with `core`, operations outside the core vocabulary.
 
-Expressions are serializable and therefore follow the `Expressions.X.Data` `Expressions.X.Schema` `Expressions.X.Builder`
-format:
+Expressions are values of their meta-schemas, and follow the `Expressions.X.Data` `Expressions.X.Schema`
+`Expressions.X.Builder` format:
 
-- `Data` is `Visitable`. Builders follow the builder pattern (`create()` / `clone()` / `update()`, none validate) and
-  implement `Visitors.OfObject`, which is how `Expressions.Builders` rebuilds expressions from snapshots.
-- The meta-schemas are ordinary object schemas. Each declares `kind`, a tag with a fixed value (`literal`, `operation`,
-  `variable`, `let`); `OfAny.Schema` is their union, discriminated by `eq(get(this, 'kind'), ...)`. A literal's schema
-  declares one optional property per native type (`int`, `float`, `str`, `bool`, `bytes`), of which a literal sets
-  exactly one. Operations, variables and lets declare `name`. Operations and lets declare the adjacency `arguments` to
-  `Expressions.Arguments`, a relation linking a `parent` to an `argument` with an `index` and `unique(argument)`; a
-  let's value is its argument 0 and its body its argument 1. Every kind declares `used_by`, the same relation seen from
-  the argument, which the arguments imply: data never writes it, and builders ignore it.
+- Builders follow the builder pattern (`create()` / `clone()` / `update()`, none validate). An expression's value is
+  `data.reader()`, a `Readers.OfObject` that serializers, validation and comparison read as any value, and
+  `DIALECT.term(value)` rebuilds an expression from one (see Resolved, "Terms after mbse-schemas' visitor pattern and
+  containers").
+- The meta-schemas are ordinary value object schemas; `OfAny.Schema` is their union, its branches named by the kinds'
+  tags. A literal's schema declares one optional property per native type (`int`, `float`, `str`, `bool`, `bytes`), of
+  which a literal sets exactly one. Operations, variables, lets and quantifiers declare `name`. Operations, lets and
+  quantifiers declare `arguments`, a dense container of their arguments by index, each a value of any type
+  (`Terms.ARGUMENT`), which the wire tags with its kind's meta-schema's name; a let's value is its argument 0 and its
+  body its argument 1. An expression is written nested: `{"Expressions.OfOperation": {"name": "not", "arguments":
+  [{"Expressions.OfLiteral": {"bool": true}}]}}`.
 - The meta-schemas are named `Expressions.OfLiteral`, `Expressions.OfOperation`, `Expressions.OfVariable`,
-  `Expressions.OfLet` and `Expressions.Arguments`, the names snapshots carry. `Builders` is an mbse-schemas store of the
-  bound classes (`Bindings.OfStore`), so snapshots, validation and comparison work on expressions as on any objects.
-  `DIALECT.register(store)` registers the meta-schemas in another store, and `mbse.Expressions.register(store)` every
-  dialect's, so that a `Proxies.OfStore` can build expressions as proxies (which then also write `used_by`) or write
-  expressions of several dialects.
+  `Expressions.OfLet` and `Expressions.OfQuantifier`, the names the wire tags arguments with, and registered in the
+  dialect's `store`, a store of proxies in which expressions' values are built. `DIALECT.register(store)` registers the
+  meta-schemas in another store, and `mbse.Expressions.register(store)` every dialect's.
 
 `Writer`s build expressions, which are data, with methods, and evaluate nothing. `.name` reads a property (`get`), and
 methods build the operations: `.eq(x)` ... `.ge(x)`, `.and_(x)`, `.or_(x)`, `.not_()`, `.implies(x)`, `.add(x)`,
@@ -279,39 +279,38 @@ the parameters that standard defines, and today's natives become their defaults.
 six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics` (names, scopes and dependencies),
 `Domains`, `Evaluators`, `Translators` and `Errors`.
 
-- `Terms.Expression` is an expression of some dialect: `Visitable`, plus `dialect()`, `form()` and
-  `validate()`. A `Form` is a term's structure: its `kind`, its native `attributes` and its ordered `arguments`. It is
+- `Terms.Expression` is an expression of some dialect: `dialect()`, `form()`, `validate()` and `reader()`, its value
+  (a `Readers.OfObject`). A `Form` is a term's structure: its `kind`, its native `attributes` and its ordered `arguments`. It is
   mbse-schemas' `Schemas.Form.Data`, the neutral form of a term that a schema holds where a literal would stand
   (mbse-schemas' `docs/FRAMEWORK.md`, Parametrics). `Dialect.make(form)` is the inverse, and `walk`, `fold` (bottom-up, once per term, raising on cycles) and `same`
   (structural equality by co-traversal: natives of one type by value, NaN is NaN, -0.0 is not 0.0) work on any
   dialect through forms alone.
-- `Terms.Dialect` is an expression language: `name()`, `kinds()`, `schema_of(expression)`, `make`, `resolve`
-  (specs: expressions, `Writer`s, native values as literals, or callables taking the `AnyBuilder`), `validate`,
-  `infer`, the union meta-schema `Schema` and the store `Builders` of its bound classes.
+- `Terms.Dialect` is an expression language: `name()`, `kinds()`, `schema_of(expression)`, `term(value)`, `make`,
+  `resolve` (specs: expressions, `Writer`s, native values as literals, or callables taking the `AnyBuilder`),
+  `validate`, `infer`, the union meta-schema `Schema` and `store`, the store of proxies holding its meta-schemas.
 - `Terms.Declared` derives a dialect from its kinds: each is a dataclass derived from `Term` whose class
   variables give its `KIND` (the tag), its `ROLE`, a literal's `VALUE` natives, its native `PROPERTIES` (required
   unless `OPTIONAL`), its arguments (`SLOTS`, fields of one argument each, then `VARIADIC`, one field holding the
   rest) and, for an application, the property naming its `OPERATOR` (or none, when the tag names it) and its
   `VOCABULARY` (operator names to signatures; `None` accepts any name, with `SIGNATURE`). A kind may add its own
   problems (`check()`), and a reference kind may be non-`LEXICAL` (resolved by the scope, never unbound) or have
-  `AMBIENT` names, bound without a declaration. From these it derives builders (`create()` / `clone()` / `update()`, `Visitors.OfObject`, and the DSL
+  `AMBIENT` names, bound without a declaration. From these it derives builders (`create()` / `clone()` / `update()`, and the DSL
   `.set(name, value)`, `.arguments(*specs)`, `.argument(slot, spec)`), meta-schemas named
-  `Expressions.<Dialect>.Of<Kind>` (Basic keeps its names) with `register(store)`, the union discriminated by Basic's
-  `eq(get(this, 'kind'), tag)`, the store `Builders`, validation and inference. Every dialect shares the relation
-  `Expressions.Arguments`.
+  `Expressions.<Dialect>.Of<Kind>` (Basic keeps its names) with `register(store)`, the union of them, `store`,
+  `term(value)`, validation and inference.
 - **A dialect may extend another**: `Terms.Declared(name, kinds, extends=base)`. Its kinds are the base's and its own,
-  whose tags must differ from the base's ("Clash would declare 'literal', which Basic has"); its classes, schemas,
-  union and store of bound classes include the base's, so every expression of the base is one of the extension, and the
-  extension validates, infers and evaluates trees that mix them. The base accepts its extensions' terms as arguments
-  (`terms()`, in specs, writers and snapshots), so a base's writer can hold an extension's term (`x.add(Twice(x))`);
-  such a tree is the extension's to validate and evaluate, and the base reports its extensions' terms as "not an
-  expression". mbse-patterns' predicates extend Basic this way.
-- **Expressions are typed bindings of their meta-schemas.** A kind's meta-schema is the source of truth for its
-  data, and `Declared` binds the kind's data class to it with mbse-schemas' `Bindings`: the kind gives `read` and
-  `make`, between its fields and the schema's properties and the `arguments` entries, and declares `kind` fixed, a
-  literal's native properties exclusive and `used_by` implied. Builders, `accept` and the store `Builders` are then
-  mbse-schemas' generic ones, and every property kind the schema declares is supported alike: a literal's `domain` is
-  an ordinary property holding a value object (a `ValueProperty`), with no holder schema.
+  whose tags must differ from the base's ("Clash would declare 'literal', which Basic has"); its classes, schemas, union
+  and store include the base's, and its meta-schemas are registered in the base's store too, so every expression of the
+  base is one of the extension, and the extension validates, infers and evaluates trees that mix them. The base accepts
+  its extensions' terms as arguments (`terms()`, in specs, writers and values), so a base's writer can hold an
+  extension's term (`x.add(Twice(x))`); such a tree is the extension's to validate and evaluate, and the base reports
+  its extensions' terms as "not an expression". mbse-patterns' predicates extend Basic this way.
+- **Expressions are values of their meta-schemas.** A kind's meta-schema is the source of truth for its data: a
+  term's value is built in its dialect's store from the term's plain form, which mbse-schemas checks against the
+  meta-schema (a term that does not fit has no value, `DecodeError`; one with a cycle neither, `ValueError`), and a
+  term is rebuilt from any value of its kind's meta-schema. Every property kind the schema declares is supported
+  alike: a literal's `domain` is an ordinary property holding a value (a `ValueProperty`). A slot named in `REFERS` is
+  written as the name of the definition it refers to, a str property, not in `arguments`, and read back as that name.
   `Terms` keeps what is the framework's own: roles, forms, validation, inference and dialect declaration.
 - The roles are what validation, inference, evaluation and translation understand without knowing the dialect:
   `literal` (a native value), `reference` (what the scope resolves: the value bound to a name, or a cell), `application`
@@ -505,6 +504,23 @@ alike only there.
     is written nested in what holds it, with no identity, so the relation `Arguments` and every kind's `used_by` go; a
     term refers to a definition (a `REFERS` slot, such as the predicate an application applies) by name, as a module
     names a schema, since nothing links a value object.
+  - proposed in building, for the user's review, where it departs from A's wording: a term is not itself a
+    `Readers.OfObject`, since its fields (`name`, `value`, `arguments`) would shadow the members the protocol names
+    after the schema's properties; `term.reader()` gives its value, a standalone value of its kind's meta-schema built
+    in its dialect's `store` (a `Proxies.OfStore`) from the term's plain form, which mbse-schemas checks. The value's
+    builders are the store's (`store.builder(name)`), which write as any builder does, and `Dialect.term(value)`
+    rebuilds a term from any value of its kinds' meta-schemas, such as one `JSON.FromJSON(store)` reads; the DSL
+    builders keep the term's fields and are not `Visitors.OfObject`. This needed mbse-schemas to write and read a
+    standalone value (`ToPlain(store)(schema, value)`; its `docs/FRAMEWORK.md`, Resolved, "`OfAny` returns").
+  - proposed in building, for the user's review: an argument is a value of any type (`Terms.ARGUMENT`, an unrestricted
+    `OfAny`), written tagged with its kind's meta-schema's registered name (`{"Expressions.OfLiteral": {"int": 1}}`),
+    since a base dialect holds its extensions' terms, whose schemas a closed union could not name; the user's rule that
+    a value is wrapped "only when the value object's schema is not clear from the parent schema" holds, as it is not.
+    The tag names the kind, so the property `kind` goes. An empty slot is `null`. A `REFERS` slot is a str property
+    holding the definition's name (its first property), not in `arguments`.
+  - an enum's members and a packed domain's codes are containers of natives (were one-link relations); data objects
+    are read through `Framework.Objects` (`properties`, `entries`, containers as listed values), in place of
+    mbse-schemas' removed `Validators.properties_of`, `entries_of` and `ListRecord`.
   This supersedes "Expressions are typed bindings of their meta-schemas" (below) where it binds with `Bindings` and
   links terms by `Arguments`.
 

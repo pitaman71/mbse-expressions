@@ -8,7 +8,7 @@ import re
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from .Expressions import _Cell, _Constant, _Field, _Function, _Let, _Map, _Name, _Prefix
 

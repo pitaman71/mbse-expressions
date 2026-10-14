@@ -7,7 +7,7 @@ import math
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from .Expressions import _Arrayfun, _Call, _Constant, _Field, _Identifier, _Import, _Index, _Unary
 

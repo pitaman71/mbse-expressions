@@ -12,11 +12,12 @@ A constraint about contacts, evaluated, stored, translated to Excel and Python, 
 from mbse.Expressions import Evaluators, Expressions as E, Translators
 from mbse.Expressions.Dialects.Excel import Evaluators as ExcelEvaluators, Expressions as Excel, Text as ExcelText
 from mbse.Expressions.Dialects.Python import Expressions as Python, Text as PythonText
+from mbse.Expressions.Framework import Terms
 from mbse.Schemas.Framework import JSON, Proxies, Schemas as S, Validators
 
 
 def native(name, type_):
-    return lambda p: p.name(name).of(lambda t: t.as_native(type_))
+    return lambda p: p.name(name).of(S.OfScalar.Data(type_))
 
 
 Contact = S.OfObject.Builder().name("Contact").ref().properties(native("name", str), native("age", int), native("email", str)).create()
@@ -36,10 +37,9 @@ assert Evaluators.OfAny(senior, {"contact": ada}) is True
 assert Evaluators.OfAny(senior, {"contact": bob}) is False
 assert Evaluators.OfAny(senior, {"contact": eve}) is None
 
-# It is data: store it and read it back.
-schema = E.DIALECT.schema_of(senior)
-text = JSON.ToJSON(E.Builders).Reachable(schema, senior)  # E.Builders: the store of Basic's expression classes
-constraint = JSON.FromJSON(E.Builders).Reachable(schema, text)
+# It is data, a value: store it and read it back. E.store holds Basic's meta-schemas; Terms.ARGUMENT tags the kind.
+text = JSON.ToJSON(E.store)(Terms.ARGUMENT, senior.reader())
+constraint = E.DIALECT.term(JSON.FromJSON(E.store)(Terms.ARGUMENT, text))
 
 # Translate it into other languages; each evaluates by its own rules.
 formula = Translators.between(E.DIALECT, Excel.DIALECT).forward(constraint)
@@ -55,7 +55,7 @@ Email = S.OfObject.Builder().properties(native("address", str)).create()
 Reach = S.OfUnion.Builder().branches(lambda b: b.name("phone").of(Phone), lambda b: b.name("email").of(Email)).create()
 Card = S.OfObject.Builder().name("Card").ref().properties(lambda p: p.name("reach").of(Reach)).create()
 store.register(Card)
-card = B.Card().reach(lambda u: u.email(lambda r: r.address("ada@example.com"))).create()
+card = B.Card().reach(lambda p: p.as_value(lambda v: v.as_union(lambda u: u.email(lambda r: r.address("ada@example.com"))))).create()
 assert Validators.Validate(B)(Card, card) == []
 assert Evaluators.OfAny(this.reach.has("email"), {"this": card}) is True
 ```
@@ -88,7 +88,7 @@ Evaluators.OfAny(constraint, {"this": value})                     # a constraint
 Partials.OfAny(constraint, {"this": value})                       # the residual: what is known evaluated, the rest an expression
 
 # Storage, traversal, translation: the same calls in every dialect.
-JSON.ToJSON(E.Builders).Reachable(E.DIALECT.schema_of(e), e); JSON.FromJSON(E.Builders).Reachable(schema, text)
+JSON.ToJSON(E.store)(Terms.ARGUMENT, e.reader()); E.DIALECT.term(JSON.FromJSON(E.store)(Terms.ARGUMENT, text))
 register(Proxies.OfStore())                 # from mbse.Expressions import register: a store with every dialect's schemas
 F.walk(e); F.fold(e, lambda term, results: ...); F.same(a, b)   # from mbse.Expressions.Framework import Terms as F
 Symbolics.free(e); Symbolics.imports(e)     # the names e needs from its scope, and the imports it declares

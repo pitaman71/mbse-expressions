@@ -22,7 +22,7 @@ import type { Visitors } from "@mbse/schemas/Framework";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 const STR = String;
 const SCALARS: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["int", BigInt], ["float", Number], ["str", String], ["bool", Boolean],
@@ -108,7 +108,7 @@ class _Where extends F.Term {
 
 export const DIALECT = new F.Declared("Latex",
   [_Constant, _Symbol, _Binary, _Unary, _Frac, _Member, _Function, _Where], { domain_of: Domains.of });
-export const Builders = DIALECT.Builders;
+export const store = DIALECT.store;
 export const Schema = DIALECT.Schema;
 
 const spec = (value: unknown): any => DIALECT.resolve(value);

@@ -1,10 +1,10 @@
 /**
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
- * `build()` returns the cases, name -> [root schema, root expression, store], the store being the case's dialect's
- * `Builders`, a store of its bound classes. Each implementation writes its snapshots to
- * `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files
- * (see the CONF test suite). Keep this module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
+ * `build()` returns the cases, name -> [schema, expression, store]: the schema each case's value is written under,
+ * `Terms.ARGUMENT`, so that the wire names its kind, the expression, and its dialect's `store`, which holds its kinds'
+ * meta-schemas. Each implementation writes its cases to `conformance/<implementation>/<case>.json` and `.yaml`, and
+ * checks them against every other implementation's files (see the CONF test suite). Keep this module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
  * cases, same values, same order of statements.
  */
 
@@ -16,11 +16,12 @@ import * as Latex from "../Dialects/Latex/Expressions.js";
 import * as Matlab from "../Dialects/Matlab/Expressions.js";
 import * as Python from "../Dialects/Python/Expressions.js";
 import * as SystemVerilog from "../Dialects/SystemVerilog/Expressions.js";
-import type { Schemas, Stores, Visitors } from "@mbse/schemas/Framework";
+import * as Terms from "../Framework/Terms.js";
+import type { Proxies } from "@mbse/schemas/Framework";
 
 export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp", "systemverilog"] as const;
 
-type Case = [Schemas.OfObject.Data, Visitors.Visitable, Stores.Store];
+type Case = [typeof Terms.ARGUMENT, Terms.Term, Proxies.OfStore];
 
 export function build(): Map<string, Case> {
   const [E, P, M, X, L] = [Expressions, Python, Matlab, Excel, Latex];
@@ -99,15 +100,16 @@ export function build(): Map<string, Case> {
     sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
       sv.cast(4n, sv.vector("11111111", true, "h")))));
 
+  const A = Terms.ARGUMENT;
   return new Map<string, Case>([
-    ["expression", [E.OfLet.Schema, expression, E.Builders]],
-    ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
-    ["matlab", [M.DIALECT.schema_of(matlab), matlab, M.Builders]],
-    ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
-    ["domains", [E.OfOperation.Schema, domains, E.Builders]],
-    ["collections", [E.OfLet.Schema, collections, E.Builders]],
-    ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],
-    ["systemverilog", [SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders]],
-    ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],
+    ["expression", [A, expression, E.store]],
+    ["python", [A, python, P.store]],
+    ["matlab", [A, matlab, M.store]],
+    ["excel", [A, excel, X.store]],
+    ["domains", [A, domains, E.store]],
+    ["collections", [A, collections, E.store]],
+    ["ccpp", [A, ccpp, Ccpp.store]],
+    ["systemverilog", [A, systemverilog, SystemVerilog.store]],
+    ["latex", [A, latex, L.store]],
   ]);
 }

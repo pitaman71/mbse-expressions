@@ -42,15 +42,13 @@ import type { Schemas, Visitors } from "@mbse/schemas/Framework";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 
 export const LITERAL = "Expressions.OfLiteral";
 export const OPERATION = "Expressions.OfOperation";
 export const VARIABLE = "Expressions.OfVariable";
 export const LET = "Expressions.OfLet";
 export const QUANTIFIER = "Expressions.OfQuantifier";
-export const ARGUMENTS = F.ARGUMENTS;
-export const Arguments = F.Arguments;
 
 /** The core operations and their numbers of arguments. */
 export const CORE: ReadonlyMap<string, number> = new Map(
@@ -340,7 +338,7 @@ export const DIALECT = new F.Declared("Basic", [_LiteralData, _OperationData, _V
 
 /** Builds expressions from snapshots: `Builders['Expressions.OfLiteral'](instance)` returns a builder, as
  * `Plain.FromPlain` expects. `schema` and `name_of` look the meta-schemas up. */
-export const Builders = DIALECT.Builders;
+export const store = DIALECT.store;
 
 // --- Specs ---
 

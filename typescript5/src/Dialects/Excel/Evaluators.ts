@@ -2,7 +2,7 @@
  * Evaluators of the Excel dialect: compute a formula by Excel's rules.
  *
  * `Evaluators.OfAny(expression, scope)` binds names to numbers, text, logicals and records (mappings, or objects that
- * write their properties through `accept`). Values are `number`, `string` (text), `boolean` (logical) and
+ * are read through the visitor protocol). Values are `number`, `string` (text), `boolean` (logical) and
  * `Domains.Error`. Excel's rules apply, not Basic's:
  *
  * - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
@@ -34,10 +34,11 @@
  * holds.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Evaluators.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
@@ -61,7 +62,7 @@ function numberOf(value: unknown): unknown {
 
 /** A value as a formula reads it: a number as a double, and a list (a list property's too) as an array. */
 function valueOf(value: unknown): unknown {
-  if (value instanceof Validators.ListRecord) return value.values.map(valueOf);
+  if (value instanceof Objects.Listed) return value.values.map(valueOf);
   if (Array.isArray(value)) return value.map(valueOf);
   return numberOf(value);
 }
@@ -341,7 +342,7 @@ function field(args: F.Thunk[], node: any): unknown {
   if (isError(record)) return record;
   if (!Domains.is_record(record)) return VALUE;
   const fields = Domains.isMapping(record)
-    ? (record instanceof Map ? record : new Map(Object.entries(record))) : Validators.properties_of(record as never);
+    ? (record instanceof Map ? record : new Map(Object.entries(record))) : Objects.properties(record);
   if (!fields.has(node.name)) return FIELD;
   return valueOf(fields.get(node.name));
 }

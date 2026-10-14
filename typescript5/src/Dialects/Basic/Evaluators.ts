@@ -21,7 +21,7 @@
  *   `count`) follow Kleene's logic over the items; an unknown collection gives unknown.
  * - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
  *   variables and wrong operand types raise, as do the problems `validate()` reports.
- * - `get` and `has` read any object that writes its properties through `accept`, including value objects.
+ * - `get` and `has` read any object that is read through the visitor protocol, including value objects.
  * - Deep equality: a value object, a union or intersection value, or an entry's record is equal to another when the
  *   properties each writes (a union's branch, an intersection's parts) are absent in both or equal in both, read
  *   through the visitor protocols, so without a schema; a property present in one and absent in the other is
@@ -32,11 +32,12 @@
  * A constraint about a value is evaluated with `this` bound to it: `Evaluators.OfAny(constraint, { this: value })`.
  */
 
-import { Comparison, Errors, Repr, Schemas, Validators } from "@mbse/schemas/Framework";
+import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import { OverflowError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
@@ -44,7 +45,7 @@ import * as Ieee754 from "./Ieee754.js";
 
 const { typeName } = Repr;
 const { ValueError } = Errors;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 
 /** The variables an expression is evaluated with, or a scope. */
 export type Scope = S.Scope | S.Bindings;
@@ -87,31 +88,24 @@ function not(name: string, values: unknown[]): boolean | null {
   return t === null ? null : !t;
 }
 
-type Readable = { accept(visitor: Visitors.OfObject): void };
-
-function isReadable(value: unknown): value is Readable {
-  return value !== null && typeof value === "object" && typeof (value as { accept?: unknown }).accept === "function";
+function isReadable(value: unknown): value is any {
+  return Objects.isObject(value);
 }
 
 /** A reference object, compared by identity; a value object's identity does not take part in equality. */
-function isObject(value: unknown): value is Visitors.Visitable {
-  // `in` first: a value object's proxy throws on reading an attribute it lacks.
-  return isReadable(value) && "identity" in value && typeof (value as { identity?: unknown }).identity === "function"
-    && (value as Visitors.Visitable).owner() === null;
+function isObject(value: unknown): value is any {
+  return Objects.isReference(value);
 }
 
 /** A record's fields, or the properties a value writes, as Basic reads them. */
 function fieldsOf(value: unknown): ReadonlyMap<string, unknown> {
   if (value instanceof Domains.Record) return value.fields;
-  return new Map([...Validators.properties_of(value as Readable)].map(([name, v]) => [name, valueOf(v)]));
+  return new Map([...Objects.properties(value)].map(([name, v]) => [name, valueOf(v)]));
 }
 
 /** A property's value as Basic reads it: a list as a collection. */
 function valueOf(value: unknown): unknown {
-  if (value instanceof Validators.ListRecord) {
-    const keyed = value.keys.some((key) => key !== null && key !== undefined);
-    return new Domains.Collection(value.values.map(valueOf), keyed ? value.keys.map(valueOf) : null);
-  }
+  if (value instanceof Objects.Listed) return new Domains.Collection(value.values.map(valueOf), value.keys);
   return value;
 }
 
@@ -125,20 +119,20 @@ function read(name: string, values: unknown[]): unknown {
   if (target === null) return null;
   let properties: ReadonlyMap<string, unknown>;
   if (target instanceof Domains.Record) properties = target.fields;
-  else if (isReadable(target)) properties = Validators.properties_of(target);
+  else if (isReadable(target)) properties = Objects.properties(target);
   else throw new TypeError(`${name} expects an object, got ${typeName(target)}`);
   if (name === "has") return properties.has(propertyName);
   return valueOf(properties.get(propertyName) ?? null);
 }
 
 function compare(a: Native, b: Native): Comparison.Result {
-  const schema = new Schemas.OfNative.Data(NATIVES.get(typeName(a)));
-  return new Comparison.OfNative(schema, a).compare(new Comparison.OfNative(schema, b));
+  const schema = new Schemas.OfScalar.Data(NATIVES.get(typeName(a)));
+  return new Comparison.OfScalar(schema, a).compare(new Comparison.OfScalar(schema, b));
 }
 
 function sameNativeType(a: unknown, b: unknown): boolean {
   const name = typeName(a);
-  return NATIVES.has(name) && Schemas.isNativeOf(NATIVES.get(name), a) && Schemas.isNativeOf(NATIVES.get(name), b);
+  return NATIVES.has(name) && Schemas.isScalarOf(NATIVES.get(name), a) && Schemas.isScalarOf(NATIVES.get(name), b);
 }
 
 /** Whether either value is typed; then they compare only within one domain. */
@@ -160,7 +154,10 @@ function equal(a: unknown, b: unknown): boolean | null {
     return x.domain.compare(x.value, y.value) === 0;
   }
   if (sameNativeType(a, b)) return compare(a as Native, b as Native) === 0;
-  if (isObject(a) || isObject(b)) return isObject(a) && isObject(b) ? a.identity() === b.identity() : null;
+  if (isObject(a) || isObject(b)) {
+    const [x, y] = [a as any, b as any];
+    return isObject(a) && isObject(b) ? x.as_schema() === y.as_schema() && x.as_identity() === y.as_identity() : null;
+  }
   if (isCollection(a) && isCollection(b)) {
     return equalCollections(collectionOf("eq", a) as Domains.Collection, collectionOf("eq", b) as Domains.Collection);
   }
@@ -234,8 +231,10 @@ function nativeOf(value: unknown): any {
 }
 
 /** A value's domain's name when it is typed, otherwise its type's. */
+/** A value's domain's name when it is typed, a data object's schema's name, otherwise its type's. */
 function describe(value: unknown): string {
-  return value instanceof Domains.Value ? value.domain.name() : typeName(value);
+  if (value instanceof Domains.Value) return value.domain.name();
+  return (isReadable(value) && value.as_schema().name) || typeName(value);
 }
 
 type Kind = abstract new (...args: never[]) => Domains.Domain;
@@ -499,7 +498,7 @@ function sum(name: string, values: unknown[]): unknown {
 
 function ordered(value: unknown): boolean {
   if (value instanceof Domains.Value) return value.domain.kind().ORDERED;
-  return ["bigint", "number", "string"].includes(typeof value) || Schemas.isNativeOf(Uint8Array, value);
+  return ["bigint", "number", "string"].includes(typeof value) || Schemas.isScalarOf(Uint8Array, value);
 }
 
 /** `min` or `max`: the least or greatest item of an ordered domain; unknown when there is none, or two items are
@@ -528,7 +527,7 @@ function entries(name: string, values: unknown[]): Domains.Collection | null {
   if (typeof adjacency !== "string") throw new TypeError(`entries expects an adjacency name, got ${typeName(adjacency)}`);
   if (target === null) return null;
   if (!isReadable(target)) throw new TypeError(`entries expects an object, got ${typeName(target)}`);
-  const found = Validators.entries_of(target).get(adjacency) ?? [];
+  const found = Objects.entries(target, adjacency);
   return new Domains.Collection(found.map((entry) => new Domains.Record(new Map<string, unknown>([...entry.targets,
     ...[...entry.values].map(([k, v]) => [k, valueOf(v)] as [string, unknown])]))));
 }

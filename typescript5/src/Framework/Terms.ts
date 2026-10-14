@@ -4,9 +4,12 @@
  * An expression language (a dialect) is a set of term kinds and a vocabulary of operators. Every dialect's
  * expressions are:
  *
- * - Serializable. Each kind has a meta-schema, an ordinary mbse-schemas object schema tagged by `kind`, and its data
- *   has a builder (`create()` / `clone()` / `update()`) that implements `Visitors.OfObject`. `Dialect.Builders`
- *   rebuilds data from snapshots and `Dialect.Schema` is the union of the kinds' meta-schemas.
+ * - Values. Each kind has a meta-schema, an ordinary mbse-schemas value object schema, and an expression is a value
+ *   of its kind's: `reader()` gives it as one (a `Readers.OfObject`), which serializers, validation and comparison
+ *   read as any value, and `Dialect.term(value)` rebuilds an expression from one. `Dialect.store`, a store of proxies
+ *   holding the meta-schemas, is where these values are built; `Dialect.register(store)` registers the meta-schemas
+ *   in any other store; and `Dialect.Schema` is the union of the kinds' meta-schemas. Each kind's data has a builder
+ *   (`create()` / `clone()` / `update()`) with a DSL.
  * - Structurally traversable. `Expression.form()` gives a term's `Form`: its kind, its native attributes and its
  *   ordered arguments, which are expressions of the same dialect. `Dialect.make(form)` is the inverse. `walk`, `fold`
  *   and `same` traverse any dialect's expressions through forms alone.
@@ -38,31 +41,31 @@
  * the conversions between the field's data and the value's plain form), such as a literal's domain. `typed()` gives a
  * literal's own domain, if it has one.
  *
- * Each kind's data is bound to its meta-schema with mbse-schemas' `Bindings`: the kind's fields are read into a
- * `Bindings.State` (its properties, and its `arguments` entries) and made from one, with `kind` fixed, a literal's
- * native properties exclusive and `used_by` implied. `accept`, the builders' visitor protocols and the store
- * `Builders` are the generic ones; `Builder` adds the DSL. Arguments are fields too: `SLOTS` names fields holding one
- * argument each, in index order, and `VARIADIC` names one field holding an array of the arguments after the slots.
- * Both are written as entries of the adjacency `arguments`, to the relation `Arguments` (registered as
- * 'Expressions.Arguments' and shared by every dialect), which links a `parent` to an `argument` with an `index`. Every
- * kind also declares `used_by`, the same relation seen from the argument, which data never writes. A kind's fields
- * are, in order, `value` (a literal's), its properties, its slots, its variadic field and its value properties, and its
- * constructor takes them in that order.
+ * An expression is a value, written nested in what holds it: its meta-schema has one property per native type its
+ * value may have (a literal's), its properties, its value properties, and `arguments`, a dense container of its
+ * arguments by index, each a value of any type (`ARGUMENT`), which the wire tags with its kind's meta-schema's
+ * registered name, since a dialect's terms hold its extensions' and its extensions' meta-schemas are registered in its
+ * store too. Arguments are fields: `SLOTS` names fields holding one argument each, in index order, and `VARIADIC` names
+ * one field holding an array of the arguments after the slots. A kind's fields are, in order, `value` (a literal's),
+ * its properties, its slots, its variadic field and its value properties, and its constructor takes them in that
+ * order.
  *
  * A slot named in `REFERS` holds a definition the term refers to, such as the predicate an application applies, not a
- * part of it. A definition may refer to itself, through such a slot, directly or not: that is recursion, not a cycle,
- * and checking stops where it reaches a definition it is already checking. Any other cycle is a problem.
+ * part of it. Its value refers to the definition by name, as a module names a schema, since nothing links a value: the
+ * slot is written as a str property holding the definition's name (`nameOf`), not in `arguments`, and read back as
+ * that name, which whatever holds the definitions resolves. A definition may refer to itself, through such a slot,
+ * directly or not: that is recursion, not a cycle, and checking stops where it reaches a definition it is already
+ * checking. Any other cycle is a problem, and an expression with one has no value.
  */
 
-import { Bindings, Errors, Plain, Repr, Schemas } from "@mbse/schemas/Framework";
-import type { Visitors } from "@mbse/schemas/Framework";
+import { Errors, Plain, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
+import type { Readers, Visitors } from "@mbse/schemas/Framework";
 
 import * as Domains from "./Domains.js";
 
 const { AttributeError, KeyError, LookupError, ValueError } = Errors;
 const { isClassLike, repr, tokenName, typeName } = Repr;
-type Callback<V> = Visitors.Callback<V>;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 
 export const LITERAL = "literal";
 export const REFERENCE = "reference";
@@ -70,7 +73,6 @@ export const APPLICATION = "application";
 export const BINDING = "binding";
 export const IMPORT = "import";
 export const QUANTIFIER = "quantifier";
-export const ARGUMENTS = "Expressions.Arguments";
 
 export const NATIVES: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["int", BigInt],
@@ -83,7 +85,7 @@ export const NATIVES: ReadonlyMap<string, unknown> = new Map<string, unknown>([
 /** The name of `value`'s native type, which is also the literal property that holds it; null if not native. */
 export function nativeName(value: unknown): string | null {
   const name = typeName(value);
-  return NATIVES.has(name) && Schemas.isNativeOf(NATIVES.get(name), value) ? name : null;
+  return NATIVES.has(name) && Schemas.isScalarOf(NATIVES.get(name), value) ? name : null;
 }
 
 export function article(noun: string): string {
@@ -104,22 +106,26 @@ export interface ValidateOptions {
 export const Form = Schemas.Form.Data;
 export type Form = Schemas.Form.Data;
 
-/** An expression of some dialect: `Visitable`, so it serializes like any object, and structurally traversable. */
-export interface Expression extends Visitors.Visitable {
+/** An expression of some dialect: a value of its kind's meta-schema, read through `reader()` as any value is, and
+ * structurally traversable. */
+export interface Expression {
   dialect(): Dialect;
   form(): Form;
   validate(options?: ValidateOptions): string[];
+  reader(): Readers.OfObject;
 }
 
 /** An expression language: its kinds, their meta-schemas and builders, and its static checks. */
 export interface Dialect {
   readonly Schema: Schemas.OfUnion.Data;
-  readonly Builders: Bindings.OfStore;
+  readonly store: Proxies.OfStore;
   name(): string;
   /** The data class of each kind, by tag. */
   kinds(): ReadonlyMap<string, TermClass>;
-  /** The meta-schema of `expression`'s kind: the root schema for its snapshots. */
+  /** The meta-schema of `expression`'s kind, which its value is of. */
   schema_of(expression: unknown): Schemas.OfObject.Data;
+  /** The expression a value of one of its kinds' meta-schemas holds, such as one read from JSON. */
+  term(value: Readers.OfObject): Expression;
   /** The expression with this form. */
   make(form: Form): Expression;
   /** The expression a spec denotes: an expression, a `Writer`, a native value (a literal) or a callable taking the
@@ -133,8 +139,6 @@ export interface Dialect {
 }
 
 // --- Data ---
-
-let nextIdentity = 0;
 
 /** A kind: a class derived from `Term`. */
 export type TermClass = typeof Term;
@@ -152,8 +156,8 @@ export class ValueProperty {
     readonly from_plain: (plain: Plain.PlainData) => unknown) {}
 }
 
-/** Shared by every kind's data: identity, schema name, writing through `accept`, and the structural view. `Declared`
- * sets `DIALECT`, `NAME`, `FIELDS` and `Schema`. */
+/** Shared by every kind's data: schema name, its value through `reader()`, and the structural view. `Declared` sets
+ * `DIALECT`, `NAME`, `FIELDS` and `Schema`. */
 export abstract class Term implements Expression {
   static DIALECT: Declared;
   static NAME: string;
@@ -173,8 +177,6 @@ export abstract class Term implements Expression {
   static VOCABULARY: ReadonlyMap<string, Domains.Signature> | null = null;
   static SIGNATURE: Domains.Signature | null = null;
   static VALUES: ReadonlyMap<string, ValueProperty> = new Map();
-  static BINDING: Bindings.Binding;
-  private readonly nodeIdentity = ++nextIdentity;
 
   constructor(...fields: unknown[]) {
     const kind = this.kind();
@@ -195,32 +197,19 @@ export abstract class Term implements Expression {
     return (this as unknown as Record<string, unknown>)[name];
   }
 
-  /** A text of its own, `expression <n>`, never reused, so that it never equals the identity of another
-   * implementation's objects (mbse-schemas' proxies count theirs as numbers), as Python's `id()` never does. */
-  identity(): unknown {
-    return `expression ${this.nodeIdentity}`;
-  }
-
   schema_name(): string {
     return this.kind().NAME;
-  }
-
-  /** Expressions are reference objects, linked by their arguments. */
-  owner(): null {
-    return null;
   }
 
   dialect(): Declared {
     return this.kind().DIALECT;
   }
 
-  /** Writes the tag, the value into the property named after its native type, the other properties, then one
-   * `arguments` entry per argument, in order, with its index. */
-  accept(visitor: Visitors.OfObject): void {
-    const kind = this.kind();
-    const value = this.field("value");
-    if (kind.VALUE !== null && value !== null) checkValue(kind, value);
-    Bindings.accept(kind.BINDING, this, visitor);
+  /** This expression as a value of its kind's meta-schema, a standalone value in its dialect's `store`, which
+   * serializers, validation and comparison read as any value. Built anew from its plain form, which the store checks
+   * against the meta-schema: an expression that does not fit it throws `DecodeError`, a cycle `ValueError`. */
+  reader(): Readers.OfObject {
+    return Plain.FromPlain(this.dialect().store).Value(this.kind().Schema, plainOf(this, new Set())) as Readers.OfObject;
   }
 
   /** The term's arguments: its slots, then its variadic arguments. */
@@ -282,125 +271,113 @@ function checkValue(kind: TermClass, value: unknown): string {
   return name;
 }
 
-// --- Bindings: a kind's fields bound to its meta-schema ---
+// --- Values: a term as an mbse-schemas value of its meta-schema ---
 
-/** A term's state: its value under the property named after its native type (under `value` when it has none), its
- * other properties, its value properties in their plain form, and its arguments as `arguments` entries. */
-function read(instance: Term): Bindings.State {
-  const kind = instance.kind();
-  const values = new Map<string, unknown>();
-  const value = instance.field("value");
-  if (kind.VALUE !== null && value !== null) {
-    const name = nativeName(value);
-    values.set(kind.VALUE.has(name as string) ? name as string : "value", value);
+/** A native's plain form; anything else as itself, for decoding to refuse with its path. */
+function scalar(value: unknown): unknown {
+  const host = Schemas.hostOf(value);
+  return host !== null ? new Schemas.OfScalar.Data(host).to_plain(value as Native) : value;
+}
+
+function nativeOf(native: unknown, plain: unknown): unknown {
+  return plain === undefined || plain === null ? null : new Schemas.OfScalar.Data(native as never).from_plain(plain);
+}
+
+/** The arguments written in `arguments`, in order: the slots but those that refer, then the variadic ones. */
+function written(term: Term): unknown[] {
+  const kind = term.kind();
+  const fixed = kind.SLOTS.filter((slot) => !kind.REFERS.has(slot)).map((slot) => term.field(slot));
+  return kind.VARIADIC !== null ? [...fixed, ...(term.field(kind.VARIADIC) as unknown[])] : fixed;
+}
+
+function holdsArguments(kind: TermClass): boolean {
+  return kind.SLOTS.some((slot) => !kind.REFERS.has(slot)) || kind.VARIADIC !== null;
+}
+
+/** The name a slot that refers writes: a definition's name, or the name it already holds. */
+function definitionName(definition: unknown): unknown {
+  return typeof definition === "string" ? definition : nameOf(definition as Term);
+}
+
+/** A term's plain form, nested as its meta-schema writes it: its value under the property named after its native
+ * type, its other properties, the names of the definitions it refers to, its value properties' plain forms, and its
+ * arguments, each tagged with its kind's meta-schema's name (null for an empty slot). */
+function plainOf(term: Term, active: Set<Term>): Plain.PlainMap {
+  if (active.has(term)) throw new ValueError("the expression contains a cycle");
+  active.add(term);
+  const kind = term.kind();
+  const out: Plain.PlainMap = new Map();
+  const value = term.field("value");
+  if (kind.VALUE !== null && value !== null) out.set(checkValue(kind, value), scalar(value) as Plain.PlainData);
+  for (const name of kind.PROPERTIES.keys()) {
+    if (term.field(name) !== null) out.set(name, scalar(term.field(name)) as Plain.PlainData);
   }
-  for (const name of kind.PROPERTIES.keys()) values.set(name, instance.field(name));
+  for (const slot of kind.SLOTS.filter((name) => kind.REFERS.has(name))) {
+    if (term.field(slot) !== null) out.set(slot, definitionName(term.field(slot)) as Plain.PlainData);
+  }
   for (const [name, field] of kind.VALUES) {
-    if (instance.field(name) !== null) values.set(name, field.to_plain(instance.field(name)));
+    if (term.field(name) !== null) out.set(name, field.to_plain(term.field(name)));
   }
-  const args = instance.argumentsOf().flatMap((argument, index) => (argument === null ? []
-    : [new Bindings.Entry(new Map([["argument", argument]]), new Map([["index", BigInt(index)]]))]));
-  return new Bindings.State(values, new Map(parent(kind) ? [["arguments", args]] : []));
-}
-
-function parent(kind: TermClass): boolean {
-  return kind.SLOTS.length > 0 || kind.VARIADIC !== null;
-}
-
-/** A literal's value: the one native property it holds, or the value it holds under `value`. */
-function valueOf(kind: TermClass, values: ReadonlyMap<string, unknown>): unknown {
-  for (const name of (kind.VALUE as ReadonlyMap<string, unknown>).keys()) {
-    if ((values.get(name) ?? null) !== null) return values.get(name);
+  const args = written(term);
+  if (args.some((argument) => argument !== null)) {
+    out.set("arguments", args.map((argument) => (argument === null ? null
+      : new Map([[(argument as Term).kind().NAME, plainOf(argument as Term, active)]]))));
   }
-  return values.get("value") ?? null;
+  active.delete(term);
+  return out;
 }
 
-function indexOf(entry: Bindings.Entry): bigint | null {
-  return (entry.properties.get("index") ?? null) as bigint | null;
-}
-
-function checkTarget(kind: TermClass, entry: Bindings.Entry): unknown {
-  const target = entry.links.get("argument") ?? null;
-  if (target === null) throw new ValueError("link 'argument' is not set");
-  if (!kind.DIALECT.accepts(target)) throw new TypeError(`an argument must be an expression, got ${typeName(target)}`);
-  return target;
-}
-
-/** The term a state holds: its fields from the properties, and its arguments from the `arguments` entries, the
- * slots by index and the variadic ones in index order. */
-function make(kind: TermClass, state: Bindings.State): Term {
-  const values = state.values;
+/** The term of `kind` a plain form holds, its arguments of the kinds their tags name. */
+function fromPlain(dialect: Declared, kind: TermClass, plain: Plain.PlainMap): Term {
   const fields: Record<string, unknown> = {};
-  for (const name of kind.PROPERTIES.keys()) fields[name] = values.get(name) ?? null;
-  if (kind.VALUE !== null) fields["value"] = valueOf(kind, values);
+  if (kind.VALUE !== null) {
+    const held = [...kind.VALUE].find(([name]) => plain.has(name));
+    fields["value"] = held === undefined ? null : nativeOf(held[1], plain.get(held[0]));
+  }
+  for (const [name, native] of kind.PROPERTIES) fields[name] = nativeOf(native, plain.get(name));
+  for (const slot of kind.REFERS) fields[slot] = plain.get(slot) ?? null;
   for (const [name, field] of kind.VALUES) {
-    const plain = values.get(name) ?? null;
-    fields[name] = plain === null ? null : field.from_plain(plain as Plain.PlainData);
+    const held = plain.get(name) ?? null;
+    fields[name] = held === null ? null : field.from_plain(held);
   }
-  const entries = state.entries.get("arguments") ?? [];
-  const slots = kind.SLOTS.length;
-  const parts: unknown[] = Array(slots).fill(null);
-  const rest: Bindings.Entry[] = [];
-  for (const entry of entries) {
-    const index = indexOf(entry);
-    if (index !== null && index >= 0n && index < BigInt(slots)) parts[Number(index)] = checkTarget(kind, entry);
-    else if (kind.VARIADIC !== null) rest.push(entry);
-    else throw new ValueError(slotsMessage(kind, index));
-  }
-  kind.SLOTS.forEach((slot, i) => { fields[slot] = parts[i]; });
-  if (kind.VARIADIC !== null) {
-    const last = BigInt(entries.length + slots);
-    const key = (entry: Bindings.Entry) => indexOf(entry) ?? last;
-    const ordered = [...rest].sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
-    fields[kind.VARIADIC] = ordered.map((entry) => checkTarget(kind, entry));
-  }
+  const named = new Map(dialect.terms().map((term) => [term.NAME, term] as const));
+  const args = ((plain.get("arguments") ?? []) as (Plain.PlainMap | null)[]).map((item) => {
+    if (item === null) return null;
+    const [[tag, held]] = [...item] as [[string, Plain.PlainMap]];
+    return fromPlain(dialect, named.get(tag) as TermClass, held);
+  });
+  const slots = kind.SLOTS.filter((slot) => !kind.REFERS.has(slot));
+  slots.forEach((slot, i) => { fields[slot] = args[i] ?? null; });
+  if (kind.VARIADIC !== null) fields[kind.VARIADIC] = args.slice(slots.length);
   return new (kind as unknown as new (...f: unknown[]) => Term)(...fieldsOf(kind).map((name) => fields[name]));
 }
 
-function assign(kind: TermClass, instance: Term, state: Bindings.State): Term {
-  const made = make(kind, state);
-  const target = instance as unknown as Record<string, unknown>;
-  for (const name of fieldsOf(kind)) target[name] = made.field(name);
-  return instance;
-}
-
-function bindingOf(kind: TermClass): Bindings.Binding {
-  return new Bindings.Binding(kind.Schema, read, (state) => make(kind, state),
-    (instance, state) => assign(kind, instance, state), {
-      fixed: new Map([["kind", kind.KIND]]),
-      exclusive: kind.VALUE !== null ? [[...kind.VALUE.keys(), "value"]] : [],
-      implied: ["used_by"],
-    });
-}
-
 // --- Builders ---
-
-/** E.g. "a let's value is argument 0 and its body argument 1, got index 2". */
-export function slotsMessage(kind: { KIND: string; SLOTS: readonly string[] }, index: unknown): string {
-  const parts = kind.SLOTS.map((slot, i) => (i === 0 ? `${slot} is argument 0` : `its ${slot} argument ${i}`));
-  const listed = parts.length === 1 ? parts[0] : `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
-  return `${article(kind.KIND)}'s ${listed}, got index ${repr(index)}`;
-}
 
 function noArguments(method: string, args: unknown[]): void {
   if (args.length > 0) throw new TypeError(`${method}() takes no arguments (${args.length} given)`);
 }
 
 /**
- * A kind's builder: mbse-schemas' generic `Bindings.Builder` over the kind's binding, so `create()` / `clone()` /
- * `update()` and `Visitors.OfObject`, with the DSL. None of them validate. DSL: `.set(name, native)` sets a property
- * ('value' is a literal's value), `.arguments(...specs)` appends arguments to a variadic kind and `.argument(slot,
- * spec)` fills a slot; specs are resolved by the dialect.
+ * A kind's builder: `create()`, or `clone()` and `update()` of a source term, none of which validate, with the DSL:
+ * `.set(name, native)` sets a property ('value' is a literal's value), `.arguments(...specs)` appends arguments to a
+ * variadic kind and `.argument(slot, spec)` fills a slot; specs are resolved by the dialect. A term's value is built
+ * through its dialect's `store`, as any value is.
  */
-export class Builder extends Bindings.Builder {
+export class Builder {
   static DATA: TermClass;
+  protected readonly source: Term | undefined;
+  protected readonly fields: Record<string, unknown> = {};
 
   constructor(instance?: Term) {
     const data = (new.target as typeof Builder).DATA;
     if (instance !== undefined && (instance as object | null)?.constructor !== data) {
       throw new TypeError(`expected ${data.KIND} data to build from, got ${typeName(instance)}`);
     }
-    super(data.BINDING, instance);
+    this.source = instance;
+    for (const name of fieldsOf(data)) {
+      this.fields[name] = instance !== undefined ? instance.field(name) : name === data.VARIADIC ? [] : null;
+    }
   }
 
   protected get data(): TermClass {
@@ -409,68 +386,57 @@ export class Builder extends Bindings.Builder {
 
   // DSL
 
-  set(name: string, value: Native): this {
+  set(name: string, value: unknown): this {
     const kind = this.data;
-    const values = this.state.values;
-    if (name === "value" && kind.VALUE !== null) {
-      for (const other of [...kind.VALUE.keys(), "value"]) values.delete(other);
-      const native = nativeName(value);
-      values.set(kind.VALUE.has(native as string) ? native as string : "value", value); // null, or a non-native, is held as `value`
-    } else if (kind.PROPERTIES.has(name)) {
-      values.set(name, value);
-    } else if (kind.VALUES.has(name)) {
-      values.set(name, value === null ? null : (kind.VALUES.get(name) as ValueProperty).to_plain(value));
-    } else {
+    if (!(name === "value" && kind.VALUE !== null || kind.PROPERTIES.has(name) || kind.VALUES.has(name))) {
       throw new KeyError(`${article(kind.KIND)} has no attribute ${repr(name)}`);
     }
+    this.fields[name] = value;
     return this;
   }
 
-  private entries(): Bindings.Entry[] {
-    if (!this.state.entries.has("arguments")) this.state.entries.set("arguments", []);
-    return this.state.entries.get("arguments") as Bindings.Entry[];
-  }
-
-  private entry(spec: unknown, index: bigint): Bindings.Entry {
-    return new Bindings.Entry(new Map([["argument", this.data.DIALECT.resolve(spec)]]), new Map([["index", index]]));
-  }
-
   arguments(...specs: unknown[]): this {
-    if (this.data.VARIADIC === null) throw new TypeError(`${article(this.data.KIND)} has no variadic arguments`);
-    const slots = BigInt(this.data.SLOTS.length);
-    for (const spec of specs) {
-      const index = slots + BigInt(this.entries().filter((entry) => {
-        const at = indexOf(entry);
-        return at === null || at >= slots;
-      }).length);
-      this.entries().push(this.entry(spec, index));
-    }
+    const variadic = this.data.VARIADIC;
+    if (variadic === null) throw new TypeError(`${article(this.data.KIND)} has no variadic arguments`);
+    this.fields[variadic] = [...(this.fields[variadic] as unknown[]), ...specs.map((spec) => this.data.DIALECT.resolve(spec))];
     return this;
   }
 
   argument(slot: string, spec: unknown): this {
     if (!this.data.SLOTS.includes(slot)) throw new KeyError(`${article(this.data.KIND)} has no argument ${repr(slot)}`);
-    const index = BigInt(this.data.SLOTS.indexOf(slot));
-    const kept = this.entries().filter((entry) => indexOf(entry) !== index);
-    this.entries().splice(0, this.entries().length, ...kept, this.entry(spec, index));
+    this.fields[slot] = this.data.DIALECT.resolve(spec);
     return this;
   }
 
   // Finalizing
 
-  override create(...args: unknown[]): any {
+  private made(): Term {
+    const kind = this.data;
+    return new (kind as unknown as new (...f: unknown[]) => Term)(...fieldsOf(kind).map((name) => this.fields[name]));
+  }
+
+  create(...args: unknown[]): any {
     noArguments("create", args);
-    return super.create();
+    if (this.source !== undefined) {
+      throw new ValueError("create() is only valid without a source instance; use clone() or update()");
+    }
+    return this.made();
   }
 
-  override clone(...args: unknown[]): any {
+  /** A new term of the fields built; arguments are shared, not copied. */
+  clone(...args: unknown[]): any {
     noArguments("clone", args);
-    return super.clone();
+    if (this.source === undefined) throw new ValueError("clone() is only valid with a source instance");
+    return this.made();
   }
 
-  override update(...args: unknown[]): any {
+  update(...args: unknown[]): any {
     noArguments("update", args);
-    return super.update();
+    if (this.source === undefined) throw new ValueError("update() is only valid with a source instance");
+    const made = this.made(); // as its class makes it, then into the source
+    const target = this.source as unknown as Record<string, unknown>;
+    for (const name of fieldsOf(this.data)) target[name] = made.field(name);
+    return this.source;
   }
 }
 
@@ -555,23 +521,24 @@ export function resolve<D>(spec: unknown, isData: (value: unknown) => value is D
 type BranchBuilder = Parameters<Parameters<Schemas.OfUnion.Builder["branches"]>[0]>[0];
 
 function nativeProperty(name: string, native: unknown) {
-  return (p: Schemas.OfProperty.Builder) => p.name(name).of((t) => t.as_native(native as Schemas.OfNative.Spec));
+  return (p: Schemas.OfProperty.Builder) => p.name(name).of(new Schemas.OfScalar.Data(native as never));
 }
 
-export const Arguments = new Schemas.OfRelation.Builder().name(ARGUMENTS).links("parent", "argument")
-  .properties(nativeProperty("index", BigInt)).unique("argument").create();
-const ARGUMENTS_ADJACENCY = (r: Schemas.OfAdjacency.Builder) => r.name("arguments").of(Arguments).me("parent");
-const USED_BY = (r: Schemas.OfAdjacency.Builder) => r.name("used_by").of(Arguments).me("argument");
+/** An argument's schema: a value of any type, an expression of any dialect, which the wire tags with its kind's
+ * meta-schema's registered name, since a dialect's terms hold its extensions'. */
+export const ARGUMENT = new Schemas.OfAny.Builder().create();
 
-/** A kind's meta-schema: the tag, one property per native type its value may have, its properties, its value fields,
- * and the adjacencies `arguments` (if it has arguments) and `used_by`. */
+/** A kind's meta-schema, a value object schema: one property per native type its value may have, its properties, the
+ * name of each definition it refers to, its value properties, and `arguments` (if it has arguments), a dense container
+ * of them by index. */
 function schemaOf(kind: TermClass): Schemas.OfObject.Data {
-  const natives = [...(kind.VALUE ?? new Map()), ...kind.PROPERTIES];
+  const refers = kind.SLOTS.filter((slot) => kind.REFERS.has(slot)).map((slot) => [slot, String] as const);
+  const natives = [...(kind.VALUE ?? new Map()), ...kind.PROPERTIES, ...refers];
   const values = [...kind.VALUES].map(([name, field]) => (p: Schemas.OfProperty.Builder) => p.name(name).of(field.schema));
-  const relations = kind.SLOTS.length > 0 || kind.VARIADIC !== null ? [ARGUMENTS_ADJACENCY, USED_BY] : [USED_BY];
-  return new Schemas.OfObject.Builder().name(kind.NAME).ref()
-    .properties(nativeProperty("kind", String), ...natives.map(([name, native]) => nativeProperty(name, native)), ...values)
-    .relations(...relations).create();
+  const args = holdsArguments(kind) ? [(p: Schemas.OfProperty.Builder) => p.name("arguments").of(
+    new Schemas.OfContainer.Builder().index(new Schemas.OfScalar.Data(BigInt)).element(ARGUMENT).create())] : [];
+  return new Schemas.OfObject.Builder().name(kind.NAME)
+    .properties(...natives.map(([name, native]) => nativeProperty(name, native)), ...values, ...args).create();
 }
 
 /** A quantifier's signature: it also gives the domain of a collection's items. */
@@ -611,8 +578,10 @@ export function register<S extends { names(): readonly string[]; register(schema
 }
 
 /** A dialect declared by its kinds' data classes, from which it derives their builders (unless given), meta-schemas,
- * the union `Schema`, whose branches are named by the kinds' tags, the store `Builders` of its bound classes,
- * `register(store)`, which registers its meta-schemas in another store, and `make`, `resolve`, `validate` and `infer`. */
+ * the union `Schema`, whose branches are named by the kinds' tags, `store`, a store of proxies holding the meta-schemas
+ * of the kinds it accepts (`terms()`), in which an expression's value is built and from which `term(value)` rebuilds
+ * one, `register(store)`, which registers its meta-schemas in another store, and `make`, `resolve`, `validate` and
+ * `infer`. */
 export class Declared implements Dialect {
   readonly classes: readonly TermClass[];
   /** The dialect this one extends, or null. */
@@ -622,8 +591,8 @@ export class Declared implements Dialect {
   readonly builders: Map<string, typeof Builder>;
   readonly AnyBuilder: typeof AnyBuilder;
   readonly Schema: Schemas.OfUnion.Data;
-  readonly Builders: Bindings.OfStore;
-  readonly schemas: ReadonlyMap<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>;
+  readonly store: Proxies.OfStore;
+  readonly schemas: ReadonlyMap<string, Schemas.OfObject.Data>;
   private readonly byTag: Map<string, TermClass>;
   private readonly domainOf: (value: Native) => Domains.Domain;
 
@@ -639,8 +608,7 @@ export class Declared implements Dialect {
     this.classes = [...(base?.classes ?? []), ...kinds];
     this.byTag = new Map([...inherited, ...kinds.map((kind) => [kind.KIND, kind] as const)]);
     this.builders = new Map([...(base?.builders ?? []), ...(declaration.builders ?? [])]);
-    const schemas = new Map<string, Schemas.OfObject.Data>([...(base?.schemas ?? [])]
-      .filter(([name]) => name !== ARGUMENTS) as [string, Schemas.OfObject.Data][]);
+    const schemas = new Map<string, Schemas.OfObject.Data>(base?.schemas ?? []);
     for (const kind of kinds) {
       kind.DIALECT = this;
       kind.NAME = declaration.schemaNames?.get(kind.KIND) ?? `Expressions.${dialectName}.Of${capitalize(kind.KIND)}`;
@@ -654,10 +622,9 @@ export class Declared implements Dialect {
       }
       kind.Schema = schemaOf(kind);
       schemas.set(kind.NAME, kind.Schema);
-      kind.BINDING = bindingOf(kind);
       this.builders.set(kind.KIND, builder);
     }
-    this.schemas = new Map<string, Schemas.OfObject.Data | Schemas.OfRelation.Data>([[ARGUMENTS, Arguments], ...schemas]);
+    this.schemas = schemas;
     DIALECTS.push(this);
     base?.extensions.push(this);
     this.AnyBuilder = declaration.anyBuilder ?? class extends AnyBuilder {};
@@ -665,10 +632,8 @@ export class Declared implements Dialect {
     this.Schema = new Schemas.OfUnion.Builder().branches(
       ...this.classes.map((kind) => (b: BranchBuilder) => b.name(kind.KIND).of(kind.Schema)),
     ).create();
-    this.Builders = new Bindings.OfStore(this.classes.map((kind) => {
-      const builder = this.builders.get(kind.KIND) as typeof Builder;
-      return [kind.Schema, (instance?: Term) => new builder(instance)] as const;
-    }), [Arguments]);
+    this.store = this.register(new Proxies.OfStore());
+    for (let above = base; above !== null; above = above.base) this.register(above.store); // a base accepts its extensions' terms
   }
 
   /** The kinds whose expressions this dialect accepts as arguments: its own, and its extensions'. */
@@ -681,8 +646,8 @@ export class Declared implements Dialect {
     return value instanceof Term && this.terms().includes(value.kind());
   }
 
-  /** Registers the dialect's meta-schemas, and the relation `Arguments` they share, in `store` (e.g. a
-   * `Proxies.OfStore`, to build expressions as proxies), skipping those it already holds. Returns the store. */
+  /** Registers the dialect's meta-schemas in `store` (e.g. a `Proxies.OfStore`, to build expressions' values there),
+   * skipping those it already holds. Returns the store. */
   register<S extends { names(): readonly string[]; register(schema: never): void }>(store: S): S {
     for (const [schemaName, schema] of this.schemas) if (!store.names().includes(schemaName)) store.register(schema as never);
     return store;
@@ -704,6 +669,15 @@ export class Declared implements Dialect {
   schema_of(expression: unknown): Schemas.OfObject.Data {
     if (!this.isExpression(expression)) throw new TypeError(`not an expression: ${repr(expression)}`);
     return expression.kind().Schema;
+  }
+
+  /** The expression a value of the meta-schema of one of the kinds it accepts holds, such as one read from JSON
+   * (`JSON.FromJSON(dialect.store)(Terms.ARGUMENT, text)`) or built through `store`: a new term, its arguments too. */
+  term(value: Readers.OfObject): any {
+    const schema = value.as_schema();
+    const kind = this.terms().find((term) => term.Schema === schema);
+    if (kind === undefined) throw new TypeError(`not a value of a ${this.dialectName} kind: ${repr(schema.name)}`);
+    return fromPlain(this, kind, Plain.ToPlain(this.store).Value(schema, value) as Plain.PlainMap);
   }
 
   toString(): string {
@@ -809,7 +783,7 @@ export class Declared implements Dialect {
     args.forEach((argument, i) => {
       const label = i < kind.SLOTS.length ? kind.SLOTS[i] as string : `argument ${i - kind.SLOTS.length}`;
       if (argument === null) found.push(`${what} needs ${article(label)}`);
-      else if (kind.REFERS.has(label) && active.has(argument)) return; // recursion: a definition referred to while it is being checked
+      else if (kind.REFERS.has(label) && (typeof argument === "string" || active.has(argument))) return; // a definition named, which its holder resolves; or recursion, referred to while checked
       else found.push(...this.problems(argument, scopes[i] as ReadonlySet<string>, core, active).map((p) => `${label}: ${p}`));
     });
     active.delete(expression);
@@ -871,14 +845,15 @@ export class Declared implements Dialect {
 
 function propertyProblems(what: string, name: string, native: unknown, value: unknown): string[] {
   if (value === null || value === "") return [`${what} needs ${article(name)}`];
-  if (!Schemas.isNativeOf(native, value)) return [`${what}'s ${name} must be a ${tokenName(native)}, got ${typeName(value)}`];
+  if (!Schemas.isScalarOf(native, value)) return [`${what}'s ${name} must be a ${tokenName(native)}, got ${typeName(value)}`];
   return [];
 }
 
 // --- Traversal ---
 
+/** An expression's arguments that are expressions: not empty slots, nor the names of definitions referred to. */
 function argumentsOf(expression: Term): Term[] {
-  return expression.form().arguments.filter((argument): argument is Term => argument !== null);
+  return expression.form().arguments.filter((argument): argument is Term => argument instanceof Term);
 }
 
 /** Every expression reachable from `expression`, each once, parents before their arguments and arguments in order.
@@ -896,7 +871,7 @@ export function* walk(expression: Term): Generator<any> {
 }
 
 /** Combines an expression bottom-up: `fn(node, results)` is called once per term, shared ones included, with the
- * results for its arguments (null for empty slots). Throws on cycles. */
+ * results for its arguments (null for empty slots, and a definition's name as itself). Throws on cycles. */
 export function fold<R>(expression: Term, fn: (node: any, results: any[]) => R): R {
   const memo = new Map<Term, R>();
   const active = new Set<Term>();
@@ -904,7 +879,7 @@ export function fold<R>(expression: Term, fn: (node: any, results: any[]) => R):
     if (memo.has(node)) return memo.get(node) as R;
     if (active.has(node)) throw new ValueError("the expression contains a cycle");
     active.add(node);
-    const results = node.form().arguments.map((argument) => (argument === null ? null : visit(argument as Term)));
+    const results = node.form().arguments.map((argument) => (argument instanceof Term ? visit(argument) : argument));
     active.delete(node);
     const result = fn(node, results);
     memo.set(node, result);
@@ -931,7 +906,7 @@ export function sameNative(a: unknown, b: unknown): boolean {
 export function same(a: unknown, b: unknown): boolean {
   const assumed = new Map<unknown, Set<unknown>>();
   const visit = (x: unknown, y: unknown): boolean => {
-    if (x === null || y === null) return x === y;
+    if (!(x instanceof Term) || !(y instanceof Term)) return x === y; // empty slots, or the names of definitions referred to
     if (assumed.get(x)?.has(y)) return true; // a cycle: the same if they are the same everywhere else
     if (!assumed.has(x)) assumed.set(x, new Set());
     assumed.get(x)?.add(y);

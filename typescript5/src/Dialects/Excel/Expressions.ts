@@ -26,7 +26,7 @@ import { isIdentifier } from "../Python/Expressions.js";
 import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 const STR = String;
 const SCALARS: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["int", BigInt], ["float", Number], ["str", String], ["bool", Boolean],
@@ -149,7 +149,7 @@ class _Map extends F.Term {
 export const DIALECT = new F.Declared("Excel", [_Constant, _Name, _Cell, _Let, _Function, _Infix, _Prefix, _Field, _Map], {
   domain_of: Domains.of,
 });
-export const Builders = DIALECT.Builders;
+export const store = DIALECT.store;
 export const Schema = DIALECT.Schema;
 
 export function constant(value: Native): _Constant {

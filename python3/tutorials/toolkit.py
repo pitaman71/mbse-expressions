@@ -2,7 +2,8 @@
 
 A shipment of vaccine travels with a data logger that records its temperature. `Shipment` holds what the logger
 reported: the latest reading, every reading, the hours in transit, and the loggers it carries (`Carries`, an entry
-per logger, with the slot it rides in). Case study 6 explains how `show` works.
+per logger, with the slot it rides in). `filled` writes a list, such as the readings, into the container a property
+holds. Case study 6 explains how `show` works.
 """
 
 from mbse.Expressions import Expressions, register
@@ -11,11 +12,18 @@ from mbse.Schemas.Framework import Proxies, Schemas
 
 
 def _native(name, type_):
-    return lambda p: p.name(name).of(lambda t: t.as_native(type_))
+    return lambda p: p.name(name).of(Schemas.OfScalar.Data(type_))
 
 
 def _listed(name, type_):
-    return lambda p: p.name(name).of(lambda t: t.as_indexed(lambda i: i.of(lambda n: n.as_native(type_))))
+    return lambda p: p.name(name).of(Schemas.OfContainer.Builder().index(Schemas.OfScalar.Data(int))
+                                     .element(Schemas.OfScalar.Data(type_)).create())
+
+
+def filled(values):
+    """Writes `values`, a list of scalars, into the container a property holds, each at its position."""
+    return lambda p: p.as_value(lambda v: v.as_container(lambda c: [c.at(i).as_scalar(x) for i, x in enumerate(values)]
+                                                         and c or c) or v)
 
 
 Carries = (Schemas.OfRelation.Builder().name("Carries").links("shipment", "logger")

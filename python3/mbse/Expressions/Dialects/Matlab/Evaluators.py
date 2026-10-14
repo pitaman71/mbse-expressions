@@ -1,7 +1,7 @@
 """Evaluators of the Matlab dialect: compute an expression by MATLAB's rules for scalars, in Python.
 
 `Evaluators.OfAny(expression, scope)` binds variables to numbers, logicals, strings and structs (mappings, or objects
-that write their properties through `accept`). Values are Python `float` (double), `bool` (logical) and `str`
+that are read through the visitor protocol). Values are Python `float` (double), `bool` (logical) and `str`
 (string scalar). MATLAB's rules apply, not Basic's:
 
 - Two-valued logic: `&&` and `||` short-circuit, and take numbers or logicals (nonzero is true; NaN raises).
@@ -30,8 +30,7 @@ import math
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Evaluators as F, Objects, Symbolics as S
 
 from . import Domains, Expressions
 
@@ -135,7 +134,7 @@ def _fields(value: Any) -> Mapping[str, Any]:
         return value
     if not Domains.is_struct(value):
         raise TypeError("Dot indexing is not supported for variables of this type.")
-    return Validators.properties_of(value)
+    return Objects.properties(value)
 
 
 def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
@@ -147,7 +146,7 @@ def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
 
 def _value(value: Any) -> Any:
     """A value as MATLAB reads it: a number as a double, and a list (a list property's too) as an array."""
-    if isinstance(value, Validators.ListRecord):
+    if isinstance(value, Objects.Listed):
         value = value.values
     if isinstance(value, (list, tuple)):
         return [_value(item) for item in value]

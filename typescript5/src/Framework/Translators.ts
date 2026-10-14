@@ -298,7 +298,7 @@ class Run {
       const value = form.attributes.get(name);
       if (!(expected instanceof Hole)) {
         if (!Terms.sameNative(expected, value)) return false;
-      } else if (expected.types.length > 0 && !expected.types.some((type) => Schemas.isNativeOf(type, value))) {
+      } else if (expected.types.length > 0 && !expected.types.some((type) => Schemas.isScalarOf(type, value))) {
         return false;
       } else if (bindings.has(expected.name) && !Terms.sameNative(bindings.get(expected.name), value)) {
         return false;

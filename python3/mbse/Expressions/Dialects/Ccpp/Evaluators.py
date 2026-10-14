@@ -30,8 +30,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Dialects.Basic import Domains as BD, Ieee754
-from mbse.Expressions.Framework import Errors, Evaluators as F, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Errors, Evaluators as F, Objects, Symbolics as S
 
 from . import Domains, Expressions
 from .Domains import CType
@@ -241,8 +240,8 @@ def _member(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
     target = arguments[0]().value
     if isinstance(target, Mapping):
         members = target
-    elif callable(getattr(target, "accept", None)):
-        members = Validators.properties_of(target)
+    elif Objects.is_object(target):
+        members = Objects.properties(target)
     else:
         raise TypeError(f"member reference base type '{type(target).__name__}' is not a structure")
     if node.name not in members:
@@ -252,7 +251,7 @@ def _member(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
 
 def _array(value: Any) -> Any:
     """A member's value: a list as a list of its items, lists of lists too."""
-    return [_array(item) for item in value.values] if isinstance(value, Validators.ListRecord) else value
+    return [_array(item) for item in value.values] if isinstance(value, Objects.Listed) else value
 
 
 def _subscript(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:

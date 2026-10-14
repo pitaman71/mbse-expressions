@@ -12,10 +12,11 @@ The same constraint as in Python, built with writers, which TypeScript uses in p
 import { Evaluators, Expressions as E } from "@mbse/expressions";
 import * as Excel from "@mbse/expressions/Dialects/Excel";
 import * as Python from "@mbse/expressions/Dialects/Python";
+import { Terms } from "@mbse/expressions/Framework";
 import * as Translators from "@mbse/expressions/Translators";
 import { JSON, Proxies, Schemas as S, Validators } from "@mbse/schemas/Framework";
 
-const native = (name: string, type: S.OfNative.Spec) => (p: S.OfProperty.Builder) => p.name(name).of((t) => t.as_native(type));
+const native = (name: string, type: unknown) => (p: S.OfProperty.Builder) => p.name(name).of(new S.OfScalar.Data(type as never));
 const check = (condition: boolean, message: string) => { if (!condition) throw new Error(message); };
 
 const Contact = new S.OfObject.Builder().name("Contact").ref().properties(native("name", String), native("age", BigInt), native("email", String)).create();
@@ -36,10 +37,9 @@ check(Evaluators.OfAny(senior, { contact: ada }) === true, "ada");
 check(Evaluators.OfAny(senior, { contact: bob }) === false, "bob");
 check(Evaluators.OfAny(senior, { contact: eve }) === null, "eve");
 
-// It is data: store it and read it back.
-const schema = E.DIALECT.schema_of(senior);
-const text = JSON.ToJSON(E.Builders).Reachable(schema, senior); // E.Builders: the store of Basic's expression classes
-const constraint = JSON.FromJSON(E.Builders).Reachable(schema, text) as E.OfAny.Data; // decoders return unknown
+// It is data, a value: store it and read it back. E.store holds Basic's meta-schemas; Terms.ARGUMENT tags the kind.
+const text = JSON.ToJSON(E.store)(Terms.ARGUMENT, senior.reader());
+const constraint = E.DIALECT.term(JSON.FromJSON(E.store)(Terms.ARGUMENT, text) as any) as E.OfAny.Data; // decoders return unknown
 
 // Translate it into other languages; each evaluates by its own rules.
 const formula = Translators.between(E.DIALECT, Excel.Expressions.DIALECT).forward(constraint);
@@ -55,7 +55,7 @@ const Email = new S.OfObject.Builder().properties(native("address", String)).cre
 const Reach = new S.OfUnion.Builder().branches((b) => b.name("phone").of(Phone), (b) => b.name("email").of(Email)).create();
 const Card = new S.OfObject.Builder().name("Card").ref().properties((p) => p.name("reach").of(Reach)).create();
 store.register(Card);
-const card = B.Card().reach((u: any) => u.email((r: any) => r.address("ada@example.com"))).create();
+const card = B.Card().reach((p: any) => p.as_value((v: any) => v.as_union((u: any) => u.email((r: any) => r.address("ada@example.com"))))).create();
 check(Validators.Validate(B)(Card, card).length === 0, "card");
 check(Evaluators.OfAny(self.reach.has("email"), { this: card }) === true, "by email");
 ```

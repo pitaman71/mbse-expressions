@@ -15,7 +15,7 @@ from collections.abc import Callable
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from ..Basic.Expressions import (
     OfAny, Writer, _KINDS, _LetData, _LiteralData, _OperationData, _QuantifierData, _VariableData, _native_name,

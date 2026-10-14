@@ -7,7 +7,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from typing import Any
 
-from mbse.Schemas.Framework import Plain, Proxies, Reachable
+from mbse.Schemas.Framework import Schemas
 
 
 @contextmanager
@@ -23,92 +23,28 @@ def raises(*errors: type[BaseException], match: str | None = None) -> Iterator[N
 
 
 def text(name: str, native: type = str):
-    """Property Spec for a native-typed property."""
-    return lambda prop: prop.name(name).of(lambda t: t.as_native(native))
+    """Property Spec for a scalar-typed property."""
+    return lambda prop: prop.name(name).of(Schemas.OfScalar.Data(native))
 
 
-def set_property(visitor: Any, name: str, value: Any) -> None:
-    """Writes a native property through the visitor protocols (works for property names the DSL cannot reach)."""
-    visitor.property(name, lambda p: p.value(lambda a: a.as_native(lambda n: n.set(value))))
+def container(element: Any, index: type = int) -> Any:
+    """A container schema of `element`s (a schema, or a scalar type), by `index`: dense by int, a dict by str."""
+    of = lambda t: Schemas.OfScalar.Data(t) if isinstance(t, type) else t  # noqa: E731
+    return Schemas.OfContainer.Builder().index(of(index)).element(of(element)).create()
 
 
-def get_property(visitor: Any, name: str) -> Any:
-    """Reads a native property through the visitor protocols."""
-    found: list[Any] = []
-    visitor.property(name, lambda p: p.value(lambda a: a.as_native(lambda n: found.append(n.get()))))
-    return found[0]
+def filled(values: Any) -> Any:
+    """A property Spec writing `values` into the container the property holds: a list by position, a dict by key, each
+    a scalar or, nested, a list or dict."""
+    return lambda prop: prop.as_value(lambda a: _fill(a, values) or a)
 
 
-def entries(schema: Any, obj: Any, adjacency: str) -> list[dict[str, Any]]:
-    """An object's entries with references resolved to objects, read from a Reachable snapshot (symbols follow
-    `Reachable.of` order)."""
-    graph = Plain.ToPlain(Proxies.store_of(obj)).Reachable(schema, obj)
-    objects = Reachable.of(obj)
-
-    def resolve(value: Any) -> Any:
-        return objects[int(value["$ref"][1:])] if isinstance(value, dict) else value
-
-    return [{k: resolve(v) for k, v in e.items()} for e in graph["objects"][graph["root"]].get(adjacency, [])]
-
-
-def same_graph(a: dict, b: dict) -> bool:
-    """Snapshot equality up to symbol numbering and entry order. Objects are identified by their own property values,
-    which must be distinct within each graph."""
-
-    def canonical(graph: dict) -> tuple:
-        objects = graph["objects"]
-        labels = {s: repr(sorted((k, v) for k, v in o.items() if not isinstance(v, list))) for s, o in objects.items()}
-        assert len(set(labels.values())) == len(labels), "objects must have distinct property values"
-
-        def entry(e: dict) -> str:
-            return repr(sorted((k, labels[v["$ref"]] if isinstance(v, dict) else v) for k, v in e.items()))
-
-        return labels[graph["root"]], {
-            labels[s]: {k: sorted(map(entry, v)) for k, v in o.items() if isinstance(v, list)}
-            for s, o in objects.items()
-        }
-
-    return canonical(a) == canonical(b)
-
-
-class Fake:
-    """A minimal hand-written `Visitors.Visitable`, independent of Proxies.
-
-    `values` maps property names to native values. `adjacencies` maps adjacency names to lists of entries; an entry
-    maps link names to `Fake` objects and property names to native values. Nothing is checked against a schema, so
-    fakes can express data that proxies would never produce.
-    """
-
-    def __init__(self, schema_name: str, values: dict | None = None, adjacencies: dict | None = None,
-                 identity: Any = None):
-        self._schema_name = schema_name
-        self.values = dict(values or {})
-        self.adjacencies = {k: list(v) for k, v in (adjacencies or {}).items()}
-        self._identity = identity
-
-    def identity(self) -> Any:
-        return id(self) if self._identity is None else self._identity
-
-    def schema_name(self) -> str:
-        return self._schema_name
-
-    def owner(self) -> Any:
-        return None
-
-    def accept(self, visitor: Any) -> None:
-        for name, value in self.values.items():
-            set_property(visitor, name, value)
-        for name, items in self.adjacencies.items():
-            for item in items:
-                visitor.adjacency(name, lambda a, item=item: a.add(lambda e: _write(e, item)))
-
-
-def _write(entry: Any, item: dict) -> None:
-    for key, value in item.items():
-        if isinstance(value, Fake):
-            entry.link(key, lambda k, value=value: k.set(value))
-        else:
-            set_property(entry, key, value)
+def _fill(element: Any, value: Any) -> None:
+    if isinstance(value, (list, dict)):
+        items = value.items() if isinstance(value, dict) else enumerate(value)
+        element.as_container(lambda c: [_fill(c.at(i), v) for i, v in items] and c or c)
+    else:
+        element.as_scalar(value)
 
 
 def protocol_methods(protocol: type) -> dict[str, inspect.Signature]:

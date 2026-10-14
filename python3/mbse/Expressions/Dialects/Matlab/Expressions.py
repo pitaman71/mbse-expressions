@@ -26,11 +26,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "binary", "unary", "call", "field", "index",
+__all__ = ["DIALECT", "store", "Schema", "constant", "identifier", "binary", "unary", "call", "field", "index",
            "arrayfun", "import_"]
 
 
@@ -149,7 +149,7 @@ class _Import(F.Term):
 
 DIALECT = F.Declared("Matlab", (_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Index, _Arrayfun, _Import),
                      domain_of=Domains.of)
-Builders = DIALECT.Builders
+store = DIALECT.store
 Schema = DIALECT.Schema
 
 

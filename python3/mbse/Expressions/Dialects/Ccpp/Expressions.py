@@ -24,11 +24,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "unary", "binary", "conditional", "cast", "member",
+__all__ = ["DIALECT", "store", "Schema", "constant", "identifier", "unary", "binary", "conditional", "cast", "member",
            "subscript", "call", "SUFFIXES"]
 
 SUFFIXES = {"unsigned int": "u", "long": "l", "unsigned long": "ul", "long long": "ll", "unsigned long long": "ull",
@@ -164,7 +164,7 @@ class _Call(F.Term):
 
 DIALECT = F.Declared("Ccpp", (_Constant, _Identifier, _Unary, _Binary, _Conditional, _Cast, _Member, _Subscript, _Call),
                      domain_of=Domains.of)
-Builders = DIALECT.Builders
+store = DIALECT.store
 Schema = DIALECT.Schema
 
 

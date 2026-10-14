@@ -21,7 +21,7 @@ includes (`includes`) only domains equal to it, since Basic has no implied promo
 
 Today's natives are the defaults: `Int` is an unbounded signed integer, `Float` binary64 rounding ties to even, `Str`
 Unicode, `Bytes` bytes of any length and `Bool` true and false; `of(value)` gives a native's default domain. `Object`
-holds what writes its properties through `accept`, including expressions and value objects, and `Anything` is the
+holds what is read through the visitor protocol, including expressions' values and value objects, and `Anything` is the
 domain of a value not known statically, such as a property read with `get`. Unknown (`None`) is not a domain.
 
 Domains are registered by name with `register`. Over the wire a domain that is registered is written by name,
@@ -46,7 +46,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
-from mbse.Expressions.Framework import Domains as D
+from mbse.Expressions.Framework import Domains as D, Objects
 from mbse.Expressions.Framework.Domains import Anything
 from mbse.Schemas.Framework import Comparison, Schemas
 
@@ -111,8 +111,8 @@ class _Domain:
     def compare(self, a: Any, b: Any) -> int | None:
         """How two values of this domain compare: -1, 0 or 1, or None when they are incomparable. An unordered domain's
         values are equal or incomparable."""
-        schema = Schemas.OfNative.Data(type(a))
-        return Comparison.OfNative(schema, a).compare(Comparison.OfNative(schema, b))
+        schema = Schemas.OfScalar.Data(type(a))
+        return Comparison.OfScalar(schema, a).compare(Comparison.OfScalar(schema, b))
 
     def validate(self) -> list[str]:
         return []
@@ -454,32 +454,32 @@ class _PackedBuilder(_Builder):
 
 
 def _text(name: str) -> Callable[[Any], Any]:
-    return lambda p: p.name(name).of(lambda t: t.as_native(str))
+    return lambda p: p.name(name).of(Schemas.OfScalar.Data(str))
 
 
 def _int(name: str) -> Callable[[Any], Any]:
-    return lambda p: p.name(name).of(lambda t: t.as_native(int))
+    return lambda p: p.name(name).of(Schemas.OfScalar.Data(int))
 
 
 Schema = Schemas.OfUnion.Builder().create()  # a domain, by value or by name; its branches are added below
 def _listing(name: str, native: type) -> Callable[[Any], Any]:
-    """An adjacency listing natives in order: a one-link relation of its own, each entry holding a `value`."""
-    return lambda r: r.name(name).me("owner").of(
-        lambda rel: rel.links("owner").properties(lambda p: p.name("value").of(lambda t: t.as_native(native))))
+    """A property listing natives in order: a dense container of them by index."""
+    return lambda p: p.name(name).of(Schemas.OfContainer.Builder().index(Schemas.OfScalar.Data(int)).element(
+        Schemas.OfScalar.Data(native)).create())
 
 
 _SCHEMAS = {
     "bool": Schemas.OfObject.Builder().create(),
     "integer": Schemas.OfObject.Builder().properties(
-        _int("width"), lambda p: p.name("signed").of(lambda t: t.as_native(bool)), _text("overflow")).create(),
+        _int("width"), lambda p: p.name("signed").of(Schemas.OfScalar.Data(bool)), _text("overflow")).create(),
     "ieee754": Schemas.OfObject.Builder().properties(_text("format"), _text("rounding")).create(),
     "bits": Schemas.OfObject.Builder().properties(_int("width")).create(),
     "bytes": Schemas.OfObject.Builder().properties(_int("width")).create(),
     "unicode": Schemas.OfObject.Builder().create(),
     "ieee1164": Schemas.OfObject.Builder().properties(_int("width")).create(),
-    "enum": Schemas.OfObject.Builder().relations(_listing("members", str)).create(),
+    "enum": Schemas.OfObject.Builder().properties(_listing("members", str)).create(),
     "packed": Schemas.OfObject.Builder().properties(
-        lambda p: p.name("domain").of(Schema), lambda p: p.name("representation").of(Schema)).relations(
+        lambda p: p.name("domain").of(Schema), lambda p: p.name("representation").of(Schema),
         _listing("codes", int)).create(),
     "named": Schemas.OfObject.Builder().properties(_text("name")).create(),
 }
@@ -549,8 +549,8 @@ def to_plain(domain: _Domain) -> dict[str, Any]:
         value = getattr(domain, field.name)
         if isinstance(value, _Domain):
             contents[field.name] = to_plain(value)
-        elif isinstance(value, tuple):  # a list: a one-link relation's entries, each holding a value
-            contents[field.name] = [{"value": item} for item in value]
+        elif isinstance(value, tuple):  # a list: a dense container of its items
+            contents[field.name] = list(value)
         elif value is not None:
             contents[field.name] = value
     return {domain.KIND: contents}
@@ -564,7 +564,7 @@ def from_plain(plain: dict[str, Any]) -> _Domain:
     fields: dict[str, Any] = {}
     for name, value in contents.items():
         fields[name] = (from_plain(value) if isinstance(value, dict) else
-                        tuple(entry["value"] for entry in value) if isinstance(value, list) else value)
+                        tuple(value) if isinstance(value, list) else value)
     return _KINDS[kind](**fields)
 
 
@@ -672,7 +672,7 @@ def items_of(domain: Any) -> D.Domain:
 # --- The defaults and the core operations' signatures ---
 
 Bool, Int, Float, Str, Bytes = _Bool(), _Integer(), _Ieee754(), _Unicode(), _Bytes()
-Object = D.OfValues("object", lambda value: callable(getattr(value, "accept", None)))
+Object = D.OfValues("object", Objects.is_object)
 
 _NATIVES: dict[type, _Domain] = {bool: Bool, int: Int, float: Float, str: Str, bytes: Bytes}
 

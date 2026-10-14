@@ -3,16 +3,25 @@
  *
  * A shipment of vaccine travels with a data logger that records its temperature. `Shipment` holds what the logger
  * reported: the latest reading, every reading, the hours in transit, and the loggers it carries (`Carries`, an entry
- * per logger, with the slot it rides in). Case study 6 explains how `show` works.
+ * per logger, with the slot it rides in). `filled` writes a list, such as the readings, into the container a property
+ * holds. Case study 6 explains how `show` works.
  */
 
 import { Expressions, register } from "@mbse/expressions";
 import { Terms } from "@mbse/expressions/Framework";
 import { Proxies, Schemas } from "@mbse/schemas/Framework";
 
-const native = (name: string, type: Schemas.OfNative.Spec) => (p: any) => p.name(name).of((t: any) => t.as_native(type));
-const listed = (name: string, type: Schemas.OfNative.Spec) =>
-  (p: any) => p.name(name).of((t: any) => t.as_indexed((i: any) => i.of((n: any) => n.as_native(type))));
+const native = (name: string, type: unknown) => (p: any) => p.name(name).of(new Schemas.OfScalar.Data(type as never));
+const listed = (name: string, type: unknown) => (p: any) => p.name(name).of(new Schemas.OfContainer.Builder()
+  .index(new Schemas.OfScalar.Data(BigInt)).element(new Schemas.OfScalar.Data(type as never)).create());
+
+/** Writes `values`, an array of scalars, into the container a property holds, each at its position. */
+export function filled(values: readonly unknown[]): (p: any) => any {
+  return (p: any) => p.as_value((v: any) => v.as_container((c: any) => {
+    values.forEach((x, i) => c.at(BigInt(i)).as_scalar(x));
+    return c;
+  }) || v);
+}
 
 export const Carries = new Schemas.OfRelation.Builder().name("Carries").links("shipment", "logger")
   .properties(native("slot", BigInt)).create();

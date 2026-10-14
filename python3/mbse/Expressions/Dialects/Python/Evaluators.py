@@ -2,7 +2,7 @@
 
 `Evaluators.OfAny(expression, scope)` evaluates in a `Scope`, or in one made from a mapping of variables. Python's
 rules apply, not Basic's: `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
-missing attribute raises `AttributeError`. Objects that write their properties through `accept`, such as
+missing attribute raises `AttributeError`. Objects that are read through the visitor protocol, such as
 mbse-schemas' data, have their properties as attributes.
 
 A `Scope(variables, modules, builtins)` resolves names as Python does, innermost first: names bound by lets and
@@ -24,8 +24,7 @@ import types
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Evaluators as F, Objects, Symbolics as S
 
 from . import Expressions
 
@@ -33,7 +32,7 @@ __all__ = ["OfAny", "Scope", "BUILTINS"]
 
 
 def _is_readable(value: Any) -> bool:
-    return callable(getattr(value, "accept", None)) and not isinstance(value, types.ModuleType)
+    return Objects.is_object(value)
 
 
 def attribute(value: Any, name: str) -> Any:
@@ -41,17 +40,16 @@ def attribute(value: Any, name: str) -> Any:
     if type(name) is not str or name.startswith("_"):
         raise AttributeError(f"attribute {name!r} is private")
     if _is_readable(value):
-        properties = Validators.properties_of(value)
+        properties = Objects.properties(value)
         if name not in properties:  # named by its schema, the type it has for expressions
-            what = value.schema_name() if callable(getattr(value, "schema_name", None)) else type(value).__name__
-            raise AttributeError(f"{what!r} object has no attribute {name!r}")
+            raise AttributeError(f"{value.as_schema().name!r} object has no attribute {name!r}")
         return _listed(properties[name])
     return getattr(value, name)
 
 
 def _listed(value: Any) -> Any:
     """A property's value as Python reads it: a list as a list of its values, lists of lists too."""
-    return [_listed(item) for item in value.values] if isinstance(value, Validators.ListRecord) else value
+    return [_listed(item) for item in value.values] if isinstance(value, Objects.Listed) else value
 
 
 def _hasattr(value: Any, name: str) -> bool:

@@ -19,7 +19,7 @@
   follow Kleene's logic over the items; an unknown collection gives unknown.
 - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
   variables and wrong operand types raise, as do the problems `validate()` reports.
-- `get` and `has` read any object that writes its properties through `accept`, including value objects.
+- `get` and `has` read any object that is read through the visitor protocol, including value objects.
 - Deep equality: a value object, a union or intersection value, or an entry's record is equal to another when the
   properties each writes (a union's branch, an intersection's parts) are absent in both or equal in both, read through
   the visitor protocols, so without a schema; a property present in one and absent in the other is incomparable. A
@@ -34,9 +34,9 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F
-from mbse.Schemas.Framework import Comparison, Schemas, Validators
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Expressions.Framework import Evaluators as F, Objects
+from mbse.Schemas.Framework import Comparison, Schemas
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains, Expressions, Ieee754
 
@@ -91,27 +91,25 @@ def _not(name: str, values: list[Any]) -> bool | None:
 
 
 def _is_readable(value: Any) -> bool:
-    return callable(getattr(value, "accept", None))
+    return Objects.is_object(value)
 
 
 def _is_object(value: Any) -> bool:
     """A reference object, compared by identity; a value object's identity does not take part in equality."""
-    return _is_readable(value) and callable(getattr(value, "identity", None)) and value.owner() is None
+    return Objects.is_reference(value)
 
 
 def _fields(value: Any) -> dict[str, Any]:
     """A record's fields, or the properties a value writes, as Basic reads them."""
     if isinstance(value, Domains.Record):
         return value.fields
-    return {name: _value_of(v) for name, v in Validators.properties_of(value).items()}
+    return {name: _value_of(v) for name, v in Objects.properties(value).items()}
 
 
 def _value_of(value: Any) -> Any:
     """A property's value as Basic reads it: a list as a collection."""
-    if isinstance(value, Validators.ListRecord):
-        keyed = any(key is not None for key in value.keys)
-        return Domains.Collection(tuple(map(_value_of, value.values)),
-                                  tuple(map(_value_of, value.keys)) if keyed else None)
+    if isinstance(value, Objects.Listed):
+        return Domains.Collection(tuple(map(_value_of, value.values)), value.keys)
     return value
 
 
@@ -126,7 +124,7 @@ def _read(name: str, values: list[Any]) -> Any:
     if isinstance(target, Domains.Record):
         properties = target.fields
     elif _is_readable(target):
-        properties = Validators.properties_of(target)
+        properties = Objects.properties(target)
     else:
         raise TypeError(f"{name} expects an object, got {_type_name(target)}")
     if name == "has":
@@ -135,8 +133,8 @@ def _read(name: str, values: list[Any]) -> Any:
 
 
 def _compare(a: Native, b: Native) -> Comparison.Result:
-    schema = Schemas.OfNative.Data(type(a))
-    return Comparison.OfNative(schema, a).compare(Comparison.OfNative(schema, b))
+    schema = Schemas.OfScalar.Data(type(a))
+    return Comparison.OfScalar(schema, a).compare(Comparison.OfScalar(schema, b))
 
 
 def _typed(a: Any, b: Any) -> bool:
@@ -158,7 +156,8 @@ def _equal(a: Any, b: Any) -> bool | None:
     if _is_native(a) and type(a) is type(b):
         return _compare(a, b) == 0
     if _is_object(a) or _is_object(b):
-        return a.identity() == b.identity() if _is_object(a) and _is_object(b) else None
+        return (a.as_schema() is b.as_schema() and a.as_identity() == b.as_identity()) if _is_object(a) and _is_object(b) \
+            else None
     if _is_collection(a) and _is_collection(b):
         return _equal_collections(_collection("eq", a), _collection("eq", b))  # type: ignore[arg-type]
     if _is_value(a) and _is_value(b):
@@ -234,8 +233,10 @@ def _native(value: Any) -> Any:
 
 
 def _describe(value: Any) -> str:
-    """A value's domain's name when it is typed, otherwise its type's."""
-    return value.domain.name() if isinstance(value, Domains.Value) else _type_name(value)
+    """A value's domain's name when it is typed, a data object's schema's name, otherwise its type's."""
+    if isinstance(value, Domains.Value):
+        return value.domain.name()
+    return (_is_readable(value) and value.as_schema().name) or _type_name(value)
 
 
 def _operands(name: str, values: list[Any], kinds: tuple[type, ...], what: str) -> Any:
@@ -529,7 +530,7 @@ def _entries(name: str, values: list[Any]) -> Domains.Collection | None:
         return None
     if not _is_readable(target):
         raise TypeError(f"entries expects an object, got {_type_name(target)}")
-    entries = Validators.entries_of(target).get(adjacency, [])
+    entries = Objects.entries(target, adjacency)
     return Domains.Collection(tuple(Domains.Record({**entry.targets, **{k: _value_of(v) for k, v in entry.values.items()}})
                                     for entry in entries))
 

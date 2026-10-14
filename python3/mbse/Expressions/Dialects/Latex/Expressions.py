@@ -21,11 +21,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "symbol", "binary", "unary", "frac", "member", "function",
+__all__ = ["DIALECT", "store", "Schema", "constant", "symbol", "binary", "unary", "frac", "member", "function",
            "where"]
 
 
@@ -117,7 +117,7 @@ class _Where(F.Term):
 
 DIALECT = F.Declared("Latex", (_Constant, _Symbol, _Binary, _Unary, _Frac, _Member, _Function, _Where),
                      domain_of=Domains.of)
-Builders = DIALECT.Builders
+store = DIALECT.store
 Schema = DIALECT.Schema
 
 

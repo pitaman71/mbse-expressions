@@ -1,7 +1,7 @@
 """Evaluators of the Excel dialect: compute a formula by Excel's rules, in Python.
 
 `Evaluators.OfAny(expression, scope)` binds names to numbers, text, logicals and records (mappings, or objects that
-write their properties through `accept`). Values are Python `float` (number), `str` (text), `bool` (logical) and
+are read through the visitor protocol). Values are Python `float` (number), `str` (text), `bool` (logical) and
 `Domains.Error`. Excel's rules apply, not Basic's:
 
 - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
@@ -39,8 +39,7 @@ import re
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Evaluators as F, Objects, Symbolics as S
 
 from . import Domains, Expressions
 from .Domains import Error
@@ -57,7 +56,7 @@ def _number_of(value: Any) -> Any:
 
 def _value(value: Any) -> Any:
     """A value as a formula reads it: a number as a double, and a list (a list property's too) as an array."""
-    if isinstance(value, Validators.ListRecord):
+    if isinstance(value, Objects.Listed):
         value = value.values
     if isinstance(value, (list, tuple)):
         return [_value(item) for item in value]
@@ -333,7 +332,7 @@ def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
         return record
     if not Domains.is_record(record):
         return _VALUE
-    fields = record if isinstance(record, Mapping) else Validators.properties_of(record)
+    fields = record if isinstance(record, Mapping) else Objects.properties(record)
     if node.name not in fields:
         return _FIELD
     return _value(fields[node.name])

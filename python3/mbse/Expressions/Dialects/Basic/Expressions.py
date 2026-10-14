@@ -12,25 +12,22 @@
 
 The dialect (`DIALECT`) is declared with the framework (`mbse.Expressions.Framework.Terms`), which gives each
 kind its `Data`, a `Builder` finalized by `create()`, `clone()` or `update()` (none validate), a `Spec` (a value, or a
-callable that takes and returns the builder) and `resolve`, and a `Schema`, the meta-schema that describes its data as
-an ordinary object schema, so expressions serialize, validate and compare like any other objects:
+callable that takes and returns the builder) and `resolve`, and a `Schema`, the meta-schema that describes its value
+as an ordinary value object schema, so expressions serialize, validate and compare like any other values:
 
-- Every kind's schema declares `kind`, a tag with a fixed value: 'literal', 'operation', 'variable' or 'let'.
 - `OfLiteral.Schema` declares one optional property per native type (`int`, `float`, `str`, `bool`, `bytes`); a literal
   sets exactly one. Its `domain`, a value of `Domains.Schema`, is written only when it is not the native's default: by
   name when the domain is registered, otherwise by value.
-- `OfOperation.Schema`, `OfVariable.Schema` and `OfLet.Schema` declare `name`.
-- Operations and lets declare the adjacency `arguments` to `Arguments`, a relation linking a `parent` to an `argument`
-  with an `index`; `unique(argument)` makes the parent and index determine the argument. A let's value is its argument
-  0 and its body its argument 1.
-- Every kind declares `used_by`: the same relation seen from the argument. The parents' arguments imply it, so data
-  never writes it and builders ignore entries added to it.
-- `OfAny.Schema` is the union of the four, discriminated by the tag: `eq(get(this, 'kind'), 'literal')`, and so on.
+- `OfOperation.Schema`, `OfVariable.Schema`, `OfLet.Schema` and `OfQuantifier.Schema` declare `name`.
+- Operations, lets and quantifiers declare `arguments`, a dense container of their arguments by index, each a value of
+  any type (`Terms.ARGUMENT`), tagged on the wire with its kind's meta-schema's name. A let's value is its argument 0
+  and its body its argument 1.
+- `OfAny.Schema` is the union of the kinds, its branches named by their tags.
 
-The meta-schemas are named 'Expressions.OfLiteral', 'Expressions.OfOperation',
-'Expressions.OfVariable', 'Expressions.OfLet' and 'Expressions.Arguments', the names snapshots carry. `Builders`
-rebuilds `Data` from snapshots, e.g. `JSON.FromJSON(Expressions.Builders).Reachable(Expressions.OfLet.Schema, text)`.
-`Data` is `Visitable`; builders implement `Visitors.OfObject`.
+The meta-schemas are named 'Expressions.OfLiteral', 'Expressions.OfOperation', 'Expressions.OfVariable',
+'Expressions.OfLet' and 'Expressions.OfQuantifier', the names the wire tags arguments with, and registered in `store`.
+An expression's value is `data.reader()`, and `DIALECT.term(value)` rebuilds one, e.g.
+`DIALECT.term(JSON.FromJSON(Expressions.store)(Terms.ARGUMENT, text))`.
 
 `Writer`s write expressions with methods: `variable('this').age.ge(18)` is `ge(get(this, 'age'), 18)`.
 `Python.Text.FromFunction` reads one from a Python function's source instead: `FromFunction(lambda this: this.age >= 18)`
@@ -45,14 +42,14 @@ from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
 from mbse.Schemas.Framework import Schemas
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains
 
 __all__ = [
-    "OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "OfQuantifier", "Arguments", "Builders", "Writer",
+    "OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "OfQuantifier", "store", "Writer",
     "CORE", "DIALECT", "variable", "literal", "let_", "operation", "quantifier",
-    "LITERAL", "OPERATION", "VARIABLE", "LET", "QUANTIFIER", "ARGUMENTS",
+    "LITERAL", "OPERATION", "VARIABLE", "LET", "QUANTIFIER",
 ]
 
 LITERAL = "Expressions.OfLiteral"
@@ -60,8 +57,6 @@ OPERATION = "Expressions.OfOperation"
 VARIABLE = "Expressions.OfVariable"
 LET = "Expressions.OfLet"
 QUANTIFIER = "Expressions.OfQuantifier"
-ARGUMENTS = F.ARGUMENTS
-Arguments = F.Arguments
 
 CORE: dict[str, int] = {name: signature.arity() for name, signature in Domains.SIGNATURES.items()}
 """The core operations and their numbers of arguments."""
@@ -273,7 +268,7 @@ DIALECT = F.Declared(
     schema_names={"literal": LITERAL, "operation": OPERATION, "variable": VARIABLE, "let": LET,
                   "quantifier": QUANTIFIER},
 )
-Builders = DIALECT.Builders
+store = DIALECT.store
 
 
 # --- Specs ---

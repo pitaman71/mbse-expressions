@@ -3,7 +3,7 @@
  *
  * `Double` holds numbers (a constant `18n` is the double 18), `Logical` holds `true` and `false`, `String` holds
  * string scalars ("abc", not 'abc' character vectors) and `Struct` the values fields are read from: a mapping, or an
- * object that writes its properties through `accept`. `Numeric` is `Double` or `Logical`, which MATLAB converts into
+ * object that is read through the visitor protocol. `Numeric` is `Double` or `Logical`, which MATLAB converts into
  * each other: `true + 1` is 2. `+` with a string concatenates. An array holds a list property's values; it is read by
  * the collection functions (`numel`, `sum`, `all`, ...), indexed and iterated by `arrayfun`, and operators take
  * scalars only.
@@ -12,6 +12,7 @@
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
+import * as Objects from "../../Framework/Objects.js";
 
 export const Anything = D.Anything;
 
@@ -24,7 +25,7 @@ export function isMapping(value: unknown): value is Map<string, unknown> | Recor
 /** Whether fields can be read from `value`. */
 export function is_struct(value: unknown): boolean {
   return isMapping(value)
-    || (value !== null && typeof value === "object" && typeof (value as { accept?: unknown }).accept === "function");
+    || Objects.isObject(value);
 }
 
 export const Double = new D.OfTypes("double", Number, BigInt);

@@ -29,7 +29,7 @@ import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 
 /** The builtins an expression may use without importing them: the default builtins of a scope (see `Evaluators`). */
 export const BUILTINS: ReadonlySet<string> = new Set([
@@ -263,7 +263,7 @@ export const DIALECT = new F.Declared("Python", KINDS, {
   schemaNames: new Map(KINDS.map((k) => [k.KIND,
     `Expressions.Python.Of${AST_NAMES[k.KIND] ?? k.KIND.charAt(0).toUpperCase() + k.KIND.slice(1)}`])),
 });
-export const Builders = DIALECT.Builders;
+export const store = DIALECT.store;
 export const Schema = DIALECT.Schema;
 
 const spec = (value: unknown): any => DIALECT.resolve(value);

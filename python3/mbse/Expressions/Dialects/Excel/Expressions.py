@@ -24,11 +24,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "name", "cell", "let_", "function", "infix", "prefix", "field",
+__all__ = ["DIALECT", "store", "Schema", "constant", "name", "cell", "let_", "function", "infix", "prefix", "field",
            "map_", "address"]
 
 _ADDRESS = re.compile(r"\$?([A-Za-z]{1,3})\$?([1-9][0-9]*)")
@@ -154,7 +154,7 @@ class _Field(F.Term):
 
 DIALECT = F.Declared("Excel", (_Constant, _Name, _Cell, _Let, _Function, _Infix, _Prefix, _Field, _Map),
                      domain_of=Domains.of)
-Builders = DIALECT.Builders
+store = DIALECT.store
 Schema = DIALECT.Schema
 
 

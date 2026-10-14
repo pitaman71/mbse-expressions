@@ -1,6 +1,6 @@
 # Adding a dialect or a translator
 
-The framework derives most of a dialect from declarations: builders, meta-schemas, snapshots, validation, domain
+The framework derives most of a dialect from declarations: builders, meta-schemas, values, validation, domain
 inference and traversal. A new dialect writes its kinds, its domains, its evaluator and its source text.
 
 ## A dialect

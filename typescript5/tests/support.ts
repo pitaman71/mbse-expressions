@@ -1,10 +1,6 @@
 /** Shared helpers for the test notebooks. Each notebook runs in its own process and makes its own stores. */
 
-import { Plain, Proxies, Reachable } from "@mbse/schemas/Framework";
-import type { PlainData, PlainMap } from "@mbse/schemas/Framework/Plain";
-import type { Instance } from "@mbse/schemas/Framework/Proxies";
-import type { OfObject } from "@mbse/schemas/Framework/Schemas";
-import type { Callback, OfObject as ObjectVisitor, Visitable } from "@mbse/schemas/Framework/Visitors";
+import { Schemas } from "@mbse/schemas/Framework";
 
 /** Python's `assert`. */
 export function assert(condition: unknown, message = "assertion failed"): asserts condition {
@@ -26,21 +22,36 @@ export function raises(errors: Function | Function[], block: () => unknown, matc
   throw new Error(`AssertionError: expected one of ${expected.map((e) => e.name).join(", ")}`);
 }
 
-/** Property Spec for a native-typed property. */
+/** Property Spec for a scalar-typed property. */
 export function text(name: string, native: unknown = String) {
-  return (prop: any) => prop.name(name).of((t: any) => t.as_native(native));
+  return (prop: any) => prop.name(name).of(new Schemas.OfScalar.Data(native as never));
 }
 
-/** Writes a native property through the visitor protocols (works for property names the DSL cannot reach). */
-export function set_property(visitor: any, name: string, value: unknown): void {
-  visitor.property(name, (p: any) => p.value((a: any) => a.as_native((n: any) => n.set(value))));
+/** A container schema of `element`s (a schema, or a scalar type), by `index`: dense by int, a dict by str. */
+export function container(element: unknown, index: unknown = BigInt): any {
+  const of = (t: unknown): never => (typeof t === "function" ? new Schemas.OfScalar.Data(t as never) : t) as never;
+  return new Schemas.OfContainer.Builder().index(of(index)).element(of(element)).create();
 }
 
-/** Reads a native property through the visitor protocols. */
-export function get_property(visitor: any, name: string): unknown {
-  const found: unknown[] = [];
-  visitor.property(name, (p: any) => p.value((a: any) => a.as_native((n: any) => found.push(n.get()))));
-  return found[0];
+/** A property Spec writing `values` into the container the property holds: an array by position, a Map by key, each a
+ * scalar or, nested, an array or Map. */
+export function filled(values: unknown): (prop: any) => any {
+  return (prop: any) => prop.as_value((a: any) => {
+    fill(a, values);
+    return a;
+  });
+}
+
+function fill(element: any, value: unknown): void {
+  if (Array.isArray(value) || value instanceof Map) {
+    const items: [unknown, unknown][] = Array.isArray(value) ? value.map((v, i) => [BigInt(i), v]) : [...value];
+    element.as_container((c: any) => {
+      for (const [i, v] of items) fill(c.at(i), v);
+      return c;
+    });
+  } else {
+    element.as_scalar(value);
+  }
 }
 
 /** Python's `==` on plain data: maps compare regardless of order, ints equal floats of the same value, NaN != NaN. */
@@ -78,16 +89,6 @@ export function same(a: readonly unknown[], b: readonly unknown[]): boolean {
   return a.length === b.length && a.every((x, i) => x === b[i] || (Number.isNaN(x) && Number.isNaN(b[i])));
 }
 
-/** An object's entries with references resolved to objects, read from a Reachable snapshot (symbols follow
- * `Reachable.of` order). */
-export function entries(schema: OfObject.Data, obj: Visitable, adjacency: string): Map<string, any>[] {
-  const graph = Plain.ToPlain(Proxies.store_of(obj)).Reachable(schema, obj);
-  const objects = Reachable.of(obj);
-  const root = (graph.get("objects") as PlainMap).get(graph.get("root") as string) as PlainMap;
-  const resolve = (value: PlainData): unknown => (value instanceof Map ? objects[Number(String(value.get("$ref")).slice(1))] : value);
-  return ((root.get(adjacency) as PlainMap[] | undefined) ?? []).map((e) => new Map([...e].map(([k, v]) => [k, resolve(v)])));
-}
-
 /** A stable text key for plain values (bigint, -0.0 and NaN included). */
 export function key(value: unknown): string {
   return JSON.stringify(value, (_k, v: unknown) => {
@@ -98,89 +99,18 @@ export function key(value: unknown): string {
   });
 }
 
-/** Snapshot equality up to symbol numbering and entry order. Objects are identified by their own property values,
- * which must be distinct within each graph. */
-export function same_graph(a: PlainData, b: PlainData): boolean {
-  const byKey = ([x]: [string, unknown], [y]: [string, unknown]) => (x < y ? -1 : x > y ? 1 : 0);
-  const canonical = (graph: PlainMap): string => {
-    const objects = graph.get("objects") as Map<string, PlainMap>;
-    const labels = new Map<string, string>();
-    for (const [symbol, obj] of objects) labels.set(symbol, key([...obj].filter(([, v]) => !Array.isArray(v)).sort(byKey)));
-    assert(new Set(labels.values()).size === labels.size, "objects must have distinct property values");
-    const entry = (e: PlainMap): string =>
-      key([...e].map(([k, v]) => [k, v instanceof Map ? labels.get(v.get("$ref") as string) : v] as [string, unknown]).sort(byKey));
-    const lists = [...objects].map(([symbol, obj]) => key([
-      labels.get(symbol),
-      [...obj].filter(([, v]) => Array.isArray(v)).map(([k, v]) => [k, (v as PlainMap[]).map(entry).sort()]).sort(),
-    ]));
-    return key([labels.get(graph.get("root") as string), lists.sort()]);
-  };
-  return canonical(a as PlainMap) === canonical(b as PlainMap);
-}
-
-/**
- * A minimal hand-written `Visitors.Visitable`, independent of Proxies.
- *
- * `values` maps property names to native values. `adjacencies` maps adjacency names to lists of entries; an entry
- * maps link names to `Fake` objects and property names to native values. Nothing is checked against a schema, so
- * fakes can express data that proxies would never produce.
- */
-export class Fake implements Visitable {
-  readonly values: Map<string, unknown>;
-  readonly adjacencies: Map<string, Record<string, unknown>[]>;
-  private static counter = 0;
-  private readonly id: unknown;
-
-  constructor(private readonly schemaName: string, values: Record<string, unknown> = {},
-    adjacencies: Record<string, Record<string, unknown>[]> = {}, identity?: unknown) {
-    this.values = new Map(Object.entries(values));
-    this.adjacencies = new Map(Object.entries(adjacencies).map(([k, v]) => [k, [...v]]));
-    this.id = identity ?? `fake:${++Fake.counter}`;
-  }
-
-  identity(): unknown {
-    return this.id;
-  }
-
-  schema_name(): string {
-    return this.schemaName;
-  }
-
-  owner(): null {
-    return null;
-  }
-
-  accept(visitor: ObjectVisitor): void {
-    for (const [name, value] of this.values) set_property(visitor, name, value);
-    for (const [name, items] of this.adjacencies) {
-      for (const item of items) visitor.adjacency(name, (a) => a.add((e) => write(e, item)));
-    }
-  }
-}
-
-function write(entry: any, item: Record<string, unknown>): void {
-  for (const [name, value] of Object.entries(item)) {
-    if (value instanceof Fake) entry.link(name, (k: any) => k.set(value));
-    else set_property(entry, name, value);
-  }
-}
-
 /** Parameter counts of every protocol method, from Python's signatures (TypeScript interfaces vanish at runtime). */
 export const PROTOCOLS: Record<string, Record<string, number>> = {
-  OfAny: { as_native: 1, as_object: 1, as_union: 1, as_intersection: 1 },
-  OfNative: { has: 0, get: 0, set: 1, clear: 0 },
-  OfProperty: { name: 0, has: 0, value: 1, clear: 0 },
-  OfObject: { properties: 1, has: 1, property: 2, clear: 1, adjacencies: 1, adjacency: 2, identify: 1 },
-  OfAdjacency: { name: 0, me: 0, entries: 1, add: 1, remove: 1 },
-  OfEntry: { links: 1, link: 2, properties: 1, has: 1, property: 2, clear: 1 },
-  OfLink: { name: 0, target: 1, set: 1 },
-  OfRelation: { links: 1, entries: 1 },
-  OfUnion: { branch: 0, value: 1 },
-  OfIntersection: { value: 1 },
-  Visitable: { identity: 0, schema_name: 0, owner: 0, accept: 1 },
+  // mbse-schemas' `Readers`, through which an expression's value is read.
+  OfScalar: { as_schema: 0, get: 0 },
+  OfAny: { as_schema: 0, as_scalar: 1, as_object: 1, as_union: 1, as_intersection: 1, as_container: 1 },
+  OfProperty: { as_schema: 0, as_value: 1, as_scalar: 1, as_object: 1, get: 0 },
+  OfObject: { as_schema: 0, as_identity: 0, as_adjacencies: 1 },
+  OfContainer: { as_schema: 0, at: 1, as_ordered: 1, as_dict: 1, as_entries: 1 },
+  OfIterator: { first: 0, last: 0, next: 0, prev: 0, index: 0, as_item: 1 },
   // The framework's protocols, with TypeScript's parameters: options objects and defaults are not counted.
-  Expression: { dialect: 0, form: 0, validate: 0 },
-  Dialect: { name: 0, kinds: 0, schema_of: 1, make: 1, resolve: 1, validate: 1, infer: 1 },
+  Expression: { dialect: 0, form: 0, validate: 0, reader: 0 },
+  Dialect: { name: 0, kinds: 0, schema_of: 1, term: 1, make: 1, resolve: 1, validate: 1, infer: 1 },
   Translator: { left: 0, right: 0, forward: 1, backward: 1, inverse: 0 },
   Scope: { lookup: 1, bind: 2, enter: 1 },
   Domain: { name: 0, contains: 1, includes: 1 },
@@ -207,5 +137,3 @@ export function instance_problems(instance: object, protocol: string): string[] 
     .filter((method) => typeof (instance as Record<string, unknown>)[method] !== "function")
     .map((method) => `${instance.constructor.name} instance: ${protocol}.${method} is not callable`);
 }
-
-export type { Callback, Instance };

@@ -29,11 +29,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "BUILTINS", "Builders", "Schema", "constant", "name", "attribute", "subscript", "call", "compare", "boolop",
+__all__ = ["DIALECT", "BUILTINS", "store", "Schema", "constant", "name", "attribute", "subscript", "call", "compare", "boolop",
            "binop", "unaryop", "ifexp", "let_", "import_", "importfrom"]
 
 
@@ -226,7 +226,7 @@ _AST_NAMES = {"boolop": "BoolOp", "binop": "BinOp", "unaryop": "UnaryOp", "ifexp
 DIALECT = F.Declared(
     "Python", _KINDS, domain_of=Domains.of,
     schema_names={k.KIND: f"Expressions.Python.Of{_AST_NAMES.get(k.KIND, k.KIND.capitalize())}" for k in _KINDS})
-Builders = DIALECT.Builders
+store = DIALECT.store
 Schema = DIALECT.Schema
 
 

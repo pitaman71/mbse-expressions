@@ -26,7 +26,7 @@ import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 const STR = String;
 
 /** The suffixes of typed constants: `5u`, `5ull`, `1.5f`, ...; other types are written with a cast. */
@@ -159,7 +159,7 @@ class _Call extends F.Term {
 
 export const DIALECT = new F.Declared("Ccpp",
   [_Constant, _Identifier, _Unary, _Binary, _Conditional, _Cast, _Member, _Subscript, _Call], { domain_of: Domains.of });
-export const Builders = DIALECT.Builders;
+export const store = DIALECT.store;
 export const Schema = DIALECT.Schema;
 
 export function constant(value: Native, type: string | null = null): _Constant {

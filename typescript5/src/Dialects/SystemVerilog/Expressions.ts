@@ -34,7 +34,7 @@ import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 const STR = String;
 
 /** What a cast may name: a built-in type, or a signedness. */
@@ -253,7 +253,7 @@ class _Iterate extends F.Term {
 export const DIALECT = new F.Declared("SystemVerilog", [
   _Constant, _Vector, _Identifier, _Unary, _Binary, _Conditional, _Concatenation, _Replication, _Select, _Range,
   _Inside, _Span, _Cast, _Member, _Call, _Method, _Iterate], { domain_of: Domains.of });
-export const Builders = DIALECT.Builders;
+export const store = DIALECT.store;
 export const Schema = DIALECT.Schema;
 
 export function constant(value: Native): _Constant {

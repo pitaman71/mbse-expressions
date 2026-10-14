@@ -35,8 +35,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from mbse.Expressions.Dialects.Basic import Domains as BD, Ieee754
-from mbse.Expressions.Framework import Errors, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Errors, Objects, Symbolics as S
 
 from . import Domains, Expressions as X
 from .Domains import Logic, SvType
@@ -543,8 +542,8 @@ class _Evaluation:
         target = self.value(node.object)
         if isinstance(target, Mapping):
             members = target
-        elif callable(getattr(target, "accept", None)):
-            members = Validators.properties_of(target)
+        elif Objects.is_object(target):
+            members = Objects.properties(target)
         else:
             raise TypeError(f"a {type(target).__name__} has no members")
         if node.name not in members:
@@ -626,7 +625,7 @@ def _identical(a: Any, b: Any) -> bool:
 
 def _array(value: Any) -> Any:
     """A member's value: a list as a list of its items, lists of lists too."""
-    return [_array(item) for item in value.values] if isinstance(value, Validators.ListRecord) else value
+    return [_array(item) for item in value.values] if isinstance(value, Objects.Listed) else value
 
 
 def _real_power(base: float, exponent: float, ctype: SvType) -> float:

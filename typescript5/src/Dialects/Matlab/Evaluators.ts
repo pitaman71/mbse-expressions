@@ -2,7 +2,7 @@
  * Evaluators of the Matlab dialect: compute an expression by MATLAB's rules for scalars.
  *
  * `Evaluators.OfAny(expression, scope)` binds variables to numbers, logicals, strings and structs (mappings, or
- * objects that write their properties through `accept`). Values are `number` (double), `boolean` (logical) and
+ * objects that are read through the visitor protocol). Values are `number` (double), `boolean` (logical) and
  * `string` (string scalar). MATLAB's rules apply, not Basic's:
  *
  * - Two-valued logic: `&&` and `||` short-circuit, and take numbers or logicals (nonzero is true; NaN throws).
@@ -25,11 +25,12 @@
  * `import pkg.*` import from `packages`, and nothing else: functions are functions the caller provides.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import { ImportError, NameError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
@@ -136,12 +137,12 @@ function fieldsOf(value: unknown): Map<string, unknown> {
   if (value instanceof Map) return value;
   if (Domains.isMapping(value)) return new Map(Object.entries(value));
   if (!Domains.is_struct(value)) throw new TypeError("Dot indexing is not supported for variables of this type.");
-  return Validators.properties_of(value as never);
+  return Objects.properties(value);
 }
 
 /** A value as MATLAB reads it: a number as a double, and a list (a list property's too) as an array. */
 function toDouble(value: unknown): unknown {
-  if (value instanceof Validators.ListRecord) return value.values.map(toDouble);
+  if (value instanceof Objects.Listed) return value.values.map(toDouble);
   if (Array.isArray(value)) return value.map(toDouble);
   return typeof value === "bigint" ? Number(value) : value;
 }

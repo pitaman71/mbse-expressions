@@ -24,11 +24,12 @@
  *   element of an array; `f(args)` calls a function the scope provides, and nothing else.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import { NameError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as BD from "../Basic/Domains.js";
 import * as Ieee754 from "../Basic/Ieee754.js";
 import { isMapping } from "../Matlab/Domains.js";
@@ -227,14 +228,14 @@ function cast(args: F.Thunk[], node: any): Typed {
 
 /** A member's value: a list as an array of its items, lists of lists too. */
 function array(value: unknown): unknown {
-  return value instanceof Validators.ListRecord ? value.values.map(array) : value;
+  return value instanceof Objects.Listed ? value.values.map(array) : value;
 }
 
 function member(args: F.Thunk[], node: any): Typed {
   const target = (args[0] as F.Thunk)().value;
   let members: ReadonlyMap<string, unknown>;
   if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
-  else if (target !== null && typeof target === "object" && typeof target.accept === "function") members = Validators.properties_of(target);
+  else if (Objects.isObject(target)) members = Objects.properties(target);
   else throw new TypeError(`member reference base type '${typeName(target)}' is not a structure`);
   if (!members.has(node.name)) throw new KeyError(`no member named '${node.name}'`);
   return typed(array(members.get(node.name)));

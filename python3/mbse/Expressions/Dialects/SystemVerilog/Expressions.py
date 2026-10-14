@@ -31,11 +31,11 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "vector", "identifier", "unary", "binary", "conditional",
+__all__ = ["DIALECT", "store", "Schema", "constant", "vector", "identifier", "unary", "binary", "conditional",
            "concatenation", "replication", "select", "range_", "inside", "span", "cast", "member", "call", "method",
            "iterate", "CASTS", "SYSTEM", "METHODS", "REDUCTIONS"]
 
@@ -268,7 +268,7 @@ class _Iterate(F.Term):
 DIALECT = F.Declared("SystemVerilog", (
     _Constant, _Vector, _Identifier, _Unary, _Binary, _Conditional, _Concatenation, _Replication, _Select, _Range,
     _Inside, _Span, _Cast, _Member, _Call, _Method, _Iterate), domain_of=Domains.of)
-Builders = DIALECT.Builders
+store = DIALECT.store
 Schema = DIALECT.Schema
 
 

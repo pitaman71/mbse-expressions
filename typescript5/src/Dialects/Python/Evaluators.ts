@@ -5,7 +5,7 @@
  *
  * `Evaluators.OfAny(expression, scope)` evaluates in a `Scope`, or in one made from an object of variables. Python's
  * rules apply, not Basic's: `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
- * missing attribute throws `AttributeError`. Objects that write their properties through `accept`, such as
+ * missing attribute throws `AttributeError`. Objects that are read through the visitor protocol, such as
  * mbse-schemas' data, have their properties as attributes; a `Module` has its members as attributes.
  *
  * A `new Scope(variables, { modules, builtins })` resolves names as Python does, innermost first: names bound by lets
@@ -20,11 +20,12 @@
  * - A call may call only a builtin of the scope, a value of `variables`, or a function of an allowed module.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import { ImportError, IndexError, NameError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as Expressions from "./Expressions.js";
 
 const { AttributeError, KeyError, ValueError } = Errors;
@@ -39,9 +40,8 @@ export class Module {
   }
 }
 
-function isReadable(value: unknown): value is { accept(visitor: unknown): void } {
-  return value !== null && typeof value === "object" && !(value instanceof Module)
-    && typeof (value as { accept?: unknown }).accept === "function";
+function isReadable(value: unknown): value is any {
+  return Objects.isObject(value);
 }
 
 /** `value.name`, as expressions read it: never private, a module's members, and properties for objects that write
@@ -54,17 +54,16 @@ export function attribute(value: unknown, name: unknown): unknown {
   }
   let what = typeName(value);
   if (isReadable(value)) {
-    const properties = Validators.properties_of(value);
+    const properties = Objects.properties(value);
     if (properties.has(name)) return listed(properties.get(name));
-    const schemaName = (value as { schema_name?: unknown }).schema_name;
-    if (typeof schemaName === "function") what = schemaName.call(value) as string; // its type, for expressions
+    what = value.as_schema().name; // named by its schema, the type it has for expressions
   }
   throw new AttributeError(`${repr(what)} object has no attribute ${repr(name)}`);
 }
 
 /** A property's value as Python reads it: a list as an array of its values, lists of lists too. */
 function listed(value: unknown): unknown {
-  return value instanceof Validators.ListRecord ? value.values.map(listed) : value;
+  return value instanceof Objects.Listed ? value.values.map(listed) : value;
 }
 
 // --- Python's rules over JavaScript values ---

@@ -31,10 +31,11 @@
  *   items.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import { NameError, OverflowError } from "../../Framework/Errors.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as BD from "../Basic/Domains.js";
 import * as Ieee754 from "../Basic/Ieee754.js";
 import { isMapping } from "../Matlab/Domains.js";
@@ -540,7 +541,7 @@ class Evaluation {
     const target: any = this.value(node.object);
     let members: ReadonlyMap<string, unknown>;
     if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
-    else if (target !== null && typeof target === "object" && typeof target.accept === "function") members = Validators.properties_of(target);
+    else if (Objects.isObject(target)) members = Objects.properties(target);
     else throw new TypeError(`a ${typeName(target)} has no members`);
     if (!members.has(node.name)) throw new KeyError(`no member named '${node.name}'`);
     return typed(array(members.get(node.name)));
@@ -624,7 +625,7 @@ function identical(a: unknown, b: unknown): boolean {
 
 /** A member's value: a list as an array of its items, lists of lists too. */
 function array(value: unknown): unknown {
-  return value instanceof Validators.ListRecord ? value.values.map(array) : value;
+  return value instanceof Objects.Listed ? value.values.map(array) : value;
 }
 
 /** A real power as C's `pow` gives it, in the format of `ctype`. */

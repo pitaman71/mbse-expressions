@@ -29,7 +29,7 @@ import { isIdentifier } from "../Python/Expressions.js";
 import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 const STR = String;
 const SCALARS: ReadonlyMap<string, unknown> = new Map<string, unknown>([
   ["int", BigInt], ["float", Number], ["str", String], ["bool", Boolean],
@@ -143,7 +143,7 @@ class _Import extends F.Term {
 export const DIALECT = new F.Declared("Matlab", [_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Index, _Arrayfun, _Import], {
   domain_of: Domains.of,
 });
-export const Builders = DIALECT.Builders;
+export const store = DIALECT.store;
 export const Schema = DIALECT.Schema;
 
 export function constant(value: Native): _Constant {

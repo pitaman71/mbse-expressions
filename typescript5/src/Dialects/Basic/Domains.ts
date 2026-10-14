@@ -23,7 +23,7 @@
  *
  * Today's natives are the defaults: `Int` is an unbounded signed integer, `Float` binary64 rounding ties to even, `Str`
  * Unicode, `Bytes` bytes of any length and `Bool` true and false; `of(value)` gives a native's default domain.
- * `Object` holds what writes its properties through `accept`, including expressions and value objects, and `Anything`
+ * `Object` holds what is read through the visitor protocol, including expressions' values and value objects, and `Anything`
  * is the domain of a value not known statically, such as a property read with `get`. Unknown (`null`) is not a domain.
  *
  * Domains are registered by name with `register`. Over the wire a domain that is registered is written by name,
@@ -47,11 +47,12 @@ import type { Plain, Visitors } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
 import { OverflowError } from "../../Framework/Errors.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as Ieee754 from "./Ieee754.js";
 
 type PlainData = Plain.PlainData;
 type PlainMap = Plain.PlainMap;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 
 /** IEEE 754-2019's interchange formats. */
 export const FORMATS = ["binary16", "binary32", "binary64", "binary128", "decimal64", "decimal128"] as const;
@@ -98,7 +99,7 @@ export abstract class Domain implements D.Domain {
   }
 
   contains(value: unknown): boolean {
-    return Schemas.isNativeOf(this.native(), value) && this.fits(value);
+    return Schemas.isScalarOf(this.native(), value) && this.fits(value);
   }
 
   protected fits(_value: unknown): boolean {
@@ -113,8 +114,8 @@ export abstract class Domain implements D.Domain {
   /** How two values of this domain compare: -1, 0 or 1, or null when they are incomparable. An unordered domain's
    * values are equal or incomparable. */
   compare(a: unknown, b: unknown): number | null {
-    const schema = new Schemas.OfNative.Data(this.native());
-    return new Comparison.OfNative(schema, a as Native).compare(new Comparison.OfNative(schema, b as Native));
+    const schema = new Schemas.OfScalar.Data(this.native());
+    return new Comparison.OfScalar(schema, a as Native).compare(new Comparison.OfScalar(schema, b as Native));
   }
 
   /** Structural equality: the same kind, with equal fields. */
@@ -550,16 +551,18 @@ class PackedBuilder extends DomainBuilder {
 
 // --- Meta-schemas ---
 
-const text = (name: string) => (p: Schemas.OfProperty.Builder) => p.name(name).of((t) => t.as_native(String));
-const integer = (name: string) => (p: Schemas.OfProperty.Builder) => p.name(name).of((t) => t.as_native(BigInt));
-const listOf = (native: unknown) => (t: Schemas.OfAny.Builder) => t.as_indexed((i) => i.of((u) => u.as_native(native as never)));
+const text = (name: string) => (p: Schemas.OfProperty.Builder) => p.name(name).of(new Schemas.OfScalar.Data(String));
+const integer = (name: string) => (p: Schemas.OfProperty.Builder) => p.name(name).of(new Schemas.OfScalar.Data(BigInt));
+/** A list of natives in order: a dense container of them by index. */
+const listOf = (native: unknown) => new Schemas.OfContainer.Builder().index(new Schemas.OfScalar.Data(BigInt))
+  .element(new Schemas.OfScalar.Data(native as never)).create();
 
 /** A domain, by value or by name. */
 export const Schema = new Schemas.OfUnion.Builder().create(); // its branches are added below
 const SCHEMAS = new Map<string, Schemas.OfObject.Data>([
   ["bool", new Schemas.OfObject.Builder().create()],
   ["integer", new Schemas.OfObject.Builder().properties(integer("width"),
-    (p) => p.name("signed").of((t) => t.as_native(Boolean)), text("overflow")).create()],
+    (p) => p.name("signed").of(new Schemas.OfScalar.Data(Boolean)), text("overflow")).create()],
   ["ieee754", new Schemas.OfObject.Builder().properties(text("format"), text("rounding")).create()],
   ["bits", new Schemas.OfObject.Builder().properties(integer("width")).create()],
   ["bytes", new Schemas.OfObject.Builder().properties(integer("width")).create()],
@@ -786,8 +789,7 @@ export const Int = new IntegerDomain();
 export const Float = new Ieee754Domain();
 export const Str = new UnicodeDomain();
 export const Bytes = new BytesDomain();
-const ObjectDomain = new D.OfValues("object", (value) =>
-  value !== null && typeof value === "object" && typeof (value as { accept?: unknown }).accept === "function");
+const ObjectDomain = new D.OfValues("object", (value) => Objects.isObject(value));
 export { ObjectDomain as Object };
 
 const NATIVES: ReadonlyMap<string, Domain> = new Map<string, Domain>([
@@ -797,7 +799,7 @@ const NATIVES: ReadonlyMap<string, Domain> = new Map<string, Domain>([
 /** A native's default domain, or null when `value` is not a native. */
 export function nativeDomain(value: unknown): Domain | null {
   const native = NATIVES.get(Repr.typeName(value));
-  return native !== undefined && Schemas.isNativeOf(native.native(), value) ? native : null;
+  return native !== undefined && Schemas.isScalarOf(native.native(), value) ? native : null;
 }
 
 type DomainKind = abstract new (...args: never[]) => Domain;

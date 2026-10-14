@@ -45,8 +45,9 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
    value: a missing property is unknown in Basic, `#FIELD!` in Excel, and an error in Python and MATLAB.
 5. **Nothing is imported or called unless the scope provides it.** Python modules, MATLAB packages and Excel add-ins
    come from an allowlist in the scope, so expressions from untrusted data cannot reach other code.
-6. **Serialize through the dialect.** The root schema is `DIALECT.schema_of(expression)`, and decoding needs that
-   dialect's `Builders`.
+6. **An expression is a value.** `expression.reader()` is its value, which mbse-schemas writes, validates and
+   compares as any value, nested; `DIALECT.term(value)` rebuilds the expression. Write and read through the dialect's
+   `store`, under `Terms.ARGUMENT`, which tags the value with its kind.
 
 ## Load the reference for your task
 
