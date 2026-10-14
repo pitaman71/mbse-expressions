@@ -495,6 +495,19 @@ alike only there.
 
 ## Resolved
 
+- **Terms after mbse-schemas' visitor pattern and containers** (2026-10-14), as the user decided, of the options put
+  to them, "1 = A" and "2 = Y":
+  - mbse-expressions implements the visitor protocol for its own term classes, in place of mbse-schemas' `Bindings`
+    (removed by its visitor pattern): a term reads as any object does (`Readers.OfObject`), a term's builder writes as
+    any builder does (`Visitors.OfObject`), and a dialect's store of its kinds rebuilds terms from snapshots; the
+    classes and the DSL stay;
+  - an expression tree is a value: a term is a value object, which holds its arguments in a container, in order, and
+    is written nested in what holds it, with no identity, so the relation `Arguments` and every kind's `used_by` go; a
+    term refers to a definition (a `REFERS` slot, such as the predicate an application applies) by name, as a module
+    names a schema, since nothing links a value object.
+  This supersedes "Expressions are typed bindings of their meta-schemas" (below) where it binds with `Bindings` and
+  links terms by `Arguments`.
+
 - **Superseded by mbse-schemas' visitor pattern** (its FRAMEWORK.md, Resolved, "The visitor pattern"), as the user
   decided: "Relation operators do not belong in Expressions.Basic. They never did. They belong in
   Visitors.OfAdjacency, Visitors.OfEntry, ..."; and "the evaluator binds each *symbol* to a Visitors.OfObject". The
