@@ -136,6 +136,16 @@ def example(store) -> Any:
     return F.Root(lambda r: r.term(lt).schema([B.Meta.OfBool]))
 
 
+def function(store, body) -> Any:
+    """What `Expressions.FromFunction(store, lambda x: x + 1 > 0)` gives, written out: a function, unnamed as a lambda is,
+    whose formal is the lambda's parameter, untyped, and whose body is the expression's root. (In Basic's terms here; it
+    reads Python into the Python dialect.)"""
+    F = store.Expressions.Framework
+    made = F.Function(lambda f: f.body([body]))
+    F.Formal(lambda x: x.name("x").function(lambda a: a.insert(lambda e: e.function(made).index(0))))
+    return made
+
+
 def install_dialect() -> None:
     Bindings.install()
     B.extend(NAME, dialect)

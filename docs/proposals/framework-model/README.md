@@ -82,9 +82,12 @@ For your review:
   Python dialect's `Text.FromFunction` does today, so that everything Python writes is read, not only what dunder
   methods can trace. TypeScript cannot trace operators (JavaScript converts an operand to a primitive before applying
   an operator), so it reads the function's source too, `Function.prototype.toString()`, as JavaScript expression text
-  (proposed; to list in EQUIVALENCE.md). Still open: whether the result is in the Python dialect, translated to Basic
-  as a separate step, and whether the lambda's parameters (`x`) become the expression's own parameters or stay free
-  variables the caller's scope binds (decision 10).
+  (proposed; to list in EQUIVALENCE.md). The result is in the language's own dialect: "Python should be in the Python
+  expressions dialect and typescript should be in the typescript expressions dialect", a TypeScript dialect being new.
+  "FromFunction generates an Expressions.Framework.Function": the lambda's parameters become its formals, in order, and
+  its body the function's body, an expression's root (`HasBody`). It "should just take a lambda and not add type
+  parameters": a lambda's parameters carry no types in either language (Python's grammar has none for a lambda,
+  TypeScript's are erased in compiling), so its formals are untyped, as level 0 allows (decision 15).
 
 ## Not drafted yet
 

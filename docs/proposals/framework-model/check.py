@@ -19,6 +19,8 @@ Basic.install_dialect()
 store = B.Store()
 vocabulary = Basic.install(store)
 root = Basic.example(store)
+f1 = Basic.function(store, root)
+assert [e.formal.name.get() for e in f1.formals] == ["x"] and f1.body[0].root is root and root.body_of[0].function is f1
 sized = Basic.sizes(store, vocabulary)
 schemas = [store.registered(name) for name in store.names() if name.startswith("Expressions.")]
 assert all(schema.validate() == [] for schema in schemas), [schema.validate() for schema in schemas]

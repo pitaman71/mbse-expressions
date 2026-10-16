@@ -102,6 +102,7 @@ def framework(m) -> None:
         .properties([lambda t: t.name("term").type([Term])])
         .adjacencies([lambda t: t.name("schema").relation([HasSchema]).me("root")])
     ))
+    # the root's other ends are declared with the relations below: a function's body (`body_of`)
 
     # --- Functions: signatures, each formal and the result typed by a schema; several may share a name ---
 
@@ -129,6 +130,12 @@ def framework(m) -> None:
         .name("Expressions.Framework.Implements")
         .links([lambda t: t.name("intrinsic"), lambda t: t.name("function")])
     ))
+    HasBody = m.Schemas.Relation(lambda r: (  # a function written in a dialect: its body, an expression's root
+        r
+        .name("Expressions.Framework.HasBody")
+        .links([lambda t: t.name("function"), lambda t: t.name("root")])
+        .uniques([["function"], ["root"]])
+    ))
     m.Schemas.Object(lambda o: (
         o
         .name("Expressions.Framework.Formal")
@@ -148,8 +155,13 @@ def framework(m) -> None:
             lambda t: t.name("formals").relation([HasFormal]).me("function"),
             lambda t: t.name("result").relation([HasResult]).me("function"),
             lambda t: t.name("intrinsics").relation([Implements]).me("function"),
+            lambda t: t.name("body").relation([HasBody]).me("function"),
         ])
     ))
+
+    m.Schemas.Object(m.registered("Expressions.Framework.Root"), lambda o: o.adjacencies([
+        lambda t: t.name("body_of").relation([HasBody]).me("root"),
+    ]))
 
     # --- Intrinsics: named reference objects implementing functions; the native code is registered against them ---
 
