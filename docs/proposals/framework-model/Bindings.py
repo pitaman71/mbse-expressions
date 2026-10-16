@@ -15,25 +15,21 @@ import Framework
 NAME = "mbse.Expressions.Framework.Bindings"
 
 
-def _links(*names: str) -> list:
-    return [lambda t, name=name: t.name(name) for name in names]
-
-
 def bindings(m) -> None:
     """Builds the parameters' and bindings' schemas, and extends the meta-schemas and the framework's to link them."""
     Domain, Root = m.registered("Expressions.Framework.Domain"), m.registered("Expressions.Framework.Root")
     HasParameter = m.Schemas.Relation(lambda r: (  # declared by a schema or a domain, in declaration order
-        r.name("Expressions.Framework.HasParameter").links(_links("owner", "parameter")).uniques("parameter")
+        r.name("Expressions.Framework.HasParameter").links([lambda t: t.name("owner"), lambda t: t.name("parameter")]).uniques("parameter")
     ))
     Ranges = m.Schemas.Relation(lambda r: (  # the domain a parameter's values are in
-        r.name("Expressions.Framework.Ranges").links(_links("parameter", "domain")).uniques("parameter")
+        r.name("Expressions.Framework.Ranges").links([lambda t: t.name("parameter"), lambda t: t.name("domain")]).uniques("parameter")
     ))
-    Binds = m.Schemas.Relation(lambda r: r.name("Expressions.Framework.Binds").links(_links("binding", "parameter")).uniques("binding"))
+    Binds = m.Schemas.Relation(lambda r: r.name("Expressions.Framework.Binds").links([lambda t: t.name("binding"), lambda t: t.name("parameter")]).uniques("binding"))
     BoundTo = m.Schemas.Relation(lambda r: (  # a binding's value: an expression, which may name parameters in scope
-        r.name("Expressions.Framework.BoundTo").links(_links("binding", "root")).uniques([["binding"], ["root"]])
+        r.name("Expressions.Framework.BoundTo").links([lambda t: t.name("binding"), lambda t: t.name("root")]).uniques([["binding"], ["root"]])
     ))
     HasBinding = m.Schemas.Relation(lambda r: (  # where a parameter is bound: an instantiation
-        r.name("Expressions.Framework.HasBinding").links(_links("site", "binding")).uniques("binding")
+        r.name("Expressions.Framework.HasBinding").links([lambda t: t.name("site"), lambda t: t.name("binding")]).uniques("binding")
     ))
     m.Schemas.Object(lambda o: (
         o

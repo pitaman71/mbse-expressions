@@ -15,127 +15,125 @@ import Bindings
 import Framework
 
 NAME = "mbse.Expressions.Dialects.Basic"
-SCALARS = {"Int": B.Meta.OfInt, "Float": B.Meta.OfFloat, "Str": B.Meta.OfStr, "Bool": B.Meta.OfBool,
-           "Bytes": B.Meta.OfBytes}
 
 
 def dialect(m) -> None:
     """Extends the framework's `Value`: a property per scalar Basic has, as the user named them (`AsIntValue`)."""
-    Value = m.registered("Expressions.Framework.Value")
-    m.Schemas.Object(Value, lambda o: o.properties([
-        lambda t, name=name, schema=schema: t.name(f"As{name}Value").type([schema]) for name, schema in SCALARS.items()
+    m.Schemas.Object(m.registered("Expressions.Framework.Value"), lambda o: o.properties([
+        lambda t: t.name("AsIntValue").type([B.Meta.OfInt]),
+        lambda t: t.name("AsFloatValue").type([B.Meta.OfFloat]),
+        lambda t: t.name("AsStrValue").type([B.Meta.OfStr]),
+        lambda t: t.name("AsBoolValue").type([B.Meta.OfBool]),
+        lambda t: t.name("AsBytesValue").type([B.Meta.OfBytes]),
     ]))
 
 
 def install(store) -> dict[str, Any]:
-    """Builds Basic's vocabulary in `store`: a domain per scalar, and functions, each implemented by an intrinsic.
-    Expressions do not link it: a call names its function, and binding finds it here."""
-    domains = {
-        name: store.Expressions.Framework.Domain(lambda d, name=name, schema=schema: (
-            d.name(name.lower()).schemas(lambda a: a.insert(lambda e: e.schema(schema)))
-        ))
-        for name, schema in SCALARS.items()
-    }
-
-    def function(name: str, formals: list[str], result: Any = None) -> Any:
-        """A function named `name`, of formals untyped (level 0: a call binds to an intrinsic for its arguments' types),
-        with its result typed by `result` where it is fixed."""
-        made = store.Expressions.Framework.Function(lambda f: f.name(name))
-        for index, formal in enumerate(formals):
-            store.Expressions.Framework.Formal(lambda x, formal=formal, index=index: (
-                x.name(formal).function(lambda a: a.insert(lambda e: e.function(made).index(index)))
-            ))
-        if result is not None:
-            store.Expressions.Framework.Function(made, lambda f: f.result(lambda a: a.insert(lambda e: e.schema(result))))
-        store.Expressions.Framework.Intrinsic(lambda i: (
-            i.name(f"basic.{name}").implements(lambda a: a.insert(lambda e: e.function(made)))
-        ))
-        return made
-
-    integer = domains["Int"]
-    width = store.Expressions.Framework.Parameter(lambda p: (  # an int's size: a parameter of the domain, in bits
-        p.name("width").domain([integer]).owner(lambda a: a.insert(lambda e: e.owner(integer)))
+    """Builds Basic's vocabulary in `store`: a domain per scalar, an int's width, and functions, each implemented by an
+    intrinsic. Expressions do not link it: a call names its function, and binding finds it here."""
+    F = store.Expressions.Framework
+    integer = F.Domain(lambda d: d.name("int").schemas(lambda a: a.insert(lambda e: e.schema(B.Meta.OfInt))))
+    real = F.Domain(lambda d: d.name("float").schemas(lambda a: a.insert(lambda e: e.schema(B.Meta.OfFloat))))
+    text = F.Domain(lambda d: d.name("str").schemas(lambda a: a.insert(lambda e: e.schema(B.Meta.OfStr))))
+    boolean = F.Domain(lambda d: d.name("bool").schemas(lambda a: a.insert(lambda e: e.schema(B.Meta.OfBool))))
+    data = F.Domain(lambda d: d.name("bytes").schemas(lambda a: a.insert(lambda e: e.schema(B.Meta.OfBytes))))
+    width = F.Parameter(lambda p: (  # an int's size: a parameter of the domain, in bits
+        p
+        .name("width")
+        .domain([integer])
+        .owner(lambda a: a.insert(lambda e: e.owner(integer)))
     ))
-    functions = {
-        "add": function("add", ["a", "b"]),  # add[T](a: T, b: T) -> T, at level 0
-        "lt": function("lt", ["a", "b"], B.Meta.OfBool),
-        "not": function("not", ["a"], B.Meta.OfBool),
-    }
-    return {"domains": domains, "functions": functions, "width": width}
 
+    add = F.Function(lambda f: f.name("add"))  # add(a, b): untyped formals, level 0
+    F.Formal(lambda x: x.name("a").function(lambda a: a.insert(lambda e: e.function(add).index(0))))
+    F.Formal(lambda x: x.name("b").function(lambda a: a.insert(lambda e: e.function(add).index(1))))
+    F.Intrinsic(lambda i: i.name("basic.add").implements(lambda a: a.insert(lambda e: e.function(add))))
 
-def _literal(value: int):
-    return lambda t: t.as_union(lambda u: u.literal(lambda o: o.value(lambda v: v.as_object(lambda x: x.AsIntValue(value)))))
+    lt = F.Function(lambda f: f.name("lt").result(lambda a: a.insert(lambda e: e.schema(B.Meta.OfBool))))
+    F.Formal(lambda x: x.name("a").function(lambda a: a.insert(lambda e: e.function(lt).index(0))))
+    F.Formal(lambda x: x.name("b").function(lambda a: a.insert(lambda e: e.function(lt).index(1))))
+    F.Intrinsic(lambda i: i.name("basic.lt").implements(lambda a: a.insert(lambda e: e.function(lt))))
 
+    negation = F.Function(lambda f: f.name("not").result(lambda a: a.insert(lambda e: e.schema(B.Meta.OfBool))))
+    F.Formal(lambda x: x.name("a").function(lambda a: a.insert(lambda e: e.function(negation).index(0))))
+    F.Intrinsic(lambda i: i.name("basic.not").implements(lambda a: a.insert(lambda e: e.function(negation))))
 
-def _variable(name: str):
-    return lambda t: t.as_union(lambda u: u.variable(lambda o: o.name(name)))
-
-
-def _root(store, term) -> Any:
-    return store.Expressions.Framework.Root(lambda r: r.term(lambda p: p.as_value(term)))
-
-
-def _binding(store, parameter, term) -> Any:
-    return store.Expressions.Framework.Binding(lambda b: b.parameter([parameter]).value([_root(store, term)]))
+    return {"domains": {"Int": integer, "Float": real, "Str": text, "Bool": boolean, "Bytes": data},
+            "functions": {"add": add, "lt": lt, "not": negation}, "width": width}
 
 
 def sizes(store, vocabulary: dict[str, Any]) -> dict[str, Any]:
     """Parameters bound at instantiations: a scalar's size as its domain's width, and a matrix's rows and columns, bound
     by a refinement (a named instantiation, `Square`) and by a use (a property typed `Matrix`)."""
-    framework, integer, width = store.Expressions.Framework, vocabulary["domains"]["Int"], vocabulary["width"]
+    F, integer, width = store.Expressions.Framework, vocabulary["domains"]["Int"], vocabulary["width"]
 
-    def parameter(owner, name: str) -> Any:
-        return framework.Parameter(lambda p: p.name(name).domain([integer]).owner(lambda a: a.insert(lambda e: e.owner(owner))))
-
-    int32 = store.Schemas.Scalar(lambda s: (
-        s.name("Int32").token("int").domain([integer]).bindings([_binding(store, width, _literal(32))])
+    Int32 = store.Schemas.Scalar(lambda s: (
+        s
+        .name("Int32")
+        .token("int")
+        .domain([integer])
+        .bindings([F.Binding(lambda b: (
+            b
+            .parameter([width])
+            .value([F.Root(lambda r: r.term(F.Term(lambda u: u.literal(lambda l: l.value(F.Value(lambda v: v.AsIntValue(32)))))))])
+        ))])
     ))
-    word = store.Schemas.Scalar(lambda s: s.name("Word").token("int").domain([integer]))
-    parameter(word, "w")
-    store.Schemas.Scalar(word, lambda s: s.bindings([_binding(store, width, _variable("w"))]))  # width = w
-    matrix = store.Schemas.Object(lambda o: (
-        o.name("Matrix").properties([lambda t: t.name("cells").type([store.Schemas.Container(lambda c: (
+
+    Word = store.Schemas.Scalar(lambda s: s.name("Word").token("int").domain([integer]))
+    F.Parameter(lambda p: p.name("w").domain([integer]).owner(lambda a: a.insert(lambda e: e.owner(Word))))
+    store.Schemas.Scalar(Word, lambda s: s.bindings([F.Binding(lambda b: (  # width = w
+        b
+        .parameter([width])
+        .value([F.Root(lambda r: r.term(F.Term(lambda u: u.variable(lambda v: v.name("w")))))])
+    ))]))
+
+    Matrix = store.Schemas.Object(lambda o: (
+        o
+        .name("Matrix")
+        .properties([lambda t: t.name("cells").type([store.Schemas.Container(lambda c: (
             c.index([B.Meta.OfInt]).element([B.Meta.OfFloat])
         ))])])
     ))
-    rows, cols = parameter(matrix, "rows"), parameter(matrix, "cols")
-    square = store.Schemas.Object(lambda o: o.name("Square").refines([matrix]))  # a named instantiation
-    parameter(square, "n")
-    store.Schemas.Object(square, lambda o: o.bindings([_binding(store, rows, _variable("n")),
-                                                     _binding(store, cols, _variable("n"))]))
-    board = store.Schemas.Object(lambda o: (  # a use: the property binds the rows; the columns stay unbound
-        o.name("Board").ref(True).properties([lambda t: t.name("grid").type([matrix]).bindings([
-            _binding(store, rows, _literal(8)),
-        ])])
+    rows = F.Parameter(lambda p: p.name("rows").domain([integer]).owner(lambda a: a.insert(lambda e: e.owner(Matrix))))
+    cols = F.Parameter(lambda p: p.name("cols").domain([integer]).owner(lambda a: a.insert(lambda e: e.owner(Matrix))))
+
+    Square = store.Schemas.Object(lambda o: o.name("Square").refines([Matrix]))  # a named instantiation
+    F.Parameter(lambda p: p.name("n").domain([integer]).owner(lambda a: a.insert(lambda e: e.owner(Square))))
+    n = F.Term(lambda u: u.variable(lambda v: v.name("n")))
+    store.Schemas.Object(Square, lambda o: o.bindings([
+        F.Binding(lambda b: b.parameter([rows]).value([F.Root(lambda r: r.term(n))])),
+        F.Binding(lambda b: b.parameter([cols]).value([F.Root(lambda r: r.term(n))])),
+    ]))
+
+    Board = store.Schemas.Object(lambda o: (  # a use: the property binds the rows; the columns stay unbound
+        o
+        .name("Board")
+        .ref(True)
+        .properties([lambda t: (
+            t
+            .name("grid")
+            .type([Matrix])
+            .bindings([F.Binding(lambda b: (
+                b
+                .parameter([rows])
+                .value([F.Root(lambda r: r.term(F.Term(lambda u: u.literal(lambda l: l.value(F.Value(lambda v: v.AsIntValue(8)))))))])
+            ))])
+        )])
     ))
-    return {"Int32": int32, "Word": word, "Matrix": matrix, "Square": square, "Board": board}
+    return {"Int32": Int32, "Word": Word, "Matrix": Matrix, "Square": Square, "Board": Board}
 
 
 def example(store) -> Any:
-    """`x + 1 > 0`, written `lt(0, add(x, 1))`: an expression's root, a reference object, holding one nested value, its term;
-    each call names its function, which binding resolves against the vocabulary by name and arguments' types."""
-
-    def literal(value: int):
-        return lambda t: t.as_union(lambda u: u.literal(lambda o: o.value(lambda v: v.as_object(lambda x: x.AsIntValue(value)))))
-
-    def variable(name: str):  # free: Basic permits it, bound by the caller's scope
-        return lambda t: t.as_union(lambda u: u.variable(lambda o: o.name(name)))
-
-    def call(function: str, *arguments):
-        def written(container):
-            for index, argument in enumerate(arguments):
-                argument(container.at(index))
-            return container
-
-        return lambda t: t.as_union(lambda u: u.call(lambda o: (
-            o
-            .function(function)
-            .arguments(lambda a: a.as_value(lambda v: v.as_container(written)))
-        )))
-
-    term = call("lt", literal(0), call("add", variable("x"), literal(1)))
-    return store.Expressions.Framework.Root(lambda r: r.term(lambda p: p.as_value(term)).schema([B.Meta.OfBool]))
+    """`x + 1 > 0`, written `lt(0, add(x, 1))`: an expression's root, a reference object, holding one nested value, its
+    term, built of standalone values; each call names its function, which binding resolves against the vocabulary by
+    name and arguments' types. `x` is free: Basic permits it, bound by the caller's scope."""
+    F = store.Expressions.Framework
+    zero = F.Term(lambda u: u.literal(lambda l: l.value(F.Value(lambda v: v.AsIntValue(0)))))
+    one = F.Term(lambda u: u.literal(lambda l: l.value(F.Value(lambda v: v.AsIntValue(1)))))
+    x = F.Term(lambda u: u.variable(lambda v: v.name("x")))
+    add = F.Term(lambda u: u.call(lambda c: c.function("add").arguments([x, one])))
+    lt = F.Term(lambda u: u.call(lambda c: c.function("lt").arguments([zero, add])))
+    return F.Root(lambda r: r.term(lt).schema([B.Meta.OfBool]))
 
 
 def install_dialect() -> None:

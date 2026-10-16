@@ -9,12 +9,7 @@ from __future__ import annotations
 
 from mbse.Schemas.Framework import Builders as B
 
-Text, Int = B.Meta.OfStr, B.Meta.OfInt
 NAME = "mbse.Expressions.Framework"
-
-
-def _links(*names: str) -> list:
-    return [lambda t, name=name: t.name(name) for name in names]
 
 
 def framework(m) -> None:
@@ -23,43 +18,72 @@ def framework(m) -> None:
     # --- Terms: values, an expression one nested value; the kinds a union (decision 3), which holds itself ---
 
     Term = m.Schemas.Union(lambda u: u.name("Expressions.Framework.Term"))  # its branches, the kinds, below
-    Terms = m.Schemas.Container(lambda c: c.index([Int]).element([Term]))  # in order
+    Terms = m.Schemas.Container(lambda c: c.index([B.Meta.OfInt]).element([Term]))  # in order
     Value = m.Schemas.Object(lambda o: (  # each dialect adds a property per scalar it has
         o
         .name("Expressions.Framework.Value")
         .description("A literal's value: one property set, of the properties the dialects add (AsIntValue, ...)")
     ))
-
-    def kind(name, description, *properties):
-        return m.Schemas.Object(lambda o: (
-            o
-            .name(f"Expressions.Framework.{name}")
-            .description(description)
-            .properties(list(properties))
-        ))
-
-    def text(name):
-        return lambda t: t.name(name).type([Text])
-
-    def term(name):
-        return lambda t: t.name(name).type([Term])
-
-    kinds = {
-        "literal": kind("Literal", "A value, written in the term", lambda t: t.name("value").type([Value])),
-        "variable": kind("Variable", "A name, bound by an enclosing binder, or free where the dialect permits",
-                         text("name")),
-        "call": kind("Call", "A function, named, applied to arguments: bound by its name and its arguments' types",
-                     text("function"), lambda t: t.name("arguments").type([Terms])),
-        "let": kind("Let", "Binds its variable to its value within its body", text("variable"), term("value"),
-                    term("body")),
-        "map": kind("Map", "Binds its variable to each item of its collection, giving its body's value for each, in order",
-                    text("variable"), term("collection"), term("body")),
-        "reduce": kind("Reduce", "Folds its collection: binds its accumulator, from its initial value, and its variable "
-                       "to each item", text("variable"), text("accumulator"), term("collection"), term("initial"),
-                       term("body")),
-    }
+    Literal = m.Schemas.Object(lambda o: (
+        o
+        .name("Expressions.Framework.Literal")
+        .description("A value, written in the term")
+        .properties([lambda t: t.name("value").type([Value])])
+    ))
+    Variable = m.Schemas.Object(lambda o: (
+        o
+        .name("Expressions.Framework.Variable")
+        .description("A name, bound by an enclosing binder, or free where the dialect permits")
+        .properties([lambda t: t.name("name").type([B.Meta.OfStr])])
+    ))
+    Call = m.Schemas.Object(lambda o: (
+        o
+        .name("Expressions.Framework.Call")
+        .description("A function, named, applied to arguments: bound by its name and its arguments' types")
+        .properties([
+            lambda t: t.name("function").type([B.Meta.OfStr]),
+            lambda t: t.name("arguments").type([Terms]),
+        ])
+    ))
+    Let = m.Schemas.Object(lambda o: (
+        o
+        .name("Expressions.Framework.Let")
+        .description("Binds its variable to its value within its body")
+        .properties([
+            lambda t: t.name("variable").type([B.Meta.OfStr]),
+            lambda t: t.name("value").type([Term]),
+            lambda t: t.name("body").type([Term]),
+        ])
+    ))
+    Map = m.Schemas.Object(lambda o: (
+        o
+        .name("Expressions.Framework.Map")
+        .description("Binds its variable to each item of its collection, giving its body's value for each, in order")
+        .properties([
+            lambda t: t.name("variable").type([B.Meta.OfStr]),
+            lambda t: t.name("collection").type([Term]),
+            lambda t: t.name("body").type([Term]),
+        ])
+    ))
+    Reduce = m.Schemas.Object(lambda o: (
+        o
+        .name("Expressions.Framework.Reduce")
+        .description("Folds its collection: binds its accumulator, from its initial value, and its variable to each item")
+        .properties([
+            lambda t: t.name("variable").type([B.Meta.OfStr]),
+            lambda t: t.name("accumulator").type([B.Meta.OfStr]),
+            lambda t: t.name("collection").type([Term]),
+            lambda t: t.name("initial").type([Term]),
+            lambda t: t.name("body").type([Term]),
+        ])
+    ))
     m.Schemas.Union(Term, lambda u: u.branches([
-        lambda t, name=name, schema=schema: t.name(name).type([schema]) for name, schema in kinds.items()
+        lambda t: t.name("literal").type([Literal]),
+        lambda t: t.name("variable").type([Variable]),
+        lambda t: t.name("call").type([Call]),
+        lambda t: t.name("let").type([Let]),
+        lambda t: t.name("map").type([Map]),
+        lambda t: t.name("reduce").type([Reduce]),
     ]))
 
     # --- An expression's root: the reference object holding its term, all that is linked (HasSchema, requires) ---
@@ -67,7 +91,7 @@ def framework(m) -> None:
     HasSchema = m.Schemas.Relation(lambda r: (
         r
         .name("Expressions.Framework.HasSchema")
-        .links(_links("root", "schema"))
+        .links([lambda t: t.name("root"), lambda t: t.name("schema")])
         .uniques("root")
     ))
     m.Schemas.Object(lambda o: (
@@ -75,7 +99,7 @@ def framework(m) -> None:
         .name("Expressions.Framework.Root")
         .ref(True)
         .description("An expression's root: its term, a value; the one object other packages link")
-        .properties([term("term")])
+        .properties([lambda t: t.name("term").type([Term])])
         .adjacencies([lambda t: t.name("schema").relation([HasSchema]).me("root")])
     ))
 
@@ -84,18 +108,32 @@ def framework(m) -> None:
     HasFormal = m.Schemas.Relation(lambda r: (
         r
         .name("Expressions.Framework.HasFormal")
-        .links(_links("function", "formal"))
-        .properties([lambda t: t.name("index").type([Int])])
+        .links([lambda t: t.name("function"), lambda t: t.name("formal")])
+        .properties([lambda t: t.name("index").type([B.Meta.OfInt])])
         .uniques([["function", "index"], ["formal"]])
     ))
-    FormalType = m.Schemas.Relation(lambda r: r.name("Expressions.Framework.FormalType").links(_links("formal", "schema")).uniques("formal"))
-    HasResult = m.Schemas.Relation(lambda r: r.name("Expressions.Framework.HasResult").links(_links("function", "schema")).uniques("function"))
-    Implements = m.Schemas.Relation(lambda r: r.name("Expressions.Framework.Implements").links(_links("intrinsic", "function")))
+    FormalType = m.Schemas.Relation(lambda r: (
+        r
+        .name("Expressions.Framework.FormalType")
+        .links([lambda t: t.name("formal"), lambda t: t.name("schema")])
+        .uniques("formal")
+    ))
+    HasResult = m.Schemas.Relation(lambda r: (
+        r
+        .name("Expressions.Framework.HasResult")
+        .links([lambda t: t.name("function"), lambda t: t.name("schema")])
+        .uniques("function")
+    ))
+    Implements = m.Schemas.Relation(lambda r: (
+        r
+        .name("Expressions.Framework.Implements")
+        .links([lambda t: t.name("intrinsic"), lambda t: t.name("function")])
+    ))
     m.Schemas.Object(lambda o: (
         o
         .name("Expressions.Framework.Formal")
         .ref(True)
-        .properties([text("name")])
+        .properties([lambda t: t.name("name").type([B.Meta.OfStr])])
         .adjacencies([
             lambda t: t.name("function").relation([HasFormal]).me("formal"),
             lambda t: t.name("schema").relation([FormalType]).me("formal"),
@@ -105,7 +143,7 @@ def framework(m) -> None:
         o
         .name("Expressions.Framework.Function")
         .ref(True)
-        .properties([text("name")])
+        .properties([lambda t: t.name("name").type([B.Meta.OfStr])])
         .adjacencies([
             lambda t: t.name("formals").relation([HasFormal]).me("function"),
             lambda t: t.name("result").relation([HasResult]).me("function"),
@@ -120,19 +158,24 @@ def framework(m) -> None:
         .name("Expressions.Framework.Intrinsic")
         .ref(True)
         .description("Native code, registered at run time under its name: no model holds code")
-        .properties([text("name")])
+        .properties([lambda t: t.name("name").type([B.Meta.OfStr])])
         .adjacencies([lambda t: t.name("implements").relation([Implements]).me("intrinsic")])
     ))
 
     # --- Domains, reached in two steps (decision 21): a root has a schema, a scalar schema a domain; named both ways ---
 
-    HasDomain = m.Schemas.Relation(lambda r: r.name("Expressions.Framework.HasDomain").links(_links("schema", "domain")).uniques("schema"))
+    HasDomain = m.Schemas.Relation(lambda r: (
+        r
+        .name("Expressions.Framework.HasDomain")
+        .links([lambda t: t.name("schema"), lambda t: t.name("domain")])
+        .uniques("schema")
+    ))
     m.Schemas.Object(lambda o: (
         o
         .name("Expressions.Framework.Domain")
         .ref(True)
         .description("A scalar domain a dialect defines, natural to its language (int8, IEEE 754 binary32, ...)")
-        .properties([text("name")])
+        .properties([lambda t: t.name("name").type([B.Meta.OfStr])])
         .adjacencies([lambda t: t.name("schemas").relation([HasDomain]).me("domain")])
     ))
     m.Schemas.Object(B.Meta.Type, lambda o: o.adjacencies([  # every kind of type: scalar, object, container, ...
@@ -140,7 +183,9 @@ def framework(m) -> None:
         lambda t: t.name("results").relation([HasResult]).me("schema"),
         lambda t: t.name("roots").relation([HasSchema]).me("schema"),
     ]))
-    m.Schemas.Object(B.OfScalar.Schema, lambda o: o.adjacencies([lambda t: t.name("domain").relation([HasDomain]).me("schema")]))
+    m.Schemas.Object(B.OfScalar.Schema, lambda o: o.adjacencies([
+        lambda t: t.name("domain").relation([HasDomain]).me("schema"),
+    ]))
 
 
 def install() -> None:
