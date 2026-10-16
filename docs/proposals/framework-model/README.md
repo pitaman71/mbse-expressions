@@ -76,6 +76,15 @@ For your review:
   34 mutations of `x + 1 > 0`.
 - Domains are reached in two steps, through the root (decision 21), and stay objects.
 - Formals are objects (decision 22), a compromise with the limit on a meta-schema's adjacencies (decision 18).
+- Reading a function into an expression: "the name be `Expressions.FromFunction`", a function of the package
+  (`Expressions.FromFunction(store, lambda x: x + 1 > 0)`), since `store.Expressions.FromFunction` would be a path to a
+  schema of that name. In Python, "keep the AST reader as primary": the function's source, read through `ast`, as the
+  Python dialect's `Text.FromFunction` does today, so that everything Python writes is read, not only what dunder
+  methods can trace. TypeScript cannot trace operators (JavaScript converts an operand to a primitive before applying
+  an operator), so it reads the function's source too, `Function.prototype.toString()`, as JavaScript expression text
+  (proposed; to list in EQUIVALENCE.md). Still open: whether the result is in the Python dialect, translated to Basic
+  as a separate step, and whether the lambda's parameters (`x`) become the expression's own parameters or stay free
+  variables the caller's scope binds (decision 10).
 
 ## Not drafted yet
 
