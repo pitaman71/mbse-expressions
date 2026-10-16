@@ -469,6 +469,18 @@ alike only there.
 
 ## Open questions
 
+- **The framework and dialects as model.** How mbse-expressions applies P-018 (Resolved, "Expressions under
+  P-018"). The direction the user has given: the framework is a model of schemas (`Term`, a union of its subtypes
+  `Call`, `Literal`, `Let`, ...; `Callable`, a reference object; `HasArguments`, a relation from a `Callable` to its
+  parameters); each dialect refines it by intersection ("1-way intersection is trivial refinement"), its vocabulary
+  being `Callable` objects (`Basic.Operators.Add`); and an expression is the only instance. Terms are reference
+  objects again ("this is why I made terms reference objects"), so built only in a store. To be drafted for the
+  user's review before any code. It was stopped, as the user decided ("stop mbse-expressions work because it cannot be
+  written correctly without it"), until mbse-schemas' schema builders aligned with their meta-schemas, which they do
+  as of mbse-schemas 0.11; mbse-schemas 0.12 adds schema extension, on which the framework model is built (its
+  `docs/SCHEMA_EXTENSION.md`, which records the user's decisions on what moves here). The redraft is in
+  `docs/proposals/framework-model/`.
+
 - **Resolving constraints.** A constraint binds variables and is resolvable in any direction
   ([MBSE.md](https://github.com/pitaman71/mbse-basis/blob/main/MBSE.md#what-a-specification-is-made-of)): `total = sum(items)` determines `total` from `items`, and
   restricts `items` given `total`. The evaluators compute only forward, from values bound to every variable an
@@ -494,6 +506,171 @@ alike only there.
   unit that groups expressions, which no dialect has yet.
 
 ## Resolved
+
+- **Expressions under P-018** (2026-10-14): applies mbse-basis P-018. Reading or writing an expression through code
+  that knows each kind's shape "violates P-018 and must be fixed", and `Writer`s and the builders' `set`, `argument`
+  and `arguments` "should go away", as the user decided. Supersedes decision 1 = A of "Terms after mbse-schemas'
+  visitor pattern and containers" and its building choices, and "Expressions are typed bindings of their
+  meta-schemas".
+
+- **Terms after mbse-schemas' visitor pattern and containers** (2026-10-14), as the user decided, of the options put
+  to them, "1 = A" and "2 = Y":
+  - mbse-expressions implements the visitor protocol for its own term classes, in place of mbse-schemas' `Bindings`
+    (removed by its visitor pattern): a term reads as any object does (`Readers.OfObject`), a term's builder writes as
+    any builder does (`Visitors.OfObject`), and a dialect's store of its kinds rebuilds terms from snapshots; the
+    classes and the DSL stay;
+  - an expression tree is a value: a term is a value object, which holds its arguments in a container, in order, and
+    is written nested in what holds it, with no identity, so the relation `Arguments` and every kind's `used_by` go; a
+    term refers to a definition (a `REFERS` slot, such as the predicate an application applies) by name, as a module
+    names a schema, since nothing links a value object.
+  - proposed in building, for the user's review, where it departs from A's wording: a term is not itself a
+    `Readers.OfObject`, since its fields (`name`, `value`, `arguments`) would shadow the members the protocol names
+    after the schema's properties; `term.reader()` gives its value, a standalone value of its kind's meta-schema built
+    in its dialect's `store` (a `Proxies.OfStore`) from the term's plain form, which mbse-schemas checks. The value's
+    builders are the store's (`store.builder(name)`), which write as any builder does, and `Dialect.term(value)`
+    rebuilds a term from any value of its kinds' meta-schemas, such as one `JSON.FromJSON(store)` reads; the DSL
+    builders keep the term's fields and are not `Visitors.OfObject`. This needed mbse-schemas to write and read a
+    standalone value (`ToPlain(store)(schema, value)`; its `docs/FRAMEWORK.md`, Resolved, "`OfAny` returns").
+  - proposed in building, for the user's review: an argument is a value of any type (`Terms.ARGUMENT`, an unrestricted
+    `OfAny`), written tagged with its kind's meta-schema's registered name (`{"Expressions.OfLiteral": {"int": 1}}`),
+    since a base dialect holds its extensions' terms, whose schemas a closed union could not name; the user's rule that
+    a value is wrapped "only when the value object's schema is not clear from the parent schema" holds, as it is not.
+    The tag names the kind, so the property `kind` goes. An empty slot is `null`. A `REFERS` slot is a str property
+    holding the definition's name (its first property), not in `arguments`.
+  - an enum's members and a packed domain's codes are containers of natives (were one-link relations); data objects
+    are read through `Framework.Objects` (`properties`, `entries`, containers as listed values), in place of
+    mbse-schemas' removed `Validators.properties_of`, `entries_of` and `ListRecord`.
+  This supersedes "Expressions are typed bindings of their meta-schemas" (below) where it binds with `Bindings` and
+  links terms by `Arguments`.
+
+- **Superseded by mbse-schemas' visitor pattern** (its FRAMEWORK.md, Resolved, "The visitor pattern"), as the user
+  decided: "Relation operators do not belong in Expressions.Basic. They never did. They belong in
+  Visitors.OfAdjacency, Visitors.OfEntry, ..."; and "the evaluator binds each *symbol* to a Visitors.OfObject". The
+  first step built for it (`get` and `has` of an adjacency, `project`) is reverted. What follows is kept as it was
+  decided, until Basic's reading of relations is redesigned on the protocol.
+
+  **Basic's collection operations go now**, with mbse-schemas' meta-schemas overhaul (its FRAMEWORK.md, Resolved, "The
+  meta-schemas overhaul"), in which lists become relations' entries, as the user decided ("C"), applying in advance
+  the decision of the exploration on the `scalars` branch, "the quantifier stays, over an adjacency or a projection;
+  other aggregate operations come from standards' or languages' dialects":
+  - `get` of an adjacency's name gives its entries, as a proxy's adjacency member does, and `entries(object,
+    adjacency)` stays as its explicit form; entries are keyed by the adjacency's key (mbse-schemas' `at`), positional
+    for an open relation;
+  - `project(entries, name)` gives the named link's targets or property's values of each entry, in order, as a proxy's
+    `project(name)` does, and `at(entries, key)` the entry under a key, unknown when there is none;
+  - the quantifiers `all`, `any` and `count` stay, over entries or a projection: `me.pins.project("value").all("p",
+    p.gt(0))`, `me.limits.at("vdd").value.le(3.6)`, and `in` written as `any` of `eq`;
+  - `count(xs)`, `item`, `in`, `sum`, `min`, `max` and `unique` go, with their translator rules, until a standard's or
+    a language's dialect supplies them.
+
+  Nothing of it is built. Basic itself stays until the open-world and scalars overhaul.
+
+- Basic compares everything but reference objects deeply, through the visitor protocols, as mbse-schemas' equality
+  does under a schema: value objects, union and intersection values, records and collections are equal when what each
+  writes is equal (0.5). Before, they compared equal to nothing, so a constraint could not compare a value with
+  another, e.g. a schema's property with an expected one (mbse-schemas' `Reflection`). Without a schema, values of two
+  schemas that write the same properties compare equal.
+
+- `Python.Text.FromFunction` reads collections in the forms the Basic-to-Python translator writes (`len`, indexing,
+  `in`, `sum`, `min`, `max`, and `all`, `any` and `sum(1 for ...)` over a generator expression), so a translated
+  constraint reads back, and `Text.FromText` reads a chained comparison as `and` of comparisons sharing the middle
+  operand.
+
+- A dialect may extend another, inheriting its kinds; a base accepts its extensions' terms as arguments, and the
+  extension validates and evaluates the trees that mix them, so that a dialect such as mbse-patterns' predicates adds
+  proper terms (quantifiers over a store's objects, links) to Basic without copying it.
+
+- A dialect's source text is its `Text` module, as in every mbse framework, where text is one more dialect or variant:
+  `Text.ToText(expression)` writes it, and `Text.FromText(source)` reads it back (Python's, in Python only), replacing
+  `render` and `parse`. Python's `Text.FromFunction(function)` reads a function's source into a Basic expression,
+  replacing Basic's `Expressions.from_`.
+
+- Parsing and printing source code belong in mbse-programs, which holds each language's complete syntax tree with an
+  established parser and printer, not in mbse-expressions, whose dialects hold the terms of constraints. No dialect
+  gains a parser here; a constraint in source text is read by mbse-programs and translated to a dialect.
+
+- An `Ieee1164` domain of a `width` is VHDL's `std_logic_vector`, its value that many states, the most significant
+  first; without one it is a single `std_logic`. SystemVerilog's binary vectors and those with x or z bits are its
+  counterparts.
+- A function may take a range of numbers of arguments: its signature takes any number (arity -1) and its kind checks
+  the range, in validation and in evaluation alike. Excel's `IF` takes 2 or 3 (FALSE without an alternative), and
+  `AND`, `OR`, `SUM`, `MIN` and `MAX` 1 to 255, as Excel's do.
+- The direct translators between Python, MATLAB and Excel write collections as their translators with Basic do, from
+  one table of each dialect's forms (`_Patterns.COLLECTIONS`), so that every route gives the same expression.
+
+- The mbse repositories stay separate, beside each other as sibling checkouts. A dependent installs its siblings as they
+  are (`../../mbse-schemas/python3`, `file:../../mbse-schemas/typescript5`), so a change in one is seen at once by the
+  others, and pins the version and commit of each it was tested with in `siblings.json`: a sibling is compatible at the
+  same minor version below 1.0 and no older, and `pyproject.toml` requires that range; the commit reproduces the
+  checkout, since the lock files record siblings by path, without a hash, and a release is the tag `v<version>`.
+  mbse-basis' `scripts/polyrepo.py` checks the siblings, clones those missing at their pinned commits, and pins new
+  ones.
+- The vocabulary is shared with mbse-schemas and mbse-programs: an element of an expression's tree is a *term* (every
+  kind derives from `Terms.Term`), never a bare node, and the objects that build expressions with methods are
+  *writers* (`Writer`). A kind's named values are *properties*; "field" means only a dataclass's or class's field.
+- Collections translate to Python as generator expressions, a quantifier kind of the Python dialect whose conditions,
+  like its element, see the bound name; the framework binds the name in every argument after the collection. A
+  list property is a list of its values in Python, a keyed list's too, so that iteration, `in` and `sum` see values as
+  Basic's collections do. `unique`, which has no single call in Python, is written as an idiom, forward only.
+- In MATLAB, collections are arrays (a list property's values, as doubles), which operators do not take: they are
+  counted, reduced, indexed from 1 and iterated by `arrayfun`, a quantifier kind for `arrayfun(@(p) body, xs)`, whose
+  body must give a numeric or logical scalar.
+- In Excel, collections are arrays, which operators do not take (`#VALUE!`): `MAP` and `LAMBDA` are `map`, a
+  quantifier kind, and the array functions read them as Excel does, ignoring the text in an array where `SUM`, `AND`
+  and `OR` would convert a value given alone. A vocabulary's signature may take any number of arguments (arity -1),
+  as `AND` and `OR` do.
+- In SystemVerilog, collections are arrays and their operations IEEE 1800's array methods; a reduction's `with` clause
+  is `iterate`, a quantifier kind, and `inside` takes an array among its items as its elements.
+
+- Typed literals translate by `Convert`, a rule of functions over a literal's attributes, rather than by patterns,
+  which only copy values. A dialect's literal names its type by the other dialect's convention where the two differ:
+  C's `<stdint.h>` names, SystemVerilog's base (decimal for integers, hexadecimal for bits, binary for single
+  `Ieee1164` bits). Translations from Basic round-trip; from C or SystemVerilog they keep the type and the value, not
+  the spelling.
+
+- SystemVerilog's integral values are 4-state (`Domains.Logic`, its bits encoded as VPI's `aval` and `bval`) whatever
+  their type, a 2-state type keeping x and z at 0; evaluation sizes operands as IEEE 1800 does, rather than in Basic's
+  unbounded integers. A shift by the width or more shifts every bit out, and `$bits` gives its argument's type's width
+  without evaluating it. A string is a vector of its UTF-8 bytes.
+
+- Value domains: conversions are `convert` (keeps the value) and `reinterpret` (keeps the bit pattern), with `pack` and
+  `unpack` for packed domains; a literal stored without a domain has its native's default domain, and writers leave
+  defaults out; an `Enum` is unordered unless packed, when it orders by its representation.
+- A literal holds its domain by value, as a value object, written by name when the domain is registered and by value
+  otherwise; domains compare by structure. A packed domain packs an enum into a fixed-width integer or bits, with an
+  integer code per member.
+- Value domains name published standards where one exists (`Ieee754`, `Ieee1164`), with only the parameters the
+  standard defines, rather than free representation parameters: no float format by widths and flags, no ones'
+  complement or sign-magnitude integers, no `Decimal` apart from IEEE 754's decimal formats. The dialect keeps its
+  name, Basic, which mbse-schemas' neutral token format (`basic`) shares.
+- Partial evaluation gives a residual expression, never only a value: a literal when everything is known, otherwise
+  the simplified remainder, which serializes and translates like any expression.
+- Collections: lists and an object's entries (`entries`), read as `Domains.Collection`s whose items are their values
+  and keys address them; the quantifiers are a binding kind, `OfQuantifier` (`all`, `any`, `count`), and the operations
+  `count`, `item`, `in`, `sum`, `min`, `max` and `unique` join the core; collection domains (`List`, `Keyed`) serve
+  inference only, and there are no collection literals.
+- Evaluation in value domains: a value of a non-default domain is a typed value (`Domains.Value`), and a default
+  domain's value stays the bare native; an operation's optional `domain` is the domain of its result, which `convert`,
+  `reinterpret` and `unpack` need and `pack` does not; the bitwise operations (`bitand`, `bitor`, `bitxor`, `bitnot`,
+  `shl`, `shr`) join the core vocabulary; every IEEE 754 format is evaluated, `binary128` and the decimal formats as
+  canonical text.
+- Expressions are a program's own classes bound to their meta-schemas with mbse-schemas' `Bindings`, not builders of
+  their own: what is generic to any schema (visitor protocols over a state, finalizing, the store, value objects in
+  properties) lives once, in mbse-schemas, and `Terms` gives only `read`, `make` and the DSL.
+
+- Expressions are `Expressions.OfAny`, `OfLiteral`, `OfOperation`, `OfVariable` and `OfLet`, each with `Data`,
+  `Builder`, `Spec` and a meta-schema `Schema` that is an ordinary registered object schema tagged by `kind`. Arguments
+  are an ordered relation (`index`, `unique(argument)`); a literal's schema has one property per native type.
+- There is no `is` operation: unions discriminate by a tag property compared with a fixed value.
+- `Python.Text.FromFunction` (Python only) reads an expression from a function's source with `ast`.
+- Evaluation is its own module, `Evaluators`, with one entry point per expression kind (`Evaluators.OfAny`, ...).
+- Expressions are partitioned into dialects over one framework (`Framework`), each declared by its kinds' roles;
+  translators are pairwise, declared as bidirectional pattern rules, and applied by co-traversal.
+- mbse-schemas' unions name their branches, and it takes no evaluator; a constraint
+  about a value is evaluated with it bound to `this`. Each dialect's union of meta-schemas names its branches by the kinds' tags.
+- Evaluation is three-valued (Kleene), never coerces, and reads properties with `get(object, name)`; variables are
+  bound by `OfLet` or by the caller's scope. `Writer`s build expressions with methods only (no operator overloading), so
+  both bindings read the same.
 
 - Basic compares everything but reference objects deeply, through the visitor protocols, as mbse-schemas' equality
   does under a schema: value objects, union and intersection values, records and collections are equal when what each
