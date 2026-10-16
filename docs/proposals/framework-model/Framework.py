@@ -62,21 +62,21 @@ def framework(m) -> None:
         lambda t, name=name, schema=schema: t.name(name).type([schema]) for name, schema in kinds.items()
     ]))
 
-    # --- The expression: the reference object that holds a term, which is all that is linked (HasSchema, requires) ---
+    # --- An expression's root: the reference object holding its term, all that is linked (HasSchema, requires) ---
 
     HasSchema = m.Schemas.Relation(lambda r: (
         r
         .name("Expressions.Framework.HasSchema")
-        .links(_links("expression", "schema"))
-        .uniques("expression")
+        .links(_links("root", "schema"))
+        .uniques("root")
     ))
     m.Schemas.Object(lambda o: (
         o
-        .name("Expressions.Framework.Expression")
+        .name("Expressions.Framework.Root")
         .ref(True)
-        .description("An expression: its term, a value; the one object other packages link")
+        .description("An expression's root: its term, a value; the one object other packages link")
         .properties([term("term")])
-        .adjacencies([lambda t: t.name("schema").relation([HasSchema]).me("expression")])
+        .adjacencies([lambda t: t.name("schema").relation([HasSchema]).me("root")])
     ))
 
     # --- Functions: signatures, each formal and the result typed by a schema; several may share a name ---
@@ -124,7 +124,7 @@ def framework(m) -> None:
         .adjacencies([lambda t: t.name("implements").relation([Implements]).me("intrinsic")])
     ))
 
-    # --- Domains, and the schemas expressions and scalars have: the meta-schemas extended, named from both ends ---
+    # --- Domains, reached in two steps (decision 21): a root has a schema, a scalar schema a domain; named both ways ---
 
     HasDomain = m.Schemas.Relation(lambda r: r.name("Expressions.Framework.HasDomain").links(_links("schema", "domain")).uniques("schema"))
     m.Schemas.Object(lambda o: (
@@ -138,7 +138,7 @@ def framework(m) -> None:
     m.Schemas.Object(B.Meta.Type, lambda o: o.adjacencies([  # every kind of type: scalar, object, container, ...
         lambda t: t.name("formals").relation([FormalType]).me("schema"),
         lambda t: t.name("results").relation([HasResult]).me("schema"),
-        lambda t: t.name("expressions").relation([HasSchema]).me("schema"),
+        lambda t: t.name("roots").relation([HasSchema]).me("schema"),
     ]))
     m.Schemas.Object(B.OfScalar.Schema, lambda o: o.adjacencies([lambda t: t.name("domain").relation([HasDomain]).me("schema")]))
 

@@ -12,12 +12,12 @@ each dialect extend mbse-schemas' framework once per process (`Builders.extend`)
 |---|---|
 | [Framework.py](Framework.py) | the framework's schemas: terms and expressions, functions, intrinsics, values, domains, and the meta-schemas extended |
 | [Basic.py](Basic.py) | Basic: its values, its vocabulary (domains, functions, intrinsics), and `x + 1 > 0` built as an expression |
-| [check.py](check.py) | runs both: 19 schemas valid; the expression built, valid, one mutation, and a snapshot that round-trips |
+| [check.py](check.py) | runs both: 19 schemas valid; the expression built and valid, one definition, its domain reached through its root, and a snapshot that round-trips |
 
 ## The model
 
-- **Terms are values; an expression is a reference object holding one** (decision 13, as revised). `Expression` is the
-  one object other packages link: `HasSchema` annotates it, never a subterm, and mbse-patterns' `requires` will link
+- **Terms are values; an expression is a reference object holding one, its root** (decision 13, as revised). `Root` is
+  the one object other packages link: `HasSchema` annotates it, never a subterm, and mbse-patterns' `requires` will link
   it. Its `term` is a value of `Term`, the union of the kinds (decision 3): `literal` (a `Value`), `variable` (a name),
   `call` (a function's name and a list of terms), `let`, and `map` and `reduce` over containers (decision 13). `Term`
   holds itself, through a kind's terms. `x + 1 > 0` is one mutation in a snapshot:
@@ -37,29 +37,24 @@ each dialect extend mbse-schemas' framework once per process (`Builders.extend`)
   time under the intrinsic's name, since no model holds code (decision 9).
 - **Values**: a literal holds a `Value`, a value object each dialect extends with a property per scalar it has; Basic
   adds `AsIntValue`, `AsFloatValue`, `AsStrValue`, `AsBoolValue` and `AsBytesValue`, as you named them.
-- **Domains and schemas**: `Domain` is a dialect's scalar domain and `HasDomain` links a scalar schema to it;
-  `HasSchema` links an expression to the schema it has. Both are named from the schema's end too (decision 17), so they
-  extend the meta-schemas (`Schemas.OfScalar.Schema`'s `domain`; every type's `expressions`, `formals` and `results`); a
-  store's entries linking a framework schema (a domain of `Schemas.OfInt`) are its own (decision 19).
+- **Domains, in two steps** (decision 21): a root has a schema (`HasSchema`), and a scalar schema a domain
+  (`HasDomain`), a `Domain` being a dialect's scalar domain, an object. `x + 1 > 0`'s root has `Schemas.OfBool`, whose
+  domain in Basic is `bool`. Both relations are named from the schema's end too (decision 17), so they extend the
+  meta-schemas (`Schemas.OfScalar.Schema`'s `domain`; every type's `roots`, `formals` and `results`); a store's entries
+  linking a framework schema (a domain of `Schemas.OfInt`) are its own (decision 19).
 
-## For your review
+## Decided in review
 
-1. **The vocabulary is data, installed in each store, and it is most of a snapshot.** Basic's domains, functions and
-   intrinsics are objects of the framework's schemas, which `Builders.extend` cannot make process-wide (it holds
-   schemas, not data). So `install(store)` builds them in a store, and a snapshot writes them: 32 of the 33 mutations of
-   `x + 1 > 0`. Since a call names its function, nothing in an expression links the vocabulary, so a store might not
-   write it at all: a store connection's handshake that names the dialects both sides install, or framework data, held
-   by every store as framework schemas are.
-2. **Domains as objects, or as scalar schemas.** This follows the Decided section (`HasDomain(schema=Schemas.OfScalar.Schema,
-   domain=Expressions.Framework.Domain)`). Your sketch of 14 October in `Framework/Terms.py` (uncommitted, in the
-   `overhauls/meta-schemas` workspace) says instead "A dialect's Domains defines a vocabulary of (scalar) domains ... that
-   refine Schemas.OfScalar": domains would then be schemas, framework-wide, with nothing to install for them.
-3. **Formals are objects.** `HasFormal(function, name, schema)` became `Function` →`HasFormal` (`index`)→ `Formal`
-   (`name`) →`FormalType`→ schema, since a meta-schema's adjacency (the schema's `formals`) is to a relation of two links
-   and no properties (decision 18).
+- The vocabulary (decision 20): a store connection's handshake names the dialects both sides install, and a snapshot
+  writes their vocabulary only where the handshake fails. Until the handshake exists, a snapshot writes it: 32 of the
+  34 mutations of `x + 1 > 0`.
+- Domains are reached in two steps, through the root (decision 21), and stay objects.
+- Formals are objects (decision 22), a compromise with the limit on a meta-schema's adjacencies (decision 18).
 
 ## Not drafted yet
 
+- The handshake (decision 20), on a store connection, in mbse-schemas: which dialects each side installs, and
+  the vocabulary's mutations left out of a snapshot when they agree.
 - Bindings (decision 6): `OfApply` and its arguments, and parameters that denote domains (decision 14), with how a
   domain carries a size (decision 4).
 - Level 2 bounds on a type parameter (decision 15, planned).

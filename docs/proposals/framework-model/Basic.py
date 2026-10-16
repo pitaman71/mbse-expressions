@@ -60,7 +60,7 @@ def install(store) -> dict[str, Any]:
 
 
 def example(store) -> Any:
-    """`x + 1 > 0`, written `lt(0, add(x, 1))`: an expression, a reference object, holding one nested value, its term;
+    """`x + 1 > 0`, written `lt(0, add(x, 1))`: an expression's root, a reference object, holding one nested value, its term;
     each call names its function, which binding resolves against the vocabulary by name and arguments' types."""
 
     def literal(value: int):
@@ -82,7 +82,7 @@ def example(store) -> Any:
         )))
 
     term = call("lt", literal(0), call("add", variable("x"), literal(1)))
-    return store.Expressions.Framework.Expression(lambda e: e.term(lambda p: p.as_value(term)))
+    return store.Expressions.Framework.Root(lambda r: r.term(lambda p: p.as_value(term)).schema([B.Meta.OfBool]))
 
 
 def install_dialect() -> None:

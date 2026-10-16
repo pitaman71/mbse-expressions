@@ -18,12 +18,14 @@ from mbse.Schemas.Framework import Builders as B, Plain, Validators  # noqa: E40
 Basic.install_dialect()
 store = B.Store()
 Basic.install(store)
-expression = Basic.example(store)
+root = Basic.example(store)
 schemas = [store.registered(name) for name in store.names() if name.startswith("Expressions.")]
 assert all(schema.validate() == [] for schema in schemas), [schema.validate() for schema in schemas]
-assert Validators.Validate(store).Reachable(store.registered("Expressions.Framework.Expression"), expression) == []
-written = [m for m in Plain.ToPlain(store).Snapshot() if "Expressions.Framework.Expression/" in str(m)]
-assert len(written) == 1  # one mutation: the expression, its term nested in it
+assert Validators.Validate(store).Reachable(store.registered("Expressions.Framework.Root"), root) == []
+written = [m for m in Plain.ToPlain(store).Snapshot() if "Expressions.Framework.Root/" in str(m) and "exists" in m]
+assert len(written) == 1  # one definition: the root, its term nested in it
+schema = root.schema[0].schema  # the root's schema, then its domain: two steps (decision 21)
+assert [e.domain.name.get() for e in B.OfScalar.Builder(schema, False, store).domain] == ["bool"]
 log = Plain.ToPlain(store).Snapshot()
 back = B.Store()
 Plain.FromPlain(back).Snapshot(log)
