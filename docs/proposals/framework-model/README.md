@@ -11,8 +11,9 @@ each dialect extend mbse-schemas' framework once per process (`Builders.extend`)
 | File | What it drafts |
 |---|---|
 | [Framework.py](Framework.py) | the framework's schemas: terms and expressions, functions, intrinsics, values, domains, and the meta-schemas extended |
-| [Basic.py](Basic.py) | Basic: its values, its vocabulary (domains, functions, intrinsics), and `x + 1 > 0` built as an expression |
-| [check.py](check.py) | runs both: 19 schemas valid; the expression built and valid, one definition, its domain reached through its root, and a snapshot that round-trips |
+| [Bindings.py](Bindings.py) | parameters, bindings and sizes: what moves here from mbse-schemas (decisions 4, 6 and 14) |
+| [Basic.py](Basic.py) | Basic: its values, its vocabulary (domains, functions, intrinsics; `int`'s `width`), `x + 1 > 0`, and sized and bound schemas |
+| [check.py](check.py) | runs them: 26 schemas valid; the expression built and valid, one definition, its domain reached through its root, each instantiation's bindings, and a snapshot that round-trips |
 
 ## The model
 
@@ -43,6 +44,31 @@ each dialect extend mbse-schemas' framework once per process (`Builders.extend`)
   meta-schemas (`Schemas.OfScalar.Schema`'s `domain`; every type's `roots`, `formals` and `results`); a store's entries
   linking a framework schema (a domain of `Schemas.OfInt`) are its own (decision 19).
 
+## Parameters, bindings and sizes
+
+What moves here from mbse-schemas: its value parameters (decision 14), its applications and their arguments (decision 6),
+and the sizes of its scalars (decision 4). mbse-schemas keeps the parameters that denote schemas (`List[T]`).
+
+- **A schema or a domain declares value parameters** (`value_parameters`, through `HasParameter`), each a `Parameter`,
+  named, ranging over a domain (`Ranges`).
+- **An instantiation binds them**, each `Binding` linking a parameter and its value, an expression's root, whose term may
+  name the parameters in scope. An instantiation is a refinement, a named one (`Square` refines `Matrix`, binding
+  `rows = n, cols = n`), or a use (the property `Board.grid`, typed `Matrix`, binding `rows = 8` and leaving `cols`
+  unbound), through `HasBinding`: every type and every typed member (property, branch, part) has `bindings`.
+- **A size is a binding of a domain's parameter.** Basic's `int` declares `width`; `Int32` has the domain `int` and binds
+  `width = 32`, and `Word` declares `w` and binds `width = w`. A scalar without a domain is plain data, sized by its
+  token's default (decision 4), so codegen reads it without mbse-expressions.
+
+For your review:
+
+1. **Refinement replaces `OfApply`.** An application was a kind of schema, so a property could be typed by one; an
+   object of mbse-expressions cannot type a property. So a named application becomes a refinement that binds its
+   parameters, and an anonymous one a use that binds them. Step 2 then removes `OfApply`, its arguments and
+   `ArgumentTerm` from mbse-schemas, rather than moving them.
+2. **The member is `value_parameters`**, since `parameters` is mbse-schemas' own, for the parameters that denote schemas.
+3. **A binding's value is a root of its own**: each binding is two reference objects and their entries, so bindings
+   weigh in a snapshot (94 mutations for these examples and `x + 1 > 0`, with Basic's vocabulary).
+
 ## Decided in review
 
 - The vocabulary (decision 20): a store connection's handshake names the dialects both sides install, and a snapshot
@@ -55,8 +81,6 @@ each dialect extend mbse-schemas' framework once per process (`Builders.extend`)
 
 - The handshake (decision 20), on a store connection, in mbse-schemas: which dialects each side installs, and
   the vocabulary's mutations left out of a snapshot when they agree.
-- Bindings (decision 6): `OfApply` and its arguments, and parameters that denote domains (decision 14), with how a
-  domain carries a size (decision 4).
 - Level 2 bounds on a type parameter (decision 15, planned).
 - The other dialects, which add their kinds to `Term` (a union extended by its branches) and extend `Value` and the
   vocabulary; and what `map` and `reduce` read (containers of scalars, decision 13).
