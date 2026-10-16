@@ -5,7 +5,7 @@
 
 The answer to the open question "The framework and dialects as model" (EXPRESSIONS.md), drafted for review before
 any code, as decided. It follows mbse-schemas' [Schema extension](https://github.com/pitaman71/mbse-schemas/blob/main/docs/SCHEMA_EXTENSION.md),
-whose Decided section records what moves here, and is written in mbse-schemas' builders (0.12.2): the framework and
+whose Decided section records what moves here, and is written in mbse-schemas' builders (0.13.0), fluently: the framework and
 each dialect extend mbse-schemas' framework once per process (`Builders.extend`), so every store holds their schemas.
 
 | File | What it drafts |
@@ -13,7 +13,7 @@ each dialect extend mbse-schemas' framework once per process (`Builders.extend`)
 | [Framework.py](Framework.py) | the framework's schemas: terms and expressions, functions, intrinsics, values, domains, and the meta-schemas extended |
 | [Bindings.py](Bindings.py) | parameters, bindings and sizes: what moves here from mbse-schemas (decisions 4, 6 and 14) |
 | [Basic.py](Basic.py) | Basic: its values, its vocabulary (domains, functions, intrinsics; `int`'s `width`), `x + 1 > 0`, and sized and bound schemas |
-| [check.py](check.py) | runs them: 26 schemas valid; the expression built and valid, one definition, its domain reached through its root, each instantiation's bindings, and a snapshot that round-trips |
+| [check.py](check.py) | runs them: 27 schemas valid; the expression built and valid, one definition, its domain reached through its root, each instantiation's bindings, and a snapshot that round-trips |
 
 ## The model
 
@@ -67,7 +67,14 @@ For your review:
    `ArgumentTerm` from mbse-schemas, rather than moving them.
 2. **The member is `value_parameters`**, since `parameters` is mbse-schemas' own, for the parameters that denote schemas.
 3. **A binding's value is a root of its own**: each binding is two reference objects and their entries, so bindings
-   weigh in a snapshot (94 mutations for these examples and `x + 1 > 0`, with Basic's vocabulary).
+   weigh in a snapshot (98 mutations for these examples and `x + 1 > 0`, with Basic's vocabulary).
+
+4. **A binding is written from its own end**, naming its site (`F.Binding(lambda b: b.site([Int32]).parameter([width])
+   .value([lambda r: ...]))`), since a schema's extension adjacency (`Int32.bindings`) links only objects that exist:
+   its far end has no builder in the meta-schemas' builders, so building the binding inline from the schema would need
+   one in mbse-schemas. Everything else is written in place, through the visitors, with no constructor nested in a
+   chain: a term through its root (`r.term(lambda t: t.call(...))`, as mbse-schemas 0.13.0 lets a property of one kind
+   answer its members), a call's arguments as callbacks, and a function's formals and intrinsics from the function.
 
 ## Decided in review
 
