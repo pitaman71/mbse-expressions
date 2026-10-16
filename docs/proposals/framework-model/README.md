@@ -10,57 +10,61 @@ each dialect extend mbse-schemas' framework once per process (`Builders.extend`)
 
 | File | What it drafts |
 |---|---|
-| [Framework.py](Framework.py) | the framework's schemas: terms, functions, intrinsics, values, domains, and the meta-schemas extended |
-| [Basic.py](Basic.py) | Basic: its values, its vocabulary (domains, functions, intrinsics), and `x + 1 > 0` built as data |
-| [check.py](check.py) | runs both: 24 schemas valid; the expression built, valid, and a snapshot that round-trips |
+| [Framework.py](Framework.py) | the framework's schemas: terms and expressions, functions, intrinsics, values, domains, and the meta-schemas extended |
+| [Basic.py](Basic.py) | Basic: its values, its vocabulary (domains, functions, intrinsics), and `x + 1 > 0` built as an expression |
+| [check.py](check.py) | runs both: 19 schemas valid; the expression built, valid, one mutation, and a snapshot that round-trips |
 
 ## The model
 
-- **Terms are reference objects** (decision 13), each kind an object schema: `Literal` (a `Value`), `Variable` (a
-  name), `Call`, `Let`, `Map` and `Reduce` (quantifiers over containers, decision 13). Every relation between terms has
-  two links and is named from both ends (decision 17): `Arguments` (a call's, with an `index`), `BoundValue`, `Body`,
-  `Over` and `Initial`.
+- **Terms are values; an expression is a reference object holding one** (decision 13, as revised). `Expression` is the
+  one object other packages link: `HasSchema` annotates it, never a subterm, and mbse-patterns' `requires` will link
+  it. Its `term` is a value of `Term`, the union of the kinds (decision 3): `literal` (a `Value`), `variable` (a name),
+  `call` (a function's name and a list of terms), `let`, and `map` and `reduce` over containers (decision 13). `Term`
+  holds itself, through a kind's terms. `x + 1 > 0` is one mutation in a snapshot:
+
+  ```json
+  {"term": {"call": {"function": "lt", "arguments": [{"literal": {"value": {"AsIntValue": 0}}},
+    {"call": {"function": "add", "arguments": [{"variable": {"name": "x"}}, {"literal": {"value": {"AsIntValue": 1}}}]}}]}}}
+  ```
+- **A call names its function** ("call terms may name their function"), and binding resolves the name and the
+  arguments' types against the vocabulary (decision 11). Variables are names, bound by an enclosing binder or free
+  where the dialect permits (decision 10).
 - **Functions are signatures** (decision 11): a `Function` is named, has `Formal`s, ordered, each typed by a schema
-  (`FormalType`), and a result (`HasResult`); several functions may share a name, and a call binds to one by its name and
-  its arguments' types. At level 0 (decision 15) a formal may be untyped: the intrinsics registered for it are its
-  constraint. `Basic.add` is `add(a, b)`, untyped; `lt` and `not` give a `Schemas.OfBool`.
+  (`FormalType`), and a result (`HasResult`); several functions may share a name. At level 0 (decision 15) a formal may
+  be untyped: the intrinsics registered for it are its constraint. `Basic.add` is `add(a, b)`, untyped; `lt` and `not`
+  give a `Schemas.OfBool`.
 - **Intrinsics** are named reference objects implementing functions (`Implements`); the native code is registered at run
   time under the intrinsic's name, since no model holds code (decision 9).
 - **Values**: a literal holds a `Value`, a value object each dialect extends with a property per scalar it has; Basic
   adds `AsIntValue`, `AsFloatValue`, `AsStrValue`, `AsBoolValue` and `AsBytesValue`, as you named them.
-- **Domains and schemas**: `Domain` is a dialect's scalar domain, `HasDomain` links a scalar schema to it, and
-  `HasSchema` links a term to the schema it has. Both are named from the schema's end too, so they extend the
-  meta-schemas (`Schemas.OfScalar.Schema`'s `domain`; every type's `terms`, `formals` and `results`), as decision 17
-  requires; a store's entries linking a framework schema (a domain of `Schemas.OfInt`) are its own (decision 19).
+- **Domains and schemas**: `Domain` is a dialect's scalar domain and `HasDomain` links a scalar schema to it;
+  `HasSchema` links an expression to the schema it has. Both are named from the schema's end too (decision 17), so they
+  extend the meta-schemas (`Schemas.OfScalar.Schema`'s `domain`; every type's `expressions`, `formals` and `results`); a
+  store's entries linking a framework schema (a domain of `Schemas.OfInt`) are its own (decision 19).
 
 ## For your review
 
-1. **Kinds share a base by refinement, not a union.** Decision 3 keeps "Unions for kinds", but a union's values are
-   value objects, and a term is a reference object; a link's types are its adjacencies'. So every kind refines `Term`,
-   which declares once the relations any term stands in (`argument_of`, `body_of`, ...). One refinement, one parent.
-   Is that acceptable for kinds, with unions kept for values?
-2. **The vocabulary is data, installed in each store.** Basic's domains, functions and intrinsics are objects of the
-   framework's schemas, which `Builders.extend` cannot make process-wide (it holds schemas, not data). So `install(store)`
-   builds them in a store, and a snapshot writes them: 32 of the 41 mutations for `x + 1 > 0` are Basic's vocabulary.
-   Alternatives: a store connection's handshake that assumes an installed vocabulary and does not write it; or
-   framework data, held by every store as framework schemas are.
-3. **Domains as objects, or as scalar schemas.** This follows the Decided section (`HasDomain(schema=Schemas.OfScalar.Schema,
+1. **The vocabulary is data, installed in each store, and it is most of a snapshot.** Basic's domains, functions and
+   intrinsics are objects of the framework's schemas, which `Builders.extend` cannot make process-wide (it holds
+   schemas, not data). So `install(store)` builds them in a store, and a snapshot writes them: 32 of the 33 mutations of
+   `x + 1 > 0`. Since a call names its function, nothing in an expression links the vocabulary, so a store might not
+   write it at all: a store connection's handshake that names the dialects both sides install, or framework data, held
+   by every store as framework schemas are.
+2. **Domains as objects, or as scalar schemas.** This follows the Decided section (`HasDomain(schema=Schemas.OfScalar.Schema,
    domain=Expressions.Framework.Domain)`). Your sketch of 14 October in `Framework/Terms.py` (uncommitted, in the
    `overhauls/meta-schemas` workspace) says instead "A dialect's Domains defines a vocabulary of (scalar) domains ... that
-   refine Schemas.OfScalar": domains would then be schemas, framework-wide, with no vocabulary to install for them.
-4. **Formals are objects.** `HasFormal(function, name, schema)` became `Function` →`HasFormal` (`index`)→ `Formal`
+   refine Schemas.OfScalar": domains would then be schemas, framework-wide, with nothing to install for them.
+3. **Formals are objects.** `HasFormal(function, name, schema)` became `Function` →`HasFormal` (`index`)→ `Formal`
    (`name`) →`FormalType`→ schema, since a meta-schema's adjacency (the schema's `formals`) is to a relation of two links
    and no properties (decision 18).
-5. **Variables refer by name**, bound or free (decision 10). A bound variable could link its binder instead, as P-015
-   prefers for references; a free one has none to link.
 
 ## Not drafted yet
 
 - Bindings (decision 6): `OfApply` and its arguments, and parameters that denote domains (decision 14), with how a
   domain carries a size (decision 4).
 - Level 2 bounds on a type parameter (decision 15, planned).
-- The other dialects, which refine `Term` with their kinds and extend `Value` and the vocabulary; and what `Map` and
-  `Reduce` read (containers of scalars, decision 13).
+- The other dialects, which add their kinds to `Term` (a union extended by its branches) and extend `Value` and the
+  vocabulary; and what `map` and `reduce` read (containers of scalars, decision 13).
 - Evaluators, printers and parsers, through the visitor protocol (decision 9).
 
 ---

@@ -17,10 +17,13 @@ from mbse.Schemas.Framework import Builders as B, Plain, Validators  # noqa: E40
 
 Basic.install_dialect()
 store = B.Store()
-term = Basic.example(store, Basic.install(store))
+Basic.install(store)
+expression = Basic.example(store)
 schemas = [store.registered(name) for name in store.names() if name.startswith("Expressions.")]
 assert all(schema.validate() == [] for schema in schemas), [schema.validate() for schema in schemas]
-assert Validators.Validate(store).Reachable(store.registered("Expressions.Framework.Call"), term) == []
+assert Validators.Validate(store).Reachable(store.registered("Expressions.Framework.Expression"), expression) == []
+written = [m for m in Plain.ToPlain(store).Snapshot() if "Expressions.Framework.Expression/" in str(m)]
+assert len(written) == 1  # one mutation: the expression, its term nested in it
 log = Plain.ToPlain(store).Snapshot()
 back = B.Store()
 Plain.FromPlain(back).Snapshot(log)

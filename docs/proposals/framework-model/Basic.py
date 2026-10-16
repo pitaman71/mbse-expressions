@@ -27,7 +27,8 @@ def dialect(m) -> None:
 
 
 def install(store) -> dict[str, Any]:
-    """Builds Basic's vocabulary in `store`: a domain per scalar, and functions, each implemented by an intrinsic."""
+    """Builds Basic's vocabulary in `store`: a domain per scalar, and functions, each implemented by an intrinsic.
+    Expressions do not link it: a call names its function, and binding finds it here."""
     domains = {
         name: store.Expressions.Framework.Domain(lambda d, name=name, schema=schema: (
             d.name(name.lower()).schemas(lambda a: a.insert(lambda e: e.schema(schema)))
@@ -58,22 +59,30 @@ def install(store) -> dict[str, Any]:
     return {"domains": domains, "functions": functions}
 
 
-def example(store, vocabulary: dict[str, Any]) -> Any:
-    """`x + 1 > 0`, written `lt(0, add(x, 1))`: terms are reference objects built in the store, linked by relations."""
-    framework = store.Expressions.Framework
+def example(store) -> Any:
+    """`x + 1 > 0`, written `lt(0, add(x, 1))`: an expression, a reference object, holding one nested value, its term;
+    each call names its function, which binding resolves against the vocabulary by name and arguments' types."""
 
-    def literal(value: int) -> Any:
-        return framework.Literal(lambda t: t.value(lambda v: v.as_object(lambda o: o.AsIntValue(value))))
+    def literal(value: int):
+        return lambda t: t.as_union(lambda u: u.literal(lambda o: o.value(lambda v: v.as_object(lambda x: x.AsIntValue(value)))))
 
-    def call(name: str, *arguments: Any) -> Any:
-        return framework.Call(lambda c: (
-            c
-            .function([vocabulary["functions"][name]])
-            .arguments(lambda a: [a.insert(lambda e, i=i, t=t: e.argument(t).index(i)) for i, t in enumerate(arguments)])
-        ))
+    def variable(name: str):  # free: Basic permits it, bound by the caller's scope
+        return lambda t: t.as_union(lambda u: u.variable(lambda o: o.name(name)))
 
-    x = framework.Variable(lambda v: v.name("x"))  # free: Basic permits it, bound by the caller's scope
-    return call("lt", literal(0), call("add", x, literal(1)))
+    def call(function: str, *arguments):
+        def written(container):
+            for index, argument in enumerate(arguments):
+                argument(container.at(index))
+            return container
+
+        return lambda t: t.as_union(lambda u: u.call(lambda o: (
+            o
+            .function(function)
+            .arguments(lambda a: a.as_value(lambda v: v.as_container(written)))
+        )))
+
+    term = call("lt", literal(0), call("add", variable("x"), literal(1)))
+    return store.Expressions.Framework.Expression(lambda e: e.term(lambda p: p.as_value(term)))
 
 
 def install_dialect() -> None:
