@@ -29,17 +29,25 @@ mbse-expressions 0.5.4 pins mbse-schemas 0.10.0, and against today's (0.26.2) it
 Its terms are bespoke dataclasses, its domain registry process-global, its vocabularies code: PRI-018 and PRI-019
 (mbse-basis `docs/PRINCIPLES.md`) list this repository as not yet applied.
 
-**Decisions held on unmerged branches.** Three branches hold the user's earlier decisions, not on `main`:
+**Unmerged branches.** Three branches hold earlier work, not on `main`; as the user decided (2026-10-28):
 
-- `overhauls/meta-schemas` (12 commits, to 2026-10-14): expressions under P-018, terms as value objects ("2 = Y"),
-  `Framework/Objects.py` reading data through `Readers` (it uses `as_identity`, since removed); it ends "mbse-expressions
-  stopped until then", the schema builders aligning with their meta-schemas, which mbse-schemas has since done.
-- `framework-model` (9 commits, to 2026-10-16): `docs/proposals/framework-model/`, the answer drafted to the open
-  question "The framework and dialects as model": terms as values held by an expression, a reference object, its root;
-  calls naming their functions; functions, intrinsics, values and domains; bindings. Written against mbse-schemas 0.13
-  (`Builders.extend`, gone).
-- `scalars` (2 commits, to 2026-10-08): "Basic is to be removed; dialects model standards (ISO/IEC 11404, IEEE 754)",
-  said to be recorded in mbse-schemas' FRAMEWORK.md, where it is not.
+- `framework-model` (9 commits, a draft of the framework and dialects as model, against mbse-schemas 0.13): "I think
+  framework-model was abandoned". Set aside; nothing below rests on it.
+- `overhauls/meta-schemas` (12 commits): this repository's half of mbse-schemas' meta-schemas overhaul, made beside it
+  in one workspace; mbse-schemas' half was merged (0.11.0), this half was not ("mbse-expressions stopped until then").
+  Its code adapts to 0.11's API, which mbse-schemas changed again through 0.26, so it is not taken. Its docs record the
+  user's decisions, taken onto `main` in stage 1: terms implement the visitor protocol and are value objects ("2 = Y");
+  expressions are built and read only through mbse-schemas; dialects as pure model, an open question under P-018.
+- `scalars` (2 commits, docs only): "scalars you may analyze and reapply unless porting is much easier and
+  risk-free". Reapplied by hand in stage 1, not cherry-picked: it cites mbse-schemas items that never landed (a
+  palette, `OfName`, scalars as placeholders: an experimental scalars overhaul, deferred in the workspace's TODO.md), and
+  mbse-schemas has since made the five basic scalars real and finer scalars domains here (Store overhaul, Decided, 8
+  and 9). What it records of the user's is kept, in the user's words: "I generally dislike semantics of datatypes and
+  operations leaking into the modeling language as currently built"; dialects hold the semantics of datatypes and
+  operations, one for each language's built-ins and for interoperation types such as IEEE 754; "the attempt to invent
+  a neutral type system was a mistake. we should model standards not invent them", so a neutral Basic "should be
+  removed", its expression kinds and three-valued evaluation kept; translation across languages belongs to transforms.
+  Removing Basic itself stays deferred, as the TODO.md has it (question 9).
 
 What the user decided about domains is in mbse-schemas: Store overhaul, Decided, 8, 9 ("all scalars are domains and
 users may define domains and dialects containing domains"; "a scalar schema can have > 1 domain"; "width is a property
@@ -48,37 +56,34 @@ of the domain, not the schema") and 22 (formats become domains); Schema extensio
 
 ## Questions for the user
 
-1. **The branches.** Take `framework-model`'s draft as the model to build (rebased on installs), `overhauls/meta-schemas`'
-   decisions with it, and record `scalars`' decision on `main`? Or set any of them aside? *Recommended: take all three;
-   the draft answers the model question this port needs.*
-2. **Model first, or mechanical first.** (a) Model first: the framework and each dialect defined by installs, as the
-   draft has them, terms stored in the store, the 96 cases rewritten to it. (b) Mechanical first: today's dataclass
-   terms kept as a runtime view over installed schemas, the model later. The user once stopped this work because the
-   model "cannot be written correctly without it" (`framework-model`). *Recommended: (a); (b) builds twice.*
-3. **How terms are stored.** (a) As the draft has them: one nested value, held by an expression, a reference object (its
-   root). (b) Counted reference objects linked by relations. (c) Today's, a reference object per term with
+1. **Model first, or mechanical first.** (a) Model first: the framework and each dialect defined by installs, terms
+   stored in the store, the 96 cases rewritten to it. (b) Mechanical first: today's dataclass terms kept as a runtime
+   view over installed schemas, the model later. *Recommended: (a); (b) builds twice, and PRI-018 forbids the bespoke
+   classes (b) keeps.*
+2. **How terms are stored.** (a) One nested value, held by an expression, a reference object (its root). (b) Counted
+   reference objects linked by relations. (c) Today's, a reference object per term with
    `Arguments`. *Recommended: (a), as Schema extension, Decided, 13 as revised and Object identity, Decided, 82 have it.*
-4. **How `Schemas.OfExpression` gains its terms.** Schema kinds are closed (Object identity, Decided, 75), so by
+3. **How `Schemas.OfExpression` gains its terms.** Schema kinds are closed (Object identity, Decided, 75), so by
    extension: (a) an extension adjacency from `Schemas.OfExpression` to the expression object holding the term (a
    relation of two links, as an extension's adjacency must be), as Parametrics links a definition to its parameters;
    (b) an extension property holding the term value. *Recommended: (a).*
-5. **What `DefinesDomains` is.** Proposed: a dialect is a reference object (as a module is), defining its domains by
+4. **What `DefinesDomains` is.** Proposed: a dialect is a reference object (as a module is), defining its domains by
    name, `Expressions.DefinesDomains(dialect, name, domain)`; a basic scalar has one domain or more through
    `HasDomain(schema, domain)` (Decided, 9); a domain is an object (Schema extension, Decided, 21). *Confirm or correct.*
-6. **How mbse-schemas' executor evaluates.** mbse-schemas cannot depend on this repository, and "takes an evaluator from
+5. **How mbse-schemas' executor evaluates.** mbse-schemas cannot depend on this repository, and "takes an evaluator from
    its caller rather than import one"; there is no global registry (its FRAMEWORK.md). (a) A protocol in mbse-schemas
    (`holds`, `assign`, `fold`), given to a store once (`Expressions.attach(store)`); the executor refuses as today where
    none is given. (b) Given per transaction (`store.transaction(..., evaluator=)`). *Recommended: (a).*
-7. **What a `requires` that evaluates to unknown does** (three-valued logic): drop the frame, keep it, or refuse.
+6. **What a `requires` that evaluates to unknown does** (three-valued logic): drop the frame, keep it, or refuse.
    *Recommended: drop; only a frame a constraint holds of passes.*
-8. **How far variables go now.** (a) Determined values only (computed, or equal to an expression); (b) and finite domains
+7. **How far variables go now.** (a) Determined values only (computed, or equal to an expression); (b) and finite domains
    (bool, enum); (c) constraint resolution (an open question here). *Recommended: (b), refusing the rest.*
-9. **A collecting reduce.** Over variables only now, or symbols too. *Recommended: variables first.*
-10. **Basic.** `scalars` says it is to be removed. Now, or after the port? *Recommended: after; keep Basic, the oracle the
-    tests are written in.*
-11. **Writers and `FromFunction`.** mbse-codegen-python uses the writers (`E.operation`, `E.Writer`). *Recommended:
-    keep `FromFunction` (the draft keeps it, giving a function); keep the writers until the dependents move.*
-12. **Scope now.** All six dialects and the twelve translators, ported with the model; vocabularies as data (functions,
+8. **A collecting reduce.** Over variables only now, or symbols too. *Recommended: variables first.*
+9. **Basic.** Removing it stays deferred (above); confirm it is kept through the port. *Recommended: keep it, the
+   oracle the tests are written in.*
+10. **Writers and `FromFunction`.** mbse-codegen-python uses the writers (`E.operation`, `E.Writer`). *Recommended:
+    keep `FromFunction`; keep the writers until the dependents move.*
+11. **Scope now.** All six dialects and the twelve translators, ported with the model; vocabularies as data (functions,
     formals, intrinsics: Schema extension, Decided, 9, 11, 22) and value parameters and `Parameters.Bind`/`Apply`
     (mbse-schemas' Parametrics) after. *Recommended as stated.*
 
@@ -87,13 +92,14 @@ of the domain, not the schema") and 22 (formats become domains); Schema extensio
 Each with both gates at 100% and the corpora regenerated; a stage touching mbse-schemas is made in a workspace
 (`polyrepo.py workspace <dir> --edit mbse-schemas`).
 
-1. **The decisions on `main`**: this proposal decided; the three branches' decisions recorded in EXPRESSIONS.md.
+1. **The decisions on `main`**: this proposal decided; `overhauls/meta-schemas`' decisions and `scalars`' recorded in
+   EXPRESSIONS.md, as above.
 2. **Schemas as installs, terms in the store** (with reads through `Readers`, since `Terms.py` fails at import until
    both are done): `Expressions.install` and each dialect's; `Bindings` gone; tests and corpora moved.
 3. **Domains**: `HasDomain`, `DefinesDomains`, domains as objects; dialect-scoped names in place of the global registry.
-4. **`OfExpression` and `OfConstraint` refined** (question 4).
+4. **`OfExpression` and `OfConstraint` refined** (question 3).
 5. **Evaluation in transactions** (mbse-schemas and here): the evaluator protocol, `requires` of a pattern and a
-   branch (a partition routing each frame), then variables and a collecting reduce (questions 6 to 9).
+   branch (a partition routing each frame), then variables and a collecting reduce (questions 5 to 8).
 6. **Tutorials, skill, README, EQUIVALENCE; release** (0.6.0). Then mbse-programs, mbse-patterns (re-scoped) and
    mbse-codegen-python.
 
