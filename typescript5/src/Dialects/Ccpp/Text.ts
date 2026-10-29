@@ -4,12 +4,13 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Repr } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
 import { SUFFIXES } from "./Expressions.js";
 
 const { repr } = Repr;
+const { ValueError } = Errors;
 
 // C's precedence, from loosest to tightest.
 const [CONDITIONAL, OR, AND, BITOR, BITXOR, BITAND, EQUALITY, RELATIONAL, SHIFT, ADDITIVE, MULTIPLICATIVE, UNARY, POSTFIX] =
@@ -46,6 +47,7 @@ function number(value: unknown): string {
 /** A constant: a bool, a string literal, or a number with its type's suffix or, for a type with none, a cast. */
 function constantText(attributes: ReadonlyMap<string, any>): [string, number] {
   const [value, ctype] = [attributes.get("value"), attributes.get("type") ?? null];
+  if (value === undefined) throw new ValueError("a ccpp_constant needs a value");
   if (typeof value === "boolean") return [value ? "true" : "false", POSTFIX];
   if (typeof value === "string" && ctype === null) return [text(value), POSTFIX];
   const written = number(value);

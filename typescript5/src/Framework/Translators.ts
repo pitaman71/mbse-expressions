@@ -252,7 +252,7 @@ class Direction {
     if (kind.role === Terms.REFERENCE) {
       free = new Set(kind.lexical && !kind.ambient.has(name) ? [name] : []);
     } else if (kind.role === Terms.BINDING || kind.role === Terms.QUANTIFIER) {
-      free = new Set([...(frees[0] ?? []), ...frees.slice(1).flatMap((f) => [...f].filter((n) => n !== name))]);
+      free = new Set([...(frees[0] as ReadonlySet<string>), ...frees.slice(1).flatMap((f) => [...f].filter((n) => n !== name))]);
     } else {
       const names = kind.role === Terms.IMPORT && kind.names !== null ? kind.names(form.attributes) : [];
       free = new Set(frees.flatMap((f) => [...f]).filter((n) => !names.includes(n)));

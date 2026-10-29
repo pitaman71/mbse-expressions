@@ -48,6 +48,8 @@ def _number(value: Any) -> str:
 def _constant(attributes: Mapping[str, Any]) -> tuple[str, int]:
     """A constant: a bool, a string literal, or a number with its type's suffix or, for a type with none, a cast."""
     value, ctype = attributes.get("value"), attributes.get("type")
+    if value is None:
+        raise ValueError("a ccpp_constant needs a value")
     if type(value) is bool:
         return ("true" if value else "false"), _POSTFIX
     if type(value) is str and ctype is None:
