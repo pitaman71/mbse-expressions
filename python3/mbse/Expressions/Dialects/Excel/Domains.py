@@ -2,9 +2,10 @@
 
 `Number` holds numbers (Excel has only doubles; a constant `18` is the number 18), `Text` holds text, `Logical` holds
 TRUE and FALSE, and `Errors` holds `Error` values such as `#FIELD!`, which formulas compute with rather than raise.
-A `Record` is what fields are read from: a mapping, or an object that writes its properties through `accept`, as
-Excel's data types are. `Scalar` is a number, text or logical. An array (a list) holds a list property's values,
-which `MAP`, `ROWS`, `INDEX`, `MATCH`, `SUM`, `MIN`, `MAX`, `UNIQUE`, `AND` and `OR` read.
+A `Record` is what fields are read from: a mapping, or a data object read through mbse-schemas' readers
+(`Framework.Objects`), as Excel's data types are. `Scalar` is a number, text or logical. An array (a list) holds a
+container property's values, which `MAP`, `ROWS`, `INDEX`, `MATCH`, `SUM`, `MIN`, `MAX`, `UNIQUE`, `AND` and `OR`
+read.
 """
 
 from __future__ import annotations
@@ -13,7 +14,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as D
+from mbse.Expressions.Framework import Domains as D, Objects
 from mbse.Expressions.Framework.Domains import Anything
 
 __all__ = ["Error", "Number", "Text", "Logical", "Errors", "Record", "Scalar", "Anything", "FUNCTIONS", "INFIX",
@@ -32,7 +33,7 @@ class Error:
 
 def is_record(value: Any) -> bool:
     """Whether fields can be read from `value`."""
-    return isinstance(value, Mapping) or callable(getattr(value, "accept", None))
+    return isinstance(value, Mapping) or Objects.is_object(value)
 
 
 Number = D.OfTypes("number", float, int)

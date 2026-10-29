@@ -1,8 +1,9 @@
 /**
  * Evaluators of the Excel dialect: compute a formula by Excel's rules.
  *
- * `Evaluators.OfAny(expression, scope)` binds names to numbers, text, logicals and records (mappings, or objects that
- * write their properties through `accept`). Values are `number`, `string` (text), `boolean` (logical) and
+ * `Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from: an `Expression`, its
+ * root) with names bound to numbers, text, logicals and records (mappings, or data objects read through mbse-schemas'
+ * readers, `Framework.Objects`). Values are `number`, `string` (text), `boolean` (logical) and
  * `Domains.Error`. Excel's rules apply, not Basic's:
  *
  * - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
@@ -11,8 +12,8 @@
  * - Two-valued logic: `AND` and `OR` evaluate every argument; numbers are true when nonzero, and text is `#VALUE!`.
  *   An array among their arguments gives its numbers and logicals, its text ignored; with no value at all, they are
  *   `#VALUE!`.
- * - Arrays: a list property's values (or a name's list) are an array, which operators do not take (`#VALUE!`). `MAP(xs,
- *   LAMBDA(p, body))` gives the body's value for each element, errors among them; `ROWS` counts elements (a single
+ * - Arrays: a container property's values (or a name's list) are an array, which operators do not take (`#VALUE!`).
+ *   `MAP(xs, LAMBDA(p, body))` gives the body's value for each element, errors among them; `ROWS` counts elements (a single
  *   value is one); `INDEX(xs, n)` is the element at `n`, from 1 and truncated, else `#REF!` (`#NUM!` for no number);
  *   `MATCH(x, xs, 0)` is the position of the first element equal to `x` (text ignoring case), else `#N/A`, and supports
  *   exact matching only (another match type is `#VALUE!`); `SUM`, `MIN` and `MAX` take an array's numbers, ignoring its
@@ -34,10 +35,14 @@
  * holds.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Evaluators.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Terms from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
@@ -59,9 +64,9 @@ function numberOf(value: unknown): unknown {
   return typeof value === "bigint" ? Number(value) : value;
 }
 
-/** A value as a formula reads it: a number as a double, and a list (a list property's too) as an array. */
+/** A value as a formula reads it: a number as a double, and a list (a container property's too) as an array. */
 function valueOf(value: unknown): unknown {
-  if (value instanceof Validators.ListRecord) return value.values.map(valueOf);
+  if (value instanceof Objects.Listed) return value.values.map(valueOf);
   if (Array.isArray(value)) return value.map(valueOf);
   return numberOf(value);
 }
@@ -95,19 +100,22 @@ export class Workbook extends S.Variables {
   }
 
   override lookup(reference: any): unknown {
-    if (reference.kind().KIND !== "cell") {
-      const [found, value] = this.find(reference.name);
+    const [tag, record] = Terms.kindOf(reference);
+    if (tag !== "excel_cell") {
+      const [found, value] = this.find(Terms.nameOf(reference));
       return found ? valueOf(value) : NAME;
     }
+    const attributes = Terms.attributesOf(record);
+    const [other, sheet] = [attributes.get("book") ?? null, attributes.get("sheet") ?? null];
     let book: Workbook = this;
-    if (reference.book !== null && reference.book !== this.name) {
-      const other = this.books.get(reference.book);
-      if (other === undefined) return REF;
-      book = other;
+    if (other !== null && other !== this.name) {
+      const found = this.books.get(other);
+      if (found === undefined) return REF;
+      book = found;
     }
-    const cells = book.sheets.get(reference.sheet ?? book.sheet);
+    const cells = book.sheets.get(sheet ?? book.sheet);
     if (cells === undefined) return REF;
-    const key = Expressions.address(reference.address) as string;
+    const key = Expressions.address(attributes.get("address")) as string;
     return cells.has(key) ? numberOf(cells.get(key)) : 0;
   }
 }
@@ -341,13 +349,15 @@ function field(args: F.Thunk[], node: any): unknown {
   if (isError(record)) return record;
   if (!Domains.is_record(record)) return VALUE;
   const fields = Domains.isMapping(record)
-    ? (record instanceof Map ? record : new Map(Object.entries(record))) : Validators.properties_of(record as never);
-  if (!fields.has(node.name)) return FIELD;
-  return valueOf(fields.get(node.name));
+    ? (record instanceof Map ? record : new Map(Object.entries(record))) : Objects.properties(record);
+  const name = Terms.attributesOf(Terms.kindOf(node)[1]).get("name");
+  if (!fields.has(name)) return FIELD;
+  return valueOf(fields.get(name));
 }
 
-const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
-  ["function", new Map<string, F.Implementation>([
+/** Evaluates the terms of the Excel dialect. */
+export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
+  ["call", new Map<string, F.Implementation>([
     ["AND", logic("AND", (truths) => truths.every(Boolean))], ["OR", logic("OR", (truths) => truths.some(Boolean))],
     ["NOT", not], ["IF", if_], ["ISERROR", (args) => isError((args[0] as F.Thunk)())],
     ...["BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT"].map((name) => [name, bit(name)] as [string, F.Implementation]),
@@ -355,18 +365,19 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
     ["ISNUMBER", (args) => typeof (args[0] as F.Thunk)() === "number"],
     ["SUM", aggregate("SUM", sum)], ["MIN", aggregate("MIN", extreme((a, b) => a < b))], ["MAX", aggregate("MAX", extreme((a, b) => a > b))],
   ])],
-  ["infix", new Map<string, F.Implementation>([
+  ["excel_infix", new Map<string, F.Implementation>([
     ["=", compare((o) => o === 0)], ["<>", compare((o) => o !== 0)],
     ["<", compare((o) => o < 0)], ["<=", compare((o) => o <= 0)],
     [">", compare((o) => o > 0)], [">=", compare((o) => o >= 0)],
     ["+", arithmetic((a, b) => a + b)], ["-", arithmetic((a, b) => a - b)], ["*", arithmetic((a, b) => a * b)],
   ])],
-  ["prefix", new Map<string, F.Implementation>([["-", negate]])],
-  ["field", field],
-  ["map", map],
+  ["excel_prefix", new Map<string, F.Implementation>([["-", negate]])],
+  ["excel_field", field],
+  ["excel_map", map],
 ]), { literal: numberOf, scope: (names) => new Workbook(names), extension: addIn });
 
-/** The value of a formula in a workbook, or with the defined names in an object. */
+/** The value of a formula (a term value, or anything `Terms.term` reads one from) in a workbook, or with the defined
+ * names in an object. */
 export function OfAny(expression: unknown, scope: Workbook | S.Bindings = {}): unknown {
-  return interpreter.run(Expressions.DIALECT.resolve(expression), scope);
+  return INTERPRETER.run(expression, scope);
 }

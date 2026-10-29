@@ -7,22 +7,24 @@ dialect that reads each case other than Basic's. Each implementation writes its 
 the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in
 lockstep: same cases, same values, same order of statements.
 
-The other dialects' cases (excel, ccpp, systemverilog) return with their dialects' port, stage 2b
+The other dialects' cases (ccpp, systemverilog) return with their dialects' port, stage 2b
 (docs/proposals/port): `_stage_2b` keeps them as they were written for the old API.
 """
 
 from __future__ import annotations
 
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import Basic, Latex, Matlab
+from mbse.Expressions.Dialects import Basic, Excel, Latex, Matlab
 from mbse.Expressions.Dialects.Basic import Domains, Expressions
+from mbse.Expressions.Dialects.Excel import Expressions as ExcelExpressions
 from mbse.Expressions.Dialects.Latex import Expressions as L
 from mbse.Expressions.Dialects.Python import Expressions as Python
 from mbse.Schemas.Framework import Builders
 
-CASES = ["expression", "python", "matlab", "latex", "domains", "collections"]
+CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections"]
 
-DIALECTS = {"python": Python.DIALECT, "matlab": Matlab.Expressions.DIALECT, "latex": L.DIALECT}
+DIALECTS = {"python": Python.DIALECT, "matlab": Matlab.Expressions.DIALECT, "excel": ExcelExpressions.DIALECT,
+            "latex": L.DIALECT}
 """The dialect that reads each case, where it is not Basic."""
 
 
@@ -34,12 +36,13 @@ def _named(name, domain):
 
 
 def build():
-    E, D = Expressions, Domains
+    E, D, X = Expressions, Domains, ExcelExpressions
     store = Builders.Store()
     store.transaction(Framework.install)
     store.transaction(Basic.install)
     store.transaction(Python.install)
     store.transaction(Matlab.install)
+    store.transaction(Excel.install)
     store.transaction(Latex.install)
 
     # --- expression: every kind and literal type, a let and its variable, an extension operation ---
@@ -94,22 +97,6 @@ def build():
         M.binary(".*", M.unary("~", M.call("isfield", this_, "email")), M.unary("-", 1.5))), M.index(M.arrayfun(
             "k", M.field(this_, "ports"), M.identifier("k")), 2)), True))
 
-    with store.transaction():
-        terms = {case: store.Expressions.Framework.Term(writer)
-                 for case, writer in [("expression", expression), ("python", python), ("matlab", matlab),
-                                      ("domains", domains), ("collections", collections), ("latex", latex)]}
-    Term = store.registered("Expressions.Framework.Term")
-    return {case: (Term, terms[case], store) for case in CASES}
-
-
-def _stage_2b():  # pragma: no cover - the old API's cases, to port with their dialects
-    from mbse.Expressions.Dialects.Ccpp import Expressions as Ccpp
-    from mbse.Expressions.Dialects.Excel import Expressions as Excel
-    from mbse.Expressions.Dialects.SystemVerilog import Expressions as SystemVerilog
-
-    E, X = Expressions, Excel
-    this = E.variable("this")
-
     # --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
     # a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
     this_, a = X.name("this"), X.name("a")
@@ -117,6 +104,19 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
         "IF", X.function("AND", X.infix(">=", a, 18), X.function("NOT", X.function("ISERROR", X.field(this_, "email")))),
         X.infix("-", X.infix("*", a, X.function("SUM", X.map_("q", X.field(this_, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
         X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")))
+
+    with store.transaction():
+        terms = {case: store.Expressions.Framework.Term(writer)
+                 for case, writer in [("expression", expression), ("python", python), ("matlab", matlab),
+                                      ("excel", excel), ("domains", domains), ("collections", collections),
+                                      ("latex", latex)]}
+    Term = store.registered("Expressions.Framework.Term")
+    return {case: (Term, terms[case], store) for case in CASES}
+
+
+def _stage_2b():  # pragma: no cover - the old API's cases, to port with their dialects
+    from mbse.Expressions.Dialects.Ccpp import Expressions as Ccpp
+    from mbse.Expressions.Dialects.SystemVerilog import Expressions as SystemVerilog
 
     # --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
     me = Ccpp.identifier("this")
@@ -134,7 +134,6 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
                   sv.cast(4, sv.vector("11111111", True, "h")))))
 
     return {
-        "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
         "ccpp": (Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders),
         "systemverilog": (SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders),
     }

@@ -1,7 +1,8 @@
 """Evaluators of the Excel dialect: compute a formula by Excel's rules, in Python.
 
-`Evaluators.OfAny(expression, scope)` binds names to numbers, text, logicals and records (mappings, or objects that
-write their properties through `accept`). Values are Python `float` (number), `str` (text), `bool` (logical) and
+`Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from: an `Expression`, its
+root) with names bound to numbers, text, logicals and records (mappings, or data objects read through mbse-schemas'
+readers, `Framework.Objects`). Values are Python `float` (number), `str` (text), `bool` (logical) and
 `Domains.Error`. Excel's rules apply, not Basic's:
 
 - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
@@ -10,8 +11,8 @@ write their properties through `accept`). Values are Python `float` (number), `s
 - Two-valued logic: `AND` and `OR` evaluate every argument; numbers are true when nonzero, and text is `#VALUE!`.
   An array among their arguments gives its numbers and logicals, its text ignored; with no value at all, they are
   `#VALUE!`.
-- Arrays: a list property's values (or a name's list) are an array, which operators do not take (`#VALUE!`). `MAP(xs,
-  LAMBDA(p, body))` gives the body's value for each element, errors among them; `ROWS` counts elements (a single value
+- Arrays: a container property's values (or a name's list) are an array, which operators do not take (`#VALUE!`).
+  `MAP(xs, LAMBDA(p, body))` gives the body's value for each element, errors among them; `ROWS` counts elements (a single value
   is one); `INDEX(xs, n)` is the element at `n`, from 1 and truncated, else `#REF!` (`#NUM!` for no number); `MATCH(x,
   xs, 0)` is the position of the first element equal to `x` (text ignoring case), else `#N/A`, and supports exact
   matching only (another match type is `#VALUE!`); `SUM`, `MIN` and `MAX` take an array's numbers, ignoring its text and
@@ -39,13 +40,12 @@ import re
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Evaluators as F, Objects, Symbolics as S, Terms
 
 from . import Domains, Expressions
 from .Domains import Error
 
-__all__ = ["OfAny", "Error", "Workbook"]
+__all__ = ["OfAny", "Error", "Workbook", "INTERPRETER"]
 
 _VALUE, _FIELD, _NAME, _REF, _NUM, _NA = (Error(code) for code in ("#VALUE!", "#FIELD!", "#NAME?", "#REF!", "#NUM!", "#N/A"))
 _BITS = 1 << 48
@@ -56,8 +56,8 @@ def _number_of(value: Any) -> Any:
 
 
 def _value(value: Any) -> Any:
-    """A value as a formula reads it: a number as a double, and a list (a list property's too) as an array."""
-    if isinstance(value, Validators.ListRecord):
+    """A value as a formula reads it: a number as a double, and a list (a container property's too) as an array."""
+    if isinstance(value, Objects.Listed):
         value = value.values
     if isinstance(value, (list, tuple)):
         return [_value(item) for item in value]
@@ -90,17 +90,20 @@ class Workbook(S.Variables):
         self.add_ins = {function.upper(): implementation for function, implementation in (add_ins or {}).items()}
 
     def lookup(self, reference: Any) -> Any:
-        if type(reference).KIND != "cell":
-            return _value(self.values[reference.name]) if reference.name in self.values else _NAME
-        book = self
-        if reference.book is not None and reference.book != self.name:
-            if reference.book not in self.books:
+        tag, record = Terms.kind_of(reference)
+        if tag != "excel_cell":
+            name = Terms.name_of(reference)
+            return _value(self.values[name]) if name in self.values else _NAME
+        attributes = Terms.attributes_of(record)
+        book, other, sheet = self, attributes.get("book"), attributes.get("sheet")
+        if other is not None and other != self.name:
+            if other not in self.books:
                 return _REF
-            book = self.books[reference.book]
-        cells = book.sheets.get(reference.sheet or book.sheet)
+            book = self.books[other]
+        cells = book.sheets.get(sheet or book.sheet)
         if cells is None:
             return _REF
-        return _number_of(cells.get(Expressions.address(reference.address), 0.0))
+        return _number_of(cells.get(Expressions.address(attributes["address"]), 0.0))  # type: ignore[arg-type]
 
 
 def _add_in(name: str, arguments: list[F.Thunk], node: Any, scope: Workbook) -> Any:
@@ -333,14 +336,15 @@ def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
         return record
     if not Domains.is_record(record):
         return _VALUE
-    fields = record if isinstance(record, Mapping) else Validators.properties_of(record)
-    if node.name not in fields:
+    fields = record if isinstance(record, Mapping) else Objects.properties(record)
+    name = Terms.attributes_of(Terms.kind_of(node)[1])["name"]
+    if name not in fields:
         return _FIELD
-    return _value(fields[node.name])
+    return _value(fields[name])
 
 
-_interpreter = F.Interpreter(Expressions.DIALECT, {
-    "function": {
+INTERPRETER = F.Interpreter(Expressions.DIALECT, {
+    "call": {
         "AND": _logic("AND", all), "OR": _logic("OR", any), "NOT": _not, "IF": _if,
         "ISERROR": lambda arguments, node, scope: isinstance(arguments[0](), Error),
         **{name: _bit(name) for name in ("BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT")},
@@ -349,19 +353,23 @@ _interpreter = F.Interpreter(Expressions.DIALECT, {
         "SUM": _aggregate("SUM", _sum), "MIN": _aggregate("MIN", lambda numbers: min(numbers, default=0.0)),
         "MAX": _aggregate("MAX", lambda numbers: max(numbers, default=0.0)),
     },
-    "infix": {
+    "excel_infix": {
         "=": _compare(lambda a, b: a == b), "<>": _compare(lambda a, b: a != b),
         "<": _compare(lambda a, b: a < b), "<=": _compare(lambda a, b: a <= b),
         ">": _compare(lambda a, b: a > b), ">=": _compare(lambda a, b: a >= b),
         "+": _arithmetic(lambda a, b: a + b), "-": _arithmetic(lambda a, b: a - b),
         "*": _arithmetic(lambda a, b: a * b),
     },
-    "prefix": {"-": _negate},
-    "field": _field,
-    "map": _map,
+    "excel_prefix": {"-": _negate},
+    "excel_field": _field,
+    "excel_map": _map,
 }, literal=_number_of, scope=Workbook, extension=_add_in)
 
 
+"""Evaluates the terms of the Excel dialect."""
+
+
 def OfAny(expression: Any, scope: Workbook | Mapping[str, Any] | None = None) -> Any:
-    """The value of a formula in a workbook, or with the defined names in a mapping."""
-    return _interpreter(Expressions.DIALECT.resolve(expression), scope)
+    """The value of a formula (a term value, or anything `Terms.term` reads one from) in a workbook, or with the
+    defined names in a mapping."""
+    return INTERPRETER(expression, scope)

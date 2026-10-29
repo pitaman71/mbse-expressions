@@ -1,0 +1,76 @@
+let:
+  name: a
+  value:
+    excel_field:
+      name: age
+      value:
+        variable:
+          name: this
+  body:
+    call:
+      callable: IF
+      arguments:
+      - call:
+          callable: AND
+          arguments:
+          - excel_infix:
+              operator: '>='
+              left:
+                variable:
+                  name: a
+              right:
+                literal:
+                  value: 18
+          - call:
+              callable: NOT
+              arguments:
+              - call:
+                  callable: ISERROR
+                  arguments:
+                  - excel_field:
+                      name: email
+                      value:
+                        variable:
+                          name: this
+      - excel_infix:
+          operator: '-'
+          left:
+            excel_infix:
+              operator: '*'
+              left:
+                variable:
+                  name: a
+              right:
+                call:
+                  callable: SUM
+                  arguments:
+                  - excel_map:
+                      name: q
+                      array:
+                        excel_field:
+                          name: ports
+                          value:
+                            variable:
+                              name: this
+                      body:
+                        variable:
+                          name: q
+          right:
+            excel_cell:
+              address: B2
+              sheet: Sheet1
+      - excel_infix:
+          operator: '+'
+          left:
+            excel_prefix:
+              operator: '-'
+              operand:
+                excel_cell:
+                  address: C3
+                  sheet: Rates
+                  book: Book.xlsx
+          right:
+            literal:
+              value:
+                scalar:
+                  str: x

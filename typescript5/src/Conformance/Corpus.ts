@@ -8,7 +8,7 @@
  * against every other implementation's files (see the CONF test suite). Keep this module and
  * `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same cases, same values, same order of statements.
  *
- * The other dialects' cases (excel, ccpp, systemverilog) return with their dialects' port, stage 2b
+ * The other dialects' cases (ccpp, systemverilog) return with their dialects' port, stage 2b
  * (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
  */
 
@@ -19,6 +19,8 @@ import { Builders } from "@mbse/schemas/Framework";
 import * as Domains from "../Dialects/Basic/Domains.js";
 import * as Expressions from "../Dialects/Basic/Expressions.js";
 import * as Basic from "../Dialects/Basic/index.js";
+import * as ExcelExpressions from "../Dialects/Excel/Expressions.js";
+import * as Excel from "../Dialects/Excel/index.js";
 import * as L from "../Dialects/Latex/Expressions.js";
 import * as Latex from "../Dialects/Latex/index.js";
 import * as Matlab from "../Dialects/Matlab/index.js";
@@ -26,11 +28,12 @@ import * as Python from "../Dialects/Python/Expressions.js";
 import * as Framework from "../Framework/index.js";
 import type * as Terms from "../Framework/Terms.js";
 
-export const CASES = ["expression", "python", "matlab", "latex", "domains", "collections"] as const;
+export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections"] as const;
 
 /** The dialect that reads each case, where it is not Basic. */
 export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
-  ["python", Python.DIALECT], ["matlab", Matlab.Expressions.DIALECT], ["latex", L.DIALECT]]);
+  ["python", Python.DIALECT], ["matlab", Matlab.Expressions.DIALECT], ["excel", ExcelExpressions.DIALECT],
+  ["latex", L.DIALECT]]);
 
 /** A case: its root schema, its root term, and the store it is built in. */
 export type Case = [any, any, any];
@@ -42,12 +45,13 @@ function named<T extends Domains.Domain>(name: string, domain: T): T {
 }
 
 export function build(): Map<string, Case> {
-  const [E, D] = [Expressions, Domains];
+  const [E, D, X] = [Expressions, Domains, ExcelExpressions];
   const store: any = new Builders.Store();
   store.transaction(Framework.install);
   store.transaction(Basic.install);
   store.transaction(Python.install);
   store.transaction(Matlab.install);
+  store.transaction(Excel.install);
   store.transaction(Latex.install);
 
   // --- expression: every kind and literal type, a let and its variable, an extension operation ---
@@ -102,19 +106,6 @@ export function build(): Map<string, Case> {
     M.binary(".*", M.unary("~", M.call("isfield", thisM, "email")), M.unary("-", 1.5))), M.index(M.arrayfun(
       "k", M.field(thisM, "ports"), M.identifier("k")), 2n)), true));
 
-  const terms = store.transaction(() => new Map<string, any>(([["expression", expression], ["python", python],
-    ["matlab", matlab], ["domains", domains], ["collections", collections], ["latex", latex]] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
-  const Term = store.registered("Expressions.Framework.Term");
-  return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
-}
-
-/** The old API's cases, to port with their dialects (stage 2b); not called. */
-export async function stage2b(): Promise<Map<string, Case>> {
-  const [Ccpp, Excel, SystemVerilog]: any[] = await Promise.all([
-    import("../Dialects/Ccpp/Expressions.js"), import("../Dialects/Excel/Expressions.js"),
-    import("../Dialects/SystemVerilog/Expressions.js")]);
-  const X = Excel;
-
   // --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
   // a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
   const [thisX, aX] = [X.name("this"), X.name("a")];
@@ -122,6 +113,17 @@ export async function stage2b(): Promise<Map<string, Case>> {
     "IF", X.function("AND", X.infix(">=", aX, 18n), X.function("NOT", X.function("ISERROR", X.field(thisX, "email")))),
     X.infix("-", X.infix("*", aX, X.function("SUM", X.map_("q", X.field(thisX, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
     X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")));
+
+  const terms = store.transaction(() => new Map<string, any>(([["expression", expression], ["python", python],
+    ["matlab", matlab], ["excel", excel], ["domains", domains], ["collections", collections], ["latex", latex]] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
+  const Term = store.registered("Expressions.Framework.Term");
+  return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
+}
+
+/** The old API's cases, to port with their dialects (stage 2b); not called. */
+export async function stage2b(): Promise<Map<string, Case>> {
+  const [Ccpp, SystemVerilog]: any[] = await Promise.all([
+    import("../Dialects/Ccpp/Expressions.js"), import("../Dialects/SystemVerilog/Expressions.js")]);
 
   // --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
   const me = Ccpp.identifier("this");
@@ -139,7 +141,6 @@ export async function stage2b(): Promise<Map<string, Case>> {
       sv.cast(4n, sv.vector("11111111", true, "h")))));
 
   return new Map<string, Case>([
-    ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
     ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],
     ["systemverilog", [SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders]],
   ]);
