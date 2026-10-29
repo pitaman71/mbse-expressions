@@ -1,23 +1,24 @@
 """The conformance corpus: the same cases, built statement for statement in every implementation.
 
 `build()` returns `{case: (root schema, root term, store)}`: each case a term value of `Expressions.Framework.Term`,
-built in one store holding the framework's and Basic's installs, written nested. Each implementation writes its
+built in one store holding the framework's installs and its dialects', written nested. Each implementation writes its
 snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
 implementation's files (see the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in
 lockstep: same cases, same values, same order of statements.
 
-The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
+The other dialects' cases (python, matlab, excel, latex, systemverilog) return with their dialects' port, stage
 2b (docs/proposals/port): `_stage_2b` keeps them as they were written for the old API.
 """
 
 from __future__ import annotations
 
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import Basic
+from mbse.Expressions.Dialects import Basic, Ccpp
 from mbse.Expressions.Dialects.Basic import Domains, Expressions
+from mbse.Expressions.Dialects.Ccpp import Expressions as C
 from mbse.Schemas.Framework import Builders
 
-CASES = ["expression", "domains", "collections"]
+CASES = ["expression", "domains", "collections", "ccpp"]
 
 
 def _named(name, domain):
@@ -32,6 +33,7 @@ def build():
     store = Builders.Store()
     store.transaction(Framework.install)
     store.transaction(Basic.install)
+    store.transaction(Ccpp.install)
 
     # --- expression: every kind and literal type, a let and its variable, an extension operation ---
     this, age = E.variable("this"), E.variable("age")
@@ -61,15 +63,21 @@ def build():
     collections = E.let_("ports", this.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
         sizes.sum().le(ports.count())))
 
+    # --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+    me = C.identifier("this")
+    ccpp = C.conditional(C.binary("&&", C.unary("!", C.member(me, "a")), C.binary(
+        ">", C.subscript(C.member(me, "b", "->"), 0), C.constant(1.5, "float"))),
+        C.cast("uint8_t", C.call("f", 1)), C.constant(5, "unsigned int"))
+
     with store.transaction():
         terms = {case: store.Expressions.Framework.Term(writer)
-                 for case, writer in [("expression", expression), ("domains", domains), ("collections", collections)]}
+                 for case, writer in [("expression", expression), ("domains", domains), ("collections", collections),
+                                      ("ccpp", ccpp)]}
     Term = store.registered("Expressions.Framework.Term")
     return {case: (Term, terms[case], store) for case in CASES}
 
 
 def _stage_2b():  # pragma: no cover - the old API's cases, to port with their dialects
-    from mbse.Expressions.Dialects.Ccpp import Expressions as Ccpp
     from mbse.Expressions.Dialects.Excel import Expressions as Excel
     from mbse.Expressions.Dialects.Latex import Expressions as Latex
     from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
@@ -108,12 +116,6 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
     latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
         "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
 
-    # --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
-    me = Ccpp.identifier("this")
-    ccpp = Ccpp.conditional(Ccpp.binary("&&", Ccpp.unary("!", Ccpp.member(me, "a")), Ccpp.binary(
-        ">", Ccpp.subscript(Ccpp.member(me, "b", "->"), 0), Ccpp.constant(1.5, "float"))),
-        Ccpp.cast("uint8_t", Ccpp.call("f", 1)), Ccpp.constant(5, "unsigned int"))
-
     # --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
     # this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(this.unique().sum(q) with (q))) + 4'(8'shff)
     sv, that = SystemVerilog, SystemVerilog.identifier("this")
@@ -127,7 +129,6 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
         "python": (P.DIALECT.schema_of(python), python, P.Builders),
         "matlab": (M.DIALECT.schema_of(matlab), matlab, M.Builders),
         "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
-        "ccpp": (Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders),
         "systemverilog": (SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders),
         "latex": (L.DIALECT.schema_of(latex), latex, L.Builders),
     }

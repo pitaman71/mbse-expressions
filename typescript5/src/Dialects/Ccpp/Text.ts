@@ -1,13 +1,13 @@
 /** Text of the Ccpp dialect: `ToText(expression)` is the expression as C source, with C's precedence, typed
- * constants written with a suffix or a cast. */
+ * constants written with a suffix or a cast. It reads a term value (or anything `Terms.term` reads one from) through
+ * `Terms.form`. */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
-import {
-  SUFFIXES, _Call, _Cast, _Conditional, _Constant, _Identifier, _Member, _Subscript,
-  _Unary,
-} from "./Expressions.js";
+import { SUFFIXES } from "./Expressions.js";
 
 const { repr } = Repr;
 
@@ -44,8 +44,8 @@ function number(value: unknown): string {
 }
 
 /** A constant: a bool, a string literal, or a number with its type's suffix or, for a type with none, a cast. */
-function constantText(node: _Constant): [string, number] {
-  const [value, ctype] = [node.value, node.type];
+function constantText(attributes: ReadonlyMap<string, any>): [string, number] {
+  const [value, ctype] = [attributes.get("value") ?? null, attributes.get("type") ?? null];
   if (typeof value === "boolean") return [value ? "true" : "false", POSTFIX];
   if (typeof value === "string" && ctype === null) return [text(value), POSTFIX];
   const written = number(value);
@@ -62,21 +62,24 @@ export function ToText(expression: unknown): string {
       const [written, precedence] = args[index] as [string, number];
       return precedence >= level ? written : `(${written})`;
     };
-    if (node instanceof _Constant) return constantText(node);
-    if (node instanceof _Identifier) return [node.name, POSTFIX];
-    if (node instanceof _Member) return [`${operand(0, POSTFIX)}${node.operator ?? "."}${node.name}`, POSTFIX];
-    if (node instanceof _Subscript) return [`${operand(0, POSTFIX)}[${(args[1] as [string, number])[0]}]`, POSTFIX];
-    if (node instanceof _Call) return [`${node.function}(${args.map(([written]) => written).join(", ")})`, POSTFIX];
-    if (node instanceof _Unary) { // `- -x`, not the decrement `--x`
+    const form = F.form(node);
+    const [kind, attributes] = [form.kind, form.attributes as ReadonlyMap<string, any>];
+    if (kind === "ccpp_constant") return constantText(attributes);
+    if (kind === "ccpp_identifier") return [attributes.get("name"), POSTFIX];
+    if (kind === "ccpp_member") return [`${operand(0, POSTFIX)}${attributes.get("operator") ?? "."}${attributes.get("name")}`, POSTFIX];
+    if (kind === "ccpp_subscript") return [`${operand(0, POSTFIX)}[${(args[1] as [string, number])[0]}]`, POSTFIX];
+    if (kind === "call") return [`${attributes.get("callable")}(${args.map(([written]) => written).join(", ")})`, POSTFIX];
+    const operator: string = attributes.get("operator");
+    if (kind === "ccpp_unary") { // `- -x`, not the decrement `--x`
       const written = operand(0, UNARY);
-      return [`${node.operator}${written[0] === node.operator && "+-".includes(node.operator) ? " " : ""}${written}`, UNARY];
+      return [`${operator}${written[0] === operator && "+-".includes(operator) ? " " : ""}${written}`, UNARY];
     }
-    if (node instanceof _Cast) return [`(${node.type})${operand(0, UNARY)}`, UNARY];
-    if (node instanceof _Conditional) { // right-associative
+    if (kind === "ccpp_cast") return [`(${attributes.get("type")})${operand(0, UNARY)}`, UNARY];
+    if (kind === "ccpp_conditional") { // right-associative
       return [`${operand(0, OR)} ? ${(args[1] as [string, number])[0]} : ${operand(2, CONDITIONAL)}`, CONDITIONAL];
     }
-    const level = LEVELS[node.operator] as number;
-    return [`${operand(0, level)} ${node.operator} ${operand(1, level + 1)}`, level];
+    const level = LEVELS[operator] as number;
+    return [`${operand(0, level)} ${operator} ${operand(1, level + 1)}`, level];
   };
-  return F.fold(expression as F.Term, write)[0];
+  return F.fold(expression, write)[0];
 }
