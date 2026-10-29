@@ -1,128 +1,92 @@
 """Expressions of the Matlab dialect: MATLAB expressions over scalars and structs, as MATLAB source writes them.
 
-- `constant`: a number (`int` or `float`, both doubles), a logical (`bool`) or a string scalar (`str`).
-- `identifier`: the value bound to a variable.
-- `binary`: `left <operator> right`, for the operators in `Domains.BINARY` (`==`, `~=`, `<`, ..., `&&`, `||`, `+`,
-  `-`, `.*`).
-- `unary`: `<operator> operand`, for `~` and `-`.
-- `call`: a function applied to ordered arguments, for the functions in `Domains.CALLS` (`isfield`, the bit
-  functions, and `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique` and `ismember` of arrays).
-- `field`: `value.name`, a field of a struct.
-- `index`: `value(index)`, an element of an array, from 1.
-- `arrayfun`: `arrayfun(@(name) body, array)`, the body's values for each element of the array, bound to `name`.
-- `import`: `import pkg.fn` or `import pkg.*`, which make a package's functions callable by their short names within its
-  body, the rest of the expression; `Text.ToText` writes it as a line before it. Functions are also found on the path
-  and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that evaluates them (see `Evaluators`).
+Matlab's terms are three of the framework's kinds (`mbse.Expressions.Framework.Terms`) and six of its own, which
+`install` adds to `Expressions.Framework.Term` by schema extension, each with a `domain` by name, as every term has:
 
-There is no binding: translators substitute a let's value for its name. The meta-schemas are registered as
-'Expressions.Matlab.Of<Kind>'. `Text.ToText` writes an expression as MATLAB source, e.g. `this.age >= 18 &&
-isfield(this, "email")`.
+- `literal` (the framework's): a constant, a number (`int` or `float`, both doubles), a logical (`bool`) or a string
+  scalar (`str`), its `value`.
+- `variable` (the framework's): an identifier, the value bound to a variable, its `name`.
+- `call` (the framework's): a function (`callable`) applied to ordered `arguments`, for the functions in
+  `Domains.CALLS` (`isfield`, the bit functions, and `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique` and
+  `ismember` of arrays).
+- `matlab_binary` (`Expressions.Matlab.Binary`): `left <operator> right`, for the operators in `Domains.BINARY` (`==`,
+  `~=`, `<`, ..., `&&`, `||`, `+`, `-`, `.*`).
+- `matlab_unary` (`Expressions.Matlab.Unary`): `<operator> operand`, for `~` and `-`.
+- `matlab_field` (`Expressions.Matlab.Field`): `value.name`, a field of a struct.
+- `matlab_index` (`Expressions.Matlab.Index`): `value(index)`, an element of an array, from 1.
+- `matlab_arrayfun` (`Expressions.Matlab.Arrayfun`): `arrayfun(@(name) body, array)`, the body's values for each
+  element of the array, bound to `name`.
+- `matlab_import` (`Expressions.Matlab.Import`): `import pkg.fn` or `import pkg.*` (its `name`), which make a
+  package's functions callable by their short names within its body, the rest of the expression; `Text.ToText` writes
+  it as a line before it. Functions are also found on the path and by their qualified names (`pkg.fn(x)`); which exist
+  is up to the scope that evaluates them (see `Evaluators`).
+
+The kinds of its own are tagged `matlab_...`: a branch of `Expressions.Framework.Term` is named once in a store, and
+other dialects have kinds of the same names (`binary`, `import`, ...). There is no binding: translators substitute a
+let's value for its name. `DIALECT` reads the terms (`Terms.Dialect`), validates and infers; the writers (`constant`,
+`identifier`, `binary`, ...) write them through the builders, wherever a term is written, in a transaction.
+`Text.ToText` writes a term as MATLAB source, e.g. `this.age >= 18 && isfield(this, "email")`.
 """
 
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "binary", "unary", "call", "field", "index",
+__all__ = ["install", "DIALECT", "Writer", "constant", "identifier", "binary", "unary", "call", "field", "index",
            "arrayfun", "import_"]
 
 
-@dataclass(eq=False)
-class _Constant(F.Term):
-    KIND = "constant"
-    ROLE = F.LITERAL
-    VALUE = {"int": int, "float": float, "str": str, "bool": bool}
-    value: Native | None = None
+def install(txn: Any) -> Any:
+    """Matlab's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its
+    own."""
+    S = txn.Schemas
+    return txn.uid("mbse.Expressions.Matlab/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"Term": S.OfUnion, "Binary": S.OfObject, "Unary": S.OfObject, "Field": S.OfObject,
+                  "Index": S.OfObject, "Arrayfun": S.OfObject, "Import": S.OfObject})  # Term: the framework's union
+        .spec([
+            lambda _: _.Binary.name("Expressions.Matlab.Binary").properties({
+                "operator": S.OfStr, "left": _.Term, "right": _.Term, "domain": S.OfStr}),
+            lambda _: _.Unary.name("Expressions.Matlab.Unary").properties({
+                "operator": S.OfStr, "operand": _.Term, "domain": S.OfStr}),
+            lambda _: _.Field.name("Expressions.Matlab.Field").properties({
+                "name": S.OfStr, "value": _.Term, "domain": S.OfStr}),
+            lambda _: _.Index.name("Expressions.Matlab.Index").properties({
+                "value": _.Term, "index": _.Term, "domain": S.OfStr}),
+            lambda _: _.Arrayfun.name("Expressions.Matlab.Arrayfun").properties({
+                "name": S.OfStr,  # bound to each element in the body
+                "array": _.Term, "body": _.Term, "domain": S.OfStr}),
+            lambda _: _.Import.name("Expressions.Matlab.Import").properties({
+                "name": S.OfStr,  # pkg.fn or pkg.*
+                "body": _.Term, "domain": S.OfStr}),
+            lambda _: _.Term.name("Expressions.Framework.Term").branches([  # branches added: schema extension
+                lambda t: t.name("matlab_binary").schema([_.Binary]),
+                lambda t: t.name("matlab_unary").schema([_.Unary]),
+                lambda t: t.name("matlab_field").schema([_.Field]),
+                lambda t: t.name("matlab_index").schema([_.Index]),
+                lambda t: t.name("matlab_arrayfun").schema([_.Arrayfun]),
+                lambda t: t.name("matlab_import").schema([_.Import]),
+            ]),
+        ])]))])
 
 
-@dataclass(eq=False)
-class _Identifier(F.Term):
-    KIND = "identifier"
-    ROLE = F.REFERENCE
-    PROPERTIES = {"name": str}
-    name: str | None = None
+_SCALARS = (bool, int, float, str)  # what a constant holds: Matlab has no bytes
 
 
-@dataclass(eq=False)
-class _Binary(F.Term):
-    KIND = "binary"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"operator": str}
-    SLOTS = ("left", "right")
-    OPERATOR = "operator"
-    VOCABULARY = Domains.BINARY
-    operator: str | None = None
-    left: Any = None
-    right: Any = None
+def _literal_check(record: Any) -> list[str]:
+    """A constant holds a number, a logical or a string."""
+    value = F.attributes_of(record).get("value")
+    return [] if type(value) in _SCALARS else [f"a literal cannot hold a {type(value).__name__}"]
 
 
-@dataclass(eq=False)
-class _Unary(F.Term):
-    KIND = "unary"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"operator": str}
-    SLOTS = ("operand",)
-    OPERATOR = "operator"
-    VOCABULARY = Domains.UNARY
-    operator: str | None = None
-    operand: Any = None
-
-
-@dataclass(eq=False)
-class _Call(F.Term):
-    KIND = "call"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"function": str}
-    VARIADIC = "arguments"
-    OPERATOR = "function"
-    VOCABULARY = Domains.CALLS
-    function: str | None = None
-    arguments: tuple[Any, ...] = ()
-
-
-@dataclass(eq=False)
-class _Field(F.Term):
-    KIND = "field"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"name": str}
-    SLOTS = ("value",)
-    OPERATOR = "name"
-    SIGNATURE = Domains.FIELD
-    name: str | None = None
-    value: Any = None
-
-
-@dataclass(eq=False)
-class _Index(F.Term):
-    KIND = "index"
-    ROLE = F.APPLICATION
-    SLOTS = ("value", "index")
-    SIGNATURE = Domains.INDEX
-    value: Any = None
-    index: Any = None
-
-
-@dataclass(eq=False)
-class _Arrayfun(F.Term):
-    KIND = "arrayfun"
-    ROLE = F.QUANTIFIER
-    PROPERTIES = {"name": str}
-    SLOTS = ("array", "body")
-    SIGNATURE = Domains.ARRAYFUN
-    name: str | None = None
-    array: Any = None
-    body: Any = None  # with `name` bound to each element
-
-    def check(self) -> list[str]:
-        return [] if type(self.name) is not str or re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", self.name) else [
-            f"an arrayfun's parameter must be an identifier, got {self.name!r}"]
+def _arrayfun_check(record: Any) -> list[str]:
+    name = F.attributes_of(record).get("name")
+    return [] if type(name) is not str or re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", name) else [
+        f"an arrayfun's parameter must be an identifier, got {name!r}"]
 
 
 def _qualified(name: str, wildcard: bool = False) -> bool:
@@ -132,63 +96,106 @@ def _qualified(name: str, wildcard: bool = False) -> bool:
     return all(part.isidentifier() for part in parts)
 
 
-@dataclass(eq=False)
-class _Import(F.Term):
-    KIND = "import"
-    ROLE = F.IMPORT
-    PROPERTIES = {"name": str}
-    SLOTS = ("body",)
-    name: str | None = None
-    body: Any = None
-
-    def check(self) -> list[str]:
-        if type(self.name) is not str or "." in self.name and _qualified(self.name, wildcard=True):
-            return []
-        return [f"an import's name must be pkg.name or pkg.*, got {self.name!r}"]
+def _import_check(record: Any) -> list[str]:
+    name = F.attributes_of(record).get("name")
+    if type(name) is not str or "." in name and _qualified(name, wildcard=True):
+        return []
+    return [f"an import's name must be pkg.name or pkg.*, got {name!r}"]
 
 
-DIALECT = F.Declared("Matlab", (_Constant, _Identifier, _Binary, _Unary, _Call, _Field, _Index, _Arrayfun, _Import),
-                     domain_of=Domains.of)
-Builders = DIALECT.Builders
-Schema = DIALECT.Schema
+def _native(value: Any) -> Writer | None:
+    """The constant of a native value; None for one Matlab has no constant of."""
+    return constant(value) if type(value) in _SCALARS else None
 
 
-def constant(value: Native) -> _Constant:
-    return _Constant(value)
+DIALECT = F.Dialect("Matlab", {
+    "literal": F.Kind(F.LITERAL, check=_literal_check),
+    "variable": F.Kind(F.REFERENCE, required=("name",)),
+    "call": F.Kind(F.APPLICATION, operator="callable", vocabulary=Domains.CALLS, required=("callable",)),
+    "matlab_binary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.BINARY, required=("operator",)),
+    "matlab_unary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.UNARY, required=("operator",)),
+    "matlab_field": F.Kind(F.APPLICATION, operator="name", signature=Domains.FIELD, required=("name",)),
+    "matlab_index": F.Kind(F.APPLICATION, signature=Domains.INDEX),
+    "matlab_arrayfun": F.Kind(F.QUANTIFIER, signature=Domains.ARRAYFUN, required=("name",), check=_arrayfun_check),
+    "matlab_import": F.Kind(F.IMPORT, required=("name",), check=_import_check),
+}, domain_of=Domains.of, literal=_native)
+"""The Matlab dialect: its kinds, as the framework reads them."""
 
 
-def identifier(name: str) -> _Identifier:
-    return _Identifier(name)
+# --- Writers ---
 
 
-def binary(operator: str, left: Any, right: Any) -> _Binary:
+class Writer(F.Writer):
+    """A Matlab term, written through the builders: a spec, which writes its term where it is given."""
+
+    __slots__ = ()
+
+
+def _spec(value: Any) -> Any:
+    return None if value is None else DIALECT.spec(value)
+
+
+def _record(tag: str, attributes: dict[str, Any], slots: dict[str, Any]) -> Writer:
+    """The writer of a term of kind `tag`, with its attributes and its slots (specs; None leaves a slot empty)."""
+    specs = {name: _spec(value) for name, value in slots.items()}
+
+    def write(u: Any) -> Any:
+        def record(r: Any) -> Any:
+            for name, value in attributes.items():
+                getattr(r, name)(value)
+            for name, value in specs.items():
+                if value is not None:
+                    getattr(r, name)(value)
+            return r
+
+        return getattr(u, tag)(record)
+
+    return Writer(write)
+
+
+def constant(value: Any) -> Writer:
+    """The constant `value`: a number, a logical or a string."""
+    if type(value) not in _SCALARS:
+        raise TypeError(f"a literal cannot hold a {type(value).__name__}")
+    return Writer(lambda u: u.literal(lambda r: r.value(lambda p: p.as_scalar(value))))
+
+
+def identifier(name: str) -> Writer:
+    """The variable `name`."""
+    return Writer(lambda u: u.variable(lambda v: v.name(name)))
+
+
+def binary(operator: str, left: Any, right: Any) -> Writer:
     """`left <operator> right`; each operand is a spec (a native value is a constant)."""
-    return _Binary(operator, DIALECT.resolve(left), DIALECT.resolve(right))
+    return _record("matlab_binary", {"operator": operator}, {"left": left, "right": right})
 
 
-def unary(operator: str, operand: Any) -> _Unary:
-    return _Unary(operator, DIALECT.resolve(operand))
+def unary(operator: str, operand: Any) -> Writer:
+    """`<operator> operand`."""
+    return _record("matlab_unary", {"operator": operator}, {"operand": operand})
 
 
-def call(function: str, *arguments: Any) -> _Call:
-    return _Call(function, tuple(DIALECT.resolve(argument) for argument in arguments))
+def call(function: str, *arguments: Any) -> Writer:
+    """`function(arguments...)`."""
+    specs = [DIALECT.spec(argument) for argument in arguments]
+    return Writer(lambda u: u.call(lambda r: r.callable(function).arguments(specs)))
 
 
-def field(value: Any, name: str) -> _Field:
+def field(value: Any, name: str) -> Writer:
     """`value.name`."""
-    return _Field(name, DIALECT.resolve(value))
+    return _record("matlab_field", {"name": name}, {"value": value})
 
 
-def index(value: Any, index: Any) -> _Index:
+def index(value: Any, index: Any) -> Writer:
     """`value(index)`, from 1."""
-    return _Index(DIALECT.resolve(value), DIALECT.resolve(index))
+    return _record("matlab_index", {}, {"value": value, "index": index})
 
 
-def arrayfun(name: str, array: Any, body: Any) -> _Arrayfun:
+def arrayfun(name: str, array: Any, body: Any) -> Writer:
     """`arrayfun(@(name) body, array)`."""
-    return _Arrayfun(name, DIALECT.resolve(array), DIALECT.resolve(body))
+    return _record("matlab_arrayfun", {"name": name}, {"array": array, "body": body})
 
 
-def import_(name: str, body: Any) -> _Import:
+def import_(name: str, body: Any) -> Writer:
     """`import name`, then `body`."""
-    return _Import(name, DIALECT.resolve(body))
+    return _record("matlab_import", {"name": name}, {"body": body})

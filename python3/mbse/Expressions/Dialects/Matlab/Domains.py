@@ -1,11 +1,11 @@
 """Domains of the Matlab dialect: MATLAB's scalar classes, and arrays of them.
 
 `Double` holds numbers (a constant `18` is the double 18), `Logical` holds `true` and `false`, `String` holds string
-scalars ("abc", not 'abc' character vectors) and `Struct` the values fields are read from: a mapping, or an object that
-writes its properties through `accept`. `Numeric` is `Double` or `Logical`, which MATLAB converts into each other:
-`true + 1` is 2. `+` with a string concatenates. An array (a list) holds a list property's values; it is read by
-the collection functions (`numel`, `sum`, `all`, ...), indexed and iterated by `arrayfun`, and operators take
-scalars only.
+scalars ("abc", not 'abc' character vectors) and `Struct` the values fields are read from: a mapping, or a data object,
+read through mbse-schemas' readers (`Framework.Objects`). `Numeric` is `Double` or `Logical`, which MATLAB converts
+into each other: `true + 1` is 2. `+` with a string concatenates. An array (a list) holds a container property's
+values; it is read by the collection functions (`numel`, `sum`, `all`, ...), indexed and iterated by `arrayfun`, and
+operators take scalars only.
 """
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as D
+from mbse.Expressions.Framework import Domains as D, Objects
 from mbse.Expressions.Framework.Domains import Anything
 
 __all__ = ["Double", "Logical", "String", "Struct", "Numeric", "Scalar", "Anything", "BINARY", "UNARY", "CALLS",
@@ -22,7 +22,7 @@ __all__ = ["Double", "Logical", "String", "Struct", "Numeric", "Scalar", "Anythi
 
 def is_struct(value: Any) -> bool:
     """Whether fields can be read from `value`."""
-    return isinstance(value, Mapping) or callable(getattr(value, "accept", None))
+    return isinstance(value, Mapping) or Objects.is_object(value)
 
 
 Double = D.OfTypes("double", float, int)

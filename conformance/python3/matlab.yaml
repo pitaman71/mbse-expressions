@@ -1,0 +1,64 @@
+matlab_import:
+  name: geo.*
+  body:
+    matlab_binary:
+      operator: '||'
+      left:
+        matlab_binary:
+          operator: '>='
+          left:
+            matlab_binary:
+              operator: +
+              left:
+                call:
+                  callable: dist
+                  arguments:
+                  - matlab_field:
+                      name: age
+                      value:
+                        variable:
+                          name: this
+                  - literal:
+                      value: 3
+              right:
+                matlab_binary:
+                  operator: .*
+                  left:
+                    matlab_unary:
+                      operator: '~'
+                      operand:
+                        call:
+                          callable: isfield
+                          arguments:
+                          - variable:
+                              name: this
+                          - literal:
+                              value:
+                                scalar:
+                                  str: email
+                  right:
+                    matlab_unary:
+                      operator: '-'
+                      operand:
+                        literal:
+                          value: 1.5
+          right:
+            matlab_index:
+              value:
+                matlab_arrayfun:
+                  name: k
+                  array:
+                    matlab_field:
+                      name: ports
+                      value:
+                        variable:
+                          name: this
+                  body:
+                    variable:
+                      name: k
+              index:
+                literal:
+                  value: 2
+      right:
+        literal:
+          value: true

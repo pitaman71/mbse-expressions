@@ -1,8 +1,9 @@
 /**
  * Evaluators of the Matlab dialect: compute an expression by MATLAB's rules for scalars.
  *
- * `Evaluators.OfAny(expression, scope)` binds variables to numbers, logicals, strings and structs (mappings, or
- * objects that write their properties through `accept`). Values are `number` (double), `boolean` (logical) and
+ * `Evaluators.OfAny(term, scope)` evaluates a term (or anything `Terms.term` reads one from, such as an `Expression`)
+ * with variables bound to numbers, logicals, strings and structs (mappings, or data objects, read through mbse-schemas'
+ * readers). Values are `number` (double), `boolean` (logical) and
  * `string` (string scalar). MATLAB's rules apply, not Basic's:
  *
  * - Two-valued logic: `&&` and `||` short-circuit, and take numbers or logicals (nonzero is true; NaN throws).
@@ -12,7 +13,7 @@
  *   variables throw too, with MATLAB's messages.
  * - The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
  *   53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
- * - An array is a JavaScript array: a list property's values, or a variable's array. Operators take scalars. `numel`
+ * - An array is a JavaScript array: a container property's values, or a variable's array. Operators take scalars. `numel`
  *   counts elements (a scalar is one), `xs(i)` indexes from 1, and `arrayfun(@(p) body, xs)` gives the body's value
  *   for each element, an array of logicals if all are, else of doubles; each must be a numeric or logical scalar.
  *   `all`, `any` and `nnz` test elements as nonzero (`any` ignores NaN), `sum` adds them from the first, `min` and
@@ -25,11 +26,15 @@
  * `import pkg.*` import from `packages`, and nothing else: functions are functions the caller provides.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import { ImportError, NameError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Terms from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
@@ -136,20 +141,20 @@ function fieldsOf(value: unknown): Map<string, unknown> {
   if (value instanceof Map) return value;
   if (Domains.isMapping(value)) return new Map(Object.entries(value));
   if (!Domains.is_struct(value)) throw new TypeError("Dot indexing is not supported for variables of this type.");
-  return Validators.properties_of(value as never);
+  return Objects.properties(value);
 }
 
-/** A value as MATLAB reads it: a number as a double, and a list (a list property's too) as an array. */
+/** A value as MATLAB reads it: a number as a double, and a list (a container property's too) as an array. */
 function toDouble(value: unknown): unknown {
-  if (value instanceof Validators.ListRecord) return value.values.map(toDouble);
+  if (value instanceof Objects.Listed) return value.values.map(toDouble);
   if (Array.isArray(value)) return value.map(toDouble);
   return typeof value === "bigint" ? Number(value) : value;
 }
 
 function field(args: F.Thunk[], node: any): unknown {
-  const fields = fieldsOf((args[0] as F.Thunk)());
-  if (!fields.has(node.name)) throw new KeyError(`Unrecognized field name "${node.name}".`);
-  return toDouble(fields.get(node.name));
+  const [fields, name] = [fieldsOf((args[0] as F.Thunk)()), Terms.nameOf(node) as string];
+  if (!fields.has(name)) throw new KeyError(`Unrecognized field name "${name}".`);
+  return toDouble(fields.get(name));
 }
 
 function isfield(args: F.Thunk[]): boolean {
@@ -289,16 +294,17 @@ export class Scope extends S.Variables {
   }
 
   override unbound(reference: any): never {
-    throw unrecognized(reference.name);
+    throw unrecognized(Terms.nameOf(reference) as string);
   }
 
   override enter(declaration: any): Scope {
-    const [pkg, name] = split(declaration.name);
+    const declared = Terms.nameOf(declaration) as string;
+    const [pkg, name] = split(declared);
     const functions = this.packages.get(pkg) ?? new Map<string, Fn>();
     let found: ReadonlyMap<string, Fn>;
     if (name === "*" && this.packages.has(pkg)) found = functions;
     else if (functions.has(name)) found = new Map([[name, functions.get(name) as Fn]]);
-    else throw new ImportError(`Import argument '${declaration.name}' cannot be found or cannot be imported.`);
+    else throw new ImportError(`Import argument '${declared}' cannot be found or cannot be imported.`);
     const inner = this.copy();
     inner.imported = new Map([...this.imported, ...found]);
     return inner;
@@ -318,8 +324,9 @@ function extension(name: string, args: F.Thunk[], _node: unknown, scope: Scope):
   return toDouble(scope.function(name)(...args.map((argument) => argument())));
 }
 
-const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
-  ["binary", new Map<string, F.Implementation>([
+/** The interpreter of the Matlab dialect. */
+export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
+  ["matlab_binary", new Map<string, F.Implementation>([
     ["==", compare("==", (o) => o === 0)], ["~=", compare("~=", (o) => o !== 0)],
     ["<", compare("<", (o) => o < 0)], ["<=", compare("<=", (o) => o <= 0)],
     [">", compare(">", (o) => o > 0)], [">=", compare(">=", (o) => o >= 0)],
@@ -327,7 +334,7 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
     ["+", arithmetic("+", (a, b) => a + b)], ["-", arithmetic("-", (a, b) => a - b)],
     [".*", arithmetic(".*", (a, b) => a * b)],
   ])],
-  ["unary", new Map<string, F.Implementation>([["~", not], ["-", negate]])],
+  ["matlab_unary", new Map<string, F.Implementation>([["~", not], ["-", negate]])],
   ["call", new Map<string, F.Implementation>([
     ["isfield", isfield], ...["bitand", "bitor", "bitxor", "bitshift"].map((name) => [name, bit(name)] as [string, F.Implementation]),
     ["all", reduction((values) => values.every((value) => value !== 0))],
@@ -336,12 +343,12 @@ const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>(
     ["numel", (args: F.Thunk[]) => elements((args[0] as F.Thunk)()).length],
     ["sum", reduction(sum)], ["min", extreme("min")], ["max", extreme("max")], ["unique", unique], ["ismember", ismember],
   ])],
-  ["field", field],
-  ["index", index],
-  ["arrayfun", arrayfun],
+  ["matlab_field", field],
+  ["matlab_index", index],
+  ["matlab_arrayfun", arrayfun],
 ]), { literal: toDouble, scope: (variables) => new Scope(variables), extension });
 
-/** The value of an expression in `scope`, or with the variables in an object bound. */
-export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
-  return interpreter.run(Expressions.DIALECT.resolve(expression), scope);
+/** The value of a term in `scope`, or with the variables in an object bound. */
+export function OfAny(expression: unknown, scope: Scope | S.Bindings | null = null): unknown {
+  return INTERPRETER.run(expression, scope);
 }

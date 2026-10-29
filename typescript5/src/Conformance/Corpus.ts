@@ -2,12 +2,13 @@
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
  * `build()` returns the cases, name -> [root schema, root term, store]: each case a term value of
- * `Expressions.Framework.Term`, built in one store holding the framework's, Basic's and the ported dialects' installs,
- * written nested. Each implementation writes its snapshots to `conformance/<implementation>/<case>.json` and `.yaml`,
- * and checks them against every other implementation's files (see the CONF test suite). Keep this module and
+ * `Expressions.Framework.Term`, built in one store holding the framework's install and every ported dialect's, written
+ * nested. `DIALECTS` names the dialect that reads each case other than Basic's. Each
+ * implementation writes its snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them
+ * against every other implementation's files (see the CONF test suite). Keep this module and
  * `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same cases, same values, same order of statements.
  *
- * The other dialects' cases (matlab, excel, ccpp, systemverilog) return with their dialects' port, stage 2b
+ * The other dialects' cases (excel, ccpp, systemverilog) return with their dialects' port, stage 2b
  * (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
  */
 
@@ -20,14 +21,16 @@ import * as Expressions from "../Dialects/Basic/Expressions.js";
 import * as Basic from "../Dialects/Basic/index.js";
 import * as L from "../Dialects/Latex/Expressions.js";
 import * as Latex from "../Dialects/Latex/index.js";
+import * as Matlab from "../Dialects/Matlab/index.js";
 import * as Python from "../Dialects/Python/Expressions.js";
 import * as Framework from "../Framework/index.js";
 import type * as Terms from "../Framework/Terms.js";
 
-export const CASES = ["expression", "python", "latex", "domains", "collections"] as const;
+export const CASES = ["expression", "python", "matlab", "latex", "domains", "collections"] as const;
 
 /** The dialect that reads each case, where it is not Basic. */
-export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([["python", Python.DIALECT], ["latex", L.DIALECT]]);
+export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
+  ["python", Python.DIALECT], ["matlab", Matlab.Expressions.DIALECT], ["latex", L.DIALECT]]);
 
 /** A case: its root schema, its root term, and the store it is built in. */
 export type Case = [any, any, any];
@@ -44,6 +47,7 @@ export function build(): Map<string, Case> {
   store.transaction(Framework.install);
   store.transaction(Basic.install);
   store.transaction(Python.install);
+  store.transaction(Matlab.install);
   store.transaction(Latex.install);
 
   // --- expression: every kind and literal type, a let and its variable, an extension operation ---
@@ -89,25 +93,27 @@ export function build(): Map<string, Case> {
   const latex = L.where("a", L.member(thisL, "age"), L.binary("\\land", L.binary("\\geq", aL, 18n), L.binary(
     "\\lor", L.unary("\\lnot", L.function("has", thisL, "email")), L.binary(">", L.frac(aL, 2n), 1.5))));
 
+  // --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
+  // >= arrayfun(@(k) k, this.ports)(2)) || true
+  const M = Matlab.Expressions;
+  const thisM = M.identifier("this");
+  const matlab = M.import_("geo.*", M.binary("||", M.binary(">=", M.binary(
+    "+", M.call("dist", M.field(thisM, "age"), 3n),
+    M.binary(".*", M.unary("~", M.call("isfield", thisM, "email")), M.unary("-", 1.5))), M.index(M.arrayfun(
+      "k", M.field(thisM, "ports"), M.identifier("k")), 2n)), true));
+
   const terms = store.transaction(() => new Map<string, any>(([["expression", expression], ["python", python],
-    ["domains", domains], ["collections", collections], ["latex", latex]] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
+    ["matlab", matlab], ["domains", domains], ["collections", collections], ["latex", latex]] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   const Term = store.registered("Expressions.Framework.Term");
   return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
 }
 
 /** The old API's cases, to port with their dialects (stage 2b); not called. */
 export async function stage2b(): Promise<Map<string, Case>> {
-  const [Ccpp, Excel, Matlab, SystemVerilog]: any[] = await Promise.all([
+  const [Ccpp, Excel, SystemVerilog]: any[] = await Promise.all([
     import("../Dialects/Ccpp/Expressions.js"), import("../Dialects/Excel/Expressions.js"),
-    import("../Dialects/Matlab/Expressions.js"), import("../Dialects/SystemVerilog/Expressions.js")]);
-  const [M, X] = [Matlab, Excel];
-
-  // --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
-  // >= arrayfun(@(k) k, this.ports)(2)) || true
-  const thisM = M.identifier("this");
-  const matlab = M.import_("geo.*", M.binary("||", M.binary(">=", M.binary(
-    "+", M.call("dist", M.field(thisM, "age"), 3n),
-    M.binary(".*", M.unary("~", M.call("isfield", thisM, "email")), M.unary("-", 1.5))), M.index(M.arrayfun("k", M.field(thisM, "ports"), M.identifier("k")), 2n)), true));
+    import("../Dialects/SystemVerilog/Expressions.js")]);
+  const X = Excel;
 
   // --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
   // a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
@@ -133,7 +139,6 @@ export async function stage2b(): Promise<Map<string, Case>> {
       sv.cast(4n, sv.vector("11111111", true, "h")))));
 
   return new Map<string, Case>([
-    ["matlab", [M.DIALECT.schema_of(matlab), matlab, M.Builders]],
     ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
     ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],
     ["systemverilog", [SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders]],

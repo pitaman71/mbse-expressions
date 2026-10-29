@@ -13,9 +13,10 @@ written nested, indent 2) and `<case>.yaml`.
 | `domains` | Basic literals of value domains, each naming its domain, decimal and `binary128` text, a conversion's domain, a bitwise operation and `pack` |
 | `collections` | a Basic quantifier over an object's entries, and the collection operations |
 | `latex` | a Latex term: every kind (`latex_where`, `latex_member`, `latex_binary`, `latex_unary`, `latex_function`, `latex_frac`, `latex_symbol`, `latex_constant`), with shared symbols |
+| `matlab` | a Matlab term: every kind (the framework's `literal`, `variable` and `call`, and `matlab_binary`, `matlab_unary`, `matlab_field`, `matlab_index`, `matlab_arrayfun`, `matlab_import`), shared identifiers |
 
 Each case is a term value in one store holding the framework's, Basic's and the ported dialects' installs, and validates
-in its own dialect. The other dialects' cases (`python`, `matlab`, `excel`, `ccpp`, `systemverilog`) return with their
+in its own dialect. The other dialects' cases (`excel`, `ccpp`, `systemverilog`) return with their
 port to the store (docs/proposals/port, stage 2b).
 
 The CONF test suite in each implementation checks that its own files are current, that the JSON files are
