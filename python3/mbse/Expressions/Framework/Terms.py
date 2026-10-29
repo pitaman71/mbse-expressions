@@ -1,770 +1,268 @@
-"""Terms: the protocols every dialect's expressions implement, and the machinery that implements them.
+"""Terms: the framework's schemas, and the generic reads of terms that every dialect's evaluator, validator and
+translator shares.
 
-An expression language (a dialect) is a set of term kinds and a vocabulary of operators. Every dialect's expressions are:
+An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
+`Expressions.Framework.Term`, a union of value object kinds, held nested (docs/proposals/port, Decided, 2). `install`
+defines them in a store: the framework's kinds `literal` (`value`, a basic scalar's), `call` (`callable`, by name;
+`arguments`, a container of terms by index), `variable` (`name`) and `let` (`name`, `value`, `body`), each with a
+`domain` by name; `Expression`; and `HasRoot(schema, expression)`, the extension adjacency `expression` it gives
+`Schemas.OfExpression`. A dialect adds its own kinds to `Term` by schema extension, in its own install.
 
-- Serializable. Each kind has a meta-schema, an ordinary mbse-schemas object schema tagged by `kind`, and its data has a
-  builder (`create()` / `clone()` / `update()`) that implements `Visitors.OfObject`. `Dialect.Builders`, a store of the
-  dialect's bound classes (an mbse-schemas `Bindings.OfStore`), rebuilds data from snapshots; `Dialect.register(store)`
-  registers the meta-schemas in any other store; and `Dialect.Schema` is the union of the kinds' meta-schemas.
-- Structurally traversable. `Expression.form()` gives a term's `Form`: its kind, its native attributes and its ordered
-  arguments, which are expressions of the same dialect. `Dialect.make(form)` is the inverse. `walk`, `fold` and `same`
-  traverse any dialect's expressions through forms alone.
-- Validatable. `Dialect.validate` reports what evaluation would raise, and `Dialect.infer` finds an expression's domain
-  from its vocabulary's signatures (see `Domains`).
-- Evaluatable, by the dialect's own evaluator (see `Evaluators`), and translatable to other dialects (see
-  `Translators`).
+Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
+branch it holds, its properties the branch's members. Which properties are a kind's slots (a term each), its variadic
+arguments (a container of terms) or its attributes (anything else) is read from the kind's schema. What the framework
+needs to know beyond the schema, how each kind is read, is a `Kind`: its role, and which properties name what it binds
+and its operator.
 
-A dialect declares each kind as a dataclass derived from `Term`, whose class variables say how its fields map to the
-data model and what `role` it plays, and passes the classes to `Declared`, which derives the rest. The roles are:
+- `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
+- `kind_of(term)`: its branch, `(tag, record)`. `form(term)`: its `Form`, `kind`, `attributes` and `arguments`.
+- `name_of(term)`, `operator_of(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
+- `Dialect`: a dialect's kinds by tag, with `validate`, `infer` and `make(form)`, the `Writer` of a form.
+- `Writer`: a spec that writes a term through the builders; `spec(x)` makes one of a writer, a native value (a
+  literal), a term value (copied) or a callable on a `Visitors.OfAny`.
 
-- `LITERAL`: a native value, in the field `value`, written to the property named after its type (`int`, `str`, ...).
-- `REFERENCE`: a value the scope resolves. A lexical reference (`LEXICAL`, the default) is the value bound to the name
-  in its first property, by an enclosing binding or import or by the scope; others, such as Excel's cell references,
-  are resolved by the scope alone, and validation does not require them to be bound. `AMBIENT` names are bound
-  without being declared, as Python's builtins are.
-- `APPLICATION`: an operator, named by the property `OPERATOR` (or, if it is None, by the kind's tag), applied to
-  arguments. A kind's `VOCABULARY` maps operator names to signatures; operators outside it are extensions, unless the
-  vocabulary is `None`, when any name is accepted and `SIGNATURE` applies to all.
-- `BINDING`: binds the name in its first property to its first argument within the others.
-- `QUANTIFIER`: binds the name in its first property to each item of its first argument, a collection, within the
-  others (a body, and any conditions), and combines the results by its operator (named as an application's is), such as `all`. Its signature also
-  gives the domain of a collection's items, `items(domain)`, for inference.
-- `IMPORT`: makes what it declares (a module, a package's functions) available within its one argument, its body. The
-  scope resolves the declaration; `binds()` gives the names it binds for lexical references.
+The roles are:
 
-Properties are required unless named in `OPTIONAL`, and `check()` adds a kind's own problems to validation. `VALUES`
-names properties that hold a value object rather than a native, each described by a `ValueProperty` (its schema, and the
-conversions between the field's data and the value's plain form), such as a literal's domain. `typed()` gives a
-literal's own domain, if it has one.
-
-Each kind's data is bound to its meta-schema with mbse-schemas' `Bindings`: the kind's fields are read into a
-`Bindings.State` (its properties, and its `arguments` entries) and made from one, with `kind` fixed, a literal's native
-properties exclusive and `used_by` implied. `accept`, the builders' visitor protocols and the store `Builders` are
-the generic ones; `Builder` adds the DSL. Arguments
-are fields too: `SLOTS` names fields holding one argument each, in index order, and `VARIADIC` names one field holding a
-tuple of the arguments after the slots. Both are written as entries of the adjacency `arguments`, to the relation `Arguments`
-(registered as 'Expressions.Arguments' and shared by every dialect), which links a `parent` to an `argument` with an
-`index`. Every kind also declares `used_by`, the same relation seen from the argument, which data never writes.
-
-A slot named in `REFERS` holds a definition the term refers to, such as the predicate an application applies, not a
-part of it. A definition may refer to itself, through such a slot, directly or not: that is recursion, not a cycle,
-and checking stops where it reaches a definition it is already checking. Any other cycle is a problem.
+- `LITERAL`: a basic scalar, its `value`.
+- `REFERENCE`: a value the scope resolves. A lexical reference (the default) is the value bound to its name, by an
+  enclosing binding or import or by the scope; others, such as Excel's cell references, are resolved by the scope
+  alone, and validation does not require them to be bound. `ambient` names are bound without being declared.
+- `APPLICATION`: an operator, named by the property `operator` (or, if it is None, by the kind's tag), applied to
+  arguments. A kind's `vocabulary` maps operator names to signatures; operators outside it are extensions, unless the
+  vocabulary is None, when any name is accepted and `signature` applies to all.
+- `BINDING`: binds its name to its first argument within the others.
+- `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
+  results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
+- `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(record)` gives the names
+  it binds for lexical references.
 """
 
 from __future__ import annotations
 
-import dataclasses
 import math
-from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
-from typing import Any, ClassVar, Protocol, runtime_checkable
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from dataclasses import dataclass, field
+from typing import Any
 
-from mbse.Schemas.Framework import Bindings, Schemas, Visitors
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework import Schemas
 
-from . import Domains
+from . import Domains, Objects
 
 __all__ = [
-    "Form", "Expression", "Dialect", "Term", "Builder", "AnyBuilder", "Writer", "Declared", "ValueProperty",
-    "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER", "ARGUMENTS", "Arguments", "NATIVES",
-    "walk", "fold", "same", "resolve", "name_of",
+    "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
+    "Form", "Kind", "Dialect", "Writer", "spec", "term", "is_term", "kind_of", "form", "name_of", "operator_of",
+    "walk", "fold", "same",
 ]
 
+TERM = "Expressions.Framework.Term"
+EXPRESSION = "Expressions.Framework.Expression"
 LITERAL, REFERENCE, APPLICATION, BINDING, IMPORT = "literal", "reference", "application", "binding", "import"
 QUANTIFIER = "quantifier"
-ARGUMENTS = "Expressions.Arguments"
-NATIVES: dict[str, type[Native]] = {"int": int, "float": float, "str": str, "bool": bool, "bytes": bytes}
 
 
-def _type_name(value: object) -> str:
-    return type(value).__name__
-
-
-def _native_name(value: object) -> str | None:
-    """The name of `value`'s native type, which is also the literal property that holds it; None if not native."""
-    name = type(value).__name__
-    return name if NATIVES.get(name) is type(value) else None
+def install(txn: Any) -> Any:
+    """The framework's schemas: terms, expressions, and an expression schema's root. Run again in a store, it finds each
+    by its name and writes nothing."""
+    S = txn.Schemas
+    return txn.uid("mbse.Expressions.Framework/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"Term": S.OfUnion, "Literal": S.OfObject, "Call": S.OfObject, "Variable": S.OfObject,
+                  "Let": S.OfObject, "Expression": S.OfObject, "HasRoot": S.OfRelation,
+                  "OfExpression": S.OfObject})  # mbse-schemas' own, found by its name
+        .spec([
+            lambda _: _.Term.name("Expressions.Framework.Term").branches([  # a dialect adds its kinds
+                lambda t: t.name("literal").schema([_.Literal]),
+                lambda t: t.name("call").schema([_.Call]),
+                lambda t: t.name("variable").schema([_.Variable]),
+                lambda t: t.name("let").schema([_.Let]),
+            ]),
+            lambda _: _.Literal.name("Expressions.Framework.Literal").properties({
+                "value": S.OfAny(lambda a: a),  # a basic scalar's, tagged on the wire (docs/proposals/port/API.md)
+                "domain": S.OfStr,  # every term has a domain (Schema extension, Decided, 21), by name (stage 3)
+            }),
+            lambda _: _.Call.name("Expressions.Framework.Call").properties({
+                "callable": S.OfStr,  # what it calls, by name: an operator, a function
+                "arguments": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),
+                "domain": S.OfStr,  # its result's
+            }),
+            lambda _: _.Variable.name("Expressions.Framework.Variable").properties({"name": S.OfStr, "domain": S.OfStr}),
+            lambda _: _.Let.name("Expressions.Framework.Let").properties({
+                "name": S.OfStr, "value": _.Term, "body": _.Term, "domain": S.OfStr}),
+            lambda _: _.Expression.name("Expressions.Framework.Expression").ref(True).properties({"root": _.Term}),
+            lambda _: _.HasRoot.name("Expressions.Framework.HasRoot").links([
+                lambda t: t.name("schema"), lambda t: t.name("expression")]).uniques("expression"),
+            lambda _: _.OfExpression.name("Schemas.OfExpression").adjacencies([  # by extension: no member on it
+                lambda t: t.name("expression").relation([_.HasRoot]).me("schema")]),
+        ])]))])
 
 
 def _article(noun: str) -> str:
     return f"{'an' if noun[0] in 'aeiou' else 'a'} {noun}"
 
 
-# --- Protocols ---
+def _type_name(value: object) -> str:
+    return type(value).__name__
 
 
-Form = Schemas.Form.Data
-"""A term's structure: its `kind`, its native `attributes` by name, and its ordered `arguments` (None where a slot is
-empty). It is mbse-schemas' neutral form of a term, which a schema holds where a literal would stand."""
+# --- Reading terms ---
 
 
-@runtime_checkable
-class Expression(Visitors.Visitable, Protocol):
-    """An expression of some dialect: `Visitable`, so it serializes like any object, and structurally traversable."""
+@dataclass(frozen=True)
+class Form:
+    """A term's structure: its `kind` (its branch's tag), its `attributes` (its properties that are not terms, those set,
+    by name) and its ordered `arguments` (its slots, None where empty, then its variadic arguments)."""
 
-    def dialect(self) -> Dialect: ...
-
-    def form(self) -> Form: ...
-
-    def validate(self, bound: Iterable[str] = (), core: bool = False) -> list[str]: ...
-
-
-@runtime_checkable
-class Dialect(Protocol):
-    """An expression language: its kinds, their meta-schemas and builders, and its static checks."""
-
-    Schema: Schemas.OfUnion.Data
-    Builders: Bindings.OfStore
-
-    def name(self) -> str: ...
-
-    def kinds(self) -> Mapping[str, type]:
-        """The data class of each kind, by tag."""
-        ...
-
-    def schema_of(self, expression: Any) -> Schemas.OfObject.Data:
-        """The meta-schema of `expression`'s kind: the root schema for its snapshots."""
-        ...
-
-    def make(self, form: Form) -> Expression:
-        """The expression with this form."""
-        ...
-
-    def resolve(self, spec: Any) -> Expression:
-        """The expression a spec denotes: an expression, a `Writer`, a native value (a literal) or a callable taking the
-        dialect's `AnyBuilder`."""
-        ...
-
-    def validate(self, expression: Any, bound: Iterable[str] = (), core: bool = False) -> list[str]:
-        """Problems with `expression`. References must be bound by an enclosing binding or be in `bound`. With `core`,
-        every operator must be in its kind's vocabulary."""
-        ...
-
-    def infer(self, expression: Any, environment: Mapping[str, Domains.Domain] | None = None) -> Domains.Domain:
-        """The domain of `expression`'s value (a spec), with the references in `environment` of the given domains."""
-        ...
+    kind: str
+    attributes: Mapping[str, Any] = field(default_factory=dict)
+    arguments: tuple[Any, ...] = ()
 
 
-# --- Data ---
+def _named(schema: Any, name: str) -> bool:
+    return getattr(schema, "name", None) == name
 
 
-class ValueProperty:
-    """A property that holds a value object rather than a native: the `schema` of its value, and the conversions between
-    the field's data and the value's plain form."""
-
-    def __init__(self, schema: Schemas.OfAny.Data, to_plain: Callable[[Any], Any], from_plain: Callable[[Any], Any]):
-        self.schema, self.to_plain, self.from_plain = schema, to_plain, from_plain
-
-
-class Term:
-    """Shared by every kind's data (a dataclass per kind): identity, schema name, writing through `accept`, and the
-    structural view. `Declared` sets `DIALECT`, `NAME` and `FIELDS`."""
-
-    DIALECT: ClassVar[Declared]
-    NAME: ClassVar[str]
-    FIELDS: ClassVar[tuple[str, ...]]
-    KIND: ClassVar[str]
-    ROLE: ClassVar[str]
-    VALUE: ClassVar[Mapping[str, type] | None] = None
-    PROPERTIES: ClassVar[Mapping[str, type]] = {}
-    OPTIONAL: ClassVar[frozenset[str]] = frozenset()
-    LEXICAL: ClassVar[bool] = True
-    AMBIENT: ClassVar[frozenset[str]] = frozenset()
-    SLOTS: ClassVar[tuple[str, ...]] = ()
-    REFERS: ClassVar[frozenset[str]] = frozenset()
-    VARIADIC: ClassVar[str | None] = None
-    OPERATOR: ClassVar[str | None] = None
-    VOCABULARY: ClassVar[Mapping[str, Domains.Signature] | None] = None
-    SIGNATURE: ClassVar[Domains.Signature | None] = None
-    VALUES: ClassVar[Mapping[str, ValueProperty]] = {}
-    BINDING: ClassVar[Bindings.Binding]
-
-    def identity(self) -> Hashable:
-        return id(self)
-
-    def schema_name(self) -> str:
-        return self.NAME
-
-    def owner(self) -> None:
-        """Expressions are reference objects, linked by their arguments."""
-        return None
-
-    def dialect(self) -> Declared:
-        return self.DIALECT
-
-    def accept(self, visitor: Visitors.OfObject) -> None:
-        """Writes the tag, the value into the property named after its native type, the other properties, then one
-        `arguments` entry per argument, in order, with its index."""
-        if self.VALUE is not None and self.value is not None:  # type: ignore[attr-defined]
-            _check_value(type(self), self.value)  # type: ignore[attr-defined]
-        Bindings.accept(self.BINDING, self, visitor)
-
-    def _arguments(self) -> tuple[Any, ...]:
-        fixed = tuple(getattr(self, slot) for slot in self.SLOTS)
-        return fixed + tuple(getattr(self, self.VARIADIC)) if self.VARIADIC is not None else fixed
-
-    def binds(self) -> tuple[str, ...]:
-        """The names an import binds within its body, for lexical references; none by default."""
-        return ()
-
-    def check(self) -> list[str]:
-        """The kind's own problems, beyond those of its role; none by default."""
-        return []
-
-    def typed(self) -> Domains.Domain | None:
-        """A literal's own domain, when it carries one; None for its value's default, and for other kinds."""
-        return None
-
-    def form(self) -> Form:
-        attributes = {"value": self.value} if self.VALUE is not None and self.value is not None else {}  # type: ignore
-        attributes.update({n: getattr(self, n) for n in (*self.PROPERTIES, *self.VALUES) if getattr(self, n) is not None})
-        return Form(self.KIND, attributes, self._arguments())
-
-    def validate(self, bound: Iterable[str] = (), core: bool = False) -> list[str]:
-        """Problems with this expression. References must be bound by an enclosing binding or be in `bound`. With
-        `core`, every operator must be in its kind's vocabulary."""
-        return self.DIALECT.validate(self, bound, core)
-
-
-def name_of(node: Any) -> Any:
-    """A reference's, binding's or import's name: the value of its first property; None if it has none."""
-    kind = type(node)
-    return getattr(node, next(iter(kind.PROPERTIES))) if kind.PROPERTIES else None
-
-
-def _operator(node: Any) -> str:
-    """The name of an application's or a quantifier's operator: its `OPERATOR` property, or its kind's tag."""
-    kind = type(node)
-    return kind.KIND if kind.OPERATOR is None else getattr(node, kind.OPERATOR)
-
-
-def _check_value(kind: type[Term], value: Any) -> str:
-    """The property that holds a literal's value; raises if the kind cannot hold it."""
-    name = _native_name(value)
-    if name is None:
-        raise TypeError(f"{_article(kind.KIND)} must hold a native value, got {_type_name(value)}")
-    if name not in kind.VALUE:  # type: ignore[operator]
-        raise TypeError(f"{_article(kind.KIND)} cannot hold a {name}")
-    return name
-
-
-# --- Bindings: a kind's fields bound to its meta-schema ---
-
-
-def _read(instance: Term) -> Bindings.State:
-    """A term's state: its value under the property named after its native type (under `value` when it has none), its
-    other properties, its value properties in their plain form, and its arguments as `arguments` entries."""
-    kind = type(instance)
-    values: dict[str, Any] = {}
-    if kind.VALUE is not None and instance.value is not None:  # type: ignore[attr-defined]
-        name = _native_name(instance.value)  # type: ignore[attr-defined]
-        values[name if name in kind.VALUE else "value"] = instance.value  # type: ignore[attr-defined, operator]
-    values.update({name: getattr(instance, name) for name in kind.PROPERTIES})
-    for name, field in kind.VALUES.items():
-        if getattr(instance, name) is not None:
-            values[name] = field.to_plain(getattr(instance, name))
-    arguments = [Bindings.Entry({"argument": argument}, {"index": index})
-                 for index, argument in enumerate(instance._arguments()) if argument is not None]
-    return Bindings.State(values, {"arguments": arguments} if _parent(kind) else {})
-
-
-def _parent(kind: type[Term]) -> bool:
-    return bool(kind.SLOTS) or kind.VARIADIC is not None
-
-
-def _value(kind: type[Term], values: Mapping[str, Any]) -> Any:
-    """A literal's value: the one native property it holds, or the value it holds under `value`."""
-    return next((values[name] for name in kind.VALUE if values.get(name) is not None), values.get("value"))  # type: ignore[union-attr]
-
-
-def _check_target(kind: type[Term], entry: Bindings.Entry) -> Any:
-    target = entry.links.get("argument")
-    if target is None:
-        raise ValueError("link 'argument' is not set")
-    if not isinstance(target, kind.DIALECT.terms()):
-        raise TypeError(f"an argument must be an expression, got {_type_name(target)}")
-    return target
-
-
-def _make(kind: type[Term], state: Bindings.State) -> Any:
-    """The term a state holds: its fields from the properties, and its arguments from the `arguments` entries, the
-    slots by index and the variadic ones in index order."""
-    values = state.values
-    fields: dict[str, Any] = {name: values.get(name) for name in kind.PROPERTIES}
-    if kind.VALUE is not None:
-        fields["value"] = _value(kind, values)
-    for name, field in kind.VALUES.items():
-        fields[name] = None if values.get(name) is None else field.from_plain(values[name])
-    entries = state.entries.get("arguments", [])
-    parts: list[Any] = [None] * len(kind.SLOTS)
-    rest: list[Bindings.Entry] = []
-    for entry in entries:
-        index = entry.properties.get("index")
-        if index in range(len(kind.SLOTS)):
-            parts[index] = _check_target(kind, entry)
-        elif kind.VARIADIC is not None:
-            rest.append(entry)
+def _parts(schema: Any) -> tuple[tuple[str, ...], str | None, tuple[str, ...]]:
+    """A kind's schema's slots (properties holding a term), its variadic property (a container of terms) or None, and its
+    attributes (the rest), each in declaration order."""
+    cached = _PARTS.get(id(schema))
+    if cached is not None and cached[0] is schema:
+        return cached[1]
+    slots, variadic, attributes = [], None, []
+    for name, prop in schema.properties.items():
+        if _named(prop.schema, TERM):
+            slots.append(name)
+        elif isinstance(prop.schema, Schemas.OfContainer.Data) and _named(prop.schema.element, TERM):
+            variadic = name
         else:
-            raise ValueError(_slots_message(kind, index))
-    fields.update(zip(kind.SLOTS, parts))
-    if kind.VARIADIC is not None:
-        last = len(entries) + len(kind.SLOTS)
-        ordered = sorted(rest, key=lambda entry: last if entry.properties.get("index") is None else entry.properties["index"])
-        fields[kind.VARIADIC] = tuple(_check_target(kind, entry) for entry in ordered)
-    return kind(**fields)
-
-
-def _assign(kind: type[Term], instance: Any, state: Bindings.State) -> Any:
-    made = _make(kind, state)
-    for name in kind.FIELDS:
-        setattr(instance, name, getattr(made, name))
-    return instance
-
-
-def _binding(kind: type[Term]) -> Bindings.Binding:
-    return Bindings.Binding(kind.Schema, _read, lambda state: _make(kind, state),  # type: ignore[attr-defined]
-                            lambda instance, state: _assign(kind, instance, state), fixed={"kind": kind.KIND},
-                            exclusive=[(*kind.VALUE, "value")] if kind.VALUE is not None else (), implied=["used_by"])
-
-
-# --- Builders ---
-
-
-def _slots_message(kind: type[Term], index: Any) -> str:
-    """E.g. "a let's value is argument 0 and its body argument 1, got index 2"."""
-    parts = [f"{slot} is argument 0" if i == 0 else f"its {slot} argument {i}" for i, slot in enumerate(kind.SLOTS)]
-    listed = parts[0] if len(parts) == 1 else f"{', '.join(parts[:-1])} and {parts[-1]}"
-    return f"{_article(kind.KIND)}'s {listed}, got index {index}"
-
-
-class Builder(Bindings.Builder):
-    """A kind's builder: mbse-schemas' generic `Bindings.Builder` over the kind's binding, so `create()` / `clone()` /
-    `update()` and `Visitors.OfObject`, with the DSL. None of them validate. DSL: `.set(name, native)` sets a property
-    ('value' is a literal's value), `.arguments(*specs)` appends arguments to a variadic kind and `.argument(slot, spec)`
-    fills a slot; specs are resolved by the dialect."""
-
-    _data: ClassVar[type[Term]]
-
-    def __init__(self, instance: Any = None):
-        if instance is not None and type(instance) is not self._data:
-            raise TypeError(f"expected {self._data.KIND} data to build from, got {_type_name(instance)}")
-        super().__init__(self._data.BINDING, instance)
-
-    # DSL
-
-    def set(self, name: str, value: Any) -> Any:
-        kind, values = self._data, self.state.values
-        if name == "value" and kind.VALUE is not None:
-            for other in (*kind.VALUE, "value"):
-                values.pop(other, None)
-            native = _native_name(value)
-            values[native if native in kind.VALUE else "value"] = value  # None, or a non-native, is held as `value`
-        elif name in kind.PROPERTIES:
-            values[name] = value
-        elif name in kind.VALUES:
-            values[name] = None if value is None else kind.VALUES[name].to_plain(value)
-        else:
-            raise KeyError(f"{_article(kind.KIND)} has no attribute {name!r}")
-        return self
-
-    def _entries(self) -> list[Bindings.Entry]:
-        return self.state.entries.setdefault("arguments", [])
-
-    def arguments(self, *specs: Any) -> Any:
-        if self._data.VARIADIC is None:
-            raise TypeError(f"{_article(self._data.KIND)} has no variadic arguments")
-        slots = len(self._data.SLOTS)
-        for spec in specs:
-            index = slots + sum(1 for entry in self._entries()
-                                if entry.properties.get("index") is None or entry.properties["index"] >= slots)
-            self._entries().append(Bindings.Entry({"argument": self._data.DIALECT.resolve(spec)}, {"index": index}))
-        return self
-
-    def argument(self, slot: str, spec: Any) -> Any:
-        if slot not in self._data.SLOTS:
-            raise KeyError(f"{_article(self._data.KIND)} has no argument {slot!r}")
-        index = self._data.SLOTS.index(slot)
-        self._entries()[:] = [entry for entry in self._entries() if entry.properties.get("index") != index]
-        self._entries().append(Bindings.Entry({"argument": self._data.DIALECT.resolve(spec)}, {"index": index}))
-        return self
-
-
-class AnyBuilder:
-    """Selects an expression of the dialect: `.select(spec)`, or a dialect's `as_<kind>(spec)` methods. Finalizing
-    yields that expression."""
-
-    _dialect: ClassVar[Declared]
-
-    def __init__(self, instance: Any = None):
-        self._source = instance
-        self._selected: Any = None
-
-    def select(self, spec: Any) -> Any:
-        self._selected = self._dialect.resolve(spec)
-        return self
+            attributes.append(name)
+    parts = (tuple(slots), variadic, tuple(attributes))
+    _PARTS[id(schema)] = (schema, parts)
+    return parts
 
-    def _require_selected(self) -> Any:
-        if self._selected is None:
-            raise ValueError("no kind selected; call an as_<kind> method")
-        return self._selected
 
-    def create(self) -> Any:
-        if self._source is not None:
-            raise ValueError("create() is only valid without a source instance; use clone() or update()")
-        return self._require_selected()
+_PARTS: dict[int, tuple[Any, Any]] = {}
 
-    def clone(self) -> Any:
-        """The selected expression, or a shallow copy of the source (arguments are shared, not copied)."""
-        if self._source is None:
-            raise ValueError("clone() is only valid with a source instance")
-        if self._selected is not None:
-            return self._selected
-        return type(self._source)(*(getattr(self._source, name) for name in self._source.FIELDS))
 
-    def update(self) -> Any:
-        if self._source is None:
-            raise ValueError("update() is only valid with a source instance")
-        selected = self._require_selected()
-        if type(selected) is not type(self._source):
-            raise TypeError("update() cannot change the kind of the source expression")
-        for name in selected.FIELDS:
-            setattr(self._source, name, getattr(selected, name))
-        return self._source
-
-
-# --- Specs ---
-
-
-class Writer:
-    """An expression written with methods; each dialect derives its own. A `Writer` is a spec; `.data` is its
-    expression."""
-
-    __slots__ = ("data",)
-
-    def __init__(self, data: Any):
-        self.data = data
-
-
-def resolve(spec: Any, data: type | tuple[type, ...], builder: Callable[[], Any], expected: str) -> Any:
-    """Resolves a spec: data is used as is, a `Writer` gives its data, and a callable is given a new builder and must
-    return it."""
-    if isinstance(spec, Writer):
-        spec = spec.data
-    if isinstance(spec, data):
-        return spec
-    if isinstance(spec, type):
-        raise TypeError(f"a class is not a Spec here, got {spec.__name__}")
-    if callable(spec):
-        built = spec(builder())
-        if built is None or not callable(getattr(built, "create", None)):
-            raise TypeError(f"a Spec callable must return its builder, got {built!r}")
-        return built.create()
-    raise TypeError(f"expected {expected} or a callable taking its builder, got {spec!r}")
-
-
-# --- Meta-schemas and the store ---
-
-
-def _native(name: str, native: type) -> Callable[[Any], Any]:
-    return lambda p: p.name(name).of(lambda t: t.as_native(native))
-
-
-Arguments = (
-    Schemas.OfRelation.Builder().name(ARGUMENTS).links("parent", "argument").properties(_native("index", int))
-    .unique("argument").create()
-)
-_ARGUMENTS = lambda r: r.name("arguments").of(Arguments).me("parent")  # noqa: E731
-_USED_BY = lambda r: r.name("used_by").of(Arguments).me("argument")  # noqa: E731
-
-
-def _schema(kind: type[Term]) -> Schemas.OfObject.Data:
-    """A kind's meta-schema: the tag, one property per native type its value may have, its properties, its value
-    fields, and the adjacencies `arguments` (if it has arguments) and `used_by`."""
-    natives = {**(kind.VALUE or {}), **kind.PROPERTIES}
-    values = [lambda p, n=n, f=f: p.name(n).of(f.schema) for n, f in kind.VALUES.items()]
-    relations = [_ARGUMENTS, _USED_BY] if kind.SLOTS or kind.VARIADIC is not None else [_USED_BY]
-    return (Schemas.OfObject.Builder().name(kind.NAME).ref().properties(
-        _native("kind", str), *(_native(n, t) for n, t in natives.items()), *values).relations(*relations).create())
-
-
-# --- Dialects declared by their kinds ---
-
-DIALECTS: list[Declared] = []
-"""Every dialect declared so far, in declaration order."""
-
-
-def register(store: Any) -> Any:
-    """Registers the meta-schemas of every dialect declared so far in `store`, e.g. a `Proxies.OfStore` that writes and
-    reads expressions of several dialects. Returns the store."""
-    for dialect in DIALECTS:
-        dialect.register(store)
-    return store
-
-
-
-class Declared:
-    """A dialect declared by its kinds' data classes, from which it derives their builders (unless given), meta-schemas
-    (named by `schema_names`, by default 'Expressions.<name>.Of<Kind>'), the union `Schema`, whose branches are named by
-    the kinds' tags, the store `Builders` of its bound classes, `register(store)`, which registers its meta-schemas in
-    another store, and `make`, `resolve`, `validate` and `infer`. `domain_of` gives a literal's domain.
-
-    A dialect may extend another, `extends`: its kinds are the base's and its own, whose tags must differ from the base's,
-    so every expression of the base is one of the extension, and the extension validates, infers and evaluates trees
-    that mix them. The base accepts its extensions' terms as arguments (in specs, writers and snapshots), so that a
-    base's writer can hold an extension's term; such a tree is the extension's to validate and evaluate."""
-
-    def __init__(self, name: str, kinds: Sequence[type[Term]], *,
-                 domain_of: Callable[[Native], Domains.Domain], builders: Mapping[str, type[Builder]] | None = None,
-                 any_builder: type[AnyBuilder] | None = None, schema_names: Mapping[str, str] | None = None,
-                 extends: Declared | None = None):
-        self._name, self._domain_of = name, domain_of
-        self.base, self.extensions = extends, []
-        inherited = {} if extends is None else extends.kinds()
-        clashes = sorted(kind.KIND for kind in kinds if kind.KIND in inherited)
-        if clashes:
-            raise ValueError(f"{name} would declare {', '.join(map(repr, clashes))}, which {extends.name()} has")  # type: ignore[union-attr]
-        self._kinds = {**inherited, **{kind.KIND: kind for kind in kinds}}
-        self.classes = (*(() if extends is None else extends.classes), *kinds)
-        builders = {**({} if extends is None else extends.builders), **dict(builders or {})}
-        schemas: dict[str, Any] = {} if extends is None else {n: s for n, s in extends.schemas.items() if n != ARGUMENTS}
-        for kind in kinds:
-            kind.DIALECT = self
-            kind.NAME = (schema_names or {}).get(kind.KIND, f"Expressions.{name}.Of{kind.KIND.capitalize()}")
-            kind.FIELDS = tuple(field.name for field in dataclasses.fields(kind))  # type: ignore[arg-type]
-            builder = builders.get(kind.KIND) or type(f"{kind.__name__}Builder", (Builder,), {"_data": kind})
-            kind.Schema = schemas[kind.NAME] = _schema(kind)  # type: ignore[attr-defined]
-            kind.BINDING = _binding(kind)
-            builders[kind.KIND] = builder
-        self.schemas = {ARGUMENTS: Arguments, **schemas}
-        DIALECTS.append(self)
-        if extends is not None:
-            extends.extensions.append(self)
-        self.builders = builders
-        self.AnyBuilder = any_builder or type(f"{name}AnyBuilder", (AnyBuilder,), {})
-        self.AnyBuilder._dialect = self
-        self.Schema = Schemas.OfUnion.Builder().branches(
-            *(lambda b, kind=kind: b.name(kind.KIND).of(kind.Schema) for kind in self.classes)
-        ).create()
-        self.Builders = Bindings.OfStore([(kind.Schema, builders[kind.KIND]) for kind in self.classes], [Arguments])
-
-    def terms(self) -> tuple[type[Term], ...]:
-        """The kinds whose expressions this dialect accepts as arguments: its own, and its extensions'."""
-        return tuple(dict.fromkeys([*self.classes, *(kind for e in self.extensions for kind in e.terms())]))
-
-    def register(self, store: Any) -> Any:
-        """Registers the dialect's meta-schemas, and the relation `Arguments` they share, in `store` (e.g. a
-        `Proxies.OfStore`, to build expressions as proxies), skipping those it already holds. Returns the store."""
-        for schema_name, schema in self.schemas.items():
-            if schema_name not in store.names():
-                store.register(schema)
-        return store
-
-    def name(self) -> str:
-        return self._name
-
-    def kinds(self) -> Mapping[str, type[Term]]:
-        return dict(self._kinds)
-
-    def schema_of(self, expression: Any) -> Schemas.OfObject.Data:
-        """The meta-schema of `expression`'s kind: the root schema for its snapshots."""
-        if not isinstance(expression, self.classes):
-            raise TypeError(f"not an expression: {expression!r}")
-        return type(expression).Schema
-
-    def __repr__(self) -> str:
-        return f"<dialect {self._name}>"
-
-    # Construction
-
-    def make(self, form: Form) -> Any:
-        if form.kind not in self._kinds:
-            raise ValueError(f"{self._name} has no kind {form.kind!r}")
-        kind = self._kinds[form.kind]
-        allowed = [*(["value"] if kind.VALUE is not None else []), *kind.PROPERTIES, *kind.VALUES]
-        for name in form.attributes:
-            if name not in allowed:
-                raise ValueError(f"{_article(kind.KIND)} has no attribute {name!r}")
-        fields: dict[str, Any] = {name: form.attributes.get(name) for name in allowed}
-        slots = len(kind.SLOTS)
-        if kind.VARIADIC is None and len(form.arguments) != slots:
-            raise ValueError(f"{_article(kind.KIND)} takes {slots} arguments, got {len(form.arguments)}")
-        if len(form.arguments) < slots:
-            raise ValueError(f"{_article(kind.KIND)} takes at least {slots} arguments, got {len(form.arguments)}")
-        fields.update(zip(kind.SLOTS, form.arguments))
-        if kind.VARIADIC is not None:
-            fields[kind.VARIADIC] = tuple(form.arguments[slots:])
-        return kind(**fields)
-
-    def literal(self, value: Native) -> Any:
-        """The literal holding `value`, of the first literal kind that can hold it."""
-        name = _native_name(value)
-        for kind in self.classes:
-            if kind.ROLE == LITERAL and name in kind.VALUE:  # type: ignore[operator]
-                return kind(value=value)  # type: ignore[call-arg]
-        return None
-
-    def resolve(self, spec: Any) -> Any:
-        if _native_name(spec) is not None:
-            made = self.literal(spec)
-            if made is not None:
-                return made
-        return resolve(spec, self.terms(), self.AnyBuilder, "an expression, a native value")
-
-    # Checks
-
-    def validate(self, expression: Any, bound: Iterable[str] = (), core: bool = False) -> list[str]:
-        return self._problems(expression, frozenset(bound), core, set())
-
-    def _problems(self, expression: Any, bound: frozenset[str], core: bool, active: set[int]) -> list[str]:
-        """Problems with `expression`; `active` holds the expressions being checked, to find cycles."""
-        if not isinstance(expression, self.classes):
-            return [f"not an expression: {expression!r}"]
-        kind = type(expression)
-        what = _article(kind.KIND)
-        if kind.ROLE == LITERAL:
-            if expression.value is None:
-                return [f"{what} needs a value"]
-            try:
-                _check_value(kind, expression.value)
-            except TypeError as error:
-                return [str(error)]
-            return expression.check()
-        problems = [p for name, native in kind.PROPERTIES.items()
-                    if not (name in kind.OPTIONAL and getattr(expression, name) is None)
-                    for p in _property_problems(what, name, native, getattr(expression, name))]
-        problems += expression.check()
-        name = name_of(expression)
-        if kind.ROLE == REFERENCE:
-            if kind.LEXICAL and not problems and name not in bound and name not in kind.AMBIENT:
-                problems.append(f"{kind.KIND} {name!r} is not bound")
-            return problems
-        if id(expression) in active:
-            return ["the expression contains a cycle"]
-        active.add(id(expression))
-        arguments = expression._arguments()
-        scopes = [bound] * len(arguments)
-        if kind.ROLE in (BINDING, QUANTIFIER):
-            inner = bound | {name} if not problems else bound
-            scopes = [bound, *[inner] * (len(arguments) - 1)]
-        elif kind.ROLE == IMPORT:
-            scopes = [bound | set(expression.binds()) if not problems else bound] * len(arguments)
-        if kind.ROLE in (APPLICATION, QUANTIFIER) and not problems and kind.VOCABULARY is not None:
-            operator, vocabulary = _operator(expression), kind.VOCABULARY
-            if operator in vocabulary and vocabulary[operator].arity() not in (-1, len(arguments)):  # -1: any number
-                problems.append(f"{operator} takes {vocabulary[operator].arity()} arguments, got {len(arguments)}")
-            elif core and operator not in vocabulary:
-                problems.append(f"{operator!r} is not a core operation")
-        for i, (argument, scope) in enumerate(zip(arguments, scopes)):
-            label = kind.SLOTS[i] if i < len(kind.SLOTS) else f"argument {i - len(kind.SLOTS)}"
-            if argument is None:
-                problems.append(f"{what} needs {_article(label)}")
-            elif label in kind.REFERS and id(argument) in active:
-                continue  # recursion: a definition referred to while it is being checked
-            else:
-                problems += [f"{label}: {problem}" for problem in self._problems(argument, scope, core, active)]
-        active.discard(id(expression))
-        return problems
-
-    def infer(self, expression: Any, environment: Mapping[str, Domains.Domain] | None = None) -> Domains.Domain:
-        environment = dict(environment or {})
-        expression = self.resolve(expression)
-        problems = self.validate(expression, environment)
-        if problems:
-            raise ValueError(f"cannot infer the domain of an invalid expression: {problems[0]}")
-        return self._infer(expression, environment, {})
-
-    def _infer(self, expression: Any, environment: dict[str, Domains.Domain],
-               memo: dict[tuple[int, int], Domains.Domain]) -> Domains.Domain:
-        key = (id(expression), id(environment))
-        if key not in memo:
-            memo[key] = self._infer_term(expression, environment, memo)
-        return memo[key]
-
-    def _infer_term(self, expression: Any, environment: dict[str, Domains.Domain],
-                    memo: dict[tuple[int, int], Domains.Domain]) -> Domains.Domain:
-        kind = type(expression)
-        if kind.ROLE == LITERAL:
-            return expression.typed() or self._domain_of(expression.value)
-        if kind.ROLE == REFERENCE:
-            name = name_of(expression)
-            return environment[name] if kind.LEXICAL and name in environment else Domains.Anything
-        arguments = expression._arguments()
-        if kind.ROLE == IMPORT:
-            inner = {**environment, **{name: Domains.Anything for name in expression.binds()}}
-            return self._infer(arguments[-1], inner, memo)
-        if kind.ROLE == BINDING:
-            value = self._infer(arguments[0], environment, memo)
-            inner = {**environment, name_of(expression): value}
-            return self._infer(arguments[-1], inner, memo)
-        operator = _operator(expression)
-        signature = kind.SIGNATURE if kind.VOCABULARY is None else kind.VOCABULARY.get(operator)
-        if kind.ROLE == QUANTIFIER:  # its name has the domain of the collection's items
-            collection = self._infer(arguments[0], environment, memo)
-            item = Domains.Anything if signature is None else signature.items(collection)  # type: ignore[attr-defined]
-            inner = {**environment, name_of(expression): item}
-            domains = [collection, *(self._infer(argument, inner, memo) for argument in arguments[1:])]
-        else:
-            domains = [self._infer(argument, environment, memo) for argument in arguments]
-        if signature is None:
-            return Domains.Anything  # an extension: nothing is known about it
-        result = signature.result(domains)
-        if result is None:
-            names = ", ".join(domain.name() for domain in domains)
-            raise TypeError(f"{operator} cannot take ({names}); it takes {signature.describe()}")
-        typed = expression.typed()
-        return result if typed is None else typed  # an application of a domain of its own gives it
-
-
-def _property_problems(what: str, name: str, native: type, value: Any) -> list[str]:
-    if value is None or value == "":
-        return [f"{what} needs {_article(name)}"]
-    if type(value) is not native:
-        return [f"{what}'s {name} must be a {native.__name__}, got {_type_name(value)}"]
-    return []
+def _is_any(visitor: Any) -> bool:
+    """Whether a visitor is a `Visitors.OfAny`, rather than the `Visitors.OfUnion` of the value it holds."""
+    return callable(getattr(type(visitor), "as_union", None))
+
+
+def is_term(value: Any) -> bool:
+    """Whether `value` is a term value: the reader of a value of `Expressions.Framework.Term`."""
+    schema = getattr(value, "as_schema", None)
+    return (callable(schema) and not isinstance(value, type) and not _is_any(value)
+            and isinstance(schema(), Schemas.OfUnion.Data) and _named(schema(), TERM))
+
+
+def term(value: Any) -> Any:
+    """The term value of an `Expression` (its root), of a term property's reader, of a `Readers.OfAny` holding one, or a
+    term value itself; raises `TypeError` for anything else, and `ValueError` where there is none."""
+    schema = value.as_schema() if callable(getattr(value, "as_schema", None)) and not isinstance(value, type) else None
+    found: list[Any] = []
+    if isinstance(schema, Schemas.OfObject.Data) and _named(schema, EXPRESSION):
+        return term(value.root)
+    if isinstance(schema, Schemas.OfProperty.Data) and _named(schema.schema, TERM):
+        value.as_value(lambda a: a.as_union(lambda u: found.append(u) or u))
+    elif _is_any(value) and _named(schema, TERM):
+        value.as_union(lambda u: found.append(u) or u)
+    elif is_term(value):
+        return value
+    else:
+        raise TypeError(f"not a term: {value!r}")
+    if found[0].as_schema() is None:
+        raise ValueError("no term is set")
+    return found[0]
+
+
+def kind_of(term_: Any) -> tuple[str, Any]:
+    """The branch a term value holds: its tag, and its record (a `Readers.OfObject`)."""
+    for branch in term_.as_schema().branches:
+        record = getattr(term_, branch.name)
+        if record.as_schema() is not None:
+            return branch.name, record
+    raise ValueError("a term holds no kind")
+
+
+def _scalar(record: Any, name: str) -> Any:
+    """A record's property's value: a scalar, or what `Objects.held` reads of any other value; None when absent."""
+    found: list[Any] = []
+    getattr(record, name).as_value(lambda a: found.append(Objects.held(a)) or a)
+    return found[0] if found else None
+
+
+def _slot(record: Any, name: str) -> Any:
+    """The term a slot holds, or None."""
+    found: list[Any] = []
+    getattr(record, name).as_value(lambda a: a.as_union(lambda u: found.append(u) or u))
+    return found[0] if found and found[0].as_schema() is not None else None
+
+
+def _variadic(record: Any, name: str) -> tuple[Any, ...]:
+    """The terms a container of terms holds, in index order."""
+    pairs: list[tuple[Any, Any]] = []
+    getattr(record, name).as_value(lambda a: a.as_container(lambda c: c.as_entries(lambda it: pairs.extend(it)) or c))
+    found: list[Any] = []
+    for _, element in pairs:
+        element.as_union(lambda u: found.append(u) or u)
+    return tuple(found)
+
+
+def attributes_of(record: Any) -> dict[str, Any]:
+    """A record's attributes that are set, by name, in declaration order."""
+    _, _, names = _parts(record.as_schema())
+    values = {name: _scalar(record, name) for name in names}
+    return {name: value for name, value in values.items() if value is not None}
+
+
+def arguments_of(record: Any) -> tuple[Any, ...]:
+    """A record's arguments: its slots, None where empty, then its variadic arguments."""
+    slots, variadic, _ = _parts(record.as_schema())
+    fixed = tuple(_slot(record, name) for name in slots)
+    return fixed + _variadic(record, variadic) if variadic is not None else fixed
+
+
+def form(term_: Any) -> Form:
+    """A term's `Form`."""
+    tag, record = kind_of(term_)
+    return Form(tag, attributes_of(record), arguments_of(record))
+
+
+def name_of(term_: Any) -> Any:
+    """The name a reference refers to, or a binding, quantifier or import binds: its `name`; None if it has none."""
+    _, record = kind_of(term_)
+    return _scalar(record, "name") if "name" in record.as_schema().properties else None
+
+
+def operator_of(term_: Any, kind: Kind) -> str:
+    """An application's or a quantifier's operator: its `kind.operator` property, or its tag."""
+    tag, record = kind_of(term_)
+    return tag if kind.operator is None else _scalar(record, kind.operator)
 
 
 # --- Traversal ---
 
 
-def _arguments_of(expression: Any) -> tuple[Any, ...]:
-    return tuple(argument for argument in expression.form().arguments if argument is not None)
-
-
-def walk(expression: Expression) -> Iterator[Any]:
-    """Every expression reachable from `expression`, each once, parents before their arguments and arguments in
-    order. Shared sub-expressions are visited once, and cycles end the walk rather than repeat it."""
-    seen: set[int] = set()
-    stack = [expression]
+def walk(term_: Any) -> Iterator[Any]:
+    """Every term within `term_`, itself first, parents before their arguments and arguments in order."""
+    stack = [term(term_)]
     while stack:
         node = stack.pop()
-        if id(node) in seen:
-            continue
-        seen.add(id(node))
         yield node
-        stack.extend(reversed(_arguments_of(node)))
+        stack.extend(reversed([a for a in form(node).arguments if a is not None]))
 
 
-def fold(expression: Expression, function: Callable[[Any, list[Any]], Any]) -> Any:
-    """Combines an expression bottom-up: `function(node, results)` is called once per term, shared ones included, with
-    the results for its arguments (None for empty slots). Raises on cycles."""
-    memo: dict[int, Any] = {}
-    active: set[int] = set()
+def fold(term_: Any, function: Callable[[Any, list[Any]], Any]) -> Any:
+    """Combines a term bottom-up: `function(node, results)` is called once per term, with the results for its arguments
+    (None for empty slots)."""
 
     def visit(node: Any) -> Any:
-        if id(node) in memo:
-            return memo[id(node)]
-        if id(node) in active:
-            raise ValueError("the expression contains a cycle")
-        active.add(id(node))
-        results = [None if argument is None else visit(argument) for argument in node.form().arguments]
-        active.discard(id(node))
-        memo[id(node)] = function(node, results)
-        return memo[id(node)]
+        return function(node, [None if a is None else visit(a) for a in form(node).arguments])
 
-    return visit(expression)
+    return visit(term(term_))
 
 
 def _same_native(a: Any, b: Any) -> bool:
-    """Natives of one type by value (NaN is NaN, -0.0 is not 0.0); a value field's data, such as a domain, by `==`."""
+    """Scalars of one type by value (NaN is NaN, -0.0 is not 0.0)."""
     if type(a) is not type(b):
         return False
     if type(a) is float:
@@ -773,19 +271,244 @@ def _same_native(a: Any, b: Any) -> bool:
 
 
 def same(a: Any, b: Any) -> bool:
-    """Whether two expressions have the same structure: co-traverses them, comparing kinds, attributes (natives of
-    one type by value; NaN is NaN, and -0.0 is not 0.0) and arguments in order. Sharing is not compared."""
-    assumed: set[tuple[int, int]] = set()
+    """Whether two terms have the same structure: their kinds, attributes (scalars of one type by value; NaN is NaN, and
+    -0.0 is not 0.0) and arguments in order."""
 
     def visit(x: Any, y: Any) -> bool:
         if x is None or y is None:
             return x is y
-        if (id(x), id(y)) in assumed:
-            return True  # a cycle: the same if they are the same everywhere else
-        assumed.add((id(x), id(y)))
-        fx, fy = x.form(), y.form()
-        return (type(x) is type(y) and fx.kind == fy.kind and fx.attributes.keys() == fy.attributes.keys()
+        fx, fy = form(x), form(y)
+        return (fx.kind == fy.kind and fx.attributes.keys() == fy.attributes.keys()
                 and all(_same_native(fx.attributes[k], fy.attributes[k]) for k in fx.attributes)
                 and len(fx.arguments) == len(fy.arguments) and all(map(visit, fx.arguments, fy.arguments)))
 
-    return visit(a, b)
+    return visit(term(a), term(b))
+
+
+# --- Writing terms: specs ---
+
+
+class Writer:
+    """A spec that writes a term through the builders: called with the `Visitors.OfProperty` of a term property, the
+    `Visitors.OfAny` of a container's element or the `Visitors.OfUnion` of a term value, it selects its kind's branch
+    and writes it. `write(union)` is given the `Visitors.OfUnion`. Each dialect derives its own, with methods."""
+
+    __slots__ = ("write",)
+
+    def __init__(self, write: Callable[[Any], Any]):
+        self.write = write
+
+    def __call__(self, visitor: Any) -> Any:
+        if isinstance(visitor.as_schema(), Schemas.OfProperty.Data):
+            return visitor.as_value(self)
+        if _is_any(visitor):
+            return visitor.as_union(self.write)
+        self.write(visitor)
+        return visitor
+
+
+def _copy(value: Any) -> Writer:
+    """The writer of a copy of a term value."""
+
+    def write(union: Any) -> Any:
+        tag, record = kind_of(value)
+        return getattr(union, tag)(record)
+
+    return Writer(write)
+
+
+def spec(value: Any, literal: Callable[[Any], Writer | None] | None = None) -> Any:
+    """A spec of a term: a writer as it is, a term value (copied), a native value as `literal` writes it (when it
+    gives one), or a callable taking a `Visitors.OfAny`."""
+    if isinstance(value, Writer):
+        return value
+    if is_term(value):
+        return _copy(value)
+    if literal is not None and type(value) in Schemas.SCALAR_TYPES:
+        written = literal(value)
+        if written is not None:
+            return written
+    if callable(value) and not isinstance(value, type):
+        return value
+    raise TypeError(f"expected a term, a writer or a native value, got {value!r}")
+
+
+# --- Dialects ---
+
+
+@dataclass(frozen=True)
+class Kind:
+    """How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`,
+    or None when its tag names it); for an application or a quantifier, its `vocabulary` (operator names to signatures;
+    None accepts any name, with `signature`); the properties it requires (`required`); for a reference, whether it is
+    `lexical` and the `ambient` names bound without a declaration; for an import, the names it binds (`names(record)`);
+    its own problems (`check(record)`); and its own domain, when it carries one (`typed(record)`)."""
+
+    role: str
+    operator: str | None = None
+    vocabulary: Mapping[str, Domains.Signature] | None = None
+    signature: Domains.Signature | None = None
+    required: tuple[str, ...] = ()
+    lexical: bool = True
+    ambient: frozenset[str] = frozenset()
+    names: Callable[[Any], tuple[str, ...]] | None = None
+    check: Callable[[Any], list[str]] | None = None
+    typed: Callable[[Any], Domains.Domain | None] | None = None
+
+
+class Dialect:
+    """An expression language: the kinds it reads, by tag, its `name`, and `domain_of(value)`, a literal's domain. A
+    dialect may extend another (`extends`): its kinds are the base's and its own, whose tags must differ from the
+    base's. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its kinds."""
+
+    def __init__(self, name: str, kinds: Mapping[str, Kind], *, domain_of: Callable[[Any], Domains.Domain],
+                 literal: Callable[[Any], Writer | None] | None = None, extends: Dialect | None = None):
+        inherited = {} if extends is None else extends.kinds()
+        clashes = sorted(tag for tag in kinds if tag in inherited)
+        if clashes:
+            raise ValueError(f"{name} would declare {', '.join(map(repr, clashes))}, which {extends.name()} has")  # type: ignore[union-attr]
+        self._name, self._kinds, self._domain_of, self.base = name, {**inherited, **kinds}, domain_of, extends
+        self._literal = literal if literal is not None or extends is None else extends._literal
+
+    def name(self) -> str:
+        return self._name
+
+    def kinds(self) -> dict[str, Kind]:
+        return dict(self._kinds)
+
+    def __repr__(self) -> str:
+        return f"<dialect {self._name}>"
+
+    def kind(self, term_: Any) -> tuple[str, Any, Kind]:
+        """A term's tag, record and `Kind`; raises `ValueError` for a kind the dialect does not read."""
+        tag, record = kind_of(term_)
+        if tag not in self._kinds:
+            raise ValueError(f"{self._name} has no kind {tag!r}")
+        return tag, record, self._kinds[tag]
+
+    def spec(self, value: Any) -> Any:
+        """A spec of a term of this dialect: see `spec`, a native value as this dialect's literal."""
+        return spec(value, self._literal)
+
+    def make(self, form_: Form) -> Writer:
+        """The writer of a term with this form: its attributes written as scalars, its arguments (specs: terms,
+        writers, native values) to its slots in order and the rest to its variadic property."""
+        if form_.kind not in self._kinds:
+            raise ValueError(f"{self._name} has no kind {form_.kind!r}")
+        arguments = [None if a is None else self.spec(a) for a in form_.arguments]
+
+        def write(union: Any) -> Any:
+            def record(r: Any) -> Any:
+                slots, variadic, names = _parts(r.as_schema())
+                for name, value in form_.attributes.items():
+                    if name not in names:
+                        raise ValueError(f"{_article(form_.kind)} has no attribute {name!r}")
+                    getattr(r, name)(lambda p, value=value: p.as_scalar(value))
+                if len(arguments) < len(slots) or (variadic is None and len(arguments) != len(slots)):
+                    least = "" if variadic is None else "at least "
+                    raise ValueError(f"{_article(form_.kind)} takes {least}{len(slots)} arguments, got {len(arguments)}")
+                for name, argument in zip(slots, arguments):
+                    if argument is not None:
+                        getattr(r, name)(argument)
+                if variadic is not None:
+                    getattr(r, variadic)(list(arguments[len(slots):]))
+                return r
+
+            return getattr(union, form_.kind)(record)
+
+        return Writer(write)
+
+    # Checks
+
+    def validate(self, term_: Any, bound: Iterable[str] = (), core: bool = False) -> list[str]:
+        """Problems with a term. References must be bound by an enclosing binding or be in `bound`. With `core`, every
+        operator must be in its kind's vocabulary."""
+        return self._problems(term(term_), frozenset(bound), core)
+
+    def _problems(self, node: Any, bound: frozenset[str], core: bool) -> list[str]:
+        tag, record = kind_of(node)
+        if tag not in self._kinds:
+            return [f"{self._name} has no kind {tag!r}"]
+        kind = self._kinds[tag]
+        what = _article(tag)
+        attributes = attributes_of(record)
+        if kind.role == LITERAL:
+            value = attributes.get("value")
+            if value is None:
+                return [f"{what} needs a value"]
+            if type(value) not in Schemas.SCALAR_TYPES:
+                return [f"{what} must hold a basic scalar, got {_type_name(value)}"]
+            return kind.check(record) if kind.check is not None else []
+        problems = [f"{what} needs {_article(name)}" for name in kind.required if attributes.get(name) in (None, "")]
+        if kind.check is not None:
+            problems += kind.check(record)
+        name = attributes.get("name")
+        if kind.role == REFERENCE:
+            if kind.lexical and not problems and name not in bound and name not in kind.ambient:
+                problems.append(f"{tag} {name!r} is not bound")
+            return problems
+        slots, _, _ = _parts(record.as_schema())
+        arguments = arguments_of(record)
+        scopes = [bound] * len(arguments)
+        if kind.role in (BINDING, QUANTIFIER):
+            inner = bound | {name} if not problems else bound
+            scopes = [bound, *[inner] * (len(arguments) - 1)]
+        elif kind.role == IMPORT:
+            names = kind.names(record) if kind.names is not None and not problems else ()
+            scopes = [bound | set(names)] * len(arguments)
+        if kind.role in (APPLICATION, QUANTIFIER) and not problems and kind.vocabulary is not None:
+            operator = operator_of(node, kind)
+            vocabulary = kind.vocabulary
+            if operator in vocabulary and vocabulary[operator].arity() not in (-1, len(arguments)):  # -1: any number
+                problems.append(f"{operator} takes {vocabulary[operator].arity()} arguments, got {len(arguments)}")
+            elif core and operator not in vocabulary:
+                problems.append(f"{operator!r} is not a core operation")
+        for i, (argument, scope) in enumerate(zip(arguments, scopes)):
+            label = slots[i] if i < len(slots) else f"argument {i - len(slots)}"
+            if argument is None:
+                problems.append(f"{what} needs {_article(label)}")
+            else:
+                problems += [f"{label}: {problem}" for problem in self._problems(argument, scope, core)]
+        return problems
+
+    def infer(self, term_: Any, environment: Mapping[str, Domains.Domain] | None = None) -> Domains.Domain:
+        """The domain of a term's value, with the references in `environment` of the given domains."""
+        environment = dict(environment or {})
+        node = term(term_)
+        problems = self.validate(node, environment)
+        if problems:
+            raise ValueError(f"cannot infer the domain of an invalid expression: {problems[0]}")
+        return self._infer(node, environment)
+
+    def _infer(self, node: Any, environment: dict[str, Domains.Domain]) -> Domains.Domain:
+        tag, record, kind = self.kind(node)
+        if kind.role == LITERAL:
+            typed = kind.typed(record) if kind.typed is not None else None
+            return typed or self._domain_of(_scalar(record, "value"))
+        if kind.role == REFERENCE:
+            name = name_of(node)
+            return environment[name] if kind.lexical and name in environment else Domains.Anything
+        arguments = arguments_of(record)
+        if kind.role == IMPORT:
+            names = kind.names(record) if kind.names is not None else ()
+            return self._infer(arguments[-1], {**environment, **{name: Domains.Anything for name in names}})
+        if kind.role == BINDING:
+            value = self._infer(arguments[0], environment)
+            return self._infer(arguments[-1], {**environment, name_of(node): value})
+        operator = operator_of(node, kind)
+        signature = kind.signature if kind.vocabulary is None else kind.vocabulary.get(operator)
+        if kind.role == QUANTIFIER:  # its name has the domain of the collection's items
+            collection = self._infer(arguments[0], environment)
+            item = Domains.Anything if signature is None else signature.items(collection)  # type: ignore[attr-defined]
+            inner = {**environment, name_of(node): item}
+            domains = [collection, *(self._infer(argument, inner) for argument in arguments[1:])]
+        else:
+            domains = [self._infer(argument, environment) for argument in arguments]
+        if signature is None:
+            return Domains.Anything  # an extension: nothing is known about it
+        result = signature.result(domains)
+        if result is None:
+            names = ", ".join(domain.name() for domain in domains)
+            raise TypeError(f"{operator} cannot take ({names}); it takes {signature.describe()}")
+        typed = kind.typed(record) if kind.typed is not None else None
+        return result if typed is None else typed  # an application of a domain of its own gives it

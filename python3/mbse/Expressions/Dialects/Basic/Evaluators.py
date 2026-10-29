@@ -1,8 +1,9 @@
 """Evaluators of the Basic dialect: compute the value of an expression.
 
-`Evaluators.OfAny(expression, scope)` evaluates any expression with the variables in `scope` bound, and
-`Evaluators.OfLiteral`, `OfOperation`, `OfVariable` and `OfLet` evaluate one kind; each accepts that kind's `Spec`
-(see `Expressions`), including `Writer`s. The value is a native value, an object, or `None` when it is unknown.
+`Evaluators.OfAny(term, scope)` evaluates any term with the variables in `scope` bound, and `Evaluators.OfLiteral`,
+`OfCall`, `OfVariable`, `OfLet` and `OfQuantifier` evaluate one kind; each takes a term value, or anything
+`Terms.term` reads one from (an `Expression`, its root). The value is a native value, an object, or `None` when it is
+unknown.
 
 - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are unknown.
   `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the first does not
@@ -14,15 +15,16 @@
   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
   `convert` keeps a value in the operation's domain, `reinterpret` keeps its bit pattern, and `pack` and `unpack` go
   to and from a packed domain's representation.
-- Collections: a list property reads as a `Domains.Collection`, and `entries` gives an object's entries as one of
+- Collections: a container property reads as a `Domains.Collection`, and `entries` gives an object's entries as one of
   `Domains.Record`s, which `get` and `has` read. The collection operations and the quantifiers (`all`, `any`, `count`)
   follow Kleene's logic over the items; an unknown collection gives unknown.
 - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
   variables and wrong operand types raise, as do the problems `validate()` reports.
-- `get` and `has` read any object that writes its properties through `accept`, including value objects.
+- `get` and `has` read any data object, read through mbse-schemas' readers (`Framework.Objects`): reference objects,
+  value objects, union and intersection values.
 - Deep equality: a value object, a union or intersection value, or an entry's record is equal to another when the
-  properties each writes (a union's branch, an intersection's parts) are absent in both or equal in both, read through
-  the visitor protocols, so without a schema; a property present in one and absent in the other is incomparable. A
+  properties each holds (a union's branch, an intersection's parts) are absent in both or equal in both, read through
+  the visitor protocols; a property present in one and absent in the other is incomparable. A
   positional collection is equal to another of the same length whose items are equal in order, and unequal to one of
   another length; a keyed collection to another with the same keys and equal values, in any order, and incomparable to
   one with other keys. Equal is Kleene's and of the parts' equalities.
@@ -34,13 +36,13 @@ from __future__ import annotations
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F
-from mbse.Schemas.Framework import Comparison, Schemas, Validators
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Expressions.Framework import Evaluators as F, Objects, Terms
+from mbse.Schemas.Framework import Comparison, Schemas
+from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains, Expressions, Ieee754
 
-__all__ = ["OfAny", "OfLiteral", "OfOperation", "OfVariable", "OfLet", "OfQuantifier", "OPERATIONS",
+__all__ = ["OfAny", "OfLiteral", "OfCall", "OfVariable", "OfLet", "OfQuantifier", "OPERATIONS",
            "QUANTIFIERS", "INTERPRETER"]
 
 Scope = Mapping[str, Any] | None
@@ -80,9 +82,14 @@ def _logic(name: str) -> F.Implementation:
     return apply
 
 
+def _callable(node: Any) -> str:
+    """A call's operation's name."""
+    return Terms.attributes_of(Terms.kind_of(node)[1])["callable"]
+
+
 def _strict(function: Callable[[str, list[Any]], Any]) -> F.Implementation:
     """An operation that evaluates all its arguments."""
-    return lambda arguments, node, scope: function(node.name, [argument() for argument in arguments])
+    return lambda arguments, node, scope: function(_callable(node), [argument() for argument in arguments])
 
 
 def _not(name: str, values: list[Any]) -> bool | None:
@@ -90,28 +97,22 @@ def _not(name: str, values: list[Any]) -> bool | None:
     return None if truth is None else not truth
 
 
-def _is_readable(value: Any) -> bool:
-    return callable(getattr(value, "accept", None))
-
-
-def _is_object(value: Any) -> bool:
-    """A reference object, compared by identity; a value object's identity does not take part in equality."""
-    return _is_readable(value) and callable(getattr(value, "identity", None)) and value.owner() is None
+_is_readable = Objects.is_object
+_is_object = Objects.is_reference  # a reference object, compared by identity
 
 
 def _fields(value: Any) -> dict[str, Any]:
-    """A record's fields, or the properties a value writes, as Basic reads them."""
+    """A record's fields, or the properties a value holds, as Basic reads them."""
     if isinstance(value, Domains.Record):
         return value.fields
-    return {name: _value_of(v) for name, v in Validators.properties_of(value).items()}
+    return {name: _value_of(v) for name, v in Objects.properties(value).items()}
 
 
 def _value_of(value: Any) -> Any:
-    """A property's value as Basic reads it: a list as a collection."""
-    if isinstance(value, Validators.ListRecord):
-        keyed = any(key is not None for key in value.keys)
+    """A property's value as Basic reads it: a container as a collection."""
+    if isinstance(value, Objects.Listed):
         return Domains.Collection(tuple(map(_value_of, value.values)),
-                                  tuple(map(_value_of, value.keys)) if keyed else None)
+                                  None if value.keys is None else tuple(map(_value_of, value.keys)))
     return value
 
 
@@ -126,7 +127,7 @@ def _read(name: str, values: list[Any]) -> Any:
     if isinstance(target, Domains.Record):
         properties = target.fields
     elif _is_readable(target):
-        properties = Validators.properties_of(target)
+        properties = Objects.properties(target)
     else:
         raise TypeError(f"{name} expects an object, got {_type_name(target)}")
     if name == "has":
@@ -135,8 +136,8 @@ def _read(name: str, values: list[Any]) -> Any:
 
 
 def _compare(a: Native, b: Native) -> Comparison.Result:
-    schema = Schemas.OfNative.Data(type(a))
-    return Comparison.OfNative(schema, a).compare(Comparison.OfNative(schema, b))
+    schema = Schemas.OfScalar.Data(type(a))
+    return Comparison.OfScalar(schema, a).compare(Comparison.OfScalar(schema, b))
 
 
 def _typed(a: Any, b: Any) -> bool:
@@ -158,7 +159,7 @@ def _equal(a: Any, b: Any) -> bool | None:
     if _is_native(a) and type(a) is type(b):
         return _compare(a, b) == 0
     if _is_object(a) or _is_object(b):
-        return a.identity() == b.identity() if _is_object(a) and _is_object(b) else None
+        return a is b if _is_object(a) and _is_object(b) else None
     if _is_collection(a) and _is_collection(b):
         return _equal_collections(_collection("eq", a), _collection("eq", b))  # type: ignore[arg-type]
     if _is_value(a) and _is_value(b):
@@ -347,9 +348,15 @@ def _converted(value: Any, target: Any) -> Any:
     raise TypeError(f"cannot convert {_describe(value)} to {target.name()}")
 
 
+def _domain_of(node: Any) -> Any:
+    """The domain a call names: its result's."""
+    return Expressions._domain_of(Terms.kind_of(node)[1])
+
+
 def _convert(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     value = arguments[0]()
-    return None if value is None else Domains.value(node.domain, _converted(value, node.domain))
+    domain = _domain_of(node)
+    return None if value is None else Domains.value(domain, _converted(value, domain))
 
 
 def _width(domain: Any) -> int | None:
@@ -384,7 +391,7 @@ def _reinterpret(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     value = arguments[0]()
     if value is None:
         return None
-    source, target = _domain(value), node.domain
+    source, target = _domain(value), _domain_of(node)
     m, n = _width(source), _width(target)
     if m is None or n is None:
         raise TypeError(f"cannot reinterpret {_describe(value)} as {target.name()}")
@@ -411,7 +418,7 @@ def _unpack(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     value = arguments[0]()
     if value is None:
         return None
-    target = node.domain
+    target = _domain_of(node)
     if not isinstance(target, _PACKED):
         raise TypeError(f"unpack needs a packed domain, got {target.name()}")
     representation = target.representation
@@ -529,7 +536,7 @@ def _entries(name: str, values: list[Any]) -> Domains.Collection | None:
         return None
     if not _is_readable(target):
         raise TypeError(f"entries expects an object, got {_type_name(target)}")
-    entries = Validators.entries_of(target).get(adjacency, [])
+    entries = Objects.entries(target, adjacency)
     return Domains.Collection(tuple(Domains.Record({**entry.targets, **{k: _value_of(v) for k, v in entry.values.items()}})
                                     for entry in entries))
 
@@ -574,37 +581,43 @@ OPERATIONS: dict[str, F.Implementation] = {
 }
 """The implementation of each core operation."""
 
-INTERPRETER = F.Interpreter(Expressions.DIALECT, {"operation": OPERATIONS, "quantifier": QUANTIFIERS},
-                            typed=Domains.Value)
+INTERPRETER = F.Interpreter(Expressions.DIALECT, {"call": OPERATIONS, "quantifier": QUANTIFIERS}, typed=Domains.Value)
 """The interpreter of the Basic dialect, which `Partials` reduces with."""
 
 
-def OfAny(expression: Expressions.OfAny.Spec, scope: Scope = None) -> Any:
-    """The value of any expression, with the variables in `scope` bound."""
-    return INTERPRETER(Expressions.OfAny.resolve(expression), scope)
+def OfAny(expression: Any, scope: Scope = None) -> Any:
+    """The value of any term, with the variables in `scope` bound."""
+    return INTERPRETER(expression, scope)
 
 
-def OfLiteral(expression: Expressions.OfLiteral.Spec, scope: Scope = None) -> Any:
+def _of(tag: str, expression: Any, scope: Scope) -> Any:
+    term = Terms.term(expression)
+    found = Terms.kind_of(term)[0]
+    if found != tag:
+        raise TypeError(f"expected {Terms._article(tag)}, got {Terms._article(found)}")
+    return INTERPRETER(term, scope)
+
+
+def OfLiteral(expression: Any, scope: Scope = None) -> Any:
     """The value of a literal."""
-    return INTERPRETER(Expressions.OfLiteral.resolve(expression), scope)
+    return _of("literal", expression, scope)
 
 
-def OfOperation(expression: Expressions.OfOperation.Spec, scope: Scope = None) -> Any:
-    """The value of an operation, with the variables in `scope` bound."""
-    return INTERPRETER(Expressions.OfOperation.resolve(expression), scope)
+def OfCall(expression: Any, scope: Scope = None) -> Any:
+    """The value of a call, with the variables in `scope` bound."""
+    return _of("call", expression, scope)
 
 
-def OfVariable(expression: Expressions.OfVariable.Spec, scope: Scope = None) -> Any:
+def OfVariable(expression: Any, scope: Scope = None) -> Any:
     """The value `scope` binds to a variable."""
-    return INTERPRETER(Expressions.OfVariable.resolve(expression), scope)
+    return _of("variable", expression, scope)
 
 
-def OfLet(expression: Expressions.OfLet.Spec, scope: Scope = None) -> Any:
+def OfLet(expression: Any, scope: Scope = None) -> Any:
     """The value of a let's body, with its name bound to its value and the variables in `scope` bound."""
-    return INTERPRETER(Expressions.OfLet.resolve(expression), scope)
+    return _of("let", expression, scope)
 
 
-def OfQuantifier(expression: Expressions.OfQuantifier.Spec, scope: Scope = None) -> Any:
+def OfQuantifier(expression: Any, scope: Scope = None) -> Any:
     """The value of a quantifier, with the variables in `scope` bound."""
-    return INTERPRETER(Expressions.OfQuantifier.resolve(expression), scope)
-
+    return _of("quantifier", expression, scope)

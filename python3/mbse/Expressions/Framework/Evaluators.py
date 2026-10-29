@@ -7,15 +7,15 @@ where dialects differ most.
 Evaluation resolves references in a scope (see `Symbolics`): an evaluator given a mapping instead of a scope makes its
 dialect's scope from it, so `Evaluators.OfAny(expression, {'this': value})` binds `this`.
 
-`Interpreter` evaluates by role (see `Terms`): a literal gives its value (through `literal`, or `typed` when it carries
-a domain of its own), a reference what
+`Interpreter` evaluates a term value by its kind's role (see `Terms`): a literal gives its value (through `literal`, or
+`typed` when it carries a domain of its own), a reference what
 the scope resolves, a binding its body in the scope with its name bound, and an import its body in the scope it
 declares. An application calls its operator's implementation from `operations`, with one thunk per argument, so that
 implementations decide which arguments to evaluate and when, and so does a quantifier, whose second thunk takes an item
 and evaluates the body with the name bound to it; the implementation of a kind whose vocabulary is open is
 one callable for every name, and operators outside a closed vocabulary go to `extension`, if given. It raises on what
-`Dialect.validate` reports: operations outside the vocabulary, wrong numbers of arguments, unbound references, missing
-values and cycles.
+`Dialect.validate` reports: operations outside the vocabulary, wrong numbers of arguments, unbound references and missing
+values. An evaluator takes a term value, or anything `Terms.term` reads one from (an `Expression`, a term property).
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from typing import Any, Protocol, runtime_checkable
 from . import Symbolics, Terms
 from .Symbolics import Scope, Variables
 
-__all__ = ["Evaluator", "Predicate", "Interpreter", "Thunk", "Implementation"]
+__all__ = ["Evaluator", "Interpreter", "Thunk", "Implementation"]
 
 Thunk = Callable[[], Any]
 Implementation = Callable[[list[Thunk], Any, Any], Any]
@@ -35,20 +35,19 @@ Implementation = Callable[[list[Thunk], Any, Any], Any]
 
 @runtime_checkable
 class Evaluator(Protocol):
-    """Computes the value of an expression in `scope`, or with the variables in a mapping bound."""
+    """Computes the value of a term in `scope`, or with the variables in a mapping bound."""
 
     def __call__(self, expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any: ...
 
 
 class Interpreter:
-    """Evaluates the expressions of `dialect`. `operations` maps each application kind's tag to its implementations
-    by operator name, or, for a kind whose vocabulary is open, to one implementation. `literal` converts a literal's
-    value into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal that carries a
-    domain of its own (without it, evaluating one raises `NotImplementedError`); `scope` makes the dialect's scope from
-    a mapping of variables, and `extension(operator, arguments, node, scope)` evaluates operators outside a kind's
-    vocabulary."""
+    """Evaluates the terms of `dialect`. `operations` maps each application kind's tag to its implementations by
+    operator name, or, for a kind whose vocabulary is open, to one implementation. `literal` converts a literal's value
+    into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal that carries a domain of
+    its own (without it, evaluating one raises `NotImplementedError`); `scope` makes the dialect's scope from a mapping
+    of variables, and `extension(operator, arguments, node, scope)` evaluates operators outside a kind's vocabulary."""
 
-    def __init__(self, dialect: Terms.Declared, operations: Mapping[str, Any], *,
+    def __init__(self, dialect: Terms.Dialect, operations: Mapping[str, Any], *,
                  literal: Callable[[Any], Any] = lambda value: value,
                  typed: Callable[[Any, Any], Any] | None = None,
                  scope: Callable[[Mapping[str, Any]], Scope] = Variables,
@@ -57,62 +56,55 @@ class Interpreter:
         self._scope, self._extension = scope, extension
 
     def __call__(self, expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
-        """The value of an expression already resolved to the dialect's data."""
+        """The value of a term (see `Terms.term`)."""
         if not isinstance(scope, Symbolics.Scope):
             scope = self._scope(dict(scope or {}))
-        return self.evaluate(expression, scope, set())
+        return self.evaluate(Terms.term(expression), scope)
 
-    def evaluate(self, expression: Any, scope: Any, active: set[int]) -> Any:
-        if not isinstance(expression, self.dialect.classes):
-            raise TypeError(f"not an expression: {expression!r}")
-        kind = type(expression)
-        if kind.ROLE == Terms.LITERAL:
-            if expression.value is None:
-                raise ValueError(f"{Terms._article(kind.KIND)} needs a value")
-            typed = expression.typed()
+    def evaluate(self, node: Any, scope: Any) -> Any:
+        tag, record, kind = self.dialect.kind(node)
+        if kind.role == Terms.LITERAL:
+            value = Terms.attributes_of(record).get("value")
+            if value is None:
+                raise ValueError(f"{Terms._article(tag)} needs a value")
+            typed = kind.typed(record) if kind.typed is not None else None
             if typed is None:
-                return self._literal(expression.value)
+                return self._literal(value)
             if self._typed is None:
                 raise NotImplementedError(f"this evaluator has no values of {typed.name()}")
-            return self._typed(typed, expression.value)
-        if kind.ROLE == Terms.REFERENCE:
-            return scope.lookup(expression)
-        if id(expression) in active:
-            raise ValueError("the expression contains a cycle")
-        active.add(id(expression))
-        try:
-            arguments = expression._arguments()
-            if kind.ROLE in (Terms.BINDING, Terms.IMPORT, Terms.QUANTIFIER):
-                for slot, argument in zip(kind.SLOTS, arguments):
-                    if argument is None:
-                        raise ValueError(f"{Terms._article(kind.KIND)} needs {Terms._article(slot)}")
-                if kind.ROLE == Terms.QUANTIFIER:
-                    return self._apply(expression, arguments, scope, active)
-                if kind.ROLE == Terms.IMPORT:
-                    return self.evaluate(arguments[0], scope.enter(expression), active)
-                bound = self.evaluate(arguments[0], scope, active)
-                return self.evaluate(arguments[1], scope.bind(Terms.name_of(expression), bound), active)
-            return self._apply(expression, arguments, scope, active)
-        finally:
-            active.discard(id(expression))
+            return self._typed(typed, value)
+        if kind.role == Terms.REFERENCE:
+            return scope.lookup(node)
+        arguments = Terms.arguments_of(record)
+        if kind.role in (Terms.BINDING, Terms.IMPORT, Terms.QUANTIFIER):
+            slots, _, _ = Terms._parts(record.as_schema())
+            for slot, argument in zip(slots, arguments):
+                if argument is None:
+                    raise ValueError(f"{Terms._article(tag)} needs {Terms._article(slot)}")
+            if kind.role == Terms.QUANTIFIER:
+                return self._apply(node, tag, kind, arguments, scope)
+            if kind.role == Terms.IMPORT:
+                return self.evaluate(arguments[0], scope.enter(node))
+            bound = self.evaluate(arguments[0], scope)
+            return self.evaluate(arguments[1], scope.bind(Terms.name_of(node), bound))
+        return self._apply(node, tag, kind, arguments, scope)
 
-    def _apply(self, expression: Any, arguments: tuple[Any, ...], scope: Any, active: set[int]) -> Any:
-        kind = type(expression)
-        operator = Terms._operator(expression)
-        implementations = self.operations[kind.KIND]
-        thunks = [lambda argument=argument: self.evaluate(argument, scope, active) for argument in arguments]
-        if kind.ROLE == Terms.QUANTIFIER:  # the arguments after the collection, of an item: evaluated with the name bound to it
-            name = Terms.name_of(expression)
+    def _apply(self, node: Any, tag: str, kind: Terms.Kind, arguments: tuple[Any, ...], scope: Any) -> Any:
+        operator = Terms.operator_of(node, kind)
+        implementations = self.operations[tag]
+        thunks = [lambda argument=argument: self.evaluate(argument, scope) for argument in arguments]
+        if kind.role == Terms.QUANTIFIER:  # the arguments after the collection, of an item: evaluated with the name bound
+            name = Terms.name_of(node)
             for i in range(1, len(arguments)):
                 thunks[i] = lambda item, argument=arguments[i]: self.evaluate(  # type: ignore[assignment]
-                    argument, scope.bind(name, item), active)
-        if kind.VOCABULARY is None:
-            return implementations(thunks, expression, scope)
+                    argument, scope.bind(name, item))
+        if kind.vocabulary is None:
+            return implementations(thunks, node, scope)
         if operator not in implementations:
             if self._extension is not None:
-                return self._extension(operator, thunks, expression, scope)
+                return self._extension(operator, thunks, node, scope)
             raise NotImplementedError(f"{operator!r} is not a core operation")
-        arity = kind.VOCABULARY[operator].arity()
+        arity = kind.vocabulary[operator].arity()
         if arity >= 0 and len(arguments) != arity:  # a negative arity takes any number
             raise TypeError(f"{operator} takes {arity} arguments, got {len(arguments)}")
-        return implementations[operator](thunks, expression, scope)
+        return implementations[operator](thunks, node, scope)

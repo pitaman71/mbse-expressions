@@ -8,10 +8,10 @@ prevent most mistakes, and which reference to load for a task.
 
 `Expressions`, `Evaluators` and `Domains` are the Basic dialect's, the neutral form of every constraint. The
 framework is `mbse.Expressions.Framework`, the dialects are under `mbse.Expressions.Dialects`, and the translators
-between them under `mbse.Expressions.Translators`. `register(store)` registers the meta-schemas of every dialect
-imported so far in an mbse-schemas store."""
+between them under `mbse.Expressions.Translators`. Expressions are stored in an mbse-schemas store, whose schemas
+`Framework.install` and each dialect's `install` define (docs/proposals/port/API.md)."""
 
+from . import Framework
 from .Dialects.Basic import Domains, Evaluators, Expressions, Partials
-from .Framework.Terms import register
 
-__all__ = ["Expressions", "Evaluators", "Domains", "Partials", "register"]
+__all__ = ["Framework", "Expressions", "Evaluators", "Domains", "Partials"]

@@ -15,18 +15,20 @@ Value domains name the standard they implement, with only its parameters (see do
   by `codes[i]`.
 
 Each kind's data, `OfX.Data`, is a dataclass compared by structure, built by `OfX.Builder` (`create()`, `clone()`,
-`update()`; none validate), with `validate()`. A domain is a `Domain`: a value is in it (`contains`) when it has the
+`update()`; none validate), with `validate()`. Domains stay code until the port's stage 3 makes them objects that
+dialects define by name (docs/proposals/port): a term names its domain. A domain is a `Domain`: a value is in it (`contains`) when it has the
 native type the domain's literals hold (an `int` for an integer, a `str` for an enum's member, ...) and fits it, and it
 includes (`includes`) only domains equal to it, since Basic has no implied promotions.
 
 Today's natives are the defaults: `Int` is an unbounded signed integer, `Float` binary64 rounding ties to even, `Str`
 Unicode, `Bytes` bytes of any length and `Bool` true and false; `of(value)` gives a native's default domain. `Object`
-holds what writes its properties through `accept`, including expressions and value objects, and `Anything` is the
-domain of a value not known statically, such as a property read with `get`. Unknown (`None`) is not a domain.
+holds data objects read through mbse-schemas' readers (`Framework.Objects`), terms and value objects among them, and
+`Anything` is the domain of a value not known statically, such as a property read with `get`. Unknown (`None`) is not a
+domain.
 
-Domains are registered by name with `register`. Over the wire a domain that is registered is written by name,
-`{"named": {"name": "uint8"}}`, and any other by value, `{"integer": {"width": 8, "signed": false, ...}}`: `Schema` is
-the union of the kinds' meta-schemas and `named`, and `to_plain` and `from_plain` convert.
+Domains are registered by name with `register`, and a term names the domain it carries: `registered(name)` gives the
+domain a name stands for, a registered one or a default's (`bool`, `int`, `float`, `str`, `bytes`, which no other may
+take), and `name_of(domain)` the name of a domain, None when it has none.
 
 A value of another domain than its native's default is a typed value, `Value(domain, value)`; `value(domain, native)`
 gives the bare native for a default domain and a typed value otherwise, and `of(value)` gives any value's domain. A
@@ -46,7 +48,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, ClassVar
 
-from mbse.Expressions.Framework import Domains as D
+from mbse.Expressions.Framework import Domains as D, Objects
 from mbse.Expressions.Framework.Domains import Anything
 from mbse.Schemas.Framework import Comparison, Schemas
 
@@ -54,9 +56,9 @@ from . import Ieee754
 
 __all__ = [
     "OfBool", "OfInteger", "OfIeee754", "OfBits", "OfBytes", "OfUnicode", "OfIeee1164", "OfEnum", "OfPacked",
-    "FORMATS", "ROUNDINGS", "OVERFLOWS", "STATES", "Schema",
+    "FORMATS", "ROUNDINGS", "OVERFLOWS", "STATES",
     "Bool", "Int", "Float", "Str", "Bytes", "Object", "Anything", "SIGNATURES",
-    "of", "register", "registered", "name_of", "to_plain", "from_plain", "Domain", "Value", "value",
+    "of", "register", "registered", "name_of", "Domain", "Value", "value",
     "Collection", "Record", "List", "Keyed", "Records", "items_of",
 ]
 
@@ -111,8 +113,8 @@ class _Domain:
     def compare(self, a: Any, b: Any) -> int | None:
         """How two values of this domain compare: -1, 0 or 1, or None when they are incomparable. An unordered domain's
         values are equal or incomparable."""
-        schema = Schemas.OfNative.Data(type(a))
-        return Comparison.OfNative(schema, a).compare(Comparison.OfNative(schema, b))
+        schema = Schemas.OfScalar.Data(type(a))
+        return Comparison.OfScalar(schema, a).compare(Comparison.OfScalar(schema, b))
 
     def validate(self) -> list[str]:
         return []
@@ -450,43 +452,14 @@ class _PackedBuilder(_Builder):
         return self._set("codes", tuple(codes))
 
 
-# --- Meta-schemas ---
-
-
-def _text(name: str) -> Callable[[Any], Any]:
-    return lambda p: p.name(name).of(lambda t: t.as_native(str))
-
-
-def _int(name: str) -> Callable[[Any], Any]:
-    return lambda p: p.name(name).of(lambda t: t.as_native(int))
-
-
-Schema = Schemas.OfUnion.Builder().create()  # a domain, by value or by name; its branches are added below
-_SCHEMAS = {
-    "bool": Schemas.OfObject.Builder().create(),
-    "integer": Schemas.OfObject.Builder().properties(
-        _int("width"), lambda p: p.name("signed").of(lambda t: t.as_native(bool)), _text("overflow")).create(),
-    "ieee754": Schemas.OfObject.Builder().properties(_text("format"), _text("rounding")).create(),
-    "bits": Schemas.OfObject.Builder().properties(_int("width")).create(),
-    "bytes": Schemas.OfObject.Builder().properties(_int("width")).create(),
-    "unicode": Schemas.OfObject.Builder().create(),
-    "ieee1164": Schemas.OfObject.Builder().properties(_int("width")).create(),
-    "enum": Schemas.OfObject.Builder().properties(
-        lambda p: p.name("members").of(lambda t: t.as_indexed(lambda i: i.of(lambda t: t.as_native(str))))).create(),
-    "packed": Schemas.OfObject.Builder().properties(
-        lambda p: p.name("domain").of(Schema), lambda p: p.name("representation").of(Schema),
-        lambda p: p.name("codes").of(lambda t: t.as_indexed(lambda i: i.of(lambda t: t.as_native(int))))).create(),
-    "named": Schemas.OfObject.Builder().properties(_text("name")).create(),
-}
-Schemas.OfUnion.Builder(Schema).branches(
-    *(lambda b, name=name, schema=schema: b.name(name).of(schema) for name, schema in _SCHEMAS.items())).update()
+# --- Kinds ---
 
 
 class _Kind:
-    """A value domain kind: `Data`, `Builder` and the meta-schema `Schema` of its value."""
+    """A value domain kind: its `Data` and its `Builder`."""
 
     def __init__(self, data: type[_Domain], builder: type[_Builder]):
-        self.Data, self.Builder, self.Schema = data, builder, _SCHEMAS[data.KIND]
+        self.Data, self.Builder = data, builder
 
     def __repr__(self) -> str:
         return f"<domain kind {self.Data.KIND}>"
@@ -505,14 +478,15 @@ _KINDS = {kind.Data.KIND: kind.Data for kind in (OfBool, OfInteger, OfIeee754, O
                                                  OfEnum, OfPacked)}
 
 
-# --- The registry and the plain form ---
+# --- The registry ---
 
 _registry: dict[str, _Domain] = {}
 
 
 def register(name: str, domain: _Domain) -> None:
-    """Registers `domain` under `name`, so that literals of it are written by name. A domain is registered once."""
-    if name in _registry:
+    """Registers `domain` under `name`, so that a term can name it. A domain is registered once, and a default's name
+    is its own."""
+    if name in _registry or name in _DEFAULTS:
         raise ValueError(f"domain {name!r} is already registered")
     for other, registered_domain in _registry.items():
         if registered_domain == domain:
@@ -521,45 +495,18 @@ def register(name: str, domain: _Domain) -> None:
 
 
 def registered(name: str) -> _Domain:
-    """The domain registered under `name`."""
-    if name not in _registry:
-        raise LookupError(f"no domain registered as {name!r}")
-    return _registry[name]
+    """The domain `name` stands for: a registered one, or a default's."""
+    if name in _registry:
+        return _registry[name]
+    if name in _DEFAULTS:
+        return _DEFAULTS[name]
+    raise LookupError(f"no domain registered as {name!r}")
 
 
 def name_of(domain: Any) -> str | None:
-    """The name a domain equal to `domain` is registered under, or None."""
-    return next((name for name, registered_domain in _registry.items() if registered_domain == domain), None)
-
-
-def to_plain(domain: _Domain) -> dict[str, Any]:
-    """A domain's plain form: by name when it is registered, otherwise by value, leaving out what is absent."""
-    name = name_of(domain)
-    if name is not None:
-        return {"named": {"name": name}}
-    if not isinstance(domain, _Domain):
-        raise TypeError(f"not a domain: {domain!r}")
-    contents: dict[str, Any] = {}
-    for field in dataclasses.fields(domain):
-        value = getattr(domain, field.name)
-        if isinstance(value, _Domain):
-            contents[field.name] = to_plain(value)
-        elif isinstance(value, tuple):
-            contents[field.name] = list(value)
-        elif value is not None:
-            contents[field.name] = value
-    return {domain.KIND: contents}
-
-
-def from_plain(plain: dict[str, Any]) -> _Domain:
-    """The domain a plain form holds: a registered one by name, or a new one of its kind."""
-    ((kind, contents),) = plain.items()
-    if kind == "named":
-        return registered(contents["name"])
-    fields: dict[str, Any] = {}
-    for name, value in contents.items():
-        fields[name] = from_plain(value) if isinstance(value, dict) else tuple(value) if isinstance(value, list) else value
-    return _KINDS[kind](**fields)
+    """The name of a domain equal to `domain`: the one it is registered under, or a default's; None if it has none."""
+    found = next((name for name, registered_domain in _registry.items() if registered_domain == domain), None)
+    return found if found is not None else next((name for name, d in _DEFAULTS.items() if d == domain), None)
 
 
 # --- Typed values ---
@@ -666,9 +613,10 @@ def items_of(domain: Any) -> D.Domain:
 # --- The defaults and the core operations' signatures ---
 
 Bool, Int, Float, Str, Bytes = _Bool(), _Integer(), _Ieee754(), _Unicode(), _Bytes()
-Object = D.OfValues("object", lambda value: callable(getattr(value, "accept", None)))
+Object = D.OfValues("object", Objects.is_object)
 
 _NATIVES: dict[type, _Domain] = {bool: Bool, int: Int, float: Float, str: Str, bytes: Bytes}
+_DEFAULTS: dict[str, _Domain] = {"bool": Bool, "int": Int, "float": Float, "str": Str, "bytes": Bytes}
 
 
 class _Family:
