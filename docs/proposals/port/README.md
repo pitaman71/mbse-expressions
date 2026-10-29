@@ -112,7 +112,16 @@ As the user decided (2026-10-28), on questions 9 to 11, "yes" to each recommenda
     parameters after.
 
 Question 6, what a `requires` that evaluates to unknown does: "semantics of evaluate deserve a more in-depth
-discussion", open. Questions 7 and 8 are put again, with examples.
+discussion", open.
+
+As the user decided (2026-10-28), on question 7, a map's variables (the "spread" case, STREAMING_QUERIES.md):
+
+7. **A variable over a finite domain is in the plan**: "(b) is in the plan": each frame fans out into one frame per
+   value the domain holds and its pattern's `requires` allows (bool, an enum). **A variable computed from the frame**,
+   one value per frame: "(a) is not in the plan". **Solving for a variable's values** (a constraint over an unbounded
+   domain): "(c) can be deferred".
+
+Question 8, a collecting reduce, is open.
 
 ## Stages (proposed, once decided)
 
