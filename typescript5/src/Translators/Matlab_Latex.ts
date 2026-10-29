@@ -12,13 +12,13 @@ const V = value(BigInt, Number, String, Boolean);
 export const TRANSLATOR = new Pairwise(MATLAB, LATEX, [
   new Rule(Matlab.constant(V), Latex.constant(V)),
   new Rule(Matlab.identifier, Latex.symbol),
-  new Inline("where", "right"),
-  new Elide("import", "left"),
+  new Inline("latex_where", "right"),
+  new Elide("matlab_import", "left"),
   new Rule(Matlab.get, Latex.get),
   new Rule(Matlab.has, Latex.has),
   new Rule(Matlab.implies, Latex.implies, "backward"),
-  ...renames("binary", "operator", "binary", "operator", {
+  ...renames("matlab_binary", "operator", "latex_binary", "operator", {
     "==": "=", "~=": "\\neq", "<": "<", "<=": "\\leq", ">": ">", ">=": "\\geq", "&&": "\\land", "||": "\\lor",
     "+": "+", "-": "-", ".*": "\\cdot" }, 2),
-  ...renames("unary", "operator", "unary", "operator", { "~": "\\lnot", "-": "-" }, 1),
+  ...renames("matlab_unary", "operator", "latex_unary", "operator", { "~": "\\lnot", "-": "-" }, 1),
 ]);

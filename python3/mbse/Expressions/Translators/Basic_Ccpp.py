@@ -17,14 +17,14 @@ from mbse.Expressions.Dialects.Ccpp.Domains import TYPES
 from mbse.Expressions.Dialects.Ccpp.Expressions import DIALECT as CCPP
 from mbse.Expressions.Framework.Translators import Convert, Inline, Pairwise, Rule, renames
 
-from ._Patterns import Basic, Ccpp, value
+from ._Patterns import Basic, Ccpp, domain_of, typed, value
 
 _FLOATS = {"binary32": "float", "binary64": "double", "binary128": "long double"}
 
 
 def _to_c(attributes: dict[str, Any]) -> dict[str, Any] | None:
     """A typed Basic literal's C constant."""
-    domain, typed = attributes.get("domain"), None
+    domain, typed = domain_of(attributes), None
     if isinstance(domain, D.OfInteger.Data) and domain.width in (8, 16, 32, 64) and domain.overflow == "raise":
         typed = f"{'' if domain.signed else 'u'}int{domain.width}_t"
     elif isinstance(domain, D.OfIeee754.Data) and domain.format in _FLOATS and domain.rounding == "roundTiesToEven":
@@ -38,9 +38,9 @@ def _from_c(attributes: dict[str, Any]) -> dict[str, Any] | None:
     if ctype is None:
         return None
     if ctype.kind == "integer":
-        return {"value": attributes["value"], "domain": D.OfInteger.Data(ctype.width, ctype.signed)}
+        return typed(attributes["value"], D.OfInteger.Data(ctype.width, ctype.signed))
     if ctype.kind == "floating":
-        return {"value": attributes["value"], "domain": D.OfIeee754.Data(ctype.format)}
+        return typed(attributes["value"], D.OfIeee754.Data(ctype.format))
     return {"value": attributes["value"]}  # a bool
 
 
@@ -48,13 +48,13 @@ V = value(int, float, str, bool)
 
 TRANSLATOR = Pairwise(BASIC, CCPP, [
     Rule(Basic.literal(V), Ccpp.constant(V)),
-    Convert("literal", "constant", _to_c, _from_c),
+    Convert("literal", "ccpp_constant", _to_c, _from_c),
     Rule(Basic.variable, Ccpp.identifier),
     Inline("let", "left"),
     Rule(Basic.get, Ccpp.get),
     Rule(Basic.implies, Ccpp.implies, "forward"),
-    *renames("operation", "name", "binary", "operator", {
+    *renames("call", "callable", "ccpp_binary", "operator", {
         "eq": "==", "ne": "!=", "lt": "<", "le": "<=", "gt": ">", "ge": ">=", "and": "&&", "or": "||", "add": "+",
         "sub": "-", "mul": "*", "bitand": "&", "bitor": "|", "bitxor": "^", "shl": "<<", "shr": ">>"}, 2),
-    *renames("operation", "name", "unary", "operator", {"not": "!", "neg": "-", "bitnot": "~"}, 1),
+    *renames("call", "callable", "ccpp_unary", "operator", {"not": "!", "neg": "-", "bitnot": "~"}, 1),
 ])

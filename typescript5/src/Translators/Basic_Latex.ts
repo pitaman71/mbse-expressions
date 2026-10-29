@@ -16,8 +16,8 @@ export const TRANSLATOR = new Pairwise(BASIC, LATEX, [
   new Rule(Basic.get, Latex.get),
   new Rule(Basic.has, Latex.has),
   new Rule(Basic.implies, Latex.implies),
-  ...renames("operation", "name", "binary", "operator", {
+  ...renames("call", "callable", "latex_binary", "operator", {
     eq: "=", ne: "\\neq", lt: "<", le: "\\leq", gt: ">", ge: "\\geq", and: "\\land", or: "\\lor",
     add: "+", sub: "-", mul: "\\cdot" }, 2),
-  ...renames("operation", "name", "unary", "operator", { not: "\\lnot", neg: "-" }, 1),
+  ...renames("call", "callable", "latex_unary", "operator", { not: "\\lnot", neg: "-" }, 1),
 ]);

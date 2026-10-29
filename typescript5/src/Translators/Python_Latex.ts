@@ -14,15 +14,15 @@ export const TRANSLATOR = new Pairwise(PYTHON, LATEX, [
   new Rule(Python.constant(V), Latex.constant(V)),
   new Rule(Python.name, Latex.symbol),
   new Rule(Python.let, Latex.where),
-  new Elide("import", "left"),
-  new Elide("importfrom", "left"),
+  new Elide("python_import", "left"),
+  new Elide("python_importfrom", "left"),
   new Rule(Python.get, Latex.get),
   new Rule(Python.has, Latex.has),
   new Rule(Python.implies, Latex.implies),
-  new Rule(new P("binop", { operator: "/" }, A, B), Latex.frac),
-  ...renames("compare", "operator", "binary", "operator", {
+  new Rule(new P("python_binop", { operator: "/" }, A, B), Latex.frac),
+  ...renames("python_compare", "operator", "latex_binary", "operator", {
     "==": "=", "!=": "\\neq", "<": "<", "<=": "\\leq", ">": ">", ">=": "\\geq" }, 2),
-  ...renames("boolop", "operator", "binary", "operator", { and: "\\land", or: "\\lor" }, 2),
-  ...renames("binop", "operator", "binary", "operator", { "+": "+", "-": "-", "*": "\\cdot" }, 2),
-  ...renames("unaryop", "operator", "unary", "operator", { not: "\\lnot", "-": "-" }, 1),
+  ...renames("python_boolop", "operator", "latex_binary", "operator", { and: "\\land", or: "\\lor" }, 2),
+  ...renames("python_binop", "operator", "latex_binary", "operator", { "+": "+", "-": "-", "*": "\\cdot" }, 2),
+  ...renames("python_unaryop", "operator", "latex_unary", "operator", { not: "\\lnot", "-": "-" }, 1),
 ]);

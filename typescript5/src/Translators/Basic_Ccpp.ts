@@ -13,13 +13,13 @@ import { TYPES } from "../Dialects/Ccpp/Domains.js";
 import { DIALECT as CCPP } from "../Dialects/Ccpp/Expressions.js";
 import { Convert, Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import type { Attributes } from "../Framework/Translators.js";
-import { Basic, Ccpp, value } from "./_Patterns.js";
+import { Basic, Ccpp, domainOf, typed, value } from "./_Patterns.js";
 
 const FLOATS: Record<string, string> = { binary32: "float", binary64: "double", binary128: "long double" };
 
 /** A typed Basic literal's C constant. */
 function toC(attributes: Attributes): Attributes | null {
-  const domain = attributes.domain;
+  const domain = domainOf(attributes);
   let typed: string | null = null;
   if (domain instanceof D.OfInteger.Data && [8n, 16n, 32n, 64n].includes(domain.width as bigint) && domain.overflow === "raise") {
     typed = `${domain.signed ? "" : "u"}int${domain.width}_t`;
@@ -33,8 +33,8 @@ function toC(attributes: Attributes): Attributes | null {
 function fromC(attributes: Attributes): Attributes | null {
   const ctype = TYPES.get(attributes.type as string);
   if (ctype === undefined) return null;
-  if (ctype.kind === "integer") return { value: attributes.value, domain: new D.OfInteger.Data(BigInt(ctype.width), ctype.signed) };
-  if (ctype.kind === "floating") return { value: attributes.value, domain: new D.OfIeee754.Data(ctype.format as string) };
+  if (ctype.kind === "integer") return typed(attributes.value, new D.OfInteger.Data(BigInt(ctype.width), ctype.signed));
+  if (ctype.kind === "floating") return typed(attributes.value, new D.OfIeee754.Data(ctype.format as string));
   return { value: attributes.value }; // a bool
 }
 
@@ -42,13 +42,13 @@ const V = value(BigInt, Number, String, Boolean);
 
 export const TRANSLATOR = new Pairwise(BASIC, CCPP, [
   new Rule(Basic.literal(V), Ccpp.constant(V)),
-  new Convert("literal", "constant", toC, fromC),
+  new Convert("literal", "ccpp_constant", toC, fromC),
   new Rule(Basic.variable, Ccpp.identifier),
   new Inline("let", "left"),
   new Rule(Basic.get, Ccpp.get),
   new Rule(Basic.implies, Ccpp.implies, "forward"),
-  ...renames("operation", "name", "binary", "operator", {
+  ...renames("call", "callable", "ccpp_binary", "operator", {
     eq: "==", ne: "!=", lt: "<", le: "<=", gt: ">", ge: ">=", and: "&&", or: "||", add: "+", sub: "-", mul: "*", bitand: "&",
     bitor: "|", bitxor: "^", shl: "<<", shr: ">>" }, 2),
-  ...renames("operation", "name", "unary", "operator", { not: "!", neg: "-", bitnot: "~" }, 1),
+  ...renames("call", "callable", "ccpp_unary", "operator", { not: "!", neg: "-", bitnot: "~" }, 1),
 ]);

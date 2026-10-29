@@ -23,15 +23,15 @@ TRANSLATOR = Pairwise(BASIC, MATLAB, [
     Rule(Basic.literal(V), Matlab.constant(V)),
     Rule(Basic.variable, Matlab.identifier),
     Inline("let", "left"),
-    Elide("import", "right"),
+    Elide("matlab_import", "right"),
     Rule(Basic.get, Matlab.get),
     Rule(Basic.has, Matlab.has),
     Rule(Basic.implies, Matlab.implies, "forward"),
-    *renames("operation", "name", "binary", "operator", {
+    *renames("call", "callable", "matlab_binary", "operator", {
         "eq": "==", "ne": "~=", "lt": "<", "le": "<=", "gt": ">", "ge": ">=", "and": "&&", "or": "||",
         "add": "+", "sub": "-", "mul": ".*"}, 2),
-    *renames("operation", "name", "unary", "operator", {"not": "~", "neg": "-"}, 1),
-    *renames("operation", "name", "call", "function", {
+    *renames("call", "callable", "matlab_unary", "operator", {"not": "~", "neg": "-"}, 1),
+    *renames("call", "callable", "call", "callable", {
         "bitand": "bitand", "bitor": "bitor", "bitxor": "bitxor", "shl": "bitshift"}, 2),
     Rule(Basic.shr, Matlab.shr),
     Rule(Basic.quantifier("all"), Matlab.over("all")),

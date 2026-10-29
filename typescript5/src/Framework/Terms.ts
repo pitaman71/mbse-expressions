@@ -287,7 +287,7 @@ export function fold<R>(term_: unknown, fn: (node: any, results: any[]) => R): R
 }
 
 /** Scalars of one type by value (NaN is NaN, -0.0 is not 0.0). */
-function sameNative(a: unknown, b: unknown): boolean {
+export function sameNative(a: unknown, b: unknown): boolean {
   if (typeName(a) !== typeName(b)) return false;
   if (typeof a === "number") return Object.is(a, b);
   if (a instanceof Uint8Array) {

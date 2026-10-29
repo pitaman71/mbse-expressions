@@ -3,6 +3,9 @@ pairs two dialects' patterns into rules; the holes are shared, so the patterns o
 
 from __future__ import annotations
 
+from typing import Any
+
+from mbse.Expressions.Dialects.Basic import Domains
 from mbse.Expressions.Framework.Translators import Hole, Pattern as P, Rule, holes
 
 A, B, C, X = holes("A", "B", "C", "X")
@@ -15,58 +18,79 @@ def value(*types: type) -> Hole:
     return Hole("V", *types)
 
 
+def domain_of(attributes: dict[str, Any]) -> Any:
+    """The value domain a Basic literal's attributes name, or None."""
+    name = attributes.get("domain")
+    return None if name is None else Domains.registered(name)
+
+
+def typed(value: Any, domain: Any) -> dict[str, Any]:
+    """A Basic literal's attributes: `value`, of `domain`, named unless it is its native's own."""
+    return {"value": value} if Domains.of(value) == domain else {"value": value, "domain": named(domain)}
+
+
+def named(domain: Any) -> str:
+    """The name a Basic literal gives `domain`: the one it is registered under, or its own, under which it is
+    registered."""
+    name = Domains.name_of(domain)
+    if name is None:
+        name = domain.name()
+        Domains.register(name, domain)
+    return name
+
+
 class Basic:
     literal = staticmethod(lambda V: P("literal", value=V))
     variable = P("variable", name=N)
     let = P("let", A, B, name=N)
-    get = P("operation", X, P("literal", value=K), name="get")
-    has = P("operation", X, P("literal", value=K), name="has")
-    implies = P("operation", A, B, name="implies")
-    shr = P("operation", A, B, name="shr")
+    get = P("call", X, P("literal", value=K), callable="get")
+    has = P("call", X, P("literal", value=K), callable="has")
+    implies = P("call", A, B, callable="implies")
+    shr = P("call", A, B, callable="shr")
     quantifier = staticmethod(lambda name: P("quantifier", A, B, name=N, quantifier=name))
-    unary = staticmethod(lambda name: P("operation", A, name=name))  # count, sum, min, max, unique
-    item = P("operation", A, B, name="item")
-    in_ = P("operation", A, B, name="in")
+    unary = staticmethod(lambda name: P("call", A, callable=name))  # count, sum, min, max, unique
+    item = P("call", A, B, callable="item")
+    in_ = P("call", A, B, callable="in")
 
 
 def _call(function: str, *arguments: P | Hole) -> P:
-    return P("call", P("name", name=function), *arguments)
+    return P("python_call", P("python_name", name=function), *arguments)
 
 
 class Python:
-    constant = staticmethod(lambda V: P("constant", value=V))
-    name = P("name", name=N)
+    constant = staticmethod(lambda V: P("python_constant", value=V))
+    name = P("python_name", name=N)
     let = P("let", A, B, name=N)
-    get = P("attribute", X, attr=K)
-    has = P("call", P("name", name="hasattr"), X, P("constant", value=K))
-    implies = P("ifexp", A, B, P("constant", value=True))
-    ifexp = P("ifexp", A, B, C)
-    shr = P("binop", A, B, operator=">>")
-    all_ = _call("all", P("generator", A, B, name=N))
-    any_ = _call("any", P("generator", A, B, name=N))
-    count_where = _call("sum", P("generator", A, P("constant", value=1), B, name=N))  # sum(1 for n in a if b)
+    get = P("python_attribute", X, attr=K)
+    has = P("python_call", P("python_name", name="hasattr"), X, P("python_constant", value=K))
+    implies = P("python_ifexp", A, B, P("python_constant", value=True))
+    ifexp = P("python_ifexp", A, B, C)
+    shr = P("python_binop", A, B, operator=">>")
+    all_ = _call("all", P("python_generator", A, B, name=N))
+    any_ = _call("any", P("python_generator", A, B, name=N))
+    count_where = _call("sum", P("python_generator", A, P("python_constant", value=1), B, name=N))  # sum(1 for n in a if b)
     builtin = staticmethod(lambda function: _call(function, A))  # len, sum, min, max
-    index = P("index", A, B)
-    in_ = P("compare", A, B, operator="in")
-    unique = P("compare", _call("len", _call("set", A)), _call("len", A), operator="==")
+    index = P("python_index", A, B)
+    in_ = P("python_compare", A, B, operator="in")
+    unique = P("python_compare", _call("len", _call("set", A)), _call("len", A), operator="==")
 
 
 def _numpy(function: str) -> P:
     """The function `np.<function>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'."""
-    callee = P("name", name="np")
+    callee = P("python_name", name="np")
     for attr in function.split("."):
-        callee = P("attribute", callee, attr=attr)
+        callee = P("python_attribute", callee, attr=attr)
     return callee
 
 
 class Numpy:
     """Python in NumPy style: columns by subscript, missing values masked, operations as numpy functions."""
 
-    call = staticmethod(lambda function, *arguments: P("call", _numpy(function), *arguments))
-    get = P("subscript", X, key=K)
-    has = P("call", _numpy("logical_not"), P("call", _numpy("ma.getmaskarray"), P("subscript", X, key=K)))
-    implies = P("call", _numpy("where"), A, B, P("constant", value=True))
-    prelude = P("import", Hole("B"), module="numpy", alias="np")
+    call = staticmethod(lambda function, *arguments: P("python_call", _numpy(function), *arguments))
+    get = P("python_subscript", X, key=K)
+    has = P("python_call", _numpy("logical_not"), P("python_call", _numpy("ma.getmaskarray"), P("python_subscript", X, key=K)))
+    implies = P("python_call", _numpy("where"), A, B, P("python_constant", value=True))
+    prelude = P("python_import", Hole("B"), module="numpy", alias="np")
 
     @staticmethod
     def renames(kind: str, attribute: str, names: dict[str, str], arity: int) -> list[Rule]:
@@ -76,66 +100,66 @@ class Numpy:
 
 
 class Matlab:
-    constant = staticmethod(lambda V: P("constant", value=V))
-    identifier = P("identifier", name=N)
-    get = P("field", X, name=K)
-    has = P("call", X, P("constant", value=K), function="isfield")
-    implies = P("binary", P("unary", A, operator="~"), B, operator="||")
-    shr = P("call", A, P("unary", B, operator="-"), function="bitshift")  # a negative shift is to the right
-    over = staticmethod(lambda function: P("call", P("arrayfun", A, B, name=N), function=function))  # all(arrayfun(@(n) b, a))
-    function = staticmethod(lambda name: P("call", A, function=name))  # numel, sum, min, max
-    index = P("index", A, P("binary", B, P("constant", value=1), operator="+"))  # a(b + 1): MATLAB counts from 1
-    ismember = P("call", A, B, function="ismember")
-    unique = P("binary", P("call", P("call", A, function="unique"), function="numel"), P("call", A, function="numel"), operator="==")
+    constant = staticmethod(lambda V: P("literal", value=V))
+    identifier = P("variable", name=N)
+    get = P("matlab_field", X, name=K)
+    has = P("call", X, P("literal", value=K), callable="isfield")
+    implies = P("matlab_binary", P("matlab_unary", A, operator="~"), B, operator="||")
+    shr = P("call", A, P("matlab_unary", B, operator="-"), callable="bitshift")  # a negative shift is to the right
+    over = staticmethod(lambda function: P("call", P("matlab_arrayfun", A, B, name=N), callable=function))  # all(arrayfun(@(n) b, a))
+    function = staticmethod(lambda name: P("call", A, callable=name))  # numel, sum, min, max
+    index = P("matlab_index", A, P("matlab_binary", B, P("literal", value=1), operator="+"))  # a(b + 1): MATLAB counts from 1
+    ismember = P("call", A, B, callable="ismember")
+    unique = P("matlab_binary", P("call", P("call", A, callable="unique"), callable="numel"), P("call", A, callable="numel"), operator="==")
 
 
 class Ccpp:
-    constant = staticmethod(lambda V: P("constant", value=V))  # untyped
-    identifier = P("identifier", name=N)
-    get = P("member", X, name=K)  # with '.'
-    implies = P("binary", P("unary", A, operator="!"), B, operator="||")
+    constant = staticmethod(lambda V: P("ccpp_constant", value=V))  # untyped
+    identifier = P("ccpp_identifier", name=N)
+    get = P("ccpp_member", X, name=K)  # with '.'
+    implies = P("ccpp_binary", P("ccpp_unary", A, operator="!"), B, operator="||")
 
 
 class SystemVerilog:
-    constant = staticmethod(lambda V: P("constant", value=V))
-    identifier = P("identifier", name=N)
-    get = P("member", X, name=K)
-    implies = P("binary", A, B, operator="->")
-    iterate = staticmethod(lambda method: P("iterate", A, B, method=method, name=N))  # a.method(n) with (b)
-    count_where = P("iterate", A, P("cast", B, type="int"), method="sum", name=N)  # a.sum(n) with (int'(b))
-    method = staticmethod(lambda name: P("method", A, name=name))  # size, sum
-    locate = staticmethod(lambda name: P("select", P("method", A, name=name), P("constant", value=0)))  # a.min()[0]
-    select = P("select", A, B)
-    inside = P("inside", A, B)
-    unique = P("binary", P("method", P("method", A, name="unique"), name="size"), P("method", A, name="size"), operator="==")
+    constant = staticmethod(lambda V: P("systemverilog_constant", value=V))
+    identifier = P("systemverilog_identifier", name=N)
+    get = P("systemverilog_member", X, name=K)
+    implies = P("systemverilog_binary", A, B, operator="->")
+    iterate = staticmethod(lambda method: P("systemverilog_iterate", A, B, method=method, name=N))  # a.method(n) with (b)
+    count_where = P("systemverilog_iterate", A, P("systemverilog_cast", B, type="int"), method="sum", name=N)  # a.sum(n) with (int'(b))
+    method = staticmethod(lambda name: P("systemverilog_method", A, name=name))  # size, sum
+    locate = staticmethod(lambda name: P("systemverilog_select", P("systemverilog_method", A, name=name), P("systemverilog_constant", value=0)))  # a.min()[0]
+    select = P("systemverilog_select", A, B)
+    inside = P("systemverilog_inside", A, B)
+    unique = P("systemverilog_binary", P("systemverilog_method", P("systemverilog_method", A, name="unique"), name="size"), P("systemverilog_method", A, name="size"), operator="==")
 
 
 class Excel:
-    constant = staticmethod(lambda V: P("constant", value=V))
-    name = P("name", name=N)
+    constant = staticmethod(lambda V: P("literal", value=V))
+    name = P("variable", name=N)
     let = P("let", A, B, name=N)
-    get = P("field", X, name=K)
-    has = P("function", P("function", P("field", X, name=K), name="ISERROR"), name="NOT")
-    implies = P("function", A, B, P("constant", value=True), name="IF")
-    if_ = P("function", A, B, C, name="IF")
-    shr = P("function", A, B, name="BITRSHIFT")
-    over = staticmethod(lambda function: P("function", P("map", A, B, name=N), name=function))  # AND(MAP(a, LAMBDA(n, b)))
-    count_where = P("function", P("map", A, P("function", B, P("constant", value=1), P("constant", value=0), name="IF"), name=N),
-                    name="SUM")  # SUM(MAP(a, LAMBDA(n, IF(b, 1, 0))))
-    function = staticmethod(lambda name: P("function", A, name=name))  # ROWS, SUM, MIN, MAX
-    index = P("function", A, P("infix", B, P("constant", value=1), operator="+"), name="INDEX")  # INDEX(a, b + 1)
-    match = P("function", P("function", A, B, P("constant", value=0), name="MATCH"), name="ISNUMBER")  # ISNUMBER(MATCH(a, b, 0))
-    unique = P("infix", P("function", P("function", A, name="UNIQUE"), name="ROWS"), P("function", A, name="ROWS"), operator="=")
+    get = P("excel_field", X, name=K)
+    has = P("call", P("call", P("excel_field", X, name=K), callable="ISERROR"), callable="NOT")
+    implies = P("call", A, B, P("literal", value=True), callable="IF")
+    if_ = P("call", A, B, C, callable="IF")
+    shr = P("call", A, B, callable="BITRSHIFT")
+    over = staticmethod(lambda function: P("call", P("excel_map", A, B, name=N), callable=function))  # AND(MAP(a, LAMBDA(n, b)))
+    count_where = P("call", P("excel_map", A, P("call", B, P("literal", value=1), P("literal", value=0), callable="IF"), name=N),
+                    callable="SUM")  # SUM(MAP(a, LAMBDA(n, IF(b, 1, 0))))
+    function = staticmethod(lambda name: P("call", A, callable=name))  # ROWS, SUM, MIN, MAX
+    index = P("call", A, P("excel_infix", B, P("literal", value=1), operator="+"), callable="INDEX")  # INDEX(a, b + 1)
+    match = P("call", P("call", A, B, P("literal", value=0), callable="MATCH"), callable="ISNUMBER")  # ISNUMBER(MATCH(a, b, 0))
+    unique = P("excel_infix", P("call", P("call", A, callable="UNIQUE"), callable="ROWS"), P("call", A, callable="ROWS"), operator="=")
 
 
 class Latex:
-    constant = staticmethod(lambda V: P("constant", value=V))
-    symbol = P("symbol", name=N)
-    where = P("where", A, B, name=N)
-    get = P("member", X, name=K)
-    has = P("function", X, P("constant", value=K), name="has")
-    implies = P("binary", A, B, operator="\\implies")
-    frac = P("frac", A, B)
+    constant = staticmethod(lambda V: P("latex_constant", value=V))
+    symbol = P("latex_symbol", name=N)
+    where = P("latex_where", A, B, name=N)
+    get = P("latex_member", X, name=K)
+    has = P("latex_function", X, P("latex_constant", value=K), name="has")
+    implies = P("latex_binary", A, B, operator="\\implies")
+    frac = P("latex_frac", A, B)
 
 
 COLLECTIONS: dict[str, dict[str, P]] = {

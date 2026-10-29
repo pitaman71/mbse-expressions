@@ -17,15 +17,15 @@ TRANSLATOR = Pairwise(MATLAB, EXCEL, [
     Rule(Matlab.constant(V), Excel.constant(V)),
     Rule(Matlab.identifier, Excel.name),
     Inline("let", "right"),
-    Elide("import", "left"),
+    Elide("matlab_import", "left"),
     Rule(Matlab.get, Excel.get),
     Rule(Matlab.has, Excel.has),
-    *renames("binary", "operator", "infix", "operator", {
+    *renames("matlab_binary", "operator", "excel_infix", "operator", {
         "==": "=", "~=": "<>", "<": "<", "<=": "<=", ">": ">", ">=": ">=", "+": "+", "-": "-", ".*": "*"}, 2),
-    *renames("binary", "operator", "function", "name", {"&&": "AND", "||": "OR"}, 2),
-    *renames("unary", "operator", "function", "name", {"~": "NOT"}, 1),
-    *renames("unary", "operator", "prefix", "operator", {"-": "-"}, 1),
-    *renames("call", "function", "function", "name", {
+    *renames("matlab_binary", "operator", "call", "callable", {"&&": "AND", "||": "OR"}, 2),
+    *renames("matlab_unary", "operator", "call", "callable", {"~": "NOT"}, 1),
+    *renames("matlab_unary", "operator", "excel_prefix", "operator", {"-": "-"}, 1),
+    *renames("call", "callable", "call", "callable", {
         "bitand": "BITAND", "bitor": "BITOR", "bitxor": "BITXOR", "bitshift": "BITLSHIFT"}, 2),
     Rule(Matlab.shr, Excel.shr),
     *collections("Matlab", "Excel"),

@@ -17,18 +17,18 @@ TRANSLATOR = Pairwise(PYTHON, EXCEL, [
     Rule(Python.constant(V), Excel.constant(V)),
     Rule(Python.name, Excel.name),
     Rule(Python.let, Excel.let),
-    Elide("import", "left"),
-    Elide("importfrom", "left"),
+    Elide("python_import", "left"),
+    Elide("python_importfrom", "left"),
     Rule(Python.get, Excel.get),
     Rule(Python.has, Excel.has),
     Rule(Python.ifexp, Excel.if_),
-    *renames("compare", "operator", "infix", "operator", {
+    *renames("python_compare", "operator", "excel_infix", "operator", {
         "==": "=", "!=": "<>", "<": "<", "<=": "<=", ">": ">", ">=": ">="}, 2),
-    *renames("binop", "operator", "infix", "operator", {"+": "+", "-": "-", "*": "*"}, 2),
-    *renames("boolop", "operator", "function", "name", {"and": "AND", "or": "OR"}, 2),
-    *renames("unaryop", "operator", "function", "name", {"not": "NOT"}, 1),
-    *renames("unaryop", "operator", "prefix", "operator", {"-": "-"}, 1),
-    *renames("binop", "operator", "function", "name", {
+    *renames("python_binop", "operator", "excel_infix", "operator", {"+": "+", "-": "-", "*": "*"}, 2),
+    *renames("python_boolop", "operator", "call", "callable", {"and": "AND", "or": "OR"}, 2),
+    *renames("python_unaryop", "operator", "call", "callable", {"not": "NOT"}, 1),
+    *renames("python_unaryop", "operator", "excel_prefix", "operator", {"-": "-"}, 1),
+    *renames("python_binop", "operator", "call", "callable", {
         "&": "BITAND", "|": "BITOR", "^": "BITXOR", "<<": "BITLSHIFT", ">>": "BITRSHIFT"}, 2),
     *collections("Python", "Excel"),
 ])

@@ -21,7 +21,7 @@ import { DIALECT as BASIC } from "../Dialects/Basic/Expressions.js";
 import { DIALECT as SYSTEMVERILOG } from "../Dialects/SystemVerilog/Expressions.js";
 import { Convert, Inline, Pairwise, Pattern, Rule, renames } from "../Framework/Translators.js";
 import type { Attributes } from "../Framework/Translators.js";
-import { Basic, SystemVerilog, value } from "./_Patterns.js";
+import { Basic, SystemVerilog, domainOf, typed, value } from "./_Patterns.js";
 
 const LEVELS: Record<string, string> = { 0: "0", 1: "1", X: "x", Z: "z" };
 
@@ -33,7 +33,7 @@ function bitsOf(number: bigint, width: number): string {
 
 /** A typed Basic literal's vector. */
 function toVector(attributes: Attributes): Attributes | null {
-  const [domain, value] = [attributes.domain, attributes.value];
+  const [domain, value] = [domainOf(attributes), attributes.value];
   if (domain instanceof D.OfInteger.Data && domain.width && domain.overflow === "raise") {
     const bits = bitsOf(value as bigint, Number(domain.width));
     return domain.signed ? { value: bits, signed: true, base: "d" } : { value: bits, base: "d" };
@@ -52,33 +52,33 @@ function toVector(attributes: Attributes): Attributes | null {
 function fromVector(attributes: Attributes): Attributes | null {
   const [bits, signed, base] = [attributes.value as string, Boolean(attributes.signed), attributes.base];
   if (/[xz]/.test(bits) || (base === "b" && !signed)) {
-    return { value: bits.toUpperCase(), domain: new D.OfIeee1164.Data(bits.length === 1 ? null : BigInt(bits.length)) };
+    return typed(bits.toUpperCase(), new D.OfIeee1164.Data(bits.length === 1 ? null : BigInt(bits.length)));
   }
   let number = BigInt("0b" + bits);
   if (base === "d" || signed) {
     if (signed && bits[0] === "1") number -= 1n << BigInt(bits.length);
-    return { value: number, domain: new D.OfInteger.Data(BigInt(bits.length), signed) };
+    return typed(number, new D.OfInteger.Data(BigInt(bits.length), signed));
   }
   const bytes = new Uint8Array(Math.ceil(bits.length / 8));
   for (let i = bytes.length - 1; i >= 0; i--, number >>= 8n) bytes[i] = Number(number & 0xffn);
-  return { value: bytes, domain: new D.OfBits.Data(BigInt(bits.length)) };
+  return typed(bytes, new D.OfBits.Data(BigInt(bits.length)));
 }
 
 const V = value(BigInt, Number, String);
 
 export const TRANSLATOR = new Pairwise(BASIC, SYSTEMVERILOG, [
   new Rule(Basic.literal(V), SystemVerilog.constant(V)),
-  new Rule(new Pattern("literal", { value: true }), new Pattern("vector", { value: "1" })),
-  new Rule(new Pattern("literal", { value: false }), new Pattern("vector", { value: "0" })),
-  new Convert("literal", "vector", toVector, fromVector),
+  new Rule(new Pattern("literal", { value: true }), new Pattern("systemverilog_vector", { value: "1" })),
+  new Rule(new Pattern("literal", { value: false }), new Pattern("systemverilog_vector", { value: "0" })),
+  new Convert("literal", "systemverilog_vector", toVector, fromVector),
   new Rule(Basic.variable, SystemVerilog.identifier),
   new Inline("let", "left"),
   new Rule(Basic.get, SystemVerilog.get),
   new Rule(Basic.implies, SystemVerilog.implies),
-  ...renames("operation", "name", "binary", "operator", {
+  ...renames("call", "callable", "systemverilog_binary", "operator", {
     eq: "==", ne: "!=", lt: "<", le: "<=", gt: ">", ge: ">=", and: "&&", or: "||", add: "+", sub: "-", mul: "*", bitand: "&",
     bitor: "|", bitxor: "^", shl: "<<", shr: ">>>" }, 2),
-  ...renames("operation", "name", "unary", "operator", { not: "!", neg: "-", bitnot: "~" }, 1),
+  ...renames("call", "callable", "systemverilog_unary", "operator", { not: "!", neg: "-", bitnot: "~" }, 1),
   new Rule(Basic.quantifier("all"), SystemVerilog.iterate("and")),
   new Rule(Basic.quantifier("any"), SystemVerilog.iterate("or")),
   new Rule(Basic.quantifier("count"), SystemVerilog.count_where),

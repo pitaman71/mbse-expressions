@@ -25,14 +25,14 @@ from mbse.Expressions.Dialects.Basic.Expressions import DIALECT as BASIC
 from mbse.Expressions.Dialects.SystemVerilog.Expressions import DIALECT as SYSTEMVERILOG
 from mbse.Expressions.Framework.Translators import Convert, Inline, Pairwise, Pattern, Rule, renames
 
-from ._Patterns import Basic, SystemVerilog, value
+from ._Patterns import Basic, SystemVerilog, domain_of, typed, value
 
 _LEVELS = {"0": "0", "1": "1", "X": "x", "Z": "z"}
 
 
 def _to_vector(attributes: dict[str, Any]) -> dict[str, Any] | None:
     """A typed Basic literal's vector."""
-    domain, value = attributes.get("domain"), attributes["value"]
+    domain, value = domain_of(attributes), attributes["value"]
     if isinstance(domain, D.OfInteger.Data) and domain.width and domain.overflow == "raise":
         bits = format(value % (1 << domain.width), f"0{domain.width}b")
         return {"value": bits, "signed": True, "base": "d"} if domain.signed else {"value": bits, "base": "d"}
@@ -47,30 +47,30 @@ def _from_vector(attributes: dict[str, Any]) -> dict[str, Any] | None:
     """A vector's typed Basic literal."""
     bits, signed, base = attributes["value"], attributes.get("signed", False), attributes.get("base")
     if any(b in "xz" for b in bits) or (base == "b" and not signed):
-        return {"value": bits.upper(), "domain": D.OfIeee1164.Data(None if len(bits) == 1 else len(bits))}
+        return typed(bits.upper(), D.OfIeee1164.Data(None if len(bits) == 1 else len(bits)))
     if base == "d" or signed:
         number = int(bits, 2)
         if signed and bits[0] == "1":
             number -= 1 << len(bits)
-        return {"value": number, "domain": D.OfInteger.Data(len(bits), bool(signed))}
-    return {"value": int(bits, 2).to_bytes((len(bits) + 7) // 8, "big"), "domain": D.OfBits.Data(len(bits))}
+        return typed(number, D.OfInteger.Data(len(bits), bool(signed)))
+    return typed(int(bits, 2).to_bytes((len(bits) + 7) // 8, "big"), D.OfBits.Data(len(bits)))
 
 
 V = value(int, float, str)
 
 TRANSLATOR = Pairwise(BASIC, SYSTEMVERILOG, [
     Rule(Basic.literal(V), SystemVerilog.constant(V)),
-    Rule(Pattern("literal", value=True), Pattern("vector", value="1")),
-    Rule(Pattern("literal", value=False), Pattern("vector", value="0")),
-    Convert("literal", "vector", _to_vector, _from_vector),
+    Rule(Pattern("literal", value=True), Pattern("systemverilog_vector", value="1")),
+    Rule(Pattern("literal", value=False), Pattern("systemverilog_vector", value="0")),
+    Convert("literal", "systemverilog_vector", _to_vector, _from_vector),
     Rule(Basic.variable, SystemVerilog.identifier),
     Inline("let", "left"),
     Rule(Basic.get, SystemVerilog.get),
     Rule(Basic.implies, SystemVerilog.implies),
-    *renames("operation", "name", "binary", "operator", {
+    *renames("call", "callable", "systemverilog_binary", "operator", {
         "eq": "==", "ne": "!=", "lt": "<", "le": "<=", "gt": ">", "ge": ">=", "and": "&&", "or": "||", "add": "+",
         "sub": "-", "mul": "*", "bitand": "&", "bitor": "|", "bitxor": "^", "shl": "<<", "shr": ">>>"}, 2),
-    *renames("operation", "name", "unary", "operator", {"not": "!", "neg": "-", "bitnot": "~"}, 1),
+    *renames("call", "callable", "systemverilog_unary", "operator", {"not": "!", "neg": "-", "bitnot": "~"}, 1),
     Rule(Basic.quantifier("all"), SystemVerilog.iterate("and")),
     Rule(Basic.quantifier("any"), SystemVerilog.iterate("or")),
     Rule(Basic.quantifier("count"), SystemVerilog.count_where),

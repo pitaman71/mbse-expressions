@@ -23,8 +23,8 @@ const COMMON = [
   new Rule(Basic.literal(V), Python.constant(V)),
   new Rule(Basic.variable, Python.name),
   new Rule(Basic.let, Python.let),
-  new Elide("import", "right"),
-  new Elide("importfrom", "right"),
+  new Elide("python_import", "right"),
+  new Elide("python_importfrom", "right"),
 ];
 
 export const TRANSLATOR = new Pairwise(BASIC, PYTHON, [
@@ -32,13 +32,13 @@ export const TRANSLATOR = new Pairwise(BASIC, PYTHON, [
   new Rule(Basic.get, Python.get),
   new Rule(Basic.has, Python.has),
   new Rule(Basic.implies, Python.implies),
-  ...renames("operation", "name", "compare", "operator", {
+  ...renames("call", "callable", "python_compare", "operator", {
     eq: "==", ne: "!=", lt: "<", le: "<=", gt: ">", ge: ">=" }, 2),
-  ...renames("operation", "name", "boolop", "operator", { and: "and", or: "or" }, 2),
-  ...renames("operation", "name", "binop", "operator", { add: "+", sub: "-", mul: "*" }, 2),
-  ...renames("operation", "name", "unaryop", "operator", { not: "not", neg: "-" }, 1),
-  ...renames("operation", "name", "binop", "operator", { bitand: "&", bitor: "|", bitxor: "^", shl: "<<", shr: ">>" }, 2),
-  ...renames("operation", "name", "unaryop", "operator", { bitnot: "~" }, 1),
+  ...renames("call", "callable", "python_boolop", "operator", { and: "and", or: "or" }, 2),
+  ...renames("call", "callable", "python_binop", "operator", { add: "+", sub: "-", mul: "*" }, 2),
+  ...renames("call", "callable", "python_unaryop", "operator", { not: "not", neg: "-" }, 1),
+  ...renames("call", "callable", "python_binop", "operator", { bitand: "&", bitor: "|", bitxor: "^", shl: "<<", shr: ">>" }, 2),
+  ...renames("call", "callable", "python_unaryop", "operator", { bitnot: "~" }, 1),
   new Rule(Basic.quantifier("all"), Python.all_),
   new Rule(Basic.quantifier("any"), Python.any_),
   new Rule(Basic.quantifier("count"), Python.count_where),
@@ -55,9 +55,9 @@ export const NUMPY = new Pairwise(BASIC, PYTHON, [
   new Rule(Basic.get, Numpy.get),
   new Rule(Basic.has, Numpy.has),
   new Rule(Basic.implies, Numpy.implies),
-  ...Numpy.renames("operation", "name", {
+  ...Numpy.renames("call", "callable", {
     eq: "equal", ne: "not_equal", lt: "less", le: "less_equal", gt: "greater", ge: "greater_equal",
     and: "logical_and", or: "logical_or", add: "add", sub: "subtract", mul: "multiply", bitand: "bitwise_and",
     bitor: "bitwise_or", bitxor: "bitwise_xor", shl: "left_shift", shr: "right_shift" }, 2),
-  ...Numpy.renames("operation", "name", { not: "logical_not", neg: "negative", bitnot: "invert" }, 1),
+  ...Numpy.renames("call", "callable", { not: "logical_not", neg: "negative", bitnot: "invert" }, 1),
 ]);

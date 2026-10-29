@@ -25,12 +25,12 @@ TRANSLATOR = Pairwise(BASIC, EXCEL, [
     Rule(Basic.get, Excel.get),
     Rule(Basic.has, Excel.has),
     Rule(Basic.implies, Excel.implies),
-    *renames("operation", "name", "infix", "operator", {
+    *renames("call", "callable", "excel_infix", "operator", {
         "eq": "=", "ne": "<>", "lt": "<", "le": "<=", "gt": ">", "ge": ">=", "add": "+", "sub": "-", "mul": "*"}, 2),
-    *renames("operation", "name", "function", "name", {"and": "AND", "or": "OR"}, 2),
-    *renames("operation", "name", "function", "name", {"not": "NOT"}, 1),
-    *renames("operation", "name", "prefix", "operator", {"neg": "-"}, 1),
-    *renames("operation", "name", "function", "name", {
+    *renames("call", "callable", "call", "callable", {"and": "AND", "or": "OR"}, 2),
+    *renames("call", "callable", "call", "callable", {"not": "NOT"}, 1),
+    *renames("call", "callable", "excel_prefix", "operator", {"neg": "-"}, 1),
+    *renames("call", "callable", "call", "callable", {
         "bitand": "BITAND", "bitor": "BITOR", "bitxor": "BITXOR", "shl": "BITLSHIFT", "shr": "BITRSHIFT"}, 2),
     Rule(Basic.quantifier("all"), Excel.over("AND")),
     Rule(Basic.quantifier("any"), Excel.over("OR")),

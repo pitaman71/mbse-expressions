@@ -19,8 +19,8 @@ TRANSLATOR = Pairwise(BASIC, LATEX, [
     Rule(Basic.get, Latex.get),
     Rule(Basic.has, Latex.has),
     Rule(Basic.implies, Latex.implies),
-    *renames("operation", "name", "binary", "operator", {
+    *renames("call", "callable", "latex_binary", "operator", {
         "eq": "=", "ne": "\\neq", "lt": "<", "le": "\\leq", "gt": ">", "ge": "\\geq", "and": "\\land",
         "or": "\\lor", "add": "+", "sub": "-", "mul": "\\cdot"}, 2),
-    *renames("operation", "name", "unary", "operator", {"not": "\\lnot", "neg": "-"}, 1),
+    *renames("call", "callable", "latex_unary", "operator", {"not": "\\lnot", "neg": "-"}, 1),
 ])

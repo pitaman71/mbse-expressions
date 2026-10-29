@@ -1,7 +1,9 @@
 /** The patterns the pairwise translators share: each dialect's forms for the concepts they translate. A translator
  * pairs two dialects' patterns into rules; the holes are shared, so the patterns of any two dialects pair up. */
 
+import * as Domains from "../Dialects/Basic/Domains.js";
 import { Hole, Pattern as P, Rule, holes } from "../Framework/Translators.js";
+import type { Attributes } from "../Framework/Translators.js";
 
 export const [A, B, C, X] = holes("A", "B", "C", "X") as [Hole, Hole, Hole, Hole];
 /** A name: of a variable, or of a binding. */
@@ -14,59 +16,80 @@ export function value(...types: unknown[]): Hole {
   return new Hole("V", ...types);
 }
 
+/** The value domain a Basic literal's attributes name, or null. */
+export function domainOf(attributes: Attributes): Domains.Domain | null {
+  const name = attributes.domain;
+  return name === undefined ? null : Domains.registered(name as string);
+}
+
+/** A Basic literal's attributes: `value`, of `domain`, named unless it is its native's own. */
+export function typed(value: unknown, domain: Domains.Domain): Attributes {
+  return domain.equals(Domains.of(value)) ? { value } : { value, domain: named(domain) };
+}
+
+/** The name a Basic literal gives `domain`: the one it is registered under, or its own, under which it is registered. */
+export function named(domain: Domains.Domain): string {
+  let name = Domains.name_of(domain);
+  if (name === null) {
+    name = domain.name();
+    Domains.register(name, domain);
+  }
+  return name;
+}
+
 export const Basic = {
   literal: (V: Hole) => new P("literal", { value: V }),
   variable: new P("variable", { name: N }),
   let: new P("let", { name: N }, A, B),
-  get: new P("operation", { name: "get" }, X, new P("literal", { value: K })),
-  has: new P("operation", { name: "has" }, X, new P("literal", { value: K })),
-  implies: new P("operation", { name: "implies" }, A, B),
-  shr: new P("operation", { name: "shr" }, A, B),
+  get: new P("call", { callable: "get" }, X, new P("literal", { value: K })),
+  has: new P("call", { callable: "has" }, X, new P("literal", { value: K })),
+  implies: new P("call", { callable: "implies" }, A, B),
+  shr: new P("call", { callable: "shr" }, A, B),
   quantifier: (name: string) => new P("quantifier", { name: N, quantifier: name }, A, B),
   /** count, sum, min, max, unique. */
-  unary: (name: string) => new P("operation", { name }, A),
-  item: new P("operation", { name: "item" }, A, B),
-  in_: new P("operation", { name: "in" }, A, B),
+  unary: (name: string) => new P("call", { callable: name }, A),
+  item: new P("call", { callable: "item" }, A, B),
+  in_: new P("call", { callable: "in" }, A, B),
 };
 
 function call(fn: string, ...args: (P | Hole)[]): P {
-  return new P("call", {}, new P("name", { name: fn }), ...args);
+  return new P("python_call", {}, new P("python_name", { name: fn }), ...args);
 }
 
 export const Python = {
-  constant: (V: Hole) => new P("constant", { value: V }),
-  name: new P("name", { name: N }),
+  constant: (V: Hole) => new P("python_constant", { value: V }),
+  name: new P("python_name", { name: N }),
   let: new P("let", { name: N }, A, B),
-  get: new P("attribute", { attr: K }, X),
-  has: new P("call", {}, new P("name", { name: "hasattr" }), X, new P("constant", { value: K })),
-  implies: new P("ifexp", {}, A, B, new P("constant", { value: true })),
-  ifexp: new P("ifexp", {}, A, B, C),
-  shr: new P("binop", { operator: ">>" }, A, B),
-  all_: call("all", new P("generator", { name: N }, A, B)),
-  any_: call("any", new P("generator", { name: N }, A, B)),
+  get: new P("python_attribute", { attr: K }, X),
+  has: new P("python_call", {}, new P("python_name", { name: "hasattr" }), X, new P("python_constant", { value: K })),
+  implies: new P("python_ifexp", {}, A, B, new P("python_constant", { value: true })),
+  ifexp: new P("python_ifexp", {}, A, B, C),
+  shr: new P("python_binop", { operator: ">>" }, A, B),
+  all_: call("all", new P("python_generator", { name: N }, A, B)),
+  any_: call("any", new P("python_generator", { name: N }, A, B)),
   /** sum(1 for n in a if b). */
-  count_where: call("sum", new P("generator", { name: N }, A, new P("constant", { value: 1n }), B)),
+  count_where: call("sum", new P("python_generator", { name: N }, A, new P("python_constant", { value: 1n }), B)),
   /** len, sum, min, max. */
   builtin: (fn: string) => call(fn, A),
-  index: new P("index", {}, A, B),
-  in_: new P("compare", { operator: "in" }, A, B),
-  unique: new P("compare", { operator: "==" }, call("len", call("set", A)), call("len", A)),
+  index: new P("python_index", {}, A, B),
+  in_: new P("python_compare", { operator: "in" }, A, B),
+  unique: new P("python_compare", { operator: "==" }, call("len", call("set", A)), call("len", A)),
 };
 
 /** The function `np.<fn>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'. */
 function numpy(fn: string): P {
-  let callee = new P("name", { name: "np" });
-  for (const attr of fn.split(".")) callee = new P("attribute", { attr }, callee);
+  let callee = new P("python_name", { name: "np" });
+  for (const attr of fn.split(".")) callee = new P("python_attribute", { attr }, callee);
   return callee;
 }
 
 /** Python in NumPy style: columns by subscript, missing values masked, operations as numpy functions. */
 export const Numpy = {
-  call: (fn: string, ...args: (P | Hole)[]) => new P("call", {}, numpy(fn), ...args),
-  get: new P("subscript", { key: K }, X),
-  has: new P("call", {}, numpy("logical_not"), new P("call", {}, numpy("ma.getmaskarray"), new P("subscript", { key: K }, X))),
-  implies: new P("call", {}, numpy("where"), A, B, new P("constant", { value: true })),
-  prelude: new P("import", { module: "numpy", alias: "np" }, new Hole("B")),
+  call: (fn: string, ...args: (P | Hole)[]) => new P("python_call", {}, numpy(fn), ...args),
+  get: new P("python_subscript", { key: K }, X),
+  has: new P("python_call", {}, numpy("logical_not"), new P("python_call", {}, numpy("ma.getmaskarray"), new P("python_subscript", { key: K }, X))),
+  implies: new P("python_call", {}, numpy("where"), A, B, new P("python_constant", { value: true })),
+  prelude: new P("python_import", { module: "numpy", alias: "np" }, new Hole("B")),
   /** Rules for operators that are numpy functions of the same arguments. */
   renames(kind: string, attribute: string, names: Record<string, string>, arity: number): Rule[] {
     const args = holes(...Array.from({ length: arity }, (_, i) => `A${i}`));
@@ -75,82 +98,82 @@ export const Numpy = {
 };
 
 export const Matlab = {
-  constant: (V: Hole) => new P("constant", { value: V }),
-  identifier: new P("identifier", { name: N }),
-  get: new P("field", { name: K }, X),
-  has: new P("call", { function: "isfield" }, X, new P("constant", { value: K })),
-  implies: new P("binary", { operator: "||" }, new P("unary", { operator: "~" }, A), B),
-  shr: new P("call", { function: "bitshift" }, A, new P("unary", { operator: "-" }, B)), // a negative shift is to the right
+  constant: (V: Hole) => new P("literal", { value: V }),
+  identifier: new P("variable", { name: N }),
+  get: new P("matlab_field", { name: K }, X),
+  has: new P("call", { callable: "isfield" }, X, new P("literal", { value: K })),
+  implies: new P("matlab_binary", { operator: "||" }, new P("matlab_unary", { operator: "~" }, A), B),
+  shr: new P("call", { callable: "bitshift" }, A, new P("matlab_unary", { operator: "-" }, B)), // a negative shift is to the right
   /** all(arrayfun(@(n) b, a)). */
-  over: (fn: string) => new P("call", { function: fn }, new P("arrayfun", { name: N }, A, B)),
+  over: (fn: string) => new P("call", { callable: fn }, new P("matlab_arrayfun", { name: N }, A, B)),
   /** numel, sum, min, max. */
-  function: (name: string) => new P("call", { function: name }, A),
+  function: (name: string) => new P("call", { callable: name }, A),
   /** a(b + 1): MATLAB counts from 1. */
-  index: new P("index", {}, A, new P("binary", { operator: "+" }, B, new P("constant", { value: 1n }))),
-  ismember: new P("call", { function: "ismember" }, A, B),
-  unique: new P("binary", { operator: "==" }, new P("call", { function: "numel" }, new P("call", { function: "unique" }, A)),
-    new P("call", { function: "numel" }, A)),
+  index: new P("matlab_index", {}, A, new P("matlab_binary", { operator: "+" }, B, new P("literal", { value: 1n }))),
+  ismember: new P("call", { callable: "ismember" }, A, B),
+  unique: new P("matlab_binary", { operator: "==" }, new P("call", { callable: "numel" }, new P("call", { callable: "unique" }, A)),
+    new P("call", { callable: "numel" }, A)),
 };
 
 export const Ccpp = {
-  constant: (V: Hole) => new P("constant", { value: V }), // untyped
-  identifier: new P("identifier", { name: N }),
-  get: new P("member", { name: K }, X), // with '.'
-  implies: new P("binary", { operator: "||" }, new P("unary", { operator: "!" }, A), B),
+  constant: (V: Hole) => new P("ccpp_constant", { value: V }), // untyped
+  identifier: new P("ccpp_identifier", { name: N }),
+  get: new P("ccpp_member", { name: K }, X), // with '.'
+  implies: new P("ccpp_binary", { operator: "||" }, new P("ccpp_unary", { operator: "!" }, A), B),
 };
 
-const method = (name: string, array: P | Hole) => new P("method", { name }, array);
+const method = (name: string, array: P | Hole) => new P("systemverilog_method", { name }, array);
 
 export const SystemVerilog = {
-  constant: (V: Hole) => new P("constant", { value: V }),
-  identifier: new P("identifier", { name: N }),
-  get: new P("member", { name: K }, X),
-  implies: new P("binary", { operator: "->" }, A, B),
+  constant: (V: Hole) => new P("systemverilog_constant", { value: V }),
+  identifier: new P("systemverilog_identifier", { name: N }),
+  get: new P("systemverilog_member", { name: K }, X),
+  implies: new P("systemverilog_binary", { operator: "->" }, A, B),
   /** a.method(n) with (b). */
-  iterate: (name: string) => new P("iterate", { method: name, name: N }, A, B),
+  iterate: (name: string) => new P("systemverilog_iterate", { method: name, name: N }, A, B),
   /** a.sum(n) with (int'(b)). */
-  count_where: new P("iterate", { method: "sum", name: N }, A, new P("cast", { type: "int" }, B)),
+  count_where: new P("systemverilog_iterate", { method: "sum", name: N }, A, new P("systemverilog_cast", { type: "int" }, B)),
   /** size, sum. */
   method: (name: string) => method(name, A),
   /** a.min()[0]. */
-  locate: (name: string) => new P("select", {}, method(name, A), new P("constant", { value: 0n })),
-  select: new P("select", {}, A, B),
-  inside: new P("inside", {}, A, B),
-  unique: new P("binary", { operator: "==" }, method("size", method("unique", A)), method("size", A)),
+  locate: (name: string) => new P("systemverilog_select", {}, method(name, A), new P("systemverilog_constant", { value: 0n })),
+  select: new P("systemverilog_select", {}, A, B),
+  inside: new P("systemverilog_inside", {}, A, B),
+  unique: new P("systemverilog_binary", { operator: "==" }, method("size", method("unique", A)), method("size", A)),
 };
 
 export const Excel = {
-  constant: (V: Hole) => new P("constant", { value: V }),
-  name: new P("name", { name: N }),
+  constant: (V: Hole) => new P("literal", { value: V }),
+  name: new P("variable", { name: N }),
   let: new P("let", { name: N }, A, B),
-  get: new P("field", { name: K }, X),
-  has: new P("function", { name: "NOT" }, new P("function", { name: "ISERROR" }, new P("field", { name: K }, X))),
-  implies: new P("function", { name: "IF" }, A, B, new P("constant", { value: true })),
-  if_: new P("function", { name: "IF" }, A, B, C),
-  shr: new P("function", { name: "BITRSHIFT" }, A, B),
+  get: new P("excel_field", { name: K }, X),
+  has: new P("call", { callable: "NOT" }, new P("call", { callable: "ISERROR" }, new P("excel_field", { name: K }, X))),
+  implies: new P("call", { callable: "IF" }, A, B, new P("literal", { value: true })),
+  if_: new P("call", { callable: "IF" }, A, B, C),
+  shr: new P("call", { callable: "BITRSHIFT" }, A, B),
   /** AND(MAP(a, LAMBDA(n, b))). */
-  over: (fn: string) => new P("function", { name: fn }, new P("map", { name: N }, A, B)),
+  over: (fn: string) => new P("call", { callable: fn }, new P("excel_map", { name: N }, A, B)),
   /** SUM(MAP(a, LAMBDA(n, IF(b, 1, 0)))). */
-  count_where: new P("function", { name: "SUM" }, new P("map", { name: N }, A,
-    new P("function", { name: "IF" }, B, new P("constant", { value: 1n }), new P("constant", { value: 0n })))),
+  count_where: new P("call", { callable: "SUM" }, new P("excel_map", { name: N }, A,
+    new P("call", { callable: "IF" }, B, new P("literal", { value: 1n }), new P("literal", { value: 0n })))),
   /** ROWS, SUM, MIN, MAX. */
-  function: (name: string) => new P("function", { name }, A),
+  function: (name: string) => new P("call", { callable: name }, A),
   /** INDEX(a, b + 1). */
-  index: new P("function", { name: "INDEX" }, A, new P("infix", { operator: "+" }, B, new P("constant", { value: 1n }))),
+  index: new P("call", { callable: "INDEX" }, A, new P("excel_infix", { operator: "+" }, B, new P("literal", { value: 1n }))),
   /** ISNUMBER(MATCH(a, b, 0)). */
-  match: new P("function", { name: "ISNUMBER" }, new P("function", { name: "MATCH" }, A, B, new P("constant", { value: 0n }))),
-  unique: new P("infix", { operator: "=" }, new P("function", { name: "ROWS" }, new P("function", { name: "UNIQUE" }, A)),
-    new P("function", { name: "ROWS" }, A)),
+  match: new P("call", { callable: "ISNUMBER" }, new P("call", { callable: "MATCH" }, A, B, new P("literal", { value: 0n }))),
+  unique: new P("excel_infix", { operator: "=" }, new P("call", { callable: "ROWS" }, new P("call", { callable: "UNIQUE" }, A)),
+    new P("call", { callable: "ROWS" }, A)),
 };
 
 export const Latex = {
-  constant: (V: Hole) => new P("constant", { value: V }),
-  symbol: new P("symbol", { name: N }),
-  where: new P("where", { name: N }, A, B),
-  get: new P("member", { name: K }, X),
-  has: new P("function", { name: "has" }, X, new P("constant", { value: K })),
-  implies: new P("binary", { operator: "\\implies" }, A, B),
-  frac: new P("frac", {}, A, B),
+  constant: (V: Hole) => new P("latex_constant", { value: V }),
+  symbol: new P("latex_symbol", { name: N }),
+  where: new P("latex_where", { name: N }, A, B),
+  get: new P("latex_member", { name: K }, X),
+  has: new P("latex_function", { name: "has" }, X, new P("latex_constant", { value: K })),
+  implies: new P("latex_binary", { operator: "\\implies" }, A, B),
+  frac: new P("latex_frac", {}, A, B),
 };
 
 /** Each dialect's forms of the collection concepts: the quantifiers `all`, `any` and `count where`, and `count`, `sum`,

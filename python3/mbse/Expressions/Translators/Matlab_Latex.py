@@ -15,13 +15,13 @@ V = value(int, float, str, bool)
 TRANSLATOR = Pairwise(MATLAB, LATEX, [
     Rule(Matlab.constant(V), Latex.constant(V)),
     Rule(Matlab.identifier, Latex.symbol),
-    Inline("where", "right"),
-    Elide("import", "left"),
+    Inline("latex_where", "right"),
+    Elide("matlab_import", "left"),
     Rule(Matlab.get, Latex.get),
     Rule(Matlab.has, Latex.has),
     Rule(Matlab.implies, Latex.implies, "backward"),
-    *renames("binary", "operator", "binary", "operator", {
+    *renames("matlab_binary", "operator", "latex_binary", "operator", {
         "==": "=", "~=": "\\neq", "<": "<", "<=": "\\leq", ">": ">", ">=": "\\geq", "&&": "\\land", "||": "\\lor",
         "+": "+", "-": "-", ".*": "\\cdot"}, 2),
-    *renames("unary", "operator", "unary", "operator", {"~": "\\lnot", "-": "-"}, 1),
+    *renames("matlab_unary", "operator", "latex_unary", "operator", {"~": "\\lnot", "-": "-"}, 1),
 ])
