@@ -111,6 +111,18 @@ As the user decided (2026-10-28), on questions 9 to 11, "yes" to each recommenda
 11. **All six dialects and the twelve translators are ported with the model**; vocabularies as data and value
     parameters after.
 
+As the user decided (2026-10-29), on what the `overhauls/meta-schemas` branch records beyond "2 = Y":
+
+- **Terms are value objects**: "there was some back and forth but I have landed on terms as value objects". The
+  branch's later "Terms are reference objects again" is superseded; question 2 stands.
+- **Writers, and the builders' `set`, `argument` and `arguments`, go** ("Expressions under P-018": they "should go
+  away"), "as a later phase of the current overhaul": after the dependents move off them (question 10).
+- **The term kinds are the starting point**: "term kinds - remains a good starting point. you are welcome to propose
+  refinements/adjustments": `Term`, a union of its kinds (`Call`, `Literal`, `Let`, ...), `Callable`, a reference
+  object, and `HasArguments`, relating a `Callable` to its parameters; an expression the only instance.
+- **A dialect extends the framework by schema extension**, not by refinement: "refinement has been superseded by schema
+  extension" (mbse-schemas' SCHEMA_EXTENSION.md), so the branch's "each dialect refines it by intersection" goes.
+
 Question 6, what a `requires` that evaluates to unknown does: "semantics of evaluate deserve a more in-depth
 discussion", open.
 
