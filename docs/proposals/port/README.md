@@ -144,14 +144,15 @@ on question 6; stages 1 to 4 do not.
 mbse-schemas 0.26 (installs valid, run again writing nothing, `x + 1 > 0` built through the builders and written
 nested, a snapshot round-tripping). What they propose, for the user's review:
 
-- `Expressions.Framework.Term`, a union of value object kinds, `literal` (`value`, a basic scalar's; `domain`, by name),
-  `call` (`callable`, by name; `arguments`, a container of terms by index; `domain`), `variable` (`name`) and `let`
-  (`name`, `value`, `body`): the term kinds as the starting point, `operation` named `call`. A term holds terms, nested.
+- `Expressions.Framework.Term`, a union of value object kinds, `literal` (`value`, a basic scalar's), `call`
+  (`callable`, by name; `arguments`, a container of terms by index), `variable` (`name`) and `let` (`name`, `value`,
+  `body`): the term kinds as the starting point, `operation` named `call`. A term holds terms, nested. Every kind
+  declares `domain`, by name ("wait, all terms have a domain"; Schema extension, Decided, 21), a dialect's kinds too.
 - `Expressions.Framework.Expression`, a reference object whose `root` is a term: the only instance of the kinds.
 - `Expressions.Framework.HasRoot(schema, expression)`, one expression per schema, and the extension adjacency
   `expression` it gives `Schemas.OfExpression` (question 3), with no member on it.
 - A dialect adds its kinds to `Term` by schema extension: Basic its `quantifier` (`name`, `quantifier`, `collection`,
-  `body`); each other dialect its own (Python's, C's, ...).
+  `body`, `domain`); each other dialect its own (Python's, C's, ...).
 - A term names what it refers to, a callable or a domain, by name, until vocabularies are data (question 11).
 
 ## Stages (proposed, once decided)

@@ -5,6 +5,7 @@ schema, `Term` their union. An expression is a reference object holding one term
 links one by an extension adjacency (decided, question 3). A dialect adds its own kinds as `Term`'s branches, by schema
 extension (decided): see Basic.py. A term names what it refers to (a callable, a domain) by name, as a module names a
 schema; vocabularies as data (`Callable`, `HasArguments`) come later (question 11), so a call names its callable.
+Every term has a domain (Schema extension, Decided, 21): each kind declares `domain`, a dialect's kinds too.
 
 Run against mbse-schemas 0.26: `python3 docs/proposals/port/check.py`.
 """
@@ -26,16 +27,16 @@ def install(txn):
             ]),
             lambda _: _.Literal.name("Expressions.Framework.Literal").properties({
                 "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes])),
-                "domain": S.OfStr,  # the domain it is a value of, by name (stage 3); absent, its scalar's default
+                "domain": S.OfStr,  # every term has a domain (Schema extension, Decided, 21), by name (stage 3)
             }),
             lambda _: _.Call.name("Expressions.Framework.Call").properties({
                 "callable": S.OfStr,  # what it calls, by name: an operator, a function
                 "arguments": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),
-                "domain": S.OfStr,  # its result's domain, by name, where the dialect needs it
+                "domain": S.OfStr,  # its result's
             }),
-            lambda _: _.Variable.name("Expressions.Framework.Variable").properties({"name": S.OfStr}),
+            lambda _: _.Variable.name("Expressions.Framework.Variable").properties({"name": S.OfStr, "domain": S.OfStr}),
             lambda _: _.Let.name("Expressions.Framework.Let").properties({
-                "name": S.OfStr, "value": _.Term, "body": _.Term}),
+                "name": S.OfStr, "value": _.Term, "body": _.Term, "domain": S.OfStr}),
             lambda _: _.Expression.name("Expressions.Framework.Expression").ref(True).properties({"root": _.Term}),
             lambda _: _.HasRoot.name("Expressions.Framework.HasRoot").links([
                 lambda t: t.name("schema"), lambda t: t.name("expression")]).uniques("expression"),

@@ -17,6 +17,7 @@ def install(txn):
                 "quantifier": S.OfStr,  # all, any or count
                 "collection": _.Term,
                 "body": _.Term,
+                "domain": S.OfStr,  # every term has a domain: a quantifier's, its result's
             }),
             lambda _: _.Term.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("quantifier").schema([_.Quantifier])]),
