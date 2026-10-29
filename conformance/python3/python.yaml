@@ -1,0 +1,78 @@
+python_import:
+  module: numpy
+  alias: np
+  body:
+    python_importfrom:
+      module: math
+      name: floor
+      body:
+        let:
+          name: a
+          value:
+            python_name:
+              name: this
+          body:
+            python_ifexp:
+              test:
+                python_boolop:
+                  operator: or
+                  left:
+                    python_unaryop:
+                      operator: not
+                      operand:
+                        python_compare:
+                          operator: '>='
+                          left:
+                            python_subscript:
+                              key: k
+                              value:
+                                python_name:
+                                  name: a
+                          right:
+                            python_constant:
+                              value: 18
+                  right:
+                    python_attribute:
+                      attr: pi
+                      value:
+                        python_name:
+                          name: np
+              body:
+                python_call:
+                  function:
+                    python_name:
+                      name: floor
+                  arguments:
+                  - python_binop:
+                      operator: '*'
+                      left:
+                        python_attribute:
+                          attr: x
+                          value:
+                            python_name:
+                              name: a
+                      right:
+                        python_constant:
+                          value: 2.5
+              orelse:
+                python_generator:
+                  name: p
+                  iterable:
+                    python_attribute:
+                      attr: 'y'
+                      value:
+                        python_name:
+                          name: a
+                  element:
+                    python_index:
+                      value:
+                        python_name:
+                          name: p
+                      index:
+                        python_constant:
+                          value:
+                            scalar:
+                              bytes: AA==
+                  conditions:
+                  - python_name:
+                      name: p

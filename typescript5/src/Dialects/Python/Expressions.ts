@@ -1,35 +1,110 @@
 /**
  * Expressions of the Python dialect: Python expressions, with the imports they need, as Python's `ast` has them.
  *
- * - `constant`: a native value. `name`: the value bound to a name; the names of `BUILTINS` are always bound.
- * - `attribute`: `value.attr`. `subscript`: `value[key]`, for a str key, and `index`: `value[index]`, for an index
- *   that is an expression. `call`: a function, the slot `function`, applied to ordered `arguments`, e.g.
- *   `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of the name `np`.
- * - `compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`), `boolop` (`and`, `or`), `binop` (`+`, `-`, `*`, `/`, `//`, `%`,
- *   `**`, `&`, `|`, `^`, `<<`, `>>`) and `unaryop` (`not`, `-`, `+`, `~`), each with one operator and two operands (one for `unaryop`).
- * - `ifexp`: `body if test else orelse`.
- * - `generator`: `(element for name in iterable if condition ...)`, a generator expression of one `for` and any number
- *   of conditions, which binds `name` to each item of `iterable` within the element and the conditions. As the only
- *   argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
- * - `let`: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
- * - `import` (`import module` or `import module as alias`) and `importfrom` (`from module import name` or `... as
- *   alias`) bind a name within their body, which is the rest of the expression; `Text.ToText` writes them as the lines
- *   before it. What they may import is up to the scope that evaluates them (see `Evaluators`).
+ * Python's terms are the framework's `let` and its own kinds, which `install` adds to `Expressions.Framework.Term` by
+ * schema extension, each a value object with a `domain`. Their tags are qualified by the dialect, `python_<kind>`
+ * (`python_binop`), since every dialect adds its kinds to the one union of terms:
  *
- * The meta-schemas are registered as 'Expressions.Python.Of<ast class>' ('Expressions.Python.OfBinOp', ...).
- * `Text.ToText` writes an expression as Python source, parenthesized only where precedence requires. Reading Python
- * source (`Text.FromText`) needs Python's own parser, so it is in the Python implementation only.
+ * - `python_constant`: a basic scalar (`value`). `python_name`: the value bound to a `name`; the names of `BUILTINS`
+ *   are always bound.
+ * - `python_attribute`: `value.attr`. `python_subscript`: `value[key]`, for a str key, and `python_index`:
+ *   `value[index]`, for an index that is an expression. `python_call`: a function, the slot `function`, applied to
+ *   ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of the name
+ *   `np`.
+ * - `python_compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`), `python_boolop` (`and`, `or`), `python_binop`
+ *   (`+`, `-`, `*`, `/`, `//`, `%`, `**`, `&`, `|`, `^`, `<<`, `>>`) and `python_unaryop` (`not`, `-`, `+`, `~`), each
+ *   with one `operator` and two operands, `left` and `right` (one, `operand`, for `python_unaryop`).
+ * - `python_ifexp`: `body if test else orelse`.
+ * - `python_generator`: `(element for name in iterable if condition ...)`, a generator expression of one `for` and any
+ *   number of `conditions`, which binds `name` to each item of `iterable` within the element and the conditions. As
+ *   the only argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
+ * - `let`, the framework's: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
+ * - `python_import` (`import module` or `import module as alias`) and `python_importfrom` (`from module import name`
+ *   or `... as alias`) bind a name within their `body`, which is the rest of the expression; `Text.ToText` writes them
+ *   as the lines before it. What they may import is up to the scope that evaluates them (see `Evaluators`).
+ *
+ * `DIALECT` reads them (`Terms.Dialect`). The writers (`constant`, `name`, `attribute`, ...) write them through the
+ * builders, wherever a term is written, in a transaction. `Text.ToText` writes an expression as Python source,
+ * parenthesized only where precedence requires. Reading Python source (`Text.FromText`) needs Python's own parser, so
+ * it is in the Python implementation only.
  */
 
-import { Errors, Repr } from "@mbse/schemas/Framework";
-import type { Visitors } from "@mbse/schemas/Framework";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Repr, Schemas } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
-type Native = Visitors.Native;
+
+export const CONSTANT = "python_constant";
+export const NAME = "python_name";
+export const ATTRIBUTE = "python_attribute";
+export const SUBSCRIPT = "python_subscript";
+export const INDEX = "python_index";
+export const CALL = "python_call";
+export const COMPARE = "python_compare";
+export const BOOLOP = "python_boolop";
+export const BINOP = "python_binop";
+export const UNARYOP = "python_unaryop";
+export const IFEXP = "python_ifexp";
+export const GENERATOR = "python_generator";
+export const LET = "let";
+export const IMPORT = "python_import";
+export const IMPORTFROM = "python_importfrom";
+
+/** Python's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
+export function install(txn: any): any {
+  const S = txn.Schemas;
+  const kinds: Record<string, string> = {
+    Constant: CONSTANT, Name: NAME, Attribute: ATTRIBUTE, Subscript: SUBSCRIPT, Index: INDEX, Call: CALL,
+    Compare: COMPARE, BoolOp: BOOLOP, BinOp: BINOP, UnaryOp: UNARYOP, IfExp: IFEXP, GeneratorExp: GENERATOR,
+    Import: IMPORT, ImportFrom: IMPORTFROM,
+  };
+  const symbols: Record<string, unknown> = { Term: S.OfUnion }; // the framework's union, by its name
+  for (const kind of Object.keys(kinds)) symbols[kind] = S.OfObject;
+  return txn.uid("mbse.Expressions.Python/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols(symbols)
+    .spec([
+      (_: any) => _.Constant.name("Expressions.Python.Constant").properties({
+        value: S.OfAny((a: any) => a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes])),
+        domain: S.OfStr, // every term has a domain
+      }),
+      (_: any) => _.Name.name("Expressions.Python.Name").properties({ name: S.OfStr, domain: S.OfStr }),
+      (_: any) => _.Attribute.name("Expressions.Python.Attribute").properties({
+        attr: S.OfStr, value: _.Term, domain: S.OfStr }),
+      (_: any) => _.Subscript.name("Expressions.Python.Subscript").properties({
+        key: S.OfStr, value: _.Term, domain: S.OfStr }),
+      (_: any) => _.Index.name("Expressions.Python.Index").properties({
+        value: _.Term, index: _.Term, domain: S.OfStr }),
+      (_: any) => _.Call.name("Expressions.Python.Call").properties({
+        function: _.Term,
+        arguments: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
+        domain: S.OfStr,
+      }),
+      ...["Compare", "BoolOp", "BinOp"].map((kind) => (_: any) => _[kind].name(`Expressions.Python.${kind}`).properties({
+        operator: S.OfStr, left: _.Term, right: _.Term, domain: S.OfStr })),
+      (_: any) => _.UnaryOp.name("Expressions.Python.UnaryOp").properties({
+        operator: S.OfStr, operand: _.Term, domain: S.OfStr }),
+      (_: any) => _.IfExp.name("Expressions.Python.IfExp").properties({
+        test: _.Term, body: _.Term, orelse: _.Term, domain: S.OfStr }),
+      (_: any) => _.GeneratorExp.name("Expressions.Python.GeneratorExp").properties({
+        name: S.OfStr, // bound to each item in the element and the conditions
+        iterable: _.Term,
+        element: _.Term,
+        conditions: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
+        domain: S.OfStr,
+      }),
+      (_: any) => _.Import.name("Expressions.Python.Import").properties({
+        module: S.OfStr, alias: S.OfStr, body: _.Term, domain: S.OfStr }),
+      (_: any) => _.ImportFrom.name("Expressions.Python.ImportFrom").properties({
+        module: S.OfStr, name: S.OfStr, alias: S.OfStr, body: _.Term, domain: S.OfStr }),
+      (_: any) => _.Term.name("Expressions.Framework.Term").branches( // branches added: schema extension
+        Object.entries(kinds).map(([kind, tag]) => (t: any) => t.name(tag).schema([_[kind]]))),
+    ])]))]);
+}
 
 /** The builtins an expression may use without importing them: the default builtins of a scope (see `Evaluators`). */
 export const BUILTINS: ReadonlySet<string> = new Set([
@@ -51,298 +126,171 @@ function identifierProblems(what: string, value: unknown): string[] {
   return [];
 }
 
-const STR = String;
-
-class _Constant extends F.Term {
-  static override KIND = "constant";
-  static override ROLE = F.LITERAL;
-  static override VALUE = F.NATIVES;
-  declare value: unknown;
+/** The check that a record's property, if a non-empty str, is an identifier. */
+function identifier(property: string, what: string): (record: any) => string[] {
+  return (record) => identifierProblems(what, F.attributesOf(record).get(property));
 }
 
-class _Name extends F.Term {
-  static override KIND = "name";
-  static override ROLE = F.REFERENCE;
-  static override PROPERTIES = new Map([["name", STR]]);
-  static override AMBIENT = BUILTINS;
-  declare name: string;
-
-  override check(): string[] {
-    return identifierProblems("a name", this.name);
-  }
+/** An alias, if given, is an identifier, and not empty. */
+function aliasProblems(what: string, attributes: Map<string, any>): string[] {
+  if (attributes.get("alias") === "") return [`${F.article(what)} needs an alias`];
+  return identifierProblems(`${F.article(what)}'s alias`, attributes.get("alias"));
 }
 
-class _Attribute extends F.Term {
-  static override KIND = "attribute";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["attr", STR]]);
-  static override SLOTS = ["value"];
-  static override OPERATOR = "attr";
-  static override SIGNATURE = new FD.Function([FD.Anything], FD.Anything);
-  declare attr: string;
-  declare value: any;
-
-  override check(): string[] {
-    return identifierProblems("an attribute", this.attr);
-  }
+function moduleProblems(what: string, module: unknown): string[] {
+  if (typeof module !== "string" || dotted(module)) return [];
+  return [`${F.article(what)}'s module must be a dotted name, got ${repr(module)}`];
 }
 
-class _Subscript extends F.Term {
-  static override KIND = "subscript";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["key", STR]]);
-  static override SLOTS = ["value"];
-  static override OPERATOR = "key";
-  static override SIGNATURE = new FD.Function([FD.Anything], FD.Anything);
-  declare key: string;
-  declare value: any;
+function importCheck(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  return [...moduleProblems("import", attributes.get("module")), ...aliasProblems("import", attributes)];
 }
 
-class _Index extends F.Term {
-  static override KIND = "index";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["value", "index"];
-  static override SIGNATURE = new FD.Function([FD.Anything, FD.Anything], FD.Anything);
-  declare value: any;
-  declare index: any;
+function importfromCheck(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  return [...moduleProblems("importfrom", attributes.get("module")),
+    ...identifierProblems("an importfrom's name", attributes.get("name")), ...aliasProblems("importfrom", attributes)];
 }
 
-class _Call extends F.Term {
-  static override KIND = "call";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["function"];
-  static override VARIADIC = "arguments";
-  static override SIGNATURE = new FD.Opaque();
-  declare function: any;
-  declare arguments: any[];
+function importNames(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  return [attributes.get("alias") || (attributes.get("module") as string).split(".")[0] as string];
 }
 
-const OPERATOR = new Map([["operator", STR]]);
-
-class _Compare extends F.Term {
-  static override KIND = "compare";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = OPERATOR;
-  static override SLOTS = ["left", "right"];
-  static override OPERATOR = "operator";
-  static override VOCABULARY = Domains.COMPARE;
-  declare operator: string;
-  declare left: any;
-  declare right: any;
+function importfromNames(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  return [attributes.get("alias") || attributes.get("name")];
 }
 
-class _Boolop extends F.Term {
-  static override KIND = "boolop";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = OPERATOR;
-  static override SLOTS = ["left", "right"];
-  static override OPERATOR = "operator";
-  static override VOCABULARY = Domains.BOOLOP;
-  declare operator: string;
-  declare left: any;
-  declare right: any;
+/** The constant of a native value. */
+function native(value: unknown): Writer | null {
+  return Schemas.hostOf(value) !== null ? constant(value) : null;
 }
 
-class _Binop extends F.Term {
-  static override KIND = "binop";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = OPERATOR;
-  static override SLOTS = ["left", "right"];
-  static override OPERATOR = "operator";
-  static override VOCABULARY = Domains.BINOP;
-  declare operator: string;
-  declare left: any;
-  declare right: any;
+const ANY = new FD.Function([FD.Anything], FD.Anything);
+
+function operatorKind(vocabulary: ReadonlyMap<string, FD.Signature>): F.Kind {
+  return new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required: ["operator"] });
 }
 
-class _Unaryop extends F.Term {
-  static override KIND = "unaryop";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = OPERATOR;
-  static override SLOTS = ["operand"];
-  static override OPERATOR = "operator";
-  static override VOCABULARY = Domains.UNARYOP;
-  declare operator: string;
-  declare operand: any;
+/** The Python dialect: its kinds, as the framework reads them. */
+export const DIALECT = new F.Dialect("Python", {
+  [CONSTANT]: new F.Kind(F.LITERAL),
+  [NAME]: new F.Kind(F.REFERENCE, { required: ["name"], ambient: BUILTINS, check: identifier("name", "a name") }),
+  [ATTRIBUTE]: new F.Kind(F.APPLICATION, { operator: "attr", signature: ANY, required: ["attr"],
+    check: identifier("attr", "an attribute") }),
+  [SUBSCRIPT]: new F.Kind(F.APPLICATION, { operator: "key", signature: ANY, required: ["key"] }),
+  [INDEX]: new F.Kind(F.APPLICATION, { signature: new FD.Function([FD.Anything, FD.Anything], FD.Anything) }),
+  [CALL]: new F.Kind(F.APPLICATION, { signature: new FD.Opaque() }),
+  [COMPARE]: operatorKind(Domains.COMPARE),
+  [BOOLOP]: operatorKind(Domains.BOOLOP),
+  [BINOP]: operatorKind(Domains.BINOP),
+  [UNARYOP]: operatorKind(Domains.UNARYOP),
+  [IFEXP]: new F.Kind(F.APPLICATION, { signature: new FD.Function([FD.Anything, FD.Anything, FD.Anything], FD.Anything) }),
+  [GENERATOR]: new F.Kind(F.QUANTIFIER, { signature: Domains.GENERATOR, required: ["name"],
+    check: identifier("name", "a generator's name") }),
+  [LET]: new F.Kind(F.BINDING, { required: ["name"], check: identifier("name", "a let's name") }),
+  [IMPORT]: new F.Kind(F.IMPORT, { required: ["module"], names: importNames, check: importCheck }),
+  [IMPORTFROM]: new F.Kind(F.IMPORT, { required: ["module", "name"], names: importfromNames, check: importfromCheck }),
+}, { domain_of: Domains.of, literal: native });
+
+// --- Writers ---
+
+/** A Python term, written through the builders: a spec, which writes its term where it is given. */
+export class Writer extends F.Writer {}
+
+const spec = (value: unknown): F.Writer => DIALECT.spec(value);
+
+/** The writer of a term of kind `tag`: its attributes and its slots (specs) that are not null, and its variadic
+ * arguments (specs). */
+function kind(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown>,
+  variadic: [string, unknown[]] | null = null): Writer {
+  const specs = Object.entries(slots).filter(([, value]) => value !== null && value !== undefined)
+    .map(([slot, value]) => [slot, spec(value)] as const);
+  const many = variadic === null ? null : [variadic[0], variadic[1].map(spec)] as const;
+  return new Writer((union: any) => union[tag]((r: any) => {
+    for (const [name, value] of Object.entries(attributes)) if (value !== null && value !== undefined) r[name](value);
+    for (const [slot, value] of specs) r[slot](value);
+    if (many !== null) r[many[0]](many[1]);
+    return r;
+  }));
 }
 
-class _IfExp extends F.Term {
-  static override KIND = "ifexp";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["test", "body", "orelse"];
-  static override SIGNATURE = new FD.Function([FD.Anything, FD.Anything, FD.Anything], FD.Anything);
-  declare test: any;
-  declare body: any;
-  declare orelse: any;
+/** The constant `value`, a basic scalar. */
+export function constant(value: unknown): Writer {
+  return new Writer((u: any) => u[CONSTANT]((r: any) => r.value((p: any) => p.as_scalar(value))));
 }
 
-class _Generator extends F.Term {
-  static override KIND = "generator";
-  static override ROLE = F.QUANTIFIER;
-  static override PROPERTIES = new Map([["name", STR]]);
-  static override SLOTS = ["iterable", "element"];
-  static override VARIADIC = "conditions";
-  static override SIGNATURE = Domains.GENERATOR;
-  declare name: string;
-  declare iterable: any;
-  /** With `name` bound to each item, as the conditions are. */
-  declare element: any;
-  declare conditions: any[];
-
-  override check(): string[] {
-    return identifierProblems("a generator's name", this.name);
-  }
+/** The value bound to `name`. */
+export function name(name: string): Writer {
+  return new Writer((u: any) => u[NAME]((r: any) => r.name(name)));
 }
 
-class _Let extends F.Term {
-  static override KIND = "let";
-  static override ROLE = F.BINDING;
-  static override PROPERTIES = new Map([["name", STR]]);
-  static override SLOTS = ["value", "body"];
-  declare name: string;
-  declare value: any;
-  declare body: any;
-
-  override check(): string[] {
-    return identifierProblems("a let's name", this.name);
-  }
-}
-
-class _Import extends F.Term {
-  static override KIND = "import";
-  static override ROLE = F.IMPORT;
-  static override PROPERTIES = new Map([["module", STR], ["alias", STR]]);
-  static override OPTIONAL = new Set(["alias"]);
-  static override SLOTS = ["body"];
-  declare module: string;
-  declare alias: string | null;
-  declare body: any;
-
-  override binds(): string[] {
-    return [this.alias ?? (this.module.split(".")[0] as string)];
-  }
-
-  override check(): string[] {
-    const problems = typeof this.module !== "string" || dotted(this.module) ? []
-      : [`an import's module must be a dotted name, got ${repr(this.module)}`];
-    return [...problems, ...identifierProblems("an import's alias", this.alias)];
-  }
-}
-
-class _ImportFrom extends F.Term {
-  static override KIND = "importfrom";
-  static override ROLE = F.IMPORT;
-  static override PROPERTIES = new Map([["module", STR], ["name", STR], ["alias", STR]]);
-  static override OPTIONAL = new Set(["alias"]);
-  static override SLOTS = ["body"];
-  declare module: string;
-  declare name: string;
-  declare alias: string | null;
-  declare body: any;
-
-  override binds(): string[] {
-    return [this.alias ?? this.name];
-  }
-
-  override check(): string[] {
-    const problems = typeof this.module !== "string" || dotted(this.module) ? []
-      : [`an importfrom's module must be a dotted name, got ${repr(this.module)}`];
-    return [...problems, ...identifierProblems("an importfrom's name", this.name),
-      ...identifierProblems("an importfrom's alias", this.alias)];
-  }
-}
-
-const KINDS = [_Constant, _Name, _Attribute, _Subscript, _Index, _Call, _Compare, _Boolop, _Binop, _Unaryop, _IfExp,
-  _Generator, _Let, _Import, _ImportFrom];
-const AST_NAMES: Record<string, string> = {
-  boolop: "BoolOp", binop: "BinOp", unaryop: "UnaryOp", ifexp: "IfExp", generator: "GeneratorExp", importfrom: "ImportFrom",
-};
-
-export const DIALECT = new F.Declared("Python", KINDS, {
-  domain_of: Domains.of,
-  schemaNames: new Map(KINDS.map((k) => [k.KIND,
-    `Expressions.Python.Of${AST_NAMES[k.KIND] ?? k.KIND.charAt(0).toUpperCase() + k.KIND.slice(1)}`])),
-});
-export const Builders = DIALECT.Builders;
-export const Schema = DIALECT.Schema;
-
-const spec = (value: unknown): any => DIALECT.resolve(value);
-
-export function constant(value: Native): _Constant {
-  return new _Constant(value);
-}
-
-export function name(name: string): _Name {
-  return new _Name(name);
-}
-
-/** `value.attr`; each argument of these constructors is a spec (a native value is a constant). */
-export function attribute(value: unknown, attr: string): _Attribute {
-  return new _Attribute(attr, spec(value));
+/** `value.attr`; each argument of these writers is a spec (a native value is a constant). */
+export function attribute(value: unknown, attr: string): Writer {
+  return kind(ATTRIBUTE, { attr }, { value });
 }
 
 /** `value[key]`. */
-export function subscript(value: unknown, key: string): _Subscript {
-  return new _Subscript(key, spec(value));
+export function subscript(value: unknown, key: string): Writer {
+  return kind(SUBSCRIPT, { key }, { value });
 }
 
 /** `value[index]`. */
-export function index(value: unknown, index: unknown): _Index {
-  return new _Index(spec(value), spec(index));
+export function index(value: unknown, index: unknown): Writer {
+  return kind(INDEX, {}, { value, index });
 }
 
 /** `fn(...args)`. A dotted name as the function is a chain of attributes: `call('np.add', 1n, 2n)` is
  * `np.add(1, 2)`. */
-export function call(fn: unknown, ...args: unknown[]): _Call {
+export function call(fn: unknown, ...args: unknown[]): Writer {
   if (typeof fn === "string") {
     const [first, ...rest] = fn.split(".");
-    let callee: F.Term = new _Name(first);
-    for (const attr of rest) callee = new _Attribute(attr, callee);
+    let callee: Writer = name(first as string);
+    for (const attr of rest) callee = attribute(callee, attr);
     fn = callee;
   }
-  return new _Call(spec(fn), args.map(spec));
+  return kind(CALL, {}, { function: fn }, ["arguments", args]);
 }
 
-export function compare(operator: string, left: unknown, right: unknown): _Compare {
-  return new _Compare(operator, spec(left), spec(right));
+export function compare(operator: string, left: unknown, right: unknown): Writer {
+  return kind(COMPARE, { operator }, { left, right });
 }
 
-export function boolop(operator: string, left: unknown, right: unknown): _Boolop {
-  return new _Boolop(operator, spec(left), spec(right));
+export function boolop(operator: string, left: unknown, right: unknown): Writer {
+  return kind(BOOLOP, { operator }, { left, right });
 }
 
-export function binop(operator: string, left: unknown, right: unknown): _Binop {
-  return new _Binop(operator, spec(left), spec(right));
+export function binop(operator: string, left: unknown, right: unknown): Writer {
+  return kind(BINOP, { operator }, { left, right });
 }
 
-export function unaryop(operator: string, operand: unknown): _Unaryop {
-  return new _Unaryop(operator, spec(operand));
+export function unaryop(operator: string, operand: unknown): Writer {
+  return kind(UNARYOP, { operator }, { operand });
 }
 
 /** `body if test else orelse`. */
-export function ifexp(test: unknown, body: unknown, orelse: unknown): _IfExp {
-  return new _IfExp(spec(test), spec(body), spec(orelse));
+export function ifexp(test: unknown, body: unknown, orelse: unknown): Writer {
+  return kind(IFEXP, {}, { test, body, orelse });
 }
 
 /** `(element for name in iterable if condition ...)`. */
-export function generator(name: string, iterable: unknown, element: unknown, ...conditions: unknown[]): _Generator {
-  return new _Generator(name, spec(iterable), spec(element), conditions.map(spec));
+export function generator(name: string, iterable: unknown, element: unknown, ...conditions: unknown[]): Writer {
+  return kind(GENERATOR, { name }, { iterable, element }, ["conditions", conditions]);
 }
 
 /** `(lambda name: body)(value)`. */
-export function let_(name: string, value: unknown, body: unknown): _Let {
-  return new _Let(name, spec(value), spec(body));
+export function let_(name: string, value: unknown, body: unknown): Writer {
+  return kind(LET, { name }, { value, body });
 }
 
 /** `import module [as alias]`, then `body`. */
-export function import_(module: string, body: unknown, alias: string | null = null): _Import {
-  return new _Import(module, alias, spec(body));
+export function import_(module: string, body: unknown, alias: string | null = null): Writer {
+  return kind(IMPORT, { module, alias }, { body });
 }
 
 /** `from module import name [as alias]`, then `body`. */
-export function importfrom(module: string, name: string, body: unknown, alias: string | null = null): _ImportFrom {
-  return new _ImportFrom(module, name, alias, spec(body));
+export function importfrom(module: string, name: string, body: unknown, alias: string | null = null): Writer {
+  return kind(IMPORTFROM, { module, name, alias }, { body });
 }
-
-/** For `Text`. */
-export { _Attribute, _Binop, _Boolop, _Call, _Compare, _Constant, _Generator, _IfExp, _Import, _ImportFrom, _Index, _Let, _Name, _Subscript, _Unaryop };
