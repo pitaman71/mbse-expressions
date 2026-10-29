@@ -1,7 +1,8 @@
 """Evaluators of the Matlab dialect: compute an expression by MATLAB's rules for scalars, in Python.
 
-`Evaluators.OfAny(expression, scope)` binds variables to numbers, logicals, strings and structs (mappings, or objects
-that write their properties through `accept`). Values are Python `float` (double), `bool` (logical) and `str`
+`Evaluators.OfAny(term, scope)` evaluates a term (or anything `Terms.term` reads one from, such as an `Expression`)
+with variables bound to numbers, logicals, strings and structs (mappings, or data objects, read through mbse-schemas'
+readers). Values are Python `float` (double), `bool` (logical) and `str`
 (string scalar). MATLAB's rules apply, not Basic's:
 
 - Two-valued logic: `&&` and `||` short-circuit, and take numbers or logicals (nonzero is true; NaN raises).
@@ -11,7 +12,7 @@ that write their properties through `accept`). Values are Python `float` (double
   variables raise too, with MATLAB's messages.
 - The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
   53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
-- An array is a list: a list property's values, or a variable's list. Operators take scalars. `numel` counts
+- An array is a list: a container property's values, or a variable's list. Operators take scalars. `numel` counts
   elements (a scalar is one), `xs(i)` indexes from 1, and `arrayfun(@(p) body, xs)` gives the body's value for each
   element, an array of logicals if all are, else of doubles; each must be a numeric or logical scalar. `all`, `any`
   and `nnz` test elements as nonzero (`any` ignores NaN), `sum` adds them from the first, `min` and `max` ignore NaN
@@ -30,12 +31,11 @@ import math
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Evaluators as F, Objects, Symbolics as S, Terms
 
 from . import Domains, Expressions
 
-__all__ = ["OfAny", "Scope"]
+__all__ = ["OfAny", "Scope", "INTERPRETER"]
 
 
 def _double(value: Any) -> float | None:
@@ -135,19 +135,19 @@ def _fields(value: Any) -> Mapping[str, Any]:
         return value
     if not Domains.is_struct(value):
         raise TypeError("Dot indexing is not supported for variables of this type.")
-    return Validators.properties_of(value)
+    return Objects.properties(value)
 
 
 def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
-    fields = _fields(arguments[0]())
-    if node.name not in fields:
-        raise KeyError(f'Unrecognized field name "{node.name}".')
-    return _value(fields[node.name])
+    fields, name = _fields(arguments[0]()), Terms.name_of(node)
+    if name not in fields:
+        raise KeyError(f'Unrecognized field name "{name}".')
+    return _value(fields[name])
 
 
 def _value(value: Any) -> Any:
-    """A value as MATLAB reads it: a number as a double, and a list (a list property's too) as an array."""
-    if isinstance(value, Validators.ListRecord):
+    """A value as MATLAB reads it: a number as a double, and a list (a container property's too) as an array."""
+    if isinstance(value, Objects.Listed):
         value = value.values
     if isinstance(value, (list, tuple)):
         return [_value(item) for item in value]
@@ -289,17 +289,18 @@ class Scope(S.Variables):
         return _value(super().lookup(reference))  # numbers are doubles, lists arrays
 
     def unbound(self, reference: Any) -> Any:
-        raise _unrecognized(reference.name)
+        raise _unrecognized(Terms.name_of(reference))
 
     def enter(self, declaration: Any) -> Scope:
-        package, _, name = declaration.name.rpartition(".")
+        declared = Terms.name_of(declaration)
+        package, _, name = declared.rpartition(".")
         functions = self.packages.get(package, {})
         if name == "*" and package in self.packages:
             found = functions
         elif name in functions:
             found = {name: functions[name]}
         else:
-            raise ImportError(f"Import argument '{declaration.name}' cannot be found or cannot be imported.")
+            raise ImportError(f"Import argument '{declared}' cannot be found or cannot be imported.")
         inner = self._copy()
         inner.imported = {**self.imported, **found}
         return inner
@@ -321,8 +322,8 @@ def _extension(name: str, arguments: list[F.Thunk], node: Any, scope: Scope) -> 
     return float(value) if type(value) is int else value
 
 
-_interpreter = F.Interpreter(Expressions.DIALECT, {
-    "binary": {
+INTERPRETER = F.Interpreter(Expressions.DIALECT, {
+    "matlab_binary": {
         "==": _compare("==", lambda a, b: a == b), "~=": _compare("~=", lambda a, b: a != b),
         "<": _compare("<", lambda a, b: a < b), "<=": _compare("<=", lambda a, b: a <= b),
         ">": _compare(">", lambda a, b: a > b), ">=": _compare(">=", lambda a, b: a >= b),
@@ -330,7 +331,7 @@ _interpreter = F.Interpreter(Expressions.DIALECT, {
         "+": _arithmetic("+", lambda a, b: a + b), "-": _arithmetic("-", lambda a, b: a - b),
         ".*": _arithmetic(".*", lambda a, b: a * b),
     },
-    "unary": {"~": _not, "-": _negate},
+    "matlab_unary": {"~": _not, "-": _negate},
     "call": {
         "isfield": _isfield, **{name: _bit(name) for name in ("bitand", "bitor", "bitxor", "bitshift")},
         "all": _reduction(lambda numbers: all(number != 0 for number in numbers)),
@@ -340,12 +341,13 @@ _interpreter = F.Interpreter(Expressions.DIALECT, {
         "sum": _reduction(_sum), "min": _extreme("min"), "max": _extreme("max"), "unique": _unique,
         "ismember": _ismember,
     },
-    "field": _field,
-    "index": _index,
-    "arrayfun": _arrayfun,
+    "matlab_field": _field,
+    "matlab_index": _index,
+    "matlab_arrayfun": _arrayfun,
 }, literal=lambda value: float(value) if type(value) is int else value, scope=Scope, extension=_extension)
+"""The interpreter of the Matlab dialect."""
 
 
 def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
-    """The value of an expression in `scope`, or with the variables in a mapping bound."""
-    return _interpreter(Expressions.DIALECT.resolve(expression), scope)
+    """The value of a term in `scope`, or with the variables in a mapping bound."""
+    return INTERPRETER(expression, scope)
