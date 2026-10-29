@@ -2,9 +2,10 @@
  * Symbolics: names, the scopes that resolve them, and the dependencies an expression declares.
  *
  * An expression refers to names: its references. A binding (a let) binds a name within its body, an import binds the
- * names it declares (`binds()`) within its body, and some names are ambient, bound without a declaration (Python's
- * builtins). `free(expression)` is the set of names an expression needs from outside: its lexical references that
- * nothing within it binds. `imports(expression)` lists the imports it declares: what it needs its scope to provide.
+ * names it declares (its kind's `names`) within its body, and some names are ambient, bound without a declaration
+ * (Python's builtins). `free(term, dialect)` is the set of names an expression needs from outside: its lexical
+ * references that nothing within it binds. `imports(term, dialect)` lists the imports it declares: what it needs its
+ * scope to provide.
  *
  * A `Scope` is where references are resolved at evaluation, in the dialect's own way: `lookup(reference)` gives a
  * reference's value, `bind(name, value)` the scope within a binding, and `enter(declaration)` the scope within an
@@ -68,7 +69,7 @@ export class Variables implements Scope {
   }
 
   unbound(reference: any): any {
-    throw new KeyError(`${reference.kind().KIND} ${repr(Terms.nameOf(reference))} is not bound`);
+    throw new KeyError(`${Terms.kindOf(reference)[0]} ${repr(Terms.nameOf(reference))} is not bound`);
   }
 
   bind(name: string, value: unknown): this {
@@ -78,7 +79,7 @@ export class Variables implements Scope {
   }
 
   enter(declaration: any): Scope {
-    throw new NotImplementedError(`${this.constructor.name} has no ${declaration.kind().KIND}s`);
+    throw new NotImplementedError(`${this.constructor.name} has no ${Terms.kindOf(declaration)[0]}s`);
   }
 
   protected copy(): this {
@@ -86,41 +87,34 @@ export class Variables implements Scope {
   }
 }
 
-/** An expression, or a `Writer`'s. */
-function dataOf(expression: unknown): Terms.Term {
-  return (expression instanceof Terms.Writer ? expression.data : expression) as Terms.Term;
-}
-
-/** The names `expression` (an expression or a `Writer`) needs from its scope: its lexical references that no binding or
- * import within it binds, and that are not ambient. Shared sub-expressions and cycles are visited once per set of
- * bound names. */
-export function free(expression: unknown): Set<string> {
+/** The names a term needs from its scope: its lexical references that no binding or import within it binds, and that
+ * are not ambient, its kinds read as `dialect` reads them. */
+export function free(term: unknown, dialect: Terms.Dialect): Set<string> {
   const found = new Set<string>();
-  const seen = new Map<unknown, Set<string>>();
-  const visit = (node: unknown, bound: ReadonlySet<string>): void => {
-    if (!(node instanceof Terms.Term)) return;
-    const key = [...bound].sort().join("\u0000");
-    const visited = seen.get(node) ?? new Set<string>();
-    if (visited.has(key)) return;
-    seen.set(node, visited.add(key));
-    const kind = node.kind();
-    const name = Terms.nameOf(node) as string;
-    if (kind.ROLE === Terms.REFERENCE) {
-      if (kind.LEXICAL && !bound.has(name) && !kind.AMBIENT.has(name)) found.add(name);
+  const visit = (node: any, bound: ReadonlySet<string>): void => {
+    const [, record, kind] = dialect.kind(node);
+    const name = Terms.nameOf(node);
+    if (kind.role === Terms.REFERENCE) {
+      if (kind.lexical && !bound.has(name) && !kind.ambient.has(name)) found.add(name);
       return;
     }
-    const args = node.argumentsOf();
+    const args = Terms.argumentsOf(record);
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
-    if (kind.ROLE === Terms.BINDING || kind.ROLE === Terms.QUANTIFIER) scopes = args.map((_, i) => (i === 0 ? bound : new Set([...bound, name])));
-    else if (kind.ROLE === Terms.IMPORT) scopes = args.map(() => new Set([...bound, ...node.binds()]));
-    args.forEach((argument, i) => visit(argument, scopes[i] as ReadonlySet<string>));
+    if (kind.role === Terms.BINDING || kind.role === Terms.QUANTIFIER) {
+      scopes = args.map((_, i) => (i === 0 ? bound : new Set([...bound, name])));
+    } else if (kind.role === Terms.IMPORT) {
+      const names = new Set([...bound, ...(kind.names !== null ? kind.names(record) : [])]);
+      scopes = args.map(() => names);
+    }
+    args.forEach((argument, i) => {
+      if (argument !== null) visit(argument, scopes[i] as ReadonlySet<string>);
+    });
   };
-  visit(dataOf(expression), new Set());
+  visit(Terms.term(term), new Set());
   return found;
 }
 
-/** The imports `expression` (an expression or a `Writer`) declares, each once, in the order `Terms.walk` visits
- * them. */
-export function imports(expression: unknown): any[] {
-  return [...Terms.walk(dataOf(expression))].filter((node) => node.kind().ROLE === Terms.IMPORT);
+/** The imports a term declares, in the order `Terms.walk` visits them. */
+export function imports(term: unknown, dialect: Terms.Dialect): any[] {
+  return [...Terms.walk(term)].filter((node) => dialect.kind(node)[2].role === Terms.IMPORT);
 }

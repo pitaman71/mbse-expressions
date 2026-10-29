@@ -1,9 +1,10 @@
 /**
  * Evaluators of the Basic dialect: compute the value of an expression.
  *
- * `Evaluators.OfAny(expression, scope)` evaluates any expression with the variables in `scope` bound, and
- * `Evaluators.OfLiteral`, `OfOperation`, `OfVariable` and `OfLet` evaluate one kind; each accepts that kind's `Spec`
- * (see `Expressions`), including `Writer`s. The value is a native value, an object, or `null` when it is unknown.
+ * `Evaluators.OfAny(term, scope)` evaluates any term with the variables in `scope` bound, and `Evaluators.OfLiteral`,
+ * `OfCall`, `OfVariable`, `OfLet` and `OfQuantifier` evaluate one kind; each takes a term value, or anything
+ * `Terms.term` reads one from (an `Expression`, its root). The value is a native value, an object, or `null` when it is
+ * unknown.
  *
  * - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are
  *   unknown. `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the
@@ -16,35 +17,37 @@
  *   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
  *   `convert` keeps a value in the operation's domain, `reinterpret` keeps its bit pattern, and `pack` and `unpack` go
  *   to and from a packed domain's representation.
- * - Collections: a list property reads as a `Domains.Collection`, and `entries` gives an object's entries as one of
+ * - Collections: a container property reads as a `Domains.Collection`, and `entries` gives an object's entries as one of
  *   `Domains.Record`s, which `get` and `has` read. The collection operations and the quantifiers (`all`, `any`,
  *   `count`) follow Kleene's logic over the items; an unknown collection gives unknown.
  * - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
  *   variables and wrong operand types raise, as do the problems `validate()` reports.
- * - `get` and `has` read any object that writes its properties through `accept`, including value objects.
+ * - `get` and `has` read any data object, read through mbse-schemas' readers (`Framework/Objects`): reference
+ *   objects, value objects, union and intersection values.
  * - Deep equality: a value object, a union or intersection value, or an entry's record is equal to another when the
- *   properties each writes (a union's branch, an intersection's parts) are absent in both or equal in both, read
- *   through the visitor protocols, so without a schema; a property present in one and absent in the other is
- *   incomparable. A positional collection is equal to another of the same length whose items are equal in order, and
+ *   properties each holds (a union's branch, an intersection's parts) are absent in both or equal in both, read
+ *   through the visitor protocols; a property present in one and absent in the other is incomparable. A positional collection is equal to another of the same length whose items are equal in order, and
  *   unequal to one of another length; a keyed collection to another with the same keys and equal values, in any
  *   order, and incomparable to one with other keys. Equal is Kleene's and of the parts' equalities.
  *
  * A constraint about a value is evaluated with `this` bound to it: `Evaluators.OfAny(constraint, { this: value })`.
  */
 
-import { Comparison, Errors, Repr, Schemas, Validators } from "@mbse/schemas/Framework";
+import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import { OverflowError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Terms from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 import * as Ieee754 from "./Ieee754.js";
 
 const { typeName } = Repr;
 const { ValueError } = Errors;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 
 /** The variables an expression is evaluated with, or a scope. */
 export type Scope = S.Scope | S.Bindings;
@@ -77,9 +80,14 @@ function logic(name: "and" | "or" | "implies"): F.Implementation {
   };
 }
 
+/** A call's operation's name. */
+function callableOf(node: any): string {
+  return Terms.attributesOf(Terms.kindOf(node)[1]).get("callable");
+}
+
 /** An operation that evaluates all its arguments. */
 function strict(fn: (name: string, values: unknown[]) => unknown): F.Implementation {
-  return (args, node) => fn(node.name, args.map((argument) => argument()));
+  return (args, node) => fn(callableOf(node), args.map((argument) => argument()));
 }
 
 function not(name: string, values: unknown[]): boolean | null {
@@ -87,30 +95,20 @@ function not(name: string, values: unknown[]): boolean | null {
   return t === null ? null : !t;
 }
 
-type Readable = { accept(visitor: Visitors.OfObject): void };
+const isReadable = Objects.isObject;
+/** A reference object, compared by identity. */
+const isObject = Objects.isReference;
 
-function isReadable(value: unknown): value is Readable {
-  return value !== null && typeof value === "object" && typeof (value as { accept?: unknown }).accept === "function";
-}
-
-/** A reference object, compared by identity; a value object's identity does not take part in equality. */
-function isObject(value: unknown): value is Visitors.Visitable {
-  // `in` first: a value object's proxy throws on reading an attribute it lacks.
-  return isReadable(value) && "identity" in value && typeof (value as { identity?: unknown }).identity === "function"
-    && (value as Visitors.Visitable).owner() === null;
-}
-
-/** A record's fields, or the properties a value writes, as Basic reads them. */
+/** A record's fields, or the properties a value holds, as Basic reads them. */
 function fieldsOf(value: unknown): ReadonlyMap<string, unknown> {
   if (value instanceof Domains.Record) return value.fields;
-  return new Map([...Validators.properties_of(value as Readable)].map(([name, v]) => [name, valueOf(v)]));
+  return new Map([...Objects.properties(value)].map(([name, v]) => [name, valueOf(v)]));
 }
 
-/** A property's value as Basic reads it: a list as a collection. */
+/** A property's value as Basic reads it: a container as a collection. */
 function valueOf(value: unknown): unknown {
-  if (value instanceof Validators.ListRecord) {
-    const keyed = value.keys.some((key) => key !== null && key !== undefined);
-    return new Domains.Collection(value.values.map(valueOf), keyed ? value.keys.map(valueOf) : null);
+  if (value instanceof Objects.Listed) {
+    return new Domains.Collection(value.values.map(valueOf), value.keys === null ? null : value.keys.map(valueOf));
   }
   return value;
 }
@@ -125,20 +123,20 @@ function read(name: string, values: unknown[]): unknown {
   if (target === null) return null;
   let properties: ReadonlyMap<string, unknown>;
   if (target instanceof Domains.Record) properties = target.fields;
-  else if (isReadable(target)) properties = Validators.properties_of(target);
+  else if (isReadable(target)) properties = Objects.properties(target);
   else throw new TypeError(`${name} expects an object, got ${typeName(target)}`);
   if (name === "has") return properties.has(propertyName);
   return valueOf(properties.get(propertyName) ?? null);
 }
 
 function compare(a: Native, b: Native): Comparison.Result {
-  const schema = new Schemas.OfNative.Data(NATIVES.get(typeName(a)));
-  return new Comparison.OfNative(schema, a).compare(new Comparison.OfNative(schema, b));
+  const schema = new Schemas.OfScalar.Data(NATIVES.get(typeName(a)));
+  return new Comparison.OfScalar(schema, a).compare(new Comparison.OfScalar(schema, b));
 }
 
 function sameNativeType(a: unknown, b: unknown): boolean {
   const name = typeName(a);
-  return NATIVES.has(name) && Schemas.isNativeOf(NATIVES.get(name), a) && Schemas.isNativeOf(NATIVES.get(name), b);
+  return NATIVES.has(name) && Schemas.isScalarOf(NATIVES.get(name), a) && Schemas.isScalarOf(NATIVES.get(name), b);
 }
 
 /** Whether either value is typed; then they compare only within one domain. */
@@ -160,7 +158,7 @@ function equal(a: unknown, b: unknown): boolean | null {
     return x.domain.compare(x.value, y.value) === 0;
   }
   if (sameNativeType(a, b)) return compare(a as Native, b as Native) === 0;
-  if (isObject(a) || isObject(b)) return isObject(a) && isObject(b) ? a.identity() === b.identity() : null;
+  if (isObject(a) || isObject(b)) return isObject(a) && isObject(b) ? a === b : null;
   if (isCollection(a) && isCollection(b)) {
     return equalCollections(collectionOf("eq", a) as Domains.Collection, collectionOf("eq", b) as Domains.Collection);
   }
@@ -367,9 +365,15 @@ function converted(value: unknown, target: any): unknown {
   throw new TypeError(`cannot convert ${describe(value)} to ${target.name()}`);
 }
 
+/** The domain a call names: its result's. */
+function domainOfCall(node: any): any {
+  return Expressions._domain_of(Terms.kindOf(node)[1]);
+}
+
 function convert(args: F.Thunk[], node: any): unknown {
   const value = args[0]?.();
-  return value === null ? null : Domains.value(node.domain, converted(value, node.domain));
+  const domain = domainOfCall(node);
+  return value === null ? null : Domains.value(domain, converted(value, domain));
 }
 
 /** The width in bits of a fixed-width domain, or null. */
@@ -399,7 +403,7 @@ function fromPattern(domain: any, value: bigint, bits: number): unknown {
 function reinterpret(args: F.Thunk[], node: any): unknown {
   const value = args[0]?.();
   if (value === null) return null;
-  const [source, target] = [domainOf(value), node.domain];
+  const [source, target] = [domainOf(value), domainOfCall(node)];
   const [m, n] = [width(source), width(target)];
   if (m === null || n === null) throw new TypeError(`cannot reinterpret ${describe(value)} as ${target.name()}`);
   if (m !== n) throw new TypeError(`cannot reinterpret ${describe(value)} as ${target.name()}: ${m} bits and ${n}`);
@@ -421,7 +425,7 @@ function pack(args: F.Thunk[]): unknown {
 function unpack(args: F.Thunk[], node: any): unknown {
   const value = args[0]?.();
   if (value === null) return null;
-  const target = node.domain;
+  const target = domainOfCall(node);
   if (!(target instanceof PACKED)) throw new TypeError(`unpack needs a packed domain, got ${target.name()}`);
   const representation = target.representation;
   if (!representation.equals(domainOf(value))) throw new TypeError(`unpack expects ${representation.name()}, got ${describe(value)}`);
@@ -499,7 +503,7 @@ function sum(name: string, values: unknown[]): unknown {
 
 function ordered(value: unknown): boolean {
   if (value instanceof Domains.Value) return value.domain.kind().ORDERED;
-  return ["bigint", "number", "string"].includes(typeof value) || Schemas.isNativeOf(Uint8Array, value);
+  return ["bigint", "number", "string"].includes(typeof value) || Schemas.isScalarOf(Uint8Array, value);
 }
 
 /** `min` or `max`: the least or greatest item of an ordered domain; unknown when there is none, or two items are
@@ -528,7 +532,7 @@ function entries(name: string, values: unknown[]): Domains.Collection | null {
   if (typeof adjacency !== "string") throw new TypeError(`entries expects an adjacency name, got ${typeName(adjacency)}`);
   if (target === null) return null;
   if (!isReadable(target)) throw new TypeError(`entries expects an object, got ${typeName(target)}`);
-  const found = Validators.entries_of(target).get(adjacency) ?? [];
+  const found = Objects.entries(target, adjacency);
   return new Domains.Collection(found.map((entry) => new Domains.Record(new Map<string, unknown>([...entry.targets,
     ...[...entry.values].map(([k, v]) => [k, valueOf(v)] as [string, unknown])]))));
 }
@@ -574,35 +578,42 @@ export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string,
 ]);
 
 /** The interpreter of the Basic dialect, which `Partials` reduces with. */
-export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map([["operation", OPERATIONS], ["quantifier", QUANTIFIERS]]),
+export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map([["call", OPERATIONS], ["quantifier", QUANTIFIERS]]),
   { typed: (domain, value) => new Domains.Value(domain, value) });
 
-/** The value of any expression, with the variables in `scope` bound. */
-export function OfAny(expression: Expressions.OfAny.Spec, scope: Scope = {}): unknown {
-  return INTERPRETER.run(Expressions.OfAny.resolve(expression), scope);
+/** The value of any term, with the variables in `scope` bound. */
+export function OfAny(expression: unknown, scope: Scope | null = null): unknown {
+  return INTERPRETER.run(expression, scope);
+}
+
+function of(tag: string, expression: unknown, scope: Scope | null): unknown {
+  const term = Terms.term(expression);
+  const found = Terms.kindOf(term)[0];
+  if (found !== tag) throw new TypeError(`expected ${Terms.article(tag)}, got ${Terms.article(found)}`);
+  return INTERPRETER.run(term, scope);
 }
 
 /** The value of a literal. */
-export function OfLiteral(expression: Expressions.OfLiteral.Spec, scope: Scope = {}): unknown {
-  return INTERPRETER.run(Expressions.OfLiteral.resolve(expression), scope);
+export function OfLiteral(expression: unknown, scope: Scope | null = null): unknown {
+  return of("literal", expression, scope);
 }
 
-/** The value of an operation, with the variables in `scope` bound. */
-export function OfOperation(expression: Expressions.OfOperation.Spec, scope: Scope = {}): unknown {
-  return INTERPRETER.run(Expressions.OfOperation.resolve(expression), scope);
+/** The value of a call, with the variables in `scope` bound. */
+export function OfCall(expression: unknown, scope: Scope | null = null): unknown {
+  return of("call", expression, scope);
 }
 
 /** The value `scope` binds to a variable. */
-export function OfVariable(expression: Expressions.OfVariable.Spec, scope: Scope = {}): unknown {
-  return INTERPRETER.run(Expressions.OfVariable.resolve(expression), scope);
+export function OfVariable(expression: unknown, scope: Scope | null = null): unknown {
+  return of("variable", expression, scope);
 }
 
 /** The value of a let's body, with its name bound to its value and the variables in `scope` bound. */
-export function OfLet(expression: Expressions.OfLet.Spec, scope: Scope = {}): unknown {
-  return INTERPRETER.run(Expressions.OfLet.resolve(expression), scope);
+export function OfLet(expression: unknown, scope: Scope | null = null): unknown {
+  return of("let", expression, scope);
 }
 
 /** The value of a quantifier, with the variables in `scope` bound. */
-export function OfQuantifier(expression: Expressions.OfQuantifier.Spec, scope: Scope = {}): unknown {
-  return INTERPRETER.run(Expressions.OfQuantifier.resolve(expression), scope);
+export function OfQuantifier(expression: unknown, scope: Scope | null = null): unknown {
+  return of("quantifier", expression, scope);
 }

@@ -11,72 +11,71 @@
  * reduced arguments, unless `simplify(node, results)` gives a simpler result from what is known of them (Kleene's
  * short-circuits, in Basic). A reference the scope does not know stays.
  *
- * The residual agrees with the expression wherever the expression evaluates without raising, in any scope that adds
- * the unknown variables to the known ones. Evaluating a closed subexpression throws as evaluation would, and a cycle
- * throws.
+ * The residual is a `Writer` (see `Terms`), which its caller writes where it wants it, in a transaction; a subterm it
+ * keeps is the term value read, which writing copies. It agrees with the expression wherever the expression evaluates
+ * without raising, in any scope that adds the unknown variables to the known ones. Evaluating a closed subexpression
+ * throws as evaluation would.
  */
-
-import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import type { Interpreter } from "./Evaluators.js";
 import { free } from "./Symbolics.js";
 import * as Terms from "./Terms.js";
 
-const { ValueError } = Errors;
-
-/** A reduced expression: the `expression`, and its `value` when it is `known`. */
+/** A reduced term: the `expression` (a term value or a `Writer`), its `value` when it is `known`, and the names it
+ * refers to that nothing within it binds (`free`). */
 export class Result {
-  constructor(readonly expression: unknown, readonly known: boolean = false, readonly value: unknown = null) {}
+  constructor(readonly expression: unknown, readonly known: boolean = false, readonly value: unknown = null,
+    readonly free: ReadonlySet<string> = new Set()) {}
 }
 
-/** Reduces the expressions of an interpreter's dialect. `literal(value)` gives the literal of a value, or null when
+/** Reduces the terms of an interpreter's dialect. `literal(value)` gives the writer of a value's literal, or null when
  * the dialect has none; `simplify(node, results)` gives a simpler result for an application whose arguments are not
  * all known, or null. */
 export class Reducer {
   constructor(readonly interpreter: Interpreter, private readonly literal: (value: unknown) => unknown,
     private readonly simplify: (node: any, results: Result[]) => Result | null) {}
 
-  /** The residual of an expression already resolved to the dialect's data, with `variables` known. */
-  run(expression: unknown, variables: Record<string, unknown> = {}): unknown {
-    return this.reduce(expression, new Map(Object.entries(variables)), new Set()).expression;
+  /** The residual of a term (see `Terms.term`), with `variables` known: a writer. Python's `__call__`. */
+  run(expression: unknown, variables: Record<string, unknown> | null = null): Terms.Writer {
+    const dialect = this.interpreter.dialect;
+    return dialect.spec(this.reduce(Terms.term(expression), new Map(Object.entries(variables ?? {}))).expression);
   }
 
   /** The result of a subexpression whose value is known: its literal, when the dialect has one. */
   known(expression: unknown, value: unknown): Result {
     const literal = this.literal(value);
-    return new Result(literal === null ? expression : literal, true, value);
+    if (literal === null) return new Result(expression, true, value, free(expression, this.interpreter.dialect));
+    return new Result(literal, true, value);
   }
 
-  private rebuild(node: Terms.Term, args: unknown[]): unknown {
-    const form = node.form();
+  private rebuild(node: any, args: unknown[]): unknown {
+    const form = Terms.form(node);
     return this.interpreter.dialect.make(new Terms.Form(form.kind, form.attributes, args));
   }
 
-  reduce(node: unknown, known: ReadonlyMap<string, unknown>, active: Set<unknown>): Result {
+  reduce(node: any, known: ReadonlyMap<string, unknown>): Result {
     const dialect = this.interpreter.dialect;
-    if (!dialect.isExpression(node)) throw new TypeError(`not an expression: ${Repr.repr(node)}`);
-    if ([...free(node)].every((name) => known.has(name))) {
+    const names = free(node, dialect);
+    if ([...names].every((name) => known.has(name))) {
       return this.known(node, this.interpreter.run(node, Object.fromEntries(known)));
     }
-    const kind = node.kind();
-    if (kind.ROLE === Terms.REFERENCE) return new Result(node);
-    if (active.has(node)) throw new ValueError("the expression contains a cycle");
-    active.add(node);
-    try {
-      const args = node.argumentsOf();
-      if (kind.ROLE === Terms.BINDING || kind.ROLE === Terms.QUANTIFIER) {
-        const name = Terms.nameOf(node) as string;
-        const first = this.reduce(args[0], known, active);
-        const hidden = new Map([...known].filter(([key]) => key !== name));
-        const inner = kind.ROLE === Terms.BINDING && first.known ? new Map([...known, [name, first.value]]) : hidden;
-        const body = this.reduce(args[1], inner, active);
-        if (kind.ROLE === Terms.BINDING && !free(body.expression).has(name)) return body;
-        return new Result(this.rebuild(node, [first.expression, body.expression]));
-      }
-      const results = args.map((argument) => this.reduce(argument, known, active));
-      return this.simplify(node, results) ?? new Result(this.rebuild(node, results.map((result) => result.expression)));
-    } finally {
-      active.delete(node);
+    const [, record, kind] = dialect.kind(node);
+    if (kind.role === Terms.REFERENCE) return new Result(node, false, null, names);
+    const args = Terms.argumentsOf(record);
+    if (kind.role === Terms.BINDING || kind.role === Terms.QUANTIFIER) {
+      const name = Terms.nameOf(node) as string;
+      const first = this.reduce(args[0], known);
+      const hidden = new Map([...known].filter(([key]) => key !== name));
+      const inner = kind.role === Terms.BINDING && first.known ? new Map([...known, [name, first.value]]) : hidden;
+      const body = this.reduce(args[1], inner);
+      if (kind.role === Terms.BINDING && !body.free.has(name)) return body;
+      return new Result(this.rebuild(node, [first.expression, body.expression]), false, null,
+        new Set([...first.free, ...[...body.free].filter((n) => n !== name)]));
     }
+    const results = args.map((argument) => this.reduce(argument, known));
+    const bound = kind.role === Terms.IMPORT && kind.names !== null ? new Set(kind.names(record)) : new Set<string>();
+    const rebuilt = new Result(this.rebuild(node, results.map((result) => result.expression)), false, null,
+      new Set(results.flatMap((result) => [...result.free]).filter((n) => !bound.has(n))));
+    return this.simplify(node, results) ?? rebuilt;
   }
 }

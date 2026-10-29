@@ -1,31 +1,83 @@
 """The conformance corpus: the same cases, built statement for statement in every implementation.
 
-`build()` returns `{case: (root schema, root expression, store)}`, the store being the case's dialect's `Builders`, a
-store of its bound classes. Each implementation writes its snapshots to `conformance/<implementation>/<case>.json` and
-`.yaml`, and checks them against every other implementation's files (see the CONF test suite). Keep this module and
-`typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values, same order of statements.
+`build()` returns `{case: (root schema, root term, store)}`: each case a term value of `Expressions.Framework.Term`,
+built in one store holding the framework's and Basic's installs, written nested. Each implementation writes its
+snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
+implementation's files (see the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in
+lockstep: same cases, same values, same order of statements.
+
+The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
+2b (docs/proposals/port): `_stage_2b` keeps them as they were written for the old API.
 """
 
 from __future__ import annotations
 
-from mbse.Expressions import Domains, Expressions
-from mbse.Expressions.Dialects.Ccpp import Expressions as Ccpp
-from mbse.Expressions.Dialects.Excel import Expressions as Excel
-from mbse.Expressions.Dialects.Latex import Expressions as Latex
-from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
-from mbse.Expressions.Dialects.Python import Expressions as Python
-from mbse.Expressions.Dialects.SystemVerilog import Expressions as SystemVerilog
+from mbse.Expressions import Framework
+from mbse.Expressions.Dialects import Basic
+from mbse.Expressions.Dialects.Basic import Domains, Expressions
+from mbse.Schemas.Framework import Builders
 
-CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp", "systemverilog"]
+CASES = ["expression", "domains", "collections"]
+
+
+def _named(name, domain):
+    """`domain`, registered under `name` unless it is already: a term names its domain."""
+    if Domains.name_of(domain) is None:
+        Domains.register(name, domain)
+    return domain
 
 
 def build():
-    E, P, M, X, L = Expressions, Python, Matlab, Excel, Latex
+    E, D = Expressions, Domains
+    store = Builders.Store()
+    store.transaction(Framework.install)
+    store.transaction(Basic.install)
 
-    # --- expression: every kind and literal type, shared sub-expressions, each operation once ---
+    # --- expression: every kind and literal type, a let and its variable, an extension operation ---
     this, age = E.variable("this"), E.variable("age")
     expression = E.let_("age", this.age, age.ge(18).and_(
-        age.lt(65.5).or_(this.has("email").not_()).implies(E.operation("in", "x", b"\x00\xff", True)))).data
+        age.lt(65.5).or_(this.has("email").not_()).implies(E.operation("in", "x", b"\x00\xff", True))))
+
+    # --- domains: literals of value domains, by name, a packed enum among them; defaults left out; decimal and
+    # binary128 text; a conversion's domain, a bitwise operation and pack ---
+    uint8 = _named("uint8", D.OfInteger.Builder().width(8).signed(False).overflow("wrap").create())
+    state = _named("state", D.OfPacked.Builder().domain(D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
+        D.OfBits.Builder().width(2).create()).codes(0, 1).create())
+    binary32 = _named("binary32 roundTowardZero", D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create())
+    decimal64 = _named("decimal64", D.OfIeee754.Builder().format("decimal64").create())
+    bits2 = _named("bits2", D.OfBits.Builder().width(2).create())
+    logic = _named("std_logic", D.OfIeee1164.Builder().create())
+    binary128 = _named("binary128", D.OfIeee754.Builder().format("binary128").create())
+    mode, count, gain, line, mask, size, price, ratio = (
+        E.variable(name) for name in ("mode", "count", "gain", "line", "mask", "size", "price", "ratio"))
+    domains = E.operation(
+        "all", mode.eq(E.literal("RUN", state)), count.le(E.literal(200, uint8)), gain.ne(E.literal(1.5, binary32)),
+        line.ge(E.literal("Z", logic)), mask.gt(E.literal(b"\x03", bits2)), size.lt(E.literal(5, D.Int)),
+        price.convert(decimal64).sub(E.literal("1.50", decimal64)), ratio.mul(E.literal("0.1", binary128)),
+        mask.bitand(E.literal(b"\x01", bits2)), mode.pack())  # each operation once
+
+    # --- collections: a quantifier over entries, and collection operations, each once ---
+    ports, p, pins, sizes = (E.variable(name) for name in ("ports", "p", "pins", "sizes"))
+    collections = E.let_("ports", this.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
+        sizes.sum().le(ports.count())))
+
+    with store.transaction():
+        terms = {case: store.Expressions.Framework.Term(writer)
+                 for case, writer in [("expression", expression), ("domains", domains), ("collections", collections)]}
+    Term = store.registered("Expressions.Framework.Term")
+    return {case: (Term, terms[case], store) for case in CASES}
+
+
+def _stage_2b():  # pragma: no cover - the old API's cases, to port with their dialects
+    from mbse.Expressions.Dialects.Ccpp import Expressions as Ccpp
+    from mbse.Expressions.Dialects.Excel import Expressions as Excel
+    from mbse.Expressions.Dialects.Latex import Expressions as Latex
+    from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
+    from mbse.Expressions.Dialects.Python import Expressions as Python
+    from mbse.Expressions.Dialects.SystemVerilog import Expressions as SystemVerilog
+
+    E, P, M, X, L = Expressions, Python, Matlab, Excel, Latex
+    this = E.variable("this")
 
     # --- python: every kind, shared names --- import numpy as np / from math import floor /
     # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
@@ -56,31 +108,6 @@ def build():
     latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
         "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
 
-    # --- domains: literals of value domains, by value and by name, a packed enum among them; defaults left out;
-    # decimal and binary128 text; a conversion's domain, a bitwise operation and pack ---
-    D = Domains
-    uint8 = D.OfInteger.Builder().width(8).signed(False).overflow("wrap").create()
-    if D.name_of(uint8) is None:
-        D.register("uint8", uint8)
-    state = D.OfPacked.Builder().domain(D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
-        D.OfBits.Builder().width(2).create()).codes(0, 1).create()
-    binary32 = D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create()
-    decimal64 = D.OfIeee754.Builder().format("decimal64").create()
-    bits2 = D.OfBits.Builder().width(2).create()
-    mode, count, gain, line, mask, size, price, ratio = (
-        E.variable(name) for name in ("mode", "count", "gain", "line", "mask", "size", "price", "ratio"))
-    domains = E.operation(
-        "all", mode.eq(E.literal("RUN", state)), count.le(E.literal(200, uint8)), gain.ne(E.literal(1.5, binary32)),
-        line.ge(E.literal("Z", D.OfIeee1164.Builder().create())), mask.gt(E.literal(b"\x03", bits2)),
-        size.lt(E.literal(5, D.Int)), price.convert(decimal64).sub(E.literal("1.50", decimal64)),
-        ratio.mul(E.literal("0.1", D.OfIeee754.Builder().format("binary128").create())),
-        mask.bitand(E.literal(b"\x01", bits2)), mode.pack()).data  # each operation once, for CONF-04
-
-    # --- collections: a quantifier over entries, and collection operations, each once ---
-    ports, p, pins, sizes = (E.variable(name) for name in ("ports", "p", "pins", "sizes"))
-    collections = E.let_("ports", this.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
-        sizes.sum().le(ports.count()))).data
-
     # --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
     me = Ccpp.identifier("this")
     ccpp = Ccpp.conditional(Ccpp.binary("&&", Ccpp.unary("!", Ccpp.member(me, "a")), Ccpp.binary(
@@ -97,12 +124,9 @@ def build():
                   sv.cast(4, sv.vector("11111111", True, "h")))))
 
     return {
-        "expression": (E.OfLet.Schema, expression, E.Builders),
         "python": (P.DIALECT.schema_of(python), python, P.Builders),
         "matlab": (M.DIALECT.schema_of(matlab), matlab, M.Builders),
         "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
-        "domains": (E.OfOperation.Schema, domains, E.Builders),
-        "collections": (E.OfLet.Schema, collections, E.Builders),
         "ccpp": (Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders),
         "systemverilog": (SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders),
         "latex": (L.DIALECT.schema_of(latex), latex, L.Builders),

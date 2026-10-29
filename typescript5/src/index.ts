@@ -8,10 +8,11 @@
  *
  * `Expressions`, `Evaluators` and `Domains` are the Basic dialect's, the neutral form of every constraint. The
  * framework is `@mbse/expressions/Framework`, the dialects are under `@mbse/expressions/Dialects/<name>`, and the
- * translators between them are `@mbse/expressions/Translators`. */
+ * translators between them are `@mbse/expressions/Translators`. Expressions are stored in an mbse-schemas store, whose
+ * schemas `Framework.install` and each dialect's `install` define (docs/proposals/port/API.md). */
 
 export * as Domains from "./Dialects/Basic/Domains.js";
 export * as Evaluators from "./Dialects/Basic/Evaluators.js";
 export * as Expressions from "./Dialects/Basic/Expressions.js";
+export * as Framework from "./Framework/index.js";
 export * as Partials from "./Dialects/Basic/Partials.js";
-export { register } from "./Framework/Terms.js";

@@ -19,8 +19,8 @@ def render(corpus: dict | None = None) -> dict[str, str]:
     already built corpus to reuse it."""
     files = {}
     for case, (schema, root, store) in (corpus if corpus is not None else build()).items():
-        files[f"{case}.json"] = JSON.ToJSON(store).Reachable(schema, root, indent=2) + "\n"
-        files[f"{case}.yaml"] = YAML.ToYAML(store).Reachable(schema, root)
+        files[f"{case}.json"] = JSON.ToJSON(store)(schema, root, indent=2) + "\n"
+        files[f"{case}.yaml"] = YAML.ToYAML(store)(schema, root)
     return files
 
 

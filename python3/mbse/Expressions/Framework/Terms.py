@@ -19,7 +19,7 @@ and its operator.
 - `name_of(term)`, `operator_of(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
 - `Dialect`: a dialect's kinds by tag, with `validate`, `infer` and `make(form)`, the `Writer` of a form.
 - `Writer`: a spec that writes a term through the builders; `spec(x)` makes one of a writer, a native value (a
-  literal), a term value (copied) or a callable on a `Visitors.OfAny`.
+  literal), a term value (copied) or a callable taking the `Visitors.OfUnion` of a term value.
 
 The roles are:
 
@@ -101,6 +101,13 @@ def _article(noun: str) -> str:
 
 def _type_name(value: object) -> str:
     return type(value).__name__
+
+
+def _described(value: Any) -> str:
+    """A value's schema's name when it is read through a reader and has one, otherwise its type's name."""
+    schema = getattr(value, "as_schema", None)
+    name = getattr(schema(), "name", None) if callable(schema) and not isinstance(value, type) else None
+    return name or _type_name(value)
 
 
 # --- Reading terms ---
@@ -200,7 +207,7 @@ def _slot(record: Any, name: str) -> Any:
 def _variadic(record: Any, name: str) -> tuple[Any, ...]:
     """The terms a container of terms holds, in index order."""
     pairs: list[tuple[Any, Any]] = []
-    getattr(record, name).as_value(lambda a: a.as_container(lambda c: c.as_entries(lambda it: pairs.extend(it)) or c))
+    getattr(record, name).as_value(lambda a: a.as_container(lambda c: c.as_entries(pairs.extend)))
     found: list[Any] = []
     for _, element in pairs:
         element.as_union(lambda u: found.append(u) or u)
@@ -317,9 +324,9 @@ def _copy(value: Any) -> Writer:
     return Writer(write)
 
 
-def spec(value: Any, literal: Callable[[Any], Writer | None] | None = None) -> Any:
-    """A spec of a term: a writer as it is, a term value (copied), a native value as `literal` writes it (when it
-    gives one), or a callable taking a `Visitors.OfAny`."""
+def spec(value: Any, literal: Callable[[Any], Writer | None] | None = None) -> Writer:
+    """The writer of a term: a writer as it is, a term value's (copied), a native value's as `literal` writes it (when
+    it gives one), or a callable's that takes the `Visitors.OfUnion` of a term value."""
     if isinstance(value, Writer):
         return value
     if is_term(value):
@@ -329,7 +336,7 @@ def spec(value: Any, literal: Callable[[Any], Writer | None] | None = None) -> A
         if written is not None:
             return written
     if callable(value) and not isinstance(value, type):
-        return value
+        return Writer(value)
     raise TypeError(f"expected a term, a writer or a native value, got {value!r}")
 
 
@@ -386,8 +393,8 @@ class Dialect:
             raise ValueError(f"{self._name} has no kind {tag!r}")
         return tag, record, self._kinds[tag]
 
-    def spec(self, value: Any) -> Any:
-        """A spec of a term of this dialect: see `spec`, a native value as this dialect's literal."""
+    def spec(self, value: Any) -> Writer:
+        """The writer of a term of this dialect: see `spec`, a native value as this dialect's literal."""
         return spec(value, self._literal)
 
     def make(self, form_: Form) -> Writer:
@@ -437,9 +444,14 @@ class Dialect:
             if value is None:
                 return [f"{what} needs a value"]
             if type(value) not in Schemas.SCALAR_TYPES:
-                return [f"{what} must hold a basic scalar, got {_type_name(value)}"]
+                return [f"{what} must hold a basic scalar, got {_described(value)}"]
             return kind.check(record) if kind.check is not None else []
         problems = [f"{what} needs {_article(name)}" for name in kind.required if attributes.get(name) in (None, "")]
+        declared = record.as_schema().properties
+        for name, value in attributes.items():  # the builders write any scalar; validation reports the wrong one
+            scalar = declared[name].schema
+            if isinstance(scalar, Schemas.OfScalar.Data) and type(value) is not scalar.type:
+                problems.append(f"{what}'s {name} must be a {scalar.type.__name__}, got {_type_name(value)}")
         if kind.check is not None:
             problems += kind.check(record)
         name = attributes.get("name")

@@ -8,14 +8,15 @@
  * Evaluation resolves references in a scope (see `Symbolics`): an evaluator given an object of variables instead of a
  * scope makes its dialect's scope from it, so `Evaluators.OfAny(expression, { this: value })` binds `this`.
  *
- * `Interpreter` evaluates by role (see `Terms`): a literal gives its value (through `literal`, or `typed` when it
- * carries a domain of its own), a reference what the scope resolves, a binding its body in the scope with its name bound, and an import its body in the scope it
- * declares. An application calls its operator's implementation from `operations`, with one thunk per argument, so
- * that implementations decide which arguments to evaluate and when, and so does a quantifier, whose second thunk takes
- * an item and evaluates the body with the name bound to it; the implementation of a kind whose vocabulary is
- * open is one function for every name, and operators outside a closed vocabulary go to `extension`, if given. It
- * throws on what `Dialect.validate` reports: operations outside the vocabulary, wrong numbers of arguments, unbound
- * references, missing values and cycles.
+ * `Interpreter` evaluates a term value by its kind's role (see `Terms`): a literal gives its value (through `literal`,
+ * or `typed` when it carries a domain of its own), a reference what the scope resolves, a binding its body in the scope
+ * with its name bound, and an import its body in the scope it declares. An application calls its operator's
+ * implementation from `operations`, with one thunk per argument, so that implementations decide which arguments to
+ * evaluate and when, and so does a quantifier, whose second thunk takes an item and evaluates the body with the name
+ * bound to it; the implementation of a kind whose vocabulary is open is one function for every name, and operators
+ * outside a closed vocabulary go to `extension`, if given. It throws on what `Dialect.validate` reports: operations
+ * outside the vocabulary, wrong numbers of arguments, unbound references and missing values. An evaluator takes a term
+ * value, or anything `Terms.term` reads one from (an `Expression`, a term property).
  */
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
@@ -30,7 +31,7 @@ export type Thunk = () => any;
 /** Computes an operation's value from thunks for its arguments, the term (for its attributes) and the scope. */
 export type Implementation = (args: Thunk[], node: any, scope: any) => any;
 
-/** Computes the value of an expression in `scope`, or with the variables in an object bound. */
+/** Computes the value of a term in `scope`, or with the variables in an object bound. */
 export type Evaluator = (expression: any, scope?: Scope | Bindings) => any;
 
 /** Evaluates the expressions of `dialect`. `operations` maps each application kind's tag to its implementations by
@@ -44,7 +45,7 @@ export class Interpreter {
   private readonly scope: (variables: Bindings) => Scope;
   private readonly extension: ((operator: string, args: Thunk[], node: any, scope: any) => any) | null;
 
-  constructor(readonly dialect: Terms.Declared,
+  constructor(readonly dialect: Terms.Dialect,
     readonly operations: ReadonlyMap<string, ReadonlyMap<string, Implementation> | Implementation>,
     options: {
       literal?: (value: unknown) => unknown;
@@ -58,59 +59,53 @@ export class Interpreter {
     this.extension = options.extension ?? null;
   }
 
-  /** The value of an expression already resolved to the dialect's data. */
-  run(expression: unknown, scope: Scope | Bindings = {}): any {
-    return this.evaluate(expression, isScope(scope) ? scope : this.scope(scope), new Set());
+  /** The value of a term (see `Terms.term`): Python's `__call__`. */
+  run(expression: unknown, scope: Scope | Bindings | null = null): any {
+    const resolved = isScope(scope) ? scope : this.scope({ ...(scope ?? {}) });
+    return this.evaluate(Terms.term(expression), resolved);
   }
 
-  evaluate(expression: unknown, scope: Scope, active: Set<unknown>): any {
-    if (!this.dialect.isExpression(expression)) throw new TypeError(`not an expression: ${repr(expression)}`);
-    const kind = expression.kind();
-    if (kind.ROLE === Terms.LITERAL) {
-      const value = expression.field("value");
-      if (value === null) throw new ValueError(`${Terms.article(kind.KIND)} needs a value`);
-      const typed = expression.typed();
+  evaluate(node: any, scope: Scope): any {
+    const [tag, record, kind] = this.dialect.kind(node);
+    if (kind.role === Terms.LITERAL) {
+      const value = Terms.attributesOf(record).get("value") ?? null;
+      if (value === null) throw new ValueError(`${Terms.article(tag)} needs a value`);
+      const typed = kind.typed !== null ? kind.typed(record) : null;
       if (typed === null) return this.literal(value);
       if (this.typed === null) throw new NotImplementedError(`this evaluator has no values of ${typed.name()}`);
       return this.typed(typed, value);
     }
-    if (kind.ROLE === Terms.REFERENCE) return scope.lookup(expression);
-    if (active.has(expression)) throw new ValueError("the expression contains a cycle");
-    active.add(expression);
-    try {
-      const args = expression.argumentsOf();
-      if (kind.ROLE === Terms.BINDING || kind.ROLE === Terms.IMPORT || kind.ROLE === Terms.QUANTIFIER) {
-        kind.SLOTS.forEach((slot, i) => {
-          if (args[i] === null) throw new ValueError(`${Terms.article(kind.KIND)} needs ${Terms.article(slot)}`);
-        });
-        if (kind.ROLE === Terms.QUANTIFIER) return this.apply(expression, args, scope, active);
-        if (kind.ROLE === Terms.IMPORT) return this.evaluate(args[0], scope.enter(expression), active);
-        const bound = this.evaluate(args[0], scope, active);
-        return this.evaluate(args[1], scope.bind(Terms.nameOf(expression) as string, bound), active);
-      }
-      return this.apply(expression, args, scope, active);
-    } finally {
-      active.delete(expression);
+    if (kind.role === Terms.REFERENCE) return scope.lookup(node);
+    const args = Terms.argumentsOf(record);
+    if (kind.role === Terms.BINDING || kind.role === Terms.IMPORT || kind.role === Terms.QUANTIFIER) {
+      const [slots] = Terms._parts(record.as_schema());
+      slots.forEach((slot, i) => {
+        if (i < args.length && args[i] === null) throw new ValueError(`${Terms.article(tag)} needs ${Terms.article(slot)}`);
+      });
+      if (kind.role === Terms.QUANTIFIER) return this.apply(node, tag, kind, args, scope);
+      if (kind.role === Terms.IMPORT) return this.evaluate(args[0], scope.enter(node));
+      const bound = this.evaluate(args[0], scope);
+      return this.evaluate(args[1], scope.bind(Terms.nameOf(node) as string, bound));
     }
+    return this.apply(node, tag, kind, args, scope);
   }
 
-  private apply(expression: Terms.Term, args: unknown[], scope: Scope, active: Set<unknown>): any {
-    const kind = expression.kind();
-    const operator = Terms.operatorOf(expression);
-    const implementations = this.operations.get(kind.KIND);
-    const thunks: any[] = args.map((argument) => () => this.evaluate(argument, scope, active));
-    if (kind.ROLE === Terms.QUANTIFIER) { // the arguments after the collection, of an item: evaluated with the name bound to it
-      const name = Terms.nameOf(expression) as string;
-      for (let i = 1; i < args.length; i++) thunks[i] = (item: unknown) => this.evaluate(args[i], scope.bind(name, item), active);
+  private apply(node: any, tag: string, kind: Terms.Kind, args: any[], scope: Scope): any {
+    const operator = Terms.operatorOf(node, kind);
+    const implementations = this.operations.get(tag);
+    const thunks: any[] = args.map((argument) => () => this.evaluate(argument, scope));
+    if (kind.role === Terms.QUANTIFIER) { // the arguments after the collection, of an item: evaluated with the name bound to it
+      const name = Terms.nameOf(node) as string;
+      for (let i = 1; i < args.length; i++) thunks[i] = (item: unknown) => this.evaluate(args[i], scope.bind(name, item));
     }
-    if (kind.VOCABULARY === null) return (implementations as Implementation)(thunks, expression, scope);
+    if (kind.vocabulary === null) return (implementations as Implementation)(thunks, node, scope);
     const implementation = (implementations as ReadonlyMap<string, Implementation>).get(operator);
     if (implementation === undefined) {
-      if (this.extension !== null) return this.extension(operator, thunks, expression, scope);
+      if (this.extension !== null) return this.extension(operator, thunks, node, scope);
       throw new NotImplementedError(`${repr(operator)} is not a core operation`);
     }
-    const arity = (kind.VOCABULARY.get(operator) as { arity(): number }).arity();
+    const arity = (kind.vocabulary.get(operator) as { arity(): number }).arity();
     if (arity >= 0 && args.length !== arity) throw new TypeError(`${operator} takes ${arity} arguments, got ${args.length}`);
-    return implementation(thunks, expression, scope);
+    return implementation(thunks, node, scope);
   }
 }

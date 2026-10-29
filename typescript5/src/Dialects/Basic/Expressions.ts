@@ -1,643 +1,369 @@
 /**
- * Expressions of the Basic dialect: the core vocabulary, for constraints.
- * `Evaluators` evaluates them.
+ * Expressions of the Basic dialect: the core vocabulary, for constraints. `Evaluators` evaluates them.
  *
- * - `OfLiteral`: a native value, and its value domain when that is not the native's default (see `Domains`).
- * - `OfOperation`: a named operation applied to ordered arguments, e.g. `eq(a, b)`. The vocabulary of names is open;
- *   the core operations (`CORE`) are the ones every binding evaluates. See docs/EXPRESSIONS.md.
- * - `OfVariable`: the value bound to a name.
- * - `OfLet`: binds a name to the value of one expression within another, its body.
- * - `OfQuantifier`: binds a name to each item of a collection within a body, and gives whether it holds for `all` or
- *   `any` of them, or for how many (`count`).
- * - `OfAny`: any of these.
+ * Basic's terms are the framework's kinds (`Framework/Terms`) and one of its own, which `install` adds to
+ * `Expressions.Framework.Term` by schema extension:
  *
- * The dialect (`DIALECT`) is declared with the framework (`Framework/Terms`), which gives each kind its `Data`,
- * a `Builder` finalized by `create()`, `clone()` or `update()` (none validate), a `Spec` (a value, or a callable that
- * takes and returns the builder) and `resolve`, and a `Schema`, the meta-schema that describes its data as an
- * ordinary object schema, so expressions serialize, validate and compare like any other objects:
+ * - `literal`: a basic scalar (`value`), and its value domain (`domain`, by name) when that is not the scalar's default
+ *   (see `Domains`).
+ * - `call`: a named operation (`callable`) applied to ordered `arguments`, e.g. `eq(a, b)`, and its result's `domain`,
+ *   which the conversions need. The vocabulary of names is open; the core operations (`CORE`) are the ones every
+ *   binding evaluates. See docs/EXPRESSIONS.md.
+ * - `variable`: the value bound to a `name`.
+ * - `let`: binds a `name` to the value of one term (`value`) within another (`body`).
+ * - `quantifier`: binds a `name` to each item of a `collection` within a `body`, and gives whether it holds for `all` or
+ *   `any` of them, or for how many (`count`): its `quantifier`.
  *
- * - Every kind's schema declares `kind`, a tag with a fixed value: 'literal', 'operation', 'variable' or 'let'.
- * - `OfLiteral.Schema` declares one optional property per native type (`int`, `float`, `str`, `bool`, `bytes`); a
- *   literal sets exactly one. Its `domain`, a value of `Domains.Schema`, is written only when it is not the native's
- *   default: by name when the domain is registered, otherwise by value.
- * - `OfOperation.Schema`, `OfVariable.Schema` and `OfLet.Schema` declare `name`.
- * - Operations and lets declare the adjacency `arguments` to `Arguments`, a relation linking a `parent` to an
- *   `argument` with an `index`; `unique(argument)` makes the parent and index determine the argument. A let's value is
- *   its argument 0 and its body its argument 1.
- * - Every kind declares `used_by`: the same relation seen from the argument. The parents' arguments imply it, so data
- *   never writes it and builders ignore entries added to it.
- * - `OfAny.Schema` is the union of the four, discriminated by the tag: `eq(get(this, 'kind'), 'literal')`, and so on.
+ * `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
  *
- * The meta-schemas are named 'Expressions.OfLiteral', 'Expressions.OfOperation',
- * 'Expressions.OfVariable', 'Expressions.OfLet' and 'Expressions.Arguments', the names snapshots carry. `Builders`
- * rebuilds `Data` from snapshots, e.g. `Json.FromJSON(Expressions.Builders).Reachable(Expressions.OfLet.Schema, text)`.
- * `Data` is `Visitable`; builders implement `Visitors.OfObject`.
- *
- * `Writer`s write expressions with methods: `variable('this').age.ge(18n)` is `ge(get(this, 'age'), 18)`.
+ * `Writer`s write terms with methods, through the builders: `variable('this').age.ge(18n)` is `ge(get(this, 'age'),
+ * 18)`. A writer is a spec, so it goes wherever a term is written, in a transaction:
+ * `store.Expressions.Framework.Expression((e: any) => e.root(variable('this').age.ge(18n)))`.
  */
 
-import { Repr } from "@mbse/schemas/Framework";
-import type { Schemas, Visitors } from "@mbse/schemas/Framework";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Errors, Repr, Schemas } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
-type Native = Visitors.Native;
-
-export const LITERAL = "Expressions.OfLiteral";
-export const OPERATION = "Expressions.OfOperation";
-export const VARIABLE = "Expressions.OfVariable";
-export const LET = "Expressions.OfLet";
-export const QUANTIFIER = "Expressions.OfQuantifier";
-export const ARGUMENTS = F.ARGUMENTS;
-export const Arguments = F.Arguments;
+/** Basic's own kind, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
+export function install(txn: any): any {
+  const S = txn.Schemas;
+  return txn.uid("mbse.Expressions.Basic/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({ Term: S.OfUnion, Quantifier: S.OfObject }) // the framework's union, found by its name
+    .spec([
+      (_: any) => _.Quantifier.name("Expressions.Basic.Quantifier").properties({
+        name: S.OfStr, // bound to each item in the body
+        quantifier: S.OfStr, // all, any or count
+        collection: _.Term,
+        body: _.Term,
+        domain: S.OfStr, // every term has a domain: a quantifier's, its result's
+      }),
+      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("quantifier").schema([_.Quantifier])]),
+    ])]))]);
+}
 
 /** The core operations and their numbers of arguments. */
 export const CORE: ReadonlyMap<string, number> = new Map(
   [...Domains.SIGNATURES].map(([name, signature]) => [name, signature.arity()]));
 
-const NAME: ReadonlyMap<string, unknown> = new Map([["name", String]]);
-
-// --- Data ---
-
-const DOMAIN = new Map([["domain", new F.ValueProperty(Domains.Schema, Domains.to_plain,
-  (plain) => Domains.from_plain(plain as Map<string, never>))]]);
 /** The operations that need a domain: their result's. */
 const TYPED = ["convert", "reinterpret", "unpack"];
 
-/** The problems of a domain that a literal or an operation carries. */
-function domainProblems(what: string, domain: unknown): string[] {
-  if (!(domain instanceof Domains.Domain)) return [`${what} domain must be a value domain, got ${Repr.typeName(domain)}`];
+/** The domain a literal or a call names, or null. */
+export function _domain_of(record: any): Domains.Domain | null {
+  const name = F.attributesOf(record).get("domain") ?? null;
+  return name === null ? null : Domains.registered(name);
+}
+
+/** The problems of a domain a term names. */
+function domainProblems(name: string): string[] {
+  let domain: Domains.Domain;
+  try {
+    domain = Domains.registered(name);
+  } catch (error) {
+    if (!(error instanceof Errors.LookupError)) throw error;
+    return [`domain: ${error.message}`];
+  }
   return domain.validate().map((problem) => `domain: ${problem}`);
 }
 
-class _LiteralData extends F.Term {
-  static override KIND = "literal";
-  static override ROLE = F.LITERAL;
-  static override VALUE = F.NATIVES;
-  static override VALUES = DOMAIN;
-  declare value: unknown;
-  /** A value domain, or null for the value's native's default. */
-  declare domain: unknown;
-
-  constructor(value: unknown = null, domain: unknown = null) {
-    super(value, domain);
-    if (this.domain !== null && F.nativeName(this.value) !== null && Domains.of(this.value) instanceof Domains.Domain &&
-      (Domains.of(this.value) as Domains.Domain).equals(this.domain)) {
-      this.domain = null; // a native's default domain is no domain at all
-    }
+/** A literal's domain is registered, valid, and holds its value. */
+function literalCheck(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  if ((attributes.get("domain") ?? null) === null) return [];
+  const problems = domainProblems(attributes.get("domain"));
+  const domain = problems.length === 0 ? Domains.registered(attributes.get("domain")) : null;
+  if (domain !== null && !domain.contains(attributes.get("value"))) {
+    problems.push(`a literal of ${domain.name()} cannot hold ${Repr.repr(attributes.get("value"))}`);
   }
-
-  override typed(): Domains.Domain | null {
-    return this.domain as Domains.Domain | null;
-  }
-
-  /** A literal's domain is valid and holds its value. */
-  override check(): string[] {
-    const domain = this.domain;
-    if (domain === null) return [];
-    const problems = domainProblems("a literal's", domain);
-    if (problems.length === 0 && !(domain as Domains.Domain).contains(this.value)) {
-      problems.push(`a literal of ${(domain as Domains.Domain).name()} cannot hold ${Repr.repr(this.value)}`);
-    }
-    return problems;
-  }
+  return problems;
 }
 
-class _OperationData extends F.Term {
-  static override KIND = "operation";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = NAME;
-  static override VARIADIC = "arguments";
-  static override OPERATOR = "name";
-  static override VOCABULARY = Domains.SIGNATURES;
-  static override VALUES = DOMAIN;
-  declare name: unknown;
-  declare arguments: readonly unknown[];
-  /** The domain of the result, which the conversions need, kept even when it is a default. */
-  declare domain: unknown;
-
-  constructor(name: unknown = null, args: readonly unknown[] = [], domain: unknown = null) {
-    super(name, args, domain);
-  }
-
-  override typed(): Domains.Domain | null {
-    return this.domain as Domains.Domain | null;
-  }
-
-  /** A conversion needs a domain, which must be valid; other core operations take none. */
-  override check(): string[] {
-    const name = this.name as string;
-    if (this.domain === null) return TYPED.includes(name) ? [`${name} needs a domain`] : [];
-    if (Domains.SIGNATURES.has(name) && !TYPED.includes(name)) return [`${name} takes no domain`];
-    return domainProblems("an operation's", this.domain);
-  }
+/** A conversion needs a domain, which must be registered and valid; other core operations take none. */
+function callCheck(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  const name = attributes.get("callable") ?? null;
+  const domain = attributes.get("domain") ?? null;
+  if (domain === null) return TYPED.includes(name) ? [`${name} needs a domain`] : [];
+  if (Domains.SIGNATURES.has(name) && !TYPED.includes(name)) return [`${name} takes no domain`];
+  return domainProblems(domain);
 }
 
-class _VariableData extends F.Term {
-  static override KIND = "variable";
-  static override ROLE = F.REFERENCE;
-  static override PROPERTIES = NAME;
-  declare name: unknown;
-
-  constructor(name: unknown = null) {
-    super(name);
-  }
+/** The literal of a native value. */
+function native(value: unknown): Writer | null {
+  return Schemas.hostOf(value) !== null ? literal(value) : null;
 }
 
-class _LetData extends F.Term {
-  static override KIND = "let";
-  static override ROLE = F.BINDING;
-  static override PROPERTIES = NAME;
-  static override SLOTS = ["value", "body"];
-  declare name: unknown;
-  declare value: any;
-  declare body: any;
+/** The Basic dialect: its kinds, as the framework reads them. */
+export const DIALECT = new F.Dialect("Basic", {
+  literal: new F.Kind(F.LITERAL, { check: literalCheck, typed: _domain_of }),
+  call: new F.Kind(F.APPLICATION, { operator: "callable", vocabulary: Domains.SIGNATURES, required: ["callable"],
+    check: callCheck, typed: _domain_of }),
+  variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
+  let: new F.Kind(F.BINDING, { required: ["name"] }),
+  quantifier: new F.Kind(F.QUANTIFIER, { operator: "quantifier", vocabulary: Domains.QUANTIFIERS,
+    required: ["name", "quantifier"] }),
+}, { domain_of: Domains.of, literal: native });
 
-  constructor(name: unknown = null, value: unknown = null, body: unknown = null) {
-    super(name, value, body);
-  }
+/** The name a term gives a domain: a name as it is, or a domain's registered name. */
+function domainName(domain: unknown): string | null {
+  if (domain === null || domain === undefined || typeof domain === "string") return (domain ?? null) as string | null;
+  const name = Domains.name_of(domain);
+  if (name === null) throw new Errors.LookupError(`${Domains._name(domain)} is not registered: a term names its domain`);
+  return name;
 }
 
-class _QuantifierData extends F.Term {
-  static override KIND = "quantifier";
-  static override ROLE = F.QUANTIFIER;
-  static override PROPERTIES = new Map<string, unknown>([["name", String], ["quantifier", String]]);
-  static override SLOTS = ["collection", "body"];
-  static override OPERATOR = "quantifier";
-  static override VOCABULARY = Domains.QUANTIFIERS;
-  declare name: unknown;
-  /** all, any or count. */
-  declare quantifier: unknown;
-  declare collection: any;
-  /** With `name` bound to each item. */
-  declare body: any;
+// --- Writers: writing terms with methods ---
 
-  constructor(name: unknown = null, quantifier: unknown = null, collection: unknown = null, body: unknown = null) {
-    super(name, quantifier, collection, body);
+/** JavaScript's own protocol probes, never read as properties: awaiting, serializing or inspecting a writer is safe. */
+const PROBES = new Set(["then", "toJSON", "constructor", "inspect", "nodeType", "$$typeof", "asymmetricMatch"]);
+
+/**
+ * A term written with methods, through the builders. `.name` reads a property (`get`); use `.get(name)` for names that
+ * are also methods, such as `eq`. A `Writer` is a spec: it writes its term where it is given. Property names come from
+ * schemas at runtime, so they are typed loosely, as proxies' are.
+ */
+export class Writer extends F.Writer {
+  [property: string]: any;
+
+  constructor(write: (union: any) => any) {
+    super(write);
+    return new Proxy(this, {
+      get(target, property, receiver) {
+        if (typeof property === "symbol" || property in target) return Reflect.get(target, property, receiver);
+        if (property.startsWith("_") || PROBES.has(property)) return undefined;
+        return (receiver as Writer).get(property);
+      },
+    });
   }
-}
-
-type AnyData = _LiteralData | _OperationData | _VariableData | _LetData | _QuantifierData;
-
-// --- Builders: Visitors that build Data ---
-
-/** Builds an `OfLiteral.Data`. DSL: `.value(native)` and `.domain(domain)`. As a `Visitors.OfObject`, it has one
- * property per native type, and setting one replaces the value, and the property `domain`. */
-class _LiteralBuilder extends F.Builder {
-  static override DATA = _LiteralData;
-
-  constructor(instance?: _LiteralData) {
-    super(instance);
-  }
-
-  value(value: Native): this {
-    return this.set("value", value);
-  }
-
-  domain(domain: unknown): this {
-    return this.set("domain", domain as Native);
-  }
-
-  override create(...args: unknown[]): _LiteralData {
-    return super.create(...args);
-  }
-}
-
-/** A builder whose kind has a `name`. DSL: `.name(str)`. */
-class _NamedBuilder extends F.Builder {
-  name(name: string): this {
-    return this.set("name", name);
-  }
-}
-
-/** Builds an `OfOperation.Data`. DSL: `.name(str)`, `.arguments(...specs)`, which appends `OfAny.Spec`s (a native
- * value is a literal), and `.domain(domain)`, its result's. As a `Visitors.OfObject`, arguments are `arguments`
- * entries, ordered by `index`. */
-class _OperationBuilder extends _NamedBuilder {
-  static override DATA = _OperationData;
-
-  constructor(instance?: _OperationData) {
-    super(instance);
-  }
-
-  domain(domain: unknown): this {
-    return this.set("domain", domain as Native);
-  }
-
-  override create(...args: unknown[]): _OperationData {
-    return super.create(...args);
-  }
-}
-
-/** Builds an `OfVariable.Data`. DSL: `.name(str)`. */
-class _VariableBuilder extends _NamedBuilder {
-  static override DATA = _VariableData;
-
-  constructor(instance?: _VariableData) {
-    super(instance);
-  }
-
-  override create(...args: unknown[]): _VariableData {
-    return super.create(...args);
-  }
-}
-
-/** Builds an `OfLet.Data`. DSL: `.name(str)`, `.value(spec)` and `.body(spec)`, each an `OfAny.Spec`. As a
- * `Visitors.OfObject`, the value is the `arguments` entry with index 0 and the body the one with index 1. */
-class _LetBuilder extends _NamedBuilder {
-  static override DATA = _LetData;
-
-  constructor(instance?: _LetData) {
-    super(instance);
-  }
-
-  value(spec: OfAny.Spec): this {
-    return this.argument("value", spec);
-  }
-
-  body(spec: OfAny.Spec): this {
-    return this.argument("body", spec);
-  }
-
-  override create(...args: unknown[]): _LetData {
-    return super.create(...args);
-  }
-}
-
-/** Builds an `OfQuantifier.Data`. DSL: `.name(str)`, `.quantifier(str)`, `.collection(spec)` and `.body(spec)`. As a
- * `Visitors.OfObject`, the collection is the `arguments` entry with index 0 and the body the one with index 1. */
-class _QuantifierBuilder extends _NamedBuilder {
-  static override DATA = _QuantifierData;
-
-  constructor(instance?: _QuantifierData) {
-    super(instance);
-  }
-
-  quantifier(quantifier: string): this {
-    return this.set("quantifier", quantifier);
-  }
-
-  collection(spec: OfAny.Spec): this {
-    return this.argument("collection", spec);
-  }
-
-  body(spec: OfAny.Spec): this {
-    return this.argument("body", spec);
-  }
-
-  override create(...args: unknown[]): _QuantifierData {
-    return super.create(...args);
-  }
-}
-
-/** Selects a kind through `as_<kind>(spec)`. Finalizing yields that kind's data. */
-class _AnyBuilder extends F.AnyBuilder {
-  constructor(instance?: AnyData) {
-    super(instance);
-  }
-
-  as_literal(spec: OfLiteral.Spec): _AnyBuilder {
-    this.selected = OfLiteral.resolve(spec);
-    return this;
-  }
-
-  as_operation(spec: OfOperation.Spec): _AnyBuilder {
-    this.selected = OfOperation.resolve(spec);
-    return this;
-  }
-
-  as_variable(spec: OfVariable.Spec): _AnyBuilder {
-    this.selected = OfVariable.resolve(spec);
-    return this;
-  }
-
-  as_let(spec: OfLet.Spec): _AnyBuilder {
-    this.selected = OfLet.resolve(spec);
-    return this;
-  }
-
-  as_quantifier(spec: OfQuantifier.Spec): _AnyBuilder {
-    this.selected = OfQuantifier.resolve(spec);
-    return this;
-  }
-
-  override create(...args: unknown[]): AnyData {
-    return super.create(...args);
-  }
-}
-
-// --- The dialect and its meta-schemas ---
-
-export const DIALECT = new F.Declared("Basic", [_LiteralData, _OperationData, _VariableData, _LetData, _QuantifierData], {
-  domain_of: Domains.of,
-  anyBuilder: _AnyBuilder,
-  builders: new Map<string, typeof F.Builder>([["literal", _LiteralBuilder], ["operation", _OperationBuilder],
-    ["variable", _VariableBuilder], ["let", _LetBuilder], ["quantifier", _QuantifierBuilder]]),
-  schemaNames: new Map([["literal", LITERAL], ["operation", OPERATION], ["variable", VARIABLE], ["let", LET],
-    ["quantifier", QUANTIFIER]]),
-});
-
-/** Builds expressions from snapshots: `Builders['Expressions.OfLiteral'](instance)` returns a builder, as
- * `Plain.FromPlain` expects. `schema` and `name_of` look the meta-schemas up. */
-export const Builders = DIALECT.Builders;
-
-// --- Specs ---
-
-export namespace OfLiteral {
-  /** A native value. `Spec` is a native value, an `OfLiteral.Data`, or a callable taking the builder. */
-  export const Data = _LiteralData;
-  export type Data = _LiteralData;
-  export const Builder = _LiteralBuilder;
-  export type Builder = _LiteralBuilder;
-  export type Spec = Native | _LiteralData | Writer | ((builder: _LiteralBuilder) => _LiteralBuilder);
-  export const Schema: Schemas.OfObject.Data = _LiteralData.Schema;
-
-  export function resolve(spec: Spec | unknown): _LiteralData {
-    if (F.nativeName(spec) !== null) return new _LiteralData(spec);
-    return F.resolve(spec, (v): v is _LiteralData => v instanceof _LiteralData, () => new _LiteralBuilder(),
-      "a native value, a literal");
-  }
-}
-
-export namespace OfOperation {
-  /** A named operation applied to ordered arguments. */
-  export const Data = _OperationData;
-  export type Data = _OperationData;
-  export const Builder = _OperationBuilder;
-  export type Builder = _OperationBuilder;
-  export type Spec = _OperationData | Writer | ((builder: _OperationBuilder) => _OperationBuilder);
-  export const Schema: Schemas.OfObject.Data = _OperationData.Schema;
-
-  export function resolve(spec: Spec | unknown): _OperationData {
-    return F.resolve(spec, (v): v is _OperationData => v instanceof _OperationData, () => new _OperationBuilder(),
-      "an operation");
-  }
-}
-
-export namespace OfVariable {
-  /** The value bound to a name. `Spec` is a name, an `OfVariable.Data`, or a callable taking the builder. */
-  export const Data = _VariableData;
-  export type Data = _VariableData;
-  export const Builder = _VariableBuilder;
-  export type Builder = _VariableBuilder;
-  export type Spec = string | _VariableData | Writer | ((builder: _VariableBuilder) => _VariableBuilder);
-  export const Schema: Schemas.OfObject.Data = _VariableData.Schema;
-
-  export function resolve(spec: Spec | unknown): _VariableData {
-    if (typeof spec === "string") return new _VariableData(spec);
-    return F.resolve(spec, (v): v is _VariableData => v instanceof _VariableData, () => new _VariableBuilder(),
-      "a name, a variable");
-  }
-}
-
-export namespace OfQuantifier {
-  /** Binds a name to each item of a collection within a body: whether it holds for `all` or `any` of them, or for
-   * how many (`count`). */
-  export const Data = _QuantifierData;
-  export type Data = _QuantifierData;
-  export const Builder = _QuantifierBuilder;
-  export type Builder = _QuantifierBuilder;
-  export type Spec = _QuantifierData | Writer | ((builder: _QuantifierBuilder) => _QuantifierBuilder);
-  export const Schema: Schemas.OfObject.Data = _QuantifierData.Schema;
-
-  export function resolve(spec: Spec | unknown): _QuantifierData {
-    return F.resolve(spec, (v): v is _QuantifierData => v instanceof _QuantifierData, () => new _QuantifierBuilder(), "a quantifier");
-  }
-}
-
-export namespace OfLet {
-  /** Binds a name to the value of one expression within another, its body. */
-  export const Data = _LetData;
-  export type Data = _LetData;
-  export const Builder = _LetBuilder;
-  export type Builder = _LetBuilder;
-  export type Spec = _LetData | Writer | ((builder: _LetBuilder) => _LetBuilder);
-  export const Schema: Schemas.OfObject.Data = _LetData.Schema;
-
-  export function resolve(spec: Spec | unknown): _LetData {
-    return F.resolve(spec, (v): v is _LetData => v instanceof _LetData, () => new _LetBuilder(), "a let");
-  }
-}
-
-export namespace OfAny {
-  /** Any expression. `Spec` is a native value (a literal), an expression, a `Writer`, or a callable taking the
-   * builder. */
-  export type Data = AnyData;
-  export const Builder = _AnyBuilder;
-  export type Builder = _AnyBuilder;
-  export type Spec = Native | AnyData | Writer | ((builder: _AnyBuilder) => _AnyBuilder);
-  export const Schema: Schemas.OfUnion.Data = DIALECT.Schema;
-
-  export function resolve(spec: Spec | unknown): AnyData {
-    return DIALECT.resolve(spec);
-  }
-}
-
-// --- Terms: writing expressions with methods ---
-
-/** The methods of a `Writer`. */
-class TermTarget extends F.Writer {
-  declare readonly data: AnyData;
 
   get(name: string): Writer {
-    return operation("get", this as unknown as Writer, name);
+    return operation("get", this, name);
   }
 
   has(name: string): Writer {
-    return operation("has", this as unknown as Writer, name);
+    return operation("has", this, name);
   }
 
-  eq(other: OfAny.Spec): Writer {
-    return operation("eq", this as unknown as Writer, other);
+  eq(other: unknown): Writer {
+    return operation("eq", this, other);
   }
 
-  ne(other: OfAny.Spec): Writer {
-    return operation("ne", this as unknown as Writer, other);
+  ne(other: unknown): Writer {
+    return operation("ne", this, other);
   }
 
-  lt(other: OfAny.Spec): Writer {
-    return operation("lt", this as unknown as Writer, other);
+  lt(other: unknown): Writer {
+    return operation("lt", this, other);
   }
 
-  le(other: OfAny.Spec): Writer {
-    return operation("le", this as unknown as Writer, other);
+  le(other: unknown): Writer {
+    return operation("le", this, other);
   }
 
-  gt(other: OfAny.Spec): Writer {
-    return operation("gt", this as unknown as Writer, other);
+  gt(other: unknown): Writer {
+    return operation("gt", this, other);
   }
 
-  ge(other: OfAny.Spec): Writer {
-    return operation("ge", this as unknown as Writer, other);
+  ge(other: unknown): Writer {
+    return operation("ge", this, other);
   }
 
-  and_(other: OfAny.Spec): Writer {
-    return operation("and", this as unknown as Writer, other);
+  and_(other: unknown): Writer {
+    return operation("and", this, other);
   }
 
-  or_(other: OfAny.Spec): Writer {
-    return operation("or", this as unknown as Writer, other);
+  or_(other: unknown): Writer {
+    return operation("or", this, other);
   }
 
   not_(): Writer {
-    return operation("not", this as unknown as Writer);
+    return operation("not", this);
   }
 
-  implies(other: OfAny.Spec): Writer {
-    return operation("implies", this as unknown as Writer, other);
+  implies(other: unknown): Writer {
+    return operation("implies", this, other);
   }
 
-  add(other: OfAny.Spec): Writer {
-    return operation("add", this as unknown as Writer, other);
+  add(other: unknown): Writer {
+    return operation("add", this, other);
   }
 
-  sub(other: OfAny.Spec): Writer {
-    return operation("sub", this as unknown as Writer, other);
+  sub(other: unknown): Writer {
+    return operation("sub", this, other);
   }
 
-  mul(other: OfAny.Spec): Writer {
-    return operation("mul", this as unknown as Writer, other);
+  mul(other: unknown): Writer {
+    return operation("mul", this, other);
   }
 
   neg(): Writer {
-    return operation("neg", this as unknown as Writer);
+    return operation("neg", this);
   }
 
-  bitand(other: OfAny.Spec): Writer {
-    return operation("bitand", this as unknown as Writer, other);
+  bitand(other: unknown): Writer {
+    return operation("bitand", this, other);
   }
 
-  bitor(other: OfAny.Spec): Writer {
-    return operation("bitor", this as unknown as Writer, other);
+  bitor(other: unknown): Writer {
+    return operation("bitor", this, other);
   }
 
-  bitxor(other: OfAny.Spec): Writer {
-    return operation("bitxor", this as unknown as Writer, other);
+  bitxor(other: unknown): Writer {
+    return operation("bitxor", this, other);
   }
 
   bitnot(): Writer {
-    return operation("bitnot", this as unknown as Writer);
+    return operation("bitnot", this);
   }
 
-  shl(count: OfAny.Spec): Writer {
-    return operation("shl", this as unknown as Writer, count);
+  shl(count: unknown): Writer {
+    return operation("shl", this, count);
   }
 
-  shr(count: OfAny.Spec): Writer {
-    return operation("shr", this as unknown as Writer, count);
+  shr(count: unknown): Writer {
+    return operation("shr", this, count);
   }
 
   /** The value in `domain`, kept: rounded or overflowing as `domain` does. */
   convert(domain: unknown): Writer {
-    return writer(new _OperationData("convert", [this.data], domain));
+    return operation("convert", this, { domain });
   }
 
   /** The bit pattern in `domain`, of the same width. */
   reinterpret(domain: unknown): Writer {
-    return writer(new _OperationData("reinterpret", [this.data], domain));
+    return operation("reinterpret", this, { domain });
   }
 
   /** A packed value's representation. */
   pack(): Writer {
-    return operation("pack", this as unknown as Writer);
+    return operation("pack", this);
   }
 
   /** The value of the packed `domain` that a representation stands for. */
   unpack(domain: unknown): Writer {
-    return writer(new _OperationData("unpack", [this.data], domain));
+    return operation("unpack", this, { domain });
   }
 
   /** The number of items of a collection. */
   count(): Writer {
-    return operation("count", this as unknown as Writer);
+    return operation("count", this);
   }
 
   /** The item at a position, or at a key of a keyed list. */
-  item(index: OfAny.Spec): Writer {
-    return operation("item", this as unknown as Writer, index);
+  item(index: unknown): Writer {
+    return operation("item", this, index);
   }
 
   /** Whether this equals one of the items of `collection`. */
-  in_(collection: OfAny.Spec): Writer {
-    return operation("in", this as unknown as Writer, collection);
+  in_(collection: unknown): Writer {
+    return operation("in", this, collection);
   }
 
   sum(): Writer {
-    return operation("sum", this as unknown as Writer);
+    return operation("sum", this);
   }
 
   min(): Writer {
-    return operation("min", this as unknown as Writer);
+    return operation("min", this);
   }
 
   max(): Writer {
-    return operation("max", this as unknown as Writer);
+    return operation("max", this);
   }
 
   /** Whether no two items are equal. */
   unique(): Writer {
-    return operation("unique", this as unknown as Writer);
+    return operation("unique", this);
   }
 
   /** An object's entries in an adjacency, as records. */
   entries(adjacency: string): Writer {
-    return operation("entries", this as unknown as Writer, adjacency);
+    return operation("entries", this, adjacency);
   }
 
   /** Whether `body` holds for every item, bound to `name`. */
-  all(name: string, body: OfAny.Spec): Writer {
-    return quantifier("all", name, this as unknown as Writer, body);
+  all(name: string, body: unknown): Writer {
+    return quantifier("all", name, this, body);
   }
 
   /** Whether `body` holds for some item, bound to `name`. */
-  any(name: string, body: OfAny.Spec): Writer {
-    return quantifier("any", name, this as unknown as Writer, body);
+  any(name: string, body: unknown): Writer {
+    return quantifier("any", name, this, body);
   }
 
   /** How many items, bound to `name`, `body` holds for. */
-  count_where(name: string, body: OfAny.Spec): Writer {
-    return quantifier("count", name, this as unknown as Writer, body);
+  count_where(name: string, body: unknown): Writer {
+    return quantifier("count", name, this, body);
   }
 }
 
-/** An expression written with methods. `.name` reads a property (`get`); use `.get(name)` for names that are also
- * methods, such as `eq`. A `Writer` is an `OfAny.Spec`; `.data` is its expression. Property names come from schemas at
- * runtime, so they are typed loosely, like proxy properties. */
-export type Writer = TermTarget & { readonly [property: string]: any };
-
-/** A writer of `data`, an expression of Basic or of a dialect extending it, as Python's `Writer(data)`. */
-export function writer(data: unknown): Writer {
-  return new Proxy(new TermTarget(data as AnyData), {
-    get(target, property, receiver) {
-      if (typeof property === "symbol" || property in target) return Reflect.get(target, property, receiver);
-      if (property === "then" || property === "toJSON") return undefined; // probes by `await` and `JSON.stringify`
-      return target.get(property);
-    },
-  }) as Writer;
+function specOf(value: unknown): F.Writer | null {
+  return value === null || value === undefined ? null : DIALECT.spec(value);
 }
 
 /** The variable `name`. */
 export function variable(name: string): Writer {
-  return writer(new _VariableData(name));
+  return new Writer((u: any) => u.variable((v: any) => v.name(name)));
 }
 
-/** The literal `value`, of `domain` (by default, its native's). */
-export function literal(value: Native, domain: unknown = null): Writer {
-  return writer(new _LiteralData(value, domain));
+/** The literal `value`, of `domain` (a domain registered under a name, or a name; by default, its native's). */
+export function literal(value: unknown, domain: unknown = null): Writer {
+  let name = domainName(domain);
+  if (name !== null && Domains.nativeDomain(value) !== null
+    && Domains.registered(name).equals(Domains.of(value))) {
+    name = null; // a native's default domain is no domain at all
+  }
+  return new Writer((u: any) => u.literal((r: any) => {
+    if (value !== null && value !== undefined) r.value((p: any) => p.as_scalar(value));
+    return name === null ? r : r.domain(name);
+  }));
 }
 
 /** `body`, with `name` bound to the value of `value`. */
-export function let_(name: string, value: OfAny.Spec, body: OfAny.Spec): Writer {
-  return writer(new _LetData(name, OfAny.resolve(value), OfAny.resolve(body)));
+export function let_(name: string, value: unknown, body: unknown): Writer {
+  const [valueSpec, bodySpec] = [specOf(value), specOf(body)];
+  return new Writer((u: any) => u.let((r: any) => {
+    r.name(name);
+    if (valueSpec !== null) r.value(valueSpec);
+    return bodySpec === null ? r : r.body(bodySpec);
+  }));
 }
 
 /** The quantifier `quantifier` (`all`, `any` or `count`) of `body`, with `name` bound to each item of `collection`. */
-export function quantifier(quantifier: string, name: string, collection: OfAny.Spec, body: OfAny.Spec): Writer {
-  return writer(new _QuantifierData(name, quantifier, OfAny.resolve(collection), OfAny.resolve(body)));
+export function quantifier(quantifier: string, name: string, collection: unknown, body: unknown): Writer {
+  const [collectionSpec, bodySpec] = [specOf(collection), specOf(body)];
+  return new Writer((u: any) => u.quantifier((r: any) => {
+    r.name(name).quantifier(quantifier);
+    if (collectionSpec !== null) r.collection(collectionSpec);
+    return bodySpec === null ? r : r.body(bodySpec);
+  }));
 }
 
-/** The operation `name` applied to `args`; for operations outside the core, or without a method. */
-export function operation(name: string, ...args: OfAny.Spec[]): Writer {
-  return writer(new _OperationData(name, args.map((arg) => OfAny.resolve(arg))));
+/** The options of an operation, given after its arguments: the `domain` of its result. Python's keyword `domain=`. */
+export interface Options {
+  domain?: unknown;
+}
+
+function isOptions(value: unknown): value is Options {
+  if (value === null || typeof value !== "object") return false;
+  const prototype = Object.getPrototypeOf(value);
+  return (prototype === Object.prototype || prototype === null) && Object.keys(value).every((key) => key === "domain");
+}
+
+/** The operation `name` applied to `args`, of the result's `domain` when it has one, given as a last argument
+ * `{ domain }`; for operations outside the core, or without a method. */
+export function operation(name: string, ...args: unknown[]): Writer {
+  const last = args[args.length - 1];
+  const options: Options = args.length > 0 && isOptions(last) ? (args.pop() as Options) : {};
+  const specs = args.map((argument) => DIALECT.spec(argument));
+  const named = domainName(options.domain ?? null);
+  return new Writer((u: any) => u.call((r: any) => {
+    r.callable(name).arguments(specs);
+    return named === null ? r : r.domain(named);
+  }));
 }

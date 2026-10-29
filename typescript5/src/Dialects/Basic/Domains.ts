@@ -17,18 +17,20 @@
  *   by `codes[i]`.
  *
  * Each kind's data, `OfX.Data`, is compared by structure (`equals`), built by `OfX.Builder` (`create()`, `clone()`,
- * `update()`; none validate), with `validate()`. A domain is a `Domain`: a value is in it (`contains`) when it has the
+ * `update()`; none validate), with `validate()`. Domains stay code until the port's stage 3 makes them objects that
+ * dialects define by name (docs/proposals/port): a term names its domain. A domain is a `Domain`: a value is in it (`contains`) when it has the
  * native type the domain's literals hold (a bigint for an integer, a string for an enum's member, ...) and fits it,
  * and it includes (`includes`) only domains equal to it, since Basic has no implied promotions.
  *
  * Today's natives are the defaults: `Int` is an unbounded signed integer, `Float` binary64 rounding ties to even, `Str`
  * Unicode, `Bytes` bytes of any length and `Bool` true and false; `of(value)` gives a native's default domain.
- * `Object` holds what writes its properties through `accept`, including expressions and value objects, and `Anything`
- * is the domain of a value not known statically, such as a property read with `get`. Unknown (`null`) is not a domain.
+ * `Object` holds data objects read through mbse-schemas' readers (`Framework/Objects`), terms and value objects among
+ * them, and `Anything` is the domain of a value not known statically, such as a property read with `get`. Unknown
+ * (`null`) is not a domain.
  *
- * Domains are registered by name with `register`. Over the wire a domain that is registered is written by name,
- * `{"named": {"name": "uint8"}}`, and any other by value, `{"integer": {"width": 8, "signed": false, ...}}`: `Schema`
- * is the union of the kinds' meta-schemas and `named`, and `to_plain` and `from_plain` convert.
+ * Domains are registered by name with `register`, and a term names the domain it carries: `registered(name)` gives the
+ * domain a name stands for, a registered one or a default's (`bool`, `int`, `float`, `str`, `bytes`, which no other may
+ * take), and `name_of(domain)` the name of a domain, null when it has none.
  *
  * A value of another domain than its native's default is a typed value, `Value(domain, value)`; `value(domain,
  * native)` gives the bare native for a default domain and a typed value otherwise, and `of(value)` gives any value's
@@ -43,15 +45,14 @@
  */
 
 import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";
-import type { Plain, Visitors } from "@mbse/schemas/Framework";
+import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
+import * as Objects from "../../Framework/Objects.js";
 import { OverflowError } from "../../Framework/Errors.js";
 import * as Ieee754 from "./Ieee754.js";
 
-type PlainData = Plain.PlainData;
-type PlainMap = Plain.PlainMap;
-type Native = Visitors.Native;
+type Native = Visitors.Scalar;
 
 /** IEEE 754-2019's interchange formats. */
 export const FORMATS = ["binary16", "binary32", "binary64", "binary128", "decimal64", "decimal128"] as const;
@@ -98,7 +99,7 @@ export abstract class Domain implements D.Domain {
   }
 
   contains(value: unknown): boolean {
-    return Schemas.isNativeOf(this.native(), value) && this.fits(value);
+    return Schemas.isScalarOf(this.native(), value) && this.fits(value);
   }
 
   protected fits(_value: unknown): boolean {
@@ -113,8 +114,8 @@ export abstract class Domain implements D.Domain {
   /** How two values of this domain compare: -1, 0 or 1, or null when they are incomparable. An unordered domain's
    * values are equal or incomparable. */
   compare(a: unknown, b: unknown): number | null {
-    const schema = new Schemas.OfNative.Data(this.native());
-    return new Comparison.OfNative(schema, a as Native).compare(new Comparison.OfNative(schema, b as Native));
+    const schema = new Schemas.OfScalar.Data(this.native());
+    return new Comparison.OfScalar(schema, a as Native).compare(new Comparison.OfScalar(schema, b as Native));
   }
 
   /** Structural equality: the same kind, with equal fields. */
@@ -406,6 +407,11 @@ class PackedDomain extends Domain {
   }
 }
 
+/** A domain's name, or the repr of what is not a domain (Python's `_name`). */
+export function _name(domain: unknown): string {
+  return nameOf(domain);
+}
+
 function nameOf(domain: unknown): string {
   return domain instanceof Domain ? domain.name() : repr(domain);
 }
@@ -548,38 +554,11 @@ class PackedBuilder extends DomainBuilder {
   }
 }
 
-// --- Meta-schemas ---
+// --- Kinds ---
 
-const text = (name: string) => (p: Schemas.OfProperty.Builder) => p.name(name).of((t) => t.as_native(String));
-const integer = (name: string) => (p: Schemas.OfProperty.Builder) => p.name(name).of((t) => t.as_native(BigInt));
-const listOf = (native: unknown) => (t: Schemas.OfAny.Builder) => t.as_indexed((i) => i.of((u) => u.as_native(native as never)));
-
-/** A domain, by value or by name. */
-export const Schema = new Schemas.OfUnion.Builder().create(); // its branches are added below
-const SCHEMAS = new Map<string, Schemas.OfObject.Data>([
-  ["bool", new Schemas.OfObject.Builder().create()],
-  ["integer", new Schemas.OfObject.Builder().properties(integer("width"),
-    (p) => p.name("signed").of((t) => t.as_native(Boolean)), text("overflow")).create()],
-  ["ieee754", new Schemas.OfObject.Builder().properties(text("format"), text("rounding")).create()],
-  ["bits", new Schemas.OfObject.Builder().properties(integer("width")).create()],
-  ["bytes", new Schemas.OfObject.Builder().properties(integer("width")).create()],
-  ["unicode", new Schemas.OfObject.Builder().create()],
-  ["ieee1164", new Schemas.OfObject.Builder().properties(integer("width")).create()],
-  ["enum", new Schemas.OfObject.Builder().properties((p) => p.name("members").of(listOf(String))).create()],
-  ["packed", new Schemas.OfObject.Builder().properties((p) => p.name("domain").of(Schema),
-    (p) => p.name("representation").of(Schema), (p) => p.name("codes").of(listOf(BigInt))).create()],
-  ["named", new Schemas.OfObject.Builder().properties(text("name")).create()],
-]);
-new Schemas.OfUnion.Builder(Schema).branches(...[...SCHEMAS].map(([name, schema]) =>
-  (b: Parameters<Parameters<Schemas.OfUnion.Builder["branches"]>[0]>[0]) => b.name(name).of(schema))).update();
-
-/** A value domain kind: `Data`, `Builder` and the meta-schema `Schema` of its value. */
+/** A value domain kind: its `Data` and its `Builder`. */
 export class Kind<Data extends Domain, B> {
-  readonly Schema: Schemas.OfObject.Data;
-
-  constructor(readonly Data: new (...fields: any[]) => Data, readonly Builder: new (instance?: Data) => B) {
-    this.Schema = SCHEMAS.get((Data as unknown as typeof Domain).KIND) as Schemas.OfObject.Data;
-  }
+  constructor(readonly Data: new (...fields: any[]) => Data, readonly Builder: new (instance?: Data) => B) {}
 
   toString(): string {
     return `<domain kind ${(this.Data as unknown as typeof Domain).KIND}>`;
@@ -598,56 +577,32 @@ export const OfPacked = new Kind(PackedDomain, PackedBuilder);
 const KINDS = new Map<string, DomainClass>([BoolDomain, IntegerDomain, Ieee754Domain, BitsDomain, BytesDomain,
   UnicodeDomain, Ieee1164Domain, EnumDomain, PackedDomain].map((kind) => [kind.KIND, kind as DomainClass]));
 
-// --- The registry and the plain form ---
+// --- The registry ---
 
 const registry = new Map<string, Domain>();
 
-/** Registers `domain` under `name`, so that literals of it are written by name. A domain is registered once. */
+/** Registers `domain` under `name`, so that a term can name it. A domain is registered once, and a default's name is
+ * its own. */
 export function register(name: string, domain: Domain): void {
-  if (registry.has(name)) throw new Errors.ValueError(`domain ${repr(name)} is already registered`);
+  if (registry.has(name) || DEFAULTS.has(name)) throw new Errors.ValueError(`domain ${repr(name)} is already registered`);
   for (const [other, registeredDomain] of registry) {
     if (registeredDomain.equals(domain)) throw new Errors.ValueError(`${nameOf(domain)} is already registered as ${repr(other)}`);
   }
   registry.set(name, domain);
 }
 
-/** The domain registered under `name`. */
+/** The domain `name` stands for: a registered one, or a default's. */
 export function registered(name: string): Domain {
-  const found = registry.get(name);
+  const found = registry.get(name) ?? DEFAULTS.get(name);
   if (found === undefined) throw new Errors.LookupError(`no domain registered as ${repr(name)}`);
   return found;
 }
 
-/** The name a domain equal to `domain` is registered under, or null. */
+/** The name of a domain equal to `domain`: the one it is registered under, or a default's; null if it has none. */
 export function name_of(domain: unknown): string | null {
   for (const [name, registeredDomain] of registry) if (registeredDomain.equals(domain)) return name;
+  for (const [name, defaultDomain] of DEFAULTS) if (defaultDomain.equals(domain)) return name;
   return null;
-}
-
-/** A domain's plain form: by name when it is registered, otherwise by value, leaving out what is absent. */
-export function to_plain(domain: unknown): PlainMap {
-  const name = name_of(domain);
-  if (name !== null) return new Map([["named", new Map([["name", name]])]]);
-  if (!(domain instanceof Domain)) throw new TypeError(`not a domain: ${repr(domain)}`);
-  const contents: PlainMap = new Map();
-  for (const field of domain.kind().FIELDS) {
-    const value = domain.field(field);
-    if (value instanceof Domain) contents.set(field, to_plain(value));
-    else if (Array.isArray(value)) contents.set(field, [...value] as PlainData[]);
-    else if (value !== null && value !== undefined) contents.set(field, value as PlainData);
-  }
-  return new Map([[domain.kind().KIND, contents]]);
-}
-
-/** The domain a plain form holds: a registered one by name, or a new one of its kind. */
-export function from_plain(plain: PlainMap): Domain {
-  const [kind, contents] = [...plain][0] as [string, PlainMap];
-  if (kind === "named") return registered(contents.get("name") as string);
-  const data = KINDS.get(kind) as DomainClass;
-  return new data(...data.FIELDS.map((field) => {
-    const value = contents.get(field);
-    return value instanceof Map ? from_plain(value) : value === undefined ? undefined : value;
-  }));
 }
 
 // --- Typed values ---
@@ -786,18 +741,19 @@ export const Int = new IntegerDomain();
 export const Float = new Ieee754Domain();
 export const Str = new UnicodeDomain();
 export const Bytes = new BytesDomain();
-const ObjectDomain = new D.OfValues("object", (value) =>
-  value !== null && typeof value === "object" && typeof (value as { accept?: unknown }).accept === "function");
+const ObjectDomain = new D.OfValues("object", Objects.isObject);
 export { ObjectDomain as Object };
 
 const NATIVES: ReadonlyMap<string, Domain> = new Map<string, Domain>([
   ["bool", Bool], ["int", Int], ["float", Float], ["str", Str], ["bytes", Bytes],
 ]);
+/** The defaults' names, which a term names them by. */
+const DEFAULTS: ReadonlyMap<string, Domain> = NATIVES;
 
 /** A native's default domain, or null when `value` is not a native. */
 export function nativeDomain(value: unknown): Domain | null {
   const native = NATIVES.get(Repr.typeName(value));
-  return native !== undefined && Schemas.isNativeOf(native.native(), value) ? native : null;
+  return native !== undefined && Schemas.isScalarOf(native.native(), value) ? native : null;
 }
 
 type DomainKind = abstract new (...args: never[]) => Domain;

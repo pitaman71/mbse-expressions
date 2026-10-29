@@ -262,6 +262,14 @@ class Writer(F.Writer):
         return quantifier("count", name, self, body)
 
 
+def _stands_for(name: str) -> Any:
+    """The domain a name stands for, or None (validation reports a name that stands for none)."""
+    try:
+        return Domains.registered(name)
+    except LookupError:
+        return None
+
+
 def _spec(value: Any) -> Any:
     return None if value is None else DIALECT.spec(value)
 
@@ -274,7 +282,7 @@ def variable(name: str) -> Writer:
 def literal(value: Any, domain: Any = None) -> Writer:
     """The literal `value`, of `domain` (a domain registered under a name, or a name; by default, its native's)."""
     name = _name(domain)
-    if name is not None and type(value) in Domains._NATIVES and Domains.registered(name) == Domains.of(value):
+    if name is not None and type(value) in Domains._NATIVES and _stands_for(name) == Domains.of(value):
         name = None  # a native's default domain is no domain at all
 
     def write(u: Any) -> Any:
@@ -307,7 +315,17 @@ def let_(name: str, value: Any, body: Any) -> Writer:
 def quantifier(quantifier: str, name: str, collection: Any, body: Any) -> Writer:
     """The quantifier `quantifier` (`all`, `any` or `count`) of `body`, with `name` bound to each item of `collection`."""
     collection, body = _spec(collection), _spec(body)
-    return Writer(lambda u: u.quantifier(lambda q: q.name(name).quantifier(quantifier).collection(collection).body(body)))
+
+    def write(u: Any) -> Any:
+        def record(r: Any) -> Any:
+            r.name(name).quantifier(quantifier)
+            if collection is not None:
+                r.collection(collection)
+            return r if body is None else r.body(body)
+
+        return u.quantifier(record)
+
+    return Writer(write)
 
 
 def operation(name: str, *arguments: Any, domain: Any = None) -> Writer:
