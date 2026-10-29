@@ -6,8 +6,8 @@ snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks 
 implementation's files (see the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in
 lockstep: same cases, same values, same order of statements.
 
-The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
-2b (docs/proposals/port): `_stage_2b` keeps them as they were written for the old API.
+The other dialects' cases (matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage 2b
+(docs/proposals/port): `_stage_2b` keeps them as they were written for the old API.
 """
 
 from __future__ import annotations
@@ -15,9 +15,10 @@ from __future__ import annotations
 from mbse.Expressions import Framework
 from mbse.Expressions.Dialects import Basic
 from mbse.Expressions.Dialects.Basic import Domains, Expressions
+from mbse.Expressions.Dialects.Python import Expressions as Python
 from mbse.Schemas.Framework import Builders
 
-CASES = ["expression", "domains", "collections"]
+CASES = ["expression", "python", "domains", "collections"]
 
 
 def _named(name, domain):
@@ -32,11 +33,21 @@ def build():
     store = Builders.Store()
     store.transaction(Framework.install)
     store.transaction(Basic.install)
+    store.transaction(Python.install)
 
     # --- expression: every kind and literal type, a let and its variable, an extension operation ---
     this, age = E.variable("this"), E.variable("age")
     expression = E.let_("age", this.age, age.ge(18).and_(
         age.lt(65.5).or_(this.has("email").not_()).implies(E.operation("contains", "x", b"\x00\xff", True))))
+
+    # --- python: every kind, a let and its names --- import numpy as np / from math import floor /
+    # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
+    P = Python
+    a, item = P.name("a"), P.name("p")
+    python = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("this"), P.ifexp(
+        P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18)), P.attribute(P.name("np"), "pi")),
+        P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
+        P.generator("p", P.attribute(a, "y"), P.index(item, b"\x00"), item)))), alias="np")
 
     # --- domains: literals of value domains, by name, a packed enum among them; defaults left out; decimal and
     # binary128 text; a conversion's domain, a bitwise operation and pack ---
@@ -63,7 +74,8 @@ def build():
 
     with store.transaction():
         terms = {case: store.Expressions.Framework.Term(writer)
-                 for case, writer in [("expression", expression), ("domains", domains), ("collections", collections)]}
+                 for case, writer in [("expression", expression), ("python", python), ("domains", domains),
+                                      ("collections", collections)]}
     Term = store.registered("Expressions.Framework.Term")
     return {case: (Term, terms[case], store) for case in CASES}
 
@@ -73,19 +85,10 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
     from mbse.Expressions.Dialects.Excel import Expressions as Excel
     from mbse.Expressions.Dialects.Latex import Expressions as Latex
     from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
-    from mbse.Expressions.Dialects.Python import Expressions as Python
     from mbse.Expressions.Dialects.SystemVerilog import Expressions as SystemVerilog
 
-    E, P, M, X, L = Expressions, Python, Matlab, Excel, Latex
+    E, M, X, L = Expressions, Matlab, Excel, Latex
     this = E.variable("this")
-
-    # --- python: every kind, shared names --- import numpy as np / from math import floor /
-    # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
-    a, item = P.name("a"), P.name("p")
-    python = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("this"), P.ifexp(
-        P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18)), P.attribute(P.name("np"), "pi")),
-        P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
-        P.generator("p", P.attribute(a, "y"), P.index(item, b"\x00"), item)))), alias="np")
 
     # --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
     # >= arrayfun(@(k) k, this.ports)(2)) || true
@@ -124,7 +127,6 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
                   sv.cast(4, sv.vector("11111111", True, "h")))))
 
     return {
-        "python": (P.DIALECT.schema_of(python), python, P.Builders),
         "matlab": (M.DIALECT.schema_of(matlab), matlab, M.Builders),
         "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
         "ccpp": (Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders),

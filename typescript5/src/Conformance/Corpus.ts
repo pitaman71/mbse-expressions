@@ -7,8 +7,8 @@
  * against every other implementation's files (see the CONF test suite). Keep this module and
  * `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same cases, same values, same order of statements.
  *
- * The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
- * 2b (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
+ * The other dialects' cases (matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage 2b
+ * (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -18,9 +18,10 @@ import { Builders } from "@mbse/schemas/Framework";
 import * as Domains from "../Dialects/Basic/Domains.js";
 import * as Expressions from "../Dialects/Basic/Expressions.js";
 import * as Basic from "../Dialects/Basic/index.js";
+import * as Python from "../Dialects/Python/Expressions.js";
 import * as Framework from "../Framework/index.js";
 
-export const CASES = ["expression", "domains", "collections"] as const;
+export const CASES = ["expression", "python", "domains", "collections"] as const;
 
 /** A case: its root schema, its root term, and the store it is built in. */
 export type Case = [any, any, any];
@@ -36,11 +37,21 @@ export function build(): Map<string, Case> {
   const store: any = new Builders.Store();
   store.transaction(Framework.install);
   store.transaction(Basic.install);
+  store.transaction(Python.install);
 
   // --- expression: every kind and literal type, a let and its variable, an extension operation ---
   const [self, age] = [E.variable("this"), E.variable("age")];
   const expression = E.let_("age", self.age, age.ge(18n).and_(
     age.lt(65.5).or_(self.has("email").not_()).implies(E.operation("contains", "x", new Uint8Array([0x00, 0xff]), true))));
+
+  // --- python: every kind, a let and its names --- import numpy as np / from math import floor /
+  // (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
+  const P = Python;
+  const [a, item] = [P.name("a"), P.name("p")];
+  const python = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("this"), P.ifexp(
+    P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18n)), P.attribute(P.name("np"), "pi")),
+    P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
+    P.generator("p", P.attribute(a, "y"), P.index(item, new Uint8Array([0x00])), item)))), "np");
 
   // --- domains: literals of value domains, by name, a packed enum among them; defaults left out; decimal and
   // binary128 text; a conversion's domain, a bitwise operation and pack ---
@@ -65,27 +76,19 @@ export function build(): Map<string, Case> {
   const collections = E.let_("ports", self.entries("ports"), ports!.all("p", p!.get("pin").in_(pins)).and_(
     sizes!.sum().le(ports!.count())));
 
-  const terms = store.transaction(() => new Map<string, any>(([["expression", expression], ["domains", domains],
-    ["collections", collections]] as [string, Expressions.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
+  const terms = store.transaction(() => new Map<string, any>(([["expression", expression], ["python", python],
+    ["domains", domains], ["collections", collections]] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   const Term = store.registered("Expressions.Framework.Term");
   return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
 }
 
 /** The old API's cases, to port with their dialects (stage 2b); not called. */
 export async function stage2b(): Promise<Map<string, Case>> {
-  const [Ccpp, Excel, Latex, Matlab, Python, SystemVerilog]: any[] = await Promise.all([
+  const [Ccpp, Excel, Latex, Matlab, SystemVerilog]: any[] = await Promise.all([
     import("../Dialects/Ccpp/Expressions.js"), import("../Dialects/Excel/Expressions.js"),
     import("../Dialects/Latex/Expressions.js"), import("../Dialects/Matlab/Expressions.js"),
-    import("../Dialects/Python/Expressions.js"), import("../Dialects/SystemVerilog/Expressions.js")]);
-  const [P, M, X, L] = [Python, Matlab, Excel, Latex];
-
-  // --- python: every kind, shared names --- import numpy as np / from math import floor /
-  // (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
-  const [a, item] = [P.name("a"), P.name("p")];
-  const python = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("this"), P.ifexp(
-    P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18n)), P.attribute(P.name("np"), "pi")),
-    P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
-    P.generator("p", P.attribute(a, "y"), P.index(item, new Uint8Array([0x00])), item)))), "np");
+    import("../Dialects/SystemVerilog/Expressions.js")]);
+  const [M, X, L] = [Matlab, Excel, Latex];
 
   // --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
   // >= arrayfun(@(k) k, this.ports)(2)) || true
@@ -124,7 +127,6 @@ export async function stage2b(): Promise<Map<string, Case>> {
       sv.cast(4n, sv.vector("11111111", true, "h")))));
 
   return new Map<string, Case>([
-    ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
     ["matlab", [M.DIALECT.schema_of(matlab), matlab, M.Builders]],
     ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
     ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],

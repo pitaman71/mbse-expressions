@@ -1,40 +1,98 @@
 """Expressions of the Python dialect: Python expressions, with the imports they need, as Python's `ast` has them.
 
-- `constant`: a native value. `name`: the value bound to a name; the names of `BUILTINS` are always bound.
-- `attribute`: `value.attr`. `subscript`: `value[key]`, for a `str` key, and `index`: `value[index]`, for an index
-  that is an expression. `call`: a function, the slot `function`,
-  applied to ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of
-  the name `np`.
-- `compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`), `boolop` (`and`, `or`), `binop` (`+`, `-`, `*`, `/`, `//`, `%`,
-  `**`, `&`, `|`, `^`, `<<`, `>>`) and `unaryop` (`not`, `-`, `+`, `~`), each with one operator and two operands (one for `unaryop`).
-- `ifexp`: `body if test else orelse`.
-- `generator`: `(element for name in iterable if condition ...)`, a generator expression of one `for` and any number
-  of conditions, which binds `name` to each item of `iterable` within the element and the conditions. As the only
-  argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
-- `let`: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
-- `import` (`import module` or `import module as alias`) and `importfrom` (`from module import name` or `... as alias`)
-  bind a name within their body, which is the rest of the expression; `Text.ToText` writes them as the lines before it.
-  What they may import is up to the scope that evaluates them (see `Evaluators`).
+Python's terms are the framework's `let` and its own kinds, which `install` adds to `Expressions.Framework.Term` by
+schema extension, each a value object with a `domain`. Their tags are qualified by the dialect, `python_<kind>`
+(`python_binop`), since every dialect adds its kinds to the one union of terms:
+
+- `python_constant`: a basic scalar (`value`). `python_name`: the value bound to a `name`; the names of `BUILTINS` are
+  always bound.
+- `python_attribute`: `value.attr`. `python_subscript`: `value[key]`, for a `str` key, and `python_index`:
+  `value[index]`, for an index that is an expression. `python_call`: a function, the slot `function`, applied to
+  ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of the name `np`.
+- `python_compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`), `python_boolop` (`and`, `or`), `python_binop`
+  (`+`, `-`, `*`, `/`, `//`, `%`, `**`, `&`, `|`, `^`, `<<`, `>>`) and `python_unaryop` (`not`, `-`, `+`, `~`), each
+  with one `operator` and two operands, `left` and `right` (one, `operand`, for `python_unaryop`).
+- `python_ifexp`: `body if test else orelse`.
+- `python_generator`: `(element for name in iterable if condition ...)`, a generator expression of one `for` and any
+  number of `conditions`, which binds `name` to each item of `iterable` within the element and the conditions. As the
+  only argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
+- `let`, the framework's: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
+- `python_import` (`import module` or `import module as alias`) and `python_importfrom` (`from module import name` or
+  `... as alias`) bind a name within their `body`, which is the rest of the expression; `Text.ToText` writes them as the
+  lines before it. What they may import is up to the scope that evaluates them (see `Evaluators`).
 
 A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of calls, not a dialect.
 
-The meta-schemas are registered as 'Expressions.Python.Of<ast class>' ('Expressions.Python.OfBinOp', ...). `Text.ToText`
-writes an expression as Python source, parenthesized only where precedence requires, and `Text.FromText` reads one back:
-imports, then one expression.
+`DIALECT` reads them (`Terms.Dialect`). The writers (`constant`, `name`, `attribute`, ...) write them through the
+builders, wherever a term is written, in a transaction. `Text.ToText` writes an expression as Python source,
+parenthesized only where precedence requires, and `Text.FromText` reads one back: imports, then one expression.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
-from mbse.Schemas.Framework.Visitors import Native
+from mbse.Schemas.Framework import Schemas
 
 from . import Domains
 
-__all__ = ["DIALECT", "BUILTINS", "Builders", "Schema", "constant", "name", "attribute", "subscript", "call", "compare", "boolop",
-           "binop", "unaryop", "ifexp", "let_", "import_", "importfrom"]
+__all__ = ["install", "DIALECT", "BUILTINS", "Writer", "constant", "name", "attribute", "subscript", "index", "call",
+           "compare", "boolop", "binop", "unaryop", "ifexp", "generator", "let_", "import_", "importfrom"]
+
+CONSTANT, NAME, ATTRIBUTE, SUBSCRIPT, INDEX, CALL = (
+    "python_constant", "python_name", "python_attribute", "python_subscript", "python_index", "python_call")
+COMPARE, BOOLOP, BINOP, UNARYOP, IFEXP, GENERATOR = (
+    "python_compare", "python_boolop", "python_binop", "python_unaryop", "python_ifexp", "python_generator")
+LET, IMPORT, IMPORTFROM = "let", "python_import", "python_importfrom"
+
+
+def install(txn: Any) -> Any:
+    """Python's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
+    S = txn.Schemas
+    kinds = {"Constant": CONSTANT, "Name": NAME, "Attribute": ATTRIBUTE, "Subscript": SUBSCRIPT, "Index": INDEX,
+             "Call": CALL, "Compare": COMPARE, "BoolOp": BOOLOP, "BinOp": BINOP, "UnaryOp": UNARYOP, "IfExp": IFEXP,
+             "GeneratorExp": GENERATOR, "Import": IMPORT, "ImportFrom": IMPORTFROM}
+    return txn.uid("mbse.Expressions.Python/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"Term": S.OfUnion, **{kind: S.OfObject for kind in kinds}})  # the framework's union, by its name
+        .spec([
+            lambda _: _.Constant.name("Expressions.Python.Constant").properties({
+                "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes])),
+                "domain": S.OfStr,  # every term has a domain
+            }),
+            lambda _: _.Name.name("Expressions.Python.Name").properties({"name": S.OfStr, "domain": S.OfStr}),
+            lambda _: _.Attribute.name("Expressions.Python.Attribute").properties({
+                "attr": S.OfStr, "value": _.Term, "domain": S.OfStr}),
+            lambda _: _.Subscript.name("Expressions.Python.Subscript").properties({
+                "key": S.OfStr, "value": _.Term, "domain": S.OfStr}),
+            lambda _: _.Index.name("Expressions.Python.Index").properties({
+                "value": _.Term, "index": _.Term, "domain": S.OfStr}),
+            lambda _: _.Call.name("Expressions.Python.Call").properties({
+                "function": _.Term,
+                "arguments": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),
+                "domain": S.OfStr,
+            }),
+            *[lambda _, kind=kind: getattr(_, kind).name(f"Expressions.Python.{kind}").properties({
+                "operator": S.OfStr, "left": _.Term, "right": _.Term, "domain": S.OfStr})
+              for kind in ("Compare", "BoolOp", "BinOp")],
+            lambda _: _.UnaryOp.name("Expressions.Python.UnaryOp").properties({
+                "operator": S.OfStr, "operand": _.Term, "domain": S.OfStr}),
+            lambda _: _.IfExp.name("Expressions.Python.IfExp").properties({
+                "test": _.Term, "body": _.Term, "orelse": _.Term, "domain": S.OfStr}),
+            lambda _: _.GeneratorExp.name("Expressions.Python.GeneratorExp").properties({
+                "name": S.OfStr,  # bound to each item in the element and the conditions
+                "iterable": _.Term,
+                "element": _.Term,
+                "conditions": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),
+                "domain": S.OfStr,
+            }),
+            lambda _: _.Import.name("Expressions.Python.Import").properties({
+                "module": S.OfStr, "alias": S.OfStr, "body": _.Term, "domain": S.OfStr}),
+            lambda _: _.ImportFrom.name("Expressions.Python.ImportFrom").properties({
+                "module": S.OfStr, "name": S.OfStr, "alias": S.OfStr, "body": _.Term, "domain": S.OfStr}),
+            lambda _: _.Term.name("Expressions.Framework.Term").branches([  # branches added: schema extension
+                lambda t, kind=kind, tag=tag: t.name(tag).schema([getattr(_, kind)]) for kind, tag in kinds.items()]),
+        ])]))])
 
 
 BUILTINS = frozenset({"abs", "all", "any", "bool", "float", "getattr", "hasattr", "int", "len", "max", "min", "round", "set",
@@ -52,258 +110,188 @@ def _identifier_problems(what: str, value: Any) -> list[str]:
     return []
 
 
-@dataclass(eq=False)
-class _Constant(F.Term):
-    KIND = "constant"
-    ROLE = F.LITERAL
-    VALUE = F.NATIVES
-    value: Native | None = None
+def _identifier(property_name: str, what: str) -> Any:
+    """The check that a record's property, if a non-empty str, is an identifier."""
+    return lambda record: _identifier_problems(what, F.attributes_of(record).get(property_name))
 
 
-@dataclass(eq=False)
-class _Name(F.Term):
-    KIND = "name"
-    ROLE = F.REFERENCE
-    PROPERTIES = {"name": str}
-    AMBIENT = BUILTINS
-    name: str | None = None
-
-    def check(self) -> list[str]:
-        return _identifier_problems("a name", self.name)
+def _alias_problems(what: str, attributes: dict[str, Any]) -> list[str]:
+    """An alias, if given, is an identifier, and not empty."""
+    if attributes.get("alias") == "":
+        return [f"{F._article(what)} needs an alias"]
+    return _identifier_problems(f"{F._article(what)}'s alias", attributes.get("alias"))
 
 
-@dataclass(eq=False)
-class _Attribute(F.Term):
-    KIND = "attribute"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"attr": str}
-    SLOTS = ("value",)
-    OPERATOR = "attr"
-    SIGNATURE = FD.Function((FD.Anything,), FD.Anything)
-    attr: str | None = None
-    value: Any = None
-
-    def check(self) -> list[str]:
-        return _identifier_problems("an attribute", self.attr)
+def _module_problems(what: str, module: Any) -> list[str]:
+    if type(module) is not str or _dotted(module):
+        return []
+    return [f"{F._article(what)}'s module must be a dotted name, got {module!r}"]
 
 
-@dataclass(eq=False)
-class _Subscript(F.Term):
-    KIND = "subscript"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"key": str}
-    SLOTS = ("value",)
-    OPERATOR = "key"
-    SIGNATURE = FD.Function((FD.Anything,), FD.Anything)
-    key: str | None = None
-    value: Any = None
+def _import_check(record: Any) -> list[str]:
+    attributes = F.attributes_of(record)
+    return _module_problems("import", attributes.get("module")) + _alias_problems("import", attributes)
 
 
-@dataclass(eq=False)
-class _Index(F.Term):
-    KIND = "index"
-    ROLE = F.APPLICATION
-    SLOTS = ("value", "index")
-    SIGNATURE = FD.Function((FD.Anything, FD.Anything), FD.Anything)
-    value: Any = None
-    index: Any = None
+def _importfrom_check(record: Any) -> list[str]:
+    attributes = F.attributes_of(record)
+    return (_module_problems("importfrom", attributes.get("module"))
+            + _identifier_problems("an importfrom's name", attributes.get("name"))
+            + _alias_problems("importfrom", attributes))
 
 
-@dataclass(eq=False)
-class _Call(F.Term):
-    KIND = "call"
-    ROLE = F.APPLICATION
-    SLOTS = ("function",)
-    VARIADIC = "arguments"
-    SIGNATURE = FD.Opaque()
-    function: Any = None
-    arguments: tuple[Any, ...] = ()
+def _import_names(record: Any) -> tuple[str, ...]:
+    attributes = F.attributes_of(record)
+    return (attributes.get("alias") or attributes["module"].split(".")[0],)
 
 
-def _operator_kind(tag: str, vocabulary: dict[str, FD.Signature], slots: tuple[str, ...]) -> type[F.Term]:
-    """A kind with one operator from `vocabulary` and fixed operands."""
-    fields = {"operator": str | None, **{slot: Any for slot in slots}}
-    namespace = {"KIND": tag, "ROLE": F.APPLICATION, "PROPERTIES": {"operator": str}, "SLOTS": slots,
-                 "OPERATOR": "operator", "VOCABULARY": vocabulary, "__annotations__": fields,
-                 **{name: None for name in fields}}
-    return dataclass(eq=False)(type(f"_{tag.capitalize()}", (F.Term,), namespace))
+def _importfrom_names(record: Any) -> tuple[str, ...]:
+    attributes = F.attributes_of(record)
+    return (attributes.get("alias") or attributes["name"],)
 
 
-_Compare = _operator_kind("compare", Domains.COMPARE, ("left", "right"))
-_BoolOp = _operator_kind("boolop", Domains.BOOLOP, ("left", "right"))
-_BinOp = _operator_kind("binop", Domains.BINOP, ("left", "right"))
-_UnaryOp = _operator_kind("unaryop", Domains.UNARYOP, ("operand",))
+def _native(value: Any) -> Writer | None:
+    """The constant of a native value."""
+    return constant(value) if type(value) in Schemas.SCALAR_TYPES else None
 
 
-@dataclass(eq=False)
-class _IfExp(F.Term):
-    KIND = "ifexp"
-    ROLE = F.APPLICATION
-    SLOTS = ("test", "body", "orelse")
-    SIGNATURE = FD.Function((FD.Anything, FD.Anything, FD.Anything), FD.Anything)
-    test: Any = None
-    body: Any = None
-    orelse: Any = None
+_ANY = FD.Function((FD.Anything,), FD.Anything)
 
 
-@dataclass(eq=False)
-class _Generator(F.Term):
-    KIND = "generator"
-    ROLE = F.QUANTIFIER
-    PROPERTIES = {"name": str}
-    SLOTS = ("iterable", "element")
-    VARIADIC = "conditions"
-    SIGNATURE = Domains.GENERATOR
-    name: str | None = None
-    iterable: Any = None
-    element: Any = None  # with `name` bound to each item, as the conditions are
-    conditions: tuple[Any, ...] = ()
-
-    def check(self) -> list[str]:
-        return _identifier_problems("a generator's name", self.name)
+def _operator_kind(vocabulary: dict[str, FD.Signature]) -> F.Kind:
+    return F.Kind(F.APPLICATION, operator="operator", vocabulary=vocabulary, required=("operator",))
 
 
-@dataclass(eq=False)
-class _Let(F.Term):
-    KIND = "let"
-    ROLE = F.BINDING
-    PROPERTIES = {"name": str}
-    SLOTS = ("value", "body")
-    name: str | None = None
-    value: Any = None
-    body: Any = None
-
-    def check(self) -> list[str]:
-        return _identifier_problems("a let's name", self.name)
-
-
-@dataclass(eq=False)
-class _Import(F.Term):
-    KIND = "import"
-    ROLE = F.IMPORT
-    PROPERTIES = {"module": str, "alias": str}
-    OPTIONAL = frozenset({"alias"})
-    SLOTS = ("body",)
-    module: str | None = None
-    alias: str | None = None
-    body: Any = None
-
-    def binds(self) -> tuple[str, ...]:
-        return (self.alias or self.module.split(".")[0],)  # type: ignore[union-attr]
-
-    def check(self) -> list[str]:
-        problems = [] if type(self.module) is not str or _dotted(self.module) else [
-            f"an import's module must be a dotted name, got {self.module!r}"]
-        return problems + _identifier_problems("an import's alias", self.alias)
+DIALECT = F.Dialect("Python", {
+    CONSTANT: F.Kind(F.LITERAL),
+    NAME: F.Kind(F.REFERENCE, required=("name",), ambient=BUILTINS, check=_identifier("name", "a name")),
+    ATTRIBUTE: F.Kind(F.APPLICATION, operator="attr", signature=_ANY, required=("attr",),
+                      check=_identifier("attr", "an attribute")),
+    SUBSCRIPT: F.Kind(F.APPLICATION, operator="key", signature=_ANY, required=("key",)),
+    INDEX: F.Kind(F.APPLICATION, signature=FD.Function((FD.Anything, FD.Anything), FD.Anything)),
+    CALL: F.Kind(F.APPLICATION, signature=FD.Opaque()),
+    COMPARE: _operator_kind(Domains.COMPARE),
+    BOOLOP: _operator_kind(Domains.BOOLOP),
+    BINOP: _operator_kind(Domains.BINOP),
+    UNARYOP: _operator_kind(Domains.UNARYOP),
+    IFEXP: F.Kind(F.APPLICATION, signature=FD.Function((FD.Anything, FD.Anything, FD.Anything), FD.Anything)),
+    GENERATOR: F.Kind(F.QUANTIFIER, signature=Domains.GENERATOR, required=("name",),
+                      check=_identifier("name", "a generator's name")),
+    LET: F.Kind(F.BINDING, required=("name",), check=_identifier("name", "a let's name")),
+    IMPORT: F.Kind(F.IMPORT, required=("module",), names=_import_names, check=_import_check),
+    IMPORTFROM: F.Kind(F.IMPORT, required=("module", "name"), names=_importfrom_names, check=_importfrom_check),
+}, domain_of=Domains.of, literal=_native)
+"""The Python dialect: its kinds, as the framework reads them."""
 
 
-@dataclass(eq=False)
-class _ImportFrom(F.Term):
-    KIND = "importfrom"
-    ROLE = F.IMPORT
-    PROPERTIES = {"module": str, "name": str, "alias": str}
-    OPTIONAL = frozenset({"alias"})
-    SLOTS = ("body",)
-    module: str | None = None
-    name: str | None = None
-    alias: str | None = None
-    body: Any = None
-
-    def binds(self) -> tuple[str, ...]:
-        return (self.alias or self.name,)  # type: ignore[return-value]
-
-    def check(self) -> list[str]:
-        problems = [] if type(self.module) is not str or _dotted(self.module) else [
-            f"an importfrom's module must be a dotted name, got {self.module!r}"]
-        return problems + _identifier_problems("an importfrom's name", self.name) + _identifier_problems(
-            "an importfrom's alias", self.alias)
+# --- Writers ---
 
 
-_KINDS = (_Constant, _Name, _Attribute, _Subscript, _Index, _Call, _Compare, _BoolOp, _BinOp, _UnaryOp, _IfExp,
-          _Generator, _Let, _Import, _ImportFrom)
-_AST_NAMES = {"boolop": "BoolOp", "binop": "BinOp", "unaryop": "UnaryOp", "ifexp": "IfExp", "generator": "GeneratorExp",
-              "importfrom": "ImportFrom"}
-DIALECT = F.Declared(
-    "Python", _KINDS, domain_of=Domains.of,
-    schema_names={k.KIND: f"Expressions.Python.Of{_AST_NAMES.get(k.KIND, k.KIND.capitalize())}" for k in _KINDS})
-Builders = DIALECT.Builders
-Schema = DIALECT.Schema
+class Writer(F.Writer):
+    """A Python term, written through the builders: a spec, which writes its term where it is given."""
+
+    __slots__ = ()
 
 
-def _spec(spec: Any) -> Any:
-    return DIALECT.resolve(spec)
+def _spec(value: Any) -> F.Writer:
+    return DIALECT.spec(value)
 
 
-def constant(value: Native) -> _Constant:
-    return _Constant(value)
+def _kind(tag: str, attributes: dict[str, Any], slots: dict[str, Any], variadic: tuple[str, list[Any]] | None = None
+          ) -> Writer:
+    """The writer of a term of kind `tag`: its attributes and its slots (specs) that are not None, and its variadic
+    arguments (specs)."""
+    specs = {slot: _spec(value) for slot, value in slots.items() if value is not None}
+    many = None if variadic is None else (variadic[0], [_spec(value) for value in variadic[1]])
+
+    def write(union: Any) -> Any:
+        def record(r: Any) -> Any:
+            for attribute_name, value in attributes.items():
+                if value is not None:
+                    getattr(r, attribute_name)(value)
+            for slot, value in specs.items():
+                getattr(r, slot)(value)
+            if many is not None:
+                getattr(r, many[0])(many[1])
+            return r
+
+        return getattr(union, tag)(record)
+
+    return Writer(write)
 
 
-def name(name: str) -> _Name:
-    return _Name(name)
+def constant(value: Any) -> Writer:
+    """The constant `value`, a basic scalar."""
+    return Writer(lambda u: getattr(u, CONSTANT)(lambda r: r.value(lambda p: p.as_scalar(value))))
 
 
-def attribute(value: Any, attr: str) -> _Attribute:
-    """`value.attr`; each argument of these constructors is a spec (a native value is a constant)."""
-    return _Attribute(attr, _spec(value))
+def name(name: str) -> Writer:
+    """The value bound to `name`."""
+    return Writer(lambda u: getattr(u, NAME)(lambda r: r.name(name)))
 
 
-def subscript(value: Any, key: str) -> _Subscript:
+def attribute(value: Any, attr: str) -> Writer:
+    """`value.attr`; each argument of these writers is a spec (a native value is a constant)."""
+    return _kind(ATTRIBUTE, {"attr": attr}, {"value": value})
+
+
+def subscript(value: Any, key: str) -> Writer:
     """`value[key]`."""
-    return _Subscript(key, _spec(value))
+    return _kind(SUBSCRIPT, {"key": key}, {"value": value})
 
 
-def index(value: Any, index: Any) -> _Index:
+def index(value: Any, index: Any) -> Writer:
     """`value[index]`."""
-    return _Index(_spec(value), _spec(index))
+    return _kind(INDEX, {}, {"value": value, "index": index})
 
 
-def call(function: Any, *arguments: Any) -> _Call:
+def call(function: Any, *arguments: Any) -> Writer:
     """`function(*arguments)`. A dotted name as the function is a chain of attributes: `call('np.add', 1, 2)` is
     `np.add(1, 2)`."""
     if type(function) is str:
         first, *rest = function.split(".")
-        function = _Name(first)
+        function = name(first)
         for attr in rest:
-            function = _Attribute(attr, function)
-    return _Call(_spec(function), tuple(_spec(argument) for argument in arguments))
+            function = attribute(function, attr)
+    return _kind(CALL, {}, {"function": function}, ("arguments", list(arguments)))
 
 
-def compare(operator: str, left: Any, right: Any) -> Any:
-    return _Compare(operator, _spec(left), _spec(right))
+def compare(operator: str, left: Any, right: Any) -> Writer:
+    return _kind(COMPARE, {"operator": operator}, {"left": left, "right": right})
 
 
-def boolop(operator: str, left: Any, right: Any) -> Any:
-    return _BoolOp(operator, _spec(left), _spec(right))
+def boolop(operator: str, left: Any, right: Any) -> Writer:
+    return _kind(BOOLOP, {"operator": operator}, {"left": left, "right": right})
 
 
-def binop(operator: str, left: Any, right: Any) -> Any:
-    return _BinOp(operator, _spec(left), _spec(right))
+def binop(operator: str, left: Any, right: Any) -> Writer:
+    return _kind(BINOP, {"operator": operator}, {"left": left, "right": right})
 
 
-def unaryop(operator: str, operand: Any) -> Any:
-    return _UnaryOp(operator, _spec(operand))
+def unaryop(operator: str, operand: Any) -> Writer:
+    return _kind(UNARYOP, {"operator": operator}, {"operand": operand})
 
 
-def ifexp(test: Any, body: Any, orelse: Any) -> _IfExp:
+def ifexp(test: Any, body: Any, orelse: Any) -> Writer:
     """`body if test else orelse`."""
-    return _IfExp(_spec(test), _spec(body), _spec(orelse))
+    return _kind(IFEXP, {}, {"test": test, "body": body, "orelse": orelse})
 
 
-def generator(name: str, iterable: Any, element: Any, *conditions: Any) -> _Generator:
+def generator(name: str, iterable: Any, element: Any, *conditions: Any) -> Writer:
     """`(element for name in iterable if condition ...)`."""
-    return _Generator(name, _spec(iterable), _spec(element), tuple(_spec(condition) for condition in conditions))
+    return _kind(GENERATOR, {"name": name}, {"iterable": iterable, "element": element}, ("conditions", list(conditions)))
 
 
-def let_(name: str, value: Any, body: Any) -> _Let:
+def let_(name: str, value: Any, body: Any) -> Writer:
     """`(lambda name: body)(value)`."""
-    return _Let(name, _spec(value), _spec(body))
+    return _kind(LET, {"name": name}, {"value": value, "body": body})
 
 
-def import_(module: str, body: Any, alias: str | None = None) -> _Import:
+def import_(module: str, body: Any, alias: str | None = None) -> Writer:
     """`import module [as alias]`, then `body`."""
-    return _Import(module, alias, _spec(body))
+    return _kind(IMPORT, {"module": module, "alias": alias}, {"body": body})
 
 
-def importfrom(module: str, name: str, body: Any, alias: str | None = None) -> _ImportFrom:
+def importfrom(module: str, name: str, body: Any, alias: str | None = None) -> Writer:
     """`from module import name [as alias]`, then `body`."""
-    return _ImportFrom(module, name, alias, _spec(body))
+    return _kind(IMPORTFROM, {"module": module, "name": name, "alias": alias}, {"body": body})

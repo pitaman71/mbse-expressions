@@ -2,8 +2,8 @@
 
 `Evaluators.OfAny(expression, scope)` evaluates in a `Scope`, or in one made from a mapping of variables. Python's
 rules apply, not Basic's: `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
-missing attribute raises `AttributeError`. Objects that write their properties through `accept`, such as
-mbse-schemas' data, have their properties as attributes.
+missing attribute raises `AttributeError`. Data objects, read through mbse-schemas' readers (`Framework.Objects`), have
+their properties as attributes.
 
 A `Scope(variables, modules, builtins)` resolves names as Python does, innermost first: names bound by lets and
 imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`, `float`,
@@ -24,34 +24,28 @@ import types
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Evaluators as F, Objects, Symbolics as S, Terms
 
 from . import Expressions
 
-__all__ = ["OfAny", "Scope", "BUILTINS"]
-
-
-def _is_readable(value: Any) -> bool:
-    return callable(getattr(value, "accept", None)) and not isinstance(value, types.ModuleType)
+__all__ = ["OfAny", "INTERPRETER", "Scope", "BUILTINS"]
 
 
 def attribute(value: Any, name: str) -> Any:
-    """`value.name`, as expressions read it: never private, and properties for objects that write them."""
+    """`value.name`, as expressions read it: never private, and a data object's properties."""
     if type(name) is not str or name.startswith("_"):
         raise AttributeError(f"attribute {name!r} is private")
-    if _is_readable(value):
-        properties = Validators.properties_of(value)
+    if Objects.is_object(value):
+        properties = Objects.properties(value)
         if name not in properties:  # named by its schema, the type it has for expressions
-            what = value.schema_name() if callable(getattr(value, "schema_name", None)) else type(value).__name__
-            raise AttributeError(f"{what!r} object has no attribute {name!r}")
+            raise AttributeError(f"{value.as_schema().name!r} object has no attribute {name!r}")
         return _listed(properties[name])
     return getattr(value, name)
 
 
 def _listed(value: Any) -> Any:
     """A property's value as Python reads it: a list as a list of its values, lists of lists too."""
-    return [_listed(item) for item in value.values] if isinstance(value, Validators.ListRecord) else value
+    return [_listed(item) for item in value.values] if isinstance(value, Objects.Listed) else value
 
 
 def _hasattr(value: Any, name: str) -> bool:
@@ -79,11 +73,12 @@ class Scope(S.Variables):
         self.builtins = dict(BUILTINS if builtins is None else builtins)
 
     def lookup(self, reference: Any) -> Any:
-        if reference.name in self.values:
-            return self.values[reference.name]
-        if reference.name in self.builtins:
-            return self.builtins[reference.name]
-        raise NameError(f"name {reference.name!r} is not defined")
+        name = Terms.name_of(reference)
+        if name in self.values:
+            return self.values[name]
+        if name in self.builtins:
+            return self.builtins[name]
+        raise NameError(f"name {name!r} is not defined")
 
     def module(self, name: str) -> types.ModuleType:
         """The module `name`, if allowed: one of `modules`, or a submodule reached through its attributes."""
@@ -98,16 +93,19 @@ class Scope(S.Variables):
         return module
 
     def enter(self, declaration: Any) -> Scope:
-        if isinstance(declaration, Expressions._Import):
-            if declaration.alias:
-                return self.bind(declaration.alias, self.module(declaration.module))
-            root = declaration.module.split(".")[0]
-            self.module(declaration.module)  # the whole path must be allowed
+        tag, record = Terms.kind_of(declaration)
+        attributes = Terms.attributes_of(record)
+        module_name, alias = attributes["module"], attributes.get("alias")
+        if tag == Expressions.IMPORT:
+            if alias:
+                return self.bind(alias, self.module(module_name))
+            root = module_name.split(".")[0]
+            self.module(module_name)  # the whole path must be allowed
             return self.bind(root, self.modules[root])
-        module = self.module(declaration.module)
-        if declaration.name.startswith("_") or not hasattr(module, declaration.name):
-            raise ImportError(f"cannot import name {declaration.name!r} from {declaration.module!r}")
-        return self.bind(declaration.alias or declaration.name, getattr(module, declaration.name))
+        module, name = self.module(module_name), attributes["name"]
+        if name.startswith("_") or not hasattr(module, name):
+            raise ImportError(f"cannot import name {name!r} from {module_name!r}")
+        return self.bind(alias or name, getattr(module, name))
 
     def allows(self, function: Any) -> bool:
         """Whether an expression may call `function`."""
@@ -153,21 +151,29 @@ _BINOP = {"+": operator.add, "-": operator.sub, "*": operator.mul, "/": operator
           "<<": operator.lshift, ">>": operator.rshift}
 _UNARYOP = {"not": operator.not_, "-": operator.neg, "+": operator.pos, "~": operator.invert}
 
-_interpreter = F.Interpreter(Expressions.DIALECT, {
-    "attribute": lambda arguments, node, scope: attribute(arguments[0](), node.attr),
-    "subscript": lambda arguments, node, scope: arguments[0]()[node.key],
-    "index": lambda arguments, node, scope: arguments[0]()[arguments[1]()],
-    "generator": _generator,
-    "call": _call,
-    "compare": {name: _strict(function) for name, function in _COMPARE.items()},
-    "boolop": {name: _boolop(name) for name in ("and", "or")},
-    "binop": {name: _strict(function) for name, function in _BINOP.items()},
-    "unaryop": {name: _strict(function) for name, function in _UNARYOP.items()},
-    "ifexp": lambda arguments, node, scope: arguments[1]() if arguments[0]() else arguments[2](),
+def _attribute(node: Any, name: str) -> Any:
+    """A term's attribute `name`."""
+    return Terms.attributes_of(Terms.kind_of(node)[1])[name]
+
+
+_P = Expressions
+INTERPRETER = F.Interpreter(_P.DIALECT, {
+    _P.ATTRIBUTE: lambda arguments, node, scope: attribute(arguments[0](), _attribute(node, "attr")),
+    _P.SUBSCRIPT: lambda arguments, node, scope: arguments[0]()[_attribute(node, "key")],
+    _P.INDEX: lambda arguments, node, scope: arguments[0]()[arguments[1]()],
+    _P.GENERATOR: _generator,
+    _P.CALL: _call,
+    _P.COMPARE: {name: _strict(function) for name, function in _COMPARE.items()},
+    _P.BOOLOP: {name: _boolop(name) for name in ("and", "or")},
+    _P.BINOP: {name: _strict(function) for name, function in _BINOP.items()},
+    _P.UNARYOP: {name: _strict(function) for name, function in _UNARYOP.items()},
+    _P.IFEXP: lambda arguments, node, scope: arguments[1]() if arguments[0]() else arguments[2](),
 }, scope=Scope)
+"""The interpreter of the Python dialect."""
 
 
 def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
-    """The value of an expression in `scope`, or with the variables in a mapping bound."""
-    return _interpreter(Expressions.DIALECT.resolve(expression), scope)
+    """The value of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in a mapping
+    bound."""
+    return INTERPRETER(expression, scope)
 

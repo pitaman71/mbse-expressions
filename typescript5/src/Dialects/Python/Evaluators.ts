@@ -5,8 +5,8 @@
  *
  * `Evaluators.OfAny(expression, scope)` evaluates in a `Scope`, or in one made from an object of variables. Python's
  * rules apply, not Basic's: `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
- * missing attribute throws `AttributeError`. Objects that write their properties through `accept`, such as
- * mbse-schemas' data, have their properties as attributes; a `Module` has its members as attributes.
+ * missing attribute throws `AttributeError`. Data objects, read through mbse-schemas' readers (`Framework/Objects`),
+ * have their properties as attributes; a `Module` has its members as attributes.
  *
  * A `new Scope(variables, { modules, builtins })` resolves names as Python does, innermost first: names bound by lets
  * and imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`,
@@ -20,11 +20,15 @@
  * - A call may call only a builtin of the scope, a value of `variables`, or a function of an allowed module.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import { ImportError, IndexError, NameError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Terms from "../../Framework/Terms.js";
 import * as Expressions from "./Expressions.js";
 
 const { AttributeError, KeyError, ValueError } = Errors;
@@ -39,13 +43,7 @@ export class Module {
   }
 }
 
-function isReadable(value: unknown): value is { accept(visitor: unknown): void } {
-  return value !== null && typeof value === "object" && !(value instanceof Module)
-    && typeof (value as { accept?: unknown }).accept === "function";
-}
-
-/** `value.name`, as expressions read it: never private, a module's members, and properties for objects that write
- * them. */
+/** `value.name`, as expressions read it: never private, a module's members, and a data object's properties. */
 export function attribute(value: unknown, name: unknown): unknown {
   if (typeof name !== "string" || name.startsWith("_")) throw new AttributeError(`attribute ${repr(name)} is private`);
   if (value instanceof Module) {
@@ -53,18 +51,17 @@ export function attribute(value: unknown, name: unknown): unknown {
     return value.members.get(name);
   }
   let what = typeName(value);
-  if (isReadable(value)) {
-    const properties = Validators.properties_of(value);
+  if (Objects.isObject(value)) {
+    const properties = Objects.properties(value);
     if (properties.has(name)) return listed(properties.get(name));
-    const schemaName = (value as { schema_name?: unknown }).schema_name;
-    if (typeof schemaName === "function") what = schemaName.call(value) as string; // its type, for expressions
+    what = (value as any).as_schema().name; // named by its schema, the type it has for expressions
   }
   throw new AttributeError(`${repr(what)} object has no attribute ${repr(name)}`);
 }
 
 /** A property's value as Python reads it: a list as an array of its values, lists of lists too. */
 function listed(value: unknown): unknown {
-  return value instanceof Validators.ListRecord ? value.values.map(listed) : value;
+  return value instanceof Objects.Listed ? value.values.map(listed) : value;
 }
 
 // --- Python's rules over JavaScript values ---
@@ -511,10 +508,11 @@ export class Scope extends S.Variables {
   }
 
   override lookup(reference: any): unknown {
-    const [found, value] = this.find(reference.name);
+    const name = Terms.nameOf(reference) as string;
+    const [found, value] = this.find(name);
     if (found) return value;
-    if (this.builtins.has(reference.name)) return this.builtins.get(reference.name);
-    throw new NameError(`name ${repr(reference.name)} is not defined`);
+    if (this.builtins.has(name)) return this.builtins.get(name);
+    throw new NameError(`name ${repr(name)} is not defined`);
   }
 
   /** The module `name`, if allowed: one of `modules`, or a submodule reached through its members. */
@@ -531,23 +529,26 @@ export class Scope extends S.Variables {
   }
 
   override enter(declaration: any): Scope {
-    if (declaration.kind().KIND === "import") {
-      if (declaration.alias) return this.bind(declaration.alias, this.module(declaration.module));
-      const root = declaration.module.split(".")[0];
-      this.module(declaration.module); // the whole path must be allowed
+    const [tag, record] = Terms.kindOf(declaration);
+    const attributes = Terms.attributesOf(record);
+    const [moduleName, alias] = [attributes.get("module") as string, attributes.get("alias") as string | undefined];
+    if (tag === Expressions.IMPORT) {
+      if (alias) return this.bind(alias, this.module(moduleName));
+      const root = moduleName.split(".")[0] as string;
+      this.module(moduleName); // the whole path must be allowed
       return this.bind(root, this.modules.get(root));
     }
-    const module = this.module(declaration.module);
-    if (declaration.name.startsWith("_") || !module.members.has(declaration.name)) {
-      throw new ImportError(`cannot import name ${repr(declaration.name)} from ${repr(declaration.module)}`);
+    const [module, name] = [this.module(moduleName), attributes.get("name") as string];
+    if (name.startsWith("_") || !module.members.has(name)) {
+      throw new ImportError(`cannot import name ${repr(name)} from ${repr(moduleName)}`);
     }
-    return this.bind(declaration.alias ?? declaration.name, module.members.get(declaration.name));
+    return this.bind(alias || name, module.members.get(name));
   }
 
   /** Whether an expression may call `fn`. */
   allows(fn: unknown): boolean {
     if ([...this.builtins.values()].includes(fn)) return true;
-    if ([...this.variables().values()].includes(fn)) return true;
+    if ([...(this.values[this.values.length - 1] as Map<string, unknown>).values()].includes(fn)) return true; // the variables
     return [...this.modules.values()].flatMap(modulesOf).some((module) => [...module.members.values()].includes(fn));
   }
 }
@@ -587,37 +588,46 @@ function strict(fn: (...values: unknown[]) => unknown): F.Implementation {
   return (args) => fn(...args.map((argument) => argument()));
 }
 
-const interpreter = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
-  ["attribute", (args: F.Thunk[], node: any) => attribute((args[0] as F.Thunk)(), node.attr)],
-  ["subscript", (args: F.Thunk[], node: any) => subscript((args[0] as F.Thunk)(), node.key)],
-  ["index", strict((value, key) => index(value, key))],
-  ["generator", generator],
-  ["call", call],
-  ["compare", new Map<string, F.Implementation>([
+/** A term's attribute `name`. */
+function attributeOf(node: any, name: string): any {
+  return Terms.attributesOf(Terms.kindOf(node)[1]).get(name);
+}
+
+const P = Expressions;
+
+/** The interpreter of the Python dialect. */
+export const INTERPRETER = new F.Interpreter(P.DIALECT, new Map<string, any>([
+  [P.ATTRIBUTE, (args: F.Thunk[], node: any) => attribute((args[0] as F.Thunk)(), attributeOf(node, "attr"))],
+  [P.SUBSCRIPT, (args: F.Thunk[], node: any) => subscript((args[0] as F.Thunk)(), attributeOf(node, "key"))],
+  [P.INDEX, strict((value, key) => index(value, key))],
+  [P.GENERATOR, generator],
+  [P.CALL, call],
+  [P.COMPARE, new Map<string, F.Implementation>([
     ["==", strict((a, b) => equals(a, b))], ["!=", strict((a, b) => !equals(a, b))],
     ["in", strict((a, b) => contains(b, a))], ["not in", strict((a, b) => !contains(b, a))],
     ...Object.entries(ORDERS).map(([operator, test]) =>
       [operator, strict((a, b) => test(order(operator, a, b)))] as [string, F.Implementation]),
   ])],
-  ["boolop", new Map<string, F.Implementation>(["and", "or"].map((name) => [name, (args: F.Thunk[]) => {
+  [P.BOOLOP, new Map<string, F.Implementation>(["and", "or"].map((name) => [name, (args: F.Thunk[]) => {
     const first = (args[0] as F.Thunk)();
     const decided = name === "and" ? !truthy(first) : truthy(first);
     return decided ? first : (args[1] as F.Thunk)();
   }]))],
-  ["binop", new Map<string, F.Implementation>([
+  [P.BINOP, new Map<string, F.Implementation>([
     ...["+", "-", "*", "/", "//", "%", "**"].map((operator) =>
       [operator, strict((a, b) => arithmetic(operator, a, b))] as [string, F.Implementation]),
     ...["&", "|", "^", "<<", ">>"].map((operator) =>
       [operator, strict((a, b) => bitwise(operator, a, b))] as [string, F.Implementation]),
   ])],
-  ["unaryop", new Map<string, F.Implementation>([
+  [P.UNARYOP, new Map<string, F.Implementation>([
     ["not", strict((a) => !truthy(a))], ["-", strict((a) => negate("-", a))], ["+", strict((a) => negate("+", a))],
     ["~", strict((a) => invert(a))],
   ])],
-  ["ifexp", (args: F.Thunk[]) => (truthy((args[0] as F.Thunk)()) ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)())],
+  [P.IFEXP, (args: F.Thunk[]) => (truthy((args[0] as F.Thunk)()) ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)())],
 ]), { scope: (variables) => new Scope(variables) });
 
-/** The value of an expression in `scope`, or with the variables in an object bound. */
+/** The value of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in an object
+ * bound. */
 export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
-  return interpreter.run(Expressions.DIALECT.resolve(expression), scope);
+  return INTERPRETER.run(expression, scope);
 }
