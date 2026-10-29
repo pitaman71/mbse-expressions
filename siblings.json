@@ -1,11 +1,11 @@
 {
   "mbse-basis": {
     "repository": "git@github.com:pitaman71/mbse-basis.git",
-    "commit": "84f47de81dfd1cb44647f239150be2e451f5df1f"
+    "commit": "51b6bbf3bdb190519fd39ee04bae7a219457a170"
   },
   "mbse-schemas": {
     "repository": "git@github.com:pitaman71/mbse-schemas.git",
-    "version": "0.10.0",
-    "commit": "3e94216d78a41b54d02f9dc49ecf7be6e64cb317"
+    "commit": "71178686f31196e5f64e4406c9b4e5fa4cbd2ea0",
+    "version": "0.26.2"
   }
 }

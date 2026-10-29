@@ -469,6 +469,23 @@ alike only there.
 
 ## Open questions
 
+- **What a `requires` that evaluates to unknown does** (three-valued logic): drop the frame, keep it, or refuse. "semantics
+  of evaluate deserve a more in-depth discussion", as the user put it (2026-10-28); open
+  ([the port](proposals/port/README.md), question 6). Stage 5 of the port waits on it.
+- **Map, reduce and a collecting reduce** are parked: "map and reduce are not where I need them to be, but parking them
+  so we can make progress on finishing the current overhaul in the dependent repos is more urgent" (2026-10-29). A
+  collecting reduce over variables or symbols too ([the port](proposals/port/README.md), question 8) waits with them.
+- **The framework and dialects as model, beyond the port's stage 2.** mbse-basis P-018 ("No model should need code to
+  read or write. Ever.") is applied by the port (Resolved, "Porting to the stabilized mbse-schemas"); what stays open is
+  vocabularies as data: `Callable`, a reference object, and `HasArguments`, relating a `Callable` to its parameters
+  (the term kinds' starting point, Resolved), functions, formals and intrinsics, and value parameters with
+  mbse-schemas' Parametrics, all after the port (its question 11). Until then a term names what it refers to, a callable
+  or a domain, by name.
+- **Removing Basic** stays deferred ([the port](proposals/port/README.md), question 9, and Resolved, "Dialects hold the
+  semantics of datatypes and operations"): Basic is kept through the port, the oracle the tests are written in. Open:
+  which standards' and languages' dialects take its value domains (IEEE 754, IEEE 1164, C's fixed-width integers), and
+  how translators through Basic become transform steps.
+
 - **Resolving constraints.** A constraint binds variables and is resolvable in any direction
   ([MBSE.md](https://github.com/pitaman71/mbse-basis/blob/main/MBSE.md#what-a-specification-is-made-of)): `total = sum(items)` determines `total` from `items`, and
   restricts `items` given `total`. The evaluators compute only forward, from values bound to every variable an
@@ -494,6 +511,75 @@ alike only there.
   unit that groups expressions, which no dialect has yet.
 
 ## Resolved
+
+- **Porting to the stabilized mbse-schemas** (2026-10-28 and 29), as the user decided on
+  [the port's proposal](proposals/port/README.md) (its Decided, recorded there in full; quoted here where the wording
+  matters). mbse-expressions moves from mbse-schemas 0.10 to 0.26, whose store overhaul is done:
+  1. **Model first** ("yes"): the framework and each dialect are defined by installs (a module-scope `install(txn)`),
+     terms are stored in the store, and the cases are rewritten to it; no runtime view over the old classes.
+  2. **Terms are one nested value**, held by an expression, a reference object, its root ("yes").
+  3. **`Schemas.OfExpression` gains its terms by an extension adjacency** ("yes"): a relation of two links from it to
+     the expression holding the term (`Expressions.Framework.HasRoot`).
+  4. **A dialect defines its domains by name**, through `Expressions.Framework.Defines(dialect, name, domain)`: "you
+     don't need to repeat the parent scope in the name. mbse-expressions.Framework.Defines is not the same as
+     mbse-schemas.Schemas.Defines". The plan's `DefinesDomains` goes. A basic scalar has one domain or more through
+     `HasDomain(schema, domain)`; a domain is an object.
+  5. **The executor's evaluator is a protocol in mbse-schemas, given to a store once**, "a fine intermediate solution
+     for now"; the executor refuses as today where none is given.
+  7. **A variable over a finite domain is in the plan** ("(b) is in the plan"): each frame fans out into one frame per
+     value the domain holds and its pattern's `requires` allows (bool, an enum). A variable computed from the frame:
+     "(a) is not in the plan". Solving for a variable's values: "(c) can be deferred".
+  9. **Basic is kept through the port**; removing it stays deferred ("yes").
+  10. **`FromFunction` is kept, and the writers**, until mbse-codegen-python moves off them ("yes").
+  11. **All six dialects and the twelve translators are ported with the model**; vocabularies as data and value
+      parameters after ("yes").
+
+  On what the `overhauls/meta-schemas` branch recorded (2026-10-29):
+  - **Terms are value objects**: "there was some back and forth but I have landed on terms as value objects". The
+    branch's later "Terms are reference objects again" is superseded; decision 2 stands.
+  - **Writers, and the builders' `set`, `argument` and `arguments`, go** ("Expressions under P-018", below: they "should
+    go away"), "as a later phase of the current overhaul": after the dependents move off them (decision 10).
+  - **The term kinds are the starting point**: "term kinds - remains a good starting point. you are welcome to propose
+    refinements/adjustments": `Term`, a union of its kinds (`Call`, `Literal`, `Let`, ...), `Callable`, a reference
+    object, and `HasArguments`, relating a `Callable` to its parameters; an expression the only instance.
+  - **A dialect extends the framework by schema extension**, not by refinement: "refinement has been superseded by
+    schema extension" (mbse-schemas' SCHEMA_EXTENSION.md), so the branch's "each dialect refines it by intersection"
+    goes.
+
+  Question 6 (a `requires` that evaluates to unknown) is open, and question 8 parked with map and reduce (Open
+  questions). The stages: the decisions recorded (1); schemas as installs and terms in the store (2); domains (3);
+  `OfExpression` and `OfConstraint` refined (4); evaluation in transactions (5); tutorials, skill and release (6).
+  The branch `framework-model` (a draft against mbse-schemas 0.13) "was abandoned", as the user said: nothing rests on
+  it. This supersedes, below, "Expressions are a program's own classes bound to their meta-schemas", "Expressions are
+  `Expressions.OfAny`, ..." where arguments are a relation, "A literal holds its domain by value" where a term's domain
+  is now named, and "mbse-schemas ... takes no evaluator".
+
+- **Dialects hold the semantics of datatypes and operations** (from the `scalars` branch, reapplied as the port's
+  proposal states it, not cherry-picked: that branch cites mbse-schemas items that never landed, a palette, `OfName`,
+  scalars as placeholders, and mbse-schemas has since made the five basic scalars real and finer scalars domains here,
+  its Store overhaul, Decided, 8 and 9). As the user put it: "I generally dislike semantics of datatypes and
+  operations leaking into the modeling language as currently built"; dialects hold the semantics of datatypes and
+  operations, one for each language's built-ins and for interoperation types such as IEEE 754; "the attempt to invent
+  a neutral type system was a mistake. we should model standards not invent them", so a neutral Basic "should be
+  removed", its expression kinds and three-valued evaluation kept, and translation across languages belongs to
+  transforms. Removing Basic itself stays deferred (Open questions). The user's decisions on domains are in
+  mbse-schemas: Store overhaul, Decided, 8, 9 ("all scalars are domains and users may define domains and dialects
+  containing domains"; "a scalar schema can have > 1 domain"; "width is a property of the domain, not the schema") and
+  22 (formats become domains); Schema extension, Decided, 9 to 14 and 21.
+
+- **Expressions are built and read only through mbse-schemas** (2026-10-14, from the `overhauls/meta-schemas` branch),
+  applying mbse-basis P-018 ("No model should need code to read or write. Ever."). Reading or writing an expression
+  through code that knows each kind's shape "violates P-018 and must be fixed", and `Writer`s and the builders' `set`,
+  `argument` and `arguments` "should go away. You don't write bespoke builders or data classes either. You use
+  mbse-schema proxies or generated classes as sourced in Visitor form." Writers stay until the dependents move off them
+  (above, the port's decision 10).
+
+- **Terms implement the visitor protocol and are value objects** (2026-10-14, from the `overhauls/meta-schemas`
+  branch), as the user decided, "2 = Y": an expression tree is a value; a term is a value object, which holds its
+  arguments in a container, in order, and is written nested in what holds it, with no identity, so the relation
+  `Arguments` and every kind's `used_by` go; a term refers to a definition by name, as a module names a schema, since
+  nothing links a value object. Its "1 = A", term classes of mbse-expressions' own implementing the protocol, is
+  superseded by the decision above. Confirmed by the port (above, "Terms are value objects").
 
 - Basic compares everything but reference objects deeply, through the visitor protocols, as mbse-schemas' equality
   does under a schema: value objects, union and intersection values, records and collections are equal when what each
@@ -566,7 +652,8 @@ alike only there.
 - Value domains: conversions are `convert` (keeps the value) and `reinterpret` (keeps the bit pattern), with `pack` and
   `unpack` for packed domains; a literal stored without a domain has its native's default domain, and writers leave
   defaults out; an `Enum` is unordered unless packed, when it orders by its representation.
-- A literal holds its domain by value, as a value object, written by name when the domain is registered and by value
+- (Superseded where a term's domain is named: "Porting to the stabilized mbse-schemas", above.) A literal holds its
+  domain by value, as a value object, written by name when the domain is registered and by value
   otherwise; domains compare by structure. A packed domain packs an enum into a fixed-width integer or bits, with an
   integer code per member.
 - Value domains name published standards where one exists (`Ieee754`, `Ieee1164`), with only the parameters the
@@ -584,11 +671,15 @@ alike only there.
   `reinterpret` and `unpack` need and `pack` does not; the bitwise operations (`bitand`, `bitor`, `bitxor`, `bitnot`,
   `shl`, `shr`) join the core vocabulary; every IEEE 754 format is evaluated, `binary128` and the decimal formats as
   canonical text.
-- Expressions are a program's own classes bound to their meta-schemas with mbse-schemas' `Bindings`, not builders of
+- (Superseded by "Porting to the stabilized mbse-schemas" and "Expressions are built and read only through
+  mbse-schemas", above; mbse-schemas' `Bindings` is gone.) Expressions are a program's own classes bound to their
+  meta-schemas with mbse-schemas' `Bindings`, not builders of
   their own: what is generic to any schema (visitor protocols over a state, finalizing, the store, value objects in
   properties) lives once, in mbse-schemas, and `Terms` gives only `read`, `make` and the DSL.
 
-- Expressions are `Expressions.OfAny`, `OfLiteral`, `OfOperation`, `OfVariable` and `OfLet`, each with `Data`,
+- (Superseded where arguments are a relation and terms reference objects: "Terms implement the visitor protocol and
+  are value objects", above.) Expressions are `Expressions.OfAny`, `OfLiteral`, `OfOperation`, `OfVariable` and
+  `OfLet`, each with `Data`,
   `Builder`, `Spec` and a meta-schema `Schema` that is an ordinary registered object schema tagged by `kind`. Arguments
   are an ordered relation (`index`, `unique(argument)`); a literal's schema has one property per native type.
 - There is no `is` operation: unions discriminate by a tag property compared with a fixed value.
@@ -596,7 +687,8 @@ alike only there.
 - Evaluation is its own module, `Evaluators`, with one entry point per expression kind (`Evaluators.OfAny`, ...).
 - Expressions are partitioned into dialects over one framework (`Framework`), each declared by its kinds' roles;
   translators are pairwise, declared as bidirectional pattern rules, and applied by co-traversal.
-- mbse-schemas' unions name their branches, and it takes no evaluator; a constraint
+- (Superseded where mbse-schemas takes no evaluator: the port's decision 5, above.) mbse-schemas' unions name their
+  branches, and it takes no evaluator; a constraint
   about a value is evaluated with it bound to `this`. Each dialect's union of meta-schemas names its branches by the kinds' tags.
 - Evaluation is three-valued (Kleene), never coerces, and reads properties with `get(object, name)`; variables are
   bound by `OfLet` or by the caller's scope. `Writer`s build expressions with methods only (no operator overloading), so
