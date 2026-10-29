@@ -12,9 +12,10 @@ written nested, indent 2) and `<case>.yaml`.
 | `expression` | a Basic term, written nested under `Expressions.Framework.Term`: every kind and literal type, a let and its variable, an extension operation |
 | `domains` | Basic literals of value domains, each naming its domain, decimal and `binary128` text, a conversion's domain, a bitwise operation and `pack` |
 | `collections` | a Basic quantifier over an object's entries, and the collection operations |
+| `systemverilog` | a SystemVerilog term: every kind (its own, as `systemverilog_<kind>` branches, and the framework's `call`), sized vectors in a base, casts to a type and a width, a shared identifier |
 
-Each case is a term value in one store holding the framework's and Basic's installs. The other dialects' cases (`python`,
-`matlab`, `excel`, `latex`, `ccpp`, `systemverilog`) return with their port to the store (docs/proposals/port, stage 2b).
+Each case is a term value in one store holding the framework's and the dialects' installs. The other dialects' cases
+(`python`, `matlab`, `excel`, `latex`, `ccpp`) return with their port to the store (docs/proposals/port, stage 2b).
 
 The CONF test suite in each implementation checks that its own files are current, that the JSON files are
 byte-identical across implementations, that every implementation's YAML reads back to the same snapshot (also under a

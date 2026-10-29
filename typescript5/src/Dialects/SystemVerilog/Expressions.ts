@@ -16,26 +16,30 @@
  * - `cast`: `type'(x)`, to a built-in type, `signed` or `unsigned`, or `width'(x)`.
  * - `member`: `object.name`.
  * - `call`: a system function (`$signed`, `$unsigned`, `$clog2`, `$bits`, `$countones`, `$onehot`, `$onehot0`,
- *   `$isunknown`) or a function the scope provides.
+ *   `$isunknown`) or a function the scope provides, named by its `callable`: the framework's `call`, read as this
+ *   dialect reads it.
  * - `method`: an array method of no arguments, `array.name()`: `size`, the reductions `sum`, `product`, `and`, `or` and
  *   `xor`, and the locators `min`, `max` and `unique`, which give queues.
  * - `iterate`: a reduction with a `with` clause, `array.method(name) with (body)`, which binds `name` (the iterator) to
  *   each item of the array within the body and reduces the body's values: `ports.and(p) with (p.pin > 0)`.
  *
- * There is no binding: translators substitute a let's value for its name. The meta-schemas are registered as
- * 'Expressions.SystemVerilog.Of<Kind>'. `Text.ToText` writes an expression as SystemVerilog source, with its
- * precedence.
+ * There is no binding: translators substitute a let's value for its name. `install` adds the kinds (but `call`, the
+ * framework's) to `Expressions.Framework.Term` by schema extension, each a value object
+ * `Expressions.SystemVerilog.<Kind>` with a `domain`, as the branch `systemverilog_<kind>` (`PREFIX`): dialects share
+ * kind names, and a branch's name is unique in the union; `DIALECT` reads them. The writers (`constant`, `vector`, ...)
+ * write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an expression as
+ * SystemVerilog source, with its precedence.
  */
 
-import { Repr } from "@mbse/schemas/Framework";
-import type { Visitors } from "@mbse/schemas/Framework";
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
+import { Repr } from "@mbse/schemas/Framework";
+
+import type * as D from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
-const { repr } = Repr;
-type Native = Visitors.Native;
-const STR = String;
+const { repr, typeName } = Repr;
 
 /** What a cast may name: a built-in type, or a signedness. */
 export const CASTS: readonly string[] = [...Domains.TYPES.keys(), "signed", "unsigned"];
@@ -45,292 +49,214 @@ export const SYSTEM: readonly string[] = ["$signed", "$unsigned", "$clog2", "$bi
 export const REDUCTIONS: readonly string[] = ["sum", "product", "and", "or", "xor"];
 /** The array methods of no arguments. */
 export const METHODS: readonly string[] = ["size", ...REDUCTIONS, "min", "max", "unique"];
-const BASES: Record<string, number> = { b: 1, o: 3, h: 4, d: 0 };
+export const BASES: Record<string, number> = { b: 1, o: 3, h: 4, d: 0 };
+/** What names each branch this dialect adds to `Expressions.Framework.Term`: `systemverilog_binary`, ... */
+export const PREFIX = "systemverilog_";
 
-class _Constant extends F.Term {
-  static override KIND = "constant";
-  static override ROLE = F.LITERAL;
-  static override VALUE = new Map<string, unknown>([["int", BigInt], ["float", Number], ["str", String]]);
-  declare value: unknown;
+/** A term's kind, as this dialect names it (its branch's tag without `PREFIX`: `binary`, `call`), and its record. */
+export function kindOf(term: any): [string, any] {
+  const [tag, record] = F.kindOf(term);
+  return [tag.startsWith(PREFIX) ? tag.slice(PREFIX.length) : tag, record];
 }
 
-class _Vector extends F.Term {
-  static override KIND = "vector";
-  static override ROLE = F.LITERAL;
-  static override VALUE = new Map<string, unknown>([["str", String]]);
-  static override PROPERTIES = new Map<string, unknown>([["signed", Boolean], ["base", STR]]);
-  static override OPTIONAL = new Set(["signed", "base"]);
-  /** The bits, MSB first. */
-  declare value: string;
-  declare signed: boolean | null;
-  declare base: string | null;
-
-  override typed(): any {
-    return this.check().length === 0 ? Domains.vector(this.value.length, Boolean(this.signed)) : null;
-  }
-
-  override check(): string[] {
-    const problems = this.value && [...this.value].every((b) => "01xz".includes(b)) ? [] : [
-      `a vector's bits must be 0, 1, x and z, at least one, got ${repr(this.value)}`];
-    if (this.base !== null && !(this.base in BASES)) problems.push(`a vector's base must be b, o, d or h, got ${repr(this.base)}`);
-    return problems;
-  }
+/** SystemVerilog's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own.
+ * Its `call` is the framework's. */
+export function install(txn: any): any {
+  const S = txn.Schemas;
+  const terms = (_: any) => S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term]));
+  const kinds: Record<string, (_: any) => Record<string, unknown>> = {
+    Constant: () => ({ value: S.OfAny((a: any) => a.schemas([S.OfInt, S.OfFloat, S.OfStr])) }),
+    Vector: () => ({ value: S.OfStr, signed: S.OfBool, base: S.OfStr }), // its bits, MSB first
+    Identifier: () => ({ name: S.OfStr }),
+    Unary: (_) => ({ operator: S.OfStr, operand: _.Term }),
+    Binary: (_) => ({ operator: S.OfStr, left: _.Term, right: _.Term }),
+    Conditional: (_) => ({ condition: _.Term, consequent: _.Term, alternative: _.Term }),
+    Concatenation: (_) => ({ parts: terms(_) }),
+    Replication: (_) => ({ count: _.Term, value: _.Term }),
+    Select: (_) => ({ value: _.Term, index: _.Term }),
+    Range: (_) => ({ value: _.Term, msb: _.Term, lsb: _.Term }),
+    Inside: (_) => ({ value: _.Term, items: terms(_) }),
+    Span: (_) => ({ low: _.Term, high: _.Term }),
+    Cast: (_) => ({ type: S.OfStr, width: S.OfInt, operand: _.Term }),
+    Member: (_) => ({ name: S.OfStr, object: _.Term }),
+    Method: (_) => ({ name: S.OfStr, array: _.Term }),
+    Iterate: (_) => ({ name: S.OfStr, method: S.OfStr, array: _.Term, body: _.Term }), // name: the iterator
+  };
+  const names = Object.keys(kinds);
+  return txn.uid("mbse.Expressions.SystemVerilog/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({ Term: S.OfUnion, ...Object.fromEntries(names.map((name) => [name, S.OfObject])) }) // the framework's union, by its name
+    .spec([
+      ...names.map((name) => (_: any) => _[name].name(`Expressions.SystemVerilog.${name}`).properties({
+        ...(kinds[name] as (_: any) => Record<string, unknown>)(_), domain: S.OfStr })), // every term has a domain, by name
+      (_: any) => _.Term.name("Expressions.Framework.Term").branches( // branches added: schema extension
+        names.map((name) => (t: any) => t.name(PREFIX + name.toLowerCase()).schema([_[name]]))),
+    ])]))]);
 }
 
-class _Identifier extends F.Term {
-  static override KIND = "identifier";
-  static override ROLE = F.REFERENCE;
-  static override PROPERTIES = new Map([["name", STR]]);
-  declare name: string;
+function constantCheck(record: any): string[] {
+  const value = F.attributesOf(record).get("value");
+  return ["bigint", "number", "string"].includes(typeof value) ? [] : [`a constant cannot hold a ${typeName(value)}`];
 }
 
-class _Unary extends F.Term {
-  static override KIND = "unary";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["operator", STR]]);
-  static override SLOTS = ["operand"];
-  static override OPERATOR = "operator";
-  static override VOCABULARY = Domains.UNARY;
-  declare operator: string;
-  declare operand: any;
+function vectorCheck(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  const [value, base] = [attributes.get("value") ?? null, attributes.get("base") ?? null];
+  const problems = value && [...value].every((b: string) => "01xz".includes(b)) ? [] : [
+    `a vector's bits must be 0, 1, x and z, at least one, got ${repr(value)}`];
+  if (base !== null && !(base in BASES)) problems.push(`a vector's base must be b, o, d or h, got ${repr(base)}`);
+  return problems;
 }
 
-class _Binary extends F.Term {
-  static override KIND = "binary";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["operator", STR]]);
-  static override SLOTS = ["left", "right"];
-  static override OPERATOR = "operator";
-  static override VOCABULARY = Domains.BINARY;
-  declare operator: string;
-  declare left: any;
-  declare right: any;
+function vectorTyped(record: any): D.Domain | null {
+  if (vectorCheck(record).length > 0) return null;
+  const attributes = F.attributesOf(record);
+  return Domains.vector(attributes.get("value").length, Boolean(attributes.get("signed")));
 }
 
-class _Conditional extends F.Term {
-  static override KIND = "conditional";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["condition", "consequent", "alternative"];
-  static override SIGNATURE = Domains.CONDITIONAL;
-  declare condition: any;
-  declare consequent: any;
-  declare alternative: any;
+function castCheck(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  const [type, width] = [attributes.get("type") ?? null, attributes.get("width") ?? null];
+  if ((type === null) === (width === null)) return ["a cast names a type or a width, not both nor neither"];
+  if (width !== null) return width > 0n ? [] : [`a cast's width must be positive, got ${width}`];
+  return CASTS.includes(type) ? [] : [`a cast's type must be a built-in type, signed or unsigned, got ${repr(type)}`];
 }
 
-class _Concatenation extends F.Term {
-  static override KIND = "concatenation";
-  static override ROLE = F.APPLICATION;
-  static override VARIADIC = "parts";
-  static override SIGNATURE = Domains.CONCATENATION;
-  declare parts: any[];
+function castTyped(record: any): D.Domain | null {
+  return Domains.TYPES.get(F.attributesOf(record).get("type")) ?? null;
 }
 
-class _Replication extends F.Term {
-  static override KIND = "replication";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["count", "value"];
-  static override SIGNATURE = Domains.REPLICATION;
-  declare count: any;
-  declare value: any;
+function methodCheck(record: any): string[] {
+  const name = F.attributesOf(record).get("name") ?? null;
+  return METHODS.includes(name) ? [] : [`an array method must be one of ${METHODS.join(", ")}, got ${repr(name)}`];
 }
 
-class _Select extends F.Term {
-  static override KIND = "select";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["value", "index"];
-  static override SIGNATURE = Domains.SELECT;
-  declare value: any;
-  declare index: any;
+function iterateCheck(record: any): string[] {
+  const method = F.attributesOf(record).get("method") ?? null;
+  if (!REDUCTIONS.includes(method)) return [`an iteration's method must be one of ${REDUCTIONS.join(", ")}, got ${repr(method)}`];
+  return [];
 }
 
-class _Range extends F.Term {
-  static override KIND = "range";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["value", "msb", "lsb"];
-  static override SIGNATURE = Domains.RANGE;
-  declare value: any;
-  declare msb: any;
-  declare lsb: any;
+/** The constant of a native value: a bigint, a number or a string. */
+function native(value: unknown): Writer | null {
+  return ["bigint", "number", "string"].includes(typeof value) ? constant(value) : null;
 }
 
-class _Inside extends F.Term {
-  static override KIND = "inside";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["value"];
-  static override VARIADIC = "items";
-  static override SIGNATURE = Domains.INSIDE;
-  declare value: any;
-  declare items: any[];
+/** The SystemVerilog dialect: its kinds, as the framework reads them. */
+export const DIALECT = new F.Dialect("SystemVerilog", {
+  [PREFIX + "constant"]: new F.Kind(F.LITERAL, { check: constantCheck }),
+  [PREFIX + "vector"]: new F.Kind(F.LITERAL, { check: vectorCheck, typed: vectorTyped }),
+  [PREFIX + "identifier"]: new F.Kind(F.REFERENCE, { required: ["name"] }),
+  [PREFIX + "unary"]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
+  [PREFIX + "binary"]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
+  [PREFIX + "conditional"]: new F.Kind(F.APPLICATION, { signature: Domains.CONDITIONAL }),
+  [PREFIX + "concatenation"]: new F.Kind(F.APPLICATION, { signature: Domains.CONCATENATION }),
+  [PREFIX + "replication"]: new F.Kind(F.APPLICATION, { signature: Domains.REPLICATION }),
+  [PREFIX + "select"]: new F.Kind(F.APPLICATION, { signature: Domains.SELECT }),
+  [PREFIX + "range"]: new F.Kind(F.APPLICATION, { signature: Domains.RANGE }),
+  [PREFIX + "inside"]: new F.Kind(F.APPLICATION, { signature: Domains.INSIDE }),
+  [PREFIX + "span"]: new F.Kind(F.APPLICATION, { signature: Domains.SPAN }),
+  [PREFIX + "cast"]: new F.Kind(F.APPLICATION, { signature: Domains.CAST, check: castCheck, typed: castTyped }),
+  [PREFIX + "member"]: new F.Kind(F.APPLICATION, { signature: Domains.MEMBER, required: ["name"] }),
+  call: new F.Kind(F.APPLICATION, { operator: "callable", signature: Domains.CALL, required: ["callable"] }),
+  [PREFIX + "method"]: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.METHOD, required: ["name"], check: methodCheck }),
+  [PREFIX + "iterate"]: new F.Kind(F.QUANTIFIER, { operator: "method", signature: Domains.ITERATE, required: ["name", "method"],
+    check: iterateCheck }),
+}, { domain_of: Domains.of, literal: native });
+
+// --- Writers ---
+
+/** A SystemVerilog term, written through the builders where it is given. */
+export class Writer extends F.Writer {}
+
+/** The writer of a term of `tag`: its attributes (those not null), its slots (specs) and its variadic arguments. */
+function kind(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown> = {},
+  variadic: [string, unknown[]] | null = null): Writer {
+  const specs = Object.entries(slots).map(([name, value]) => [name, DIALECT.spec(value)] as const);
+  const elements = variadic === null ? null : [variadic[0], variadic[1].map((value) => DIALECT.spec(value))] as const;
+  return new Writer((u: any) => u[tag === "call" ? tag : PREFIX + tag]((r: any) => {
+    for (const [name, value] of Object.entries(attributes)) {
+      if (value !== null && value !== undefined) r[name]((p: any) => p.as_scalar(value));
+    }
+    for (const [name, written] of specs) r[name](written);
+    if (elements !== null) r[elements[0]](elements[1]);
+    return r;
+  }));
 }
 
-class _Span extends F.Term {
-  static override KIND = "span";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["low", "high"];
-  static override SIGNATURE = Domains.SPAN;
-  declare low: any;
-  declare high: any;
-}
-
-class _Cast extends F.Term {
-  static override KIND = "cast";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map<string, unknown>([["type", STR], ["width", BigInt]]);
-  static override OPTIONAL = new Set(["type", "width"]);
-  static override SLOTS = ["operand"];
-  static override SIGNATURE = Domains.CAST;
-  declare type: string | null;
-  declare width: bigint | null;
-  declare operand: any;
-
-  override typed(): any {
-    return Domains.TYPES.get(this.type as string) ?? null;
-  }
-
-  override check(): string[] {
-    if ((this.type === null) === (this.width === null)) return ["a cast names a type or a width, not both nor neither"];
-    if (this.width !== null) return this.width > 0n ? [] : [`a cast's width must be positive, got ${this.width}`];
-    return CASTS.includes(this.type as string) ? [] : [`a cast's type must be a built-in type, signed or unsigned, got ${repr(this.type)}`];
-  }
-}
-
-class _Member extends F.Term {
-  static override KIND = "member";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["name", STR]]);
-  static override SLOTS = ["object"];
-  static override SIGNATURE = Domains.MEMBER;
-  declare name: string;
-  declare object: any;
-}
-
-class _Call extends F.Term {
-  static override KIND = "call";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["function", STR]]);
-  static override VARIADIC = "arguments";
-  static override OPERATOR = "function";
-  static override SIGNATURE = Domains.CALL;
-  declare function: string;
-  declare arguments: any[];
-}
-
-class _Method extends F.Term {
-  static override KIND = "method";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["name", STR]]);
-  static override SLOTS = ["array"];
-  static override OPERATOR = "name";
-  static override SIGNATURE = Domains.METHOD;
-  declare name: string;
-  declare array: any;
-
-  override check(): string[] {
-    return METHODS.includes(this.name) ? [] : [`an array method must be one of ${METHODS.join(", ")}, got ${repr(this.name)}`];
-  }
-}
-
-class _Iterate extends F.Term {
-  static override KIND = "iterate";
-  static override ROLE = F.QUANTIFIER;
-  static override PROPERTIES = new Map([["name", STR], ["method", STR]]);
-  static override SLOTS = ["array", "body"];
-  static override OPERATOR = "method";
-  static override SIGNATURE = Domains.ITERATE;
-  /** The iterator. */
-  declare name: string;
-  declare method: string;
-  declare array: any;
-  /** The `with` clause, with `name` bound to each item. */
-  declare body: any;
-
-  override check(): string[] {
-    if (!REDUCTIONS.includes(this.method)) return [`an iteration's method must be one of ${REDUCTIONS.join(", ")}, got ${repr(this.method)}`];
-    return [];
-  }
-}
-
-export const DIALECT = new F.Declared("SystemVerilog", [
-  _Constant, _Vector, _Identifier, _Unary, _Binary, _Conditional, _Concatenation, _Replication, _Select, _Range,
-  _Inside, _Span, _Cast, _Member, _Call, _Method, _Iterate], { domain_of: Domains.of });
-export const Builders = DIALECT.Builders;
-export const Schema = DIALECT.Schema;
-
-export function constant(value: Native): _Constant {
-  return new _Constant(value);
+/** An unsized integer, a real or a string literal. */
+export function constant(value: unknown): Writer {
+  return new Writer((u: any) => u.systemverilog_constant((r: any) => r.value((p: any) => p.as_scalar(value))));
 }
 
 /** A sized literal of `bits`, MSB first. */
-export function vector(bits: string, signed: boolean | null = null, base: string | null = null): _Vector {
-  return new _Vector(bits, signed, base);
+export function vector(bits: string, signed: boolean | null = null, base: string | null = null): Writer {
+  return kind("vector", { value: bits, signed, base });
 }
 
-export function identifier(name: string): _Identifier {
-  return new _Identifier(name);
+export function identifier(name: string): Writer {
+  return kind("identifier", { name });
 }
 
 /** `<operator> operand`; the operand is a spec (a native value is a constant). */
-export function unary(operator: string, operand: unknown): _Unary {
-  return new _Unary(operator, DIALECT.resolve(operand));
+export function unary(operator: string, operand: unknown): Writer {
+  return kind("unary", { operator }, { operand });
 }
 
-export function binary(operator: string, left: unknown, right: unknown): _Binary {
-  return new _Binary(operator, DIALECT.resolve(left), DIALECT.resolve(right));
+export function binary(operator: string, left: unknown, right: unknown): Writer {
+  return kind("binary", { operator }, { left, right });
 }
 
-export function conditional(condition: unknown, consequent: unknown, alternative: unknown): _Conditional {
-  return new _Conditional(DIALECT.resolve(condition), DIALECT.resolve(consequent), DIALECT.resolve(alternative));
+export function conditional(condition: unknown, consequent: unknown, alternative: unknown): Writer {
+  return kind("conditional", {}, { condition, consequent, alternative });
 }
 
-export function concatenation(...parts: unknown[]): _Concatenation {
-  return new _Concatenation(parts.map((part) => DIALECT.resolve(part)));
+export function concatenation(...parts: unknown[]): Writer {
+  return kind("concatenation", {}, {}, ["parts", parts]);
 }
 
-export function replication(count: unknown, value: unknown): _Replication {
-  return new _Replication(DIALECT.resolve(count), DIALECT.resolve(value));
+export function replication(count: unknown, value: unknown): Writer {
+  return kind("replication", {}, { count, value });
 }
 
-export function select(value: unknown, index: unknown): _Select {
-  return new _Select(DIALECT.resolve(value), DIALECT.resolve(index));
+export function select(value: unknown, index: unknown): Writer {
+  return kind("select", {}, { value, index });
 }
 
 /** `value[msb:lsb]`. */
-export function range_(value: unknown, msb: unknown, lsb: unknown): _Range {
-  return new _Range(DIALECT.resolve(value), DIALECT.resolve(msb), DIALECT.resolve(lsb));
+export function range_(value: unknown, msb: unknown, lsb: unknown): Writer {
+  return kind("range", {}, { value, msb, lsb });
 }
 
-export function inside(value: unknown, ...items: unknown[]): _Inside {
-  return new _Inside(DIALECT.resolve(value), items.map((item) => DIALECT.resolve(item)));
+export function inside(value: unknown, ...items: unknown[]): Writer {
+  return kind("inside", {}, { value }, ["items", items]);
 }
 
 /** `[low:high]`, an item of `inside`. */
-export function span(low: unknown, high: unknown): _Span {
-  return new _Span(DIALECT.resolve(low), DIALECT.resolve(high));
+export function span(low: unknown, high: unknown): Writer {
+  return kind("span", {}, { low, high });
 }
 
 /** `type'(operand)`, or `width'(operand)` for a bigint. */
-export function cast(typeOrWidth: string | bigint, operand: unknown): _Cast {
-  if (typeof typeOrWidth === "bigint") return new _Cast(null, typeOrWidth, DIALECT.resolve(operand));
-  return new _Cast(typeOrWidth, null, DIALECT.resolve(operand));
+export function cast(typeOrWidth: string | bigint, operand: unknown): Writer {
+  if (typeof typeOrWidth === "bigint") return kind("cast", { width: typeOrWidth }, { operand });
+  return kind("cast", { type: typeOrWidth }, { operand });
 }
 
-export function member(object: unknown, name: string): _Member {
-  return new _Member(name, DIALECT.resolve(object));
+export function member(object: unknown, name: string): Writer {
+  return kind("member", { name }, { object });
 }
 
-export function call(fn: string, ...args: unknown[]): _Call {
-  return new _Call(fn, args.map((argument) => DIALECT.resolve(argument)));
+/** `fn(args)`: the framework's `call`, its `callable` the function's name. */
+export function call(fn: string, ...args: unknown[]): Writer {
+  return kind("call", { callable: fn }, {}, ["arguments", args]);
 }
 
 /** `array.name()`. */
-export function method(array: unknown, name: string): _Method {
-  return new _Method(name, DIALECT.resolve(array));
+export function method(array: unknown, name: string): Writer {
+  return kind("method", { name }, { array });
 }
 
 /** `array.method(name) with (body)`. */
-export function iterate(array: unknown, method: string, name: string, body: unknown): _Iterate {
-  return new _Iterate(name, method, DIALECT.resolve(array), DIALECT.resolve(body));
+export function iterate(array: unknown, method: string, name: string, body: unknown): Writer {
+  return kind("iterate", { name, method }, { array, body });
 }
-
-/** For `Text`. */
-export { BASES, _Call, _Cast, _Concatenation, _Conditional, _Constant, _Identifier, _Inside, _Iterate, _Member, _Method, _Range, _Replication, _Select, _Span, _Unary, _Vector };

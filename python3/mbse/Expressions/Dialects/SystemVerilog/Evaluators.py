@@ -1,6 +1,7 @@
 """Evaluators of the SystemVerilog dialect: compute an expression by IEEE 1800's rules, in Python.
 
-`Evaluators.OfAny(expression, scope)` evaluates in a `Scope(variables, functions)` and gives a `Domains.Logic` for an
+`Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
+`Scope(variables, functions)` and gives a `Domains.Logic` for an
 integral result or a float for a real one. A variable's type is its value's: a `Logic` its own, a bool a `bit`, an int
 an `integer` (or a `longint` beyond 32 bits), a float a `real`, a string a vector of its bytes (in UTF-8), and a Basic
 typed value (`Domains.Value`) of an integer domain a 2-state vector of its width and signedness, of bits a 2-state
@@ -35,8 +36,7 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from mbse.Expressions.Dialects.Basic import Domains as BD, Ieee754
-from mbse.Expressions.Framework import Errors, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Errors, Objects, Symbolics as S, Terms as F
 
 from . import Domains, Expressions as X
 from .Domains import Logic, SvType
@@ -56,7 +56,7 @@ class Scope(S.Variables):
         self.functions = dict(functions or {})
 
     def unbound(self, reference: Any) -> Any:
-        raise Errors.NameError(f"identifier '{reference.name}' is not declared")
+        raise Errors.NameError(f"identifier '{F.name_of(reference)}' is not declared")
 
     def function(self, name: str) -> Callable[..., Any]:
         if name not in self.functions:
@@ -192,6 +192,24 @@ def _number(value: Logic) -> int:
 # --- The evaluation ---
 
 
+class _Node:
+    """A term read once for one evaluation: its `kind` (as `Expressions.kind_of` names it), and its members as
+    attributes, its attributes (None where not set), its slots (a `_Node`) and its variadic arguments (a tuple of
+    `_Node`s). `term` is the term value read."""
+
+    def __init__(self, term: Any):
+        tag, record = X.kind_of(term)
+        slots, variadic, names = F._parts(record.as_schema())
+        arguments = F.arguments_of(record)
+        members: dict[str, Any] = dict.fromkeys(names)
+        members.update(F.attributes_of(record))
+        members.update({name: None if a is None else _Node(a) for name, a in zip(slots, arguments)})
+        if variadic is not None:
+            members[variadic] = tuple(_Node(a) for a in arguments[len(slots):])
+        self.__dict__.update(members)
+        self.term, self.kind = term, tag
+
+
 class _Evaluation:
     """One evaluation in a scope: each term's self-determined type, then its value in a context."""
 
@@ -219,15 +237,15 @@ class _Evaluation:
         return ctype
 
     def _type_of(self, node: Any) -> SvType | None:
-        if isinstance(node, (X._Constant, X._Vector, X._Identifier, X._Member, X._Select, X._Call, X._Method, X._Iterate)):
+        if node.kind in ("constant", "vector", "identifier", "member", "select", "call", "method", "iterate"):
             return _type(self.own(node))
-        if isinstance(node, X._Unary):
+        if node.kind == "unary":
             if node.operator in ("+", "-"):
                 return self.type(node.operand)
             if node.operator == "~":
                 return self._integral(node.operand, "~")
             return _ONE
-        if isinstance(node, X._Binary):
+        if node.kind == "binary":
             op = node.operator
             if op in ("<", "<=", ">", ">=", "==", "!=", "&&", "||", "->", "<->", "==?", "!=?"):
                 return _ONE
@@ -239,11 +257,11 @@ class _Evaluation:
             if op == "**" and "real" not in (left.kind, right.kind):
                 return left  # its exponent is self-determined
             return Domains.common([left, right])
-        if isinstance(node, X._Conditional):
+        if node.kind == "conditional":
             return Domains.common([self._numeric(node.consequent, "?:"), self._numeric(node.alternative, "?:")])
-        if isinstance(node, (X._Concatenation, X._Replication, X._Range)):
+        if node.kind in ("concatenation", "replication", "range"):
             return _type(self.own(node))
-        if isinstance(node, X._Inside):
+        if node.kind == "inside":
             return _ONE
         cast = node  # a cast
         operand = self._numeric(cast.operand, "a cast")
@@ -261,25 +279,25 @@ class _Evaluation:
         return self._values[id(node)]
 
     def _own(self, node: Any) -> Any:
-        if isinstance(node, X._Constant):
+        if node.kind == "constant":
             return typed(node.value)
-        if isinstance(node, X._Vector):
+        if node.kind == "vector":
             return Logic.of(node.value, bool(node.signed))
-        if isinstance(node, X._Identifier):
-            return typed(self.scope.lookup(node))
-        if isinstance(node, X._Member):
+        if node.kind == "identifier":
+            return typed(self.scope.lookup(node.term))
+        if node.kind == "member":
             return self._member(node)
-        if isinstance(node, X._Select):
+        if node.kind == "select":
             return self._select(node)
-        if isinstance(node, X._Range):
+        if node.kind == "range":
             return self._range(node)
-        if isinstance(node, X._Concatenation):
+        if node.kind == "concatenation":
             return self._concatenation([self.value(part) for part in node.parts])
-        if isinstance(node, X._Replication):
+        if node.kind == "replication":
             return self._replication(node)
-        if isinstance(node, X._Method):
+        if node.kind == "method":
             return self._method(node)
-        if isinstance(node, X._Iterate):
+        if node.kind == "iterate":
             items = self._items(self.value(node.array), f"{node.method}()")
             return self._reduce(node.method, [_Evaluation(self.scope.bind(node.name, item)).value(node.body) for item in items])
         return self._call(node)
@@ -288,11 +306,11 @@ class _Evaluation:
         """The term's value in a context: its own type's, unless the context gives another."""
         ctype = self.type(node)
         target = context if context is not None else ctype
-        if isinstance(node, X._Unary) and node.operator in ("+", "-", "~"):
+        if node.kind == "unary" and node.operator in ("+", "-", "~"):
             return self._unary(node.operator, self.value(node.operand, target), target)
-        if isinstance(node, X._Binary):
+        if node.kind == "binary":
             return self._binary(node, target)
-        if isinstance(node, X._Conditional):
+        if node.kind == "conditional":
             return self._conditional(node, target)
         result = self._self_determined(node)
         if ctype is None:  # an object, an array
@@ -300,11 +318,11 @@ class _Evaluation:
         return _convert(result, target, ctype.signed and target.signed)  # sign-extended only in a signed context
 
     def _self_determined(self, node: Any) -> Any:
-        if isinstance(node, X._Unary):
+        if node.kind == "unary":
             return self._reduction(node.operator, self.value(node.operand))
-        if isinstance(node, X._Inside):
+        if node.kind == "inside":
             return self._inside(node)
-        if isinstance(node, X._Cast):
+        if node.kind == "cast":
             return self._cast(node)
         return self.own(node)
 
@@ -464,7 +482,7 @@ class _Evaluation:
     def _inside(self, node: Any) -> Logic:
         items: list[tuple[Any, ...]] = []  # a term, a span's ends, or an array's element
         for item in node.items:
-            if isinstance(item, X._Span):
+            if item.kind == "span":
                 items.append((item.low, item.high))
             elif self.type(item) is None and isinstance(self.own(item), list):  # an array: each of its elements
                 items.extend(("element", element) for element in self._items(self.own(item), "inside"))
@@ -543,8 +561,8 @@ class _Evaluation:
         target = self.value(node.object)
         if isinstance(target, Mapping):
             members = target
-        elif callable(getattr(target, "accept", None)):
-            members = Validators.properties_of(target)
+        elif Objects.is_object(target):
+            members = Objects.properties(target)
         else:
             raise TypeError(f"a {type(target).__name__} has no members")
         if node.name not in members:
@@ -599,7 +617,7 @@ class _Evaluation:
         return self._concatenation([self.value(node.value)] * count)
 
     def _call(self, node: Any) -> Any:
-        name = node.function
+        name = node.callable
         if name in X.SYSTEM:
             if len(node.arguments) != 1:
                 raise TypeError(f"{name} takes 1 argument, got {len(node.arguments)}")
@@ -626,7 +644,7 @@ def _identical(a: Any, b: Any) -> bool:
 
 def _array(value: Any) -> Any:
     """A member's value: a list as a list of its items, lists of lists too."""
-    return [_array(item) for item in value.values] if isinstance(value, Validators.ListRecord) else value
+    return [_array(item) for item in value.values] if isinstance(value, Objects.Listed) else value
 
 
 def _real_power(base: float, exponent: float, ctype: SvType) -> float:
@@ -663,8 +681,8 @@ def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> An
     """The value of an expression in `scope`, or with the variables in a mapping bound: a `Logic` or a float."""
     if not isinstance(scope, S.Scope):
         scope = Scope(dict(scope or {}))
-    expression = X.DIALECT.resolve(expression)
-    problems = X.DIALECT.validate(expression, bound=S.free(expression))  # its structure: references resolve as they go
+    term = F.term(expression)
+    problems = X.DIALECT.validate(term, bound=S.free(term, X.DIALECT))  # its structure: references resolve as they go
     if problems:
         raise ValueError(f"cannot evaluate an invalid expression: {problems[0]}")
-    return _Evaluation(scope).value(expression)
+    return _Evaluation(scope).value(_Node(term))

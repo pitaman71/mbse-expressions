@@ -2,13 +2,13 @@
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
  * `build()` returns the cases, name -> [root schema, root term, store]: each case a term value of
- * `Expressions.Framework.Term`, built in one store holding the framework's and Basic's installs, written nested. Each
+ * `Expressions.Framework.Term`, built in one store holding the framework's and the dialects' installs, written nested. Each
  * implementation writes its snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them
  * against every other implementation's files (see the CONF test suite). Keep this module and
  * `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same cases, same values, same order of statements.
  *
- * The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
- * 2b (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
+ * The other dialects' cases (python, matlab, excel, latex, ccpp) return with their dialects' port, stage 2b
+ * (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -18,9 +18,10 @@ import { Builders } from "@mbse/schemas/Framework";
 import * as Domains from "../Dialects/Basic/Domains.js";
 import * as Expressions from "../Dialects/Basic/Expressions.js";
 import * as Basic from "../Dialects/Basic/index.js";
+import * as SystemVerilog from "../Dialects/SystemVerilog/index.js";
 import * as Framework from "../Framework/index.js";
 
-export const CASES = ["expression", "domains", "collections"] as const;
+export const CASES = ["expression", "domains", "collections", "systemverilog"] as const;
 
 /** A case: its root schema, its root term, and the store it is built in. */
 export type Case = [any, any, any];
@@ -36,6 +37,7 @@ export function build(): Map<string, Case> {
   const store: any = new Builders.Store();
   store.transaction(Framework.install);
   store.transaction(Basic.install);
+  store.transaction(SystemVerilog.install);
 
   // --- expression: every kind and literal type, a let and its variable, an extension operation ---
   const [self, age] = [E.variable("this"), E.variable("age")];
@@ -65,18 +67,28 @@ export function build(): Map<string, Case> {
   const collections = E.let_("ports", self.entries("ports"), ports!.all("p", p!.get("pin").in_(pins)).and_(
     sizes!.sum().le(ports!.count())));
 
+  // --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
+  // this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(this.unique().sum(q) with (q))) + 4'(8'shff)
+  const sv = SystemVerilog.Expressions;
+  const that = sv.identifier("this");
+  const systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1n, sv.span(2n, 5n)), sv.conditional(
+    sv.unary("!", sv.select(that, 0n)),
+    sv.concatenation(sv.replication(6n, sv.vector("10")), sv.range_(sv.member(that, "b"), 7n, 4n)),
+    sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
+      sv.cast(4n, sv.vector("11111111", true, "h")))));
+
   const terms = store.transaction(() => new Map<string, any>(([["expression", expression], ["domains", domains],
-    ["collections", collections]] as [string, Expressions.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
+    ["collections", collections], ["systemverilog", systemverilog]] as [string, (visitor: any) => any][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   const Term = store.registered("Expressions.Framework.Term");
   return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
 }
 
 /** The old API's cases, to port with their dialects (stage 2b); not called. */
 export async function stage2b(): Promise<Map<string, Case>> {
-  const [Ccpp, Excel, Latex, Matlab, Python, SystemVerilog]: any[] = await Promise.all([
+  const [Ccpp, Excel, Latex, Matlab, Python]: any[] = await Promise.all([
     import("../Dialects/Ccpp/Expressions.js"), import("../Dialects/Excel/Expressions.js"),
     import("../Dialects/Latex/Expressions.js"), import("../Dialects/Matlab/Expressions.js"),
-    import("../Dialects/Python/Expressions.js"), import("../Dialects/SystemVerilog/Expressions.js")]);
+    import("../Dialects/Python/Expressions.js")]);
   const [P, M, X, L] = [Python, Matlab, Excel, Latex];
 
   // --- python: every kind, shared names --- import numpy as np / from math import floor /
@@ -114,21 +126,11 @@ export async function stage2b(): Promise<Map<string, Case>> {
     ">", Ccpp.subscript(Ccpp.member(me, "b", "->"), 0n), Ccpp.constant(1.5, "float"))),
     Ccpp.cast("uint8_t", Ccpp.call("f", 1n)), Ccpp.constant(5n, "unsigned int"));
 
-  // --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
-  // this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(this.unique().sum(q) with (q))) + 4'(8'shff)
-  const [sv, that] = [SystemVerilog, SystemVerilog.identifier("this")];
-  const systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1n, sv.span(2n, 5n)), sv.conditional(
-    sv.unary("!", sv.select(that, 0n)),
-    sv.concatenation(sv.replication(6n, sv.vector("10")), sv.range_(sv.member(that, "b"), 7n, 4n)),
-    sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
-      sv.cast(4n, sv.vector("11111111", true, "h")))));
-
   return new Map<string, Case>([
     ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
     ["matlab", [M.DIALECT.schema_of(matlab), matlab, M.Builders]],
     ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
     ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],
-    ["systemverilog", [SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders]],
     ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],
   ]);
 }

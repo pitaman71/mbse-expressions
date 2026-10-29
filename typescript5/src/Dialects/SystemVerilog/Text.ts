@@ -1,16 +1,15 @@
-/** Text of the SystemVerilog dialect: `ToText(expression)` is the expression as SystemVerilog source, with IEEE
- * 1800's precedence, sized literals in their base. */
+/** Text of the SystemVerilog dialect: `ToText(expression)` is the expression (a term, or anything `Terms.term` reads
+ * one from) as SystemVerilog source, with IEEE 1800's precedence, sized literals in their base. */
 
-import { Repr } from "@mbse/schemas/Framework";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
-import {
-  BASES, _Call, _Cast, _Concatenation, _Conditional, _Constant, _Identifier, _Inside,
-  _Iterate, _Member, _Method, _Range, _Replication, _Select, _Span, _Unary,
-  _Vector,
-} from "./Expressions.js";
+import { BASES, kindOf } from "./Expressions.js";
 
 const { repr } = Repr;
+const { ValueError } = Errors;
 
 // SystemVerilog's precedence, from loosest to tightest (IEEE 1800, table 11-2).
 const [IMPLY, CONDITIONAL, OR, AND, BITOR, BITXOR, BITAND, EQUALITY, RELATIONAL, SHIFT, ADDITIVE, MULTIPLICATIVE, POWER, UNARY,
@@ -42,11 +41,12 @@ function digitsOf(bits: string, base: string): string | null {
   return digits.join("");
 }
 
-function vectorText(node: _Vector): string {
-  let base = node.base ?? "b";
-  let digits = base !== "b" ? digitsOf(node.value, base) : node.value;
-  if (digits === null) [base, digits] = ["b", node.value];
-  return `${node.value.length}'${node.signed ? "s" : ""}${base}${digits}`;
+function vectorText(attributes: ReadonlyMap<string, any>): string {
+  const bits: string = attributes.get("value");
+  let base: string = attributes.get("base") ?? "b";
+  let digits = base !== "b" ? digitsOf(bits, base) : bits;
+  if (digits === null) [base, digits] = ["b", bits];
+  return `${bits.length}'${attributes.get("signed") ? "s" : ""}${base}${digits}`;
 }
 
 function constantText(value: unknown): string {
@@ -69,30 +69,38 @@ export function ToText(expression: unknown): string {
       return precedence >= level ? written : `(${written})`;
     };
     const texts = args.map(([written]) => written);
-    if (node instanceof _Constant) {
-      const written = constantText(node.value);
-      return [written, written.includes("/") ? MULTIPLICATIVE : written.startsWith("-") ? UNARY : PRIMARY];
+    const [tag, record] = kindOf(node);
+    const attributes = F.attributesOf(record);
+    const name = attributes.get("name");
+    switch (tag) {
+      case "constant": {
+        const written = constantText(attributes.get("value"));
+        return [written, written.includes("/") ? MULTIPLICATIVE : written.startsWith("-") ? UNARY : PRIMARY];
+      }
+      case "vector": return [vectorText(attributes), PRIMARY];
+      case "identifier": return [name, PRIMARY];
+      case "member": return [`${operand(0, PRIMARY)}.${name}`, PRIMARY];
+      case "select": return [`${operand(0, PRIMARY)}[${texts[1]}]`, PRIMARY];
+      case "range": return [`${operand(0, PRIMARY)}[${texts[1]}:${texts[2]}]`, PRIMARY];
+      case "span": return [`[${texts[0]}:${texts[1]}]`, PRIMARY];
+      case "concatenation": return [`{${texts.join(", ")}}`, PRIMARY];
+      case "replication": return [`{${texts[0]}{${texts[1]}}}`, PRIMARY];
+      case "call": return [`${attributes.get("callable")}(${texts.join(", ")})`, PRIMARY];
+      case "method": return [`${operand(0, PRIMARY)}.${name}()`, PRIMARY];
+      case "iterate": return [`${operand(0, PRIMARY)}.${attributes.get("method")}(${name}) with (${texts[1]})`, PRIMARY];
+      case "cast": return [`${attributes.get("type") ?? attributes.get("width")}'(${texts[0]})`, PRIMARY];
+      case "inside": return [`${operand(0, RELATIONAL + 1)} inside {${texts.slice(1).join(", ")}}`, RELATIONAL];
+      default: break;
     }
-    if (node instanceof _Vector) return [vectorText(node), PRIMARY];
-    if (node instanceof _Identifier) return [node.name, PRIMARY];
-    if (node instanceof _Member) return [`${operand(0, PRIMARY)}.${node.name}`, PRIMARY];
-    if (node instanceof _Select) return [`${operand(0, PRIMARY)}[${texts[1]}]`, PRIMARY];
-    if (node instanceof _Range) return [`${operand(0, PRIMARY)}[${texts[1]}:${texts[2]}]`, PRIMARY];
-    if (node instanceof _Span) return [`[${texts[0]}:${texts[1]}]`, PRIMARY];
-    if (node instanceof _Concatenation) return [`{${texts.join(", ")}}`, PRIMARY];
-    if (node instanceof _Replication) return [`{${texts[0]}{${texts[1]}}}`, PRIMARY];
-    if (node instanceof _Call) return [`${node.function}(${texts.join(", ")})`, PRIMARY];
-    if (node instanceof _Method) return [`${operand(0, PRIMARY)}.${node.name}()`, PRIMARY];
-    if (node instanceof _Iterate) return [`${operand(0, PRIMARY)}.${node.method}(${node.name}) with (${texts[1]})`, PRIMARY];
-    if (node instanceof _Cast) return [`${node.type ?? node.width}'(${texts[0]})`, PRIMARY];
-    if (node instanceof _Inside) return [`${operand(0, RELATIONAL + 1)} inside {${texts.slice(1).join(", ")}}`, RELATIONAL];
-    if (node instanceof _Unary) return [`${node.operator}${operand(0, PRIMARY)}`, UNARY]; // its operand is a primary (A.8.3): `-(-x)`
-    if (node instanceof _Conditional) { // right-associative
+    const operator: string = attributes.get("operator");
+    if (tag === "unary") return [`${operator}${operand(0, PRIMARY)}`, UNARY]; // its operand is a primary (A.8.3): `-(-x)`
+    if (tag === "conditional") { // right-associative
       return [`${operand(0, OR)} ? ${operand(1, CONDITIONAL)} : ${operand(2, CONDITIONAL)}`, CONDITIONAL];
     }
-    const level = LEVELS[node.operator] as number;
-    if (level === IMPLY) return [`${operand(0, level + 1)} ${node.operator} ${operand(1, level)}`, level]; // right-associative, the loosest
-    return [`${operand(0, level)} ${node.operator} ${operand(1, level + 1)}`, level];
+    if (tag !== "binary") throw new ValueError(`SystemVerilog has no kind ${repr(tag)}`);
+    const level = LEVELS[operator] as number;
+    if (level === IMPLY) return [`${operand(0, level + 1)} ${operator} ${operand(1, level)}`, level]; // right-associative, the loosest
+    return [`${operand(0, level)} ${operator} ${operand(1, level + 1)}`, level];
   };
-  return F.fold(expression as F.Term, write)[0];
+  return F.fold(expression, write)[0];
 }

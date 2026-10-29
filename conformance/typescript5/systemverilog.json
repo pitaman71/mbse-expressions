@@ -1,0 +1,157 @@
+{
+  "systemverilog_binary": {
+    "operator": "->",
+    "left": {
+      "systemverilog_inside": {
+        "value": {
+          "systemverilog_member": {
+            "name": "a",
+            "object": {
+              "systemverilog_identifier": {
+                "name": "this"
+              }
+            }
+          }
+        },
+        "items": [
+          {
+            "systemverilog_constant": {
+              "value": 1
+            }
+          },
+          {
+            "systemverilog_span": {
+              "low": {
+                "systemverilog_constant": {
+                  "value": 2
+                }
+              },
+              "high": {
+                "systemverilog_constant": {
+                  "value": 5
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "right": {
+      "systemverilog_conditional": {
+        "condition": {
+          "systemverilog_unary": {
+            "operator": "!",
+            "operand": {
+              "systemverilog_select": {
+                "value": {
+                  "systemverilog_identifier": {
+                    "name": "this"
+                  }
+                },
+                "index": {
+                  "systemverilog_constant": {
+                    "value": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "consequent": {
+          "systemverilog_concatenation": {
+            "parts": [
+              {
+                "systemverilog_replication": {
+                  "count": {
+                    "systemverilog_constant": {
+                      "value": 6
+                    }
+                  },
+                  "value": {
+                    "systemverilog_vector": {
+                      "value": "10"
+                    }
+                  }
+                }
+              },
+              {
+                "systemverilog_range": {
+                  "value": {
+                    "systemverilog_member": {
+                      "name": "b",
+                      "object": {
+                        "systemverilog_identifier": {
+                          "name": "this"
+                        }
+                      }
+                    }
+                  },
+                  "msb": {
+                    "systemverilog_constant": {
+                      "value": 7
+                    }
+                  },
+                  "lsb": {
+                    "systemverilog_constant": {
+                      "value": 4
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "alternative": {
+          "systemverilog_binary": {
+            "operator": "+",
+            "left": {
+              "systemverilog_cast": {
+                "type": "byte",
+                "operand": {
+                  "call": {
+                    "callable": "$clog2",
+                    "arguments": [
+                      {
+                        "systemverilog_iterate": {
+                          "name": "q",
+                          "method": "sum",
+                          "array": {
+                            "systemverilog_method": {
+                              "name": "unique",
+                              "array": {
+                                "systemverilog_identifier": {
+                                  "name": "this"
+                                }
+                              }
+                            }
+                          },
+                          "body": {
+                            "systemverilog_identifier": {
+                              "name": "q"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            "right": {
+              "systemverilog_cast": {
+                "width": 4,
+                "operand": {
+                  "systemverilog_vector": {
+                    "value": "11111111",
+                    "signed": true,
+                    "base": "h"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
