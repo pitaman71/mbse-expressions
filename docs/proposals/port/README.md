@@ -121,7 +121,10 @@ As the user decided (2026-10-28), on question 7, a map's variables (the "spread"
    one value per frame: "(a) is not in the plan". **Solving for a variable's values** (a constraint over an unbounded
    domain): "(c) can be deferred".
 
-Question 8, a collecting reduce, is open.
+Question 8, a collecting reduce, is parked with map and reduce themselves: "map and reduce are not where I need them
+to be, but parking them so we can make progress on finishing the current overhaul in the dependent repos is more
+urgent" (2026-10-29; the workspace's TODO.md). Stage 5's variables and collecting reduce wait on it, and its `requires`
+on question 6; stages 1 to 4 do not.
 
 ## Stages (proposed, once decided)
 
