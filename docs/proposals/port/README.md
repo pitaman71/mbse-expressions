@@ -68,7 +68,7 @@ of the domain, not the schema") and 22 (formats become domains); Schema extensio
    relation of two links, as an extension's adjacency must be), as Parametrics links a definition to its parameters;
    (b) an extension property holding the term value. *Recommended: (a).*
 4. **What `DefinesDomains` is.** Proposed: a dialect is a reference object (as a module is), defining its domains by
-   name, `Expressions.DefinesDomains(dialect, name, domain)`; a basic scalar has one domain or more through
+   name, `Expressions.Framework.Defines(dialect, name, domain)` (decided: see Decided, 4); a basic scalar has one domain or more through
    `HasDomain(schema, domain)` (Decided, 9); a domain is an object (Schema extension, Decided, 21). *Confirm or correct.*
 5. **How mbse-schemas' executor evaluates.** mbse-schemas cannot depend on this repository, and "takes an evaluator from
    its caller rather than import one"; there is no global registry (its FRAMEWORK.md). (a) A protocol in mbse-schemas
@@ -86,6 +86,23 @@ of the domain, not the schema") and 22 (formats become domains); Schema extensio
 11. **Scope now.** All six dialects and the twelve translators, ported with the model; vocabularies as data (functions,
     formals, intrinsics: Schema extension, Decided, 9, 11, 22) and value parameters and `Parameters.Bind`/`Apply`
     (mbse-schemas' Parametrics) after. *Recommended as stated.*
+
+## Decided
+
+As the user decided (2026-10-28), on questions 1 to 5:
+
+1. **Model first** ("yes"): the framework and each dialect defined by installs, terms stored in the store, the cases
+   rewritten to it.
+2. **Terms are one nested value**, held by an expression, a reference object, its root ("yes").
+3. **`Schemas.OfExpression` gains its terms by an extension adjacency** ("yes"): a relation of two links from it to the
+   expression holding the term.
+4. **A dialect defines its domains by name**, through `Expressions.Framework.Defines(dialect, name, domain)`: "you don't
+   need to repeat the parent scope in the name. mbse-expressions.Framework.Defines is not the same as
+   mbse-schemas.Schemas.Defines". A relation is named within its module, as `Schemas.Defines` and `Parametrics.Defines`
+   are, not with its parent's scope repeated (`DefinesDomains`, the plan's word, goes). A basic scalar has one domain or
+   more through `HasDomain(schema, domain)`; a domain is an object.
+5. **The executor's evaluator is a protocol in mbse-schemas, given to a store once**, "a fine intermediate solution for
+   now": the executor refuses as today where none is given.
 
 ## Stages (proposed, once decided)
 
