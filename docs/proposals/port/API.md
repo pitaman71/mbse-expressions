@@ -176,7 +176,33 @@ Basic's `operation` is the framework's `call`: its property `name` is `callable`
    under `Expressions.Framework.Term`; the other dialects' cases, and their files, return with stage 2b. A domain the
    corpus names is registered by it (`binary32 roundTowardZero`, `state`, ...).
 
-## What stage 2b needs
+Settled in stage 2b:
+
+10. **A dialect's kinds are branches of `Expressions.Framework.Term` named `<dialect>_<kind>`** (lowercase dialect:
+    `python_binop`, `latex_frac`), their schemas `Expressions.<Dialect>.<Kind>`, every kind with `domain`: every dialect
+    adds its kinds to the one union, and several have a `binary`, a `constant` or a `member`. A dialect reuses the
+    framework's `literal`, `variable`, `let` and `call` (`callable`, `arguments`) where its kind has that shape: Matlab
+    (constants, identifiers, calls) and Excel (constants, names, `LET`, functions) do; Python reuses `let`, Ccpp and
+    SystemVerilog `call`; Latex none. Each dialect's package exports its `install`.
+11. **An import kind's names are read from its attributes**: `Kind.names(attributes)` in place of `names(record)`, so
+    that a translator can tell which names an import it writes binds before it is written (a `Prelude`).
+12. **A translation is a writer** of the target dialect's term, which its caller writes in a transaction, in a store
+    holding the target dialect's install. Patterns name a kind by its branch's tag and read it as `Terms.form` does; a
+    hole bound twice matches equal terms (`Terms.same`), since terms are nested values; `trace` pairs each source term
+    with the writer of its translation, a term after the terms within it. With no sharing and no cycle, the memo and
+    the cycle check go: an inlined let's value is translated once and written at every use. A message names a kind
+    without its dialect's prefix ("Python call has no Basic counterpart", "Basic call 'entries' has no Matlab
+    counterpart"), as the old kinds' names read.
+13. **A conversion names the domain it gives** (Ccpp's and SystemVerilog's typed literals back to Basic): the name it is
+    registered under, or, when it has none, its own name (`uint32`, `bits12`), under which the translator registers it
+    in Basic's `Domains` registry; a native's own domain is left unnamed, as `E.literal` leaves it. This writes to the
+    process-wide registry until stage 3 makes domains objects that dialects define, for the user's review.
+14. **The corpus holds every dialect's case again, in the old corpus's order** (`expression`, `python`, `matlab`,
+    `excel`, `latex`, `domains`, `collections`, `ccpp`, `systemverilog`), in one store holding every install, with one
+    `DIALECTS` map in the corpus naming the dialect that reads each case other than Basic's; CONF-04 validates each case
+    in its dialect.
+
+## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,
   each with `domain`; a slot a property of `_.Term`, variadic arguments a container of `_.Term` by an int index), its

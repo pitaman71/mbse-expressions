@@ -338,23 +338,33 @@ expressions read), `Symbolics` (names, scopes and dependencies), `Domains`, `Eva
 
 ## Dialects
 
+Each dialect's `install(txn)` adds its kinds to `Expressions.Framework.Term` by schema extension, run after the
+framework's, in a transaction of its own: a value object schema per kind, `Expressions.<Dialect>.<Kind>`, each with a
+`domain` by name, added as the branch `<dialect>_<kind>` (`python_binop`, `latex_frac`), since every dialect adds its
+kinds to the one union and several have a `binary` or a `constant`. A dialect reuses the framework's `literal`,
+`variable`, `let` and `call` (`callable`, `arguments`) where its kind has that shape: Matlab's constants, identifiers
+and calls, Excel's constants, names, `LET` and functions, Python's let, and Ccpp's and SystemVerilog's function calls;
+Latex reuses none. Its `DIALECT`, a `Terms.Dialect`, declares how the framework reads each kind it reads, its own and
+the framework's it reuses; its writers (`Excel.Expressions.function('AND', a, b)`, ...) write them wherever a term is
+written. In the table, a kind is named without its dialect's prefix.
+
 | Dialect | Kinds | Values | Evaluation |
 |---|---|---|---|
-| Basic | `literal`, `operation`, `variable`, `let`, `quantifier` | natives, typed values, objects, collections | three-valued (Kleene), no coercion; absent is unknown |
-| Python | `constant`, `name`, `attribute`, `subscript` (`x['k']`), `index` (`xs[i]`), `call`, `compare` (with `in`, `not in`), `boolop`, `binop` (arithmetic and bitwise), `unaryop` (`not`, `-`, `+`, `~`), `ifexp`, `generator` (`(e for p in xs if c)`), `let` (`(lambda a: body)(value)`), `import`, `importfrom`: Python's `ast` | Python's; a list property is a list of its values | Python's: `and`/`or` give an operand, `1 == 1.0`, `True + 1` is 2; absent attributes raise |
-| Matlab | `constant`, `identifier`, `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (`isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`, `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique`, `ismember`, and functions of the scope), `field` (`s.age`), `index` (`xs(i)`, from 1), `arrayfun` (`arrayfun(@(p) body, xs)`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct, arrays of them | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; the bit functions take integers from 0 to 2^53; absent fields raise |
-| Excel | `constant`, `name`, `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`), `function` (`AND`, `OR`, `NOT`, `IF` (2 or 3 arguments; `AND`, `OR`, `SUM`, `MIN` and `MAX` 1 to 255), `ISERROR`, `BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`, `ROWS`, `INDEX`, `MATCH`, `ISNUMBER`, `SUM`, `MIN`, `MAX`, `UNIQUE`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`), `map` (`MAP(xs, LAMBDA(p, body))`) | number, text, logical, error, record, arrays of them | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case; the bit functions take integers from 0 to 2^48 - 1, else `#NUM!` |
-| Ccpp | `constant` (with an optional type: `5u`, `1.5f`, `(uint8_t)5`), `identifier`, `unary` (`+`, `-`, `!`, `~`), `binary` (`*` ... `\|\|`, with C's precedence), `conditional` (`?:`), `cast` (`(type)x`), `member` (`x.a`, `x->a`), `subscript` (`a[i]`), `call` (functions of the scope) | C's arithmetic types under LP64 (`bool`, `char` ... `unsigned long long`, `int8_t` ... `uint64_t`, `size_t`, `float`, `double`, `long double` as IEEE 754 `binary128`), strings, structs, arrays | C's: the integer promotions and the usual arithmetic conversions; unsigned arithmetic wraps; what C leaves undefined (signed overflow, division by zero, shifts out of range, casts of floats out of range) raises; casts to integers wrap; comparisons give `bool`, as in C++; `?:` keeps its chosen operand's type |
-| SystemVerilog | `constant` (unsized integers, reals, strings), `vector` (sized literals: `8'hff`, `4'b10x1`, `8'sd5`), `identifier`, `unary` (`+`, `-`, `!`, `~` and the reductions `&`, `~&`, `\|`, `~\|`, `^`, `~^`; its operand a primary, so `-(-x)`), `binary` (`**` ... `\|\|`, `===`, `==?`, `->`, `<->`, with IEEE 1800's precedence), `conditional`, `concatenation` (`{a, b}`), `replication` (`{n{a}}`), `select` (`a[i]`), `range` (`a[7:4]`), `inside` (with `span`s, `[lo:hi]`), `cast` (`int'(x)`, `signed'(x)`, `8'(x)`), `member`, `call` (system functions and functions of the scope), `method` (`xs.size()`, `xs.sum()`, `xs.min()`), `iterate` (`xs.and(p) with (p > 0)`) | 4-state and 2-state vectors of any width and signedness (`logic`, `bit`, `byte` ... `longint`, `integer`, `time`), `real` and `shortreal`, structs, arrays | IEEE 1800's: operands sized by context or by themselves, extended by signedness; x and z propagate through arithmetic and comparisons, and follow the truth tables of the bitwise and logical operators; `===` and `==?` compare exactly and with wildcards; division by zero gives x; casts convert as assignments do |
+| Basic | `literal`, `call`, `variable`, `let` (the framework's), and its own `quantifier` | natives, typed values, objects, collections | three-valued (Kleene), no coercion; absent is unknown |
+| Python | `constant`, `name`, `attribute`, `subscript` (`x['k']`), `index` (`xs[i]`), `call`, `compare` (with `in`, `not in`), `boolop`, `binop` (arithmetic and bitwise), `unaryop` (`not`, `-`, `+`, `~`), `ifexp`, `generator` (`(e for p in xs if c)`), `let` (`(lambda a: body)(value)`, the framework's), `import`, `importfrom`: Python's `ast` | Python's; a list property is a list of its values | Python's: `and`/`or` give an operand, `1 == 1.0`, `True + 1` is 2; absent attributes raise |
+| Matlab | `constant` (the framework's `literal`), `identifier` (`variable`), `binary` (`==` ... `&&`, `\|\|`, `+`, `-`, `.*`), `unary` (`~`, `-`), `call` (the framework's: `isfield`, `bitand`, `bitor`, `bitxor`, `bitshift`, `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique`, `ismember`, and functions of the scope), `field` (`s.age`), `index` (`xs(i)`, from 1), `arrayfun` (`arrayfun(@(p) body, xs)`), `import` (`import pkg.fn`, `import pkg.*`) | double, logical, string, struct, arrays of them | MATLAB's: two-valued with short-circuit, logicals and doubles convert, `+` concatenates strings; the bit functions take integers from 0 to 2^53; absent fields raise |
+| Excel | `constant` (the framework's `literal`), `name` (`variable`), `cell` (`A1`, `Sheet1!B2`, `[Book.xlsx]Sheet1!A1`), `let` (`LET`, the framework's), `function` (the framework's `call`: `AND`, `OR`, `NOT`, `IF` (2 or 3 arguments; `AND`, `OR`, `SUM`, `MIN` and `MAX` 1 to 255), `ISERROR`, `BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`, `ROWS`, `INDEX`, `MATCH`, `ISNUMBER`, `SUM`, `MIN`, `MAX`, `UNIQUE`, and add-ins), `infix` (`=`, `<>`, `<` ... `+`, `-`, `*`), `prefix` (`-`), `field` (`r.age`), `map` (`MAP(xs, LAMBDA(p, body))`) | number, text, logical, error, record, arrays of them | Excel's: errors are values (`#FIELD!`, `#NAME?`, `#VALUE!`, `#REF!`) that propagate; `AND`/`OR` evaluate every argument, `IF` one branch; arithmetic coerces; comparisons order numbers < text < logicals and ignore case; the bit functions take integers from 0 to 2^48 - 1, else `#NUM!` |
+| Ccpp | `constant` (with an optional type: `5u`, `1.5f`, `(uint8_t)5`), `identifier`, `unary` (`+`, `-`, `!`, `~`), `binary` (`*` ... `\|\|`, with C's precedence), `conditional` (`?:`), `cast` (`(type)x`), `member` (`x.a`, `x->a`), `subscript` (`a[i]`), `call` (the framework's: functions of the scope) | C's arithmetic types under LP64 (`bool`, `char` ... `unsigned long long`, `int8_t` ... `uint64_t`, `size_t`, `float`, `double`, `long double` as IEEE 754 `binary128`), strings, structs, arrays | C's: the integer promotions and the usual arithmetic conversions; unsigned arithmetic wraps; what C leaves undefined (signed overflow, division by zero, shifts out of range, casts of floats out of range) raises; casts to integers wrap; comparisons give `bool`, as in C++; `?:` keeps its chosen operand's type |
+| SystemVerilog | `constant` (unsized integers, reals, strings), `vector` (sized literals: `8'hff`, `4'b10x1`, `8'sd5`), `identifier`, `unary` (`+`, `-`, `!`, `~` and the reductions `&`, `~&`, `\|`, `~\|`, `^`, `~^`; its operand a primary, so `-(-x)`), `binary` (`**` ... `\|\|`, `===`, `==?`, `->`, `<->`, with IEEE 1800's precedence), `conditional`, `concatenation` (`{a, b}`), `replication` (`{n{a}}`), `select` (`a[i]`), `range` (`a[7:4]`), `inside` (with `span`s, `[lo:hi]`), `cast` (`int'(x)`, `signed'(x)`, `8'(x)`), `member`, `call` (the framework's: system functions and functions of the scope), `method` (`xs.size()`, `xs.sum()`, `xs.min()`), `iterate` (`xs.and(p) with (p > 0)`) | 4-state and 2-state vectors of any width and signedness (`logic`, `bit`, `byte` ... `longint`, `integer`, `time`), `real` and `shortreal`, structs, arrays | IEEE 1800's: operands sized by context or by themselves, extended by signedness; x and z propagate through arithmetic and comparisons, and follow the truth tables of the bitwise and logical operators; `===` and `==?` compare exactly and with wildcards; division by zero gives x; casts convert as assignments do |
 | Latex | `constant` (numbers, `\text{...}`, `\mathrm{true}`), `symbol` (`a`, `\mathit{age}`), `binary` (`=`, `\neq`, `<` ... `\land`, `\lor`, `\implies`, `+`, `-`, `\cdot`), `unary` (`\lnot`, `-`), `frac`, `member` (`x.\mathit{age}`), `function` (`\operatorname{has}`), `where` | number, text, truth | none: notation is written, rendered, checked and translated, and evaluated in the dialects it is translated to |
 
 Python, Matlab, Excel, Latex, Ccpp and SystemVerilog each have a `Text` module, as every mbse framework names a
-dialect's source text: `Text.ToText(expression)` is their source text (`hasattr(this, 'email') if this.age >= 18 else
+dialect's source text: `Text.ToText(term)` is their source text (`hasattr(this, 'email') if this.age >= 18 else
 True`, `this.age >= 18 && isfield(this, "email")`, `=AND(this.age >= 18, NOT(ISERROR(this.email)))`,
 `\mathit{this}.\mathit{age} \geq 18 \land \operatorname{has}(\mathit{this}, \text{email})`), with imports as the lines
 before the expression, and constructors for their kinds (`Excel.Expressions.function('AND', a, b)`, ...). In Python, the
-Python dialect's `Text.FromText(source)` reads source text back: imports, then one expression, a chained comparison
-`a < b < c` as `a < b and b < c` with `b` one shared term (which writes back unchained). The Matlab and Excel
+Python dialect's `Text.FromText(source)` reads source text back, as a writer: imports, then one expression, a chained
+comparison `a < b < c` as `a < b and b < c`, `b` written in both (which writes back unchained). The Matlab and Excel
 evaluators are models of those languages' rules for scalars, not calls into MATLAB or Excel, and so is the TypeScript
 implementation's evaluator of Python expressions.
 
@@ -378,17 +388,20 @@ resolves only what the scope allowlists, never by loading code.
 ## Translators
 
 `Framework.Translators.Translator` translates between two dialects both ways: `left()`, `right()`,
-`forward(expression, trace=None)`, `backward(...)` and `inverse()`. Each pair of dialects has its own, specialized
+`forward(term, trace=None)`, `backward(...)` and `inverse()`. A translation is a writer of the target dialect's term,
+which its caller writes where it wants it, in a transaction, in a store holding the target dialect's install:
+`store.Expressions.Framework.Term(translator.forward(term))`. Each pair of dialects has its own, specialized
 to what the two have in common, in `mbse.Expressions.Translators.<Left>_<Right>`; `Translators.between(source,
 target)` finds the one that translates from `source` to `target`.
 
 A pairwise translator (`Pairwise`) is declared as rules:
 
-- `Rule(left, right, direction='both')` pairs two `Pattern`s, forms whose arguments and attributes may be `Hole`s:
-  `Rule(Pattern('operation', X, Pattern('literal', value=K), name='has'), Pattern('function', Pattern('function',
-  Pattern('field', X, name=K), name='ISERROR'), name='NOT'))` translates Basic `has(x, 'email')` to and from Excel
-  `NOT(ISERROR(x.email))`. A hole in an attribute binds a native value, of the types it names; one bound twice must
-  bind the same term or equal values. A rule may apply `forward` or `backward` only, when its other direction would
+- `Rule(left, right, direction='both')` pairs two `Pattern`s, forms whose arguments and attributes may be `Hole`s, a
+  kind named by its branch's tag and read as `Terms.form` reads it: `Rule(Pattern('call', X, Pattern('literal',
+  value=K), callable='has'), Pattern('call', Pattern('call', Pattern('excel_field', X, name=K), callable='ISERROR'),
+  callable='NOT'))` translates Basic `has(x, 'email')` to and from Excel `NOT(ISERROR(x.email))`. A hole in an
+  attribute binds a scalar, of the types it names; one bound twice must bind equal terms (`Terms.same`) or equal
+  values. A rule may apply `forward` or `backward` only, when its other direction would
   capture expressions it should not (Matlab writes `implies(a, b)` as `~a || b`, which reads back as `or(not(a),
   b)`). `renames` declares the rules for operators that differ only in name.
 - `Inline(kind, side)` translates a binding that the other dialect has no counterpart for by substituting its value
@@ -400,15 +413,17 @@ A pairwise translator (`Pairwise`) is declared as rules:
 - `Convert(left_kind, right_kind, forward, backward)` translates literals whose values the dialects write
   differently, by functions of their attributes: a Basic literal of `uint8` is C's `(uint8_t)200` and SystemVerilog's
   `8'd200`. A function gives None where there is no counterpart, and conversions are tried after the rules of their
-  kind.
+  kind. A Basic literal names its domain (`Domains.register`): a conversion reads the domain by its name, and names a
+  domain it gives, its native's own left unnamed, registering it under its own name (`uint32`) if it has none.
 
 Translation co-traverses. At each term, the rules whose source pattern has the term's kind are tried, the most
 specific first (the most terms and fixed attributes), by traversing pattern and expression in lockstep to bind the
 holes; the first that matches is applied by instantiating its target pattern with the bound attributes and the
-translations of the bound arguments. Each term is translated once (per binding environment), so shared
-sub-expressions stay shared, and an inlined value is shared by every use of its name. `trace`, if given, receives
-the pairs of corresponding source and target terms. A term no rule matches raises `ValueError` naming it ("Basic
-literal b'\x00' has no Excel counterpart", "Excel function 'ISERROR' has no Basic counterpart").
+translations of the bound arguments. Each term is translated once; a term is a nested value, so an inlined value,
+translated once, is written at every use of its name. `trace`, if given, receives the pairs of corresponding source
+terms and target writers, each term after the terms within it. A term no rule matches raises `ValueError` naming it
+by its kind without its dialect's prefix ("Basic literal b'\x00' has no Excel counterpart", "Excel call 'ISERROR' has
+no Basic counterpart", "Python ifexp has no Matlab counterpart").
 
 What translation guarantees, and what the TRN suite checks: every pair round-trips expressions that both dialects
 can write (lets and implies are the exceptions above); translating directly or through a third dialect gives the
