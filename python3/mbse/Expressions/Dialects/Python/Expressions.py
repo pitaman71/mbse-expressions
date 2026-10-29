@@ -33,7 +33,6 @@ from __future__ import annotations
 from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
-from mbse.Schemas.Framework import Schemas
 
 from . import Domains
 
@@ -148,9 +147,9 @@ def _importfrom_names(attributes: Any) -> tuple[str, ...]:
     return (attributes.get("alias") or attributes["name"],)
 
 
-def _native(value: Any) -> Writer | None:
-    """The constant of a native value."""
-    return constant(value) if type(value) in Schemas.SCALAR_TYPES else None
+def _native(value: Any) -> Writer:
+    """The constant of a native value: a basic scalar, the only native value `spec` gives it."""
+    return constant(value)
 
 
 _ANY = FD.Function((FD.Anything,), FD.Anything)

@@ -31,7 +31,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Repr, Schemas } from "@mbse/schemas/Framework";
+import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
@@ -161,9 +161,9 @@ function importfromNames(attributes: ReadonlyMap<string, any>): string[] {
   return [attributes.get("alias") || attributes.get("name")];
 }
 
-/** The constant of a native value. */
-function native(value: unknown): Writer | null {
-  return Schemas.hostOf(value) !== null ? constant(value) : null;
+/** The constant of a native value: a basic scalar, the only native value `spec` gives it. */
+function native(value: unknown): Writer {
+  return constant(value);
 }
 
 const ANY = new FD.Function([FD.Anything], FD.Anything);

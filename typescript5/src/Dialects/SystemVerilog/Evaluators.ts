@@ -223,7 +223,7 @@ class Node {
     for (const name of names) this[name] = null;
     for (const [name, value] of F.attributesOf(record)) this[name] = value;
     slots.forEach((name, i) => {
-      this[name] = args[i] === null ? null : new Node(args[i]);
+      this[name] = new Node(args[i]); // a valid term fills every slot
     });
     if (variadic !== null) this[variadic] = args.slice(slots.length).map((a) => new Node(a));
     this.tag = tag;

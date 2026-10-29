@@ -100,7 +100,7 @@ function constantCheck(record: any): string[] {
 
 function vectorCheck(record: any): string[] {
   const attributes = F.attributesOf(record);
-  const [value, base] = [attributes.get("value") ?? null, attributes.get("base") ?? null];
+  const [value, base] = [attributes.get("value"), attributes.get("base") ?? null]; // a vector checked has a value
   const problems = value && [...value].every((b: string) => "01xz".includes(b)) ? [] : [
     `a vector's bits must be 0, 1, x and z, at least one, got ${repr(value)}`];
   if (base !== null && !(base in BASES)) problems.push(`a vector's base must be b, o, d or h, got ${repr(base)}`);

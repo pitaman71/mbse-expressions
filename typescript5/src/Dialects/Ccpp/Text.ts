@@ -45,7 +45,7 @@ function number(value: unknown): string {
 
 /** A constant: a bool, a string literal, or a number with its type's suffix or, for a type with none, a cast. */
 function constantText(attributes: ReadonlyMap<string, any>): [string, number] {
-  const [value, ctype] = [attributes.get("value") ?? null, attributes.get("type") ?? null];
+  const [value, ctype] = [attributes.get("value"), attributes.get("type") ?? null];
   if (typeof value === "boolean") return [value ? "true" : "false", POSTFIX];
   if (typeof value === "string" && ctype === null) return [text(value), POSTFIX];
   const written = number(value);

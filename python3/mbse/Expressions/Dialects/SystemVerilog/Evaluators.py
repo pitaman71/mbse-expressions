@@ -203,7 +203,7 @@ class _Node:
         arguments = F.arguments_of(record)
         members: dict[str, Any] = dict.fromkeys(names)
         members.update(F.attributes_of(record))
-        members.update({name: None if a is None else _Node(a) for name, a in zip(slots, arguments)})
+        members.update({name: _Node(a) for name, a in zip(slots, arguments)})  # a valid term fills every slot
         if variadic is not None:
             members[variadic] = tuple(_Node(a) for a in arguments[len(slots):])
         self.__dict__.update(members)
