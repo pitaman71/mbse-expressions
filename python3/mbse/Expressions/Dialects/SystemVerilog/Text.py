@@ -1,5 +1,5 @@
-"""Text of the SystemVerilog dialect: `ToText(expression)` is the expression as SystemVerilog source, with IEEE 1800's
-precedence, sized literals in their base."""
+"""Text of the SystemVerilog dialect: `ToText(expression)` is the expression (a term, or anything `Terms.term` reads one
+from) as SystemVerilog source, with IEEE 1800's precedence, sized literals in their base."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
 
-from .Expressions import _BASES, _Call, _Cast, _Concatenation, _Conditional, _Constant, _Identifier, _Inside, _Iterate, _Member, _Method, _Range, _Replication, _Select, _Span, _Unary, _Vector
+from .Expressions import _BASES, kind_of
 
 __all__ = ["ToText"]
 
@@ -42,12 +42,13 @@ def _digits(bits: str, base: str) -> str | None:
     return "".join(digits)
 
 
-def _vector(node: _Vector) -> str:
-    base = node.base or "b"
-    digits = _digits(node.value, base) if base != "b" else node.value
+def _vector(attributes: dict[str, Any]) -> str:
+    bits = attributes["value"]
+    base = attributes.get("base") or "b"
+    digits = _digits(bits, base) if base != "b" else bits
     if digits is None:
-        base, digits = "b", node.value
-    return f"{len(node.value)}'{'s' if node.signed else ''}{base}{digits}"
+        base, digits = "b", bits
+    return f"{len(bits)}'{'s' if attributes.get('signed') else ''}{base}{digits}"
 
 
 def _constant(value: Any) -> str:
@@ -70,42 +71,48 @@ def ToText(expression: Any) -> str:
             return text if precedence >= level else f"({text})"
 
         texts = [text for text, _ in arguments]
-        if isinstance(node, _Constant):
-            text = _constant(node.value)
+        tag, record = kind_of(node)
+        attributes = F.attributes_of(record)
+        name = attributes.get("name")
+        if tag == "constant":
+            text = _constant(attributes.get("value"))
             return text, (_MULTIPLICATIVE if "/" in text else _UNARY if text.startswith("-") else _PRIMARY)
-        if isinstance(node, _Vector):
-            return _vector(node), _PRIMARY
-        if isinstance(node, _Identifier):
-            return node.name, _PRIMARY
-        if isinstance(node, _Member):
-            return f"{operand(0, _PRIMARY)}.{node.name}", _PRIMARY
-        if isinstance(node, _Select):
+        if tag == "vector":
+            return _vector(attributes), _PRIMARY
+        if tag == "identifier":
+            return name, _PRIMARY
+        if tag == "member":
+            return f"{operand(0, _PRIMARY)}.{name}", _PRIMARY
+        if tag == "select":
             return f"{operand(0, _PRIMARY)}[{texts[1]}]", _PRIMARY
-        if isinstance(node, _Range):
+        if tag == "range":
             return f"{operand(0, _PRIMARY)}[{texts[1]}:{texts[2]}]", _PRIMARY
-        if isinstance(node, _Span):
+        if tag == "span":
             return f"[{texts[0]}:{texts[1]}]", _PRIMARY
-        if isinstance(node, _Concatenation):
+        if tag == "concatenation":
             return "{" + ", ".join(texts) + "}", _PRIMARY
-        if isinstance(node, _Replication):
+        if tag == "replication":
             return "{" + texts[0] + "{" + texts[1] + "}}", _PRIMARY
-        if isinstance(node, _Call):
-            return f"{node.function}({', '.join(texts)})", _PRIMARY
-        if isinstance(node, _Method):
-            return f"{operand(0, _PRIMARY)}.{node.name}()", _PRIMARY
-        if isinstance(node, _Iterate):
-            return f"{operand(0, _PRIMARY)}.{node.method}({node.name}) with ({texts[1]})", _PRIMARY
-        if isinstance(node, _Cast):
-            return f"{node.type or node.width}'({texts[0]})", _PRIMARY
-        if isinstance(node, _Inside):
+        if tag == "call":
+            return f"{attributes.get('callable')}({', '.join(texts)})", _PRIMARY
+        if tag == "method":
+            return f"{operand(0, _PRIMARY)}.{name}()", _PRIMARY
+        if tag == "iterate":
+            return f"{operand(0, _PRIMARY)}.{attributes.get('method')}({name}) with ({texts[1]})", _PRIMARY
+        if tag == "cast":
+            return f"{attributes.get('type') or attributes.get('width')}'({texts[0]})", _PRIMARY
+        if tag == "inside":
             return f"{operand(0, _RELATIONAL + 1)} inside {{{', '.join(texts[1:])}}}", _RELATIONAL
-        if isinstance(node, _Unary):  # its operand is a primary (A.8.3): `-(-x)`, `&(&x)`
-            return f"{node.operator}{operand(0, _PRIMARY)}", _UNARY
-        if isinstance(node, _Conditional):  # right-associative
+        operator = attributes.get("operator")
+        if tag == "unary":  # its operand is a primary (A.8.3): `-(-x)`, `&(&x)`
+            return f"{operator}{operand(0, _PRIMARY)}", _UNARY
+        if tag == "conditional":  # right-associative
             return f"{operand(0, _OR)} ? {operand(1, _CONDITIONAL)} : {operand(2, _CONDITIONAL)}", _CONDITIONAL
-        level = _LEVELS[node.operator]
+        if tag != "binary":
+            raise ValueError(f"SystemVerilog has no kind {tag!r}")
+        level = _LEVELS[operator]
         if level == _IMPLY:  # right-associative, the loosest
-            return f"{operand(0, level + 1)} {node.operator} {operand(1, level)}", level
-        return f"{operand(0, level)} {node.operator} {operand(1, level + 1)}", level
+            return f"{operand(0, level + 1)} {operator} {operand(1, level)}", level
+        return f"{operand(0, level)} {operator} {operand(1, level + 1)}", level
 
     return F.fold(expression, write)[0]

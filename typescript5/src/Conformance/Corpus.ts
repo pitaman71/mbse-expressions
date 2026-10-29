@@ -7,9 +7,6 @@
  * snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
  * implementation's files (see the CONF test suite). Keep this module and `python3/mbse/Expressions/Conformance/Corpus.py`
  * in lockstep: same cases, same values, same order of statements.
- *
- * The SystemVerilog case returns with its dialect's port, stage 2b (docs/proposals/port): `stage2b` keeps it as it was
- * written for the old API.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -24,16 +21,19 @@ import * as Excel from "../Dialects/Excel/index.js";
 import * as Latex from "../Dialects/Latex/index.js";
 import * as Matlab from "../Dialects/Matlab/index.js";
 import * as Python from "../Dialects/Python/index.js";
+import * as SystemVerilog from "../Dialects/SystemVerilog/index.js";
 import * as Framework from "../Framework/index.js";
 import type * as Terms from "../Framework/Terms.js";
 
 const [C, X, L, M, P] = [Ccpp.Expressions, Excel.Expressions, Latex.Expressions, Matlab.Expressions, Python.Expressions];
+const SV = SystemVerilog.Expressions;
 
-export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp"] as const;
+export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp", "systemverilog"] as const;
 
 /** The dialect that reads each case, where it is not Basic. */
 export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
   ["python", P.DIALECT], ["matlab", M.DIALECT], ["excel", X.DIALECT], ["latex", L.DIALECT], ["ccpp", C.DIALECT],
+  ["systemverilog", SV.DIALECT],
 ]);
 
 /** A case: its root schema, its root term, and the store it is built in. */
@@ -55,6 +55,7 @@ export function build(): Map<string, Case> {
   store.transaction(Excel.install);
   store.transaction(Latex.install);
   store.transaction(Ccpp.install);
+  store.transaction(SystemVerilog.install);
 
   // --- expression: every kind and literal type, a let and its variable, an extension operation ---
   const [self, age] = [E.variable("this"), E.variable("age")];
@@ -120,28 +121,19 @@ export function build(): Map<string, Case> {
     ">", C.subscript(C.member(me, "b", "->"), 0n), C.constant(1.5, "float"))),
     C.cast("uint8_t", C.call("f", 1n)), C.constant(5n, "unsigned int"));
 
-  const terms = store.transaction(() => new Map<string, any>(([
-    ["expression", expression], ["python", python], ["matlab", matlab], ["excel", excel], ["latex", latex],
-    ["domains", domains], ["collections", collections], ["ccpp", ccpp]
-  ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
-  const Term = store.registered("Expressions.Framework.Term");
-  return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
-}
-
-/** The old API's case, to port with its dialect (stage 2b); not called. */
-export async function stage2b(): Promise<Map<string, Case>> {
-  const SystemVerilog: any = await import("../Dialects/SystemVerilog/Expressions.js");
-
   // --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
   // this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(this.unique().sum(q) with (q))) + 4'(8'shff)
-  const [sv, that] = [SystemVerilog, SystemVerilog.identifier("this")];
+  const [sv, that] = [SV, SV.identifier("this")];
   const systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1n, sv.span(2n, 5n)), sv.conditional(
     sv.unary("!", sv.select(that, 0n)),
     sv.concatenation(sv.replication(6n, sv.vector("10")), sv.range_(sv.member(that, "b"), 7n, 4n)),
     sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
       sv.cast(4n, sv.vector("11111111", true, "h")))));
 
-  return new Map<string, Case>([
-    ["systemverilog", [SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders]],
-  ]);
+  const terms = store.transaction(() => new Map<string, any>(([
+    ["expression", expression], ["python", python], ["matlab", matlab], ["excel", excel], ["latex", latex],
+    ["domains", domains], ["collections", collections], ["ccpp", ccpp], ["systemverilog", systemverilog]
+  ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
+  const Term = store.registered("Expressions.Framework.Term");
+  return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
 }

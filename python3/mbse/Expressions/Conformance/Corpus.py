@@ -6,26 +6,25 @@ that reads each case other than Basic's. Each implementation writes its snapshot
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
 the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same
 values, same order of statements.
-
-The SystemVerilog case returns with its dialect's port, stage 2b (docs/proposals/port): `_stage_2b` keeps it as it
-was written for the old API.
 """
 
 from __future__ import annotations
 
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import Basic, Ccpp, Excel, Latex, Matlab, Python
+from mbse.Expressions.Dialects import Basic, Ccpp, Excel, Latex, Matlab, Python, SystemVerilog
 from mbse.Expressions.Dialects.Basic import Domains, Expressions
 from mbse.Expressions.Dialects.Ccpp import Expressions as C
 from mbse.Expressions.Dialects.Excel import Expressions as X
 from mbse.Expressions.Dialects.Latex import Expressions as L
 from mbse.Expressions.Dialects.Matlab import Expressions as M
 from mbse.Expressions.Dialects.Python import Expressions as P
+from mbse.Expressions.Dialects.SystemVerilog import Expressions as SV
 from mbse.Schemas.Framework import Builders
 
-CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp"]
+CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp", "systemverilog"]
 
-DIALECTS = {"python": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex": L.DIALECT, "ccpp": C.DIALECT}
+DIALECTS = {"python": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex": L.DIALECT, "ccpp": C.DIALECT,
+            "systemverilog": SV.DIALECT}
 """The dialect that reads each case, where it is not Basic."""
 
 
@@ -46,6 +45,7 @@ def build():
     store.transaction(Excel.install)
     store.transaction(Latex.install)
     store.transaction(Ccpp.install)
+    store.transaction(SystemVerilog.install)
 
     # --- expression: every kind and literal type, a let and its variable, an extension operation ---
     this, age = E.variable("this"), E.variable("age")
@@ -111,26 +111,18 @@ def build():
         ">", C.subscript(C.member(me, "b", "->"), 0), C.constant(1.5, "float"))),
         C.cast("uint8_t", C.call("f", 1)), C.constant(5, "unsigned int"))
 
-    with store.transaction():
-        terms = {case: store.Expressions.Framework.Term(writer) for case, writer in [
-            ("expression", expression), ("python", python), ("matlab", matlab), ("excel", excel), ("latex", latex),
-            ("domains", domains), ("collections", collections), ("ccpp", ccpp)]}
-    Term = store.registered("Expressions.Framework.Term")
-    return {case: (Term, terms[case], store) for case in CASES}
-
-
-def _stage_2b():  # pragma: no cover - the old API's cases, to port with their dialects
-    from mbse.Expressions.Dialects.SystemVerilog import Expressions as SystemVerilog
-
     # --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
     # this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(this.unique().sum(q) with (q))) + 4'(8'shff)
-    sv, that = SystemVerilog, SystemVerilog.identifier("this")
+    sv, that = SV, SV.identifier("this")
     systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1, sv.span(2, 5)), sv.conditional(
         sv.unary("!", sv.select(that, 0)),
         sv.concatenation(sv.replication(6, sv.vector("10")), sv.range_(sv.member(that, "b"), 7, 4)),
         sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
                   sv.cast(4, sv.vector("11111111", True, "h")))))
 
-    return {
-        "systemverilog": (SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders),
-    }
+    with store.transaction():
+        terms = {case: store.Expressions.Framework.Term(writer) for case, writer in [
+            ("expression", expression), ("python", python), ("matlab", matlab), ("excel", excel), ("latex", latex),
+            ("domains", domains), ("collections", collections), ("ccpp", ccpp), ("systemverilog", systemverilog)]}
+    Term = store.registered("Expressions.Framework.Term")
+    return {case: (Term, terms[case], store) for case in CASES}

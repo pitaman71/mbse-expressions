@@ -1,9 +1,9 @@
 /**
  * Evaluators of the SystemVerilog dialect: compute an expression by IEEE 1800's rules, in TypeScript.
  *
- * `Evaluators.OfAny(expression, scope)` evaluates in a `new Scope(variables, { functions })` and gives a
- * `Domains.Logic` for an integral result or a number for a real one. A variable's type is its value's: a `Logic` its
- * own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32 bits), a number a `real`, a string a vector
+ * `Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
+ * `new Scope(variables, { functions })` and gives a `Domains.Logic` for an integral result or a number for a real one.
+ * A variable's type is its value's: a `Logic` its own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32 bits), a number a `real`, a string a vector
  * of its bytes (in UTF-8), and a Basic typed value (`Domains.Value`) of an integer domain a 2-state vector of its width
  * and signedness, of bits a 2-state vector, of std_logic a `logic` bit, or a vector of a std_logic_vector's width (U,
  * X, W and - as x, L as 0, H as 1), and of a binary IEEE 754 format a `real` or `shortreal`. IEEE 1800's rules apply:
@@ -31,10 +31,12 @@
  *   items.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import { NameError, OverflowError } from "../../Framework/Errors.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as F from "../../Framework/Terms.js";
 import * as BD from "../Basic/Domains.js";
 import * as Ieee754 from "../Basic/Ieee754.js";
 import { isMapping } from "../Matlab/Domains.js";
@@ -59,7 +61,7 @@ export class Scope extends S.Variables {
   }
 
   override unbound(reference: any): never {
-    throw new NameError(`identifier '${reference.name}' is not declared`);
+    throw new NameError(`identifier '${F.nameOf(reference)}' is not declared`);
   }
 
   function(name: string): Fn {
@@ -209,7 +211,26 @@ function power(base: bigint, exponent: bigint, modulus: bigint): bigint {
 
 // --- The evaluation ---
 
-const kindOf = (node: any): string => node.kind().KIND;
+/** A term read once for one evaluation: its `tag` (as `Expressions.kindOf` names it), and its members by name, its attributes (null where not set), its
+ * slots (a `Node`) and its variadic arguments (an array of `Node`s). `term` is the term value read. */
+class Node {
+  [member: string]: any;
+
+  constructor(readonly term: any) {
+    const [tag, record] = X.kindOf(term);
+    const [slots, variadic, names] = F._parts(record.as_schema());
+    const args = F.argumentsOf(record);
+    for (const name of names) this[name] = null;
+    for (const [name, value] of F.attributesOf(record)) this[name] = value;
+    slots.forEach((name, i) => {
+      this[name] = args[i] === null ? null : new Node(args[i]);
+    });
+    if (variadic !== null) this[variadic] = args.slice(slots.length).map((a) => new Node(a));
+    this.tag = tag;
+  }
+}
+
+const kindOf = (node: Node): string => node.tag;
 const COMPARISONS = ["<", "<=", ">", ">=", "==", "!=", "===", "!==", "==?", "!=?"];
 const SHIFTS = ["<<", ">>", "<<<", ">>>"];
 
@@ -277,7 +298,7 @@ class Evaluation {
     switch (kindOf(node)) {
       case "constant": return typed(node.value);
       case "vector": return Logic.of(node.value, Boolean(node.signed));
-      case "identifier": return typed(this.scope.lookup(node));
+      case "identifier": return typed(this.scope.lookup(node.term));
       case "member": return this.member(node);
       case "select": return this.select(node);
       case "range": return this.range(node);
@@ -539,8 +560,8 @@ class Evaluation {
   private member(node: any): unknown {
     const target: any = this.value(node.object);
     let members: ReadonlyMap<string, unknown>;
-    if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
-    else if (target !== null && typeof target === "object" && typeof target.accept === "function") members = Validators.properties_of(target);
+    if (Objects.isObject(target)) members = Objects.properties(target);
+    else if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
     else throw new TypeError(`a ${typeName(target)} has no members`);
     if (!members.has(node.name)) throw new KeyError(`no member named '${node.name}'`);
     return typed(array(members.get(node.name)));
@@ -597,7 +618,7 @@ class Evaluation {
   }
 
   private call(node: any): unknown {
-    const name = node.function;
+    const name = node.callable;
     if (X.SYSTEM.includes(name)) {
       if (node.arguments.length !== 1) throw new TypeError(`${name} takes 1 argument, got ${node.arguments.length}`);
       if (name === "$bits") { // its argument's type's width; the argument is not evaluated
@@ -624,7 +645,7 @@ function identical(a: unknown, b: unknown): boolean {
 
 /** A member's value: a list as an array of its items, lists of lists too. */
 function array(value: unknown): unknown {
-  return value instanceof Validators.ListRecord ? value.values.map(array) : value;
+  return value instanceof Objects.Listed ? value.values.map(array) : value;
 }
 
 /** A real power as C's `pow` gives it, in the format of `ctype`. */
@@ -650,8 +671,8 @@ function system(name: string, value: unknown): Logic {
 
 /** The value of an expression in `scope`, or with the variables in an object bound: a `Logic` or a number. */
 export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
-  const resolved = X.DIALECT.resolve(expression);
-  const problems = X.DIALECT.validate(resolved, { bound: S.free(resolved) }); // its structure: references resolve as they go
+  const term = F.term(expression);
+  const problems = X.DIALECT.validate(term, S.free(term, X.DIALECT)); // its structure: references resolve as they go
   if (problems.length > 0) throw new ValueError(`cannot evaluate an invalid expression: ${problems[0]}`);
-  return new Evaluation(S.isScope(scope) ? scope as Scope : new Scope(scope as S.Bindings)).value(resolved);
+  return new Evaluation(S.isScope(scope) ? scope as Scope : new Scope(scope as S.Bindings)).value(new Node(term));
 }
