@@ -26,15 +26,17 @@ python3/mbse/Expressions/, typescript5/src/
 
 ## The Basic dialect
 
-- `Expressions.OfAny` : any expression
-- `Expressions.OfLiteral` : a native value; conversion to and from the over-the-wire format is the responsibility of
-  `Schemas.OfNative`
-- `Expressions.OfOperation` : a named operation applied to ordered arguments, over an open vocabulary of string names
-- `Expressions.OfVariable` : the value bound to a name
-- `Expressions.OfLet` : binds a name to the value of one expression within another, its body; nest lets for several
-  names
-- `Expressions.OfQuantifier` : binds a name to each item of a collection within a body: `all`, `any` or `count` of the
-  items for which the body holds
+An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term, a value of
+`Expressions.Framework.Term` held nested (see [The framework](#the-framework), and the port's
+[API](proposals/port/API.md)). Basic's terms are the framework's kinds and one of its own, each a branch of `Term`:
+
+- `literal` : a basic scalar (`value`), and the name of its value `domain` when it is not the scalar's default
+- `call` : a named operation (`callable`) applied to ordered `arguments`, over an open vocabulary of string names, and
+  its result's `domain`
+- `variable` : the value bound to a `name`
+- `let` : binds a `name` to the value of one term (`value`) within another (`body`); nest lets for several names
+- `quantifier` (Basic's, added to `Term` by `Basic.install`) : binds a `name` to each item of a `collection` within a
+  `body`: `all`, `any` or `count` of the items for which the body holds
 
 Every binding must implement a core vocabulary of operations. The core vocabulary is chosen so that any core expression
 can also be interpreted as a constraint (e.g. by a solver or as a SystemVerilog constraint): operations are pure,
@@ -54,9 +56,9 @@ Constraints that every binding must evaluate use only the core vocabulary. Opera
 that a binding may or may not support. A union value is a record of its one branch, by name, so a constraint tests which
 branch it holds with `has`, e.g. `has(get(this, 'reach'), 'email')`.
 
-Evaluation is the concern of `Evaluators`: `Evaluators.OfAny(expression, scope)` binds the variables in `scope` and
-returns a native value, an object, or unknown (`None`), and `Evaluators.OfLiteral`, `OfOperation`, `OfVariable` and
-`OfLet` evaluate one kind, each accepting that kind's `Spec`:
+Evaluation is the concern of `Evaluators`: `Evaluators.OfAny(term, scope)` binds the variables in `scope` and
+returns a native value, an object, or unknown (`None`), and `Evaluators.OfLiteral`, `OfCall`, `OfVariable`, `OfLet`
+and `OfQuantifier` evaluate one kind; each takes a term value, or an `Expression`:
 
 - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are unknown.
   `and`, `or`, `not` and `implies` follow Kleene's logic (`False and unknown` is `False`); the second operand is
@@ -67,9 +69,10 @@ returns a native value, an object, or unknown (`None`), and `Evaluators.OfLitera
   `str` and `bytes` are ordered. Arithmetic takes numbers of one domain (`add(1, 1.5)` is an error). Values of other
   domains than the natives' defaults follow the same semantics by domain (see Value domains).
 - Unknown operations, wrong numbers of arguments, unbound variables and wrong operand types raise.
-- `get` and `has` read any object that writes its properties through `accept`, including mbse-schemas' value
-  objects. Equality is deep for everything but reference objects, which compare by identity: value objects, union and
-  intersection values and entries' records by the properties each writes, read through the visitor protocols (absent
+- `get` and `has` read any data object through mbse-schemas' readers (`Framework.Objects`): reference objects, value
+  objects, union and intersection values, terms among them. Equality is deep for everything but reference objects,
+  which compare by identity: value objects, union and intersection values and entries' records by the properties each
+  holds, read through the visitor protocols (absent
   in both or equal in both; present in one only is incomparable); positional collections item by item (another length
   is unequal), keyed ones by key in any order (other keys are incomparable). Equal is Kleene's and of the parts'
   equalities.
@@ -79,39 +82,28 @@ gives `True`, `False` or unknown (`None`). Checking constraints against data, by
 mbse-patterns' (`Predicates.holds`). mbse-schemas needs no evaluator: its union values name their branch, so neither
 decoding nor validation evaluates anything.
 
-`validate(bound=(), core=False)` reports statically what evaluation would raise: missing names and values, non-native
-literals, cycles (shared sub-expressions are not cycles, nor is recursion: a definition that refers to itself
-through a slot its kind names in `REFERS`, as mbse-patterns' application refers to its predicate), wrong numbers of arguments to core operations, variables not
-bound by an enclosing let or in `bound`, and, with `core`, operations outside the core vocabulary.
+`Expressions.DIALECT.validate(term, bound=(), core=False)` reports statically what evaluation would raise: missing
+names and values, literals that hold no basic scalar, properties of the wrong scalar, wrong numbers of arguments to
+core operations, variables not bound by an enclosing let or in `bound`, and, with `core`, operations outside the core
+vocabulary. A term is a nested value, so it holds no cycle.
 
-Expressions are serializable and therefore follow the `Expressions.X.Data` `Expressions.X.Schema` `Expressions.X.Builder`
-format:
+Terms are stored, serialized, validated and compared as any value of their schemas: `Framework.install` and
+`Basic.install` define them in a store (each a module-scope `install(txn)`, run once each, in that order), a term is
+built there in a transaction through the builders, and written nested, its kind the name of the branch it holds:
+`{"call": {"callable": "not", "arguments": [{"literal": {"value": {"bool": true}}}]}}`. A literal's value is tagged by
+its scalar, and a domain is named.
 
-- `Data` is `Visitable`. Builders follow the builder pattern (`create()` / `clone()` / `update()`, none validate) and
-  implement `Visitors.OfObject`, which is how `Expressions.Builders` rebuilds expressions from snapshots.
-- The meta-schemas are ordinary object schemas. Each declares `kind`, a tag with a fixed value (`literal`, `operation`,
-  `variable`, `let`); `OfAny.Schema` is their union, discriminated by `eq(get(this, 'kind'), ...)`. A literal's schema
-  declares one optional property per native type (`int`, `float`, `str`, `bool`, `bytes`), of which a literal sets
-  exactly one. Operations, variables and lets declare `name`. Operations and lets declare the adjacency `arguments` to
-  `Expressions.Arguments`, a relation linking a `parent` to an `argument` with an `index` and `unique(argument)`; a
-  let's value is its argument 0 and its body its argument 1. Every kind declares `used_by`, the same relation seen from
-  the argument, which the arguments imply: data never writes it, and builders ignore it.
-- The meta-schemas are named `Expressions.OfLiteral`, `Expressions.OfOperation`, `Expressions.OfVariable`,
-  `Expressions.OfLet` and `Expressions.Arguments`, the names snapshots carry. `Builders` is an mbse-schemas store of the
-  bound classes (`Bindings.OfStore`), so snapshots, validation and comparison work on expressions as on any objects.
-  `DIALECT.register(store)` registers the meta-schemas in another store, and `mbse.Expressions.register(store)` every
-  dialect's, so that a `Proxies.OfStore` can build expressions as proxies (which then also write `used_by`) or write
-  expressions of several dialects.
-
-`Writer`s build expressions, which are data, with methods, and evaluate nothing. `.name` reads a property (`get`), and
+`Writer`s write terms through the builders, with methods, and evaluate nothing. `.name` reads a property (`get`), and
 methods build the operations: `.eq(x)` ... `.ge(x)`, `.and_(x)`, `.or_(x)`, `.not_()`, `.implies(x)`, `.add(x)`,
-`.sub(x)`, `.mul(x)`, `.neg()`, `.has(name)`, `.get(name)`. `variable(name)`, `literal(value)`, `let_(name, value,
-body)` and `operation(name, *arguments)` start writers, and a writer is accepted wherever an `Expressions.OfAny.Spec`
-is:
+`.sub(x)`, `.mul(x)`, `.neg()`, `.has(name)`, `.get(name)`. `variable(name)`, `literal(value, domain)`, `let_(name,
+value, body)` and `operation(name, *arguments, domain=None)` start writers. A writer is a spec, written wherever a term
+is, in a transaction (kept until mbse-codegen-python moves off them: Resolved, "Porting to the stabilized
+mbse-schemas"):
 
 ```python
 this = Expressions.variable('this')
-adult = this.age.ge(18).and_(this.has('email'))
+with store.transaction():
+    adult = store.Expressions.Framework.Expression(lambda e: e.root(this.age.ge(18).and_(this.has('email'))))
 Evaluators.OfAny(adult, {'this': ann})   # True, False, or None when age is absent
 ```
 
@@ -127,7 +119,7 @@ function's closure and globals when `FromFunction` runs. The result follows the 
 1.0` is unknown. TypeScript has no counterpart, since a JavaScript function has no Python source to read.
 
 ```python
-adult = Python.Text.FromFunction(lambda this: this.age >= 18 and this.email is not None)
+adult = Python.Text.FromFunction(lambda this: this.age >= 18 and this.email is not None)   # a writer (stage 2b)
 ```
 
 ### Collections
@@ -185,14 +177,15 @@ the parameters that standard defines, and today's natives become their defaults.
 - **Basic has no implied promotions.** An operation takes its arguments' domains as they are: `add` of an
   `Integer(8)` and an `Integer(16)` does not apply until one is converted explicitly. A dialect's translator writes out
   its language's promotions as conversions.
-- **Literals carry their domain.** A literal's `domain` is a value object, so `1` as an `Integer(8)` and `1` as an
-  `Ieee754` are different literals, and two literals of equal domains are the same wherever their domains came from.
+- **Literals carry their domain.** A literal's `domain` names one, so `1` as an `Integer(8)` and `1` as an `Ieee754`
+  are different literals. Until domains are objects that dialects define by name (the port's stage 3), the name is one
+  registered in Basic's `Domains`, or a default's (`int`, `float`, `str`, `bytes`, `bool`).
 - **Domains are data, compared by structure, and registered by name.** Each kind is `Domains.Of<Kind>`, with `Data`
-  (a dataclass in Python, a class with `equals` in TypeScript), a `Builder` and the meta-schema `Schema` of its value;
-  `Domains.Schema` is their union, with the branch `named`. `Domains.register(name, domain)` registers a domain, once,
-  under one name. Over the wire a literal of a registered domain carries its name, `{"named": {"name": "uint8"}}`, and
-  any other its value, `{"integer": {"width": 8, "signed": true, "overflow": "raise"}}`; a name resolves in the
-  registry. Signatures stay code: they are a dialect's vocabulary, not values on the wire. So do `Anything` and
+  (a dataclass in Python, a class with `equals` in TypeScript) and a `Builder`. `Domains.register(name, domain)`
+  registers a domain, once, under one name, and a term names it: over the wire a literal of a registered domain
+  carries its name, `{"literal": {"value": {"int": 200}, "domain": "uint8"}}`; a writer refuses a domain with no name,
+  and validation one that names none. (Before the port, a domain was written by value when it had no name, through a
+  meta-schema of the domains; that went with the domains' schemas outside a store.) Signatures stay code: they are a dialect's vocabulary, not values on the wire. So do `Anything` and
   `OfValues`, which serve inference only and are never stored. Today's natives are the domains' defaults (`Int` is an
   unbounded `Integer`, and so on), and a domain includes only domains equal to it, so the core operations' signatures
   apply to no other domain until arithmetic takes them.
@@ -275,79 +268,68 @@ the parameters that standard defines, and today's natives become their defaults.
 
 ## The framework
 
-`mbse.Expressions.Framework` defines what every dialect implements, and implements most of it from declarations, in
-six modules: `Terms` (expressions, their forms, kinds and dialects), `Symbolics` (names, scopes and dependencies),
-`Domains`, `Evaluators`, `Translators` and `Errors`.
+`mbse.Expressions.Framework` defines what every dialect implements, and implements most of it from the dialects'
+kinds, in modules: `Terms` (the framework's schemas, and the generic reads of terms), `Objects` (the data objects
+expressions read), `Symbolics` (names, scopes and dependencies), `Domains`, `Evaluators`, `Partials`, `Translators` and
+`Errors`. The port to mbse-schemas 0.26 settles its API in [the port's API](proposals/port/API.md).
 
-- `Terms.Expression` is an expression of some dialect: `Visitable`, plus `dialect()`, `form()` and
-  `validate()`. A `Form` is a term's structure: its `kind`, its native `attributes` and its ordered `arguments`. It is
-  mbse-schemas' `Schemas.Form.Data`, the neutral form of a term that a schema holds where a literal would stand
-  (mbse-schemas' `docs/FRAMEWORK.md`, Parametrics). `Dialect.make(form)` is the inverse, and `walk`, `fold` (bottom-up, once per term, raising on cycles) and `same`
-  (structural equality by co-traversal: natives of one type by value, NaN is NaN, -0.0 is not 0.0) work on any
-  dialect through forms alone.
-- `Terms.Dialect` is an expression language: `name()`, `kinds()`, `schema_of(expression)`, `make`, `resolve`
-  (specs: expressions, `Writer`s, native values as literals, or callables taking the `AnyBuilder`), `validate`,
-  `infer`, the union meta-schema `Schema` and the store `Builders` of its bound classes.
-- `Terms.Declared` derives a dialect from its kinds: each is a dataclass derived from `Term` whose class
-  variables give its `KIND` (the tag), its `ROLE`, a literal's `VALUE` natives, its native `PROPERTIES` (required
-  unless `OPTIONAL`), its arguments (`SLOTS`, fields of one argument each, then `VARIADIC`, one field holding the
-  rest) and, for an application, the property naming its `OPERATOR` (or none, when the tag names it) and its
-  `VOCABULARY` (operator names to signatures; `None` accepts any name, with `SIGNATURE`). A kind may add its own
-  problems (`check()`), and a reference kind may be non-`LEXICAL` (resolved by the scope, never unbound) or have
-  `AMBIENT` names, bound without a declaration. From these it derives builders (`create()` / `clone()` / `update()`, `Visitors.OfObject`, and the DSL
-  `.set(name, value)`, `.arguments(*specs)`, `.argument(slot, spec)`), meta-schemas named
-  `Expressions.<Dialect>.Of<Kind>` (Basic keeps its names) with `register(store)`, the union discriminated by Basic's
-  `eq(get(this, 'kind'), tag)`, the store `Builders`, validation and inference. Every dialect shares the relation
-  `Expressions.Arguments`.
-- **A dialect may extend another**: `Terms.Declared(name, kinds, extends=base)`. Its kinds are the base's and its own,
-  whose tags must differ from the base's ("Clash would declare 'literal', which Basic has"); its classes, schemas,
-  union and store of bound classes include the base's, so every expression of the base is one of the extension, and the
-  extension validates, infers and evaluates trees that mix them. The base accepts its extensions' terms as arguments
-  (`terms()`, in specs, writers and snapshots), so a base's writer can hold an extension's term (`x.add(Twice(x))`);
-  such a tree is the extension's to validate and evaluate, and the base reports its extensions' terms as "not an
-  expression". mbse-patterns' predicates extend Basic this way.
-- **Expressions are typed bindings of their meta-schemas.** A kind's meta-schema is the source of truth for its
-  data, and `Declared` binds the kind's data class to it with mbse-schemas' `Bindings`: the kind gives `read` and
-  `make`, between its fields and the schema's properties and the `arguments` entries, and declares `kind` fixed, a
-  literal's native properties exclusive and `used_by` implied. Builders, `accept` and the store `Builders` are then
-  mbse-schemas' generic ones, and every property kind the schema declares is supported alike: a literal's `domain` is
-  an ordinary property holding a value object (a `ValueProperty`), with no holder schema.
-  `Terms` keeps what is the framework's own: roles, forms, validation, inference and dialect declaration.
+- `Terms.install(txn)` defines `Expressions.Framework.Term`, a union of value object kinds (`literal`, `call`,
+  `variable`, `let`), each with a `domain` by name; `Expressions.Framework.Expression`, a reference object whose `root`
+  is a term; and `Expressions.Framework.HasRoot(schema, expression)`, which gives `Schemas.OfExpression` the extension
+  adjacency `expression`. A dialect adds its kinds to `Term` by schema extension, in its own install.
+- Terms are read only through mbse-schemas' readers. `Terms.term(x)` gives the term value of an expression, of a term
+  property or of a `Readers.OfAny` holding one; `Terms.kind_of(term)` its branch, `(tag, record)`; `Terms.form(term)`
+  its `Form`: its `kind`, its `attributes` (the properties that are not terms) and its ordered `arguments` (its slots,
+  properties holding a term, then the elements of a container of terms), read from the kind's schema. `walk`, `fold`
+  and `same` (structural equality: natives of one type by value, NaN is NaN, -0.0 is not 0.0) work on any dialect
+  through forms alone.
+- `Terms.Dialect(name, kinds, domain_of=..., literal=..., extends=...)` is an expression language: the kinds it reads,
+  by tag, each a `Terms.Kind`: its role, the property naming its operator, its vocabulary (operator names to
+  signatures; None accepts any name, with `signature`), its required properties, and, by role, whether a reference is
+  `lexical` and its `ambient` names, the names an import binds (`names(record)`), its own problems (`check(record)`)
+  and its own domain (`typed(record)`). A dialect `validate`s, `infer`s and `make`s (the writer of a form) terms of its
+  kinds, and `spec(x)` makes a writer of a writer, a term (copied), a native value (its literal) or a callable taking
+  a term value's `Visitors.OfUnion`.
+- **A dialect may extend another**: `Terms.Dialect(name, kinds, extends=base)`. Its kinds are the base's and its own,
+  whose tags must differ from the base's ("Clash would declare 'literal', which Basic has"), so the extension
+  validates, infers and evaluates terms that mix them; a base reports an extension's kind it does not read ("Basic has
+  no kind 'twice'"). mbse-patterns' predicates extend Basic this way.
 - The roles are what validation, inference, evaluation and translation understand without knowing the dialect:
-  `literal` (a native value), `reference` (what the scope resolves: the value bound to a name, or a cell), `application`
+  `literal` (a basic scalar), `reference` (what the scope resolves: the value bound to a name, or a cell), `application`
   (an operator applied to arguments), `binding` (binds a name to its first argument within the others), `quantifier`
-  (binds a name to each item of its first argument within its second, combined by its operator; its signature gives the
-  items' domain, `items(domain)`) and `import` (makes what it declares available within its body: a module, a package's
-  functions; `binds()` names what it binds for references). `validate` reports what the Basic
-  section below lists, with the same messages in every dialect ("a literal needs a value", "identifier 'x' is not
-  bound", "'**' is not a core operation"), where `core` means the dialect's vocabulary.
+  (binds a name to each item of its first argument within its second, combined by its operator; its signature gives
+  the items' domain, `items(domain)`) and `import` (makes what it declares available within its body). `validate`
+  reports what the Basic section above lists, with the same messages in every dialect ("a literal needs a value",
+  "variable 'x' is not bound", "'**' is not a core operation"), where `core` means the dialect's vocabulary.
 - `Domains` defines `Domain` (`contains(value)`, `includes(domain)`) and `Signature` (`arity()`, `result(domains)`,
   `describe()`), with generic implementations: `OfTypes`, `OfValues`, `OfUnion`, `Anything`, `Function`, `Same` (one
   of several domains, the same for every argument), `Overloaded` (the first signature whose parameters include the
   arguments', or else the union of the results of those that may apply), `Opaque` (any arguments, a fixed result: a
   call) and `Either` (gives one of its arguments, as Python's `and` does). Each dialect's `Domains` module
-  declares its value domains and its vocabulary's signatures. `Dialect.infer(expression, environment)` gives an
-  expression's domain from them, raising `TypeError` for an operator that cannot take its arguments' domains:
+  declares its value domains and its vocabulary's signatures. `Dialect.infer(term, environment)` gives a term's domain
+  from them, raising `TypeError` for an operator that cannot take its arguments' domains:
   `add cannot take (int, float); it takes (T, T) -> T for T in int | float`. Inference is permissive: `Anything`, the
   domain of a value not known statically, is accepted wherever a domain is expected, and extensions give `Anything`.
-- `Symbolics` is about names. `free(expression)` gives the names an expression needs from its scope: its lexical
-  references that no binding or import within it binds, and that are not ambient. `imports(expression)` gives the
+- `Symbolics` is about names. `free(term, dialect)` gives the names a term needs from its scope: its lexical
+  references that no binding or import within it binds, and that are not ambient. `imports(term, dialect)` gives the
   imports it declares, which its scope must provide. `Scope` is where references are resolved at evaluation, the
   dialect's way: `lookup(reference)`, `bind(name, value)` (the scope within a binding) and `enter(declaration)` (the
   scope within an import). `Variables` is the scope of names bound to values, which dialect scopes derive from, and an
   evaluator given a mapping makes its dialect's scope from it.
-- `Evaluators` defines `Evaluator` (`(expression, scope) -> value`). `Interpreter` evaluates by role and calls an implementation per operator with
-  one thunk per argument and the scope, so each dialect decides what to evaluate and when; operators outside a closed
-  vocabulary go to an `extension`, which is how Matlab and Excel call the functions their scopes provide. It raises what
-  `validate` reports.
+- `Evaluators` defines `Evaluator` (`(term, scope) -> value`). `Interpreter` evaluates a term by its kind's role and
+  calls an implementation per operator with one thunk per argument, the term and the scope, so each dialect decides
+  what to evaluate and when; operators outside a closed vocabulary go to an `extension`, which is how Matlab and Excel
+  call the functions their scopes provide. It raises what `validate` reports.
 - `Partials` is partial evaluation, a peer of `Evaluators`: `Reducer(interpreter, literal, simplify)` evaluates every
-  subexpression whose references the given variables determine and replaces it with the literal of its value, when the
-  dialect has one (an object, a collection or an unknown value has none, and its subexpression stays); a binding of a
-  known value binds it in its body and stays only while the body refers to it; other terms are rebuilt from their
-  reduced arguments unless the dialect's `simplify` decides them from what is known. The result, the residual, is an
-  expression of the same dialect that agrees with the original wherever the original evaluates without raising.
-  Basic's `Partials.OfAny(expression, variables)` simplifies with Kleene's logic (`and(false, x)` is false, `and(true,
-  x)` is `x`, `implies(false, x)` is true).
+  subterm whose references the given variables determine and replaces it with the literal of its value, when the
+  dialect has one (an object, a collection, an unknown value or a value of a domain with no name has none, and its
+  subterm stays); a binding of a known value binds it in its body and stays only while the body refers to it; other
+  terms are rebuilt from their reduced arguments unless the dialect's `simplify` decides them from what is known. The
+  result, the residual, is a writer of a term of the same dialect that agrees with the original wherever the original
+  evaluates without raising. Basic's `Partials.OfAny(term, variables)` simplifies with Kleene's logic (`and(false, x)`
+  is false, `and(true, x)` is `x`, `implies(false, x)` is true).
+- `Objects` reads the data objects expressions are evaluated over, through mbse-schemas' readers: their properties
+  (a container as listed values), their entries, and whether one is a reference object.
 - `Errors` names the exceptions evaluation raises beyond mbse-schemas' own (`NameError`, `ImportError`,
   `OverflowError`, `ZeroDivisionError`): Python's own in Python, and classes of the same names in TypeScript.
 

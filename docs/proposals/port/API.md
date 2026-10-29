@@ -66,9 +66,11 @@ with store.transaction():
     term = store.Expressions.Framework.Term(x.add(1).gt(0))                                # a term value alone
 ```
 
-A writer's argument is a writer, a native value (a literal), or a term value read from a store, which is copied
-(mbse-schemas copies a value given whole). `E.literal(value, domain)` and the conversions take a domain by name, or a
-`Domains` value registered under one (below). Python's `Text.FromFunction(function)` gives a `Writer`, so it builds an
+A writer's argument is a spec: a writer, a native value (a literal), a term value read from a store, which is copied
+(mbse-schemas copies a value given whole), or a callable taking the `Visitors.OfUnion` of a term value, as
+`store.Expressions.Framework.Term(cb)` gives one (`E.DIALECT.spec(x)` makes a writer of any of them).
+`E.literal(value, domain)` and the conversions take a domain by name, or a `Domains` value registered under one
+(below). Python's `Text.FromFunction(function)` gives a `Writer`, so it builds an
 expression inside a transaction: `e.root(FromFunction(lambda this: this.age >= 18))`.
 
 ## Reading an expression
@@ -82,7 +84,7 @@ every evaluator, validator and translator shares, over any dialect's kinds:
 | `Terms.term(x)` | the term value (a `Readers.OfUnion` of `Expressions.Framework.Term`) of an `Expression`, its `root` property's reader, a `Readers.OfAny` holding one, or a term value itself |
 | `Terms.kind_of(term)` | the branch it holds, `(tag, record)`: `("call", <Readers.OfObject>)` |
 | `Terms.form(term)` | its `Form`: `kind`, `attributes` (its scalar properties set, by name: `{"callable": "add"}`) and `arguments` (its terms, in order: the term properties in declaration order, its slots, then a container of terms' elements) |
-| `Terms.name_of(term)`, `Terms.operator_of(term)` | the name a reference, binding or quantifier binds or refers to; an application's or quantifier's operator |
+| `Terms.name_of(term)`, `Terms.operator_of(term, kind)` | the name a reference, binding or quantifier binds or refers to; an application's or quantifier's operator, its kind's `operator` property or its tag |
 | `Terms.walk`, `Terms.fold`, `Terms.same` | as before, over term values: a term is a nested value, so there is no sharing and no cycle |
 
 Which properties are slots, variadic arguments or attributes is read from the schema: a property whose schema is
@@ -90,6 +92,8 @@ Which properties are slots, variadic arguments or attributes is read from the sc
 `x + 1 > 0` reads:
 
 ```python
+from mbse.Expressions.Framework import Terms
+
 term = Terms.term(positive)                         # positive.root, as a Readers.OfUnion
 tag, call = Terms.kind_of(term)                     # "call", the branch's Readers.OfObject
 assert tag == "call" and call.callable.get() == "gt"
@@ -108,7 +112,9 @@ assert Evaluators.OfAny(term, {"x": -1}) is False
 ```
 
 `Evaluators.OfLiteral`, `OfCall`, `OfVariable`, `OfLet` and `OfQuantifier` evaluate one kind, raising `TypeError` for a
-term of another. Partial evaluation gives its residual as a `Writer`, written where the caller wants it:
+term of another. `E.DIALECT.validate(term, bound, core)` and `E.DIALECT.infer(term, environment)` take a term as an
+evaluator does; `Symbolics.free(term, dialect)` and `Symbolics.imports(term, dialect)` take the dialect whose kinds they
+read. Partial evaluation gives its residual as a `Writer`, written where the caller wants it:
 `e.root(Partials.OfAny(term, {"x": 1}))`; a subterm it keeps is the term value read, copied when written.
 
 ## What a dialect module provides
@@ -154,7 +160,32 @@ Basic's `operation` is the framework's `call`: its property `name` is `callable`
    `overhauls/meta-schemas` branch: a reference object is one whose schema is a reference object schema (`ref`), with
    no `as_identity`; its identity, for equality, is the object itself.
 6. **Cycles and sharing go**: a term is a nested value, so `walk`, `fold`, validation and evaluation no longer look for
-   them, and FRM's cases about them assert that a tree has none to find.
+   them, and the cases about them assert that a term written into another is copied. A kind's slot that referred to a
+   definition (`REFERS`, mbse-patterns' predicates) is a by-name attribute when that dialect is ported.
+7. **The builders write any scalar into a basic scalar's property**, so validation still reports a wrong one ("a call's
+   callable must be a str, got int"), and a literal holding something other than a basic scalar names its schema ("a
+   literal must hold a basic scalar, got Expressions.Framework.Term").
+8. **The tests build a term through one helper per notebook**, `term(spec)`: a transaction around
+   `store.Expressions.Framework.Term(E.DIALECT.spec(spec))`. Writing that transaction out at each of several hundred
+   uses would bury what each case asserts; against P-019 ("helper functions that build a model through the builders
+   are such a DSL") it is the one exception, and it builds through the writers that the decisions keep for now.
+9. **The corpus holds Basic's three cases** (`expression`, `domains`, `collections`), each a term value written nested
+   under `Expressions.Framework.Term`; the other dialects' cases, and their files, return with stage 2b. A domain the
+   corpus names is registered by it (`binary32 roundTowardZero`, `state`, ...).
+
+## What stage 2b needs
+
+- Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,
+  each with `domain`; a slot a property of `_.Term`, variadic arguments a container of `_.Term` by an int index), its
+  `Terms.Dialect` of `Terms.Kind`s (an import's `names(record)`, a reference's `lexical` and `ambient`, a kind's
+  `check(record)` with its old messages), writers deriving `Terms.Writer` (or `E.Writer` for Basic's methods), and its
+  evaluator on `Framework.Evaluators.Interpreter` (implementations take `(thunks, term, scope)`; a term's attributes
+  through `Terms.attributes_of(Terms.kind_of(term)[1])`). A dialect whose kinds' tags are Basic's (`let`, `call`)
+  reads them from the same branches; a kind of its own that clashes with a framework branch's tag needs another tag.
+- `Framework/Translators.py` (`Terms.Form`, `Dialect.make`, which now gives a writer, and `Terms.same`) and the twelve
+  translators: a translation is a writer, written in a transaction by its caller.
+- `Python.Text.FromFunction` giving a Basic writer (EXP-12), and `ToText` reading terms through `Terms.form`.
+- The cases marked "Stage 2b restores ..." in EXP, FRM, COL, DOM and PAR, and the corpus's other cases.
 
 ---
 

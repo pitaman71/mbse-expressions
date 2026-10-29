@@ -4,26 +4,21 @@
 # Conformance corpus
 
 Each implementation builds the same corpus, statement for statement (`python3/mbse/Expressions/Conformance/Corpus.py`,
-`typescript5/src/Conformance/Corpus.ts`), and commits its snapshots here as `<implementation>/<case>.json` (reachable
-snapshot, indent 2) and `<case>.yaml`.
+`typescript5/src/Conformance/Corpus.ts`), and commits its snapshots here as `<implementation>/<case>.json` (the term
+written nested, indent 2) and `<case>.yaml`.
 
 | Case | Covers |
 |---|---|
-| `expression` | a Basic expression through its tagged meta-schemas: every kind and literal type, a let, shared variables, an extension operation; rebuilt with `Expressions.Builders` |
-| `python` | a Python expression with every kind, imports included, and shared names |
-| `matlab` | a MATLAB expression with every kind, an import included, and shared identifiers |
-| `excel` | an Excel formula with every kind, cells in other sheets and books included, and shared names |
-| `latex` | a LaTeX formula with every kind, a `where` included, and shared symbols |
-| `domains` | Basic literals of value domains, by value and by name, decimal and `binary128` text, a conversion's domain, a bitwise operation and `pack` |
+| `expression` | a Basic term, written nested under `Expressions.Framework.Term`: every kind and literal type, a let and its variable, an extension operation |
+| `domains` | Basic literals of value domains, each naming its domain, decimal and `binary128` text, a conversion's domain, a bitwise operation and `pack` |
 | `collections` | a Basic quantifier over an object's entries, and the collection operations |
-| `ccpp` | a C expression with every kind, typed constants and a shared identifier |
-| `systemverilog` | a SystemVerilog expression with every kind, sized vectors, casts and a shared identifier |
 
-Each case is rebuilt with its own dialect's builders.
+Each case is a term value in one store holding the framework's and Basic's installs. The other dialects' cases (`python`,
+`matlab`, `excel`, `latex`, `ccpp`, `systemverilog`) return with their port to the store (docs/proposals/port, stage 2b).
 
 The CONF test suite in each implementation checks that its own files are current, that the JSON files are
 byte-identical across implementations, that every implementation's YAML reads back to the same snapshot (also under a
-YAML 1.1 reader), and that every implementation's JSON and YAML deserialize to the same expressions, which validate.
+YAML 1.1 reader), and that every implementation's JSON and YAML read into this implementation's store as the same terms, which validate.
 
 Regenerate:
 

@@ -157,6 +157,9 @@ nested, a snapshot round-tripping). What they propose, for the user's review:
 
 ## Stages (proposed, once decided)
 
+Stage 1 is done; stage 2 is split in two: 2a, the framework and Basic as installs, terms in the store, with the API
+settled in [API.md](API.md); 2b, the other dialects and the translators on it.
+
 Each with both gates at 100% and the corpora regenerated; a stage touching mbse-schemas is made in a workspace
 (`polyrepo.py workspace <dir> --edit mbse-schemas`).
 
