@@ -104,6 +104,16 @@ As the user decided (2026-10-28), on questions 1 to 5:
 5. **The executor's evaluator is a protocol in mbse-schemas, given to a store once**, "a fine intermediate solution for
    now": the executor refuses as today where none is given.
 
+As the user decided (2026-10-28), on questions 9 to 11, "yes" to each recommendation:
+
+9. **Basic is kept through the port**; removing it stays deferred.
+10. **`FromFunction` is kept, and the writers**, until mbse-codegen-python moves off them.
+11. **All six dialects and the twelve translators are ported with the model**; vocabularies as data and value
+    parameters after.
+
+Question 6, what a `requires` that evaluates to unknown does: "semantics of evaluate deserve a more in-depth
+discussion", open. Questions 7 and 8 are put again, with examples.
+
 ## Stages (proposed, once decided)
 
 Each with both gates at 100% and the corpora regenerated; a stage touching mbse-schemas is made in a workspace
