@@ -153,13 +153,11 @@ function importfromCheck(record: any): string[] {
     ...identifierProblems("an importfrom's name", attributes.get("name")), ...aliasProblems("importfrom", attributes)];
 }
 
-function importNames(record: any): string[] {
-  const attributes = F.attributesOf(record);
+function importNames(attributes: ReadonlyMap<string, any>): string[] {
   return [attributes.get("alias") || (attributes.get("module") as string).split(".")[0] as string];
 }
 
-function importfromNames(record: any): string[] {
-  const attributes = F.attributesOf(record);
+function importfromNames(attributes: ReadonlyMap<string, any>): string[] {
   return [attributes.get("alias") || attributes.get("name")];
 }
 

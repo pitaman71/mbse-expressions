@@ -86,7 +86,7 @@ def free(term: Any, dialect: Terms.Dialect) -> set[str]:
         if kind.role in (Terms.BINDING, Terms.QUANTIFIER):
             scopes = [bound, *[bound | {name}] * (len(arguments) - 1)]
         elif kind.role == Terms.IMPORT:
-            scopes = [bound | set(kind.names(record) if kind.names is not None else ())] * len(arguments)
+            scopes = [bound | set(kind.names(Terms.attributes_of(record)) if kind.names is not None else ())] * len(arguments)
         for argument, scope in zip(arguments, scopes):
             if argument is not None:
                 visit(argument, scope)

@@ -84,7 +84,7 @@ class Reducer:
             return Result(self._rebuild(node, [first.expression, body.expression]),
                           free=first.free | (body.free - {name}))
         results = [self.reduce(argument, known) for argument in arguments]
-        names = frozenset(kind.names(record)) if kind.role == Terms.IMPORT and kind.names is not None else frozenset()
+        names = frozenset(kind.names(Terms.attributes_of(record))) if kind.role == Terms.IMPORT and kind.names is not None else frozenset()
         rebuilt = Result(self._rebuild(node, [result.expression for result in results]),
                          free=frozenset().union(*(result.free for result in results)) - names)
         return self._simplify(node, results) or rebuilt

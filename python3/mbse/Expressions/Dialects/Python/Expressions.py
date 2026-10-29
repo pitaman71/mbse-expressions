@@ -140,13 +140,11 @@ def _importfrom_check(record: Any) -> list[str]:
             + _alias_problems("importfrom", attributes))
 
 
-def _import_names(record: Any) -> tuple[str, ...]:
-    attributes = F.attributes_of(record)
+def _import_names(attributes: Any) -> tuple[str, ...]:
     return (attributes.get("alias") or attributes["module"].split(".")[0],)
 
 
-def _importfrom_names(record: Any) -> tuple[str, ...]:
-    attributes = F.attributes_of(record)
+def _importfrom_names(attributes: Any) -> tuple[str, ...]:
     return (attributes.get("alias") or attributes["name"],)
 
 

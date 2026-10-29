@@ -180,7 +180,7 @@ Basic's `operation` is the framework's `call`: its property `name` is `callable`
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,
   each with `domain`; a slot a property of `_.Term`, variadic arguments a container of `_.Term` by an int index), its
-  `Terms.Dialect` of `Terms.Kind`s (an import's `names(record)`, a reference's `lexical` and `ambient`, a kind's
+  `Terms.Dialect` of `Terms.Kind`s (an import's `names(attributes)`, a reference's `lexical` and `ambient`, a kind's
   `check(record)` with its old messages), writers deriving `Terms.Writer` (or `E.Writer` for Basic's methods), and its
   evaluator on `Framework.Evaluators.Interpreter` (implementations take `(thunks, term, scope)`; a term's attributes
   through `Terms.attributes_of(Terms.kind_of(term)[1])`). A dialect whose kinds' tags are Basic's (`let`, `call`)

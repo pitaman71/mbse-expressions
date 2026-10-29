@@ -98,7 +98,7 @@ export function free(term: unknown, dialect: Terms.Dialect): Set<string> {
     if (kind.role === Terms.BINDING || kind.role === Terms.QUANTIFIER) {
       scopes = args.map((_, i) => (i === 0 ? bound : new Set([...bound, name])));
     } else if (kind.role === Terms.IMPORT) {
-      const names = new Set([...bound, ...(kind.names !== null ? kind.names(record) : [])]);
+      const names = new Set([...bound, ...(kind.names !== null ? kind.names(Terms.attributesOf(record)) : [])]);
       scopes = args.map(() => names);
     }
     args.forEach((argument, i) => {

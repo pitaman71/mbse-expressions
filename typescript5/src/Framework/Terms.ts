@@ -34,7 +34,7 @@
  * - `BINDING`: binds its name to its first argument within the others.
  * - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
  *   results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
- * - `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(record)` gives the names
+ * - `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(attributes)` gives the names
  *   it binds for lexical references.
  */
 
@@ -377,7 +377,7 @@ export interface KindOptions {
   required?: readonly string[];
   lexical?: boolean;
   ambient?: Iterable<string>;
-  names?: ((record: any) => readonly string[]) | null;
+  names?: ((attributes: ReadonlyMap<string, any>) => readonly string[]) | null;
   check?: ((record: any) => string[]) | null;
   typed?: ((record: any) => Domains.Domain | null) | null;
 }
@@ -385,7 +385,7 @@ export interface KindOptions {
 /** How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`, or null
  * when its tag names it); for an application or a quantifier, its `vocabulary` (operator names to signatures; null
  * accepts any name, with `signature`); the properties it requires (`required`); for a reference, whether it is
- * `lexical` and the `ambient` names bound without a declaration; for an import, the names it binds (`names(record)`);
+ * `lexical` and the `ambient` names bound without a declaration; for an import, the names it binds, of its attributes (`names(attributes)`);
  * its own problems (`check(record)`); and its own domain, when it carries one (`typed(record)`). */
 export class Kind {
   readonly operator: string | null;
@@ -394,7 +394,7 @@ export class Kind {
   readonly required: readonly string[];
   readonly lexical: boolean;
   readonly ambient: ReadonlySet<string>;
-  readonly names: ((record: any) => readonly string[]) | null;
+  readonly names: ((attributes: ReadonlyMap<string, any>) => readonly string[]) | null;
   readonly check: ((record: any) => string[]) | null;
   readonly typed: ((record: any) => Domains.Domain | null) | null;
 
@@ -548,7 +548,7 @@ export class Dialect {
       const inner = problems.length === 0 ? new Set([...bound, name]) : bound;
       scopes = args.map((_, i) => (i === 0 ? bound : inner));
     } else if (kind.role === IMPORT) {
-      const names = kind.names !== null && problems.length === 0 ? kind.names(record) : [];
+      const names = kind.names !== null && problems.length === 0 ? kind.names(attributes) : [];
       scopes = args.map(() => new Set([...bound, ...names]));
     }
     if ((kind.role === APPLICATION || kind.role === QUANTIFIER) && problems.length === 0 && kind.vocabulary !== null) {
@@ -590,7 +590,7 @@ export class Dialect {
     const args = argumentsOf(record);
     if (kind.role === IMPORT) {
       const inner: Environment = { ...environment };
-      for (const name of kind.names !== null ? kind.names(record) : []) inner[name] = Domains.Anything;
+      for (const name of kind.names !== null ? kind.names(attributesOf(record)) : []) inner[name] = Domains.Anything;
       return this.inferIn(args[args.length - 1], inner);
     }
     if (kind.role === BINDING) {

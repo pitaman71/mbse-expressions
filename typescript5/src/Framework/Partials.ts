@@ -73,7 +73,7 @@ export class Reducer {
         new Set([...first.free, ...[...body.free].filter((n) => n !== name)]));
     }
     const results = args.map((argument) => this.reduce(argument, known));
-    const bound = kind.role === Terms.IMPORT && kind.names !== null ? new Set(kind.names(record)) : new Set<string>();
+    const bound = kind.role === Terms.IMPORT && kind.names !== null ? new Set(kind.names(Terms.attributesOf(record))) : new Set<string>();
     const rebuilt = new Result(this.rebuild(node, results.map((result) => result.expression)), false, null,
       new Set(results.flatMap((result) => [...result.free]).filter((n) => !bound.has(n))));
     return this.simplify(node, results) ?? rebuilt;

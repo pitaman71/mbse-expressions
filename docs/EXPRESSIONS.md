@@ -289,7 +289,7 @@ expressions read), `Symbolics` (names, scopes and dependencies), `Domains`, `Eva
 - `Terms.Dialect(name, kinds, domain_of=..., literal=..., extends=...)` is an expression language: the kinds it reads,
   by tag, each a `Terms.Kind`: its role, the property naming its operator, its vocabulary (operator names to
   signatures; None accepts any name, with `signature`), its required properties, and, by role, whether a reference is
-  `lexical` and its `ambient` names, the names an import binds (`names(record)`), its own problems (`check(record)`)
+  `lexical` and its `ambient` names, the names an import binds (`names(attributes)`, of its attributes), its own problems (`check(record)`)
   and its own domain (`typed(record)`). A dialect `validate`s, `infer`s and `make`s (the writer of a form) terms of its
   kinds, and `spec(x)` makes a writer of a writer, a term (copied), a native value (its literal) or a callable taking
   a term value's `Visitors.OfUnion`.

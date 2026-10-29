@@ -33,7 +33,7 @@ The roles are:
 - `BINDING`: binds its name to its first argument within the others.
 - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
   results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
-- `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(record)` gives the names
+- `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(attributes)` gives the names
   it binds for lexical references.
 """
 
@@ -341,7 +341,7 @@ class Kind:
     """How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`,
     or None when its tag names it); for an application or a quantifier, its `vocabulary` (operator names to signatures;
     None accepts any name, with `signature`); the properties it requires (`required`); for a reference, whether it is
-    `lexical` and the `ambient` names bound without a declaration; for an import, the names it binds (`names(record)`);
+    `lexical` and the `ambient` names bound without a declaration; for an import, the names it binds, of its attributes (`names(attributes)`);
     its own problems (`check(record)`); and its own domain, when it carries one (`typed(record)`)."""
 
     role: str
@@ -351,7 +351,7 @@ class Kind:
     required: tuple[str, ...] = ()
     lexical: bool = True
     ambient: frozenset[str] = frozenset()
-    names: Callable[[Any], tuple[str, ...]] | None = None
+    names: Callable[[Mapping[str, Any]], tuple[str, ...]] | None = None
     check: Callable[[Any], list[str]] | None = None
     typed: Callable[[Any], Domains.Domain | None] | None = None
 
@@ -457,7 +457,7 @@ class Dialect:
             inner = bound | {name} if not problems else bound
             scopes = [bound, *[inner] * (len(arguments) - 1)]
         elif kind.role == IMPORT:
-            names = kind.names(record) if kind.names is not None and not problems else ()
+            names = kind.names(attributes) if kind.names is not None and not problems else ()
             scopes = [bound | set(names)] * len(arguments)
         if kind.role in (APPLICATION, QUANTIFIER) and not problems and kind.vocabulary is not None:
             operator = operator_of(node, kind)
@@ -493,7 +493,7 @@ class Dialect:
             return environment[name] if kind.lexical and name in environment else Domains.Anything
         arguments = arguments_of(record)
         if kind.role == IMPORT:
-            names = kind.names(record) if kind.names is not None else ()
+            names = kind.names(attributes_of(record)) if kind.names is not None else ()
             return self._infer(arguments[-1], {**environment, **{name: Domains.Anything for name in names}})
         if kind.role == BINDING:
             value = self._infer(arguments[0], environment)
