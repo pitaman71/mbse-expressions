@@ -123,6 +123,14 @@ As the user decided (2026-10-29), on what the `overhauls/meta-schemas` branch re
 - **A dialect extends the framework by schema extension**, not by refinement: "refinement has been superseded by schema
   extension" (mbse-schemas' SCHEMA_EXTENSION.md), so the branch's "each dialect refines it by intersection" goes.
 
+As the user decided (2026-10-30), on what stage 2b raised:
+
+- **A dialect reuses the framework's kinds wherever the shape matches** ("yes"): `literal`, `variable`, `let` and `call`
+  (`callable` by name, positional `arguments`), defining a kind of its own, `<dialect>_<kind>`, only where its shape
+  differs (a C constant typed by C's type; Python's call, whose callee is a term).
+- **A term's domain is a registered name until stage 3** ("yes"), translators' conversions registering the domains they
+  hand back included (API.md, "Settled while building", 13).
+
 Question 6, what a `requires` that evaluates to unknown does: "semantics of evaluate deserve a more in-depth
 discussion", open.
 
