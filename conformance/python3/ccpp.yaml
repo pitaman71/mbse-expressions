@@ -1,0 +1,45 @@
+ccpp_conditional:
+  condition:
+    ccpp_binary:
+      operator: '&&'
+      left:
+        ccpp_unary:
+          operator: '!'
+          operand:
+            ccpp_member:
+              name: a
+              object:
+                ccpp_identifier:
+                  name: this
+      right:
+        ccpp_binary:
+          operator: '>'
+          left:
+            ccpp_subscript:
+              array:
+                ccpp_member:
+                  name: b
+                  operator: ->
+                  object:
+                    ccpp_identifier:
+                      name: this
+              index:
+                ccpp_constant:
+                  value: 0
+          right:
+            ccpp_constant:
+              value: 1.5
+              type: float
+  consequent:
+    ccpp_cast:
+      type: uint8_t
+      operand:
+        call:
+          callable: f
+          arguments:
+          - ccpp_constant:
+              value: 1
+  alternative:
+    ccpp_constant:
+      value: 5
+      type: unsigned int

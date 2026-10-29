@@ -2,207 +2,195 @@
  * Expressions of the Ccpp dialect: expressions of C and C++ (a superset of both), over their arithmetic types, as
  * their source writes them.
  *
- * - `constant`: a number, a bool or a string literal, and optionally its type (`Domains.TYPES`), written with a suffix
- *   (`5u`, `5ull`, `1.5f`, `1.5L`) or, for a type without one, a cast (`(uint8_t)5`). Without a type an int is the
- *   first of `int`, `long` and `unsigned long` that holds it, and a float a `double`.
- * - `identifier`: the value bound to a variable.
- * - `unary` (`+`, `-`, `!`, `~`) and `binary` (`*`, `/`, `%`, `+`, `-`, `<<`, `>>`, `<`, `<=`, `>`, `>=`, `==`, `!=`,
- *   `&`, `^`, `|`, `&&`, `||`).
+ * Ccpp's terms are kinds of its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a
+ * branch tagged `ccpp_<kind>` (dialects share kind names), and the framework's `call`:
+ *
+ * - `constant`: a number, a bool or a string literal (`value`), and optionally its type (`type`, one of
+ *   `Domains.TYPES`), written with a suffix (`5u`, `5ull`, `1.5f`, `1.5L`) or, for a type without one, a cast
+ *   (`(uint8_t)5`). Without a type an int is the first of `int`, `long` and `unsigned long` that holds it, and a float a
+ *   `double`.
+ * - `identifier`: the value bound to a variable (`name`).
+ * - `unary` (`operator`: `+`, `-`, `!`, `~`; `operand`) and `binary` (`operator`: `*`, `/`, `%`, `+`, `-`, `<<`, `>>`,
+ *   `<`, `<=`, `>`, `>=`, `==`, `!=`, `&`, `^`, `|`, `&&`, `||`; `left`, `right`).
  * - `conditional`: `condition ? consequent : alternative`.
  * - `cast`: `(type) operand`, to one of `Domains.TYPES`.
- * - `member`: `object.name`, or `object->name` with the operator `->`.
+ * - `member`: `object.name`, or `object->name` with the `operator` `->`.
  * - `subscript`: `array[index]`.
- * - `call`: a function the scope provides, applied to ordered arguments.
+ * - `call`: the framework's: a function the scope provides (`callable`), applied to ordered `arguments`.
  *
- * There is no binding: translators substitute a let's value for its name. The meta-schemas are registered as
- * 'Expressions.Ccpp.Of<Kind>'. `Text.ToText` writes an expression as C source, with C's precedence, e.g. `x.width >= 8u
- * && (uint8_t)(a + b) == 0`.
+ * Every kind has a `domain`, by name, as every term does; C's own `type` is what a constant and a cast are written
+ * with. There is no binding: translators substitute a let's value for its name. `DIALECT` reads the kinds
+ * (`Terms.Dialect`). The writers (`constant`, `identifier`, ...) write terms through the builders, in a transaction:
+ * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1n))`. `Text.ToText` writes an expression as C source,
+ * with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
  */
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Repr } from "@mbse/schemas/Framework";
-import type { Visitors } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
-type Native = Visitors.Native;
-const STR = String;
 
 /** The suffixes of typed constants: `5u`, `5ull`, `1.5f`, ...; other types are written with a cast. */
 export const SUFFIXES: ReadonlyMap<string, string> = new Map([["unsigned int", "u"], ["long", "l"], ["unsigned long", "ul"],
   ["long long", "ll"], ["unsigned long long", "ull"], ["float", "f"], ["long double", "L"]]);
 
+/** Ccpp's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
+export function install(txn: any): any {
+  const S = txn.Schemas;
+  return txn.uid("mbse.Expressions.Ccpp/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({
+      Term: S.OfUnion, Constant: S.OfObject, Identifier: S.OfObject, Unary: S.OfObject, Binary: S.OfObject,
+      Conditional: S.OfObject, Cast: S.OfObject, Member: S.OfObject, Subscript: S.OfObject,
+    }) // the framework's union, found by its name
+    .spec([
+      (_: any) => _.Constant.name("Expressions.Ccpp.Constant").properties({
+        value: S.OfAny((a: any) => a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr])),
+        type: S.OfStr, // C's, by default its value's
+        domain: S.OfStr, // every term has a domain
+      }),
+      (_: any) => _.Identifier.name("Expressions.Ccpp.Identifier").properties({ name: S.OfStr, domain: S.OfStr }),
+      (_: any) => _.Unary.name("Expressions.Ccpp.Unary").properties({
+        operator: S.OfStr, operand: _.Term, domain: S.OfStr }),
+      (_: any) => _.Binary.name("Expressions.Ccpp.Binary").properties({
+        operator: S.OfStr, left: _.Term, right: _.Term, domain: S.OfStr }),
+      (_: any) => _.Conditional.name("Expressions.Ccpp.Conditional").properties({
+        condition: _.Term, consequent: _.Term, alternative: _.Term, domain: S.OfStr }),
+      (_: any) => _.Cast.name("Expressions.Ccpp.Cast").properties({
+        type: S.OfStr, operand: _.Term, domain: S.OfStr }),
+      (_: any) => _.Member.name("Expressions.Ccpp.Member").properties({
+        name: S.OfStr,
+        operator: S.OfStr, // '.' (by default) or '->'
+        object: _.Term, domain: S.OfStr }),
+      (_: any) => _.Subscript.name("Expressions.Ccpp.Subscript").properties({
+        array: _.Term, index: _.Term, domain: S.OfStr }),
+      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // branches added: schema extension
+        (t: any) => t.name("ccpp_constant").schema([_.Constant]),
+        (t: any) => t.name("ccpp_identifier").schema([_.Identifier]),
+        (t: any) => t.name("ccpp_unary").schema([_.Unary]),
+        (t: any) => t.name("ccpp_binary").schema([_.Binary]),
+        (t: any) => t.name("ccpp_conditional").schema([_.Conditional]),
+        (t: any) => t.name("ccpp_cast").schema([_.Cast]),
+        (t: any) => t.name("ccpp_member").schema([_.Member]),
+        (t: any) => t.name("ccpp_subscript").schema([_.Subscript]),
+      ]),
+    ])]))]);
+}
+
 function typeProblems(what: string, name: unknown): string[] {
   return Domains.TYPES.has(name as string) ? [] : [`${what} type must be one of C's arithmetic types, got ${repr(name)}`];
 }
 
-class _Constant extends F.Term {
-  static override KIND = "constant";
-  static override ROLE = F.LITERAL;
-  static override VALUE = new Map<string, unknown>([["int", BigInt], ["float", Number], ["str", String], ["bool", Boolean]]);
-  static override PROPERTIES = new Map([["type", STR]]);
-  static override OPTIONAL = new Set(["type"]);
-  declare value: unknown;
-  /** The constant's type, by default its value's. */
-  declare type: string | null;
+/** The C type a constant or a cast names, or null (validation reports a name that is not one). */
+function typed(record: any): any {
+  return Domains.TYPES.get(F.attributesOf(record).get("type")) ?? null;
+}
 
-  override typed(): any {
-    return this.type !== null ? Domains.TYPES.get(this.type) ?? null : null;
+/** A constant's type, when it has one, is an arithmetic type that holds its value. */
+function constantCheck(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  const ctype = attributes.get("type") ?? null;
+  if (ctype === null) return [];
+  const problems = typeProblems("a constant's", ctype);
+  if (problems.length === 0 && !(Domains.TYPES.get(ctype) as Domains.CType).contains(attributes.get("value"))) {
+    problems.push(`a constant of ${ctype} cannot hold ${repr(attributes.get("value"))}`);
   }
-
-  /** A constant's type, when it has one, is an arithmetic type that holds its value. */
-  override check(): string[] {
-    if (this.type === null) return [];
-    const problems = typeProblems("a constant's", this.type);
-    if (problems.length === 0 && !(Domains.TYPES.get(this.type) as Domains.CType).contains(this.value)) {
-      problems.push(`a constant of ${this.type} cannot hold ${repr(this.value)}`);
-    }
-    return problems;
-  }
+  return problems;
 }
 
-class _Identifier extends F.Term {
-  static override KIND = "identifier";
-  static override ROLE = F.REFERENCE;
-  static override PROPERTIES = new Map([["name", STR]]);
-  declare name: string;
+function castCheck(record: any): string[] {
+  const ctype = F.attributesOf(record).get("type") ?? null;
+  return ctype === null ? [] : typeProblems("a cast's", ctype);
 }
 
-class _Unary extends F.Term {
-  static override KIND = "unary";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["operator", STR]]);
-  static override SLOTS = ["operand"];
-  static override OPERATOR = "operator";
-  static override VOCABULARY = Domains.UNARY;
-  declare operator: string;
-  declare operand: any;
+function memberCheck(record: any): string[] {
+  const operator = F.attributesOf(record).get("operator") ?? null;
+  return [null, ".", "->"].includes(operator) ? [] : [`a member's operator must be '.' or '->', got ${repr(operator)}`];
 }
 
-class _Binary extends F.Term {
-  static override KIND = "binary";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["operator", STR]]);
-  static override SLOTS = ["left", "right"];
-  static override OPERATOR = "operator";
-  static override VOCABULARY = Domains.BINARY;
-  declare operator: string;
-  declare left: any;
-  declare right: any;
+/** The constant of a native value: a number, a bool or a string. */
+function native(value: unknown): Writer | null {
+  return ["bigint", "number", "boolean", "string"].includes(typeof value) ? constant(value) : null;
 }
 
-class _Conditional extends F.Term {
-  static override KIND = "conditional";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["condition", "consequent", "alternative"];
-  static override SIGNATURE = Domains.CONDITIONAL;
-  declare condition: any;
-  declare consequent: any;
-  declare alternative: any;
+/** The Ccpp dialect: its kinds, as the framework reads them. */
+export const DIALECT: F.Dialect = new F.Dialect("Ccpp", {
+  ccpp_constant: new F.Kind(F.LITERAL, { check: constantCheck, typed }),
+  ccpp_identifier: new F.Kind(F.REFERENCE, { required: ["name"] }),
+  ccpp_unary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
+  ccpp_binary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
+  ccpp_conditional: new F.Kind(F.APPLICATION, { signature: Domains.CONDITIONAL }),
+  ccpp_cast: new F.Kind(F.APPLICATION, { signature: Domains.CAST, required: ["type"], check: castCheck, typed }),
+  ccpp_member: new F.Kind(F.APPLICATION, { signature: Domains.MEMBER, required: ["name"], check: memberCheck }),
+  ccpp_subscript: new F.Kind(F.APPLICATION, { signature: Domains.SUBSCRIPT }),
+  call: new F.Kind(F.APPLICATION, { operator: "callable", signature: Domains.CALL, required: ["callable"] }),
+}, { domain_of: Domains.of, literal: native });
+
+// --- Writers ---
+
+/** A term of the Ccpp dialect, written through the builders where it is given (a spec). */
+export class Writer extends F.Writer {}
+
+const specOf = (value: unknown): F.Writer => DIALECT.spec(value);
+
+/** The constant `value`, of the C type `type` (by default, its value's). */
+export function constant(value: unknown, type: string | null = null): Writer {
+  return new Writer((u: any) => u.ccpp_constant((r: any) => {
+    if (value !== null && value !== undefined) r.value((p: any) => p.as_scalar(value));
+    return type === null ? r : r.type(type);
+  }));
 }
 
-class _Cast extends F.Term {
-  static override KIND = "cast";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["type", STR]]);
-  static override SLOTS = ["operand"];
-  static override SIGNATURE = Domains.CAST;
-  declare type: string;
-  declare operand: any;
-
-  override typed(): any {
-    return Domains.TYPES.get(this.type) as any; // none, for a type validation reports
-  }
-
-  override check(): string[] {
-    return this.type === null ? [] : typeProblems("a cast's", this.type);
-  }
-}
-
-class _Member extends F.Term {
-  static override KIND = "member";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["name", STR], ["operator", STR]]);
-  static override OPTIONAL = new Set(["operator"]);
-  static override SLOTS = ["object"];
-  static override SIGNATURE = Domains.MEMBER;
-  declare name: string;
-  /** '.' (by default) or '->'. */
-  declare operator: string | null;
-  declare object: any;
-
-  override check(): string[] {
-    return [null, ".", "->"].includes(this.operator) ? [] : [`a member's operator must be '.' or '->', got ${repr(this.operator)}`];
-  }
-}
-
-class _Subscript extends F.Term {
-  static override KIND = "subscript";
-  static override ROLE = F.APPLICATION;
-  static override SLOTS = ["array", "index"];
-  static override SIGNATURE = Domains.SUBSCRIPT;
-  declare array: any;
-  declare index: any;
-}
-
-class _Call extends F.Term {
-  static override KIND = "call";
-  static override ROLE = F.APPLICATION;
-  static override PROPERTIES = new Map([["function", STR]]);
-  static override VARIADIC = "arguments";
-  static override OPERATOR = "function";
-  static override SIGNATURE = Domains.CALL;
-  declare function: string;
-  declare arguments: any[];
-}
-
-export const DIALECT = new F.Declared("Ccpp",
-  [_Constant, _Identifier, _Unary, _Binary, _Conditional, _Cast, _Member, _Subscript, _Call], { domain_of: Domains.of });
-export const Builders = DIALECT.Builders;
-export const Schema = DIALECT.Schema;
-
-export function constant(value: Native, type: string | null = null): _Constant {
-  return new _Constant(value, type);
-}
-
-export function identifier(name: string): _Identifier {
-  return new _Identifier(name);
+/** The variable `name`. */
+export function identifier(name: string): Writer {
+  return new Writer((u: any) => u.ccpp_identifier((r: any) => r.name(name)));
 }
 
 /** `<operator> operand`; the operand is a spec (a native value is a constant). */
-export function unary(operator: string, operand: unknown): _Unary {
-  return new _Unary(operator, DIALECT.resolve(operand));
+export function unary(operator: string, operand: unknown): Writer {
+  const operandSpec = specOf(operand);
+  return new Writer((u: any) => u.ccpp_unary((r: any) => r.operator(operator).operand(operandSpec)));
 }
 
 /** `left <operator> right`; each operand is a spec. */
-export function binary(operator: string, left: unknown, right: unknown): _Binary {
-  return new _Binary(operator, DIALECT.resolve(left), DIALECT.resolve(right));
+export function binary(operator: string, left: unknown, right: unknown): Writer {
+  const [leftSpec, rightSpec] = [specOf(left), specOf(right)];
+  return new Writer((u: any) => u.ccpp_binary((r: any) => r.operator(operator).left(leftSpec).right(rightSpec)));
 }
 
 /** `condition ? consequent : alternative`. */
-export function conditional(condition: unknown, consequent: unknown, alternative: unknown): _Conditional {
-  return new _Conditional(DIALECT.resolve(condition), DIALECT.resolve(consequent), DIALECT.resolve(alternative));
+export function conditional(condition: unknown, consequent: unknown, alternative: unknown): Writer {
+  const [a, b, c] = [specOf(condition), specOf(consequent), specOf(alternative)];
+  return new Writer((u: any) => u.ccpp_conditional((r: any) => r.condition(a).consequent(b).alternative(c)));
 }
 
 /** `(type) operand`. */
-export function cast(type: string, operand: unknown): _Cast {
-  return new _Cast(type, DIALECT.resolve(operand));
+export function cast(type: string, operand: unknown): Writer {
+  const operandSpec = specOf(operand);
+  return new Writer((u: any) => u.ccpp_cast((r: any) => r.type(type).operand(operandSpec)));
 }
 
 /** `object.name`, or `object->name` with the operator '->'. */
-export function member(object: unknown, name: string, operator: string | null = null): _Member {
-  return new _Member(name, operator, DIALECT.resolve(object));
+export function member(object: unknown, name: string, operator: string | null = null): Writer {
+  const objectSpec = specOf(object);
+  return new Writer((u: any) => u.ccpp_member((r: any) => {
+    r.name(name);
+    if (operator !== null) r.operator(operator);
+    return r.object(objectSpec);
+  }));
 }
 
 /** `array[index]`. */
-export function subscript(array: unknown, index: unknown): _Subscript {
-  return new _Subscript(DIALECT.resolve(array), DIALECT.resolve(index));
+export function subscript(array: unknown, index: unknown): Writer {
+  const [arraySpec, indexSpec] = [specOf(array), specOf(index)];
+  return new Writer((u: any) => u.ccpp_subscript((r: any) => r.array(arraySpec).index(indexSpec)));
 }
 
-export function call(fn: string, ...args: unknown[]): _Call {
-  return new _Call(fn, args.map((argument) => DIALECT.resolve(argument)));
+/** `fn(args...)`: the framework's call, of a function the scope provides. */
+export function call(fn: string, ...args: unknown[]): Writer {
+  const specs = args.map(specOf);
+  return new Writer((u: any) => u.call((r: any) => r.callable(fn).arguments(specs)));
 }
-
-/** For `Text`. */
-export { _Call, _Cast, _Conditional, _Constant, _Identifier, _Member, _Subscript, _Unary };

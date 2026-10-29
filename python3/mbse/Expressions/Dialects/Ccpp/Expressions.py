@@ -1,34 +1,37 @@
 """Expressions of the Ccpp dialect: expressions of C and C++ (a superset of both), over their arithmetic types, as their
 source writes them.
 
-- `constant`: a number, a bool or a string literal, and optionally its type (`Domains.TYPES`), written with a suffix
-  (`5u`, `5ull`, `1.5f`, `1.5L`) or, for a type without one, a cast (`(uint8_t)5`). Without a type an int is the first
-  of `int`, `long` and `unsigned long` that holds it, and a float a `double`.
-- `identifier`: the value bound to a variable.
-- `unary` (`+`, `-`, `!`, `~`) and `binary` (`*`, `/`, `%`, `+`, `-`, `<<`, `>>`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `&`,
-  `^`, `|`, `&&`, `||`).
+Ccpp's terms are kinds of its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a
+branch tagged `ccpp_<kind>` (dialects share kind names), and the framework's `call`:
+
+- `constant`: a number, a bool or a string literal (`value`), and optionally its type (`type`, one of `Domains.TYPES`),
+  written with a suffix (`5u`, `5ull`, `1.5f`, `1.5L`) or, for a type without one, a cast (`(uint8_t)5`). Without a
+  type an int is the first of `int`, `long` and `unsigned long` that holds it, and a float a `double`.
+- `identifier`: the value bound to a variable (`name`).
+- `unary` (`operator`: `+`, `-`, `!`, `~`; `operand`) and `binary` (`operator`: `*`, `/`, `%`, `+`, `-`, `<<`, `>>`,
+  `<`, `<=`, `>`, `>=`, `==`, `!=`, `&`, `^`, `|`, `&&`, `||`; `left`, `right`).
 - `conditional`: `condition ? consequent : alternative`.
 - `cast`: `(type) operand`, to one of `Domains.TYPES`.
-- `member`: `object.name`, or `object->name` with the operator `->`.
+- `member`: `object.name`, or `object->name` with the `operator` `->`.
 - `subscript`: `array[index]`.
-- `call`: a function the scope provides, applied to ordered arguments.
+- `call`: the framework's: a function the scope provides (`callable`), applied to ordered `arguments`.
 
-There is no binding: translators substitute a let's value for its name. The meta-schemas are registered as
-'Expressions.Ccpp.Of<Kind>'. `Text.ToText` writes an expression as C source, with C's precedence, e.g. `x.width >= 8u &&
-(uint8_t)(a + b) == 0`.
+Every kind has a `domain`, by name, as every term does; C's own `type` is what a constant and a cast are written with.
+There is no binding: translators substitute a let's value for its name. `DIALECT` reads the kinds (`Terms.Dialect`).
+The writers (`constant`, `identifier`, ...) write terms through the builders, in a transaction:
+`store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C source,
+with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
 
 from . import Domains
 
-__all__ = ["DIALECT", "Builders", "Schema", "constant", "identifier", "unary", "binary", "conditional", "cast", "member",
+__all__ = ["install", "DIALECT", "Writer", "constant", "identifier", "unary", "binary", "conditional", "cast", "member",
            "subscript", "call", "SUFFIXES"]
 
 SUFFIXES = {"unsigned int": "u", "long": "l", "unsigned long": "ul", "long long": "ll", "unsigned long long": "ull",
@@ -36,175 +39,171 @@ SUFFIXES = {"unsigned int": "u", "long": "l", "unsigned long": "ul", "long long"
 """The suffixes of typed constants: `5u`, `5ull`, `1.5f`, ...; other types are written with a cast."""
 
 
+def install(txn: Any) -> Any:
+    """Ccpp's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
+    S = txn.Schemas
+    return txn.uid("mbse.Expressions.Ccpp/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"Term": S.OfUnion, "Constant": S.OfObject, "Identifier": S.OfObject, "Unary": S.OfObject,
+                  "Binary": S.OfObject, "Conditional": S.OfObject, "Cast": S.OfObject, "Member": S.OfObject,
+                  "Subscript": S.OfObject})  # the framework's union, found by its name
+        .spec([
+            lambda _: _.Constant.name("Expressions.Ccpp.Constant").properties({
+                "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr])),
+                "type": S.OfStr,  # C's, by default its value's
+                "domain": S.OfStr,  # every term has a domain
+            }),
+            lambda _: _.Identifier.name("Expressions.Ccpp.Identifier").properties({"name": S.OfStr, "domain": S.OfStr}),
+            lambda _: _.Unary.name("Expressions.Ccpp.Unary").properties({
+                "operator": S.OfStr, "operand": _.Term, "domain": S.OfStr}),
+            lambda _: _.Binary.name("Expressions.Ccpp.Binary").properties({
+                "operator": S.OfStr, "left": _.Term, "right": _.Term, "domain": S.OfStr}),
+            lambda _: _.Conditional.name("Expressions.Ccpp.Conditional").properties({
+                "condition": _.Term, "consequent": _.Term, "alternative": _.Term, "domain": S.OfStr}),
+            lambda _: _.Cast.name("Expressions.Ccpp.Cast").properties({
+                "type": S.OfStr, "operand": _.Term, "domain": S.OfStr}),
+            lambda _: _.Member.name("Expressions.Ccpp.Member").properties({
+                "name": S.OfStr,
+                "operator": S.OfStr,  # '.' (by default) or '->'
+                "object": _.Term, "domain": S.OfStr}),
+            lambda _: _.Subscript.name("Expressions.Ccpp.Subscript").properties({
+                "array": _.Term, "index": _.Term, "domain": S.OfStr}),
+            lambda _: _.Term.name("Expressions.Framework.Term").branches([  # branches added: schema extension
+                lambda t: t.name("ccpp_constant").schema([_.Constant]),
+                lambda t: t.name("ccpp_identifier").schema([_.Identifier]),
+                lambda t: t.name("ccpp_unary").schema([_.Unary]),
+                lambda t: t.name("ccpp_binary").schema([_.Binary]),
+                lambda t: t.name("ccpp_conditional").schema([_.Conditional]),
+                lambda t: t.name("ccpp_cast").schema([_.Cast]),
+                lambda t: t.name("ccpp_member").schema([_.Member]),
+                lambda t: t.name("ccpp_subscript").schema([_.Subscript]),
+            ]),
+        ])]))])
+
+
 def _type_problems(what: str, name: Any) -> list[str]:
     return [] if name in Domains.TYPES else [f"{what} type must be one of C's arithmetic types, got {name!r}"]
 
 
-@dataclass(eq=False)
-class _Constant(F.Term):
-    KIND = "constant"
-    ROLE = F.LITERAL
-    VALUE = {"int": int, "float": float, "str": str, "bool": bool}
-    PROPERTIES = {"type": str}
-    OPTIONAL = frozenset({"type"})
-    value: Native | None = None
-    type: str | None = None  # the constant's type, by default its value's
-
-    def typed(self) -> Any:
-        return Domains.TYPES.get(self.type) if self.type is not None else None
-
-    def check(self) -> list[str]:
-        """A constant's type, when it has one, is an arithmetic type that holds its value."""
-        if self.type is None:
-            return []
-        problems = _type_problems("a constant's", self.type)
-        if not problems and not Domains.TYPES[self.type].contains(self.value):
-            problems.append(f"a constant of {self.type} cannot hold {self.value!r}")
-        return problems
+def _typed(record: Any) -> Any:
+    """The C type a constant or a cast names, or None (validation reports a name that is not one)."""
+    name = F.attributes_of(record).get("type")
+    return Domains.TYPES.get(name) if type(name) is str else None
 
 
-@dataclass(eq=False)
-class _Identifier(F.Term):
-    KIND = "identifier"
-    ROLE = F.REFERENCE
-    PROPERTIES = {"name": str}
-    name: str | None = None
+def _constant_check(record: Any) -> list[str]:
+    """A constant's type, when it has one, is an arithmetic type that holds its value."""
+    attributes = F.attributes_of(record)
+    if attributes.get("type") is None:
+        return []
+    problems = _type_problems("a constant's", attributes["type"])
+    if not problems and not Domains.TYPES[attributes["type"]].contains(attributes["value"]):
+        problems.append(f"a constant of {attributes['type']} cannot hold {attributes['value']!r}")
+    return problems
 
 
-@dataclass(eq=False)
-class _Unary(F.Term):
-    KIND = "unary"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"operator": str}
-    SLOTS = ("operand",)
-    OPERATOR = "operator"
-    VOCABULARY = Domains.UNARY
-    operator: str | None = None
-    operand: Any = None
+def _cast_check(record: Any) -> list[str]:
+    name = F.attributes_of(record).get("type")
+    return [] if name is None else _type_problems("a cast's", name)
 
 
-@dataclass(eq=False)
-class _Binary(F.Term):
-    KIND = "binary"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"operator": str}
-    SLOTS = ("left", "right")
-    OPERATOR = "operator"
-    VOCABULARY = Domains.BINARY
-    operator: str | None = None
-    left: Any = None
-    right: Any = None
+def _member_check(record: Any) -> list[str]:
+    operator = F.attributes_of(record).get("operator")
+    return [] if operator in (None, ".", "->") else [f"a member's operator must be '.' or '->', got {operator!r}"]
 
 
-@dataclass(eq=False)
-class _Conditional(F.Term):
-    KIND = "conditional"
-    ROLE = F.APPLICATION
-    SLOTS = ("condition", "consequent", "alternative")
-    SIGNATURE = Domains.CONDITIONAL
-    condition: Any = None
-    consequent: Any = None
-    alternative: Any = None
+def _native(value: Any) -> Writer | None:
+    """The constant of a native value: a number, a bool or a string."""
+    return constant(value) if type(value) in (bool, int, float, str) else None
 
 
-@dataclass(eq=False)
-class _Cast(F.Term):
-    KIND = "cast"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"type": str}
-    SLOTS = ("operand",)
-    SIGNATURE = Domains.CAST
-    type: str | None = None
-    operand: Any = None
-
-    def typed(self) -> Any:
-        return Domains.TYPES.get(self.type)
-
-    def check(self) -> list[str]:
-        return [] if self.type is None else _type_problems("a cast's", self.type)
+DIALECT = F.Dialect("Ccpp", {
+    "ccpp_constant": F.Kind(F.LITERAL, check=_constant_check, typed=_typed),
+    "ccpp_identifier": F.Kind(F.REFERENCE, required=("name",)),
+    "ccpp_unary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.UNARY, required=("operator",)),
+    "ccpp_binary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.BINARY, required=("operator",)),
+    "ccpp_conditional": F.Kind(F.APPLICATION, signature=Domains.CONDITIONAL),
+    "ccpp_cast": F.Kind(F.APPLICATION, signature=Domains.CAST, required=("type",), check=_cast_check, typed=_typed),
+    "ccpp_member": F.Kind(F.APPLICATION, signature=Domains.MEMBER, required=("name",), check=_member_check),
+    "ccpp_subscript": F.Kind(F.APPLICATION, signature=Domains.SUBSCRIPT),
+    "call": F.Kind(F.APPLICATION, operator="callable", signature=Domains.CALL, required=("callable",)),
+}, domain_of=Domains.of, literal=_native)
+"""The Ccpp dialect: its kinds, as the framework reads them."""
 
 
-@dataclass(eq=False)
-class _Member(F.Term):
-    KIND = "member"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"name": str, "operator": str}
-    OPTIONAL = frozenset({"operator"})
-    SLOTS = ("object",)
-    SIGNATURE = Domains.MEMBER
-    name: str | None = None
-    operator: str | None = None  # '.' (by default) or '->'
-    object: Any = None
-
-    def check(self) -> list[str]:
-        return [] if self.operator in (None, ".", "->") else [f"a member's operator must be '.' or '->', got {self.operator!r}"]
+# --- Writers ---
 
 
-@dataclass(eq=False)
-class _Subscript(F.Term):
-    KIND = "subscript"
-    ROLE = F.APPLICATION
-    SLOTS = ("array", "index")
-    SIGNATURE = Domains.SUBSCRIPT
-    array: Any = None
-    index: Any = None
+class Writer(F.Writer):
+    """A term of the Ccpp dialect, written through the builders where it is given (a spec)."""
+
+    __slots__ = ()
 
 
-@dataclass(eq=False)
-class _Call(F.Term):
-    KIND = "call"
-    ROLE = F.APPLICATION
-    PROPERTIES = {"function": str}
-    VARIADIC = "arguments"
-    OPERATOR = "function"
-    SIGNATURE = Domains.CALL
-    function: str | None = None
-    arguments: tuple[Any, ...] = ()
+def _spec(value: Any) -> Any:
+    return DIALECT.spec(value)
 
 
-DIALECT = F.Declared("Ccpp", (_Constant, _Identifier, _Unary, _Binary, _Conditional, _Cast, _Member, _Subscript, _Call),
-                     domain_of=Domains.of)
-Builders = DIALECT.Builders
-Schema = DIALECT.Schema
+def constant(value: Any, type: str | None = None) -> Writer:
+    """The constant `value`, of the C type `type` (by default, its value's)."""
+
+    def record(r: Any) -> Any:
+        if value is not None:
+            r.value(lambda p: p.as_scalar(value))
+        return r if type is None else r.type(type)
+
+    return Writer(lambda u: u.ccpp_constant(record))
 
 
-def constant(value: Native, type: str | None = None) -> _Constant:
-    return _Constant(value, type)
+def identifier(name: str) -> Writer:
+    """The variable `name`."""
+    return Writer(lambda u: u.ccpp_identifier(lambda r: r.name(name)))
 
 
-def identifier(name: str) -> _Identifier:
-    return _Identifier(name)
-
-
-def unary(operator: str, operand: Any) -> _Unary:
+def unary(operator: str, operand: Any) -> Writer:
     """`<operator> operand`; the operand is a spec (a native value is a constant)."""
-    return _Unary(operator, DIALECT.resolve(operand))
+    operand = _spec(operand)
+    return Writer(lambda u: u.ccpp_unary(lambda r: r.operator(operator).operand(operand)))
 
 
-def binary(operator: str, left: Any, right: Any) -> _Binary:
+def binary(operator: str, left: Any, right: Any) -> Writer:
     """`left <operator> right`; each operand is a spec."""
-    return _Binary(operator, DIALECT.resolve(left), DIALECT.resolve(right))
+    left, right = _spec(left), _spec(right)
+    return Writer(lambda u: u.ccpp_binary(lambda r: r.operator(operator).left(left).right(right)))
 
 
-def conditional(condition: Any, consequent: Any, alternative: Any) -> _Conditional:
+def conditional(condition: Any, consequent: Any, alternative: Any) -> Writer:
     """`condition ? consequent : alternative`."""
-    return _Conditional(DIALECT.resolve(condition), DIALECT.resolve(consequent), DIALECT.resolve(alternative))
+    condition, consequent, alternative = _spec(condition), _spec(consequent), _spec(alternative)
+    return Writer(lambda u: u.ccpp_conditional(
+        lambda r: r.condition(condition).consequent(consequent).alternative(alternative)))
 
 
-def cast(type: str, operand: Any) -> _Cast:
+def cast(type: str, operand: Any) -> Writer:
     """`(type) operand`."""
-    return _Cast(type, DIALECT.resolve(operand))
+    operand = _spec(operand)
+    return Writer(lambda u: u.ccpp_cast(lambda r: r.type(type).operand(operand)))
 
 
-def member(object: Any, name: str, operator: str | None = None) -> _Member:
+def member(object: Any, name: str, operator: str | None = None) -> Writer:
     """`object.name`, or `object->name` with the operator '->'."""
-    return _Member(name, operator, DIALECT.resolve(object))
+    object = _spec(object)
+
+    def record(r: Any) -> Any:
+        r.name(name)
+        if operator is not None:
+            r.operator(operator)
+        return r.object(object)
+
+    return Writer(lambda u: u.ccpp_member(record))
 
 
-def subscript(array: Any, index: Any) -> _Subscript:
+def subscript(array: Any, index: Any) -> Writer:
     """`array[index]`."""
-    return _Subscript(DIALECT.resolve(array), DIALECT.resolve(index))
+    array, index = _spec(array), _spec(index)
+    return Writer(lambda u: u.ccpp_subscript(lambda r: r.array(array).index(index)))
 
 
-def call(function: str, *arguments: Any) -> _Call:
-    return _Call(function, tuple(DIALECT.resolve(argument) for argument in arguments))
+def call(function: str, *arguments: Any) -> Writer:
+    """`function(arguments...)`: the framework's call, of a function the scope provides."""
+    specs = [_spec(argument) for argument in arguments]
+    return Writer(lambda u: u.call(lambda r: r.callable(function).arguments(specs)))

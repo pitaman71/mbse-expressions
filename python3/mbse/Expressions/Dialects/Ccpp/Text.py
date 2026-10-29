@@ -1,14 +1,15 @@
 """Text of the Ccpp dialect: `ToText(expression)` is the expression as C source, with C's precedence, typed constants
-written with a suffix or a cast."""
+written with a suffix or a cast. It reads a term value (or anything `Terms.term` reads one from) through `Terms.form`."""
 
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
 
-from .Expressions import SUFFIXES, _Call, _Cast, _Conditional, _Constant, _Identifier, _Member, _Subscript, _Unary
+from .Expressions import SUFFIXES
 
 __all__ = ["ToText"]
 
@@ -44,9 +45,9 @@ def _number(value: Any) -> str:
     return value if any(c in value for c in ".eE") else value + ".0"
 
 
-def _constant(node: _Constant) -> tuple[str, int]:
+def _constant(attributes: Mapping[str, Any]) -> tuple[str, int]:
     """A constant: a bool, a string literal, or a number with its type's suffix or, for a type with none, a cast."""
-    value, ctype = node.value, node.type
+    value, ctype = attributes.get("value"), attributes.get("type")
     if type(value) is bool:
         return ("true" if value else "false"), _POSTFIX
     if type(value) is str and ctype is None:
@@ -68,24 +69,27 @@ def ToText(expression: Any) -> str:
             text, precedence = arguments[index]
             return text if precedence >= level else f"({text})"
 
-        if isinstance(node, _Constant):
-            return _constant(node)
-        if isinstance(node, _Identifier):
-            return node.name, _POSTFIX
-        if isinstance(node, _Member):
-            return f"{operand(0, _POSTFIX)}{node.operator or '.'}{node.name}", _POSTFIX
-        if isinstance(node, _Subscript):
+        form = F.form(node)
+        kind, attributes = form.kind, form.attributes
+        if kind == "ccpp_constant":
+            return _constant(attributes)
+        if kind == "ccpp_identifier":
+            return attributes["name"], _POSTFIX
+        if kind == "ccpp_member":
+            return f"{operand(0, _POSTFIX)}{attributes.get('operator') or '.'}{attributes['name']}", _POSTFIX
+        if kind == "ccpp_subscript":
             return f"{operand(0, _POSTFIX)}[{arguments[1][0]}]", _POSTFIX
-        if isinstance(node, _Call):
-            return f"{node.function}({', '.join(text for text, _ in arguments)})", _POSTFIX
-        if isinstance(node, _Unary):  # `- -x`, not the decrement `--x`
-            text = operand(0, _UNARY)
-            return f"{node.operator}{' ' if text[0] == node.operator in '+-' else ''}{text}", _UNARY
-        if isinstance(node, _Cast):
-            return f"({node.type}){operand(0, _UNARY)}", _UNARY
-        if isinstance(node, _Conditional):  # right-associative
+        if kind == "call":
+            return f"{attributes['callable']}({', '.join(text for text, _ in arguments)})", _POSTFIX
+        if kind == "ccpp_unary":  # `- -x`, not the decrement `--x`
+            text, operator = operand(0, _UNARY), attributes["operator"]
+            return f"{operator}{' ' if text[0] == operator in '+-' else ''}{text}", _UNARY
+        if kind == "ccpp_cast":
+            return f"({attributes['type']}){operand(0, _UNARY)}", _UNARY
+        if kind == "ccpp_conditional":  # right-associative
             return f"{operand(0, _OR)} ? {arguments[1][0]} : {operand(2, _CONDITIONAL)}", _CONDITIONAL
-        level = _LEVELS[node.operator]
-        return f"{operand(0, level)} {node.operator} {operand(1, level + 1)}", level
+        operator = attributes["operator"]
+        level = _LEVELS[operator]
+        return f"{operand(0, level)} {operator} {operand(1, level + 1)}", level
 
     return F.fold(expression, write)[0]

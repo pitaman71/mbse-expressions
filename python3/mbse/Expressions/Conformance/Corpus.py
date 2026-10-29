@@ -1,30 +1,31 @@
 """The conformance corpus: the same cases, built statement for statement in every implementation.
 
 `build()` returns `{case: (root schema, root term, store)}`: each case a term value of `Expressions.Framework.Term`,
-built in one store holding the framework's install and every ported dialect's, written nested. `DIALECTS` names the
-dialect that reads each case other than Basic's. Each implementation writes its snapshots to
+built in one store holding the framework's install and every dialect's, written nested. `DIALECTS` names the dialect
+that reads each case other than Basic's. Each implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
-the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in
-lockstep: same cases, same values, same order of statements.
+the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same
+values, same order of statements.
 
-The other dialects' cases (ccpp, systemverilog) return with their dialects' port, stage 2b
-(docs/proposals/port): `_stage_2b` keeps them as they were written for the old API.
+The SystemVerilog case returns with its dialect's port, stage 2b (docs/proposals/port): `_stage_2b` keeps it as it
+was written for the old API.
 """
 
 from __future__ import annotations
 
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import Basic, Excel, Latex, Matlab
+from mbse.Expressions.Dialects import Basic, Ccpp, Excel, Latex, Matlab, Python
 from mbse.Expressions.Dialects.Basic import Domains, Expressions
-from mbse.Expressions.Dialects.Excel import Expressions as ExcelExpressions
+from mbse.Expressions.Dialects.Ccpp import Expressions as C
+from mbse.Expressions.Dialects.Excel import Expressions as X
 from mbse.Expressions.Dialects.Latex import Expressions as L
-from mbse.Expressions.Dialects.Python import Expressions as Python
+from mbse.Expressions.Dialects.Matlab import Expressions as M
+from mbse.Expressions.Dialects.Python import Expressions as P
 from mbse.Schemas.Framework import Builders
 
-CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections"]
+CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp"]
 
-DIALECTS = {"python": Python.DIALECT, "matlab": Matlab.Expressions.DIALECT, "excel": ExcelExpressions.DIALECT,
-            "latex": L.DIALECT}
+DIALECTS = {"python": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex": L.DIALECT, "ccpp": C.DIALECT}
 """The dialect that reads each case, where it is not Basic."""
 
 
@@ -36,7 +37,7 @@ def _named(name, domain):
 
 
 def build():
-    E, D, X = Expressions, Domains, ExcelExpressions
+    E, D = Expressions, Domains
     store = Builders.Store()
     store.transaction(Framework.install)
     store.transaction(Basic.install)
@@ -44,6 +45,7 @@ def build():
     store.transaction(Matlab.install)
     store.transaction(Excel.install)
     store.transaction(Latex.install)
+    store.transaction(Ccpp.install)
 
     # --- expression: every kind and literal type, a let and its variable, an extension operation ---
     this, age = E.variable("this"), E.variable("age")
@@ -52,12 +54,33 @@ def build():
 
     # --- python: every kind, a let and its names --- import numpy as np / from math import floor /
     # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
-    P = Python
     a, item = P.name("a"), P.name("p")
     python = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("this"), P.ifexp(
         P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18)), P.attribute(P.name("np"), "pi")),
         P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
         P.generator("p", P.attribute(a, "y"), P.index(item, b"\x00"), item)))), alias="np")
+
+    # --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
+    # >= arrayfun(@(k) k, this.ports)(2)) || true
+    this_ = M.identifier("this")
+    matlab = M.import_("geo.*", M.binary("||", M.binary(">=", M.binary(
+        "+", M.call("dist", M.field(this_, "age"), 3),
+        M.binary(".*", M.unary("~", M.call("isfield", this_, "email")), M.unary("-", 1.5))), M.index(M.arrayfun(
+            "k", M.field(this_, "ports"), M.identifier("k")), 2)), True))
+
+    # --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
+    # a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
+    this_, a = X.name("this"), X.name("a")
+    excel = X.let_("a", X.field(this_, "age"), X.function(
+        "IF", X.function("AND", X.infix(">=", a, 18), X.function("NOT", X.function("ISERROR", X.field(this_, "email")))),
+        X.infix("-", X.infix("*", a, X.function("SUM", X.map_("q", X.field(this_, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
+        X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")))
+
+    # --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
+    # \frac{a}{2} > 1.5) \quad \text{where } a = this.age
+    this_, a = L.symbol("this"), L.symbol("a")
+    latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
+        "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
 
     # --- domains: literals of value domains, by name, a packed enum among them; defaults left out; decimal and
     # binary128 text; a conversion's domain, a bitwise operation and pack ---
@@ -82,47 +105,22 @@ def build():
     collections = E.let_("ports", this.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
         sizes.sum().le(ports.count())))
 
-    # --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
-    # \frac{a}{2} > 1.5) \quad \text{where } a = this.age
-    this_, a = L.symbol("this"), L.symbol("a")
-    latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
-        "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
-
-    # --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
-    # >= arrayfun(@(k) k, this.ports)(2)) || true
-    M = Matlab.Expressions
-    this_ = M.identifier("this")
-    matlab = M.import_("geo.*", M.binary("||", M.binary(">=", M.binary(
-        "+", M.call("dist", M.field(this_, "age"), 3),
-        M.binary(".*", M.unary("~", M.call("isfield", this_, "email")), M.unary("-", 1.5))), M.index(M.arrayfun(
-            "k", M.field(this_, "ports"), M.identifier("k")), 2)), True))
-
-    # --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
-    # a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
-    this_, a = X.name("this"), X.name("a")
-    excel = X.let_("a", X.field(this_, "age"), X.function(
-        "IF", X.function("AND", X.infix(">=", a, 18), X.function("NOT", X.function("ISERROR", X.field(this_, "email")))),
-        X.infix("-", X.infix("*", a, X.function("SUM", X.map_("q", X.field(this_, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
-        X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")))
+    # --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+    me = C.identifier("this")
+    ccpp = C.conditional(C.binary("&&", C.unary("!", C.member(me, "a")), C.binary(
+        ">", C.subscript(C.member(me, "b", "->"), 0), C.constant(1.5, "float"))),
+        C.cast("uint8_t", C.call("f", 1)), C.constant(5, "unsigned int"))
 
     with store.transaction():
-        terms = {case: store.Expressions.Framework.Term(writer)
-                 for case, writer in [("expression", expression), ("python", python), ("matlab", matlab),
-                                      ("excel", excel), ("domains", domains), ("collections", collections),
-                                      ("latex", latex)]}
+        terms = {case: store.Expressions.Framework.Term(writer) for case, writer in [
+            ("expression", expression), ("python", python), ("matlab", matlab), ("excel", excel), ("latex", latex),
+            ("domains", domains), ("collections", collections), ("ccpp", ccpp)]}
     Term = store.registered("Expressions.Framework.Term")
     return {case: (Term, terms[case], store) for case in CASES}
 
 
 def _stage_2b():  # pragma: no cover - the old API's cases, to port with their dialects
-    from mbse.Expressions.Dialects.Ccpp import Expressions as Ccpp
     from mbse.Expressions.Dialects.SystemVerilog import Expressions as SystemVerilog
-
-    # --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
-    me = Ccpp.identifier("this")
-    ccpp = Ccpp.conditional(Ccpp.binary("&&", Ccpp.unary("!", Ccpp.member(me, "a")), Ccpp.binary(
-        ">", Ccpp.subscript(Ccpp.member(me, "b", "->"), 0), Ccpp.constant(1.5, "float"))),
-        Ccpp.cast("uint8_t", Ccpp.call("f", 1)), Ccpp.constant(5, "unsigned int"))
 
     # --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
     # this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(this.unique().sum(q) with (q))) + 4'(8'shff)
@@ -134,6 +132,5 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
                   sv.cast(4, sv.vector("11111111", True, "h")))))
 
     return {
-        "ccpp": (Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders),
         "systemverilog": (SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders),
     }

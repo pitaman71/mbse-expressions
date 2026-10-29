@@ -1,7 +1,8 @@
 /**
  * Evaluators of the Ccpp dialect: compute an expression by C's and C++'s rules for arithmetic types, in TypeScript.
  *
- * `Evaluators.OfAny(expression, scope)` evaluates in a `new Scope(variables, { functions })`. Values carry their C
+ * `Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from, an `Expression`) in
+ * a `new Scope(variables, { functions })`. Values carry their C
  * type while evaluating, and the result is its native: a bigint, a number (a `long double` as its text, as
  * `Basic.Ieee754` writes it), a boolean, a string, or an object. A variable's type is its value's: a boolean is a
  * `bool`, a bigint an `int`, `long` or `unsigned long` as the first that holds it, a number a `double`, and a Basic
@@ -20,18 +21,21 @@
  * - A cast converts: to an integer type by wrapping into its width (as C++20 defines), from a floating value by
  *   truncation; to a floating type by rounding; to `bool` by comparing with zero.
  * - `condition ? a : b` evaluates only the operand it chooses, and keeps that operand's type.
- * - `object.name` and `object->name` read a member (a property of an object, or a key of a mapping); `array[index]` an
- *   element of an array; `f(args)` calls a function the scope provides, and nothing else.
+ * - `object.name` and `object->name` read a member (a property of a data object, read through mbse-schemas' readers
+ *   (`Framework.Objects`), or a key of a mapping); `array[index]` an element of an array, or of a container; `f(args)` calls a function the scope provides, and nothing else.
  */
 
-import { Errors, Repr, Validators } from "@mbse/schemas/Framework";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import { NameError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
+import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
+import * as Terms from "../../Framework/Terms.js";
 import * as BD from "../Basic/Domains.js";
 import * as Ieee754 from "../Basic/Ieee754.js";
-import { isMapping } from "../Matlab/Domains.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
@@ -221,23 +225,34 @@ function conditional(args: F.Thunk[]): Typed {
   return truth((args[0] as F.Thunk)(), "?:") ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)();
 }
 
+/** A mapping: a `Map`, or a plain object. */
+function isMapping(value: unknown): value is Map<string, unknown> | Record<string, unknown> {
+  if (value instanceof Map) return true;
+  return value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype;
+}
+
+function attributes(node: any): Map<string, any> {
+  return Terms.attributesOf(Terms.kindOf(node)[1]);
+}
+
 function cast(args: F.Thunk[], node: any): Typed {
-  return convert((args[0] as F.Thunk)(), type(node.type));
+  return convert((args[0] as F.Thunk)(), type(attributes(node).get("type")));
 }
 
 /** A member's value: a list as an array of its items, lists of lists too. */
 function array(value: unknown): unknown {
-  return value instanceof Validators.ListRecord ? value.values.map(array) : value;
+  return value instanceof Objects.Listed ? value.values.map(array) : value;
 }
 
 function member(args: F.Thunk[], node: any): Typed {
   const target = (args[0] as F.Thunk)().value;
   let members: ReadonlyMap<string, unknown>;
   if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
-  else if (target !== null && typeof target === "object" && typeof target.accept === "function") members = Validators.properties_of(target);
+  else if (Objects.isObject(target)) members = Objects.properties(target);
   else throw new TypeError(`member reference base type '${typeName(target)}' is not a structure`);
-  if (!members.has(node.name)) throw new KeyError(`no member named '${node.name}'`);
-  return typed(array(members.get(node.name)));
+  const name: string = attributes(node).get("name");
+  if (!members.has(name)) throw new KeyError(`no member named '${name}'`);
+  return typed(array(members.get(name)));
 }
 
 function subscript(args: F.Thunk[]): Typed {
@@ -252,7 +267,7 @@ function subscript(args: F.Thunk[]): Typed {
 }
 
 function call(args: F.Thunk[], node: any, scope: Scope): Typed {
-  const fn = scope.function(node.function);
+  const fn = scope.function(attributes(node).get("callable"));
   return typed(fn(...args.map((argument) => (argument() as Typed).value)));
 }
 
@@ -270,7 +285,7 @@ export class Scope extends S.Variables {
   }
 
   override unbound(reference: any): never {
-    throw new NameError(`use of undeclared identifier '${reference.name}'`);
+    throw new NameError(`use of undeclared identifier '${Terms.nameOf(reference)}'`);
   }
 
   function(name: string): Fn {
@@ -282,17 +297,18 @@ export class Scope extends S.Variables {
 
 /** The interpreter of the Ccpp dialect; its values carry their C types. */
 export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
-  ["binary", new Map<string, F.Implementation>([
+  ["ccpp_binary", new Map<string, F.Implementation>([
     ...["+", "-", "*", "/", "%", "&", "^", "|"].map((op) => [op, binaryArithmetic(op)] as [string, F.Implementation]),
     ...["<<", ">>"].map((op) => [op, shift(op)] as [string, F.Implementation]),
     ...["<", "<=", ">", ">=", "==", "!="].map((op) => [op, comparison(op)] as [string, F.Implementation]),
     ...["&&", "||"].map((op) => [op, logical(op)] as [string, F.Implementation]),
   ])],
-  ["unary", new Map<string, F.Implementation>(["+", "-", "~", "!"].map((op) => [op, unary(op)]))],
-  ["conditional", conditional], ["cast", cast], ["member", member], ["subscript", subscript], ["call", call],
+  ["ccpp_unary", new Map<string, F.Implementation>(["+", "-", "~", "!"].map((op) => [op, unary(op)]))],
+  ["ccpp_conditional", conditional], ["ccpp_cast", cast], ["ccpp_member", member], ["ccpp_subscript", subscript],
+  ["call", call],
 ]), { literal: typed, typed: constant, scope: (variables) => new Scope(variables) });
 
-/** The value of an expression in `scope`, or with the variables in an object bound: its native. */
+/** The value of a term in `scope`, or with the variables in an object bound: its native. */
 export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
-  return (INTERPRETER.run(Expressions.DIALECT.resolve(expression), scope) as Typed).value;
+  return (INTERPRETER.run(expression, scope) as Typed).value;
 }

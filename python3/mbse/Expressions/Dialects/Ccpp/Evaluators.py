@@ -1,6 +1,7 @@
 """Evaluators of the Ccpp dialect: compute an expression by C's and C++'s rules for arithmetic types, in Python.
 
-`Evaluators.OfAny(expression, scope)` evaluates in a `Scope(variables, functions)`. Values carry their C type while
+`Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from, an `Expression`) in a
+`Scope(variables, functions)`. Values carry their C type while
 evaluating, and the result is its native: an int, a float (a `long double` as its text, as `Basic.Ieee754` writes it),
 a bool, a string, or an object. A variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or
 `unsigned long` as the first that holds it, a float a `double`, and a Basic typed value (`Domains.Value`) of an integer
@@ -18,8 +19,8 @@ domain of 8, 16, 32 or 64 bits the `<stdint.h>` type of its width and signedness
 - A cast converts: to an integer type by wrapping into its width (as C++20 defines), from a floating value by
   truncation; to a floating type by rounding; to `bool` by comparing with zero.
 - `condition ? a : b` evaluates only the operand it chooses, and keeps that operand's type.
-- `object.name` and `object->name` read a member (a property of an object, or a key of a mapping); `array[index]` an
-  element of a list; `f(args)` calls a function the scope provides, and nothing else.
+- `object.name` and `object->name` read a member (a property of a data object, read through mbse-schemas' readers
+  (`Framework.Objects`), or a key of a mapping); `array[index]` an element of a list, or of a container; `f(args)` calls a function the scope provides, and nothing else.
 """
 
 from __future__ import annotations
@@ -30,8 +31,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Dialects.Basic import Domains as BD, Ieee754
-from mbse.Expressions.Framework import Errors, Evaluators as F, Symbolics as S
-from mbse.Schemas.Framework import Validators
+from mbse.Expressions.Framework import Errors, Evaluators as F, Objects, Symbolics as S, Terms
 
 from . import Domains, Expressions
 from .Domains import CType
@@ -233,26 +233,31 @@ def _conditional(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
     return arguments[1]() if _truth(arguments[0](), "?:") else arguments[2]()
 
 
+def _attributes(node: Any) -> dict[str, Any]:
+    return Terms.attributes_of(Terms.kind_of(node)[1])
+
+
 def _cast(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
-    return _convert(arguments[0](), Domains.TYPES[node.type])
+    return _convert(arguments[0](), Domains.TYPES[_attributes(node)["type"]])
 
 
 def _member(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
     target = arguments[0]().value
     if isinstance(target, Mapping):
         members = target
-    elif callable(getattr(target, "accept", None)):
-        members = Validators.properties_of(target)
+    elif Objects.is_object(target):
+        members = Objects.properties(target)
     else:
         raise TypeError(f"member reference base type '{type(target).__name__}' is not a structure")
-    if node.name not in members:
-        raise KeyError(f"no member named '{node.name}'")
-    return _typed(_array(members[node.name]))
+    name = _attributes(node)["name"]
+    if name not in members:
+        raise KeyError(f"no member named '{name}'")
+    return _typed(_array(members[name]))
 
 
 def _array(value: Any) -> Any:
     """A member's value: a list as a list of its items, lists of lists too."""
-    return [_array(item) for item in value.values] if isinstance(value, Validators.ListRecord) else value
+    return [_array(item) for item in value.values] if isinstance(value, Objects.Listed) else value
 
 
 def _subscript(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
@@ -268,7 +273,7 @@ def _subscript(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
 
 
 def _call(arguments: list[F.Thunk], node: Any, scope: Scope) -> _Typed:
-    function = scope.function(node.function)
+    function = scope.function(_attributes(node)["callable"])
     return _typed(function(*(_native(argument()) for argument in arguments)))
 
 
@@ -288,7 +293,7 @@ class Scope(S.Variables):
         return _typed(super().lookup(reference))
 
     def unbound(self, reference: Any) -> Any:
-        raise Errors.NameError(f"use of undeclared identifier '{reference.name}'")
+        raise Errors.NameError(f"use of undeclared identifier '{Terms.name_of(reference)}'")
 
     def function(self, name: str) -> Callable[..., Any]:
         if name not in self.functions:
@@ -297,18 +302,19 @@ class Scope(S.Variables):
 
 
 INTERPRETER = F.Interpreter(Expressions.DIALECT, {
-    "binary": {
+    "ccpp_binary": {
         **{op: _binary_arithmetic(op) for op in ("+", "-", "*", "/", "%", "&", "^", "|")},
         **{op: _shift(op) for op in ("<<", ">>")},
         **{op: _comparison(op) for op in ("<", "<=", ">", ">=", "==", "!=")},
         **{op: _logical(op) for op in ("&&", "||")},
     },
-    "unary": {op: _unary(op) for op in ("+", "-", "~", "!")},
-    "conditional": _conditional, "cast": _cast, "member": _member, "subscript": _subscript, "call": _call,
+    "ccpp_unary": {op: _unary(op) for op in ("+", "-", "~", "!")},
+    "ccpp_conditional": _conditional, "ccpp_cast": _cast, "ccpp_member": _member, "ccpp_subscript": _subscript,
+    "call": _call,
 }, literal=_typed, typed=_constant, scope=Scope)
 """The interpreter of the Ccpp dialect; its values carry their C types."""
 
 
 def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
-    """The value of an expression in `scope`, or with the variables in a mapping bound: its native."""
-    return _native(INTERPRETER(Expressions.DIALECT.resolve(expression), scope))
+    """The value of a term in `scope`, or with the variables in a mapping bound: its native."""
+    return _native(INTERPRETER(expression, scope))
