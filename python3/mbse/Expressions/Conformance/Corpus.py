@@ -1,23 +1,24 @@
 """The conformance corpus: the same cases, built statement for statement in every implementation.
 
 `build()` returns `{case: (root schema, root term, store)}`: each case a term value of `Expressions.Framework.Term`,
-built in one store holding the framework's and Basic's installs, written nested. Each implementation writes its
-snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
-implementation's files (see the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in
-lockstep: same cases, same values, same order of statements.
+built in one store holding the framework's, Basic's and the ported dialects' installs, written nested. Each
+implementation writes its snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against
+every other implementation's files (see the CONF test suite). Keep this module and
+`typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values, same order of statements.
 
-The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
+The other dialects' cases (python, matlab, excel, ccpp, systemverilog) return with their dialects' port, stage
 2b (docs/proposals/port): `_stage_2b` keeps them as they were written for the old API.
 """
 
 from __future__ import annotations
 
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import Basic
+from mbse.Expressions.Dialects import Basic, Latex
 from mbse.Expressions.Dialects.Basic import Domains, Expressions
+from mbse.Expressions.Dialects.Latex import Expressions as L
 from mbse.Schemas.Framework import Builders
 
-CASES = ["expression", "domains", "collections"]
+CASES = ["expression", "domains", "collections", "latex"]
 
 
 def _named(name, domain):
@@ -32,6 +33,7 @@ def build():
     store = Builders.Store()
     store.transaction(Framework.install)
     store.transaction(Basic.install)
+    store.transaction(Latex.install)
 
     # --- expression: every kind and literal type, a let and its variable, an extension operation ---
     this, age = E.variable("this"), E.variable("age")
@@ -61,9 +63,16 @@ def build():
     collections = E.let_("ports", this.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
         sizes.sum().le(ports.count())))
 
+    # --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
+    # \frac{a}{2} > 1.5) \quad \text{where } a = this.age
+    this_, a = L.symbol("this"), L.symbol("a")
+    latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
+        "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
+
     with store.transaction():
         terms = {case: store.Expressions.Framework.Term(writer)
-                 for case, writer in [("expression", expression), ("domains", domains), ("collections", collections)]}
+                 for case, writer in [("expression", expression), ("domains", domains), ("collections", collections),
+                                      ("latex", latex)]}
     Term = store.registered("Expressions.Framework.Term")
     return {case: (Term, terms[case], store) for case in CASES}
 
@@ -71,12 +80,11 @@ def build():
 def _stage_2b():  # pragma: no cover - the old API's cases, to port with their dialects
     from mbse.Expressions.Dialects.Ccpp import Expressions as Ccpp
     from mbse.Expressions.Dialects.Excel import Expressions as Excel
-    from mbse.Expressions.Dialects.Latex import Expressions as Latex
     from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
     from mbse.Expressions.Dialects.Python import Expressions as Python
     from mbse.Expressions.Dialects.SystemVerilog import Expressions as SystemVerilog
 
-    E, P, M, X, L = Expressions, Python, Matlab, Excel, Latex
+    E, P, M, X = Expressions, Python, Matlab, Excel
     this = E.variable("this")
 
     # --- python: every kind, shared names --- import numpy as np / from math import floor /
@@ -102,12 +110,6 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
         X.infix("-", X.infix("*", a, X.function("SUM", X.map_("q", X.field(this_, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
         X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")))
 
-    # --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
-    # \frac{a}{2} > 1.5) \quad \text{where } a = this.age
-    this_, a = L.symbol("this"), L.symbol("a")
-    latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
-        "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
-
     # --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
     me = Ccpp.identifier("this")
     ccpp = Ccpp.conditional(Ccpp.binary("&&", Ccpp.unary("!", Ccpp.member(me, "a")), Ccpp.binary(
@@ -129,5 +131,4 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
         "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
         "ccpp": (Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders),
         "systemverilog": (SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders),
-        "latex": (L.DIALECT.schema_of(latex), latex, L.Builders),
     }

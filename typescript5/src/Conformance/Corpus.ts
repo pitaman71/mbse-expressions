@@ -2,12 +2,12 @@
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
  * `build()` returns the cases, name -> [root schema, root term, store]: each case a term value of
- * `Expressions.Framework.Term`, built in one store holding the framework's and Basic's installs, written nested. Each
- * implementation writes its snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them
- * against every other implementation's files (see the CONF test suite). Keep this module and
+ * `Expressions.Framework.Term`, built in one store holding the framework's, Basic's and the ported dialects' installs,
+ * written nested. Each implementation writes its snapshots to `conformance/<implementation>/<case>.json` and `.yaml`,
+ * and checks them against every other implementation's files (see the CONF test suite). Keep this module and
  * `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same cases, same values, same order of statements.
  *
- * The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
+ * The other dialects' cases (python, matlab, excel, ccpp, systemverilog) return with their dialects' port, stage
  * 2b (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
  */
 
@@ -18,9 +18,11 @@ import { Builders } from "@mbse/schemas/Framework";
 import * as Domains from "../Dialects/Basic/Domains.js";
 import * as Expressions from "../Dialects/Basic/Expressions.js";
 import * as Basic from "../Dialects/Basic/index.js";
+import * as L from "../Dialects/Latex/Expressions.js";
+import * as Latex from "../Dialects/Latex/index.js";
 import * as Framework from "../Framework/index.js";
 
-export const CASES = ["expression", "domains", "collections"] as const;
+export const CASES = ["expression", "domains", "collections", "latex"] as const;
 
 /** A case: its root schema, its root term, and the store it is built in. */
 export type Case = [any, any, any];
@@ -36,6 +38,7 @@ export function build(): Map<string, Case> {
   const store: any = new Builders.Store();
   store.transaction(Framework.install);
   store.transaction(Basic.install);
+  store.transaction(Latex.install);
 
   // --- expression: every kind and literal type, a let and its variable, an extension operation ---
   const [self, age] = [E.variable("this"), E.variable("age")];
@@ -65,19 +68,25 @@ export function build(): Map<string, Case> {
   const collections = E.let_("ports", self.entries("ports"), ports!.all("p", p!.get("pin").in_(pins)).and_(
     sizes!.sum().le(ports!.count())));
 
+  // --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
+  // \frac{a}{2} > 1.5) \quad \text{where } a = this.age
+  const [thisL, aL] = [L.symbol("this"), L.symbol("a")];
+  const latex = L.where("a", L.member(thisL, "age"), L.binary("\\land", L.binary("\\geq", aL, 18n), L.binary(
+    "\\lor", L.unary("\\lnot", L.function("has", thisL, "email")), L.binary(">", L.frac(aL, 2n), 1.5))));
+
   const terms = store.transaction(() => new Map<string, any>(([["expression", expression], ["domains", domains],
-    ["collections", collections]] as [string, Expressions.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
+    ["collections", collections], ["latex", latex]] as [string, any][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   const Term = store.registered("Expressions.Framework.Term");
   return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
 }
 
 /** The old API's cases, to port with their dialects (stage 2b); not called. */
 export async function stage2b(): Promise<Map<string, Case>> {
-  const [Ccpp, Excel, Latex, Matlab, Python, SystemVerilog]: any[] = await Promise.all([
+  const [Ccpp, Excel, Matlab, Python, SystemVerilog]: any[] = await Promise.all([
     import("../Dialects/Ccpp/Expressions.js"), import("../Dialects/Excel/Expressions.js"),
-    import("../Dialects/Latex/Expressions.js"), import("../Dialects/Matlab/Expressions.js"),
-    import("../Dialects/Python/Expressions.js"), import("../Dialects/SystemVerilog/Expressions.js")]);
-  const [P, M, X, L] = [Python, Matlab, Excel, Latex];
+    import("../Dialects/Matlab/Expressions.js"), import("../Dialects/Python/Expressions.js"),
+    import("../Dialects/SystemVerilog/Expressions.js")]);
+  const [P, M, X] = [Python, Matlab, Excel];
 
   // --- python: every kind, shared names --- import numpy as np / from math import floor /
   // (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
@@ -102,12 +111,6 @@ export async function stage2b(): Promise<Map<string, Case>> {
     X.infix("-", X.infix("*", aX, X.function("SUM", X.map_("q", X.field(thisX, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
     X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")));
 
-  // --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
-  // \frac{a}{2} > 1.5) \quad \text{where } a = this.age
-  const [thisL, aL] = [L.symbol("this"), L.symbol("a")];
-  const latex = L.where("a", L.member(thisL, "age"), L.binary("\\land", L.binary("\\geq", aL, 18n), L.binary(
-    "\\lor", L.unary("\\lnot", L.function("has", thisL, "email")), L.binary(">", L.frac(aL, 2n), 1.5))));
-
   // --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
   const me = Ccpp.identifier("this");
   const ccpp = Ccpp.conditional(Ccpp.binary("&&", Ccpp.unary("!", Ccpp.member(me, "a")), Ccpp.binary(
@@ -129,6 +132,5 @@ export async function stage2b(): Promise<Map<string, Case>> {
     ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
     ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],
     ["systemverilog", [SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders]],
-    ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],
   ]);
 }

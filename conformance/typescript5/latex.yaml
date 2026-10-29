@@ -1,0 +1,50 @@
+latex_where:
+  name: a
+  value:
+    latex_member:
+      name: age
+      value:
+        latex_symbol:
+          name: this
+  body:
+    latex_binary:
+      operator: '\land'
+      left:
+        latex_binary:
+          operator: '\geq'
+          left:
+            latex_symbol:
+              name: a
+          right:
+            latex_constant:
+              value: 18
+      right:
+        latex_binary:
+          operator: '\lor'
+          left:
+            latex_unary:
+              operator: '\lnot'
+              operand:
+                latex_function:
+                  name: has
+                  arguments:
+                  - latex_symbol:
+                      name: this
+                  - latex_constant:
+                      value:
+                        scalar:
+                          str: email
+          right:
+            latex_binary:
+              operator: '>'
+              left:
+                latex_frac:
+                  numerator:
+                    latex_symbol:
+                      name: a
+                  denominator:
+                    latex_constant:
+                      value: 2
+              right:
+                latex_constant:
+                  value: 1.5

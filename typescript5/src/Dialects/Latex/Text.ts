@@ -1,10 +1,11 @@
-/** Text of the Latex dialect: `ToText(expression)` is the expression as math-mode LaTeX, parenthesized only where
- * precedence requires. */
+/** Text of the Latex dialect: `ToText(term)` is a term of the dialect as math-mode LaTeX, parenthesized only where
+ * precedence requires. The term is read through the readers: a term value, or anything `Terms.term` reads one from. */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
-import { _Binary, _Constant, _Frac, _Function, _Member, _Symbol, _Unary, _Where } from "./Expressions.js";
 
 // --- Rendering ---
 
@@ -48,30 +49,35 @@ function constantText(value: unknown): [string, number] {
   return numberText(value as bigint | number);
 }
 
-/** The expression as math-mode LaTeX. */
-export function ToText(expression: F.Term): string {
-  const write = (node: F.Term, args: [string, number][]): [string, number] => {
+/** The term as math-mode LaTeX: a term value, or anything `Terms.term` reads one from. */
+export function ToText(expression: unknown): string {
+  const write = (node: any, args: [string, number][]): [string, number] => {
     const operand = (index: number, level: number): string => {
       const [written, precedence] = args[index] as [string, number];
       return precedence >= level ? written : `(${written})`;
     };
-    if (node instanceof _Constant) return constantText(node.value);
-    if (node instanceof _Symbol) return [nameText(node.name), ATOM];
-    if (node instanceof _Member) return [`${operand(0, ATOM)}.${nameText(node.name)}`, ATOM];
-    if (node instanceof _Function) return [`\\operatorname{${node.name}}(${args.map(([t]) => t).join(", ")})`, ATOM];
-    if (node instanceof _Frac) return [`\\frac{${args[0]?.[0]}}{${args[1]?.[0]}}`, ATOM];
-    if (node instanceof _Where) {
-      return [`${operand(1, IMPLIES)} \\quad \\text{where } ${nameText(node.name)} = ${operand(0, IMPLIES)}`, WHERE];
+    const [tag, record] = F.kindOf(node);
+    const attributes = F.attributesOf(record);
+    if (tag === "latex_constant") return constantText(attributes.get("value"));
+    if (tag === "latex_symbol") return [nameText(attributes.get("name")), ATOM];
+    if (tag === "latex_member") return [`${operand(0, ATOM)}.${nameText(attributes.get("name"))}`, ATOM];
+    if (tag === "latex_function") {
+      return [`\\operatorname{${attributes.get("name")}}(${args.map(([t]) => t).join(", ")})`, ATOM];
     }
-    if (node instanceof _Unary) {
-      if (node.operator === "\\lnot") return [`\\lnot ${operand(0, UNARY)}`, UNARY];
-      return [`${node.operator}${operand(0, ATOM)}`, UNARY];
+    if (tag === "latex_frac") return [`\\frac{${args[0]?.[0]}}{${args[1]?.[0]}}`, ATOM];
+    if (tag === "latex_where") {
+      const name = nameText(attributes.get("name"));
+      return [`${operand(1, IMPLIES)} \\quad \\text{where } ${name} = ${operand(0, IMPLIES)}`, WHERE];
     }
-    const binary = node as _Binary;
-    const level = LEVELS[binary.operator] as number;
-    if (level === COMPARE) return [`${operand(0, level + 1)} ${binary.operator} ${operand(1, level + 1)}`, level]; // not associative
-    if (level === IMPLIES) return [`${operand(0, level + 1)} ${binary.operator} ${operand(1, level)}`, level]; // right-associative
-    return [`${operand(0, level)} ${binary.operator} ${operand(1, level + 1)}`, level];
+    const operator: string = attributes.get("operator");
+    if (tag === "latex_unary") {
+      if (operator === "\\lnot") return [`\\lnot ${operand(0, UNARY)}`, UNARY];
+      return [`${operator}${operand(0, ATOM)}`, UNARY];
+    }
+    const level = LEVELS[operator] as number;
+    if (level === COMPARE) return [`${operand(0, level + 1)} ${operator} ${operand(1, level + 1)}`, level]; // not associative
+    if (level === IMPLIES) return [`${operand(0, level + 1)} ${operator} ${operand(1, level)}`, level]; // right-associative
+    return [`${operand(0, level)} ${operator} ${operand(1, level + 1)}`, level];
   };
   return F.fold(expression, write)[0];
 }

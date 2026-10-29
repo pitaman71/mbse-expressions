@@ -1,5 +1,5 @@
-"""Text of the Latex dialect: `ToText(expression)` is the expression as math-mode LaTeX, parenthesized only where
-precedence requires."""
+"""Text of the Latex dialect: `ToText(term)` is a term of the dialect as math-mode LaTeX, parenthesized only where
+precedence requires. The term is read through the readers: a term value, or anything `Terms.term` reads one from."""
 
 from __future__ import annotations
 
@@ -7,9 +7,6 @@ import math
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
-from mbse.Schemas.Framework.Visitors import Native
-
-from .Expressions import _Constant, _Frac, _Function, _Member, _Symbol, _Unary, _Where
 
 __all__ = ["ToText"]
 
@@ -44,7 +41,7 @@ def _number(value: float | int) -> tuple[str, int]:
     return text, _UNARY if text.startswith("-") else _ATOM
 
 
-def _constant(value: Native) -> tuple[str, int]:
+def _constant(value: Any) -> tuple[str, int]:
     if type(value) is bool:
         return ("\\mathrm{true}" if value else "\\mathrm{false}"), _ATOM
     if type(value) is str:
@@ -53,34 +50,38 @@ def _constant(value: Native) -> tuple[str, int]:
 
 
 def ToText(expression: Any) -> str:
-    """The expression as math-mode LaTeX."""
+    """The term as math-mode LaTeX: a term value, or anything `Terms.term` reads one from."""
 
     def write(node: Any, arguments: list[tuple[str, int]]) -> tuple[str, int]:
         def operand(index: int, level: int) -> str:
             text, precedence = arguments[index]
             return text if precedence >= level else f"({text})"
 
-        if isinstance(node, _Constant):
-            return _constant(node.value)
-        if isinstance(node, _Symbol):
-            return _name(node.name), _ATOM
-        if isinstance(node, _Member):
-            return f"{operand(0, _ATOM)}.{_name(node.name)}", _ATOM
-        if isinstance(node, _Function):
-            return f"\\operatorname{{{node.name}}}({', '.join(text for text, _ in arguments)})", _ATOM
-        if isinstance(node, _Frac):
+        tag, record = F.kind_of(node)
+        attributes = F.attributes_of(record)
+        if tag == "latex_constant":
+            return _constant(attributes["value"])
+        if tag == "latex_symbol":
+            return _name(attributes["name"]), _ATOM
+        if tag == "latex_member":
+            return f"{operand(0, _ATOM)}.{_name(attributes['name'])}", _ATOM
+        if tag == "latex_function":
+            return f"\\operatorname{{{attributes['name']}}}({', '.join(text for text, _ in arguments)})", _ATOM
+        if tag == "latex_frac":
             return f"\\frac{{{arguments[0][0]}}}{{{arguments[1][0]}}}", _ATOM
-        if isinstance(node, _Where):
-            return f"{operand(1, _IMPLIES)} \\quad \\text{{where }} {_name(node.name)} = {operand(0, _IMPLIES)}", _WHERE
-        if isinstance(node, _Unary):
-            if node.operator == "\\lnot":
+        if tag == "latex_where":
+            return (f"{operand(1, _IMPLIES)} \\quad \\text{{where }} {_name(attributes['name'])} = "
+                    f"{operand(0, _IMPLIES)}"), _WHERE
+        operator = attributes["operator"]
+        if tag == "latex_unary":
+            if operator == "\\lnot":
                 return f"\\lnot {operand(0, _UNARY)}", _UNARY
-            return f"{node.operator}{operand(0, _ATOM)}", _UNARY
-        level = _LEVELS[node.operator]
+            return f"{operator}{operand(0, _ATOM)}", _UNARY
+        level = _LEVELS[operator]
         if level == _COMPARE:  # not associative: both sides bind tighter
-            return f"{operand(0, level + 1)} {node.operator} {operand(1, level + 1)}", level
+            return f"{operand(0, level + 1)} {operator} {operand(1, level + 1)}", level
         if level == _IMPLIES:  # right-associative
-            return f"{operand(0, level + 1)} {node.operator} {operand(1, level)}", level
-        return f"{operand(0, level)} {node.operator} {operand(1, level + 1)}", level
+            return f"{operand(0, level + 1)} {operator} {operand(1, level)}", level
+        return f"{operand(0, level)} {operator} {operand(1, level + 1)}", level
 
     return F.fold(expression, write)[0]
