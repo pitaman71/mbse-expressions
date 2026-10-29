@@ -23,7 +23,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Errors, Repr, Schemas } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
@@ -64,9 +64,8 @@ function domainProblems(name: string): string[] {
   let domain: Domains.Domain;
   try {
     domain = Domains.registered(name);
-  } catch (error) {
-    if (!(error instanceof Errors.LookupError)) throw error;
-    return [`domain: ${error.message}`];
+  } catch (error) { // a LookupError: the name stands for no domain
+    return [`domain: ${(error as Error).message}`];
   }
   return domain.validate().map((problem) => `domain: ${problem}`);
 }
@@ -93,9 +92,9 @@ function callCheck(record: any): string[] {
   return domainProblems(domain);
 }
 
-/** The literal of a native value. */
+/** The literal of a native value (`Terms.spec` gives it only a basic scalar). */
 function native(value: unknown): Writer | null {
-  return Schemas.hostOf(value) !== null ? literal(value) : null;
+  return literal(value);
 }
 
 /** The Basic dialect: its kinds, as the framework reads them. */
@@ -302,6 +301,15 @@ export class Writer extends F.Writer {
   }
 }
 
+/** The domain a name stands for, or null (validation reports a name that stands for none). */
+function standsFor(name: string): Domains.Domain | null {
+  try {
+    return Domains.registered(name);
+  } catch { // a LookupError: the name stands for no domain
+    return null;
+  }
+}
+
 function specOf(value: unknown): F.Writer | null {
   return value === null || value === undefined ? null : DIALECT.spec(value);
 }
@@ -315,7 +323,7 @@ export function variable(name: string): Writer {
 export function literal(value: unknown, domain: unknown = null): Writer {
   let name = domainName(domain);
   if (name !== null && Domains.nativeDomain(value) !== null
-    && Domains.registered(name).equals(Domains.of(value))) {
+    && standsFor(name)?.equals(Domains.of(value))) {
     name = null; // a native's default domain is no domain at all
   }
   return new Writer((u: any) => u.literal((r: any) => {

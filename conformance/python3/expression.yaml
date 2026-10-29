@@ -47,7 +47,7 @@ let:
                           value:
                             str: email
           - call:
-              callable: in
+              callable: contains
               arguments:
               - literal:
                   value:

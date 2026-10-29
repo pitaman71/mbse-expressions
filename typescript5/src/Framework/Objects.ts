@@ -79,11 +79,11 @@ function listed(read: Readers.OfContainer): Listed {
 
 function valueOf(read: any): unknown {
   const found: unknown[] = [];
-  read.as_value((a: Readers.OfAny) => {
+  read.as_value((a: Readers.OfAny) => { // every callback is called: an absent value's reader holds nothing
     found.push(held(a));
     return a;
   });
-  return found.length > 0 ? found[0] : null;
+  return found[0];
 }
 
 /** A union's branch or an intersection's part, whose visitor is of its type's kind; null if it is absent. */

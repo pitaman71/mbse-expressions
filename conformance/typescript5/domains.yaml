@@ -1,261 +1,92 @@
-root: s0
-objects:
-  s0:
-    kind: operation
-    name: all
-    arguments:
-    - argument:
-        $ref: s1
-        $schema: Expressions.OfOperation
-      index: 0
-    - argument:
-        $ref: s2
-        $schema: Expressions.OfOperation
-      index: 1
-    - argument:
-        $ref: s3
-        $schema: Expressions.OfOperation
-      index: 2
-    - argument:
-        $ref: s4
-        $schema: Expressions.OfOperation
-      index: 3
-    - argument:
-        $ref: s5
-        $schema: Expressions.OfOperation
-      index: 4
-    - argument:
-        $ref: s6
-        $schema: Expressions.OfOperation
-      index: 5
-    - argument:
-        $ref: s7
-        $schema: Expressions.OfOperation
-      index: 6
-    - argument:
-        $ref: s8
-        $schema: Expressions.OfOperation
-      index: 7
-    - argument:
-        $ref: s9
-        $schema: Expressions.OfOperation
-      index: 8
-    - argument:
-        $ref: s10
-        $schema: Expressions.OfOperation
-      index: 9
-  s1:
-    kind: operation
-    name: eq
-    arguments:
-    - argument:
-        $ref: s11
-        $schema: Expressions.OfVariable
-      index: 0
-    - argument:
-        $ref: s12
-        $schema: Expressions.OfLiteral
-      index: 1
-  s2:
-    kind: operation
-    name: le
-    arguments:
-    - argument:
-        $ref: s13
-        $schema: Expressions.OfVariable
-      index: 0
-    - argument:
-        $ref: s14
-        $schema: Expressions.OfLiteral
-      index: 1
-  s3:
-    kind: operation
-    name: ne
-    arguments:
-    - argument:
-        $ref: s15
-        $schema: Expressions.OfVariable
-      index: 0
-    - argument:
-        $ref: s16
-        $schema: Expressions.OfLiteral
-      index: 1
-  s4:
-    kind: operation
-    name: ge
-    arguments:
-    - argument:
-        $ref: s17
-        $schema: Expressions.OfVariable
-      index: 0
-    - argument:
-        $ref: s18
-        $schema: Expressions.OfLiteral
-      index: 1
-  s5:
-    kind: operation
-    name: gt
-    arguments:
-    - argument:
-        $ref: s19
-        $schema: Expressions.OfVariable
-      index: 0
-    - argument:
-        $ref: s20
-        $schema: Expressions.OfLiteral
-      index: 1
-  s6:
-    kind: operation
-    name: lt
-    arguments:
-    - argument:
-        $ref: s21
-        $schema: Expressions.OfVariable
-      index: 0
-    - argument:
-        $ref: s22
-        $schema: Expressions.OfLiteral
-      index: 1
-  s7:
-    kind: operation
-    name: sub
-    arguments:
-    - argument:
-        $ref: s23
-        $schema: Expressions.OfOperation
-      index: 0
-    - argument:
-        $ref: s24
-        $schema: Expressions.OfLiteral
-      index: 1
-  s8:
-    kind: operation
-    name: mul
-    arguments:
-    - argument:
-        $ref: s25
-        $schema: Expressions.OfVariable
-      index: 0
-    - argument:
-        $ref: s26
-        $schema: Expressions.OfLiteral
-      index: 1
-  s9:
-    kind: operation
-    name: bitand
-    arguments:
-    - argument:
-        $ref: s19
-        $schema: Expressions.OfVariable
-      index: 0
-    - argument:
-        $ref: s27
-        $schema: Expressions.OfLiteral
-      index: 1
-  s10:
-    kind: operation
-    name: pack
-    arguments:
-    - argument:
-        $ref: s11
-        $schema: Expressions.OfVariable
-      index: 0
-  s11:
-    kind: variable
-    name: mode
-  s12:
-    kind: literal
-    str: RUN
-    domain:
-      packed:
-        domain:
-          enum:
-            members:
-            - IDLE
-            - RUN
-        representation:
-          bits:
-            width: 2
-        codes:
-        - 0
-        - 1
-  s13:
-    kind: variable
-    name: count
-  s14:
-    kind: literal
-    int: 200
-    domain:
-      named:
-        name: uint8
-  s15:
-    kind: variable
-    name: gain
-  s16:
-    kind: literal
-    float: 1.5
-    domain:
-      ieee754:
-        format: binary32
-        rounding: roundTowardZero
-  s17:
-    kind: variable
-    name: line
-  s18:
-    kind: literal
-    str: Z
-    domain:
-      ieee1164: {}
-  s19:
-    kind: variable
-    name: mask
-  s20:
-    kind: literal
-    bytes: 'Aw=='
-    domain:
-      bits:
-        width: 2
-  s21:
-    kind: variable
-    name: size
-  s22:
-    kind: literal
-    int: 5
-  s23:
-    kind: operation
-    name: convert
-    domain:
-      ieee754:
-        format: decimal64
-        rounding: roundTiesToEven
-    arguments:
-    - argument:
-        $ref: s28
-        $schema: Expressions.OfVariable
-      index: 0
-  s24:
-    kind: literal
-    str: '1.50'
-    domain:
-      ieee754:
-        format: decimal64
-        rounding: roundTiesToEven
-  s25:
-    kind: variable
-    name: ratio
-  s26:
-    kind: literal
-    str: '0.1'
-    domain:
-      ieee754:
-        format: binary128
-        rounding: roundTiesToEven
-  s27:
-    kind: literal
-    bytes: 'AQ=='
-    domain:
-      bits:
-        width: 2
-  s28:
-    kind: variable
-    name: price
+call:
+  callable: all
+  arguments:
+  - call:
+      callable: eq
+      arguments:
+      - variable:
+          name: mode
+      - literal:
+          value:
+            str: RUN
+          domain: state
+  - call:
+      callable: le
+      arguments:
+      - variable:
+          name: count
+      - literal:
+          value:
+            int: 200
+          domain: uint8
+  - call:
+      callable: ne
+      arguments:
+      - variable:
+          name: gain
+      - literal:
+          value:
+            float: 1.5
+          domain: binary32 roundTowardZero
+  - call:
+      callable: ge
+      arguments:
+      - variable:
+          name: line
+      - literal:
+          value:
+            str: Z
+          domain: std_logic
+  - call:
+      callable: gt
+      arguments:
+      - variable:
+          name: mask
+      - literal:
+          value:
+            bytes: 'Aw=='
+          domain: bits2
+  - call:
+      callable: lt
+      arguments:
+      - variable:
+          name: size
+      - literal:
+          value:
+            int: 5
+  - call:
+      callable: sub
+      arguments:
+      - call:
+          callable: convert
+          arguments:
+          - variable:
+              name: price
+          domain: decimal64
+      - literal:
+          value:
+            str: '1.50'
+          domain: decimal64
+  - call:
+      callable: mul
+      arguments:
+      - variable:
+          name: ratio
+      - literal:
+          value:
+            str: '0.1'
+          domain: binary128
+  - call:
+      callable: bitand
+      arguments:
+      - variable:
+          name: mask
+      - literal:
+          value:
+            bytes: 'AQ=='
+          domain: bits2
+  - call:
+      callable: pack
+      arguments:
+      - variable:
+          name: mode

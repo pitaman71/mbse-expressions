@@ -8,8 +8,8 @@ import { build } from "./Corpus.js";
 export function render(corpus: ReturnType<typeof build> = build()): Map<string, string> {
   const files = new Map<string, string>();
   for (const [name, [schema, root, store]] of corpus) {
-    files.set(`${name}.json`, JSON.ToJSON(store).Reachable(schema, root, { indent: 2 }) + "\n");
-    files.set(`${name}.yaml`, YAML.ToYAML(store).Reachable(schema, root));
+    files.set(`${name}.json`, JSON.ToJSON(store)(schema, root, { indent: 2 }) + "\n");
+    files.set(`${name}.yaml`, YAML.ToYAML(store)(schema, root));
   }
   return files;
 }

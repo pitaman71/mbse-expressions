@@ -99,6 +99,13 @@ export function article(noun: string): string {
   return `${"aeiou".includes(noun[0] as string) ? "an" : "a"} ${noun}`;
 }
 
+/** A value's schema's name when it is read through a reader and has one, otherwise its type's name. */
+function described(value: unknown): string {
+  const schema = schemaOf(value) as { name?: unknown } | null;
+  const name = schema?.name;
+  return typeof name === "string" && name !== "" ? name : typeName(value);
+}
+
 // --- Reading terms ---
 
 /** A term's structure: its `kind` (its branch's tag), its `attributes` (its properties that are not terms, those set,
@@ -115,10 +122,6 @@ export class Form {
 
   [Repr.REPR](): string {
     return `Form(kind=${repr(this.kind)}, attributes=${repr(this.attributes)}, arguments=${repr(new Tuple(this.arguments))})`;
-  }
-
-  toString(): string {
-    return this[Repr.REPR]();
   }
 }
 
@@ -202,11 +205,11 @@ export function kindOf(term_: any): [string, any] {
 /** A record's property's value: a scalar, or what `Objects.held` reads of any other value; null when absent. */
 function scalar(record: any, name: string): any {
   const found: unknown[] = [];
-  record[name].as_value((a: any) => {
+  record[name].as_value((a: any) => { // every callback is called: an absent value's reader holds nothing
     found.push(Objects.held(a));
     return a;
   });
-  return found.length > 0 ? found[0] : null;
+  return found[0];
 }
 
 /** The term a slot holds, or null. */
@@ -442,9 +445,8 @@ export class Dialect {
   private readonly domainOf: (value: unknown) => Domains.Domain;
   readonly _literal: ((value: unknown) => Writer | null) | null;
 
-  constructor(private readonly dialectName: string, kinds: ReadonlyMap<string, Kind> | Record<string, Kind>,
-    options: DialectOptions) {
-    const own = kinds instanceof Map ? kinds : new Map(Object.entries(kinds));
+  constructor(private readonly dialectName: string, kinds: Record<string, Kind>, options: DialectOptions) {
+    const own = new Map(Object.entries(kinds));
     const base = options.extends ?? null;
     const inherited = base === null ? new Map<string, Kind>() : base.kinds();
     const clashes = [...own.keys()].filter((tag) => inherited.has(tag)).sort();
@@ -527,7 +529,7 @@ export class Dialect {
     if (kind.role === LITERAL) {
       const value = attributes.get("value") ?? null;
       if (value === null) return [`${what} needs a value`];
-      if (Schemas.hostOf(value) === null) return [`${what} must hold a basic scalar, got ${typeName(value)}`];
+      if (Schemas.hostOf(value) === null) return [`${what} must hold a basic scalar, got ${described(value)}`];
       return kind.check !== null ? kind.check(record) : [];
     }
     const problems = kind.required.filter((name) => [null, undefined, ""].includes(attributes.get(name)))
@@ -575,9 +577,8 @@ export class Dialect {
   }
 
   /** The domain of a term's value, with the references in `environment` of the given domains. */
-  infer(term_: unknown, environment: Environment | ReadonlyMap<string, Domains.Domain> = {}): Domains.Domain {
-    const known: Environment = environment instanceof Map ? Object.fromEntries(environment)
-      : { ...(environment as Environment) };
+  infer(term_: unknown, environment: Environment = {}): Domains.Domain {
+    const known: Environment = { ...environment };
     const node = term(term_);
     const problems = this.validate(node, Object.keys(known));
     if (problems.length > 0) throw new ValueError(`cannot infer the domain of an invalid expression: ${problems[0]}`);

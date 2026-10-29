@@ -1,10 +1,14 @@
 /** Shared helpers for the test notebooks. Each notebook runs in its own process and makes its own stores. */
 
-import { Plain, Proxies, Reachable } from "@mbse/schemas/Framework";
+import { Plain, Proxies, Reachable, Visitors } from "@mbse/schemas/Framework";
 import type { PlainData, PlainMap } from "@mbse/schemas/Framework/Plain";
 import type { Instance } from "@mbse/schemas/Framework/Proxies";
 import type { OfObject } from "@mbse/schemas/Framework/Schemas";
-import type { Callback, OfObject as ObjectVisitor, Visitable } from "@mbse/schemas/Framework/Visitors";
+import type { Callback } from "@mbse/schemas/Framework/Specs";
+
+/** What a hand-written object writes its properties through (Bindings-era, kept for stage 2b's suites). */
+type Visitable = { identity(): unknown; schema_name(): string; owner(): unknown; accept(visitor: any): void };
+type ObjectVisitor = any;
 
 /** Python's `assert`. */
 export function assert(condition: unknown, message = "assertion failed"): asserts condition {
@@ -57,6 +61,12 @@ export function equal(a: unknown, b: unknown): boolean {
   return a === b;
 }
 
+/** Python's `==` on two `Terms.Form`s: the same kind, equal attributes, and the same arguments (by identity). */
+export function form_equal(a: { kind: string; attributes: ReadonlyMap<string, unknown>; arguments: readonly unknown[] },
+  b: { kind: string; attributes: ReadonlyMap<string, unknown>; arguments: readonly unknown[] }): boolean {
+  return a.kind === b.kind && equal(a.attributes, b.attributes) && same(a.arguments, b.arguments);
+}
+
 /** Map literal from an object literal, recursively (keys stay in literal order). */
 export function map(value: unknown): any {
   if (Array.isArray(value)) return value.map(map);
@@ -80,7 +90,7 @@ export function same(a: readonly unknown[], b: readonly unknown[]): boolean {
 
 /** An object's entries with references resolved to objects, read from a Reachable snapshot (symbols follow
  * `Reachable.of` order). */
-export function entries(schema: OfObject.Data, obj: Visitable, adjacency: string): Map<string, any>[] {
+export function entries(schema: OfObject.Data, obj: any, adjacency: string): Map<string, any>[] {
   const graph = Plain.ToPlain(Proxies.store_of(obj)).Reachable(schema, obj);
   const objects = Reachable.of(obj);
   const root = (graph.get("objects") as PlainMap).get(graph.get("root") as string) as PlainMap;
@@ -153,7 +163,7 @@ export class Fake implements Visitable {
   accept(visitor: ObjectVisitor): void {
     for (const [name, value] of this.values) set_property(visitor, name, value);
     for (const [name, items] of this.adjacencies) {
-      for (const item of items) visitor.adjacency(name, (a) => a.add((e) => write(e, item)));
+      for (const item of items) visitor.adjacency(name, (a: any) => a.add((e: any) => write(e, item)));
     }
   }
 }
@@ -186,6 +196,20 @@ export const PROTOCOLS: Record<string, Record<string, number>> = {
   Domain: { name: 0, contains: 1, includes: 1 },
   Signature: { arity: 0, result: 1, describe: 0 },
 };
+
+/** mbse-schemas' readers' methods (`Readers.OfX` is a type, which vanishes at runtime), and its visitors' own list. */
+const READERS: Record<string, readonly string[]> = {
+  OfScalar: ["as_schema", "get"],
+  OfAny: ["as_schema", "as_scalar", "as_object", "as_union", "as_intersection", "as_container"],
+  OfContainer: ["as_schema", "at", "as_ordered", "as_dict", "as_entries"],
+  OfProperty: ["as_schema", "as_value", "as_scalar", "as_object", "get"],
+  OfObject: ["as_schema", "as_adjacencies"],
+  OfUnion: ["as_schema"],
+};
+for (const [name, methods] of Object.entries(READERS)) PROTOCOLS[`Readers.${name}`] = Object.fromEntries(methods.map((m) => [m, 0]));
+for (const [name, methods] of Object.entries(Visitors.PROTOCOL_METHODS)) {
+  PROTOCOLS[`Visitors.${name}`] = Object.fromEntries(methods.map((m) => [m, 0]));
+}
 
 /** Methods of `protocol` that `implementation` lacks, or declares with a different number of parameters. */
 export function conformance_problems(implementation: { name: string; prototype: object }, protocol: string): string[] {

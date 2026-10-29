@@ -101,7 +101,7 @@
                 },
                 {
                   "call": {
-                    "callable": "in",
+                    "callable": "contains",
                     "arguments": [
                       {
                         "literal": {

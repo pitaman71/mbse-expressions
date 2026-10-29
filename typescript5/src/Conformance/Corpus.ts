@@ -1,35 +1,83 @@
 /**
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
- * `build()` returns the cases, name -> [root schema, root expression, store], the store being the case's dialect's
- * `Builders`, a store of its bound classes. Each implementation writes its snapshots to
- * `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files
- * (see the CONF test suite). Keep this module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
- * cases, same values, same order of statements.
+ * `build()` returns the cases, name -> [root schema, root term, store]: each case a term value of
+ * `Expressions.Framework.Term`, built in one store holding the framework's and Basic's installs, written nested. Each
+ * implementation writes its snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them
+ * against every other implementation's files (see the CONF test suite). Keep this module and
+ * `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same cases, same values, same order of statements.
+ *
+ * The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
+ * 2b (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
  */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { Builders } from "@mbse/schemas/Framework";
 
 import * as Domains from "../Dialects/Basic/Domains.js";
 import * as Expressions from "../Dialects/Basic/Expressions.js";
-import * as Ccpp from "../Dialects/Ccpp/Expressions.js";
-import * as Excel from "../Dialects/Excel/Expressions.js";
-import * as Latex from "../Dialects/Latex/Expressions.js";
-import * as Matlab from "../Dialects/Matlab/Expressions.js";
-import * as Python from "../Dialects/Python/Expressions.js";
-import * as SystemVerilog from "../Dialects/SystemVerilog/Expressions.js";
-import type { Schemas, Stores, Visitors } from "@mbse/schemas/Framework";
+import * as Basic from "../Dialects/Basic/index.js";
+import * as Framework from "../Framework/index.js";
 
-export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp", "systemverilog"] as const;
+export const CASES = ["expression", "domains", "collections"] as const;
 
-type Case = [Schemas.OfObject.Data, Visitors.Visitable, Stores.Store];
+/** A case: its root schema, its root term, and the store it is built in. */
+export type Case = [any, any, any];
+
+/** `domain`, registered under `name` unless it is already: a term names its domain. */
+function named<T extends Domains.Domain>(name: string, domain: T): T {
+  if (Domains.name_of(domain) === null) Domains.register(name, domain);
+  return domain;
+}
 
 export function build(): Map<string, Case> {
-  const [E, P, M, X, L] = [Expressions, Python, Matlab, Excel, Latex];
+  const [E, D] = [Expressions, Domains];
+  const store: any = new Builders.Store();
+  store.transaction(Framework.install);
+  store.transaction(Basic.install);
 
-  // --- expression: every kind and literal type, shared sub-expressions, each operation once ---
+  // --- expression: every kind and literal type, a let and its variable, an extension operation ---
   const [self, age] = [E.variable("this"), E.variable("age")];
   const expression = E.let_("age", self.age, age.ge(18n).and_(
-    age.lt(65.5).or_(self.has("email").not_())
-      .implies(E.operation("in", "x", new Uint8Array([0x00, 0xff]), true)))).data;
+    age.lt(65.5).or_(self.has("email").not_()).implies(E.operation("contains", "x", new Uint8Array([0x00, 0xff]), true))));
+
+  // --- domains: literals of value domains, by name, a packed enum among them; defaults left out; decimal and
+  // binary128 text; a conversion's domain, a bitwise operation and pack ---
+  const uint8 = named("uint8", new D.OfInteger.Builder().width(8n).signed(false).overflow("wrap").create());
+  const state = named("state", new D.OfPacked.Builder().domain(new D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
+    new D.OfBits.Builder().width(2n).create()).codes(0n, 1n).create());
+  const binary32 = named("binary32 roundTowardZero", new D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create());
+  const decimal64 = named("decimal64", new D.OfIeee754.Builder().format("decimal64").create());
+  const bits2 = named("bits2", new D.OfBits.Builder().width(2n).create());
+  const logic = named("std_logic", new D.OfIeee1164.Builder().create());
+  const binary128 = named("binary128", new D.OfIeee754.Builder().format("binary128").create());
+  const [mode, count, gain, line, mask, size, price, ratio] = ["mode", "count", "gain", "line", "mask", "size", "price", "ratio"]
+    .map((name) => E.variable(name)) as Expressions.Writer[];
+  const domains = E.operation(
+    "all", mode!.eq(E.literal("RUN", state)), count!.le(E.literal(200n, uint8)), gain!.ne(E.literal(1.5, binary32)),
+    line!.ge(E.literal("Z", logic)), mask!.gt(E.literal(new Uint8Array([3]), bits2)), size!.lt(E.literal(5n, D.Int)),
+    price!.convert(decimal64).sub(E.literal("1.50", decimal64)), ratio!.mul(E.literal("0.1", binary128)),
+    mask!.bitand(E.literal(new Uint8Array([1]), bits2)), mode!.pack()); // each operation once
+
+  // --- collections: a quantifier over entries, and collection operations, each once ---
+  const [ports, p, pins, sizes] = ["ports", "p", "pins", "sizes"].map((name) => E.variable(name)) as Expressions.Writer[];
+  const collections = E.let_("ports", self.entries("ports"), ports!.all("p", p!.get("pin").in_(pins)).and_(
+    sizes!.sum().le(ports!.count())));
+
+  const terms = store.transaction(() => new Map<string, any>(([["expression", expression], ["domains", domains],
+    ["collections", collections]] as [string, Expressions.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
+  const Term = store.registered("Expressions.Framework.Term");
+  return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
+}
+
+/** The old API's cases, to port with their dialects (stage 2b); not called. */
+export async function stage2b(): Promise<Map<string, Case>> {
+  const [Ccpp, Excel, Latex, Matlab, Python, SystemVerilog]: any[] = await Promise.all([
+    import("../Dialects/Ccpp/Expressions.js"), import("../Dialects/Excel/Expressions.js"),
+    import("../Dialects/Latex/Expressions.js"), import("../Dialects/Matlab/Expressions.js"),
+    import("../Dialects/Python/Expressions.js"), import("../Dialects/SystemVerilog/Expressions.js")]);
+  const [P, M, X, L] = [Python, Matlab, Excel, Latex];
 
   // --- python: every kind, shared names --- import numpy as np / from math import floor /
   // (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
@@ -60,30 +108,6 @@ export function build(): Map<string, Case> {
   const latex = L.where("a", L.member(thisL, "age"), L.binary("\\land", L.binary("\\geq", aL, 18n), L.binary(
     "\\lor", L.unary("\\lnot", L.function("has", thisL, "email")), L.binary(">", L.frac(aL, 2n), 1.5))));
 
-  // --- domains: literals of value domains, by value and by name, a packed enum among them; defaults left out;
-  // decimal and binary128 text; a conversion's domain, a bitwise operation and pack ---
-  const D = Domains;
-  const uint8 = new D.OfInteger.Builder().width(8n).signed(false).overflow("wrap").create();
-  if (D.name_of(uint8) === null) D.register("uint8", uint8);
-  const state = new D.OfPacked.Builder().domain(new D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
-    new D.OfBits.Builder().width(2n).create()).codes(0n, 1n).create();
-  const binary32 = new D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create();
-  const decimal64 = new D.OfIeee754.Builder().format("decimal64").create();
-  const bits2 = new D.OfBits.Builder().width(2n).create();
-  const [mode, count, gain, line, mask, size, price, ratio] = ["mode", "count", "gain", "line", "mask", "size", "price", "ratio"]
-    .map((name) => E.variable(name));
-  const domains = E.operation(
-    "all", mode!.eq(E.literal("RUN", state)), count!.le(E.literal(200n, uint8)), gain!.ne(E.literal(1.5, binary32)),
-    line!.ge(E.literal("Z", new D.OfIeee1164.Builder().create())), mask!.gt(E.literal(new Uint8Array([3]), bits2)),
-    size!.lt(E.literal(5n, D.Int)), price!.convert(decimal64).sub(E.literal("1.50", decimal64)),
-    ratio!.mul(E.literal("0.1", new D.OfIeee754.Builder().format("binary128").create())),
-    mask!.bitand(E.literal(new Uint8Array([1]), bits2)), mode!.pack()).data; // each operation once, for CONF-04
-
-  // --- collections: a quantifier over entries, and collection operations, each once ---
-  const [ports, p, pins, sizes] = ["ports", "p", "pins", "sizes"].map((name) => E.variable(name)) as [any, any, any, any];
-  const collections = E.let_("ports", self.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
-    sizes.sum().le(ports.count()))).data;
-
   // --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
   const me = Ccpp.identifier("this");
   const ccpp = Ccpp.conditional(Ccpp.binary("&&", Ccpp.unary("!", Ccpp.member(me, "a")), Ccpp.binary(
@@ -100,12 +124,9 @@ export function build(): Map<string, Case> {
       sv.cast(4n, sv.vector("11111111", true, "h")))));
 
   return new Map<string, Case>([
-    ["expression", [E.OfLet.Schema, expression, E.Builders]],
     ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
     ["matlab", [M.DIALECT.schema_of(matlab), matlab, M.Builders]],
     ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
-    ["domains", [E.OfOperation.Schema, domains, E.Builders]],
-    ["collections", [E.OfLet.Schema, collections, E.Builders]],
     ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],
     ["systemverilog", [SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders]],
     ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],

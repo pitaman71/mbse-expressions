@@ -58,11 +58,6 @@ export class Variables implements Scope {
     return [false, undefined];
   }
 
-  /** The variables the scope was made with. */
-  protected variables(): Map<string, unknown> {
-    return this.values[this.values.length - 1] as Map<string, unknown>;
-  }
-
   lookup(reference: any): any {
     const [found, value] = this.find(Terms.nameOf(reference) as string);
     return found ? value : this.unbound(reference);

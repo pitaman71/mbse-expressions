@@ -36,7 +36,7 @@ def build():
     # --- expression: every kind and literal type, a let and its variable, an extension operation ---
     this, age = E.variable("this"), E.variable("age")
     expression = E.let_("age", this.age, age.ge(18).and_(
-        age.lt(65.5).or_(this.has("email").not_()).implies(E.operation("in", "x", b"\x00\xff", True))))
+        age.lt(65.5).or_(this.has("email").not_()).implies(E.operation("contains", "x", b"\x00\xff", True))))
 
     # --- domains: literals of value domains, by name, a packed enum among them; defaults left out; decimal and
     # binary128 text; a conversion's domain, a bitwise operation and pack ---
