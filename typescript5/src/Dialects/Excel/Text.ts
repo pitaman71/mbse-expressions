@@ -1,11 +1,13 @@
-/** Text of the Excel dialect: `ToText(expression)` is the expression as a formula, starting with `=` and
- * parenthesized only where precedence requires. */
+/** Text of the Excel dialect: `ToText(term)` is a term as a formula, starting with `=` and parenthesized only where
+ * precedence requires. It takes a term value, or anything `Terms.term` reads one from (an `Expression`, its root), and
+ * reads it as `Expressions.DIALECT` does: a kind it does not read throws `ValueError`. */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
-import { isIdentifier } from "../Python/Expressions.js";
-import { _Cell, _Constant, _Field, _Function, _Infix, _Let, _Map, _Name, _Prefix } from "./Expressions.js";
+import { DIALECT } from "./Expressions.js";
 
 const { repr } = Repr;
 
@@ -21,38 +23,46 @@ function constantText(value: unknown): string {
   return repr(value);
 }
 
+/** Whether `text` is an identifier, as Python's `str.isidentifier` has it. */
+function isIdentifier(text: string): boolean {
+  return /^[\p{XID_Start}_]\p{XID_Continue}*$/u.test(text);
+}
+
 function fieldName(name: string): string {
   return isIdentifier(name) ? name : `[${name}]`;
 }
 
-function cellText(node: _Cell): string {
-  if (node.sheet === null) return node.address;
-  let prefix = node.book !== null ? `[${node.book}]${node.sheet}` : node.sheet;
+function cellText(attributes: Map<string, any>): string {
+  const [address, sheet, book] = [attributes.get("address"), attributes.get("sheet"), attributes.get("book")];
+  if (sheet === undefined) return address;
+  let prefix = book !== undefined ? `[${book}]${sheet}` : sheet;
   if (!/^[\p{L}\p{N}_.[\]]+$/u.test(prefix)) prefix = `'${prefix.replaceAll("'", "''")}'`;
-  return `${prefix}!${node.address}`;
+  return `${prefix}!${address}`;
 }
 
-/** The expression as a formula, starting with '=' and parenthesized only where precedence requires. */
-export function ToText(expression: F.Term): string {
-  const write = (node: F.Term, args: [string, number][]): [string, number] => {
+/** The term as a formula, starting with '=' and parenthesized only where precedence requires. */
+export function ToText(expression: unknown): string {
+  const write = (node: any, args: [string, number][]): [string, number] => {
     const operand = (index: number, level: number): string => {
       const [text, precedence] = args[index] as [string, number];
       return precedence >= level ? text : `(${text})`;
     };
-    if (node instanceof _Constant) {
-      const text = constantText(node.value);
+    const [kind, record] = DIALECT.kind(node);
+    const attributes = F.attributesOf(record);
+    if (kind === "literal") {
+      const text = constantText(attributes.get("value"));
       return [text, text.startsWith("-") ? PREFIX : ATOM];
     }
-    if (node instanceof _Name) return [node.name, ATOM];
-    if (node instanceof _Cell) return [cellText(node), ATOM];
-    if (node instanceof _Field) return [`${operand(0, ATOM)}.${fieldName(node.name)}`, ATOM];
-    if (node instanceof _Let) return [`LET(${node.name}, ${args[0]?.[0]}, ${args[1]?.[0]})`, ATOM];
-    if (node instanceof _Function) return [`${node.name}(${args.map(([text]) => text).join(", ")})`, ATOM];
-    if (node instanceof _Map) return [`MAP(${args[0]?.[0]}, LAMBDA(${node.name}, ${args[1]?.[0]}))`, ATOM];
-    if (node instanceof _Prefix) return [`${node.operator}${operand(0, PREFIX)}`, PREFIX];
-    const infix = node as _Infix;
-    const level = PRECEDENCE[infix.operator] as number;
-    return [`${operand(0, level)} ${infix.operator} ${operand(1, level + 1)}`, level];
+    if (kind === "variable") return [attributes.get("name"), ATOM];
+    if (kind === "excel_cell") return [cellText(attributes), ATOM];
+    if (kind === "excel_field") return [`${operand(0, ATOM)}.${fieldName(attributes.get("name"))}`, ATOM];
+    if (kind === "let") return [`LET(${attributes.get("name")}, ${args[0]?.[0]}, ${args[1]?.[0]})`, ATOM];
+    if (kind === "call") return [`${attributes.get("callable")}(${args.map(([text]) => text).join(", ")})`, ATOM];
+    if (kind === "excel_map") return [`MAP(${args[0]?.[0]}, LAMBDA(${attributes.get("name")}, ${args[1]?.[0]}))`, ATOM];
+    if (kind === "excel_prefix") return [`${attributes.get("operator")}${operand(0, PREFIX)}`, PREFIX];
+    const operator: string = attributes.get("operator");
+    const level = PRECEDENCE[operator] as number;
+    return [`${operand(0, level)} ${operator} ${operand(1, level + 1)}`, level];
   };
   return "=" + F.fold(expression, write)[0];
 }

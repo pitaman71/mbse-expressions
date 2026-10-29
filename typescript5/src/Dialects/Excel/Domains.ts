@@ -3,13 +3,16 @@
  *
  * `Number` holds numbers (Excel has only doubles; a constant `18n` is the number 18), `Text` holds text, `Logical`
  * holds TRUE and FALSE, and `Errors` holds `Error` values such as `#FIELD!`, which formulas compute with rather than
- * throw. A `Record` is what fields are read from: a mapping, or an object that writes its properties through
- * `accept`, as Excel's data types are. `Scalar` is a number, text or logical.
+ * throw. A `Record` is what fields are read from: a mapping, or a data object read through mbse-schemas' readers
+ * (`Framework.Objects`), as Excel's data types are. `Scalar` is a number, text or logical. An array (a list) holds a
+ * container property's values, which `MAP`, `ROWS`, `INDEX`, `MATCH`, `SUM`, `MIN`, `MAX`, `UNIQUE`, `AND` and `OR`
+ * read.
  */
 
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
+import * as Objects from "../../Framework/Objects.js";
 
 export const Anything = D.Anything;
 
@@ -40,8 +43,7 @@ export function isMapping(value: unknown): value is Map<string, unknown> | Recor
 
 /** Whether fields can be read from `value`. */
 export function is_record(value: unknown): boolean {
-  return isMapping(value)
-    || (value !== null && typeof value === "object" && typeof (value as { accept?: unknown }).accept === "function");
+  return isMapping(value) || Objects.isObject(value);
 }
 
 const NumberDomain = new D.OfTypes("number", Number, BigInt);

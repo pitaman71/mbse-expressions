@@ -2,13 +2,13 @@
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
  * `build()` returns the cases, name -> [root schema, root term, store]: each case a term value of
- * `Expressions.Framework.Term`, built in one store holding the framework's and Basic's installs, written nested. Each
- * implementation writes its snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them
+ * `Expressions.Framework.Term`, built in one store holding the framework's install and its dialects', written nested;
+ * `DIALECTS` gives the dialect that reads each case not Basic's. Each implementation writes its snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them
  * against every other implementation's files (see the CONF test suite). Keep this module and
  * `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same cases, same values, same order of statements.
  *
- * The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
- * 2b (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
+ * The other dialects' cases (python, matlab, latex, ccpp, systemverilog) return with their dialects' port, stage 2b
+ * (docs/proposals/port): `stage2b` keeps them as they were written for the old API.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -18,9 +18,15 @@ import { Builders } from "@mbse/schemas/Framework";
 import * as Domains from "../Dialects/Basic/Domains.js";
 import * as Expressions from "../Dialects/Basic/Expressions.js";
 import * as Basic from "../Dialects/Basic/index.js";
+import * as ExcelExpressions from "../Dialects/Excel/Expressions.js";
+import * as Excel from "../Dialects/Excel/index.js";
 import * as Framework from "../Framework/index.js";
+import type { Dialect } from "../Framework/Terms.js";
 
-export const CASES = ["expression", "domains", "collections"] as const;
+export const CASES = ["expression", "domains", "collections", "excel"] as const;
+
+/** The dialect that reads each case other than Basic's. */
+export const DIALECTS: ReadonlyMap<string, Dialect> = new Map([["excel", ExcelExpressions.DIALECT]]);
 
 /** A case: its root schema, its root term, and the store it is built in. */
 export type Case = [any, any, any];
@@ -32,10 +38,11 @@ function named<T extends Domains.Domain>(name: string, domain: T): T {
 }
 
 export function build(): Map<string, Case> {
-  const [E, D] = [Expressions, Domains];
+  const [E, D, X] = [Expressions, Domains, ExcelExpressions];
   const store: any = new Builders.Store();
   store.transaction(Framework.install);
   store.transaction(Basic.install);
+  store.transaction(Excel.install);
 
   // --- expression: every kind and literal type, a let and its variable, an extension operation ---
   const [self, age] = [E.variable("this"), E.variable("age")];
@@ -65,19 +72,27 @@ export function build(): Map<string, Case> {
   const collections = E.let_("ports", self.entries("ports"), ports!.all("p", p!.get("pin").in_(pins)).and_(
     sizes!.sum().le(ports!.count())));
 
+  // --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
+  // a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
+  const [thisX, aX] = [X.name("this"), X.name("a")];
+  const excel = X.let_("a", X.field(thisX, "age"), X.function(
+    "IF", X.function("AND", X.infix(">=", aX, 18n), X.function("NOT", X.function("ISERROR", X.field(thisX, "email")))),
+    X.infix("-", X.infix("*", aX, X.function("SUM", X.map_("q", X.field(thisX, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
+    X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")));
+
   const terms = store.transaction(() => new Map<string, any>(([["expression", expression], ["domains", domains],
-    ["collections", collections]] as [string, Expressions.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
+    ["collections", collections], ["excel", excel]] as [string, Expressions.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   const Term = store.registered("Expressions.Framework.Term");
   return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
 }
 
 /** The old API's cases, to port with their dialects (stage 2b); not called. */
 export async function stage2b(): Promise<Map<string, Case>> {
-  const [Ccpp, Excel, Latex, Matlab, Python, SystemVerilog]: any[] = await Promise.all([
-    import("../Dialects/Ccpp/Expressions.js"), import("../Dialects/Excel/Expressions.js"),
-    import("../Dialects/Latex/Expressions.js"), import("../Dialects/Matlab/Expressions.js"),
-    import("../Dialects/Python/Expressions.js"), import("../Dialects/SystemVerilog/Expressions.js")]);
-  const [P, M, X, L] = [Python, Matlab, Excel, Latex];
+  const [Ccpp, Latex, Matlab, Python, SystemVerilog]: any[] = await Promise.all([
+    import("../Dialects/Ccpp/Expressions.js"), import("../Dialects/Latex/Expressions.js"),
+    import("../Dialects/Matlab/Expressions.js"), import("../Dialects/Python/Expressions.js"),
+    import("../Dialects/SystemVerilog/Expressions.js")]);
+  const [P, M, L] = [Python, Matlab, Latex];
 
   // --- python: every kind, shared names --- import numpy as np / from math import floor /
   // (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
@@ -93,14 +108,6 @@ export async function stage2b(): Promise<Map<string, Case>> {
   const matlab = M.import_("geo.*", M.binary("||", M.binary(">=", M.binary(
     "+", M.call("dist", M.field(thisM, "age"), 3n),
     M.binary(".*", M.unary("~", M.call("isfield", thisM, "email")), M.unary("-", 1.5))), M.index(M.arrayfun("k", M.field(thisM, "ports"), M.identifier("k")), 2n)), true));
-
-  // --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
-  // a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
-  const [thisX, aX] = [X.name("this"), X.name("a")];
-  const excel = X.let_("a", X.field(thisX, "age"), X.function(
-    "IF", X.function("AND", X.infix(">=", aX, 18n), X.function("NOT", X.function("ISERROR", X.field(thisX, "email")))),
-    X.infix("-", X.infix("*", aX, X.function("SUM", X.map_("q", X.field(thisX, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
-    X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")));
 
   // --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
   // \frac{a}{2} > 1.5) \quad \text{where } a = this.age
@@ -126,7 +133,6 @@ export async function stage2b(): Promise<Map<string, Case>> {
   return new Map<string, Case>([
     ["python", [P.DIALECT.schema_of(python), python, P.Builders]],
     ["matlab", [M.DIALECT.schema_of(matlab), matlab, M.Builders]],
-    ["excel", [X.DIALECT.schema_of(excel), excel, X.Builders]],
     ["ccpp", [Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders]],
     ["systemverilog", [SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders]],
     ["latex", [L.DIALECT.schema_of(latex), latex, L.Builders]],

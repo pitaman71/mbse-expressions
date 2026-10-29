@@ -1,23 +1,26 @@
 """The conformance corpus: the same cases, built statement for statement in every implementation.
 
 `build()` returns `{case: (root schema, root term, store)}`: each case a term value of `Expressions.Framework.Term`,
-built in one store holding the framework's and Basic's installs, written nested. Each implementation writes its
-snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
-implementation's files (see the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in
-lockstep: same cases, same values, same order of statements.
+built in one store holding the framework's install and its dialects', written nested; `DIALECTS` gives the dialect
+that reads each case not Basic's. Each implementation writes its snapshots to `conformance/<implementation>/<case>.json`
+and `.yaml`, and checks them against every other implementation's files (see the CONF test suite). Keep this module
+and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values, same order of statements.
 
-The other dialects' cases (python, matlab, excel, latex, ccpp, systemverilog) return with their dialects' port, stage
-2b (docs/proposals/port): `_stage_2b` keeps them as they were written for the old API.
+The other dialects' cases (python, matlab, latex, ccpp, systemverilog) return with their dialects' port, stage 2b
+(docs/proposals/port): `_stage_2b` keeps them as they were written for the old API.
 """
 
 from __future__ import annotations
 
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import Basic
+from mbse.Expressions.Dialects import Basic, Excel
 from mbse.Expressions.Dialects.Basic import Domains, Expressions
+from mbse.Expressions.Dialects.Excel import Expressions as ExcelExpressions
 from mbse.Schemas.Framework import Builders
 
-CASES = ["expression", "domains", "collections"]
+CASES = ["expression", "domains", "collections", "excel"]
+DIALECTS = {"excel": ExcelExpressions.DIALECT}
+"""The dialect that reads each case other than Basic's."""
 
 
 def _named(name, domain):
@@ -28,10 +31,11 @@ def _named(name, domain):
 
 
 def build():
-    E, D = Expressions, Domains
+    E, D, X = Expressions, Domains, ExcelExpressions
     store = Builders.Store()
     store.transaction(Framework.install)
     store.transaction(Basic.install)
+    store.transaction(Excel.install)
 
     # --- expression: every kind and literal type, a let and its variable, an extension operation ---
     this, age = E.variable("this"), E.variable("age")
@@ -61,22 +65,30 @@ def build():
     collections = E.let_("ports", this.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
         sizes.sum().le(ports.count())))
 
+    # --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
+    # a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
+    this_, a = X.name("this"), X.name("a")
+    excel = X.let_("a", X.field(this_, "age"), X.function(
+        "IF", X.function("AND", X.infix(">=", a, 18), X.function("NOT", X.function("ISERROR", X.field(this_, "email")))),
+        X.infix("-", X.infix("*", a, X.function("SUM", X.map_("q", X.field(this_, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
+        X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")))
+
     with store.transaction():
         terms = {case: store.Expressions.Framework.Term(writer)
-                 for case, writer in [("expression", expression), ("domains", domains), ("collections", collections)]}
+                 for case, writer in [("expression", expression), ("domains", domains), ("collections", collections),
+                                      ("excel", excel)]}
     Term = store.registered("Expressions.Framework.Term")
     return {case: (Term, terms[case], store) for case in CASES}
 
 
 def _stage_2b():  # pragma: no cover - the old API's cases, to port with their dialects
     from mbse.Expressions.Dialects.Ccpp import Expressions as Ccpp
-    from mbse.Expressions.Dialects.Excel import Expressions as Excel
     from mbse.Expressions.Dialects.Latex import Expressions as Latex
     from mbse.Expressions.Dialects.Matlab import Expressions as Matlab
     from mbse.Expressions.Dialects.Python import Expressions as Python
     from mbse.Expressions.Dialects.SystemVerilog import Expressions as SystemVerilog
 
-    E, P, M, X, L = Expressions, Python, Matlab, Excel, Latex
+    E, P, M, L = Expressions, Python, Matlab, Latex
     this = E.variable("this")
 
     # --- python: every kind, shared names --- import numpy as np / from math import floor /
@@ -93,14 +105,6 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
     matlab = M.import_("geo.*", M.binary("||", M.binary(">=", M.binary(
         "+", M.call("dist", M.field(this_, "age"), 3),
         M.binary(".*", M.unary("~", M.call("isfield", this_, "email")), M.unary("-", 1.5))), M.index(M.arrayfun("k", M.field(this_, "ports"), M.identifier("k")), 2)), True))
-
-    # --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
-    # a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
-    this_, a = X.name("this"), X.name("a")
-    excel = X.let_("a", X.field(this_, "age"), X.function(
-        "IF", X.function("AND", X.infix(">=", a, 18), X.function("NOT", X.function("ISERROR", X.field(this_, "email")))),
-        X.infix("-", X.infix("*", a, X.function("SUM", X.map_("q", X.field(this_, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
-        X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")))
 
     # --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
     # \frac{a}{2} > 1.5) \quad \text{where } a = this.age
@@ -126,7 +130,6 @@ def _stage_2b():  # pragma: no cover - the old API's cases, to port with their d
     return {
         "python": (P.DIALECT.schema_of(python), python, P.Builders),
         "matlab": (M.DIALECT.schema_of(matlab), matlab, M.Builders),
-        "excel": (X.DIALECT.schema_of(excel), excel, X.Builders),
         "ccpp": (Ccpp.DIALECT.schema_of(ccpp), ccpp, Ccpp.Builders),
         "systemverilog": (SystemVerilog.DIALECT.schema_of(systemverilog), systemverilog, SystemVerilog.Builders),
         "latex": (L.DIALECT.schema_of(latex), latex, L.Builders),
