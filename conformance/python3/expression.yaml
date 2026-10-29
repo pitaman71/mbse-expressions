@@ -8,7 +8,8 @@ let:
           name: this
       - literal:
           value:
-            str: age
+            scalar:
+              str: age
   body:
     call:
       callable: and
@@ -19,8 +20,7 @@ let:
           - variable:
               name: age
           - literal:
-              value:
-                int: 18
+              value: 18
       - call:
           callable: implies
           arguments:
@@ -33,8 +33,7 @@ let:
                   - variable:
                       name: age
                   - literal:
-                      value:
-                        float: 65.5
+                      value: 65.5
               - call:
                   callable: not
                   arguments:
@@ -45,16 +44,18 @@ let:
                           name: this
                       - literal:
                           value:
-                            str: email
+                            scalar:
+                              str: email
           - call:
               callable: contains
               arguments:
               - literal:
                   value:
-                    str: x
+                    scalar:
+                      str: x
               - literal:
                   value:
-                    bytes: AP8=
+                    scalar:
+                      bytes: AP8=
               - literal:
-                  value:
-                    bool: true
+                  value: true

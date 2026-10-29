@@ -83,15 +83,18 @@ mbse-patterns' (`Predicates.holds`). mbse-schemas needs no evaluator: its union 
 decoding nor validation evaluates anything.
 
 `Expressions.DIALECT.validate(term, bound=(), core=False)` reports statically what evaluation would raise: missing
-names and values, literals that hold no basic scalar, properties of the wrong scalar, wrong numbers of arguments to
+names and values, properties of the wrong scalar, wrong numbers of arguments to
 core operations, variables not bound by an enclosing let or in `bound`, and, with `core`, operations outside the core
 vocabulary. A term is a nested value, so it holds no cycle.
 
 Terms are stored, serialized, validated and compared as any value of their schemas: `Framework.install` and
 `Basic.install` define them in a store (each a module-scope `install(txn)`, run once each, in that order), a term is
 built there in a transaction through the builders, and written nested, its kind the name of the branch it holds:
-`{"call": {"callable": "not", "arguments": [{"literal": {"value": {"bool": true}}}]}}`. A literal's value is tagged by
-its scalar, and a domain is named.
+`{"call": {"callable": "not", "arguments": [{"literal": {"value": true}}]}}`. A literal's `value` is an `OfAny` of the
+five basic scalars (Bool, Int, Float, Str, Bytes), which refuses any other value as it is written: bare where exactly
+one of them writes that form (`1`, `1.5`, `true`, `-0.0`), otherwise wrapped, kind then schema
+(`{"scalar": {"str": "x"}}`, `{"scalar": {"bytes": "AQ=="}}`, `{"scalar": {"float": "NaN"}}`), and read back without
+guessing (mbse-schemas 0.26.3). A domain is named.
 
 `Writer`s write terms through the builders, with methods, and evaluate nothing. `.name` reads a property (`get`), and
 methods build the operations: `.eq(x)` ... `.ge(x)`, `.and_(x)`, `.or_(x)`, `.not_()`, `.implies(x)`, `.add(x)`,
@@ -183,7 +186,7 @@ the parameters that standard defines, and today's natives become their defaults.
 - **Domains are data, compared by structure, and registered by name.** Each kind is `Domains.Of<Kind>`, with `Data`
   (a dataclass in Python, a class with `equals` in TypeScript) and a `Builder`. `Domains.register(name, domain)`
   registers a domain, once, under one name, and a term names it: over the wire a literal of a registered domain
-  carries its name, `{"literal": {"value": {"int": 200}, "domain": "uint8"}}`; a writer refuses a domain with no name,
+  carries its name, `{"literal": {"value": 200, "domain": "uint8"}}`; a writer refuses a domain with no name,
   and validation one that names none. (Before the port, a domain was written by value when it had no name, through a
   meta-schema of the domains; that went with the domains' schemas outside a store.) Signatures stay code: they are a dialect's vocabulary, not values on the wire. So do `Anything` and
   `OfValues`, which serve inference only and are never stored. Today's natives are the domains' defaults (`Int` is an

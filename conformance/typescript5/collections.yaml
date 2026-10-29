@@ -8,7 +8,8 @@ let:
           name: this
       - literal:
           value:
-            str: ports
+            scalar:
+              str: ports
   body:
     call:
       callable: and
@@ -30,7 +31,8 @@ let:
                       name: p
                   - literal:
                       value:
-                        str: pin
+                        scalar:
+                          str: pin
               - variable:
                   name: pins
       - call:

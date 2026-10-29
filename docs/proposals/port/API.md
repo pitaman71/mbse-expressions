@@ -140,12 +140,15 @@ Basic's `operation` is the framework's `call`: its property `name` is `callable`
 
 ## Settled while building, for the user's review
 
-1. **A literal's `value` is a value of any schema** (`S.OfAny(lambda a: a)`, as Parametrics' `BindsValue` holds one),
-   not the drafted `OfAny` of the five basic scalars: mbse-schemas writes a value of a restricted `OfAny` untagged and
-   cannot read a `str`, a `bytes` or a NaN back (`$.literal.value: a value of any schema takes the plain form of one of
-   its schemas, got str`), though the schema validates. Unrestricted, it is tagged, `{"int": 1}`, and round-trips.
-   Basic's validation keeps a literal's value to a basic scalar. To be restored when mbse-schemas tags an ambiguous
-   restricted value.
+1. **Resolved, by mbse-schemas 0.26.3: a literal's `value` is the drafted `OfAny` of the five basic scalars**
+   (`S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes]))`, as in
+   [Framework.py](Framework.py)). Under 0.26.2 it was briefly a value of any schema, because 0.26.2 wrote a restricted
+   `OfAny`'s value untagged and could not read a `str`, a `bytes` or a NaN back. 0.26.3 writes such a value bare only
+   where exactly one of its schemas writes that form, otherwise wrapped, kind then schema, and reads it back without
+   guessing (mbse-basis PRI-025, PRI-026, CAP-069): `{"literal": {"value": 1}}`, `1.5`, `true`, `-0.0`, but
+   `{"scalar": {"str": "x"}}`, `{"scalar": {"bytes": "AQ=="}}`, `{"scalar": {"float": "NaN"}}`. The schema now refuses
+   anything else, as the builders write it (`property 'value' does not hold a value of Expressions.Framework.Term`, a
+   `TypeError`), so validation's "a literal must hold a basic scalar" check, which nothing can reach, is gone.
 2. **A term's `domain` names a domain registered in Basic's `Domains`** (`Domains.register(name, domain)`) until stage 3
    makes domains objects defined by dialects: a writer given an unregistered domain raises `LookupError`, a name that
    is not registered is a validation problem, and partial evaluation keeps a subterm whose value is of an unregistered
@@ -163,8 +166,8 @@ Basic's `operation` is the framework's `call`: its property `name` is `callable`
    them, and the cases about them assert that a term written into another is copied. A kind's slot that referred to a
    definition (`REFERS`, mbse-patterns' predicates) is a by-name attribute when that dialect is ported.
 7. **The builders write any scalar into a basic scalar's property**, so validation still reports a wrong one ("a call's
-   callable must be a str, got int"), and a literal holding something other than a basic scalar names its schema ("a
-   literal must hold a basic scalar, got Expressions.Framework.Term").
+   callable must be a str, got int"). A literal's value is not such a property: its schema, an `OfAny` of the basic
+   scalars, refuses anything else as it is written (item 1).
 8. **The tests build a term through one helper per notebook**, `term(spec)`: a transaction around
    `store.Expressions.Framework.Term(E.DIALECT.spec(spec))`. Writing that transaction out at each of several hundred
    uses would bury what each case asserts; against P-019 ("helper functions that build a model through the builders

@@ -75,7 +75,7 @@ export function install(txn: any): any {
         (t: any) => t.name("let").schema([_.Let]),
       ]),
       (_: any) => _.Literal.name("Expressions.Framework.Literal").properties({
-        value: S.OfAny((a: any) => a), // a basic scalar's, tagged on the wire (docs/proposals/port/API.md)
+        value: S.OfAny((a: any) => a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes])), // a basic scalar
         domain: S.OfStr, // every term has a domain (Schema extension, Decided, 21), by name (stage 3)
       }),
       (_: any) => _.Call.name("Expressions.Framework.Call").properties({
@@ -97,13 +97,6 @@ export function install(txn: any): any {
 /** A noun with its indefinite article: "an operation", "a let". */
 export function article(noun: string): string {
   return `${"aeiou".includes(noun[0] as string) ? "an" : "a"} ${noun}`;
-}
-
-/** A value's schema's name when it is read through a reader and has one, otherwise its type's name. */
-function described(value: unknown): string {
-  const schema = schemaOf(value) as { name?: unknown } | null;
-  const name = schema?.name;
-  return typeof name === "string" && name !== "" ? name : typeName(value);
 }
 
 // --- Reading terms ---
@@ -529,7 +522,6 @@ export class Dialect {
     if (kind.role === LITERAL) {
       const value = attributes.get("value") ?? null;
       if (value === null) return [`${what} needs a value`];
-      if (Schemas.hostOf(value) === null) return [`${what} must hold a basic scalar, got ${described(value)}`];
       return kind.check !== null ? kind.check(record) : [];
     }
     const problems = kind.required.filter((name) => [null, undefined, ""].includes(attributes.get(name)))

@@ -76,7 +76,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("let").schema([_.Let]),
             ]),
             lambda _: _.Literal.name("Expressions.Framework.Literal").properties({
-                "value": S.OfAny(lambda a: a),  # a basic scalar's, tagged on the wire (docs/proposals/port/API.md)
+                "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes])),  # a basic scalar
                 "domain": S.OfStr,  # every term has a domain (Schema extension, Decided, 21), by name (stage 3)
             }),
             lambda _: _.Call.name("Expressions.Framework.Call").properties({
@@ -101,13 +101,6 @@ def _article(noun: str) -> str:
 
 def _type_name(value: object) -> str:
     return type(value).__name__
-
-
-def _described(value: Any) -> str:
-    """A value's schema's name when it is read through a reader and has one, otherwise its type's name."""
-    schema = getattr(value, "as_schema", None)
-    name = getattr(schema(), "name", None) if callable(schema) and not isinstance(value, type) else None
-    return name or _type_name(value)
 
 
 # --- Reading terms ---
@@ -443,8 +436,6 @@ class Dialect:
             value = attributes.get("value")
             if value is None:
                 return [f"{what} needs a value"]
-            if type(value) not in Schemas.SCALAR_TYPES:
-                return [f"{what} must hold a basic scalar, got {_described(value)}"]
             return kind.check(record) if kind.check is not None else []
         problems = [f"{what} needs {_article(name)}" for name in kind.required if attributes.get(name) in (None, "")]
         declared = record.as_schema().properties

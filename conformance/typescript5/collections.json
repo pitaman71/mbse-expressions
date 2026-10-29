@@ -13,7 +13,9 @@
           {
             "literal": {
               "value": {
-                "str": "ports"
+                "scalar": {
+                  "str": "ports"
+                }
               }
             }
           }
@@ -49,7 +51,9 @@
                           {
                             "literal": {
                               "value": {
-                                "str": "pin"
+                                "scalar": {
+                                  "str": "pin"
+                                }
                               }
                             }
                           }

@@ -14,7 +14,9 @@
             {
               "literal": {
                 "value": {
-                  "str": "RUN"
+                  "scalar": {
+                    "str": "RUN"
+                  }
                 },
                 "domain": "state"
               }
@@ -33,9 +35,7 @@
             },
             {
               "literal": {
-                "value": {
-                  "int": 200
-                },
+                "value": 200,
                 "domain": "uint8"
               }
             }
@@ -53,9 +53,7 @@
             },
             {
               "literal": {
-                "value": {
-                  "float": 1.5
-                },
+                "value": 1.5,
                 "domain": "binary32 roundTowardZero"
               }
             }
@@ -74,7 +72,9 @@
             {
               "literal": {
                 "value": {
-                  "str": "Z"
+                  "scalar": {
+                    "str": "Z"
+                  }
                 },
                 "domain": "std_logic"
               }
@@ -94,7 +94,9 @@
             {
               "literal": {
                 "value": {
-                  "bytes": "Aw=="
+                  "scalar": {
+                    "bytes": "Aw=="
+                  }
                 },
                 "domain": "bits2"
               }
@@ -113,9 +115,7 @@
             },
             {
               "literal": {
-                "value": {
-                  "int": 5
-                }
+                "value": 5
               }
             }
           ]
@@ -141,7 +141,9 @@
             {
               "literal": {
                 "value": {
-                  "str": "1.50"
+                  "scalar": {
+                    "str": "1.50"
+                  }
                 },
                 "domain": "decimal64"
               }
@@ -161,7 +163,9 @@
             {
               "literal": {
                 "value": {
-                  "str": "0.1"
+                  "scalar": {
+                    "str": "0.1"
+                  }
                 },
                 "domain": "binary128"
               }
@@ -181,7 +185,9 @@
             {
               "literal": {
                 "value": {
-                  "bytes": "AQ=="
+                  "scalar": {
+                    "bytes": "AQ=="
+                  }
                 },
                 "domain": "bits2"
               }

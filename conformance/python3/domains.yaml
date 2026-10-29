@@ -8,7 +8,8 @@ call:
           name: mode
       - literal:
           value:
-            str: RUN
+            scalar:
+              str: RUN
           domain: state
   - call:
       callable: le
@@ -16,8 +17,7 @@ call:
       - variable:
           name: count
       - literal:
-          value:
-            int: 200
+          value: 200
           domain: uint8
   - call:
       callable: ne
@@ -25,8 +25,7 @@ call:
       - variable:
           name: gain
       - literal:
-          value:
-            float: 1.5
+          value: 1.5
           domain: binary32 roundTowardZero
   - call:
       callable: ge
@@ -35,7 +34,8 @@ call:
           name: line
       - literal:
           value:
-            str: Z
+            scalar:
+              str: Z
           domain: std_logic
   - call:
       callable: gt
@@ -44,7 +44,8 @@ call:
           name: mask
       - literal:
           value:
-            bytes: Aw==
+            scalar:
+              bytes: Aw==
           domain: bits2
   - call:
       callable: lt
@@ -52,8 +53,7 @@ call:
       - variable:
           name: size
       - literal:
-          value:
-            int: 5
+          value: 5
   - call:
       callable: sub
       arguments:
@@ -65,7 +65,8 @@ call:
           domain: decimal64
       - literal:
           value:
-            str: '1.50'
+            scalar:
+              str: '1.50'
           domain: decimal64
   - call:
       callable: mul
@@ -74,7 +75,8 @@ call:
           name: ratio
       - literal:
           value:
-            str: '0.1'
+            scalar:
+              str: '0.1'
           domain: binary128
   - call:
       callable: bitand
@@ -83,7 +85,8 @@ call:
           name: mask
       - literal:
           value:
-            bytes: AQ==
+            scalar:
+              bytes: AQ==
           domain: bits2
   - call:
       callable: pack
