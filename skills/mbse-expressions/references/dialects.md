@@ -1,9 +1,11 @@
 # Dialects
 
-A dialect is an expression language: its term kinds, its vocabulary of operators, the domains of its values, its
-source text (its `Text` module: `ToText`, and for Python `FromText`), its evaluator, and the scope that resolves its names. Every dialect serializes, validates,
-infers domains and traverses the same way (see `DIALECT.schema_of`, `validate`, `DIALECT.infer`, `Framework.Terms.walk`),
-and `Framework.Symbolics.free(expression)` tells which names it needs from its scope.
+A dialect is an expression language: its term kinds, which its `install` adds to the store's
+`Expressions.Framework.Term`, its vocabulary of operators, the domains of its values, its source text (its `Text`
+module: `ToText`, and for Python `FromText`), its evaluator, and the scope that resolves its names. Every dialect's
+terms serialize, validate, infer domains and traverse the same way (`DIALECT.validate(term)`, `DIALECT.infer(term)`,
+`Framework.Terms.walk`), and `Framework.Symbolics.free(term, DIALECT)` tells which names a term needs from its scope.
+Its constructors are writers: write them in a transaction, into a store where its install has run.
 
 ## Which dialect
 

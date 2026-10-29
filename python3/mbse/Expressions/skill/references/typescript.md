@@ -2,62 +2,84 @@
 
 Import the Basic dialect from `@mbse/expressions`, the others from `@mbse/expressions/Dialects/<Name>`, the
 translators from `@mbse/expressions/Translators`, and the framework from `@mbse/expressions/Framework`. The API
-mirrors Python name for name, snake_case included (`schema_of`, `name_of`), and writes the same JSON byte for byte.
+mirrors Python name for name, snake_case included (`Domains.name_of`), except the framework's reads of terms, in
+camelCase (`Terms.nameOf`, `Terms.kindOf`), and writes the same JSON byte for byte.
 
 ## A complete program
 
 The same constraint as in Python, built with writers, which TypeScript uses in place of Python's `Text.FromFunction`.
 
 ```typescript
-import { Evaluators, Expressions as E } from "@mbse/expressions";
+import { Evaluators, Expressions as E, Framework } from "@mbse/expressions";
+import * as Basic from "@mbse/expressions/Dialects/Basic";
 import * as Excel from "@mbse/expressions/Dialects/Excel";
 import * as Python from "@mbse/expressions/Dialects/Python";
+import { Terms } from "@mbse/expressions/Framework";
 import * as Translators from "@mbse/expressions/Translators";
-import { JSON, Proxies, Schemas as S, Validators } from "@mbse/schemas/Framework";
+import { Builders, JSON, Validators } from "@mbse/schemas/Framework";
 
-const native = (name: string, type: S.OfNative.Spec) => (p: S.OfProperty.Builder) => p.name(name).of((t) => t.as_native(type));
 const check = (condition: boolean, message: string) => { if (!condition) throw new Error(message); };
 
-const Contact = new S.OfObject.Builder().name("Contact").ref().properties(native("name", String), native("age", BigInt), native("email", String)).create();
-const store = new Proxies.OfStore(); // an mbse-schemas store: the program's schemas, and the objects built with them
-store.register(Contact);
-const B = store;
-const ada = B.Contact().name("Ada").age(70n).email("ada@example.com").create();
-const bob = B.Contact().name("Bob").age(30n).create();
-const eve = B.Contact().name("Eve").email("eve@example.com").create(); // no age
+/** The program's schemas, defined in the store as mbse-schemas defines any: a contact, and a card that reaches one by
+ * phone or by email (a union). */
+function contacts(txn: any): any {
+  const S = txn.Schemas;
+  return txn.uid("example.contacts/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({ Contact: S.OfObject, Card: S.OfObject, Reach: S.OfUnion, Phone: S.OfObject, Email: S.OfObject })
+    .spec([
+      (_: any) => _.Contact.name("Contact").ref(true).properties({ name: S.OfStr, age: S.OfInt, email: S.OfStr }),
+      (_: any) => _.Phone.name("Phone").properties({ number: S.OfStr }),
+      (_: any) => _.Email.name("Email").properties({ address: S.OfStr }),
+      (_: any) => _.Reach.name("Reach").branches([(t: any) => t.name("phone").schema([_.Phone]),
+        (t: any) => t.name("email").schema([_.Email])]),
+      (_: any) => _.Card.name("Card").ref(true).properties({ reach: _.Reach }),
+    ])]))]);
+}
 
-// A constraint, built with writers: methods that build data. (Python can also read one from a lambda.)
+const store: any = new Builders.Store(); // an mbse-schemas store: the schemas, the objects, and the expressions about them
+for (const install of [Framework.install, Basic.install, Excel.install, Python.install, contacts]) {
+  store.transaction(install); // each dialect's install adds its kinds of term; run again, an install writes nothing
+}
+const [ada, bob, eve] = store.transaction(() => [
+  store.Contact((c: any) => c.name("Ada").age(70n).email("ada@example.com")),
+  store.Contact((c: any) => c.name("Bob").age(30n)),
+  store.Contact((c: any) => c.name("Eve").email("eve@example.com")), // no age
+]);
+
+// A constraint, built with writers (Python can also read one from a lambda), written as an expression's root in a
+// transaction.
 const contact = E.variable("contact");
-const senior = contact.age.ge(65n).and_(contact.has("email")).data;
-check(senior.validate({ bound: ["contact"], core: true }).length === 0, "invalid");
+const senior = store.transaction(() => store.Expressions.Framework.Expression((e: any) => e.root(
+  contact.age.ge(65n).and_(contact.has("email")))));
+check(E.DIALECT.validate(senior, ["contact"], true).length === 0, "invalid");
 
 // Basic evaluates with three-valued logic: an absent property is unknown (null), and nothing is coerced.
 check(Evaluators.OfAny(senior, { contact: ada }) === true, "ada");
 check(Evaluators.OfAny(senior, { contact: bob }) === false, "bob");
 check(Evaluators.OfAny(senior, { contact: eve }) === null, "eve");
 
-// It is data: store it and read it back.
-const schema = E.DIALECT.schema_of(senior);
-const text = JSON.ToJSON(E.Builders).Reachable(schema, senior); // E.Builders: the store of Basic's expression classes
-const constraint = JSON.FromJSON(E.Builders).Reachable(schema, text) as E.OfAny.Data; // decoders return unknown
+// It is data: a term is a value of Expressions.Framework.Term; store it and read it back.
+const Term = store.registered("Expressions.Framework.Term");
+const text = JSON.ToJSON(store)(Term, Terms.term(senior));
+const constraint = JSON.FromJSON(store)(Term, text);
+check(Terms.same(constraint, senior), "read back");
 
-// Translate it into other languages; each evaluates by its own rules.
-const formula = Translators.between(E.DIALECT, Excel.Expressions.DIALECT).forward(constraint);
+// Translate it into other languages: a translation is a writer, written in a transaction. Each evaluates by its own
+// rules.
+const written = (writer: Terms.Writer): any => store.transaction(() => store.Expressions.Framework.Term(writer));
+const formula = written(Translators.between(E.DIALECT, Excel.Expressions.DIALECT).forward(constraint));
 check(Excel.Text.ToText(formula) === "=AND(contact.age >= 65, NOT(ISERROR(contact.email)))", "formula");
 check(Excel.Evaluators.OfAny(formula, { contact: eve }) === Excel.Evaluators.Error.of("#FIELD!"), "an error value, not unknown");
-const code = Translators.between(E.DIALECT, Python.Expressions.DIALECT).forward(constraint);
+const code = written(Translators.between(E.DIALECT, Python.Expressions.DIALECT).forward(constraint));
 check(Python.Text.ToText(code) === "contact.age >= 65 and hasattr(contact, 'email')", "python");
 
 // A union value is a record of its one branch, by name, so a constraint reads it like any object.
+const card = store.transaction(() => store.Card((c: any) => c.reach((p: any) => p.as_value((a: any) => a.as_union(
+  (u: any) => u.email((r: any) => r.address("ada@example.com")))))));
+check(Validators.Validate(store)(store.registered("Card"), card).length === 0, "card");
 const self = E.variable("this");
-const Phone = new S.OfObject.Builder().properties(native("number", String)).create();
-const Email = new S.OfObject.Builder().properties(native("address", String)).create();
-const Reach = new S.OfUnion.Builder().branches((b) => b.name("phone").of(Phone), (b) => b.name("email").of(Email)).create();
-const Card = new S.OfObject.Builder().name("Card").ref().properties((p) => p.name("reach").of(Reach)).create();
-store.register(Card);
-const card = B.Card().reach((u: any) => u.email((r: any) => r.address("ada@example.com"))).create();
-check(Validators.Validate(B)(Card, card).length === 0, "card");
-check(Evaluators.OfAny(self.reach.has("email"), { this: card }) === true, "by email");
+check(Evaluators.OfAny(written(self.reach.has("email")), { this: card }) === true, "by email");
+check(Evaluators.OfAny(written(self.reach.has("phone")), { this: card }) === false, "not by phone");
 ```
 
 ## Differences from Python
@@ -68,8 +90,10 @@ check(Evaluators.OfAny(self.reach.has("email"), { this: card }) === true, "by em
 | `None` | `null` |
 | `Python.Text.FromFunction(lambda this: ...)` | none: use writers. `this` is reserved, so name that variable `self` |
 | `Domains.OfInteger.Builder().width(8)`, domains and typed values compared with `==` | `new Domains.OfInteger.Builder().width(8n)`, compared with `.equals()` |
-| `validate(bound={"this"}, core=True)`, keyword arguments | options objects: `validate({ bound: ["this"], core: true })`, `new Scope(variables, { modules })` |
-| `Pattern("operation", A, B, name="eq")` | `new Pattern("operation", { name: "eq" }, A, B)` |
+| `Terms.name_of`, `Terms.kind_of`, `Terms.attributes_of` | `Terms.nameOf`, `Terms.kindOf`, `Terms.attributesOf` (a `Map`) |
+| `with store.transaction(): ...` | `store.transaction(() => ...)`, which returns what its function returns |
+| `validate(term, bound={"this"}, core=True)`, keyword arguments | positional: `validate(term, ["this"], true)`; options objects elsewhere: `new Scope(variables, { modules })` |
+| `Pattern("call", A, B, callable="eq")` | `new Pattern("call", { callable: "eq" }, A, B)` |
 | `Python.Text.FromText(source)` | none: build Python expressions with constructors (`P.compare(">=", P.attribute(P.name("x"), "age"), 18n)`) |
 | Python expressions evaluated by Python, with real modules | a model of Python's rules; modules are `new Python.Evaluators.Module(name, { members })`; no numpy |
 | `NameError`, `ImportError`, `ZeroDivisionError`, `OverflowError` | classes of the same names in `@mbse/expressions/Framework`'s `Errors` |

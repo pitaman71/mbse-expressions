@@ -35,8 +35,9 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 
 ## Practices that prevent most mistakes
 
-1. **Writers build data; nothing evaluates until asked.** `variable("this").age.ge(18)` is the expression
-   `ge(get(this, 'age'), 18)`. Evaluate it with a dialect's `Evaluators.OfAny(expression, scope)`.
+1. **Writers build data; nothing evaluates until asked.** `variable("this").age.ge(18)` writes the expression
+   `ge(get(this, 'age'), 18)` where it is given: an expression's `root`, in a store, within a transaction. Evaluate
+   it with a dialect's `Evaluators.OfAny(expression, scope)`.
 2. **Basic is three-valued and never coerces.** An absent property is unknown (`None`/`null`), and `and`/`or` follow
    Kleene. `1 == 1.0` is unknown, since int and float are different types; in TypeScript, an int is a `bigint` (`18n`).
 3. **Only the core vocabulary is guaranteed.** Other operation names are extensions; `validate(core=True)` reports
@@ -45,8 +46,9 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
    value: a missing property is unknown in Basic, `#FIELD!` in Excel, and an error in Python and MATLAB.
 5. **Nothing is imported or called unless the scope provides it.** Python modules, MATLAB packages and Excel add-ins
    come from an allowlist in the scope, so expressions from untrusted data cannot reach other code.
-6. **Serialize through the dialect.** The root schema is `DIALECT.schema_of(expression)`, and decoding needs that
-   dialect's `Builders`.
+6. **Terms live in a store.** Run the installs first, the framework's, Basic's and each dialect's you write
+   (`store.transaction(Framework.install)`); a term is a nested value of `Expressions.Framework.Term`, which every
+   dialect extends, so it serializes as any mbse-schemas value: `JSON.ToJSON(store)(Term, term)`.
 
 ## Load the reference for your task
 
