@@ -138,6 +138,22 @@ to be, but parking them so we can make progress on finishing the current overhau
 urgent" (2026-10-29; the workspace's TODO.md). Stage 5's variables and collecting reduce wait on it, and its `requires`
 on question 6; stages 1 to 4 do not.
 
+## Stage 2's model, drafted for review
+
+[Framework.py](Framework.py) and [Basic.py](Basic.py) draft the installs; [check.py](check.py) runs them against
+mbse-schemas 0.26 (installs valid, run again writing nothing, `x + 1 > 0` built through the builders and written
+nested, a snapshot round-tripping). What they propose, for the user's review:
+
+- `Expressions.Framework.Term`, a union of value object kinds, `literal` (`value`, a basic scalar's; `domain`, by name),
+  `call` (`callable`, by name; `arguments`, a container of terms by index; `domain`), `variable` (`name`) and `let`
+  (`name`, `value`, `body`): the term kinds as the starting point, `operation` named `call`. A term holds terms, nested.
+- `Expressions.Framework.Expression`, a reference object whose `root` is a term: the only instance of the kinds.
+- `Expressions.Framework.HasRoot(schema, expression)`, one expression per schema, and the extension adjacency
+  `expression` it gives `Schemas.OfExpression` (question 3), with no member on it.
+- A dialect adds its kinds to `Term` by schema extension: Basic its `quantifier` (`name`, `quantifier`, `collection`,
+  `body`); each other dialect its own (Python's, C's, ...).
+- A term names what it refers to, a callable or a domain, by name, until vocabularies are data (question 11).
+
 ## Stages (proposed, once decided)
 
 Each with both gates at 100% and the corpora regenerated; a stage touching mbse-schemas is made in a workspace
