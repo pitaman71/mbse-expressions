@@ -15,18 +15,30 @@ rest of your data, sent between programs, and evaluated the same way in Python a
 [mbse-patterns](https://github.com/pitaman71/mbse-patterns) uses them as constraints on mbse-schemas data, and as queries.
 
 ```python
-from mbse.Expressions import Evaluators, Expressions
-from mbse.Expressions.Dialects import Python
+from mbse.Expressions import Evaluators, Framework
+from mbse.Expressions.Dialects import Basic, Python
+from mbse.Schemas.Framework import Builders
 
-senior = Python.Text.FromFunction(lambda contact: contact.age >= 65 and contact.email is not None)
+store = Builders.Store()  # expressions are stored in an mbse-schemas store, with the data they constrain
+store.transaction(Framework.install)
+store.transaction(Basic.install)
+with store.transaction():
+    senior = store.Expressions.Framework.Expression(lambda e: e.root(
+        Python.Text.FromFunction(lambda contact: contact.age >= 65 and contact.email is not None)))
 Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value is unknown
 ```
 
 ```typescript
-import { Evaluators, Expressions } from "@mbse/expressions";
+import { Evaluators, Expressions, Framework } from "@mbse/expressions";
+import * as Basic from "@mbse/expressions/Dialects/Basic";
+import { Builders } from "@mbse/schemas/Framework";
 
+const store: any = new Builders.Store(); // expressions are stored in an mbse-schemas store, with the data they constrain
+store.transaction(Framework.install);
+store.transaction(Basic.install);
 const contact = Expressions.variable("contact");
-const senior = contact.age.ge(65n).and_(contact.has("email"));
+const senior = store.transaction(() => store.Expressions.Framework.Expression((e: any) => e.root(
+  contact.age.ge(65n).and_(contact.has("email")))));
 Evaluators.OfAny(senior, { contact: ada });
 ```
 
