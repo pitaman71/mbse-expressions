@@ -113,7 +113,7 @@ Each with both gates at 100% and the corpora regenerated; a stage touching mbse-
    EXPRESSIONS.md, as above.
 2. **Schemas as installs, terms in the store** (with reads through `Readers`, since `Terms.py` fails at import until
    both are done): `Expressions.install` and each dialect's; `Bindings` gone; tests and corpora moved.
-3. **Domains**: `HasDomain`, `DefinesDomains`, domains as objects; dialect-scoped names in place of the global registry.
+3. **Domains**: `HasDomain`, `Expressions.Framework.Defines`, domains as objects; dialect-scoped names in place of the global registry.
 4. **`OfExpression` and `OfConstraint` refined** (question 3).
 5. **Evaluation in transactions** (mbse-schemas and here): the evaluator protocol, `requires` of a pattern and a
    branch (a partition routing each frame), then variables and a collecting reduce (questions 5 to 8).
