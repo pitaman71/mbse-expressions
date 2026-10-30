@@ -165,12 +165,17 @@ As the user decided (2026-10-30), on what stage 2b raised about `Python.Text.Fro
 - **No `this`.** "I don't even want the tutorials introducing 'this' as a convention": tutorials, skill, tests and
   README name each parameter for what it holds.
 
+Then, shown what schema parameters for it would take (Parametrics has none yet), the user decided: **`FromFunction`
+is removed.** "Honestly FromExpression is not that important. Let's just remove that capability entirely" (meaning
+`FromFunction`). Expressions are written with the writers. What follows was open when it was removed, and is moot:
+
 Open, proposed to the user: (1) and (2), where an argument's schema comes from and whether it is an object or a value
 parameter, are superseded by (b): its schema is a schema parameter, bound later; (3) `FromFunction` writes a definition in a
 transaction and gives the `Schemas.OfExpression`, evaluation and use within another expression binding by parameter
 name (proposed); and how the parameters relate to `OfExpression`'s `pattern`, which stage 4 settles with them. Python's
 builtins (`len`, `max`, `all`, ...) stay read by name, as the Python dialect's vocabulary rather than free references
-(proposed). Built in 0.7.0 with stage 3, a breaking change.
+(proposed). The user's three kinds of parameter (schema, object, value) stand for Parametrics: schema parameters are still
+missing there (CAP-112, "Schema parameters now or later"), now with no user in this repository.
 
 ## Stage 2's model, drafted for review
 
