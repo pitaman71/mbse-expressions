@@ -218,6 +218,16 @@ As the user decided (2026-10-30), reviewing a first draft that made domains obje
 6. **Dialects model their operations.** "(ii) dialects also define operation models which arguments as
    Schemas.OfVariable and return value as Schemas.OfAny" (proposed below, B).
 
+As the user decided (2026-10-30) on the proposals below: A, "you can choose to keep the schema and domain separate
+and track them through a relation with unique, or use schema extension"; B and C, "okay for now". Chosen for A: both
+kept separate and related, since an extension adds only an adjacency to a relation of two links and no properties
+(mbse-schemas), so a domain's parameters need an object of their own either way. The domain's schema is a named
+`Schemas.OfAny` restricted to its scalar, defined in its dialect's module (`Expressions.Basic.uint8`); the domain is an
+`Expressions.Framework.Domain`, a reference object holding its `kind`; `Expressions.Framework.HasDomain(schema,
+domain)`, unique both ways, relates them, and an extension adjacency `domain` on `Schemas.OfAny` reads it from the
+schema. A's text below, "attached by extension", is superseded by this. B's open point (arguments by position or by
+name) is settled while building by what mbse-schemas keeps of a pattern's variables' order, and recorded.
+
 ### Proposed, for the user's review
 
 - **A. A domain is a schema.** Schema kinds are closed (Object identity, Decided, 75) and the scalars are exactly five
