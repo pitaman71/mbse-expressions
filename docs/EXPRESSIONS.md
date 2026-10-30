@@ -3,6 +3,12 @@
 
 # Expressions
 
+> **Being drained into mbse-basis** (the docs refactor's batch 2d): each span below says where it moves, to
+> [FEA-024: expressions as data](../../mbse-basis/docs/features/FEA-024.md) or one of its capabilities. Once source comments and commit
+> messages cite those, this document is removed. The port's own proposal, [proposals/port/](proposals/port/README.md), stays.
+
+> Moving to mbse-basis: [FEA-024: expressions as data](../../mbse-basis/docs/features/FEA-024.md), its introduction (batch 2d).
+
 Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas): constraints about its data,
 which [mbse-patterns](https://github.com/pitaman71/mbse-patterns) keeps as constraints, such as "at least one phone",
 and uses as queries. This package depends on mbse-schemas (a sibling checkout, pinned in `siblings.json`), whose
@@ -25,6 +31,8 @@ python3/mbse/Expressions/, typescript5/src/
 ```
 
 ## The Basic dialect
+
+> Moving to mbse-basis: [CAP-095: Basic terms as data](../../mbse-basis/docs/capabilities/CAP-095.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
 
 An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term, a value of
 `Expressions.Framework.Term` held nested (see [The framework](#the-framework), and the port's
@@ -56,6 +64,8 @@ Constraints that every binding must evaluate use only the core vocabulary. Opera
 that a binding may or may not support. A union value is a record of its one branch, by name, so a constraint tests which
 branch it holds with `has`, e.g. `has(get(this, 'reach'), 'email')`.
 
+> Moving to mbse-basis: [CAP-106: expressions evaluated three-valued](../../mbse-basis/docs/capabilities/CAP-106.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
+
 Evaluation is the concern of `Evaluators`: `Evaluators.OfAny(term, scope)` binds the variables in `scope` and
 returns a native value, an object, or unknown (`None`), and `Evaluators.OfLiteral`, `OfCall`, `OfVariable`, `OfLet`
 and `OfQuantifier` evaluate one kind; each takes a term value, or an `Expression`:
@@ -81,6 +91,8 @@ A constraint about a value is evaluated with `this` bound to it, `Evaluators.OfA
 gives `True`, `False` or unknown (`None`). Checking constraints against data, by the symbols they bind, is
 mbse-patterns' (`Predicates.holds`). mbse-schemas needs no evaluator: its union values name their branch, so neither
 decoding nor validation evaluates anything.
+
+> Moving to mbse-basis: [CAP-095: Basic terms as data](../../mbse-basis/docs/capabilities/CAP-095.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
 
 `Expressions.DIALECT.validate(term, bound=(), core=False)` reports statically what evaluation would raise: missing
 names and values, properties of the wrong scalar, wrong numbers of arguments to
@@ -127,6 +139,8 @@ adult = Python.Text.FromFunction(lambda this: this.age >= 18 and this.email is n
 
 ### Collections
 
+> Moving to mbse-basis: [CAP-096: collections in expressions](../../mbse-basis/docs/capabilities/CAP-096.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
+
 - **A collection is a list or an object's entries.** `get` of a list property (mbse-schemas' `OfIndexed`) gives a
   `Domains.Collection`: its items in order and, for a keyed list, their keys. `entries(object, adjacency)` gives an
   object's entries in an adjacency as a collection of `Domains.Record`s, each holding the targets of the entry's other
@@ -152,6 +166,8 @@ adult = Python.Text.FromFunction(lambda this: this.age >= 18 and this.email is n
   `min` and `max` give it. There are no collection literals: collections come from data.
 
 ## Value domains
+
+> Moving to mbse-basis: [CAP-097: value domains of published standards](../../mbse-basis/docs/capabilities/CAP-097.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
 
 Domains are implemented as data and in evaluation: the kinds below, their validation, the registry, literals and
 operations that carry them, typed values, comparisons, `Integer` and IEEE 754 arithmetic in every format, the bitwise
@@ -271,6 +287,8 @@ the parameters that standard defines, and today's natives become their defaults.
 
 ## The framework
 
+> Moving to mbse-basis: [CAP-098: dialects over one framework](../../mbse-basis/docs/capabilities/CAP-098.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
+
 `mbse.Expressions.Framework` defines what every dialect implements, and implements most of it from the dialects'
 kinds, in modules: `Terms` (the framework's schemas, and the generic reads of terms), `Objects` (the data objects
 expressions read), `Symbolics` (names, scopes and dependencies), `Domains`, `Evaluators`, `Partials`, `Translators` and
@@ -323,6 +341,8 @@ expressions read), `Symbolics` (names, scopes and dependencies), `Domains`, `Eva
   calls an implementation per operator with one thunk per argument, the term and the scope, so each dialect decides
   what to evaluate and when; operators outside a closed vocabulary go to an `extension`, which is how Matlab and Excel
   call the functions their scopes provide. It raises what `validate` reports.
+> Moving to mbse-basis: [CAP-099: partial evaluation](../../mbse-basis/docs/capabilities/CAP-099.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
+
 - `Partials` is partial evaluation, a peer of `Evaluators`: `Reducer(interpreter, literal, simplify)` evaluates every
   subterm whose references the given variables determine and replaces it with the literal of its value, when the
   dialect has one (an object, a collection, an unknown value or a value of a domain with no name has none, and its
@@ -331,12 +351,16 @@ expressions read), `Symbolics` (names, scopes and dependencies), `Domains`, `Eva
   result, the residual, is a writer of a term of the same dialect that agrees with the original wherever the original
   evaluates without raising. Basic's `Partials.OfAny(term, variables)` simplifies with Kleene's logic (`and(false, x)`
   is false, `and(true, x)` is `x`, `implies(false, x)` is true).
+> Moving to mbse-basis: [CAP-098: dialects over one framework](../../mbse-basis/docs/capabilities/CAP-098.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
+
 - `Objects` reads the data objects expressions are evaluated over, through mbse-schemas' readers: their properties
   (a container as listed values), their entries, and whether one is a reference object.
 - `Errors` names the exceptions evaluation raises beyond mbse-schemas' own (`NameError`, `ImportError`,
   `OverflowError`, `ZeroDivisionError`): Python's own in Python, and classes of the same names in TypeScript.
 
 ## Dialects
+
+> Moving to mbse-basis: [CAP-100: six languages' expression dialects](../../mbse-basis/docs/capabilities/CAP-100.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
 
 Each dialect's `install(txn)` adds its kinds to `Expressions.Framework.Term` by schema extension, run after the
 framework's, in a transaction of its own: a value object schema per kind, `Expressions.<Dialect>.<Kind>`, each with a
@@ -402,6 +426,8 @@ Expressions may come from data, so nothing is imported or called unless the call
 resolves only what the scope allowlists, never by loading code.
 
 ## Translators
+
+> Moving to mbse-basis: [CAP-101: translation between dialects](../../mbse-basis/docs/capabilities/CAP-101.md#as-built-mbse-expressions), As built: mbse-expressions (batch 2d).
 
 `Framework.Translators.Translator` translates between two dialects both ways: `left()`, `right()`,
 `forward(term, trace=None)`, `backward(...)` and `inverse()`. A translation is a writer of the target dialect's term,
@@ -488,19 +514,23 @@ alike only there.
 - **What a `requires` that evaluates to unknown does** (three-valued logic): drop the frame, keep it, or refuse. "semantics
   of evaluate deserve a more in-depth discussion", as the user put it (2026-10-28); open
   ([the port](proposals/port/README.md), question 6). Stage 5 of the port waits on it.
+  (Moving to mbse-basis: [CAP-106: expressions evaluated three-valued](../../mbse-basis/docs/capabilities/CAP-106.md#open-questions), Open questions.)
 - **Map, reduce and a collecting reduce** are parked: "map and reduce are not where I need them to be, but parking them
   so we can make progress on finishing the current overhaul in the dependent repos is more urgent" (2026-10-29). A
   collecting reduce over variables or symbols too ([the port](proposals/port/README.md), question 8) waits with them.
+  (Moving to mbse-basis: [CAP-096: collections in expressions](../../mbse-basis/docs/capabilities/CAP-096.md#open-questions), Open questions.)
 - **The framework and dialects as model, beyond the port's stage 2.** mbse-basis P-018 ("No model should need code to
   read or write. Ever.") is applied by the port (Resolved, "Porting to the stabilized mbse-schemas"); what stays open is
   vocabularies as data: `Callable`, a reference object, and `HasArguments`, relating a `Callable` to its parameters
   (the term kinds' starting point, Resolved), functions, formals and intrinsics, and value parameters with
   mbse-schemas' Parametrics, all after the port (its question 11). Until then a term names what it refers to, a callable
   or a domain, by name.
+  (Moving to mbse-basis: [CAP-098: dialects over one framework](../../mbse-basis/docs/capabilities/CAP-098.md#open-questions), Open questions.)
 - **Removing Basic** stays deferred ([the port](proposals/port/README.md), question 9, and Resolved, "Dialects hold the
   semantics of datatypes and operations"): Basic is kept through the port, the oracle the tests are written in. Open:
   which standards' and languages' dialects take its value domains (IEEE 754, IEEE 1164, C's fixed-width integers), and
   how translators through Basic become transform steps.
+  (Moving to mbse-basis: [FEA-024: expressions as data](../../mbse-basis/docs/features/FEA-024.md#open-questions), Open questions.)
 
 - **Resolving constraints.** A constraint binds variables and is resolvable in any direction
   ([MBSE.md](https://github.com/pitaman71/mbse-basis/blob/main/MBSE.md#what-a-specification-is-made-of)): `total = sum(items)` determines `total` from `items`, and
@@ -508,23 +538,31 @@ alike only there.
   expression reads, and partial evaluation simplifies what is known; nothing determines or restricts a variable from a
   constraint that binds it, and `eq` is checked, never used to determine. Open: how a constraint is resolved, how a
   restriction that does not determine a variable is represented, and which operations are invertible.
+  (Moving to mbse-basis: [CAP-043: constraints resolved in any direction](../../mbse-basis/docs/capabilities/CAP-043.md#open-questions), Open questions.)
 - **How hard a check tries.** Checking gives true, false or unknown (mbse-patterns' `Predicates.holds`), and should make a best
   effort to prove a constraint true or false when its variables are restricted by other constraints but not
   determined. Today it proves what three-valued logic and partial evaluation prove (`false and unknown` is false), and
   nothing from the restrictions other constraints place on a variable.
+  (Moving to mbse-basis: [CAP-106: expressions evaluated three-valued](../../mbse-basis/docs/capabilities/CAP-106.md#open-questions), Open questions.)
 - Collections have no literals, and Basic has no tensor domain over keyed and extended lists, nor `map` or `filter`.
+  (Moving to mbse-basis: [CAP-096: collections in expressions](../../mbse-basis/docs/capabilities/CAP-096.md#open-questions), Open questions.)
 - Collections translate between Basic and Python, SystemVerilog, MATLAB and Excel, and directly between Python,
   MATLAB and Excel; not to Latex or Ccpp, nor directly between SystemVerilog and the others, which have no translator
   of their own. `unique` is written as an idiom that does not read back, and `entries` has no counterpart.
+  (Moving to mbse-basis: [CAP-102: collections translated to LaTeX and C and C++](../../mbse-basis/docs/capabilities/CAP-102.md#design), Design.)
 - SystemVerilog's reductions of no items give their identities (0, 1, `1'b1`, `1'b0`), which IEEE 1800 leaves to
   tools; `min()[0]` of an empty array raises, where Basic's `min` is unknown.
+  (Moving to mbse-basis: [CAP-101: translation between dialects](../../mbse-basis/docs/capabilities/CAP-101.md#open-questions), Open questions.)
 - Reading constraints from source text and writing them back is the work of a bridge between mbse-programs' syntax trees
   and the dialects' terms (see Resolved). Until it exists, every dialect's `Text.ToText`, and Python's `Text.FromText`
   and `Text.FromFunction`, stay here; whether they move to the bridge or delegate to it is undecided.
+  (Moving to mbse-basis: [CAP-100: six languages' expression dialects](../../mbse-basis/docs/capabilities/CAP-100.md#open-questions), Open questions.)
 - Excel's ranges (`A1:B3`) and structured references (`Table1[@age]`) are not modeled; they need array values.
+  (Moving to mbse-basis: [CAP-105: Excel ranges and structured references](../../mbse-basis/docs/capabilities/CAP-105.md#design), Design.)
 - `Symbolics` has imports, an expression's dependencies, but no exports. Exports would name what a unit of
   expressions (a module of constraints, a MATLAB package, a workbook's defined names) provides to others; they need a
   unit that groups expressions, which no dialect has yet.
+  (Moving to mbse-basis: [CAP-098: dialects over one framework](../../mbse-basis/docs/capabilities/CAP-098.md#open-questions), Open questions.)
 
 ## Resolved
 
@@ -549,6 +587,7 @@ alike only there.
   10. **`FromFunction` is kept, and the writers**, until mbse-codegen-python moves off them ("yes").
   11. **All six dialects and the twelve translators are ported with the model**; vocabularies as data and value
       parameters after ("yes").
+  (Moving to mbse-basis: [FEA-024: expressions as data](../../mbse-basis/docs/features/FEA-024.md#decided), Decided.)
 
   On what the `overhauls/meta-schemas` branch recorded (2026-10-29):
   - **Terms are value objects**: "there was some back and forth but I have landed on terms as value objects". The
@@ -582,6 +621,7 @@ alike only there.
   mbse-schemas: Store overhaul, Decided, 8, 9 ("all scalars are domains and users may define domains and dialects
   containing domains"; "a scalar schema can have > 1 domain"; "width is a property of the domain, not the schema") and
   22 (formats become domains); Schema extension, Decided, 9 to 14 and 21.
+  (Moving to mbse-basis: [FEA-024: expressions as data](../../mbse-basis/docs/features/FEA-024.md#decided), Decided.)
 
 - **Expressions are built and read only through mbse-schemas** (2026-10-14, from the `overhauls/meta-schemas` branch),
   applying mbse-basis P-018 ("No model should need code to read or write. Ever."). Reading or writing an expression
@@ -589,6 +629,7 @@ alike only there.
   `argument` and `arguments` "should go away. You don't write bespoke builders or data classes either. You use
   mbse-schema proxies or generated classes as sourced in Visitor form." Writers stay until the dependents move off them
   (above, the port's decision 10).
+  (Moving to mbse-basis: [CAP-095: Basic terms as data](../../mbse-basis/docs/capabilities/CAP-095.md#decided), Decided.)
 
 - **Terms implement the visitor protocol and are value objects** (2026-10-14, from the `overhauls/meta-schemas`
   branch), as the user decided, "2 = Y": an expression tree is a value; a term is a value object, which holds its
@@ -596,39 +637,48 @@ alike only there.
   `Arguments` and every kind's `used_by` go; a term refers to a definition by name, as a module names a schema, since
   nothing links a value object. Its "1 = A", term classes of mbse-expressions' own implementing the protocol, is
   superseded by the decision above. Confirmed by the port (above, "Terms are value objects").
+  (Moving to mbse-basis: [CAP-095: Basic terms as data](../../mbse-basis/docs/capabilities/CAP-095.md#decided), Decided.)
 
 - Basic compares everything but reference objects deeply, through the visitor protocols, as mbse-schemas' equality
   does under a schema: value objects, union and intersection values, records and collections are equal when what each
   writes is equal (0.5). Before, they compared equal to nothing, so a constraint could not compare a value with
   another, e.g. a schema's property with an expected one (mbse-schemas' `Reflection`). Without a schema, values of two
   schemas that write the same properties compare equal.
+  (Moving to mbse-basis: [CAP-106: expressions evaluated three-valued](../../mbse-basis/docs/capabilities/CAP-106.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - `Python.Text.FromFunction` reads collections in the forms the Basic-to-Python translator writes (`len`, indexing,
   `in`, `sum`, `min`, `max`, and `all`, `any` and `sum(1 for ...)` over a generator expression), so a translated
   constraint reads back, and `Text.FromText` reads a chained comparison as `and` of comparisons sharing the middle
   operand.
+  (Moving to mbse-basis: [CAP-096: collections in expressions](../../mbse-basis/docs/capabilities/CAP-096.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - A dialect may extend another, inheriting its kinds; a base accepts its extensions' terms as arguments, and the
   extension validates and evaluates the trees that mix them, so that a dialect such as mbse-patterns' predicates adds
   proper terms (quantifiers over a store's objects, links) to Basic without copying it.
+  (Moving to mbse-basis: [CAP-098: dialects over one framework](../../mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - A dialect's source text is its `Text` module, as in every mbse framework, where text is one more dialect or variant:
   `Text.ToText(expression)` writes it, and `Text.FromText(source)` reads it back (Python's, in Python only), replacing
   `render` and `parse`. Python's `Text.FromFunction(function)` reads a function's source into a Basic expression,
   replacing Basic's `Expressions.from_`.
+  (Moving to mbse-basis: [CAP-100: six languages' expression dialects](../../mbse-basis/docs/capabilities/CAP-100.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - Parsing and printing source code belong in mbse-programs, which holds each language's complete syntax tree with an
   established parser and printer, not in mbse-expressions, whose dialects hold the terms of constraints. No dialect
   gains a parser here; a constraint in source text is read by mbse-programs and translated to a dialect.
+  (Moving to mbse-basis: [CAP-100: six languages' expression dialects](../../mbse-basis/docs/capabilities/CAP-100.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - An `Ieee1164` domain of a `width` is VHDL's `std_logic_vector`, its value that many states, the most significant
   first; without one it is a single `std_logic`. SystemVerilog's binary vectors and those with x or z bits are its
   counterparts.
+  (Moving to mbse-basis: [CAP-097: value domains of published standards](../../mbse-basis/docs/capabilities/CAP-097.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - A function may take a range of numbers of arguments: its signature takes any number (arity -1) and its kind checks
   the range, in validation and in evaluation alike. Excel's `IF` takes 2 or 3 (FALSE without an alternative), and
   `AND`, `OR`, `SUM`, `MIN` and `MAX` 1 to 255, as Excel's do.
+  (Moving to mbse-basis: [CAP-098: dialects over one framework](../../mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - The direct translators between Python, MATLAB and Excel write collections as their translators with Basic do, from
   one table of each dialect's forms (`_Patterns.COLLECTIONS`), so that every route gives the same expression.
+  (Moving to mbse-basis: [CAP-101: translation between dialects](../../mbse-basis/docs/capabilities/CAP-101.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - The mbse repositories stay separate, beside each other as sibling checkouts. A dependent installs its siblings as they
   are (`../../mbse-schemas/python3`, `file:../../mbse-schemas/typescript5`), so a change in one is seen at once by the
@@ -637,78 +687,102 @@ alike only there.
   checkout, since the lock files record siblings by path, without a hash, and a release is the tag `v<version>`.
   mbse-basis' `scripts/polyrepo.py` checks the siblings, clones those missing at their pinned commits, and pins new
   ones.
+  (Not moving: mbse-basis already states it, in `scripts/README.md` for sibling checkouts and in
+  [VOC-007: property](../../mbse-basis/docs/VOCABULARY.md#VOC-007) and [VOC-008: term](../../mbse-basis/docs/VOCABULARY.md#VOC-008) for the vocabulary.)
 - The vocabulary is shared with mbse-schemas and mbse-programs: an element of an expression's tree is a *term* (every
   kind derives from `Terms.Term`), never a bare node, and the objects that build expressions with methods are
   *writers* (`Writer`). A kind's named values are *properties*; "field" means only a dataclass's or class's field.
+  (Not moving: mbse-basis already states it, in `scripts/README.md` for sibling checkouts and in
+  [VOC-007: property](../../mbse-basis/docs/VOCABULARY.md#VOC-007) and [VOC-008: term](../../mbse-basis/docs/VOCABULARY.md#VOC-008) for the vocabulary.)
 - Collections translate to Python as generator expressions, a quantifier kind of the Python dialect whose conditions,
   like its element, see the bound name; the framework binds the name in every argument after the collection. A
   list property is a list of its values in Python, a keyed list's too, so that iteration, `in` and `sum` see values as
   Basic's collections do. `unique`, which has no single call in Python, is written as an idiom, forward only.
+  (Moving to mbse-basis: [CAP-101: translation between dialects](../../mbse-basis/docs/capabilities/CAP-101.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - In MATLAB, collections are arrays (a list property's values, as doubles), which operators do not take: they are
   counted, reduced, indexed from 1 and iterated by `arrayfun`, a quantifier kind for `arrayfun(@(p) body, xs)`, whose
   body must give a numeric or logical scalar.
+  (Moving to mbse-basis: [CAP-101: translation between dialects](../../mbse-basis/docs/capabilities/CAP-101.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - In Excel, collections are arrays, which operators do not take (`#VALUE!`): `MAP` and `LAMBDA` are `map`, a
   quantifier kind, and the array functions read them as Excel does, ignoring the text in an array where `SUM`, `AND`
   and `OR` would convert a value given alone. A vocabulary's signature may take any number of arguments (arity -1),
   as `AND` and `OR` do.
+  (Moving to mbse-basis: [CAP-101: translation between dialects](../../mbse-basis/docs/capabilities/CAP-101.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - In SystemVerilog, collections are arrays and their operations IEEE 1800's array methods; a reduction's `with` clause
   is `iterate`, a quantifier kind, and `inside` takes an array among its items as its elements.
+  (Moving to mbse-basis: [CAP-101: translation between dialects](../../mbse-basis/docs/capabilities/CAP-101.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - Typed literals translate by `Convert`, a rule of functions over a literal's attributes, rather than by patterns,
   which only copy values. A dialect's literal names its type by the other dialect's convention where the two differ:
   C's `<stdint.h>` names, SystemVerilog's base (decimal for integers, hexadecimal for bits, binary for single
   `Ieee1164` bits). Translations from Basic round-trip; from C or SystemVerilog they keep the type and the value, not
   the spelling.
+  (Moving to mbse-basis: [CAP-101: translation between dialects](../../mbse-basis/docs/capabilities/CAP-101.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - SystemVerilog's integral values are 4-state (`Domains.Logic`, its bits encoded as VPI's `aval` and `bval`) whatever
   their type, a 2-state type keeping x and z at 0; evaluation sizes operands as IEEE 1800 does, rather than in Basic's
   unbounded integers. A shift by the width or more shifts every bit out, and `$bits` gives its argument's type's width
   without evaluating it. A string is a vector of its UTF-8 bytes.
+  (Moving to mbse-basis: [CAP-100: six languages' expression dialects](../../mbse-basis/docs/capabilities/CAP-100.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - Value domains: conversions are `convert` (keeps the value) and `reinterpret` (keeps the bit pattern), with `pack` and
   `unpack` for packed domains; a literal stored without a domain has its native's default domain, and writers leave
   defaults out; an `Enum` is unordered unless packed, when it orders by its representation.
+  (Moving to mbse-basis: [CAP-097: value domains of published standards](../../mbse-basis/docs/capabilities/CAP-097.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - (Superseded where a term's domain is named: "Porting to the stabilized mbse-schemas", above.) A literal holds its
   domain by value, as a value object, written by name when the domain is registered and by value
   otherwise; domains compare by structure. A packed domain packs an enum into a fixed-width integer or bits, with an
   integer code per member.
+  (Moving to mbse-basis: [CAP-097: value domains of published standards](../../mbse-basis/docs/capabilities/CAP-097.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - Value domains name published standards where one exists (`Ieee754`, `Ieee1164`), with only the parameters the
   standard defines, rather than free representation parameters: no float format by widths and flags, no ones'
   complement or sign-magnitude integers, no `Decimal` apart from IEEE 754's decimal formats. The dialect keeps its
   name, Basic, which mbse-schemas' neutral token format (`basic`) shares.
+  (Moving to mbse-basis: [CAP-097: value domains of published standards](../../mbse-basis/docs/capabilities/CAP-097.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - Partial evaluation gives a residual expression, never only a value: a literal when everything is known, otherwise
   the simplified remainder, which serializes and translates like any expression.
+  (Moving to mbse-basis: [CAP-099: partial evaluation](../../mbse-basis/docs/capabilities/CAP-099.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - Collections: lists and an object's entries (`entries`), read as `Domains.Collection`s whose items are their values
   and keys address them; the quantifiers are a binding kind, `OfQuantifier` (`all`, `any`, `count`), and the operations
   `count`, `item`, `in`, `sum`, `min`, `max` and `unique` join the core; collection domains (`List`, `Keyed`) serve
   inference only, and there are no collection literals.
+  (Moving to mbse-basis: [CAP-096: collections in expressions](../../mbse-basis/docs/capabilities/CAP-096.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - Evaluation in value domains: a value of a non-default domain is a typed value (`Domains.Value`), and a default
   domain's value stays the bare native; an operation's optional `domain` is the domain of its result, which `convert`,
   `reinterpret` and `unpack` need and `pack` does not; the bitwise operations (`bitand`, `bitor`, `bitxor`, `bitnot`,
   `shl`, `shr`) join the core vocabulary; every IEEE 754 format is evaluated, `binary128` and the decimal formats as
   canonical text.
+  (Moving to mbse-basis: [CAP-097: value domains of published standards](../../mbse-basis/docs/capabilities/CAP-097.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - (Superseded by "Porting to the stabilized mbse-schemas" and "Expressions are built and read only through
   mbse-schemas", above; mbse-schemas' `Bindings` is gone.) Expressions are a program's own classes bound to their
   meta-schemas with mbse-schemas' `Bindings`, not builders of
   their own: what is generic to any schema (visitor protocols over a state, finalizing, the store, value objects in
   properties) lives once, in mbse-schemas, and `Terms` gives only `read`, `make` and the DSL.
+  (Moving to mbse-basis: [CAP-095: Basic terms as data](../../mbse-basis/docs/capabilities/CAP-095.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 - (Superseded where arguments are a relation and terms reference objects: "Terms implement the visitor protocol and
   are value objects", above.) Expressions are `Expressions.OfAny`, `OfLiteral`, `OfOperation`, `OfVariable` and
   `OfLet`, each with `Data`,
   `Builder`, `Spec` and a meta-schema `Schema` that is an ordinary registered object schema tagged by `kind`. Arguments
   are an ordered relation (`index`, `unique(argument)`); a literal's schema has one property per native type.
+  (Moving to mbse-basis: [CAP-095: Basic terms as data](../../mbse-basis/docs/capabilities/CAP-095.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - There is no `is` operation: unions discriminate by a tag property compared with a fixed value.
+  (Moving to mbse-basis: [CAP-095: Basic terms as data](../../mbse-basis/docs/capabilities/CAP-095.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - `Python.Text.FromFunction` (Python only) reads an expression from a function's source with `ast`.
+  (Moving to mbse-basis: [CAP-095: Basic terms as data](../../mbse-basis/docs/capabilities/CAP-095.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - Evaluation is its own module, `Evaluators`, with one entry point per expression kind (`Evaluators.OfAny`, ...).
+  (Moving to mbse-basis: [CAP-106: expressions evaluated three-valued](../../mbse-basis/docs/capabilities/CAP-106.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - Expressions are partitioned into dialects over one framework (`Framework`), each declared by its kinds' roles;
   translators are pairwise, declared as bidirectional pattern rules, and applied by co-traversal.
+  (Moving to mbse-basis: [CAP-098: dialects over one framework](../../mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - (Superseded where mbse-schemas takes no evaluator: the port's decision 5, above.) mbse-schemas' unions name their
   branches, and it takes no evaluator; a constraint
   about a value is evaluated with it bound to `this`. Each dialect's union of meta-schemas names its branches by the kinds' tags.
+  (Moving to mbse-basis: [CAP-106: expressions evaluated three-valued](../../mbse-basis/docs/capabilities/CAP-106.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 - Evaluation is three-valued (Kleene), never coerces, and reads properties with `get(object, name)`; variables are
   bound by `OfLet` or by the caller's scope. `Writer`s build expressions with methods only (no operator overloading), so
   both bindings read the same.
+  (Moving to mbse-basis: [CAP-106: expressions evaluated three-valued](../../mbse-basis/docs/capabilities/CAP-106.md#decided-by-an-agent-for-review), Decided by an agent, for review.)
 
 ---
 
