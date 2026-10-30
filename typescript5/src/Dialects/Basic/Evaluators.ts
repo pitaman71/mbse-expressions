@@ -9,7 +9,8 @@
  * - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are
  *   unknown. `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the
  *   first does not decide.
- * - No coercion. Comparisons follow mbse-schemas' EQUALITY.md: natives of one type by value, reference objects by
+ * - No coercion. Comparisons follow mbse-basis [CAP-111: equality and ordering defined by the
+ *   schema](../../../../../mbse-basis/docs/capabilities/CAP-111.md): natives of one type by value, reference objects by
  *   identity, everything else deeply (see Deep equality); values of different types are incomparable. Arithmetic takes
  *   numbers of one domain.
  * - Values of other domains than the natives' defaults are typed values (`Domains.Value`): a literal of such a domain
