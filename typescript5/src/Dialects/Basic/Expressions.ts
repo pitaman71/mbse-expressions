@@ -17,9 +17,9 @@
  *
  * `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
  *
- * `Writer`s write terms with methods, through the builders: `variable('this').age.ge(18n)` is `ge(get(this, 'age'),
- * 18)`. A writer is a spec, so it goes wherever a term is written, in a transaction:
- * `store.Expressions.Framework.Expression((e: any) => e.root(variable('this').age.ge(18n)))`.
+ * `Writer`s write terms with methods, through the builders: `variable('person').age.ge(18n)` is
+ * `ge(get(person, 'age'), 18)`. A writer is a spec, so it goes wherever a term is written, in a transaction:
+ * `store.Expressions.Framework.Expression((e: any) => e.root(variable('person').age.ge(18n)))`.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

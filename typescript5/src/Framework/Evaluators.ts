@@ -6,7 +6,7 @@
  * evaluation is where dialects differ most.
  *
  * Evaluation resolves references in a scope (see `Symbolics`): an evaluator given an object of variables instead of a
- * scope makes its dialect's scope from it, so `Evaluators.OfAny(expression, { this: value })` binds `this`.
+ * scope makes its dialect's scope from it, so `Evaluators.OfAny(expression, { person: value })` binds `person`.
  *
  * `Interpreter` evaluates a term value by its kind's role (see `Terms`): a literal gives its value (through `literal`,
  * or `typed` when it carries a domain of its own), a reference what the scope resolves, a binding its body in the scope

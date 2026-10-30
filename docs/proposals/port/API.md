@@ -70,8 +70,9 @@ A writer's argument is a spec: a writer, a native value (a literal), a term valu
 (mbse-schemas copies a value given whole), or a callable taking the `Visitors.OfUnion` of a term value, as
 `store.Expressions.Framework.Term(cb)` gives one (`E.DIALECT.spec(x)` makes a writer of any of them).
 `E.literal(value, domain)` and the conversions take a domain by name, or a `Domains` value registered under one
-(below). Python's `Text.FromFunction(function)` gives a `Writer`, so it builds an
-expression inside a transaction: `e.root(FromFunction(lambda this: this.age >= 18))`.
+(below). Python's `Text.FromFunction(function)`, which read a writer from a function's source, is removed, as the
+user decided (2026-10-30; [the proposal](README.md), the decision on `Python.Text.FromFunction`): expressions are
+written with the writers.
 
 ## Reading an expression
 
@@ -237,7 +238,8 @@ Settled in stage 2b:
   reads them from the same branches; a kind of its own that clashes with a framework branch's tag needs another tag.
 - `Framework/Translators.py` (`Terms.Form`, `Dialect.make`, which now gives a writer, and `Terms.same`) and the twelve
   translators: a translation is a writer, written in a transaction by its caller.
-- `Python.Text.FromFunction` giving a Basic writer (EXP-12), and `ToText` reading terms through `Terms.form`.
+- `ToText` reading terms through `Terms.form`. (`Python.Text.FromFunction`, which gave a Basic writer in EXP-12, is
+  removed, as the user decided (2026-10-30), and EXP-12 retired with it.)
 - The cases marked "Stage 2b restores ..." in EXP, FRM, COL, DOM and PAR, and the corpus's other cases.
 
 ---

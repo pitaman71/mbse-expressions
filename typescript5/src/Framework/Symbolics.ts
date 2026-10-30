@@ -11,7 +11,7 @@
  * reference's value, `bind(name, value)` the scope within a binding, and `enter(declaration)` the scope within an
  * import. `Variables` is the scope of dialects whose references are names bound to values; dialects with imports,
  * packages or workbooks derive their own. An evaluator given an object of variables instead of a scope makes its
- * dialect's scope from it, so `Evaluators.OfAny(expression, { this: value })` binds `this`. A scope decides what an
+ * dialect's scope from it, so `Evaluators.OfAny(expression, { person: value })` binds `person`. A scope decides what an
  * import may bring in: imports resolve only what the caller's scope allows, never by loading code.
  */
 
