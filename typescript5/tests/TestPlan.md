@@ -21,7 +21,7 @@ npm run conformance           # regenerate ../conformance/typescript5
 
 | Notebook | Suite | Cases | Focus |
 |---|---|---|---|
-| `01_Expressions.ipynb` | EXP | 12 | as in Python; a writer is a function with its class's prototype, and its probes are JavaScript's (`then`, `toJSON`, symbols); EXP-12, Python only, asserts `Python.Text` has no `FromFunction` |
+| `01_Expressions.ipynb` | EXP | 11 | as in Python; a writer is a function with its class's prototype, and its probes are JavaScript's (`then`, `toJSON`, symbols) |
 | `02_Evaluators.ipynb` | EVL | 7 | as in Python; evaluation scopes are object literals |
 | `03_Visitors.ipynb` | VIS | 2 | as in Python, the readers' and visitors' protocols checked on live instances by method presence |
 | `04_Conformance.ipynb` | CONF | 4 | as in Python, from this side, for a case of Basic's and of every dialect; YAML is formatted by mbse-schemas' own emitter (it quotes base64 text), and its values must match (mbse-schemas' EQUIVALENCE.md, YAML formatting) |
@@ -33,7 +33,15 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `10_Collections.ipynb` | COL | 7 | as in Python; collections, records and collection domains compare with `equals()`, and a record's fields are a `Map` |
 | `11_Partials.ipynb` | PAR | 4 | as in Python; the reducer is called with `REDUCER.run(term, variables)` |
 
-Total: 96 cases, with the same IDs in the same order in both implementations.
+## Retired cases
+
+A retired case's ID is not reused; the cases after it keep theirs.
+
+| ID | Was | Why retired |
+|---|---|---|
+| EXP-12 | `Python.Text.FromFunction` read a Basic writer from a Python function's source | `FromFunction` was removed, as the user decided (2026-10-30): constraints are built with writers, in Python as in TypeScript |
+
+Total: 95 cases, with the same IDs in the same order in both implementations.
 
 ---
 

@@ -31,7 +31,7 @@ and `show`, which writes an expression as text (case study 6 explains it).
 
 | # | Notebook | The problem | What you learn |
 |---|---|---|---|
-| 1 | [Constraints as data](01_Constraints_As_Data.ipynb) | One constraint, four hand-written copies in four languages | Writing a constraint (`FromFunction`, writers), as an expression in a store; evaluating it; the core vocabulary; validating; saving and loading |
+| 1 | [Constraints as data](01_Constraints_As_Data.ipynb) | One constraint, four hand-written copies in four languages | Writing a constraint with writers, as an expression in a store; evaluating it; the core vocabulary; validating; saving and loading |
 | 2 | [Answers you can trust](02_Answers_You_Can_Trust.ipynb) | A logger that never reported: neither true nor false | Unknown; `has`; Kleene's logic; deciding what unknown means; no coercion; what raises |
 | 3 | [Constraints over collections](03_Constraints_Over_Collections.ipynb) | Every reading, not just the last; every logger's battery | Collections; `count`, `item`, `max` and friends; quantifiers; empty collections; an object's related objects |
 | 4 | [Values with widths](04_Values_With_Widths.ipynb) | A radio packet of `int16_t` and `uint8_t` fields | Value domains; typed values and literals; inference; overflow; bits; conversions; domains on the wire |

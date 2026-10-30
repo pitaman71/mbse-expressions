@@ -146,6 +146,37 @@ to be, but parking them so we can make progress on finishing the current overhau
 urgent" (2026-10-29; the workspace's TODO.md). Stage 5's variables and collecting reduce wait on it, and its `requires`
 on question 6; stages 1 to 4 do not.
 
+As the user decided (2026-10-30), on what stage 2b raised about `Python.Text.FromFunction` (it refused a captured
+`Expression`; tutorial 3 read the expression's root with `Terms.term` instead, and question 4 asked whether
+`FromFunction` should read it):
+
+- **No free references.** "I had not envisioned that Expressions.FromFunction would support free references at all.
+  Now I see it as an undesired complication." Question 4 is withdrawn: `FromFunction` stops reading names from the
+  function's closure and globals (native values, writers, term values, which it has done since before the port).
+- **Parameters, each a schema parameter.** "FromFunction should introspect the parameters of the function being
+  passed. There is no 'this' convention. And generate a schema parameter for each argument": through mbse-schemas'
+  Parametrics, the `Schemas.OfExpression` it defines has one `Parametrics.OfParameters`, a parameter for each
+  argument. The kinds of parameter, as the user put them: "A parameter can represent: a schema, an object, a value. A
+  schema parameter is bound to a schema. An object parameter is bound to an object. A value parameter is bound to a
+  value." Asked whether each argument is an object or value parameter of the schema it is declared with (a), or also
+  gets a schema parameter for its type, the expression generic in it (b), the user answered "(b)". mbse-schemas'
+  Parametrics has value and object parameters only (`ForValue`/`BindsValue`, `ForObject`/`BindsObject`); schema
+  parameters are added there first.
+- **No `this`.** "I don't even want the tutorials introducing 'this' as a convention": tutorials, skill, tests and
+  README name each parameter for what it holds.
+
+Then, shown what schema parameters for it would take (Parametrics has none yet), the user decided: **`FromFunction`
+is removed.** "Honestly FromExpression is not that important. Let's just remove that capability entirely" (meaning
+`FromFunction`). Expressions are written with the writers. What follows was open when it was removed, and is moot:
+
+Open, proposed to the user: (1) and (2), where an argument's schema comes from and whether it is an object or a value
+parameter, are superseded by (b): its schema is a schema parameter, bound later; (3) `FromFunction` writes a definition in a
+transaction and gives the `Schemas.OfExpression`, evaluation and use within another expression binding by parameter
+name (proposed); and how the parameters relate to `OfExpression`'s `pattern`, which stage 4 settles with them. Python's
+builtins (`len`, `max`, `all`, ...) stay read by name, as the Python dialect's vocabulary rather than free references
+(proposed). The user's three kinds of parameter (schema, object, value) stand for Parametrics: schema parameters are still
+missing there (CAP-112, "Schema parameters now or later"), now with no user in this repository.
+
 ## Stage 2's model, drafted for review
 
 [Framework.py](Framework.py) and [Basic.py](Basic.py) draft the installs; [check.py](check.py) runs them against

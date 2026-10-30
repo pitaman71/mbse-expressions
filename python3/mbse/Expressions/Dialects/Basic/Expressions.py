@@ -16,10 +16,10 @@ Basic's terms are the framework's kinds (`mbse.Expressions.Framework.Terms`) and
 
 `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
 
-`Writer`s write terms with methods, through the builders: `variable('this').age.ge(18)` is `ge(get(this, 'age'), 18)`.
+`Writer`s write terms with methods, through the builders: `variable('person').age.ge(18)` is
+`ge(get(person, 'age'), 18)`.
 A writer is a spec, so it goes wherever a term is written, in a transaction:
-`store.Expressions.Framework.Expression(lambda e: e.root(variable('this').age.ge(18)))`.
-`Python.Text.FromFunction` reads one from a Python function's source instead.
+`store.Expressions.Framework.Expression(lambda e: e.root(variable('person').age.ge(18)))`.
 """
 
 from __future__ import annotations

@@ -7,7 +7,7 @@ camelCase (`Terms.nameOf`, `Terms.kindOf`), and writes the same JSON byte for by
 
 ## A complete program
 
-The same constraint as in Python, built with writers, which TypeScript uses in place of Python's `Text.FromFunction`.
+The same constraint as in Python, built with the same writers.
 
 ```typescript
 import { Evaluators, Expressions as E, Framework } from "@mbse/expressions";
@@ -46,8 +46,7 @@ const [ada, bob, eve] = store.transaction(() => [
   store.Contact((c: any) => c.name("Eve").email("eve@example.com")), // no age
 ]);
 
-// A constraint, built with writers (Python can also read one from a lambda), written as an expression's root in a
-// transaction.
+// A constraint, built with writers, written as an expression's root in a transaction.
 const contact = E.variable("contact");
 const senior = store.transaction(() => store.Expressions.Framework.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
@@ -74,12 +73,12 @@ const code = written(Translators.between(E.DIALECT, Python.Expressions.DIALECT).
 check(Python.Text.ToText(code) === "contact.age >= 65 and hasattr(contact, 'email')", "python");
 
 // A union value is a record of its one branch, by name, so a constraint reads it like any object.
-const card = store.transaction(() => store.Card((c: any) => c.reach((p: any) => p.as_value((a: any) => a.as_union(
+const ada_card = store.transaction(() => store.Card((c: any) => c.reach((p: any) => p.as_value((a: any) => a.as_union(
   (u: any) => u.email((r: any) => r.address("ada@example.com")))))));
-check(Validators.Validate(store)(store.registered("Card"), card).length === 0, "card");
-const self = E.variable("this");
-check(Evaluators.OfAny(written(self.reach.has("email")), { this: card }) === true, "by email");
-check(Evaluators.OfAny(written(self.reach.has("phone")), { this: card }) === false, "not by phone");
+check(Validators.Validate(store)(store.registered("Card"), ada_card).length === 0, "card");
+const card = E.variable("card");
+check(Evaluators.OfAny(written(card.reach.has("email")), { card: ada_card }) === true, "by email");
+check(Evaluators.OfAny(written(card.reach.has("phone")), { card: ada_card }) === false, "not by phone");
 ```
 
 ## Differences from Python
@@ -88,11 +87,10 @@ check(Evaluators.OfAny(written(self.reach.has("phone")), { this: card }) === fal
 |---|---|
 | `int`, `float` values (`18`, `18.0`) | `bigint` and `number` (`18n`, `18`): `18` is a float, and `ge(get(x, 'age'), 18)` against an int age is unknown |
 | `None` | `null` |
-| `Python.Text.FromFunction(lambda this: ...)` | none: use writers. `this` is reserved, so name that variable `self` |
 | `Domains.OfInteger.Builder().width(8)`, domains and typed values compared with `==` | `new Domains.OfInteger.Builder().width(8n)`, compared with `.equals()` |
 | `Terms.name_of`, `Terms.kind_of`, `Terms.attributes_of` | `Terms.nameOf`, `Terms.kindOf`, `Terms.attributesOf` (a `Map`) |
 | `with store.transaction(): ...` | `store.transaction(() => ...)`, which returns what its function returns |
-| `validate(term, bound={"this"}, core=True)`, keyword arguments | positional: `validate(term, ["this"], true)`; options objects elsewhere: `new Scope(variables, { modules })` |
+| `validate(term, bound={"person"}, core=True)`, keyword arguments | positional: `validate(term, ["person"], true)`; options objects elsewhere: `new Scope(variables, { modules })` |
 | `Pattern("call", A, B, callable="eq")` | `new Pattern("call", { callable: "eq" }, A, B)` |
 | `Python.Text.FromText(source)` | none: build Python expressions with constructors (`P.compare(">=", P.attribute(P.name("x"), "age"), 18n)`) |
 | Python expressions evaluated by Python, with real modules | a model of Python's rules; modules are `new Python.Evaluators.Module(name, { members })`; no numpy |

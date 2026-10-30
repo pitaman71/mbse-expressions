@@ -38,11 +38,10 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | Area | Python | TypeScript | Why | Cases |
 |---|---|---|---|---|
 | Unknown | `None` | `null` | the respective "no value" | EVL-01..06 |
-| Evaluation scope and validation options | `Evaluators.OfAny(t, {"this": x})`, `DIALECT.validate(t, bound={"this"}, core=True)` | `Evaluators.OfAny(t, { this: x })`, `DIALECT.validate(t, ["this"], true)` | no keyword arguments; object literals are the idiom, and validation's two options are positional | EXP-10, EVL-01, EVL-04, EVL-06, FRM-05 |
+| Evaluation scope and validation options | `Evaluators.OfAny(t, {"person": x})`, `DIALECT.validate(t, bound={"person"}, core=True)` | `Evaluators.OfAny(t, { person: x })`, `DIALECT.validate(t, ["person"], true)` | no keyword arguments; object literals are the idiom, and validation's two options are positional | EXP-10, EVL-01, EVL-04, EVL-06, FRM-05 |
 | A call's domain | `operation("convert", x, domain=d)` | `operation("convert", x, { domain: d })`, a trailing object whose only key is `domain` | no keyword arguments | DOM-13 |
 | Keyword arguments of the framework and dialects | `Pattern("call", A, B, callable="eq")`, `Python.Scope(variables, modules=..., builtins=...)`, `Matlab.Scope(variables, functions=..., packages=...)`, `Ccpp.Scope(variables, functions=...)`, `SystemVerilog.Scope(variables, functions=...)`, `Workbook(names, sheets, name=..., books=..., add_ins=...)`, `import_(module, body, alias=...)` | `new Pattern("call", { callable: "eq" }, A, B)`, `new Scope(variables, { modules, builtins })`, `new Scope(variables, { functions, packages })` and `new Scope(variables, { functions })`, `new Workbook(names, sheets, { name, books, add_ins })`, `import_(module, body, alias)` | no keyword arguments: options objects, or positions for a single optional argument | TRN-01, DIA-02, DIA-05, DIA-08 |
 | Kinds and their structure | `Terms.Kind(role, operator=..., ...)` and `Terms.Dialect(name, kinds, domain_of=..., extends=...)` take keyword arguments; `kinds()`, `Form.attributes` and `infer`'s environment are dicts; `kind_of` gives a tuple | `new Kind(role, { operator, ... })` and `new Dialect(name, kinds, { domain_of, extends })` take options objects; `kinds()` and `Form.attributes` are `Map`s, `infer`'s environment an object or a `Map`; `kindOf` gives an array; the generic reads are camelCase (`kindOf`, `attributesOf`, `argumentsOf`, `nameOf`, `operatorOf`, `isTerm`), as is SystemVerilog's `kind_of` (`kindOf`) | each language's idiom for records, maps and names | FRM-01..10 |
-| Expressions from functions | `Python.Text.FromFunction(lambda this: this.age >= 18)` reads the function's source with `ast` | none; EXP-12 asserts `Python.Text` has no `FromFunction` | a JavaScript function has no Python source to read; writers build the same expressions in both | EXP-12 |
 | Reading Python source | `Python.Text.FromText(source)`, with `ast` | none; DIA-01 asserts `Python.Text` has no `FromText` | reading Python source needs Python's parser; constructors write the same expressions in both, and `ToText` writes the same source | DIA-01 |
 | Evaluating Python expressions | Python itself evaluates them, in a scope that allowlists modules | a model of Python's rules over JavaScript values (int is `bigint`, float `number`, None `null`); modules are `Module` objects of named members; attributes are modeled for modules and for objects that write their properties, not for other values; a generator is a class whose type name is `generator`, and `sum` follows CPython's (exact ints, compensated floats), which a fuzz of 20,000 sums matched | TypeScript cannot run Python; DIA-02's tables check the model against Python | DIA-02 |
 | NumPy | a module Python expressions import, evaluated vectorized with masks | none; a `Module` stands in for it in DIA-02, and TRN-06 leaves out evaluation over columns | numpy is a Python library | DIA-02, TRN-06 |
@@ -63,12 +62,12 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 
 ## Tutorials
 
-`python3/tutorials/` and `typescript5/tutorials/` are the same eight case studies, with the same answers. Python writes
-scalar expressions with lambdas read by `Python.Text.FromFunction` and Python source with `Text.FromText`; TypeScript
-uses writers throughout, each written in a store within a transaction, so that the expressions, and their JSON,
-are the same. Each toolkit's `show` writes floats as Python does (`2.0`), so the expressions print alike; values printed
-by each language's own means (`4n`, `4.0` against `4`) follow that language. Both are
-run as tests and committed with outputs (Python's from its kernel, TypeScript's from Deno's Jupyter kernel).
+`python3/tutorials/` and `typescript5/tutorials/` are the same eight case studies, with the same answers. Both build
+their constraints with writers, each written in a store within a transaction, so that the expressions, and their JSON,
+are the same; Python also reads Python source with `Text.FromText`, where TypeScript writes the same expression with
+the Python dialect's constructors. Each toolkit's `show` writes floats as Python does (`2.0`), so the expressions print
+alike; values printed by each language's own means (`4n`, `4.0` against `4`) follow that language. Both are run as
+tests and committed with outputs (Python's from its kernel, TypeScript's from Deno's Jupyter kernel).
 
 ---
 
