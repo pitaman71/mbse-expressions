@@ -10,7 +10,7 @@
               "ccpp_member": {
                 "name": "a",
                 "object": {
-                  "ccpp_identifier": {
+                  "variable": {
                     "name": "this"
                   }
                 }
@@ -28,7 +28,7 @@
                     "name": "b",
                     "operator": "->",
                     "object": {
-                      "ccpp_identifier": {
+                      "variable": {
                         "name": "this"
                       }
                     }

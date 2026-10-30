@@ -2,14 +2,15 @@
  * Expressions of the Ccpp dialect: expressions of C and C++ (a superset of both), over their arithmetic types, as
  * their source writes them.
  *
- * Ccpp's terms are kinds of its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a
- * branch tagged `ccpp_<kind>` (dialects share kind names), and the framework's `call`:
+ * Ccpp's terms are the framework's `variable` and `call`, whose shape C's identifiers and calls have, and kinds of its
+ * own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a branch tagged `ccpp_<kind>`
+ * (dialects share kind names):
  *
  * - `constant`: a number, a bool or a string literal (`value`), and optionally its type (`type`, one of
  *   `Domains.TYPES`), written with a suffix (`5u`, `5ull`, `1.5f`, `1.5L`) or, for a type without one, a cast
  *   (`(uint8_t)5`). Without a type an int is the first of `int`, `long` and `unsigned long` that holds it, and a float a
- *   `double`.
- * - `identifier`: the value bound to a variable (`name`).
+ *   `double`. Its own, not the framework's `literal`: it has C's `type` besides its `domain`.
+ * - `variable`: the framework's: an identifier, the value bound to a variable (`name`).
  * - `unary` (`operator`: `+`, `-`, `!`, `~`; `operand`) and `binary` (`operator`: `*`, `/`, `%`, `+`, `-`, `<<`, `>>`,
  *   `<`, `<=`, `>`, `>=`, `==`, `!=`, `&`, `^`, `|`, `&&`, `||`; `left`, `right`).
  * - `conditional`: `condition ? consequent : alternative`.
@@ -38,12 +39,12 @@ const { repr } = Repr;
 export const SUFFIXES: ReadonlyMap<string, string> = new Map([["unsigned int", "u"], ["long", "l"], ["unsigned long", "ul"],
   ["long long", "ll"], ["unsigned long long", "ull"], ["float", "f"], ["long double", "L"]]);
 
-/** Ccpp's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
+/** Ccpp's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   return txn.uid("mbse.Expressions.Ccpp/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
-      Term: S.OfUnion, Constant: S.OfObject, Identifier: S.OfObject, Unary: S.OfObject, Binary: S.OfObject,
+      Term: S.OfUnion, Constant: S.OfObject, Unary: S.OfObject, Binary: S.OfObject,
       Conditional: S.OfObject, Cast: S.OfObject, Member: S.OfObject, Subscript: S.OfObject,
     }) // the framework's union, found by its name
     .spec([
@@ -52,7 +53,6 @@ export function install(txn: any): any {
         type: S.OfStr, // C's, by default its value's
         domain: S.OfStr, // every term has a domain
       }),
-      (_: any) => _.Identifier.name("Expressions.Ccpp.Identifier").properties({ name: S.OfStr, domain: S.OfStr }),
       (_: any) => _.Unary.name("Expressions.Ccpp.Unary").properties({
         operator: S.OfStr, operand: _.Term, domain: S.OfStr }),
       (_: any) => _.Binary.name("Expressions.Ccpp.Binary").properties({
@@ -69,7 +69,6 @@ export function install(txn: any): any {
         array: _.Term, index: _.Term, domain: S.OfStr }),
       (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // branches added: schema extension
         (t: any) => t.name("ccpp_constant").schema([_.Constant]),
-        (t: any) => t.name("ccpp_identifier").schema([_.Identifier]),
         (t: any) => t.name("ccpp_unary").schema([_.Unary]),
         (t: any) => t.name("ccpp_binary").schema([_.Binary]),
         (t: any) => t.name("ccpp_conditional").schema([_.Conditional]),
@@ -119,7 +118,7 @@ function native(value: unknown): Writer | null {
 /** The Ccpp dialect: its kinds, as the framework reads them. */
 export const DIALECT: F.Dialect = new F.Dialect("Ccpp", {
   ccpp_constant: new F.Kind(F.LITERAL, { check: constantCheck, typed }),
-  ccpp_identifier: new F.Kind(F.REFERENCE, { required: ["name"] }),
+  variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
   ccpp_unary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
   ccpp_binary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
   ccpp_conditional: new F.Kind(F.APPLICATION, { signature: Domains.CONDITIONAL }),
@@ -146,7 +145,7 @@ export function constant(value: unknown, type: string | null = null): Writer {
 
 /** The variable `name`. */
 export function identifier(name: string): Writer {
-  return new Writer((u: any) => u.ccpp_identifier((r: any) => r.name(name)));
+  return new Writer((u: any) => u.variable((r: any) => r.name(name)));
 }
 
 /** `<operator> operand`; the operand is a spec (a native value is a constant). */

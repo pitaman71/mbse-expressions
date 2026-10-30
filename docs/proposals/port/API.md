@@ -181,9 +181,9 @@ Settled in stage 2b:
 10. **A dialect's kinds are branches of `Expressions.Framework.Term` named `<dialect>_<kind>`** (lowercase dialect:
     `python_binop`, `latex_frac`), their schemas `Expressions.<Dialect>.<Kind>`, every kind with `domain`: every dialect
     adds its kinds to the one union, and several have a `binary`, a `constant` or a `member`. A dialect reuses the
-    framework's `literal`, `variable`, `let` and `call` (`callable`, `arguments`) where its kind has that shape: Matlab
-    (constants, identifiers, calls) and Excel (constants, names, `LET`, functions) do; Python reuses `let`, Ccpp and
-    SystemVerilog `call`; Latex none. Each dialect's package exports its `install`.
+    framework's `literal`, `variable`, `let` and `call` (`callable`, `arguments`) where its kind has that shape
+    (item 15).
+    Each dialect's package exports its `install`.
 11. **An import kind's names are read from its attributes**: `Kind.names(attributes)` in place of `names(record)`, so
     that a translator can tell which names an import it writes binds before it is written (a `Prelude`).
 12. **A translation is a writer** of the target dialect's term, which its caller writes in a transaction, in a store
@@ -201,6 +201,30 @@ Settled in stage 2b:
     `excel`, `latex`, `domains`, `collections`, `ccpp`, `systemverilog`), in one store holding every install, with one
     `DIALECTS` map in the corpus naming the dialect that reads each case other than Basic's; CONF-04 validates each case
     in its dialect.
+15. **Every dialect reuses the framework's kinds wherever the shape matches exactly** (the proposal, Decided,
+    2026-10-30): `literal` (`value`, one of the five basic scalars; `domain`), `variable` (`name`, `domain`), `let`
+    (`name`, `value`, `body`, `domain`) and `call` (`callable` by name, positional `arguments`, `domain`). A restriction
+    of the dialect's on a reused kind is its `Kind`'s check, reported by validation (Latex's and SystemVerilog's writers
+    write any value, as they did; Matlab's and Excel's raise `TypeError`, as they did). Kind by kind:
+    - Matlab and Excel, as before: `literal` (no bytes: "a literal cannot hold a bytes", "an Excel literal cannot hold
+      a bytes"), `variable`, `call`, and Excel's `let`.
+    - Python: `python_constant` → `literal` (the same five scalars, no check), `python_name` → `variable` (its
+      builtins the `Kind`'s ambient names, "a name must be an identifier" its check), `let` as before. `python_call`
+      stays: its callee is a slot, a term (`np.add` is an attribute of a name), where `call`'s `callable` is a name.
+    - Latex: `latex_constant` → `literal` (no bytes, a new check, "a Latex literal cannot hold a bytes": the old
+      schema took bytes without a word), `latex_symbol` → `variable`, `latex_function` → `call` (its `name` is now
+      `callable`), `latex_where` → `let` (`name`, `value`, `body`, as a let's). Its `member`, `binary`, `unary` and
+      `frac` stay: no framework kind has their shape.
+    - Ccpp: `ccpp_identifier` → `variable`. `ccpp_constant` stays: it has C's `type` besides its `domain`.
+    - SystemVerilog: `systemverilog_constant` → `literal` (no bool, no bytes, its check, whose message is now "a
+      SystemVerilog literal cannot hold a bool", was "a constant cannot hold a bool"), `systemverilog_identifier` →
+      `variable`. `systemverilog_vector` stays: its `value` is its bits, a str, with `signed` and `base`.
+
+    So validation names the framework's kind where it named the dialect's: "variable 'x' is not bound" (was
+    "python_name 'x'", "latex_symbol 'x'", "ccpp_identifier 'x'", "systemverilog_identifier 'x'"), "a variable needs a
+    name", "a literal needs a value", and translation "Python literal b'\x00' has no Matlab counterpart" (was "Python
+    constant"). A term of one of these kinds is the same value in each dialect that reuses it: Basic's `variable` is
+    Python's name, so evaluating it in Python looks the name up, where it raised "Python has no kind 'variable'".
 
 ## What stage 2b needed (done)
 

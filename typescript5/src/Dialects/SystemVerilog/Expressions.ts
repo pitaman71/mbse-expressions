@@ -2,10 +2,11 @@
  * Expressions of the SystemVerilog dialect: expressions and constraints of SystemVerilog (and Verilog), over its
  * 4-state and 2-state vectors and reals, as its source writes them.
  *
- * - `constant`: an unsized decimal integer (an `integer`), a real, or a string literal.
+ * - `literal` (the framework's): a constant, an unsized decimal integer (an `integer`), a real, or a string literal; it
+ *   holds no bool nor bytes, which validation reports.
  * - `vector`: a sized literal, its bits MSB first (`0`, `1`, `x`, `z`), `signed` or not, written in its `base` (`b`,
  *   `o`, `d` or `h`; binary by default, and wherever the base cannot write the bits): `8'hFF`, `4'b10x1`, `8'sd5`.
- * - `identifier`: the value bound to a variable.
+ * - `variable` (the framework's): an identifier, the value bound to a variable.
  * - `unary`: `+`, `-`, `!`, `~` and the reductions `&`, `~&`, `|`, `~|`, `^`, `~^`.
  * - `binary`: `**`, `*`, `/`, `%`, `+`, `-`, `<<`, `>>`, `<<<`, `>>>`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`,
  *   `==?`, `!=?`, `&`, `^`, `^~`, `~^`, `|`, `&&`, `||`, and the implications `->` and `<->`.
@@ -23,12 +24,12 @@
  * - `iterate`: a reduction with a `with` clause, `array.method(name) with (body)`, which binds `name` (the iterator) to
  *   each item of the array within the body and reduces the body's values: `ports.and(p) with (p.pin > 0)`.
  *
- * There is no binding: translators substitute a let's value for its name. `install` adds the kinds (but `call`, the
- * framework's) to `Expressions.Framework.Term` by schema extension, each a value object
- * `Expressions.SystemVerilog.<Kind>` with a `domain`, as the branch `systemverilog_<kind>` (`PREFIX`): dialects share
- * kind names, and a branch's name is unique in the union; `DIALECT` reads them. The writers (`constant`, `vector`, ...)
- * write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an expression as
- * SystemVerilog source, with its precedence.
+ * There is no binding: translators substitute a let's value for its name. `install` adds the kinds (but `literal`,
+ * `variable` and `call`, the framework's, whose shape these have) to `Expressions.Framework.Term` by schema extension,
+ * each a value object `Expressions.SystemVerilog.<Kind>` with a `domain`, as the branch `systemverilog_<kind>`
+ * (`PREFIX`): dialects share kind names, and a branch's name is unique in the union; `DIALECT` reads them. The writers
+ * (`constant`, `vector`, ...) write terms through the builders, wherever a term is written, in a transaction.
+ * `Text.ToText` writes an expression as SystemVerilog source, with its precedence.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -53,7 +54,10 @@ export const BASES: Record<string, number> = { b: 1, o: 3, h: 4, d: 0 };
 /** What names each branch this dialect adds to `Expressions.Framework.Term`: `systemverilog_binary`, ... */
 export const PREFIX = "systemverilog_";
 
-/** A term's kind, as this dialect names it (its branch's tag without `PREFIX`: `binary`, `call`), and its record. */
+/**
+ * A term's kind, as this dialect names it (its branch's tag without `PREFIX`: `binary`, `literal`, `call`), and its
+ * record.
+ */
 export function kindOf(term: any): [string, any] {
   const [tag, record] = F.kindOf(term);
   return [tag.startsWith(PREFIX) ? tag.slice(PREFIX.length) : tag, record];
@@ -65,9 +69,7 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const terms = (_: any) => S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term]));
   const kinds: Record<string, (_: any) => Record<string, unknown>> = {
-    Constant: () => ({ value: S.OfAny((a: any) => a.schemas([S.OfInt, S.OfFloat, S.OfStr])) }),
     Vector: () => ({ value: S.OfStr, signed: S.OfBool, base: S.OfStr }), // its bits, MSB first
-    Identifier: () => ({ name: S.OfStr }),
     Unary: (_) => ({ operator: S.OfStr, operand: _.Term }),
     Binary: (_) => ({ operator: S.OfStr, left: _.Term, right: _.Term }),
     Conditional: (_) => ({ condition: _.Term, consequent: _.Term, alternative: _.Term }),
@@ -93,9 +95,12 @@ export function install(txn: any): any {
     ])]))]);
 }
 
-function constantCheck(record: any): string[] {
+const SCALARS = ["bigint", "number", "string"]; // what a constant holds: no bool, no bytes
+
+/** A literal holds what a constant of SystemVerilog does: the framework's literal may hold more. */
+function literalCheck(record: any): string[] {
   const value = F.attributesOf(record).get("value");
-  return ["bigint", "number", "string"].includes(typeof value) ? [] : [`a constant cannot hold a ${typeName(value)}`];
+  return SCALARS.includes(typeof value) ? [] : [`a SystemVerilog literal cannot hold a ${typeName(value)}`];
 }
 
 function vectorCheck(record: any): string[] {
@@ -138,14 +143,14 @@ function iterateCheck(record: any): string[] {
 
 /** The constant of a native value: a bigint, a number or a string. */
 function native(value: unknown): Writer | null {
-  return ["bigint", "number", "string"].includes(typeof value) ? constant(value) : null;
+  return SCALARS.includes(typeof value) ? constant(value) : null;
 }
 
 /** The SystemVerilog dialect: its kinds, as the framework reads them. */
 export const DIALECT = new F.Dialect("SystemVerilog", {
-  [PREFIX + "constant"]: new F.Kind(F.LITERAL, { check: constantCheck }),
+  literal: new F.Kind(F.LITERAL, { check: literalCheck }),
   [PREFIX + "vector"]: new F.Kind(F.LITERAL, { check: vectorCheck, typed: vectorTyped }),
-  [PREFIX + "identifier"]: new F.Kind(F.REFERENCE, { required: ["name"] }),
+  variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
   [PREFIX + "unary"]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
   [PREFIX + "binary"]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
   [PREFIX + "conditional"]: new F.Kind(F.APPLICATION, { signature: Domains.CONDITIONAL }),
@@ -168,12 +173,15 @@ export const DIALECT = new F.Dialect("SystemVerilog", {
 /** A SystemVerilog term, written through the builders where it is given. */
 export class Writer extends F.Writer {}
 
+/** The framework's kinds, whose branches are not prefixed. */
+const FRAMEWORK = ["variable", "call"];
+
 /** The writer of a term of `tag`: its attributes (those not null), its slots (specs) and its variadic arguments. */
 function kind(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown> = {},
   variadic: [string, unknown[]] | null = null): Writer {
   const specs = Object.entries(slots).map(([name, value]) => [name, DIALECT.spec(value)] as const);
   const elements = variadic === null ? null : [variadic[0], variadic[1].map((value) => DIALECT.spec(value))] as const;
-  return new Writer((u: any) => u[tag === "call" ? tag : PREFIX + tag]((r: any) => {
+  return new Writer((u: any) => u[FRAMEWORK.includes(tag) ? tag : PREFIX + tag]((r: any) => {
     for (const [name, value] of Object.entries(attributes)) {
       if (value !== null && value !== undefined) r[name]((p: any) => p.as_scalar(value));
     }
@@ -183,9 +191,9 @@ function kind(tag: string, attributes: Record<string, unknown>, slots: Record<st
   }));
 }
 
-/** An unsized integer, a real or a string literal. */
+/** An unsized integer, a real or a string literal (validation reports any other value). */
 export function constant(value: unknown): Writer {
-  return new Writer((u: any) => u.systemverilog_constant((r: any) => r.value((p: any) => p.as_scalar(value))));
+  return new Writer((u: any) => u.literal((r: any) => r.value((p: any) => p.as_scalar(value))));
 }
 
 /** A sized literal of `bits`, MSB first. */
@@ -194,7 +202,7 @@ export function vector(bits: string, signed: boolean | null = null, base: string
 }
 
 export function identifier(name: string): Writer {
-  return kind("identifier", { name });
+  return kind("variable", { name });
 }
 
 /** `<operator> operand`; the operand is a spec (a native value is a constant). */

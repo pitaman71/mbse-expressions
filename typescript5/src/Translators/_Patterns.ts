@@ -53,22 +53,22 @@ export const Basic = {
 };
 
 function call(fn: string, ...args: (P | Hole)[]): P {
-  return new P("python_call", {}, new P("python_name", { name: fn }), ...args);
+  return new P("python_call", {}, new P("variable", { name: fn }), ...args);
 }
 
 export const Python = {
-  constant: (V: Hole) => new P("python_constant", { value: V }),
-  name: new P("python_name", { name: N }),
+  constant: (V: Hole) => new P("literal", { value: V }),
+  name: new P("variable", { name: N }),
   let: new P("let", { name: N }, A, B),
   get: new P("python_attribute", { attr: K }, X),
-  has: new P("python_call", {}, new P("python_name", { name: "hasattr" }), X, new P("python_constant", { value: K })),
-  implies: new P("python_ifexp", {}, A, B, new P("python_constant", { value: true })),
+  has: new P("python_call", {}, new P("variable", { name: "hasattr" }), X, new P("literal", { value: K })),
+  implies: new P("python_ifexp", {}, A, B, new P("literal", { value: true })),
   ifexp: new P("python_ifexp", {}, A, B, C),
   shr: new P("python_binop", { operator: ">>" }, A, B),
   all_: call("all", new P("python_generator", { name: N }, A, B)),
   any_: call("any", new P("python_generator", { name: N }, A, B)),
   /** sum(1 for n in a if b). */
-  count_where: call("sum", new P("python_generator", { name: N }, A, new P("python_constant", { value: 1n }), B)),
+  count_where: call("sum", new P("python_generator", { name: N }, A, new P("literal", { value: 1n }), B)),
   /** len, sum, min, max. */
   builtin: (fn: string) => call(fn, A),
   index: new P("python_index", {}, A, B),
@@ -78,7 +78,7 @@ export const Python = {
 
 /** The function `np.<fn>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'. */
 function numpy(fn: string): P {
-  let callee = new P("python_name", { name: "np" });
+  let callee = new P("variable", { name: "np" });
   for (const attr of fn.split(".")) callee = new P("python_attribute", { attr }, callee);
   return callee;
 }
@@ -88,7 +88,7 @@ export const Numpy = {
   call: (fn: string, ...args: (P | Hole)[]) => new P("python_call", {}, numpy(fn), ...args),
   get: new P("python_subscript", { key: K }, X),
   has: new P("python_call", {}, numpy("logical_not"), new P("python_call", {}, numpy("ma.getmaskarray"), new P("python_subscript", { key: K }, X))),
-  implies: new P("python_call", {}, numpy("where"), A, B, new P("python_constant", { value: true })),
+  implies: new P("python_call", {}, numpy("where"), A, B, new P("literal", { value: true })),
   prelude: new P("python_import", { module: "numpy", alias: "np" }, new Hole("B")),
   /** Rules for operators that are numpy functions of the same arguments. */
   renames(kind: string, attribute: string, names: Record<string, string>, arity: number): Rule[] {
@@ -117,7 +117,7 @@ export const Matlab = {
 
 export const Ccpp = {
   constant: (V: Hole) => new P("ccpp_constant", { value: V }), // untyped
-  identifier: new P("ccpp_identifier", { name: N }),
+  identifier: new P("variable", { name: N }),
   get: new P("ccpp_member", { name: K }, X), // with '.'
   implies: new P("ccpp_binary", { operator: "||" }, new P("ccpp_unary", { operator: "!" }, A), B),
 };
@@ -125,8 +125,8 @@ export const Ccpp = {
 const method = (name: string, array: P | Hole) => new P("systemverilog_method", { name }, array);
 
 export const SystemVerilog = {
-  constant: (V: Hole) => new P("systemverilog_constant", { value: V }),
-  identifier: new P("systemverilog_identifier", { name: N }),
+  constant: (V: Hole) => new P("literal", { value: V }),
+  identifier: new P("variable", { name: N }),
   get: new P("systemverilog_member", { name: K }, X),
   implies: new P("systemverilog_binary", { operator: "->" }, A, B),
   /** a.method(n) with (b). */
@@ -136,7 +136,7 @@ export const SystemVerilog = {
   /** size, sum. */
   method: (name: string) => method(name, A),
   /** a.min()[0]. */
-  locate: (name: string) => new P("systemverilog_select", {}, method(name, A), new P("systemverilog_constant", { value: 0n })),
+  locate: (name: string) => new P("systemverilog_select", {}, method(name, A), new P("literal", { value: 0n })),
   select: new P("systemverilog_select", {}, A, B),
   inside: new P("systemverilog_inside", {}, A, B),
   unique: new P("systemverilog_binary", { operator: "==" }, method("size", method("unique", A)), method("size", A)),
@@ -167,11 +167,11 @@ export const Excel = {
 };
 
 export const Latex = {
-  constant: (V: Hole) => new P("latex_constant", { value: V }),
-  symbol: new P("latex_symbol", { name: N }),
-  where: new P("latex_where", { name: N }, A, B),
+  constant: (V: Hole) => new P("literal", { value: V }),
+  symbol: new P("variable", { name: N }),
+  where: new P("let", { name: N }, A, B),
   get: new P("latex_member", { name: K }, X),
-  has: new P("latex_function", { name: "has" }, X, new P("latex_constant", { value: K })),
+  has: new P("call", { callable: "has" }, X, new P("literal", { value: K })),
   implies: new P("latex_binary", { operator: "\\implies" }, A, B),
   frac: new P("latex_frac", {}, A, B),
 };

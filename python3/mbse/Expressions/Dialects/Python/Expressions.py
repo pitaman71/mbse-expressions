@@ -1,14 +1,16 @@
 """Expressions of the Python dialect: Python expressions, with the imports they need, as Python's `ast` has them.
 
-Python's terms are the framework's `let` and its own kinds, which `install` adds to `Expressions.Framework.Term` by
-schema extension, each a value object with a `domain`. Their tags are qualified by the dialect, `python_<kind>`
+Python's terms are the framework's `literal`, `variable` and `let`, whose shape Python's constants, names and
+`(lambda name: body)(value)` have, and its own kinds, which `install` adds to `Expressions.Framework.Term` by schema
+extension, each a value object with a `domain`. The tags of its own are qualified by the dialect, `python_<kind>`
 (`python_binop`), since every dialect adds its kinds to the one union of terms:
 
-- `python_constant`: a basic scalar (`value`). `python_name`: the value bound to a `name`; the names of `BUILTINS` are
-  always bound.
+- `literal`, the framework's: a constant, a basic scalar (`value`). `variable`, the framework's: a name, the value
+  bound to a `name`; the names of `BUILTINS` are always bound.
 - `python_attribute`: `value.attr`. `python_subscript`: `value[key]`, for a `str` key, and `python_index`:
   `value[index]`, for an index that is an expression. `python_call`: a function, the slot `function`, applied to
-  ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of the name `np`.
+  ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of the name `np`;
+  its own, not the framework's `call`, whose callable is a name, since a Python callee is a term.
 - `python_compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`), `python_boolop` (`and`, `or`), `python_binop`
   (`+`, `-`, `*`, `/`, `//`, `%`, `**`, `&`, `|`, `^`, `<<`, `>>`) and `python_unaryop` (`not`, `-`, `+`, `~`), each
   with one `operator` and two operands, `left` and `right` (one, `operand`, for `python_unaryop`).
@@ -40,26 +42,22 @@ __all__ = ["install", "DIALECT", "BUILTINS", "Writer", "constant", "name", "attr
            "compare", "boolop", "binop", "unaryop", "ifexp", "generator", "let_", "import_", "importfrom"]
 
 CONSTANT, NAME, ATTRIBUTE, SUBSCRIPT, INDEX, CALL = (
-    "python_constant", "python_name", "python_attribute", "python_subscript", "python_index", "python_call")
+    "literal", "variable", "python_attribute", "python_subscript", "python_index", "python_call")
 COMPARE, BOOLOP, BINOP, UNARYOP, IFEXP, GENERATOR = (
     "python_compare", "python_boolop", "python_binop", "python_unaryop", "python_ifexp", "python_generator")
 LET, IMPORT, IMPORTFROM = "let", "python_import", "python_importfrom"
 
 
 def install(txn: Any) -> Any:
-    """Python's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
+    """Python's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its
+    own."""
     S = txn.Schemas
-    kinds = {"Constant": CONSTANT, "Name": NAME, "Attribute": ATTRIBUTE, "Subscript": SUBSCRIPT, "Index": INDEX,
+    kinds = {"Attribute": ATTRIBUTE, "Subscript": SUBSCRIPT, "Index": INDEX,
              "Call": CALL, "Compare": COMPARE, "BoolOp": BOOLOP, "BinOp": BINOP, "UnaryOp": UNARYOP, "IfExp": IFEXP,
              "GeneratorExp": GENERATOR, "Import": IMPORT, "ImportFrom": IMPORTFROM}
     return txn.uid("mbse.Expressions.Python/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Term": S.OfUnion, **{kind: S.OfObject for kind in kinds}})  # the framework's union, by its name
         .spec([
-            lambda _: _.Constant.name("Expressions.Python.Constant").properties({
-                "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes])),
-                "domain": S.OfStr,  # every term has a domain
-            }),
-            lambda _: _.Name.name("Expressions.Python.Name").properties({"name": S.OfStr, "domain": S.OfStr}),
             lambda _: _.Attribute.name("Expressions.Python.Attribute").properties({
                 "attr": S.OfStr, "value": _.Term, "domain": S.OfStr}),
             lambda _: _.Subscript.name("Expressions.Python.Subscript").properties({

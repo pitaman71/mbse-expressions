@@ -12,7 +12,7 @@ const V = value(BigInt, Number, String, Boolean);
 export const TRANSLATOR = new Pairwise(MATLAB, LATEX, [
   new Rule(Matlab.constant(V), Latex.constant(V)),
   new Rule(Matlab.identifier, Latex.symbol),
-  new Inline("latex_where", "right"),
+  new Inline("let", "right"),
   new Elide("matlab_import", "left"),
   new Rule(Matlab.get, Latex.get),
   new Rule(Matlab.has, Latex.has),

@@ -7,7 +7,7 @@
           "systemverilog_member": {
             "name": "a",
             "object": {
-              "systemverilog_identifier": {
+              "variable": {
                 "name": "this"
               }
             }
@@ -15,19 +15,19 @@
         },
         "items": [
           {
-            "systemverilog_constant": {
+            "literal": {
               "value": 1
             }
           },
           {
             "systemverilog_span": {
               "low": {
-                "systemverilog_constant": {
+                "literal": {
                   "value": 2
                 }
               },
               "high": {
-                "systemverilog_constant": {
+                "literal": {
                   "value": 5
                 }
               }
@@ -44,12 +44,12 @@
             "operand": {
               "systemverilog_select": {
                 "value": {
-                  "systemverilog_identifier": {
+                  "variable": {
                     "name": "this"
                   }
                 },
                 "index": {
-                  "systemverilog_constant": {
+                  "literal": {
                     "value": 0
                   }
                 }
@@ -63,7 +63,7 @@
               {
                 "systemverilog_replication": {
                   "count": {
-                    "systemverilog_constant": {
+                    "literal": {
                       "value": 6
                     }
                   },
@@ -80,19 +80,19 @@
                     "systemverilog_member": {
                       "name": "b",
                       "object": {
-                        "systemverilog_identifier": {
+                        "variable": {
                           "name": "this"
                         }
                       }
                     }
                   },
                   "msb": {
-                    "systemverilog_constant": {
+                    "literal": {
                       "value": 7
                     }
                   },
                   "lsb": {
-                    "systemverilog_constant": {
+                    "literal": {
                       "value": 4
                     }
                   }
@@ -119,14 +119,14 @@
                             "systemverilog_method": {
                               "name": "unique",
                               "array": {
-                                "systemverilog_identifier": {
+                                "variable": {
                                   "name": "this"
                                 }
                               }
                             }
                           },
                           "body": {
-                            "systemverilog_identifier": {
+                            "variable": {
                               "name": "q"
                             }
                           }

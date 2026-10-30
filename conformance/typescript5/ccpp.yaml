@@ -9,7 +9,7 @@ ccpp_conditional:
             ccpp_member:
               name: a
               object:
-                ccpp_identifier:
+                variable:
                   name: this
       right:
         ccpp_binary:
@@ -21,7 +21,7 @@ ccpp_conditional:
                   name: b
                   operator: '->'
                   object:
-                    ccpp_identifier:
+                    variable:
                       name: this
               index:
                 ccpp_constant:

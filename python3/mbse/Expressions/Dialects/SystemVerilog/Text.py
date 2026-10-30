@@ -74,12 +74,12 @@ def ToText(expression: Any) -> str:
         tag, record = kind_of(node)
         attributes = F.attributes_of(record)
         name = attributes.get("name")
-        if tag == "constant":
+        if tag == "literal":
             text = _constant(attributes.get("value"))
             return text, (_MULTIPLICATIVE if "/" in text else _UNARY if text.startswith("-") else _PRIMARY)
         if tag == "vector":
             return _vector(attributes), _PRIMARY
-        if tag == "identifier":
+        if tag == "variable":
             return name, _PRIMARY
         if tag == "member":
             return f"{operand(0, _PRIMARY)}.{name}", _PRIMARY

@@ -9,7 +9,7 @@ python_import:
         let:
           name: a
           value:
-            python_name:
+            variable:
               name: this
           body:
             python_ifexp:
@@ -26,21 +26,21 @@ python_import:
                             python_subscript:
                               key: k
                               value:
-                                python_name:
+                                variable:
                                   name: a
                           right:
-                            python_constant:
+                            literal:
                               value: 18
                   right:
                     python_attribute:
                       attr: pi
                       value:
-                        python_name:
+                        variable:
                           name: np
               body:
                 python_call:
                   function:
-                    python_name:
+                    variable:
                       name: floor
                   arguments:
                   - python_binop:
@@ -49,10 +49,10 @@ python_import:
                         python_attribute:
                           attr: x
                           value:
-                            python_name:
+                            variable:
                               name: a
                       right:
-                        python_constant:
+                        literal:
                           value: 2.5
               orelse:
                 python_generator:
@@ -61,18 +61,18 @@ python_import:
                     python_attribute:
                       attr: 'y'
                       value:
-                        python_name:
+                        variable:
                           name: a
                   element:
                     python_index:
                       value:
-                        python_name:
+                        variable:
                           name: p
                       index:
-                        python_constant:
+                        literal:
                           value:
                             scalar:
                               bytes: 'AA=='
                   conditions:
-                  - python_name:
+                  - variable:
                       name: p

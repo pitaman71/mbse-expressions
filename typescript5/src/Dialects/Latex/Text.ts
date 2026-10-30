@@ -58,14 +58,14 @@ export function ToText(expression: unknown): string {
     };
     const [tag, record] = F.kindOf(node);
     const attributes = F.attributesOf(record);
-    if (tag === "latex_constant") return constantText(attributes.get("value"));
-    if (tag === "latex_symbol") return [nameText(attributes.get("name")), ATOM];
+    if (tag === "literal") return constantText(attributes.get("value"));
+    if (tag === "variable") return [nameText(attributes.get("name")), ATOM];
     if (tag === "latex_member") return [`${operand(0, ATOM)}.${nameText(attributes.get("name"))}`, ATOM];
-    if (tag === "latex_function") {
-      return [`\\operatorname{${attributes.get("name")}}(${args.map(([t]) => t).join(", ")})`, ATOM];
+    if (tag === "call") {
+      return [`\\operatorname{${attributes.get("callable")}}(${args.map(([t]) => t).join(", ")})`, ATOM];
     }
     if (tag === "latex_frac") return [`\\frac{${args[0]?.[0]}}{${args[1]?.[0]}}`, ATOM];
-    if (tag === "latex_where") {
+    if (tag === "let") {
       const name = nameText(attributes.get("name"));
       return [`${operand(1, IMPLIES)} \\quad \\text{where } ${name} = ${operand(0, IMPLIES)}`, WHERE];
     }

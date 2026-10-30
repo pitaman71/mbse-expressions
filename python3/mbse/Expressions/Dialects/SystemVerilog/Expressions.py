@@ -1,10 +1,11 @@
 """Expressions of the SystemVerilog dialect: expressions and constraints of SystemVerilog (and Verilog), over its
 4-state and 2-state vectors and reals, as its source writes them.
 
-- `constant`: an unsized decimal integer (an `integer`), a real, or a string literal.
+- `literal` (the framework's): a constant, an unsized decimal integer (an `integer`), a real, or a string literal; it
+  holds no bool nor bytes, which validation reports.
 - `vector`: a sized literal, its bits MSB first (`0`, `1`, `x`, `z`), `signed` or not, written in its `base` (`b`, `o`,
   `d` or `h`; binary by default, and wherever the base cannot write the bits): `8'hFF`, `4'b10x1`, `8'sd5`.
-- `identifier`: the value bound to a variable.
+- `variable` (the framework's): an identifier, the value bound to a variable.
 - `unary`: `+`, `-`, `!`, `~` and the reductions `&`, `~&`, `|`, `~|`, `^`, `~^`.
 - `binary`: `**`, `*`, `/`, `%`, `+`, `-`, `<<`, `>>`, `<<<`, `>>>`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`,
   `==?`, `!=?`, `&`, `^`, `^~`, `~^`, `|`, `&&`, `||`, and the implications `->` and `<->`.
@@ -22,12 +23,12 @@
 - `iterate`: a reduction with a `with` clause, `array.method(name) with (body)`, which binds `name` (the iterator) to
   each item of the array within the body and reduces the body's values: `ports.and(p) with (p.pin > 0)`.
 
-There is no binding: translators substitute a let's value for its name. `install` adds the kinds (but `call`, the
-framework's) to `Expressions.Framework.Term` by schema extension, each a value object
-`Expressions.SystemVerilog.<Kind>` with a `domain`, as the branch `systemverilog_<kind>` (`PREFIX`): dialects share
-kind names, and a branch's name is unique in the union; `DIALECT` reads them. The writers (`constant`, `vector`, ...)
-write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an expression as
-SystemVerilog source, with its precedence.
+There is no binding: translators substitute a let's value for its name. `install` adds the kinds (but `literal`,
+`variable` and `call`, the framework's, whose shape these have) to `Expressions.Framework.Term` by schema extension,
+each a value object `Expressions.SystemVerilog.<Kind>` with a `domain`, as the branch `systemverilog_<kind>` (`PREFIX`):
+dialects share kind names, and a branch's name is unique in the union; `DIALECT` reads them. The writers (`constant`,
+`vector`, ...) write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an
+expression as SystemVerilog source, with its precedence.
 """
 
 from __future__ import annotations
@@ -56,14 +57,15 @@ PREFIX = "systemverilog_"
 
 
 def kind_of(term: Any) -> tuple[str, Any]:
-    """A term's kind, as this dialect names it (its branch's tag without `PREFIX`: `binary`, `call`), and its record."""
+    """A term's kind, as this dialect names it (its branch's tag without `PREFIX`: `binary`, `literal`, `call`), and its
+    record."""
     tag, record = F.kind_of(term)
     return tag.removeprefix(PREFIX), record
 
 
 def install(txn: Any) -> Any:
     """SystemVerilog's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own.
-    Its `call` is the framework's."""
+    Its `literal`, `variable` and `call` are the framework's."""
     S = txn.Schemas
 
     def kind(name: str, properties: Any) -> Any:  # every term has a domain, by name
@@ -71,9 +73,7 @@ def install(txn: Any) -> Any:
             {**properties(_), "domain": S.OfStr})
 
     kinds = {
-        "Constant": lambda _: {"value": S.OfAny(lambda a: a.schemas([S.OfInt, S.OfFloat, S.OfStr]))},
         "Vector": lambda _: {"value": S.OfStr, "signed": S.OfBool, "base": S.OfStr},  # its bits, MSB first
-        "Identifier": lambda _: {"name": S.OfStr},
         "Unary": lambda _: {"operator": S.OfStr, "operand": _.Term},
         "Binary": lambda _: {"operator": S.OfStr, "left": _.Term, "right": _.Term},
         "Conditional": lambda _: {"condition": _.Term, "consequent": _.Term, "alternative": _.Term},
@@ -97,9 +97,13 @@ def install(txn: Any) -> Any:
         ])]))])
 
 
-def _constant_check(record: Any) -> list[str]:
+_SCALARS = (int, float, str)  # what a constant holds: no bool, no bytes
+
+
+def _literal_check(record: Any) -> list[str]:
+    """A literal holds what a constant of SystemVerilog does: the framework's literal may hold more."""
     value = F.attributes_of(record)["value"]
-    return [] if type(value) in (int, float, str) else [f"a constant cannot hold a {type(value).__name__}"]
+    return [] if type(value) in _SCALARS else [f"a SystemVerilog literal cannot hold a {type(value).__name__}"]
 
 
 def _vector_check(record: Any) -> list[str]:
@@ -147,13 +151,13 @@ def _iterate_check(record: Any) -> list[str]:
 
 def _native(value: Any) -> Writer | None:
     """The constant of a native value: an int, a float or a str."""
-    return constant(value) if type(value) in (int, float, str) else None
+    return constant(value) if type(value) in _SCALARS else None
 
 
 DIALECT = F.Dialect("SystemVerilog", {
-    PREFIX + "constant": F.Kind(F.LITERAL, check=_constant_check),
+    "literal": F.Kind(F.LITERAL, check=_literal_check),
     PREFIX + "vector": F.Kind(F.LITERAL, check=_vector_check, typed=_vector_typed),
-    PREFIX + "identifier": F.Kind(F.REFERENCE, required=("name",)),
+    "variable": F.Kind(F.REFERENCE, required=("name",)),
     PREFIX + "unary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.UNARY, required=("operator",)),
     PREFIX + "binary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.BINARY, required=("operator",)),
     PREFIX + "conditional": F.Kind(F.APPLICATION, signature=Domains.CONDITIONAL),
@@ -186,6 +190,9 @@ def _spec(value: Any) -> F.Writer:
     return DIALECT.spec(value)
 
 
+_FRAMEWORK = ("variable", "call")  # the framework's kinds, whose branches are not prefixed
+
+
 def _kind(tag: str, attributes: dict[str, Any], slots: dict[str, Any] | None = None,
           variadic: tuple[str, list[Any]] | None = None) -> Writer:
     """The writer of a term of `tag`: its attributes (those not None), its slots (specs) and its variadic arguments."""
@@ -203,17 +210,14 @@ def _kind(tag: str, attributes: dict[str, Any], slots: dict[str, Any] | None = N
                 getattr(r, elements[0])(elements[1])
             return r
 
-        return getattr(u, tag if tag == "call" else PREFIX + tag)(record)
+        return getattr(u, tag if tag in _FRAMEWORK else PREFIX + tag)(record)
 
     return Writer(write)
 
 
 def constant(value: Any) -> Writer:
-    """An unsized integer, a real or a string literal."""
-    def write(u: Any) -> Any:
-        return u.systemverilog_constant(lambda r: r.value(lambda p: p.as_scalar(value)))
-
-    return Writer(write)
+    """An unsized integer, a real or a string literal (validation reports any other value)."""
+    return Writer(lambda u: u.literal(lambda r: r.value(lambda p: p.as_scalar(value))))
 
 
 def vector(bits: str, signed: bool | None = None, base: str | None = None) -> Writer:
@@ -222,7 +226,7 @@ def vector(bits: str, signed: bool | None = None, base: str | None = None) -> Wr
 
 
 def identifier(name: str) -> Writer:
-    return _kind("identifier", {"name": name})
+    return _kind("variable", {"name": name})
 
 
 def unary(operator: str, operand: Any) -> Writer:

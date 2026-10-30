@@ -10,14 +10,14 @@ written nested, indent 2) and `<case>.yaml`.
 | Case | Covers |
 |---|---|
 | `expression` | a Basic term, written nested under `Expressions.Framework.Term`: every kind and literal type, a let and its variable, an extension operation |
-| `python` | a Python term: every kind (the framework's `let`, and `python_import`, `python_importfrom`, `python_ifexp`, `python_boolop`, `python_unaryop`, `python_compare`, `python_subscript`, `python_attribute`, `python_name`, `python_call`, `python_binop`, `python_generator`, `python_index`, `python_constant`), imports included, shared names |
+| `python` | a Python term: every kind (the framework's `literal`, `variable` and `let`, and `python_import`, `python_importfrom`, `python_ifexp`, `python_boolop`, `python_unaryop`, `python_compare`, `python_subscript`, `python_attribute`, `python_call`, `python_binop`, `python_generator`, `python_index`), imports included, shared names |
 | `matlab` | a Matlab term: every kind (the framework's `literal`, `variable` and `call`, and `matlab_binary`, `matlab_unary`, `matlab_field`, `matlab_index`, `matlab_arrayfun`, `matlab_import`), shared identifiers |
 | `excel` | an Excel term: every kind (the framework's `literal`, `variable`, `let` and `call`, and `excel_infix`, `excel_prefix`, `excel_field`, `excel_map`, `excel_cell`), cells in other sheets and books included, shared names |
-| `latex` | a Latex term: every kind (`latex_where`, `latex_member`, `latex_binary`, `latex_unary`, `latex_function`, `latex_frac`, `latex_symbol`, `latex_constant`), with shared symbols |
+| `latex` | a Latex term: every kind (the framework's `literal`, `variable`, `let` and `call`, and `latex_member`, `latex_binary`, `latex_unary`, `latex_frac`), with shared symbols |
 | `domains` | Basic literals of value domains, each naming its domain, decimal and `binary128` text, a conversion's domain, a bitwise operation and `pack` |
 | `collections` | a Basic quantifier over an object's entries, and the collection operations |
-| `ccpp` | a Ccpp term: every kind (the framework's `call`, and `ccpp_conditional`, `ccpp_binary`, `ccpp_unary`, `ccpp_member`, `ccpp_subscript`, `ccpp_cast`, `ccpp_constant`, `ccpp_identifier`), typed constants and a shared identifier |
-| `systemverilog` | a SystemVerilog term: every kind (its own, as `systemverilog_<kind>` branches, and the framework's `call`), sized vectors in a base, casts to a type and a width, a shared identifier |
+| `ccpp` | a Ccpp term: every kind (the framework's `variable` and `call`, and `ccpp_conditional`, `ccpp_binary`, `ccpp_unary`, `ccpp_member`, `ccpp_subscript`, `ccpp_cast`, `ccpp_constant`), typed constants and a shared identifier |
+| `systemverilog` | a SystemVerilog term: every kind (its own, as `systemverilog_<kind>` branches, and the framework's `literal`, `variable` and `call`), sized vectors in a base, casts to a type and a width, a shared identifier |
 
 Each case is a term value in one store holding the framework's install and every dialect's, and validates in its own
 dialect (`DIALECTS` in the corpus; Basic's by default).

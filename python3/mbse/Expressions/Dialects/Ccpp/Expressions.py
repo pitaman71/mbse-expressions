@@ -1,13 +1,15 @@
 """Expressions of the Ccpp dialect: expressions of C and C++ (a superset of both), over their arithmetic types, as their
 source writes them.
 
-Ccpp's terms are kinds of its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a
-branch tagged `ccpp_<kind>` (dialects share kind names), and the framework's `call`:
+Ccpp's terms are the framework's `variable` and `call`, whose shape C's identifiers and calls have, and kinds of its
+own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a branch tagged `ccpp_<kind>`
+(dialects share kind names):
 
 - `constant`: a number, a bool or a string literal (`value`), and optionally its type (`type`, one of `Domains.TYPES`),
   written with a suffix (`5u`, `5ull`, `1.5f`, `1.5L`) or, for a type without one, a cast (`(uint8_t)5`). Without a
-  type an int is the first of `int`, `long` and `unsigned long` that holds it, and a float a `double`.
-- `identifier`: the value bound to a variable (`name`).
+  type an int is the first of `int`, `long` and `unsigned long` that holds it, and a float a `double`. Its own, not
+  the framework's `literal`: it has C's `type` besides its `domain`.
+- `variable`: the framework's: an identifier, the value bound to a variable (`name`).
 - `unary` (`operator`: `+`, `-`, `!`, `~`; `operand`) and `binary` (`operator`: `*`, `/`, `%`, `+`, `-`, `<<`, `>>`,
   `<`, `<=`, `>`, `>=`, `==`, `!=`, `&`, `^`, `|`, `&&`, `||`; `left`, `right`).
 - `conditional`: `condition ? consequent : alternative`.
@@ -40,19 +42,18 @@ SUFFIXES = {"unsigned int": "u", "long": "l", "unsigned long": "ul", "long long"
 
 
 def install(txn: Any) -> Any:
-    """Ccpp's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
+    """Ccpp's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
     S = txn.Schemas
     return txn.uid("mbse.Expressions.Ccpp/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Term": S.OfUnion, "Constant": S.OfObject, "Identifier": S.OfObject, "Unary": S.OfObject,
-                  "Binary": S.OfObject, "Conditional": S.OfObject, "Cast": S.OfObject, "Member": S.OfObject,
-                  "Subscript": S.OfObject})  # the framework's union, found by its name
+        .symbols({"Term": S.OfUnion,  # the framework's union, found by its name
+                  "Constant": S.OfObject, "Unary": S.OfObject, "Binary": S.OfObject, "Conditional": S.OfObject,
+                  "Cast": S.OfObject, "Member": S.OfObject, "Subscript": S.OfObject})
         .spec([
             lambda _: _.Constant.name("Expressions.Ccpp.Constant").properties({
                 "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr])),
                 "type": S.OfStr,  # C's, by default its value's
                 "domain": S.OfStr,  # every term has a domain
             }),
-            lambda _: _.Identifier.name("Expressions.Ccpp.Identifier").properties({"name": S.OfStr, "domain": S.OfStr}),
             lambda _: _.Unary.name("Expressions.Ccpp.Unary").properties({
                 "operator": S.OfStr, "operand": _.Term, "domain": S.OfStr}),
             lambda _: _.Binary.name("Expressions.Ccpp.Binary").properties({
@@ -69,7 +70,6 @@ def install(txn: Any) -> Any:
                 "array": _.Term, "index": _.Term, "domain": S.OfStr}),
             lambda _: _.Term.name("Expressions.Framework.Term").branches([  # branches added: schema extension
                 lambda t: t.name("ccpp_constant").schema([_.Constant]),
-                lambda t: t.name("ccpp_identifier").schema([_.Identifier]),
                 lambda t: t.name("ccpp_unary").schema([_.Unary]),
                 lambda t: t.name("ccpp_binary").schema([_.Binary]),
                 lambda t: t.name("ccpp_conditional").schema([_.Conditional]),
@@ -118,7 +118,7 @@ def _native(value: Any) -> Writer | None:
 
 DIALECT = F.Dialect("Ccpp", {
     "ccpp_constant": F.Kind(F.LITERAL, check=_constant_check, typed=_typed),
-    "ccpp_identifier": F.Kind(F.REFERENCE, required=("name",)),
+    "variable": F.Kind(F.REFERENCE, required=("name",)),
     "ccpp_unary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.UNARY, required=("operator",)),
     "ccpp_binary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.BINARY, required=("operator",)),
     "ccpp_conditional": F.Kind(F.APPLICATION, signature=Domains.CONDITIONAL),
@@ -156,7 +156,7 @@ def constant(value: Any, type: str | None = None) -> Writer:
 
 def identifier(name: str) -> Writer:
     """The variable `name`."""
-    return Writer(lambda u: u.ccpp_identifier(lambda r: r.name(name)))
+    return Writer(lambda u: u.variable(lambda r: r.name(name)))
 
 
 def unary(operator: str, operand: Any) -> Writer:

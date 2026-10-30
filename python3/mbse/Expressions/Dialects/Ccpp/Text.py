@@ -75,7 +75,7 @@ def ToText(expression: Any) -> str:
         kind, attributes = form.kind, form.attributes
         if kind == "ccpp_constant":
             return _constant(attributes)
-        if kind == "ccpp_identifier":
+        if kind == "variable":
             return attributes["name"], _POSTFIX
         if kind == "ccpp_member":
             return f"{operand(0, _POSTFIX)}{attributes.get('operator') or '.'}{attributes['name']}", _POSTFIX

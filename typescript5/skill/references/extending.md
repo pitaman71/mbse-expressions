@@ -9,8 +9,10 @@ its install, its kinds' declarations, its writers, its domains, its evaluator an
 Its `install(txn)` adds its kinds to `Expressions.Framework.Term` by schema extension: a value object schema per kind,
 each with a `domain` (by name), a slot a property of the framework's `Term`, variadic arguments a container of `Term`
 by an int index, attributes any other scalar property. Branch tags carry the dialect's name (`latex_frac`), since every
-dialect adds its kinds to the one union; a dialect reuses the framework's `literal`, `variable`, `let` and `call`
-(`callable`, `arguments`) where its kind has that shape. Its `Terms.Dialect` declares how each kind is read, a
+dialect adds its kinds to the one union. A dialect reuses the framework's `literal`, `variable`, `let` and `call`
+(`callable` by name, positional `arguments`) wherever its kind has that shape exactly, and keeps a kind of its own
+only where the shape differs (Ccpp's constant has C's `type`; Python's call has a term for its callee); a restriction
+of its own on a reused kind ("no bytes") is its `Kind`'s check. Its `Terms.Dialect` declares how each kind is read, a
 `Terms.Kind` by tag, whose role tells validation, inference, evaluation and translation how to treat it:
 
 | Role | Is | Declares |

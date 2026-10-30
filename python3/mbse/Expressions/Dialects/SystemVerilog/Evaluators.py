@@ -237,7 +237,7 @@ class _Evaluation:
         return ctype
 
     def _type_of(self, node: Any) -> SvType | None:
-        if node.kind in ("constant", "vector", "identifier", "member", "select", "call", "method", "iterate"):
+        if node.kind in ("literal", "vector", "variable", "member", "select", "call", "method", "iterate"):
             return _type(self.own(node))
         if node.kind == "unary":
             if node.operator in ("+", "-"):
@@ -279,11 +279,11 @@ class _Evaluation:
         return self._values[id(node)]
 
     def _own(self, node: Any) -> Any:
-        if node.kind == "constant":
+        if node.kind == "literal":
             return typed(node.value)
         if node.kind == "vector":
             return Logic.of(node.value, bool(node.signed))
-        if node.kind == "identifier":
+        if node.kind == "variable":
             return typed(self.scope.lookup(node.term))
         if node.kind == "member":
             return self._member(node)

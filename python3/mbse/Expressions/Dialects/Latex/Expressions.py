@@ -1,19 +1,20 @@
 """Expressions of the Latex dialect: mathematical notation, as LaTeX's math mode writes it.
 
-`install` adds its kinds to `Expressions.Framework.Term` by schema extension, each a value object with a `domain`, by
-name, as every term has. Their tags carry the dialect's name, `latex_`, since every dialect adds its kinds to the one
-union and several have a `binary` or a `constant`:
+Latex's terms are four of the framework's kinds (`mbse.Expressions.Framework.Terms`), whose shape notation's
+constructs have, and four of its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a
+value object with a `domain`, by name, as every term has. The tags of its own carry the dialect's name, `latex_`,
+since every dialect adds its kinds to the one union and several have a `binary` or a `member`:
 
-- `latex_constant`: a number (`int` or `float`), text (`str`, written `\\text{...}`) or a truth value (`bool`): its
-  `value`.
-- `latex_symbol`: a named quantity, `a`, or `\\mathit{age}` for a longer name: its `name`.
+- `literal` (the framework's): a constant, a number (`int` or `float`), text (`str`, written `\\text{...}`) or a truth
+  value (`bool`): its `value`. Notation has no bytes: validation reports a literal holding one.
+- `variable` (the framework's): a named quantity, `a`, or `\\mathit{age}` for a longer name: its `name`.
 - `latex_binary`: `left <operator> right`, for the operators in `Domains.BINARY` (`=`, `\\neq`, `<`, `\\leq`, `>`,
   `\\geq`, `\\land`, `\\lor`, `\\implies`, `+`, `-`, `\\cdot`); `latex_unary`: `\\lnot` and `-` of its `operand`.
 - `latex_frac`: `\\frac{numerator}{denominator}`.
 - `latex_member`: `value.\\mathit{name}`, a member of a value.
-- `latex_function`: a named function (`name`) applied to ordered `arguments`, `\\operatorname{has}(x, \\text{email})`,
-  for the functions in `Domains.FUNCTIONS`.
-- `latex_where`: `body \\quad \\text{where } name = value`, which binds a name within its body.
+- `call` (the framework's): a named function (`callable`) applied to ordered `arguments`,
+  `\\operatorname{has}(x, \\text{email})`, for the functions in `Domains.FUNCTIONS`.
+- `let` (the framework's): `body \\quad \\text{where } name = value`, which binds a name within its body.
 
 Notation has no evaluator: this dialect is written, rendered, validated, inferred and translated, and evaluation belongs
 to the dialects it is translated to. `DIALECT` reads its kinds (`Terms.Dialect`); its writers (`constant`, `symbol`,
@@ -33,18 +34,12 @@ __all__ = ["install", "DIALECT", "constant", "symbol", "binary", "unary", "frac"
 
 
 def install(txn: Any) -> Any:
-    """Latex's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
+    """Latex's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
     S = txn.Schemas
     return txn.uid("mbse.Expressions.Latex/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Term": S.OfUnion, "Constant": S.OfObject, "Symbol": S.OfObject, "Binary": S.OfObject,
-                  "Unary": S.OfObject, "Frac": S.OfObject, "Member": S.OfObject, "Function": S.OfObject,
-                  "Where": S.OfObject})  # the framework's union, found by its name
+        .symbols({"Term": S.OfUnion, "Binary": S.OfObject, "Unary": S.OfObject, "Frac": S.OfObject,
+                  "Member": S.OfObject})  # the framework's union, found by its name
         .spec([
-            lambda _: _.Constant.name("Expressions.Latex.Constant").properties({
-                "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr])),  # a number, text, truth
-                "domain": S.OfStr,  # every term has a domain
-            }),
-            lambda _: _.Symbol.name("Expressions.Latex.Symbol").properties({"name": S.OfStr, "domain": S.OfStr}),
             lambda _: _.Binary.name("Expressions.Latex.Binary").properties({
                 "operator": S.OfStr, "left": _.Term, "right": _.Term, "domain": S.OfStr}),
             lambda _: _.Unary.name("Expressions.Latex.Unary").properties({
@@ -53,27 +48,22 @@ def install(txn: Any) -> Any:
                 "numerator": _.Term, "denominator": _.Term, "domain": S.OfStr}),
             lambda _: _.Member.name("Expressions.Latex.Member").properties({
                 "name": S.OfStr, "value": _.Term, "domain": S.OfStr}),
-            lambda _: _.Function.name("Expressions.Latex.Function").properties({
-                "name": S.OfStr,
-                "arguments": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),
-                "domain": S.OfStr,
-            }),
-            lambda _: _.Where.name("Expressions.Latex.Where").properties({
-                "name": S.OfStr, "value": _.Term, "body": _.Term, "domain": S.OfStr}),
             lambda _: _.Term.name("Expressions.Framework.Term").branches([  # branches added: schema extension
-                lambda t: t.name("latex_constant").schema([_.Constant]),
-                lambda t: t.name("latex_symbol").schema([_.Symbol]),
                 lambda t: t.name("latex_binary").schema([_.Binary]),
                 lambda t: t.name("latex_unary").schema([_.Unary]),
                 lambda t: t.name("latex_frac").schema([_.Frac]),
                 lambda t: t.name("latex_member").schema([_.Member]),
-                lambda t: t.name("latex_function").schema([_.Function]),
-                lambda t: t.name("latex_where").schema([_.Where]),
             ]),
         ])]))])
 
 
-_SCALARS = (bool, int, float, str)
+_SCALARS = (bool, int, float, str)  # what a constant holds: notation has no bytes
+
+
+def _literal_check(record: Any) -> list[str]:
+    """A literal holds what a constant of Latex does: the framework's literal may hold more."""
+    value = F.attributes_of(record)["value"]
+    return [] if type(value) in _SCALARS else [f"a Latex literal cannot hold a {type(value).__name__}"]
 
 
 def _native(value: Any) -> F.Writer | None:
@@ -82,14 +72,14 @@ def _native(value: Any) -> F.Writer | None:
 
 
 DIALECT = F.Dialect("Latex", {
-    "latex_constant": F.Kind(F.LITERAL),
-    "latex_symbol": F.Kind(F.REFERENCE, required=("name",)),
+    "literal": F.Kind(F.LITERAL, check=_literal_check),
+    "variable": F.Kind(F.REFERENCE, required=("name",)),
     "latex_binary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.BINARY, required=("operator",)),
     "latex_unary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.UNARY, required=("operator",)),
     "latex_frac": F.Kind(F.APPLICATION, signature=Domains.FRAC),
     "latex_member": F.Kind(F.APPLICATION, operator="name", signature=Domains.MEMBER, required=("name",)),
-    "latex_function": F.Kind(F.APPLICATION, operator="name", vocabulary=Domains.FUNCTIONS, required=("name",)),
-    "latex_where": F.Kind(F.BINDING, required=("name",)),
+    "call": F.Kind(F.APPLICATION, operator="callable", vocabulary=Domains.FUNCTIONS, required=("callable",)),
+    "let": F.Kind(F.BINDING, required=("name",)),
 }, domain_of=Domains.of, literal=_native)
 """The Latex dialect: its kinds, as the framework reads them."""
 
@@ -98,13 +88,13 @@ DIALECT = F.Dialect("Latex", {
 
 
 def constant(value: Any) -> F.Writer:
-    """The constant `value`: an `int`, a `float`, a `str` or a `bool`."""
-    return F.Writer(lambda u: u.latex_constant(lambda r: r.value(lambda p: p.as_scalar(value))))
+    """The constant `value`: an `int`, a `float`, a `str` or a `bool` (validation reports any other)."""
+    return F.Writer(lambda u: u.literal(lambda r: r.value(lambda p: p.as_scalar(value))))
 
 
 def symbol(name: str) -> F.Writer:
     """The symbol `name`."""
-    return F.Writer(lambda u: u.latex_symbol(lambda r: r.name(name)))
+    return F.Writer(lambda u: u.variable(lambda r: r.name(name)))
 
 
 def binary(operator: str, left: Any, right: Any) -> F.Writer:
@@ -134,10 +124,10 @@ def member(value: Any, name: str) -> F.Writer:
 def function(name: str, *arguments: Any) -> F.Writer:
     """`\\operatorname{name}(arguments...)`."""
     specs = [DIALECT.spec(argument) for argument in arguments]
-    return F.Writer(lambda u: u.latex_function(lambda r: r.name(name).arguments(specs)))
+    return F.Writer(lambda u: u.call(lambda r: r.callable(name).arguments(specs)))
 
 
 def where(name: str, value: Any, body: Any) -> F.Writer:
     """`body \\quad \\text{where } name = value`."""
     value, body = DIALECT.spec(value), DIALECT.spec(body)
-    return F.Writer(lambda u: u.latex_where(lambda r: r.name(name).value(value).body(body)))
+    return F.Writer(lambda u: u.let(lambda r: r.name(name).value(value).body(body)))

@@ -15,7 +15,7 @@ V = value(int, float, str, bool)
 TRANSLATOR = Pairwise(MATLAB, LATEX, [
     Rule(Matlab.constant(V), Latex.constant(V)),
     Rule(Matlab.identifier, Latex.symbol),
-    Inline("latex_where", "right"),
+    Inline("let", "right"),
     Elide("matlab_import", "left"),
     Rule(Matlab.get, Latex.get),
     Rule(Matlab.has, Latex.has),

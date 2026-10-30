@@ -1,16 +1,17 @@
 /**
  * Expressions of the Python dialect: Python expressions, with the imports they need, as Python's `ast` has them.
  *
- * Python's terms are the framework's `let` and its own kinds, which `install` adds to `Expressions.Framework.Term` by
- * schema extension, each a value object with a `domain`. Their tags are qualified by the dialect, `python_<kind>`
+ * Python's terms are the framework's `literal`, `variable` and `let`, whose shape Python's constants, names and
+ * `(lambda name: body)(value)` have, and its own kinds, which `install` adds to `Expressions.Framework.Term` by schema
+ * extension, each a value object with a `domain`. The tags of its own are qualified by the dialect, `python_<kind>`
  * (`python_binop`), since every dialect adds its kinds to the one union of terms:
  *
- * - `python_constant`: a basic scalar (`value`). `python_name`: the value bound to a `name`; the names of `BUILTINS`
- *   are always bound.
+ * - `literal`, the framework's: a constant, a basic scalar (`value`). `variable`, the framework's: a name, the value
+ *   bound to a `name`; the names of `BUILTINS` are always bound.
  * - `python_attribute`: `value.attr`. `python_subscript`: `value[key]`, for a str key, and `python_index`:
  *   `value[index]`, for an index that is an expression. `python_call`: a function, the slot `function`, applied to
  *   ordered `arguments`, e.g. `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of the name
- *   `np`.
+ *   `np`; its own, not the framework's `call`, whose callable is a name, since a Python callee is a term.
  * - `python_compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`), `python_boolop` (`and`, `or`), `python_binop`
  *   (`+`, `-`, `*`, `/`, `//`, `%`, `**`, `&`, `|`, `^`, `<<`, `>>`) and `python_unaryop` (`not`, `-`, `+`, `~`), each
  *   with one `operator` and two operands, `left` and `right` (one, `operand`, for `python_unaryop`).
@@ -39,8 +40,8 @@ import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
 
-export const CONSTANT = "python_constant";
-export const NAME = "python_name";
+export const CONSTANT = "literal";
+export const NAME = "variable";
 export const ATTRIBUTE = "python_attribute";
 export const SUBSCRIPT = "python_subscript";
 export const INDEX = "python_index";
@@ -55,11 +56,11 @@ export const LET = "let";
 export const IMPORT = "python_import";
 export const IMPORTFROM = "python_importfrom";
 
-/** Python's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
+/** Python's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   const kinds: Record<string, string> = {
-    Constant: CONSTANT, Name: NAME, Attribute: ATTRIBUTE, Subscript: SUBSCRIPT, Index: INDEX, Call: CALL,
+    Attribute: ATTRIBUTE, Subscript: SUBSCRIPT, Index: INDEX, Call: CALL,
     Compare: COMPARE, BoolOp: BOOLOP, BinOp: BINOP, UnaryOp: UNARYOP, IfExp: IFEXP, GeneratorExp: GENERATOR,
     Import: IMPORT, ImportFrom: IMPORTFROM,
   };
@@ -68,11 +69,6 @@ export function install(txn: any): any {
   return txn.uid("mbse.Expressions.Python/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols(symbols)
     .spec([
-      (_: any) => _.Constant.name("Expressions.Python.Constant").properties({
-        value: S.OfAny((a: any) => a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes])),
-        domain: S.OfStr, // every term has a domain
-      }),
-      (_: any) => _.Name.name("Expressions.Python.Name").properties({ name: S.OfStr, domain: S.OfStr }),
       (_: any) => _.Attribute.name("Expressions.Python.Attribute").properties({
         attr: S.OfStr, value: _.Term, domain: S.OfStr }),
       (_: any) => _.Subscript.name("Expressions.Python.Subscript").properties({

@@ -67,7 +67,7 @@ export function ToText(expression: unknown): string {
     const form = F.form(node);
     const [kind, attributes] = [form.kind, form.attributes as ReadonlyMap<string, any>];
     if (kind === "ccpp_constant") return constantText(attributes);
-    if (kind === "ccpp_identifier") return [attributes.get("name"), POSTFIX];
+    if (kind === "variable") return [attributes.get("name"), POSTFIX];
     if (kind === "ccpp_member") return [`${operand(0, POSTFIX)}${attributes.get("operator") ?? "."}${attributes.get("name")}`, POSTFIX];
     if (kind === "ccpp_subscript") return [`${operand(0, POSTFIX)}[${(args[1] as [string, number])[0]}]`, POSTFIX];
     if (kind === "call") return [`${attributes.get("callable")}(${args.map(([written]) => written).join(", ")})`, POSTFIX];

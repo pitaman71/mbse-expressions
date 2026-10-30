@@ -261,7 +261,7 @@ class Evaluation {
 
   private typeOf(node: any): SvType | null {
     const kind = kindOf(node);
-    if (["constant", "vector", "identifier", "member", "select", "call", "method", "iterate"].includes(kind)) return typeOfValue(this.own(node));
+    if (["literal", "vector", "variable", "member", "select", "call", "method", "iterate"].includes(kind)) return typeOfValue(this.own(node));
     if (kind === "unary") {
       if (node.operator === "+" || node.operator === "-") return this.type(node.operand);
       if (node.operator === "~") return this.integral(node.operand, "~");
@@ -296,9 +296,9 @@ class Evaluation {
 
   private ownOf(node: any): unknown {
     switch (kindOf(node)) {
-      case "constant": return typed(node.value);
+      case "literal": return typed(node.value);
       case "vector": return Logic.of(node.value, Boolean(node.signed));
-      case "identifier": return typed(this.scope.lookup(node.term));
+      case "variable": return typed(this.scope.lookup(node.term));
       case "member": return this.member(node);
       case "select": return this.select(node);
       case "range": return this.range(node);

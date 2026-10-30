@@ -73,12 +73,12 @@ export function ToText(expression: unknown): string {
     const attributes = F.attributesOf(record);
     const name = attributes.get("name");
     switch (tag) {
-      case "constant": {
+      case "literal": {
         const written = constantText(attributes.get("value"));
         return [written, written.includes("/") ? MULTIPLICATIVE : written.startsWith("-") ? UNARY : PRIMARY];
       }
       case "vector": return [vectorText(attributes), PRIMARY];
-      case "identifier": return [name, PRIMARY];
+      case "variable": return [name, PRIMARY];
       case "member": return [`${operand(0, PRIMARY)}.${name}`, PRIMARY];
       case "select": return [`${operand(0, PRIMARY)}[${texts[1]}]`, PRIMARY];
       case "range": return [`${operand(0, PRIMARY)}[${texts[1]}:${texts[2]}]`, PRIMARY];

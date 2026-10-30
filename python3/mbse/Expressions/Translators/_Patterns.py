@@ -54,21 +54,21 @@ class Basic:
 
 
 def _call(function: str, *arguments: P | Hole) -> P:
-    return P("python_call", P("python_name", name=function), *arguments)
+    return P("python_call", P("variable", name=function), *arguments)
 
 
 class Python:
-    constant = staticmethod(lambda V: P("python_constant", value=V))
-    name = P("python_name", name=N)
+    constant = staticmethod(lambda V: P("literal", value=V))
+    name = P("variable", name=N)
     let = P("let", A, B, name=N)
     get = P("python_attribute", X, attr=K)
-    has = P("python_call", P("python_name", name="hasattr"), X, P("python_constant", value=K))
-    implies = P("python_ifexp", A, B, P("python_constant", value=True))
+    has = P("python_call", P("variable", name="hasattr"), X, P("literal", value=K))
+    implies = P("python_ifexp", A, B, P("literal", value=True))
     ifexp = P("python_ifexp", A, B, C)
     shr = P("python_binop", A, B, operator=">>")
     all_ = _call("all", P("python_generator", A, B, name=N))
     any_ = _call("any", P("python_generator", A, B, name=N))
-    count_where = _call("sum", P("python_generator", A, P("python_constant", value=1), B, name=N))  # sum(1 for n in a if b)
+    count_where = _call("sum", P("python_generator", A, P("literal", value=1), B, name=N))  # sum(1 for n in a if b)
     builtin = staticmethod(lambda function: _call(function, A))  # len, sum, min, max
     index = P("python_index", A, B)
     in_ = P("python_compare", A, B, operator="in")
@@ -77,7 +77,7 @@ class Python:
 
 def _numpy(function: str) -> P:
     """The function `np.<function>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'."""
-    callee = P("python_name", name="np")
+    callee = P("variable", name="np")
     for attr in function.split("."):
         callee = P("python_attribute", callee, attr=attr)
     return callee
@@ -89,7 +89,7 @@ class Numpy:
     call = staticmethod(lambda function, *arguments: P("python_call", _numpy(function), *arguments))
     get = P("python_subscript", X, key=K)
     has = P("python_call", _numpy("logical_not"), P("python_call", _numpy("ma.getmaskarray"), P("python_subscript", X, key=K)))
-    implies = P("python_call", _numpy("where"), A, B, P("python_constant", value=True))
+    implies = P("python_call", _numpy("where"), A, B, P("literal", value=True))
     prelude = P("python_import", Hole("B"), module="numpy", alias="np")
 
     @staticmethod
@@ -115,20 +115,20 @@ class Matlab:
 
 class Ccpp:
     constant = staticmethod(lambda V: P("ccpp_constant", value=V))  # untyped
-    identifier = P("ccpp_identifier", name=N)
+    identifier = P("variable", name=N)
     get = P("ccpp_member", X, name=K)  # with '.'
     implies = P("ccpp_binary", P("ccpp_unary", A, operator="!"), B, operator="||")
 
 
 class SystemVerilog:
-    constant = staticmethod(lambda V: P("systemverilog_constant", value=V))
-    identifier = P("systemverilog_identifier", name=N)
+    constant = staticmethod(lambda V: P("literal", value=V))
+    identifier = P("variable", name=N)
     get = P("systemverilog_member", X, name=K)
     implies = P("systemverilog_binary", A, B, operator="->")
     iterate = staticmethod(lambda method: P("systemverilog_iterate", A, B, method=method, name=N))  # a.method(n) with (b)
     count_where = P("systemverilog_iterate", A, P("systemverilog_cast", B, type="int"), method="sum", name=N)  # a.sum(n) with (int'(b))
     method = staticmethod(lambda name: P("systemverilog_method", A, name=name))  # size, sum
-    locate = staticmethod(lambda name: P("systemverilog_select", P("systemverilog_method", A, name=name), P("systemverilog_constant", value=0)))  # a.min()[0]
+    locate = staticmethod(lambda name: P("systemverilog_select", P("systemverilog_method", A, name=name), P("literal", value=0)))  # a.min()[0]
     select = P("systemverilog_select", A, B)
     inside = P("systemverilog_inside", A, B)
     unique = P("systemverilog_binary", P("systemverilog_method", P("systemverilog_method", A, name="unique"), name="size"), P("systemverilog_method", A, name="size"), operator="==")
@@ -153,11 +153,11 @@ class Excel:
 
 
 class Latex:
-    constant = staticmethod(lambda V: P("latex_constant", value=V))
-    symbol = P("latex_symbol", name=N)
-    where = P("latex_where", A, B, name=N)
+    constant = staticmethod(lambda V: P("literal", value=V))
+    symbol = P("variable", name=N)
+    where = P("let", A, B, name=N)
     get = P("latex_member", X, name=K)
-    has = P("latex_function", X, P("latex_constant", value=K), name="has")
+    has = P("call", X, P("literal", value=K), callable="has")
     implies = P("latex_binary", A, B, operator="\\implies")
     frac = P("latex_frac", A, B)
 

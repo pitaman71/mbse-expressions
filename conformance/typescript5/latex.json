@@ -1,11 +1,11 @@
 {
-  "latex_where": {
+  "let": {
     "name": "a",
     "value": {
       "latex_member": {
         "name": "age",
         "value": {
-          "latex_symbol": {
+          "variable": {
             "name": "this"
           }
         }
@@ -18,12 +18,12 @@
           "latex_binary": {
             "operator": "\\geq",
             "left": {
-              "latex_symbol": {
+              "variable": {
                 "name": "a"
               }
             },
             "right": {
-              "latex_constant": {
+              "literal": {
                 "value": 18
               }
             }
@@ -36,16 +36,16 @@
               "latex_unary": {
                 "operator": "\\lnot",
                 "operand": {
-                  "latex_function": {
-                    "name": "has",
+                  "call": {
+                    "callable": "has",
                     "arguments": [
                       {
-                        "latex_symbol": {
+                        "variable": {
                           "name": "this"
                         }
                       },
                       {
-                        "latex_constant": {
+                        "literal": {
                           "value": {
                             "scalar": {
                               "str": "email"
@@ -64,19 +64,19 @@
                 "left": {
                   "latex_frac": {
                     "numerator": {
-                      "latex_symbol": {
+                      "variable": {
                         "name": "a"
                       }
                     },
                     "denominator": {
-                      "latex_constant": {
+                      "literal": {
                         "value": 2
                       }
                     }
                   }
                 },
                 "right": {
-                  "latex_constant": {
+                  "literal": {
                     "value": 1.5
                   }
                 }

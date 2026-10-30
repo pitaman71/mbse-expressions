@@ -59,17 +59,17 @@ def ToText(expression: Any) -> str:
 
         tag, record = F.kind_of(node)
         attributes = F.attributes_of(record)
-        if tag == "latex_constant":
+        if tag == "literal":
             return _constant(attributes["value"])
-        if tag == "latex_symbol":
+        if tag == "variable":
             return _name(attributes["name"]), _ATOM
         if tag == "latex_member":
             return f"{operand(0, _ATOM)}.{_name(attributes['name'])}", _ATOM
-        if tag == "latex_function":
-            return f"\\operatorname{{{attributes['name']}}}({', '.join(text for text, _ in arguments)})", _ATOM
+        if tag == "call":
+            return f"\\operatorname{{{attributes['callable']}}}({', '.join(text for text, _ in arguments)})", _ATOM
         if tag == "latex_frac":
             return f"\\frac{{{arguments[0][0]}}}{{{arguments[1][0]}}}", _ATOM
-        if tag == "latex_where":
+        if tag == "let":
             return (f"{operand(1, _IMPLIES)} \\quad \\text{{where }} {_name(attributes['name'])} = "
                     f"{operand(0, _IMPLIES)}"), _WHERE
         operator = attributes["operator"]
