@@ -156,13 +156,17 @@ As the user decided (2026-10-30), on what stage 2b raised about `Python.Text.Fro
 - **Parameters, each a schema parameter.** "FromFunction should introspect the parameters of the function being
   passed. There is no 'this' convention. And generate a schema parameter for each argument": through mbse-schemas'
   Parametrics, the `Schemas.OfExpression` it defines has one `Parametrics.OfParameters`, a parameter for each
-  argument.
+  argument. The kinds of parameter, as the user put them: "A parameter can represent: a schema, an object, a value. A
+  schema parameter is bound to a schema. An object parameter is bound to an object. A value parameter is bound to a
+  value." Asked whether each argument is an object or value parameter of the schema it is declared with (a), or also
+  gets a schema parameter for its type, the expression generic in it (b), the user answered "(b)". mbse-schemas'
+  Parametrics has value and object parameters only (`ForValue`/`BindsValue`, `ForObject`/`BindsObject`); schema
+  parameters are added there first.
 - **No `this`.** "I don't even want the tutorials introducing 'this' as a convention": tutorials, skill, tests and
   README name each parameter for what it holds.
 
-Open, proposed to the user: (1) where a parameter's schema comes from, a `def`'s annotations, schemas given to
-`FromFunction` by name, or both (proposed: both, a parameter without one refused); (2) `ForObject` for a reference
-object schema, `ForValue` otherwise, read from the schema given (proposed); (3) `FromFunction` writes a definition in a
+Open, proposed to the user: (1) and (2), where an argument's schema comes from and whether it is an object or a value
+parameter, are superseded by (b): its schema is a schema parameter, bound later; (3) `FromFunction` writes a definition in a
 transaction and gives the `Schemas.OfExpression`, evaluation and use within another expression binding by parameter
 name (proposed); and how the parameters relate to `OfExpression`'s `pattern`, which stage 4 settles with them. Python's
 builtins (`len`, `max`, `all`, ...) stay read by name, as the Python dialect's vocabulary rather than free references
