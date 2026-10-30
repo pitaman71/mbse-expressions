@@ -146,6 +146,28 @@ to be, but parking them so we can make progress on finishing the current overhau
 urgent" (2026-10-29; the workspace's TODO.md). Stage 5's variables and collecting reduce wait on it, and its `requires`
 on question 6; stages 1 to 4 do not.
 
+As the user decided (2026-10-30), on what stage 2b raised about `Python.Text.FromFunction` (it refused a captured
+`Expression`; tutorial 3 read the expression's root with `Terms.term` instead, and question 4 asked whether
+`FromFunction` should read it):
+
+- **No free references.** "I had not envisioned that Expressions.FromFunction would support free references at all.
+  Now I see it as an undesired complication." Question 4 is withdrawn: `FromFunction` stops reading names from the
+  function's closure and globals (native values, writers, term values, which it has done since before the port).
+- **Parameters, each a schema parameter.** "FromFunction should introspect the parameters of the function being
+  passed. There is no 'this' convention. And generate a schema parameter for each argument": through mbse-schemas'
+  Parametrics, the `Schemas.OfExpression` it defines has one `Parametrics.OfParameters`, a parameter for each
+  argument.
+- **No `this`.** "I don't even want the tutorials introducing 'this' as a convention": tutorials, skill, tests and
+  README name each parameter for what it holds.
+
+Open, proposed to the user: (1) where a parameter's schema comes from, a `def`'s annotations, schemas given to
+`FromFunction` by name, or both (proposed: both, a parameter without one refused); (2) `ForObject` for a reference
+object schema, `ForValue` otherwise, read from the schema given (proposed); (3) `FromFunction` writes a definition in a
+transaction and gives the `Schemas.OfExpression`, evaluation and use within another expression binding by parameter
+name (proposed); and how the parameters relate to `OfExpression`'s `pattern`, which stage 4 settles with them. Python's
+builtins (`len`, `max`, `all`, ...) stay read by name, as the Python dialect's vocabulary rather than free references
+(proposed). Built in 0.7.0 with stage 3, a breaking change.
+
 ## Stage 2's model, drafted for review
 
 [Framework.py](Framework.py) and [Basic.py](Basic.py) draft the installs; [check.py](check.py) runs them against
