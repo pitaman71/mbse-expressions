@@ -194,6 +194,67 @@ nested, a snapshot round-tripping). What they propose, for the user's review:
   `body`, `domain`); each other dialect its own (Python's, C's, ...).
 - A term names what it refers to, a callable or a domain, by name, until vocabularies are data (question 11).
 
+## Stage 3's model, drafted for review
+
+Stage 3 makes domains objects, as decided: a dialect defines its domains by name through
+`Expressions.Framework.Defines(dialect, name, domain)` (Decided, 4); a basic scalar has one domain or more through
+`HasDomain(schema, domain)` (Store overhaul, Decided, 9: "a scalar schema can have > 1 domain"; "width is a property of
+the domain, not the schema"); "users may define domains and dialects containing domains" (the same). Today a term's
+`domain` is a name in Basic's process-wide registry (`Domains.register`), which goes. Proposed:
+
+- **`Expressions.Framework.Dialect`**, a reference object, one per dialect, a singleton by its name
+  (`Expressions.Basic`, `Expressions.Ccpp`, a user's own), as a module is one by its path.
+- **`Expressions.Framework.Domain`**, a reference object owned by its dialect through `Defines` (unique by dialect and
+  name; a domain defined once), so that its path is its dialect's and its name. It holds `kind`, a value of the union
+  `Expressions.Framework.DomainKind`, which dialects extend by schema extension as they extend `Term`. Basic adds
+  today's kinds, each a value object of the parameters it has now: `bool`; `integer` (`width`, `signed`, `overflow`);
+  `ieee754` (`format`, `rounding`); `bits` (`width`); `bytes` (`width`); `unicode`; `ieee1164` (`width`); `enum`
+  (`members`); `packed` (`domain`, `representation`, each a domain as A gives it; `codes`).
+- **`Expressions.Framework.HasDomain(schema, domain)`**, from a basic scalar (`Schemas.OfInt`, ...) to a domain: Basic
+  links each of the five to its own (B).
+- **What a domain means stays code**, as intrinsics' implementations are (Schema extension, Decided, 9): an evaluator
+  reads a domain object's `kind` into today's `Domains.OfX.Data` and asks it `contains`, `compare`, `fit`.
+
+Example, the domains of tutorial 4 as the store holds them (no syntax implied):
+
+| Object | Kind | Holds |
+|---|---|---|
+| dialect `acme.Firmware` | `Expressions.Framework.Dialect` | `Defines` entries `int16` and `uint8` |
+| domain `int16`, owned by it | `Expressions.Framework.Domain` | `kind`: `integer`, width 16, signed |
+| domain `uint8`, owned by it | `Expressions.Framework.Domain` | `kind`: `integer`, width 8, unsigned |
+| a literal `200` | the `literal` branch of `Term`, nested in an expression's `root` | `value` 200, `domain`: `uint8` as A gives it |
+
+Questions for the user, each with a recommendation:
+
+- **A. How a term names its domain.** (a) A `References.OfObject`, the domain's path (its dialect's, then its name),
+  resolved by `References.resolve` as any durable reference is (mbse-schemas 0.25, "durable references for client
+  code"). (b) A name qualified with its dialect, `acme.Firmware.uint8`, resolved through `Defines` by code of this
+  repository. (c) A name resolved in the term's own dialect: refused, since dialects share the framework's kinds (a
+  `literal` is every dialect's) and a term has no dialect of its own. *Recommended: (a)*: no new resolution rule,
+  and the open question of an unqualified name's resolution (CAP-110) stays out of it.
+- **B. A literal written without a domain.** Today it takes its native's default (`int` an unbounded signed integer,
+  `float` binary64, ...). (a) Keep that: Basic defines the five defaults as domains named `bool`, `int`, `float`,
+  `str` and `bytes`, links each from its scalar with `HasDomain`, and a literal without a domain has the one Basic
+  links from its value's scalar. Since a scalar may have more than one domain, Basic's is marked as the default by its
+  own relation, `Expressions.Framework.Default(schema, domain)`, one per scalar. (b) Every term names its domain, a
+  literal too: nothing is left to a default. *Recommended: (a)*; (b) is stricter and writes every literal's domain.
+- **C. Domain kinds as one union, extended by dialects** (above), or each kind its own reference object schema, the
+  domain an instance of one of them. *Recommended: the union*: it is how terms are built, one `Domain` to link to
+  (`HasDomain`, `Defines`, `packed`'s), and a dialect adds kinds without new relations.
+- **D. What stays outside the store.** `Object`, `Anything` and the collection domains (`Collection`, `Record`,
+  `List`, `Keyed`) are what evaluators infer, never a term's `domain`: they stay code. *Recommended as stated.*
+- **E. Conversions' domains.** A translator's conversion that gives a typed literal (C's `uint8_t` back to Basic,
+  SystemVerilog's `logic [1:0]`) names its domain (API.md, Settled while building, 13), today by registering it. (a)
+  Each dialect defines, in its install, the domains its conversions give; one only known from a literal's text (a
+  width) is upserted in the transaction that writes the result, found where it exists. (b) Only (a)'s install part:
+  a conversion that needs another domain is refused. *Recommended: (a)*.
+
+What changes with it, in both languages: the framework's and each dialect's install, Basic's `Domains` (its registry
+goes, `register`, `registered` and `name_of`), the writers (`E.literal(value, domain)` takes a domain object or its
+reference), the evaluators, the translators' conversions, the corpus (its `domains` case, and every term naming a
+domain), tutorial 4 and the skill (domains defined in an install), and DOM's cases. A breaking change: released as
+0.7.0, with `FromFunction`'s removal.
+
 ## Stages (proposed, once decided)
 
 Stage 1 is done; stage 2 is split in two: 2a, the framework and Basic as installs, terms in the store, with the API
