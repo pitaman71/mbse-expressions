@@ -31,7 +31,8 @@
  *   unequal to one of another length; a keyed collection to another with the same keys and equal values, in any
  *   order, and incomparable to one with other keys. Equal is Kleene's and of the parts' equalities.
  *
- * A constraint about a value is evaluated with `this` bound to it: `Evaluators.OfAny(constraint, { this: value })`.
+ * A constraint about a value is evaluated with the variable it names bound to it, such as `person`:
+ * `Evaluators.OfAny(constraint, { person: value })`.
  */
 
 import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";

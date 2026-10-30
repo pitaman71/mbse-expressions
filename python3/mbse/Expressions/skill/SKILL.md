@@ -35,8 +35,8 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 
 ## Practices that prevent most mistakes
 
-1. **Writers build data; nothing evaluates until asked.** `variable("this").age.ge(18)` writes the expression
-   `ge(get(this, 'age'), 18)` where it is given: an expression's `root`, in a store, within a transaction. Evaluate
+1. **Writers build data; nothing evaluates until asked.** `variable("person").age.ge(18)` writes the expression
+   `ge(get(person, 'age'), 18)` where it is given: an expression's `root`, in a store, within a transaction. Evaluate
    it with a dialect's `Evaluators.OfAny(expression, scope)`.
 2. **Basic is three-valued and never coerces.** An absent property is unknown (`None`/`null`), and `and`/`or` follow
    Kleene. `1 == 1.0` is unknown, since int and float are different types; in TypeScript, an int is a `bigint` (`18n`).

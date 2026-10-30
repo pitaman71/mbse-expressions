@@ -1,6 +1,6 @@
 /** Text of the Python dialect: `ToText(expression)` is a term (or anything `Terms.term` reads one from) as Python
  * source, parenthesized only where precedence requires, with its imports as the lines before it. Reading Python source
- * (`FromText`) and functions (`FromFunction`) needs Python's own parser, so it is in the Python implementation only. */
+ * (`FromText`) needs Python's own parser, so it is in the Python implementation only. */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

@@ -42,11 +42,10 @@ with store.transaction():
     bob = store.Contact(lambda c: c.name("Bob").age(30))
     eve = store.Contact(lambda c: c.name("Eve").email("eve@example.com"))  # no age
 
-# A constraint, read from a Python lambda into a writer, and written as an expression's root in a transaction. Writers
-# build the same: contact.age.ge(65).and_(contact.has("email")), with contact = E.variable("contact").
+# A constraint, built with writers, written as an expression's root in a transaction.
+contact = E.variable("contact")
 with store.transaction():
-    senior = store.Expressions.Framework.Expression(lambda e: e.root(
-        PythonText.FromFunction(lambda contact: contact.age >= 65 and contact.email is not None)))
+    senior = store.Expressions.Framework.Expression(lambda e: e.root(contact.age.ge(65).and_(contact.has("email"))))
 assert E.DIALECT.validate(senior, bound={"contact"}, core=True) == []
 
 # Basic evaluates with three-valued logic: an absent property is unknown (None), and nothing is coerced.
@@ -74,12 +73,12 @@ assert PythonText.ToText(code) == "contact.age >= 65 and hasattr(contact, 'email
 
 # A union value is a record of its one branch, by name, so a constraint reads it like any object.
 with store.transaction():
-    card = store.Card(lambda c: c.reach(lambda p: p.as_value(lambda a: a.as_union(
+    ada_card = store.Card(lambda c: c.reach(lambda p: p.as_value(lambda a: a.as_union(
         lambda u: u.email(lambda r: r.address("ada@example.com"))))))
-assert Validators.Validate(store)(store.registered("Card"), card) == []
-this = E.variable("this")
-assert Evaluators.OfAny(written(this.reach.has("email")), {"this": card}) is True
-assert Evaluators.OfAny(written(this.reach.has("phone")), {"this": card}) is False
+assert Validators.Validate(store)(store.registered("Card"), ada_card) == []
+card = E.variable("card")
+assert Evaluators.OfAny(written(card.reach.has("email")), {"card": ada_card}) is True
+assert Evaluators.OfAny(written(card.reach.has("phone")), {"card": ada_card}) is False
 ```
 
 ## Cheat sheet
@@ -90,31 +89,29 @@ store = Builders.Store(); store.transaction(Framework.install); store.transactio
 Term = store.registered("Expressions.Framework.Term")
 
 # Writers: methods that write terms where they are given, within a transaction.
-this = E.variable("this"); E.literal(1); E.let_("a", value, body); E.operation("name", *arguments)
+person = E.variable("person"); E.literal(1); E.let_("a", value, body); E.operation("name", *arguments)
 with store.transaction():
-    expression = store.Expressions.Framework.Expression(lambda e: e.root(this.age.ge(18)))  # an expression, by its root
-    term = store.Expressions.Framework.Term(E.DIALECT.spec(this.age.ge(18)))               # a term value alone
+    expression = store.Expressions.Framework.Expression(lambda e: e.root(person.age.ge(18)))  # an expression, by its root
+    term = store.Expressions.Framework.Term(E.DIALECT.spec(person.age.ge(18)))               # a term value alone
 Domains.register("uint8", Domains.OfInteger.Builder().width(8).signed(False).create())  # a literal names its domain
 E.literal(200, "uint8"); E.literal(200, domain)            # by name, or a domain registered under one
 Domains.Value(domain, 200)                 # a value of a non-default domain, as evaluation gives it; overflow applies
-this.age; this.get("eq"); this.has("email")                 # .name is get(this, 'name'); get() for names like eq
+person.age; person.get("eq"); person.has("email")         # .name is get(person, 'name'); get() for names like eq
 t.eq(x) .ne .lt .le .gt .ge .and_(x) .or_(x) .not_() .implies(x) .add(x) .sub(x) .mul(x) .neg()
 t.bitand(x) .bitor(x) .bitxor(x) .bitnot() .shl(n) .shr(n)  # on integers and bits of one domain
 t.convert(domain) .reinterpret(domain) .pack() .unpack(packed)  # a call's domain is its result's
-this.ports.all("p", E.variable("p").width.ge(8))   # .any .count_where; .count() .item(i) .in_(xs) .sum() .min() .max() .unique()
-this.entries("wires")                              # an object's entries in an adjacency, as records that get reads
-PythonText.FromFunction(lambda this: this.age >= 18 and this.email is not None)  # a writer, from a lambda or a def of one return
-PythonText.FromFunction(lambda this: all(p.width >= 8 for p in this.ports) and len(this.ports) > 0)  # collections too
+block.ports.all("p", E.variable("p").width.ge(8))  # .any .count_where; .count() .item(i) .in_(xs) .sum() .min() .max() .unique()
+block.entries("wires")                             # an object's entries in an adjacency, as records that get reads
 
 # Reading: a term is read through mbse-schemas' readers; Terms gives the generic reads.
 Terms.term(expression)                     # the root term of an Expression (or a term itself)
 Terms.kind_of(term); Terms.form(term)      # ("call", record); Form(kind, attributes, arguments)
-E.DIALECT.validate(term, bound={"this"}, core=True)          # problems, [] when valid
-E.DIALECT.infer(term, {"this": Domains.Object})              # from mbse.Expressions.Dialects.Basic import Domains
+E.DIALECT.validate(term, bound={"person"}, core=True)        # problems, [] when valid
+E.DIALECT.infer(term, {"person": Domains.Object})            # from mbse.Expressions.Dialects.Basic import Domains
 
 # Evaluation: a scope, or a mapping of variables.
-Evaluators.OfAny(expression, {"this": value})               # True, False, a value, or None when unknown
-Partials.OfAny(constraint, {"this": value})                 # the residual: a writer, what is known evaluated, the rest kept
+Evaluators.OfAny(expression, {"person": value})             # True, False, a value, or None when unknown
+Partials.OfAny(constraint, {"person": value})               # the residual: a writer, what is known evaluated, the rest kept
 
 # Storage, traversal, translation: the same calls in every dialect.
 JSON.ToJSON(store)(Term, term); JSON.FromJSON(store)(Term, text)   # YAML likewise; a term reads back as a term value
@@ -127,14 +124,13 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 
 ## Traps
 
-- `FromFunction` reads the function's source file, so it fails in `python -c`, `eval` and some REPLs. Use writers there.
 - `1 == 1.0` is unknown in Basic, and `True` is not an `int`. Write literals of the type the data has.
-- In `FromFunction`, `x.email is not None` means `has(x, 'email')`; `x.email` alone is `get`, unknown when absent.
+- `x.email` is `get`, unknown when absent; whether it is present is `x.has("email")`.
 - Evaluating an operation outside the core raises `NotImplementedError`: validate with `core=True` first.
 - Each mbse-schemas store has its own schemas: run each install once per store, and an install and what uses it in
   separate transactions. Transactions do not nest: build what a writer needs (a translation's source term, say) before
   opening the one that writes it.
-- A translation, a residual and `FromFunction` give writers, not terms: write them (`store.Expressions.Framework.Term(w)`
+- A translation and a residual give writers, not terms: write them (`store.Expressions.Framework.Term(w)`
   in a transaction) before rendering or evaluating them.
 - A Python-dialect scope imports nothing by default: `Python.Evaluators.Scope(variables, modules={"numpy": numpy})`.
 
@@ -143,5 +139,5 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 | Topic | Read |
 |---|---|
 | Learning it by example: constraints as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog | [the tutorial, eight case studies](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) |
-| The Basic dialect: kinds, core vocabulary, evaluation, installs and writers, `Python.Text.FromFunction` | [CAP-095: Basic terms as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-095.md), in mbse-basis |
+| The Basic dialect: kinds, core vocabulary, evaluation, installs and writers | [CAP-095: Basic terms as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-095.md), in mbse-basis |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/TestPlan.md) |

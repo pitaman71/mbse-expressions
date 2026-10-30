@@ -5,7 +5,7 @@ one. The value domains, the treatment of unknown values and the rules of each op
 where dialects differ most.
 
 Evaluation resolves references in a scope (see `Symbolics`): an evaluator given a mapping instead of a scope makes its
-dialect's scope from it, so `Evaluators.OfAny(expression, {'this': value})` binds `this`.
+dialect's scope from it, so `Evaluators.OfAny(expression, {'person': value})` binds `person`.
 
 `Interpreter` evaluates a term value by its kind's role (see `Terms`): a literal gives its value (through `literal`, or
 `typed` when it carries a domain of its own), a reference what

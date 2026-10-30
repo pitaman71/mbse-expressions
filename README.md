@@ -15,16 +15,17 @@ rest of your data, sent between programs, and evaluated the same way in Python a
 [mbse-patterns](https://github.com/pitaman71/mbse-patterns) uses them as constraints on mbse-schemas data, and as queries.
 
 ```python
-from mbse.Expressions import Evaluators, Framework
-from mbse.Expressions.Dialects import Basic, Python
+from mbse.Expressions import Evaluators, Expressions, Framework
+from mbse.Expressions.Dialects import Basic
 from mbse.Schemas.Framework import Builders
 
 store = Builders.Store()  # expressions are stored in an mbse-schemas store, with the data they constrain
 store.transaction(Framework.install)
 store.transaction(Basic.install)
+contact = Expressions.variable("contact")
 with store.transaction():
     senior = store.Expressions.Framework.Expression(lambda e: e.root(
-        Python.Text.FromFunction(lambda contact: contact.age >= 65 and contact.email is not None)))
+        contact.age.ge(65).and_(contact.has("email"))))
 Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value is unknown
 ```
 
@@ -142,7 +143,7 @@ ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email
 
 Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Basic,
 Python, Matlab, Excel and Latex dialects, and translators between every pair; in the Basic dialect, literals,
-operations, variables and lets, with builders and meta-schemas; writers (and, in Python, `Python.Text.FromFunction`);
+operations, variables and lets, with builders and meta-schemas; writers;
 `validate()`; evaluation of the core operations with three-valued logic. Not built yet: the collection operations
 (`count`, `in`, `all`, `any`), and the evaluator interface through which mbse-schemas will choose union branches and
 check constraints.

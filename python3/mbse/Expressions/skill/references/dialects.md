@@ -11,7 +11,7 @@ Its constructors are writers: write them in a transaction, into a store where it
 
 | Use | For |
 |---|---|
-| **Basic** (`mbse.Expressions`) | the constraint itself: the neutral form to store, share and analyze. Constraints every binding evaluates are Basic, over `this`, using only the core vocabulary |
+| **Basic** (`mbse.Expressions`) | the constraint itself: the neutral form to store, share and analyze. Constraints every binding evaluates are Basic, over the variables they name, using only the core vocabulary |
 | **Python** | Python source, to check the constraint in Python or read one from Python code; NumPy style evaluates over columns |
 | **Matlab** | MATLAB source, for constraints that live in MATLAB code or Simulink models |
 | **Excel** | worksheet formulas, for constraints that live in spreadsheets, over cells and records |
@@ -26,7 +26,7 @@ analyze it.
 
 ```python fragment
 from mbse.Expressions.Dialects.Python import Expressions as P, Text as PT
-P.compare(">=", P.attribute(P.name("this"), "age"), 18)      # ast-shaped: name, attribute, subscript, call, compare,
+P.compare(">=", P.attribute(P.name("person"), "age"), 18)    # ast-shaped: name, attribute, subscript, call, compare,
 P.call("np.greater_equal", P.subscript(P.name("t"), "age"), 18)  # boolop, binop, unaryop, ifexp, let, import, importfrom
 P.import_("numpy", body, alias="np"); PT.ToText(e); PT.FromText("import numpy as np\nnp.add(x, 1)")  # Python only
 
