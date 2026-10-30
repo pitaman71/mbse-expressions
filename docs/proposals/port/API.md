@@ -25,7 +25,7 @@ store.transaction(Basic.install)            # Expressions.Basic.Quantifier, adde
 
 `Framework.install` (in `Framework/Terms.py`, `Framework/Terms.ts`) and `Basic.install` (in
 `Dialects/Basic/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
-and what uses it are separate transactions: mbse-schemas, Object identity, Decided, 96). Run again, each writes
+and what uses it are separate transactions: mbse-schemas, Object identity, Decided, 96 in [CAP-124: writes all-or-nothing in transactions](../../../../mbse-basis/docs/capabilities/CAP-124.md#decided)). Run again, each writes
 nothing. Every other dialect has its own install, run after the framework's, which adds its kinds to
 `Expressions.Framework.Term` by schema extension, as Basic's does; `mbse.Expressions.install(store)` is not given (it
 would be a helper over the installs): a program runs the installs it needs.
