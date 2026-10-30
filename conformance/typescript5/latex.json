@@ -6,7 +6,7 @@
         "name": "age",
         "value": {
           "variable": {
-            "name": "this"
+            "name": "record"
           }
         }
       }
@@ -41,7 +41,7 @@
                     "arguments": [
                       {
                         "variable": {
-                          "name": "this"
+                          "name": "record"
                         }
                       },
                       {

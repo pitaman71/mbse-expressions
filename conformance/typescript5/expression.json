@@ -7,7 +7,7 @@
         "arguments": [
           {
             "variable": {
-              "name": "this"
+              "name": "record"
             }
           },
           {
@@ -78,7 +78,7 @@
                                 "arguments": [
                                   {
                                     "variable": {
-                                      "name": "this"
+                                      "name": "record"
                                     }
                                   },
                                   {

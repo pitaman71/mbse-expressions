@@ -8,7 +8,7 @@
             "name": "a",
             "object": {
               "variable": {
-                "name": "this"
+                "name": "record"
               }
             }
           }
@@ -45,7 +45,7 @@
               "systemverilog_select": {
                 "value": {
                   "variable": {
-                    "name": "this"
+                    "name": "record"
                   }
                 },
                 "index": {
@@ -81,7 +81,7 @@
                       "name": "b",
                       "object": {
                         "variable": {
-                          "name": "this"
+                          "name": "record"
                         }
                       }
                     }
@@ -120,7 +120,7 @@
                               "name": "unique",
                               "array": {
                                 "variable": {
-                                  "name": "this"
+                                  "name": "record"
                                 }
                               }
                             }

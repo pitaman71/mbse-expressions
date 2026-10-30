@@ -10,7 +10,7 @@ python_import:
           name: a
           value:
             variable:
-              name: this
+              name: record
           body:
             python_ifexp:
               test:

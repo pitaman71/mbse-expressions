@@ -6,7 +6,7 @@
         "name": "age",
         "value": {
           "variable": {
-            "name": "this"
+            "name": "record"
           }
         }
       }
@@ -47,7 +47,7 @@
                                 "name": "email",
                                 "value": {
                                   "variable": {
-                                    "name": "this"
+                                    "name": "record"
                                   }
                                 }
                               }
@@ -84,7 +84,7 @@
                                 "name": "ports",
                                 "value": {
                                   "variable": {
-                                    "name": "this"
+                                    "name": "record"
                                   }
                                 }
                               }

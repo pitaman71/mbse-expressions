@@ -10,7 +10,7 @@ ccpp_conditional:
               name: a
               object:
                 variable:
-                  name: this
+                  name: record
       right:
         ccpp_binary:
           operator: '>'
@@ -22,7 +22,7 @@ ccpp_conditional:
                   operator: ->
                   object:
                     variable:
-                      name: this
+                      name: record
               index:
                 ccpp_constant:
                   value: 0

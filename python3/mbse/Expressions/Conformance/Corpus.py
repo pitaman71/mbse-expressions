@@ -48,39 +48,39 @@ def build():
     store.transaction(SystemVerilog.install)
 
     # --- expression: every kind and literal type, a let and its variable, an extension operation ---
-    this, age = E.variable("this"), E.variable("age")
-    expression = E.let_("age", this.age, age.ge(18).and_(
-        age.lt(65.5).or_(this.has("email").not_()).implies(E.operation("contains", "x", b"\x00\xff", True))))
+    record, age = E.variable("record"), E.variable("age")
+    expression = E.let_("age", record.age, age.ge(18).and_(
+        age.lt(65.5).or_(record.has("email").not_()).implies(E.operation("contains", "x", b"\x00\xff", True))))
 
     # --- python: every kind, a let and its names --- import numpy as np / from math import floor /
-    # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(this)
+    # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(record)
     a, item = P.name("a"), P.name("p")
-    python = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("this"), P.ifexp(
+    python = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("record"), P.ifexp(
         P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18)), P.attribute(P.name("np"), "pi")),
         P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
         P.generator("p", P.attribute(a, "y"), P.index(item, b"\x00"), item)))), alias="np")
 
-    # --- matlab: every kind, shared identifiers --- import geo.* / (dist(this.age, 3) + ~isfield(this, "email") .* -1.5
-    # >= arrayfun(@(k) k, this.ports)(2)) || true
-    this_ = M.identifier("this")
+    # --- matlab: every kind, shared identifiers --- import geo.* / (dist(record.age, 3) + ~isfield(record, "email") .* -1.5
+    # >= arrayfun(@(k) k, record.ports)(2)) || true
+    record_ = M.identifier("record")
     matlab = M.import_("geo.*", M.binary("||", M.binary(">=", M.binary(
-        "+", M.call("dist", M.field(this_, "age"), 3),
-        M.binary(".*", M.unary("~", M.call("isfield", this_, "email")), M.unary("-", 1.5))), M.index(M.arrayfun(
-            "k", M.field(this_, "ports"), M.identifier("k")), 2)), True))
+        "+", M.call("dist", M.field(record_, "age"), 3),
+        M.binary(".*", M.unary("~", M.call("isfield", record_, "email")), M.unary("-", 1.5))), M.index(M.arrayfun(
+            "k", M.field(record_, "ports"), M.identifier("k")), 2)), True))
 
-    # --- excel: every kind, shared names --- =LET(a, this.age, IF(AND(a >= 18, NOT(ISERROR(this.email))),
-    # a * SUM(MAP(this.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
-    this_, a = X.name("this"), X.name("a")
-    excel = X.let_("a", X.field(this_, "age"), X.function(
-        "IF", X.function("AND", X.infix(">=", a, 18), X.function("NOT", X.function("ISERROR", X.field(this_, "email")))),
-        X.infix("-", X.infix("*", a, X.function("SUM", X.map_("q", X.field(this_, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
+    # --- excel: every kind, shared names --- =LET(a, record.age, IF(AND(a >= 18, NOT(ISERROR(record.email))),
+    # a * SUM(MAP(record.ports, LAMBDA(q, q))) - Sheet1!B2, -[Book.xlsx]Rates!C3 + "x"))
+    record_, a = X.name("record"), X.name("a")
+    excel = X.let_("a", X.field(record_, "age"), X.function(
+        "IF", X.function("AND", X.infix(">=", a, 18), X.function("NOT", X.function("ISERROR", X.field(record_, "email")))),
+        X.infix("-", X.infix("*", a, X.function("SUM", X.map_("q", X.field(record_, "ports"), X.name("q")))), X.cell("B2", "Sheet1")),
         X.infix("+", X.prefix("-", X.cell("C3", "Rates", "Book.xlsx")), "x")))
 
-    # --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(this, email) \lor
-    # \frac{a}{2} > 1.5) \quad \text{where } a = this.age
-    this_, a = L.symbol("this"), L.symbol("a")
-    latex = L.where("a", L.member(this_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
-        "\\lor", L.unary("\\lnot", L.function("has", this_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
+    # --- latex: every kind, shared symbols --- a \geq 18 \land (\lnot \operatorname{has}(record, email) \lor
+    # \frac{a}{2} > 1.5) \quad \text{where } a = record.age
+    record_, a = L.symbol("record"), L.symbol("a")
+    latex = L.where("a", L.member(record_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
+        "\\lor", L.unary("\\lnot", L.function("has", record_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
 
     # --- domains: literals of value domains, by name, a packed enum among them; defaults left out; decimal and
     # binary128 text; a conversion's domain, a bitwise operation and pack ---
@@ -102,18 +102,18 @@ def build():
 
     # --- collections: a quantifier over entries, and collection operations, each once ---
     ports, p, pins, sizes = (E.variable(name) for name in ("ports", "p", "pins", "sizes"))
-    collections = E.let_("ports", this.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
+    collections = E.let_("ports", record.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
         sizes.sum().le(ports.count())))
 
-    # --- ccpp: every kind, typed constants and a shared identifier --- !this.a && this->b[0] > 1.5f ? (uint8_t)f(1) : 5u
-    me = C.identifier("this")
+    # --- ccpp: every kind, typed constants and a shared identifier --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+    me = C.identifier("record")
     ccpp = C.conditional(C.binary("&&", C.unary("!", C.member(me, "a")), C.binary(
         ">", C.subscript(C.member(me, "b", "->"), 0), C.constant(1.5, "float"))),
         C.cast("uint8_t", C.call("f", 1)), C.constant(5, "unsigned int"))
 
     # --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
-    # this.a inside {1, [2:5]} -> !this[0] ? {{6{2'b10}}, this.b[7:4]} : byte'($clog2(this.unique().sum(q) with (q))) + 4'(8'shff)
-    sv, that = SV, SV.identifier("this")
+    # record.a inside {1, [2:5]} -> !record[0] ? {{6{2'b10}}, record.b[7:4]} : byte'($clog2(record.unique().sum(q) with (q))) + 4'(8'shff)
+    sv, that = SV, SV.identifier("record")
     systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1, sv.span(2, 5)), sv.conditional(
         sv.unary("!", sv.select(that, 0)),
         sv.concatenation(sv.replication(6, sv.vector("10")), sv.range_(sv.member(that, "b"), 7, 4)),

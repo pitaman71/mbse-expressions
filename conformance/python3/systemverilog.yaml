@@ -7,7 +7,7 @@ systemverilog_binary:
           name: a
           object:
             variable:
-              name: this
+              name: record
       items:
       - literal:
           value: 1
@@ -27,7 +27,7 @@ systemverilog_binary:
             systemverilog_select:
               value:
                 variable:
-                  name: this
+                  name: record
               index:
                 literal:
                   value: 0
@@ -47,7 +47,7 @@ systemverilog_binary:
                   name: b
                   object:
                     variable:
-                      name: this
+                      name: record
               msb:
                 literal:
                   value: 7
@@ -72,7 +72,7 @@ systemverilog_binary:
                           name: unique
                           array:
                             variable:
-                              name: this
+                              name: record
                       body:
                         variable:
                           name: q

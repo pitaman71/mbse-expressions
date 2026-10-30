@@ -5,7 +5,7 @@ let:
       name: age
       value:
         variable:
-          name: this
+          name: record
   body:
     latex_binary:
       operator: '\land'
@@ -29,7 +29,7 @@ let:
                   callable: has
                   arguments:
                   - variable:
-                      name: this
+                      name: record
                   - literal:
                       value:
                         scalar:

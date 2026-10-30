@@ -17,7 +17,7 @@ matlab_import:
                       name: age
                       value:
                         variable:
-                          name: this
+                          name: record
                   - literal:
                       value: 3
               right:
@@ -31,7 +31,7 @@ matlab_import:
                           callable: isfield
                           arguments:
                           - variable:
-                              name: this
+                              name: record
                           - literal:
                               value:
                                 scalar:
@@ -52,7 +52,7 @@ matlab_import:
                       name: ports
                       value:
                         variable:
-                          name: this
+                          name: record
                   body:
                     variable:
                       name: k
