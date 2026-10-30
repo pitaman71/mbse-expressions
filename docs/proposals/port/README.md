@@ -196,64 +196,57 @@ nested, a snapshot round-tripping). What they propose, for the user's review:
 
 ## Stage 3's model, drafted for review
 
-Stage 3 makes domains objects, as decided: a dialect defines its domains by name through
-`Expressions.Framework.Defines(dialect, name, domain)` (Decided, 4); a basic scalar has one domain or more through
-`HasDomain(schema, domain)` (Store overhaul, Decided, 9: "a scalar schema can have > 1 domain"; "width is a property of
-the domain, not the schema"); "users may define domains and dialects containing domains" (the same). Today a term's
-`domain` is a name in Basic's process-wide registry (`Domains.register`), which goes. Proposed:
+### Decided, for stage 3
 
-- **`Expressions.Framework.Dialect`**, a reference object, one per dialect, a singleton by its name
-  (`Expressions.Basic`, `Expressions.Ccpp`, a user's own), as a module is one by its path.
-- **`Expressions.Framework.Domain`**, a reference object owned by its dialect through `Defines` (unique by dialect and
-  name; a domain defined once), so that its path is its dialect's and its name. It holds `kind`, a value of the union
-  `Expressions.Framework.DomainKind`, which dialects extend by schema extension as they extend `Term`. Basic adds
-  today's kinds, each a value object of the parameters it has now: `bool`; `integer` (`width`, `signed`, `overflow`);
-  `ieee754` (`format`, `rounding`); `bits` (`width`); `bytes` (`width`); `unicode`; `ieee1164` (`width`); `enum`
-  (`members`); `packed` (`domain`, `representation`, each a domain as A gives it; `codes`).
-- **`Expressions.Framework.HasDomain(schema, domain)`**, from a basic scalar (`Schemas.OfInt`, ...) to a domain: Basic
-  links each of the five to its own (B).
-- **What a domain means stays code**, as intrinsics' implementations are (Schema extension, Decided, 9): an evaluator
-  reads a domain object's `kind` into today's `Domains.OfX.Data` and asks it `contains`, `compare`, `fit`.
+As the user decided (2026-10-30), reviewing a first draft that made domains objects a term named:
 
-Example, the domains of tutorial 4 as the store holds them (no syntax implied):
+1. **A term carries no domain.** "Terms do not designate their schema. Whatever reference object owns the root term
+   must specify its schema." Every kind loses `domain`, the framework's and each dialect's. This supersedes "wait, all
+   terms have a domain" (2026-10-28) and Schema extension, Decided, 21's "A term has a domain".
+2. **No type inference yet.** "For the time being, evaluation will need to do without an external source specifying
+   the domain for every term, as that involves building a type inference system which should be a follow-up
+   capability." What needs a term's domain is deferred with it ("(iii) agreed, defer for type inference"): widths,
+   overflow, IEEE 754 formats other than binary64, enums, `convert`, `reinterpret`, `pack`, `unpack`, and the
+   translators' conversions of typed literals; tutorial 4, the corpus's `domains` case and DOM's width cases go until
+   then.
+3. **Terms hold values.** "terms are not restricted to scalars. Terms can have any value (Schemas.OfAny)"; then "yes
+   restrict `literal` to scalars, but also provide container constructors as terms". A `literal` stays an `OfAny` of
+   the five basic scalars; new kinds construct containers from terms.
+4. **Expressions deal in values.** "CORRECTION: 'expressions only deal in scalars' -> 'expressions only deal in
+   values'" (Schema extension, Decided, 13).
+5. **Every domain a schema.** "(i) can we make every domain a schema too?" (asked; proposed below, A).
+6. **Dialects model their operations.** "(ii) dialects also define operation models which arguments as
+   Schemas.OfVariable and return value as Schemas.OfAny" (proposed below, B).
 
-| Object | Kind | Holds |
-|---|---|---|
-| dialect `acme.Firmware` | `Expressions.Framework.Dialect` | `Defines` entries `int16` and `uint8` |
-| domain `int16`, owned by it | `Expressions.Framework.Domain` | `kind`: `integer`, width 16, signed |
-| domain `uint8`, owned by it | `Expressions.Framework.Domain` | `kind`: `integer`, width 8, unsigned |
-| a literal `200` | the `literal` branch of `Term`, nested in an expression's `root` | `value` 200, `domain`: `uint8` as A gives it |
+### Proposed, for the user's review
 
-Questions for the user, each with a recommendation:
+- **A. A domain is a schema.** Schema kinds are closed (Object identity, Decided, 75) and the scalars are exactly five
+  (Store overhaul, Decided, 8), so a domain cannot be a new kind or a sixth scalar. Proposed: a domain is a named
+  `Schemas.OfAny` restricted to the scalar it narrows (`uint8`, an `OfAny` of `Schemas.OfInt`), its parameters
+  (`integer`: `width`, `signed`, `overflow`; `ieee754`: `format`, `rounding`; ...) attached by extension, as
+  Parametrics extends every kind. It is then a schema wherever a schema goes: a property's, a container's element, an
+  expression's `result` (decision 1's "must specify its schema"), and its values are written as its scalar's, bare.
+  `HasDomain(schema, domain)` is then the restriction itself (`Schemas.AnyOf`), and goes. A dialect defines its domains
+  in its own module (`Expressions.Basic.uint8`), as any schema is defined, through `Schemas.Defines`; so a dialect is
+  a module, and `Expressions.Framework.Defines` (Decided, 4) is needed only for what a module does not define
+  (operations, B). What a domain's parameters mean stays code, deferred with type inference (2).
+- **B. An operation model is an expression schema.** mbse-schemas already has the shape: a `Schemas.OfExpression` has a
+  `pattern`, whose variables (`Schemas.OfVariable`, each a name and a schema) are free in it, and a `result`, an
+  `OfAny`. Proposed: a dialect's operation (`add`, `count`, Python's `len`) is a `Schemas.OfExpression` its dialect
+  defines by name, through `Expressions.Framework.Defines(dialect, name, operation)`; its arguments are its pattern's
+  variables, its return its `result`. A `call` names its operation (`callable`) and gives its arguments in the order
+  the operation's variables are declared. Open: whether variables keep their declared order (mbse-schemas keys a
+  pattern's variables by name), else arguments are given by name; and overloads (several operations of one name,
+  Schema extension, Decided, 11), proposed later, with type inference.
+- **C. Container constructors.** Two framework kinds, every dialect's, as `literal` is: `list` (`elements`, a container
+  of terms by int index) and `mapping` (`entries`, a container of `key` and `value` terms by int index). Proposed as
+  the containers Basic's collection operations already read (`count`, `item`, `in`, the quantifiers).
 
-- **A. How a term names its domain.** (a) A `References.OfObject`, the domain's path (its dialect's, then its name),
-  resolved by `References.resolve` as any durable reference is (mbse-schemas 0.25, "durable references for client
-  code"). (b) A name qualified with its dialect, `acme.Firmware.uint8`, resolved through `Defines` by code of this
-  repository. (c) A name resolved in the term's own dialect: refused, since dialects share the framework's kinds (a
-  `literal` is every dialect's) and a term has no dialect of its own. *Recommended: (a)*: no new resolution rule,
-  and the open question of an unqualified name's resolution (CAP-110) stays out of it.
-- **B. A literal written without a domain.** Today it takes its native's default (`int` an unbounded signed integer,
-  `float` binary64, ...). (a) Keep that: Basic defines the five defaults as domains named `bool`, `int`, `float`,
-  `str` and `bytes`, links each from its scalar with `HasDomain`, and a literal without a domain has the one Basic
-  links from its value's scalar. Since a scalar may have more than one domain, Basic's is marked as the default by its
-  own relation, `Expressions.Framework.Default(schema, domain)`, one per scalar. (b) Every term names its domain, a
-  literal too: nothing is left to a default. *Recommended: (a)*; (b) is stricter and writes every literal's domain.
-- **C. Domain kinds as one union, extended by dialects** (above), or each kind its own reference object schema, the
-  domain an instance of one of them. *Recommended: the union*: it is how terms are built, one `Domain` to link to
-  (`HasDomain`, `Defines`, `packed`'s), and a dialect adds kinds without new relations.
-- **D. What stays outside the store.** `Object`, `Anything` and the collection domains (`Collection`, `Record`,
-  `List`, `Keyed`) are what evaluators infer, never a term's `domain`: they stay code. *Recommended as stated.*
-- **E. Conversions' domains.** A translator's conversion that gives a typed literal (C's `uint8_t` back to Basic,
-  SystemVerilog's `logic [1:0]`) names its domain (API.md, Settled while building, 13), today by registering it. (a)
-  Each dialect defines, in its install, the domains its conversions give; one only known from a literal's text (a
-  width) is upserted in the transaction that writes the result, found where it exists. (b) Only (a)'s install part:
-  a conversion that needs another domain is refused. *Recommended: (a)*.
-
-What changes with it, in both languages: the framework's and each dialect's install, Basic's `Domains` (its registry
-goes, `register`, `registered` and `name_of`), the writers (`E.literal(value, domain)` takes a domain object or its
-reference), the evaluators, the translators' conversions, the corpus (its `domains` case, and every term naming a
-domain), tutorial 4 and the skill (domains defined in an install), and DOM's cases. A breaking change: released as
-0.7.0, with `FromFunction`'s removal.
+What changes, in both languages: every kind's schema (no `domain`), the framework's install (`list`, `mapping`;
+`Defines`), each dialect's install (its module's domains, its operations), Basic's `Domains` (the registry goes; the
+kinds' code stays, unused until type inference), the writers (no `domain` argument), the evaluators (values by their
+schemas), the translators (their conversions of typed literals deferred), the corpus (every term's file), tutorial 4
+(deferred), the skill, and EXP, DOM, COL, TRN. A breaking change: released as 0.7.0, with `FromFunction`'s removal.
 
 ## Stages (proposed, once decided)
 
