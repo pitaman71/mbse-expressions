@@ -5,7 +5,7 @@ let:
       callable: entries
       arguments:
       - variable:
-          name: this
+          name: record
       - literal:
           value:
             scalar:

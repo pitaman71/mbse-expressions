@@ -11,7 +11,7 @@
             "name": "a",
             "value": {
               "variable": {
-                "name": "this"
+                "name": "record"
               }
             },
             "body": {

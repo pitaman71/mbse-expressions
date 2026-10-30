@@ -5,7 +5,7 @@ let:
       callable: get
       arguments:
       - variable:
-          name: this
+          name: record
       - literal:
           value:
             scalar:
@@ -41,7 +41,7 @@ let:
                       callable: has
                       arguments:
                       - variable:
-                          name: this
+                          name: record
                       - literal:
                           value:
                             scalar:

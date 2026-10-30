@@ -11,7 +11,7 @@
                 "name": "a",
                 "object": {
                   "variable": {
-                    "name": "this"
+                    "name": "record"
                   }
                 }
               }
@@ -29,7 +29,7 @@
                     "operator": "->",
                     "object": {
                       "variable": {
-                        "name": "this"
+                        "name": "record"
                       }
                     }
                   }
