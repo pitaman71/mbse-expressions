@@ -51,7 +51,7 @@ Its terms are bespoke dataclasses, its domain registry process-global, its vocab
 
 What the user decided about domains is in mbse-schemas: Store overhaul, Decided, 8, 9 ("all scalars are domains and
 users may define domains and dialects containing domains"; "a scalar schema can have > 1 domain"; "width is a property
-of the domain, not the schema") and 22 (formats become domains); Schema extension, Decided, 9 to 14 and 21.
+of the domain, not the schema") and 22 (formats become domains); Schema extension, Decided, 9 to 13 and 21 in [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided), 14 in [CAP-112: parameters modeled as schema data](../../../../mbse-basis/docs/capabilities/CAP-112.md#decided).
 `DefinesDomains` is named once, with no description (Store overhaul, step 5).
 
 ## Questions for the user
@@ -62,16 +62,16 @@ of the domain, not the schema") and 22 (formats become domains); Schema extensio
    classes (b) keeps.*
 2. **How terms are stored.** (a) One nested value, held by an expression, a reference object (its root). (b) Counted
    reference objects linked by relations. (c) Today's, a reference object per term with
-   `Arguments`. *Recommended: (a), as Schema extension, Decided, 13 as revised and Object identity, Decided, 82 have it.*
-3. **How `Schemas.OfExpression` gains its terms.** Schema kinds are closed (Object identity, Decided, 75), so by
+   `Arguments`. *Recommended: (a), as Schema extension, Decided, 13 as revised ([FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided)) and Object identity, Decided, 82 ([CAP-123: schema objects identified by path](../../../../mbse-basis/docs/capabilities/CAP-123.md#decided)) have it.*
+3. **How `Schemas.OfExpression` gains its terms.** Schema kinds are closed (Object identity, Decided, 75 in [CAP-116: framework schemas extended, checked](../../../../mbse-basis/docs/capabilities/CAP-116.md#decided)), so by
    extension: (a) an extension adjacency from `Schemas.OfExpression` to the expression object holding the term (a
    relation of two links, as an extension's adjacency must be), as Parametrics links a definition to its parameters;
    (b) an extension property holding the term value. *Recommended: (a).*
 4. **What `DefinesDomains` is.** Proposed: a dialect is a reference object (as a module is), defining its domains by
    name, `Expressions.Framework.Defines(dialect, name, domain)` (decided: see Decided, 4); a basic scalar has one domain or more through
-   `HasDomain(schema, domain)` (Decided, 9); a domain is an object (Schema extension, Decided, 21). *Confirm or correct.*
+   `HasDomain(schema, domain)` (Decided, 9); a domain is an object (Schema extension, Decided, 21 in [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided)). *Confirm or correct.*
 5. **How mbse-schemas' executor evaluates.** mbse-schemas cannot depend on this repository, and "takes an evaluator from
-   its caller rather than import one"; there is no global registry (its FRAMEWORK.md). (a) A protocol in mbse-schemas
+   its caller rather than import one"; there is no global registry ([CAP-161: isolated stores, with no global registry](../../../../mbse-basis/docs/capabilities/CAP-161.md#an-evaluator-given-never-imported); [CAP-142: expressions evaluated in queries](../../../../mbse-basis/docs/capabilities/CAP-142.md)). (a) A protocol in mbse-schemas
    (`holds`, `assign`, `fold`), given to a store once (`Expressions.attach(store)`); the executor refuses as today where
    none is given. (b) Given per transaction (`store.transaction(..., evaluator=)`). *Recommended: (a).*
 6. **What a `requires` that evaluates to unknown does** (three-valued logic): drop the frame, keep it, or refuse.
@@ -84,7 +84,7 @@ of the domain, not the schema") and 22 (formats become domains); Schema extensio
 10. **Writers and `FromFunction`.** mbse-codegen-python uses the writers (`E.operation`, `E.Writer`). *Recommended:
     keep `FromFunction`; keep the writers until the dependents move.*
 11. **Scope now.** All six dialects and the twelve translators, ported with the model; vocabularies as data (functions,
-    formals, intrinsics: Schema extension, Decided, 9, 11, 22) and value parameters and `Parameters.Bind`/`Apply`
+    formals, intrinsics: Schema extension, Decided, 9, 11, 22 in [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided)) and value parameters and `Parameters.Bind`/`Apply`
     (mbse-schemas' Parametrics) after. *Recommended as stated.*
 
 ## Decided
@@ -134,7 +134,7 @@ As the user decided (2026-10-30), on what stage 2b raised:
 Question 6, what a `requires` that evaluates to unknown does: "semantics of evaluate deserve a more in-depth
 discussion", open.
 
-As the user decided (2026-10-28), on question 7, a map's variables (the "spread" case, STREAMING_QUERIES.md):
+As the user decided (2026-10-28), on question 7, a map's variables (the "spread" case, [CAP-142: expressions evaluated in queries](../../../../mbse-basis/docs/capabilities/CAP-142.md#the-spread-case-of-a-map)):
 
 7. **A variable over a finite domain is in the plan**: "(b) is in the plan": each frame fans out into one frame per
    value the domain holds and its pattern's `requires` allows (bool, an enum). **A variable computed from the frame**,
@@ -155,7 +155,7 @@ nested, a snapshot round-tripping). What they propose, for the user's review:
 - `Expressions.Framework.Term`, a union of value object kinds, `literal` (`value`, a basic scalar's), `call`
   (`callable`, by name; `arguments`, a container of terms by index), `variable` (`name`) and `let` (`name`, `value`,
   `body`): the term kinds as the starting point, `operation` named `call`. A term holds terms, nested. Every kind
-  declares `domain`, by name ("wait, all terms have a domain"; Schema extension, Decided, 21), a dialect's kinds too.
+  declares `domain`, by name ("wait, all terms have a domain"; Schema extension, Decided, 21 in [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided)), a dialect's kinds too.
 - `Expressions.Framework.Expression`, a reference object whose `root` is a term: the only instance of the kinds.
 - `Expressions.Framework.HasRoot(schema, expression)`, one expression per schema, and the extension adjacency
   `expression` it gives `Schemas.OfExpression` (question 3), with no member on it.
@@ -196,13 +196,13 @@ pattern, its root's domain against its result) is to be scoped with stage 3 or 5
 
 - **Cost**: every expression is written within a transaction, in a store that takes about 23 ms to make; suites and
   `FromFunction` that build many expressions need care.
-- **The commit-time rule** (mbse-schemas, Decided, 96, kept by 32): an install and the expressions using it are
+- **The commit-time rule** (Object identity, Decided, 96 in [CAP-124: writes all-or-nothing in transactions](../../../../mbse-basis/docs/capabilities/CAP-124.md#decided), kept by the store overhaul's Decided, 32): an install and the expressions using it are
   separate transactions.
 - **No reference between stores**: a constraint and the data it is evaluated over share a store.
 - **Extension limits**: an extension's adjacency is to a relation of two links and no properties.
 - **Equivalence**: byte-identical JSON in both languages, and the TypeScript model of Python's rules (DIA-02).
-- **Stale text in mbse-schemas** to correct with the port: its FRAMEWORK.md still calls expressions "ordinary objects
-  with registered meta-schemas", and its skill's `queries.md` promises step 5.
+- **Stale text in mbse-schemas** to correct with the port: its skill's `queries.md` promises step 5 ("No expressions
+  yet"). FRAMEWORK.md's "ordinary objects with registered meta-schemas" did not survive its drain into mbse-basis.
 
 ---
 
