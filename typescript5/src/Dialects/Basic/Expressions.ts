@@ -8,7 +8,8 @@
  *   (see `Domains`).
  * - `call`: a named operation (`callable`) applied to ordered `arguments`, e.g. `eq(a, b)`, and its result's `domain`,
  *   which the conversions need. The vocabulary of names is open; the core operations (`CORE`) are the ones every
- *   binding evaluates. See docs/EXPRESSIONS.md.
+ *   binding evaluates. See mbse-basis
+ *   [CAP-095: Basic terms as data](../../../../../mbse-basis/docs/capabilities/CAP-095.md#terms-and-the-core-vocabulary).
  * - `variable`: the value bound to a `name`.
  * - `let`: binds a `name` to the value of one term (`value`) within another (`body`).
  * - `quantifier`: binds a `name` to each item of a `collection` within a `body`, and gives whether it holds for `all` or

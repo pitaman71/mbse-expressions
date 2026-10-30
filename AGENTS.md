@@ -13,7 +13,7 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 | Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
 | Use the library: write, evaluate, store or translate constraints | [skills/mbse-expressions/SKILL.md](skills/mbse-expressions/SKILL.md), a skill. It loads its references only as needed |
 | Learn it by example, from a first constraint to C and SystemVerilog | [python3/tutorials/README.md](python3/tutorials/README.md), eight case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
-| Understand a design decision or an open question | [docs/EXPRESSIONS.md](docs/EXPRESSIONS.md), by section |
+| Understand a design decision or an open question | mbse-basis [FEA-024: expressions as data](../mbse-basis/docs/features/FEA-024.md) and its capabilities' detail files |
 | Change the framework, a dialect or a translator | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
 | Model the data the constraints refer to | [mbse-schemas' AGENTS.md](https://github.com/pitaman71/mbse-schemas/blob/main/AGENTS.md), in the sibling checkout |
@@ -54,8 +54,8 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 - **The skill is packaged with each implementation.** After editing `skills/mbse-expressions/`, run `skills/sync.sh`;
   SKL-01 fails until the copies match. Every fenced block tagged `python` or `typescript` in the skill is a complete
   program that SKL-02 runs; tag fragments `python fragment` or `typescript fragment`.
-- **Behavior is decided in `docs/EXPRESSIONS.md`.** Record new decisions under Resolved, and put what stays undecided
-  under Open questions.
+- **Behavior is decided in the detail files of mbse-basis [FEA-024: expressions as data](../mbse-basis/docs/features/FEA-024.md)'s capabilities**, kept as mbse-basis'
+  [`docs/README.md`](../mbse-basis/docs/README.md#detail-files) says (Detail files).
 
 ## Commands
 

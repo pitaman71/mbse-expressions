@@ -22,7 +22,7 @@ Basic is three-valued (an absent property is unknown) and never coerces, only it
 
 ## Design
 
-- [EXPRESSIONS.md](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md): the Basic dialect, the framework, the dialects and the translators, plus the open questions
+- [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md), in mbse-basis, with its capabilities: the Basic dialect, evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, plus the open questions
 
 ## Optional
 

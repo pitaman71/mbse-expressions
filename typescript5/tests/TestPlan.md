@@ -4,7 +4,8 @@
 # Test plan — typescript5
 
 Scope: everything under `typescript5/src` (the framework, the Basic, Python, Matlab, Excel, Latex, Ccpp and
-SystemVerilog dialects, and the translators between them) and cross-implementation conformance. The design reference is `../../docs/EXPRESSIONS.md`;
+SystemVerilog dialects, and the translators between them) and cross-implementation conformance. The design reference is
+mbse-basis [FEA-024: expressions as data](../../../mbse-basis/docs/features/FEA-024.md), with its capabilities;
 this plan and the Python one mirror each other case for case, with the deliberate differences of
 `../../docs/EQUIVALENCE.md`. mbse-schemas is tested in mbse-schemas.
 

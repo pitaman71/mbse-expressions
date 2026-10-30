@@ -1,5 +1,6 @@
 """The Ccpp dialect: expressions of C and C++ over their arithmetic types, under the LP64 data model, rendered as C
-source and evaluated by C's rules. `install` adds its kinds to the framework's terms. See docs/EXPRESSIONS.md."""
+source and evaluated by C's rules. `install` adds its kinds to the framework's terms. See mbse-basis
+[CAP-100: six languages' expression dialects](../../../../../../mbse-basis/docs/capabilities/CAP-100.md)."""
 
 from . import Domains, Evaluators, Expressions, Text
 from .Expressions import install

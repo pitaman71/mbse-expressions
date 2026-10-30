@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Expressions](../../EXPRESSIONS.md) · [Home](../../../README.md)
+[← FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md) · [Home](../../../README.md)
 
 # Porting to the stabilized mbse-schemas (a proposal, for review)
 
@@ -174,7 +174,8 @@ Each with both gates at 100% and the corpora regenerated; a stage touching mbse-
 (`polyrepo.py workspace <dir> --edit mbse-schemas`).
 
 1. **The decisions on `main`**: this proposal decided; `overhauls/meta-schemas`' decisions and `scalars`' recorded in
-   EXPRESSIONS.md, as above.
+   EXPRESSIONS.md, as above (since drained into mbse-basis
+   [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md) and its capabilities).
 2. **Schemas as installs, terms in the store** (with reads through `Readers`, since `Terms.py` fails at import until
    both are done): `Expressions.install` and each dialect's; `Bindings` gone; tests and corpora moved.
 3. **Domains**: `HasDomain`, `Expressions.Framework.Defines`, domains as objects; dialect-scoped names in place of the global registry.
@@ -199,4 +200,4 @@ Each with both gates at 100% and the corpora regenerated; a stage touching mbse-
 ---
 
 <!-- nav -->
-[← Expressions](../../EXPRESSIONS.md) · [Home](../../../README.md)
+[← FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md) · [Home](../../../README.md)

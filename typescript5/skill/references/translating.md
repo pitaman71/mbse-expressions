@@ -65,6 +65,6 @@ A translator between a dialect and itself is a rewriting: `Pairwise(E.DIALECT, E
 
 | Topic | Read |
 |---|---|
-| Rules, patterns, holes and co-traversal | [EXPRESSIONS.md, Translators](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#translators) |
+| Rules, patterns, holes and co-traversal | [CAP-101: translation between dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-101.md#translators), in mbse-basis |
 | The rules of every pair | [python3/mbse/Expressions/Translators/](https://github.com/pitaman71/mbse-expressions/blob/main/python3/mbse/Expressions/Translators) |
 | Round trips, routes, sharing, refusals and evaluation, case by case | [TRN, the translators' test suite](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/07_Translators.ipynb) |

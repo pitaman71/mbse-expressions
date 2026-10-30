@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Expressions design](EXPRESSIONS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 8 · Constraints for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
 
 # Equivalence of the implementations
 
@@ -73,4 +73,4 @@ run as tests and committed with outputs (Python's from its kernel, TypeScript's 
 ---
 
 <!-- nav -->
-[← Expressions design](EXPRESSIONS.md) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 8 · Constraints for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)

@@ -61,7 +61,9 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 | Add a dialect or a translator | [references/extending.md](references/extending.md) |
 | Model the schemas the expressions refer to | the [mbse-schemas skill](https://github.com/pitaman71/mbse-schemas/blob/main/skills/mbse-schemas/SKILL.md) |
 
-Deeper material is in the repository: `docs/EXPRESSIONS.md` holds the design, every decision and the open questions, and
-eight tutorial case studies (`python3/tutorials/`, `typescript5/tutorials/`) teach it from a first constraint to C and
+Deeper material: mbse-basis
+[FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md)
+holds the design, with its capabilities: every decision and the open questions. In the repository, eight tutorial
+case studies (`python3/tutorials/`, `typescript5/tutorials/`) teach it from a first constraint to C and
 SystemVerilog. Links use `https://github.com/pitaman71/mbse-expressions/blob/main/<path>`; in a
 checkout, `<path>` is relative to the repository root.

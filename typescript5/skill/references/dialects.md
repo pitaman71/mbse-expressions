@@ -77,5 +77,5 @@ Excel.Evaluators.Workbook(names, {"Sheet1": {"A1": 2}}, name="Book1", books={"Ra
 
 | Topic | Read |
 |---|---|
-| Every dialect's kinds, values and evaluation, and how scopes resolve | [EXPRESSIONS.md, Dialects](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#dialects) |
+| Every dialect's kinds, values and evaluation, and how scopes resolve | [CAP-100: six languages' expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-100.md#dialects), in mbse-basis |
 | Each dialect's rules, case by case | [DIA, the dialects' test suite](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/06_Dialects.ipynb) |

@@ -68,6 +68,6 @@ Add a module per pair to `Translators/`, declaring `TRANSLATOR = Pairwise(left, 
 
 | Topic | Read |
 |---|---|
-| The framework: terms and roles, symbolics and scopes, domains, the interpreter | [EXPRESSIONS.md, The framework](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EXPRESSIONS.md#the-framework) |
+| The framework: terms and roles, symbolics and scopes, domains, the interpreter | [CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md#the-framework), in mbse-basis |
 | A complete dialect to copy | [the Excel dialect](https://github.com/pitaman71/mbse-expressions/blob/main/python3/mbse/Expressions/Dialects/Excel) |
 | The framework, case by case | [FRM, the framework's test suite](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/05_Framework.ipynb) |

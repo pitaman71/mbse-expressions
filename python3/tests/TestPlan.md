@@ -5,7 +5,7 @@
 
 Scope: everything under `python3/mbse/Expressions` (the framework, the Basic, Python, Matlab, Excel, Latex, Ccpp and
 SystemVerilog dialects, and the translators between them) and cross-implementation conformance. The design reference is
-`../../docs/EXPRESSIONS.md`; this plan and the TypeScript one mirror each other case for case, with the deliberate
+mbse-basis [FEA-024: expressions as data](../../../mbse-basis/docs/features/FEA-024.md), with its capabilities; this plan and the TypeScript one mirror each other case for case, with the deliberate
 differences of `../../docs/EQUIVALENCE.md`. mbse-schemas is tested in mbse-schemas. DIA and TRN use numpy, as a module
 Python expressions import (`uv sync --all-extras`).
 

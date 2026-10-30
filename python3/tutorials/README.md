@@ -11,8 +11,8 @@ where a programmer starts, with a constraint written in code, and ends with that
 It's written for Python programmers who keep constraints about their data in more than one place or language. A
 TypeScript port with the same case studies and the same outputs is in the [TypeScript
 tutorial](../../typescript5/tutorials/README.md). You don't need mbse-schemas' tutorial first; mbse-patterns' tutorial
-builds validation, queries and test data on these expressions. The [design document](../../docs/EXPRESSIONS.md) is the
-reference for everything here.
+builds validation, queries and test data on these expressions. mbse-basis
+[FEA-024: expressions as data](../../../mbse-basis/docs/features/FEA-024.md), with its capabilities, is the reference for everything here.
 
 ## Running the notebooks
 

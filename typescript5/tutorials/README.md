@@ -10,8 +10,8 @@ where a programmer starts, with a constraint written in code, and ends with that
 
 It's written for TypeScript programmers who keep constraints about their data in more than one place or language. It's a
 port of the [Python tutorial](../../python3/tutorials/README.md), with the same case studies, the same reasoning and the
-same answers; the JSON of case study 1 is byte for byte Python's. The [design document](../../docs/EXPRESSIONS.md)
-is the reference for everything here.
+same answers; the JSON of case study 1 is byte for byte Python's. mbse-basis
+[FEA-024: expressions as data](../../../mbse-basis/docs/features/FEA-024.md), with its capabilities, is the reference for everything here.
 
 Where the bindings differ, the code follows TypeScript idioms:
 

@@ -1,6 +1,7 @@
 """Domains of the Basic dialect: the value domains that literals carry, and the values its core operations take and give.
 
-Value domains name the standard they implement, with only its parameters (see docs/EXPRESSIONS.md, Value domains):
+Value domains name the standard they implement, with only its parameters (see mbse-basis
+[CAP-097: value domains of published standards](../../../../../../mbse-basis/docs/capabilities/CAP-097.md#value-domains)):
 
 - `OfBool`: true and false.
 - `OfInteger`: two's complement integers of a `width` in bits, or unbounded, `signed` or not, whose `overflow` wraps,

@@ -107,7 +107,7 @@ npm test                       # type-check and run the test suites and the tuto
 | Read | For |
 |---|---|
 | [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Eight case studies, from a constraint written in code to the same constraint in C and SystemVerilog: constraints as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
-| [Expressions design](docs/EXPRESSIONS.md) | The design: the expression kinds, the core vocabulary, evaluation, meta-schemas and writers |
+| mbse-basis [FEA-024: expressions as data](../mbse-basis/docs/features/FEA-024.md) | The design, as its capabilities' detail files: the Basic dialect's terms and core vocabulary, three-valued evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, and open questions |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-expressions/SKILL.md), [Summary for LLMs](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
 | [Python test plan](python3/tests/TestPlan.md), [TypeScript test plan](typescript5/tests/TestPlan.md) | The test suites |
@@ -116,7 +116,7 @@ npm test                       # type-check and run the test suites and the tuto
 ## Repository layout
 
 ```
-docs/                     the design (EXPRESSIONS.md) and how the implementations are kept equivalent (EQUIVALENCE.md)
+docs/                     how the implementations are kept equivalent (EQUIVALENCE.md); the design is mbse-basis FEA-024's
 python3/                  Python implementation: mbse/Expressions (Framework, Dialects, Translators), tests, tutorials
 typescript5/              TypeScript implementation: src (Expressions, Evaluators), tests, tutorials
 conformance/              snapshots each implementation writes; each must read the other's
