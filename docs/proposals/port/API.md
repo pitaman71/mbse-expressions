@@ -315,8 +315,11 @@ extension preferred to refinement):
     (`Proxies._EntryBuilder.build`), and under `python -X dev` writing `Basic.define` failed with
     `DecodeError: $.integer[""]: the value object has no property ''`; neither happens outside those runtimes, under
     other hash seeds or with forced garbage collection, so it looks like memory-layout dependence (an `id()`-keyed
-    cache) in mbse-schemas. DOM-05
-    takes the store's snapshot before reading the documents back; reported, not fixed here.
+    cache) in mbse-schemas. *Resolved by mbse-schemas 0.26.5*: the Python store told the schema objects it held when a
+    transaction began by their `id()`s, and an unnamed one collected while the transaction was open could give its
+    `id()` to one the transaction made, whose updates then waited for the commit and, written then, undid what was
+    written in between; it now numbers them, as the TypeScript store did (mbse-schemas TXN-15, F16). DOM-05 takes the
+    snapshot after reading the documents back again, as first written.
 
 ## What stage 2b needed (done)
 
