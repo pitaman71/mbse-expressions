@@ -46,6 +46,8 @@ uv run python -m mbse.Expressions.Conformance.write
 cd typescript5 && nvm use && npm install        # TypeScript: Node 22 or later
 npm run coverage                                # type-checks, runs every notebook, gates at 100%
 npm run conformance
+
+python3 ../mbse-basis/scripts/update_doc_links.py  # after adding, renaming or retitling a document
 ```
 
 ## Related repositories
