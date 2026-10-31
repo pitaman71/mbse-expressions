@@ -40,14 +40,14 @@ Its terms are bespoke dataclasses, its domain registry process-global, its vocab
   expressions are built and read only through mbse-schemas; dialects as pure model, an open question under P-018.
 - `scalars` (2 commits, docs only): "scalars you may analyze and reapply unless porting is much easier and
   risk-free". Reapplied by hand in stage 1, not cherry-picked: it cites mbse-schemas items that never landed (a
-  palette, `OfName`, scalars as placeholders: an experimental scalars overhaul, deferred in the workspace's TODO.md), and
+  palette, `OfName`, scalars as placeholders: an experimental scalars overhaul, deferred: plain scalars now in [CAP-156: the five basic scalars with boundless domains](../../../../mbse-basis/docs/capabilities/CAP-156.md)), and
   mbse-schemas has since made the five basic scalars real and finer scalars domains here (Store overhaul, Decided, 8
   and 9). What it records of the user's is kept, in the user's words: "I generally dislike semantics of datatypes and
   operations leaking into the modeling language as currently built"; dialects hold the semantics of datatypes and
   operations, one for each language's built-ins and for interoperation types such as IEEE 754; "the attempt to invent
   a neutral type system was a mistake. we should model standards not invent them", so a neutral Basic "should be
   removed", its expression kinds and three-valued evaluation kept; translation across languages belongs to transforms.
-  Removing Basic itself stays deferred, as the TODO.md has it (question 9).
+  Removing Basic itself stays deferred, as [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](../../../../mbse-basis/docs/capabilities/CAP-180.md) has it (question 9).
 
 What the user decided about domains is in mbse-schemas: Store overhaul, Decided, 8, 9 ("all scalars are domains and
 users may define domains and dialects containing domains"; "a scalar schema can have > 1 domain"; "width is a property
@@ -143,7 +143,7 @@ As the user decided (2026-10-28), on question 7, a map's variables (the "spread"
 
 Question 8, a collecting reduce, is parked with map and reduce themselves: "map and reduce are not where I need them
 to be, but parking them so we can make progress on finishing the current overhaul in the dependent repos is more
-urgent" (2026-10-29; the workspace's TODO.md). Stage 5's variables and collecting reduce wait on it, and its `requires`
+urgent" (2026-10-29; [CAP-142: expressions evaluated in queries](../../../../mbse-basis/docs/capabilities/CAP-142.md#blocked), Blocked). Stage 5's variables and collecting reduce wait on it, and its `requires`
 on question 6; stages 1 to 4 do not.
 
 As the user decided (2026-10-30), on what stage 2b raised about `Python.Text.FromFunction` (it refused a captured
