@@ -46,7 +46,7 @@ with store.transaction():
 contact = E.variable("contact")
 with store.transaction():
     senior = store.Expressions.Framework.Expression(lambda e: e.root(contact.age.ge(65).and_(contact.has("email"))))
-assert E.DIALECT.validate(senior, bound={"contact"}, core=True) == []
+assert E.DIALECT.validate(senior, bound={"contact"}) == []
 
 # Basic evaluates with three-valued logic: an absent property is unknown (None), and nothing is coerced.
 assert Evaluators.OfAny(senior, {"contact": ada}) is True
@@ -90,28 +90,31 @@ Term = store.registered("Expressions.Framework.Term")
 
 # Writers: methods that write terms where they are given, within a transaction.
 person = E.variable("person"); E.literal(1); E.let_("a", value, body); E.operation("name", *arguments)
+E.list_(1, person.age); E.mapping(("lo", 0.5), ("hi", 2.0))  # container constructors: a list, a mapping of key to value
 with store.transaction():
     expression = store.Expressions.Framework.Expression(lambda e: e.root(person.age.ge(18)))  # an expression, by its root
     term = store.Expressions.Framework.Term(E.DIALECT.spec(person.age.ge(18)))               # a term value alone
-Domains.register("uint8", Domains.OfInteger.Builder().width(8).signed(False).create())  # a literal names its domain
-E.literal(200, "uint8"); E.literal(200, domain)            # by name, or a domain registered under one
-Domains.Value(domain, 200)                 # a value of a non-default domain, as evaluation gives it; overflow applies
 person.age; person.get("eq"); person.has("email")         # .name is get(person, 'name'); get() for names like eq
 t.eq(x) .ne .lt .le .gt .ge .and_(x) .or_(x) .not_() .implies(x) .add(x) .sub(x) .mul(x) .neg()
-t.bitand(x) .bitor(x) .bitxor(x) .bitnot() .shl(n) .shr(n)  # on integers and bits of one domain
-t.convert(domain) .reinterpret(domain) .pack() .unpack(packed)  # a call's domain is its result's
+t.bitand(x) .bitor(x) .bitxor(x) .bitnot() .shl(n) .shr(n)  # on ints, two's complement of infinite width
 block.ports.all("p", E.variable("p").width.ge(8))  # .any .count_where; .count() .item(i) .in_(xs) .sum() .min() .max() .unique()
 block.entries("wires")                             # an object's entries in an adjacency, as records that get reads
 
 # Reading: a term is read through mbse-schemas' readers; Terms gives the generic reads.
 Terms.term(expression)                     # the root term of an Expression (or a term itself)
 Terms.kind_of(term); Terms.form(term)      # ("call", record); Form(kind, attributes, arguments)
-E.DIALECT.validate(term, bound={"person"}, core=True)        # problems, [] when valid
+E.DIALECT.validate(term, bound={"person"})                   # problems, [] when valid; a call Basic doesn't define is one
 E.DIALECT.infer(term, {"person": Domains.Object})            # from mbse.Expressions.Dialects.Basic import Domains
 
 # Evaluation: a scope, or a mapping of variables.
 Evaluators.OfAny(expression, {"person": value})             # True, False, a value, or None when unknown
 Partials.OfAny(constraint, {"person": value})               # the residual: a writer, what is known evaluated, the rest kept
+
+# Dialects, operations and domains are data: a dialect is a singleton owning its domains by name.
+store.transaction(Basic.define)            # Basic's dialect's data, after its install: its operations and domains
+basic = store.singleton("Expressions.Basic"); [str(e.name) for e in basic.operations]   # "get", "has", "eq", ...
+store.registered("Expressions.Basic.add").pattern.variables   # its arguments, in order: a, b; .result its return
+Domains.read(next(e.domain for e in basic.domains if str(e.name) == "uint8"))   # its kind's data: width 8, unsigned
 
 # Storage, traversal, translation: the same calls in every dialect.
 JSON.ToJSON(store)(Term, term); JSON.FromJSON(store)(Term, text)   # YAML likewise; a term reads back as a term value
@@ -126,7 +129,8 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 
 - `1 == 1.0` is unknown in Basic, and `True` is not an `int`. Write literals of the type the data has.
 - `x.email` is `get`, unknown when absent; whether it is present is `x.has("email")`.
-- Evaluating an operation outside the core raises `NotImplementedError`: validate with `core=True` first.
+- Evaluating an operation Basic does not define raises `NotImplementedError`: validate first. Widths, overflow and the
+  conversions wait for type inference: a term carries no domain.
 - Each mbse-schemas store has its own schemas: run each install once per store, and an install and what uses it in
   separate transactions. Transactions do not nest: build what a writer needs (a translation's source term, say) before
   opening the one that writes it.
@@ -138,6 +142,6 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 
 | Topic | Read |
 |---|---|
-| Learning it by example: constraints as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog | [the tutorial, eight case studies](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) |
+| Learning it by example: constraints as data, unknowns, collections, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog | [the tutorial, seven case studies](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) |
 | The Basic dialect: kinds, core vocabulary, evaluation, installs and writers | [CAP-095: Basic terms as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-095.md), in mbse-basis |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/TestPlan.md) |

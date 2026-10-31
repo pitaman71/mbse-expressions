@@ -1,12 +1,13 @@
 /**
  * Expressions of the Matlab dialect: MATLAB expressions over scalars and structs, as MATLAB source writes them.
  *
- * Matlab's terms are three of the framework's kinds (`Framework/Terms`) and six of its own, which `install` adds to
- * `Expressions.Framework.Term` by schema extension, each with a `domain` by name, as every term has:
+ * Matlab's terms are four of the framework's kinds (`Framework/Terms`) and six of its own, which `install` adds to
+ * `Expressions.Framework.Term` by schema extension (a term carries no domain):
  *
  * - `literal` (the framework's): a constant, a number (int or float, both doubles), a logical (boolean) or a string
  *   scalar (str), its `value`.
  * - `variable` (the framework's): an identifier, the value bound to a variable, its `name`.
+ * - `list` (the framework's container constructor): `[a, b]`, the concatenation of its elements into a row array.
  * - `call` (the framework's): a function (`callable`) applied to ordered `arguments`, for the functions in
  *   `Domains.CALLS` (`isfield`, the bit functions, and `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique` and
  *   `ismember` of arrays).
@@ -41,26 +42,28 @@ const { repr, typeName } = Repr;
 /** Matlab's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
 export function install(txn: any): any {
   const S = txn.Schemas;
+  const [dialect, specs] = F.dialect(txn, "Expressions.Matlab"); // its dialect: a singleton
   return txn.uid("mbse.Expressions.Matlab/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
-      Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Field: S.OfObject, Index: S.OfObject,
+      ...dialect, Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Field: S.OfObject, Index: S.OfObject,
       Arrayfun: S.OfObject, Import: S.OfObject, // Term: the framework's union
     })
     .spec([
+      ...specs,
       (_: any) => _.Binary.name("Expressions.Matlab.Binary").properties({
-        operator: S.OfStr, left: _.Term, right: _.Term, domain: S.OfStr }),
+        operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.Unary.name("Expressions.Matlab.Unary").properties({
-        operator: S.OfStr, operand: _.Term, domain: S.OfStr }),
+        operator: S.OfStr, operand: _.Term }),
       (_: any) => _.Field.name("Expressions.Matlab.Field").properties({
-        name: S.OfStr, value: _.Term, domain: S.OfStr }),
+        name: S.OfStr, value: _.Term }),
       (_: any) => _.Index.name("Expressions.Matlab.Index").properties({
-        value: _.Term, index: _.Term, domain: S.OfStr }),
+        value: _.Term, index: _.Term }),
       (_: any) => _.Arrayfun.name("Expressions.Matlab.Arrayfun").properties({
         name: S.OfStr, // bound to each element in the body
-        array: _.Term, body: _.Term, domain: S.OfStr }),
+        array: _.Term, body: _.Term }),
       (_: any) => _.Import.name("Expressions.Matlab.Import").properties({
         name: S.OfStr, // pkg.fn or pkg.*
-        body: _.Term, domain: S.OfStr }),
+        body: _.Term }),
       (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // branches added: schema extension
         (t: any) => t.name("matlab_binary").schema([_.Binary]),
         (t: any) => t.name("matlab_unary").schema([_.Unary]),
@@ -125,6 +128,7 @@ export const DIALECT = new F.Dialect("Matlab", {
   matlab_index: new F.Kind(F.APPLICATION, { signature: Domains.INDEX }),
   matlab_arrayfun: new F.Kind(F.QUANTIFIER, { signature: Domains.ARRAYFUN, required: ["name"], check: arrayfunCheck }),
   matlab_import: new F.Kind(F.IMPORT, { required: ["name"], check: importCheck }),
+  list: new F.Kind(F.APPLICATION, { signature: Domains.CONCATENATION }),
 }, { domain_of: Domains.of, literal: native });
 
 // --- Writers ---
@@ -186,6 +190,12 @@ export function index(value: unknown, index: unknown): Writer {
 /** `arrayfun(@(name) body, array)`. */
 export function arrayfun(name: string, array: unknown, body: unknown): Writer {
   return record("matlab_arrayfun", { name }, { array, body });
+}
+
+/** `[elements, ...]`, their concatenation into a row array. */
+export function array(...elements: unknown[]): Writer {
+  const specs = elements.map((element) => DIALECT.spec(element));
+  return new Writer((u: any) => u.list((r: any) => r.elements(specs)));
 }
 
 /** `import name`, then `body`. */

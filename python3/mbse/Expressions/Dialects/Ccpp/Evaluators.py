@@ -4,9 +4,8 @@
 `Scope(variables, functions)`. Values carry their C type while
 evaluating, and the result is its native: an int, a float (a `long double` as its text, as `Basic.Ieee754` writes it),
 a bool, a string, or an object. A variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or
-`unsigned long` as the first that holds it, a float a `double`, and a Basic typed value (`Domains.Value`) of an integer
-domain of 8, 16, 32 or 64 bits the `<stdint.h>` type of its width and signedness, and of a binary IEEE 754 format
-`float`, `double` or `long double`. C's rules apply:
+`unsigned long` as the first that holds it, and a float a `double` (a value carries no domain: a variable of another
+type waits for type inference, the port's stage 3, Decided, 2). C's rules apply:
 
 - The integer promotions and the usual arithmetic conversions decide the type an operator computes in (see `Domains`);
   unsigned arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754 specifies.
@@ -30,7 +29,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from mbse.Expressions.Dialects.Basic import Domains as BD, Ieee754
+from mbse.Expressions.Dialects.Basic import Ieee754
 from mbse.Expressions.Framework import Errors, Evaluators as F, Objects, Symbolics as S, Terms
 
 from . import Domains, Expressions
@@ -55,14 +54,6 @@ def _name(value: _Typed) -> str:
 
 def _typed(value: Any) -> _Typed:
     """A variable's or a member's value, with its type."""
-    if isinstance(value, BD.Value):
-        domain = value.domain
-        if isinstance(domain, BD.OfInteger.Data) and domain.width in (8, 16, 32, 64):
-            return _Typed(Domains.TYPES[f"{'' if domain.signed else 'u'}int{domain.width}_t"], value.value)
-        formats = {"binary32": "float", "binary64": "double", "binary128": "long double"}
-        if isinstance(domain, BD.OfIeee754.Data) and domain.format in formats:
-            return _Typed(Domains.TYPES[formats[domain.format]], value.value)
-        raise TypeError(f"{domain.name()} has no C type")
     ctype = Domains.of(value)
     if isinstance(ctype, CType):
         return _Typed(ctype, value)

@@ -4,16 +4,25 @@
  * Basic's terms are the framework's kinds (`Framework/Terms`) and one of its own, which `install` adds to
  * `Expressions.Framework.Term` by schema extension:
  *
- * - `literal`: a basic scalar (`value`), and its value domain (`domain`, by name) when that is not the scalar's default
- *   (see `Domains`).
- * - `call`: a named operation (`callable`) applied to ordered `arguments`, e.g. `eq(a, b)`, and its result's `domain`,
- *   which the conversions need. The vocabulary of names is open; the core operations (`CORE`) are the ones every
- *   binding evaluates. See mbse-basis
+ * - `literal`: a basic scalar (`value`).
+ * - `call`: an operation Basic defines (`callable`) applied to ordered `arguments`, e.g. `eq(a, b)`: the arguments are
+ *   the operation's variables in the order it declares them. See mbse-basis
  *   [CAP-095: Basic terms as data](../../../../../mbse-basis/docs/capabilities/CAP-095.md#terms-and-the-core-vocabulary).
  * - `variable`: the value bound to a `name`.
  * - `let`: binds a `name` to the value of one term (`value`) within another (`body`).
+ * - `list` and `mapping`: the container constructors, a list of its `elements`' values and a mapping of its `entries`'
+ *   keys to their values.
  * - `quantifier`: binds a `name` to each item of a `collection` within a `body`, and gives whether it holds for `all` or
  *   `any` of them, or for how many (`count`): its `quantifier`.
+ *
+ * A term carries no domain. Basic's operations are data: `install` defines each as a `Schemas.OfExpression` in Basic's
+ * module (`Expressions.Basic.add`), its pattern's variables its arguments and its `result` its return, as precise as the
+ * basic scalars and containers allow (`Expressions.Basic.Number`, an int or a float; `Expressions.Basic.Ordered`;
+ * `Expressions.Basic.Collection`, a list or a mapping; an unrestricted `Schemas.OfAny` where any value goes). `OPERATIONS`
+ * is that table, which validation reads: a call naming an operation Basic does not define is refused. `install` also
+ * adds Basic's kinds of domain to `Expressions.Framework.DomainKind` (`Domains`) and the schemas of its domains, and
+ * Basic's dialect, the singleton `Expressions.Basic`; `define` writes the dialect's data: its operations by name
+ * (`Expressions.Framework.Operates`) and its domains, which it owns by name (`Expressions.Framework.Defines`).
  *
  * `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
  *
@@ -24,73 +33,164 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Errors, Repr } from "@mbse/schemas/Framework";
-
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
-/** Basic's own kind, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
+type Operation = readonly [readonly (readonly [string, string])[], string];
+
+const ANY_ANY: Operation = [[["a", "any"], ["b", "any"]], "bool"];
+const ORDER: Operation = [[["a", "ordered"], ["b", "ordered"]], "bool"];
+const LOGIC: Operation = [[["a", "bool"], ["b", "bool"]], "bool"];
+const ARITHMETIC: Operation = [[["a", "number"], ["b", "number"]], "number"];
+const BITWISE: Operation = [[["a", "int"], ["b", "int"]], "int"];
+const SHIFT: Operation = [[["value", "int"], ["count", "int"]], "int"];
+const EXTREME: Operation = [[["collection", "collection"]], "ordered"];
+
+/** The operations Basic defines, by name: each one's variables, its arguments in order, each a name and a schema, and
+ * its result's schema. A schema is a basic scalar's (`bool`, `int`, `str`), Basic's `number`, `ordered` or `collection`,
+ * `list` (a list of any values) or `any`. `install` writes each as an `Expressions.Basic.<name>`. */
+export const OPERATIONS: ReadonlyMap<string, Operation> = new Map<string, Operation>([
+  ["get", [[["object", "any"], ["name", "str"]], "any"]],
+  ["has", [[["object", "any"], ["name", "str"]], "bool"]],
+  ["eq", ANY_ANY], ["ne", ANY_ANY],
+  ["lt", ORDER], ["le", ORDER], ["gt", ORDER], ["ge", ORDER],
+  ["and", LOGIC], ["or", LOGIC],
+  ["not", [[["a", "bool"]], "bool"]],
+  ["implies", LOGIC],
+  ["add", ARITHMETIC], ["sub", ARITHMETIC], ["mul", ARITHMETIC],
+  ["neg", [[["a", "number"]], "number"]],
+  ["bitand", BITWISE], ["bitor", BITWISE], ["bitxor", BITWISE],
+  ["bitnot", [[["a", "int"]], "int"]],
+  ["shl", SHIFT], ["shr", SHIFT],
+  ["count", [[["collection", "collection"]], "int"]],
+  ["item", [[["collection", "collection"], ["index", "any"]], "any"]],
+  ["in", [[["value", "any"], ["collection", "collection"]], "bool"]],
+  ["sum", [[["collection", "collection"]], "number"]],
+  ["min", EXTREME], ["max", EXTREME],
+  ["unique", [[["collection", "collection"]], "bool"]],
+  ["entries", [[["object", "any"], ["adjacency", "str"]], "list"]],
+]);
+
+/** The operations Basic defines and their numbers of arguments. */
+export const CORE: ReadonlyMap<string, number> = new Map(
+  [...OPERATIONS].map(([name, [variables]]) => [name, variables.length]));
+
+/** Basic's own kind, added to the framework's terms; its dialect's schema, whose singleton is `Expressions.Basic`; its
+ * kinds of domain, added to the framework's, and its domains' schemas; and its operations, each an expression schema of
+ * its module. Run after `Framework.install`, in a transaction of its own; run again, it writes nothing. Its dialect's
+ * data, its operations by name and its domains, `define` writes after it. */
 export function install(txn: any): any {
   const S = txn.Schemas;
+  const scalars: Record<string, any> = { bool: S.OfBool, int: S.OfInt, str: S.OfStr };
+  const allScalars: Record<string, any> = { ...scalars, float: S.OfFloat, bytes: S.OfBytes };
+  /** A variable's schema: a basic scalar, Basic's shared one, or a fresh unnamed one. */
+  const schema = (_: any, name: string): any => {
+    if (name in scalars) return scalars[name];
+    if (name === "any") return S.OfAny((a: any) => a);
+    if (name === "list") {
+      return S.OfAny((a: any) => a.schemas([S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfAny((e: any) => e)]))]));
+    }
+    return ({ number: _.Number, ordered: _.Ordered, collection: _.Collection } as Record<string, any>)[name];
+  };
+  /** A result's schema, an `OfAny`. */
+  const result = (_: any, name: string): any => (name in scalars ? S.OfAny((a: any) => a.schemas([scalars[name]])) : schema(_, name));
+  const operation = (name: string) => {
+    const [variables, returns] = OPERATIONS.get(name) as Operation;
+    return (_: any) => _[`op_${name}`].name(`Expressions.Basic.${name}`).pattern([S.OfPattern((p: any) => p.variables(
+      variables.map(([n, s]) => (v: any) => v.name(n).schema([schema(_, s)]))))]).result([result(_, returns)]);
+  };
+  const [symbols, specs] = F.dialect(txn, "Expressions.Basic");
+  const kinds = ["OfBool", "OfInteger", "OfIeee754", "OfBits", "OfBytes", "OfUnicode", "OfIeee1164", "OfEnum", "OfPacked"];
   return txn.uid("mbse.Expressions.Basic/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Term: S.OfUnion, Quantifier: S.OfObject }) // the framework's union, found by its name
+    .symbols({
+      ...symbols, Term: S.OfUnion, Quantifier: S.OfObject, // the framework's union, found by its name
+      DomainKind: S.OfUnion, Domain: S.OfObject, Packs: S.OfRelation,
+      ...Object.fromEntries(kinds.map((kind) => [kind, S.OfObject])),
+      Number: S.OfAny, Ordered: S.OfAny, Collection: S.OfAny,
+      ...Object.fromEntries([...OPERATIONS.keys()].map((name) => [`op_${name}`, S.OfExpression])),
+      ...Object.fromEntries([...Domains.DOMAINS.keys()].map((name) => [`domain_${name}`, S.OfAny])),
+    })
     .spec([
+      ...specs, // Basic's dialect, the singleton `Expressions.Basic`
       (_: any) => _.Quantifier.name("Expressions.Basic.Quantifier").properties({
         name: S.OfStr, // bound to each item in the body
         quantifier: S.OfStr, // all, any or count
         collection: _.Term,
         body: _.Term,
-        domain: S.OfStr, // every term has a domain: a quantifier's, its result's
       }),
       (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("quantifier").schema([_.Quantifier])]),
+
+      // --- Its kinds of domain, each a standard's parameters; a packed domain's enum and representation are domains,
+      // which a value cannot hold: `Packs` links them ---
+      (_: any) => _.OfBool.name("Expressions.Basic.OfBool"),
+      (_: any) => _.OfInteger.name("Expressions.Basic.OfInteger").properties({
+        width: S.OfInt, signed: S.OfBool, overflow: S.OfStr }),
+      (_: any) => _.OfIeee754.name("Expressions.Basic.OfIeee754").properties({ format: S.OfStr, rounding: S.OfStr }),
+      (_: any) => _.OfBits.name("Expressions.Basic.OfBits").properties({ width: S.OfInt }),
+      (_: any) => _.OfBytes.name("Expressions.Basic.OfBytes").properties({ width: S.OfInt }),
+      (_: any) => _.OfUnicode.name("Expressions.Basic.OfUnicode"),
+      (_: any) => _.OfIeee1164.name("Expressions.Basic.OfIeee1164").properties({ width: S.OfInt }),
+      (_: any) => _.OfEnum.name("Expressions.Basic.OfEnum").properties({
+        members: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])) }),
+      (_: any) => _.OfPacked.name("Expressions.Basic.OfPacked").properties({
+        codes: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfInt])) }),
+      (_: any) => _.DomainKind.name("Expressions.Framework.DomainKind").branches([
+        (t: any) => t.name("bool").schema([_.OfBool]),
+        (t: any) => t.name("integer").schema([_.OfInteger]),
+        (t: any) => t.name("ieee754").schema([_.OfIeee754]),
+        (t: any) => t.name("bits").schema([_.OfBits]),
+        (t: any) => t.name("bytes").schema([_.OfBytes]),
+        (t: any) => t.name("unicode").schema([_.OfUnicode]),
+        (t: any) => t.name("ieee1164").schema([_.OfIeee1164]),
+        (t: any) => t.name("enum").schema([_.OfEnum]),
+        (t: any) => t.name("packed").schema([_.OfPacked]),
+      ]),
+      (_: any) => _.Packs.name("Expressions.Basic.Packs").links([
+        (t: any) => t.name("packed"), (t: any) => t.name("domain").schema([_.Domain]),
+        (t: any) => t.name("representation").schema([_.Domain])]).uniques([["packed"]]),
+      (_: any) => _.Domain.name("Expressions.Framework.Domain").adjacencies({
+        packs: (a: any) => a.relation([_.Packs]).me("packed") }),
+
+      // --- Its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
+      ...[...Domains.DOMAINS].map(([name, [scalar]]) => (_: any) => _[`domain_${name}`].name(`Expressions.Basic.${name}`)
+        .schemas([allScalars[scalar]])),
+
+      // --- Its operations: the schemas their variables share, and each operation, which its dialect defines ---
+      (_: any) => _.Number.name("Expressions.Basic.Number").schemas([S.OfInt, S.OfFloat]),
+      (_: any) => _.Ordered.name("Expressions.Basic.Ordered").schemas([S.OfInt, S.OfFloat, S.OfStr, S.OfBytes]),
+      (_: any) => _.Collection.name("Expressions.Basic.Collection").schemas([ // a list, or a mapping
+        S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfAny((a: any) => a)])),
+        S.OfContainer((c: any) => c.index([S.OfAny((a: any) => a)]).element([S.OfAny((a: any) => a)]))]),
+      ...[...OPERATIONS.keys()].map(operation),
     ])]))]);
 }
 
-/** The core operations and their numbers of arguments. */
-export const CORE: ReadonlyMap<string, number> = new Map(
-  [...Domains.SIGNATURES].map(([name, signature]) => [name, signature.arity()]));
-
-/** The operations that need a domain: their result's. */
-const TYPED = ["convert", "reinterpret", "unpack"];
-
-/** The domain a literal or a call names, or null. */
-export function _domain_of(record: any): Domains.Domain | null {
-  const name = F.attributesOf(record).get("domain") ?? null;
-  return name === null ? null : Domains.registered(name);
-}
-
-/** The problems of a domain a term names. */
-function domainProblems(name: string): string[] {
-  let domain: Domains.Domain;
-  try {
-    domain = Domains.registered(name);
-  } catch (error) { // a LookupError: the name stands for no domain
-    return [`domain: ${(error as Error).message}`];
-  }
-  return domain.validate().map((problem) => `domain: ${problem}`);
-}
-
-/** A literal's domain is registered, valid, and holds its value. */
-function literalCheck(record: any): string[] {
-  const attributes = F.attributesOf(record);
-  if ((attributes.get("domain") ?? null) === null) return [];
-  const problems = domainProblems(attributes.get("domain"));
-  const domain = problems.length === 0 ? Domains.registered(attributes.get("domain")) : null;
-  if (domain !== null && !domain.contains(attributes.get("value"))) {
-    problems.push(`a literal of ${domain.name()} cannot hold ${Repr.repr(attributes.get("value"))}`);
-  }
-  return problems;
-}
-
-/** A conversion needs a domain, which must be registered and valid; other core operations take none. */
-function callCheck(record: any): string[] {
-  const attributes = F.attributesOf(record);
-  const name = attributes.get("callable") ?? null;
-  const domain = attributes.get("domain") ?? null;
-  if (domain === null) return TYPED.includes(name) ? [`${name} needs a domain`] : [];
-  if (Domains.SIGNATURES.has(name) && !TYPED.includes(name)) return [`${name} takes no domain`];
-  return domainProblems(domain);
+/** Basic's dialect as data: the singleton `Expressions.Basic` naming its operations (`operations`, through
+ * `Expressions.Framework.Operates`) and owning its domains by name (`domains`, through `Expressions.Framework.Defines`),
+ * each related to its schema (`Expressions.Basic.uint8`) by `Expressions.Framework.HasDomain`. Run after `install`, in a
+ * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its
+ * name: `store.transaction(Basic.define)[0].get("uint8")`. */
+export function define(txn: any): any {
+  const names = [...Domains.DOMAINS.keys()];
+  const domain = (name: string) => {
+    const [, kind, parameters] = Domains.DOMAINS.get(name) as Domains.DomainEntry;
+    const parameterized = (record: any) => {
+      for (const [parameter, value] of Object.entries(parameters)) record[parameter](value);
+      return record;
+    };
+    return (_: any) => _[name].kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u[kind](parameterized))))
+      .schema([txn.Expressions.Basic[name]]);
+  };
+  return txn.uid("mbse.Expressions.Basic.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({ dialect: txn.Expressions.Basic.Dialect,
+      ...Object.fromEntries(names.map((name) => [name, txn.Expressions.Framework.Domain])) })
+    .spec([
+      (_: any) => _.dialect.operations(Object.fromEntries([...OPERATIONS.keys()].map((name) =>
+        [name, (e: any) => e.operation(txn.Expressions.Basic[name])]))).domains(Object.fromEntries(names.map((name) =>
+        [name, (e: any) => e.domain(_[name])]))),
+      ...names.map(domain),
+    ])]))]);
 }
 
 /** The literal of a native value (`Terms.spec` gives it only a basic scalar). */
@@ -100,22 +200,16 @@ function native(value: unknown): Writer | null {
 
 /** The Basic dialect: its kinds, as the framework reads them. */
 export const DIALECT = new F.Dialect("Basic", {
-  literal: new F.Kind(F.LITERAL, { check: literalCheck, typed: _domain_of }),
+  literal: new F.Kind(F.LITERAL),
   call: new F.Kind(F.APPLICATION, { operator: "callable", vocabulary: Domains.SIGNATURES, required: ["callable"],
-    check: callCheck, typed: _domain_of }),
+    closed: true }),
   variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
   let: new F.Kind(F.BINDING, { required: ["name"] }),
+  list: new F.Kind(F.APPLICATION, { signature: Domains.LIST }),
+  mapping: new F.Kind(F.APPLICATION, { signature: Domains.MAPPING }),
   quantifier: new F.Kind(F.QUANTIFIER, { operator: "quantifier", vocabulary: Domains.QUANTIFIERS,
     required: ["name", "quantifier"] }),
 }, { domain_of: Domains.of, literal: native });
-
-/** The name a term gives a domain: a name as it is, or a domain's registered name. */
-function domainName(domain: unknown): string | null {
-  if (domain === null || domain === undefined || typeof domain === "string") return (domain ?? null) as string | null;
-  const name = Domains.name_of(domain);
-  if (name === null) throw new Errors.LookupError(`${Domains._name(domain)} is not registered: a term names its domain`);
-  return name;
-}
 
 // --- Writers: writing terms with methods ---
 
@@ -229,26 +323,6 @@ export class Writer extends F.Writer {
     return operation("shr", this, count);
   }
 
-  /** The value in `domain`, kept: rounded or overflowing as `domain` does. */
-  convert(domain: unknown): Writer {
-    return operation("convert", this, { domain });
-  }
-
-  /** The bit pattern in `domain`, of the same width. */
-  reinterpret(domain: unknown): Writer {
-    return operation("reinterpret", this, { domain });
-  }
-
-  /** A packed value's representation. */
-  pack(): Writer {
-    return operation("pack", this);
-  }
-
-  /** The value of the packed `domain` that a representation stands for. */
-  unpack(domain: unknown): Writer {
-    return operation("unpack", this, { domain });
-  }
-
   /** The number of items of a collection. */
   count(): Writer {
     return operation("count", this);
@@ -302,15 +376,6 @@ export class Writer extends F.Writer {
   }
 }
 
-/** The domain a name stands for, or null (validation reports a name that stands for none). */
-function standsFor(name: string): Domains.Domain | null {
-  try {
-    return Domains.registered(name);
-  } catch { // a LookupError: the name stands for no domain
-    return null;
-  }
-}
-
 function specOf(value: unknown): F.Writer | null {
   return value === null || value === undefined ? null : DIALECT.spec(value);
 }
@@ -320,17 +385,10 @@ export function variable(name: string): Writer {
   return new Writer((u: any) => u.variable((v: any) => v.name(name)));
 }
 
-/** The literal `value`, of `domain` (a domain registered under a name, or a name; by default, its native's). */
-export function literal(value: unknown, domain: unknown = null): Writer {
-  let name = domainName(domain);
-  if (name !== null && Domains.nativeDomain(value) !== null
-    && standsFor(name)?.equals(Domains.of(value))) {
-    name = null; // a native's default domain is no domain at all
-  }
-  return new Writer((u: any) => u.literal((r: any) => {
-    if (value !== null && value !== undefined) r.value((p: any) => p.as_scalar(value));
-    return name === null ? r : r.domain(name);
-  }));
+/** The literal `value`, a basic scalar. */
+export function literal(value: unknown): Writer {
+  return new Writer((u: any) => u.literal((r: any) => (value === null || value === undefined ? r
+    : r.value((p: any) => p.as_scalar(value)))));
 }
 
 /** `body`, with `name` bound to the value of `value`. */
@@ -353,26 +411,21 @@ export function quantifier(quantifier: string, name: string, collection: unknown
   }));
 }
 
-/** The options of an operation, given after its arguments: the `domain` of its result. Python's keyword `domain=`. */
-export interface Options {
-  domain?: unknown;
+/** The list of the values of `elements`, in order. */
+export function list_(...elements: unknown[]): Writer {
+  const specs = elements.map((element) => DIALECT.spec(element));
+  return new Writer((u: any) => u.list((r: any) => r.elements(specs)));
 }
 
-function isOptions(value: unknown): value is Options {
-  if (value === null || typeof value !== "object") return false;
-  const prototype = Object.getPrototypeOf(value);
-  return (prototype === Object.prototype || prototype === null) && Object.keys(value).every((key) => key === "domain");
+/** The mapping of each entry's key's value to its value's: `mapping(["a", 1n], ["b", x])`. */
+export function mapping(...entries: (readonly [unknown, unknown])[]): Writer {
+  const pairs = entries.map(([key, value]) => [DIALECT.spec(key), DIALECT.spec(value)] as const);
+  return new Writer((u: any) => u.mapping((r: any) => r.entries(pairs.map(([key, value]) =>
+    (a: any) => a.as_object((o: any) => o.key(key).value(value))))));
 }
 
-/** The operation `name` applied to `args`, of the result's `domain` when it has one, given as a last argument
- * `{ domain }`; for operations outside the core, or without a method. */
+/** The operation `name` applied to `args`, in the order its variables are declared; for operations without a method. */
 export function operation(name: string, ...args: unknown[]): Writer {
-  const last = args[args.length - 1];
-  const options: Options = args.length > 0 && isOptions(last) ? (args.pop() as Options) : {};
   const specs = args.map((argument) => DIALECT.spec(argument));
-  const named = domainName(options.domain ?? null);
-  return new Writer((u: any) => u.call((r: any) => {
-    r.callable(name).arguments(specs);
-    return named === null ? r : r.domain(named);
-  }));
+  return new Writer((u: any) => u.call((r: any) => r.callable(name).arguments(specs)));
 }

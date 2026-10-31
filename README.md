@@ -107,7 +107,7 @@ npm test                       # type-check and run the test suites and the tuto
 
 | Read | For |
 |---|---|
-| [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Eight case studies, from a constraint written in code to the same constraint in C and SystemVerilog: constraints as data, unknowns, collections, value domains, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
+| [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Seven case studies (the fourth, on values with widths, deferred until type inference), from a constraint written in code to the same constraint in C and SystemVerilog: constraints as data, unknowns, collections, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
 | mbse-basis [FEA-024: expressions as data](../mbse-basis/docs/features/FEA-024.md) | The design, as its capabilities' detail files: the Basic dialect's terms and core vocabulary, three-valued evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, and open questions |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-expressions/SKILL.md), [Summary for LLMs](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
@@ -142,11 +142,13 @@ ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email
 ## Status
 
 Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Basic,
-Python, Matlab, Excel and Latex dialects, and translators between every pair; in the Basic dialect, literals,
-operations, variables and lets, with builders and meta-schemas; writers;
-`validate()`; evaluation of the core operations with three-valued logic. Not built yet: the collection operations
-(`count`, `in`, `all`, `any`), and the evaluator interface through which mbse-schemas will choose union branches and
-check constraints.
+Python, Matlab, Excel, Latex, Ccpp and SystemVerilog dialects, and translators between them; terms as values in an
+mbse-schemas store, with the container constructors `list` and `mapping`; dialects, their operations and their
+domains as data (each dialect a singleton that names its operations, each an expression schema, and owns its domains
+by name); writers; `validate()`, which refuses a call to an operation the dialect does not define; evaluation with
+three-valued logic over values by the schemas they are written with, collections and quantifiers. Not built yet: type
+inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
+interface through which mbse-schemas will choose union branches and check constraints.
 
 ---
 

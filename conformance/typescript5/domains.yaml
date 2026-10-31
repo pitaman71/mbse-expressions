@@ -1,95 +1,1240 @@
-call:
-  callable: all
-  arguments:
-  - call:
-      callable: eq
-      arguments:
-      - variable:
-          name: mode
-      - literal:
-          value:
-            scalar:
-              str: RUN
-          domain: state
-  - call:
-      callable: le
-      arguments:
-      - variable:
-          name: count
-      - literal:
-          value: 200
-          domain: uint8
-  - call:
-      callable: ne
-      arguments:
-      - variable:
-          name: gain
-      - literal:
-          value: 1.5
-          domain: binary32 roundTowardZero
-  - call:
-      callable: ge
-      arguments:
-      - variable:
-          name: line
-      - literal:
-          value:
-            scalar:
-              str: Z
-          domain: std_logic
-  - call:
-      callable: gt
-      arguments:
-      - variable:
-          name: mask
-      - literal:
-          value:
-            scalar:
-              bytes: 'Aw=='
-          domain: bits2
-  - call:
-      callable: lt
-      arguments:
-      - variable:
-          name: size
-      - literal:
-          value: 5
-  - call:
-      callable: sub
-      arguments:
-      - call:
-          callable: convert
-          arguments:
-          - variable:
-              name: price
-          domain: decimal64
-      - literal:
-          value:
-            scalar:
-              str: '1.50'
-          domain: decimal64
-  - call:
-      callable: mul
-      arguments:
-      - variable:
-          name: ratio
-      - literal:
-          value:
-            scalar:
-              str: '0.1'
-          domain: binary128
-  - call:
-      callable: bitand
-      arguments:
-      - variable:
-          name: mask
-      - literal:
-          value:
-            scalar:
-              bytes: 'AQ=='
-          domain: bits2
-  - call:
-      callable: pack
-      arguments:
-      - variable:
-          name: mode
+mutations:
+- upsert:
+    exists:
+    - symbols:
+        '0':
+          schema:
+          - $ref:
+              singleton: '.'
+              next:
+                entry:
+                  i: schemas
+                  o: ''
+                  properties:
+                    name: Expressions
+                  next:
+                    entry:
+                      i: schemas
+                      o: ''
+                      properties:
+                        name: Basic
+                      next:
+                        entry:
+                          i: schemas
+                          o: ''
+                          properties:
+                            name: Dialect
+                          next:
+                            target: {}
+      spec:
+      - '0':
+        - as_adjacency:
+            name: domains
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: binary32
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: binary32
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: bool
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: bool
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: bytes
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: bytes
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: float
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: float
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: int
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: int
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: mode
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: mode
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: state
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: state
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: std_logic
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: std_logic
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: str
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: str
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Basic
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: uint8
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: uint8
+        - as_adjacency:
+            name: operations
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: add
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: add
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: and
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: and
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: bitand
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: bitand
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: bitnot
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: bitnot
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: bitor
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: bitor
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: bitxor
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: bitxor
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: count
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: count
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: entries
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: entries
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: eq
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: eq
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: ge
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: ge
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: get
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: get
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: gt
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: gt
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: has
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: has
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: implies
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: implies
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: in
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: in
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: item
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: item
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: le
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: le
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: lt
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: lt
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: max
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: max
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: min
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: min
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: mul
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: mul
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: ne
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: ne
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: neg
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: neg
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: not
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: not
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: or
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: or
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: shl
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: shl
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: shr
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: shr
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: sub
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: sub
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: sum
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: sum
+                - mutations:
+                  - as_link:
+                      name: operation
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Basic
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: unique
+                                          next:
+                                            target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: unique

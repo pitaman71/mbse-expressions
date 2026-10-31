@@ -54,6 +54,7 @@ export function ToText(expression: unknown): string {
       return [`arrayfun(@(${attributes.get("name")}) ${args[1]?.[0]}, ${args[0]?.[0]})`, ATOM];
     }
     if (tag === "matlab_import") throw new Errors.ValueError("an import can only enclose the whole expression");
+    if (tag === "list") return [`[${args.map(([text]) => text).join(", ")}]`, ATOM];
     if (tag === "matlab_unary") return [`${attributes.get("operator")}${operand(0, UNARY)}`, UNARY];
     const operator = attributes.get("operator") as string;
     const level = PRECEDENCE[operator] as number;

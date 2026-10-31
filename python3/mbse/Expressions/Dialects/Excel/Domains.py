@@ -4,8 +4,8 @@
 TRUE and FALSE, and `Errors` holds `Error` values such as `#FIELD!`, which formulas compute with rather than raise.
 A `Record` is what fields are read from: a mapping, or a data object read through mbse-schemas' readers
 (`Framework.Objects`), as Excel's data types are. `Scalar` is a number, text or logical. An array (a list) holds a
-container property's values, which `MAP`, `ROWS`, `INDEX`, `MATCH`, `SUM`, `MIN`, `MAX`, `UNIQUE`, `AND` and `OR`
-read.
+container property's values, or what `VSTACK` stacks, which `MAP`, `ROWS`, `INDEX`, `MATCH`, `SUM`, `MIN`, `MAX`,
+`UNIQUE`, `AND` and `OR` read.
 """
 
 from __future__ import annotations
@@ -53,11 +53,13 @@ FUNCTIONS: dict[str, D.Signature] = {
     "ROWS": D.Function((Anything,), Number), "INDEX": D.Function((Anything, Scalar), Anything),
     "MATCH": D.Function((Anything, Anything, Scalar), Number), "ISNUMBER": D.Function((Anything,), Logical),
     **{name: D.Opaque(Number) for name in ("SUM", "MIN", "MAX")}, "UNIQUE": D.Function((Anything,), Anything),
+    "VSTACK": D.Opaque(),
 }
-"""The worksheet functions: `IF`, `AND`, `OR`, `SUM`, `MIN` and `MAX` take a range of numbers of arguments (see
-`ARITIES`), the others a fixed number."""
+"""The worksheet functions: `IF`, `AND`, `OR`, `SUM`, `MIN`, `MAX` and `VSTACK` take a range of numbers of arguments
+(see `ARITIES`), the others a fixed number."""
 
-ARITIES: dict[str, tuple[int, int]] = {"IF": (2, 3), **{name: (1, 255) for name in ("AND", "OR", "SUM", "MIN", "MAX")}}
+ARITIES: dict[str, tuple[int, int]] = {"IF": (2, 3), **{name: (1, 255) for name in ("AND", "OR", "SUM", "MIN", "MAX")},
+                                      "VSTACK": (1, 254)}
 """The least and the most arguments of the functions that take a range of numbers of them, as Excel's do."""
 
 

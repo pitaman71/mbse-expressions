@@ -9,60 +9,15 @@
  * `in(x, xs)` is `x inside {xs}`. `unique(xs)` is written `xs.unique().size() == xs.size()`, which does not read back
  * as `unique`, and `entries` has no counterpart.
  *
- * A sized vector is a Basic literal of a value domain, its base telling which: a literal of an `Integer` domain of a
- * width is a decimal vector of that width and signedness (`8'd200`, `8'sd251` for -5), of a `Bits` domain a hexadecimal
- * one (`12'habc`), and of `Ieee1164` a binary one, a bit for a `std_logic` and a vector of its width for a
- * `std_logic_vector` (`1'bx`, `4'b10xz`), of the levels SystemVerilog has: 0, 1, X and Z. Back, a vector with x or z
- * bits or an unsigned binary one is an `Ieee1164` level, or a `std_logic_vector` when wider than a bit; a decimal or
- * signed vector is an `Integer`, and any other `Bits`. A vector without a base of a single 0 or 1 is a bool. */
+ * A sized vector other than a bool's (`8'd200`, `12'habc`, `4'b10xz`) has no Basic counterpart yet: a term carries no
+ * domain, and the conversions of typed literals wait for type inference (the port's stage 3, Decided, 2). A bool is a
+ * single bit, `1'b1` or `1'b0`, and back a vector without a base of a single 0 or 1 is a bool. Basic's container
+ * constructors, `list` and `mapping`, have no counterpart. */
 
-import * as D from "../Dialects/Basic/Domains.js";
 import { DIALECT as BASIC } from "../Dialects/Basic/Expressions.js";
 import { DIALECT as SYSTEMVERILOG } from "../Dialects/SystemVerilog/Expressions.js";
-import { Convert, Inline, Pairwise, Pattern, Rule, renames } from "../Framework/Translators.js";
-import type { Attributes } from "../Framework/Translators.js";
-import { Basic, SystemVerilog, domainOf, typed, value } from "./_Patterns.js";
-
-const LEVELS: Record<string, string> = { 0: "0", 1: "1", X: "x", Z: "z" };
-
-/** The bits of `number` in `width` bits, two's complement. */
-function bitsOf(number: bigint, width: number): string {
-  const modulus = 1n << BigInt(width);
-  return (((number % modulus) + modulus) % modulus).toString(2).padStart(width, "0");
-}
-
-/** A typed Basic literal's vector. */
-function toVector(attributes: Attributes): Attributes | null {
-  const [domain, value] = [domainOf(attributes), attributes.value];
-  if (domain instanceof D.OfInteger.Data && domain.width && domain.overflow === "raise") {
-    const bits = bitsOf(value as bigint, Number(domain.width));
-    return domain.signed ? { value: bits, signed: true, base: "d" } : { value: bits, base: "d" };
-  }
-  if (domain instanceof D.OfBits.Data) {
-    const number = (value as Uint8Array).reduce((total, byte) => (total << 8n) | BigInt(byte), 0n);
-    return { value: bitsOf(number, Number(domain.width)), base: "h" };
-  }
-  if (domain instanceof D.OfIeee1164.Data && [...(value as string)].every((state) => state in LEVELS)) {
-    return { value: [...(value as string)].map((state) => LEVELS[state]).join(""), base: "b" };
-  }
-  return null;
-}
-
-/** A vector's typed Basic literal. */
-function fromVector(attributes: Attributes): Attributes | null {
-  const [bits, signed, base] = [attributes.value as string, Boolean(attributes.signed), attributes.base];
-  if (/[xz]/.test(bits) || (base === "b" && !signed)) {
-    return typed(bits.toUpperCase(), new D.OfIeee1164.Data(bits.length === 1 ? null : BigInt(bits.length)));
-  }
-  let number = BigInt("0b" + bits);
-  if (base === "d" || signed) {
-    if (signed && bits[0] === "1") number -= 1n << BigInt(bits.length);
-    return typed(number, new D.OfInteger.Data(BigInt(bits.length), signed));
-  }
-  const bytes = new Uint8Array(Math.ceil(bits.length / 8));
-  for (let i = bytes.length - 1; i >= 0; i--, number >>= 8n) bytes[i] = Number(number & 0xffn);
-  return typed(bytes, new D.OfBits.Data(BigInt(bits.length)));
-}
+import { Inline, Pairwise, Pattern, Rule, renames } from "../Framework/Translators.js";
+import { Basic, SystemVerilog, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String);
 
@@ -70,7 +25,6 @@ export const TRANSLATOR = new Pairwise(BASIC, SYSTEMVERILOG, [
   new Rule(Basic.literal(V), SystemVerilog.constant(V)),
   new Rule(new Pattern("literal", { value: true }), new Pattern("systemverilog_vector", { value: "1" })),
   new Rule(new Pattern("literal", { value: false }), new Pattern("systemverilog_vector", { value: "0" })),
-  new Convert("literal", "systemverilog_vector", toVector, fromVector),
   new Rule(Basic.variable, SystemVerilog.identifier),
   new Inline("let", "left"),
   new Rule(Basic.get, SystemVerilog.get),

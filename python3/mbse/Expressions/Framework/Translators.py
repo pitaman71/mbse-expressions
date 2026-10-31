@@ -15,6 +15,10 @@ of dialects has its own, specialized to what the two have in common, and is decl
   differently: a `left_kind` literal is the `right_kind` literal of the attributes `forward(attributes)` gives, and
   `backward` maps the other way. A function gives None for the attributes it has no counterpart for (a value domain
   the other side lacks, say). Conversions are tried after the rules of their kind.
+- `Elementwise(left_kind, right_kind, left_attributes, right_attributes)` translates a term of any number of arguments,
+  a container constructor, into the other side's, its arguments translated in order: a `left_kind` term whose
+  attributes are `left_attributes` is the `right_kind` term of `right_attributes` (Basic's `list(a, b)` is Excel's
+  `HSTACK(a, b)`), both ways unless its `direction` says otherwise.
 - `Prelude(pattern, side)` adds an import to what is translated to `side`: `pattern` is the import with its body as
   its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds, e.g.
   `import numpy as np` around an expression that uses `np`.
@@ -41,7 +45,8 @@ from typing import Any, Protocol, runtime_checkable
 
 from . import Symbolics, Terms
 
-__all__ = ["Translator", "Pairwise", "Rule", "Inline", "Elide", "Convert", "Prelude", "Pattern", "Hole", "holes", "renames"]
+__all__ = ["Translator", "Pairwise", "Rule", "Inline", "Elide", "Convert", "Elementwise", "Prelude", "Pattern", "Hole",
+           "holes", "renames"]
 
 
 @runtime_checkable
@@ -149,6 +154,18 @@ class Convert:
         self.left_kind, self.right_kind, self.forward, self.backward = left_kind, right_kind, forward, backward
 
 
+class Elementwise:
+    """Translates `left_kind` terms of `left_attributes` into `right_kind` terms of `right_attributes`, and back, each
+    argument translated in turn, whatever their number; `direction` 'both', 'forward' or 'backward'."""
+
+    def __init__(self, left_kind: str, right_kind: str, left_attributes: Mapping[str, Any] | None = None,
+                 right_attributes: Mapping[str, Any] | None = None, direction: str = "both"):
+        if direction not in ("both", "forward", "backward"):
+            raise ValueError(f"direction must be 'both', 'forward' or 'backward', got {direction!r}")
+        self.left_kind, self.right_kind, self.direction = left_kind, right_kind, direction
+        self.left_attributes, self.right_attributes = dict(left_attributes or {}), dict(right_attributes or {})
+
+
 class Prelude:
     """Wraps translations to `side` ('left' or 'right') in the import `pattern` when they refer to a name it binds."""
 
@@ -205,8 +222,12 @@ class _Direction:
 
     def __init__(self, source: Terms.Dialect, target: Terms.Dialect,
                  rules: Sequence[tuple[Pattern, Pattern]], inlines: Iterable[str], elides: Iterable[str] = (),
-                 preludes: Sequence[Pattern] = (), converts: Sequence[tuple[str, str, Callable[..., Any]]] = ()):
+                 preludes: Sequence[Pattern] = (), converts: Sequence[tuple[str, str, Callable[..., Any]]] = (),
+                 elementwise: Sequence[tuple[str, dict[str, Any], str, dict[str, Any]]] = ()):
         self.source, self.target, self.inlines = source, target, frozenset(inlines)
+        self.elementwise: dict[str, list[tuple[dict[str, Any], str, dict[str, Any]]]] = {}
+        for kind, attributes, target_kind, target_attributes in elementwise:
+            self.elementwise.setdefault(kind, []).append((attributes, target_kind, target_attributes))
         self.elides, self.preludes = frozenset(elides), list(preludes)
         self.converts: dict[str, list[tuple[str, Callable[..., Any]]]] = {}
         for kind, target_kind, convert in converts:
@@ -278,6 +299,12 @@ class _Run:
             bindings: dict[str, Any] = {}
             if self._match(source, node, bindings):
                 return self._instantiate(target, bindings, environment)
+        for attributes, target_kind, target_attributes in self.direction.elementwise.get(tag, []):
+            form = Terms.form(node)
+            if None not in form.arguments and form.attributes.keys() == attributes.keys() and all(
+                    _same_native(attributes[k], form.attributes[k]) for k in attributes):  # a mapping's empty key: none
+                arguments = tuple(self.translate(argument, environment) for argument in form.arguments)
+                return self.direction.build(Terms.Form(target_kind, dict(target_attributes), arguments))
         for target_kind, convert in self.direction.converts.get(tag, []):
             attributes = convert(Terms.attributes_of(record))
             if attributes is not None:
@@ -322,14 +349,15 @@ class _Run:
 
 
 class Pairwise:
-    """A `Translator` between `left` and `right`, declared by `rules` (`Rule`s, `Inline`s, `Elide`s, `Convert`s and
-    `Prelude`s)."""
+    """A `Translator` between `left` and `right`, declared by `rules` (`Rule`s, `Inline`s, `Elide`s, `Convert`s,
+    `Elementwise`s and `Prelude`s)."""
 
     def __init__(self, left: Terms.Dialect, right: Terms.Dialect,
-                 rules: Sequence[Rule | Inline | Elide | Convert | Prelude]):
+                 rules: Sequence[Rule | Inline | Elide | Convert | Elementwise | Prelude]):
         self._left, self._right, self._rules = left, right, list(rules)
         pairs = [rule for rule in rules if isinstance(rule, Rule)]
         converts = [rule for rule in rules if isinstance(rule, Convert)]
+        each = [rule for rule in rules if isinstance(rule, Elementwise)]
 
         def of(kind: type, side: str) -> list[Any]:
             return [rule for rule in rules if isinstance(rule, kind) and rule.side == side]
@@ -337,11 +365,15 @@ class Pairwise:
         self._forward = _Direction(left, right, [(r.left, r.right) for r in pairs if r.direction != "backward"],
                                    [i.kind for i in of(Inline, "left")], [e.kind for e in of(Elide, "left")],
                                    [p.pattern for p in of(Prelude, "right")],
-                                   [(c.left_kind, c.right_kind, c.forward) for c in converts])
+                                   [(c.left_kind, c.right_kind, c.forward) for c in converts],
+                                   [(e.left_kind, e.left_attributes, e.right_kind, e.right_attributes)
+                                    for e in each if e.direction != "backward"])
         self._backward = _Direction(right, left, [(r.right, r.left) for r in pairs if r.direction != "forward"],
                                     [i.kind for i in of(Inline, "right")], [e.kind for e in of(Elide, "right")],
                                     [p.pattern for p in of(Prelude, "left")],
-                                    [(c.right_kind, c.left_kind, c.backward) for c in converts])
+                                    [(c.right_kind, c.left_kind, c.backward) for c in converts],
+                                    [(e.right_kind, e.right_attributes, e.left_kind, e.left_attributes)
+                                     for e in each if e.direction != "forward"])
 
     def left(self) -> Terms.Dialect:
         return self._left
@@ -358,10 +390,12 @@ class Pairwise:
     def inverse(self) -> Pairwise:
         swapped = {"both": "both", "forward": "backward", "backward": "forward"}
         other = {"left": "right", "right": "left"}
-        rules: list[Rule | Inline | Elide | Convert | Prelude] = [
+        rules: list[Rule | Inline | Elide | Convert | Elementwise | Prelude] = [
             Rule(r.right, r.left, swapped[r.direction]) if isinstance(r, Rule)
             else Prelude(r.pattern, other[r.side]) if isinstance(r, Prelude)
             else Convert(r.right_kind, r.left_kind, r.backward, r.forward) if isinstance(r, Convert)
+            else Elementwise(r.right_kind, r.left_kind, r.right_attributes, r.left_attributes, swapped[r.direction])
+            if isinstance(r, Elementwise)
             else type(r)(r.kind, other[r.side]) for r in self._rules
         ]
         return Pairwise(self._right, self._left, rules)

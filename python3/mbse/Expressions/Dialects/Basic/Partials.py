@@ -2,8 +2,8 @@
 
 `Partials.OfAny(term, variables)` gives the residual of any term with `variables` known, a `Writer` its caller writes
 where it wants it (in a transaction): the literal of its value when it is all known, otherwise the expression with every known subexpression replaced by the
-literal of its value (a typed value's literal names its domain, when the domain has a name; an object, a collection,
-an unknown value or a value of a domain with no name has none, and its subexpression stays). Kleene's logic decides `and`, `or` and `implies` with what is known: a false
+literal of its value (a native's; an object, a collection or an unknown value has none, and its subexpression
+stays). Kleene's logic decides `and`, `or` and `implies` with what is known: a false
 operand of `and` (a true one of `or`) decides it, a true operand of `and` (a false one of `or`) drops out, and
 `implies` is true when its condition is false or its conclusion true, and its conclusion when its condition is true.
 A let of a known value binds it in its body and stays only while the body refers to its name.
@@ -25,10 +25,7 @@ __all__ = ["OfAny", "REDUCER"]
 
 
 def _literal(value: Any) -> Any:
-    """The literal of a value: a native's, or a typed value's naming its domain; None for anything else."""
-    if isinstance(value, Domains.Value):
-        name = Domains.name_of(value.domain)
-        return None if name is None else Expressions.literal(value.value, name)
+    """The literal of a value: a native's; None for anything else."""
     return Expressions.literal(value) if type(value) in Domains._NATIVES else None
 
 

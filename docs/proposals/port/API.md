@@ -1,7 +1,7 @@
 <!-- nav -->
 [← Porting to the stabilized mbse-schemas](README.md) · [Home](../../../README.md)
 
-# The API after stage 2 (as settled in stage 2a)
+# The API after stage 3 (as settled in stages 2a, 2b and 3)
 
 The port's stage 2 replaces `Framework/Terms` and mbse-schemas' `Bindings` with terms stored in a store
 ([the proposal](README.md), Decided, 1 and 2; its model, [Framework.py](Framework.py) and [Basic.py](Basic.py)). This
@@ -18,10 +18,21 @@ from mbse.Expressions import Framework
 from mbse.Expressions.Dialects import Basic
 
 store = Builders.Store()
-store.transaction(Framework.install)        # Expressions.Framework: Term, Literal, Call, Variable, Let, Expression,
-                                            # HasRoot, and Schemas.OfExpression's adjacency `expression`
-store.transaction(Basic.install)            # Expressions.Basic.Quantifier, added to Term as the branch `quantifier`
+store.transaction(Framework.install)        # Expressions.Framework: Term, Literal, Call, Variable, Let, List, Mapping,
+                                            # Pair, Expression, HasRoot, Schemas.OfExpression's adjacency `expression`;
+                                            # Dialect, Domain, DomainKind, Defines, Operates, HasDomain and
+                                            # Schemas.OfAny's adjacency `domain`
+store.transaction(Basic.install)            # Expressions.Basic.Quantifier, added to Term as the branch `quantifier`;
+                                            # Basic's dialect schema (singleton `Expressions.Basic`), its kinds of
+                                            # domain, its domains' schemas and its operations, each an OfExpression
+store.transaction(Basic.define)             # optional, data: Basic's dialect naming its operations, owning its domains
 ```
+
+Since stage 3, `Basic.define` writes Basic's dialect's data: the singleton `Expressions.Basic` names each operation
+(`Expressions.Framework.Operates`) and owns each domain by name (`Expressions.Framework.Defines`); its frame binds the
+dialect (`dialect`) and each domain by its name. Validation and evaluation do not need it: they read `E.OPERATIONS`,
+the same table the install writes. Every other dialect's install adds its singleton schema too
+(`Terms.dialect(txn, "Expressions.Python")`), with no operations or domains yet (below, Settled in stage 3).
 
 `Framework.install` (in `Framework/Terms.py`, `Framework/Terms.ts`) and `Basic.install` (in
 `Dialects/Basic/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
@@ -69,8 +80,8 @@ with store.transaction():
 A writer's argument is a spec: a writer, a native value (a literal), a term value read from a store, which is copied
 (mbse-schemas copies a value given whole), or a callable taking the `Visitors.OfUnion` of a term value, as
 `store.Expressions.Framework.Term(cb)` gives one (`E.DIALECT.spec(x)` makes a writer of any of them).
-`E.literal(value, domain)` and the conversions take a domain by name, or a `Domains` value registered under one
-(below). Python's `Text.FromFunction(function)`, which read a writer from a function's source, is removed, as the
+`E.literal(value)` takes a basic scalar alone: a term carries no domain (stage 3). `E.list_(*elements)` and
+`E.mapping(*(key, value))` write the container constructors. Python's `Text.FromFunction(function)`, which read a writer from a function's source, is removed, as the
 user decided (2026-10-30; [the proposal](README.md), the decision on `Python.Text.FromFunction`): expressions are
 written with the writers.
 
@@ -112,7 +123,8 @@ assert Evaluators.OfAny(positive, {"x": 1}) is True       # an Expression, or Te
 assert Evaluators.OfAny(term, {"x": -1}) is False
 ```
 
-`Evaluators.OfLiteral`, `OfCall`, `OfVariable`, `OfLet` and `OfQuantifier` evaluate one kind, raising `TypeError` for a
+Values are taken by the schemas they are written with (stage 3): ints unbounded, floats binary64, `list` and `mapping`
+giving `Domains.Collection`s. `Evaluators.OfLiteral`, `OfCall`, `OfVariable`, `OfLet` and `OfQuantifier` evaluate one kind, raising `TypeError` for a
 term of another. `E.DIALECT.validate(term, bound, core)` and `E.DIALECT.infer(term, environment)` take a term as an
 evaluator does; `Symbolics.free(term, dialect)` and `Symbolics.imports(term, dialect)` take the dialect whose kinds they
 read. Partial evaluation gives its residual as a `Writer`, written where the caller wants it:
@@ -123,7 +135,8 @@ read. Partial evaluation gives its residual as a `Writer`, written where the cal
 | | Python | TypeScript |
 |---|---|---|
 | its install, adding its kinds to `Term` | `Expressions.install(txn)` | `Expressions.install(txn)` |
-| its kinds: how the framework reads each branch it adds (a `Terms.Kind`: its role, the properties naming what it binds and its operator, its vocabulary, its required properties, its own checks) and its `Terms.Dialect` (name, kinds, a native's domain), with `validate` and `infer` | `Expressions.DIALECT` | `Expressions.DIALECT` |
+| its kinds: how the framework reads each branch it adds (a `Terms.Kind`: its role, the properties naming what it binds and its operator, its vocabulary and whether it is `closed`, its required properties, its own checks) and its `Terms.Dialect` (name, kinds, a native's domain), with `validate` and `infer` | `Expressions.DIALECT` | `Expressions.DIALECT` |
+| its operations, as a table and as data (Basic only, so far) | `Expressions.OPERATIONS`, `Expressions.define(txn)` | the same |
 | its writers, while they stay | `Expressions.Writer`, `variable`, `literal`, ... | the same |
 | its evaluator | `Evaluators.OfAny(term, scope)`, `Evaluators.INTERPRETER` | the same |
 
@@ -133,7 +146,10 @@ form, so a translator builds the target term through the builders, and its calle
 
 ## What goes
 
-`Terms.Declared`, `Term`, `Builder`, `AnyBuilder`, `ValueProperty`, `Arguments` and `used_by`, `register`, the term
+Since stage 3: every kind's `domain`; the writers' `domain` arguments and the conversion writers (`convert`,
+`reinterpret`, `pack`, `unpack`) and those operations; Basic's registry (`Domains.register`, `registered`, `name_of`),
+typed values (`Domains.Value`, `value`) and the translators' conversions of typed literals (Basic and Ccpp, Basic and
+SystemVerilog); tutorial 4. Since stage 2: `Terms.Declared`, `Term`, `Builder`, `AnyBuilder`, `ValueProperty`, `Arguments` and `used_by`, `register`, the term
 dataclasses (`OfLiteral.Data`, ...) and their `Spec`s and `resolve`, each kind's meta-schema `Schema`, a dialect's
 `Builders` and `Schema`, `Domains.Schema`, `to_plain` and `from_plain` (a domain is named), and reads through
 `Validators.properties_of`, `ListRecord`, `entries_of` (`Framework.Objects` reads data objects through `Readers`).
@@ -150,7 +166,7 @@ Basic's `operation` is the framework's `call`: its property `name` is `callable`
    `{"scalar": {"str": "x"}}`, `{"scalar": {"bytes": "AQ=="}}`, `{"scalar": {"float": "NaN"}}`. The schema now refuses
    anything else, as the builders write it (`property 'value' does not hold a value of Expressions.Framework.Term`, a
    `TypeError`), so validation's "a literal must hold a basic scalar" check, which nothing can reach, is gone.
-2. **A term's `domain` names a domain registered in Basic's `Domains`** (`Domains.register(name, domain)`) until stage 3
+2. **(Superseded in stage 3: a term carries no domain, and the registry is gone.) A term's `domain` names a domain registered in Basic's `Domains`** (`Domains.register(name, domain)`) until stage 3
    makes domains objects defined by dialects: a writer given an unregistered domain raises `LookupError`, a name that
    is not registered is a validation problem, and partial evaluation keeps a subterm whose value is of an unregistered
    domain, as it keeps one with no literal.
@@ -194,7 +210,7 @@ Settled in stage 2b:
     the cycle check go: an inlined let's value is translated once and written at every use. A message names a kind
     without its dialect's prefix ("Python call has no Basic counterpart", "Basic call 'entries' has no Matlab
     counterpart"), as the old kinds' names read.
-13. **A conversion names the domain it gives** (Ccpp's and SystemVerilog's typed literals back to Basic): the name it is
+13. **(Superseded in stage 3: the conversions of typed literals are deferred with type inference.) A conversion names the domain it gives** (Ccpp's and SystemVerilog's typed literals back to Basic): the name it is
     registered under, or, when it has none, its own name (`uint32`, `bits12`), under which the translator registers it
     in Basic's `Domains` registry; a native's own domain is left unnamed, as `E.literal` leaves it. This writes to the
     process-wide registry until stage 3 makes domains objects that dialects define, for the user's review.
@@ -226,6 +242,84 @@ Settled in stage 2b:
     name", "a literal needs a value", and translation "Python literal b'\x00' has no Matlab counterpart" (was "Python
     constant"). A term of one of these kinds is the same value in each dialect that reuses it: Basic's `variable` is
     Python's name, so evaluating it in Python looks the name up, where it raised "Python has no kind 'variable'".
+
+Settled in stage 3 (the proposal's "Stage 3's model", Decided, 1 to 6, and the user's answers on A, B and C; the
+coordinator's direction of 2026-10-30 on ownership: "It's not hard to add an ownership path to the schema", schema
+extension preferred to refinement):
+
+16. **A dialect is a singleton of its own schema, a branch of the kind union `Expressions.Framework.Dialect`.** The
+    direction was a reference object schema `Expressions.Framework.Dialect` of which each dialect is a singleton by
+    name; mbse-schemas gives a schema one singleton (`OfObject.singleton`), so each dialect's install defines its own
+    reference object schema, `Expressions.<Dialect>.Dialect`, singleton `Expressions.<Dialect>` (Basic's:
+    `Expressions.Basic`), with the adjacencies `domains` and `operations`, and adds it to `Expressions.Framework.Dialect`
+    by schema extension, as a branch named after the dialect (`basic`), as a dialect adds its kinds to `Term`; the
+    relations' `dialect` links take that kind union. `Terms.dialect(txn, module)` gives the symbols and specs.
+    `HasDialect` and the module's `dialect` adjacency, in the first draft, are dropped: a dialect is found by its
+    singleton's name (`store.singleton("Expressions.Basic")`).
+17. **A dialect owns its domains: `Expressions.Framework.Defines(dialect, name, domain)`**, unique `[dialect, name]` and
+    `[domain]`, the domain's adjacency `dialect` its owner, so a domain's path is its dialect's singleton then its name:
+    snapshots write it, documents refer to it, and a document of a domain or a dialect reads back as the object the
+    store holds. A domain is an `Expressions.Framework.Domain` (`kind`, a value of `Expressions.Framework.DomainKind`,
+    whose branches Basic adds: `bool`, `integer` (`width`, `signed`, `overflow`), `ieee754` (`format`, `rounding`),
+    `bits`, `bytes` (`width`), `unicode`, `ieee1164` (`width`), `enum` (`members`), `packed` (`codes`)).
+18. **A packed domain links its enum and its representation through `Expressions.Basic.Packs(packed, domain,
+    representation)`**, unique `[packed]`, the domain's adjacency `packs`: a value cannot hold a reference object, and
+    with domains owned by their dialect, the link is to their paths.
+19. **`Expressions.Framework.HasDomain(schema, domain)`, unique both ways**, between a domain's schema, a named
+    `Schemas.OfAny` of the scalar it narrows, defined by the dialect's install in its module (`Expressions.Basic.uint8`,
+    `Expressions.Basic.binary32`, ...), and its domain; `Schemas.OfAny` gains the extension adjacency `domain`. Basic
+    defines `bool`, `int`, `float`, `str`, `bytes`, `uint8`, `binary32` and `std_logic` (`Domains.DOMAINS`), written by
+    `Basic.define`; `Domains.read(domain)` gives a stored domain's data (`OfX.Data`), whose `contains`, `compare`,
+    `fit` and `validate` stay, unused by evaluation until type inference.
+20. **A dialect names its operations: `Expressions.Framework.Operates(dialect, name, operation)`**, unique
+    `[dialect, name]` and `[operation]`, owning nothing: an operation is a `Schemas.OfExpression` its module owns
+    (`Schemas.Defines`), named `Expressions.Basic.<name>`, as mbse-schemas writes only named schema objects that data
+    links. Its pattern's variables are its arguments, its `result` (an `OfAny`) its return: `Expressions.Basic.Number`
+    (int or float), `Expressions.Basic.Ordered` (int, float, str, bytes), `Expressions.Basic.Collection` (a list or a
+    mapping, containers of any value), a basic scalar, or an unrestricted `Schemas.OfAny`. `Defines` stays for domains.
+21. **Arguments are positional.** mbse-schemas keeps a pattern's variables in their declared order, in the store and
+    through a snapshot (its PAT-01 asserts "in order"; EXP-13 asserts `shl`'s `value, count` after a snapshot), so a
+    call's arguments are the operation's variables in that order.
+22. **A call to an operation Basic does not define is refused**: Basic's `call` kind is `closed` (`Terms.Kind.closed`),
+    so validation reports "'contains' is not an operation Basic defines" whether or not `core` is asked, and evaluation
+    raises `NotImplementedError` with that message. Validation reads `E.OPERATIONS`, the table `Basic.install` writes as
+    data: a term built alone belongs to no store, so a check cannot read a store's dialect. Overloads are not modeled.
+23. **The container constructors are framework kinds**: `list` (`elements`) and `mapping` (`entries`, a container of
+    `Expressions.Framework.Pair`, `key` and `value` terms); a mapping's arguments are its pairs' terms in turn, and
+    `make` writes them back in twos. Basic evaluates them to `Domains.Collection`s (an unknown key makes a mapping
+    unknown; equal keys raise "a mapping's keys are distinct, got 'a' twice"), infers `list(T)` and `keyed(K, T)`.
+    Spellings: Python's list and dict displays (rendered, parsed, evaluated), MATLAB's concatenation `[a, b]`, Excel's
+    `VSTACK(a, b)` (a new function, 1 to 254 arguments); Latex, Ccpp and SystemVerilog refuse them by name ("Basic
+    list has no Ccpp counterpart"). A new translator rule, `Elementwise(left_kind, right_kind, left_attributes,
+    right_attributes, direction)`, translates a term of any number of arguments.
+24. **`Terms.Dialect.domain_of` and `Kind.typed` stay, for what they still mean**: `domain_of` is the domain of a
+    literal's value by the scalar it is written with, for `infer`; `typed` is the domain a kind's own attributes give
+    it (C's `type` of a constant or a cast, SystemVerilog's vector), for C's and SystemVerilog's own evaluation. Neither
+    reads a term's domain, which no term has.
+25. **Typed values go**: `Domains.Value`, and C's and SystemVerilog's evaluators' acceptance of one as a variable's
+    value; a variable's type is its value's. Ieee754's arithmetic, conversions and encodings stay (C and SystemVerilog
+    use them; DOM-10, DOM-11 assert them directly).
+26. **mbse-schemas limitation found, worked around by this model**: data owned by a schema object fails to write in
+    mbse-schemas (`.owner(True)` on an adjacency of a domain to its schema, or of a dialect to its module): `Paths._steps`
+    raises `AttributeError: '_ModuleData' object has no attribute '_schema'`. Owned by a dialect singleton instead, a
+    domain has a path. Not fixed here (mbse-schemas is not edited by this stage).
+27. **The corpus's `domains` case is Basic's dialect, one document**: the singleton with its operations (by their
+    paths) and its domains, an enum and a domain packing it into `uint8` added. The `expression` case's extension
+    operation `contains` became `in(b"\x00\xff", list("x", True))`, since a call Basic does not define is now invalid,
+    and the `collections` case gained a mapping.
+28. **Other dialects' operations as data are a follow-up**: each has its singleton, empty; their vocabularies
+    (`Domains.CALLS`, `FUNCTIONS`, `BINARY`, ...) stay code.
+29. **An mbse-schemas failure that depends on the runtime, observed, not diagnosed**: under `coverage run` in a
+    Jupyter kernel, reading a store snapshot (into a store with the same installs) after documents of owned domains and
+    of their dialect had been read back into the source store failed, every time, with `ValueError: link '' is not set`
+    (`Proxies._EntryBuilder.build`), and under `python -X dev` writing `Basic.define` failed with
+    `DecodeError: $.integer[""]: the value object has no property ''`; neither happens outside those runtimes, under
+    other hash seeds or with forced garbage collection, so it looks like memory-layout dependence (an `id()`-keyed
+    cache) in mbse-schemas. *Resolved by mbse-schemas 0.26.5*: the Python store told the schema objects it held when a
+    transaction began by their `id()`s, and an unnamed one collected while the transaction was open could give its
+    `id()` to one the transaction made, whose updates then waited for the commit and, written then, undid what was
+    written in between; it now numbers them, as the TypeScript store did (mbse-schemas TXN-15, F16). DOM-05 takes the
+    snapshot after reading the documents back again, as first written.
 
 ## What stage 2b needed (done)
 

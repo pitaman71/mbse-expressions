@@ -2,7 +2,7 @@
 
 Python's terms are the framework's `literal`, `variable` and `let`, whose shape Python's constants, names and
 `(lambda name: body)(value)` have, and its own kinds, which `install` adds to `Expressions.Framework.Term` by schema
-extension, each a value object with a `domain`. The tags of its own are qualified by the dialect, `python_<kind>`
+extension, each a value object; a term carries no domain. The tags of its own are qualified by the dialect, `python_<kind>`
 (`python_binop`), since every dialect adds its kinds to the one union of terms:
 
 - `literal`, the framework's: a constant, a basic scalar (`value`). `variable`, the framework's: a name, the value
@@ -19,6 +19,8 @@ extension, each a value object with a `domain`. The tags of its own are qualifie
   number of `conditions`, which binds `name` to each item of `iterable` within the element and the conditions. As the
   only argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
 - `let`, the framework's: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
+- `list` and `mapping`, the framework's container constructors: a list display, `[a, b]`, and a dict display,
+  `{k: v}`.
 - `python_import` (`import module` or `import module as alias`) and `python_importfrom` (`from module import name` or
   `... as alias`) bind a name within their `body`, which is the rest of the expression; `Text.ToText` writes them as the
   lines before it. What they may import is up to the scope that evaluates them (see `Evaluators`).
@@ -39,13 +41,15 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 from . import Domains
 
 __all__ = ["install", "DIALECT", "BUILTINS", "Writer", "constant", "name", "attribute", "subscript", "index", "call",
-           "compare", "boolop", "binop", "unaryop", "ifexp", "generator", "let_", "import_", "importfrom"]
+           "compare", "boolop", "binop", "unaryop", "ifexp", "generator", "let_", "list_", "dict_", "import_",
+           "importfrom"]
 
 CONSTANT, NAME, ATTRIBUTE, SUBSCRIPT, INDEX, CALL = (
     "literal", "variable", "python_attribute", "python_subscript", "python_index", "python_call")
 COMPARE, BOOLOP, BINOP, UNARYOP, IFEXP, GENERATOR = (
     "python_compare", "python_boolop", "python_binop", "python_unaryop", "python_ifexp", "python_generator")
 LET, IMPORT, IMPORTFROM = "let", "python_import", "python_importfrom"
+LIST, DICT = "list", "mapping"
 
 
 def install(txn: Any) -> Any:
@@ -55,38 +59,38 @@ def install(txn: Any) -> Any:
     kinds = {"Attribute": ATTRIBUTE, "Subscript": SUBSCRIPT, "Index": INDEX,
              "Call": CALL, "Compare": COMPARE, "BoolOp": BOOLOP, "BinOp": BINOP, "UnaryOp": UNARYOP, "IfExp": IFEXP,
              "GeneratorExp": GENERATOR, "Import": IMPORT, "ImportFrom": IMPORTFROM}
+    dialect, specs = F.dialect(txn, "Expressions.Python")  # its dialect: a singleton
     return txn.uid("mbse.Expressions.Python/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Term": S.OfUnion, **{kind: S.OfObject for kind in kinds}})  # the framework's union, by its name
+        .symbols({**dialect, "Term": S.OfUnion, **{kind: S.OfObject for kind in kinds}})  # Term: the framework's
         .spec([
+            *specs,
             lambda _: _.Attribute.name("Expressions.Python.Attribute").properties({
-                "attr": S.OfStr, "value": _.Term, "domain": S.OfStr}),
+                "attr": S.OfStr, "value": _.Term}),
             lambda _: _.Subscript.name("Expressions.Python.Subscript").properties({
-                "key": S.OfStr, "value": _.Term, "domain": S.OfStr}),
+                "key": S.OfStr, "value": _.Term}),
             lambda _: _.Index.name("Expressions.Python.Index").properties({
-                "value": _.Term, "index": _.Term, "domain": S.OfStr}),
+                "value": _.Term, "index": _.Term}),
             lambda _: _.Call.name("Expressions.Python.Call").properties({
                 "function": _.Term,
                 "arguments": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),
-                "domain": S.OfStr,
             }),
             *[lambda _, kind=kind: getattr(_, kind).name(f"Expressions.Python.{kind}").properties({
-                "operator": S.OfStr, "left": _.Term, "right": _.Term, "domain": S.OfStr})
+                "operator": S.OfStr, "left": _.Term, "right": _.Term})
               for kind in ("Compare", "BoolOp", "BinOp")],
             lambda _: _.UnaryOp.name("Expressions.Python.UnaryOp").properties({
-                "operator": S.OfStr, "operand": _.Term, "domain": S.OfStr}),
+                "operator": S.OfStr, "operand": _.Term}),
             lambda _: _.IfExp.name("Expressions.Python.IfExp").properties({
-                "test": _.Term, "body": _.Term, "orelse": _.Term, "domain": S.OfStr}),
+                "test": _.Term, "body": _.Term, "orelse": _.Term}),
             lambda _: _.GeneratorExp.name("Expressions.Python.GeneratorExp").properties({
                 "name": S.OfStr,  # bound to each item in the element and the conditions
                 "iterable": _.Term,
                 "element": _.Term,
                 "conditions": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),
-                "domain": S.OfStr,
             }),
             lambda _: _.Import.name("Expressions.Python.Import").properties({
-                "module": S.OfStr, "alias": S.OfStr, "body": _.Term, "domain": S.OfStr}),
+                "module": S.OfStr, "alias": S.OfStr, "body": _.Term}),
             lambda _: _.ImportFrom.name("Expressions.Python.ImportFrom").properties({
-                "module": S.OfStr, "name": S.OfStr, "alias": S.OfStr, "body": _.Term, "domain": S.OfStr}),
+                "module": S.OfStr, "name": S.OfStr, "alias": S.OfStr, "body": _.Term}),
             lambda _: _.Term.name("Expressions.Framework.Term").branches([  # branches added: schema extension
                 lambda t, kind=kind, tag=tag: t.name(tag).schema([getattr(_, kind)]) for kind, tag in kinds.items()]),
         ])]))])
@@ -173,6 +177,8 @@ DIALECT = F.Dialect("Python", {
     GENERATOR: F.Kind(F.QUANTIFIER, signature=Domains.GENERATOR, required=("name",),
                       check=_identifier("name", "a generator's name")),
     LET: F.Kind(F.BINDING, required=("name",), check=_identifier("name", "a let's name")),
+    LIST: F.Kind(F.APPLICATION, signature=FD.Opaque()),
+    DICT: F.Kind(F.APPLICATION, signature=FD.Opaque()),
     IMPORT: F.Kind(F.IMPORT, required=("module",), names=_import_names, check=_import_check),
     IMPORTFROM: F.Kind(F.IMPORT, required=("module", "name"), names=_importfrom_names, check=_importfrom_check),
 }, domain_of=Domains.of, literal=_native)
@@ -280,6 +286,18 @@ def generator(name: str, iterable: Any, element: Any, *conditions: Any) -> Write
 def let_(name: str, value: Any, body: Any) -> Writer:
     """`(lambda name: body)(value)`."""
     return _kind(LET, {"name": name}, {"value": value, "body": body})
+
+
+def list_(*elements: Any) -> Writer:
+    """`[elements, ...]`, a list display."""
+    return _kind(LIST, {}, {}, ("elements", list(elements)))
+
+
+def dict_(*entries: tuple[Any, Any]) -> Writer:
+    """`{key: value, ...}`, a dict display: `dict_(("a", 1), ("b", x))`."""
+    pairs = [(_spec(key), _spec(value)) for key, value in entries]
+    return Writer(lambda u: getattr(u, DICT)(lambda r: r.entries([
+        lambda a, key=key, value=value: a.as_object(lambda o: o.key(key).value(value)) for key, value in pairs])))
 
 
 def import_(module: str, body: Any, alias: str | None = None) -> Writer:

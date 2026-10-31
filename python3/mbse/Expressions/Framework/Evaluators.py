@@ -8,7 +8,7 @@ Evaluation resolves references in a scope (see `Symbolics`): an evaluator given 
 dialect's scope from it, so `Evaluators.OfAny(expression, {'person': value})` binds `person`.
 
 `Interpreter` evaluates a term value by its kind's role (see `Terms`): a literal gives its value (through `literal`, or
-`typed` when it carries a domain of its own), a reference what
+`typed` when its kind's attributes give it a domain of its own, as C's type does a constant), a reference what
 the scope resolves, a binding its body in the scope with its name bound, and an import its body in the scope it
 declares. An application calls its operator's implementation from `operations`, with one thunk per argument, so that
 implementations decide which arguments to evaluate and when, and so does a quantifier, whose second thunk takes an item
@@ -43,8 +43,8 @@ class Evaluator(Protocol):
 class Interpreter:
     """Evaluates the terms of `dialect`. `operations` maps each application kind's tag to its implementations by
     operator name, or, for a kind whose vocabulary is open, to one implementation. `literal` converts a literal's value
-    into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal that carries a domain of
-    its own (without it, evaluating one raises `NotImplementedError`); `scope` makes the dialect's scope from a mapping
+    into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal whose kind gives it a
+    domain of its own (`Kind.typed`; without it, evaluating one raises `NotImplementedError`); `scope` makes the dialect's scope from a mapping
     of variables, and `extension(operator, arguments, node, scope)` evaluates operators outside a kind's vocabulary."""
 
     def __init__(self, dialect: Terms.Dialect, operations: Mapping[str, Any], *,
@@ -103,6 +103,8 @@ class Interpreter:
         if operator not in implementations:
             if self._extension is not None:
                 return self._extension(operator, thunks, node, scope)
+            if kind.closed:
+                raise NotImplementedError(f"{operator!r} is not an operation {self.dialect.name()} defines")
             raise NotImplementedError(f"{operator!r} is not a core operation")
         arity = kind.vocabulary[operator].arity()
         if arity >= 0 and len(arguments) != arity:  # a negative arity takes any number

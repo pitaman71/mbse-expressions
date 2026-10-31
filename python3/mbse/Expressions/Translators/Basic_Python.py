@@ -10,13 +10,14 @@ back its own style. The bitwise operations are Python's (`&`, `|`, `^`, `~`, `<<
 name in collection)` and `any(...)`, the quantifier `count` is `sum(1 for name in collection if body)`, `count(xs)` is
 `len(xs)`, `item(xs, i)` is `xs[i]`, `in(x, xs)` is `x in xs`, and `sum`, `min` and `max` are the builtins of one
 argument. `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back as `unique`. `entries` has no
-Python counterpart, and `NUMPY` writes no collections."""
+Python counterpart, and `NUMPY` writes no collections. The container constructors are Python's displays: a `list` its
+list display, `[a, b]`, and a `mapping` its dict display, `{k: v}`."""
 
 from __future__ import annotations
 
 from mbse.Expressions.Dialects.Basic.Expressions import DIALECT as BASIC
 from mbse.Expressions.Dialects.Python.Expressions import DIALECT as PYTHON
-from mbse.Expressions.Framework.Translators import Elide, Pairwise, Prelude, Rule, renames
+from mbse.Expressions.Framework.Translators import Elementwise, Elide, Pairwise, Prelude, Rule, renames
 
 from ._Patterns import Basic, Numpy, Python, value
 
@@ -50,6 +51,8 @@ TRANSLATOR = Pairwise(BASIC, PYTHON, [
     Rule(Basic.item, Python.index),
     Rule(Basic.in_, Python.in_),
     Rule(Basic.unary("unique"), Python.unique, "forward"),
+    Elementwise("list", "list"),
+    Elementwise("mapping", "mapping"),
 ])
 
 NUMPY = Pairwise(BASIC, PYTHON, [

@@ -11,11 +11,12 @@
  * name in collection)` and `any(...)`, the quantifier `count` is `sum(1 for name in collection if body)`, `count(xs)`
  * is `len(xs)`, `item(xs, i)` is `xs[i]`, `in(x, xs)` is `x in xs`, and `sum`, `min` and `max` are the builtins of one
  * argument. `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back as `unique`. `entries` has no
- * Python counterpart, and `NUMPY` writes no collections. */
+ * Python counterpart, and `NUMPY` writes no collections. The container constructors are Python's displays: a `list` its
+ * list display, `[a, b]`, and a `mapping` its dict display, `{k: v}`. */
 
 import { DIALECT as BASIC } from "../Dialects/Basic/Expressions.js";
 import { DIALECT as PYTHON } from "../Dialects/Python/Expressions.js";
-import { Elide, Pairwise, Prelude, Rule, renames } from "../Framework/Translators.js";
+import { Elementwise, Elide, Pairwise, Prelude, Rule, renames } from "../Framework/Translators.js";
 import { Basic, Numpy, Python, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean, Uint8Array);
@@ -47,6 +48,8 @@ export const TRANSLATOR = new Pairwise(BASIC, PYTHON, [
   new Rule(Basic.item, Python.index),
   new Rule(Basic.in_, Python.in_),
   new Rule(Basic.unary("unique"), Python.unique, "forward"),
+  new Elementwise("list", "list"),
+  new Elementwise("mapping", "mapping"),
 ]);
 
 export const NUMPY = new Pairwise(BASIC, PYTHON, [

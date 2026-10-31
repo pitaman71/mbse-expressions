@@ -1,8 +1,10 @@
 """The conformance corpus: the same cases, built statement for statement in every implementation.
 
-`build()` returns `{case: (root schema, root term, store)}`: each case a term value of `Expressions.Framework.Term`,
-built in one store holding the framework's install and every dialect's, written nested. `DIALECTS` names the dialect
-that reads each case other than Basic's. Each implementation writes its snapshots to
+`build()` returns `{case: (root schema, root, store)}`: each case but `domains` a term value of
+`Expressions.Framework.Term`, built in one store holding the framework's install and every dialect's, written nested.
+`DIALECTS` names the dialect that reads each case other than Basic's. The `domains` case is data: Basic's dialect, the
+singleton `Expressions.Basic` (`Expressions.Basic.Dialect`), naming its operations and owning its domains by name, a
+packed one among them, written as one document. Each implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
 the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same
 values, same order of statements.
@@ -12,7 +14,7 @@ from __future__ import annotations
 
 from mbse.Expressions import Framework
 from mbse.Expressions.Dialects import Basic, Ccpp, Excel, Latex, Matlab, Python, SystemVerilog
-from mbse.Expressions.Dialects.Basic import Domains, Expressions
+from mbse.Expressions.Dialects.Basic import Expressions
 from mbse.Expressions.Dialects.Ccpp import Expressions as C
 from mbse.Expressions.Dialects.Excel import Expressions as X
 from mbse.Expressions.Dialects.Latex import Expressions as L
@@ -27,16 +29,8 @@ DIALECTS = {"python": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex
             "systemverilog": SV.DIALECT}
 """The dialect that reads each case, where it is not Basic."""
 
-
-def _named(name, domain):
-    """`domain`, registered under `name` unless it is already: a term names its domain."""
-    if Domains.name_of(domain) is None:
-        Domains.register(name, domain)
-    return domain
-
-
 def build():
-    E, D = Expressions, Domains
+    E = Expressions
     store = Builders.Store()
     store.transaction(Framework.install)
     store.transaction(Basic.install)
@@ -46,11 +40,23 @@ def build():
     store.transaction(Latex.install)
     store.transaction(Ccpp.install)
     store.transaction(SystemVerilog.install)
+    defined = store.transaction(Basic.define)[0]  # Basic's dialect, its operations and its domains
 
-    # --- expression: every kind and literal type, a let and its variable, an extension operation ---
+    # --- domains: Basic's dialect, its operations by name and its domains, owned by name; an enum and a domain packing
+    # it into uint8 added ---
+    with store.transaction():
+        state = store.Expressions.Framework.Domain(lambda d: d.kind(lambda k: k.as_value(lambda a: a.as_union(
+            lambda u: u.enum(lambda e: e.members(["IDLE", "RUN"]))))))
+        mode = store.Expressions.Framework.Domain(lambda d: d.kind(lambda k: k.as_value(lambda a: a.as_union(
+            lambda u: u.packed(lambda e: e.codes([0, 1]))))).packs(lambda a: a.insert(
+            lambda e: e.domain(state).representation(defined["uint8"]))))
+        store.Expressions.Basic.Dialect(defined["dialect"], lambda b: b.domains({
+            "state": lambda e: e.domain(state), "mode": lambda e: e.domain(mode)}))
+
+    # --- expression: every kind and literal type, a let and its variable, a list ---
     record, age = E.variable("record"), E.variable("age")
     expression = E.let_("age", record.age, age.ge(18).and_(
-        age.lt(65.5).or_(record.has("email").not_()).implies(E.operation("contains", "x", b"\x00\xff", True))))
+        age.lt(65.5).or_(record.has("email").not_()).implies(E.literal(b"\x00\xff").in_(E.list_("x", True)))))
 
     # --- python: every kind, a let and its names --- import numpy as np / from math import floor /
     # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(record)
@@ -82,28 +88,10 @@ def build():
     latex = L.where("a", L.member(record_, "age"), L.binary("\\land", L.binary("\\geq", a, 18), L.binary(
         "\\lor", L.unary("\\lnot", L.function("has", record_, "email")), L.binary(">", L.frac(a, 2), 1.5))))
 
-    # --- domains: literals of value domains, by name, a packed enum among them; defaults left out; decimal and
-    # binary128 text; a conversion's domain, a bitwise operation and pack ---
-    uint8 = _named("uint8", D.OfInteger.Builder().width(8).signed(False).overflow("wrap").create())
-    state = _named("state", D.OfPacked.Builder().domain(D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
-        D.OfBits.Builder().width(2).create()).codes(0, 1).create())
-    binary32 = _named("binary32 roundTowardZero", D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create())
-    decimal64 = _named("decimal64", D.OfIeee754.Builder().format("decimal64").create())
-    bits2 = _named("bits2", D.OfBits.Builder().width(2).create())
-    logic = _named("std_logic", D.OfIeee1164.Builder().create())
-    binary128 = _named("binary128", D.OfIeee754.Builder().format("binary128").create())
-    mode, count, gain, line, mask, size, price, ratio = (
-        E.variable(name) for name in ("mode", "count", "gain", "line", "mask", "size", "price", "ratio"))
-    domains = E.operation(
-        "all", mode.eq(E.literal("RUN", state)), count.le(E.literal(200, uint8)), gain.ne(E.literal(1.5, binary32)),
-        line.ge(E.literal("Z", logic)), mask.gt(E.literal(b"\x03", bits2)), size.lt(E.literal(5, D.Int)),
-        price.convert(decimal64).sub(E.literal("1.50", decimal64)), ratio.mul(E.literal("0.1", binary128)),
-        mask.bitand(E.literal(b"\x01", bits2)), mode.pack())  # each operation once
-
-    # --- collections: a quantifier over entries, and collection operations, each once ---
+    # --- collections: a quantifier over entries, collection operations and a mapping, each once ---
     ports, p, pins, sizes = (E.variable(name) for name in ("ports", "p", "pins", "sizes"))
     collections = E.let_("ports", record.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
-        sizes.sum().le(ports.count())))
+        sizes.sum().le(E.mapping(("most", ports.count()), ("least", 0)).item("most"))))
 
     # --- ccpp: every kind, typed constants and a shared identifier --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
     me = C.identifier("record")
@@ -123,6 +111,7 @@ def build():
     with store.transaction():
         terms = {case: store.Expressions.Framework.Term(writer) for case, writer in [
             ("expression", expression), ("python", python), ("matlab", matlab), ("excel", excel), ("latex", latex),
-            ("domains", domains), ("collections", collections), ("ccpp", ccpp), ("systemverilog", systemverilog)]}
-    Term = store.registered("Expressions.Framework.Term")
-    return {case: (Term, terms[case], store) for case in CASES}
+            ("collections", collections), ("ccpp", ccpp), ("systemverilog", systemverilog)]}
+    terms["domains"] = defined["dialect"]
+    Term, Dialect = store.registered("Expressions.Framework.Term"), store.registered("Expressions.Basic.Dialect")
+    return {case: (Dialect if case == "domains" else Term, terms[case], store) for case in CASES}

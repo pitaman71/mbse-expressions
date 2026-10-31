@@ -6,13 +6,13 @@ Collections are arrays: `all` and `any` are `AND(MAP(xs, LAMBDA(p, body)))` and 
 `SUM(MAP(xs, LAMBDA(p, IF(body, 1, 0))))`, `count(xs)` is `ROWS(xs)`, `item(xs, i)` is `INDEX(xs, i + 1)` (Excel
 counts from 1), `in(x, xs)` is `ISNUMBER(MATCH(x, xs, 0))`, and `sum`, `min` and `max` are `SUM`, `MIN` and `MAX`.
 `unique(xs)` is written `ROWS(UNIQUE(xs)) = ROWS(xs)`, which does not read back as `unique`, and `entries` has no
-counterpart."""
+counterpart. A `list` is `VSTACK(a, b)`, a column of its elements; a `mapping` has no counterpart."""
 
 from __future__ import annotations
 
 from mbse.Expressions.Dialects.Basic.Expressions import DIALECT as BASIC
 from mbse.Expressions.Dialects.Excel.Expressions import DIALECT as EXCEL
-from mbse.Expressions.Framework.Translators import Pairwise, Rule, renames
+from mbse.Expressions.Framework.Translators import Elementwise, Pairwise, Rule, renames
 
 from ._Patterns import Basic, Excel, value
 
@@ -40,4 +40,5 @@ TRANSLATOR = Pairwise(BASIC, EXCEL, [
     Rule(Basic.item, Excel.index),
     Rule(Basic.in_, Excel.match),
     Rule(Basic.unary("unique"), Excel.unique, "forward"),
+    Elementwise("list", "call", {}, {"callable": "VSTACK"}),
 ])

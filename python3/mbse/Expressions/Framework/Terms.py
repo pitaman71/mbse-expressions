@@ -4,13 +4,27 @@ translator shares.
 An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
 `Expressions.Framework.Term`, a union of value object kinds, held nested (docs/proposals/port, Decided, 2). `install`
 defines them in a store: the framework's kinds `literal` (`value`, a basic scalar's), `call` (`callable`, by name;
-`arguments`, a container of terms by index), `variable` (`name`) and `let` (`name`, `value`, `body`), each with a
-`domain` by name; `Expression`; and `HasRoot(schema, expression)`, the extension adjacency `expression` it gives
-`Schemas.OfExpression`. A dialect adds its own kinds to `Term` by schema extension, in its own install.
+`arguments`, a container of terms by index), `variable` (`name`), `let` (`name`, `value`, `body`), and the container
+constructors `list` (`elements`, a container of terms by index) and `mapping` (`entries`, a container by index of
+`Expressions.Framework.Pair`s, each a `key` and a `value` term); `Expression`; and `HasRoot(schema, expression)`, the
+extension adjacency `expression` it gives `Schemas.OfExpression`. A term carries no domain: whatever owns the root term
+gives its schema. A dialect adds its own kinds to `Term` by schema extension, in its own install.
+
+Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
+(`Expressions.Basic`), of its own reference object schema (`Expressions.Basic.Dialect`), a branch of the kind union
+`Expressions.Framework.Dialect`, which each dialect extends. It owns its domains by name
+(`Expressions.Framework.Defines(dialect, name, domain)`), so a domain's path is its dialect's and its name; a domain is
+an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
+a union each dialect extends with its kinds of domain. A domain's schema is a named `Schemas.OfAny` restricted to the
+scalar it narrows (`Expressions.Basic.uint8`), which reads it through the extension adjacency `domain`
+(`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
+(`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module defines, whose
+pattern's variables are its arguments, in the order they are declared, and whose `result` is its return.
 
 Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
 branch it holds, its properties the branch's members. Which properties are a kind's slots (a term each), its variadic
-arguments (a container of terms) or its attributes (anything else) is read from the kind's schema. What the framework
+arguments (a container of terms, or of value objects of terms, a mapping's pairs, read as their terms in turn) or its
+attributes (anything else) is read from the kind's schema. What the framework
 needs to know beyond the schema, how each kind is read, is a `Kind`: its role, and which properties name what it binds
 and its operator.
 
@@ -29,7 +43,8 @@ The roles are:
   alone, and validation does not require them to be bound. `ambient` names are bound without being declared.
 - `APPLICATION`: an operator, named by the property `operator` (or, if it is None, by the kind's tag), applied to
   arguments. A kind's `vocabulary` maps operator names to signatures; operators outside it are extensions, unless the
-  vocabulary is None, when any name is accepted and `signature` applies to all.
+  vocabulary is None, when any name is accepted and `signature` applies to all, or the kind is `closed`, when they
+  are refused. The container constructors are applications named by their tags.
 - `BINDING`: binds its name to its first argument within the others.
 - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
   results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
@@ -49,7 +64,7 @@ from mbse.Schemas.Framework import Schemas
 from . import Domains, Objects
 
 __all__ = [
-    "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
+    "install", "dialect", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
     "Form", "Kind", "Dialect", "Writer", "spec", "term", "is_term", "kind_of", "form", "name_of", "operator_of",
     "walk", "fold", "same",
 ]
@@ -61,38 +76,86 @@ QUANTIFIER = "quantifier"
 
 
 def install(txn: Any) -> Any:
-    """The framework's schemas: terms, expressions, and an expression schema's root. Run again in a store, it finds each
-    by its name and writes nothing."""
+    """The framework's schemas: terms, expressions and an expression schema's root; domains and the schemas they
+    restrict; dialects and the operations they define. Run again in a store, it finds each by its name and writes
+    nothing."""
     S = txn.Schemas
     return txn.uid("mbse.Expressions.Framework/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Term": S.OfUnion, "Literal": S.OfObject, "Call": S.OfObject, "Variable": S.OfObject,
-                  "Let": S.OfObject, "Expression": S.OfObject, "HasRoot": S.OfRelation,
-                  "OfExpression": S.OfObject})  # mbse-schemas' own, found by its name
+                  "Let": S.OfObject, "List": S.OfObject, "Mapping": S.OfObject, "Pair": S.OfObject,
+                  "Expression": S.OfObject, "HasRoot": S.OfRelation, "OfExpression": S.OfObject,
+                  "Domain": S.OfObject, "DomainKind": S.OfUnion, "HasDomain": S.OfRelation, "OfAny": S.OfObject,
+                  "Dialect": S.OfUnion, "Defines": S.OfRelation, "Operates": S.OfRelation})  # mbse-schemas' own, by name
         .spec([
             lambda _: _.Term.name("Expressions.Framework.Term").branches([  # a dialect adds its kinds
                 lambda t: t.name("literal").schema([_.Literal]),
                 lambda t: t.name("call").schema([_.Call]),
                 lambda t: t.name("variable").schema([_.Variable]),
                 lambda t: t.name("let").schema([_.Let]),
+                lambda t: t.name("list").schema([_.List]),
+                lambda t: t.name("mapping").schema([_.Mapping]),
             ]),
             lambda _: _.Literal.name("Expressions.Framework.Literal").properties({
                 "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes])),  # a basic scalar
-                "domain": S.OfStr,  # every term has a domain (Schema extension, Decided, 21), by name (stage 3)
             }),
             lambda _: _.Call.name("Expressions.Framework.Call").properties({
-                "callable": S.OfStr,  # what it calls, by name: an operator, a function
+                "callable": S.OfStr,  # what it calls, by name: an operation its dialect defines
                 "arguments": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),
-                "domain": S.OfStr,  # its result's
             }),
-            lambda _: _.Variable.name("Expressions.Framework.Variable").properties({"name": S.OfStr, "domain": S.OfStr}),
-            lambda _: _.Let.name("Expressions.Framework.Let").properties({
-                "name": S.OfStr, "value": _.Term, "body": _.Term, "domain": S.OfStr}),
+            lambda _: _.Variable.name("Expressions.Framework.Variable").properties({"name": S.OfStr}),
+            lambda _: _.Let.name("Expressions.Framework.Let").properties({"name": S.OfStr, "value": _.Term, "body": _.Term}),
+            lambda _: _.List.name("Expressions.Framework.List").properties({  # constructs a list of its elements' values
+                "elements": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),
+            }),
+            lambda _: _.Mapping.name("Expressions.Framework.Mapping").properties({  # constructs a mapping, key to value
+                "entries": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Pair])),
+            }),
+            lambda _: _.Pair.name("Expressions.Framework.Pair").properties({"key": _.Term, "value": _.Term}),
             lambda _: _.Expression.name("Expressions.Framework.Expression").ref(True).properties({"root": _.Term}),
             lambda _: _.HasRoot.name("Expressions.Framework.HasRoot").links([
                 lambda t: t.name("schema"), lambda t: t.name("expression")]).uniques("expression"),
             lambda _: _.OfExpression.name("Schemas.OfExpression").adjacencies([  # by extension: no member on it
                 lambda t: t.name("expression").relation([_.HasRoot]).me("schema")]),
+            # A dialect: a singleton, its identity its global name (`Expressions.Basic`), the root of its domains'
+            # paths. mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object
+            # schemas, to which each dialect adds its own by schema extension, as it adds its kinds to `Term`.
+            lambda _: _.Dialect.name("Expressions.Framework.Dialect"),
+            # A domain: a reference object holding its kind, a value of a union that dialects extend, owned by the
+            # dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the scalar it
+            # narrows, reads it through the extension adjacency `domain`.
+            lambda _: _.DomainKind.name("Expressions.Framework.DomainKind"),  # a dialect adds its kinds
+            lambda _: _.Domain.name("Expressions.Framework.Domain").ref(True).properties({"kind": _.DomainKind}).adjacencies({
+                "dialect": lambda a: a.relation([_.Defines]).me("domain").owner(True),  # its path: its dialect's, its name
+                "schema": lambda a: a.relation([_.HasDomain]).me("domain")}),
+            lambda _: _.Defines.name("Expressions.Framework.Defines").links([
+                lambda t: t.name("dialect").schema([_.Dialect]), lambda t: t.name("domain")]).properties({
+                "name": S.OfStr}).uniques([["dialect", "name"], ["domain"]]),
+            lambda _: _.HasDomain.name("Expressions.Framework.HasDomain").links([
+                lambda t: t.name("schema").schema([_.OfAny]), lambda t: t.name("domain")]).uniques([["schema"], ["domain"]]),
+            lambda _: _.OfAny.name("Schemas.OfAny").adjacencies({
+                "domain": lambda a: a.relation([_.HasDomain]).me("schema")}),
+            # A dialect's operations, each a `Schemas.OfExpression` its module owns (`Schemas.Defines`), its pattern's
+            # variables its arguments in the order they are declared, its `result` its return: named by the dialect.
+            lambda _: _.Operates.name("Expressions.Framework.Operates").links([
+                lambda t: t.name("dialect").schema([_.Dialect]), lambda t: t.name("operation").schema([_.OfExpression])
+            ]).properties({"name": S.OfStr}).uniques([["dialect", "name"], ["operation"]]),
         ])]))])
+
+
+def dialect(txn: Any, module: str) -> tuple[dict[str, Any], list[Any]]:
+    """The symbols and the specs a dialect's install adds for its dialect: its schema, `<module>.Dialect`, a reference
+    object schema whose singleton is named `module` (`Expressions.Basic`), with its `domains` (`Defines`, keyed by name)
+    and its `operations` (`Operates`), added to `Expressions.Framework.Dialect` as the branch named after the module's
+    last part, lowercase (`basic`). The symbols are `Dialects` and `DialectSchema`."""
+    S = txn.Schemas
+    branch = module.rsplit(".", 1)[-1].lower()
+    return {"Dialects": S.OfUnion, "DialectSchema": S.OfObject}, [
+        lambda _: _.DialectSchema.name(f"{module}.Dialect").ref(True).singleton(module).adjacencies({
+            "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+            "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
+        lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
+            lambda t: t.name(branch).schema([_.DialectSchema])]),
+    ]
 
 
 def _article(noun: str) -> str:
@@ -120,9 +183,15 @@ def _named(schema: Any, name: str) -> bool:
     return getattr(schema, "name", None) == name
 
 
+def _is_pair(schema: Any) -> bool:
+    """Whether a schema is a value object whose properties are all terms, such as a mapping's pair."""
+    return (isinstance(schema, Schemas.OfObject.Data) and not schema.ref and bool(schema.properties)
+            and all(_named(prop.schema, TERM) for prop in schema.properties.values()))
+
+
 def _parts(schema: Any) -> tuple[tuple[str, ...], str | None, tuple[str, ...]]:
-    """A kind's schema's slots (properties holding a term), its variadic property (a container of terms) or None, and its
-    attributes (the rest), each in declaration order."""
+    """A kind's schema's slots (properties holding a term), its variadic property (a container of terms, or of value
+    objects of terms such as a mapping's pairs) or None, and its attributes (the rest), each in declaration order."""
     cached = _PARTS.get(id(schema))
     if cached is not None and cached[0] is schema:
         return cached[1]
@@ -130,13 +199,22 @@ def _parts(schema: Any) -> tuple[tuple[str, ...], str | None, tuple[str, ...]]:
     for name, prop in schema.properties.items():
         if _named(prop.schema, TERM):
             slots.append(name)
-        elif isinstance(prop.schema, Schemas.OfContainer.Data) and _named(prop.schema.element, TERM):
+        elif isinstance(prop.schema, Schemas.OfContainer.Data) and (
+                _named(prop.schema.element, TERM) or _is_pair(prop.schema.element)):
             variadic = name
         else:
             attributes.append(name)
     parts = (tuple(slots), variadic, tuple(attributes))
     _PARTS[id(schema)] = (schema, parts)
     return parts
+
+
+def _members(schema: Any) -> tuple[str, ...]:
+    """The term properties of the value objects a kind's variadic property holds, in declaration order (a mapping's
+    `key` and `value`); none where it holds terms, or the kind has no variadic property."""
+    _, variadic, _ = _parts(schema)
+    element = schema.properties[variadic].schema.element if variadic is not None else None
+    return tuple(element.properties) if _is_pair(element) else ()
 
 
 _PARTS: dict[int, tuple[Any, Any]] = {}
@@ -198,12 +276,17 @@ def _slot(record: Any, name: str) -> Any:
 
 
 def _variadic(record: Any, name: str) -> tuple[Any, ...]:
-    """The terms a container of terms holds, in index order."""
+    """The terms a container holds, in index order: its elements, or each element's terms in turn (`_members`), None
+    where one is empty."""
     pairs: list[tuple[Any, Any]] = []
     getattr(record, name).as_value(lambda a: a.as_container(lambda c: c.as_entries(pairs.extend)))
+    members = _members(record.as_schema())
     found: list[Any] = []
     for _, element in pairs:
-        element.as_union(lambda u: found.append(u) or u)
+        if members:
+            element.as_object(lambda o: found.extend(_slot(o, member) for member in members) or o)
+        else:
+            element.as_union(lambda u: found.append(u) or u)
     return tuple(found)
 
 
@@ -333,6 +416,21 @@ def spec(value: Any, literal: Callable[[Any], Writer | None] | None = None) -> W
     raise TypeError(f"expected a term, a writer or a native value, got {value!r}")
 
 
+def _pair(members: tuple[str, ...], terms: Any) -> Callable[[Any], Any]:
+    """The spec of a value object of terms (a mapping's pair), its members written from `terms` in order."""
+
+    def write(element: Any) -> Any:
+        def record(o: Any) -> Any:
+            for member, written in zip(members, terms):
+                if written is not None:
+                    getattr(o, member)(written)
+            return o
+
+        return element.as_object(record)
+
+    return write
+
+
 # --- Dialects ---
 
 
@@ -340,9 +438,12 @@ def spec(value: Any, literal: Callable[[Any], Writer | None] | None = None) -> W
 class Kind:
     """How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`,
     or None when its tag names it); for an application or a quantifier, its `vocabulary` (operator names to signatures;
-    None accepts any name, with `signature`); the properties it requires (`required`); for a reference, whether it is
-    `lexical` and the `ambient` names bound without a declaration; for an import, the names it binds, of its attributes (`names(attributes)`);
-    its own problems (`check(record)`); and its own domain, when it carries one (`typed(record)`)."""
+    None accepts any name, with `signature`), and whether it is `closed`, refusing an operator outside its vocabulary
+    whether or not validation asks for the core (the operations its dialect defines, and no others); the properties it
+    requires (`required`); for a reference, whether it is `lexical` and the `ambient` names bound without a declaration;
+    for an import, the names it binds, of its attributes (`names(attributes)`); its own problems (`check(record)`); and
+    the domain its own attributes give it, where they give one (`typed(record)`: C's type of a constant or a cast; a
+    term carries no domain)."""
 
     role: str
     operator: str | None = None
@@ -354,10 +455,12 @@ class Kind:
     names: Callable[[Mapping[str, Any]], tuple[str, ...]] | None = None
     check: Callable[[Any], list[str]] | None = None
     typed: Callable[[Any], Domains.Domain | None] | None = None
+    closed: bool = False
 
 
 class Dialect:
-    """An expression language: the kinds it reads, by tag, its `name`, and `domain_of(value)`, a literal's domain. A
+    """An expression language: the kinds it reads, by tag, its `name`, and `domain_of(value)`, the domain of a literal's
+    value by the scalar it is written with (for `infer`; a term carries no domain). A
     dialect may extend another (`extends`): its kinds are the base's and its own, whose tags must differ from the
     base's. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its kinds."""
 
@@ -411,7 +514,12 @@ class Dialect:
                     if argument is not None:
                         getattr(r, name)(argument)
                 if variadic is not None:
-                    getattr(r, variadic)(list(arguments[len(slots):]))
+                    rest, members = arguments[len(slots):], _members(r.as_schema())
+                    if members and len(rest) % len(members):
+                        raise ValueError(f"{_article(form_.kind)} takes its arguments in {len(members)}s "
+                                         f"({', '.join(members)}), got {len(rest)}")
+                    getattr(r, variadic)(list(rest) if not members else [
+                        _pair(members, rest[i:i + len(members)]) for i in range(0, len(rest), len(members))])
                 return r
 
             return getattr(union, form_.kind)(record)
@@ -464,10 +572,14 @@ class Dialect:
             vocabulary = kind.vocabulary
             if operator in vocabulary and vocabulary[operator].arity() not in (-1, len(arguments)):  # -1: any number
                 problems.append(f"{operator} takes {vocabulary[operator].arity()} arguments, got {len(arguments)}")
+            elif kind.closed and operator not in vocabulary:
+                problems.append(f"{operator!r} is not an operation {self._name} defines")
             elif core and operator not in vocabulary:
                 problems.append(f"{operator!r} is not a core operation")
+        members = _members(record.as_schema())
         for i, (argument, scope) in enumerate(zip(arguments, scopes)):
-            label = slots[i] if i < len(slots) else f"argument {i - len(slots)}"
+            j = i - len(slots)
+            label = slots[i] if j < 0 else f"{members[j % len(members)]} {j // len(members)}" if members else f"argument {j}"
             if argument is None:
                 problems.append(f"{what} needs {_article(label)}")
             else:

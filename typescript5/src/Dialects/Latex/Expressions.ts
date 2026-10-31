@@ -2,8 +2,8 @@
  * Expressions of the Latex dialect: mathematical notation, as LaTeX's math mode writes it.
  *
  * Latex's terms are four of the framework's kinds (`Framework/Terms`), whose shape notation's constructs have, and four
- * of its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a value object with a
- * `domain`, by name, as every term has. The tags of its own carry the dialect's name, `latex_`, since every dialect adds
+ * of its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a value object (a term
+ * carries no domain). The tags of its own carry the dialect's name, `latex_`, since every dialect adds
  * its kinds to the one union and several have a `binary` or a `member`:
  *
  * - `literal` (the framework's): a constant, a number (int or float), text (str, written `\text{...}`) or a truth value
@@ -33,17 +33,19 @@ import * as Domains from "./Domains.js";
 /** Latex's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
 export function install(txn: any): any {
   const S = txn.Schemas;
+  const [dialect, specs] = F.dialect(txn, "Expressions.Latex"); // its dialect: a singleton
   return txn.uid("mbse.Expressions.Latex/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Frac: S.OfObject, Member: S.OfObject })
+    .symbols({ ...dialect, Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Frac: S.OfObject, Member: S.OfObject })
     .spec([ // Term: the framework's union, found by its name
+      ...specs,
       (_: any) => _.Binary.name("Expressions.Latex.Binary").properties({
-        operator: S.OfStr, left: _.Term, right: _.Term, domain: S.OfStr }),
+        operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.Unary.name("Expressions.Latex.Unary").properties({
-        operator: S.OfStr, operand: _.Term, domain: S.OfStr }),
+        operator: S.OfStr, operand: _.Term }),
       (_: any) => _.Frac.name("Expressions.Latex.Frac").properties({
-        numerator: _.Term, denominator: _.Term, domain: S.OfStr }),
+        numerator: _.Term, denominator: _.Term }),
       (_: any) => _.Member.name("Expressions.Latex.Member").properties({
-        name: S.OfStr, value: _.Term, domain: S.OfStr }),
+        name: S.OfStr, value: _.Term }),
       (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // branches added: schema extension
         (t: any) => t.name("latex_binary").schema([_.Binary]),
         (t: any) => t.name("latex_unary").schema([_.Unary]),

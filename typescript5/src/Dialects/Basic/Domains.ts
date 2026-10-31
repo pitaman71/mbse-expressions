@@ -1,6 +1,6 @@
 /**
- * Domains of the Basic dialect: the value domains that literals carry, and the values its core operations take and
- * give.
+ * Domains of the Basic dialect: its kinds of value domain, the domains it defines as data, and the values its core
+ * operations take and give.
  *
  * Value domains name the standard they implement, with only its parameters (see mbse-basis
  * [CAP-097: value domains of published standards](../../../../../mbse-basis/docs/capabilities/CAP-097.md#value-domains)):
@@ -17,32 +17,32 @@
  * - `OfPacked`: an enum (its `domain`) represented in a fixed-width integer or bits (its `representation`), member `i`
  *   by `codes[i]`.
  *
+ * A domain is data: an `Expressions.Framework.Domain`, holding its `kind`, a value of `Expressions.Framework.DomainKind`,
+ * whose branches `Expressions.install` adds, one per kind above (`integer`, with `width`, `signed` and `overflow`, ...),
+ * and owned by the dialect that defines it, by name: its path is the dialect's singleton (`Expressions.Basic`), then its
+ * name. A packed domain links its enum and its representation through `Expressions.Basic.Packs`. Its schema is a named
+ * `Schemas.OfAny` restricted to the scalar it narrows (`Expressions.Basic.uint8`), which reads it through `domain`
+ * (`Expressions.Framework.HasDomain`). `Expressions.define` writes the domains Basic defines (`DOMAINS`), and
+ * `read(domain)` gives the data of a stored one, so that what its parameters mean can be asked of it.
+ *
  * Each kind's data, `OfX.Data`, is compared by structure (`equals`), built by `OfX.Builder` (`create()`, `clone()`,
- * `update()`; none validate), with `validate()`. Domains stay code until the port's stage 3 makes them objects that
- * dialects define by name (docs/proposals/port): a term names its domain. A domain is a `Domain`: a value is in it (`contains`) when it has the
+ * `update()`; none validate), with `validate()`. A domain is a `Domain`: a value is in it (`contains`) when it has the
  * native type the domain's literals hold (a bigint for an integer, a string for an enum's member, ...) and fits it,
- * and it includes (`includes`) only domains equal to it, since Basic has no implied promotions.
+ * and it includes (`includes`) only domains equal to it, since Basic has no implied promotions. A domain compares two of
+ * its values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into itself by its overflow
+ * (`fit`). What a domain means is not yet used by evaluation, which deals in values by the schemas they are written
+ * with: a term carries no domain, and giving each term one is type inference's, a later capability (the port's stage 3,
+ * Decided, 2).
  *
- * Today's natives are the defaults: `Int` is an unbounded signed integer, `Float` binary64 rounding ties to even, `Str`
- * Unicode, `Bytes` bytes of any length and `Bool` true and false; `of(value)` gives a native's default domain.
- * `Object` holds data objects read through mbse-schemas' readers (`Framework/Objects`), terms and value objects among
- * them, and `Anything` is the domain of a value not known statically, such as a property read with `get`. Unknown
- * (`null`) is not a domain.
+ * The natives' defaults are `Bool`, `Int` (an unbounded signed integer), `Float` (binary64, rounding ties to even),
+ * `Str` (Unicode) and `Bytes` (bytes of any length): `of(value)` gives a native's. `Object` holds data objects read
+ * through mbse-schemas' readers (`Framework/Objects`), terms and value objects among them, and `Anything` is the domain
+ * of a value not known statically, such as a property read with `get`. Unknown (`null`) is not a domain.
  *
- * Domains are registered by name with `register`, and a term names the domain it carries: `registered(name)` gives the
- * domain a name stands for, a registered one or a default's (`bool`, `int`, `float`, `str`, `bytes`, which no other may
- * take), and `name_of(domain)` the name of a domain, null when it has none.
- *
- * A value of another domain than its native's default is a typed value, `Value(domain, value)`; `value(domain,
- * native)` gives the bare native for a default domain and a typed value otherwise, and `of(value)` gives any value's
- * domain. A domain compares two of its values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a
- * result into itself by its overflow (`fit`).
- *
- * `SIGNATURES` gives each core operation's signature, following the evaluator's rules: comparisons take two values of
- * one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes bools;
- * arithmetic takes two numbers of one domain and gives that domain, and the bitwise operations two integers or bits of
- * one domain; `convert`, `reinterpret` and `unpack` give the operation's own domain, and `pack` a packed domain's
- * representation.
+ * `SIGNATURES` gives each core operation's signature, for inference, following the evaluator's rules: comparisons take
+ * two values of one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes
+ * bools; arithmetic takes two numbers of one domain and gives that domain, and the bitwise operations two integers or
+ * bits of one domain. `LIST` and `MAPPING` are the container constructors'.
  */
 
 import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";
@@ -409,10 +409,6 @@ class PackedDomain extends Domain {
 }
 
 /** A domain's name, or the repr of what is not a domain (Python's `_name`). */
-export function _name(domain: unknown): string {
-  return nameOf(domain);
-}
-
 function nameOf(domain: unknown): string {
   return domain instanceof Domain ? domain.name() : repr(domain);
 }
@@ -578,68 +574,10 @@ export const OfPacked = new Kind(PackedDomain, PackedBuilder);
 const KINDS = new Map<string, DomainClass>([BoolDomain, IntegerDomain, Ieee754Domain, BitsDomain, BytesDomain,
   UnicodeDomain, Ieee1164Domain, EnumDomain, PackedDomain].map((kind) => [kind.KIND, kind as DomainClass]));
 
-// --- The registry ---
-
-const registry = new Map<string, Domain>();
-
-/** Registers `domain` under `name`, so that a term can name it. A domain is registered once, and a default's name is
- * its own. */
-export function register(name: string, domain: Domain): void {
-  if (registry.has(name) || DEFAULTS.has(name)) throw new Errors.ValueError(`domain ${repr(name)} is already registered`);
-  for (const [other, registeredDomain] of registry) {
-    if (registeredDomain.equals(domain)) throw new Errors.ValueError(`${nameOf(domain)} is already registered as ${repr(other)}`);
-  }
-  registry.set(name, domain);
-}
-
-/** The domain `name` stands for: a registered one, or a default's. */
-export function registered(name: string): Domain {
-  const found = registry.get(name) ?? DEFAULTS.get(name);
-  if (found === undefined) throw new Errors.LookupError(`no domain registered as ${repr(name)}`);
-  return found;
-}
-
-/** The name of a domain equal to `domain`: the one it is registered under, or a default's; null if it has none. */
-export function name_of(domain: unknown): string | null {
-  for (const [name, registeredDomain] of registry) if (registeredDomain.equals(domain)) return name;
-  for (const [name, defaultDomain] of DEFAULTS) if (defaultDomain.equals(domain)) return name;
-  return null;
-}
-
-// --- Typed values ---
-
-/** A value of a domain other than its native's default: the `domain`, and the `value`, a native it holds. */
-export class Value {
-  constructor(readonly domain: Domain, readonly value: unknown) {
-    if (!(domain instanceof Domain)) throw new TypeError(`not a value domain: ${repr(domain)}`);
-    if (!domain.contains(value)) throw new Errors.ValueError(`${domain.name()} cannot hold ${repr(value)}`);
-  }
-
-  /** The same domain, and the same native. */
-  equals(other: unknown): boolean {
-    return other instanceof Value && other.domain.equals(this.domain) && sameNative(other.value, this.value);
-  }
-
-  toString(): string {
-    return `${repr(this.value)} as ${this.domain.name()}`;
-  }
-}
-
-function sameNative(a: unknown, b: unknown): boolean {
-  if (a instanceof Uint8Array && b instanceof Uint8Array) return a.length === b.length && a.every((x, i) => x === b[i]);
-  return a === b;
-}
-
-/** A value of `domain`: the bare native when `domain` is its native's default, otherwise a typed value. */
-export function value(domain: Domain, native: unknown): unknown {
-  return nativeDomain(native)?.equals(domain) ? native : new Value(domain, native);
-}
-
 // --- Collections ---
 
 function sameItem(a: unknown, b: unknown): boolean {
   if (a instanceof Collection) return a.equals(b);
-  if (a instanceof Value) return a.equals(b);
   if (a instanceof Uint8Array && b instanceof Uint8Array) return a.length === b.length && a.every((x, i) => x === b[i]);
   return a === b;
 }
@@ -748,8 +686,6 @@ export { ObjectDomain as Object };
 const NATIVES: ReadonlyMap<string, Domain> = new Map<string, Domain>([
   ["bool", Bool], ["int", Int], ["float", Float], ["str", Str], ["bytes", Bytes],
 ]);
-/** The defaults' names, which a term names them by. */
-const DEFAULTS: ReadonlyMap<string, Domain> = NATIVES;
 
 /** A native's default domain, or null when `value` is not a native. */
 export function nativeDomain(value: unknown): Domain | null {
@@ -776,7 +712,7 @@ class Family implements D.Domain {
   }
 
   contains(value: unknown): boolean {
-    return this.has(value instanceof Value ? value.domain : nativeDomain(value));
+    return this.has(nativeDomain(value));
   }
 
   includes(other: D.Domain): boolean {
@@ -795,7 +731,6 @@ const ORDERED_KINDS = new Family("integer, ieee754, bytes, unicode or packed dom
 const NUMERIC = new Family("integer or ieee754 domain", IntegerDomain, Ieee754Domain);
 const BITWISE = new Family("integer or bits domain", IntegerDomain, BitsDomain);
 const INTEGERS = new Family("integer domain", IntegerDomain);
-const PACKED = new Family("packed domain", PackedDomain);
 export { RecordData as Record };
 export const Records = new D.OfValues("record", (value) => value instanceof RecordData);
 const COLLECTIONS = new D.OfValues("collection", (value) => value instanceof Collection || Array.isArray(value));
@@ -819,38 +754,6 @@ class Shift implements D.Signature {
 
   describe(): string {
     return `(T, any ${INTEGERS.name()}) -> T for T in int or any ${BITWISE.name()}`;
-  }
-}
-
-/** `convert`, `reinterpret` and `unpack`: a value of any domain, giving the operation's own domain, which inference
- * takes from the operation. */
-class Conversion implements D.Signature {
-  arity(): number {
-    return 1;
-  }
-
-  result(args: readonly D.Domain[]): D.Domain | null {
-    return args.length === 1 && D.overlaps(VALUES, args[0] as D.Domain) ? Anything : null;
-  }
-
-  describe(): string {
-    return "(T) -> the operation's domain";
-  }
-}
-
-/** `pack`: a value of a packed domain, giving its representation. */
-class Pack implements D.Signature {
-  arity(): number {
-    return 1;
-  }
-
-  result(args: readonly D.Domain[]): D.Domain | null {
-    if (args.length !== 1 || !D.overlaps(PACKED, args[0] as D.Domain)) return null;
-    return args[0] instanceof PackedDomain ? args[0].representation as D.Domain : Anything;
-  }
-
-  describe(): string {
-    return "(packed) -> its representation";
   }
 }
 
@@ -922,18 +825,85 @@ export const SIGNATURES: ReadonlyMap<string, D.Signature> = new Map<string, D.Si
   ["neg", new D.Same(1, NUMBERS, null, NUMERIC)],
   ...["bitand", "bitor", "bitxor"].map((name) => [name, new D.Same(2, [Int], null, BITWISE)] as [string, D.Signature]),
   ["bitnot", new D.Same(1, [Int], null, BITWISE)], ["shl", new Shift()], ["shr", new Shift()],
-  ...["convert", "reinterpret", "unpack"].map((name) => [name, new Conversion()] as [string, D.Signature]), ["pack", new Pack()],
   ["count", new Collective(0, 0, Int)], ["item", new Collective(0, 1, null)], ["in", new Collective(1, 0, Bool)],
   ["sum", new Collective(0, 0, null, NUMERIC, "number")], ["min", new Collective(0, 0, null, ORDERED_KINDS, "ordered value")],
   ["max", new Collective(0, 0, null, ORDERED_KINDS, "ordered value")], ["unique", new Collective(0, 0, Bool)],
   ["entries", new D.Function([ObjectDomain, Str], new List(Records))],
 ]);
 
-/** The domain of a value: a typed value's own, its native type's default, or `Object`. */
+/** A container constructor's signature: any number of elements, giving a list of their domain, or of entries (a key
+ * then its value), giving a keyed collection of theirs. */
+class Constructor implements D.Signature {
+  constructor(private readonly keyed: boolean) {}
+
+  arity(): number {
+    return -1; // any number
+  }
+
+  result(args: readonly D.Domain[]): D.Domain | null {
+    const joined = (domains: readonly D.Domain[]) => (domains.length > 0 ? D.join(domains) : Anything);
+    if (!this.keyed) return new List(joined(args));
+    return new Keyed(joined(args.filter((_, i) => i % 2 === 0)), joined(args.filter((_, i) => i % 2 === 1)));
+  }
+
+  describe(): string {
+    return this.keyed ? "(K, T, ...) -> keyed(K, T)" : "(T, ...) -> list(T)";
+  }
+}
+
+/** The container constructors' signatures. */
+export const LIST: D.Signature = new Constructor(false);
+export const MAPPING: D.Signature = new Constructor(true);
+
+/** The domain of a value: its native type's default, or `Object`. */
 export function of(value: unknown): D.Domain {
-  if (value instanceof Value) return value.domain;
   const native = nativeDomain(value);
   if (native !== null) return native;
   if (ObjectDomain.contains(value)) return ObjectDomain;
   throw new TypeError(`a ${Repr.typeName(value)} is not a value of the Basic dialect`);
+}
+
+// --- Domains as data ---
+
+/** A domain Basic defines: its scalar, its kind and its parameters. */
+export type DomainEntry = readonly [string, string, Readonly<Record<string, unknown>>];
+
+/** The domains Basic defines, by name: each one's scalar, its kind and its parameters. `Expressions.install` writes
+ * each one's schema, `Expressions.Basic.<name>`, a `Schemas.OfAny` of its scalar, and `Expressions.define` its
+ * `Expressions.Framework.Domain`, which Basic's dialect owns by that name. */
+export const DOMAINS: ReadonlyMap<string, DomainEntry> = new Map<string, DomainEntry>([
+  ["bool", ["bool", "bool", {}]],
+  ["int", ["int", "integer", { signed: true, overflow: "raise" }]],
+  ["float", ["float", "ieee754", { format: "binary64", rounding: "roundTiesToEven" }]],
+  ["str", ["str", "unicode", {}]],
+  ["bytes", ["bytes", "bytes", {}]],
+  ["uint8", ["int", "integer", { width: 8n, signed: false, overflow: "wrap" }]],
+  ["binary32", ["float", "ieee754", { format: "binary32", rounding: "roundTiesToEven" }]],
+  ["std_logic", ["str", "ieee1164", {}]],
+]);
+
+/** The data of a stored domain, an `Expressions.Framework.Domain`: its kind's, with the parameters it holds (a packed
+ * domain's enum and representation read in turn), so that it can be validated and asked what it holds. */
+export function read(domain: any): Domain {
+  const found: any[] = [];
+  domain.kind.as_value((a: any) => a.as_union((u: any) => {
+    found.push(u);
+    return u;
+  }));
+  if (found.length === 0 || found[0].as_schema() === null) throw new Errors.ValueError("a domain needs a kind");
+  const union = found[0];
+  const branch = (union.as_schema().branches as readonly { name: string }[])
+    .find((b) => union[b.name].as_schema() !== null) as { name: string };
+  const parameters = new Map<string, unknown>();
+  for (const [name, value] of Objects.properties(union[branch.name])) {
+    parameters.set(name, value instanceof Objects.Listed ? [...value.values] : value);
+  }
+  if (branch.name === "packed") {
+    for (const entry of domain.packs) {
+      parameters.set("domain", read(entry.domain));
+      parameters.set("representation", read(entry.representation));
+    }
+  }
+  const data = KINDS.get(branch.name) as DomainClass;
+  return new data(...data.FIELDS.map((name) => parameters.get(name)));
 }

@@ -13,7 +13,9 @@
  *   variables throw too, with MATLAB's messages.
  * - The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
  *   53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
- * - An array is a JavaScript array: a container property's values, or a variable's array. Operators take scalars. `numel`
+ * - An array is a JavaScript array: a container property's values, a variable's array, or a concatenation `[a, b]`, the
+ *   elements of its operands in order: logicals if all are, doubles if all are numbers or logicals, strings if all are
+ *   strings (a string array), any other mixture throwing. Operators take scalars. `numel`
  *   counts elements (a scalar is one), `xs(i)` indexes from 1, and `arrayfun(@(p) body, xs)` gives the body's value
  *   for each element, an array of logicals if all are, else of doubles; each must be a numeric or logical scalar.
  *   `all`, `any` and `nnz` test elements as nonzero (`any` ignores NaN), `sum` adds them from the first, `min` and
@@ -201,6 +203,14 @@ function logicals(values: unknown[]): unknown[] {
   return values.every((value) => typeof value === "boolean") ? values : values.map((value) => double(value));
 }
 
+/** `[a, b]`: the elements of each, in order: logicals if all are, else doubles, or strings if all are. */
+function concatenate(args: F.Thunk[]): unknown[] {
+  const found = args.flatMap((argument) => elements(argument()));
+  if (found.every((value) => typeof value === "string")) return found;
+  if (found.some((value) => double(value) === null)) throw new TypeError("Concatenation takes numbers and logicals, or strings.");
+  return logicals(found);
+}
+
 function extreme(name: string): F.Implementation {
   return (args) => {
     const value = (args[0] as F.Thunk)();
@@ -346,6 +356,7 @@ export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string
   ["matlab_field", field],
   ["matlab_index", index],
   ["matlab_arrayfun", arrayfun],
+  ["list", concatenate],
 ]), { literal: toDouble, scope: (variables) => new Scope(variables), extension });
 
 /** The value of a term in `scope`, or with the variables in an object bound. */

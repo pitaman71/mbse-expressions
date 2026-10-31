@@ -11,9 +11,10 @@ is stored with the rest of the data ([mbse-schemas](https://github.com/pitaman71
 the same way in Python (`mbse.Expressions`) and TypeScript (`@mbse/expressions`), and translated between expression
 languages, called dialects:
 
-- **Basic**, the core vocabulary: comparisons, Kleene logic, arithmetic and bitwise operations over value domains,
-  property access, lets, and collections with quantifiers. Every binding evaluates it, and it is the neutral form of
-  every constraint.
+- **Basic**, the core vocabulary: comparisons, Kleene logic, arithmetic and bitwise operations over values, property
+  access, lets, lists and mappings, and collections with quantifiers. Every binding evaluates it, and it is the neutral
+  form of every constraint. Its operations are data: each an expression schema its dialect defines by name, its
+  variables its arguments, in order.
 - **Python**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules.
 - **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.
@@ -40,8 +41,9 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
    it with a dialect's `Evaluators.OfAny(expression, scope)`.
 2. **Basic is three-valued and never coerces.** An absent property is unknown (`None`/`null`), and `and`/`or` follow
    Kleene. `1 == 1.0` is unknown, since int and float are different types; in TypeScript, an int is a `bigint` (`18n`).
-3. **Only the core vocabulary is guaranteed.** Other operation names are extensions; `validate(core=True)` reports
-   them, and evaluating one raises.
+3. **Only the operations a dialect defines are calls of it.** Basic's are its data (`Expressions.Basic.add`, ...);
+   `validate` refuses a call to any other ("'contains' is not an operation Basic defines"), and evaluating one raises.
+   A term carries no domain: values are taken by the schemas they are written with, ints unbounded and floats binary64.
 4. **Each dialect evaluates by its own language's rules.** A translation keeps a constraint's form, not always its
    value: a missing property is unknown in Basic, `#FIELD!` in Excel, and an error in Python and MATLAB.
 5. **Nothing is imported or called unless the scope provides it.** Python modules, MATLAB packages and Excel add-ins

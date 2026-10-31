@@ -40,14 +40,14 @@ Its terms are bespoke dataclasses, its domain registry process-global, its vocab
   expressions are built and read only through mbse-schemas; dialects as pure model, an open question under P-018.
 - `scalars` (2 commits, docs only): "scalars you may analyze and reapply unless porting is much easier and
   risk-free". Reapplied by hand in stage 1, not cherry-picked: it cites mbse-schemas items that never landed (a
-  palette, `OfName`, scalars as placeholders: an experimental scalars overhaul, deferred in the workspace's TODO.md), and
+  palette, `OfName`, scalars as placeholders: an experimental scalars overhaul, deferred: plain scalars now in [CAP-156: the five basic scalars with boundless domains](../../../../mbse-basis/docs/capabilities/CAP-156.md)), and
   mbse-schemas has since made the five basic scalars real and finer scalars domains here (Store overhaul, Decided, 8
   and 9). What it records of the user's is kept, in the user's words: "I generally dislike semantics of datatypes and
   operations leaking into the modeling language as currently built"; dialects hold the semantics of datatypes and
   operations, one for each language's built-ins and for interoperation types such as IEEE 754; "the attempt to invent
   a neutral type system was a mistake. we should model standards not invent them", so a neutral Basic "should be
   removed", its expression kinds and three-valued evaluation kept; translation across languages belongs to transforms.
-  Removing Basic itself stays deferred, as the TODO.md has it (question 9).
+  Removing Basic itself stays deferred, as [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](../../../../mbse-basis/docs/capabilities/CAP-180.md) has it (question 9).
 
 What the user decided about domains is in mbse-schemas: Store overhaul, Decided, 8, 9 ("all scalars are domains and
 users may define domains and dialects containing domains"; "a scalar schema can have > 1 domain"; "width is a property
@@ -143,7 +143,7 @@ As the user decided (2026-10-28), on question 7, a map's variables (the "spread"
 
 Question 8, a collecting reduce, is parked with map and reduce themselves: "map and reduce are not where I need them
 to be, but parking them so we can make progress on finishing the current overhaul in the dependent repos is more
-urgent" (2026-10-29; the workspace's TODO.md). Stage 5's variables and collecting reduce wait on it, and its `requires`
+urgent" (2026-10-29; [CAP-142: expressions evaluated in queries](../../../../mbse-basis/docs/capabilities/CAP-142.md#blocked), Blocked). Stage 5's variables and collecting reduce wait on it, and its `requires`
 on question 6; stages 1 to 4 do not.
 
 As the user decided (2026-10-30), on what stage 2b raised about `Python.Text.FromFunction` (it refused a captured
@@ -193,6 +193,88 @@ nested, a snapshot round-tripping). What they propose, for the user's review:
 - A dialect adds its kinds to `Term` by schema extension: Basic its `quantifier` (`name`, `quantifier`, `collection`,
   `body`, `domain`); each other dialect its own (Python's, C's, ...).
 - A term names what it refers to, a callable or a domain, by name, until vocabularies are data (question 11).
+
+## Stage 3's model, drafted for review
+
+### Decided, for stage 3
+
+As the user decided (2026-10-30), reviewing a first draft that made domains objects a term named:
+
+1. **A term carries no domain.** "Terms do not designate their schema. Whatever reference object owns the root term
+   must specify its schema." Every kind loses `domain`, the framework's and each dialect's. This supersedes "wait, all
+   terms have a domain" (2026-10-28) and Schema extension, Decided, 21's "A term has a domain".
+2. **No type inference yet.** "For the time being, evaluation will need to do without an external source specifying
+   the domain for every term, as that involves building a type inference system which should be a follow-up
+   capability." What needs a term's domain is deferred with it ("(iii) agreed, defer for type inference"): widths,
+   overflow, IEEE 754 formats other than binary64, enums, `convert`, `reinterpret`, `pack`, `unpack`, and the
+   translators' conversions of typed literals; tutorial 4, the corpus's `domains` case and DOM's width cases go until
+   then.
+3. **Terms hold values.** "terms are not restricted to scalars. Terms can have any value (Schemas.OfAny)"; then "yes
+   restrict `literal` to scalars, but also provide container constructors as terms". A `literal` stays an `OfAny` of
+   the five basic scalars; new kinds construct containers from terms.
+4. **Expressions deal in values.** "CORRECTION: 'expressions only deal in scalars' -> 'expressions only deal in
+   values'" (Schema extension, Decided, 13).
+5. **Every domain a schema.** "(i) can we make every domain a schema too?" (asked; proposed below, A).
+6. **Dialects model their operations.** "(ii) dialects also define operation models which arguments as
+   Schemas.OfVariable and return value as Schemas.OfAny" (proposed below, B).
+
+As the user decided (2026-10-30) on the proposals below: A, "you can choose to keep the schema and domain separate
+and track them through a relation with unique, or use schema extension"; B and C, "okay for now". Chosen for A: both
+kept separate and related, since an extension adds only an adjacency to a relation of two links and no properties
+(mbse-schemas), so a domain's parameters need an object of their own either way. The domain's schema is a named
+`Schemas.OfAny` restricted to its scalar, defined in its dialect's module (`Expressions.Basic.uint8`); the domain is an
+`Expressions.Framework.Domain`, a reference object holding its `kind`; `Expressions.Framework.HasDomain(schema,
+domain)`, unique both ways, relates them, and an extension adjacency `domain` on `Schemas.OfAny` reads it from the
+schema. A's text below, "attached by extension", is superseded by this. B's open point (arguments by position or by
+name) is settled while building by what mbse-schemas keeps of a pattern's variables' order, and recorded.
+
+### Proposed, for the user's review
+
+- **A. A domain is a schema.** Schema kinds are closed (Object identity, Decided, 75) and the scalars are exactly five
+  (Store overhaul, Decided, 8), so a domain cannot be a new kind or a sixth scalar. Proposed: a domain is a named
+  `Schemas.OfAny` restricted to the scalar it narrows (`uint8`, an `OfAny` of `Schemas.OfInt`), its parameters
+  (`integer`: `width`, `signed`, `overflow`; `ieee754`: `format`, `rounding`; ...) attached by extension, as
+  Parametrics extends every kind. It is then a schema wherever a schema goes: a property's, a container's element, an
+  expression's `result` (decision 1's "must specify its schema"), and its values are written as its scalar's, bare.
+  `HasDomain(schema, domain)` is then the restriction itself (`Schemas.AnyOf`), and goes. A dialect defines its domains
+  in its own module (`Expressions.Basic.uint8`), as any schema is defined, through `Schemas.Defines`; so a dialect is
+  a module, and `Expressions.Framework.Defines` (Decided, 4) is needed only for what a module does not define
+  (operations, B). What a domain's parameters mean stays code, deferred with type inference (2).
+- **B. An operation model is an expression schema.** mbse-schemas already has the shape: a `Schemas.OfExpression` has a
+  `pattern`, whose variables (`Schemas.OfVariable`, each a name and a schema) are free in it, and a `result`, an
+  `OfAny`. Proposed: a dialect's operation (`add`, `count`, Python's `len`) is a `Schemas.OfExpression` its dialect
+  defines by name, through `Expressions.Framework.Defines(dialect, name, operation)`; its arguments are its pattern's
+  variables, its return its `result`. A `call` names its operation (`callable`) and gives its arguments in the order
+  the operation's variables are declared. Open: whether variables keep their declared order (mbse-schemas keys a
+  pattern's variables by name), else arguments are given by name; and overloads (several operations of one name,
+  Schema extension, Decided, 11), proposed later, with type inference.
+- **C. Container constructors.** Two framework kinds, every dialect's, as `literal` is: `list` (`elements`, a container
+  of terms by int index) and `mapping` (`entries`, a container of `key` and `value` terms by int index). Proposed as
+  the containers Basic's collection operations already read (`count`, `item`, `in`, the quantifiers).
+
+What changes, in both languages: every kind's schema (no `domain`), the framework's install (`list`, `mapping`;
+`Defines`), each dialect's install (its module's domains, its operations), Basic's `Domains` (the registry goes; the
+kinds' code stays, unused until type inference), the writers (no `domain` argument), the evaluators (values by their
+schemas), the translators (their conversions of typed literals deferred), the corpus (every term's file), tutorial 4
+(deferred), the skill, and EXP, DOM, COL, TRN. A breaking change: released as 0.7.0, with `FromFunction`'s removal.
+
+### As built (stage 3)
+
+- Terms carry no domain: `domain` is gone from every kind, the writers and the checks; values are taken by the schemas
+  they are written with (ints unbounded, floats binary64). API.md, Settled while building, 24, 25.
+- Container constructors `list` and `mapping` (of `Expressions.Framework.Pair`s), evaluated, inferred, and translated
+  to Python's displays, MATLAB's `[a, b]` and Excel's `VSTACK`, refused by Latex, Ccpp and SystemVerilog. 23.
+- Dialects, domains and operations as data: each dialect a singleton of its own schema, a branch of the kind union
+  `Expressions.Framework.Dialect` (one singleton per schema in mbse-schemas); `Defines(dialect, name, domain)` owning
+  domains; `Operates(dialect, name, operation)` naming operations, each an `Expressions.Basic.<name>`
+  `Schemas.OfExpression`; `HasDomain(schema, domain)` unique both ways, with `Schemas.OfAny`'s adjacency `domain`;
+  `Expressions.Basic.Packs` for a packed domain. 16 to 20, and 26 (the mbse-schemas limitation worked around).
+- Arguments are positional: mbse-schemas keeps a pattern's variables in declared order, through a snapshot. 21.
+- A call to an operation Basic does not define is refused by validation. 22.
+- Deferred with type inference: widths, overflow, IEEE 754 formats other than binary64, enums, `convert`,
+  `reinterpret`, `pack`, `unpack`, typed values, the translators' conversions of typed literals, tutorial 4; DOM-04,
+  DOM-13 to DOM-16 retired. The corpus's `domains` case is Basic's dialect, one document. 27.
+- Other dialects' operations as data, and overloads: follow-ups. 28.
 
 ## Stages (proposed, once decided)
 

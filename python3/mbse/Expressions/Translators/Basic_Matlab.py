@@ -7,13 +7,14 @@ has no `bitnot` for doubles.
 Collections are arrays: `all` and `any` are `all(arrayfun(@(p) body, xs))` and `any(...)`, the quantifier `count` is
 `nnz(arrayfun(...))`, `count(xs)` is `numel(xs)`, `item(xs, i)` is `xs(i + 1)` (MATLAB counts from 1), `in(x, xs)` is
 `ismember(x, xs)`, and `sum`, `min` and `max` are MATLAB's. `unique(xs)` is written `numel(unique(xs)) == numel(xs)`,
-which does not read back as `unique`, and `entries` has no counterpart."""
+which does not read back as `unique`, and `entries` has no counterpart. A `list` is a concatenation, `[a, b]`; a
+`mapping` has no counterpart."""
 
 from __future__ import annotations
 
 from mbse.Expressions.Dialects.Basic.Expressions import DIALECT as BASIC
 from mbse.Expressions.Dialects.Matlab.Expressions import DIALECT as MATLAB
-from mbse.Expressions.Framework.Translators import Elide, Inline, Pairwise, Rule, renames
+from mbse.Expressions.Framework.Translators import Elementwise, Elide, Inline, Pairwise, Rule, renames
 
 from ._Patterns import Basic, Matlab, value
 
@@ -42,4 +43,5 @@ TRANSLATOR = Pairwise(BASIC, MATLAB, [
     Rule(Basic.item, Matlab.index),
     Rule(Basic.in_, Matlab.ismember),
     Rule(Basic.unary("unique"), Matlab.unique, "forward"),
+    Elementwise("list", "list"),
 ])

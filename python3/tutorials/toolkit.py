@@ -39,20 +39,22 @@ def cold_chain():
 
 
 def show(expression):
-    """An expression of the Basic dialect as function-call text: a literal as Python writes its value, `int16(3)` when it
-    has a domain, and a conversion with its result's domain, `convert[int16](x)`."""
+    """An expression of the Basic dialect as function-call text: a literal as Python writes its value, a let, a
+    quantifier, and the container constructors as `[a, b]` and `{k: v}`."""
     def render(term, arguments):
         form = Terms.form(term)
         name = form.attributes.get("name")
-        domain = form.attributes.get("domain")  # a name: a literal's, or a conversion's result's
         if form.kind == "literal":
-            value = repr(form.attributes["value"])
-            return f"{domain}({value})" if domain is not None else value
+            return repr(form.attributes["value"])
         if form.kind == "variable":
             return name
         if form.kind == "let":
             return f"let {name} = {arguments[0]} in {arguments[1]}"
         if form.kind == "quantifier":
             return f"{form.attributes['quantifier']}({arguments[0]}, {name} => {arguments[1]})"
-        return f"{form.attributes['callable']}{f'[{domain}]' if domain is not None else ''}({', '.join(arguments)})"
+        if form.kind == "list":
+            return f"[{', '.join(arguments)}]"
+        if form.kind == "mapping":
+            return "{" + ", ".join(f"{k}: {v}" for k, v in zip(arguments[0::2], arguments[1::2])) + "}"
+        return f"{form.attributes['callable']}({', '.join(arguments)})"
     return Terms.fold(expression, render)

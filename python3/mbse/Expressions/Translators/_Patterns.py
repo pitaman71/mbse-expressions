@@ -5,7 +5,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from mbse.Expressions.Dialects.Basic import Domains
 from mbse.Expressions.Framework.Translators import Hole, Pattern as P, Rule, holes
 
 A, B, C, X = holes("A", "B", "C", "X")
@@ -16,27 +15,6 @@ K = Hole("K", str)  # the name of a property, field or column
 def value(*types: type) -> Hole:
     """A literal's value, of `types`: the native types both dialects of a pair hold."""
     return Hole("V", *types)
-
-
-def domain_of(attributes: dict[str, Any]) -> Any:
-    """The value domain a Basic literal's attributes name, or None."""
-    name = attributes.get("domain")
-    return None if name is None else Domains.registered(name)
-
-
-def typed(value: Any, domain: Any) -> dict[str, Any]:
-    """A Basic literal's attributes: `value`, of `domain`, named unless it is its native's own."""
-    return {"value": value} if Domains.of(value) == domain else {"value": value, "domain": named(domain)}
-
-
-def named(domain: Any) -> str:
-    """The name a Basic literal gives `domain`: the one it is registered under, or its own, under which it is
-    registered."""
-    name = Domains.name_of(domain)
-    if name is None:
-        name = domain.name()
-        Domains.register(name, domain)
-    return name
 
 
 class Basic:
