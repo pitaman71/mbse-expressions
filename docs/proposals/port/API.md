@@ -246,12 +246,14 @@ Settled in stage 2b:
     Python's name, so evaluating it in Python looks the name up, where it raised "Python has no kind 'variable'".
 
 Settled in stage 3 (the proposal's "Stage 3's model", Decided, 1 to 6, and the user's answers on A, B and C; the
-coordinator's direction of 2026-10-30 on ownership: "It's not hard to add an ownership path to the schema", schema
-extension preferred to refinement):
+user's direction of 2026-10-30 on ownership, when the first build left dialects and domains as counted objects: "It's
+not hard to add an ownership path to the schema", and "ah, schema *extension* is the preferred form", to refinement;
+domains owned by their dialect through `Defines(dialect, name, domain)` is the user's Decided, 4. Each dialect a
+singleton by name was the coordinating agent's proposal, built on that direction, and awaits the user's confirmation):
 
 16. **A dialect is a singleton of its own schema, a branch of the kind union `Expressions.Framework.Dialect`.** The
-    direction was a reference object schema `Expressions.Framework.Dialect` of which each dialect is a singleton by
-    name; mbse-schemas gives a schema one singleton (`OfObject.singleton`), so each dialect's install defines its own
+    coordinating agent's proposal was a reference object schema `Expressions.Framework.Dialect` of which each dialect
+    is a singleton by name; mbse-schemas gives a schema one singleton (`OfObject.singleton`), so each dialect's install defines its own
     reference object schema, `Expressions.<Dialect>.Dialect`, singleton `Expressions.<Dialect>` (Basic's:
     `Expressions.Basic`), with the adjacencies `domains` and `operations`, and adds it to `Expressions.Framework.Dialect`
     by schema extension, as a branch named after the dialect (`basic`), as a dialect adds its kinds to `Term`; the
