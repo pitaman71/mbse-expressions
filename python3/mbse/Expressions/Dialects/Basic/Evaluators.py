@@ -18,7 +18,7 @@ unknown.
   constructors, `list` (positional) and `mapping` (keyed: a key unknown makes it unknown, and two equal keys raise), and
   `entries` gives an object's entries as one of `Domains.Record`s, which `get` and `has` read. The collection operations
   and the quantifiers (`all`, `any`, `count`) follow Kleene's logic over the items; an unknown collection gives unknown.
-- Only the operations Basic defines (`Expressions.OPERATIONS`) are evaluated. Unknown operations, wrong numbers of
+- Only the operations Basic defines (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of
   arguments, unbound variables and wrong operand types raise, as do the problems `validate()` reports.
 - `get` and `has` read any data object, read through mbse-schemas' readers (`Framework.Objects`): reference objects,
   value objects, union and intersection values.

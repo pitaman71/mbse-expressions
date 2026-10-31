@@ -42,14 +42,19 @@ const { repr, typeName } = Repr;
 /** Matlab's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
 export function install(txn: any): any {
   const S = txn.Schemas;
-  const [dialect, specs] = F.dialect(txn, "Expressions.Matlab"); // its dialect: a singleton
   return txn.uid("mbse.Expressions.Matlab/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
-      ...dialect, Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Field: S.OfObject, Index: S.OfObject,
+      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
+      Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Field: S.OfObject, Index: S.OfObject,
       Arrayfun: S.OfObject, Import: S.OfObject, // Term: the framework's union
     })
     .spec([
-      ...specs,
+      // its dialect: the singleton `Expressions.Matlab`, a branch of the framework's kind union of dialects
+      (_: any) => _.Dialect.name("Expressions.Matlab.Dialect").ref(true).singleton("Expressions.Matlab").adjacencies({
+        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+      (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
+        (t: any) => t.name("matlab").schema([_.Dialect])]),
       (_: any) => _.Binary.name("Expressions.Matlab.Binary").properties({
         operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.Unary.name("Expressions.Matlab.Unary").properties({

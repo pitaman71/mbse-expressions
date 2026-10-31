@@ -46,12 +46,16 @@ def install(txn: Any) -> Any:
     """Matlab's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its
     own."""
     S = txn.Schemas
-    dialect, specs = F.dialect(txn, "Expressions.Matlab")  # its dialect: a singleton
     return txn.uid("mbse.Expressions.Matlab/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({**dialect, "Term": S.OfUnion, "Binary": S.OfObject, "Unary": S.OfObject, "Field": S.OfObject,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion, "Binary": S.OfObject, "Unary": S.OfObject, "Field": S.OfObject,
                   "Index": S.OfObject, "Arrayfun": S.OfObject, "Import": S.OfObject})  # Term: the framework's union
         .spec([
-            *specs,
+            # its dialect: the singleton `Expressions.Matlab`, a branch of the framework's kind union of dialects
+            lambda _: _.Dialect.name("Expressions.Matlab.Dialect").ref(True).singleton("Expressions.Matlab").adjacencies({
+                "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+                "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
+            lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
+                lambda t: t.name("matlab").schema([_.Dialect])]),
             lambda _: _.Binary.name("Expressions.Matlab.Binary").properties({
                 "operator": S.OfStr, "left": _.Term, "right": _.Term}),
             lambda _: _.Unary.name("Expressions.Matlab.Unary").properties({

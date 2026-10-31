@@ -141,23 +141,6 @@ export function install(txn: any): any {
     ])]))]);
 }
 
-/** The symbols and the specs a dialect's install adds for its dialect: its schema, `<module>.Dialect`, a reference
- * object schema whose singleton is named `module` (`Expressions.Basic`), with its `domains` (`Defines`, keyed by name)
- * and its `operations` (`Operates`), added to `Expressions.Framework.Dialect` as the branch named after the module's
- * last part, lowercase (`basic`). The symbols are `Dialects` and `DialectSchema`. */
-export function dialect(txn: any, module: string): [Record<string, any>, any[]] {
-  const S = txn.Schemas;
-  const branch = (module.split(".").pop() as string).toLowerCase();
-  return [{ Dialects: S.OfUnion, DialectSchema: S.OfObject }, [
-    (_: any) => _.DialectSchema.name(`${module}.Dialect`).ref(true).singleton(module).adjacencies({
-      domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
-      operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect"),
-    }),
-    (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
-      (t: any) => t.name(branch).schema([_.DialectSchema])]),
-  ]];
-}
-
 /** A noun with its indefinite article: "an operation", "a let". */
 export function article(noun: string): string {
   return `${"aeiou".includes(noun[0] as string) ? "an" : "a"} ${noun}`;

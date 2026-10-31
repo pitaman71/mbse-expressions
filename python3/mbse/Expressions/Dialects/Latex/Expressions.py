@@ -36,12 +36,16 @@ __all__ = ["install", "DIALECT", "constant", "symbol", "binary", "unary", "frac"
 def install(txn: Any) -> Any:
     """Latex's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
     S = txn.Schemas
-    dialect, specs = F.dialect(txn, "Expressions.Latex")  # its dialect: a singleton
     return txn.uid("mbse.Expressions.Latex/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({**dialect, "Term": S.OfUnion, "Binary": S.OfObject, "Unary": S.OfObject, "Frac": S.OfObject,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion, "Binary": S.OfObject, "Unary": S.OfObject, "Frac": S.OfObject,
                   "Member": S.OfObject})  # the framework's union, found by its name
         .spec([
-            *specs,
+            # its dialect: the singleton `Expressions.Latex`, a branch of the framework's kind union of dialects
+            lambda _: _.Dialect.name("Expressions.Latex.Dialect").ref(True).singleton("Expressions.Latex").adjacencies({
+                "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+                "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
+            lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
+                lambda t: t.name("latex").schema([_.Dialect])]),
             lambda _: _.Binary.name("Expressions.Latex.Binary").properties({
                 "operator": S.OfStr, "left": _.Term, "right": _.Term}),
             lambda _: _.Unary.name("Expressions.Latex.Unary").properties({

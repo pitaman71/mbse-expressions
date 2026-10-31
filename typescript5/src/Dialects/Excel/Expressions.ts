@@ -39,12 +39,18 @@ const { repr } = Repr;
 /** Excel's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
 export function install(txn: any): any {
   const S = txn.Schemas;
-  const [dialect, specs] = F.dialect(txn, "Expressions.Excel"); // its dialect: a singleton
   return txn.uid("mbse.Expressions.Excel/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ ...dialect, Term: S.OfUnion, Cell: S.OfObject, Map: S.OfObject, Infix: S.OfObject, Prefix: S.OfObject,
+    .symbols({
+      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
+      Term: S.OfUnion, Cell: S.OfObject, Map: S.OfObject, Infix: S.OfObject, Prefix: S.OfObject,
       Field: S.OfObject }) // the framework's union, found by its name
     .spec([
-      ...specs,
+      // its dialect: the singleton `Expressions.Excel`, a branch of the framework's kind union of dialects
+      (_: any) => _.Dialect.name("Expressions.Excel.Dialect").ref(true).singleton("Expressions.Excel").adjacencies({
+        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+      (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
+        (t: any) => t.name("excel").schema([_.Dialect])]),
       (_: any) => _.Cell.name("Expressions.Excel.Cell").properties({
         address: S.OfStr, sheet: S.OfStr, book: S.OfStr }),
       (_: any) => _.Map.name("Expressions.Excel.Map").properties({

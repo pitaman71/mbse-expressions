@@ -22,7 +22,7 @@
  * and owned by the dialect that defines it, by name: its path is the dialect's singleton (`Expressions.Basic`), then its
  * name. A packed domain links its enum and its representation through `Expressions.Basic.Packs`. Its schema is a named
  * `Schemas.OfAny` restricted to the scalar it narrows (`Expressions.Basic.uint8`), which reads it through `domain`
- * (`Expressions.Framework.HasDomain`). `Expressions.define` writes the domains Basic defines (`DOMAINS`), and
+ * (`Expressions.Framework.HasDomain`). `Expressions.define` writes the domains Basic defines, and
  * `read(domain)` gives the data of a stored one, so that what its parameters mean can be asked of it.
  *
  * Each kind's data, `OfX.Data`, is compared by structure (`equals`), built by `OfX.Builder` (`create()`, `clone()`,
@@ -864,23 +864,6 @@ export function of(value: unknown): D.Domain {
 }
 
 // --- Domains as data ---
-
-/** A domain Basic defines: its scalar, its kind and its parameters. */
-export type DomainEntry = readonly [string, string, Readonly<Record<string, unknown>>];
-
-/** The domains Basic defines, by name: each one's scalar, its kind and its parameters. `Expressions.install` writes
- * each one's schema, `Expressions.Basic.<name>`, a `Schemas.OfAny` of its scalar, and `Expressions.define` its
- * `Expressions.Framework.Domain`, which Basic's dialect owns by that name. */
-export const DOMAINS: ReadonlyMap<string, DomainEntry> = new Map<string, DomainEntry>([
-  ["bool", ["bool", "bool", {}]],
-  ["int", ["int", "integer", { signed: true, overflow: "raise" }]],
-  ["float", ["float", "ieee754", { format: "binary64", rounding: "roundTiesToEven" }]],
-  ["str", ["str", "unicode", {}]],
-  ["bytes", ["bytes", "bytes", {}]],
-  ["uint8", ["int", "integer", { width: 8n, signed: false, overflow: "wrap" }]],
-  ["binary32", ["float", "ieee754", { format: "binary32", rounding: "roundTiesToEven" }]],
-  ["std_logic", ["str", "ieee1164", {}]],
-]);
 
 /** The data of a stored domain, an `Expressions.Framework.Domain`: its kind's, with the parameters it holds (a packed
  * domain's enum and representation read in turn), so that it can be validated and asked what it holds. */

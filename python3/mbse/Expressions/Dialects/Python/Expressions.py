@@ -59,11 +59,15 @@ def install(txn: Any) -> Any:
     kinds = {"Attribute": ATTRIBUTE, "Subscript": SUBSCRIPT, "Index": INDEX,
              "Call": CALL, "Compare": COMPARE, "BoolOp": BOOLOP, "BinOp": BINOP, "UnaryOp": UNARYOP, "IfExp": IFEXP,
              "GeneratorExp": GENERATOR, "Import": IMPORT, "ImportFrom": IMPORTFROM}
-    dialect, specs = F.dialect(txn, "Expressions.Python")  # its dialect: a singleton
     return txn.uid("mbse.Expressions.Python/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({**dialect, "Term": S.OfUnion, **{kind: S.OfObject for kind in kinds}})  # Term: the framework's
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion, **{kind: S.OfObject for kind in kinds}})  # Term: the framework's
         .spec([
-            *specs,
+            # its dialect: the singleton `Expressions.Python`, a branch of the framework's kind union of dialects
+            lambda _: _.Dialect.name("Expressions.Python.Dialect").ref(True).singleton("Expressions.Python").adjacencies({
+                "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+                "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
+            lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
+                lambda t: t.name("python").schema([_.Dialect])]),
             lambda _: _.Attribute.name("Expressions.Python.Attribute").properties({
                 "attr": S.OfStr, "value": _.Term}),
             lambda _: _.Subscript.name("Expressions.Python.Subscript").properties({

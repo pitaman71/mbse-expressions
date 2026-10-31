@@ -85,11 +85,17 @@ export function install(txn: any): any {
     Iterate: (_) => ({ name: S.OfStr, method: S.OfStr, array: _.Term, body: _.Term }), // name: the iterator
   };
   const names = Object.keys(kinds);
-  const [dialect, specs] = F.dialect(txn, "Expressions.SystemVerilog"); // its dialect: a singleton
   return txn.uid("mbse.Expressions.SystemVerilog/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ ...dialect, Term: S.OfUnion, ...Object.fromEntries(names.map((name) => [name, S.OfObject])) }) // the framework's union, by its name
+    .symbols({
+      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
+      Term: S.OfUnion, ...Object.fromEntries(names.map((name) => [name, S.OfObject])) }) // the framework's union, by its name
     .spec([
-      ...specs,
+      // its dialect: the singleton `Expressions.SystemVerilog`, a branch of the framework's kind union of dialects
+      (_: any) => _.Dialect.name("Expressions.SystemVerilog.Dialect").ref(true).singleton("Expressions.SystemVerilog").adjacencies({
+        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+      (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
+        (t: any) => t.name("systemverilog").schema([_.Dialect])]),
       ...names.map((name) => (_: any) => _[name].name(`Expressions.SystemVerilog.${name}`).properties({
         ...(kinds[name] as (_: any) => Record<string, unknown>)(_) })),
       (_: any) => _.Term.name("Expressions.Framework.Term").branches( // branches added: schema extension

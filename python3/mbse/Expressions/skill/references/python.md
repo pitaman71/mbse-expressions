@@ -112,9 +112,9 @@ Partials.OfAny(constraint, {"person": value})               # the residual: a wr
 
 # Dialects, operations and domains are data: a dialect is a singleton owning its domains by name.
 store.transaction(Basic.define)            # Basic's dialect's data, after its install: its operations and domains
-basic = store.singleton("Expressions.Basic"); [str(e.name) for e in basic.operations]   # "get", "has", "eq", ...
-store.registered("Expressions.Basic.add").pattern.variables   # its arguments, in order: a, b; .result its return
-Domains.read(next(e.domain for e in basic.domains if str(e.name) == "uint8"))   # its kind's data: width 8, unsigned
+basic = store.Instances.Expressions.Basic; [str(e.name) for e in basic.operations]   # by its path: "get", "has", ...
+basic.operations({"name": "add"}).pattern.variables   # its arguments, in order: a, b; .result its return
+Domains.read(basic.domains({"name": "uint8"}))        # an owned domain, by its path; its kind's data: width 8, unsigned
 
 # Storage, traversal, translation: the same calls in every dialect.
 JSON.ToJSON(store)(Term, term); JSON.FromJSON(store)(Term, text)   # YAML likewise; a term reads back as a term value

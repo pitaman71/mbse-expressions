@@ -41,12 +41,16 @@ __all__ = ["install", "DIALECT", "Writer", "constant", "name", "cell", "let_", "
 def install(txn: Any) -> Any:
     """Excel's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
     S = txn.Schemas
-    dialect, specs = F.dialect(txn, "Expressions.Excel")  # its dialect: a singleton
     return txn.uid("mbse.Expressions.Excel/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({**dialect, "Term": S.OfUnion, "Cell": S.OfObject, "Map": S.OfObject, "Infix": S.OfObject,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion, "Cell": S.OfObject, "Map": S.OfObject, "Infix": S.OfObject,
                   "Prefix": S.OfObject, "Field": S.OfObject})  # the framework's union, found by its name
         .spec([
-            *specs,
+            # its dialect: the singleton `Expressions.Excel`, a branch of the framework's kind union of dialects
+            lambda _: _.Dialect.name("Expressions.Excel.Dialect").ref(True).singleton("Expressions.Excel").adjacencies({
+                "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+                "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
+            lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
+                lambda t: t.name("excel").schema([_.Dialect])]),
             lambda _: _.Cell.name("Expressions.Excel.Cell").properties({
                 "address": S.OfStr, "sheet": S.OfStr, "book": S.OfStr}),
             lambda _: _.Map.name("Expressions.Excel.Map").properties({

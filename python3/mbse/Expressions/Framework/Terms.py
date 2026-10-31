@@ -64,7 +64,7 @@ from mbse.Schemas.Framework import Schemas
 from . import Domains, Objects
 
 __all__ = [
-    "install", "dialect", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
+    "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
     "Form", "Kind", "Dialect", "Writer", "spec", "term", "is_term", "kind_of", "form", "name_of", "operator_of",
     "walk", "fold", "same",
 ]
@@ -140,22 +140,6 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("dialect").schema([_.Dialect]), lambda t: t.name("operation").schema([_.OfExpression])
             ]).properties({"name": S.OfStr}).uniques([["dialect", "name"], ["operation"]]),
         ])]))])
-
-
-def dialect(txn: Any, module: str) -> tuple[dict[str, Any], list[Any]]:
-    """The symbols and the specs a dialect's install adds for its dialect: its schema, `<module>.Dialect`, a reference
-    object schema whose singleton is named `module` (`Expressions.Basic`), with its `domains` (`Defines`, keyed by name)
-    and its `operations` (`Operates`), added to `Expressions.Framework.Dialect` as the branch named after the module's
-    last part, lowercase (`basic`). The symbols are `Dialects` and `DialectSchema`."""
-    S = txn.Schemas
-    branch = module.rsplit(".", 1)[-1].lower()
-    return {"Dialects": S.OfUnion, "DialectSchema": S.OfObject}, [
-        lambda _: _.DialectSchema.name(f"{module}.Dialect").ref(True).singleton(module).adjacencies({
-            "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
-            "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
-        lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
-            lambda t: t.name(branch).schema([_.DialectSchema])]),
-    ]
 
 
 def _article(noun: str) -> str:
