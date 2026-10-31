@@ -1,9 +1,7 @@
 /** The patterns the pairwise translators share: each dialect's forms for the concepts they translate. A translator
  * pairs two dialects' patterns into rules; the holes are shared, so the patterns of any two dialects pair up. */
 
-import * as Domains from "../Dialects/Basic/Domains.js";
 import { Hole, Pattern as P, Rule, holes } from "../Framework/Translators.js";
-import type { Attributes } from "../Framework/Translators.js";
 
 export const [A, B, C, X] = holes("A", "B", "C", "X") as [Hole, Hole, Hole, Hole];
 /** A name: of a variable, or of a binding. */
@@ -14,27 +12,6 @@ export const K = new Hole("K", String);
 /** A literal's value, of `types`: the native types both dialects of a pair hold. */
 export function value(...types: unknown[]): Hole {
   return new Hole("V", ...types);
-}
-
-/** The value domain a Basic literal's attributes name, or null. */
-export function domainOf(attributes: Attributes): Domains.Domain | null {
-  const name = attributes.domain;
-  return name === undefined ? null : Domains.registered(name as string);
-}
-
-/** A Basic literal's attributes: `value`, of `domain`, named unless it is its native's own. */
-export function typed(value: unknown, domain: Domains.Domain): Attributes {
-  return domain.equals(Domains.of(value)) ? { value } : { value, domain: named(domain) };
-}
-
-/** The name a Basic literal gives `domain`: the one it is registered under, or its own, under which it is registered. */
-export function named(domain: Domains.Domain): string {
-  let name = Domains.name_of(domain);
-  if (name === null) {
-    name = domain.name();
-    Domains.register(name, domain);
-  }
-  return name;
 }
 
 export const Basic = {

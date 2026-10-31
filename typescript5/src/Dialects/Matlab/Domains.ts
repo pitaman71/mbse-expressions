@@ -77,6 +77,9 @@ class Iterated extends D.Opaque {
 /** `arrayfun(@(name) body, array)`. */
 export const ARRAYFUN = new Iterated();
 
+/** `[a, b]`: an array of any elements. */
+export const CONCATENATION = new D.Opaque();
+
 const NATIVES: ReadonlyMap<string, D.Domain> = new Map([
   ["bool", Logical], ["int", Double], ["float", Double], ["str", StringDomain],
 ]);

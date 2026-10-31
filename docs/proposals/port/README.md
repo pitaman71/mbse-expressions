@@ -258,6 +258,24 @@ kinds' code stays, unused until type inference), the writers (no `domain` argume
 schemas), the translators (their conversions of typed literals deferred), the corpus (every term's file), tutorial 4
 (deferred), the skill, and EXP, DOM, COL, TRN. A breaking change: released as 0.7.0, with `FromFunction`'s removal.
 
+### As built (stage 3)
+
+- Terms carry no domain: `domain` is gone from every kind, the writers and the checks; values are taken by the schemas
+  they are written with (ints unbounded, floats binary64). API.md, Settled while building, 24, 25.
+- Container constructors `list` and `mapping` (of `Expressions.Framework.Pair`s), evaluated, inferred, and translated
+  to Python's displays, MATLAB's `[a, b]` and Excel's `VSTACK`, refused by Latex, Ccpp and SystemVerilog. 23.
+- Dialects, domains and operations as data: each dialect a singleton of its own schema, a branch of the kind union
+  `Expressions.Framework.Dialect` (one singleton per schema in mbse-schemas); `Defines(dialect, name, domain)` owning
+  domains; `Operates(dialect, name, operation)` naming operations, each an `Expressions.Basic.<name>`
+  `Schemas.OfExpression`; `HasDomain(schema, domain)` unique both ways, with `Schemas.OfAny`'s adjacency `domain`;
+  `Expressions.Basic.Packs` for a packed domain. 16 to 20, and 26 (the mbse-schemas limitation worked around).
+- Arguments are positional: mbse-schemas keeps a pattern's variables in declared order, through a snapshot. 21.
+- A call to an operation Basic does not define is refused by validation. 22.
+- Deferred with type inference: widths, overflow, IEEE 754 formats other than binary64, enums, `convert`,
+  `reinterpret`, `pack`, `unpack`, typed values, the translators' conversions of typed literals, tutorial 4; DOM-04,
+  DOM-13 to DOM-16 retired. The corpus's `domains` case is Basic's dialect, one document. 27.
+- Other dialects' operations as data, and overloads: follow-ups. 28.
+
 ## Stages (proposed, once decided)
 
 Stage 1 is done; stage 2 is split in two: 2a, the framework and Basic as installs, terms in the store, with the API

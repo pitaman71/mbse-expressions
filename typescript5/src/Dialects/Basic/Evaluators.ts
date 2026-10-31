@@ -13,16 +13,16 @@
  *   schema](../../../../../mbse-basis/docs/capabilities/CAP-111.md): natives of one type by value, reference objects by
  *   identity, everything else deeply (see Deep equality); values of different types are incomparable. Arithmetic takes
  *   numbers of one domain.
- * - Values of other domains than the natives' defaults are typed values (`Domains.Value`): a literal of such a domain
- *   evaluates to one, and the operations take them by domain. Values of different domains are incomparable; arithmetic
- *   and the bitwise operations take values of one domain, and an integer domain's overflow applies to their results.
- *   `convert` keeps a value in the operation's domain, `reinterpret` keeps its bit pattern, and `pack` and `unpack` go
- *   to and from a packed domain's representation.
- * - Collections: a container property reads as a `Domains.Collection`, and `entries` gives an object's entries as one of
- *   `Domains.Record`s, which `get` and `has` read. The collection operations and the quantifiers (`all`, `any`,
- *   `count`) follow Kleene's logic over the items; an unknown collection gives unknown.
- * - Only core operations (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of arguments, unbound
- *   variables and wrong operand types raise, as do the problems `validate()` reports.
+ * - Values are taken by the schemas they are written with: a term carries no domain (the port's stage 3, Decided, 1 and
+ *   2), so an int is an unbounded integer, a float an IEEE 754 binary64 number, and the bitwise operations and shifts
+ *   take ints, as two's complement of infinite width.
+ * - Collections: a container property reads as a `Domains.Collection`, and so do the values of the container
+ *   constructors, `list` (positional) and `mapping` (keyed: a key unknown makes it unknown, and two equal keys throw), and
+ *   `entries` gives an object's entries as one of `Domains.Record`s, which `get` and `has` read. The collection
+ *   operations and the quantifiers (`all`, `any`, `count`) follow Kleene's logic over the items; an unknown collection
+ *   gives unknown.
+ * - Only the operations Basic defines (`Expressions.OPERATIONS`) are evaluated. Unknown operations, wrong numbers of
+ *   arguments, unbound variables and wrong operand types raise, as do the problems `validate()` reports.
  * - `get` and `has` read any data object, read through mbse-schemas' readers (`Framework/Objects`): reference
  *   objects, value objects, union and intersection values.
  * - Deep equality: a value object, a union or intersection value, or an entry's record is equal to another when the
@@ -38,14 +38,12 @@
 import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
-import { OverflowError } from "../../Framework/Errors.js";
 import * as F from "../../Framework/Evaluators.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
-import * as Ieee754 from "./Ieee754.js";
 
 const { typeName } = Repr;
 const { ValueError } = Errors;
@@ -141,24 +139,10 @@ function sameNativeType(a: unknown, b: unknown): boolean {
   return NATIVES.has(name) && Schemas.isScalarOf(NATIVES.get(name), a) && Schemas.isScalarOf(NATIVES.get(name), b);
 }
 
-/** Whether either value is typed; then they compare only within one domain. */
-function typed(a: unknown, b: unknown): boolean {
-  return a instanceof Domains.Value || b instanceof Domains.Value;
-}
-
-function sameDomain(a: unknown, b: unknown): boolean {
-  return a instanceof Domains.Value && b instanceof Domains.Value && a.domain.equals(b.domain);
-}
-
-/** Whether `a` equals `b`: natives of one type by value, typed values of one domain by its comparison, objects by
- * identity; `null` if unknown or incomparable. */
+/** Whether `a` equals `b`: natives of one type by value, objects by identity, collections, records and values deeply;
+ * `null` if unknown or incomparable. */
 function equal(a: unknown, b: unknown): boolean | null {
   if (a === null || b === null) return null;
-  if (typed(a, b)) {
-    if (!sameDomain(a, b)) return null;
-    const [x, y] = [a as Domains.Value, b as Domains.Value];
-    return x.domain.compare(x.value, y.value) === 0;
-  }
   if (sameNativeType(a, b)) return compare(a as Native, b as Native) === 0;
   if (isObject(a) || isObject(b)) return isObject(a) && isObject(b) ? a === b : null;
   if (isCollection(a) && isCollection(b)) {
@@ -209,33 +193,15 @@ function equality(name: string, values: unknown[]): boolean | null {
 /** Ordered natives of one type; `null` if unknown or incomparable. */
 function order(name: string, values: unknown[]): boolean | null {
   const [a, b] = values;
-  if (a === null || b === null) return null;
-  let o: number | null;
-  if (typed(a, b)) {
-    if (!sameDomain(a, b) || !(a as Domains.Value).domain.kind().ORDERED) return null;
-    const [x, y] = [a as Domains.Value, b as Domains.Value];
-    o = x.domain.compare(x.value, y.value);
-  } else if (!sameNativeType(a, b)) {
-    return null;
-  } else {
-    o = compare(a as Native, b as Native);
-  }
+  if (a === null || b === null || !sameNativeType(a, b)) return null;
+  const o = compare(a as Native, b as Native);
   if (o === null) return null;
   return { lt: o < 0, le: o <= 0, gt: o > 0, ge: o >= 0 }[name as "lt"];
 }
 
-/** A value's domain, or null when it is not a value of one (an object). */
+/** A value's domain, by the native type it is written with, or null when it is not a native (an object). */
 function domainOf(value: unknown): Domains.Domain | null {
-  return value instanceof Domains.Value ? value.domain : Domains.nativeDomain(value);
-}
-
-function nativeOf(value: unknown): any {
-  return value instanceof Domains.Value ? value.value : value;
-}
-
-/** A value's domain's name when it is typed, otherwise its type's. */
-function describe(value: unknown): string {
-  return value instanceof Domains.Value ? value.domain.name() : typeName(value);
+  return Domains.nativeDomain(value);
 }
 
 type Kind = abstract new (...args: never[]) => Domains.Domain;
@@ -245,196 +211,42 @@ function operands(name: string, values: unknown[], kinds: readonly Kind[], what:
   const domains = values.map(domainOf);
   const first = domains[0];
   if (!kinds.some((kind) => first instanceof kind) || domains.some((domain) => !(domain as Domains.Domain).equals(first))) {
-    if (values.length === 1) throw new TypeError(`${name} expects ${what[0]}, got ${describe(values[0])}`);
-    throw new TypeError(`${name} expects ${what[1]} of one domain, got ${describe(values[0])} and ${describe(values[1])}`);
+    if (values.length === 1) throw new TypeError(`${name} expects ${what[0]}, got ${typeName(values[0])}`);
+    throw new TypeError(`${name} expects ${what[1]} of one domain, got ${typeName(values[0])} and ${typeName(values[1])}`);
   }
   return first;
 }
 
 const INTEGER: any = Domains.OfInteger.Data;
 const IEEE754: any = Domains.OfIeee754.Data;
-const BITS: any = Domains.OfBits.Data;
-const BYTES: any = Domains.OfBytes.Data;
-const PACKED: any = Domains.OfPacked.Data;
 
-/** `operator` (by default `name`) on numbers of one domain; errors and overflows name `name`. */
+/** `operator` (by default `name`) on numbers of one domain, ints unbounded and floats binary64; errors name `name`. */
 function arithmetic(name: string, values: unknown[], operator: string = name): unknown {
   if (values.some((value) => value === null)) return null;
-  const domain = operands(name, values, [INTEGER, IEEE754], ["a number", "numbers"]);
-  const natives = values.map(nativeOf);
-  if (domain instanceof IEEE754 && !domain.equals(Domains.Float)) { // the default's is the host's own
-    return new Domains.Value(domain, Ieee754.operate(operator, domain.format, domain.rounding, natives));
-  }
-  let result: any;
-  if (operator === "neg") {
-    result = -natives[0];
-  } else {
-    const [a, b] = natives;
-    result = operator === "add" ? a + b : operator === "sub" ? a - b : a * b;
-  }
-  return Domains.value(domain, domain instanceof INTEGER ? domain.fit(name, result) : result);
+  operands(name, values, [INTEGER, IEEE754], ["a number", "numbers"]);
+  const natives = values as any[];
+  if (operator === "neg") return -natives[0];
+  const [a, b] = natives;
+  return operator === "add" ? a + b : operator === "sub" ? a - b : a * b;
 }
 
-/** An integer's value, or a bits value's pattern as an unsigned int. */
-function pattern(domain: unknown, native: any): bigint {
-  return domain instanceof BITS ? fromBytes(native) : native;
-}
-
-/** Big-endian bytes as an unsigned bigint. */
-function fromBytes(bytes: Uint8Array): bigint {
-  let result = 0n;
-  for (const byte of bytes) result = (result << 8n) | BigInt(byte);
-  return result;
-}
-
-/** An unsigned bigint as `length` big-endian bytes. */
-function bytesOf(value: bigint, length: number): Uint8Array {
-  let rest = value;
-  const out = new Uint8Array(length);
-  for (let i = length - 1; i >= 0; i--) {
-    out[i] = Number(rest & 0xffn);
-    rest >>= 8n;
-  }
-  return out;
-}
-
-/** The bits value of a pattern, the bits beyond its width dropped. */
-function bits(domain: any, value: bigint): Domains.Value {
-  const width = domain.width as bigint;
-  return new Domains.Value(domain, bytesOf(value & ((1n << width) - 1n), Number((width + 7n) / 8n)));
-}
-
-/** On two's complement patterns: of the width, or infinite without one. */
+/** On ints, as two's complement of infinite width. */
 function bitwise(name: string, values: unknown[]): unknown {
   if (values.some((value) => value === null)) return null;
-  const domain = operands(name, values, [INTEGER, BITS], ["an integer or bits", "integers or bits"]);
-  const patterns = values.map((value) => pattern(domain, nativeOf(value)));
-  let result: bigint;
-  if (name === "bitnot") {
-    result = ~(patterns[0] as bigint);
-  } else {
-    const [a, b] = patterns as [bigint, bigint];
-    result = name === "bitand" ? a & b : name === "bitor" ? a | b : a ^ b;
-  }
-  if (domain instanceof BITS) return bits(domain, result);
-  const high = domain.bounds()[1];
-  if (!domain.signed && high !== null) result &= high; // an unsigned width's mask
-  return Domains.value(domain, domain.fit(name, result));
+  operands(name, values, [INTEGER], ["an integer", "integers"]);
+  if (name === "bitnot") return ~(values[0] as bigint);
+  const [a, b] = values as [bigint, bigint];
+  return name === "bitand" ? a & b : name === "bitor" ? a | b : a ^ b;
 }
 
-/** `shl` and `shr`: on an integer, multiplying or dividing (toward negative infinity) by a power of two, with the
- * domain's overflow; on bits, logical within the width. */
+/** `shl` and `shr`: multiplying or dividing (toward negative infinity) an int by a power of two. */
 function shift(name: string, values: unknown[]): unknown {
   const [value, count] = values;
   if (value === null || count === null) return null;
-  const domain = operands(name, [value], [INTEGER, BITS], ["an integer or bits", ""]);
-  if (!(domainOf(count) instanceof INTEGER)) throw new TypeError(`${name} expects an integer count, got ${describe(count)}`);
-  const n = nativeOf(count) as bigint;
-  if (n < 0n) throw new ValueError(`${name} needs a non-negative count, got ${n}`);
-  const p = pattern(domain, nativeOf(value));
-  const result = name === "shl" ? p << n : p >> n;
-  if (domain instanceof BITS) return bits(domain, result);
-  return Domains.value(domain, domain.fit(name, result));
-}
-
-/** An integer rounded from an IEEE 754 value, in `target`: an infinity saturates or overflows. */
-function integer(target: any, value: bigint | number): bigint {
-  if (typeof value === "number") {
-    const bound = target.bounds()[value < 0 ? 0 : 1];
-    if (target.overflow === "saturate" && bound !== null) return bound;
-    throw new OverflowError(`convert overflows ${target.name()}: ${value < 0 ? "-" : ""}Infinity`);
-  }
-  return target.fit("convert", value);
-}
-
-/** The native of `target` that keeps `value`. */
-function converted(value: unknown, target: any): unknown {
-  const source: any = domainOf(value);
-  const native = nativeOf(value);
-  if (source !== null && source.equals(target)) return native;
-  if (source instanceof INTEGER && target instanceof INTEGER) return target.fit("convert", native);
-  if (source instanceof INTEGER && target instanceof IEEE754) return Ieee754.from_integer(native, target.format, target.rounding);
-  if (source instanceof IEEE754 && target instanceof IEEE754) {
-    return Ieee754.convert(source.format, native, target.format, target.rounding);
-  }
-  if (source instanceof IEEE754 && target instanceof INTEGER) {
-    return integer(target, Ieee754.to_integer(source.format, native, source.rounding));
-  }
-  if (source instanceof BYTES && target instanceof BYTES) return native; // a value of the target's width, or none
-  if ((target instanceof PACKED && target.domain.equals(source)) || (source instanceof PACKED && source.domain.equals(target))) {
-    return native;
-  }
-  throw new TypeError(`cannot convert ${describe(value)} to ${target.name()}`);
-}
-
-/** The domain a call names: its result's. */
-function domainOfCall(node: any): any {
-  return Expressions._domain_of(Terms.kindOf(node)[1]);
-}
-
-function convert(args: F.Thunk[], node: any): unknown {
-  const value = args[0]?.();
-  const domain = domainOfCall(node);
-  return value === null ? null : Domains.value(domain, converted(value, domain));
-}
-
-/** The width in bits of a fixed-width domain, or null. */
-function width(domain: any): number | null {
-  if ((domain instanceof INTEGER || domain instanceof BITS) && typeof domain.width === "bigint" && domain.width > 0n) {
-    return Number(domain.width);
-  }
-  if (domain instanceof BYTES && domain.width !== null) return 8 * Number(domain.width);
-  return domain instanceof IEEE754 ? Ieee754.WIDTHS.get(domain.format) ?? null : null;
-}
-
-/** A fixed-width value's bit pattern, as an unsigned bigint. */
-function toPattern(domain: any, native: any, bits: number): bigint {
-  if (domain instanceof INTEGER) return BigInt.asUintN(bits, native); // two's complement
-  if (domain instanceof IEEE754) return Ieee754.to_bits(domain.format, native);
-  return fromBytes(native);
-}
-
-/** The native of a fixed-width domain with a bit pattern. */
-function fromPattern(domain: any, value: bigint, bits: number): unknown {
-  if (domain instanceof INTEGER) return domain.signed ? BigInt.asIntN(bits, value) : value;
-  if (domain instanceof IEEE754) return Ieee754.from_bits(domain.format, value);
-  return bytesOf(value, Math.ceil(bits / 8));
-}
-
-/** The same bit pattern, big-endian, in a domain of the same width. */
-function reinterpret(args: F.Thunk[], node: any): unknown {
-  const value = args[0]?.();
-  if (value === null) return null;
-  const [source, target] = [domainOf(value), domainOfCall(node)];
-  const [m, n] = [width(source), width(target)];
-  if (m === null || n === null) throw new TypeError(`cannot reinterpret ${describe(value)} as ${target.name()}`);
-  if (m !== n) throw new TypeError(`cannot reinterpret ${describe(value)} as ${target.name()}: ${m} bits and ${n}`);
-  return Domains.value(target, fromPattern(target, toPattern(source, nativeOf(value), m), n));
-}
-
-/** A packed value's code, in its representation. */
-function pack(args: F.Thunk[]): unknown {
-  const value = args[0]?.();
-  if (value === null) return null;
-  const domain: any = domainOf(value);
-  if (!(domain instanceof PACKED)) throw new TypeError(`pack expects a packed value, got ${describe(value)}`);
-  const [representation, code] = [domain.representation, domain.code(nativeOf(value))];
-  const native = representation instanceof INTEGER ? code : fromPattern(representation, code, Number(representation.width));
-  return Domains.value(representation, native);
-}
-
-/** The value of the packed domain whose code a representation holds. */
-function unpack(args: F.Thunk[], node: any): unknown {
-  const value = args[0]?.();
-  if (value === null) return null;
-  const target = domainOfCall(node);
-  if (!(target instanceof PACKED)) throw new TypeError(`unpack needs a packed domain, got ${target.name()}`);
-  const representation = target.representation;
-  if (!representation.equals(domainOf(value))) throw new TypeError(`unpack expects ${representation.name()}, got ${describe(value)}`);
-  const code: bigint = representation instanceof INTEGER ? nativeOf(value) : fromBytes(nativeOf(value));
-  const index = target.codes.indexOf(code);
-  if (index < 0) throw new ValueError(`no member of ${target.name()} has code ${code}`);
-  return new Domains.Value(target, target.domain.members[index]);
+  operands(name, [value], [INTEGER], ["an integer", ""]);
+  if (typeof count !== "bigint") throw new TypeError(`${name} expects an integer count, got ${typeName(count)}`);
+  if (count < 0n) throw new ValueError(`${name} needs a non-negative count, got ${count}`);
+  return name === "shl" ? (value as bigint) << count : (value as bigint) >> count;
 }
 
 /** A collection, an array as a positional one, or null when unknown. */
@@ -458,8 +270,8 @@ function item(name: string, values: unknown[]): unknown {
     const found = keys.findIndex((key) => equal(key, index) === true);
     return found < 0 ? null : collection.items[found];
   }
-  if (!(domainOf(index) instanceof INTEGER)) throw new TypeError(`item expects an integer position, got ${describe(index)}`);
-  const position = nativeOf(index) as bigint;
+  if (typeof index !== "bigint") throw new TypeError(`item expects an integer position, got ${typeName(index)}`);
+  const position = index;
   return position >= 0n && position < BigInt(collection.items.length) ? collection.items[Number(position)] : null;
 }
 
@@ -504,7 +316,6 @@ function sum(name: string, values: unknown[]): unknown {
 }
 
 function ordered(value: unknown): boolean {
-  if (value instanceof Domains.Value) return value.domain.kind().ORDERED;
   return ["bigint", "number", "string"].includes(typeof value) || Schemas.isScalarOf(Uint8Array, value);
 }
 
@@ -516,7 +327,7 @@ function extreme(name: string, values: unknown[]): unknown {
   const first = collection.items[0];
   for (const each of collection.items) {
     if (!ordered(each) || !(domainOf(each) as Domains.Domain).equals(domainOf(first))) {
-      throw new TypeError(`${name} expects ordered values of one domain, got ${describe(first)} and ${describe(each)}`);
+      throw new TypeError(`${name} expects ordered values of one domain, got ${typeName(first)} and ${typeName(each)}`);
     }
   }
   let best = first;
@@ -560,11 +371,31 @@ function quantifier(name: string): F.Implementation {
   };
 }
 
+/** A list of its elements' values, in order. */
+function list(args: F.Thunk[]): Domains.Collection {
+  return new Domains.Collection(args.map((argument) => argument()));
+}
+
+/** A keyed collection of its entries' values by their keys' values, in order; unknown where a key is unknown, and two
+ * equal keys throw. */
+function mapping(args: F.Thunk[]): Domains.Collection | null {
+  const values = args.map((argument) => argument());
+  const keys = values.filter((_, i) => i % 2 === 0);
+  const items = values.filter((_, i) => i % 2 === 1);
+  if (keys.includes(null)) return null;
+  keys.forEach((key, i) => {
+    if (keys.slice(0, i).some((other) => equal(key, other))) {
+      throw new ValueError(`a mapping's keys are distinct, got ${Repr.repr(key)} twice`);
+    }
+  });
+  return new Domains.Collection(items, keys);
+}
+
 /** The implementation of each quantifier. */
 export const QUANTIFIERS: ReadonlyMap<string, F.Implementation> = new Map(["all", "any", "count"].map((name) =>
   [name, quantifier(name)] as [string, F.Implementation]));
 
-/** The implementation of each core operation. */
+/** The implementation of each operation Basic defines. */
 export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string, F.Implementation>([
   ["get", strict(read)], ["has", strict(read)],
   ...["eq", "ne"].map((name) => [name, strict(equality)] as [string, F.Implementation]),
@@ -574,14 +405,13 @@ export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string,
   ...["add", "sub", "mul", "neg"].map((name) => [name, strict(arithmetic)] as [string, F.Implementation]),
   ...["bitand", "bitor", "bitxor", "bitnot"].map((name) => [name, strict(bitwise)] as [string, F.Implementation]),
   ...["shl", "shr"].map((name) => [name, strict(shift)] as [string, F.Implementation]),
-  ["convert", convert], ["reinterpret", reinterpret], ["pack", pack], ["unpack", unpack],
   ["count", strict(count)], ["item", strict(item)], ["in", strict(inCollection)], ["unique", strict(unique)],
   ["sum", strict(sum)], ["min", strict(extreme)], ["max", strict(extreme)], ["entries", strict(entries)],
 ]);
 
 /** The interpreter of the Basic dialect, which `Partials` reduces with. */
-export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map([["call", OPERATIONS], ["quantifier", QUANTIFIERS]]),
-  { typed: (domain, value) => new Domains.Value(domain, value) });
+export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([["call", OPERATIONS],
+  ["quantifier", QUANTIFIERS], ["list", list], ["mapping", mapping]]));
 
 /** The value of any term, with the variables in `scope` bound. */
 export function OfAny(expression: unknown, scope: Scope | null = null): unknown {

@@ -26,7 +26,7 @@
  *
  * There is no binding: translators substitute a let's value for its name. `install` adds the kinds (but `literal`,
  * `variable` and `call`, the framework's, whose shape these have) to `Expressions.Framework.Term` by schema extension,
- * each a value object `Expressions.SystemVerilog.<Kind>` with a `domain`, as the branch `systemverilog_<kind>`
+ * each a value object `Expressions.SystemVerilog.<Kind>` (a term carries no domain), as the branch `systemverilog_<kind>`
  * (`PREFIX`): dialects share kind names, and a branch's name is unique in the union; `DIALECT` reads them. The writers
  * (`constant`, `vector`, ...) write terms through the builders, wherever a term is written, in a transaction.
  * `Text.ToText` writes an expression as SystemVerilog source, with its precedence.
@@ -85,11 +85,13 @@ export function install(txn: any): any {
     Iterate: (_) => ({ name: S.OfStr, method: S.OfStr, array: _.Term, body: _.Term }), // name: the iterator
   };
   const names = Object.keys(kinds);
+  const [dialect, specs] = F.dialect(txn, "Expressions.SystemVerilog"); // its dialect: a singleton
   return txn.uid("mbse.Expressions.SystemVerilog/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Term: S.OfUnion, ...Object.fromEntries(names.map((name) => [name, S.OfObject])) }) // the framework's union, by its name
+    .symbols({ ...dialect, Term: S.OfUnion, ...Object.fromEntries(names.map((name) => [name, S.OfObject])) }) // the framework's union, by its name
     .spec([
+      ...specs,
       ...names.map((name) => (_: any) => _[name].name(`Expressions.SystemVerilog.${name}`).properties({
-        ...(kinds[name] as (_: any) => Record<string, unknown>)(_), domain: S.OfStr })), // every term has a domain, by name
+        ...(kinds[name] as (_: any) => Record<string, unknown>)(_) })),
       (_: any) => _.Term.name("Expressions.Framework.Term").branches( // branches added: schema extension
         names.map((name) => (t: any) => t.name(PREFIX + name.toLowerCase()).schema([_[name]]))),
     ])]))]);

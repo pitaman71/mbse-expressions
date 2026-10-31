@@ -11,7 +11,8 @@
  * A `new Scope(variables, { modules, builtins })` resolves names as Python does, innermost first: names bound by lets
  * and imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`,
  * `float`, `getattr`, `hasattr`, `int`, `len`, `max`, `min`, `round`, `set`, `str`, `sum`). A list property is an
- * array of its values, a keyed list's too. Nothing else is reachable from an expression, since expressions may come
+ * array of its values, a keyed list's too; a list display is an array, and a dict display a `Map`, its keys compared as
+ * Python compares them. Nothing else is reachable from an expression, since expressions may come
  * from data:
  *
  * - An import resolves only a module in `modules`, or a submodule of one (a `Module` among its members), and every
@@ -596,6 +597,18 @@ function attributeOf(node: any, name: string): any {
 const P = Expressions;
 
 /** The interpreter of the Python dialect. */
+/** A dict display's value: its keys and values evaluated in order, a later equal key's value replacing an earlier's. */
+function dict(args: F.Thunk[]): Map<unknown, unknown> {
+  const result = new Map<unknown, unknown>();
+  for (let i = 0; i < args.length; i += 2) {
+    const key = (args[i] as F.Thunk)();
+    hashable(key, "a dict key");
+    const found = [...result.keys()].find((other) => equals(other, key));
+    result.set(found === undefined ? key : found, (args[i + 1] as F.Thunk)());
+  }
+  return result;
+}
+
 export const INTERPRETER = new F.Interpreter(P.DIALECT, new Map<string, any>([
   [P.ATTRIBUTE, (args: F.Thunk[], node: any) => attribute((args[0] as F.Thunk)(), attributeOf(node, "attr"))],
   [P.SUBSCRIPT, (args: F.Thunk[], node: any) => subscript((args[0] as F.Thunk)(), attributeOf(node, "key"))],
@@ -624,6 +637,8 @@ export const INTERPRETER = new F.Interpreter(P.DIALECT, new Map<string, any>([
     ["~", strict((a) => invert(a))],
   ])],
   [P.IFEXP, (args: F.Thunk[]) => (truthy((args[0] as F.Thunk)()) ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)())],
+  [P.LIST, (args: F.Thunk[]) => args.map((argument) => argument())],
+  [P.DICT, dict],
 ]), { scope: (variables) => new Scope(variables) });
 
 /** The value of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in an object

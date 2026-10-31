@@ -47,15 +47,17 @@ let:
                             scalar:
                               str: email
           - call:
-              callable: contains
+              callable: in
               arguments:
               - literal:
                   value:
                     scalar:
-                      str: x
-              - literal:
-                  value:
-                    scalar:
                       bytes: AP8=
-              - literal:
-                  value: true
+              - list:
+                  elements:
+                  - literal:
+                      value:
+                        scalar:
+                          str: x
+                  - literal:
+                      value: true

@@ -1,4 +1,5 @@
-"""Domains of the Basic dialect: the value domains that literals carry, and the values its core operations take and give.
+"""Domains of the Basic dialect: its kinds of value domain, the domains it defines as data, and the values its core
+operations take and give.
 
 Value domains name the standard they implement, with only its parameters (see mbse-basis
 [CAP-097: value domains of published standards](../../../../../../mbse-basis/docs/capabilities/CAP-097.md#value-domains)):
@@ -15,31 +16,32 @@ Value domains name the standard they implement, with only its parameters (see mb
 - `OfPacked`: an enum (its `domain`) represented in a fixed-width integer or bits (its `representation`), member `i`
   by `codes[i]`.
 
+A domain is data: an `Expressions.Framework.Domain`, holding its `kind`, a value of `Expressions.Framework.DomainKind`,
+whose branches `Expressions.install` adds, one per kind above (`integer`, with `width`, `signed` and `overflow`, ...),
+and owned by the dialect that defines it, by name: its path is the dialect's singleton (`Expressions.Basic`), then its
+name. A packed domain links its enum and its representation through `Expressions.Basic.Packs`. Its schema is a named
+`Schemas.OfAny` restricted to the scalar it narrows (`Expressions.Basic.uint8`), which reads it through `domain`
+(`Expressions.Framework.HasDomain`). `Expressions.define` writes the domains Basic defines (`DOMAINS`), and
+`read(domain)` gives the data of a stored one, so that what its parameters mean can be asked of it.
+
 Each kind's data, `OfX.Data`, is a dataclass compared by structure, built by `OfX.Builder` (`create()`, `clone()`,
-`update()`; none validate), with `validate()`. Domains stay code until the port's stage 3 makes them objects that
-dialects define by name (docs/proposals/port): a term names its domain. A domain is a `Domain`: a value is in it (`contains`) when it has the
+`update()`; none validate), with `validate()`. A domain is a `Domain`: a value is in it (`contains`) when it has the
 native type the domain's literals hold (an `int` for an integer, a `str` for an enum's member, ...) and fits it, and it
-includes (`includes`) only domains equal to it, since Basic has no implied promotions.
+includes (`includes`) only domains equal to it, since Basic has no implied promotions. A domain compares two of its
+values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into itself by its overflow
+(`fit`). What a domain means is not yet used by evaluation, which deals in values by the schemas they are written with:
+a term carries no domain, and giving each term one is type inference's, a later capability (the port's stage 3,
+Decided, 2).
 
-Today's natives are the defaults: `Int` is an unbounded signed integer, `Float` binary64 rounding ties to even, `Str`
-Unicode, `Bytes` bytes of any length and `Bool` true and false; `of(value)` gives a native's default domain. `Object`
-holds data objects read through mbse-schemas' readers (`Framework.Objects`), terms and value objects among them, and
-`Anything` is the domain of a value not known statically, such as a property read with `get`. Unknown (`None`) is not a
-domain.
+The natives' defaults are `Bool`, `Int` (an unbounded signed integer), `Float` (binary64, rounding ties to even),
+`Str` (Unicode) and `Bytes` (bytes of any length): `of(value)` gives a native's. `Object` holds data objects read
+through mbse-schemas' readers (`Framework.Objects`), terms and value objects among them, and `Anything` is the domain
+of a value not known statically, such as a property read with `get`. Unknown (`None`) is not a domain.
 
-Domains are registered by name with `register`, and a term names the domain it carries: `registered(name)` gives the
-domain a name stands for, a registered one or a default's (`bool`, `int`, `float`, `str`, `bytes`, which no other may
-take), and `name_of(domain)` the name of a domain, None when it has none.
-
-A value of another domain than its native's default is a typed value, `Value(domain, value)`; `value(domain, native)`
-gives the bare native for a default domain and a typed value otherwise, and `of(value)` gives any value's domain. A
-domain compares two of its values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into
-itself by its overflow (`fit`).
-
-`SIGNATURES` gives each core operation's signature, following the evaluator's rules: comparisons take two values of
-one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes bools; arithmetic
-takes two numbers of one domain and gives that domain, and the bitwise operations two integers or bits of one domain;
-`convert`, `reinterpret` and `unpack` give the operation's own domain, and `pack` a packed domain's representation.
+`SIGNATURES` gives each core operation's signature, for inference, following the evaluator's rules: comparisons take
+two values of one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes
+bools; arithmetic takes two numbers of one domain and gives that domain, and the bitwise operations two integers or
+bits of one domain. `LIST` and `MAPPING` are the container constructors'.
 """
 
 from __future__ import annotations
@@ -58,8 +60,8 @@ from . import Ieee754
 __all__ = [
     "OfBool", "OfInteger", "OfIeee754", "OfBits", "OfBytes", "OfUnicode", "OfIeee1164", "OfEnum", "OfPacked",
     "FORMATS", "ROUNDINGS", "OVERFLOWS", "STATES",
-    "Bool", "Int", "Float", "Str", "Bytes", "Object", "Anything", "SIGNATURES",
-    "of", "register", "registered", "name_of", "Domain", "Value", "value",
+    "Bool", "Int", "Float", "Str", "Bytes", "Object", "Anything", "SIGNATURES", "QUANTIFIERS", "LIST", "MAPPING",
+    "of", "Domain", "DOMAINS", "read",
     "Collection", "Record", "List", "Keyed", "Records", "items_of",
 ]
 
@@ -475,64 +477,6 @@ OfUnicode = _Kind(_Unicode, _UnicodeBuilder)
 OfIeee1164 = _Kind(_Ieee1164, _Ieee1164Builder)
 OfEnum = _Kind(_Enum, _EnumBuilder)
 OfPacked = _Kind(_Packed, _PackedBuilder)
-_KINDS = {kind.Data.KIND: kind.Data for kind in (OfBool, OfInteger, OfIeee754, OfBits, OfBytes, OfUnicode, OfIeee1164,
-                                                 OfEnum, OfPacked)}
-
-
-# --- The registry ---
-
-_registry: dict[str, _Domain] = {}
-
-
-def register(name: str, domain: _Domain) -> None:
-    """Registers `domain` under `name`, so that a term can name it. A domain is registered once, and a default's name
-    is its own."""
-    if name in _registry or name in _DEFAULTS:
-        raise ValueError(f"domain {name!r} is already registered")
-    for other, registered_domain in _registry.items():
-        if registered_domain == domain:
-            raise ValueError(f"{_name(domain)} is already registered as {other!r}")
-    _registry[name] = domain
-
-
-def registered(name: str) -> _Domain:
-    """The domain `name` stands for: a registered one, or a default's."""
-    if name in _registry:
-        return _registry[name]
-    if name in _DEFAULTS:
-        return _DEFAULTS[name]
-    raise LookupError(f"no domain registered as {name!r}")
-
-
-def name_of(domain: Any) -> str | None:
-    """The name of a domain equal to `domain`: the one it is registered under, or a default's; None if it has none."""
-    found = next((name for name, registered_domain in _registry.items() if registered_domain == domain), None)
-    return found if found is not None else next((name for name, d in _DEFAULTS.items() if d == domain), None)
-
-
-# --- Typed values ---
-
-
-@dataclass(frozen=True)
-class Value:
-    """A value of a domain other than its native's default: the `domain`, and the `value`, a native it holds."""
-
-    domain: _Domain
-    value: Any
-
-    def __post_init__(self) -> None:
-        if not isinstance(self.domain, _Domain):
-            raise TypeError(f"not a value domain: {self.domain!r}")
-        if not self.domain.contains(self.value):
-            raise ValueError(f"{self.domain.name()} cannot hold {self.value!r}")
-
-    def __repr__(self) -> str:
-        return f"{self.value!r} as {self.domain.name()}"
-
-
-def value(domain: _Domain, native: Any) -> Any:
-    """A value of `domain`: the bare native when `domain` is its native's default, otherwise a typed value."""
-    return native if _NATIVES.get(type(native)) == domain else Value(domain, native)
 
 
 # --- Collections ---
@@ -617,7 +561,6 @@ Bool, Int, Float, Str, Bytes = _Bool(), _Integer(), _Ieee754(), _Unicode(), _Byt
 Object = D.OfValues("object", Objects.is_object)
 
 _NATIVES: dict[type, _Domain] = {bool: Bool, int: Int, float: Float, str: Str, bytes: Bytes}
-_DEFAULTS: dict[str, _Domain] = {"bool": Bool, "int": Int, "float": Float, "str": Str, "bytes": Bytes}
 
 
 class _Family:
@@ -630,8 +573,7 @@ class _Family:
         return self._name
 
     def contains(self, value: Any) -> bool:
-        domain = value.domain if isinstance(value, Value) else _NATIVES.get(type(value))
-        return isinstance(domain, self.kinds)
+        return isinstance(_NATIVES.get(type(value)), self.kinds)
 
     def includes(self, other: D.Domain) -> bool:
         if isinstance(other, D.OfUnion):
@@ -648,7 +590,6 @@ _ORDERED_KINDS = _Family("integer, ieee754, bytes, unicode or packed domain", _I
 _NUMERIC = _Family("integer or ieee754 domain", _Integer, _Ieee754)
 _BITWISE = _Family("integer or bits domain", _Integer, _Bits)
 _INTEGERS = _Family("integer domain", _Integer)
-_PACKED = _Family("packed domain", _Packed)
 Records = D.OfValues("record", lambda value: isinstance(value, Record))
 _COLLECTIONS = D.OfValues("collection", lambda value: isinstance(value, (Collection, list, tuple)))
 _COMPARABLE = (Bool, Int, Float, Str, Bytes, Object)
@@ -673,35 +614,6 @@ class _Shift:
 
     def describe(self) -> str:
         return f"(T, any {_INTEGERS.name()}) -> T for T in int or any {_BITWISE.name()}"
-
-
-class _Conversion:
-    """`convert`, `reinterpret` and `unpack`: a value of any domain, giving the operation's own domain, which inference
-    takes from the operation."""
-
-    def arity(self) -> int:
-        return 1
-
-    def result(self, arguments: Any) -> D.Domain | None:
-        return Anything if len(arguments) == 1 and D.overlaps(_VALUES, arguments[0]) else None
-
-    def describe(self) -> str:
-        return "(T) -> the operation's domain"
-
-
-class _Pack:
-    """`pack`: a value of a packed domain, giving its representation."""
-
-    def arity(self) -> int:
-        return 1
-
-    def result(self, arguments: Any) -> D.Domain | None:
-        if len(arguments) != 1 or not D.overlaps(_PACKED, arguments[0]):
-            return None
-        return arguments[0].representation if isinstance(arguments[0], _Packed) else Anything
-
-    def describe(self) -> str:
-        return "(packed) -> its representation"
 
 
 class _Collective:
@@ -762,7 +674,6 @@ SIGNATURES: dict[str, D.Signature] = {
     "neg": D.Same(1, _NUMBERS, None, _NUMERIC),
     **{name: D.Same(2, (Int,), None, _BITWISE) for name in ("bitand", "bitor", "bitxor")},
     "bitnot": D.Same(1, (Int,), None, _BITWISE), "shl": _Shift(), "shr": _Shift(),
-    **{name: _Conversion() for name in ("convert", "reinterpret", "unpack")}, "pack": _Pack(),
     "count": _Collective(0, 0, Int), "item": _Collective(0, 1, None), "in": _Collective(1, 0, Bool),
     "sum": _Collective(0, 0, None, _NUMERIC, "number"), "min": _Collective(0, 0, None, _ORDERED_KINDS, "ordered value"),
     "max": _Collective(0, 0, None, _ORDERED_KINDS, "ordered value"), "unique": _Collective(0, 0, Bool),
@@ -771,12 +682,73 @@ SIGNATURES: dict[str, D.Signature] = {
 """The core operations' signatures."""
 
 
+
+
+class _Constructor:
+    """A container constructor's signature: any number of elements, giving a list of their domain, or of entries (a
+    key then its value), giving a keyed collection of theirs."""
+
+    def __init__(self, keyed: bool):
+        self._keyed = keyed
+
+    def arity(self) -> int:
+        return -1  # any number
+
+    def result(self, arguments: Any) -> D.Domain | None:
+        if not self._keyed:
+            return List(D._join(arguments) if arguments else Anything)
+        keys, items = arguments[0::2], arguments[1::2]
+        return Keyed(D._join(keys) if keys else Anything, D._join(items) if items else Anything)
+
+    def describe(self) -> str:
+        return "(K, T, ...) -> keyed(K, T)" if self._keyed else "(T, ...) -> list(T)"
+
+
+LIST, MAPPING = _Constructor(False), _Constructor(True)
+"""The container constructors' signatures."""
+
+
 def of(value: Any) -> D.Domain:
-    """The domain of a value: a typed value's own, its native type's default, or `Object`."""
-    if isinstance(value, Value):
-        return value.domain
+    """The domain of a value: its native type's default, or `Object`."""
     if type(value) in _NATIVES:
         return _NATIVES[type(value)]
     if Object.contains(value):
         return Object
     raise TypeError(f"a {type(value).__name__} is not a value of the Basic dialect")
+
+
+# --- Domains as data ---
+
+DOMAINS: dict[str, tuple[str, str, dict[str, Any]]] = {
+    "bool": ("bool", "bool", {}),
+    "int": ("int", "integer", {"signed": True, "overflow": "raise"}),
+    "float": ("float", "ieee754", {"format": "binary64", "rounding": "roundTiesToEven"}),
+    "str": ("str", "unicode", {}),
+    "bytes": ("bytes", "bytes", {}),
+    "uint8": ("int", "integer", {"width": 8, "signed": False, "overflow": "wrap"}),
+    "binary32": ("float", "ieee754", {"format": "binary32", "rounding": "roundTiesToEven"}),
+    "std_logic": ("str", "ieee1164", {}),
+}
+"""The domains Basic defines, by name: each one's scalar, its kind and its parameters. `Expressions.install` writes
+each one's schema, `Expressions.Basic.<name>`, a `Schemas.OfAny` of its scalar, and `Expressions.define` its
+`Expressions.Framework.Domain`, which Basic's dialect owns by that name."""
+
+
+_DATA = {kind.Data.KIND: kind for kind in (OfBool, OfInteger, OfIeee754, OfBits, OfBytes, OfUnicode, OfIeee1164, OfEnum,
+                                            OfPacked)}
+
+
+def read(domain: Any) -> _Domain:
+    """The data of a stored domain, an `Expressions.Framework.Domain`: its kind's, with the parameters it holds (a
+    packed domain's enum and representation read in turn), so that it can be validated and asked what it holds."""
+    found: list[Any] = []
+    domain.kind.as_value(lambda a: a.as_union(lambda u: found.append(u) or u))
+    if not found or found[0].as_schema() is None:
+        raise ValueError("a domain needs a kind")
+    branch = next(b.name for b in found[0].as_schema().branches if getattr(found[0], b.name).as_schema() is not None)
+    parameters = {name: tuple(value.values) if isinstance(value, Objects.Listed) else value
+                  for name, value in Objects.properties(getattr(found[0], branch)).items()}
+    if branch == "packed":
+        for entry in domain.packs:
+            parameters.update(domain=read(entry.domain), representation=read(entry.representation))
+    return _DATA[branch].Data(**parameters)

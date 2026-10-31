@@ -12,7 +12,7 @@ evaluates, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog.
 |---|---|
 | Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
 | Use the library: write, evaluate, store or translate constraints | [skills/mbse-expressions/SKILL.md](skills/mbse-expressions/SKILL.md), a skill. It loads its references only as needed |
-| Learn it by example, from a first constraint to C and SystemVerilog | [python3/tutorials/README.md](python3/tutorials/README.md), eight case studies; the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
+| Learn it by example, from a first constraint to C and SystemVerilog | [python3/tutorials/README.md](python3/tutorials/README.md), seven case studies (the fourth deferred); the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
 | Understand a design decision or an open question | mbse-basis [FEA-024: expressions as data](../mbse-basis/docs/features/FEA-024.md) and its capabilities' detail files |
 | Change the framework, a dialect or a translator | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |

@@ -8,7 +8,7 @@ own, which `install` adds to `Expressions.Framework.Term` by schema extension, e
 - `constant`: a number, a bool or a string literal (`value`), and optionally its type (`type`, one of `Domains.TYPES`),
   written with a suffix (`5u`, `5ull`, `1.5f`, `1.5L`) or, for a type without one, a cast (`(uint8_t)5`). Without a
   type an int is the first of `int`, `long` and `unsigned long` that holds it, and a float a `double`. Its own, not
-  the framework's `literal`: it has C's `type` besides its `domain`.
+  the framework's `literal`: it has C's `type` besides its `value`.
 - `variable`: the framework's: an identifier, the value bound to a variable (`name`).
 - `unary` (`operator`: `+`, `-`, `!`, `~`; `operand`) and `binary` (`operator`: `*`, `/`, `%`, `+`, `-`, `<<`, `>>`,
   `<`, `<=`, `>`, `>=`, `==`, `!=`, `&`, `^`, `|`, `&&`, `||`; `left`, `right`).
@@ -18,7 +18,7 @@ own, which `install` adds to `Expressions.Framework.Term` by schema extension, e
 - `subscript`: `array[index]`.
 - `call`: the framework's: a function the scope provides (`callable`), applied to ordered `arguments`.
 
-Every kind has a `domain`, by name, as every term does; C's own `type` is what a constant and a cast are written with.
+A term carries no domain; C's own `type` is what a constant and a cast are written with, a C attribute.
 There is no binding: translators substitute a let's value for its name. `DIALECT` reads the kinds (`Terms.Dialect`).
 The writers (`constant`, `identifier`, ...) write terms through the builders, in a transaction:
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C source,
@@ -44,30 +44,31 @@ SUFFIXES = {"unsigned int": "u", "long": "l", "unsigned long": "ul", "long long"
 def install(txn: Any) -> Any:
     """Ccpp's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
     S = txn.Schemas
+    dialect, specs = F.dialect(txn, "Expressions.Ccpp")  # its dialect: a singleton
     return txn.uid("mbse.Expressions.Ccpp/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Term": S.OfUnion,  # the framework's union, found by its name
+        .symbols({**dialect, "Term": S.OfUnion,  # the framework's union, found by its name
                   "Constant": S.OfObject, "Unary": S.OfObject, "Binary": S.OfObject, "Conditional": S.OfObject,
                   "Cast": S.OfObject, "Member": S.OfObject, "Subscript": S.OfObject})
         .spec([
+            *specs,
             lambda _: _.Constant.name("Expressions.Ccpp.Constant").properties({
                 "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr])),
                 "type": S.OfStr,  # C's, by default its value's
-                "domain": S.OfStr,  # every term has a domain
             }),
             lambda _: _.Unary.name("Expressions.Ccpp.Unary").properties({
-                "operator": S.OfStr, "operand": _.Term, "domain": S.OfStr}),
+                "operator": S.OfStr, "operand": _.Term}),
             lambda _: _.Binary.name("Expressions.Ccpp.Binary").properties({
-                "operator": S.OfStr, "left": _.Term, "right": _.Term, "domain": S.OfStr}),
+                "operator": S.OfStr, "left": _.Term, "right": _.Term}),
             lambda _: _.Conditional.name("Expressions.Ccpp.Conditional").properties({
-                "condition": _.Term, "consequent": _.Term, "alternative": _.Term, "domain": S.OfStr}),
+                "condition": _.Term, "consequent": _.Term, "alternative": _.Term}),
             lambda _: _.Cast.name("Expressions.Ccpp.Cast").properties({
-                "type": S.OfStr, "operand": _.Term, "domain": S.OfStr}),
+                "type": S.OfStr, "operand": _.Term}),
             lambda _: _.Member.name("Expressions.Ccpp.Member").properties({
                 "name": S.OfStr,
                 "operator": S.OfStr,  # '.' (by default) or '->'
-                "object": _.Term, "domain": S.OfStr}),
+                "object": _.Term}),
             lambda _: _.Subscript.name("Expressions.Ccpp.Subscript").properties({
-                "array": _.Term, "index": _.Term, "domain": S.OfStr}),
+                "array": _.Term, "index": _.Term}),
             lambda _: _.Term.name("Expressions.Framework.Term").branches([  # branches added: schema extension
                 lambda t: t.name("ccpp_constant").schema([_.Constant]),
                 lambda t: t.name("ccpp_unary").schema([_.Unary]),

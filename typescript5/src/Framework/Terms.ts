@@ -5,13 +5,27 @@
  * An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
  * `Expressions.Framework.Term`, a union of value object kinds, held nested (docs/proposals/port, Decided, 2). `install`
  * defines them in a store: the framework's kinds `literal` (`value`, a basic scalar's), `call` (`callable`, by name;
- * `arguments`, a container of terms by index), `variable` (`name`) and `let` (`name`, `value`, `body`), each with a
- * `domain` by name; `Expression`; and `HasRoot(schema, expression)`, the extension adjacency `expression` it gives
- * `Schemas.OfExpression`. A dialect adds its own kinds to `Term` by schema extension, in its own install.
+ * `arguments`, a container of terms by index), `variable` (`name`), `let` (`name`, `value`, `body`), and the container
+ * constructors `list` (`elements`, a container of terms by index) and `mapping` (`entries`, a container by index of
+ * `Expressions.Framework.Pair`s, each a `key` and a `value` term); `Expression`; and `HasRoot(schema, expression)`, the
+ * extension adjacency `expression` it gives `Schemas.OfExpression`. A term carries no domain: whatever owns the root term
+ * gives its schema. A dialect adds its own kinds to `Term` by schema extension, in its own install.
+ *
+ * Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
+ * (`Expressions.Basic`), of its own reference object schema (`Expressions.Basic.Dialect`), a branch of the kind union
+ * `Expressions.Framework.Dialect`, which each dialect extends. It owns its domains by name
+ * (`Expressions.Framework.Defines(dialect, name, domain)`), so a domain's path is its dialect's and its name; a domain is
+ * an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
+ * a union each dialect extends with its kinds of domain. A domain's schema is a named `Schemas.OfAny` restricted to the
+ * scalar it narrows (`Expressions.Basic.uint8`), which reads it through the extension adjacency `domain`
+ * (`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
+ * (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module defines, whose
+ * pattern's variables are its arguments, in the order they are declared, and whose `result` is its return.
  *
  * Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
  * branch it holds, its properties the branch's members. Which properties are a kind's slots (a term each), its variadic
- * arguments (a container of terms) or its attributes (anything else) is read from the kind's schema. What the framework
+ * arguments (a container of terms, or of value objects of terms, a mapping's pairs, read as their terms in turn) or its
+ * attributes (anything else) is read from the kind's schema. What the framework
  * needs to know beyond the schema, how each kind is read, is a `Kind`: its role, and which properties name what it binds
  * and its operator.
  *
@@ -30,7 +44,8 @@
  *   alone, and validation does not require them to be bound. `ambient` names are bound without being declared.
  * - `APPLICATION`: an operator, named by the property `operator` (or, if it is null, by the kind's tag), applied to
  *   arguments. A kind's `vocabulary` maps operator names to signatures; operators outside it are extensions, unless the
- *   vocabulary is null, when any name is accepted and `signature` applies to all.
+ *   vocabulary is null, when any name is accepted and `signature` applies to all, or the kind is `closed`, when they
+ *   are refused. The container constructors are applications named by their tags.
  * - `BINDING`: binds its name to its first argument within the others.
  * - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
  *   results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
@@ -57,15 +72,17 @@ export const BINDING = "binding";
 export const IMPORT = "import";
 export const QUANTIFIER = "quantifier";
 
-/** The framework's schemas: terms, expressions, and an expression schema's root. Run again in a store, it finds each
- * by its name and writes nothing. */
+/** The framework's schemas: terms, expressions and an expression schema's root; domains and the schemas they
+ * restrict; dialects and the operations they define. Run again in a store, it finds each by its name and writes
+ * nothing. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   return txn.uid("mbse.Expressions.Framework/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
       Term: S.OfUnion, Literal: S.OfObject, Call: S.OfObject, Variable: S.OfObject, Let: S.OfObject,
-      Expression: S.OfObject, HasRoot: S.OfRelation,
-      OfExpression: S.OfObject, // mbse-schemas' own, found by its name
+      List: S.OfObject, Mapping: S.OfObject, Pair: S.OfObject, Expression: S.OfObject, HasRoot: S.OfRelation,
+      OfExpression: S.OfObject, Domain: S.OfObject, DomainKind: S.OfUnion, HasDomain: S.OfRelation, OfAny: S.OfObject,
+      Dialect: S.OfUnion, Defines: S.OfRelation, Operates: S.OfRelation, // mbse-schemas' own, by name
     })
     .spec([
       (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a dialect adds its kinds
@@ -73,25 +90,72 @@ export function install(txn: any): any {
         (t: any) => t.name("call").schema([_.Call]),
         (t: any) => t.name("variable").schema([_.Variable]),
         (t: any) => t.name("let").schema([_.Let]),
+        (t: any) => t.name("list").schema([_.List]),
+        (t: any) => t.name("mapping").schema([_.Mapping]),
       ]),
       (_: any) => _.Literal.name("Expressions.Framework.Literal").properties({
         value: S.OfAny((a: any) => a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes])), // a basic scalar
-        domain: S.OfStr, // every term has a domain (Schema extension, Decided, 21), by name (stage 3)
       }),
       (_: any) => _.Call.name("Expressions.Framework.Call").properties({
-        callable: S.OfStr, // what it calls, by name: an operator, a function
+        callable: S.OfStr, // what it calls, by name: an operation its dialect defines
         arguments: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
-        domain: S.OfStr, // its result's
       }),
-      (_: any) => _.Variable.name("Expressions.Framework.Variable").properties({ name: S.OfStr, domain: S.OfStr }),
-      (_: any) => _.Let.name("Expressions.Framework.Let").properties({
-        name: S.OfStr, value: _.Term, body: _.Term, domain: S.OfStr }),
+      (_: any) => _.Variable.name("Expressions.Framework.Variable").properties({ name: S.OfStr }),
+      (_: any) => _.Let.name("Expressions.Framework.Let").properties({ name: S.OfStr, value: _.Term, body: _.Term }),
+      (_: any) => _.List.name("Expressions.Framework.List").properties({ // constructs a list of its elements' values
+        elements: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
+      }),
+      (_: any) => _.Mapping.name("Expressions.Framework.Mapping").properties({ // constructs a mapping, key to value
+        entries: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Pair])),
+      }),
+      (_: any) => _.Pair.name("Expressions.Framework.Pair").properties({ key: _.Term, value: _.Term }),
       (_: any) => _.Expression.name("Expressions.Framework.Expression").ref(true).properties({ root: _.Term }),
       (_: any) => _.HasRoot.name("Expressions.Framework.HasRoot").links([
         (t: any) => t.name("schema"), (t: any) => t.name("expression")]).uniques("expression"),
       (_: any) => _.OfExpression.name("Schemas.OfExpression").adjacencies([ // by extension: no member on it
         (t: any) => t.name("expression").relation([_.HasRoot]).me("schema")]),
+      // A dialect: a singleton, its identity its global name (`Expressions.Basic`), the root of its domains' paths.
+      // mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object schemas, to which
+      // each dialect adds its own by schema extension, as it adds its kinds to `Term`.
+      (_: any) => _.Dialect.name("Expressions.Framework.Dialect"),
+      // A domain: a reference object holding its kind, a value of a union that dialects extend, owned by the dialect
+      // that defines it by name; its schema, a named `Schemas.OfAny` restricted to the scalar it narrows, reads it
+      // through the extension adjacency `domain`.
+      (_: any) => _.DomainKind.name("Expressions.Framework.DomainKind"), // a dialect adds its kinds
+      (_: any) => _.Domain.name("Expressions.Framework.Domain").ref(true).properties({ kind: _.DomainKind }).adjacencies({
+        dialect: (a: any) => a.relation([_.Defines]).me("domain").owner(true), // its path: its dialect's, its name
+        schema: (a: any) => a.relation([_.HasDomain]).me("domain"),
+      }),
+      (_: any) => _.Defines.name("Expressions.Framework.Defines").links([
+        (t: any) => t.name("dialect").schema([_.Dialect]), (t: any) => t.name("domain")]).properties({
+        name: S.OfStr }).uniques([["dialect", "name"], ["domain"]]),
+      (_: any) => _.HasDomain.name("Expressions.Framework.HasDomain").links([
+        (t: any) => t.name("schema").schema([_.OfAny]), (t: any) => t.name("domain")]).uniques([["schema"], ["domain"]]),
+      (_: any) => _.OfAny.name("Schemas.OfAny").adjacencies({
+        domain: (a: any) => a.relation([_.HasDomain]).me("schema") }),
+      // A dialect's operations, each a `Schemas.OfExpression` its module owns (`Schemas.Defines`), its pattern's
+      // variables its arguments in the order they are declared, its `result` its return: named by the dialect.
+      (_: any) => _.Operates.name("Expressions.Framework.Operates").links([
+        (t: any) => t.name("dialect").schema([_.Dialect]), (t: any) => t.name("operation").schema([_.OfExpression]),
+      ]).properties({ name: S.OfStr }).uniques([["dialect", "name"], ["operation"]]),
     ])]))]);
+}
+
+/** The symbols and the specs a dialect's install adds for its dialect: its schema, `<module>.Dialect`, a reference
+ * object schema whose singleton is named `module` (`Expressions.Basic`), with its `domains` (`Defines`, keyed by name)
+ * and its `operations` (`Operates`), added to `Expressions.Framework.Dialect` as the branch named after the module's
+ * last part, lowercase (`basic`). The symbols are `Dialects` and `DialectSchema`. */
+export function dialect(txn: any, module: string): [Record<string, any>, any[]] {
+  const S = txn.Schemas;
+  const branch = (module.split(".").pop() as string).toLowerCase();
+  return [{ Dialects: S.OfUnion, DialectSchema: S.OfObject }, [
+    (_: any) => _.DialectSchema.name(`${module}.Dialect`).ref(true).singleton(module).adjacencies({
+      domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+      operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect"),
+    }),
+    (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
+      (t: any) => t.name(branch).schema([_.DialectSchema])]),
+  ]];
 }
 
 /** A noun with its indefinite article: "an operation", "a let". */
@@ -125,8 +189,14 @@ function named(schema: unknown, name: string): boolean {
 type Parts = readonly [readonly string[], string | null, readonly string[]];
 const PARTS = new WeakMap<object, Parts>();
 
-/** A kind's schema's slots (properties holding a term), its variadic property (a container of terms) or null, and its
- * attributes (the rest), each in declaration order. */
+/** Whether a schema is a value object whose properties are all terms, such as a mapping's pair. */
+function isPair(schema: any): boolean {
+  return schema instanceof Schemas.OfObject.Data && !schema.ref && schema.properties.size > 0
+    && [...(schema.properties as Map<string, Schemas.OfProperty.Data>).values()].every((prop) => named(prop.schema, TERM));
+}
+
+/** A kind's schema's slots (properties holding a term), its variadic property (a container of terms, or of value
+ * objects of terms such as a mapping's pairs) or null, and its attributes (the rest), each in declaration order. */
 export function _parts(schema: any): Parts {
   const cached = PARTS.get(schema);
   if (cached !== undefined) return cached;
@@ -135,12 +205,21 @@ export function _parts(schema: any): Parts {
   let variadic: string | null = null;
   for (const [name, prop] of schema.properties as Map<string, Schemas.OfProperty.Data>) {
     if (named(prop.schema, TERM)) slots.push(name);
-    else if (prop.schema instanceof Schemas.OfContainer.Data && named(prop.schema.element, TERM)) variadic = name;
+    else if (prop.schema instanceof Schemas.OfContainer.Data && (named(prop.schema.element, TERM)
+      || isPair(prop.schema.element))) variadic = name;
     else attributes.push(name);
   }
   const parts: Parts = [slots, variadic, attributes];
   PARTS.set(schema, parts);
   return parts;
+}
+
+/** The term properties of the value objects a kind's variadic property holds, in declaration order (a mapping's `key`
+ * and `value`); none where it holds terms, or the kind has no variadic property. */
+export function _members(schema: any): readonly string[] {
+  const [, variadic] = _parts(schema);
+  const element = variadic !== null ? (schema.properties.get(variadic) as any).schema.element : null;
+  return isPair(element) ? [...element.properties.keys()] : [];
 }
 
 /** Whether a visitor is a `Visitors.OfAny`, rather than the `Visitors.OfUnion` of the value it holds. */
@@ -215,18 +294,27 @@ function slot(record: any, name: string): any {
   return found.length > 0 && found[0].as_schema() !== null ? found[0] : null;
 }
 
-/** The terms a container of terms holds, in index order. */
+/** The terms a container holds, in index order: its elements, or each element's terms in turn (`_members`), null where
+ * one is empty. */
 function variadicOf(record: any, name: string): any[] {
   const pairs: [unknown, any][] = [];
   record[name].as_value((a: any) => a.as_container((c: any) => c.as_entries((it: Iterator<[unknown, any]>) => {
     for (let next = it.next(); !next.done; next = it.next()) pairs.push(next.value);
   })));
+  const members = _members(record.as_schema());
   const found: any[] = [];
   for (const [, element] of pairs) {
-    element.as_union((u: any) => {
-      found.push(u);
-      return u;
-    });
+    if (members.length > 0) {
+      element.as_object((o: any) => {
+        found.push(...members.map((member) => slot(o, member)));
+        return o;
+      });
+    } else {
+      element.as_union((u: any) => {
+        found.push(u);
+        return u;
+      });
+    }
   }
   return found;
 }
@@ -367,6 +455,16 @@ export function spec(value: unknown, literal: ((value: unknown) => Writer | null
   throw new TypeError(`expected a term, a writer or a native value, got ${repr(value)}`);
 }
 
+/** The spec of a value object of terms (a mapping's pair), its members written from `terms` in order. */
+function pair(members: readonly string[], terms: readonly (Writer | null)[]): (element: any) => any {
+  return (element: any) => element.as_object((o: any) => {
+    members.forEach((member, i) => {
+      if (terms[i] !== null) o[member](terms[i]);
+    });
+    return o;
+  });
+}
+
 // --- Dialects ---
 
 /** What a kind's `Kind` declares, beyond its role. */
@@ -380,13 +478,17 @@ export interface KindOptions {
   names?: ((attributes: ReadonlyMap<string, any>) => readonly string[]) | null;
   check?: ((record: any) => string[]) | null;
   typed?: ((record: any) => Domains.Domain | null) | null;
+  closed?: boolean;
 }
 
 /** How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`, or null
  * when its tag names it); for an application or a quantifier, its `vocabulary` (operator names to signatures; null
- * accepts any name, with `signature`); the properties it requires (`required`); for a reference, whether it is
- * `lexical` and the `ambient` names bound without a declaration; for an import, the names it binds, of its attributes (`names(attributes)`);
- * its own problems (`check(record)`); and its own domain, when it carries one (`typed(record)`). */
+ * accepts any name, with `signature`), and whether it is `closed`, refusing an operator outside its vocabulary whether
+ * or not validation asks for the core (the operations its dialect defines, and no others); the properties it requires
+ * (`required`); for a reference, whether it is `lexical` and the `ambient` names bound without a declaration; for an
+ * import, the names it binds, of its attributes (`names(attributes)`); its own problems (`check(record)`); and the domain
+ * its own attributes give it, where they give one (`typed(record)`: C's type of a constant or a cast; a term carries no
+ * domain). */
 export class Kind {
   readonly operator: string | null;
   readonly vocabulary: ReadonlyMap<string, Domains.Signature> | null;
@@ -397,6 +499,7 @@ export class Kind {
   readonly names: ((attributes: ReadonlyMap<string, any>) => readonly string[]) | null;
   readonly check: ((record: any) => string[]) | null;
   readonly typed: ((record: any) => Domains.Domain | null) | null;
+  readonly closed: boolean;
 
   constructor(readonly role: string, options: KindOptions = {}) {
     this.operator = options.operator ?? null;
@@ -408,6 +511,7 @@ export class Kind {
     this.names = options.names ?? null;
     this.check = options.check ?? null;
     this.typed = options.typed ?? null;
+    this.closed = options.closed ?? false;
     Object.freeze(this);
   }
 }
@@ -419,7 +523,7 @@ interface Quantified {
 
 /** How a dialect is declared, beyond its name and kinds. */
 export interface DialectOptions {
-  /** A literal's domain. */
+  /** The domain of a literal's value by the scalar it is written with (for `infer`; a term carries no domain). */
   domain_of: (value: unknown) => Domains.Domain;
   /** The writer of a native value's literal, or null when the dialect has none. */
   literal?: ((value: unknown) => Writer | null) | null;
@@ -429,7 +533,8 @@ export interface DialectOptions {
 
 type Environment = Record<string, Domains.Domain>;
 
-/** An expression language: the kinds it reads, by tag, its `name`, and `domain_of(value)`, a literal's domain. A
+/** An expression language: the kinds it reads, by tag, its `name`, and `domain_of(value)`, the domain of a literal's
+ * value by the scalar it is written with (for `infer`; a term carries no domain). A
  * dialect may extend another (`extends`): its kinds are the base's and its own, whose tags must differ from the base's.
  * It validates (`validate`), infers (`infer`) and writes (`make`) terms of its kinds. */
 export class Dialect {
@@ -500,7 +605,15 @@ export class Dialect {
       slots.forEach((name, i) => {
         if (args[i] !== null) r[name](args[i]);
       });
-      if (variadic !== null) r[variadic](args.slice(slots.length));
+      if (variadic !== null) {
+        const rest = args.slice(slots.length);
+        const members = _members(r.as_schema());
+        if (members.length > 0 && rest.length % members.length !== 0) {
+          throw new ValueError(`${article(form_.kind)} takes its arguments in ${members.length}s (${members.join(", ")}), got ${rest.length}`);
+        }
+        r[variadic](members.length === 0 ? rest : Array.from({ length: rest.length / members.length },
+          (_, i) => pair(members, rest.slice(i * members.length, (i + 1) * members.length))));
+      }
       return r;
     }));
   }
@@ -556,12 +669,17 @@ export class Dialect {
       const signature = kind.vocabulary.get(operator);
       if (signature !== undefined && ![-1, args.length].includes(signature.arity())) { // -1: any number
         problems.push(`${operator} takes ${signature.arity()} arguments, got ${args.length}`);
+      } else if (kind.closed && signature === undefined) {
+        problems.push(`${repr(operator)} is not an operation ${this.dialectName} defines`);
       } else if (core && signature === undefined) {
         problems.push(`${repr(operator)} is not a core operation`);
       }
     }
+    const members = _members(record.as_schema());
     args.forEach((argument, i) => {
-      const label = i < slots.length ? slots[i] as string : `argument ${i - slots.length}`;
+      const j = i - slots.length;
+      const label = j < 0 ? slots[i] as string : members.length > 0
+        ? `${members[j % members.length]} ${Math.floor(j / members.length)}` : `argument ${j}`;
       if (argument === null) problems.push(`${what} needs ${article(label)}`);
       else problems.push(...this.problems(argument, scopes[i] as ReadonlySet<string>, core).map((p) => `${label}: ${p}`));
     });

@@ -7,11 +7,12 @@
  * Collections are arrays: `all` and `any` are `all(arrayfun(@(p) body, xs))` and `any(...)`, the quantifier `count` is
  * `nnz(arrayfun(...))`, `count(xs)` is `numel(xs)`, `item(xs, i)` is `xs(i + 1)` (MATLAB counts from 1), `in(x, xs)` is
  * `ismember(x, xs)`, and `sum`, `min` and `max` are MATLAB's. `unique(xs)` is written `numel(unique(xs)) == numel(xs)`,
- * which does not read back as `unique`, and `entries` has no counterpart. */
+ * which does not read back as `unique`, and `entries` has no counterpart. A `list` is a concatenation, `[a, b]`; a
+ * `mapping` has no counterpart. */
 
 import { DIALECT as BASIC } from "../Dialects/Basic/Expressions.js";
 import { DIALECT as MATLAB } from "../Dialects/Matlab/Expressions.js";
-import { Elide, Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
+import { Elementwise, Elide, Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Basic, Matlab, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean);
@@ -38,4 +39,5 @@ export const TRANSLATOR = new Pairwise(BASIC, MATLAB, [
   new Rule(Basic.item, Matlab.index),
   new Rule(Basic.in_, Matlab.ismember),
   new Rule(Basic.unary("unique"), Matlab.unique, "forward"),
+  new Elementwise("list", "list"),
 ]);

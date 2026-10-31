@@ -58,7 +58,10 @@ renames("call", "callable", "excel_infix", "operator", {"eq": "=", "ne": "<>"}, 
 
 Applying a rule co-traverses its pattern with the term, binding the holes (a hole bound twice to equal terms), then
 writes the other pattern. The most specific rule wins. `Inline`, `Elide` and `Prelude` declare substituting lets, dropping imports and adding them;
-`Convert` maps literals whose values the dialects write differently (a `uint8` literal is C's `(uint8_t)200`).
+`Convert` maps literals whose values the dialects write differently (none of the built-in translators uses it yet: the
+conversions of typed literals, C's `(uint8_t)200` or SystemVerilog's `8'd200`, wait for type inference, as a term carries
+no domain); `Elementwise` maps a container constructor of any number of arguments (Basic's `list(a, b)` is Excel's
+`VSTACK(a, b)`, Python's `[a, b]` and MATLAB's `[a, b]`).
 A translator between a dialect and itself is a rewriting: `Pairwise(E.DIALECT, E.DIALECT, rules)`.
 
 ## Go deeper

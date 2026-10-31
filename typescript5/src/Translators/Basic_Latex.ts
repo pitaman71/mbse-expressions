@@ -1,6 +1,6 @@
 /** Basic <-> Latex. Basic's operations are LaTeX's operators (`\geq`, `\land`, `\implies`, `\cdot`, ...), `get` is a
- * member, `has` is `\operatorname{has}`, and a let is `where`. Every Basic expression without bytes round-trips.
- * LaTeX has no bytes. */
+ * member, `has` is `\operatorname{has}`, and a let is `where`. Every Basic expression without bytes or container
+ * constructors round-trips: LaTeX has no bytes, and Basic's `list` and `mapping` have no counterpart. */
 
 import { DIALECT as BASIC } from "../Dialects/Basic/Expressions.js";
 import { DIALECT as LATEX } from "../Dialects/Latex/Expressions.js";

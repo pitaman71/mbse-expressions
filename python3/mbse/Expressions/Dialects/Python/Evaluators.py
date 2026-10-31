@@ -8,7 +8,7 @@ their properties as attributes.
 A `Scope(variables, modules, builtins)` resolves names as Python does, innermost first: names bound by lets and
 imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`, `float`,
 `getattr`, `hasattr`, `int`, `len`, `max`, `min`, `round`, `set`, `str`, `sum`). A list property is a list of its
-values, a keyed list's too. Nothing else is reachable from an expression, since expressions
+values, a keyed list's too; a list display is a list, and a dict display a dict. Nothing else is reachable from an expression, since expressions
 may come from data:
 
 - An import resolves only a module in `modules`, or a submodule of one: `Scope(modules={'numpy': numpy})` allows
@@ -157,6 +157,16 @@ def _attribute(node: Any, name: str) -> Any:
 
 
 _P = Expressions
+def _dict(arguments: list[F.Thunk], node: Any, scope: Any) -> dict[Any, Any]:
+    """A dict display's value: its keys and values evaluated in order, a later equal key's value replacing an
+    earlier's."""
+    result: dict[Any, Any] = {}
+    for i in range(0, len(arguments), 2):
+        key = arguments[i]()
+        result[key] = arguments[i + 1]()
+    return result
+
+
 INTERPRETER = F.Interpreter(_P.DIALECT, {
     _P.ATTRIBUTE: lambda arguments, node, scope: attribute(arguments[0](), _attribute(node, "attr")),
     _P.SUBSCRIPT: lambda arguments, node, scope: arguments[0]()[_attribute(node, "key")],
@@ -168,6 +178,8 @@ INTERPRETER = F.Interpreter(_P.DIALECT, {
     _P.BINOP: {name: _strict(function) for name, function in _BINOP.items()},
     _P.UNARYOP: {name: _strict(function) for name, function in _UNARYOP.items()},
     _P.IFEXP: lambda arguments, node, scope: arguments[1]() if arguments[0]() else arguments[2](),
+    _P.LIST: lambda arguments, node, scope: [argument() for argument in arguments],
+    _P.DICT: _dict,
 }, scope=Scope)
 """The interpreter of the Python dialect."""
 

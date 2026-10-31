@@ -4,9 +4,8 @@
  * `Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
  * `new Scope(variables, { functions })` and gives a `Domains.Logic` for an integral result or a number for a real one.
  * A variable's type is its value's: a `Logic` its own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32 bits), a number a `real`, a string a vector
- * of its bytes (in UTF-8), and a Basic typed value (`Domains.Value`) of an integer domain a 2-state vector of its width
- * and signedness, of bits a 2-state vector, of std_logic a `logic` bit, or a vector of a std_logic_vector's width (U,
- * X, W and - as x, L as 0, H as 1), and of a binary IEEE 754 format a `real` or `shortreal`. IEEE 1800's rules apply:
+ * of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for type inference, the port's
+ * stage 3, Decided, 2). IEEE 1800's rules apply:
  *
  * - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
  *   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its
@@ -37,7 +36,6 @@ import { NameError, OverflowError } from "../../Framework/Errors.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as F from "../../Framework/Terms.js";
-import * as BD from "../Basic/Domains.js";
 import * as Ieee754 from "../Basic/Ieee754.js";
 import { isMapping } from "../Matlab/Domains.js";
 import * as Domains from "./Domains.js";
@@ -71,7 +69,6 @@ export class Scope extends S.Variables {
   }
 }
 
-const STD_LOGIC: Record<string, string> = { 0: "0", 1: "1", Z: "z", L: "0", H: "1" };
 
 function fromBytes(data: Uint8Array): bigint {
   return data.reduce((total, byte) => (total << 8n) | BigInt(byte), 0n);
@@ -89,16 +86,6 @@ function typed(value: unknown): unknown {
   if (typeof value === "string") { // its bytes, in UTF-8
     const data = new TextEncoder().encode(value);
     return new Logic(Domains.vector(8 * Math.max(data.length, 1)), fromBytes(data));
-  }
-  if (value instanceof BD.Value) {
-    const domain: any = value.domain;
-    if (domain instanceof BD.OfInteger.Data && domain.width) {
-      return Logic.number(Domains.vector(Number(domain.width), domain.signed, 2), value.value as bigint);
-    }
-    if (domain instanceof BD.OfBits.Data) return new Logic(Domains.vector(Number(domain.width), false, 2), fromBytes(value.value as Uint8Array));
-    if (domain instanceof BD.OfIeee1164.Data) return Logic.of([...(value.value as string)].map((state) => STD_LOGIC[state] ?? "x").join(""));
-    if (domain instanceof BD.OfIeee754.Data && ["binary32", "binary64"].includes(domain.format)) return value.value;
-    throw new TypeError(`${domain.name()} has no SystemVerilog type`);
   }
   return value;
 }
