@@ -30,9 +30,11 @@ store.transaction(Basic.define)             # optional, data: Basic's dialect na
 
 Since stage 3, `Basic.define` writes Basic's dialect's data: the singleton `Expressions.Basic` names each operation
 (`Expressions.Framework.Operates`) and owns each domain by name (`Expressions.Framework.Defines`); its frame binds the
-dialect (`dialect`) and each domain by its name. Validation and evaluation do not need it: they read `E.OPERATIONS`,
-the same table the install writes. Every other dialect's install adds its singleton schema too
-(`Terms.dialect(txn, "Expressions.Python")`), with no operations or domains yet (below, Settled in stage 3).
+dialect (`dialect`) and each domain by its name. Validation and evaluation do not need it: they read Basic's
+vocabulary, `Domains.SIGNATURES`, whose names are the operations the install writes. Every other dialect's install adds
+its singleton schema too (`Expressions.Python.Dialect`, singleton `Expressions.Python`), with no operations or domains
+yet (below, Settled in stage 3). Each install and `define` write their schemas and data in the builders' fluent syntax
+(P-019), not from tables of their own.
 
 `Framework.install` (in `Framework/Terms.py`, `Framework/Terms.ts`) and `Basic.install` (in
 `Dialects/Basic/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
@@ -136,7 +138,7 @@ read. Partial evaluation gives its residual as a `Writer`, written where the cal
 |---|---|---|
 | its install, adding its kinds to `Term` | `Expressions.install(txn)` | `Expressions.install(txn)` |
 | its kinds: how the framework reads each branch it adds (a `Terms.Kind`: its role, the properties naming what it binds and its operator, its vocabulary and whether it is `closed`, its required properties, its own checks) and its `Terms.Dialect` (name, kinds, a native's domain), with `validate` and `infer` | `Expressions.DIALECT` | `Expressions.DIALECT` |
-| its operations, as a table and as data (Basic only, so far) | `Expressions.OPERATIONS`, `Expressions.define(txn)` | the same |
+| its operations and domains as data (Basic only, so far); their number of arguments | `Expressions.define(txn)`; `Expressions.CORE` | the same |
 | its writers, while they stay | `Expressions.Writer`, `variable`, `literal`, ... | the same |
 | its evaluator | `Evaluators.OfAny(term, scope)`, `Evaluators.INTERPRETER` | the same |
 
@@ -244,18 +246,22 @@ Settled in stage 2b:
     Python's name, so evaluating it in Python looks the name up, where it raised "Python has no kind 'variable'".
 
 Settled in stage 3 (the proposal's "Stage 3's model", Decided, 1 to 6, and the user's answers on A, B and C; the
-coordinator's direction of 2026-10-30 on ownership: "It's not hard to add an ownership path to the schema", schema
-extension preferred to refinement):
+user's direction of 2026-10-30 on ownership, when the first build left dialects and domains as counted objects: "It's
+not hard to add an ownership path to the schema", and "ah, schema *extension* is the preferred form", to refinement;
+domains owned by their dialect through `Defines(dialect, name, domain)` is the user's Decided, 4. Each dialect a
+singleton by name was the coordinating agent's proposal, built on that direction, and awaits the user's confirmation):
 
 16. **A dialect is a singleton of its own schema, a branch of the kind union `Expressions.Framework.Dialect`.** The
-    direction was a reference object schema `Expressions.Framework.Dialect` of which each dialect is a singleton by
-    name; mbse-schemas gives a schema one singleton (`OfObject.singleton`), so each dialect's install defines its own
+    coordinating agent's proposal was a reference object schema `Expressions.Framework.Dialect` of which each dialect
+    is a singleton by name; mbse-schemas gives a schema one singleton (`OfObject.singleton`), so each dialect's install defines its own
     reference object schema, `Expressions.<Dialect>.Dialect`, singleton `Expressions.<Dialect>` (Basic's:
     `Expressions.Basic`), with the adjacencies `domains` and `operations`, and adds it to `Expressions.Framework.Dialect`
     by schema extension, as a branch named after the dialect (`basic`), as a dialect adds its kinds to `Term`; the
-    relations' `dialect` links take that kind union. `Terms.dialect(txn, module)` gives the symbols and specs.
+    relations' `dialect` links take that kind union. Each install writes them in the builders' fluent syntax (a
+    helper, `Terms.dialect(txn, module)`, wrote them at first; removed in review, P-019).
     `HasDialect` and the module's `dialect` adjacency, in the first draft, are dropped: a dialect is found by its
-    singleton's name (`store.singleton("Expressions.Basic")`).
+    singleton's path (`store.Instances.Expressions.Basic`; P-015: concrete references are programmatic), and a
+    domain or an operation by its path through the dialect (`basic.domains({"name": "uint8"})`).
 17. **A dialect owns its domains: `Expressions.Framework.Defines(dialect, name, domain)`**, unique `[dialect, name]` and
     `[domain]`, the domain's adjacency `dialect` its owner, so a domain's path is its dialect's singleton then its name:
     snapshots write it, documents refer to it, and a document of a domain or a dialect reads back as the object the
@@ -268,7 +274,7 @@ extension preferred to refinement):
 19. **`Expressions.Framework.HasDomain(schema, domain)`, unique both ways**, between a domain's schema, a named
     `Schemas.OfAny` of the scalar it narrows, defined by the dialect's install in its module (`Expressions.Basic.uint8`,
     `Expressions.Basic.binary32`, ...), and its domain; `Schemas.OfAny` gains the extension adjacency `domain`. Basic
-    defines `bool`, `int`, `float`, `str`, `bytes`, `uint8`, `binary32` and `std_logic` (`Domains.DOMAINS`), written by
+    defines `bool`, `int`, `float`, `str`, `bytes`, `uint8`, `binary32` and `std_logic`, written in fluent syntax by
     `Basic.define`; `Domains.read(domain)` gives a stored domain's data (`OfX.Data`), whose `contains`, `compare`,
     `fit` and `validate` stay, unused by evaluation until type inference.
 20. **A dialect names its operations: `Expressions.Framework.Operates(dialect, name, operation)`**, unique
@@ -282,8 +288,10 @@ extension preferred to refinement):
     call's arguments are the operation's variables in that order.
 22. **A call to an operation Basic does not define is refused**: Basic's `call` kind is `closed` (`Terms.Kind.closed`),
     so validation reports "'contains' is not an operation Basic defines" whether or not `core` is asked, and evaluation
-    raises `NotImplementedError` with that message. Validation reads `E.OPERATIONS`, the table `Basic.install` writes as
-    data: a term built alone belongs to no store, so a check cannot read a store's dialect. Overloads are not modeled.
+    raises `NotImplementedError` with that message. Validation reads Basic's vocabulary, `Domains.SIGNATURES`, whose
+    names are the operations `Basic.install` writes as data (EXP-13 asserts they are the same, in order): a term built
+    alone belongs to no store, so a check cannot read a store's dialect. Overloads are not modeled. (A table of the
+    operations, `E.OPERATIONS`, that the install expanded into its builders, was removed in review: P-019.)
 23. **The container constructors are framework kinds**: `list` (`elements`) and `mapping` (`entries`, a container of
     `Expressions.Framework.Pair`, `key` and `value` terms); a mapping's arguments are its pairs' terms in turn, and
     `make` writes them back in twos. Basic evaluates them to `Domains.Collection`s (an unknown key makes a mapping

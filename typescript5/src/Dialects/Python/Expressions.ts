@@ -70,11 +70,17 @@ export function install(txn: any): any {
   };
   const symbols: Record<string, unknown> = { Term: S.OfUnion }; // the framework's union, by its name
   for (const kind of Object.keys(kinds)) symbols[kind] = S.OfObject;
-  const [dialect, specs] = F.dialect(txn, "Expressions.Python"); // its dialect: a singleton
   return txn.uid("mbse.Expressions.Python/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ ...dialect, ...symbols })
+    .symbols({
+      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
+      ...symbols })
     .spec([
-      ...specs,
+      // its dialect: the singleton `Expressions.Python`, a branch of the framework's kind union of dialects
+      (_: any) => _.Dialect.name("Expressions.Python.Dialect").ref(true).singleton("Expressions.Python").adjacencies({
+        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+      (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
+        (t: any) => t.name("python").schema([_.Dialect])]),
       (_: any) => _.Attribute.name("Expressions.Python.Attribute").properties({
         attr: S.OfStr, value: _.Term }),
       (_: any) => _.Subscript.name("Expressions.Python.Subscript").properties({

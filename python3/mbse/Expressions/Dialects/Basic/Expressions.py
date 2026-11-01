@@ -17,8 +17,9 @@ Basic's terms are the framework's kinds (`mbse.Expressions.Framework.Terms`) and
 A term carries no domain. Basic's operations are data: `install` defines each as a `Schemas.OfExpression` in Basic's
 module (`Expressions.Basic.add`), its pattern's variables its arguments and its `result` its return, as precise as the
 basic scalars and containers allow (`Expressions.Basic.Number`, an int or a float; `Expressions.Basic.Ordered`;
-`Expressions.Basic.Collection`, a list or a mapping; an unrestricted `Schemas.OfAny` where any value goes). `OPERATIONS`
-is that table, which validation reads: a call naming an operation Basic does not define is refused. `install` also
+`Expressions.Basic.Collection`, a list or a mapping; an unrestricted `Schemas.OfAny` where any value goes), each written
+in the builders' fluent syntax. Validation reads Basic's vocabulary (`Domains.SIGNATURES`, the same names, which a term
+alone, in no store, can read): a call naming an operation Basic does not define is refused. `install` also
 adds Basic's kinds of domain to `Expressions.Framework.DomainKind` (`Domains`) and the schemas of its domains, and
 Basic's dialect, the singleton `Expressions.Basic`; `define` writes the dialect's data: its operations by name
 (`Expressions.Framework.Operates`) and its domains, which it owns by name (`Expressions.Framework.Defines`).
@@ -41,36 +42,11 @@ from mbse.Schemas.Framework import Schemas
 from . import Domains
 
 __all__ = [
-    "install", "define", "OPERATIONS", "CORE", "DIALECT", "Writer", "variable", "literal", "let_", "list_", "mapping",
-    "operation", "quantifier",
+    "install", "define", "CORE", "DIALECT", "Writer", "variable", "literal", "let_", "list_", "mapping", "operation",
+    "quantifier",
 ]
 
-OPERATIONS: dict[str, tuple[tuple[tuple[str, str], ...], str]] = {
-    "get": ((("object", "any"), ("name", "str")), "any"),
-    "has": ((("object", "any"), ("name", "str")), "bool"),
-    **{name: ((("a", "any"), ("b", "any")), "bool") for name in ("eq", "ne")},
-    **{name: ((("a", "ordered"), ("b", "ordered")), "bool") for name in ("lt", "le", "gt", "ge")},
-    **{name: ((("a", "bool"), ("b", "bool")), "bool") for name in ("and", "or")},
-    "not": ((("a", "bool"),), "bool"),
-    "implies": ((("a", "bool"), ("b", "bool")), "bool"),
-    **{name: ((("a", "number"), ("b", "number")), "number") for name in ("add", "sub", "mul")},
-    "neg": ((("a", "number"),), "number"),
-    **{name: ((("a", "int"), ("b", "int")), "int") for name in ("bitand", "bitor", "bitxor")},
-    "bitnot": ((("a", "int"),), "int"),
-    **{name: ((("value", "int"), ("count", "int")), "int") for name in ("shl", "shr")},
-    "count": ((("collection", "collection"),), "int"),
-    "item": ((("collection", "collection"), ("index", "any")), "any"),
-    "in": ((("value", "any"), ("collection", "collection")), "bool"),
-    "sum": ((("collection", "collection"),), "number"),
-    **{name: ((("collection", "collection"),), "ordered") for name in ("min", "max")},
-    "unique": ((("collection", "collection"),), "bool"),
-    "entries": ((("object", "any"), ("adjacency", "str")), "list"),
-}
-"""The operations Basic defines, by name: each one's variables, its arguments in order, each a name and a schema, and its
-result's schema. A schema is a basic scalar's (`bool`, `int`, `str`), Basic's `number`, `ordered` or `collection`,
-`list` (a list of any values) or `any`. `install` writes each as an `Expressions.Basic.<name>`."""
-
-CORE: dict[str, int] = {name: len(variables) for name, (variables, _) in OPERATIONS.items()}
+CORE: dict[str, int] = {name: signature.arity() for name, signature in Domains.SIGNATURES.items()}
 """The operations Basic defines and their numbers of arguments."""
 
 
@@ -80,42 +56,34 @@ def install(txn: Any) -> Any:
     schema of its module. Run after `Framework.install`, in a transaction of its own; run again, it writes nothing. Its
     dialect's data, its operations by name and its domains, `define` writes after it."""
     S = txn.Schemas
-    scalars = {"bool": S.OfBool, "int": S.OfInt, "str": S.OfStr}
-    scalars_all = {**scalars, "float": S.OfFloat, "bytes": S.OfBytes}
-
-    def schema(_: Any, name: str) -> Any:
-        """A variable's schema: a basic scalar, Basic's shared one, or a fresh unnamed one."""
-        if name in scalars:
-            return scalars[name]
-        if name == "any":
-            return S.OfAny(lambda a: a)
-        if name == "list":
-            return S.OfAny(lambda a: a.schemas([S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfAny(lambda e: e)]))]))
-        return {"number": _.Number, "ordered": _.Ordered, "collection": _.Collection}[name]
-
-    def result(_: Any, name: str) -> Any:
-        """A result's schema, an `OfAny`."""
-        if name in scalars:
-            return S.OfAny(lambda a: a.schemas([scalars[name]]))
-        return schema(_, name)
-
-    def operation(name: str) -> Any:
-        variables, returns = OPERATIONS[name]
-        return lambda _: getattr(_, f"op_{name}").name(f"Expressions.Basic.{name}").pattern([S.OfPattern(
-            lambda p: p.variables([lambda v, n=n, s=s: v.name(n).schema([schema(_, s)]) for n, s in variables]))]).result([
-            result(_, returns)])
-
-    symbols, specs = F.dialect(txn, "Expressions.Basic")
     return txn.uid("mbse.Expressions.Basic/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({**symbols, "Term": S.OfUnion, "Quantifier": S.OfObject,  # the framework's union, found by its name
+        .symbols({"Term": S.OfUnion, "Quantifier": S.OfObject,  # the framework's union, found by its name
+                  "Dialects": S.OfUnion, "Dialect": S.OfObject,  # the framework's kind union of dialects, and Basic's
                   "DomainKind": S.OfUnion, "Domain": S.OfObject, "Packs": S.OfRelation,
-                  **{kind: S.OfObject for kind in ("OfBool", "OfInteger", "OfIeee754", "OfBits", "OfBytes", "OfUnicode",
-                                                   "OfIeee1164", "OfEnum", "OfPacked")},
+                  "OfBool": S.OfObject, "OfInteger": S.OfObject, "OfIeee754": S.OfObject, "OfBits": S.OfObject,
+                  "OfBytes": S.OfObject, "OfUnicode": S.OfObject, "OfIeee1164": S.OfObject, "OfEnum": S.OfObject,
+                  "OfPacked": S.OfObject,
+                  "bool": S.OfAny, "int": S.OfAny, "float": S.OfAny, "str": S.OfAny, "bytes": S.OfAny, "uint8": S.OfAny,
+                  "binary32": S.OfAny, "std_logic": S.OfAny,
                   "Number": S.OfAny, "Ordered": S.OfAny, "Collection": S.OfAny,
-                  **{f"op_{name}": S.OfExpression for name in OPERATIONS},
-                  **{f"domain_{name}": S.OfAny for name in Domains.DOMAINS}})
+                  "op_get": S.OfExpression, "op_has": S.OfExpression, "op_eq": S.OfExpression, "op_ne": S.OfExpression,
+                  "op_lt": S.OfExpression, "op_le": S.OfExpression, "op_gt": S.OfExpression, "op_ge": S.OfExpression,
+                  "op_and": S.OfExpression, "op_or": S.OfExpression, "op_not": S.OfExpression,
+                  "op_implies": S.OfExpression, "op_add": S.OfExpression, "op_sub": S.OfExpression,
+                  "op_mul": S.OfExpression, "op_neg": S.OfExpression, "op_bitand": S.OfExpression,
+                  "op_bitor": S.OfExpression, "op_bitxor": S.OfExpression, "op_bitnot": S.OfExpression,
+                  "op_shl": S.OfExpression, "op_shr": S.OfExpression, "op_count": S.OfExpression,
+                  "op_item": S.OfExpression, "op_in": S.OfExpression, "op_sum": S.OfExpression,
+                  "op_min": S.OfExpression, "op_max": S.OfExpression, "op_unique": S.OfExpression,
+                  "op_entries": S.OfExpression})
         .spec([
-            *specs,  # Basic's dialect, the singleton `Expressions.Basic`
+            # --- Basic's dialect: the singleton `Expressions.Basic`, a branch of the framework's kind union ---
+            lambda _: _.Dialect.name("Expressions.Basic.Dialect").ref(True).singleton("Expressions.Basic").adjacencies({
+                "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+                "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
+            lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
+                lambda t: t.name("basic").schema([_.Dialect])]),
+
             lambda _: _.Quantifier.name("Expressions.Basic.Quantifier").properties({
                 "name": S.OfStr,  # bound to each item in the body
                 "quantifier": S.OfStr,  # all, any or count
@@ -157,16 +125,105 @@ def install(txn: Any) -> Any:
                 "packs": lambda a: a.relation([_.Packs]).me("packed")}),
 
             # --- Its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
-            *[lambda _, name=name, scalar=scalar: getattr(_, f"domain_{name}").name(f"Expressions.Basic.{name}").schemas([
-                scalars_all[scalar]]) for name, (scalar, _kind, _parameters) in Domains.DOMAINS.items()],
+            lambda _: _.bool.name("Expressions.Basic.bool").schemas([S.OfBool]),
+            lambda _: _.int.name("Expressions.Basic.int").schemas([S.OfInt]),
+            lambda _: _.float.name("Expressions.Basic.float").schemas([S.OfFloat]),
+            lambda _: _.str.name("Expressions.Basic.str").schemas([S.OfStr]),
+            lambda _: _.bytes.name("Expressions.Basic.bytes").schemas([S.OfBytes]),
+            lambda _: _.uint8.name("Expressions.Basic.uint8").schemas([S.OfInt]),
+            lambda _: _.binary32.name("Expressions.Basic.binary32").schemas([S.OfFloat]),
+            lambda _: _.std_logic.name("Expressions.Basic.std_logic").schemas([S.OfStr]),
 
-            # --- Its operations: the schemas their variables share, and each operation, which its dialect defines ---
+            # --- Its operations: the schemas their variables share, and each operation, which its dialect defines:
+            # its pattern's variables its arguments, in order, and its result its return ---
             lambda _: _.Number.name("Expressions.Basic.Number").schemas([S.OfInt, S.OfFloat]),
             lambda _: _.Ordered.name("Expressions.Basic.Ordered").schemas([S.OfInt, S.OfFloat, S.OfStr, S.OfBytes]),
             lambda _: _.Collection.name("Expressions.Basic.Collection").schemas([  # a list, or a mapping
                 S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfAny(lambda a: a)])),
                 S.OfContainer(lambda c: c.index([S.OfAny(lambda a: a)]).element([S.OfAny(lambda a: a)]))]),
-            *[operation(name) for name in OPERATIONS],
+            lambda _: _.op_get.name("Expressions.Basic.get").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("object").schema([S.OfAny(lambda a: a)]),
+                lambda v: v.name("name").schema([S.OfStr])]))]).result([S.OfAny(lambda a: a)]),
+            lambda _: _.op_has.name("Expressions.Basic.has").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("object").schema([S.OfAny(lambda a: a)]),
+                lambda v: v.name("name").schema([S.OfStr])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_eq.name("Expressions.Basic.eq").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfAny(lambda a: a)]),
+                lambda v: v.name("b").schema([S.OfAny(lambda a: a)])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_ne.name("Expressions.Basic.ne").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfAny(lambda a: a)]),
+                lambda v: v.name("b").schema([S.OfAny(lambda a: a)])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_lt.name("Expressions.Basic.lt").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([_.Ordered]),
+                lambda v: v.name("b").schema([_.Ordered])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_le.name("Expressions.Basic.le").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([_.Ordered]),
+                lambda v: v.name("b").schema([_.Ordered])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_gt.name("Expressions.Basic.gt").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([_.Ordered]),
+                lambda v: v.name("b").schema([_.Ordered])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_ge.name("Expressions.Basic.ge").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([_.Ordered]),
+                lambda v: v.name("b").schema([_.Ordered])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_and.name("Expressions.Basic.and").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfBool]),
+                lambda v: v.name("b").schema([S.OfBool])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_or.name("Expressions.Basic.or").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfBool]),
+                lambda v: v.name("b").schema([S.OfBool])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_not.name("Expressions.Basic.not").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfBool])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_implies.name("Expressions.Basic.implies").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfBool]),
+                lambda v: v.name("b").schema([S.OfBool])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_add.name("Expressions.Basic.add").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([_.Number]),
+                lambda v: v.name("b").schema([_.Number])]))]).result([_.Number]),
+            lambda _: _.op_sub.name("Expressions.Basic.sub").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([_.Number]),
+                lambda v: v.name("b").schema([_.Number])]))]).result([_.Number]),
+            lambda _: _.op_mul.name("Expressions.Basic.mul").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([_.Number]),
+                lambda v: v.name("b").schema([_.Number])]))]).result([_.Number]),
+            lambda _: _.op_neg.name("Expressions.Basic.neg").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([_.Number])]))]).result([_.Number]),
+            lambda _: _.op_bitand.name("Expressions.Basic.bitand").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfInt]),
+                lambda v: v.name("b").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
+            lambda _: _.op_bitor.name("Expressions.Basic.bitor").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfInt]),
+                lambda v: v.name("b").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
+            lambda _: _.op_bitxor.name("Expressions.Basic.bitxor").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfInt]),
+                lambda v: v.name("b").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
+            lambda _: _.op_bitnot.name("Expressions.Basic.bitnot").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("a").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
+            lambda _: _.op_shl.name("Expressions.Basic.shl").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("value").schema([S.OfInt]),
+                lambda v: v.name("count").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
+            lambda _: _.op_shr.name("Expressions.Basic.shr").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("value").schema([S.OfInt]),
+                lambda v: v.name("count").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
+            lambda _: _.op_count.name("Expressions.Basic.count").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("collection").schema([_.Collection])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
+            lambda _: _.op_item.name("Expressions.Basic.item").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("collection").schema([_.Collection]),
+                lambda v: v.name("index").schema([S.OfAny(lambda a: a)])]))]).result([S.OfAny(lambda a: a)]),
+            lambda _: _.op_in.name("Expressions.Basic.in").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("value").schema([S.OfAny(lambda a: a)]),
+                lambda v: v.name("collection").schema([_.Collection])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_sum.name("Expressions.Basic.sum").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("collection").schema([_.Collection])]))]).result([_.Number]),
+            lambda _: _.op_min.name("Expressions.Basic.min").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("collection").schema([_.Collection])]))]).result([_.Ordered]),
+            lambda _: _.op_max.name("Expressions.Basic.max").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("collection").schema([_.Collection])]))]).result([_.Ordered]),
+            lambda _: _.op_unique.name("Expressions.Basic.unique").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("collection").schema([_.Collection])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
+            lambda _: _.op_entries.name("Expressions.Basic.entries").pattern([S.OfPattern(lambda p: p.variables([
+                lambda v: v.name("object").schema([S.OfAny(lambda a: a)]),
+                lambda v: v.name("adjacency").schema([S.OfStr])]))]).result([S.OfAny(lambda a: a.schemas([  # records
+                    S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfAny(lambda e: e)]))]))]),
         ])]))])
 
 
@@ -176,26 +233,49 @@ def define(txn: Any) -> Any:
     each related to its schema (`Expressions.Basic.uint8`) by `Expressions.Framework.HasDomain`. Run after `install`, in
     a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by
     its name: `store.transaction(Basic.define)[0]["uint8"]`."""
-
-    def domain(name: str) -> Any:
-        _, kind, parameters = Domains.DOMAINS[name]
-
-        def parameterized(record: Any) -> Any:
-            for parameter, value in parameters.items():
-                getattr(record, parameter)(value)
-            return record
-
-        return lambda _: getattr(_, name).kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: getattr(u, kind)(parameterized)))).schema([
-            getattr(txn.Expressions.Basic, name)])
-
+    Basic, Domain = txn.Expressions.Basic, txn.Expressions.Framework.Domain
     return txn.uid("mbse.Expressions.Basic.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": txn.Expressions.Basic.Dialect, **{name: txn.Expressions.Framework.Domain
-                                                                 for name in Domains.DOMAINS}})
+        .symbols({"dialect": Basic.Dialect, "bool": Domain, "int": Domain, "float": Domain, "str": Domain,
+                  "bytes": Domain, "uint8": Domain, "binary32": Domain, "std_logic": Domain})
         .spec([
-            lambda _: _.dialect.operations({name: lambda e, name=name: e.operation(getattr(txn.Expressions.Basic, name))
-                                            for name in OPERATIONS}).domains({
-                name: lambda e, name=name: e.domain(getattr(_, name)) for name in Domains.DOMAINS}),
-            *[domain(name) for name in Domains.DOMAINS],
+            lambda _: _.dialect.operations({
+                "get": lambda e: e.operation(Basic.get), "has": lambda e: e.operation(Basic.has),
+                "eq": lambda e: e.operation(Basic.eq), "ne": lambda e: e.operation(Basic.ne),
+                "lt": lambda e: e.operation(Basic.lt), "le": lambda e: e.operation(Basic.le),
+                "gt": lambda e: e.operation(Basic.gt), "ge": lambda e: e.operation(Basic.ge),
+                "and": lambda e: e.operation(getattr(Basic, "and")), "or": lambda e: e.operation(getattr(Basic, "or")),
+                "not": lambda e: e.operation(getattr(Basic, "not")), "implies": lambda e: e.operation(Basic.implies),
+                "add": lambda e: e.operation(Basic.add), "sub": lambda e: e.operation(Basic.sub),
+                "mul": lambda e: e.operation(Basic.mul), "neg": lambda e: e.operation(Basic.neg),
+                "bitand": lambda e: e.operation(Basic.bitand), "bitor": lambda e: e.operation(Basic.bitor),
+                "bitxor": lambda e: e.operation(Basic.bitxor), "bitnot": lambda e: e.operation(Basic.bitnot),
+                "shl": lambda e: e.operation(Basic.shl), "shr": lambda e: e.operation(Basic.shr),
+                "count": lambda e: e.operation(Basic.count), "item": lambda e: e.operation(Basic.item),
+                "in": lambda e: e.operation(getattr(Basic, "in")), "sum": lambda e: e.operation(Basic.sum),
+                "min": lambda e: e.operation(Basic.min), "max": lambda e: e.operation(Basic.max),
+                "unique": lambda e: e.operation(Basic.unique), "entries": lambda e: e.operation(Basic.entries),
+            }).domains({
+                "bool": lambda e: e.domain(_.bool), "int": lambda e: e.domain(_.int),
+                "float": lambda e: e.domain(_.float), "str": lambda e: e.domain(_.str),
+                "bytes": lambda e: e.domain(_.bytes), "uint8": lambda e: e.domain(_.uint8),
+                "binary32": lambda e: e.domain(_.binary32), "std_logic": lambda e: e.domain(_.std_logic),
+            }),
+            lambda _: _.bool.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.bool(lambda d: d)))).schema([
+                Basic.bool]),
+            lambda _: _.int.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.integer(
+                lambda d: d.signed(True).overflow("raise"))))).schema([Basic.int]),
+            lambda _: _.float.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(
+                lambda d: d.format("binary64").rounding("roundTiesToEven"))))).schema([Basic.float]),
+            lambda _: _.str.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.unicode(lambda d: d)))).schema([
+                Basic.str]),
+            lambda _: _.bytes.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.bytes(lambda d: d)))).schema([
+                Basic.bytes]),
+            lambda _: _.uint8.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.integer(
+                lambda d: d.width(8).signed(False).overflow("wrap"))))).schema([Basic.uint8]),
+            lambda _: _.binary32.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(
+                lambda d: d.format("binary32").rounding("roundTiesToEven"))))).schema([Basic.binary32]),
+            lambda _: _.std_logic.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee1164(lambda d: d)))).schema([
+                Basic.std_logic]),
         ])]))])
 
 

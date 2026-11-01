@@ -44,13 +44,17 @@ SUFFIXES = {"unsigned int": "u", "long": "l", "unsigned long": "ul", "long long"
 def install(txn: Any) -> Any:
     """Ccpp's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own."""
     S = txn.Schemas
-    dialect, specs = F.dialect(txn, "Expressions.Ccpp")  # its dialect: a singleton
     return txn.uid("mbse.Expressions.Ccpp/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({**dialect, "Term": S.OfUnion,  # the framework's union, found by its name
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion,  # the framework's union, found by its name
                   "Constant": S.OfObject, "Unary": S.OfObject, "Binary": S.OfObject, "Conditional": S.OfObject,
                   "Cast": S.OfObject, "Member": S.OfObject, "Subscript": S.OfObject})
         .spec([
-            *specs,
+            # its dialect: the singleton `Expressions.Ccpp`, a branch of the framework's kind union of dialects
+            lambda _: _.Dialect.name("Expressions.Ccpp.Dialect").ref(True).singleton("Expressions.Ccpp").adjacencies({
+                "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+                "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
+            lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
+                lambda t: t.name("ccpp").schema([_.Dialect])]),
             lambda _: _.Constant.name("Expressions.Ccpp.Constant").properties({
                 "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr])),
                 "type": S.OfStr,  # C's, by default its value's

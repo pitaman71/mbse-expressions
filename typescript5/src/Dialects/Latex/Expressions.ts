@@ -33,11 +33,17 @@ import * as Domains from "./Domains.js";
 /** Latex's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
 export function install(txn: any): any {
   const S = txn.Schemas;
-  const [dialect, specs] = F.dialect(txn, "Expressions.Latex"); // its dialect: a singleton
   return txn.uid("mbse.Expressions.Latex/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ ...dialect, Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Frac: S.OfObject, Member: S.OfObject })
+    .symbols({
+      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
+      Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Frac: S.OfObject, Member: S.OfObject })
     .spec([ // Term: the framework's union, found by its name
-      ...specs,
+      // its dialect: the singleton `Expressions.Latex`, a branch of the framework's kind union of dialects
+      (_: any) => _.Dialect.name("Expressions.Latex.Dialect").ref(true).singleton("Expressions.Latex").adjacencies({
+        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+      (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
+        (t: any) => t.name("latex").schema([_.Dialect])]),
       (_: any) => _.Binary.name("Expressions.Latex.Binary").properties({
         operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.Unary.name("Expressions.Latex.Unary").properties({

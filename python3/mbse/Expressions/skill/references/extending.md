@@ -8,9 +8,10 @@ its install, its kinds' declarations, its writers, its domains, its evaluator an
 
 Its `install(txn)` adds its kinds to `Expressions.Framework.Term` by schema extension: a value object schema per kind
 (a term carries no domain), a slot a property of the framework's `Term`, variadic arguments a container of `Term` by an
-int index, attributes any other scalar property; and its dialect, a singleton named after its module
-(`Terms.dialect(txn, "Expressions.Latex")` gives the symbols and specs), which names its operations and owns its domains
-by name. Branch tags carry the dialect's name (`latex_frac`), since every
+int index, attributes any other scalar property; and its dialect, the singleton `Expressions.Latex` of its own reference
+object schema `Expressions.Latex.Dialect`, a branch (`latex`) of the kind union `Expressions.Framework.Dialect`, which
+names its operations (`Expressions.Framework.Operates`) and owns its domains by name (`Expressions.Framework.Defines`),
+all written in the builders' fluent syntax. Branch tags carry the dialect's name (`latex_frac`), since every
 dialect adds its kinds to the one union. A dialect reuses the framework's `literal`, `variable`, `let` and `call`
 (`callable` by name, positional `arguments`), and the container constructors `list` and `mapping`, wherever its kind
 has that shape exactly, and keeps a kind of its own
@@ -33,8 +34,13 @@ from mbse.Expressions.Framework import Terms as F
 def install(txn):                                      # LaTeX's \frac{numerator}{denominator}, among its kinds
     S = txn.Schemas
     return txn.uid("mbse.Expressions.Latex/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Term": S.OfUnion, "Frac": S.OfObject})   # the framework's union, found by its name
+        .symbols({"Term": S.OfUnion, "Dialects": S.OfUnion, "Dialect": S.OfObject, "Frac": S.OfObject})  # unions by name
         .spec([
+            lambda _: _.Dialect.name("Expressions.Latex.Dialect").ref(True).singleton("Expressions.Latex").adjacencies({
+                "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+                "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
+            lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
+                lambda t: t.name("latex").schema([_.Dialect])]),
             lambda _: _.Frac.name("Expressions.Latex.Frac").properties({"numerator": _.Term, "denominator": _.Term}),
             lambda _: _.Term.name("Expressions.Framework.Term").branches([lambda t: t.name("latex_frac").schema([_.Frac])]),
         ])]))])

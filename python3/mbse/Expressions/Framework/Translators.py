@@ -18,7 +18,7 @@ of dialects has its own, specialized to what the two have in common, and is decl
 - `Elementwise(left_kind, right_kind, left_attributes, right_attributes)` translates a term of any number of arguments,
   a container constructor, into the other side's, its arguments translated in order: a `left_kind` term whose
   attributes are `left_attributes` is the `right_kind` term of `right_attributes` (Basic's `list(a, b)` is Excel's
-  `HSTACK(a, b)`), both ways unless its `direction` says otherwise.
+  `VSTACK(a, b)`), both ways unless its `direction` says otherwise.
 - `Prelude(pattern, side)` adds an import to what is translated to `side`: `pattern` is the import with its body as
   its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds, e.g.
   `import numpy as np` around an expression that uses `np`.

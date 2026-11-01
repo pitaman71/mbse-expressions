@@ -21,7 +21,7 @@ whose branches `Expressions.install` adds, one per kind above (`integer`, with `
 and owned by the dialect that defines it, by name: its path is the dialect's singleton (`Expressions.Basic`), then its
 name. A packed domain links its enum and its representation through `Expressions.Basic.Packs`. Its schema is a named
 `Schemas.OfAny` restricted to the scalar it narrows (`Expressions.Basic.uint8`), which reads it through `domain`
-(`Expressions.Framework.HasDomain`). `Expressions.define` writes the domains Basic defines (`DOMAINS`), and
+(`Expressions.Framework.HasDomain`). `Expressions.define` writes the domains Basic defines, and
 `read(domain)` gives the data of a stored one, so that what its parameters mean can be asked of it.
 
 Each kind's data, `OfX.Data`, is a dataclass compared by structure, built by `OfX.Builder` (`create()`, `clone()`,
@@ -61,7 +61,7 @@ __all__ = [
     "OfBool", "OfInteger", "OfIeee754", "OfBits", "OfBytes", "OfUnicode", "OfIeee1164", "OfEnum", "OfPacked",
     "FORMATS", "ROUNDINGS", "OVERFLOWS", "STATES",
     "Bool", "Int", "Float", "Str", "Bytes", "Object", "Anything", "SIGNATURES", "QUANTIFIERS", "LIST", "MAPPING",
-    "of", "Domain", "DOMAINS", "read",
+    "of", "Domain", "read",
     "Collection", "Record", "List", "Keyed", "Records", "items_of",
 ]
 
@@ -718,21 +718,6 @@ def of(value: Any) -> D.Domain:
 
 
 # --- Domains as data ---
-
-DOMAINS: dict[str, tuple[str, str, dict[str, Any]]] = {
-    "bool": ("bool", "bool", {}),
-    "int": ("int", "integer", {"signed": True, "overflow": "raise"}),
-    "float": ("float", "ieee754", {"format": "binary64", "rounding": "roundTiesToEven"}),
-    "str": ("str", "unicode", {}),
-    "bytes": ("bytes", "bytes", {}),
-    "uint8": ("int", "integer", {"width": 8, "signed": False, "overflow": "wrap"}),
-    "binary32": ("float", "ieee754", {"format": "binary32", "rounding": "roundTiesToEven"}),
-    "std_logic": ("str", "ieee1164", {}),
-}
-"""The domains Basic defines, by name: each one's scalar, its kind and its parameters. `Expressions.install` writes
-each one's schema, `Expressions.Basic.<name>`, a `Schemas.OfAny` of its scalar, and `Expressions.define` its
-`Expressions.Framework.Domain`, which Basic's dialect owns by that name."""
-
 
 _DATA = {kind.Data.KIND: kind for kind in (OfBool, OfInteger, OfIeee754, OfBits, OfBytes, OfUnicode, OfIeee1164, OfEnum,
                                             OfPacked)}
