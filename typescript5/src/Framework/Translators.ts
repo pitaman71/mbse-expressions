@@ -16,6 +16,10 @@
  *   differently: a `leftKind` literal is the `rightKind` literal of the attributes `forward(attributes)` gives, and
  *   `backward` maps the other way. A function gives null for the attributes it has no counterpart for (a value domain
  *   the other side lacks, say). Conversions are tried after the rules of their kind.
+ * - `new Elementwise(leftKind, rightKind, leftAttributes, rightAttributes)` translates a term of any number of
+ *   arguments, a container constructor, into the other side's, its arguments translated in order: a `leftKind` term
+ *   whose attributes are `leftAttributes` is the `rightKind` term of `rightAttributes` (Basic's `list(a, b)` is Excel's
+ *   `VSTACK(a, b)`), both ways unless its `direction` says otherwise.
  * - `new Prelude(pattern, side)` adds an import to what is translated to `side`: `pattern` is the import with its body
  *   as its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds,
  *   e.g. `import numpy as np` around an expression that uses `np`.
@@ -158,6 +162,22 @@ export class Convert {
     readonly backward: Conversion) {}
 }
 
+/** Translates `leftKind` terms of `leftAttributes` into `rightKind` terms of `rightAttributes`, and back, each argument
+ * translated in turn, whatever their number; `direction` 'both', 'forward' or 'backward'. */
+export class Elementwise {
+  readonly leftAttributes: Attributes;
+  readonly rightAttributes: Attributes;
+
+  constructor(readonly leftKind: string, readonly rightKind: string, leftAttributes: Attributes = {},
+    rightAttributes: Attributes = {}, readonly direction: string = "both") {
+    if (!DIRECTIONS.includes(direction)) {
+      throw new ValueError(`direction must be 'both', 'forward' or 'backward', got ${repr(direction)}`);
+    }
+    this.leftAttributes = { ...leftAttributes };
+    this.rightAttributes = { ...rightAttributes };
+  }
+}
+
 /** Wraps translations to `side` ('left' or 'right') in the import `pattern` when they refer to a name it binds. */
 export class Prelude {
   constructor(readonly pattern: Pattern, readonly side: string) {
@@ -210,12 +230,17 @@ class Direction {
   readonly inlines: ReadonlySet<string>;
   readonly elides: ReadonlySet<string>;
   readonly converts = new Map<string, [string, Conversion][]>();
+  readonly elementwise = new Map<string, [Attributes, string, Attributes][]>();
 
   constructor(readonly source: Terms.Dialect, readonly target: Terms.Dialect,
     rules: readonly [Pattern, Pattern][], inlines: readonly string[], elides: readonly string[],
-    readonly preludes: readonly Pattern[], converts: readonly [string, string, Conversion][]) {
+    readonly preludes: readonly Pattern[], converts: readonly [string, string, Conversion][],
+    elementwise: readonly [string, Attributes, string, Attributes][]) {
     this.inlines = new Set(inlines);
     this.elides = new Set(elides);
+    for (const [kind, attributes, targetKind, targetAttributes] of elementwise) {
+      this.elementwise.set(kind, [...(this.elementwise.get(kind) ?? []), [attributes, targetKind, targetAttributes]]);
+    }
     for (const [kind, targetKind, convert] of converts) {
       for (const [dialect, name] of [[source, kind], [target, targetKind]] as const) {
         const literal = dialect.kinds().get(name);
@@ -295,6 +320,15 @@ class Run {
       const bindings = new Map<string, unknown>();
       if (this.match(source, node, bindings)) return this.instantiate(target, bindings, environment);
     }
+    for (const [attributes, targetKind, targetAttributes] of this.direction.elementwise.get(tag) ?? []) {
+      const form = Terms.form(node);
+      const keys = Object.keys(attributes);
+      if (!form.arguments.includes(null) && form.attributes.size === keys.length // a mapping's empty key: none
+        && keys.every((k) => form.attributes.has(k) && Terms.sameNative(attributes[k], form.attributes.get(k)))) {
+        const args = form.arguments.map((argument) => this.translate(argument, environment));
+        return this.direction.build(new Terms.Form(targetKind, targetAttributes, args));
+      }
+    }
     for (const [targetKind, convert] of this.direction.converts.get(tag) ?? []) {
       const attributes = convert(Object.fromEntries(Terms.attributesOf(record)));
       if (attributes === null) continue;
@@ -340,10 +374,10 @@ class Run {
   }
 }
 
-type Declaration = Rule | Inline | Elide | Convert | Prelude;
+type Declaration = Rule | Inline | Elide | Convert | Elementwise | Prelude;
 
-/** A `Translator` between `left` and `right`, declared by `rules` (`Rule`s, `Inline`s, `Elide`s, `Convert`s and
- * `Prelude`s). */
+/** A `Translator` between `left` and `right`, declared by `rules` (`Rule`s, `Inline`s, `Elide`s, `Convert`s,
+ * `Elementwise`s and `Prelude`s). */
 export class Pairwise implements Translator {
   private readonly forwards: Direction;
   private readonly backwards: Direction;
@@ -352,16 +386,19 @@ export class Pairwise implements Translator {
     private readonly rules: readonly Declaration[]) {
     const pairs = rules.filter((rule): rule is Rule => rule instanceof Rule);
     const converts = rules.filter((rule): rule is Convert => rule instanceof Convert);
+    const each = rules.filter((rule): rule is Elementwise => rule instanceof Elementwise);
     const of = <T extends Inline | Elide | Prelude>(type: new (...a: any[]) => T, side: string): T[] =>
       rules.filter((rule): rule is T => rule instanceof type && rule.side === side);
     this.forwards = new Direction(leftDialect, rightDialect,
       pairs.filter((r) => r.direction !== "backward").map((r) => [r.left, r.right]),
       of(Inline, "left").map((i) => i.kind), of(Elide, "left").map((e) => e.kind),
-      of(Prelude, "right").map((p) => p.pattern), converts.map((c) => [c.leftKind, c.rightKind, c.forward]));
+      of(Prelude, "right").map((p) => p.pattern), converts.map((c) => [c.leftKind, c.rightKind, c.forward]),
+      each.filter((e) => e.direction !== "backward").map((e) => [e.leftKind, e.leftAttributes, e.rightKind, e.rightAttributes]));
     this.backwards = new Direction(rightDialect, leftDialect,
       pairs.filter((r) => r.direction !== "forward").map((r) => [r.right, r.left]),
       of(Inline, "right").map((i) => i.kind), of(Elide, "right").map((e) => e.kind),
-      of(Prelude, "left").map((p) => p.pattern), converts.map((c) => [c.rightKind, c.leftKind, c.backward]));
+      of(Prelude, "left").map((p) => p.pattern), converts.map((c) => [c.rightKind, c.leftKind, c.backward]),
+      each.filter((e) => e.direction !== "forward").map((e) => [e.rightKind, e.rightAttributes, e.leftKind, e.leftAttributes]));
   }
 
   left(): Terms.Dialect {
@@ -387,6 +424,9 @@ export class Pairwise implements Translator {
       if (r instanceof Rule) return new Rule(r.right, r.left, swapped[r.direction]);
       if (r instanceof Prelude) return new Prelude(r.pattern, other(r.side));
       if (r instanceof Convert) return new Convert(r.rightKind, r.leftKind, r.backward, r.forward);
+      if (r instanceof Elementwise) {
+        return new Elementwise(r.rightKind, r.leftKind, r.rightAttributes, r.leftAttributes, swapped[r.direction]);
+      }
       return new (r.constructor as typeof Inline)(r.kind, other(r.side));
     }));
   }

@@ -6,11 +6,11 @@
  * `SUM(MAP(xs, LAMBDA(p, IF(body, 1, 0))))`, `count(xs)` is `ROWS(xs)`, `item(xs, i)` is `INDEX(xs, i + 1)` (Excel
  * counts from 1), `in(x, xs)` is `ISNUMBER(MATCH(x, xs, 0))`, and `sum`, `min` and `max` are `SUM`, `MIN` and `MAX`.
  * `unique(xs)` is written `ROWS(UNIQUE(xs)) = ROWS(xs)`, which does not read back as `unique`, and `entries` has no
- * counterpart. */
+ * counterpart. A `list` is `VSTACK(a, b)`, a column of its elements; a `mapping` has no counterpart. */
 
 import { DIALECT as BASIC } from "../Dialects/Basic/Expressions.js";
 import { DIALECT as EXCEL } from "../Dialects/Excel/Expressions.js";
-import { Pairwise, Rule, renames } from "../Framework/Translators.js";
+import { Elementwise, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Basic, Excel, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean);
@@ -37,4 +37,5 @@ export const TRANSLATOR = new Pairwise(BASIC, EXCEL, [
   new Rule(Basic.item, Excel.index),
   new Rule(Basic.in_, Excel.match),
   new Rule(Basic.unary("unique"), Excel.unique, "forward"),
+  new Elementwise("list", "call", {}, { callable: "VSTACK" }),
 ]);

@@ -3,16 +3,16 @@
  *
  * Excel's terms are the framework's kinds (`Framework/Terms`) where a formula's construct has their shape, and five of
  * its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a branch named
- * `excel_<kind>` (dialects share kind names) holding a value object `Expressions.Excel.<Kind>` with a `domain`, as
- * every term has:
+ * `excel_<kind>` (dialects share kind names) holding a value object `Expressions.Excel.<Kind>` (a term carries no
+ * domain):
  *
  * - `literal` (the framework's): a constant, a number (int or float), text (str) or a logical (boolean).
  * - `variable` (the framework's): the value bound to a `name`, by `LET` or as a defined name.
  * - `let` (the framework's): `LET(name, value, body)`.
  * - `call` (the framework's): a worksheet function (`callable`) applied to ordered `arguments`, for the functions in
- *   `Domains.FUNCTIONS` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, the bit functions, and `ROWS`, `INDEX`, `MATCH`,
- *   `ISNUMBER`, `SUM`, `MIN`, `MAX` and `UNIQUE` of arrays); other names are add-in functions, which the workbook
- *   provides.
+ *   `Domains.FUNCTIONS` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, the bit functions, `ROWS`, `INDEX`, `MATCH`,
+ *   `ISNUMBER`, `SUM`, `MIN`, `MAX` and `UNIQUE` of arrays, and `VSTACK`, which makes one); other names are add-in
+ *   functions, which the workbook provides.
  * - `excel_cell`: a cell reference (`address`): `A1` on the current sheet, `Sheet1!A1` (`sheet`), or
  *   `[Book.xlsx]Sheet1!A1` (`book`) in another workbook. A workbook (see `Evaluators`) resolves it; it need not be
  *   bound.
@@ -40,19 +40,27 @@ const { repr } = Repr;
 export function install(txn: any): any {
   const S = txn.Schemas;
   return txn.uid("mbse.Expressions.Excel/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Term: S.OfUnion, Cell: S.OfObject, Map: S.OfObject, Infix: S.OfObject, Prefix: S.OfObject,
+    .symbols({
+      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
+      Term: S.OfUnion, Cell: S.OfObject, Map: S.OfObject, Infix: S.OfObject, Prefix: S.OfObject,
       Field: S.OfObject }) // the framework's union, found by its name
     .spec([
+      // its dialect: the singleton `Expressions.Excel`, a branch of the framework's kind union of dialects
+      (_: any) => _.Dialect.name("Expressions.Excel.Dialect").ref(true).singleton("Expressions.Excel").adjacencies({
+        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+      (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
+        (t: any) => t.name("excel").schema([_.Dialect])]),
       (_: any) => _.Cell.name("Expressions.Excel.Cell").properties({
-        address: S.OfStr, sheet: S.OfStr, book: S.OfStr, domain: S.OfStr }),
+        address: S.OfStr, sheet: S.OfStr, book: S.OfStr }),
       (_: any) => _.Map.name("Expressions.Excel.Map").properties({
-        name: S.OfStr, array: _.Term, body: _.Term, domain: S.OfStr }), // the LAMBDA's name and body
+        name: S.OfStr, array: _.Term, body: _.Term }), // the LAMBDA's name and body
       (_: any) => _.Infix.name("Expressions.Excel.Infix").properties({
-        operator: S.OfStr, left: _.Term, right: _.Term, domain: S.OfStr }),
+        operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.Prefix.name("Expressions.Excel.Prefix").properties({
-        operator: S.OfStr, operand: _.Term, domain: S.OfStr }),
+        operator: S.OfStr, operand: _.Term }),
       (_: any) => _.Field.name("Expressions.Excel.Field").properties({
-        name: S.OfStr, value: _.Term, domain: S.OfStr }),
+        name: S.OfStr, value: _.Term }),
       (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // branches added: schema extension
         (t: any) => t.name("excel_cell").schema([_.Cell]),
         (t: any) => t.name("excel_map").schema([_.Map]),

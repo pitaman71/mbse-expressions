@@ -2,13 +2,14 @@
 else True` is written `~a || b`, which translates back as `not a or b`; other conditional expressions have no MATLAB
 expression. MATLAB has no let expression, so lets are inlined, and imports on either side, which the other cannot
 declare, are dropped: what they brought in has no counterpart. MATLAB has no bytes. Python's bitwise operators are
-MATLAB's bit functions, `a >> n` being `bitshift(a, -n)`; `~` has no counterpart."""
+MATLAB's bit functions, `a >> n` being `bitshift(a, -n)`; `~` has no counterpart. A list display is a concatenation,
+`[a, b]`; a dict display has no counterpart."""
 
 from __future__ import annotations
 
 from mbse.Expressions.Dialects.Matlab.Expressions import DIALECT as MATLAB
 from mbse.Expressions.Dialects.Python.Expressions import DIALECT as PYTHON
-from mbse.Expressions.Framework.Translators import Elide, Inline, Pairwise, Rule, renames
+from mbse.Expressions.Framework.Translators import Elementwise, Elide, Inline, Pairwise, Rule, renames
 
 from ._Patterns import Matlab, Python, collections, value
 
@@ -32,4 +33,5 @@ TRANSLATOR = Pairwise(PYTHON, MATLAB, [
     *renames("python_binop", "operator", "call", "callable", {"&": "bitand", "|": "bitor", "^": "bitxor", "<<": "bitshift"}, 2),
     Rule(Python.shr, Matlab.shr),
     *collections("Python", "Matlab"),
+    Elementwise("list", "list"),
 ])

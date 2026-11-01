@@ -26,7 +26,7 @@
  *
  * There is no binding: translators substitute a let's value for its name. `install` adds the kinds (but `literal`,
  * `variable` and `call`, the framework's, whose shape these have) to `Expressions.Framework.Term` by schema extension,
- * each a value object `Expressions.SystemVerilog.<Kind>` with a `domain`, as the branch `systemverilog_<kind>`
+ * each a value object `Expressions.SystemVerilog.<Kind>` (a term carries no domain), as the branch `systemverilog_<kind>`
  * (`PREFIX`): dialects share kind names, and a branch's name is unique in the union; `DIALECT` reads them. The writers
  * (`constant`, `vector`, ...) write terms through the builders, wherever a term is written, in a transaction.
  * `Text.ToText` writes an expression as SystemVerilog source, with its precedence.
@@ -86,10 +86,18 @@ export function install(txn: any): any {
   };
   const names = Object.keys(kinds);
   return txn.uid("mbse.Expressions.SystemVerilog/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Term: S.OfUnion, ...Object.fromEntries(names.map((name) => [name, S.OfObject])) }) // the framework's union, by its name
+    .symbols({
+      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
+      Term: S.OfUnion, ...Object.fromEntries(names.map((name) => [name, S.OfObject])) }) // the framework's union, by its name
     .spec([
+      // its dialect: the singleton `Expressions.SystemVerilog`, a branch of the framework's kind union of dialects
+      (_: any) => _.Dialect.name("Expressions.SystemVerilog.Dialect").ref(true).singleton("Expressions.SystemVerilog").adjacencies({
+        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+      (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
+        (t: any) => t.name("systemverilog").schema([_.Dialect])]),
       ...names.map((name) => (_: any) => _[name].name(`Expressions.SystemVerilog.${name}`).properties({
-        ...(kinds[name] as (_: any) => Record<string, unknown>)(_), domain: S.OfStr })), // every term has a domain, by name
+        ...(kinds[name] as (_: any) => Record<string, unknown>)(_) })),
       (_: any) => _.Term.name("Expressions.Framework.Term").branches( // branches added: schema extension
         names.map((name) => (t: any) => t.name(PREFIX + name.toLowerCase()).schema([_[name]]))),
     ])]))]);

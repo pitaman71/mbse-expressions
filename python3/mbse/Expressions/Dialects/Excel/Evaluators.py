@@ -17,8 +17,9 @@ readers, `Framework.Objects`). Values are Python `float` (number), `str` (text),
   xs, 0)` is the position of the first element equal to `x` (text ignoring case), else `#N/A`, and supports exact
   matching only (another match type is `#VALUE!`); `SUM`, `MIN` and `MAX` take an array's numbers, ignoring its text and
   logicals (`MIN` and `MAX` of none are 0), or a value given alone as arithmetic converts it, over all their arguments;
-  `UNIQUE` gives the distinct elements, the first of each. An error among an array's elements is the result of these
-  functions but `MAP`, `ROWS`, `INDEX` and `UNIQUE`.
+  `UNIQUE` gives the distinct elements, the first of each; `VSTACK(a, b, ...)` stacks its arguments, an array's
+  elements in turn, into one array, errors among them. An error among an array's elements is the result of these
+  functions but `MAP`, `ROWS`, `INDEX`, `UNIQUE` and `VSTACK`.
 - The bit functions (`BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`) convert their arguments as arithmetic
   does, and give `#NUM!` for a number that is not an integer from 0 to 2^48 - 1, a shift that is not an integer of at
   most 53 either way, and a result beyond 2^48 - 1.
@@ -207,6 +208,11 @@ def _map(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     return [arguments[1](element) for element in _elements(array)]  # type: ignore[call-arg]
 
 
+def _vstack(arguments: list[F.Thunk], node: Any, scope: Any) -> list[Any]:
+    _counted("VSTACK", arguments)
+    return [element for argument in arguments for element in _elements(argument())]
+
+
 def _rows(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     array = arguments[0]()
     return array if isinstance(array, Error) else float(len(_elements(array)))
@@ -348,7 +354,7 @@ INTERPRETER = F.Interpreter(Expressions.DIALECT, {
         "AND": _logic("AND", all), "OR": _logic("OR", any), "NOT": _not, "IF": _if,
         "ISERROR": lambda arguments, node, scope: isinstance(arguments[0](), Error),
         **{name: _bit(name) for name in ("BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT")},
-        "ROWS": _rows, "INDEX": _index, "MATCH": _match, "UNIQUE": _unique,
+        "ROWS": _rows, "INDEX": _index, "MATCH": _match, "UNIQUE": _unique, "VSTACK": _vstack,
         "ISNUMBER": lambda arguments, node, scope: type(arguments[0]()) is float,
         "SUM": _aggregate("SUM", _sum), "MIN": _aggregate("MIN", lambda numbers: min(numbers, default=0.0)),
         "MAX": _aggregate("MAX", lambda numbers: max(numbers, default=0.0)),

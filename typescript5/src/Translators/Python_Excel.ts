@@ -1,11 +1,12 @@
 /** Python <-> Excel. Comparisons and arithmetic are Excel's operators, `and`, `or` and `not` are `AND`, `OR` and
  * `NOT`, an attribute is a field, `hasattr(x, 'name')` is `NOT(ISERROR(x.name))`, a conditional expression is `IF`,
  * and a let is `LET`. Python's imports, which Excel cannot declare, are dropped. Excel has no bytes. Python's bitwise
- * operators are Excel's bit functions; `~` has no counterpart. */
+ * operators are Excel's bit functions; `~` has no counterpart. A list display is `VSTACK(a, b)`; a dict display has no
+ * counterpart. */
 
 import { DIALECT as EXCEL } from "../Dialects/Excel/Expressions.js";
 import { DIALECT as PYTHON } from "../Dialects/Python/Expressions.js";
-import { Elide, Pairwise, Rule, renames } from "../Framework/Translators.js";
+import { Elementwise, Elide, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Excel, Python, collections, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean);
@@ -28,4 +29,5 @@ export const TRANSLATOR = new Pairwise(PYTHON, EXCEL, [
   ...renames("python_binop", "operator", "call", "callable", {
     "&": "BITAND", "|": "BITOR", "^": "BITXOR", "<<": "BITLSHIFT", ">>": "BITRSHIFT" }, 2),
   ...collections("Python", "Excel"),
+  new Elementwise("list", "call", {}, { callable: "VSTACK" }),
 ]);

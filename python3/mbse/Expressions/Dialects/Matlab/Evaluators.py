@@ -12,7 +12,9 @@ readers). Values are Python `float` (double), `bool` (logical) and `str`
   variables raise too, with MATLAB's messages.
 - The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
   53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
-- An array is a list: a container property's values, or a variable's list. Operators take scalars. `numel` counts
+- An array is a list: a container property's values, a variable's list, or a concatenation `[a, b]`, the elements of
+  its operands in order: logicals if all are, doubles if all are numbers or logicals, strings if all are strings (a
+  string array), any other mixture raising. Operators take scalars. `numel` counts
   elements (a scalar is one), `xs(i)` indexes from 1, and `arrayfun(@(p) body, xs)` gives the body's value for each
   element, an array of logicals if all are, else of doubles; each must be a numeric or logical scalar. `all`, `any`
   and `nnz` test elements as nonzero (`any` ignores NaN), `sum` adds them from the first, `min` and `max` ignore NaN
@@ -248,6 +250,16 @@ def _index(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     return elements[int(number) - 1]
 
 
+def _concatenate(arguments: list[F.Thunk], node: Any, scope: Any) -> list[Any]:
+    """`[a, b]`: the elements of each, in order: logicals if all are, else doubles, or strings if all are."""
+    elements = [element for argument in arguments for element in _elements(argument())]
+    if all(type(element) is str for element in elements):
+        return elements
+    if any(_double(element) is None for element in elements):
+        raise TypeError("Concatenation takes numbers and logicals, or strings.")
+    return _logicals(elements)
+
+
 def _arrayfun(arguments: list[F.Thunk], node: Any, scope: Any) -> list[Any]:
     body = arguments[1]
     values = []
@@ -344,6 +356,7 @@ INTERPRETER = F.Interpreter(Expressions.DIALECT, {
     "matlab_field": _field,
     "matlab_index": _index,
     "matlab_arrayfun": _arrayfun,
+    "list": _concatenate,
 }, literal=lambda value: float(value) if type(value) is int else value, scope=Scope, extension=_extension)
 """The interpreter of the Matlab dialect."""
 

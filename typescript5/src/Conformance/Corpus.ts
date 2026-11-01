@@ -1,9 +1,11 @@
 /**
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
- * `build()` returns the cases, name -> [root schema, root term, store]: each case a term value of
+ * `build()` returns the cases, name -> [root schema, root, store]: each case but `domains` a term value of
  * `Expressions.Framework.Term`, built in one store holding the framework's install and every dialect's, written
- * nested. `DIALECTS` names the dialect that reads each case other than Basic's. Each implementation writes its
+ * nested. `DIALECTS` names the dialect that reads each case other than Basic's. The `domains` case is data: Basic's
+ * dialect, the singleton `Expressions.Basic` (`Expressions.Basic.Dialect`), naming its operations and owning its domains
+ * by name, a packed one among them, written as one document. Each implementation writes its
  * snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
  * implementation's files (see the CONF test suite). Keep record module and `python3/mbse/Expressions/Conformance/Corpus.py`
  * in lockstep: same cases, same values, same order of statements.
@@ -13,7 +15,6 @@
 
 import { Builders } from "@mbse/schemas/Framework";
 
-import * as Domains from "../Dialects/Basic/Domains.js";
 import * as Expressions from "../Dialects/Basic/Expressions.js";
 import * as Basic from "../Dialects/Basic/index.js";
 import * as Ccpp from "../Dialects/Ccpp/index.js";
@@ -39,14 +40,8 @@ export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
 /** A case: its root schema, its root term, and the store it is built in. */
 export type Case = [any, any, any];
 
-/** `domain`, registered under `name` unless it is already: a term names its domain. */
-function named<T extends Domains.Domain>(name: string, domain: T): T {
-  if (Domains.name_of(domain) === null) Domains.register(name, domain);
-  return domain;
-}
-
 export function build(): Map<string, Case> {
-  const [E, D] = [Expressions, Domains];
+  const E = Expressions;
   const store: any = new Builders.Store();
   store.transaction(Framework.install);
   store.transaction(Basic.install);
@@ -56,11 +51,24 @@ export function build(): Map<string, Case> {
   store.transaction(Latex.install);
   store.transaction(Ccpp.install);
   store.transaction(SystemVerilog.install);
+  const defined = store.transaction(Basic.define)[0]; // Basic's dialect, its operations and its domains
 
-  // --- expression: every kind and literal type, a let and its variable, an extension operation ---
+  // --- domains: Basic's dialect, its operations by name and its domains, owned by name; an enum and a domain packing it
+  // into uint8 added ---
+  store.transaction(() => {
+    const state = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
+      (u: any) => u.enum((e: any) => e.members(["IDLE", "RUN"]))))));
+    const mode = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
+      (u: any) => u.packed((e: any) => e.codes([0n, 1n]))))).packs((a: any) => a.insert(
+      (e: any) => e.domain(state).representation(defined.get("uint8")))));
+    store.Expressions.Basic.Dialect(defined.get("dialect"), (b: any) => b.domains({
+      state: (e: any) => e.domain(state), mode: (e: any) => e.domain(mode) }));
+  });
+
+  // --- expression: every kind and literal type, a let and its variable, a list ---
   const [self, age] = [E.variable("record"), E.variable("age")];
   const expression = E.let_("age", self.age, age.ge(18n).and_(
-    age.lt(65.5).or_(self.has("email").not_()).implies(E.operation("contains", "x", new Uint8Array([0x00, 0xff]), true))));
+    age.lt(65.5).or_(self.has("email").not_()).implies(E.literal(new Uint8Array([0x00, 0xff])).in_(E.list_("x", true)))));
 
   // --- python: every kind, a let and its names --- import numpy as np / from math import floor /
   // (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(record)
@@ -92,28 +100,10 @@ export function build(): Map<string, Case> {
   const latex = L.where("a", L.member(recordL, "age"), L.binary("\\land", L.binary("\\geq", aL, 18n), L.binary(
     "\\lor", L.unary("\\lnot", L.function("has", recordL, "email")), L.binary(">", L.frac(aL, 2n), 1.5))));
 
-  // --- domains: literals of value domains, by name, a packed enum among them; defaults left out; decimal and
-  // binary128 text; a conversion's domain, a bitwise operation and pack ---
-  const uint8 = named("uint8", new D.OfInteger.Builder().width(8n).signed(false).overflow("wrap").create());
-  const state = named("state", new D.OfPacked.Builder().domain(new D.OfEnum.Builder().members("IDLE", "RUN").create()).representation(
-    new D.OfBits.Builder().width(2n).create()).codes(0n, 1n).create());
-  const binary32 = named("binary32 roundTowardZero", new D.OfIeee754.Builder().format("binary32").rounding("roundTowardZero").create());
-  const decimal64 = named("decimal64", new D.OfIeee754.Builder().format("decimal64").create());
-  const bits2 = named("bits2", new D.OfBits.Builder().width(2n).create());
-  const logic = named("std_logic", new D.OfIeee1164.Builder().create());
-  const binary128 = named("binary128", new D.OfIeee754.Builder().format("binary128").create());
-  const [mode, count, gain, line, mask, size, price, ratio] = ["mode", "count", "gain", "line", "mask", "size", "price", "ratio"]
-    .map((name) => E.variable(name)) as Expressions.Writer[];
-  const domains = E.operation(
-    "all", mode!.eq(E.literal("RUN", state)), count!.le(E.literal(200n, uint8)), gain!.ne(E.literal(1.5, binary32)),
-    line!.ge(E.literal("Z", logic)), mask!.gt(E.literal(new Uint8Array([3]), bits2)), size!.lt(E.literal(5n, D.Int)),
-    price!.convert(decimal64).sub(E.literal("1.50", decimal64)), ratio!.mul(E.literal("0.1", binary128)),
-    mask!.bitand(E.literal(new Uint8Array([1]), bits2)), mode!.pack()); // each operation once
-
-  // --- collections: a quantifier over entries, and collection operations, each once ---
+  // --- collections: a quantifier over entries, collection operations and a mapping, each once ---
   const [ports, p, pins, sizes] = ["ports", "p", "pins", "sizes"].map((name) => E.variable(name)) as Expressions.Writer[];
   const collections = E.let_("ports", self.entries("ports"), ports!.all("p", p!.get("pin").in_(pins)).and_(
-    sizes!.sum().le(ports!.count())));
+    sizes!.sum().le(E.mapping(["most", ports!.count()], ["least", 0n]).item("most"))));
 
   // --- ccpp: every kind, typed constants and a shared identifier --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
   const me = C.identifier("record");
@@ -132,8 +122,9 @@ export function build(): Map<string, Case> {
 
   const terms = store.transaction(() => new Map<string, any>(([
     ["expression", expression], ["python", python], ["matlab", matlab], ["excel", excel], ["latex", latex],
-    ["domains", domains], ["collections", collections], ["ccpp", ccpp], ["systemverilog", systemverilog]
+    ["collections", collections], ["ccpp", ccpp], ["systemverilog", systemverilog]
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
-  const Term = store.registered("Expressions.Framework.Term");
-  return new Map<string, Case>(CASES.map((name) => [name, [Term, terms.get(name), store]]));
+  terms.set("domains", defined.get("dialect"));
+  const [Term, Dialect] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.Basic.Dialect")];
+  return new Map<string, Case>(CASES.map((name) => [name, [name === "domains" ? Dialect : Term, terms.get(name), store]]));
 }

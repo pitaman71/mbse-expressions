@@ -82,6 +82,11 @@ def ToText(expression: Any) -> str:
             return f"(lambda {attributes['name']}: {arguments[1][0]})({arguments[0][0]})", _PRIMARY
         if tag == P.IFEXP:
             return f"{operand(1, _OR)} if {operand(0, _OR)} else {operand(2, _IF)}", _IF
+        if tag == P.LIST:
+            return f"[{', '.join(text for text, _ in arguments)}]", _PRIMARY
+        if tag == P.DICT:
+            pairs = [f"{arguments[i][0]}: {arguments[i + 1][0]}" for i in range(0, len(arguments), 2)]
+            return f"{{{', '.join(pairs)}}}", _PRIMARY
         if tag in _IMPORTS:
             raise ValueError("an import can only enclose the whole expression")
         operator = attributes["operator"]
@@ -171,6 +176,12 @@ def _expression(node: ast.expr) -> P.Writer:
         return P.unaryop(_operator(node, node.op), _expression(node.operand))
     if isinstance(node, ast.IfExp):
         return P.ifexp(_expression(node.test), _expression(node.body), _expression(node.orelse))
+    if isinstance(node, ast.List):
+        return P.list_(*(_expression(element) for element in node.elts))
+    if isinstance(node, ast.Dict):
+        if any(key is None for key in node.keys):
+            raise _unsupported(node, "a dict's unpacking is not supported")
+        return P.dict_(*((_expression(key), _expression(value)) for key, value in zip(node.keys, node.values)))  # type: ignore[arg-type]
     raise _unsupported(node)
 
 

@@ -2,7 +2,7 @@
 
 Import the Basic dialect from `@mbse/expressions`, the others from `@mbse/expressions/Dialects/<Name>`, the
 translators from `@mbse/expressions/Translators`, and the framework from `@mbse/expressions/Framework`. The API
-mirrors Python name for name, snake_case included (`Domains.name_of`), except the framework's reads of terms, in
+mirrors Python name for name, snake_case included (`Domains.items_of`), except the framework's reads of terms, in
 camelCase (`Terms.nameOf`, `Terms.kindOf`), and writes the same JSON byte for byte.
 
 ## A complete program
@@ -50,7 +50,7 @@ const [ada, bob, eve] = store.transaction(() => [
 const contact = E.variable("contact");
 const senior = store.transaction(() => store.Expressions.Framework.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
-check(E.DIALECT.validate(senior, ["contact"], true).length === 0, "invalid");
+check(E.DIALECT.validate(senior, ["contact"]).length === 0, "invalid");
 
 // Basic evaluates with three-valued logic: an absent property is unknown (null), and nothing is coerced.
 check(Evaluators.OfAny(senior, { contact: ada }) === true, "ada");
@@ -87,10 +87,12 @@ check(Evaluators.OfAny(written(card.reach.has("phone")), { card: ada_card }) ===
 |---|---|
 | `int`, `float` values (`18`, `18.0`) | `bigint` and `number` (`18n`, `18`): `18` is a float, and `ge(get(x, 'age'), 18)` against an int age is unknown |
 | `None` | `null` |
-| `Domains.OfInteger.Builder().width(8)`, domains and typed values compared with `==` | `new Domains.OfInteger.Builder().width(8n)`, compared with `.equals()` |
+| `Domains.OfInteger.Builder().width(8)`, domains compared with `==` | `new Domains.OfInteger.Builder().width(8n)`, compared with `.equals()` |
+| `E.mapping(("lo", 0.5), ("hi", x))`, entries as tuples | `E.mapping(["lo", 0.5], ["hi", x])`, entries as arrays |
+| a frame's symbols, `store.transaction(Basic.define)[0]["uint8"]` | a `Map`: `store.transaction(Basic.define)[0].get("uint8")` |
 | `Terms.name_of`, `Terms.kind_of`, `Terms.attributes_of` | `Terms.nameOf`, `Terms.kindOf`, `Terms.attributesOf` (a `Map`) |
 | `with store.transaction(): ...` | `store.transaction(() => ...)`, which returns what its function returns |
-| `validate(term, bound={"person"}, core=True)`, keyword arguments | positional: `validate(term, ["person"], true)`; options objects elsewhere: `new Scope(variables, { modules })` |
+| `validate(term, bound={"person"})`, keyword arguments | positional: `validate(term, ["person"])`; options objects elsewhere: `new Scope(variables, { modules })` |
 | `Pattern("call", A, B, callable="eq")` | `new Pattern("call", { callable: "eq" }, A, B)` |
 | `Python.Text.FromText(source)` | none: build Python expressions with constructors (`P.compare(">=", P.attribute(P.name("x"), "age"), 18n)`) |
 | Python expressions evaluated by Python, with real modules | a model of Python's rules; modules are `new Python.Evaluators.Module(name, { members })`; no numpy |

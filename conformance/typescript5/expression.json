@@ -101,17 +101,8 @@
                 },
                 {
                   "call": {
-                    "callable": "contains",
+                    "callable": "in",
                     "arguments": [
-                      {
-                        "literal": {
-                          "value": {
-                            "scalar": {
-                              "str": "x"
-                            }
-                          }
-                        }
-                      },
                       {
                         "literal": {
                           "value": {
@@ -122,8 +113,23 @@
                         }
                       },
                       {
-                        "literal": {
-                          "value": true
+                        "list": {
+                          "elements": [
+                            {
+                              "literal": {
+                                "value": {
+                                  "scalar": {
+                                    "str": "x"
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "literal": {
+                                "value": true
+                              }
+                            }
+                          ]
                         }
                       }
                     ]

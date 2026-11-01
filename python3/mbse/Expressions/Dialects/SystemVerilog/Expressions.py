@@ -25,7 +25,7 @@
 
 There is no binding: translators substitute a let's value for its name. `install` adds the kinds (but `literal`,
 `variable` and `call`, the framework's, whose shape these have) to `Expressions.Framework.Term` by schema extension,
-each a value object `Expressions.SystemVerilog.<Kind>` with a `domain`, as the branch `systemverilog_<kind>` (`PREFIX`):
+each a value object `Expressions.SystemVerilog.<Kind>` (a term carries no domain), as the branch `systemverilog_<kind>` (`PREFIX`):
 dialects share kind names, and a branch's name is unique in the union; `DIALECT` reads them. The writers (`constant`,
 `vector`, ...) write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an
 expression as SystemVerilog source, with its precedence.
@@ -68,9 +68,8 @@ def install(txn: Any) -> Any:
     Its `literal`, `variable` and `call` are the framework's."""
     S = txn.Schemas
 
-    def kind(name: str, properties: Any) -> Any:  # every term has a domain, by name
-        return lambda _: getattr(_, name).name(f"Expressions.SystemVerilog.{name}").properties(
-            {**properties(_), "domain": S.OfStr})
+    def kind(name: str, properties: Any) -> Any:
+        return lambda _: getattr(_, name).name(f"Expressions.SystemVerilog.{name}").properties(properties(_))
 
     kinds = {
         "Vector": lambda _: {"value": S.OfStr, "signed": S.OfBool, "base": S.OfStr},  # its bits, MSB first
@@ -89,8 +88,14 @@ def install(txn: Any) -> Any:
         "Iterate": lambda _: {"name": S.OfStr, "method": S.OfStr, "array": _.Term, "body": _.Term},  # name: the iterator
     }
     return txn.uid("mbse.Expressions.SystemVerilog/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Term": S.OfUnion, **{name: S.OfObject for name in kinds}})  # the framework's union, by its name
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion, **{name: S.OfObject for name in kinds}})  # the framework's union, by its name
         .spec([
+            # its dialect: the singleton `Expressions.SystemVerilog`, a branch of the framework's kind union of dialects
+            lambda _: _.Dialect.name("Expressions.SystemVerilog.Dialect").ref(True).singleton("Expressions.SystemVerilog").adjacencies({
+                "domains": lambda a: a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+                "operations": lambda a: a.relation([txn.Expressions.Framework.Operates]).me("dialect")}),
+            lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
+                lambda t: t.name("systemverilog").schema([_.Dialect])]),
             *(kind(name, properties) for name, properties in kinds.items()),
             lambda _: _.Term.name("Expressions.Framework.Term").branches([  # branches added: schema extension
                 lambda t, name=name: t.name(PREFIX + name.lower()).schema([getattr(_, name)]) for name in kinds]),

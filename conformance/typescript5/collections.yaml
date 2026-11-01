@@ -44,7 +44,30 @@ let:
               - variable:
                   name: sizes
           - call:
-              callable: count
+              callable: item
               arguments:
-              - variable:
-                  name: ports
+              - mapping:
+                  entries:
+                  - key:
+                      literal:
+                        value:
+                          scalar:
+                            str: most
+                    value:
+                      call:
+                        callable: count
+                        arguments:
+                        - variable:
+                            name: ports
+                  - key:
+                      literal:
+                        value:
+                          scalar:
+                            str: least
+                    value:
+                      literal:
+                        value: 0
+              - literal:
+                  value:
+                    scalar:
+                      str: most

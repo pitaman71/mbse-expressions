@@ -60,6 +60,8 @@ def ToText(expression: Any) -> str:
             return f"arrayfun(@({attributes['name']}) {arguments[1][0]}, {arguments[0][0]})", _ATOM
         if tag == "matlab_import":
             raise ValueError("an import can only enclose the whole expression")
+        if tag == "list":
+            return f"[{', '.join(text for text, _ in arguments)}]", _ATOM
         if tag == "matlab_unary":
             return f"{attributes['operator']}{operand(0, _UNARY)}", _UNARY
         level = _PRECEDENCE[attributes["operator"]]

@@ -3,7 +3,7 @@
  *
  * Python's terms are the framework's `literal`, `variable` and `let`, whose shape Python's constants, names and
  * `(lambda name: body)(value)` have, and its own kinds, which `install` adds to `Expressions.Framework.Term` by schema
- * extension, each a value object with a `domain`. The tags of its own are qualified by the dialect, `python_<kind>`
+ * extension, each a value object; a term carries no domain. The tags of its own are qualified by the dialect, `python_<kind>`
  * (`python_binop`), since every dialect adds its kinds to the one union of terms:
  *
  * - `literal`, the framework's: a constant, a basic scalar (`value`). `variable`, the framework's: a name, the value
@@ -20,6 +20,8 @@
  *   number of `conditions`, which binds `name` to each item of `iterable` within the element and the conditions. As
  *   the only argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
  * - `let`, the framework's: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
+ * - `list` and `mapping`, the framework's container constructors: a list display, `[a, b]`, and a dict display,
+ *   `{k: v}`.
  * - `python_import` (`import module` or `import module as alias`) and `python_importfrom` (`from module import name`
  *   or `... as alias`) bind a name within their `body`, which is the rest of the expression; `Text.ToText` writes them
  *   as the lines before it. What they may import is up to the scope that evaluates them (see `Evaluators`).
@@ -55,6 +57,8 @@ export const GENERATOR = "python_generator";
 export const LET = "let";
 export const IMPORT = "python_import";
 export const IMPORTFROM = "python_importfrom";
+export const LIST = "list";
+export const DICT = "mapping";
 
 /** Python's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
 export function install(txn: any): any {
@@ -67,36 +71,42 @@ export function install(txn: any): any {
   const symbols: Record<string, unknown> = { Term: S.OfUnion }; // the framework's union, by its name
   for (const kind of Object.keys(kinds)) symbols[kind] = S.OfObject;
   return txn.uid("mbse.Expressions.Python/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols(symbols)
+    .symbols({
+      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
+      ...symbols })
     .spec([
+      // its dialect: the singleton `Expressions.Python`, a branch of the framework's kind union of dialects
+      (_: any) => _.Dialect.name("Expressions.Python.Dialect").ref(true).singleton("Expressions.Python").adjacencies({
+        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+      (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
+        (t: any) => t.name("python").schema([_.Dialect])]),
       (_: any) => _.Attribute.name("Expressions.Python.Attribute").properties({
-        attr: S.OfStr, value: _.Term, domain: S.OfStr }),
+        attr: S.OfStr, value: _.Term }),
       (_: any) => _.Subscript.name("Expressions.Python.Subscript").properties({
-        key: S.OfStr, value: _.Term, domain: S.OfStr }),
+        key: S.OfStr, value: _.Term }),
       (_: any) => _.Index.name("Expressions.Python.Index").properties({
-        value: _.Term, index: _.Term, domain: S.OfStr }),
+        value: _.Term, index: _.Term }),
       (_: any) => _.Call.name("Expressions.Python.Call").properties({
         function: _.Term,
         arguments: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
-        domain: S.OfStr,
       }),
       ...["Compare", "BoolOp", "BinOp"].map((kind) => (_: any) => _[kind].name(`Expressions.Python.${kind}`).properties({
-        operator: S.OfStr, left: _.Term, right: _.Term, domain: S.OfStr })),
+        operator: S.OfStr, left: _.Term, right: _.Term })),
       (_: any) => _.UnaryOp.name("Expressions.Python.UnaryOp").properties({
-        operator: S.OfStr, operand: _.Term, domain: S.OfStr }),
+        operator: S.OfStr, operand: _.Term }),
       (_: any) => _.IfExp.name("Expressions.Python.IfExp").properties({
-        test: _.Term, body: _.Term, orelse: _.Term, domain: S.OfStr }),
+        test: _.Term, body: _.Term, orelse: _.Term }),
       (_: any) => _.GeneratorExp.name("Expressions.Python.GeneratorExp").properties({
         name: S.OfStr, // bound to each item in the element and the conditions
         iterable: _.Term,
         element: _.Term,
         conditions: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
-        domain: S.OfStr,
       }),
       (_: any) => _.Import.name("Expressions.Python.Import").properties({
-        module: S.OfStr, alias: S.OfStr, body: _.Term, domain: S.OfStr }),
+        module: S.OfStr, alias: S.OfStr, body: _.Term }),
       (_: any) => _.ImportFrom.name("Expressions.Python.ImportFrom").properties({
-        module: S.OfStr, name: S.OfStr, alias: S.OfStr, body: _.Term, domain: S.OfStr }),
+        module: S.OfStr, name: S.OfStr, alias: S.OfStr, body: _.Term }),
       (_: any) => _.Term.name("Expressions.Framework.Term").branches( // branches added: schema extension
         Object.entries(kinds).map(([kind, tag]) => (t: any) => t.name(tag).schema([_[kind]]))),
     ])]))]);
@@ -185,6 +195,8 @@ export const DIALECT = new F.Dialect("Python", {
   [GENERATOR]: new F.Kind(F.QUANTIFIER, { signature: Domains.GENERATOR, required: ["name"],
     check: identifier("name", "a generator's name") }),
   [LET]: new F.Kind(F.BINDING, { required: ["name"], check: identifier("name", "a let's name") }),
+  [LIST]: new F.Kind(F.APPLICATION, { signature: new FD.Opaque() }),
+  [DICT]: new F.Kind(F.APPLICATION, { signature: new FD.Opaque() }),
   [IMPORT]: new F.Kind(F.IMPORT, { required: ["module"], names: importNames, check: importCheck }),
   [IMPORTFROM]: new F.Kind(F.IMPORT, { required: ["module", "name"], names: importfromNames, check: importfromCheck }),
 }, { domain_of: Domains.of, literal: native });
@@ -277,6 +289,18 @@ export function generator(name: string, iterable: unknown, element: unknown, ...
 /** `(lambda name: body)(value)`. */
 export function let_(name: string, value: unknown, body: unknown): Writer {
   return kind(LET, { name }, { value, body });
+}
+
+/** `[elements, ...]`, a list display. */
+export function list_(...elements: unknown[]): Writer {
+  return kind(LIST, {}, {}, ["elements", elements]);
+}
+
+/** `{key: value, ...}`, a dict display: `dict_(["a", 1n], ["b", x])`. */
+export function dict_(...entries: (readonly [unknown, unknown])[]): Writer {
+  const pairs = entries.map(([key, value]) => [spec(key), spec(value)] as const);
+  return new Writer((u: any) => u[DICT]((r: any) => r.entries(pairs.map(([key, value]) =>
+    (a: any) => a.as_object((o: any) => o.key(key).value(value))))));
 }
 
 /** `import module [as alias]`, then `body`. */

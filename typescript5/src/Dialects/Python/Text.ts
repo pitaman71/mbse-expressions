@@ -72,6 +72,11 @@ export function ToText(expression: unknown): string {
     }
     if (kind === P.LET) return [`(lambda ${attributes.get("name")}: ${args[1]?.[0]})(${args[0]?.[0]})`, PRIMARY];
     if (kind === P.IFEXP) return [`${operand(1, OR)} if ${operand(0, OR)} else ${operand(2, IF)}`, IF];
+    if (kind === P.LIST) return [`[${args.map(([text]) => text).join(", ")}]`, PRIMARY];
+    if (kind === P.DICT) {
+      const pairs = args.filter((_, i) => i % 2 === 0).map(([key], i) => `${key}: ${args[2 * i + 1]?.[0]}`);
+      return [`{${pairs.join(", ")}}`, PRIMARY];
+    }
     if (IMPORTS.includes(kind)) throw new Errors.ValueError("an import can only enclose the whole expression");
     const operator = attributes.get("operator") as string;
     if (kind === P.UNARYOP) {

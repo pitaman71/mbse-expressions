@@ -3,9 +3,8 @@
  *
  * `Partials.OfAny(term, variables)` gives the residual of any term with `variables` known, a `Writer` its caller writes
  * where it wants it (in a transaction): the literal of its value when it is all known, otherwise the expression with
- * every known subexpression replaced by the literal of its value (a typed value's literal names its domain, when the
- * domain has a name; an object, a collection, an unknown value or a value of a domain with no name has none, and its
- * subexpression stays). Kleene's logic decides `and`, `or` and `implies` with what is known: a false operand of `and`
+ * every known subexpression replaced by the literal of its value (a native's; an object, a collection or an unknown
+ * value has none, and its subexpression stays). Kleene's logic decides `and`, `or` and `implies` with what is known: a false operand of `and`
  * (a true one of `or`) decides it, a true operand of `and` (a false one of `or`) drops out, and `implies` is true when
  * its condition is false or its conclusion true, and its conclusion when its condition is true. A let of a known value
  * binds it in its body and stays only while the body refers to its name.
@@ -20,12 +19,8 @@ import * as Domains from "./Domains.js";
 import * as Evaluators from "./Evaluators.js";
 import * as Expressions from "./Expressions.js";
 
-/** The literal of a value: a native's, or a typed value's naming its domain; null for anything else. */
+/** The literal of a value: a native's; null for anything else. */
 function literal(value: unknown): unknown {
-  if (value instanceof Domains.Value) {
-    const name = Domains.name_of(value.domain);
-    return name === null ? null : Expressions.literal(value.value, name);
-  }
   return Domains.nativeDomain(value) !== null ? Expressions.literal(value) : null;
 }
 

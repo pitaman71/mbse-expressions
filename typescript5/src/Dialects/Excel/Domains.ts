@@ -5,8 +5,8 @@
  * holds TRUE and FALSE, and `Errors` holds `Error` values such as `#FIELD!`, which formulas compute with rather than
  * throw. A `Record` is what fields are read from: a mapping, or a data object read through mbse-schemas' readers
  * (`Framework.Objects`), as Excel's data types are. `Scalar` is a number, text or logical. An array (a list) holds a
- * container property's values, which `MAP`, `ROWS`, `INDEX`, `MATCH`, `SUM`, `MIN`, `MAX`, `UNIQUE`, `AND` and `OR`
- * read.
+ * container property's values, or what `VSTACK` stacks, which `MAP`, `ROWS`, `INDEX`, `MATCH`, `SUM`, `MIN`, `MAX`,
+ * `UNIQUE`, `AND` and `OR` read.
  */
 
 import { Repr } from "@mbse/schemas/Framework";
@@ -58,8 +58,8 @@ export const Scalar = new D.OfUnion(NumberDomain, Text, Logical);
 const LOGIC = new D.Function([Scalar, Scalar], Logical);
 const ARITHMETIC = new D.Function([Scalar, Scalar], NumberDomain);
 
-/** The worksheet functions: `IF`, `AND`, `OR`, `SUM`, `MIN` and `MAX` take a range of numbers of arguments (see
- * `ARITIES`), the others a fixed number. */
+/** The worksheet functions: `IF`, `AND`, `OR`, `SUM`, `MIN`, `MAX` and `VSTACK` take a range of numbers of arguments
+ * (see `ARITIES`), the others a fixed number. */
 export const FUNCTIONS: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
   ["AND", new D.Opaque(Logical)], ["OR", new D.Opaque(Logical)], ["NOT", new D.Function([Scalar], Logical)],
   ["IF", new D.Opaque()], ["ISERROR", new D.Function([Anything], Logical)],
@@ -67,12 +67,13 @@ export const FUNCTIONS: ReadonlyMap<string, D.Signature> = new Map<string, D.Sig
   ["ROWS", new D.Function([Anything], NumberDomain)], ["INDEX", new D.Function([Anything, Scalar], Anything)],
   ["MATCH", new D.Function([Anything, Anything, Scalar], NumberDomain)], ["ISNUMBER", new D.Function([Anything], Logical)],
   ...["SUM", "MIN", "MAX"].map((name) => [name, new D.Opaque(NumberDomain)] as [string, D.Signature]),
-  ["UNIQUE", new D.Function([Anything], Anything)],
+  ["UNIQUE", new D.Function([Anything], Anything)], ["VSTACK", new D.Opaque()],
 ]);
 
 /** The least and the most arguments of the functions that take a range of numbers of them, as Excel's do. */
 export const ARITIES: ReadonlyMap<string, [number, number]> = new Map<string, [number, number]>([
   ["IF", [2, 3]], ...["AND", "OR", "SUM", "MIN", "MAX"].map((name) => [name, [1, 255]] as [string, [number, number]]),
+  ["VSTACK", [1, 254]],
 ]);
 
 /** What is wrong with a function of `ARITIES` applied to `count` arguments, or null. */

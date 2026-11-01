@@ -51,18 +51,19 @@ function repr(value: unknown): string {
   return String(value);
 }
 
-/** An expression of the Basic dialect as function-call text: a literal as Python writes its value, `int16(3)` when it
- * has a domain, and a conversion with its result's domain, `convert[int16](x)`. */
+/** An expression of the Basic dialect as function-call text: a literal as Python writes its value, a let, a quantifier,
+ * and the container constructors as `[a, b]` and `{k: v}`. */
 export function show(expression: unknown): string {
   return Terms.fold(expression, (term: any, args: string[]) => {
     const form = Terms.form(term);
     const attribute = (key: string): any => form.attributes.get(key);
     const name = attribute("name");
-    const domain = attribute("domain"); // a name: a literal's, or a conversion's result's
-    if (form.kind === "literal") return domain ? `${domain}(${repr(attribute("value"))})` : repr(attribute("value"));
+    if (form.kind === "literal") return repr(attribute("value"));
     if (form.kind === "variable") return name;
     if (form.kind === "let") return `let ${name} = ${args[0]} in ${args[1]}`;
     if (form.kind === "quantifier") return `${attribute("quantifier")}(${args[0]}, ${name} => ${args[1]})`;
-    return `${attribute("callable")}${domain ? `[${domain}]` : ""}(${args.join(", ")})`;
+    if (form.kind === "list") return `[${args.join(", ")}]`;
+    if (form.kind === "mapping") return `{${args.filter((_, i) => i % 2 === 0).map((key, i) => `${key}: ${args[2 * i + 1]}`).join(", ")}}`;
+    return `${attribute("callable")}(${args.join(", ")})`;
   });
 }

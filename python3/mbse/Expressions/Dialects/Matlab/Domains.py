@@ -17,7 +17,7 @@ from mbse.Expressions.Framework import Domains as D, Objects
 from mbse.Expressions.Framework.Domains import Anything
 
 __all__ = ["Double", "Logical", "String", "Struct", "Numeric", "Scalar", "Anything", "BINARY", "UNARY", "CALLS",
-           "FIELD", "INDEX", "ARRAYFUN", "of", "is_struct"]
+           "FIELD", "INDEX", "ARRAYFUN", "CONCATENATION", "of", "is_struct"]
 
 
 def is_struct(value: Any) -> bool:
@@ -71,6 +71,9 @@ class _Iterated(D.Opaque):
 
 ARRAYFUN = _Iterated()
 """`arrayfun(@(name) body, array)`."""
+
+CONCATENATION = D.Opaque()
+"""`[a, b]`: an array of any elements."""
 
 _NATIVES = {bool: Logical, int: Double, float: Double, str: String}
 

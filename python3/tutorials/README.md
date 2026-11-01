@@ -1,7 +1,7 @@
 <!-- nav -->
 [← Why the mbse repositories exist](../../MBSE.md) · [Home](../../README.md) · [1 · Constraints as data →](01_Constraints_As_Data.ipynb)
 
-# Tutorial: constraints as data, in eight case studies
+# Tutorial: constraints as data, in seven case studies
 
 This tutorial teaches mbse-expressions by solving real problems, one per notebook, each building on the ones before
 it. They follow one story: a cold chain, in which vaccine shipments must stay between 2 and 8 °C, and the same
@@ -34,11 +34,17 @@ and `show`, which writes an expression as text (case study 6 explains it).
 | 1 | [Constraints as data](01_Constraints_As_Data.ipynb) | One constraint, four hand-written copies in four languages | Writing a constraint with writers, as an expression in a store; evaluating it; the core vocabulary; validating; saving and loading |
 | 2 | [Answers you can trust](02_Answers_You_Can_Trust.ipynb) | A logger that never reported: neither true nor false | Unknown; `has`; Kleene's logic; deciding what unknown means; no coercion; what raises |
 | 3 | [Constraints over collections](03_Constraints_Over_Collections.ipynb) | Every reading, not just the last; every logger's battery | Collections; `count`, `item`, `max` and friends; quantifiers; empty collections; an object's related objects |
-| 4 | [Values with widths](04_Values_With_Widths.ipynb) | A radio packet of `int16_t` and `uint8_t` fields | Value domains; typed values and literals; inference; overflow; bits; conversions; domains on the wire |
 | 5 | [Deciding what you can now](05_Deciding_What_You_Can_Now.ipynb) | A constraint per product; a question that waits on the clock | Partial evaluation; templates; residuals; how Kleene's logic simplifies; lets of known values |
 | 6 | [Analyzing and rewriting constraints](06_Analyzing_And_Rewriting_Constraints.ipynb) | Which constraints read a property; one way to write each constraint | Forms; `walk`, `fold`, `same` and `free`; rewriting with patterns and holes |
 | 7 | [One constraint, many languages](07_One_Constraint_Many_Languages.ipynb) | The constraint in Excel, Python, MATLAB and LaTeX | Dialects and translators; each language's own evaluation; reading constraints back; scopes as allowlists |
-| 8 | [Constraints for firmware and hardware](08_Constraints_For_Firmware_And_Hardware.ipynb) | The packet constraint in C and SystemVerilog | C's promotions and undefined behavior; sized literals; `x` and `z`; what has no counterpart |
+| 8 | [Constraints for firmware and hardware](08_Constraints_For_Firmware_And_Hardware.ipynb) | A packet constraint in C and SystemVerilog | C's widths, promotions and undefined behavior; `x` and `z`; what has no counterpart |
+
+Case study 4, *Values with widths* (a radio packet of `int16_t` and `uint8_t` fields: typed literals, overflow, bits,
+conversions), is deferred, and the others keep their numbers. A term no longer carries a domain: whatever owns a
+constraint's root gives its schema, and giving each term a domain is type inference, a later capability. Widths,
+overflow, IEEE 754 formats other than binary64, enums and the conversions wait for it (the port's stage 3, Decided, 2,
+in [docs/proposals/port](../../docs/proposals/port/README.md)). Domains themselves are data meanwhile: each dialect
+owns its domains by name, and each one's schema is a named `Schemas.OfAny` of the scalar it narrows.
 
 ---
 

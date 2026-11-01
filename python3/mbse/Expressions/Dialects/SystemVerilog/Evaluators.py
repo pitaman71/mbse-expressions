@@ -3,10 +3,9 @@
 `Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
 `Scope(variables, functions)` and gives a `Domains.Logic` for an
 integral result or a float for a real one. A variable's type is its value's: a `Logic` its own, a bool a `bit`, an int
-an `integer` (or a `longint` beyond 32 bits), a float a `real`, a string a vector of its bytes (in UTF-8), and a Basic
-typed value (`Domains.Value`) of an integer domain a 2-state vector of its width and signedness, of bits a 2-state
-vector, of std_logic a `logic` bit, or a vector of a std_logic_vector's width (U, X, W and - as x, L as 0, H as 1), and
-of a binary IEEE 754 format a `real` or `shortreal`. IEEE 1800's rules apply:
+an `integer` (or a `longint` beyond 32 bits), a float a `real`, and a string a vector of its bytes (in UTF-8) (a value
+carries no domain: a variable of another type waits for type inference, the port's stage 3, Decided, 2). IEEE 1800's
+rules apply:
 
 - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its
@@ -35,7 +34,7 @@ import math
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Dialects.Basic import Domains as BD, Ieee754
+from mbse.Expressions.Dialects.Basic import Ieee754
 from mbse.Expressions.Framework import Errors, Objects, Symbolics as S, Terms as F
 
 from . import Domains, Expressions as X
@@ -64,9 +63,6 @@ class Scope(S.Variables):
         return self.functions[name]
 
 
-_STD_LOGIC = {"0": "0", "1": "1", "Z": "z", "L": "0", "H": "1"}
-
-
 def typed(value: Any) -> Any:
     """A variable's value as SystemVerilog has it: a `Logic`, a float, or an object."""
     if isinstance(value, (Logic, float)):
@@ -81,17 +77,6 @@ def typed(value: Any) -> Any:
     if type(value) is str:  # its bytes, in UTF-8
         data = value.encode()
         return Logic(Domains.vector(8 * max(len(data), 1)), int.from_bytes(data, "big"))
-    if isinstance(value, BD.Value):
-        domain = value.domain
-        if isinstance(domain, BD.OfInteger.Data) and domain.width:
-            return Logic.number(Domains.vector(domain.width, domain.signed, 2), value.value)
-        if isinstance(domain, BD.OfBits.Data):
-            return Logic(Domains.vector(domain.width, False, 2), int.from_bytes(value.value, "big"))
-        if isinstance(domain, BD.OfIeee1164.Data):
-            return Logic.of("".join(_STD_LOGIC.get(state, "x") for state in value.value))
-        if isinstance(domain, BD.OfIeee754.Data) and domain.format in ("binary32", "binary64"):
-            return value.value
-        raise TypeError(f"{domain.name()} has no SystemVerilog type")
     return value
 
 

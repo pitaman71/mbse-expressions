@@ -9,7 +9,8 @@
  * scope makes its dialect's scope from it, so `Evaluators.OfAny(expression, { person: value })` binds `person`.
  *
  * `Interpreter` evaluates a term value by its kind's role (see `Terms`): a literal gives its value (through `literal`,
- * or `typed` when it carries a domain of its own), a reference what the scope resolves, a binding its body in the scope
+ * or `typed` when its kind's attributes give it a domain of its own, as C's type does a constant), a reference what the
+ * scope resolves, a binding its body in the scope
  * with its name bound, and an import its body in the scope it declares. An application calls its operator's
  * implementation from `operations`, with one thunk per argument, so that implementations decide which arguments to
  * evaluate and when, and so does a quantifier, whose second thunk takes an item and evaluates the body with the name
@@ -36,8 +37,8 @@ export type Evaluator = (expression: any, scope?: Scope | Bindings) => any;
 
 /** Evaluates the expressions of `dialect`. `operations` maps each application kind's tag to its implementations by
  * operator name, or, for a kind whose vocabulary is open, to one implementation. `literal` converts a literal's value
- * into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal that carries a domain of
- * its own (without it, evaluating one throws `NotImplementedError`); `scope` makes the dialect's scope from an object
+ * into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal whose kind gives it a
+ * domain of its own (`Kind.typed`; without it, evaluating one throws `NotImplementedError`); `scope` makes the dialect's scope from an object
  * of variables, and `extension(operator, args, node, scope)` evaluates operators outside a kind's vocabulary. */
 export class Interpreter {
   private readonly literal: (value: unknown) => unknown;
@@ -102,6 +103,7 @@ export class Interpreter {
     const implementation = (implementations as ReadonlyMap<string, Implementation>).get(operator);
     if (implementation === undefined) {
       if (this.extension !== null) return this.extension(operator, thunks, node, scope);
+      if (kind.closed) throw new NotImplementedError(`${repr(operator)} is not an operation ${this.dialect.name()} defines`);
       throw new NotImplementedError(`${repr(operator)} is not a core operation`);
     }
     const arity = (kind.vocabulary.get(operator) as { arity(): number }).arity();

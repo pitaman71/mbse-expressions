@@ -18,8 +18,9 @@
  *   `MATCH(x, xs, 0)` is the position of the first element equal to `x` (text ignoring case), else `#N/A`, and supports
  *   exact matching only (another match type is `#VALUE!`); `SUM`, `MIN` and `MAX` take an array's numbers, ignoring its
  *   text and logicals (`MIN` and `MAX` of none are 0), or a value given alone as arithmetic converts it, over all their
- *   arguments; `UNIQUE` gives the distinct elements, the first of each. An error among an array's elements is the
- *   result of these functions but `MAP`, `ROWS`, `INDEX` and `UNIQUE`.
+ *   arguments; `UNIQUE` gives the distinct elements, the first of each; `VSTACK(a, b, ...)` stacks its arguments, an
+ *   array's elements in turn, into one array, errors among them. An error among an array's elements is the result of
+ *   these functions but `MAP`, `ROWS`, `INDEX`, `UNIQUE` and `VSTACK`.
  * - The bit functions (`BITAND`, `BITOR`, `BITXOR`, `BITLSHIFT`, `BITRSHIFT`) convert their arguments as arithmetic
  *   does, and give `#NUM!` for a number that is not an integer from 0 to 2^48 - 1, a shift that is not an integer of
  *   at most 53 either way, and a result beyond 2^48 - 1.
@@ -248,6 +249,11 @@ function map(args: F.Thunk[]): unknown {
   return elements(array).map((element) => body(element));
 }
 
+function vstack(args: F.Thunk[]): unknown[] {
+  counted("VSTACK", args);
+  return args.flatMap((argument) => elements(argument()));
+}
+
 function rows(args: F.Thunk[]): unknown {
   const array = (args[0] as F.Thunk)();
   return isError(array) ? array : elements(array).length;
@@ -361,7 +367,7 @@ export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string
     ["AND", logic("AND", (truths) => truths.every(Boolean))], ["OR", logic("OR", (truths) => truths.some(Boolean))],
     ["NOT", not], ["IF", if_], ["ISERROR", (args) => isError((args[0] as F.Thunk)())],
     ...["BITAND", "BITOR", "BITXOR", "BITLSHIFT", "BITRSHIFT"].map((name) => [name, bit(name)] as [string, F.Implementation]),
-    ["ROWS", rows], ["INDEX", index], ["MATCH", match], ["UNIQUE", unique],
+    ["ROWS", rows], ["INDEX", index], ["MATCH", match], ["UNIQUE", unique], ["VSTACK", vstack],
     ["ISNUMBER", (args) => typeof (args[0] as F.Thunk)() === "number"],
     ["SUM", aggregate("SUM", sum)], ["MIN", aggregate("MIN", extreme((a, b) => a < b))], ["MAX", aggregate("MAX", extreme((a, b) => a > b))],
   ])],

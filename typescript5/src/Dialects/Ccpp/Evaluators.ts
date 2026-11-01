@@ -5,9 +5,9 @@
  * a `new Scope(variables, { functions })`. Values carry their C
  * type while evaluating, and the result is its native: a bigint, a number (a `long double` as its text, as
  * `Basic.Ieee754` writes it), a boolean, a string, or an object. A variable's type is its value's: a boolean is a
- * `bool`, a bigint an `int`, `long` or `unsigned long` as the first that holds it, a number a `double`, and a Basic
- * typed value (`Domains.Value`) of an integer domain of 8, 16, 32 or 64 bits the `<stdint.h>` type of its width and
- * signedness, and of a binary IEEE 754 format `float`, `double` or `long double`. C's rules apply:
+ * `bool`, a bigint an `int`, `long` or `unsigned long` as the first that holds it, and a number a `double` (a value
+ * carries no domain: a variable of another type waits for type inference, the port's stage 3, Decided, 2). C's rules
+ * apply:
  *
  * - The integer promotions and the usual arithmetic conversions decide the type an operator computes in (see
  *   `Domains`); unsigned arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754
@@ -34,7 +34,6 @@ import * as F from "../../Framework/Evaluators.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
-import * as BD from "../Basic/Domains.js";
 import * as Ieee754 from "../Basic/Ieee754.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
@@ -58,15 +57,6 @@ const type = (name: string) => Domains.TYPES.get(name) as CType;
 
 /** A variable's or a member's value, with its type. */
 function typed(value: unknown): Typed {
-  if (value instanceof BD.Value) {
-    const domain: any = value.domain;
-    if (domain instanceof BD.OfInteger.Data && [8n, 16n, 32n, 64n].includes(domain.width as bigint)) {
-      return new Typed(type(`${domain.signed ? "" : "u"}int${domain.width}_t`), value.value);
-    }
-    const formats: Record<string, string> = { binary32: "float", binary64: "double", binary128: "long double" };
-    if (domain instanceof BD.OfIeee754.Data && domain.format in formats) return new Typed(type(formats[domain.format] as string), value.value);
-    throw new TypeError(`${domain.name()} has no C type`);
-  }
   const ctype = Domains.of(value);
   if (ctype instanceof Domains.CType) return new Typed(ctype, value);
   if (typeof value === "bigint") throw new OverflowError(`integer ${value} is too large for any type`);
