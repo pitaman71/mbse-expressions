@@ -301,7 +301,8 @@ Each with both gates at 100% and the corpora regenerated; a stage touching mbse-
 **0.6.0 is released after stage 2**, not after stage 6: asked whether to release before or after stages 3 and 4, the
 user answered "yes release now" (2026-10-29), so the dependents port against the stabilized mbse-schemas sooner.
 Stage 2 brought the tutorials, skill, README and EQUIVALENCE along (stage 2b), so stage 6 is that release; stage 3
-changes how a term names its domain, on the wire too, and is released as 0.7.0. Stage 4's question 3 was built in
+changes how a term names its domain, on the wire too, and is released as 0.7.0 (released 2026-11-01, with
+`FromFunction`'s removal, as the user directed: "proceed with the release now"). Stage 4's question 3 was built in
 stage 2 (`HasRoot` and the adjacency `expression`); what remains of it (an expression's free variables against its
 pattern, its root's domain against its result) is to be scoped with stage 3 or 5.
 
