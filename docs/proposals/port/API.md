@@ -249,7 +249,8 @@ Settled in stage 3 (the proposal's "Stage 3's model", Decided, 1 to 6, and the u
 user's direction of 2026-10-30 on ownership, when the first build left dialects and domains as counted objects: "It's
 not hard to add an ownership path to the schema", and "ah, schema *extension* is the preferred form", to refinement;
 domains owned by their dialect through `Defines(dialect, name, domain)` is the user's Decided, 4. Each dialect a
-singleton by name was the coordinating agent's proposal, built on that direction, and awaits the user's confirmation):
+singleton by name was the coordinating agent's proposal, built on that direction, which the user confirmed (2026-11-01):
+"yes, each dialect has a singleton by name"):
 
 16. **A dialect is a singleton of its own schema, a branch of the kind union `Expressions.Framework.Dialect`.** The
     coordinating agent's proposal was a reference object schema `Expressions.Framework.Dialect` of which each dialect
