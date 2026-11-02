@@ -55,7 +55,9 @@ Decided; quoted as written):
   Cpp17, cpp20, cpp23" (tentative; C17 adds no syntax over C11). "yes keep verilog as a subset of systemverilog,
   presuming that is how the standards are partitioned" (it is: IEEE 1800-2009 merged IEEE 1364).
 - **Each dialect its own holder.** Asked whether each dialect has its own expression holder or the framework's one
-  restricted to it, the user answered "3.", naming `mbse-expressions.Dialects.<lang_ver>.Expression`.
+  restricted to it, the user answered "3.", naming `mbse-expressions.Dialects.<lang_ver>.Expression`. *Superseded*
+  (2026-11-02): `Expressions.<Dialect>.Expression` is the dialect's union of its kinds, the holder the framework's
+  (Decided, below, "1. Names, and 4's holder").
 - **Terms are values.** "Expression terms are value objects. An instance of OfSchemas.Expression holds the expression
   root." Files, scopes and statements are owned reference objects, in mbse-programs.
 - **A native parser.** "`mbse-programs` typically uses a "native parser" or "tree walker" that conforms to and tracks
@@ -81,7 +83,22 @@ schema", type inference deferred. And the standing rules: "Never guess the schem
 
 As the user decided (2026-11-02), on the questions below:
 
-- **1. Names**: not answered separately; recommended (a), tags naming the module that defines the kind.
+- **1. Names, and 4's holder: a union of dialects' unions** (2026-11-02). Asked about branch tags ("I don't
+  understand the `python_` prefix"; "I don't know that we need `Expressions.Framework.Term`"; "or the slots can use
+  `Expressions.Framework.Expression`"), the user: "OK if instead we keep `Expressions.Framework.Term`, that can be a
+  union of `Expressions.Dialects.<lang_ver>.Expression` which is itself a union." Shown the consequences, "yes":
+  `Expressions.Framework.Term` is a union whose branches are the dialects (`python3`, `typescript5`, `c`, `cpp`,
+  `systemverilog`, `patterns`, `matlab`, `excel`, `latex`), each branch's schema that dialect's union of its kinds,
+  `Expressions.<Dialect>.Expression`, whose branches are named plainly (`binop`, `compare`): no `<dialect>_` prefix,
+  each name unique where it is defined. A dialect's own kinds name its union in their term slots, so its terms nest
+  only its terms by schema; the framework's shared kinds (`literal`, `variable`, `let`, `call`, `list`, `mapping`) name
+  `Expressions.Framework.Term`, holding any dialect's term, constraints deciding what is allowed, and each dialect's
+  union lists the shared kinds it reuses among its branches. Where `Framework.Term` is held, a term is written with its
+  dialect, then its kind, as a restricted `OfAny` is (mbse-basis CAP-069). The holder stays the framework's:
+  `Expressions.Framework.Expression`, a reference object whose `root` holds a `Framework.Term`, linked by `HasRoot` as
+  today; `Expressions.<Dialect>.Expression` is the dialect's union, not a holder. Tried against mbse-schemas 0.26.5: a
+  union whose branches are unions validates, builds and round-trips through a snapshot. This supersedes question 1's
+  prefixed tags and question 4's per-dialect holder (its options (a) to (c)).
 - **2. Whose kinds**: "yes to both": mbse-programs' kinds, names and shapes, ours narrower replaced; what has no
   counterpart in the grammar kept, marked as an extension; concrete syntax kept, so source prints back as written.
 - **3. C and C++ by standard**: "it sounds like having 6 different dialects is overkill. what would you recommend?"
