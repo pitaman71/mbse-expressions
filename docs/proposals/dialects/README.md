@@ -104,6 +104,14 @@ As the user decided (2026-11-02), on the questions below:
 - **8. Evaluation**: "agreed we can keep a shallow evalluator in mbse-expressions": new kinds refused by evaluation by
   name; what is evaluated today keeps working.
 - **9. The other dialects and the translators**: "yes".
+- **Python's subscript is a tensor's** (2026-11-02): "For python, subscript must support any datatype that tensors
+  might use." Proposed, for the user's review: one `subscript` kind (`value`, `slice`, its index any term), with
+  `Slice` (`lower`, `upper`, `step`, each optional) and `Tuple` for several dimensions, as `ast` has them, replacing
+  `subscript` and `index`; so integers (negative too), slices, tuples of them, `...`, `None` (a new axis), boolean
+  masks, integer arrays and starred indices (3.11) are each an index. `None`, `...` and complex numbers (`1j`) are not
+  among the five basic scalars `literal` holds ("yes restrict `literal` to scalars"): `Python3` defines a constant kind
+  of its own for them, as a dialect does where a shape differs. Modeled, validated and printed; evaluating tensor
+  indexing is left to a later evaluator.
 - **Basic is renamed Patterns; a quantifier takes a pattern** (2026-11-02): "former `Expressions.Dialects.Basic` should
   be renamed `Expressions.Dialects.Patterns`. Any quantiier should take a Schemas.OfPattern as its sole argument." (As
   first written, "a Schemas.OfPredicate"; asked, since mbse-schemas has none since the store overhaul's 4d, the user
