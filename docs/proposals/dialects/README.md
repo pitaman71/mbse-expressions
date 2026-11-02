@@ -52,7 +52,7 @@ Decided; quoted as written):
 - **By major version.** "language dialects each of which supports a major version of a target language and all of
   the minor versions in it, such as Python3 or Typescript5. This means each language dialect must correctly handle
   the closure of syntaxes across minor versions such as 3.11 - 3.14." C and C++ by standard: "Maybe C11, C17, C23
-  Cpp17, cpp20, cpp23" (tentative; C17 adds no syntax over C11). "yes keep verilog as a subset of systemverilog,
+  Cpp17, cpp20, cpp23" (tentative; C17 adds no syntax over C11; *superseded*: `C` and `Cpp`, Decided, 3, below). "yes keep verilog as a subset of systemverilog,
   presuming that is how the standards are partitioned" (it is: IEEE 1800-2009 merged IEEE 1364).
 - **Each dialect its own holder.** Asked whether each dialect has its own expression holder or the framework's one
   restricted to it, the user answered "3.", naming `mbse-expressions.Dialects.<lang_ver>.Expression`. *Superseded*
@@ -66,7 +66,8 @@ Decided; quoted as written):
 - **Its stage 1**, as mbse-programs' proposal draws it: each dialect "covers its language's whole expression syntax
   across its minor versions and has its own `Expression` holder (`Expressions.<Dialect>.Expression`) ... Evaluation may
   stay partial; the model, parsing and printing are complete. Proposed for the user's review in mbse-expressions' own
-  proposal before it is built."
+  proposal before it is built." (*Superseded* there: the holder is the framework's, Decided, 1, below; parsing is
+  mbse-programs', Decided, 6.)
 
 This repository's ([the port](../port/README.md#decided) and [its API](../port/API.md)): terms are one nested value
 held by an `Expressions.Framework.Expression`, linked from a schema by `HasRoot`; "refinement has been superseded by
@@ -122,12 +123,12 @@ As the user decided (2026-11-02), on the questions below:
   name; what is evaluated today keeps working.
 - **9. The other dialects and the translators**: "yes".
 - **Python's subscript is a tensor's** (2026-11-02): "For python, subscript must support any datatype that tensors
-  might use." Proposed, for the user's review: one `subscript` kind (`value`, `slice`, its index any term), with
+  might use." Proposed, and confirmed ("I think your subscript interpretation is fine."): one `subscript` kind (`value`, `slice`, its index any term), with
   `Slice` (`lower`, `upper`, `step`, each optional) and `Tuple` for several dimensions, as `ast` has them, replacing
   `subscript` and `index`; so integers (negative too), slices, tuples of them, `...`, `None` (a new axis), boolean
-  masks, integer arrays and starred indices (3.11) are each an index. `None`, `...` and complex numbers (`1j`) are not
-  among the five basic scalars `literal` holds ("yes restrict `literal` to scalars"): `Python3` defines a constant kind
-  of its own for them, as a dialect does where a shape differs. Modeled, validated and printed; evaluating tensor
+  masks, integer arrays and starred indices (3.11) are each an index. `None`, `...` and complex numbers (`1j`) have no
+  schema in mbse-schemas, so no literal holds them, whatever it holds (a literal holds any value, below): `Python3`
+  defines a constant kind of its own for them, as a dialect does where a shape differs. Modeled, validated and printed; evaluating tensor
   indexing is left to a later evaluator.
 - **A literal holds any value** (2026-11-02): told that "the five basic scalars" was the agent's gloss of "yes restrict
   `literal` to scalars" (2026-10-30, the port's stage 3 Decided, 3), the user: "I don't think that rule about "literal
@@ -150,14 +151,14 @@ As the user decided (2026-11-02), on the questions below:
 - **Basic is renamed Patterns; a quantifier takes a pattern** (2026-11-02): "former `Expressions.Dialects.Basic` should
   be renamed `Expressions.Dialects.Patterns`. Any quantiier should take a Schemas.OfPattern as its sole argument." (As
   first written, "a Schemas.OfPredicate"; asked, since mbse-schemas has none since the store overhaul's 4d, the user
-  corrected it to `Schemas.OfPattern`.) Proposed reading, for the user's review: the pattern's symbols and variables
+  corrected it to `Schemas.OfPattern`.) Proposed reading, confirmed ("Yes", below): the pattern's symbols and variables
   are what the quantifier binds, its `spec` what it ranges over (in place of a collection), its `requires` what it
   tests (in place of a body); `all` holds when every frame the spec matches meets `requires`, `any` when one does,
   `count` is how many do.
   To the proposed reading: "Yes, patterns need to be enabled to bind container expressions. I think we need a
   `contains(var, path.to.container)` expression that can be used with variables in a pattern. Better even still if
-  the path expression itself can contain variable and symbol references." Proposed, for the user's review: `contains`
-  a kind of the Patterns dialect, its first argument a pattern variable, its second a path term (`get` and `item`
+  the path expression itself can contain variable and symbol references." First proposed (*superseded* by the visitor
+  method, below): `contains` a kind of the Patterns dialect, its first argument a pattern variable, its second a path term (`get` and `item`
   applied to the pattern's symbols and variables, which a term names as it names any variable); in a pattern it binds
   the variable to each element of the container, the frame fanning out into one frame per element, as the "spread"
   case decided 2026-10-28 has it for a variable over a finite domain (question 7 of the port: "(b) is in the plan"). Asked whether it belongs in a pattern's `spec` or its `requires`: "yes, in a spec. Maybe 'contains' is a visitor
