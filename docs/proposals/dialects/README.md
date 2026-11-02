@@ -85,7 +85,12 @@ As the user decided (2026-11-02), on the questions below:
 - **2. Whose kinds**: "yes to both": mbse-programs' kinds, names and shapes, ours narrower replaced; what has no
   counterpart in the grammar kept, marked as an extension; concrete syntax kept, so source prints back as written.
 - **3. C and C++ by standard**: "it sounds like having 6 different dialects is overkill. what would you recommend?"
-  (answered below, for the user's decision).
+  Recommended: two dialects, `C` and `Cpp`, each covering every standard of its language (C11 to C23, C++17 to C++23),
+  each kind recording as data the standards that have it, as mbse-programs' standards do (`SINCE`) and as
+  `SystemVerilog` records Verilog; separate, since C++ is not a superset of C; one union each, so that no union is
+  completed by extension; whether a construct is in a standard a constraint, as decision 4 has validation. The user:
+  "yes". The dialects are then `Python3`, `TypeScript5`, `C`, `Cpp` and `SystemVerilog`, one rule for all: a dialect
+  per language and major version, covering its minor versions or standards.
 - **4. Each dialect's own `Expression`**: "validation will be by constraints not by schema": the framework's kinds
   with term slots (`let`, `call`, `list`, `mapping`) stay shared, as decided 2026-10-30, their slots any dialect's
   term; that a dialect's expression holds only its own terms is a constraint, not the schema's closure. Option (ii).
