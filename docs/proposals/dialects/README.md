@@ -132,7 +132,11 @@ As the user decided (2026-11-02), on the questions below:
   a kind of the Patterns dialect, its first argument a pattern variable, its second a path term (`get` and `item`
   applied to the pattern's symbols and variables, which a term names as it names any variable); in a pattern it binds
   the variable to each element of the container, the frame fanning out into one frame per element, as the "spread"
-  case decided 2026-10-28 has it for a variable over a finite domain (question 7 of the port: "(b) is in the plan").
+  case decided 2026-10-28 has it for a variable over a finite domain (question 7 of the port: "(b) is in the plan"). Asked whether it belongs in a pattern's `spec` or its `requires`: "yes, in a spec. Maybe 'contains' is a visitor
+  method." So, tentatively: `contains` is a method of mbse-schemas' container visitor, called within a spec written in
+  the builders' fluent syntax over the pattern's symbols and variables (`_.shipment.readings.contains(_.c)`, its path the
+  spec's own), recorded by the spec and fanned out by the executor; not a term kind of the Patterns dialect. Work for
+  mbse-schemas (patterns and specs, containers), its execution waiting on the parked map and reduce.
 
 ## Questions for the user
 
