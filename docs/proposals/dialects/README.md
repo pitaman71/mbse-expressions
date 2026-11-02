@@ -104,10 +104,13 @@ As the user decided (2026-11-02), on the questions below:
 - **8. Evaluation**: "agreed we can keep a shallow evalluator in mbse-expressions": new kinds refused by evaluation by
   name; what is evaluated today keeps working.
 - **9. The other dialects and the translators**: "yes".
-- **Basic is renamed Patterns** (2026-11-02): "former `Expressions.Dialects.Basic` should be renamed
-  `Expressions.Dialects.Patterns`. Any quantiier should take a Schemas.OfPredicate as its sole argument." The rename
-  is decided; the quantifier's argument is asked of the user, since mbse-schemas has no `Schemas.OfPredicate` (it went
-  in the store overhaul's 4d, replaced by `Schemas.OfPattern`).
+- **Basic is renamed Patterns; a quantifier takes a pattern** (2026-11-02): "former `Expressions.Dialects.Basic` should
+  be renamed `Expressions.Dialects.Patterns`. Any quantiier should take a Schemas.OfPattern as its sole argument." (As
+  first written, "a Schemas.OfPredicate"; asked, since mbse-schemas has none since the store overhaul's 4d, the user
+  corrected it to `Schemas.OfPattern`.) Proposed reading, for the user's review: the pattern's symbols and variables
+  are what the quantifier binds, its `spec` what it ranges over (in place of a collection), its `requires` what it
+  tests (in place of a body); `all` holds when every frame the spec matches meets `requires`, `any` when one does,
+  `count` is how many do.
 
 ## Questions for the user
 
