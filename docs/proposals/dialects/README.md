@@ -136,7 +136,10 @@ As the user decided (2026-11-02), on the questions below:
   method." So, tentatively: `contains` is a method of mbse-schemas' container visitor, called within a spec written in
   the builders' fluent syntax over the pattern's symbols and variables (`_.shipment.readings.contains(_.c)`, its path the
   spec's own), recorded by the spec and fanned out by the executor; not a term kind of the Patterns dialect. Work for
-  mbse-schemas (patterns and specs, containers), its execution waiting on the parked map and reduce.
+  mbse-schemas (patterns and specs, containers), its execution waiting on the parked map and reduce. Then: "Maybe
+  'contains' is a method on `Visitors.OfContainer` *and* `Visitors.OfAdjacency`": over an adjacency, it ranges over
+  the object's entries (as Basic's `entries(c, 'phones')` does today). Open, for the user: what it binds there, the
+  entry (a value, its links and properties) to a variable, or the object at its other end to a symbol.
 
 ## Questions for the user
 
