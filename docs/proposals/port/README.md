@@ -210,8 +210,10 @@ As the user decided (2026-10-30), reviewing a first draft that made domains obje
    translators' conversions of typed literals; tutorial 4, the corpus's `domains` case and DOM's width cases go until
    then.
 3. **Terms hold values.** "terms are not restricted to scalars. Terms can have any value (Schemas.OfAny)"; then "yes
-   restrict `literal` to scalars, but also provide container constructors as terms". A `literal` stays an `OfAny` of
-   the five basic scalars; new kinds construct containers from terms.
+   restrict `literal` to scalars, but also provide container constructors as terms". A `literal` stayed an `OfAny` of
+   the five basic scalars (the agent's gloss of "scalars"); new kinds construct containers from terms. *Superseded*
+   (2026-11-02): a literal holds any value, the restriction dropped as the user decided (the
+   [complete-dialects proposal](../dialects/README.md#decided), Decided).
 4. **Expressions deal in values.** "CORRECTION: 'expressions only deal in scalars' -> 'expressions only deal in
    values'" (Schema extension, Decided, 13).
 5. **Every domain a schema.** "(i) can we make every domain a schema too?" (asked; proposed below, A).
