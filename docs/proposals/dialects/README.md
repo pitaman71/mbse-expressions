@@ -136,6 +136,17 @@ As the user decided (2026-11-02), on the questions below:
   (scalars, containers, value objects), superseding the restriction to scalars; a container may then be written as a
   literal or by a constructor (`list`, `mapping`). `Python3` defines a constant kind of its own for what mbse-schemas has
   no schema for (`None`, `...`, complex numbers). Its own capability item in mbse-basis.
+- **A literal is a domain representation** (2026-11-02): asked whether a literal keeps its spelling beside its value
+  (the proposal's question 2, "to settle in stage 2"), the user: "See PRI-023" (mbse-basis
+  [PRI-023: domain representations](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-023): "A domain representation carries
+  three things at once: unvalidated data, usually in string form; a validation indicator for each possible validation
+  error; and encoded properties"). Proposed, and confirmed ("it does"): a `literal` holds `text`, its source spelling,
+  unvalidated, filled by parsers and kept where it does not parse (`0x10`, `r'\n'`, `8'hFF`); `problems`, a
+  validation indicator for each possible error (an invalid digit, a value out of range, an unterminated string); and
+  `value`, the encoded value (any value), absent where the text is invalid. A dialect's literal adds the other
+  properties its text encodes (a base, digit separators, a string's prefix and quotes, C's `u` and `f` suffixes, which
+  keep a C literal's suffix until domains give it meaning). A literal written in code has a `value` and no `text`, and
+  printers write a default spelling. Whitespace and comments between tokens are not a literal's.
 - **Basic is renamed Patterns; a quantifier takes a pattern** (2026-11-02): "former `Expressions.Dialects.Basic` should
   be renamed `Expressions.Dialects.Patterns`. Any quantiier should take a Schemas.OfPattern as its sole argument." (As
   first written, "a Schemas.OfPredicate"; asked, since mbse-schemas has none since the store overhaul's 4d, the user
