@@ -77,6 +77,29 @@ schema", type inference deferred. And the standing rules: "Never guess the schem
 [PRI-012: model published standards](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-012) and
 [PRI-002: preserve, don't lose](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-002).
 
+## Decided
+
+As the user decided (2026-11-02), on the questions below:
+
+- **1. Names**: not answered separately; recommended (a), tags naming the module that defines the kind.
+- **2. Whose kinds**: "yes to both": mbse-programs' kinds, names and shapes, ours narrower replaced; what has no
+  counterpart in the grammar kept, marked as an extension; concrete syntax kept, so source prints back as written.
+- **3. C and C++ by standard**: "it sounds like having 6 different dialects is overkill. what would you recommend?"
+  (answered below, for the user's decision).
+- **4. Each dialect's own `Expression`**: "validation will be by constraints not by schema": the framework's kinds
+  with term slots (`let`, `call`, `list`, `mapping`) stay shared, as decided 2026-10-30, their slots any dialect's
+  term; that a dialect's expression holds only its own terms is a constraint, not the schema's closure. Option (ii).
+- **5. What "completely cover the AST" includes**: "(i)": a body (a function's, an arrow's, a lambda's) is not part
+  of the term; mbse-programs relates its statements to what holds the expression. Sublanguages an expression holds
+  (types, patterns, JSX, SystemVerilog's sequences and properties) are the dialect's, as recommended (a).
+- **6. Where text is read**: "yes fix that phrase": (b), the model and printers here, the parsers mbse-programs';
+  mbse-programs' stage 1 no longer says "parsing ... complete".
+- **7. Invalid syntax**: "agreed": `error` and `missing`, framework kinds, modeled now, written later by parsers that
+  keep them.
+- **8. Evaluation**: "agreed we can keep a shallow evalluator in mbse-expressions": new kinds refused by evaluation by
+  name; what is evaluated today keeps working.
+- **9. The other dialects and the translators**: "yes".
+
 ## Questions for the user
 
 1. **Names.** Proposed: the module, schemas and singleton renamed by dialect (`Python` to `Python3`,
