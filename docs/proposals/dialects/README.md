@@ -111,6 +111,13 @@ As the user decided (2026-11-02), on the questions below:
   are what the quantifier binds, its `spec` what it ranges over (in place of a collection), its `requires` what it
   tests (in place of a body); `all` holds when every frame the spec matches meets `requires`, `any` when one does,
   `count` is how many do.
+  To the proposed reading: "Yes, patterns need to be enabled to bind container expressions. I think we need a
+  `contains(var, path.to.container)` expression that can be used with variables in a pattern. Better even still if
+  the path expression itself can contain variable and symbol references." Proposed, for the user's review: `contains`
+  a kind of the Patterns dialect, its first argument a pattern variable, its second a path term (`get` and `item`
+  applied to the pattern's symbols and variables, which a term names as it names any variable); in a pattern it binds
+  the variable to each element of the container, the frame fanning out into one frame per element, as the "spread"
+  case decided 2026-10-28 has it for a variable over a finite domain (question 7 of the port: "(b) is in the plan").
 
 ## Questions for the user
 
