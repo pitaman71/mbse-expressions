@@ -112,6 +112,13 @@ As the user decided (2026-11-02), on the questions below:
   among the five basic scalars `literal` holds ("yes restrict `literal` to scalars"): `Python3` defines a constant kind
   of its own for them, as a dialect does where a shape differs. Modeled, validated and printed; evaluating tensor
   indexing is left to a later evaluator.
+- **A literal holds any value** (2026-11-02): told that "the five basic scalars" was the agent's gloss of "yes restrict
+  `literal` to scalars" (2026-10-30, the port's stage 3 Decided, 3), the user: "I don't think that rule about "literal
+  is restricted to the five basic scalars" is useful. May have been a hallucination or exaggeration." Then, to the
+  recommendation, "Yes. This merits its own CAP item too": a `literal`'s `value` is an unrestricted `Schemas.OfAny`
+  (scalars, containers, value objects), superseding the restriction to scalars; a container may then be written as a
+  literal or by a constructor (`list`, `mapping`). `Python3` defines a constant kind of its own for what mbse-schemas has
+  no schema for (`None`, `...`, complex numbers). Its own capability item in mbse-basis.
 - **Basic is renamed Patterns; a quantifier takes a pattern** (2026-11-02): "former `Expressions.Dialects.Basic` should
   be renamed `Expressions.Dialects.Patterns`. Any quantiier should take a Schemas.OfPattern as its sole argument." (As
   first written, "a Schemas.OfPredicate"; asked, since mbse-schemas has none since the store overhaul's 4d, the user
