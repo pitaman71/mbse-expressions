@@ -104,6 +104,6 @@ check(Evaluators.OfAny(written(card.reach.has("phone")), { card: ada_card }) ===
 
 | Topic | Read |
 |---|---|
-| The Python tutorial's eight case studies, built with writers | [typescript5/tutorials/](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tutorials/README.md) |
+| The tutorial's seven case studies, in TypeScript, built with writers | [typescript5/tutorials/](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tutorials/README.md) |
 | Where the languages deliberately differ, and why | [EQUIVALENCE.md, Deliberate differences](https://github.com/pitaman71/mbse-expressions/blob/main/docs/EQUIVALENCE.md#deliberate-differences) |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tests/TestPlan.md) |

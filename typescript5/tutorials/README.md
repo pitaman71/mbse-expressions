@@ -55,9 +55,10 @@ expressions, with the framework's and every dialect's kinds installed, and `show
 | 7 | [One constraint, many languages](07_One_Constraint_Many_Languages.ipynb) | The constraint in Excel, Python, MATLAB and LaTeX | Dialects and translators; each language's own evaluation; reading constraints back; scopes as allowlists |
 | 8 | [Constraints for firmware and hardware](08_Constraints_For_Firmware_And_Hardware.ipynb) | A packet constraint in C and SystemVerilog | C's widths, promotions and undefined behavior; `x` and `z`; what has no counterpart |
 
-Case study 4, *Values with widths* (a radio packet of `int16_t` and `uint8_t` fields: typed literals, overflow, bits,
+Case study 4, *Values with widths* (a radio packet's `int16_t` and `uint8_t` members: typed literals, overflow, bits,
 conversions), is deferred, and the others keep their numbers. A term no longer carries a domain: whatever owns a
-constraint's root gives its schema, and giving each term a domain is type inference, a later capability. Widths,
+constraint's root gives its schema, and giving each term a domain, domain inference, is a later capability
+([CAP-232: domains inferred for terms](../../../mbse-basis/docs/capabilities/CAP-232.md)). Widths,
 overflow, IEEE 754 formats other than binary64, enums and the conversions wait for it (the port's stage 3, Decided, 2,
 in [docs/proposals/port](../../docs/proposals/port/README.md)). Domains themselves are data meanwhile: each dialect
 owns its domains by name, and each one's schema is a named `Schemas.OfAny` of the scalar it narrows.

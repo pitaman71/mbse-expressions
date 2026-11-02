@@ -127,10 +127,11 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 
 ## Traps
 
-- `1 == 1.0` is unknown in Basic, and `True` is not an `int`. Write literals of the type the data has.
+- `1 == 1.0` is unknown in Basic, and `True` is not an `int`. Write literals of the kind of value the data's schema has.
 - `x.email` is `get`, unknown when absent; whether it is present is `x.has("email")`.
 - Evaluating an operation Basic does not define raises `NotImplementedError`: validate first. Widths, overflow and the
-  conversions wait for type inference: a term carries no domain.
+  conversions wait for domain inference ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)):
+  a term carries no domain.
 - Each mbse-schemas store has its own schemas: run each install once per store, and an install and what uses it in
   separate transactions. Transactions do not nest: build what a writer needs (a translation's source term, say) before
   opening the one that writes it.

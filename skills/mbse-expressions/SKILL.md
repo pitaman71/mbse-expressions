@@ -40,10 +40,13 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
    `ge(get(person, 'age'), 18)` where it is given: an expression's `root`, in a store, within a transaction. Evaluate
    it with a dialect's `Evaluators.OfAny(expression, scope)`.
 2. **Basic is three-valued and never coerces.** An absent property is unknown (`None`/`null`), and `and`/`or` follow
-   Kleene. `1 == 1.0` is unknown, since int and float are different types; in TypeScript, an int is a `bigint` (`18n`).
+   Kleene. `1 == 1.0` is unknown, since an int and a float are different kinds of value; in TypeScript, an int is a
+   `bigint` (`18n`). See
+   [CAP-106: expressions evaluated three-valued](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-106.md#evaluation-in-mbse-expressions).
 3. **Only the operations a dialect defines are calls of it.** Basic's are its data (`Expressions.Basic.add`, ...);
    `validate` refuses a call to any other ("'contains' is not an operation Basic defines"), and evaluating one raises.
-   A term carries no domain: values are taken by the schemas they are written with, ints unbounded and floats binary64.
+   A term carries no domain: values are taken by the schemas they are written with, ints unbounded and floats binary64,
+   until domain inference ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)).
 4. **Each dialect evaluates by its own language's rules.** A translation keeps a constraint's form, not always its
    value: a missing property is unknown in Basic, `#FIELD!` in Excel, and an error in Python and MATLAB.
 5. **Nothing is imported or called unless the scope provides it.** Python modules, MATLAB packages and Excel add-ins
@@ -65,7 +68,7 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 
 Deeper material: mbse-basis
 [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md)
-holds the design, with its capabilities: every decision and the open questions. In the repository, eight tutorial
+holds the design, with its capabilities: every decision and the open questions. In the repository, seven tutorial
 case studies (`python3/tutorials/`, `typescript5/tutorials/`) teach it from a first constraint to C and
 SystemVerilog. Links use `https://github.com/pitaman71/mbse-expressions/blob/main/<path>`; in a
 checkout, `<path>` is relative to the repository root.
