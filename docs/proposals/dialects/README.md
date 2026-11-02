@@ -138,8 +138,12 @@ As the user decided (2026-11-02), on the questions below:
   spec's own), recorded by the spec and fanned out by the executor; not a term kind of the Patterns dialect. Work for
   mbse-schemas (patterns and specs, containers), its execution waiting on the parked map and reduce. Then: "Maybe
   'contains' is a method on `Visitors.OfContainer` *and* `Visitors.OfAdjacency`": over an adjacency, it ranges over
-  the object's entries (as Basic's `entries(c, 'phones')` does today). Open, for the user: what it binds there, the
-  entry (a value, its links and properties) to a variable, or the object at its other end to a symbol.
+  the object's entries (as Basic's `entries(c, 'phones')` does today). Asked what it binds there, the user: "in a
+  container, `contains` can only be called with a value or variable of compatible schema / in an adjacency,
+  `contains` can only be called with a symbol or builder of compatible schema". So a container's `contains` takes a
+  value (the container must hold it) or a variable (bound to each element), whose schema is compatible with the
+  element's; an adjacency's takes a symbol (bound to each object at the other end) or a builder (an object the spec
+  writes there), whose schema is compatible with that end's.
 
 ## Questions for the user
 
