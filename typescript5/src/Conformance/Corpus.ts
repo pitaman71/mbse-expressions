@@ -6,7 +6,8 @@
  * dialect's, written nested. `DIALECTS` names the dialect that reads each case other than Patterns'. The `domains` case
  * is data: Patterns' dialect, the singleton `Expressions.Patterns` (`Expressions.Patterns.Dialect`), naming its
  * operations and owning its domains by name, a packed one among them, written as one document. The `invalid` case is a
- * Python3 term holding invalid syntax and literals with their spelling. Each implementation writes its
+ * Python3 term holding invalid syntax and literals with their spelling; the `typescript5` case a TypeScript5 term of every
+ * kind, written through the builders. Each implementation writes its
  * snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
  * implementation's files (see the CONF test suite). Keep record module and `python3/mbse/Expressions/Conformance/Corpus.py`
  * in lockstep: same cases, same values, same order of statements.
@@ -25,20 +26,23 @@ import * as Expressions from "../Dialects/Patterns/Expressions.js";
 import * as Patterns from "../Dialects/Patterns/index.js";
 import * as Python3 from "../Dialects/Python3/index.js";
 import * as SystemVerilog from "../Dialects/SystemVerilog/index.js";
+import * as TypeScript5 from "../Dialects/TypeScript5/index.js";
 import * as Framework from "../Framework/index.js";
 import type * as Terms from "../Framework/Terms.js";
 
 const [CE, CPP, X, L, M, P] = [C.Expressions, Cpp.Expressions, Excel.Expressions, Latex.Expressions, Matlab.Expressions,
   Python3.Expressions];
 const SV = SystemVerilog.Expressions;
+const TS = TypeScript5.Expressions;
 
 export const CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp",
-  "systemverilog", "invalid"] as const;
+  "systemverilog", "typescript5", "invalid"] as const;
 
 /** The dialect that reads each case, where it is not Patterns. */
 export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
   ["python3", P.DIALECT], ["matlab", M.DIALECT], ["excel", X.DIALECT], ["latex", L.DIALECT], ["c", CE.DIALECT],
-  ["cpp", CPP.DIALECT], ["systemverilog", SV.DIALECT], ["invalid", P.DIALECT],
+  ["cpp", CPP.DIALECT], ["systemverilog", SV.DIALECT], ["typescript5", TS.DIALECT],
+  ["invalid", P.DIALECT],
 ]);
 
 /** A case: its root schema, its root term, and the store it is built in. */
@@ -56,6 +60,7 @@ export function build(): Map<string, Case> {
   store.transaction(C.install);
   store.transaction(Cpp.install);
   store.transaction(SystemVerilog.install);
+  store.transaction(TypeScript5.install);
   const defined = store.transaction(Patterns.define)[0]; // Patterns' dialect, its operations and its domains
 
   // --- domains: Patterns' dialect, its operations by name and its domains, owned by name; an enum and a domain packing it
@@ -144,6 +149,82 @@ export function build(): Map<string, Case> {
     sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
       sv.cast(4n, sv.vector("11111111", true, "h")))));
 
+  // --- typescript5: every kind, its types, patterns and JSX, written through the builders (TypeScript5 has no writers), a
+  // literal with its spelling and a shared identifier ---
+  const tsRecord = (u: any) => u.identifier((r: any) => r.name("record")); // TypeScript5's `tsRecord`, in any union that has identifiers
+  const typescript5 = (u: any) => u.sequenceexpression((s: any) => s.expressions([ // written through the builders
+      (e: any) => e.parenthesizedexpression((r: any) => r.expression((x: any) => x.assignmentexpression((a: any) => a  // ({ a: [b, , ...c], d: { tsRecord }, f = 1 } = tsRecord)
+          .left((t: any) => t.objectpattern((o: any) => o.properties([
+              (p: any) => p.property((q: any) => q.propertyKind("init").key((k: any) => k.identifier((i: any) => i.name("a"))).value(
+                  (v: any) => v.arraypattern((ap: any) => ap.elements([(y: any) => y.identifier((i: any) => i.name("b")), (y: any) => y.elision((h: any) => h),
+                                                                    (y: any) => y.restelement((z: any) => z.argument((g: any) => g.identifier((i: any) => i.name("c"))))])))),
+              (p: any) => p.property((q: any) => q.propertyKind("init").key((k: any) => k.identifier((i: any) => i.name("d"))).value(
+                  (v: any) => v.objectpattern((op: any) => op.properties([(y: any) => y.property((z: any) => z.propertyKind("init").key(tsRecord).shorthand(true).value(tsRecord))])))),
+              (p: any) => p.property((q: any) => q.propertyKind("init").key((k: any) => k.identifier((i: any) => i.name("f"))).shorthand(true).value(
+                  (v: any) => v.assignmentpattern((ap: any) => ap.left((g: any) => g.identifier((i: any) => i.name("f"))).right(
+                      (g: any) => g.literal((li: any) => li.value((n: any) => n.as_scalar(1.0)))))))])))
+          .operator("=").right(tsRecord)))),
+      (e: any) => e.functionexpression((r: any) => r.isAsync(true).generator(true).id((i: any) => i.name("g")).typeParameters(  // async function* g<T>(x: T = this.y) {}
+          (d: any) => d.params([(p: any) => p.name((i: any) => i.name("T"))])).params([(p: any) => p.assignmentpattern((ap: any) => ap
+              .left((g: any) => g.identifier((i: any) => i.name("x").typeAnnotation((ta: any) => ta.typeAnnotation(
+                  (t: any) => t.tstypereference((tr: any) => tr.typeName((n: any) => n.identifier((j: any) => j.name("T"))))))))
+              .right((g: any) => g.memberexpression((m: any) => m.object((o: any) => o.thisexpression((h: any) => h)).property((y: any) => y.identifier((i: any) => i.name("y"))))))])),
+      (e: any) => e.arrowfunctionexpression((r: any) => r.isAsync(true).typeParameters((d: any) => d.params([(p: any) => p.name((i: any) => i.name("U"))]))  // async <U>(p: U, ...r: U[]) => await import.meta.resolve(p)
+          .params([(p: any) => p.identifier((i: any) => i.name("p").typeAnnotation((ta: any) => ta.typeAnnotation(
+                       (t: any) => t.tstypereference((tr: any) => tr.typeName((n: any) => n.identifier((j: any) => j.name("U"))))))),
+                   (p: any) => p.restelement((z: any) => z.argument((g: any) => g.identifier((i: any) => i.name("r"))).typeAnnotation((ta: any) => ta.typeAnnotation(
+                       (t: any) => t.tsarraytype((at: any) => at.elementType((y: any) => y.tstypereference((tr: any) => tr.typeName((n: any) => n.identifier((j: any) => j.name("U")))))))))])
+          .body((b: any) => b.awaitexpression((w: any) => w.argument((c: any) => c.callexpression((ce: any) => ce.callee((f: any) => f.memberexpression((m: any) => m
+              .object((o: any) => o.metaproperty((mp: any) => mp.meta((i: any) => i.name("import")).property((i: any) => i.name("meta"))))
+              .property((y: any) => y.identifier((i: any) => i.name("resolve"))))).arguments([(y: any) => y.identifier((i: any) => i.name("p"))])))))),
+      (e: any) => e.classexpression((r: any) => r.decorators([(d: any) => d.expression(tsRecord)]).id((i: any) => i.name("K"))  // @tsRecord class K<T> extends tsRecord.Base<T> implements tsRecord {}
+          .typeParameters((d: any) => d.params([(p: any) => p.name((i: any) => i.name("T"))]))
+          .superClass((c: any) => c.memberexpression((m: any) => m.object(tsRecord).property((y: any) => y.identifier((i: any) => i.name("Base")))))
+          .superTypeArguments((a: any) => a.params([(t: any) => t.tstypereference((tr: any) => tr.typeName((n: any) => n.identifier((j: any) => j.name("T"))))]))
+          .implements([(c: any) => c.expression(tsRecord)])),
+      (e: any) => e.newexpression((r: any) => r.callee((c: any) => c.memberexpression((m: any) => m.object(tsRecord).property(  // new tsRecord.C<number>(...tsRecord)
+          (y: any) => y.identifier((i: any) => i.name("C"))))).typeArguments((a: any) => a.params([(t: any) => t.tsnumberkeyword((k: any) => k)]))
+          .arguments([(y: any) => y.spreadelement((z: any) => z.argument(tsRecord))])),
+      (e: any) => e.taggedtemplateexpression((r: any) => r.tag(tsRecord).quasi((q: any) => q.quasis([  // tsRecord`a${tsRecord}b`
+          (y: any) => y.raw("a"), (y: any) => y.raw("b").tail(true)]).expressions([tsRecord]))),
+      (e: any) => e.templateliteral((r: any) => r.quasis([(y: any) => y.raw("x"), (y: any) => y.raw("").tail(true)]).expressions([tsRecord])),  // `x${tsRecord}`
+      (e: any) => e.updateexpression((r: any) => r.operator("++").argument(tsRecord)),  // tsRecord++
+      (e: any) => e.unaryexpression((r: any) => r.operator("typeof").argument(tsRecord)),  // typeof tsRecord
+      (e: any) => e.binaryexpression((r: any) => r.left((y: any) => y.privateidentifier((i: any) => i.name("p"))).operator("in").right(tsRecord)),  // #p in tsRecord
+      (e: any) => e.logicalexpression((r: any) => r.left(tsRecord).operator("??").right((y: any) => y.constant((c: any) => c.singleton("null")))),  // tsRecord ?? null
+      (e: any) => e.conditionalexpression((r: any) => r.test(tsRecord).consequent(  // tsRecord ? /x/g : 1n
+          (y: any) => y.constant((c: any) => c.pattern("x").flags("g"))).alternate((y: any) => y.literal((li: any) => li.value((n: any) => n.as_scalar(1n))))),
+      (e: any) => e.yieldexpression((r: any) => r.delegate(true).argument(tsRecord)),  // yield* tsRecord
+      (e: any) => e.tsasexpression((r: any) => r.expression(tsRecord).typeAnnotation((t: any) => t.tsstringkeyword((k: any) => k))),  // tsRecord as string
+      (e: any) => e.tssatisfiesexpression((r: any) => r.expression(tsRecord).typeAnnotation((t: any) => t.tsobjectkeyword((k: any) => k))),  // tsRecord satisfies object
+      (e: any) => e.tstypeassertion((r: any) => r.typeAnnotation((t: any) => t.tsanykeyword((k: any) => k)).expression(tsRecord)),  // <any>tsRecord
+      (e: any) => e.tsnonnullexpression((r: any) => r.expression(tsRecord)),  // tsRecord!
+      (e: any) => e.tsinstantiationexpression((r: any) => r.expression(tsRecord).typeArguments((a: any) => a.params([(t: any) => t.tsstringkeyword((k: any) => k)]))),  // tsRecord<string>
+      (e: any) => e.arrayexpression((r: any) => r.elements([  // [1, , ...tsRecord]: the framework's list, its elements any dialect's terms
+          (y: any) => y.typescript5((t: any) => t.literal((li: any) => li.value((n: any) => n.as_scalar(1.0)))), (y: any) => y.typescript5((t: any) => t.elision((h: any) => h)),
+          (y: any) => y.typescript5((t: any) => t.spreadelement((z: any) => z.argument(tsRecord)))])),
+      (e: any) => e.objectexpression((r: any) => r.properties([  // { m(): void, ...tsRecord, [tsRecord]: "s" }
+          (p: any) => p.property((q: any) => q.propertyKind("init").key((k: any) => k.identifier((i: any) => i.name("m"))).method(true).value(
+              (v: any) => v.tsemptybodyfunctionexpression((f: any) => f.returnType((a: any) => a.typeAnnotation((t: any) => t.tsvoidkeyword((k: any) => k)))))),
+          (p: any) => p.spreadelement((z: any) => z.argument(tsRecord)),
+          (p: any) => p.property((q: any) => q.propertyKind("init").computed(true).key(tsRecord).value((v: any) => v.literal((li: any) => li.value((n: any) => n.as_scalar("s")))))])),
+      (e: any) => e.jsxelement((r: any) => r  // <div id="x" {...tsRecord}>{}{tsRecord}<>text</></div>
+          .openingElement((o: any) => o.name((n: any) => n.jsxidentifier((i: any) => i.name("div"))).attributes([
+              (a: any) => a.jsxattribute((t: any) => t.name((n: any) => n.jsxidentifier((i: any) => i.name("id"))).value(
+                  (v: any) => v.literal((li: any) => li.value((n: any) => n.as_scalar("x")).text('"x"')))),
+              (a: any) => a.jsxspreadattribute((z: any) => z.argument(tsRecord))]))
+          .children([(c: any) => c.jsxexpressioncontainer((x: any) => x.expression((y: any) => y.jsxemptyexpression((h: any) => h))),
+                     (c: any) => c.jsxexpressioncontainer((x: any) => x.expression(tsRecord)),
+                     (c: any) => c.jsxfragment((f: any) => f.openingFragment((h: any) => h).children([(t: any) => t.jsxtext((j: any) => j.raw("text"))]).closingFragment((h: any) => h))])
+          .closingElement((c: any) => c.name((n: any) => n.jsxidentifier((i: any) => i.name("div"))))),
+      (e: any) => e.jsxfragment((f: any) => f.openingFragment((h: any) => h).children([(c: any) => c.jsxelement((x: any) => x  // <><br /></>
+          .openingElement((o: any) => o.name((n: any) => n.jsxidentifier((i: any) => i.name("br"))).selfClosing(true)))]).closingFragment((h: any) => h)),
+      (e: any) => e.chainexpression((r: any) => r.expression((y: any) => y.memberexpression((m: any) => m.object(tsRecord).optional(true).property(  // tsRecord?.a
+          (z: any) => z.identifier((i: any) => i.name("a")))))),
+      (e: any) => e.memberexpression((m: any) => m.object((o: any) => o.super((h: any) => h)).property((y: any) => y.identifier((i: any) => i.name("x")))),  // super.x
+      (e: any) => e.importexpression((r: any) => r.source(tsRecord)),  // import(tsRecord)
+  ]));
+
   // --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
   // their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
   // (a binop's operands are Python3's terms, written in its union)
@@ -155,7 +236,8 @@ export function build(): Map<string, Case> {
 
   const terms = store.transaction(() => new Map<string, any>(([
     ["expression", expression], ["python3", python3], ["matlab", matlab], ["excel", excel], ["latex", latex],
-    ["collections", collections], ["c", c], ["cpp", cpp], ["systemverilog", systemverilog], ["invalid", invalid],
+    ["collections", collections], ["c", c], ["cpp", cpp], ["systemverilog", systemverilog],
+    ["typescript5", TS.DIALECT.spec(typescript5)], ["invalid", invalid],
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   terms.set("domains", defined.get("dialect"));
   const [Term, Dialect] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.Patterns.Dialect")];

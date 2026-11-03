@@ -1,0 +1,766 @@
+{
+  "typescript5": {
+    "sequenceexpression": {
+      "expressions": [
+        {
+          "parenthesizedexpression": {
+            "expression": {
+              "assignmentexpression": {
+                "left": {
+                  "objectpattern": {
+                    "properties": [
+                      {
+                        "property": {
+                          "propertyKind": "init",
+                          "key": {
+                            "identifier": {
+                              "name": "a"
+                            }
+                          },
+                          "value": {
+                            "arraypattern": {
+                              "elements": [
+                                {
+                                  "identifier": {
+                                    "name": "b"
+                                  }
+                                },
+                                {
+                                  "elision": {}
+                                },
+                                {
+                                  "restelement": {
+                                    "argument": {
+                                      "identifier": {
+                                        "name": "c"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "property": {
+                          "propertyKind": "init",
+                          "key": {
+                            "identifier": {
+                              "name": "d"
+                            }
+                          },
+                          "value": {
+                            "objectpattern": {
+                              "properties": [
+                                {
+                                  "property": {
+                                    "propertyKind": "init",
+                                    "key": {
+                                      "identifier": {
+                                        "name": "record"
+                                      }
+                                    },
+                                    "shorthand": true,
+                                    "value": {
+                                      "identifier": {
+                                        "name": "record"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      {
+                        "property": {
+                          "propertyKind": "init",
+                          "key": {
+                            "identifier": {
+                              "name": "f"
+                            }
+                          },
+                          "shorthand": true,
+                          "value": {
+                            "assignmentpattern": {
+                              "left": {
+                                "identifier": {
+                                  "name": "f"
+                                }
+                              },
+                              "right": {
+                                "literal": {
+                                  "value": {
+                                    "float": 1.0
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                "operator": "=",
+                "right": {
+                  "identifier": {
+                    "name": "record"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "functionexpression": {
+            "isAsync": true,
+            "generator": true,
+            "id": {
+              "name": "g"
+            },
+            "typeParameters": {
+              "params": [
+                {
+                  "name": {
+                    "name": "T"
+                  }
+                }
+              ]
+            },
+            "params": [
+              {
+                "assignmentpattern": {
+                  "left": {
+                    "identifier": {
+                      "name": "x",
+                      "typeAnnotation": {
+                        "typeAnnotation": {
+                          "tstypereference": {
+                            "typeName": {
+                              "identifier": {
+                                "name": "T"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "right": {
+                    "memberexpression": {
+                      "object": {
+                        "thisexpression": {}
+                      },
+                      "property": {
+                        "identifier": {
+                          "name": "y"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "arrowfunctionexpression": {
+            "isAsync": true,
+            "typeParameters": {
+              "params": [
+                {
+                  "name": {
+                    "name": "U"
+                  }
+                }
+              ]
+            },
+            "params": [
+              {
+                "identifier": {
+                  "name": "p",
+                  "typeAnnotation": {
+                    "typeAnnotation": {
+                      "tstypereference": {
+                        "typeName": {
+                          "identifier": {
+                            "name": "U"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "restelement": {
+                  "argument": {
+                    "identifier": {
+                      "name": "r"
+                    }
+                  },
+                  "typeAnnotation": {
+                    "typeAnnotation": {
+                      "tsarraytype": {
+                        "elementType": {
+                          "tstypereference": {
+                            "typeName": {
+                              "identifier": {
+                                "name": "U"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "body": {
+              "awaitexpression": {
+                "argument": {
+                  "callexpression": {
+                    "callee": {
+                      "memberexpression": {
+                        "object": {
+                          "metaproperty": {
+                            "meta": {
+                              "name": "import"
+                            },
+                            "property": {
+                              "name": "meta"
+                            }
+                          }
+                        },
+                        "property": {
+                          "identifier": {
+                            "name": "resolve"
+                          }
+                        }
+                      }
+                    },
+                    "arguments": [
+                      {
+                        "identifier": {
+                          "name": "p"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "classexpression": {
+            "decorators": [
+              {
+                "expression": {
+                  "identifier": {
+                    "name": "record"
+                  }
+                }
+              }
+            ],
+            "id": {
+              "name": "K"
+            },
+            "typeParameters": {
+              "params": [
+                {
+                  "name": {
+                    "name": "T"
+                  }
+                }
+              ]
+            },
+            "superClass": {
+              "memberexpression": {
+                "object": {
+                  "identifier": {
+                    "name": "record"
+                  }
+                },
+                "property": {
+                  "identifier": {
+                    "name": "Base"
+                  }
+                }
+              }
+            },
+            "superTypeArguments": {
+              "params": [
+                {
+                  "tstypereference": {
+                    "typeName": {
+                      "identifier": {
+                        "name": "T"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "implements": [
+              {
+                "expression": {
+                  "identifier": {
+                    "name": "record"
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "newexpression": {
+            "callee": {
+              "memberexpression": {
+                "object": {
+                  "identifier": {
+                    "name": "record"
+                  }
+                },
+                "property": {
+                  "identifier": {
+                    "name": "C"
+                  }
+                }
+              }
+            },
+            "typeArguments": {
+              "params": [
+                {
+                  "tsnumberkeyword": {}
+                }
+              ]
+            },
+            "arguments": [
+              {
+                "spreadelement": {
+                  "argument": {
+                    "identifier": {
+                      "name": "record"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "taggedtemplateexpression": {
+            "tag": {
+              "identifier": {
+                "name": "record"
+              }
+            },
+            "quasi": {
+              "quasis": [
+                {
+                  "raw": "a"
+                },
+                {
+                  "raw": "b",
+                  "tail": true
+                }
+              ],
+              "expressions": [
+                {
+                  "identifier": {
+                    "name": "record"
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "templateliteral": {
+            "quasis": [
+              {
+                "raw": "x"
+              },
+              {
+                "raw": "",
+                "tail": true
+              }
+            ],
+            "expressions": [
+              {
+                "identifier": {
+                  "name": "record"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "updateexpression": {
+            "operator": "++",
+            "argument": {
+              "identifier": {
+                "name": "record"
+              }
+            }
+          }
+        },
+        {
+          "unaryexpression": {
+            "operator": "typeof",
+            "argument": {
+              "identifier": {
+                "name": "record"
+              }
+            }
+          }
+        },
+        {
+          "binaryexpression": {
+            "left": {
+              "privateidentifier": {
+                "name": "p"
+              }
+            },
+            "operator": "in",
+            "right": {
+              "identifier": {
+                "name": "record"
+              }
+            }
+          }
+        },
+        {
+          "logicalexpression": {
+            "left": {
+              "identifier": {
+                "name": "record"
+              }
+            },
+            "operator": "??",
+            "right": {
+              "constant": {
+                "singleton": "null"
+              }
+            }
+          }
+        },
+        {
+          "conditionalexpression": {
+            "test": {
+              "identifier": {
+                "name": "record"
+              }
+            },
+            "consequent": {
+              "constant": {
+                "pattern": "x",
+                "flags": "g"
+              }
+            },
+            "alternate": {
+              "literal": {
+                "value": {
+                  "int": 1
+                }
+              }
+            }
+          }
+        },
+        {
+          "yieldexpression": {
+            "delegate": true,
+            "argument": {
+              "identifier": {
+                "name": "record"
+              }
+            }
+          }
+        },
+        {
+          "tsasexpression": {
+            "expression": {
+              "identifier": {
+                "name": "record"
+              }
+            },
+            "typeAnnotation": {
+              "tsstringkeyword": {}
+            }
+          }
+        },
+        {
+          "tssatisfiesexpression": {
+            "expression": {
+              "identifier": {
+                "name": "record"
+              }
+            },
+            "typeAnnotation": {
+              "tsobjectkeyword": {}
+            }
+          }
+        },
+        {
+          "tstypeassertion": {
+            "typeAnnotation": {
+              "tsanykeyword": {}
+            },
+            "expression": {
+              "identifier": {
+                "name": "record"
+              }
+            }
+          }
+        },
+        {
+          "tsnonnullexpression": {
+            "expression": {
+              "identifier": {
+                "name": "record"
+              }
+            }
+          }
+        },
+        {
+          "tsinstantiationexpression": {
+            "expression": {
+              "identifier": {
+                "name": "record"
+              }
+            },
+            "typeArguments": {
+              "params": [
+                {
+                  "tsstringkeyword": {}
+                }
+              ]
+            }
+          }
+        },
+        {
+          "arrayexpression": {
+            "elements": [
+              {
+                "typescript5": {
+                  "literal": {
+                    "value": {
+                      "float": 1.0
+                    }
+                  }
+                }
+              },
+              {
+                "typescript5": {
+                  "elision": {}
+                }
+              },
+              {
+                "typescript5": {
+                  "spreadelement": {
+                    "argument": {
+                      "identifier": {
+                        "name": "record"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "objectexpression": {
+            "properties": [
+              {
+                "property": {
+                  "propertyKind": "init",
+                  "key": {
+                    "identifier": {
+                      "name": "m"
+                    }
+                  },
+                  "method": true,
+                  "value": {
+                    "tsemptybodyfunctionexpression": {
+                      "returnType": {
+                        "typeAnnotation": {
+                          "tsvoidkeyword": {}
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "spreadelement": {
+                  "argument": {
+                    "identifier": {
+                      "name": "record"
+                    }
+                  }
+                }
+              },
+              {
+                "property": {
+                  "propertyKind": "init",
+                  "computed": true,
+                  "key": {
+                    "identifier": {
+                      "name": "record"
+                    }
+                  },
+                  "value": {
+                    "literal": {
+                      "value": {
+                        "str": "s"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "jsxelement": {
+            "openingElement": {
+              "name": {
+                "jsxidentifier": {
+                  "name": "div"
+                }
+              },
+              "attributes": [
+                {
+                  "jsxattribute": {
+                    "name": {
+                      "jsxidentifier": {
+                        "name": "id"
+                      }
+                    },
+                    "value": {
+                      "literal": {
+                        "value": {
+                          "str": "x"
+                        },
+                        "text": "\"x\""
+                      }
+                    }
+                  }
+                },
+                {
+                  "jsxspreadattribute": {
+                    "argument": {
+                      "identifier": {
+                        "name": "record"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "children": [
+              {
+                "jsxexpressioncontainer": {
+                  "expression": {
+                    "jsxemptyexpression": {}
+                  }
+                }
+              },
+              {
+                "jsxexpressioncontainer": {
+                  "expression": {
+                    "identifier": {
+                      "name": "record"
+                    }
+                  }
+                }
+              },
+              {
+                "jsxfragment": {
+                  "children": [
+                    {
+                      "jsxtext": {
+                        "raw": "text"
+                      }
+                    }
+                  ]
+                }
+              }
+            ],
+            "closingElement": {
+              "name": {
+                "jsxidentifier": {
+                  "name": "div"
+                }
+              }
+            }
+          }
+        },
+        {
+          "jsxfragment": {
+            "children": [
+              {
+                "jsxelement": {
+                  "openingElement": {
+                    "name": {
+                      "jsxidentifier": {
+                        "name": "br"
+                      }
+                    },
+                    "selfClosing": true
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "chainexpression": {
+            "expression": {
+              "memberexpression": {
+                "object": {
+                  "identifier": {
+                    "name": "record"
+                  }
+                },
+                "optional": true,
+                "property": {
+                  "identifier": {
+                    "name": "a"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "memberexpression": {
+            "object": {
+              "super": {}
+            },
+            "property": {
+              "identifier": {
+                "name": "x"
+              }
+            }
+          }
+        },
+        {
+          "importexpression": {
+            "source": {
+              "identifier": {
+                "name": "record"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

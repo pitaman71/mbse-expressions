@@ -11,14 +11,14 @@
 import * as D from "../../Framework/Domains.js";
 
 export const Anything = D.Anything;
-export const Boolean_ = new D.OfTypes("boolean", Boolean);
-export const Number_ = new D.OfTypes("number", Number);
-export const BigInt_ = new D.OfTypes("bigint", BigInt);
-export const String_ = new D.OfTypes("string", String);
-export { Boolean_ as Boolean, Number_ as Number, BigInt_ as BigInt, String_ as String };
+// Named as Python names them; JavaScript's own `Boolean`, `Number`, `BigInt`, `String` and `RegExp` are the types they hold.
+const Boolean_ = new D.OfTypes("boolean", Boolean);
+const Number_ = new D.OfTypes("number", Number);
+const BigInt_ = new D.OfTypes("bigint", BigInt);
+const String_ = new D.OfTypes("string", String);
+const RegExp_ = new D.OfTypes("RegExp", RegExp);
+export { Boolean_ as Boolean, Number_ as Number, BigInt_ as BigInt, String_ as String, RegExp_ as RegExp };
 export const Null = new D.OfTypes("null", null);
-export const RegExp_ = new D.OfTypes("RegExp", RegExp);
-export { RegExp_ as RegExp };
 
 const ONE = new D.Function([Anything], Anything);
 const TWO = new D.Function([Anything, Anything], Anything);

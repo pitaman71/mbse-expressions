@@ -351,6 +351,18 @@ change as it lands.
    `grammars/python3-ast.json` keeps `ast`'s node list, which DIA-20 checks in both. Evaluation stays shallow, refusing
    new kinds by name; the translators keep what they translated, reading a chain and n values as nested `and`s.
 4. **`TypeScript5`**, new: expressions, types, patterns and JSX (question 5), printed.
+
+   *As built* (branch `stage4-typescript5`; every choice made where the decisions were silent is in
+   [the API, Settled in stage 4 (TypeScript5)](../port/API.md#settled-in-stage-4-typescript5-for-the-users-review), items 70
+   to 85). `Expressions.TypeScript5.Term` holds typescript-estree's expression kinds, TypeScript 5.0 to 5.9, in
+   mbse-programs' names and shapes, tags lowercased (`binaryexpression`, `tsasexpression`), with JSX as an extension;
+   its types and destructuring patterns are unions of their own, `Expressions.TypeScript5.Type` and
+   `Expressions.TypeScript5.Pattern`, a schema a branch of every union whose positions hold it (Decided, "A
+   sublanguage's union holds the terms its positions hold"). A literal refines the framework's, adding its quote, base
+   and separators, a number a float and a bigint an int; TypeScript5's `constant` holds `null` and regular expressions.
+   A body of statements is absent, printed `{}`; an arrow's expression body is a term. `ToText` prints every kind in
+   both languages; `grammars/typescript5-estree.json` keeps typescript-estree's node types, which DIA-23 checks in
+   both. Evaluation refuses every kind but a literal by name; there is no translator and no writer.
 5. **C and C++ by standard.**
 6. **`SystemVerilog` complete**, Verilog its subset.
 7. **Tutorials, skill, README, EQUIVALENCE; release 0.8.0.** Then mbse-programs' stage 2, mbse-patterns and

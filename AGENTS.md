@@ -4,7 +4,7 @@ mbse-expressions formalizes what interfaces and models require, their constraint
 language-independent data: expressions with schemas, built on
 [mbse-schemas](https://github.com/pitaman71/mbse-schemas). An expression can be stored, validated, evaluated, and
 translated between expression languages (dialects): Patterns (formerly Basic), the core vocabulary that every binding
-evaluates, and Python3, Matlab, Excel, Latex, C, Cpp and SystemVerilog. Two equivalent implementations exist: `python3/` and `typescript5/`.
+evaluates, and Python3, TypeScript5, Matlab, Excel, Latex, C, Cpp and SystemVerilog. Two equivalent implementations exist: `python3/` and `typescript5/`.
 
 ## Start here
 
