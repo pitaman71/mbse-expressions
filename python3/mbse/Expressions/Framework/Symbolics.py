@@ -1,7 +1,8 @@
 """Symbolics: names, the scopes that resolve them, and the dependencies an expression declares.
 
 An expression refers to names: its references. A binding (a let) binds a name within its body, an import binds the
-names it declares (its kind's `names`) within its body, and some names are ambient, bound without a declaration (Python's
+names it declares (its kind's `names`) within its body, a kind with `scopes` binds the names it gives each argument (a
+comprehension's targets, a lambda's parameters), and some names are ambient, bound without a declaration (Python's
 builtins). `free(term, dialect)` is the set of names an expression needs from outside: its lexical references that
 nothing within it binds. `imports(term, dialect)` lists the imports it declares: what it needs its scope to provide.
 
@@ -83,7 +84,9 @@ def free(term: Any, dialect: Terms.Dialect) -> set[str]:
             return
         arguments = Terms.arguments_of(record)
         scopes = [bound] * len(arguments)
-        if kind.role in (Terms.BINDING, Terms.QUANTIFIER):
+        if kind.scopes is not None:  # the names each argument has bound: a comprehension's targets, say
+            scopes = [bound | names for names in kind.scopes(record)]
+        elif kind.role in (Terms.BINDING, Terms.QUANTIFIER):
             scopes = [bound, *[bound | {name}] * (len(arguments) - 1)]
         elif kind.role == Terms.IMPORT:
             scopes = [bound | set(kind.names(Terms.attributes_of(record)) if kind.names is not None else ())] * len(arguments)

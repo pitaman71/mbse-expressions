@@ -81,7 +81,7 @@ export function build(): Map<string, Case> {
   const python3 = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("record"), P.ifexp(
     P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18n)), P.attribute(P.name("np"), "pi")),
     P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
-    P.generator("p", P.attribute(a, "y"), P.index(item, new Uint8Array([0x00])), item)))), "np");
+    P.generatorexp(P.subscript(item, new Uint8Array([0x00])), P.comprehension("p", P.attribute(a, "y"), [item]))))), "np");
 
   // --- matlab: every kind, shared identifiers --- import geo.* / (dist(record.age, 3) + ~isfield(record, "email") .* -1.5
   // >= arrayfun(@(k) k, record.ports)(2)) || true

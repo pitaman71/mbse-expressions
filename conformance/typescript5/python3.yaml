@@ -16,67 +16,73 @@ python3:
             body:
               python3:
                 ifexp:
-                  test:
-                    boolop:
-                      operator: or
-                      left:
-                        unaryop:
-                          operator: not
-                          operand:
-                            compare:
-                              operator: '>='
-                              left:
-                                subscript:
-                                  key: k
-                                  value:
-                                    variable:
-                                      name: a
-                              right:
-                                literal:
-                                  value:
-                                    int: 18
-                      right:
-                        attribute:
-                          attr: pi
-                          value:
-                            variable:
-                              name: np
                   body:
                     call:
-                      function:
+                      func:
                         variable:
                           name: floor
-                      arguments:
+                      args:
                       - binop:
-                          operator: '*'
                           left:
                             attribute:
-                              attr: x
                               value:
                                 variable:
                                   name: a
+                              attr: x
+                          op: '*'
                           right:
                             literal:
                               value:
                                 float: 2.5
-                  orelse:
-                    generator:
-                      name: p
-                      iterable:
-                        attribute:
-                          attr: 'y'
+                  test:
+                    boolop:
+                      op: or
+                      values:
+                      - unaryop:
+                          op: not
+                          operand:
+                            compare:
+                              left:
+                                subscript:
+                                  value:
+                                    variable:
+                                      name: a
+                                  slice:
+                                    literal:
+                                      value:
+                                        str: k
+                              comparisons:
+                              - op: '>='
+                                comparator:
+                                  literal:
+                                    value:
+                                      int: 18
+                      - attribute:
                           value:
                             variable:
-                              name: a
-                      element:
-                        index:
+                              name: np
+                          attr: pi
+                  orelse:
+                    generatorexp:
+                      elt:
+                        subscript:
                           value:
                             variable:
                               name: p
-                          index:
+                          slice:
                             literal:
                               value:
                                 bytes: 'AA=='
-                      conditions:
-                      - variable:
-                          name: p
+                      generators:
+                      - target:
+                          variable:
+                            name: p
+                        iter:
+                          attribute:
+                            value:
+                              variable:
+                                name: a
+                            attr: 'y'
+                        ifs:
+                        - variable:
+                            name: p

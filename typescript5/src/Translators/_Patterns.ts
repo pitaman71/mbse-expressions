@@ -1,6 +1,7 @@
 /** The patterns the pairwise translators share: each dialect's forms for the concepts they translate. A translator
  * pairs two dialects' patterns into rules; the holes are shared, so the patterns of any two dialects pair up. */
 
+import { Part } from "../Framework/Terms.js";
 import { Hole, Pattern as P, Rule, holes } from "../Framework/Translators.js";
 
 export const [A, B, C, X] = holes("A", "B", "C", "X") as [Hole, Hole, Hole, Hole];
@@ -33,24 +34,48 @@ function call(fn: string, ...args: (P | Hole)[]): P {
   return new P("call", {}, new P("variable", { name: fn }), ...args);
 }
 
+/** A Python3 comparison chain of one link, `op`, as a form's attributes hold it. */
+export function comparison(op: string): Part[] {
+  return [new Part("comparison", { op }, 1)];
+}
+
+/** A Python3 comprehension's one `for` clause over a name, with `conditions`, as a form's attributes hold it. */
+function forClause(conditions: number): Part[] {
+  return [new Part("comprehension", {}, 2 + conditions)];
+}
+
+/** Rules for comparisons that are another dialect's operators of `kind`: each Python3 comparison of one link, a key of
+ * `names`, is the operator its value names (or the other way round, where Python3 is on the `right`). */
+export function compares(kind: string, attribute: string, names: Record<string, string>, python = "left"): Rule[] {
+  return Object.entries(names).map(([op, other]) => {
+    const mine = new P("compare", { comparisons: comparison(op) }, A, B);
+    const theirs = new P(kind, { [attribute]: other }, A, B);
+    return python === "left" ? new Rule(mine, theirs) : new Rule(theirs, mine);
+  });
+}
+
 export const Python3 = {
   constant: (V: Hole) => new P("literal", { value: V }),
   name: new P("variable", { name: N }),
   let: new P("let", { name: N }, A, B),
   get: new P("attribute", { attr: K }, X),
   has: new P("call", {}, new P("variable", { name: "hasattr" }), X, new P("literal", { value: K })),
-  implies: new P("ifexp", {}, A, B, new P("literal", { value: true })),
-  ifexp: new P("ifexp", {}, A, B, C),
-  shr: new P("binop", { operator: ">>" }, A, B),
-  all_: call("all", new P("generator", { name: N }, A, B)),
-  any_: call("any", new P("generator", { name: N }, A, B)),
+  /** b if a else True. */
+  implies: new P("ifexp", {}, B, A, new P("literal", { value: true })),
+  /** b if a else c. */
+  ifexp: new P("ifexp", {}, B, A, C),
+  shr: new P("binop", { op: ">>" }, A, B),
+  /** all(b for n in a). */
+  all_: call("all", new P("generatorexp", { generators: forClause(0) }, B, new P("variable", { name: N }), A)),
+  any_: call("any", new P("generatorexp", { generators: forClause(0) }, B, new P("variable", { name: N }), A)),
   /** sum(1 for n in a if b). */
-  count_where: call("sum", new P("generator", { name: N }, A, new P("literal", { value: 1n }), B)),
+  count_where: call("sum", new P("generatorexp", { generators: forClause(1) }, new P("literal", { value: 1n }),
+    new P("variable", { name: N }), A, B)),
   /** len, sum, min, max. */
   builtin: (fn: string) => call(fn, A),
-  index: new P("index", {}, A, B),
-  in_: new P("compare", { operator: "in" }, A, B),
-  unique: new P("compare", { operator: "==" }, call("len", call("set", A)), call("len", A)),
+  index: new P("subscript", {}, A, B),
+  in_: new P("compare", { comparisons: comparison("in") }, A, B),
+  unique: new P("compare", { comparisons: comparison("==") }, call("len", call("set", A)), call("len", A)),
 };
 
 /** The function `np.<fn>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'. */
@@ -63,8 +88,9 @@ function numpy(fn: string): P {
 /** Python in NumPy style: columns by subscript, missing values masked, operations as numpy functions. */
 export const Numpy = {
   call: (fn: string, ...args: (P | Hole)[]) => new P("call", {}, numpy(fn), ...args),
-  get: new P("subscript", { key: K }, X),
-  has: new P("call", {}, numpy("logical_not"), new P("call", {}, numpy("ma.getmaskarray"), new P("subscript", { key: K }, X))),
+  get: new P("subscript", {}, X, new P("literal", { value: K })),
+  has: new P("call", {}, numpy("logical_not"), new P("call", {}, numpy("ma.getmaskarray"),
+    new P("subscript", {}, X, new P("literal", { value: K })))),
   implies: new P("call", {}, numpy("where"), A, B, new P("literal", { value: true })),
   prelude: new P("import", { module: "numpy", alias: "np" }, new Hole("B")),
   /** Rules for operators that are numpy functions of the same arguments. */

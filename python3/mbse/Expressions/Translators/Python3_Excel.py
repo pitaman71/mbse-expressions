@@ -10,7 +10,7 @@ from mbse.Expressions.Dialects.Excel.Expressions import DIALECT as EXCEL
 from mbse.Expressions.Dialects.Python3.Expressions import DIALECT as PYTHON3
 from mbse.Expressions.Framework.Translators import Elementwise, Elide, Pairwise, Rule, renames
 
-from ._Patterns import Excel, Python3, collections, value
+from ._Patterns import compares, Excel, Python3, collections, value
 
 V = value(int, float, str, bool)
 
@@ -23,13 +23,13 @@ TRANSLATOR = Pairwise(PYTHON3, EXCEL, [
     Rule(Python3.get, Excel.get),
     Rule(Python3.has, Excel.has),
     Rule(Python3.ifexp, Excel.if_),
-    *renames("compare", "operator", "infix", "operator", {
-        "==": "=", "!=": "<>", "<": "<", "<=": "<=", ">": ">", ">=": ">="}, 2),
-    *renames("binop", "operator", "infix", "operator", {"+": "+", "-": "-", "*": "*"}, 2),
-    *renames("boolop", "operator", "call", "callable", {"and": "AND", "or": "OR"}, 2),
-    *renames("unaryop", "operator", "call", "callable", {"not": "NOT"}, 1),
-    *renames("unaryop", "operator", "prefix", "operator", {"-": "-"}, 1),
-    *renames("binop", "operator", "call", "callable", {
+    *compares("infix", "operator", {
+        "==": "=", "!=": "<>", "<": "<", "<=": "<=", ">": ">", ">=": ">="}),
+    *renames("binop", "op", "infix", "operator", {"+": "+", "-": "-", "*": "*"}, 2),
+    *renames("boolop", "op", "call", "callable", {"and": "AND", "or": "OR"}, 2),
+    *renames("unaryop", "op", "call", "callable", {"not": "NOT"}, 1),
+    *renames("unaryop", "op", "prefix", "operator", {"-": "-"}, 1),
+    *renames("binop", "op", "call", "callable", {
         "&": "BITAND", "|": "BITOR", "^": "BITXOR", "<<": "BITLSHIFT", ">>": "BITRSHIFT"}, 2),
     *collections("Python", "Excel"),
     Elementwise("list", "call", {}, {"callable": "VSTACK"}),

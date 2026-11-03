@@ -10,14 +10,16 @@
  * `TRANSLATOR` writes collections with Python's builtins and generator expressions: `all` and `any` are `all(body for
  * name in collection)` and `any(...)`, the quantifier `count` is `sum(1 for name in collection if body)`, `count(xs)`
  * is `len(xs)`, `item(xs, i)` is `xs[i]`, `in(x, xs)` is `x in xs`, and `sum`, `min` and `max` are the builtins of one
- * argument. `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back as `unique`. `entries` has no
+ * argument. A comparison translates as a chain of one link, `and` and `or` as a `boolop` of two values, and a generator
+ * expression as one of one `for` clause over a name: Python3's longer chains, boolops and clauses have no Patterns
+ * counterpart. `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back as `unique`. `entries` has no
  * Python counterpart, and `NUMPY` writes no collections. The container constructors are Python's displays: a `list` its
- * list display, `[a, b]`, and a `mapping` its dict display, `{k: v}`. */
+ * list display, `[a, b]`, and a `mapping` its dict display, `{k: v}`, a `dict` (its `**` items have no counterpart). */
 
 import { DIALECT as PATTERNS } from "../Dialects/Patterns/Expressions.js";
 import { DIALECT as PYTHON3 } from "../Dialects/Python3/Expressions.js";
 import { Elementwise, Elide, Pairwise, Prelude, Rule, renames } from "../Framework/Translators.js";
-import { Patterns, Numpy, Python3, value } from "./_Patterns.js";
+import { Patterns, Numpy, Python3, compares, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean, Uint8Array);
 const COMMON = [
@@ -33,13 +35,12 @@ export const TRANSLATOR = new Pairwise(PATTERNS, PYTHON3, [
   new Rule(Patterns.get, Python3.get),
   new Rule(Patterns.has, Python3.has),
   new Rule(Patterns.implies, Python3.implies),
-  ...renames("call", "callable", "compare", "operator", {
-    eq: "==", ne: "!=", lt: "<", le: "<=", gt: ">", ge: ">=" }, 2),
-  ...renames("call", "callable", "boolop", "operator", { and: "and", or: "or" }, 2),
-  ...renames("call", "callable", "binop", "operator", { add: "+", sub: "-", mul: "*" }, 2),
-  ...renames("call", "callable", "unaryop", "operator", { not: "not", neg: "-" }, 1),
-  ...renames("call", "callable", "binop", "operator", { bitand: "&", bitor: "|", bitxor: "^", shl: "<<", shr: ">>" }, 2),
-  ...renames("call", "callable", "unaryop", "operator", { bitnot: "~" }, 1),
+  ...compares("call", "callable", { "==": "eq", "!=": "ne", "<": "lt", "<=": "le", ">": "gt", ">=": "ge" }, "right"),
+  ...renames("call", "callable", "boolop", "op", { and: "and", or: "or" }, 2),
+  ...renames("call", "callable", "binop", "op", { add: "+", sub: "-", mul: "*" }, 2),
+  ...renames("call", "callable", "unaryop", "op", { not: "not", neg: "-" }, 1),
+  ...renames("call", "callable", "binop", "op", { bitand: "&", bitor: "|", bitxor: "^", shl: "<<", shr: ">>" }, 2),
+  ...renames("call", "callable", "unaryop", "op", { bitnot: "~" }, 1),
   new Rule(Patterns.quantifier("all"), Python3.all_),
   new Rule(Patterns.quantifier("any"), Python3.any_),
   new Rule(Patterns.quantifier("count"), Python3.count_where),
@@ -49,7 +50,7 @@ export const TRANSLATOR = new Pairwise(PATTERNS, PYTHON3, [
   new Rule(Patterns.in_, Python3.in_),
   new Rule(Patterns.unary("unique"), Python3.unique, "forward"),
   new Elementwise("list", "list"),
-  new Elementwise("mapping", "mapping"),
+  new Elementwise("mapping", "dict"),
 ]);
 
 export const NUMPY = new Pairwise(PATTERNS, PYTHON3, [

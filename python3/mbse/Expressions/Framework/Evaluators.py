@@ -15,8 +15,11 @@ implementations decide which arguments to evaluate and when, and so does a quant
 and evaluates the body with the name bound to it; the implementation of a kind whose vocabulary is open is
 one callable for every name, and operators outside a closed vocabulary go to `extension`, if given. It raises on what
 `Dialect.validate` reports: operations outside the vocabulary, wrong numbers of arguments, unbound references and missing
-values; invalid syntax (`error`, `missing`) is refused by name. An evaluator takes a term value, or anything
-`Terms.term` reads one from (an `Expression`, a term property).
+values; invalid syntax (`error`, `missing`) is refused by name, and so is a kind outside `evaluated`, where the
+interpreter is given the kinds it evaluates (a dialect whose kinds outgrow its evaluator: "Python3 lambda is not
+evaluated"), and an operator its vocabulary has but `operations` does not implement ("Python3 binop '@' is not
+evaluated"). An evaluator takes a term value, or anything `Terms.term` reads one from (an `Expression`, a term
+property).
 """
 
 from __future__ import annotations
@@ -46,15 +49,17 @@ class Interpreter:
     operator name, or, for a kind whose vocabulary is open, to one implementation. `literal` converts a literal's value
     into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal whose kind gives it a
     domain of its own (`Kind.typed`; without it, evaluating one raises `NotImplementedError`); `scope` makes the dialect's scope from a mapping
-    of variables, and `extension(operator, arguments, node, scope)` evaluates operators outside a kind's vocabulary."""
+    of variables, and `extension(operator, arguments, node, scope)` evaluates operators outside a kind's vocabulary.
+    `evaluated`, where given, names the kinds it evaluates: any other is refused by name, `NotImplementedError`."""
 
     def __init__(self, dialect: Terms.Dialect, operations: Mapping[str, Any], *,
                  literal: Callable[[Any], Any] = lambda value: value,
                  typed: Callable[[Any, Any], Any] | None = None,
                  scope: Callable[[Mapping[str, Any]], Scope] = Variables,
-                 extension: Callable[[str, list[Thunk], Any, Any], Any] | None = None):
+                 extension: Callable[[str, list[Thunk], Any, Any], Any] | None = None,
+                 evaluated: frozenset[str] | None = None):
         self.dialect, self.operations, self._literal, self._typed = dialect, operations, literal, typed
-        self._scope, self._extension = scope, extension
+        self._scope, self._extension, self._evaluated = scope, extension, evaluated
 
     def __call__(self, expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
         """The value of a term (see `Terms.term`)."""
@@ -66,6 +71,8 @@ class Interpreter:
         tag, record, kind = self.dialect.kind(node)
         if kind.role == Terms.INVALID:
             raise ValueError(f"{self.dialect.name()} {tag} is not evaluated")
+        if self._evaluated is not None and tag not in self._evaluated:
+            raise NotImplementedError(f"{self.dialect.name()} {tag} is not evaluated")
         if kind.role == Terms.LITERAL:
             value = Terms.attributes_of(record).get("value")
             if value is None:
@@ -101,8 +108,10 @@ class Interpreter:
             for i in range(1, len(arguments)):
                 thunks[i] = lambda item, argument=arguments[i]: self.evaluate(  # type: ignore[assignment]
                     argument, scope.bind(name, item))
-        if kind.vocabulary is None:
+        if kind.vocabulary is None or kind.operators is not None:  # one implementation for every operator
             return implementations(thunks, node, scope)
+        if operator not in implementations and operator in kind.vocabulary and not kind.closed and self._extension is None:
+            raise NotImplementedError(f"{self.dialect.name()} {tag} {operator!r} is not evaluated")
         if operator not in implementations:
             if self._extension is not None:
                 return self._extension(operator, thunks, node, scope)

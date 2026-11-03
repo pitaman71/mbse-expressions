@@ -1,17 +1,15 @@
 python3:
   binop:
-    operator: '-'
     left:
       binop:
-        operator: '+'
         left:
           binop:
-            operator: '+'
             left:
               literal:
                 value:
                   int: 16
                 text: '0x10'
+            op: '+'
             right:
               error:
                 text: '(x +* 1)'
@@ -23,11 +21,13 @@ python3:
                     literal:
                       value:
                         int: 1
+        op: '+'
         right:
           literal:
             text: '08'
             problems:
             - leading zeros in a decimal integer literal are not permitted
+    op: '-'
     right:
       missing:
         kind: expression

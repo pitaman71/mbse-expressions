@@ -9,9 +9,11 @@ back its own style. The bitwise operations are Python's (`&`, `|`, `^`, `~`, `<<
 `TRANSLATOR` writes collections with Python's builtins and generator expressions: `all` and `any` are `all(body for
 name in collection)` and `any(...)`, the quantifier `count` is `sum(1 for name in collection if body)`, `count(xs)` is
 `len(xs)`, `item(xs, i)` is `xs[i]`, `in(x, xs)` is `x in xs`, and `sum`, `min` and `max` are the builtins of one
-argument. `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back as `unique`. `entries` has no
+argument. A comparison translates as a chain of one link, `and` and `or` as a `boolop` of two values, and a generator
+expression as one of one `for` clause over a name: Python3's longer chains, boolops and clauses have no Patterns
+counterpart. `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back as `unique`. `entries` has no
 Python counterpart, and `NUMPY` writes no collections. The container constructors are Python's displays: a `list` its
-list display, `[a, b]`, and a `mapping` its dict display, `{k: v}`."""
+list display, `[a, b]`, and a `mapping` its dict display, `{k: v}`, a `dict` (its `**` items have no counterpart)."""
 
 from __future__ import annotations
 
@@ -19,7 +21,7 @@ from mbse.Expressions.Dialects.Patterns.Expressions import DIALECT as PATTERNS
 from mbse.Expressions.Dialects.Python3.Expressions import DIALECT as PYTHON3
 from mbse.Expressions.Framework.Translators import Elementwise, Elide, Pairwise, Prelude, Rule, renames
 
-from ._Patterns import Patterns, Numpy, Python3, value
+from ._Patterns import Patterns, Numpy, Python3, compares, value
 
 V = value(int, float, str, bool, bytes)
 _COMMON = [
@@ -35,14 +37,13 @@ TRANSLATOR = Pairwise(PATTERNS, PYTHON3, [
     Rule(Patterns.get, Python3.get),
     Rule(Patterns.has, Python3.has),
     Rule(Patterns.implies, Python3.implies),
-    *renames("call", "callable", "compare", "operator", {
-        "eq": "==", "ne": "!=", "lt": "<", "le": "<=", "gt": ">", "ge": ">="}, 2),
-    *renames("call", "callable", "boolop", "operator", {"and": "and", "or": "or"}, 2),
-    *renames("call", "callable", "binop", "operator", {"add": "+", "sub": "-", "mul": "*"}, 2),
-    *renames("call", "callable", "unaryop", "operator", {"not": "not", "neg": "-"}, 1),
-    *renames("call", "callable", "binop", "operator", {
+    *compares("call", "callable", {"==": "eq", "!=": "ne", "<": "lt", "<=": "le", ">": "gt", ">=": "ge"}, "right"),
+    *renames("call", "callable", "boolop", "op", {"and": "and", "or": "or"}, 2),
+    *renames("call", "callable", "binop", "op", {"add": "+", "sub": "-", "mul": "*"}, 2),
+    *renames("call", "callable", "unaryop", "op", {"not": "not", "neg": "-"}, 1),
+    *renames("call", "callable", "binop", "op", {
         "bitand": "&", "bitor": "|", "bitxor": "^", "shl": "<<", "shr": ">>"}, 2),
-    *renames("call", "callable", "unaryop", "operator", {"bitnot": "~"}, 1),
+    *renames("call", "callable", "unaryop", "op", {"bitnot": "~"}, 1),
     Rule(Patterns.quantifier("all"), Python3.all_),
     Rule(Patterns.quantifier("any"), Python3.any_),
     Rule(Patterns.quantifier("count"), Python3.count_where),
@@ -52,7 +53,7 @@ TRANSLATOR = Pairwise(PATTERNS, PYTHON3, [
     Rule(Patterns.in_, Python3.in_),
     Rule(Patterns.unary("unique"), Python3.unique, "forward"),
     Elementwise("list", "list"),
-    Elementwise("mapping", "mapping"),
+    Elementwise("mapping", "dict"),
 ])
 
 NUMPY = Pairwise(PATTERNS, PYTHON3, [

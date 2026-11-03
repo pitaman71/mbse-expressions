@@ -260,7 +260,8 @@ export class Opaque implements Signature {
   }
 }
 
-/** Takes `arity` arguments of any domains and gives one of them, as Python's `and` and `or` do. */
+/** Takes `arity` arguments of any domains, or any number of them (`arity` -1), and gives one of them, as Python's `and`
+ * and `or` do. */
 export class Either implements Signature {
   constructor(private readonly count: number) {}
 
@@ -269,10 +270,10 @@ export class Either implements Signature {
   }
 
   result(args: readonly Domain[]): Domain | null {
-    return args.length === this.count ? join(args) : null;
+    return (this.count === -1 || args.length === this.count) && args.length > 0 ? join(args) : null;
   }
 
   describe(): string {
-    return `(${Array(this.count).fill("T").join(", ")}) -> T`;
+    return this.count < 0 ? "(T, ...) -> T" : `(${Array(this.count).fill("T").join(", ")}) -> T`;
   }
 }

@@ -27,8 +27,10 @@
  * A pattern names a kind by its branch's tag in its dialect's `Term` (`call`, `binop`) and its attributes and arguments
  * as `Terms.form` reads them: a hole in an argument binds the term in that place, slots then variadic arguments, and a
  * fixed attribute must be set to an equal scalar, with every attribute of the term matched (an attribute that is not set
- * is absent), but a literal's spelling (`text`, `problems`), which is its own dialect's: a literal translates by its
- * value, and one with no value has no counterpart.
+ * is absent), but a literal's spelling (its kind's `spelling`: `text` and `problems`, and a Python literal's prefix,
+ * quotes, base and digit separators), which is its own dialect's: a literal translates by its value, and one with no
+ * value has no counterpart. A helper's structure is among a form's attributes (`Terms.Part`), so a pattern matches a
+ * Python comparison's operators or a comprehension's clauses as attributes, and its terms as arguments.
  *
  * Translating co-traverses: at each term, the first rule whose source pattern matches (the most specific first: the
  * one with the most terms and fixed attributes) is applied by traversing the pattern and the term in lockstep, binding
@@ -36,8 +38,11 @@
  * pattern is instantiated with the bound attributes and the translations of the bound arguments. A translation is a
  * `Terms.Writer` of the target dialect's term, which its caller writes where it wants it, in a transaction:
  * `store.Expressions.Framework.Term(translator.forward(term))`. A term is a nested value, so a let's value inlined at
- * each use of its name is written at each. Pairs of corresponding source terms and target writers are appended to
- * `trace`, if given, each term after the terms within it. A term that no rule matches throws `ValueError` naming it. A
+ * each use of its name is written at each. A term that no rule matches is read as its kind's `unfold` gives it, where it
+ * gives one: an equivalent `Form` of simpler terms (a Python comparison chain as the `and` of its links, its middle
+ * operands written in each), translated as a term is. Pairs of corresponding source terms (or unfolded forms) and target
+ * writers are appended to `trace`, if given, each term after the terms within it. A term that no rule matches throws
+ * `ValueError` naming it. A
  * translation preserves the expression's form, not always its value: dialects evaluate by their own rules (see each
  * dialect's `Evaluators`).
  */
@@ -200,8 +205,16 @@ export function renames(leftKind: string, leftAttribute: string, rightKind: stri
     new Pattern(rightKind, { [rightAttribute]: b }, ...args)));
 }
 
-/** A literal's spelling in its source, and what is wrong with it: its own dialect's, which no translation carries. */
-const SPELLING = ["text", "problems"];
+/** A term's form, or an unfolded form itself. */
+function formOf(node: unknown): Terms.Form {
+  return node instanceof Terms.Form ? node : Terms.form(node);
+}
+
+/** A term's tag, record and kind, or an unfolded form's, which has no record. */
+function kindOf(dialect: Terms.Dialect, node: unknown): [string, any, Terms.Kind] {
+  if (node instanceof Terms.Form) return [node.kind, null, dialect.kinds().get(node.kind) as Terms.Kind];
+  return dialect.kind(node);
+}
 
 function describe(dialect: Terms.Dialect, node: unknown): string {
   const [tag, record, kind] = dialect.kind(node);
@@ -275,6 +288,8 @@ class Direction {
     let free: Set<string>;
     if (kind.role === Terms.REFERENCE) {
       free = new Set(kind.lexical && !kind.ambient.has(name) ? [name] : []);
+    } else if (kind.scopes !== null) { // what its arguments bind is read from a record, which a writer is not yet:
+      free = new Set(frees.flatMap((f) => [...f])); // its arguments' names, the names it binds among them
     } else if (kind.role === Terms.BINDING || kind.role === Terms.QUANTIFIER) {
       free = new Set([...(frees[0] as ReadonlySet<string>), ...frees.slice(1).flatMap((f) => [...f].filter((n) => n !== name))]);
     } else {
@@ -298,7 +313,10 @@ class Run {
   }
 
   private translateTerm(node: unknown, environment: Environment): Built {
-    const [tag, record, kind] = this.direction.source.kind(node);
+    const [tag, record, kind] = kindOf(this.direction.source, node);
+    if (record === null) { // an unfolded form: a rule reads it, or its kind unfolds it further
+      return this.rules(node, tag, environment) ?? this.unfolded(node, kind, environment);
+    }
     const name = Terms.nameOf(node) as string;
     if (kind.role === Terms.REFERENCE && kind.lexical && environment.has(name)) return environment.get(name) as Built;
     if (this.direction.elides.has(tag)) {
@@ -315,10 +333,8 @@ class Run {
       const inner = new Map([...environment, [name, this.translate(value, environment)]]);
       return this.translate(body, inner);
     }
-    for (const [source, target] of this.direction.rules.get(tag) ?? []) {
-      const bindings = new Map<string, unknown>();
-      if (this.match(source, node, bindings)) return this.instantiate(target, bindings, environment);
-    }
+    const ruled = this.rules(node, tag, environment);
+    if (ruled !== null) return ruled;
     for (const [attributes, targetKind, targetAttributes] of this.direction.elementwise.get(tag) ?? []) {
       const form = Terms.form(node);
       const keys = Object.keys(attributes);
@@ -333,7 +349,25 @@ class Run {
       if (attributes === null) continue;
       return this.direction.build(new Terms.Form(targetKind, attributes, []));
     }
-    throw new ValueError(`${describe(this.direction.source, node)} has no ${this.direction.target.name()} counterpart`);
+    return this.unfolded(node, kind, environment);
+  }
+
+  /** The translation of the first rule whose source pattern matches `node`, or null. */
+  private rules(node: unknown, tag: string, environment: Environment): Built | null {
+    for (const [source, target] of this.direction.rules.get(tag) ?? []) {
+      const bindings = new Map<string, unknown>();
+      if (this.match(source, node, bindings)) return this.instantiate(target, bindings, environment);
+    }
+    return null;
+  }
+
+  /** The translation of the form `node`'s kind unfolds it into; throws naming the term where it has none. */
+  private unfolded(node: unknown, kind: Terms.Kind, environment: Environment): Built {
+    const unfolded = kind.unfold !== null ? kind.unfold(formOf(node)) : null;
+    if (unfolded !== null) return this.translate(unfolded, environment);
+    const described = node instanceof Terms.Form ? `${this.direction.source.name()} ${node.kind}`
+      : describe(this.direction.source, node);
+    throw new ValueError(`${described} has no ${this.direction.target.name()} counterpart`);
   }
 
   /** Co-traverses `pattern` and `node`, binding the pattern's holes. */
@@ -345,10 +379,11 @@ class Run {
       return true;
     }
     if (node === null) return false;
-    const form = Terms.form(node);
+    const form = formOf(node);
     let attributes = form.attributes;
-    if (this.direction.source.kind(node)[2].role === Terms.LITERAL) { // a literal's spelling is its dialect's own
-      attributes = new Map([...attributes].filter(([k]) => !SPELLING.includes(k)));
+    const kind = kindOf(this.direction.source, node)[2];
+    if (kind.role === Terms.LITERAL) { // a literal's spelling is its dialect's own
+      attributes = new Map([...attributes].filter(([k]) => !kind.spelling.includes(k)));
     }
     if (form.kind !== pattern.kind || attributes.size !== pattern.attributes.size
       || ![...pattern.attributes.keys()].every((k) => attributes.has(k))) return false;

@@ -95,7 +95,9 @@ export function free(term: unknown, dialect: Terms.Dialect): Set<string> {
     }
     const args = Terms.argumentsOf(record);
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
-    if (kind.role === Terms.BINDING || kind.role === Terms.QUANTIFIER) {
+    if (kind.scopes !== null) { // the names each argument has bound: a comprehension's targets, say
+      scopes = kind.scopes(record).map((names) => new Set([...bound, ...names]));
+    } else if (kind.role === Terms.BINDING || kind.role === Terms.QUANTIFIER) {
       scopes = args.map((_, i) => (i === 0 ? bound : new Set([...bound, name])));
     } else if (kind.role === Terms.IMPORT) {
       const names = new Set([...bound, ...(kind.names !== null ? kind.names(Terms.attributesOf(record)) : [])]);

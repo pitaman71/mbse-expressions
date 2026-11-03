@@ -39,9 +39,13 @@
  * Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
  * branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's slots (a term
  * each: a property whose schema is `Expressions.Framework.Term` or a dialect's `Term`), its variadic arguments (a container of terms, or of
- * value objects of terms, a mapping's pairs, read as their terms in turn) or its attributes (anything else) is read from
- * the kind's schema. What the framework needs to know beyond the schema, how each kind is read, is a `Kind`: its role,
- * and which properties name what it binds and its operator.
+ * value objects of terms, a mapping's pairs, read as their terms in turn), its helpers (a value object that is not a
+ * term and not a pair, or a container of them, or of a union of them: a Python call's keywords, a comparison's links, a
+ * comprehension's `for` clauses) or its attributes (anything else) is read from the kind's schema. A helper is read as a
+ * `Part` among the attributes, its kind, its own attributes and how many arguments it holds, and its terms are the
+ * term's arguments too, after its slots and variadic arguments; so a form keeps a helper's structure in its attributes
+ * and its terms in its arguments, and `make` writes it back. What the framework needs to know beyond the schema, how each
+ * kind is read, is a `Kind`: its role, and which properties name what it binds and its operator.
  *
  * - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
  * - `kindOf(term)`: its kind's branch, `(tag, record)`; `dialectOf(term)`: the name of its dialect's `Term`.
@@ -189,6 +193,23 @@ export class Form {
   }
 }
 
+/** A helper a term holds, as its form's attributes read it: its `kind` (its branch's tag, where a union of helpers holds
+ * it, else its schema's name's last part, lowercased: `keyword`), its `attributes`, read as a term's are, and its `size`,
+ * how many of the term's arguments are its terms (its slots, null where empty, its variadic arguments and its own
+ * helpers' terms). Two parts are the same where their kinds, attributes and sizes are. */
+export class Part {
+  readonly attributes: ReadonlyMap<string, unknown>;
+
+  constructor(readonly kind: string, attributes: ReadonlyMap<string, unknown> | Record<string, unknown> = new Map(),
+    readonly size: number = 0) {
+    this.attributes = attributes instanceof Map ? attributes : new Map(Object.entries(attributes));
+  }
+
+  [Repr.REPR](): string {
+    return `Part(kind=${repr(this.kind)}, attributes=${repr(this.attributes)}, size=${this.size})`;
+  }
+}
+
 function named(schema: unknown, name: string): boolean {
   return (schema as { name?: unknown } | null | undefined)?.name === name;
 }
@@ -202,7 +223,7 @@ function holdsTerms(schema: unknown): boolean {
 }
 
 type Parts = readonly [readonly string[], string | null, readonly string[]];
-const PARTS = new WeakMap<object, Parts>();
+const PARTS = new WeakMap<object, readonly [Parts, readonly string[]]>();
 
 /** Whether a schema is a value object whose properties are all terms, such as a mapping's pair. */
 function isPair(schema: any): boolean {
@@ -210,23 +231,45 @@ function isPair(schema: any): boolean {
     && [...(schema.properties as Map<string, Schemas.OfProperty.Data>).values()].every((prop) => holdsTerms(prop.schema));
 }
 
+/** Whether a schema is a helper's: a value object that is not a pair, or a union whose branches all are. */
+function isHelper(schema: any): boolean {
+  if (schema instanceof Schemas.OfUnion.Data) {
+    return !holdsTerms(schema) && schema.branches.length > 0
+      && (schema.branches as readonly Schemas.OfUnion.Branch[]).every((branch) => isHelper(branch.schema));
+  }
+  return schema instanceof Schemas.OfObject.Data && !schema.ref && !isPair(schema);
+}
+
 /** A kind's schema's slots (properties holding a term), its variadic property (a container of terms, or of value
- * objects of terms such as a mapping's pairs) or null, and its attributes (the rest), each in declaration order. */
+ * objects of terms such as a mapping's pairs) or null, and its attributes (the rest, its helpers among them), each in
+ * declaration order. */
 export function _parts(schema: any): Parts {
   const cached = PARTS.get(schema);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) return cached[0];
   const slots: string[] = [];
   const attributes: string[] = [];
+  const helpers: string[] = [];
   let variadic: string | null = null;
   for (const [name, prop] of schema.properties as Map<string, Schemas.OfProperty.Data>) {
     if (holdsTerms(prop.schema)) slots.push(name);
     else if (prop.schema instanceof Schemas.OfContainer.Data && (holdsTerms(prop.schema.element)
       || isPair(prop.schema.element))) variadic = name;
-    else attributes.push(name);
+    else {
+      attributes.push(name);
+      if (isHelper(prop.schema) || (prop.schema instanceof Schemas.OfContainer.Data && isHelper(prop.schema.element))) {
+        helpers.push(name);
+      }
+    }
   }
   const parts: Parts = [slots, variadic, attributes];
-  PARTS.set(schema, parts);
+  PARTS.set(schema, [parts, helpers]);
   return parts;
+}
+
+/** A kind's schema's helper properties (each a helper, or a container of them), in declaration order. */
+export function _helpers(schema: any): readonly string[] {
+  _parts(schema);
+  return (PARTS.get(schema) as readonly [Parts, readonly string[]])[1];
 }
 
 /** The term properties of the value objects a kind's variadic property holds, in declaration order (a mapping's `key`
@@ -365,22 +408,72 @@ function variadicOf(record: any, name: string): any[] {
   return found;
 }
 
-/** A record's attributes that are set, by name, in declaration order. */
+/** The helpers a helper property holds, each its kind and its record, in order. */
+function helperRecords(record: any, name: string): [string, any][] {
+  const found: [string, any][] = [];
+  const one = (value: any): any => { // a helper, or a union holding one
+    const schema = value.as_schema();
+    if (schema instanceof Schemas.OfUnion.Data) {
+      found.push(heldBranch(value) as [string, any]); // a union value holding nothing is not stored
+    } else if (schema !== null) {
+      found.push([(schema.name as string).split(".").pop()!.toLowerCase(), value]);
+    }
+    return value;
+  };
+  const read = (a: any): any => {
+    a.as_object(one);
+    a.as_union(one);
+    a.as_container((c: any) => {
+      if (c.as_schema() === null) return c;
+      return c.as_entries((it: Iterator<[unknown, any]>) => {
+        for (let next = it.next(); !next.done; next = it.next()) read(next.value[1]);
+      });
+    });
+    return a;
+  };
+  record[name].as_value(read);
+  return found;
+}
+
+function partOf(kind: string, record: any): Part {
+  return new Part(kind, attributesOf(record), argumentsOf(record).length);
+}
+
+/** A record's attributes that are set, by name, in declaration order: a helper as its `Part`, a container of helpers as
+ * an array of them. */
 export function attributesOf(record: any): Map<string, any> {
-  const [, , names] = _parts(record.as_schema());
+  const schema = record.as_schema();
+  const [, , names] = _parts(schema);
+  const helpers = _helpers(schema);
   const found = new Map<string, any>();
   for (const name of names) {
+    if (helpers.includes(name)) {
+      const parts = helperRecords(record, name).map(([kind, helper]) => partOf(kind, helper));
+      const many = schema.properties.get(name).schema instanceof Schemas.OfContainer.Data;
+      if (parts.length > 0) found.set(name, many ? parts : parts[0]);
+      continue;
+    }
     const value = scalar(record, name);
     if (value !== null) found.set(name, value);
   }
   return found;
 }
 
-/** A record's arguments: its slots, null where empty, then its variadic arguments. */
-export function argumentsOf(record: any): any[] {
+/** A record's own arguments: its slots, null where empty, then its variadic arguments. */
+function ownArguments(record: any): any[] {
   const [slots, variadic] = _parts(record.as_schema());
   const fixed = slots.map((name) => slot(record, name));
   return variadic !== null ? [...fixed, ...variadicOf(record, variadic)] : fixed;
+}
+
+/** A record's arguments: its slots, null where empty, then its variadic arguments, then its helpers' arguments, in
+ * order. */
+export function argumentsOf(record: any): any[] {
+  const found = ownArguments(record);
+  for (const name of _helpers(record.as_schema())) {
+    for (const [, helper] of helperRecords(record, name)) found.push(...argumentsOf(helper));
+  }
+  return found;
 }
 
 /** A term's `Form`. */
@@ -421,8 +514,17 @@ export function fold<R>(term_: unknown, fn: (node: any, results: any[]) => R): R
 }
 
 /** Scalars of one type by value (NaN is NaN, -0.0 is not 0.0), and containers of them (a literal's problems)
- * element by element, as Python compares tuples. */
+ * element by element, as Python compares tuples; helpers' parts by their kinds, attributes and sizes, and arrays of them
+ * element by element. */
 export function sameNative(a: unknown, b: unknown): boolean {
+  if (a instanceof Part || b instanceof Part) {
+    return a instanceof Part && b instanceof Part && a.kind === b.kind && a.size === b.size
+      && a.attributes.size === b.attributes.size
+      && [...a.attributes].every(([k, v]) => b.attributes.has(k) && sameNative(v, b.attributes.get(k)));
+  }
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((v, i) => sameNative(v, b[i]));
+  }
   if (typeName(a) !== typeName(b)) return false;
   if (typeof a === "number") return Object.is(a, b);
   if (a instanceof Uint8Array) {
@@ -535,6 +637,91 @@ function pair(members: readonly string[], terms: readonly (Writer | null)[]): (e
   });
 }
 
+/** A record's arguments, as `argumentsOf` gives them, each with its label (`left`, `argument 0`, `key 1`,
+ * `keywords 0 value`) and its path (`left`, `argument`, `key`, `keywords.value`). */
+export function _labelled(record: any): [string, string, any][] {
+  const schema = record.as_schema();
+  const [slots, variadic] = _parts(schema);
+  const own = ownArguments(record);
+  const found: [string, string, any][] = slots.map((name, i) => [name, name, own[i]]);
+  if (variadic !== null) {
+    const members = _members(schema);
+    own.slice(slots.length).forEach((argument, j) => {
+      const member = members.length > 0 ? members[j % members.length] as string : null;
+      const label = member !== null ? `${member} ${Math.floor(j / members.length)}` : `argument ${j}`;
+      found.push([label, member ?? "argument", argument]);
+    });
+  }
+  for (const name of _helpers(schema)) {
+    const many = schema.properties.get(name).schema instanceof Schemas.OfContainer.Data;
+    helperRecords(record, name).forEach(([, helper], i) => {
+      const prefix = many ? `${name} ${i}` : name;
+      for (const [label, path, argument] of _labelled(helper)) found.push([`${prefix} ${label}`, `${name}.${path}`, argument]);
+    });
+  }
+  return found;
+}
+
+/** Writes a record of a term or a helper (`kind`, for messages): its attributes, then its arguments, in order, to its
+ * slots, its variadic property and its helpers, each helper's part taking its size. */
+function fill(r: any, kind: string, attributes: ReadonlyMap<string, unknown>, args: readonly (Writer | null)[]): any {
+  const schema = r.as_schema();
+  const [slots, variadic, names] = _parts(schema);
+  const helpers = _helpers(schema);
+  const parts: [string, Part][] = [];
+  for (const [name, value] of attributes) {
+    if (!names.includes(name)) throw new ValueError(`${article(kind)} has no attribute ${repr(name)}`);
+    if (helpers.includes(name)) {
+      for (const part of Array.isArray(value) ? value as Part[] : [value as Part]) parts.push([name, part]);
+    } else if (value instanceof Objects.Listed) r[name]([...value.values]); // a container of scalars: a literal's problems
+    else r[name]((p: any) => p.as_scalar(value));
+  }
+  const held = parts.reduce((total, [, part]) => total + part.size, 0);
+  if (args.length < slots.length + held || (variadic === null && args.length !== slots.length + held)) {
+    const least = variadic === null ? "" : "at least ";
+    throw new ValueError(`${article(kind)} takes ${least}${slots.length + held} arguments, got ${args.length}`);
+  }
+  slots.forEach((name, i) => {
+    if (args[i] !== null) r[name](args[i]);
+  });
+  if (variadic !== null) {
+    const rest = args.slice(slots.length, args.length - held);
+    const members = _members(schema);
+    if (members.length > 0 && rest.length % members.length !== 0) {
+      throw new ValueError(`${article(kind)} takes its arguments in ${members.length}s (${members.join(", ")}), got ${rest.length}`);
+    }
+    r[variadic](members.length === 0 ? rest : Array.from({ length: rest.length / members.length },
+      (_, i) => pair(members, rest.slice(i * members.length, (i + 1) * members.length))));
+  }
+  let offset = args.length - held;
+  for (const name of helpers) {
+    const mine = parts.filter(([owner]) => owner === name).map(([, part]) => part);
+    if (mine.length === 0) continue;
+    const prop = schema.properties.get(name).schema;
+    const specs = mine.map((part) => {
+      const spec = helperSpec(prop, part, args.slice(offset, offset + part.size));
+      offset += part.size;
+      return spec;
+    });
+    if (prop instanceof Schemas.OfContainer.Data) r[name](specs);
+    else r[name](specs[0]);
+  }
+  return r;
+}
+
+/** The spec of a helper, from its part and its arguments: given the visitor of a property or of a container's element,
+ * it writes the helper, the union's branch its part's kind where a union of helpers holds it. */
+function helperSpec(schema: any, part: Part, args: readonly (Writer | null)[]): (visitor: any) => any {
+  const element = schema instanceof Schemas.OfContainer.Data ? schema.element : schema;
+  const filled = (o: any): any => fill(o, part.kind, part.attributes, args);
+  const write = (visitor: any): any => {
+    if (visitor.as_schema() instanceof Schemas.OfProperty.Data) return visitor.as_value(write); // a property: its value
+    if (element instanceof Schemas.OfUnion.Data) return visitor.as_union((u: any) => u[part.kind](filled));
+    return visitor.as_object(filled);
+  };
+  return write;
+}
+
 // --- Dialects ---
 
 /** What a kind's `Kind` declares, beyond its role. */
@@ -550,6 +737,12 @@ export interface KindOptions {
   typed?: ((record: any) => Domains.Domain | null) | null;
   closed?: boolean;
   standards?: readonly string[];
+  optional?: readonly string[];
+  scopes?: ((record: any) => ReadonlySet<string>[]) | null;
+  operators?: ((attributes: ReadonlyMap<string, any>) => readonly string[]) | null;
+  result?: ((attributes: ReadonlyMap<string, any>, domains: Domains.Domain[]) => Domains.Domain) | null;
+  unfold?: ((form: Form) => Form | null) | null;
+  spelling?: readonly string[];
 }
 
 /** How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`, or null
@@ -560,7 +753,15 @@ export interface KindOptions {
  * import, the names it binds, of its attributes (`names(attributes)`); its own problems (`check(record)`); the domain
  * its own attributes give it, where they give one (`typed(record)`: C's type of a constant or a cast; a term carries no
  * domain); and the standards of its dialect's language that have it (`standards`: `C11`, `C++17`), where its dialect
- * covers several, as mbse-programs' standards record when each kind arrived. */
+ * covers several, as mbse-programs' standards record when each kind arrived.
+ * Where its role says too little: the slots that may be empty (`optional`, by path: a slot's name, a pair's member's, or
+ * a helper property's name, a dot, and the path within the helper: `generators.target`); the names each of its
+ * arguments has bound, besides its scope's (`scopes(record)`, one set per argument: a comprehension's targets, a
+ * lambda's parameters); the operators it applies, where it applies several (`operators(attributes)`: a comparison
+ * chain's), each checked against its vocabulary, and the domain they give (`result(attributes, domains)`); an
+ * equivalent form of simpler terms (`unfold(form)`, or null: a comparison chain as the `and` of its links), which
+ * translation reads where no rule reads the term itself; and, for a literal, the attributes that spell it rather than
+ * give its value (`spelling`), which no translation carries. */
 export class Kind {
   readonly operator: string | null;
   readonly vocabulary: ReadonlyMap<string, Domains.Signature> | null;
@@ -573,6 +774,12 @@ export class Kind {
   readonly typed: ((record: any) => Domains.Domain | null) | null;
   readonly closed: boolean;
   readonly standards: readonly string[];
+  readonly optional: readonly string[];
+  readonly scopes: ((record: any) => ReadonlySet<string>[]) | null;
+  readonly operators: ((attributes: ReadonlyMap<string, any>) => readonly string[]) | null;
+  readonly result: ((attributes: ReadonlyMap<string, any>, domains: Domains.Domain[]) => Domains.Domain) | null;
+  readonly unfold: ((form: Form) => Form | null) | null;
+  readonly spelling: readonly string[];
 
   constructor(readonly role: string, options: KindOptions = {}) {
     this.operator = options.operator ?? null;
@@ -586,6 +793,12 @@ export class Kind {
     this.typed = options.typed ?? null;
     this.closed = options.closed ?? false;
     this.standards = options.standards ?? [];
+    this.optional = options.optional ?? [];
+    this.scopes = options.scopes ?? null;
+    this.operators = options.operators ?? null;
+    this.result = options.result ?? null;
+    this.unfold = options.unfold ?? null;
+    this.spelling = options.spelling ?? ["text", "problems"];
     Object.freeze(this);
   }
 }
@@ -701,36 +914,13 @@ export class Dialect {
     return spec(value, this._literal, this.tag);
   }
 
-  /** The writer of a term with this form: its attributes written as scalars, its arguments (specs: terms, writers,
-   * native values) to its slots in order and the rest to its variadic property. */
+  /** The writer of a term with this form: its attributes written as scalars (a container of scalars as a container, a
+   * helper's `Part` as the helper), its arguments (specs: terms, writers, native values) to its slots in order, then to
+   * its variadic property, then to its helpers, each its part's size. */
   make(form_: Form): Writer {
     if (!this.byTag.has(form_.kind)) throw new ValueError(`${this.dialectName} has no kind ${repr(form_.kind)}`);
     const args = form_.arguments.map((a) => (a === null ? null : this.spec(a)));
-    return new Writer((union: any) => union[form_.kind]((r: any) => {
-      const [slots, variadic, names] = _parts(r.as_schema());
-      for (const [name, value] of form_.attributes) {
-        if (!names.includes(name)) throw new ValueError(`${article(form_.kind)} has no attribute ${repr(name)}`);
-        if (value instanceof Objects.Listed) r[name]([...value.values]); // a container of scalars: a literal's problems
-        else r[name]((p: any) => p.as_scalar(value));
-      }
-      if (args.length < slots.length || (variadic === null && args.length !== slots.length)) {
-        const least = variadic === null ? "" : "at least ";
-        throw new ValueError(`${article(form_.kind)} takes ${least}${slots.length} arguments, got ${args.length}`);
-      }
-      slots.forEach((name, i) => {
-        if (args[i] !== null) r[name](args[i]);
-      });
-      if (variadic !== null) {
-        const rest = args.slice(slots.length);
-        const members = _members(r.as_schema());
-        if (members.length > 0 && rest.length % members.length !== 0) {
-          throw new ValueError(`${article(form_.kind)} takes its arguments in ${members.length}s (${members.join(", ")}), got ${rest.length}`);
-        }
-        r[variadic](members.length === 0 ? rest : Array.from({ length: rest.length / members.length },
-          (_, i) => pair(members, rest.slice(i * members.length, (i + 1) * members.length))));
-      }
-      return r;
-    }), this.tag);
+    return new Writer((union: any) => union[form_.kind]((r: any) => fill(r, form_.kind, form_.attributes, args)), this.tag);
   }
 
   // Checks
@@ -749,15 +939,17 @@ export class Dialect {
     if (kind === undefined) return [`${this.dialectName} has no kind ${repr(tag)}`];
     const what = article(tag);
     const attributes = attributesOf(record);
-    if (kind.role === LITERAL) { // its problems, as its text's reader found them; a value it needs
+    const declared = record.as_schema().properties as Map<string, Schemas.OfProperty.Data>;
+    if (kind.role === LITERAL) { // its problems, as its text's reader found them; a value it needs, where it has one
       const found = attributes.has("problems") ? [...(attributes.get("problems") as Objects.Listed).values as string[]] : [];
-      if ((attributes.get("value") ?? null) === null) return found.length > 0 ? found : [`${what} needs a value`];
+      if (declared.has("value") && (attributes.get("value") ?? null) === null) {
+        return found.length > 0 ? found : [`${what} needs a value`];
+      }
       return [...found, ...(kind.check !== null ? kind.check(record) : [])];
     }
     if (kind.role === INVALID) return (kind.check as (record: any) => string[])(record);
     const problems = kind.required.filter((name) => [null, undefined, ""].includes(attributes.get(name)))
       .map((name) => `${what} needs ${article(name)}`);
-    const declared = record.as_schema().properties as Map<string, Schemas.OfProperty.Data>;
     for (const [name, value] of attributes) { // the builders write any scalar; validation reports the wrong one
       const held = (declared.get(name) as Schemas.OfProperty.Data).schema;
       if (held instanceof Schemas.OfScalar.Data && !Schemas.isScalarOf(held.type, value)) {
@@ -772,10 +964,12 @@ export class Dialect {
       }
       return problems;
     }
-    const [slots] = _parts(record.as_schema());
-    const args = argumentsOf(record);
+    const labelled = _labelled(record);
+    const args = labelled.map(([, , argument]) => argument);
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
-    if (kind.role === BINDING || kind.role === QUANTIFIER) {
+    if (kind.scopes !== null) {
+      scopes = kind.scopes(record).map((names) => new Set([...bound, ...names]));
+    } else if (kind.role === BINDING || kind.role === QUANTIFIER) {
       const inner = problems.length === 0 ? new Set([...bound, name]) : bound;
       scopes = args.map((_, i) => (i === 0 ? bound : inner));
     } else if (kind.role === IMPORT) {
@@ -783,23 +977,26 @@ export class Dialect {
       scopes = args.map(() => new Set([...bound, ...names]));
     }
     if ((kind.role === APPLICATION || kind.role === QUANTIFIER) && problems.length === 0 && kind.vocabulary !== null) {
-      const operator = operatorOf(node, kind);
-      const signature = kind.vocabulary.get(operator);
-      if (signature !== undefined && ![-1, args.length].includes(signature.arity())) { // -1: any number
-        problems.push(`${operator} takes ${signature.arity()} arguments, got ${args.length}`);
-      } else if (kind.closed && signature === undefined) {
-        problems.push(`${repr(operator)} is not an operation ${this.dialectName} defines`);
-      } else if (core && signature === undefined) {
-        problems.push(`${repr(operator)} is not a core operation`);
+      const vocabulary = kind.vocabulary;
+      if (kind.operators !== null) { // several, each checked against the vocabulary
+        problems.push(...kind.operators(attributes).filter((operator) => core && !vocabulary.has(operator))
+          .map((operator) => `${repr(operator)} is not a core operation`));
+      } else {
+        const operator = operatorOf(node, kind);
+        const signature = vocabulary.get(operator);
+        if (signature !== undefined && ![-1, args.length].includes(signature.arity())) { // -1: any number
+          problems.push(`${operator} takes ${signature.arity()} arguments, got ${args.length}`);
+        } else if (kind.closed && signature === undefined) {
+          problems.push(`${repr(operator)} is not an operation ${this.dialectName} defines`);
+        } else if (core && signature === undefined) {
+          problems.push(`${repr(operator)} is not a core operation`);
+        }
       }
     }
-    const members = _members(record.as_schema());
-    args.forEach((argument, i) => {
-      const j = i - slots.length;
-      const label = j < 0 ? slots[i] as string : members.length > 0
-        ? `${members[j % members.length]} ${Math.floor(j / members.length)}` : `argument ${j}`;
-      if (argument === null) problems.push(`${what} needs ${article(label)}`);
-      else problems.push(...this.problems(argument, scopes[i] as ReadonlySet<string>, core).map((p) => `${label}: ${p}`));
+    labelled.forEach(([label, path, argument], i) => {
+      if (argument === null) {
+        if (!kind.optional.includes(path)) problems.push(`${what} needs ${article(label)}`);
+      } else problems.push(...this.problems(argument, scopes[i] as ReadonlySet<string>, core).map((p) => `${label}: ${p}`));
     });
     return problems;
   }
@@ -841,9 +1038,10 @@ export class Dialect {
       const item = signature === null ? Domains.Anything : (signature as unknown as Quantified).items(collection);
       const inner = { ...environment, [nameOf(node)]: item };
       domains = [collection, ...args.slice(1).map((argument) => this.inferIn(argument, inner))];
-    } else {
-      domains = args.map((argument) => this.inferIn(argument, environment));
+    } else { // an empty slot, where it may be empty, is not known
+      domains = args.map((argument) => (argument === null ? Domains.Anything : this.inferIn(argument, environment)));
     }
+    if (kind.result !== null) return kind.result(attributesOf(record), domains); // several operators, which it applies
     if (signature === null) return Domains.Anything; // an extension: nothing is known about it
     const result = signature.result(domains);
     if (result === null) {

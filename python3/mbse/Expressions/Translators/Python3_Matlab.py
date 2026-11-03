@@ -11,7 +11,7 @@ from mbse.Expressions.Dialects.Matlab.Expressions import DIALECT as MATLAB
 from mbse.Expressions.Dialects.Python3.Expressions import DIALECT as PYTHON3
 from mbse.Expressions.Framework.Translators import Elementwise, Elide, Inline, Pairwise, Rule, renames
 
-from ._Patterns import Matlab, Python3, collections, value
+from ._Patterns import compares, Matlab, Python3, collections, value
 
 V = value(int, float, str, bool)
 
@@ -25,12 +25,12 @@ TRANSLATOR = Pairwise(PYTHON3, MATLAB, [
     Rule(Python3.get, Matlab.get),
     Rule(Python3.has, Matlab.has),
     Rule(Python3.implies, Matlab.implies, "forward"),
-    *renames("compare", "operator", "binary", "operator", {
-        "==": "==", "!=": "~=", "<": "<", "<=": "<=", ">": ">", ">=": ">="}, 2),
-    *renames("boolop", "operator", "binary", "operator", {"and": "&&", "or": "||"}, 2),
-    *renames("binop", "operator", "binary", "operator", {"+": "+", "-": "-", "*": ".*"}, 2),
-    *renames("unaryop", "operator", "unary", "operator", {"not": "~", "-": "-"}, 1),
-    *renames("binop", "operator", "call", "callable", {"&": "bitand", "|": "bitor", "^": "bitxor", "<<": "bitshift"}, 2),
+    *compares("binary", "operator", {
+        "==": "==", "!=": "~=", "<": "<", "<=": "<=", ">": ">", ">=": ">="}),
+    *renames("boolop", "op", "binary", "operator", {"and": "&&", "or": "||"}, 2),
+    *renames("binop", "op", "binary", "operator", {"+": "+", "-": "-", "*": ".*"}, 2),
+    *renames("unaryop", "op", "unary", "operator", {"not": "~", "-": "-"}, 1),
+    *renames("binop", "op", "call", "callable", {"&": "bitand", "|": "bitor", "^": "bitxor", "<<": "bitshift"}, 2),
     Rule(Python3.shr, Matlab.shr),
     *collections("Python", "Matlab"),
     Elementwise("list", "list"),

@@ -252,7 +252,8 @@ class Opaque:
 
 
 class Either:
-    """Takes `arity` arguments of any domains and gives one of them, as Python's `and` and `or` do."""
+    """Takes `arity` arguments of any domains, or any number of them (`arity` -1), and gives one of them, as Python's
+    `and` and `or` do."""
 
     def __init__(self, arity: int):
         self._arity = arity
@@ -261,7 +262,7 @@ class Either:
         return self._arity
 
     def result(self, arguments: Sequence[Domain]) -> Domain | None:
-        return _join(arguments) if len(arguments) == self._arity else None
+        return _join(arguments) if self._arity in (-1, len(arguments)) and arguments else None
 
     def describe(self) -> str:
-        return f"({', '.join(['T'] * self._arity)}) -> T"
+        return "(T, ...) -> T" if self._arity < 0 else f"({', '.join(['T'] * self._arity)}) -> T"

@@ -1,6 +1,7 @@
 /** Text of the Python3 dialect: `ToText(expression)` is a term (or anything `Terms.term` reads one from) as Python
- * source, parenthesized only where precedence requires, with its imports as the lines before it. Reading Python source
- * (`FromText`) needs Python's own parser, so it is in the Python implementation only. */
+ * source, parenthesized only where precedence requires, with its imports as the lines before it, a literal in its
+ * spelling where it has one and invalid syntax as written (`Terms.invalidText`). Reading Python source (`FromText`)
+ * needs Python's own parser, so it is in the Python implementation only. */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -9,20 +10,23 @@ import { Errors, Repr } from "@mbse/schemas/Framework";
 import * as F from "../../Framework/Terms.js";
 import * as P from "./Expressions.js";
 
-const { repr } = Repr;
+const { repr, pyFloat } = Repr;
 
 // --- Rendering ---
 
-// Python's precedence, from loosest to tightest (lambda is 0).
-const IF = 1, OR = 2, AND = 3, NOT = 4, COMPARE = 5, BITOR = 6, BITXOR = 7, BITAND = 8, SHIFT = 9, SUM = 10,
-  PRODUCT = 11, UNARY = 12, POWER = 13, PRIMARY = 14;
+// Python's precedence, loosest first (its language reference, 6.17).
+const YIELD = 0, NAMED = 1, LAMBDA = 2, IF = 3, OR = 4, AND = 5, NOT = 6, COMPARE = 7, BITOR = 8, BITXOR = 9,
+  BITAND = 10, SHIFT = 11, SUM = 12, PRODUCT = 13, UNARY = 14, POWER = 15, AWAIT = 16, PRIMARY = 17;
 const BINOP_LEVELS: Record<string, number> = {
-  "+": SUM, "-": SUM, "*": PRODUCT, "/": PRODUCT, "//": PRODUCT, "%": PRODUCT, "**": POWER,
+  "+": SUM, "-": SUM, "*": PRODUCT, "@": PRODUCT, "/": PRODUCT, "//": PRODUCT, "%": PRODUCT, "**": POWER,
   "|": BITOR, "^": BITXOR, "&": BITAND, "<<": SHIFT, ">>": SHIFT,
 };
 const IMPORTS = [P.IMPORT, P.IMPORTFROM];
 
-function constantText(value: unknown): [string, number] {
+type Written = [string, number];
+type Attributes = Map<string, any>;
+
+function constantText(value: unknown): Written {
   let text: string;
   if (typeof value === "number" && !Number.isFinite(value)) {
     text = Number.isNaN(value) ? "float('nan')" : value > 0 ? "float('inf')" : "-float('inf')";
@@ -32,10 +36,301 @@ function constantText(value: unknown): [string, number] {
   return [text, text.startsWith("-") ? UNARY : PRIMARY];
 }
 
-function importLine(tag: string, attributes: Map<string, any>): string {
+/** A complex number as Python's `repr` writes it: `2j`, `(1-2j)`. */
+function complexText(real: number, imag: number): string {
+  const part = (x: number): string => {
+    const text = pyFloat(x);
+    return text.endsWith(".0") ? text.slice(0, -2) : text;
+  };
+  if (Object.is(real, 0)) return `${part(imag)}j`;
+  const imaginary = part(imag);
+  return `(${part(real)}${imaginary.startsWith("-") ? "" : "+"}${imaginary}j)`;
+}
+
+function importLine(tag: string, attributes: Attributes): string {
   const alias = attributes.get("alias") ? ` as ${attributes.get("alias")}` : "";
   if (tag === P.IMPORT) return `import ${attributes.get("module")}${alias}`;
   return `from ${attributes.get("module")} import ${attributes.get("name")}${alias}`;
+}
+
+/** A container's helpers, in order. */
+function parts(held: unknown): F.Part[] {
+  return (held ?? []) as F.Part[];
+}
+
+/** Writes a term's source: each kind as Python writes it, its helpers read from its attributes and its terms from its
+ * arguments, in order. */
+class Printer {
+  /** `node`'s source, parenthesized where its precedence is looser than `level`. */
+  write(node: any, level: number): string {
+    const [text, precedence] = this.text(node);
+    return precedence >= level ? text : `(${text})`;
+  }
+
+  /** An element of a display, an argument, an index: any expression but a named expression or a yield. */
+  element(node: any): string {
+    return this.write(node, LAMBDA);
+  }
+
+  text(node: any): Written {
+    const [tag, record] = P.DIALECT.kind(node);
+    const attributes = F.attributesOf(record);
+    const args = F.argumentsOf(record);
+    if (tag === P.LITERAL || tag === P.CONSTANT) {
+      if (attributes.has("text")) { // its spelling, as written
+        const text = attributes.get("text") as string;
+        return [text, text.startsWith("-") ? UNARY : PRIMARY];
+      }
+      if (tag === P.LITERAL) return constantText(attributes.get("value"));
+      if (attributes.has("singleton")) return [attributes.get("singleton"), PRIMARY];
+      const text = complexText(attributes.get("real") ?? 0, attributes.get("imag"));
+      return [text, text.startsWith("-") ? UNARY : PRIMARY];
+    }
+    if (tag === "error" || tag === "missing") return [F.invalidText(P.DIALECT, tag, attributes), PRIMARY];
+    if (IMPORTS.includes(tag)) throw new Errors.ValueError("an import can only enclose the whole expression");
+    return (this as any)[`_${tag}`](attributes, args);
+  }
+
+  _variable(attributes: Attributes): Written {
+    return [attributes.get("name"), PRIMARY];
+  }
+
+  _concatenatedstring(_: Attributes, args: any[]): Written {
+    return [args.map((argument) => this.write(argument, PRIMARY)).join(" "), PRIMARY];
+  }
+
+  string(attributes: Attributes, args: any[], prefix: string): Written {
+    const quote = attributes.get("quote") ?? "'";
+    return [`${attributes.get("prefix") ?? prefix}${quote}${this.values(attributes, [...args])}${quote}`, PRIMARY];
+  }
+
+  _joinedstr(attributes: Attributes, args: any[]): Written {
+    return this.string(attributes, args, "f");
+  }
+
+  _templatestr(attributes: Attributes, args: any[]): Written {
+    return this.string(attributes, args, "t");
+  }
+
+  /** An f-string's, a t-string's or a format spec's text and fields, as written: each field's terms taken from `terms`
+   * in turn. */
+  values(attributes: ReadonlyMap<string, any>, terms: any[]): string {
+    const written: string[] = [];
+    for (const part of parts(attributes.get("values"))) {
+      if (part.kind === "stringtext") {
+        written.push(part.attributes.get("spelling") as string);
+        continue;
+      }
+      const [value, ...mine] = terms.splice(0, part.size);
+      const field = part.attributes;
+      let expression: string;
+      if (field.has("text")) { // the field's expression as written, `=` among it where it is a debug field
+        expression = field.get("text") as string;
+      } else {
+        expression = this.write(value, IF) + (field.get("debug") ? "=" : "");
+        expression = expression.startsWith("{") ? ` ${expression}` : expression;
+      }
+      const conversion = field.has("conversion") ? `!${field.get("conversion")}` : "";
+      const spec = field.has("format_spec") ? `:${this.values((field.get("format_spec") as F.Part).attributes, mine)}` : "";
+      written.push(`{${expression}${conversion}${spec}}`);
+    }
+    return written.join("");
+  }
+
+  _parenthesized(_: Attributes, args: any[]): Written {
+    return [`(${this.write(args[0], YIELD)})`, PRIMARY];
+  }
+
+  _tuple(_: Attributes, args: any[]): Written {
+    return [`(${this.elements(args)})`, PRIMARY];
+  }
+
+  /** A tuple's elements, a trailing comma after one alone. */
+  elements(args: any[]): string {
+    const texts = args.map((argument) => this.element(argument));
+    return texts.length === 1 ? `${texts[0]},` : texts.join(", ");
+  }
+
+  _list(_: Attributes, args: any[]): Written {
+    return [`[${args.map((argument) => this.element(argument)).join(", ")}]`, PRIMARY];
+  }
+
+  _set(_: Attributes, args: any[]): Written {
+    return [`{${args.map((argument) => this.element(argument)).join(", ")}}`, PRIMARY];
+  }
+
+  _dict(_: Attributes, args: any[]): Written {
+    const items: string[] = [];
+    for (let i = 0; i < args.length; i += 2) {
+      items.push(args[i] === null ? `**${this.write(args[i + 1], BITOR)}`
+        : `${this.element(args[i])}: ${this.element(args[i + 1])}`);
+    }
+    return [`{${items.join(", ")}}`, PRIMARY];
+  }
+
+  /** A comprehension's `for` clauses, after its element: each `async for target in iter if condition ...`. */
+  clauses(attributes: Attributes, args: any[]): string {
+    const written: string[] = [];
+    let i = 0;
+    for (const part of parts(attributes.get("generators"))) {
+      const [target, iterable, ...conditions] = args.slice(i, i + part.size);
+      i += part.size;
+      const asynchronous = part.attributes.get("is_async") ? "async " : "";
+      const targetText = F.kindOf(target)[0] === P.TUPLE ? this.elements(F.argumentsOf(F.kindOf(target)[1]))
+        : this.write(target, BITOR);
+      written.push(` ${asynchronous}for ${targetText} in ${this.write(iterable, OR)}`
+        + conditions.map((condition) => ` if ${this.write(condition, OR)}`).join(""));
+    }
+    return written.join("");
+  }
+
+  comprehension(attributes: Attributes, args: any[], lead: number, opening: string, closing: string): Written {
+    const element = args[0];
+    let head: string;
+    if (lead === 2) {
+      head = args[1] === null ? `**${this.write(element, BITOR)}` : `${this.element(element)}: ${this.element(args[1])}`;
+    } else {
+      head = this.element(element);
+    }
+    return [`${opening}${head}${this.clauses(attributes, args.slice(lead))}${closing}`, PRIMARY];
+  }
+
+  _listcomp(attributes: Attributes, args: any[]): Written {
+    return this.comprehension(attributes, args, 1, "[", "]");
+  }
+
+  _setcomp(attributes: Attributes, args: any[]): Written {
+    return this.comprehension(attributes, args, 1, "{", "}");
+  }
+
+  _dictcomp(attributes: Attributes, args: any[]): Written {
+    return this.comprehension(attributes, args, 2, "{", "}");
+  }
+
+  _generatorexp(attributes: Attributes, args: any[]): Written {
+    return this.comprehension(attributes, args, 1, "(", ")");
+  }
+
+  _yield(_: Attributes, args: any[]): Written {
+    return [args[0] === null ? "yield" : `yield ${this.element(args[0])}`, YIELD];
+  }
+
+  _yieldfrom(_: Attributes, args: any[]): Written {
+    return [`yield from ${this.element(args[0])}`, YIELD];
+  }
+
+  _await(_: Attributes, args: any[]): Written {
+    return [`await ${this.write(args[0], PRIMARY)}`, AWAIT];
+  }
+
+  _attribute(attributes: Attributes, args: any[]): Written {
+    let value = this.write(args[0], PRIMARY);
+    if (/^[0-9]+$/.test(value)) value = `(${value})`; // an int's `.` would be its decimal point
+    return [`${value}.${attributes.get("attr")}`, PRIMARY];
+  }
+
+  /** A subscript's index: a slice, or a tuple of indices without its parentheses. */
+  index(node: any): string {
+    const [tag, record] = F.kindOf(node);
+    if (tag === P.SLICE) return this._slice(new Map(), F.argumentsOf(record))[0];
+    if (tag === P.TUPLE) {
+      const texts = F.argumentsOf(record).map((argument) => this.index(argument));
+      return texts.length === 1 ? `${texts[0]},` : texts.length > 0 ? texts.join(", ") : "()";
+    }
+    return this.element(node);
+  }
+
+  _subscript(_: Attributes, args: any[]): Written {
+    return [`${this.write(args[0], PRIMARY)}[${this.index(args[1])}]`, PRIMARY];
+  }
+
+  _slice(_: Attributes, args: any[]): Written {
+    const [lower, upper, step] = args.map((argument) => (argument !== null ? this.element(argument) : ""));
+    return [`${lower}:${upper}` + (step ? `:${step}` : ""), PRIMARY];
+  }
+
+  _call(attributes: Attributes, args: any[]): Written {
+    const keywords = parts(attributes.get("keywords"));
+    const positional = args.slice(1, args.length - keywords.length);
+    const values = args.slice(args.length - keywords.length);
+    let texts: string[];
+    if (positional.length === 1 && keywords.length === 0 && F.kindOf(positional[0])[0] === P.GENERATOREXP) {
+      texts = [this.text(positional[0])[0].slice(1, -1)]; // a generator, the only argument, without its parentheses
+    } else {
+      texts = positional.map((argument) => this.element(argument));
+    }
+    texts.push(...keywords.map((part, i) => (part.attributes.has("arg")
+      ? `${part.attributes.get("arg")}=${this.element(values[i])}` : `**${this.write(values[i], BITOR)}`)));
+    return [`${this.write(args[0], PRIMARY)}(${texts.join(", ")})`, PRIMARY];
+  }
+
+  _starred(_: Attributes, args: any[]): Written {
+    return [`*${this.write(args[0], BITOR)}`, LAMBDA];
+  }
+
+  _unaryop(attributes: Attributes, args: any[]): Written {
+    if (attributes.get("op") === "not") return [`not ${this.write(args[0], NOT)}`, NOT];
+    return [`${attributes.get("op")}${this.write(args[0], UNARY)}`, UNARY];
+  }
+
+  _binop(attributes: Attributes, args: any[]): Written {
+    const op = attributes.get("op") as string;
+    if (op === "**") { // right-associative, binding tighter than unary operators on its left
+      return [`${this.write(args[0], AWAIT)} ** ${this.write(args[1], UNARY)}`, POWER];
+    }
+    const level = BINOP_LEVELS[op] as number;
+    return [`${this.write(args[0], level)} ${op} ${this.write(args[1], level + 1)}`, level];
+  }
+
+  _compare(attributes: Attributes, args: any[]): Written {
+    const links = parts(attributes.get("comparisons")).map((part, i) =>
+      ` ${part.attributes.get("op")} ${this.write(args[i + 1], COMPARE + 1)}`);
+    return [this.write(args[0], COMPARE + 1) + links.join(""), COMPARE];
+  }
+
+  _boolop(attributes: Attributes, args: any[]): Written {
+    const op = attributes.get("op") as string;
+    const level = op === "and" ? AND : OR;
+    return [args.map((argument) => this.write(argument, level + 1)).join(` ${op} `), level];
+  }
+
+  _namedexpr(_: Attributes, args: any[]): Written {
+    return [`${this.write(args[0], PRIMARY)} := ${this.element(args[1])}`, NAMED];
+  }
+
+  _ifexp(_: Attributes, args: any[]): Written {
+    const [body, test, orelse] = args;
+    return [`${this.write(body, OR)} if ${this.write(test, OR)} else ${this.write(orelse, LAMBDA)}`, IF];
+  }
+
+  /** A lambda's parameters, `a, /, b=1, *c, d, **e`, each default taken from `defaults` in turn (after its annotation,
+   * which a lambda's parameter has none of). */
+  parameters(attributes: Attributes, defaults: any[]): string {
+    const held = attributes.get("args") as F.Part | undefined;
+    if (held === undefined) return "";
+    const groups = held.attributes;
+    const parameter = (part: F.Part, prefix = ""): string => {
+      const [, defaultValue] = defaults.splice(0, part.size);
+      return prefix + (part.attributes.get("arg") ?? "") + (defaultValue === null ? "" : `=${this.element(defaultValue)}`);
+    };
+    const written = parts(groups.get("posonlyargs")).map((part) => parameter(part));
+    if (written.length > 0) written.push("/");
+    written.push(...parts(groups.get("args")).map((part) => parameter(part)));
+    if (groups.has("vararg")) written.push(parameter(groups.get("vararg") as F.Part, "*"));
+    else if (groups.has("kwonlyargs")) written.push("*");
+    written.push(...parts(groups.get("kwonlyargs")).map((part) => parameter(part)));
+    if (groups.has("kwarg")) written.push(parameter(groups.get("kwarg") as F.Part, "**"));
+    return ` ${written.join(", ")}`;
+  }
+
+  _lambda(attributes: Attributes, args: any[]): Written {
+    const parameters = this.parameters(attributes, args.slice(1));
+    return [`lambda${parameters}: ${this.write(args[0], LAMBDA)}`, LAMBDA];
+  }
+
+  _let(attributes: Attributes, args: any[]): Written {
+    return [`(lambda ${attributes.get("name")}: ${this.write(args[1], LAMBDA)})(${this.element(args[0])})`, PRIMARY];
+  }
 }
 
 /** The expression as Python source: one line per import around it, then the expression. */
@@ -48,53 +343,5 @@ export function ToText(expression: unknown): string {
     node = F.argumentsOf(record)[0];
     [tag, record] = P.DIALECT.kind(node);
   }
-  const write = (term: any, args: [string, number][]): [string, number] => {
-    const operand = (index: number, level: number): string => {
-      const [text, precedence] = args[index] as [string, number];
-      return precedence >= level ? text : `(${text})`;
-    };
-    const [kind, held] = P.DIALECT.kind(term);
-    const attributes = F.attributesOf(held);
-    if (kind === P.CONSTANT) {
-      if (attributes.has("text")) return [attributes.get("text"), attributes.get("text").startsWith("-") ? UNARY : PRIMARY]; // its spelling
-      return constantText(attributes.get("value"));
-    }
-    if (kind === "error" || kind === "missing") return [F.invalidText(P.DIALECT, kind, attributes), PRIMARY];
-    if (kind === P.NAME) return [attributes.get("name"), PRIMARY];
-    if (kind === P.ATTRIBUTE) return [`${operand(0, PRIMARY)}.${attributes.get("attr")}`, PRIMARY];
-    if (kind === P.SUBSCRIPT) return [`${operand(0, PRIMARY)}[${repr(attributes.get("key"))}]`, PRIMARY];
-    if (kind === P.INDEX) return [`${operand(0, PRIMARY)}[${args[1]?.[0]}]`, PRIMARY];
-    if (kind === P.CALL) {
-      let texts = args.slice(1).map(([text]) => text);
-      const called = F.argumentsOf(held).slice(1);
-      if (called.length === 1 && F.kindOf(called[0])[0] === P.GENERATOR) texts = [(texts[0] as string).slice(1, -1)]; // without its parentheses
-      return [`${operand(0, PRIMARY)}(${texts.join(", ")})`, PRIMARY];
-    }
-    if (kind === P.GENERATOR) {
-      const conditions = args.slice(2).map((_, i) => ` if ${operand(i + 2, OR)}`).join("");
-      return [`(${operand(1, IF)} for ${attributes.get("name")} in ${operand(0, OR)}${conditions})`, PRIMARY];
-    }
-    if (kind === P.LET) return [`(lambda ${attributes.get("name")}: ${args[1]?.[0]})(${args[0]?.[0]})`, PRIMARY];
-    if (kind === P.IFEXP) return [`${operand(1, OR)} if ${operand(0, OR)} else ${operand(2, IF)}`, IF];
-    if (kind === P.LIST) return [`[${args.map(([text]) => text).join(", ")}]`, PRIMARY];
-    if (kind === P.DICT) {
-      const pairs = args.filter((_, i) => i % 2 === 0).map(([key], i) => `${key}: ${args[2 * i + 1]?.[0]}`);
-      return [`{${pairs.join(", ")}}`, PRIMARY];
-    }
-    if (IMPORTS.includes(kind)) throw new Errors.ValueError("an import can only enclose the whole expression");
-    const operator = attributes.get("operator") as string;
-    if (kind === P.UNARYOP) {
-      if (operator === "not") return [`not ${operand(0, NOT)}`, NOT];
-      return [`${operator}${operand(0, UNARY)}`, UNARY];
-    }
-    if (kind === P.COMPARE) return [`${operand(0, COMPARE + 1)} ${operator} ${operand(1, COMPARE + 1)}`, COMPARE];
-    if (kind === P.BOOLOP) {
-      const level = operator === "and" ? AND : OR;
-      return [`${operand(0, level)} ${operator} ${operand(1, level + 1)}`, level];
-    }
-    if (operator === "**") return [`${operand(0, PRIMARY)} ** ${operand(1, UNARY)}`, POWER];
-    const level = BINOP_LEVELS[operator] as number;
-    return [`${operand(0, level)} ${operator} ${operand(1, level + 1)}`, level];
-  };
-  return [...lines, F.fold(node, write)[0]].join("\n");
+  return [...lines, new Printer().write(node, LAMBDA)].join("\n"); // a named expression or a yield in parentheses
 }
