@@ -11,7 +11,7 @@ evaluates, and Python3, Matlab, Excel, Latex, C, Cpp and SystemVerilog. Two equi
 | You want to | Read |
 |---|---|
 | Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
-| Use the library: write, evaluate, store or translate constraints | [skills/mbse-expressions/SKILL.md](skills/mbse-expressions/SKILL.md), a skill. It loads its references only as needed |
+| Use the library: write, evaluate, store or translate constraints | The skill, written once: [skills/mbse-expressions/SKILL.md](skills/mbse-expressions/SKILL.md), packaged in each language as [python3/mbse/Expressions/skill/SKILL.md](python3/mbse/Expressions/skill/SKILL.md) and [typescript5/skill/SKILL.md](typescript5/skill/SKILL.md). Each practice links its case in each language's tutorials or tests; it loads its references only as needed |
 | Learn it by example, from a first constraint to C and SystemVerilog | [python3/tutorials/README.md](python3/tutorials/README.md), seven case studies (the fourth deferred); the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
 | Understand a design decision or an open question | mbse-basis [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) and its capabilities' detail files |
 | Change the framework, a dialect or a translator | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
@@ -55,6 +55,17 @@ npm run conformance
 python3 ../mbse-basis/scripts/update_doc_links.py  # after adding, renaming or retitling a document
 skills/sync.sh                                  # after editing skills/mbse-expressions/: the packaged copies (SKL-01)
 ```
+
+The skill is written once, in `skills/mbse-expressions/`, mostly language-independent (mbse-basis
+[PRI-016: guidance written once](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-016)): each practice says why, when and how, links the items for what, and links each how
+to its case in both languages, as `mbse:` links with a `#Tnn.k` anchor (a tutorial step) or a test's case ID. It holds
+no programs and no per-language cheat sheets. `skills/sync.sh` copies it byte for byte into
+`python3/mbse/Expressions/skill/` and `typescript5/skill/`; SKL-01 checks the copies in both suites, and SKL-03 that
+every case it links has its `<a id>` in both languages, but for the cases
+[docs/EQUIVALENCE.md](docs/EQUIVALENCE.md#cases-in-one-language-only) lists as one language's only (none yet). Each
+tutorial step's markdown cell starts with `<a id="Tnn.k"></a>`, and each test case's with `<a id="ID"></a>`, the same in
+both languages. A how the skill teaches with no case is a bug, since it is untested
+([the basis](https://github.com/pitaman71/mbse-basis/blob/main/docs/README.md#the-doc-spec)): write the case, in both languages, before linking it.
 
 ## Related repositories
 

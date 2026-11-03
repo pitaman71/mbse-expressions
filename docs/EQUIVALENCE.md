@@ -16,7 +16,7 @@ the translators between them.
 | Every test case exists in both implementations, same ID, same order | `python3/tests/*.ipynb`, `typescript5/tests/*.ipynb` |
 | API conformance to the visitor protocols and the framework's protocols, on classes and on live instances | VIS-01, VIS-02, FRM-01 |
 | JSON is byte-identical, for a case of every dialect; YAML and JSON are interchangeable | the CONF suite over the shared corpus in `conformance/` |
-| The agent guides are current, their programs run in each language, and their links resolve | the SKL suite |
+| The agent guides are current, and their links resolve: every notebook case the skill links, in both languages but those listed in [Cases in one language only](#cases-in-one-language-only) | the SKL suite |
 | The TypeScript model of Python's rules gives what Python gives | DIA-02's tables of values and errors, which the Python suite runs against Python itself |
 | Full code coverage in both | the coverage gates below |
 
@@ -74,6 +74,18 @@ are the same; Python also reads Python source with `Text.FromText`, where TypeSc
 the Python3 dialect's constructors. Each toolkit's `show` writes floats as Python does (`2.0`), so the expressions print
 alike; values printed by each language's own means (`4n`, `4.0` against `4`) follow that language. Both are run as
 tests and committed with outputs (Python's from its kernel, TypeScript's from Deno's Jupyter kernel).
+
+Both languages' steps carry the same IDs, `## NN.k · title`, in the same order, and each step's markdown cell starts
+with the same anchor, `<a id="Tnn.k"></a>`, which the skill links, as each test case's starts with its ID's
+(`<a id="EXP-01"></a>`). When a case study changes, change both, and rerun both notebooks to refresh their outputs.
+
+## Cases in one language only
+
+Every case, a tutorial step's or a test's, has a twin in the other language with the same ID and anchor, except those
+listed here, which test what only one language has. The skill may link them in that language alone; SKL-03 accepts each
+listed here as having no twin, and no other. There are none: where the languages differ (Python's `Text.FromText`, its
+real modules and numpy), the twins show each language's own way, under the same ID. A case added in one language
+alone is listed here, in a table of its cases (each in backticks), its language and why.
 
 ---
 
