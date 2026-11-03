@@ -763,8 +763,9 @@ function application(tag: string, signature: FD.Signature = new FD.Opaque(), sta
   return new F.Kind(F.APPLICATION, { signature, standards, check: check(tag), scopes: scopes(tag), ...options });
 }
 
-function operatorKind(tag: string, vocabulary: ReadonlyMap<string, FD.Signature>): F.Kind {
-  return new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required: ["operator"], standards: STANDARDS,
+function operatorKind(tag: string, vocabulary: ReadonlyMap<string, FD.Signature>,
+  required: readonly string[] = ["operator"]): F.Kind {
+  return new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required, standards: STANDARDS,
     check: check(tag), scopes: scopes(tag) });
 }
 
@@ -778,7 +779,7 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript5", {
   [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: check(CONSTANT),
     typed: (record) => Domains.constant(F.attributesOf(record)), standards: STANDARDS }),
   [TEMPLATELITERAL]: application(TEMPLATELITERAL, new FD.Opaque(Domains.String)),
-  [TAGGEDTEMPLATEEXPRESSION]: application(TAGGEDTEMPLATEEXPRESSION),
+  [TAGGEDTEMPLATEEXPRESSION]: application(TAGGEDTEMPLATEEXPRESSION, new FD.Opaque(), STANDARDS, { required: ["quasi"] }),
   [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false, standards: STANDARDS }),
   [SUPER]: new F.Kind(F.REFERENCE, { lexical: false, standards: STANDARDS }),
   [PARENTHESIZEDEXPRESSION]: application(PARENTHESIZEDEXPRESSION, ANY),
@@ -791,7 +792,7 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript5", {
   [ARROWFUNCTIONEXPRESSION]: application(ARROWFUNCTIONEXPRESSION, new FD.Opaque(), STANDARDS, { optional: ["body"] }),
   [CLASSEXPRESSION]: application(CLASSEXPRESSION, new FD.Opaque(), STANDARDS, { optional: ["superClass"] }),
   [TSEMPTYBODYFUNCTIONEXPRESSION]: application(TSEMPTYBODYFUNCTIONEXPRESSION),
-  [METAPROPERTY]: application(METAPROPERTY),
+  [METAPROPERTY]: application(METAPROPERTY, new FD.Opaque(), STANDARDS, { required: ["meta", "property"] }),
   [MEMBEREXPRESSION]: application(MEMBEREXPRESSION, ANY2),
   [CALLEXPRESSION]: application(CALLEXPRESSION),
   [CHAINEXPRESSION]: application(CHAINEXPRESSION, ANY),
@@ -804,18 +805,18 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript5", {
   [LOGICALEXPRESSION]: operatorKind(LOGICALEXPRESSION, Domains.LOGICAL),
   [CONDITIONALEXPRESSION]: application(CONDITIONALEXPRESSION,
     new FD.Function([FD.Anything, FD.Anything, FD.Anything], FD.Anything)),
-  [ASSIGNMENTEXPRESSION]: operatorKind(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT),
+  [ASSIGNMENTEXPRESSION]: operatorKind(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT, ["left", "operator"]),
   [SEQUENCEEXPRESSION]: application(SEQUENCEEXPRESSION),
   [YIELDEXPRESSION]: application(YIELDEXPRESSION, new FD.Opaque(), STANDARDS, { optional: ["argument"] }),
-  [TSASEXPRESSION]: application(TSASEXPRESSION),
-  [TSSATISFIESEXPRESSION]: application(TSSATISFIESEXPRESSION),
-  [TSTYPEASSERTION]: application(TSTYPEASSERTION),
+  [TSASEXPRESSION]: application(TSASEXPRESSION, new FD.Opaque(), STANDARDS, { required: ["typeAnnotation"] }),
+  [TSSATISFIESEXPRESSION]: application(TSSATISFIESEXPRESSION, new FD.Opaque(), STANDARDS, { required: ["typeAnnotation"] }),
+  [TSTYPEASSERTION]: application(TSTYPEASSERTION, new FD.Opaque(), STANDARDS, { required: ["typeAnnotation"] }),
   [TSNONNULLEXPRESSION]: application(TSNONNULLEXPRESSION, ANY),
-  [TSINSTANTIATIONEXPRESSION]: application(TSINSTANTIATIONEXPRESSION),
+  [TSINSTANTIATIONEXPRESSION]: application(TSINSTANTIATIONEXPRESSION, new FD.Opaque(), STANDARDS, { required: ["typeArguments"] }),
   [ARRAYPATTERN]: application(ARRAYPATTERN),
   [OBJECTPATTERN]: application(OBJECTPATTERN),
   [ASSIGNMENTPATTERN]: application(ASSIGNMENTPATTERN),
-  [JSXELEMENT]: application(JSXELEMENT, new FD.Opaque(), []),
+  [JSXELEMENT]: application(JSXELEMENT, new FD.Opaque(), [], { required: ["openingElement"] }),
   [JSXFRAGMENT]: application(JSXFRAGMENT, new FD.Opaque(), []),
   [JSXEMPTYEXPRESSION]: application(JSXEMPTYEXPRESSION, new FD.Opaque(), []),
 }, { domain_of: Domains.of, literal: native });

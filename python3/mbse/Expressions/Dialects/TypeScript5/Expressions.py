@@ -751,9 +751,9 @@ def _application(tag: str, signature: FD.Signature = FD.Opaque(), standards: tup
                   **options)
 
 
-def _operator(tag: str, vocabulary: dict[str, FD.Signature], **options: Any) -> F.Kind:
-    return F.Kind(F.APPLICATION, operator="operator", vocabulary=vocabulary, required=("operator",), standards=_ALL,
-                  check=_check(tag), scopes=_scopes(tag), **options)
+def _operator(tag: str, vocabulary: dict[str, FD.Signature], required: tuple[str, ...] = ("operator",)) -> F.Kind:
+    return F.Kind(F.APPLICATION, operator="operator", vocabulary=vocabulary, required=required, standards=_ALL,
+                  check=_check(tag), scopes=_scopes(tag))
 
 
 DIALECT = F.Dialect("TypeScript5", {
@@ -765,7 +765,7 @@ DIALECT = F.Dialect("TypeScript5", {
     CONSTANT: F.Kind(F.LITERAL, spelling=("text", "problems"), check=_check(CONSTANT),
                      typed=lambda record: Domains.constant(F.attributes_of(record)), standards=_ALL),
     TEMPLATELITERAL: _application(TEMPLATELITERAL, FD.Opaque(Domains.String)),
-    TAGGEDTEMPLATEEXPRESSION: _application(TAGGEDTEMPLATEEXPRESSION),
+    TAGGEDTEMPLATEEXPRESSION: _application(TAGGEDTEMPLATEEXPRESSION, required=("quasi",)),
     THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False, standards=_ALL),
     SUPER: F.Kind(F.REFERENCE, lexical=False, standards=_ALL),
     PARENTHESIZEDEXPRESSION: _application(PARENTHESIZEDEXPRESSION, _ANY),
@@ -778,7 +778,7 @@ DIALECT = F.Dialect("TypeScript5", {
     ARROWFUNCTIONEXPRESSION: _application(ARROWFUNCTIONEXPRESSION, optional=("body",)),
     CLASSEXPRESSION: _application(CLASSEXPRESSION, optional=("superClass",)),
     TSEMPTYBODYFUNCTIONEXPRESSION: _application(TSEMPTYBODYFUNCTIONEXPRESSION),
-    METAPROPERTY: _application(METAPROPERTY),
+    METAPROPERTY: _application(METAPROPERTY, required=("meta", "property")),
     MEMBEREXPRESSION: _application(MEMBEREXPRESSION, _ANY2),
     CALLEXPRESSION: _application(CALLEXPRESSION),
     CHAINEXPRESSION: _application(CHAINEXPRESSION, _ANY),
@@ -791,18 +791,18 @@ DIALECT = F.Dialect("TypeScript5", {
     LOGICALEXPRESSION: _operator(LOGICALEXPRESSION, Domains.LOGICAL),
     CONDITIONALEXPRESSION: _application(CONDITIONALEXPRESSION,
                                         FD.Function((FD.Anything, FD.Anything, FD.Anything), FD.Anything)),
-    ASSIGNMENTEXPRESSION: _operator(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT),
+    ASSIGNMENTEXPRESSION: _operator(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT, required=("left", "operator")),
     SEQUENCEEXPRESSION: _application(SEQUENCEEXPRESSION),
     YIELDEXPRESSION: _application(YIELDEXPRESSION, optional=("argument",)),
-    TSASEXPRESSION: _application(TSASEXPRESSION),
-    TSSATISFIESEXPRESSION: _application(TSSATISFIESEXPRESSION),
-    TSTYPEASSERTION: _application(TSTYPEASSERTION),
+    TSASEXPRESSION: _application(TSASEXPRESSION, required=("typeAnnotation",)),
+    TSSATISFIESEXPRESSION: _application(TSSATISFIESEXPRESSION, required=("typeAnnotation",)),
+    TSTYPEASSERTION: _application(TSTYPEASSERTION, required=("typeAnnotation",)),
     TSNONNULLEXPRESSION: _application(TSNONNULLEXPRESSION, _ANY),
-    TSINSTANTIATIONEXPRESSION: _application(TSINSTANTIATIONEXPRESSION),
+    TSINSTANTIATIONEXPRESSION: _application(TSINSTANTIATIONEXPRESSION, required=("typeArguments",)),
     ARRAYPATTERN: _application(ARRAYPATTERN),
     OBJECTPATTERN: _application(OBJECTPATTERN),
     ASSIGNMENTPATTERN: _application(ASSIGNMENTPATTERN),
-    JSXELEMENT: _application(JSXELEMENT, standards=()),
+    JSXELEMENT: _application(JSXELEMENT, standards=(), required=("openingElement",)),
     JSXFRAGMENT: _application(JSXFRAGMENT, standards=()),
     JSXEMPTYEXPRESSION: _application(JSXEMPTYEXPRESSION, standards=()),
 }, domain_of=Domains.of, literal=_native)

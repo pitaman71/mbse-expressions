@@ -5,4 +5,5 @@
 export * as Domains from "./Domains.js";
 export * as Evaluators from "./Evaluators.js";
 export * as Expressions from "./Expressions.js";
+export * as Text from "./Text.js";
 export { install } from "./Expressions.js";

@@ -2,7 +2,7 @@
 JSX, printed as TypeScript writes it and evaluated no further than its literals. `install` adds its kinds to the
 framework's terms."""
 
-from . import Domains, Evaluators, Expressions
+from . import Domains, Evaluators, Expressions, Text
 from .Expressions import install
 
-__all__ = ["Domains", "Evaluators", "Expressions", "install"]
+__all__ = ["Domains", "Evaluators", "Expressions", "Text", "install"]

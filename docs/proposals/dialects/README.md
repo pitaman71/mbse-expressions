@@ -191,6 +191,26 @@ As the user decided (2026-11-02), on the questions below:
   value (the container must hold it) or a variable (bound to each element), whose schema is compatible with the
   element's; an adjacency's takes a symbol (bound to each object at the other end) or a builder (an object the spec
   writes there), whose schema is compatible with that end's.
+- **A sublanguage's union holds the terms its positions hold, as branches** (2026-11-03, in building stage 4,
+  `TypeScript5`). Asked how a property holds a kind from two unions, where mbse-programs types it as a mix of a term
+  kind and a sublanguage's kind (an arrow's parameter `x` is an `Identifier`, a term; `a.b = 1`, `x! = 1`,
+  `(x as T) = 1` and `(x) = 1` have targets that are terms; a type's entity name is `Identifier | ThisExpression |
+  TSQualifiedName`; a literal type holds `Literal | UnaryExpression | TemplateLiteral`; an import type an
+  `ObjectExpression`), each sublanguage being a union of its own beside `Term` (question 5): (a) a `term` branch in
+  each sublanguage's union, holding `Term`, a level of wrapping on the wire; (b) one schema listed as a branch of
+  several unions, `Pattern` listing `identifier` and `memberexpression` (typescript-estree's `DestructuringPattern`)
+  and the expressions an assignment's target may be, `Type` listing `identifier` and `thisexpression` for entity
+  names; (c) a union of its own for each mixed position (`Target`, `EntityName`); (d) the pattern kinds in `Term`, as
+  typescript-estree's `Expression` has them. The user: "(b) as you recommended": `Pattern` lists, beside its own
+  pattern kinds, the term kinds typescript-estree's `DestructuringPattern` allows (`identifier`, `memberexpression`)
+  and, for an assignment's target, the expression kinds valid there (`tsnonnullexpression`, `tsasexpression`,
+  `tssatisfiesexpression`, `tstypeassertion`, `parenthesizedexpression`); `Type` lists `identifier` and
+  `thisexpression` for entity names, and what else a type position holds (`TSLiteralType.literal`'s terms,
+  `TSImportType`'s), each listed directly, with no wrapping level; which terms are allowed where beyond the schema is
+  a constraint, consistent with decision 4; a literal type holds its terms the same way. Asked whether names that only
+  declare (`TSMappedType.key`, `TSNamedTupleMember.label`, `TSTypeParameter.name`, `TSQualifiedName.right`) are a
+  `str`, as Python3's are where mbse-programs has an `Identifier` node, or stay mbse-programs' `Identifier`: "yes, stay
+  `Identifier` terms".
 
 ## Questions for the user
 
