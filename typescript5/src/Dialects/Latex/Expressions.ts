@@ -1,26 +1,27 @@
 /**
  * Expressions of the Latex dialect: mathematical notation, as LaTeX's math mode writes it.
  *
- * Latex's terms are four of the framework's kinds (`Framework/Terms`), whose shape notation's constructs have, and four
- * of its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a value object (a term
- * carries no domain). The tags of its own carry the dialect's name, `latex_`, since every dialect adds
- * its kinds to the one union and several have a `binary` or a `member`:
+ * Latex's terms are values of its union, `Expressions.Latex.Expression`, the branch `latex` of
+ * `Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are four of
+ * the framework's kinds (`Framework/Terms`), whose shape notation's constructs have, four of its own,
+ * each a value object whose slots hold Latex's terms, and the framework's kinds of invalid syntax (`error`, `missing`); a
+ * term carries no domain:
  *
- * - `literal` (the framework's): a constant, a number (int or float), text (str, written `\text{...}`) or a truth value
- *   (boolean): its `value`. Notation has no bytes: validation reports a literal holding one.
- * - `variable` (the framework's): a named quantity, `a`, or `\mathit{age}` for a longer name: its `name`.
- * - `latex_binary`: `left <operator> right`, for the operators in `Domains.BINARY` (`=`, `\neq`, `<`, `\leq`, `>`,
- *   `\geq`, `\land`, `\lor`, `\implies`, `+`, `-`, `\cdot`); `latex_unary`: `\lnot` and `-` of its `operand`.
- * - `latex_frac`: `\frac{numerator}{denominator}`.
- * - `latex_member`: `value.\mathit{name}`, a member of a value.
+ * - `literal` (the framework's): a constant, a number (`int` or `float`), text (`str`, written `\\text{...}`) or a truth
+ *   value (`bool`): its `value`, with its spelling (`text`) where it has one. Notation has no bytes: validation reports a literal holding one.
+ * - `variable` (the framework's): a named quantity, `a`, or `\\mathit{age}` for a longer name: its `name`.
+ * - `binary`: `left <operator> right`, for the operators in `Domains.BINARY` (`=`, `\\neq`, `<`, `\\leq`, `>`,
+ *   `\\geq`, `\\land`, `\\lor`, `\\implies`, `+`, `-`, `\\cdot`); `unary`: `\\lnot` and `-` of its `operand`.
+ * - `frac`: `\\frac{numerator}{denominator}`.
+ * - `member`: `value.\\mathit{name}`, a member of a value.
  * - `call` (the framework's): a named function (`callable`) applied to ordered `arguments`,
- *   `\operatorname{has}(x, \text{email})`, for the functions in `Domains.FUNCTIONS`.
- * - `let` (the framework's): `body \quad \text{where } name = value`, which binds a name within its body.
+ *   `\\operatorname{has}(x, \\text{email})`, for the functions in `Domains.FUNCTIONS`.
+ * - `let` (the framework's): `body \\quad \\text{where } name = value`, which binds a name within its body.
  *
- * Notation has no evaluator: this dialect is written, rendered, validated, inferred and translated, and evaluation
- * belongs to the dialects it is translated to. `DIALECT` reads its kinds (`Terms.Dialect`); its writers (`constant`,
- * `symbol`, ...) write them through the builders, wherever a term is written, in a transaction. `Text.ToText` writes a
- * term as math-mode LaTeX, parenthesized only where precedence requires.
+ * Notation has no evaluator: this dialect is written, rendered, validated, inferred and translated, and evaluation belongs
+ * to the dialects it is translated to. `DIALECT` reads its kinds (`Terms.Dialect`); its writers (`constant`, `symbol`,
+ * ...) write them through the builders, wherever a term is written, in a transaction. `Text.ToText` writes a term as
+ * math-mode LaTeX, parenthesized only where precedence requires.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -30,34 +31,45 @@ import { Repr } from "@mbse/schemas/Framework";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
-/** Latex's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
+/** Latex's union of its kinds, added to the framework's terms as the branch `latex`, its own kinds, and its
+ * dialect's schema, whose singleton is `Expressions.Latex`: run after `Framework.install`, in a transaction of its
+ * own; run again, it writes nothing. */
 export function install(txn: any): any {
   const S = txn.Schemas;
+  const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Latex/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({
-      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
-      Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Frac: S.OfObject, Member: S.OfObject })
-    .spec([ // Term: the framework's union, found by its name
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, Term: S.OfUnion, Expression: S.OfUnion,
+      Binary: S.OfObject, Unary: S.OfObject, Frac: S.OfObject, Member: S.OfObject })
+    .spec([
       // its dialect: the singleton `Expressions.Latex`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Latex.Dialect").ref(true).singleton("Expressions.Latex").adjacencies({
-        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+        domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("latex").schema([_.Dialect])]),
-      (_: any) => _.Binary.name("Expressions.Latex.Binary").properties({
-        operator: S.OfStr, left: _.Term, right: _.Term }),
-      (_: any) => _.Unary.name("Expressions.Latex.Unary").properties({
-        operator: S.OfStr, operand: _.Term }),
-      (_: any) => _.Frac.name("Expressions.Latex.Frac").properties({
-        numerator: _.Term, denominator: _.Term }),
-      (_: any) => _.Member.name("Expressions.Latex.Member").properties({
-        name: S.OfStr, value: _.Term }),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // branches added: schema extension
-        (t: any) => t.name("latex_binary").schema([_.Binary]),
-        (t: any) => t.name("latex_unary").schema([_.Unary]),
-        (t: any) => t.name("latex_frac").schema([_.Frac]),
-        (t: any) => t.name("latex_member").schema([_.Member]),
+      // its union of its kinds: the framework's it reuses, its own, and invalid syntax
+      (_: any) => _.Expression.name("Expressions.Latex.Expression").branches([
+        (t: any) => t.name("literal").schema([Framework.Literal]),
+        (t: any) => t.name("variable").schema([Framework.Variable]),
+        (t: any) => t.name("call").schema([Framework.Call]),
+        (t: any) => t.name("let").schema([Framework.Let]),
+        (t: any) => t.name("binary").schema([_.Binary]),
+        (t: any) => t.name("unary").schema([_.Unary]),
+        (t: any) => t.name("frac").schema([_.Frac]),
+        (t: any) => t.name("member").schema([_.Member]),
+        (t: any) => t.name("error").schema([Framework.Error]),
+        (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
+      (_: any) => _.Binary.name("Expressions.Latex.Binary").properties({
+        operator: S.OfStr, left: _.Expression, right: _.Expression }),
+      (_: any) => _.Unary.name("Expressions.Latex.Unary").properties({
+        operator: S.OfStr, operand: _.Expression }),
+      (_: any) => _.Frac.name("Expressions.Latex.Frac").properties({
+        numerator: _.Expression, denominator: _.Expression }),
+      (_: any) => _.Member.name("Expressions.Latex.Member").properties({
+        name: S.OfStr, value: _.Expression }),
+      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("latex").schema([_.Expression])]),
     ])]))]);
 }
 
@@ -70,7 +82,7 @@ function literalCheck(record: any): string[] {
 }
 
 /** The constant of a native value: a number, text or a truth value. */
-function native(value: unknown): F.Writer | null {
+function native(value: unknown): Writer | null {
   return SCALARS.has(Repr.typeName(value)) ? constant(value) : null;
 }
 
@@ -78,59 +90,66 @@ function native(value: unknown): F.Writer | null {
 export const DIALECT = new F.Dialect("Latex", {
   literal: new F.Kind(F.LITERAL, { check: literalCheck }),
   variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
-  latex_binary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
-  latex_unary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
-  latex_frac: new F.Kind(F.APPLICATION, { signature: Domains.FRAC }),
-  latex_member: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.MEMBER, required: ["name"] }),
+  binary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
+  unary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
+  frac: new F.Kind(F.APPLICATION, { signature: Domains.FRAC }),
+  member: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.MEMBER, required: ["name"] }),
   call: new F.Kind(F.APPLICATION, { operator: "callable", vocabulary: Domains.FUNCTIONS, required: ["callable"] }),
   let: new F.Kind(F.BINDING, { required: ["name"] }),
 }, { domain_of: Domains.of, literal: native });
 
 // --- Writers: specs that write Latex's terms through the builders ---
 
+/** A Latex term, written through the builders where it is given (a spec). */
+export class Writer extends F.Writer {
+  constructor(write: (union: any) => any) {
+    super(write, DIALECT.tag);
+  }
+}
+
 /** The constant `value`: an int (bigint), a float (number), a str or a boolean (validation reports any other). */
-export function constant(value: unknown): F.Writer {
-  return new F.Writer((u: any) => u.literal((r: any) => r.value((p: any) => p.as_scalar(value))));
+export function constant(value: unknown): Writer {
+  return new Writer((u: any) => u.literal((r: any) => r.value((p: any) => p.as_scalar(value))));
 }
 
 /** The symbol `name`. */
-export function symbol(name: string): F.Writer {
-  return new F.Writer((u: any) => u.variable((r: any) => r.name(name)));
+export function symbol(name: string): Writer {
+  return new Writer((u: any) => u.variable((r: any) => r.name(name)));
 }
 
 /** `left <operator> right`; each operand is a spec (a native value is a constant). */
-export function binary(operator: string, left: unknown, right: unknown): F.Writer {
+export function binary(operator: string, left: unknown, right: unknown): Writer {
   const [lhs, rhs] = [DIALECT.spec(left), DIALECT.spec(right)];
-  return new F.Writer((u: any) => u.latex_binary((r: any) => r.operator(operator).left(lhs).right(rhs)));
+  return new Writer((u: any) => u.binary((r: any) => r.operator(operator).left(lhs).right(rhs)));
 }
 
 /** `<operator> operand`: `\lnot` or `-`. */
-export function unary(operator: string, operand: unknown): F.Writer {
+export function unary(operator: string, operand: unknown): Writer {
   const o = DIALECT.spec(operand);
-  return new F.Writer((u: any) => u.latex_unary((r: any) => r.operator(operator).operand(o)));
+  return new Writer((u: any) => u.unary((r: any) => r.operator(operator).operand(o)));
 }
 
 /** `\frac{numerator}{denominator}`. */
-export function frac(numerator: unknown, denominator: unknown): F.Writer {
+export function frac(numerator: unknown, denominator: unknown): Writer {
   const [n, d] = [DIALECT.spec(numerator), DIALECT.spec(denominator)];
-  return new F.Writer((u: any) => u.latex_frac((r: any) => r.numerator(n).denominator(d)));
+  return new Writer((u: any) => u.frac((r: any) => r.numerator(n).denominator(d)));
 }
 
 /** `value.\mathit{name}`. */
-export function member(value: unknown, name: string): F.Writer {
+export function member(value: unknown, name: string): Writer {
   const v = DIALECT.spec(value);
-  return new F.Writer((u: any) => u.latex_member((r: any) => r.name(name).value(v)));
+  return new Writer((u: any) => u.member((r: any) => r.name(name).value(v)));
 }
 
 /** `\operatorname{name}(arguments...)`. */
-function function_(name: string, ...args: unknown[]): F.Writer {
+function function_(name: string, ...args: unknown[]): Writer {
   const specs = args.map((argument) => DIALECT.spec(argument));
-  return new F.Writer((u: any) => u.call((r: any) => r.callable(name).arguments(specs)));
+  return new Writer((u: any) => u.call((r: any) => r.callable(name).arguments(specs)));
 }
 export { function_ as function };
 
 /** `body \quad \text{where } name = value`. */
-export function where(name: string, value: unknown, body: unknown): F.Writer {
+export function where(name: string, value: unknown, body: unknown): Writer {
   const [v, b] = [DIALECT.spec(value), DIALECT.spec(body)];
-  return new F.Writer((u: any) => u.let((r: any) => r.name(name).value(v).body(b)));
+  return new Writer((u: any) => u.let((r: any) => r.name(name).value(v).body(b)));
 }

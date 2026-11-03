@@ -16,12 +16,12 @@ TRANSLATOR = Pairwise(MATLAB, LATEX, [
     Rule(Matlab.constant(V), Latex.constant(V)),
     Rule(Matlab.identifier, Latex.symbol),
     Inline("let", "right"),
-    Elide("matlab_import", "left"),
+    Elide("import", "left"),
     Rule(Matlab.get, Latex.get),
     Rule(Matlab.has, Latex.has),
     Rule(Matlab.implies, Latex.implies, "backward"),
-    *renames("matlab_binary", "operator", "latex_binary", "operator", {
+    *renames("binary", "operator", "binary", "operator", {
         "==": "=", "~=": "\\neq", "<": "<", "<=": "\\leq", ">": ">", ">=": "\\geq", "&&": "\\land", "||": "\\lor",
         "+": "+", "-": "-", ".*": "\\cdot"}, 2),
-    *renames("matlab_unary", "operator", "latex_unary", "operator", {"~": "\\lnot", "-": "-"}, 1),
+    *renames("unary", "operator", "unary", "operator", {"~": "\\lnot", "-": "-"}, 1),
 ])

@@ -1,0 +1,82 @@
+python3:
+  import:
+    module: numpy
+    alias: np
+    body:
+      importfrom:
+        module: math
+        name: floor
+        body:
+          let:
+            name: a
+            value:
+              python3:
+                variable:
+                  name: record
+            body:
+              python3:
+                ifexp:
+                  test:
+                    boolop:
+                      operator: or
+                      left:
+                        unaryop:
+                          operator: not
+                          operand:
+                            compare:
+                              operator: '>='
+                              left:
+                                subscript:
+                                  key: k
+                                  value:
+                                    variable:
+                                      name: a
+                              right:
+                                literal:
+                                  value:
+                                    int: 18
+                      right:
+                        attribute:
+                          attr: pi
+                          value:
+                            variable:
+                              name: np
+                  body:
+                    call:
+                      function:
+                        variable:
+                          name: floor
+                      arguments:
+                      - binop:
+                          operator: '*'
+                          left:
+                            attribute:
+                              attr: x
+                              value:
+                                variable:
+                                  name: a
+                          right:
+                            literal:
+                              value:
+                                float: 2.5
+                  orelse:
+                    generator:
+                      name: p
+                      iterable:
+                        attribute:
+                          attr: 'y'
+                          value:
+                            variable:
+                              name: a
+                      element:
+                        index:
+                          value:
+                            variable:
+                              name: p
+                          index:
+                            literal:
+                              value:
+                                bytes: AA==
+                      conditions:
+                      - variable:
+                          name: p

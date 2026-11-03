@@ -36,7 +36,7 @@ import { NameError, OverflowError } from "../../Framework/Errors.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as F from "../../Framework/Terms.js";
-import * as Ieee754 from "../Basic/Ieee754.js";
+import * as Ieee754 from "../Patterns/Ieee754.js";
 import { isMapping } from "../Matlab/Domains.js";
 import * as Domains from "./Domains.js";
 import * as X from "./Expressions.js";
@@ -198,13 +198,13 @@ function power(base: bigint, exponent: bigint, modulus: bigint): bigint {
 
 // --- The evaluation ---
 
-/** A term read once for one evaluation: its `tag` (as `Expressions.kindOf` names it), and its members by name, its attributes (null where not set), its
+/** A term read once for one evaluation: its `tag` (as `Expressions.DIALECT` reads it), and its members by name, its attributes (null where not set), its
  * slots (a `Node`) and its variadic arguments (an array of `Node`s). `term` is the term value read. */
 class Node {
   [member: string]: any;
 
   constructor(readonly term: any) {
-    const [tag, record] = X.kindOf(term);
+    const [tag, record] = X.DIALECT.kind(term);
     const [slots, variadic, names] = F._parts(record.as_schema());
     const args = F.argumentsOf(record);
     for (const name of names) this[name] = null;

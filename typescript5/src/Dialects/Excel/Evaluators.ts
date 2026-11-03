@@ -102,7 +102,7 @@ export class Workbook extends S.Variables {
 
   override lookup(reference: any): unknown {
     const [tag, record] = Terms.kindOf(reference);
-    if (tag !== "excel_cell") {
+    if (tag !== "cell") {
       const [found, value] = this.find(Terms.nameOf(reference));
       return found ? valueOf(value) : NAME;
     }
@@ -371,15 +371,15 @@ export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string
     ["ISNUMBER", (args) => typeof (args[0] as F.Thunk)() === "number"],
     ["SUM", aggregate("SUM", sum)], ["MIN", aggregate("MIN", extreme((a, b) => a < b))], ["MAX", aggregate("MAX", extreme((a, b) => a > b))],
   ])],
-  ["excel_infix", new Map<string, F.Implementation>([
+  ["infix", new Map<string, F.Implementation>([
     ["=", compare((o) => o === 0)], ["<>", compare((o) => o !== 0)],
     ["<", compare((o) => o < 0)], ["<=", compare((o) => o <= 0)],
     [">", compare((o) => o > 0)], [">=", compare((o) => o >= 0)],
     ["+", arithmetic((a, b) => a + b)], ["-", arithmetic((a, b) => a - b)], ["*", arithmetic((a, b) => a * b)],
   ])],
-  ["excel_prefix", new Map<string, F.Implementation>([["-", negate]])],
-  ["excel_field", field],
-  ["excel_map", map],
+  ["prefix", new Map<string, F.Implementation>([["-", negate]])],
+  ["field", field],
+  ["map", map],
 ]), { literal: numberOf, scope: (names) => new Workbook(names), extension: addIn });
 
 /** The value of a formula (a term value, or anything `Terms.term` reads one from) in a workbook, or with the defined

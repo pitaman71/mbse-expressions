@@ -16,8 +16,9 @@
  * evaluate and when, and so does a quantifier, whose second thunk takes an item and evaluates the body with the name
  * bound to it; the implementation of a kind whose vocabulary is open is one function for every name, and operators
  * outside a closed vocabulary go to `extension`, if given. It throws on what `Dialect.validate` reports: operations
- * outside the vocabulary, wrong numbers of arguments, unbound references and missing values. An evaluator takes a term
- * value, or anything `Terms.term` reads one from (an `Expression`, a term property).
+ * outside the vocabulary, wrong numbers of arguments, unbound references and missing values; invalid syntax (`error`,
+ * `missing`) is refused by name. An evaluator takes a term value, or anything `Terms.term` reads one from (an
+ * `Expression`, a term property).
  */
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
@@ -68,6 +69,7 @@ export class Interpreter {
 
   evaluate(node: any, scope: Scope): any {
     const [tag, record, kind] = this.dialect.kind(node);
+    if (kind.role === Terms.INVALID) throw new ValueError(`${this.dialect.name()} ${tag} is not evaluated`);
     if (kind.role === Terms.LITERAL) {
       const value = Terms.attributesOf(record).get("value") ?? null;
       if (value === null) throw new ValueError(`${Terms.article(tag)} needs a value`);

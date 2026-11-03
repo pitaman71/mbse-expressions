@@ -1,33 +1,35 @@
 /**
  * Expressions of the Matlab dialect: MATLAB expressions over scalars and structs, as MATLAB source writes them.
  *
- * Matlab's terms are four of the framework's kinds (`Framework/Terms`) and six of its own, which `install` adds to
- * `Expressions.Framework.Term` by schema extension (a term carries no domain):
+ * Matlab's terms are values of its union, `Expressions.Matlab.Expression`, the branch `matlab` of
+ * `Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are four of
+ * the framework's kinds (`Framework/Terms`), six of its own, whose slots hold Matlab's terms, and the
+ * framework's kinds of invalid syntax (`error`, `missing`); a term carries no domain:
  *
- * - `literal` (the framework's): a constant, a number (int or float, both doubles), a logical (boolean) or a string
- *   scalar (str), its `value`.
+ * - `literal` (the framework's): a constant, a number (`int` or `float`, both doubles), a logical (`bool`) or a string
+ *   scalar (`str`), its `value`, with its spelling (`text`) where it has one.
  * - `variable` (the framework's): an identifier, the value bound to a variable, its `name`.
  * - `list` (the framework's container constructor): `[a, b]`, the concatenation of its elements into a row array.
  * - `call` (the framework's): a function (`callable`) applied to ordered `arguments`, for the functions in
  *   `Domains.CALLS` (`isfield`, the bit functions, and `all`, `any`, `nnz`, `numel`, `sum`, `min`, `max`, `unique` and
  *   `ismember` of arrays).
- * - `matlab_binary` (`Expressions.Matlab.Binary`): `left <operator> right`, for the operators in `Domains.BINARY`
- *   (`==`, `~=`, `<`, ..., `&&`, `||`, `+`, `-`, `.*`).
- * - `matlab_unary` (`Expressions.Matlab.Unary`): `<operator> operand`, for `~` and `-`.
- * - `matlab_field` (`Expressions.Matlab.Field`): `value.name`, a field of a struct.
- * - `matlab_index` (`Expressions.Matlab.Index`): `value(index)`, an element of an array, from 1.
- * - `matlab_arrayfun` (`Expressions.Matlab.Arrayfun`): `arrayfun(@(name) body, array)`, the body's values for each
+ * - `binary` (`Expressions.Matlab.Binary`): `left <operator> right`, for the operators in `Domains.BINARY` (`==`,
+ *   `~=`, `<`, ..., `&&`, `||`, `+`, `-`, `.*`).
+ * - `unary` (`Expressions.Matlab.Unary`): `<operator> operand`, for `~` and `-`.
+ * - `field` (`Expressions.Matlab.Field`): `value.name`, a field of a struct.
+ * - `index` (`Expressions.Matlab.Index`): `value(index)`, an element of an array, from 1.
+ * - `arrayfun` (`Expressions.Matlab.Arrayfun`): `arrayfun(@(name) body, array)`, the body's values for each
  *   element of the array, bound to `name`.
- * - `matlab_import` (`Expressions.Matlab.Import`): `import pkg.fn` or `import pkg.*` (its `name`), which make a
- *   package's functions callable by their short names within its body, the rest of the expression; `Text.ToText`
- *   writes it as a line before it. Functions are also found on the path and by their qualified names (`pkg.fn(x)`);
- *   which exist is up to the scope that evaluates them (see `Evaluators`).
+ * - `import` (`Expressions.Matlab.Import`): `import pkg.fn` or `import pkg.*` (its `name`), which make a
+ *   package's functions callable by their short names within its body, the rest of the expression; `Text.ToText` writes
+ *   it as a line before it. Functions are also found on the path and by their qualified names (`pkg.fn(x)`); which exist
+ *   is up to the scope that evaluates them (see `Evaluators`).
  *
- * The kinds of its own are tagged `matlab_...`: a branch of `Expressions.Framework.Term` is named once in a store, and
- * other dialects have kinds of the same names (`binary`, `import`, ...). There is no binding: translators substitute a
- * let's value for its name. `DIALECT` reads the terms (`Terms.Dialect`), validates and infers; the writers
- * (`constant`, `identifier`, `binary`, ...) write them through the builders, wherever a term is written, in a
- * transaction. `Text.ToText` writes a term as MATLAB source, e.g. `this.age >= 18 && isfield(this, "email")`.
+ * Its kinds are named plainly in its union, though other dialects have kinds of the same names (`binary`, `import`, ...):
+ * each union names its own. There is no binding: translators substitute a
+ * let's value for its name. `DIALECT` reads the terms (`Terms.Dialect`), validates and infers; the writers (`constant`,
+ * `identifier`, `binary`, ...) write them through the builders, wherever a term is written, in a transaction.
+ * `Text.ToText` writes a term as MATLAB source, e.g. `this.age >= 18 && isfield(this, "email")`.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -39,44 +41,54 @@ import * as Domains from "./Domains.js";
 
 const { repr, typeName } = Repr;
 
-/** Matlab's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
+/** Matlab's union of its kinds, added to the framework's terms as the branch `matlab`, its own kinds, and its
+ * dialect's schema, whose singleton is `Expressions.Matlab`: run after `Framework.install`, in a transaction of its
+ * own; run again, it writes nothing. */
 export function install(txn: any): any {
   const S = txn.Schemas;
+  const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Matlab/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({
-      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
-      Term: S.OfUnion, Binary: S.OfObject, Unary: S.OfObject, Field: S.OfObject, Index: S.OfObject,
-      Arrayfun: S.OfObject, Import: S.OfObject, // Term: the framework's union
-    })
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, Term: S.OfUnion, Expression: S.OfUnion,
+      Binary: S.OfObject, Unary: S.OfObject, Field: S.OfObject, Index: S.OfObject,
+      Arrayfun: S.OfObject, Import: S.OfObject }) // Term: the framework's union, by name
     .spec([
       // its dialect: the singleton `Expressions.Matlab`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Matlab.Dialect").ref(true).singleton("Expressions.Matlab").adjacencies({
-        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+        domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("matlab").schema([_.Dialect])]),
+      // its union of its kinds: the framework's it reuses, its own, and invalid syntax
+      (_: any) => _.Expression.name("Expressions.Matlab.Expression").branches([
+        (t: any) => t.name("literal").schema([Framework.Literal]),
+        (t: any) => t.name("variable").schema([Framework.Variable]),
+        (t: any) => t.name("call").schema([Framework.Call]),
+        (t: any) => t.name("list").schema([Framework.List]),
+        (t: any) => t.name("binary").schema([_.Binary]),
+        (t: any) => t.name("unary").schema([_.Unary]),
+        (t: any) => t.name("field").schema([_.Field]),
+        (t: any) => t.name("index").schema([_.Index]),
+        (t: any) => t.name("arrayfun").schema([_.Arrayfun]),
+        (t: any) => t.name("import").schema([_.Import]),
+        (t: any) => t.name("error").schema([Framework.Error]),
+        (t: any) => t.name("missing").schema([Framework.Missing]),
+      ]),
       (_: any) => _.Binary.name("Expressions.Matlab.Binary").properties({
-        operator: S.OfStr, left: _.Term, right: _.Term }),
+        operator: S.OfStr, left: _.Expression, right: _.Expression }),
       (_: any) => _.Unary.name("Expressions.Matlab.Unary").properties({
-        operator: S.OfStr, operand: _.Term }),
+        operator: S.OfStr, operand: _.Expression }),
       (_: any) => _.Field.name("Expressions.Matlab.Field").properties({
-        name: S.OfStr, value: _.Term }),
+        name: S.OfStr, value: _.Expression }),
       (_: any) => _.Index.name("Expressions.Matlab.Index").properties({
-        value: _.Term, index: _.Term }),
+        value: _.Expression, index: _.Expression }),
       (_: any) => _.Arrayfun.name("Expressions.Matlab.Arrayfun").properties({
         name: S.OfStr, // bound to each element in the body
-        array: _.Term, body: _.Term }),
+        array: _.Expression, body: _.Expression }),
       (_: any) => _.Import.name("Expressions.Matlab.Import").properties({
         name: S.OfStr, // pkg.fn or pkg.*
-        body: _.Term }),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // branches added: schema extension
-        (t: any) => t.name("matlab_binary").schema([_.Binary]),
-        (t: any) => t.name("matlab_unary").schema([_.Unary]),
-        (t: any) => t.name("matlab_field").schema([_.Field]),
-        (t: any) => t.name("matlab_index").schema([_.Index]),
-        (t: any) => t.name("matlab_arrayfun").schema([_.Arrayfun]),
-        (t: any) => t.name("matlab_import").schema([_.Import]),
-      ]),
+        body: _.Expression }),
+      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("matlab").schema([_.Expression])]),
     ])]))]);
 }
 
@@ -126,20 +138,24 @@ export const DIALECT = new F.Dialect("Matlab", {
   literal: new F.Kind(F.LITERAL, { check: literalCheck }),
   variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
   call: new F.Kind(F.APPLICATION, { operator: "callable", vocabulary: Domains.CALLS, required: ["callable"] }),
-  matlab_binary: new F.Kind(F.APPLICATION, {
+  binary: new F.Kind(F.APPLICATION, {
     operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
-  matlab_unary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
-  matlab_field: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.FIELD, required: ["name"] }),
-  matlab_index: new F.Kind(F.APPLICATION, { signature: Domains.INDEX }),
-  matlab_arrayfun: new F.Kind(F.QUANTIFIER, { signature: Domains.ARRAYFUN, required: ["name"], check: arrayfunCheck }),
-  matlab_import: new F.Kind(F.IMPORT, { required: ["name"], check: importCheck }),
+  unary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
+  field: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.FIELD, required: ["name"] }),
+  index: new F.Kind(F.APPLICATION, { signature: Domains.INDEX }),
+  arrayfun: new F.Kind(F.QUANTIFIER, { signature: Domains.ARRAYFUN, required: ["name"], check: arrayfunCheck }),
+  import: new F.Kind(F.IMPORT, { required: ["name"], check: importCheck }),
   list: new F.Kind(F.APPLICATION, { signature: Domains.CONCATENATION }),
 }, { domain_of: Domains.of, literal: native });
 
 // --- Writers ---
 
 /** A Matlab term, written through the builders: a spec, which writes its term where it is given. */
-export class Writer extends F.Writer {}
+export class Writer extends F.Writer {
+  constructor(write: (union: any) => any) {
+    super(write, DIALECT.tag);
+  }
+}
 
 function specOf(value: unknown): F.Writer | null {
   return value === null || value === undefined ? null : DIALECT.spec(value);
@@ -168,12 +184,12 @@ export function identifier(name: string): Writer {
 
 /** `left <operator> right`; each operand is a spec (a native value is a constant). */
 export function binary(operator: string, left: unknown, right: unknown): Writer {
-  return record("matlab_binary", { operator }, { left, right });
+  return record("binary", { operator }, { left, right });
 }
 
 /** `<operator> operand`. */
 export function unary(operator: string, operand: unknown): Writer {
-  return record("matlab_unary", { operator }, { operand });
+  return record("unary", { operator }, { operand });
 }
 
 /** `fn(args...)`. */
@@ -184,17 +200,17 @@ export function call(fn: string, ...args: unknown[]): Writer {
 
 /** `value.name`. */
 export function field(value: unknown, name: string): Writer {
-  return record("matlab_field", { name }, { value });
+  return record("field", { name }, { value });
 }
 
 /** `value(index)`, from 1. */
 export function index(value: unknown, index: unknown): Writer {
-  return record("matlab_index", {}, { value, index });
+  return record("index", {}, { value, index });
 }
 
 /** `arrayfun(@(name) body, array)`. */
 export function arrayfun(name: string, array: unknown, body: unknown): Writer {
-  return record("matlab_arrayfun", { name }, { array, body });
+  return record("arrayfun", { name }, { array, body });
 }
 
 /** `[elements, ...]`, their concatenation into a row array. */
@@ -205,5 +221,5 @@ export function array(...elements: unknown[]): Writer {
 
 /** `import name`, then `body`. */
 export function import_(name: string, body: unknown): Writer {
-  return record("matlab_import", { name }, { body });
+  return record("import", { name }, { body });
 }

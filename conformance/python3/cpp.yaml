@@ -1,0 +1,60 @@
+cpp:
+  conditional:
+    condition:
+      cpp:
+        binary:
+          operator: '&&'
+          left:
+            cpp:
+              unary:
+                operator: '!'
+                operand:
+                  cpp:
+                    member:
+                      name: a
+                      object:
+                        cpp:
+                          variable:
+                            name: record
+          right:
+            cpp:
+              binary:
+                operator: '>'
+                left:
+                  cpp:
+                    subscript:
+                      array:
+                        cpp:
+                          member:
+                            name: b
+                            operator: ->
+                            object:
+                              cpp:
+                                variable:
+                                  name: record
+                      index:
+                        cpp:
+                          constant:
+                            value: 0
+                right:
+                  cpp:
+                    constant:
+                      value: 1.5
+                      type: float
+    consequent:
+      cpp:
+        cast:
+          type: uint8_t
+          operand:
+            cpp:
+              call:
+                callable: f
+                arguments:
+                - cpp:
+                    constant:
+                      value: 1
+    alternative:
+      cpp:
+        constant:
+          value: 5
+          type: unsigned int

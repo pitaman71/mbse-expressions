@@ -71,7 +71,7 @@ of the domain, not the schema") and 22 (formats become domains); Schema extensio
    name, `Expressions.Framework.Defines(dialect, name, domain)` (decided: see Decided, 4); a basic scalar has one domain or more through
    `HasDomain(schema, domain)` (Decided, 9); a domain is an object (Schema extension, Decided, 21 in [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided)). *Confirm or correct.*
 5. **How mbse-schemas' executor evaluates.** mbse-schemas cannot depend on this repository, and "takes an evaluator from
-   its caller rather than import one"; there is no global registry ([CAP-161: isolated stores, with no global registry](../../../../mbse-basis/docs/capabilities/CAP-161.md#an-evaluator-given-never-imported); [CAP-142: expressions evaluated in queries](../../../../mbse-basis/docs/capabilities/CAP-142.md)). (a) A protocol in mbse-schemas
+   its caller rather than import one"; there is no global registry ([CAP-142: expressions evaluated in queries](../../../../mbse-basis/docs/capabilities/CAP-142.md#an-evaluator-given-never-imported)). (a) A protocol in mbse-schemas
    (`holds`, `assign`, `fold`), given to a store once (`Expressions.attach(store)`); the executor refuses as today where
    none is given. (b) Given per transaction (`store.transaction(..., evaluator=)`). *Recommended: (a).*
 6. **What a `requires` that evaluates to unknown does** (three-valued logic): drop the frame, keep it, or refuse.

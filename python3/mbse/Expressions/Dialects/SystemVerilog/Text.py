@@ -8,7 +8,7 @@ from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
 
-from .Expressions import _BASES, kind_of
+from .Expressions import _BASES, DIALECT
 
 __all__ = ["ToText"]
 
@@ -71,12 +71,14 @@ def ToText(expression: Any) -> str:
             return text if precedence >= level else f"({text})"
 
         texts = [text for text, _ in arguments]
-        tag, record = kind_of(node)
+        tag, record, _ = DIALECT.kind(node)
         attributes = F.attributes_of(record)
         name = attributes.get("name")
-        if tag == "literal":
-            text = _constant(attributes.get("value"))
+        if tag == "literal":  # its spelling, as written, or its value's
+            text = attributes["text"] if "text" in attributes else _constant(attributes.get("value"))
             return text, (_MULTIPLICATIVE if "/" in text else _UNARY if text.startswith("-") else _PRIMARY)
+        if tag in ("error", "missing"):
+            return F.invalid_text(DIALECT, tag, attributes), _PRIMARY
         if tag == "vector":
             return _vector(attributes), _PRIMARY
         if tag == "variable":
@@ -108,9 +110,7 @@ def ToText(expression: Any) -> str:
             return f"{operator}{operand(0, _PRIMARY)}", _UNARY
         if tag == "conditional":  # right-associative
             return f"{operand(0, _OR)} ? {operand(1, _CONDITIONAL)} : {operand(2, _CONDITIONAL)}", _CONDITIONAL
-        if tag != "binary":
-            raise ValueError(f"SystemVerilog has no kind {tag!r}")
-        level = _LEVELS[operator]
+        level = _LEVELS[operator]  # a binary
         if level == _IMPLY:  # right-associative, the loosest
             return f"{operand(0, level + 1)} {operator} {operand(1, level)}", level
         return f"{operand(0, level)} {operator} {operand(1, level + 1)}", level

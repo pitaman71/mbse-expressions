@@ -1,0 +1,33 @@
+python3:
+  binop:
+    operator: '-'
+    left:
+      binop:
+        operator: +
+        left:
+          binop:
+            operator: +
+            left:
+              literal:
+                value:
+                  int: 16
+                text: '0x10'
+            right:
+              error:
+                text: (x +* 1)
+                terms:
+                - python3:
+                    variable:
+                      name: x
+                - python3:
+                    literal:
+                      value:
+                        int: 1
+        right:
+          literal:
+            text: '08'
+            problems:
+            - leading zeros in a decimal integer literal are not permitted
+    right:
+      missing:
+        kind: expression

@@ -54,22 +54,24 @@ def ToText(expression: Any) -> str:
 
         kind, record, _ = DIALECT.kind(node)
         attributes = F.attributes_of(record)
-        if kind == "literal":
-            text = _constant(attributes["value"])
+        if kind == "literal":  # its spelling, as written, or its value's
+            text = attributes["text"] if "text" in attributes else _constant(attributes["value"])
             return text, _PREFIX if text.startswith("-") else _ATOM
+        if kind in ("error", "missing"):
+            return F.invalid_text(DIALECT, kind, attributes), _ATOM
         if kind == "variable":
             return attributes["name"], _ATOM
-        if kind == "excel_cell":
+        if kind == "cell":
             return _cell(attributes), _ATOM
-        if kind == "excel_field":
+        if kind == "field":
             return f"{operand(0, _ATOM)}.{_field_name(attributes['name'])}", _ATOM
         if kind == "let":
             return f"LET({attributes['name']}, {arguments[0][0]}, {arguments[1][0]})", _ATOM
         if kind == "call":
             return f"{attributes['callable']}({', '.join(text for text, _ in arguments)})", _ATOM
-        if kind == "excel_map":
+        if kind == "map":
             return f"MAP({arguments[0][0]}, LAMBDA({attributes['name']}, {arguments[1][0]}))", _ATOM
-        if kind == "excel_prefix":
+        if kind == "prefix":
             return f"{attributes['operator']}{operand(0, _PREFIX)}", _PREFIX
         level = _PRECEDENCE[attributes["operator"]]
         return f"{operand(0, level)} {attributes['operator']} {operand(1, level + 1)}", level

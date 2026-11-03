@@ -49,17 +49,18 @@ export function ToText(expression: unknown): string {
     };
     const [kind, record] = DIALECT.kind(node);
     const attributes = F.attributesOf(record);
-    if (kind === "literal") {
-      const text = constantText(attributes.get("value"));
+    if (kind === "literal") { // its spelling, as written, or its value's
+      const text = attributes.has("text") ? attributes.get("text") : constantText(attributes.get("value"));
       return [text, text.startsWith("-") ? PREFIX : ATOM];
     }
+    if (kind === "error" || kind === "missing") return [F.invalidText(DIALECT, kind, attributes), ATOM];
     if (kind === "variable") return [attributes.get("name"), ATOM];
-    if (kind === "excel_cell") return [cellText(attributes), ATOM];
-    if (kind === "excel_field") return [`${operand(0, ATOM)}.${fieldName(attributes.get("name"))}`, ATOM];
+    if (kind === "cell") return [cellText(attributes), ATOM];
+    if (kind === "field") return [`${operand(0, ATOM)}.${fieldName(attributes.get("name"))}`, ATOM];
     if (kind === "let") return [`LET(${attributes.get("name")}, ${args[0]?.[0]}, ${args[1]?.[0]})`, ATOM];
     if (kind === "call") return [`${attributes.get("callable")}(${args.map(([text]) => text).join(", ")})`, ATOM];
-    if (kind === "excel_map") return [`MAP(${args[0]?.[0]}, LAMBDA(${attributes.get("name")}, ${args[1]?.[0]}))`, ATOM];
-    if (kind === "excel_prefix") return [`${attributes.get("operator")}${operand(0, PREFIX)}`, PREFIX];
+    if (kind === "map") return [`MAP(${args[0]?.[0]}, LAMBDA(${attributes.get("name")}, ${args[1]?.[0]}))`, ATOM];
+    if (kind === "prefix") return [`${attributes.get("operator")}${operand(0, PREFIX)}`, PREFIX];
     const operator: string = attributes.get("operator");
     const level = PRECEDENCE[operator] as number;
     return [`${operand(0, level)} ${operator} ${operand(1, level + 1)}`, level];

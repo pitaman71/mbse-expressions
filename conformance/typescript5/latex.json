@@ -1,83 +1,97 @@
 {
-  "let": {
-    "name": "a",
-    "value": {
-      "latex_member": {
-        "name": "age",
-        "value": {
-          "variable": {
-            "name": "record"
-          }
-        }
-      }
-    },
-    "body": {
-      "latex_binary": {
-        "operator": "\\land",
-        "left": {
-          "latex_binary": {
-            "operator": "\\geq",
-            "left": {
+  "latex": {
+    "let": {
+      "name": "a",
+      "value": {
+        "latex": {
+          "member": {
+            "name": "age",
+            "value": {
               "variable": {
-                "name": "a"
-              }
-            },
-            "right": {
-              "literal": {
-                "value": 18
+                "name": "record"
               }
             }
           }
-        },
-        "right": {
-          "latex_binary": {
-            "operator": "\\lor",
+        }
+      },
+      "body": {
+        "latex": {
+          "binary": {
+            "operator": "\\land",
             "left": {
-              "latex_unary": {
-                "operator": "\\lnot",
-                "operand": {
-                  "call": {
-                    "callable": "has",
-                    "arguments": [
-                      {
-                        "variable": {
-                          "name": "record"
-                        }
-                      },
-                      {
-                        "literal": {
-                          "value": {
-                            "scalar": {
-                              "str": "email"
-                            }
-                          }
-                        }
-                      }
-                    ]
+              "binary": {
+                "operator": "\\geq",
+                "left": {
+                  "variable": {
+                    "name": "a"
+                  }
+                },
+                "right": {
+                  "literal": {
+                    "value": {
+                      "int": 18
+                    }
                   }
                 }
               }
             },
             "right": {
-              "latex_binary": {
-                "operator": ">",
+              "binary": {
+                "operator": "\\lor",
                 "left": {
-                  "latex_frac": {
-                    "numerator": {
-                      "variable": {
-                        "name": "a"
-                      }
-                    },
-                    "denominator": {
-                      "literal": {
-                        "value": 2
+                  "unary": {
+                    "operator": "\\lnot",
+                    "operand": {
+                      "call": {
+                        "callable": "has",
+                        "arguments": [
+                          {
+                            "latex": {
+                              "variable": {
+                                "name": "record"
+                              }
+                            }
+                          },
+                          {
+                            "latex": {
+                              "literal": {
+                                "value": {
+                                  "str": "email"
+                                }
+                              }
+                            }
+                          }
+                        ]
                       }
                     }
                   }
                 },
                 "right": {
-                  "literal": {
-                    "value": 1.5
+                  "binary": {
+                    "operator": ">",
+                    "left": {
+                      "frac": {
+                        "numerator": {
+                          "variable": {
+                            "name": "a"
+                          }
+                        },
+                        "denominator": {
+                          "literal": {
+                            "value": {
+                              "int": 2
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "right": {
+                      "literal": {
+                        "value": {
+                          "float": 1.5
+                        }
+                      }
+                    }
                   }
                 }
               }

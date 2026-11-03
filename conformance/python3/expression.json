@@ -1,144 +1,186 @@
 {
-  "let": {
-    "name": "age",
-    "value": {
-      "call": {
-        "callable": "get",
-        "arguments": [
-          {
-            "variable": {
-              "name": "record"
-            }
-          },
-          {
-            "literal": {
-              "value": {
-                "scalar": {
-                  "str": "age"
+  "patterns": {
+    "let": {
+      "name": "age",
+      "value": {
+        "patterns": {
+          "call": {
+            "callable": "get",
+            "arguments": [
+              {
+                "patterns": {
+                  "variable": {
+                    "name": "record"
+                  }
+                }
+              },
+              {
+                "patterns": {
+                  "literal": {
+                    "value": {
+                      "str": "age"
+                    }
+                  }
                 }
               }
-            }
+            ]
           }
-        ]
-      }
-    },
-    "body": {
-      "call": {
-        "callable": "and",
-        "arguments": [
-          {
-            "call": {
-              "callable": "ge",
-              "arguments": [
-                {
-                  "variable": {
-                    "name": "age"
-                  }
-                },
-                {
-                  "literal": {
-                    "value": 18
-                  }
-                }
-              ]
-            }
-          },
-          {
-            "call": {
-              "callable": "implies",
-              "arguments": [
-                {
+        }
+      },
+      "body": {
+        "patterns": {
+          "call": {
+            "callable": "and",
+            "arguments": [
+              {
+                "patterns": {
                   "call": {
-                    "callable": "or",
+                    "callable": "ge",
                     "arguments": [
                       {
-                        "call": {
-                          "callable": "lt",
-                          "arguments": [
-                            {
-                              "variable": {
-                                "name": "age"
-                              }
-                            },
-                            {
-                              "literal": {
-                                "value": 65.5
-                              }
-                            }
-                          ]
-                        }
-                      },
-                      {
-                        "call": {
-                          "callable": "not",
-                          "arguments": [
-                            {
-                              "call": {
-                                "callable": "has",
-                                "arguments": [
-                                  {
-                                    "variable": {
-                                      "name": "record"
-                                    }
-                                  },
-                                  {
-                                    "literal": {
-                                      "value": {
-                                        "scalar": {
-                                          "str": "email"
-                                        }
-                                      }
-                                    }
-                                  }
-                                ]
-                              }
-                            }
-                          ]
-                        }
-                      }
-                    ]
-                  }
-                },
-                {
-                  "call": {
-                    "callable": "in",
-                    "arguments": [
-                      {
-                        "literal": {
-                          "value": {
-                            "scalar": {
-                              "bytes": "AP8="
-                            }
+                        "patterns": {
+                          "variable": {
+                            "name": "age"
                           }
                         }
                       },
                       {
-                        "list": {
-                          "elements": [
-                            {
-                              "literal": {
-                                "value": {
-                                  "scalar": {
-                                    "str": "x"
-                                  }
-                                }
-                              }
-                            },
-                            {
-                              "literal": {
-                                "value": true
-                              }
+                        "patterns": {
+                          "literal": {
+                            "value": {
+                              "int": 18
                             }
-                          ]
+                          }
                         }
                       }
                     ]
                   }
                 }
-              ]
-            }
+              },
+              {
+                "patterns": {
+                  "call": {
+                    "callable": "implies",
+                    "arguments": [
+                      {
+                        "patterns": {
+                          "call": {
+                            "callable": "or",
+                            "arguments": [
+                              {
+                                "patterns": {
+                                  "call": {
+                                    "callable": "lt",
+                                    "arguments": [
+                                      {
+                                        "patterns": {
+                                          "variable": {
+                                            "name": "age"
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "patterns": {
+                                          "literal": {
+                                            "value": {
+                                              "float": 65.5
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              },
+                              {
+                                "patterns": {
+                                  "call": {
+                                    "callable": "not",
+                                    "arguments": [
+                                      {
+                                        "patterns": {
+                                          "call": {
+                                            "callable": "has",
+                                            "arguments": [
+                                              {
+                                                "patterns": {
+                                                  "variable": {
+                                                    "name": "record"
+                                                  }
+                                                }
+                                              },
+                                              {
+                                                "patterns": {
+                                                  "literal": {
+                                                    "value": {
+                                                      "str": "email"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      },
+                      {
+                        "patterns": {
+                          "call": {
+                            "callable": "in",
+                            "arguments": [
+                              {
+                                "patterns": {
+                                  "literal": {
+                                    "value": {
+                                      "bytes": "AP8="
+                                    }
+                                  }
+                                }
+                              },
+                              {
+                                "patterns": {
+                                  "list": {
+                                    "elements": [
+                                      {
+                                        "patterns": {
+                                          "literal": {
+                                            "value": {
+                                              "str": "x"
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "patterns": {
+                                          "literal": {
+                                            "value": {
+                                              "bool": true
+                                            }
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            ]
           }
-        ]
+        }
       }
     }
   }

@@ -335,7 +335,7 @@ def _extension(name: str, arguments: list[F.Thunk], node: Any, scope: Scope) -> 
 
 
 INTERPRETER = F.Interpreter(Expressions.DIALECT, {
-    "matlab_binary": {
+    "binary": {
         "==": _compare("==", lambda a, b: a == b), "~=": _compare("~=", lambda a, b: a != b),
         "<": _compare("<", lambda a, b: a < b), "<=": _compare("<=", lambda a, b: a <= b),
         ">": _compare(">", lambda a, b: a > b), ">=": _compare(">=", lambda a, b: a >= b),
@@ -343,7 +343,7 @@ INTERPRETER = F.Interpreter(Expressions.DIALECT, {
         "+": _arithmetic("+", lambda a, b: a + b), "-": _arithmetic("-", lambda a, b: a - b),
         ".*": _arithmetic(".*", lambda a, b: a * b),
     },
-    "matlab_unary": {"~": _not, "-": _negate},
+    "unary": {"~": _not, "-": _negate},
     "call": {
         "isfield": _isfield, **{name: _bit(name) for name in ("bitand", "bitor", "bitxor", "bitshift")},
         "all": _reduction(lambda numbers: all(number != 0 for number in numbers)),
@@ -353,9 +353,9 @@ INTERPRETER = F.Interpreter(Expressions.DIALECT, {
         "sum": _reduction(_sum), "min": _extreme("min"), "max": _extreme("max"), "unique": _unique,
         "ismember": _ismember,
     },
-    "matlab_field": _field,
-    "matlab_index": _index,
-    "matlab_arrayfun": _arrayfun,
+    "field": _field,
+    "index": _index,
+    "arrayfun": _arrayfun,
     "list": _concatenate,
 }, literal=lambda value: float(value) if type(value) is int else value, scope=Scope, extension=_extension)
 """The interpreter of the Matlab dialect."""

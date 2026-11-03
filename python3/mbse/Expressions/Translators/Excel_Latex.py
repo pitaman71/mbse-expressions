@@ -19,10 +19,10 @@ TRANSLATOR = Pairwise(EXCEL, LATEX, [
     Rule(Excel.get, Latex.get),
     Rule(Excel.has, Latex.has),
     Rule(Excel.implies, Latex.implies),
-    *renames("excel_infix", "operator", "latex_binary", "operator", {
+    *renames("infix", "operator", "binary", "operator", {
         "=": "=", "<>": "\\neq", "<": "<", "<=": "\\leq", ">": ">", ">=": "\\geq", "+": "+", "-": "-",
         "*": "\\cdot"}, 2),
-    *renames("call", "callable", "latex_binary", "operator", {"AND": "\\land", "OR": "\\lor"}, 2),
-    *renames("call", "callable", "latex_unary", "operator", {"NOT": "\\lnot"}, 1),
-    *renames("excel_prefix", "operator", "latex_unary", "operator", {"-": "-"}, 1),
+    *renames("call", "callable", "binary", "operator", {"AND": "\\land", "OR": "\\lor"}, 2),
+    *renames("call", "callable", "unary", "operator", {"NOT": "\\lnot"}, 1),
+    *renames("prefix", "operator", "unary", "operator", {"-": "-"}, 1),
 ])

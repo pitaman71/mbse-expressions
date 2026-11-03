@@ -336,7 +336,7 @@ function extension(name: string, args: F.Thunk[], _node: unknown, scope: Scope):
 
 /** The interpreter of the Matlab dialect. */
 export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
-  ["matlab_binary", new Map<string, F.Implementation>([
+  ["binary", new Map<string, F.Implementation>([
     ["==", compare("==", (o) => o === 0)], ["~=", compare("~=", (o) => o !== 0)],
     ["<", compare("<", (o) => o < 0)], ["<=", compare("<=", (o) => o <= 0)],
     [">", compare(">", (o) => o > 0)], [">=", compare(">=", (o) => o >= 0)],
@@ -344,7 +344,7 @@ export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string
     ["+", arithmetic("+", (a, b) => a + b)], ["-", arithmetic("-", (a, b) => a - b)],
     [".*", arithmetic(".*", (a, b) => a * b)],
   ])],
-  ["matlab_unary", new Map<string, F.Implementation>([["~", not], ["-", negate]])],
+  ["unary", new Map<string, F.Implementation>([["~", not], ["-", negate]])],
   ["call", new Map<string, F.Implementation>([
     ["isfield", isfield], ...["bitand", "bitor", "bitxor", "bitshift"].map((name) => [name, bit(name)] as [string, F.Implementation]),
     ["all", reduction((values) => values.every((value) => value !== 0))],
@@ -353,9 +353,9 @@ export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string
     ["numel", (args: F.Thunk[]) => elements((args[0] as F.Thunk)()).length],
     ["sum", reduction(sum)], ["min", extreme("min")], ["max", extreme("max")], ["unique", unique], ["ismember", ismember],
   ])],
-  ["matlab_field", field],
-  ["matlab_index", index],
-  ["matlab_arrayfun", arrayfun],
+  ["field", field],
+  ["index", index],
+  ["arrayfun", arrayfun],
   ["list", concatenate],
 ]), { literal: toDouble, scope: (variables) => new Scope(variables), extension });
 
