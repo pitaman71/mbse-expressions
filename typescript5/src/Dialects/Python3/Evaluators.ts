@@ -4,7 +4,7 @@
  * bool and bytes (`Uint8Array`) are themselves, and None is `null`.
  *
  * `Evaluators.OfAny(expression, scope)` evaluates in a `Scope`, or in one made from an object of variables. Python's
- * rules apply, not Basic's: `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
+ * rules apply, not Patterns': `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
  * missing attribute throws `AttributeError`. Data objects, read through mbse-schemas' readers (`Framework/Objects`),
  * have their properties as attributes; a `Module` has its members as attributes.
  *

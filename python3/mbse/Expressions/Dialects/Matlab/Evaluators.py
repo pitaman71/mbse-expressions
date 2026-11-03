@@ -3,7 +3,7 @@
 `Evaluators.OfAny(term, scope)` evaluates a term (or anything `Terms.term` reads one from, such as an `Expression`)
 with variables bound to numbers, logicals, strings and structs (mappings, or data objects, read through mbse-schemas'
 readers). Values are Python `float` (double), `bool` (logical) and `str`
-(string scalar). MATLAB's rules apply, not Basic's:
+(string scalar). MATLAB's rules apply, not Patterns':
 
 - Two-valued logic: `&&` and `||` short-circuit, and take numbers or logicals (nonzero is true; NaN raises).
 - Numbers and logicals convert into each other: `true + 1` is 2, and `1 == true` is true. A comparison of a string

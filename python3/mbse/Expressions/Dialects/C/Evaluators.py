@@ -6,7 +6,7 @@ interpreter is `interpreter(Cpp.Expressions.DIALECT)`).
 evaluating, and the result is its native: an int, a float (a `long double` as its text, as `Patterns.Ieee754` writes it),
 a bool, a string, or an object. A variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or
 `unsigned long` as the first that holds it, and a float a `double` (a value carries no domain: a variable of another
-type waits for type inference, the port's stage 3, Decided, 2). C's rules apply:
+type waits for domain inference, the port's stage 3, Decided, 2). C's rules apply:
 
 - The integer promotions and the usual arithmetic conversions decide the type an operator computes in (see `Domains`);
   unsigned arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754 specifies.

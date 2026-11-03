@@ -30,7 +30,7 @@ native type the domain's literals hold (an `int` for an integer, a `str` for an 
 includes (`includes`) only domains equal to it, since Patterns has no implied promotions. A domain compares two of its
 values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into itself by its overflow
 (`fit`). What a domain means is not yet used by evaluation, which deals in values by the schemas they are written with:
-a term carries no domain, and giving each term one is type inference's, a later capability (the port's stage 3,
+a term carries no domain, and giving each term one is domain inference's, a later capability (the port's stage 3,
 Decided, 2).
 
 The natives' defaults are `Bool`, `Int` (an unbounded signed integer), `Float` (binary64, rounding ties to even),

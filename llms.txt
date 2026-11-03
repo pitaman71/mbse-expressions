@@ -1,8 +1,8 @@
 # mbse-expressions
 
-> Constraints as neutral, language-independent data: expressions with schemas, built on mbse-schemas. An expression is stored, validated, evaluated, and translated between expression languages (dialects): Basic, the core vocabulary, and Python, Matlab, Excel, Latex, Ccpp (C and C++) and SystemVerilog, each rendered as its source, and all but Latex evaluated by their own rules. Equivalent Python (`mbse.Expressions`) and TypeScript (`@mbse/expressions`) implementations write byte-identical JSON. Aimed at the constraints of interfaces and model-based systems engineering (MBSE) models, and at union discriminators for mbse-schemas.
+> Constraints as neutral, language-independent data: expressions with schemas, built on mbse-schemas. An expression is stored, validated, evaluated, and translated between expression languages (dialects): Patterns (formerly Basic), the core vocabulary, and Python3, Matlab, Excel, Latex, C, Cpp and SystemVerilog, each rendered as its source, and all but Latex evaluated by their own rules. Equivalent Python (`mbse.Expressions`) and TypeScript (`@mbse/expressions`) implementations write byte-identical JSON. Aimed at the constraints of interfaces and model-based systems engineering (MBSE) models, and at union discriminators for mbse-schemas.
 
-Basic is three-valued (an absent property is unknown) and never coerces, only its core vocabulary is guaranteed, each dialect evaluates by its own language's rules, and evaluators reach only what their scope allowlists.
+Patterns is three-valued (an absent property is unknown) and never coerces, only its core vocabulary is guaranteed, each dialect evaluates by its own language's rules, and evaluators reach only what their scope allowlists.
 
 ## Why
 
@@ -22,7 +22,7 @@ Basic is three-valued (an absent property is unknown) and never coerces, only it
 
 ## Design
 
-- [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md), in mbse-basis, with its capabilities: the Basic dialect, evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, plus the open questions
+- [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md), in mbse-basis, with its capabilities: the Patterns dialect, evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, plus the open questions
 
 ## Optional
 

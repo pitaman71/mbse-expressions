@@ -4,7 +4,7 @@
 `Scope(variables, functions)` and gives a `Domains.Logic` for an
 integral result or a float for a real one. A variable's type is its value's: a `Logic` its own, a bool a `bit`, an int
 an `integer` (or a `longint` beyond 32 bits), a float a `real`, and a string a vector of its bytes (in UTF-8) (a value
-carries no domain: a variable of another type waits for type inference, the port's stage 3, Decided, 2). IEEE 1800's
+carries no domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). IEEE 1800's
 rules apply:
 
 - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are

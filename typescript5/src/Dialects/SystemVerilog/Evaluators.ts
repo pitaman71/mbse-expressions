@@ -4,7 +4,7 @@
  * `Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
  * `new Scope(variables, { functions })` and gives a `Domains.Logic` for an integral result or a number for a real one.
  * A variable's type is its value's: a `Logic` its own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32 bits), a number a `real`, a string a vector
- * of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for type inference, the port's
+ * of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for domain inference, the port's
  * stage 3, Decided, 2). IEEE 1800's rules apply:
  *
  * - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are

@@ -7,7 +7,7 @@
  * type while evaluating, and the result is its native: a bigint, a number (a `long double` as its text, as
  * `Patterns.Ieee754` writes it), a boolean, a string, or an object. A variable's type is its value's: a boolean is a
  * `bool`, a bigint an `int`, `long` or `unsigned long` as the first that holds it, and a number a `double` (a value
- * carries no domain: a variable of another type waits for type inference, the port's stage 3, Decided, 2). C's rules
+ * carries no domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). C's rules
  * apply:
  *
  * - The integer promotions and the usual arithmetic conversions decide the type an operator computes in (see

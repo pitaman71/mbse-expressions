@@ -4,7 +4,7 @@
  * `Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from: an `Expression`, its
  * root) with names bound to numbers, text, logicals and records (mappings, or data objects read through mbse-schemas'
  * readers, `Framework.Objects`). Values are `number`, `string` (text), `boolean` (logical) and
- * `Domains.Error`. Excel's rules apply, not Basic's:
+ * `Domains.Error`. Excel's rules apply, not Patterns':
  *
  * - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
  *   wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for them,

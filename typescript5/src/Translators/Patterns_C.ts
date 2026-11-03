@@ -4,7 +4,7 @@
  * value is shared by every use of its name. C has no `has`, and no container constructor.
  * 
  * A C constant of a type of its own (`5u`, `1.5f`, `(uint8_t)5`) has no Patterns counterpart yet: a term carries no domain,
- * and the conversions of typed literals wait for type inference (the port's stage 3, Decided, 2). An untyped constant is
+ * and the conversions of typed literals wait for domain inference (the port's stage 3, Decided, 2). An untyped constant is
  * a Patterns literal, and a Patterns literal an untyped constant; a `bool` constant is a bool, as C's bool is Patterns'. */
 
 import { DIALECT as C_DIALECT } from "../Dialects/C/Expressions.js";

@@ -16,7 +16,7 @@ same answers; the JSON of case study 1 is byte for byte Python's. mbse-basis
 Where the bindings differ, the code follows TypeScript idioms:
 
 - Constraints are built with writers, as in Python; Python can also read Python source (`Text.FromText`), where
-  TypeScript writes the Python dialect's expressions with its constructors.
+  TypeScript writes the Python3 dialect's expressions with its constructors.
 - Integers are `bigint`s (`72n`) and unknown is `null`. `2.0` is a float, which JavaScript prints as `2`; `show` writes
   it `2.0`, as Python does.
 - A transaction is `store.transaction(() => ...)`, which returns what its function returns, where Python writes

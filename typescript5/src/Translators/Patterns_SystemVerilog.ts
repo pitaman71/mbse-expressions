@@ -10,7 +10,7 @@
  * as `unique`, and `entries` has no counterpart.
  *
  * A sized vector other than a bool's (`8'd200`, `12'habc`, `4'b10xz`) has no Patterns counterpart yet: a term carries no
- * domain, and the conversions of typed literals wait for type inference (the port's stage 3, Decided, 2). A bool is a
+ * domain, and the conversions of typed literals wait for domain inference (the port's stage 3, Decided, 2). A bool is a
  * single bit, `1'b1` or `1'b0`, and back a vector without a base of a single 0 or 1 is a bool. Patterns' container
  * constructors, `list` and `mapping`, have no counterpart. */
 

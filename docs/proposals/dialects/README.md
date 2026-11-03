@@ -73,7 +73,7 @@ This repository's ([the port](../port/README.md#decided) and [its API](../port/A
 held by an `Expressions.Framework.Expression`, linked from a schema by `HasRoot`; "refinement has been superseded by
 schema extension" and "ah, schema *extension* is the preferred form"; "a dialect reuses the framework's kinds wherever
 the shape matches" ("yes", 2026-10-30); "yes, each dialect has a singleton by name"; "Terms do not designate their
-schema", type inference deferred. And the standing rules: "Never guess the schema"
+schema", domain inference deferred. And the standing rules: "Never guess the schema"
 ([PRI-025: never guess the schema](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-025)); "Never use wire format in examples";
 "Do not invent another DSL by wrapping builder syntax"
 ([PRI-019: fluent builder syntax](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-019));
@@ -271,6 +271,20 @@ change as it lands.
 2. **The framework and the renames**, with today's kinds: each dialect's `Expression` and union (question 4), the
    invalid-syntax kinds (question 7), `Python3`, the C and C++ dialects from `Ccpp`'s kinds (question 3),
    `SystemVerilog`; the translators retargeted; corpus cases per dialect.
+
+   *As built* (branch `stage2-framework`; every choice made where the decisions were silent is in
+   [the API, Settled in the complete dialects' stage 2](../port/API.md#settled-in-the-complete-dialects-stage-2-for-the-users-review),
+   items 30 to 45). `Expressions.Framework.Term` is a union of the dialects' unions, each dialect's install adding its
+   `Expressions.<Dialect>.Expression` as the branch named after it (`patterns`, `python3`, `matlab`, `excel`, `latex`,
+   `c`, `cpp`, `systemverilog`), its kinds named plainly; a dialect's own kinds hold its union, the shared kinds and the
+   new `error` and `missing` hold `Term`. Basic is `Patterns` (its quantifier unchanged), Python is `Python3`, and `Ccpp`
+   is `C` and `Cpp`, whose kinds are defined once by C's install and listed by both unions, their slots holding `Term`,
+   each `Kind` recording its language's standards (`C11`, `C17`, `C23`; `C++17`, `C++20`, `C++23`). A dialect reads
+   only its own terms. A literal holds any value, its spelling and its problems, and printers write its spelling;
+   `error` and `missing` are validated, printed as written and refused by evaluation and translation by name. Patterns
+   <-> C and Patterns <-> C++ share one rule set. The corpus has a case per dialect (`python3`, `c`, `cpp`) and one of
+   invalid syntax (`invalid`). Found: mbse-schemas reports a union of one branch as invalid, so `Term` in a store of
+   one dialect, and its expressions, do not validate as data (item 41).
 3. **`Python3` complete**: `ast`'s 29 kinds and helpers, the narrower kinds replaced, printing every construct of 3.0
    to 3.15; checked against `ast`'s node list.
 4. **`TypeScript5`**, new: expressions, types, patterns and JSX (question 5), printed.
