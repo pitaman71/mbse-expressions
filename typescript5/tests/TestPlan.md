@@ -26,7 +26,7 @@ npm run conformance           # regenerate ../conformance/typescript5
 | `03_Visitors.ipynb` | VIS | 2 | as in Python, the readers' and visitors' protocols checked on live instances by method presence |
 | `04_Conformance.ipynb` | CONF | 4 | as in Python, from this side, for a case of Patterns' and of every dialect, and one of invalid syntax; YAML is formatted by mbse-schemas' own emitter (it quotes base64 text), and its values must match (mbse-schemas' EQUIVALENCE.md, YAML formatting) |
 | `05_Framework.ipynb` | FRM | 12 | as in Python; options objects stand for keyword arguments (`new Kind(role, { ... })`, `new Dialect(name, kinds, { domain_of, extends })`), `kinds()` and `Form.attributes` are `Map`s, and the generic reads are camelCase (`kindOf`, `dialectOf`, `nameOf`, `isExpression`); the C family's writers are a `Writers` object's arrow-function fields; the samples' integers are bigints, and a Python form's attributes compare with `form_equal` |
-| `06_Dialects.ipynb` | DIA | 19 | as in Python, with Python3 expressions written by constructors (DIA-01 asserts `Python3.Text` has no `FromText`), Python's rules checked against the same tables of values and errors as the Python suite, and a `Module` in place of numpy; the data objects' integers are bigints, and a `Map` is a mapping too (Python, MATLAB, Excel, SystemVerilog) |
+| `06_Dialects.ipynb` | DIA | 20 | as in Python, with Python3 expressions written by constructors (DIA-01 asserts `Python3.Text` has no `FromText`), Python's rules checked against the same tables of values and errors as the Python suite, and a `Module` in place of numpy; DIA-20 reads the same node list of `ast`, but checks it against the running Python's `ast` in Python only, and DIA-19 writes through the builders the literals and f-strings the Python suite also reads with `FromText`; JavaScript has no complex numbers or `...`, written `Complex` and `ELLIPSIS`; the data objects' integers are bigints, and a `Map` is a mapping too (Python, MATLAB, Excel, SystemVerilog) |
 | `07_Translators.ipynb` | TRN | 14 | as in Python, but for evaluating the NumPy style over columns |
 | `08_Skill.ipynb` | SKL | 3 | as in Python; SKL-02 type-checks the skill's TypeScript program strictly, then runs it |
 | `09_Domains.ipynb` | DOM | 11 | as in Python; domains compare with `equals()`, widths and codes are `bigint`s, and builders are classes (`new D.OfInteger.Builder()`); the IEEE 754 table is checked against `decimal` and the host's floats in Python only |
@@ -46,7 +46,7 @@ A retired case's ID is not reused; the cases after it keep theirs.
 | DOM-15 | `reinterpret` kept the bit pattern, big-endian, between fixed-width domains of one size | Deferred with domain inference (stage 3, Decided, 2); a binary format's encoding is still asserted, directly, in DOM-10 |
 | DOM-16 | `pack` gave a packed value's code in its representation, and `unpack` the packed value of a code | Deferred with domain inference (stage 3, Decided, 2) |
 
-Total: 96 cases (FRM-11, FRM-12 and DIA-18 added in stage 2; DIA-19 in stage 3, `Python3` complete), with the same IDs in the same order in both implementations.
+Total: 97 cases (FRM-11, FRM-12 and DIA-18 added in stage 2; DIA-19 and DIA-20 in stage 3, `Python3` complete), with the same IDs in the same order in both implementations.
 
 ---
 
