@@ -43,10 +43,12 @@ __all__ = ["install", "DIALECT", "Writer", "constant", "name", "cell", "let_", "
 def install(txn: Any) -> Any:
     """Excel's union of its kinds, added to the framework's terms as the branch `excel`, its own kinds, and its
     dialect's schema, whose singleton is `Expressions.Excel`: run after `Framework.install`, in a transaction of its
-    own; run again, it writes nothing."""
+    own; run again, it writes nothing.
+    Its holder, `Expressions.Excel.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
+    its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Excel/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Cell": S.OfObject, "Map": S.OfObject, "Infix": S.OfObject, "Prefix": S.OfObject,
                   "Field": S.OfObject})  # FrameworkTerm: the framework's union, by name
         .spec([
@@ -80,6 +82,10 @@ def install(txn: Any) -> Any:
                 "operator": S.OfStr, "operand": _.Term}),
             lambda _: _.Field.name("Expressions.Excel.Field").properties({
                 "name": S.OfStr, "value": _.Term}),
+            # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
+            # to its `Term`
+            lambda _: _.Expression.name("Expressions.Excel.Expression").ref(True).refines([Framework.Expression]).properties({
+                "root": _.Term}),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("excel").schema([_.Term])]),
         ])]))])

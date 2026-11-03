@@ -309,6 +309,11 @@ change as it lands.
    share, holding `Expressions.C.Term` and `Expressions.Cpp.Term` (API, item 35, superseded). Each dialect's holder
    `Expressions.<Dialect>.Expression`, refining `Expressions.Framework.Expression`, waits: mbse-schemas 0.26.5 does not
    confirm a redeclared `root` narrowed to a branch's schema (API, item 46).
+
+   *Holders* (branch `stage2-holders`, mbse-schemas 0.26.7): each dialect's install writes its holder,
+   `Expressions.<Dialect>.Expression`, a reference object refining `Expressions.Framework.Expression`, its `root`
+   narrowed to the dialect's `Term`; `HasRoot` links it, and everything reading an expression takes it (API, items 46
+   to 49).
 3. **`Python3` complete**: `ast`'s 29 kinds and helpers, the narrower kinds replaced, printing every construct of 3.0
    to 3.15; checked against `ast`'s node list.
 4. **`TypeScript5`**, new: expressions, types, patterns and JSX (question 5), printed.

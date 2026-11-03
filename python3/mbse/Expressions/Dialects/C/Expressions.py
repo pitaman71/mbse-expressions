@@ -51,10 +51,12 @@ STANDARDS = ("C11", "C17", "C23")
 def install(txn: Any) -> Any:
     """C's union of its kinds, `Expressions.C.Term`, added to the framework's terms as the branch `c`, its own kinds, and
     its dialect's schema, whose singleton is `Expressions.C`: run after `Framework.install`, in a transaction of its
-    own; run again, it writes nothing."""
+    own; run again, it writes nothing.
+    Its holder, `Expressions.C.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
+    `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.C/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Constant": S.OfObject, "Unary": S.OfObject, "Binary": S.OfObject, "Conditional": S.OfObject,
                   "Cast": S.OfObject, "Member": S.OfObject, "Subscript": S.OfObject})  # FrameworkTerm: the framework's, by name
         .spec([
@@ -97,6 +99,10 @@ def install(txn: Any) -> Any:
                 "object": _.Term}),
             lambda _: _.Subscript.name("Expressions.C.Subscript").properties({
                 "array": _.Term, "index": _.Term}),
+            # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
+            # to its `Term`
+            lambda _: _.Expression.name("Expressions.C.Expression").ref(True).refines([Framework.Expression]).properties({
+                "root": _.Term}),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("c").schema([_.Term])]),
         ])]))])

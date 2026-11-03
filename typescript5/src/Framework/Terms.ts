@@ -248,18 +248,30 @@ function schemaOf(value: any): unknown {
   return typeof value.as_schema === "function" && !Repr.isClassLike(value) ? value.as_schema() : null;
 }
 
+/** Whether `schema` is `Expressions.Framework.Expression` or refines it, as each dialect's holder does
+ * (`Expressions.Python3.Expression`): an expression, whose `root` holds its root term. */
+export function isExpression(schema: unknown): boolean {
+  let current: any = schema;
+  while (current instanceof Schemas.OfObject.Data) {
+    if (named(current, EXPRESSION)) return true;
+    current = (current as any).refines;
+  }
+  return false;
+}
+
 /** Whether `value` is a term value: the reader of a value of `Expressions.Framework.Term` or of a dialect's `Term`. */
 export function isTerm(value: unknown): boolean {
   if (isAny(value)) return false;
   return holdsTerms(schemaOf(value));
 }
 
-/** The term value of an `Expression` (its root), of a term property's reader, of a `Readers.OfAny` holding one, or a
+/** The term value of an expression (its root: an `Expressions.Framework.Expression` or a dialect's holder refining it),
+ * of a term property's reader, of a `Readers.OfAny` holding one, or a
  * term value itself; throws `TypeError` for anything else, and `ValueError` where there is none. */
 export function term(value: any): any {
   const schema = schemaOf(value);
   const found: any[] = [];
-  if (schema instanceof Schemas.OfObject.Data && named(schema, EXPRESSION)) return term(value.root);
+  if (isExpression(schema)) return term(value.root);
   if (schema instanceof Schemas.OfProperty.Data && holdsTerms(schema.schema)) {
     value.as_value((a: any) => a.as_union((u: any) => {
       found.push(u);

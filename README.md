@@ -24,7 +24,7 @@ store.transaction(Framework.install)
 store.transaction(Patterns.install)
 contact = Expressions.variable("contact")
 with store.transaction():
-    senior = store.Expressions.Framework.Expression(lambda e: e.root(
+    senior = store.Expressions.Patterns.Expression(lambda e: e.root(
         contact.age.ge(65).and_(contact.has("email"))))
 Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value is unknown
 ```
@@ -38,7 +38,7 @@ const store: any = new Builders.Store(); // expressions are stored in an mbse-sc
 store.transaction(Framework.install);
 store.transaction(Patterns.install);
 const contact = Expressions.variable("contact");
-const senior = store.transaction(() => store.Expressions.Framework.Expression((e: any) => e.root(
+const senior = store.transaction(() => store.Expressions.Patterns.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
 Evaluators.OfAny(senior, { contact: ada });
 ```

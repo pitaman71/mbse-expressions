@@ -60,10 +60,12 @@ _BASES = {"b": 1, "o": 3, "h": 4, "d": 0}
 def install(txn: Any) -> Any:
     """SystemVerilog's union of its kinds, added to the framework's terms as the branch `systemverilog`, its own kinds,
     and its dialect's schema, whose singleton is `Expressions.SystemVerilog`: run after `Framework.install`, in a
-    transaction of its own; run again, it writes nothing. Its `literal`, `variable` and `call` are the framework's."""
+    transaction of its own; run again, it writes nothing. Its `literal`, `variable` and `call` are the framework's.
+    Its holder, `Expressions.SystemVerilog.Expression`, refines `Expressions.Framework.Expression`, its `root`
+    narrowed to its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.SystemVerilog/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Vector": S.OfObject, "Unary": S.OfObject, "Binary": S.OfObject, "Conditional": S.OfObject,
                   "Concatenation": S.OfObject, "Replication": S.OfObject, "Select": S.OfObject, "Range": S.OfObject,
                   "Inside": S.OfObject, "Span": S.OfObject, "Cast": S.OfObject, "Member": S.OfObject,
@@ -126,6 +128,10 @@ def install(txn: Any) -> Any:
             lambda _: _.Iterate.name("Expressions.SystemVerilog.Iterate").properties({
                 "name": S.OfStr,  # the iterator
                 "method": S.OfStr, "array": _.Term, "body": _.Term}),
+            # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
+            # to its `Term`
+            lambda _: _.Expression.name("Expressions.SystemVerilog.Expression").ref(True).refines([Framework.Expression]).properties({
+                "root": _.Term}),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("systemverilog").schema([_.Term])]),
         ])]))])
