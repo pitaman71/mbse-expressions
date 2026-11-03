@@ -49,6 +49,40 @@
                                 }
                               }
                             }
+                          },
+                          {
+                            "starred": {
+                              "value": {
+                                "list": {
+                                  "elements": [
+                                    {
+                                      "python3": {
+                                        "variable": {
+                                          "name": "a"
+                                        }
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          }
+                        ],
+                        "keywords": [
+                          {
+                            "arg": "k",
+                            "value": {
+                              "constant": {
+                                "singleton": "..."
+                              }
+                            }
+                          },
+                          {
+                            "value": {
+                              "variable": {
+                                "name": "a"
+                              }
+                            }
                           }
                         ]
                       }
@@ -88,6 +122,18 @@
                                           }
                                         }
                                       }
+                                    },
+                                    {
+                                      "op": "<",
+                                      "comparator": {
+                                        "literal": {
+                                          "value": {
+                                            "int": 16
+                                          },
+                                          "text": "0x10",
+                                          "base": 16
+                                        }
+                                      }
                                     }
                                   ]
                                 }
@@ -103,52 +149,383 @@
                               },
                               "attr": "pi"
                             }
+                          },
+                          {
+                            "namedexpr": {
+                              "target": {
+                                "variable": {
+                                  "name": "n"
+                                }
+                              },
+                              "value": {
+                                "constant": {
+                                  "singleton": "None"
+                                }
+                              }
+                            }
                           }
                         ]
                       }
                     },
                     "orelse": {
-                      "generatorexp": {
-                        "elt": {
-                          "subscript": {
+                      "call": {
+                        "func": {
+                          "attribute": {
                             "value": {
                               "variable": {
-                                "name": "p"
+                                "name": "np"
                               }
                             },
-                            "slice": {
-                              "literal": {
-                                "value": {
-                                  "bytes": "AA=="
-                                }
-                              }
-                            }
+                            "attr": "stack"
                           }
                         },
-                        "generators": [
+                        "args": [
                           {
-                            "target": {
-                              "variable": {
-                                "name": "p"
-                              }
-                            },
-                            "iter": {
-                              "attribute": {
-                                "value": {
-                                  "variable": {
-                                    "name": "a"
+                            "generatorexp": {
+                              "elt": {
+                                "subscript": {
+                                  "value": {
+                                    "variable": {
+                                      "name": "p"
+                                    }
+                                  },
+                                  "slice": {
+                                    "literal": {
+                                      "value": {
+                                        "bytes": "AA=="
+                                      }
+                                    }
                                   }
-                                },
-                                "attr": "y"
-                              }
-                            },
-                            "ifs": [
-                              {
+                                }
+                              },
+                              "generators": [
+                                {
+                                  "target": {
+                                    "variable": {
+                                      "name": "p"
+                                    }
+                                  },
+                                  "iter": {
+                                    "attribute": {
+                                      "value": {
+                                        "variable": {
+                                          "name": "a"
+                                        }
+                                      },
+                                      "attr": "y"
+                                    }
+                                  },
+                                  "ifs": [
+                                    {
+                                      "variable": {
+                                        "name": "p"
+                                      }
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "listcomp": {
+                              "elt": {
                                 "variable": {
                                   "name": "p"
                                 }
+                              },
+                              "generators": [
+                                {
+                                  "is_async": true,
+                                  "target": {
+                                    "tuple": {
+                                      "elts": [
+                                        {
+                                          "variable": {
+                                            "name": "p"
+                                          }
+                                        },
+                                        {
+                                          "starred": {
+                                            "value": {
+                                              "variable": {
+                                                "name": "q"
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "iter": {
+                                    "variable": {
+                                      "name": "a"
+                                    }
+                                  },
+                                  "ifs": []
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "setcomp": {
+                              "elt": {
+                                "variable": {
+                                  "name": "p"
+                                }
+                              },
+                              "generators": [
+                                {
+                                  "target": {
+                                    "variable": {
+                                      "name": "p"
+                                    }
+                                  },
+                                  "iter": {
+                                    "variable": {
+                                      "name": "a"
+                                    }
+                                  },
+                                  "ifs": []
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "dictcomp": {
+                              "key": {
+                                "variable": {
+                                  "name": "p"
+                                }
+                              },
+                              "value": {
+                                "constant": {
+                                  "real": 0.0,
+                                  "imag": 2.0
+                                }
+                              },
+                              "generators": [
+                                {
+                                  "target": {
+                                    "variable": {
+                                      "name": "p"
+                                    }
+                                  },
+                                  "iter": {
+                                    "variable": {
+                                      "name": "a"
+                                    }
+                                  },
+                                  "ifs": []
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "set": {
+                              "elts": [
+                                {
+                                  "dict": {
+                                    "items": [
+                                      {
+                                        "key": {
+                                          "literal": {
+                                            "value": {
+                                              "str": "k"
+                                            }
+                                          }
+                                        },
+                                        "value": {
+                                          "literal": {
+                                            "value": {
+                                              "int": 1
+                                            }
+                                          }
+                                        }
+                                      },
+                                      {
+                                        "value": {
+                                          "variable": {
+                                            "name": "a"
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "lambda": {
+                              "args": {
+                                "args": [
+                                  {
+                                    "arg": "b"
+                                  }
+                                ],
+                                "kwarg": {
+                                  "arg": "c"
+                                }
+                              },
+                              "body": {
+                                "binop": {
+                                  "left": {
+                                    "variable": {
+                                      "name": "b"
+                                    }
+                                  },
+                                  "op": "@",
+                                  "right": {
+                                    "variable": {
+                                      "name": "a"
+                                    }
+                                  }
+                                }
                               }
-                            ]
+                            }
+                          },
+                          {
+                            "subscript": {
+                              "value": {
+                                "variable": {
+                                  "name": "a"
+                                }
+                              },
+                              "slice": {
+                                "tuple": {
+                                  "elts": [
+                                    {
+                                      "slice": {
+                                        "lower": {
+                                          "literal": {
+                                            "value": {
+                                              "int": 1
+                                            }
+                                          }
+                                        },
+                                        "step": {
+                                          "literal": {
+                                            "value": {
+                                              "int": -1
+                                            }
+                                          }
+                                        }
+                                      }
+                                    },
+                                    {
+                                      "slice": {}
+                                    }
+                                  ]
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "yield": {
+                              "value": {
+                                "variable": {
+                                  "name": "a"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "yieldfrom": {
+                              "value": {
+                                "variable": {
+                                  "name": "a"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "await": {
+                              "value": {
+                                "variable": {
+                                  "name": "a"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "concatenatedstring": {
+                              "values": [
+                                {
+                                  "literal": {
+                                    "value": {
+                                      "str": "x"
+                                    }
+                                  }
+                                },
+                                {
+                                  "joinedstr": {
+                                    "prefix": "f",
+                                    "quote": "'",
+                                    "values": [
+                                      {
+                                        "stringtext": {
+                                          "spelling": "y"
+                                        }
+                                      },
+                                      {
+                                        "formattedvalue": {
+                                          "value": {
+                                            "variable": {
+                                              "name": "a"
+                                            }
+                                          },
+                                          "conversion": "r",
+                                          "format_spec": {
+                                            "values": [
+                                              {
+                                                "stringtext": {
+                                                  "spelling": ">"
+                                                }
+                                              },
+                                              {
+                                                "formattedvalue": {
+                                                  "value": {
+                                                    "variable": {
+                                                      "name": "p"
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "templatestr": {
+                              "prefix": "t",
+                              "quote": "'",
+                              "values": [
+                                {
+                                  "interpolation": {
+                                    "value": {
+                                      "variable": {
+                                        "name": "a"
+                                      }
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          {
+                            "parenthesized": {
+                              "value": {
+                                "variable": {
+                                  "name": "a"
+                                }
+                              }
+                            }
                           }
                         ]
                       }

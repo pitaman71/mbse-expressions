@@ -97,6 +97,8 @@ check(Evaluators.OfAny(written(card.reach.has("phone")), { card: ada_card }) ===
 | `validate(term, bound={"person"})`, keyword arguments | positional: `validate(term, ["person"])`; options objects elsewhere: `new Scope(variables, { modules })` |
 | `Pattern("call", A, B, callable="eq")` | `new Pattern("call", { callable: "eq" }, A, B)` |
 | `Python3.Text.FromText(source)` | none: build Python expressions with constructors (`P.compare(">=", P.attribute(P.name("x"), "age"), 18n)`) |
+| `P.constant(None)`, `P.constant(...)`, `P.constant(2j)` | `P.constant(null)`, `P.constant(P.ELLIPSIS)`, `P.constant(new P.Complex(0, 2))`: JavaScript has no `Ellipsis` or complex numbers |
+| `P.lambda_(body, ("a",), kwarg="k")`, `P.comprehension("p", xs, (cond,), is_async=True)` | `P.lambda_(body, ["a"], { kwarg: "k" })`, `P.comprehension("p", xs, [cond], true)` |
 | Python expressions evaluated by Python, with real modules | a model of Python's rules; modules are `new Python3.Evaluators.Module(name, { members })`; no numpy |
 | `NameError`, `ImportError`, `ZeroDivisionError`, `OverflowError` | classes of the same names in `@mbse/expressions/Framework`'s `Errors` |
 | Excel's `Error("#FIELD!")`, equal by value | `Error.of("#FIELD!")`, one instance per code, compared with `===` |

@@ -128,8 +128,8 @@ skills/                   the agent skill (SKILL.md plus per-task references); s
 Expressions come in dialects that implement one framework: each is serializable, traversable, validatable and
 evaluatable, and pairwise translators convert between them. A term is a value of `Expressions.Framework.Term`, the union of
 the dialects' `Term`s: written with its dialect, then its kind. Patterns (formerly Basic), above, is the core vocabulary.
-Python3 (with NumPy as a module it imports), Matlab, Excel and Latex (notation, without evaluation) model those
-languages' expressions, render as their source, resolve names, imports and cell references as those languages do, and
+Python3 (every expression of Python 3, 3.0 to 3.15, as CPython's `ast` has it, with NumPy as a module it imports), Matlab,
+Excel and Latex (notation, without evaluation) model those languages' expressions, render as their source, resolve names, imports and cell references as those languages do, and
 evaluate by their rules; C and Cpp (C11 to C23, C++17 to C++23), each with its own kinds of the same shapes, and SystemVerilog model those
 languages' expressions over their own types:
 
@@ -152,7 +152,9 @@ domains as data (each dialect a singleton that names its operations, each an exp
 by name); writers; `validate()`, which refuses a call to an operation the dialect does not define; evaluation with
 three-valued logic over values by the schemas they are written with, collections and quantifiers. Under way: the
 complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)), whose stage 2,
-the framework and the renames, is built. Not built yet: domain
+the framework and the renames, is built, and stage 3, `Python3` complete over Python 3's expressions
+([CAP-227: the Python3 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-227.md)), printed in both languages, read by
+`FromText` in Python and checked against `ast`'s node list; its evaluator stays shallow. Not built yet: domain
 inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
 interface through which mbse-schemas will choose union branches and check constraints.
 

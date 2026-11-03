@@ -30,6 +30,15 @@ the framework's `error` and `missing`; it keeps a kind of its own only where the
 | `IMPORT` | makes something available within its body | `names(attributes)`, the names it binds; the scope resolves it with `enter` |
 | `INVALID` | invalid syntax, the framework's `error` and `missing`, which every dialect reads | nothing: validation reports it, evaluation refuses it |
 
+A kind whose role says too little declares more (Python3's do): `optional`, the slots that may be empty (`lower` of a
+slice, `generators.target` within a helper); `scopes(record)`, the names each argument has bound (a comprehension's
+targets, a lambda's parameters); `operators(attributes)` and `result(attributes, domains)`, where it applies several
+operators (a comparison chain); `unfold(form)`, an equivalent form of simpler terms that translation reads where no rule
+reads the term; and `spelling`, a literal's attributes that spell it rather than give its value. A helper, a value
+object a kind holds that is not a term (a call's `keyword`), or a container of them, is read as a `Terms.Part` among the
+form's attributes, its terms after the kind's own arguments, and `make` writes it back. An interpreter given the kinds
+it `evaluated` refuses any other by name.
+
 ```python fragment
 from mbse.Expressions.Framework import Terms as F
 

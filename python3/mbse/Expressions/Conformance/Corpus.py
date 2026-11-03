@@ -62,13 +62,26 @@ def build():
     expression = E.let_("age", record.age, age.ge(18).and_(
         age.lt(65.5).or_(record.has("email").not_()).implies(E.literal(b"\x00\xff").in_(E.list_("x", True)))))
 
-    # --- python3: every kind, a let and its names --- import numpy as np / from math import floor /
-    # (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(record)
-    a, item = P.name("a"), P.name("p")
+    # --- python3: every kind, a let and its names, a literal with its spelling --- import numpy as np / from math import
+    # floor / (lambda a: floor(a.x * 2.5, *[a], k=..., **a) if not a['k'] >= 18 < 0x10 or np.pi or (n := None) else
+    # np.stack((p[b'\x00'] for p in a.y if p), [p async for p, *q in a], {p for p in a}, {p: 2j for p in a},
+    # {{'k': 1, **a}}, lambda b, **c: b @ a, a[1::-1, :], (yield a), (yield from a), await a, 'x' f'y{a!r:>{p}}', t'{a}',
+    # (a)))(record)
+    a, item, b = P.name("a"), P.name("p"), P.name("b")
+    spelled = lambda t: t.literal(lambda r: r.value(lambda v: v.as_scalar(16)).text("0x10").base(16))  # noqa: E731
     python3 = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("record"), P.ifexp(
-        P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18)), P.attribute(P.name("np"), "pi")),
-        P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
-        P.generatorexp(P.subscript(item, b"\x00"), P.comprehension("p", P.attribute(a, "y"), (item,)))))), alias="np")
+        P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18, ("<", spelled))), P.attribute(P.name("np"), "pi"),
+                 P.namedexpr("n", P.constant(None))),
+        P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5), P.starred(P.list_(a)), P.keyword("k", P.constant(...)),
+               P.keyword(None, a)),
+        P.call(P.attribute(P.name("np"), "stack"),
+               P.generatorexp(P.subscript(item, b"\x00"), P.comprehension("p", P.attribute(a, "y"), (item,))),
+               P.listcomp(item, P.comprehension(P.tuple_(item, P.starred(P.name("q"))), a, (), True)),
+               P.setcomp(item, P.comprehension("p", a)), P.dictcomp(item, P.constant(2j), P.comprehension("p", a)),
+               P.set_(P.dict_(("k", 1), (None, a))), P.lambda_(P.binop("@", b, a), ("b",), kwarg="c"),
+               P.subscript(a, P.tuple_(P.slice_(1, None, -1), P.slice_())), P.yield_(a), P.yieldfrom(a), P.await_(a),
+               P.concatenatedstring("x", P.joinedstr(("y", P.formattedvalue(a, "r", (">", P.formattedvalue(item)))))),
+               P.templatestr((P.interpolation(a),)), P.parenthesized(a))))), alias="np")
 
     # --- matlab: every kind, shared identifiers --- import geo.* / (dist(record.age, 3) + ~isfield(record, "email") .* -1.5
     # >= arrayfun(@(k) k, record.ports)(2)) || true

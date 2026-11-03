@@ -10,7 +10,7 @@ written nested, indent 2) and `<case>.yaml`.
 | Case | Covers |
 |---|---|
 | `expression` | a Patterns term, written nested under `Expressions.Framework.Term`, its dialect then its kind: every kind and literal type, a let and its variable, a list |
-| `python3` | a Python3 term: every kind (the framework's `literal`, `variable` and `let`, and its own `import`, `importfrom`, `ifexp`, `boolop`, `unaryop`, `compare`, `subscript`, `attribute`, `call`, `binop`, `generator`, `index`), imports included, shared names |
+| `python3` | a Python3 term of every kind of Python 3's expressions (its literal refining the framework's, one with its spelling and its base; its `constant` for `None`, `...` and a complex number; a comparison chain, `and` and `or` of n values, keywords and unpacking, a tensor's indices, comprehensions, a lambda, a named expression, `await` and `yield`, f- and t-strings, adjacent strings, parentheses) and its extensions `let`, `import` and `importfrom`, imports included, shared names |
 | `matlab` | a Matlab term: every kind (the framework's `literal`, `variable` and `call`, and its own `binary`, `unary`, `field`, `index`, `arrayfun`, `import`), shared identifiers |
 | `excel` | an Excel term: every kind (the framework's `literal`, `variable`, `let` and `call`, and its own `infix`, `prefix`, `field`, `map`, `cell`), cells in other sheets and books included, shared names |
 | `latex` | a Latex term: every kind (the framework's `literal`, `variable`, `let` and `call`, and its own `member`, `binary`, `unary`, `frac`), with shared symbols |
