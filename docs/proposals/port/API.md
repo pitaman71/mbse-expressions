@@ -41,8 +41,8 @@ store.transaction(Patterns.define)          # optional, data: Patterns' dialect 
 dialect (`dialect`) and each domain by its name. Validation and evaluation do not need it: they read Patterns'
 vocabulary, `Domains.SIGNATURES`, whose names are the operations the install writes. Every other dialect's install adds
 its singleton schema too (`Expressions.Python3.Dialect`, singleton `Expressions.Python3`), with no operations or domains
-yet (below, Settled in stage 3). A store may hold one dialect only: `Term` is then a union of one branch, which
-mbse-schemas allows since 0.26.6 (item 41). Each install and `define` write their schemas and data in the builders' fluent syntax
+yet (below, Settled in stage 3). A store holds any number of dialects, each install adding its own; where it holds a single one, `Framework.Term` is
+a union of one branch, which mbse-schemas allows since 0.26.6 (item 41). Each install and `define` write their schemas and data in the builders' fluent syntax
 (P-019), not from tables of their own.
 
 `Framework.install` (in `Framework/Terms.py`, `Framework/Terms.ts`) and `Patterns.install` (in
