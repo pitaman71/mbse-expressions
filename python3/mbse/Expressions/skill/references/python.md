@@ -141,8 +141,6 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 - A Python3 scope imports nothing by default: `Python3.Evaluators.Scope(variables, modules={"numpy": numpy})`.
 - A dialect reads only its own terms: Patterns' `variable` is not a term of Python3, though both have the kind. Write a
   dialect's terms with its own writers, or translate them.
-- A store holding one dialect only has a union of one branch, `Expressions.Framework.Term`, which mbse-schemas' validation reports: validate
-  stored expressions in a store holding at least two dialects.
 
 ## Go deeper
 

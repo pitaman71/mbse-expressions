@@ -56,8 +56,7 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
    (`store.transaction(Framework.install)`, `Patterns.install`, ...); a term is a nested value of
    `Expressions.Framework.Term`, the union of the dialects' `Term`s, written with its dialect, then its kind
    (`{"patterns": {"call": ...}}`), so it serializes as any mbse-schemas value: `JSON.ToJSON(store)(Term, term)`. A
-   dialect reads only its own terms. mbse-schemas holds a union of one branch invalid, so a store whose expressions are
-   validated as data holds at least two dialects.
+   dialect reads only its own terms.
 
 ## Load the reference for your task
 
