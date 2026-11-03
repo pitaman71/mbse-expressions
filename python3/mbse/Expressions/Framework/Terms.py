@@ -225,10 +225,12 @@ def _is_pair(schema: Any) -> bool:
 
 
 def _is_helper(schema: Any) -> bool:
-    """Whether a schema is a helper's: a value object that is not a pair, or a union whose branches all are."""
+    """Whether a schema is a helper's: a value object that is not a pair, or a union, not of terms, whose branches are
+    all value objects, helpers or pairs (a branch of terms alone, such as TypeScript5's `parenthesizedexpression` among
+    its patterns, is a helper there)."""
     if isinstance(schema, Schemas.OfUnion.Data):
         return not _holds_terms(schema) and bool(schema.branches) and all(
-            _is_helper(branch.schema) for branch in schema.branches)
+            _is_helper(branch.schema) or _is_pair(branch.schema) for branch in schema.branches)
     return isinstance(schema, Schemas.OfObject.Data) and not schema.ref and not _is_pair(schema)
 
 
