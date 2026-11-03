@@ -24,7 +24,7 @@
  *   as its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds,
  *   e.g. `import numpy as np` around an expression that uses `np`.
  *
- * A pattern names a kind by its branch's tag in its dialect's union (`call`, `binop`) and its attributes and arguments
+ * A pattern names a kind by its branch's tag in its dialect's `Term` (`call`, `binop`) and its attributes and arguments
  * as `Terms.form` reads them: a hole in an argument binds the term in that place, slots then variadic arguments, and a
  * fixed attribute must be set to an equal scalar, with every attribute of the term matched (an attribute that is not set
  * is absent), but a literal's spelling (`text`, `problems`), which is its own dialect's: a literal translates by its

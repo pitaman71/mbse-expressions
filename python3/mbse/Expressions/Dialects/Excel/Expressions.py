@@ -1,7 +1,7 @@
 """Expressions of the Excel dialect: worksheet formulas.
 
-Excel's terms are values of its union, `Expressions.Excel.Expression`, the branch `excel` of
-`Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are the
+Excel's terms are values of its `Term`, `Expressions.Excel.Term`, the branch `excel` of
+`Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
 framework's kinds (`mbse.Expressions.Framework.Terms`) where a formula's construct has their shape, five of its own,
 each a value object `Expressions.Excel.<Kind>` whose slots hold Excel's terms, and the framework's kinds of invalid
 syntax (`error`, `missing`); a term carries no domain:
@@ -46,9 +46,9 @@ def install(txn: Any) -> Any:
     own; run again, it writes nothing."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Excel/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion, "Expression": S.OfUnion,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   "Cell": S.OfObject, "Map": S.OfObject, "Infix": S.OfObject, "Prefix": S.OfObject,
-                  "Field": S.OfObject})  # Term: the framework's union, by name
+                  "Field": S.OfObject})  # FrameworkTerm: the framework's union, by name
         .spec([
             # its dialect: the singleton `Expressions.Excel`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.Excel.Dialect").ref(True).singleton("Expressions.Excel").adjacencies({
@@ -57,7 +57,7 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("excel").schema([_.Dialect])]),
             # its union of its kinds: the framework's it reuses, its own, and invalid syntax
-            lambda _: _.Expression.name("Expressions.Excel.Expression").branches([
+            lambda _: _.Term.name("Expressions.Excel.Term").branches([
                 lambda t: t.name("literal").schema([Framework.Literal]),
                 lambda t: t.name("variable").schema([Framework.Variable]),
                 lambda t: t.name("let").schema([Framework.Let]),
@@ -73,15 +73,15 @@ def install(txn: Any) -> Any:
             lambda _: _.Cell.name("Expressions.Excel.Cell").properties({
                 "address": S.OfStr, "sheet": S.OfStr, "book": S.OfStr}),
             lambda _: _.Map.name("Expressions.Excel.Map").properties({
-                "name": S.OfStr, "array": _.Expression, "body": _.Expression}),  # the LAMBDA's name and body
+                "name": S.OfStr, "array": _.Term, "body": _.Term}),  # the LAMBDA's name and body
             lambda _: _.Infix.name("Expressions.Excel.Infix").properties({
-                "operator": S.OfStr, "left": _.Expression, "right": _.Expression}),
+                "operator": S.OfStr, "left": _.Term, "right": _.Term}),
             lambda _: _.Prefix.name("Expressions.Excel.Prefix").properties({
-                "operator": S.OfStr, "operand": _.Expression}),
+                "operator": S.OfStr, "operand": _.Term}),
             lambda _: _.Field.name("Expressions.Excel.Field").properties({
-                "name": S.OfStr, "value": _.Expression}),
-            lambda _: _.Term.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
-                lambda t: t.name("excel").schema([_.Expression])]),
+                "name": S.OfStr, "value": _.Term}),
+            lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
+                lambda t: t.name("excel").schema([_.Term])]),
         ])]))])
 
 

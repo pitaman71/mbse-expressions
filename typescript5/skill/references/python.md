@@ -36,7 +36,7 @@ def contacts(txn):
 
 store = Builders.Store()  # an mbse-schemas store: the schemas, the objects, and the expressions about them
 for install in (Framework.install, Patterns.install, Excel.install, Python3.install, contacts):
-    store.transaction(install)  # each dialect's install adds its union of its kinds; run again, an install writes nothing
+    store.transaction(install)  # each dialect's install adds its Term, the union of its kinds; run again, an install writes nothing
 with store.transaction():
     ada = store.Contact(lambda c: c.name("Ada").age(70).email("ada@example.com"))
     bob = store.Contact(lambda c: c.name("Bob").age(30))
@@ -84,7 +84,7 @@ assert Evaluators.OfAny(written(card.reach.has("phone")), {"card": ada_card}) is
 ## Cheat sheet
 
 ```python fragment
-# Installs: one transaction each, the framework's first; a dialect's adds its union to Expressions.Framework.Term.
+# Installs: one transaction each, the framework's first; a dialect's adds its Term to Expressions.Framework.Term.
 store = Builders.Store(); store.transaction(Framework.install); store.transaction(Patterns.install)  # then Python3.install, ...
 Term = store.registered("Expressions.Framework.Term")
 
@@ -103,7 +103,7 @@ block.entries("wires")                             # an object's entries in an a
 # Reading: a term is read through mbse-schemas' readers; Terms gives the generic reads.
 Terms.term(expression)                     # the root term of an Expression (or a term itself)
 Terms.kind_of(term); Terms.form(term)      # ("call", record); Form(kind, attributes, arguments)
-Terms.dialect_of(term)                     # "Expressions.Patterns.Expression": the union of the dialect it is of
+Terms.dialect_of(term)                     # "Expressions.Patterns.Term": the Term of the dialect it is of
 E.DIALECT.validate(term, bound={"person"})                   # problems, [] when valid; a call Patterns doesn't define is one
 E.DIALECT.infer(term, {"person": Domains.Object})            # from mbse.Expressions.Dialects.Patterns import Domains
 
@@ -141,7 +141,7 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 - A Python3 scope imports nothing by default: `Python3.Evaluators.Scope(variables, modules={"numpy": numpy})`.
 - A dialect reads only its own terms: Patterns' `variable` is not a term of Python3, though both have the kind. Write a
   dialect's terms with its own writers, or translate them.
-- A store holding one dialect only has a union of one branch, `Term`, which mbse-schemas' validation reports: validate
+- A store holding one dialect only has a union of one branch, `Expressions.Framework.Term`, which mbse-schemas' validation reports: validate
   stored expressions in a store holding at least two dialects.
 
 ## Go deeper

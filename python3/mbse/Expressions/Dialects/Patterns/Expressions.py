@@ -1,8 +1,8 @@
 """Expressions of the Patterns dialect (formerly Basic): the core vocabulary, for constraints. `Evaluators` evaluates
 them.
 
-Patterns' terms are values of its union, `Expressions.Patterns.Expression`, the branch `patterns` of
-`Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are the
+Patterns' terms are values of its `Term`, `Expressions.Patterns.Term`, the branch `patterns` of
+`Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
 framework's kinds it reuses (`mbse.Expressions.Framework.Terms`), one of its own, and the framework's kinds of invalid
 syntax:
 
@@ -63,7 +63,7 @@ def install(txn: Any) -> Any:
     `define` writes after it."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Patterns/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Term": S.OfUnion, "Expression": S.OfUnion, "Quantifier": S.OfObject,  # Term: the framework's, by name
+        .symbols({"FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Quantifier": S.OfObject,  # FrameworkTerm: the framework's, by name
                   "Dialects": S.OfUnion, "Dialect": S.OfObject,  # the framework's kind union of dialects, and Patterns'
                   "DomainKind": S.OfUnion, "Domain": S.OfObject, "Packs": S.OfRelation,
                   "OfBool": S.OfObject, "OfInteger": S.OfObject, "OfIeee754": S.OfObject, "OfBits": S.OfObject,
@@ -92,7 +92,7 @@ def install(txn: Any) -> Any:
 
             # --- Its union of its kinds: the framework's it reuses, its own, and invalid syntax; the branch `patterns`
             # of the framework's terms ---
-            lambda _: _.Expression.name("Expressions.Patterns.Expression").branches([
+            lambda _: _.Term.name("Expressions.Patterns.Term").branches([
                 lambda t: t.name("literal").schema([Framework.Literal]),
                 lambda t: t.name("call").schema([Framework.Call]),
                 lambda t: t.name("variable").schema([Framework.Variable]),
@@ -106,11 +106,11 @@ def install(txn: Any) -> Any:
             lambda _: _.Quantifier.name("Expressions.Patterns.Quantifier").properties({
                 "name": S.OfStr,  # bound to each item in the body
                 "quantifier": S.OfStr,  # all, any or count
-                "collection": _.Expression,
-                "body": _.Expression,
+                "collection": _.Term,
+                "body": _.Term,
             }),
-            lambda _: _.Term.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
-                lambda t: t.name("patterns").schema([_.Expression])]),
+            lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
+                lambda t: t.name("patterns").schema([_.Term])]),
 
             # --- Its kinds of domain, each a standard's parameters; a packed domain's enum and representation are
             # domains, which a value cannot hold: `Packs` links them ---

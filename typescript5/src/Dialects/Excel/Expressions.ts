@@ -1,8 +1,8 @@
 /**
  * Expressions of the Excel dialect: worksheet formulas.
  *
- * Excel's terms are values of its union, `Expressions.Excel.Expression`, the branch `excel` of
- * `Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are the
+ * Excel's terms are values of its `Term`, `Expressions.Excel.Term`, the branch `excel` of
+ * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
  * framework's kinds (`Framework/Terms`) where a formula's construct has their shape, five of its own,
  * each a value object `Expressions.Excel.<Kind>` whose slots hold Excel's terms, and the framework's kinds of invalid
  * syntax (`error`, `missing`); a term carries no domain:
@@ -44,9 +44,9 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Excel/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, Term: S.OfUnion, Expression: S.OfUnion,
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       Cell: S.OfObject, Map: S.OfObject, Infix: S.OfObject, Prefix: S.OfObject,
-      Field: S.OfObject }) // Term: the framework's union, by name
+      Field: S.OfObject }) // FrameworkTerm: the framework's union, by name
     .spec([
       // its dialect: the singleton `Expressions.Excel`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Excel.Dialect").ref(true).singleton("Expressions.Excel").adjacencies({
@@ -55,7 +55,7 @@ export function install(txn: any): any {
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("excel").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, and invalid syntax
-      (_: any) => _.Expression.name("Expressions.Excel.Expression").branches([
+      (_: any) => _.Term.name("Expressions.Excel.Term").branches([
         (t: any) => t.name("literal").schema([Framework.Literal]),
         (t: any) => t.name("variable").schema([Framework.Variable]),
         (t: any) => t.name("let").schema([Framework.Let]),
@@ -71,15 +71,15 @@ export function install(txn: any): any {
       (_: any) => _.Cell.name("Expressions.Excel.Cell").properties({
         address: S.OfStr, sheet: S.OfStr, book: S.OfStr }),
       (_: any) => _.Map.name("Expressions.Excel.Map").properties({
-        name: S.OfStr, array: _.Expression, body: _.Expression }), // the LAMBDA's name and body
+        name: S.OfStr, array: _.Term, body: _.Term }), // the LAMBDA's name and body
       (_: any) => _.Infix.name("Expressions.Excel.Infix").properties({
-        operator: S.OfStr, left: _.Expression, right: _.Expression }),
+        operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.Prefix.name("Expressions.Excel.Prefix").properties({
-        operator: S.OfStr, operand: _.Expression }),
+        operator: S.OfStr, operand: _.Term }),
       (_: any) => _.Field.name("Expressions.Excel.Field").properties({
-        name: S.OfStr, value: _.Expression }),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
-        (t: any) => t.name("excel").schema([_.Expression])]),
+        name: S.OfStr, value: _.Term }),
+      (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("excel").schema([_.Term])]),
     ])]))]);
 }
 

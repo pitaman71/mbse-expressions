@@ -1,7 +1,7 @@
 """Expressions of the Latex dialect: mathematical notation, as LaTeX's math mode writes it.
 
-Latex's terms are values of its union, `Expressions.Latex.Expression`, the branch `latex` of
-`Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are four of
+Latex's terms are values of its `Term`, `Expressions.Latex.Term`, the branch `latex` of
+`Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are four of
 the framework's kinds (`mbse.Expressions.Framework.Terms`), whose shape notation's constructs have, four of its own,
 each a value object whose slots hold Latex's terms, and the framework's kinds of invalid syntax (`error`, `missing`); a
 term carries no domain:
@@ -40,7 +40,7 @@ def install(txn: Any) -> Any:
     own; run again, it writes nothing."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Latex/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion, "Expression": S.OfUnion,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   "Binary": S.OfObject, "Unary": S.OfObject, "Frac": S.OfObject, "Member": S.OfObject})
         .spec([
             # its dialect: the singleton `Expressions.Latex`, a branch of the framework's kind union of dialects
@@ -50,7 +50,7 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("latex").schema([_.Dialect])]),
             # its union of its kinds: the framework's it reuses, its own, and invalid syntax
-            lambda _: _.Expression.name("Expressions.Latex.Expression").branches([
+            lambda _: _.Term.name("Expressions.Latex.Term").branches([
                 lambda t: t.name("literal").schema([Framework.Literal]),
                 lambda t: t.name("variable").schema([Framework.Variable]),
                 lambda t: t.name("call").schema([Framework.Call]),
@@ -63,15 +63,15 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             lambda _: _.Binary.name("Expressions.Latex.Binary").properties({
-                "operator": S.OfStr, "left": _.Expression, "right": _.Expression}),
+                "operator": S.OfStr, "left": _.Term, "right": _.Term}),
             lambda _: _.Unary.name("Expressions.Latex.Unary").properties({
-                "operator": S.OfStr, "operand": _.Expression}),
+                "operator": S.OfStr, "operand": _.Term}),
             lambda _: _.Frac.name("Expressions.Latex.Frac").properties({
-                "numerator": _.Expression, "denominator": _.Expression}),
+                "numerator": _.Term, "denominator": _.Term}),
             lambda _: _.Member.name("Expressions.Latex.Member").properties({
-                "name": S.OfStr, "value": _.Expression}),
-            lambda _: _.Term.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
-                lambda t: t.name("latex").schema([_.Expression])]),
+                "name": S.OfStr, "value": _.Term}),
+            lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
+                lambda t: t.name("latex").schema([_.Term])]),
         ])]))])
 
 

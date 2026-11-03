@@ -18,8 +18,8 @@ languages, called dialects:
 - **Python3**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules.
 - **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.
-- **C** and **Cpp**, C (C11 to C23) and C++ (C++17 to C++23) expressions over their arithmetic types, sharing their
-  kinds: each renders as its source and evaluates by C's rules (promotions, wrapping unsigned arithmetic, undefined
+- **C** and **Cpp**, C (C11 to C23) and C++ (C++17 to C++23) expressions over their arithmetic types, each with
+  its own kinds of the same shapes: each renders as its source and evaluates by C's rules (promotions, wrapping unsigned arithmetic, undefined
   behavior raising); each translates to and from Patterns, by one rule set.
 - **SystemVerilog**, hardware expressions and constraints over 4-state vectors and reals: it renders as SystemVerilog
   source and evaluates by IEEE 1800's rules (sizing by context, x and z propagating); it translates to and from Patterns.
@@ -54,7 +54,7 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
    come from an allowlist in the scope, so expressions from untrusted data cannot reach other code.
 6. **Terms live in a store.** Run the installs first, the framework's, then each dialect's you write
    (`store.transaction(Framework.install)`, `Patterns.install`, ...); a term is a nested value of
-   `Expressions.Framework.Term`, a union of the dialects' unions, written with its dialect, then its kind
+   `Expressions.Framework.Term`, the union of the dialects' `Term`s, written with its dialect, then its kind
    (`{"patterns": {"call": ...}}`), so it serializes as any mbse-schemas value: `JSON.ToJSON(store)(Term, term)`. A
    dialect reads only its own terms. mbse-schemas holds a union of one branch invalid, so a store whose expressions are
    validated as data holds at least two dialects.

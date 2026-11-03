@@ -38,7 +38,7 @@ function contacts(txn: any): any {
 
 const store: any = new Builders.Store(); // an mbse-schemas store: the schemas, the objects, and the expressions about them
 for (const install of [Framework.install, Patterns.install, Excel.install, Python3.install, contacts]) {
-  store.transaction(install); // each dialect's install adds its union of its kinds; run again, an install writes nothing
+  store.transaction(install); // each dialect's install adds its Term, the union of its kinds; run again, an install writes nothing
 }
 const [ada, bob, eve] = store.transaction(() => [
   store.Contact((c: any) => c.name("Ada").age(70n).email("ada@example.com")),

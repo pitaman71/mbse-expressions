@@ -2,70 +2,50 @@
   "cpp": {
     "conditional": {
       "condition": {
-        "cpp": {
-          "binary": {
-            "operator": "&&",
-            "left": {
-              "cpp": {
-                "unary": {
-                  "operator": "!",
-                  "operand": {
-                    "cpp": {
-                      "member": {
-                        "name": "a",
-                        "object": {
-                          "cpp": {
-                            "variable": {
-                              "name": "record"
-                            }
-                          }
-                        }
-                      }
+        "binary": {
+          "operator": "&&",
+          "left": {
+            "unary": {
+              "operator": "!",
+              "operand": {
+                "member": {
+                  "name": "a",
+                  "object": {
+                    "variable": {
+                      "name": "record"
                     }
                   }
                 }
               }
-            },
-            "right": {
-              "cpp": {
-                "binary": {
-                  "operator": ">",
-                  "left": {
-                    "cpp": {
-                      "subscript": {
-                        "array": {
-                          "cpp": {
-                            "member": {
-                              "name": "b",
-                              "operator": "->",
-                              "object": {
-                                "cpp": {
-                                  "variable": {
-                                    "name": "record"
-                                  }
-                                }
-                              }
-                            }
-                          }
-                        },
-                        "index": {
-                          "cpp": {
-                            "constant": {
-                              "value": 0
-                            }
-                          }
+            }
+          },
+          "right": {
+            "binary": {
+              "operator": ">",
+              "left": {
+                "subscript": {
+                  "array": {
+                    "member": {
+                      "name": "b",
+                      "operator": "->",
+                      "object": {
+                        "variable": {
+                          "name": "record"
                         }
                       }
                     }
                   },
-                  "right": {
-                    "cpp": {
-                      "constant": {
-                        "value": 1.5,
-                        "type": "float"
-                      }
+                  "index": {
+                    "constant": {
+                      "value": 0
                     }
                   }
+                }
+              },
+              "right": {
+                "constant": {
+                  "value": 1.5,
+                  "type": "float"
                 }
               }
             }
@@ -73,34 +53,28 @@
         }
       },
       "consequent": {
-        "cpp": {
-          "cast": {
-            "type": "uint8_t",
-            "operand": {
-              "cpp": {
-                "call": {
-                  "callable": "f",
-                  "arguments": [
-                    {
-                      "cpp": {
-                        "constant": {
-                          "value": 1
-                        }
-                      }
+        "cast": {
+          "type": "uint8_t",
+          "operand": {
+            "call": {
+              "callable": "f",
+              "arguments": [
+                {
+                  "cpp": {
+                    "constant": {
+                      "value": 1
                     }
-                  ]
+                  }
                 }
-              }
+              ]
             }
           }
         }
       },
       "alternative": {
-        "cpp": {
-          "constant": {
-            "value": 5,
-            "type": "unsigned int"
-          }
+        "constant": {
+          "value": 5,
+          "type": "unsigned int"
         }
       }
     }

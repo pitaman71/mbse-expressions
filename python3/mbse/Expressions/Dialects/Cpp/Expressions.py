@@ -1,11 +1,10 @@
 """Expressions of the Cpp dialect: expressions of C++, C++17 to C++23, over its arithmetic types, as its source writes
 them.
 
-Cpp's terms are values of its union, `Expressions.Cpp.Expression`, the branch `cpp` of `Expressions.Framework.Term`,
-which `install` defines and adds to `Term` by schema extension. Today its kinds are C's, defined once by C's install
-(`Expressions.C.Constant`, ...) and listed by both unions, with the framework's `variable` and `call` and its kinds of
-invalid syntax (`error`, `missing`): see `C.Expressions` for each. Their slots hold a term of either dialect; that a C++
-term holds only C++'s terms is validation's. Each kind records the standards of C++ that have it (`Kind.standards`:
+Cpp's terms are values of its `Term`, `Expressions.Cpp.Term`, the branch `cpp` of `Expressions.Framework.Term`, which
+`install` defines and adds to `Expressions.Framework.Term` by schema extension. Today its kinds have C's shapes (see
+`C.Expressions` for each): it defines its own (`Expressions.Cpp.Constant`, ...), whose properties hold C++'s terms,
+beside the framework's `variable` and `call` and its kinds of invalid syntax (`error`, `missing`). Each kind records the standards of C++ that have it (`Kind.standards`:
 `STANDARDS`, every one, as far as these kinds go). C++ is not a superset of C, so the two are separate dialects, each
 with a union of its own.
 
@@ -29,12 +28,14 @@ STANDARDS = ("C++17", "C++20", "C++23")
 
 
 def install(txn: Any) -> Any:
-    """Cpp's union of its kinds, C's (whose install runs before it), added to the framework's terms as the branch
-    `cpp`, and its dialect's schema, whose singleton is `Expressions.Cpp`: run after `C.install`, in a transaction of its
-    own; run again, it writes nothing."""
-    S, Framework, Shared = txn.Schemas, txn.Expressions.Framework, txn.Expressions.C
+    """Cpp's union of its kinds, `Expressions.Cpp.Term`, added to the framework's terms as the branch `cpp`, its own
+    kinds, which have C's shapes but hold C++'s terms, and its dialect's schema, whose singleton is `Expressions.Cpp`:
+    run after `Framework.install`, in a transaction of its own; run again, it writes nothing."""
+    S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Cpp/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion, "Expression": S.OfUnion})
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+                  "Constant": S.OfObject, "Unary": S.OfObject, "Binary": S.OfObject, "Conditional": S.OfObject,
+                  "Cast": S.OfObject, "Member": S.OfObject, "Subscript": S.OfObject})  # FrameworkTerm: the framework's, by name
         .spec([
             # its dialect: the singleton `Expressions.Cpp`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.Cpp.Dialect").ref(True).singleton("Expressions.Cpp").adjacencies({
@@ -42,22 +43,41 @@ def install(txn: Any) -> Any:
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("cpp").schema([_.Dialect])]),
-            # its union of its kinds: C's, the framework's it reuses, and invalid syntax
-            lambda _: _.Expression.name("Expressions.Cpp.Expression").branches([
-                lambda t: t.name("constant").schema([Shared.Constant]),
+            # its union of its kinds: the framework's it reuses, its own, and invalid syntax
+            lambda _: _.Term.name("Expressions.Cpp.Term").branches([
+                lambda t: t.name("constant").schema([_.Constant]),
                 lambda t: t.name("variable").schema([Framework.Variable]),
-                lambda t: t.name("unary").schema([Shared.Unary]),
-                lambda t: t.name("binary").schema([Shared.Binary]),
-                lambda t: t.name("conditional").schema([Shared.Conditional]),
-                lambda t: t.name("cast").schema([Shared.Cast]),
-                lambda t: t.name("member").schema([Shared.Member]),
-                lambda t: t.name("subscript").schema([Shared.Subscript]),
+                lambda t: t.name("unary").schema([_.Unary]),
+                lambda t: t.name("binary").schema([_.Binary]),
+                lambda t: t.name("conditional").schema([_.Conditional]),
+                lambda t: t.name("cast").schema([_.Cast]),
+                lambda t: t.name("member").schema([_.Member]),
+                lambda t: t.name("subscript").schema([_.Subscript]),
                 lambda t: t.name("call").schema([Framework.Call]),
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
-            lambda _: _.Term.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
-                lambda t: t.name("cpp").schema([_.Expression])]),
+            # its own kinds, C's shapes, holding C++'s terms
+            lambda _: _.Constant.name("Expressions.Cpp.Constant").properties({
+                "value": S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr])),
+                "type": S.OfStr,  # C++'s, by default its value's
+            }),
+            lambda _: _.Unary.name("Expressions.Cpp.Unary").properties({
+                "operator": S.OfStr, "operand": _.Term}),
+            lambda _: _.Binary.name("Expressions.Cpp.Binary").properties({
+                "operator": S.OfStr, "left": _.Term, "right": _.Term}),
+            lambda _: _.Conditional.name("Expressions.Cpp.Conditional").properties({
+                "condition": _.Term, "consequent": _.Term, "alternative": _.Term}),
+            lambda _: _.Cast.name("Expressions.Cpp.Cast").properties({
+                "type": S.OfStr, "operand": _.Term}),
+            lambda _: _.Member.name("Expressions.Cpp.Member").properties({
+                "name": S.OfStr,
+                "operator": S.OfStr,  # '.' (by default) or '->'
+                "object": _.Term}),
+            lambda _: _.Subscript.name("Expressions.Cpp.Subscript").properties({
+                "array": _.Term, "index": _.Term}),
+            lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
+                lambda t: t.name("cpp").schema([_.Term])]),
         ])]))])
 
 

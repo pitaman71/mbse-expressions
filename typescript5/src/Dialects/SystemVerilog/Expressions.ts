@@ -2,8 +2,8 @@
  * Expressions of the SystemVerilog dialect: expressions and constraints of SystemVerilog (and Verilog), over its
  * 4-state and 2-state vectors and reals, as its source writes them.
  *
- * SystemVerilog's terms are values of its union, `Expressions.SystemVerilog.Expression`, the branch `systemverilog` of
- * `Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are the
+ * SystemVerilog's terms are values of its `Term`, `Expressions.SystemVerilog.Term`, the branch `systemverilog` of
+ * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
  * framework's `literal`, `variable` and `call`, whose shape these have, its own kinds, each a value object
  * `Expressions.SystemVerilog.<Kind>` named plainly, whose slots hold SystemVerilog's terms, and the framework's kinds of
  * invalid syntax (`error`, `missing`); a term carries no domain:
@@ -62,11 +62,11 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.SystemVerilog/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, Term: S.OfUnion, Expression: S.OfUnion,
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       Vector: S.OfObject, Unary: S.OfObject, Binary: S.OfObject, Conditional: S.OfObject,
       Concatenation: S.OfObject, Replication: S.OfObject, Select: S.OfObject, Range: S.OfObject,
       Inside: S.OfObject, Span: S.OfObject, Cast: S.OfObject, Member: S.OfObject,
-      Method: S.OfObject, Iterate: S.OfObject }) // Term: the framework's union, by name
+      Method: S.OfObject, Iterate: S.OfObject }) // FrameworkTerm: the framework's union, by name
     .spec([
       // its dialect: the singleton `Expressions.SystemVerilog`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.SystemVerilog.Dialect").ref(true).singleton("Expressions.SystemVerilog").adjacencies({
@@ -75,7 +75,7 @@ export function install(txn: any): any {
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("systemverilog").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, and invalid syntax
-      (_: any) => _.Expression.name("Expressions.SystemVerilog.Expression").branches([
+      (_: any) => _.Term.name("Expressions.SystemVerilog.Term").branches([
         (t: any) => t.name("literal").schema([Framework.Literal]),
         (t: any) => t.name("variable").schema([Framework.Variable]),
         (t: any) => t.name("call").schema([Framework.Call]),
@@ -99,34 +99,34 @@ export function install(txn: any): any {
       (_: any) => _.Vector.name("Expressions.SystemVerilog.Vector").properties({
         value: S.OfStr, signed: S.OfBool, base: S.OfStr }), // its bits, MSB first
       (_: any) => _.Unary.name("Expressions.SystemVerilog.Unary").properties({
-        operator: S.OfStr, operand: _.Expression }),
+        operator: S.OfStr, operand: _.Term }),
       (_: any) => _.Binary.name("Expressions.SystemVerilog.Binary").properties({
-        operator: S.OfStr, left: _.Expression, right: _.Expression }),
+        operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.Conditional.name("Expressions.SystemVerilog.Conditional").properties({
-        condition: _.Expression, consequent: _.Expression, alternative: _.Expression }),
+        condition: _.Term, consequent: _.Term, alternative: _.Term }),
       (_: any) => _.Concatenation.name("Expressions.SystemVerilog.Concatenation").properties({
-        parts: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Expression])) }),
+        parts: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])) }),
       (_: any) => _.Replication.name("Expressions.SystemVerilog.Replication").properties({
-        count: _.Expression, value: _.Expression }),
+        count: _.Term, value: _.Term }),
       (_: any) => _.Select.name("Expressions.SystemVerilog.Select").properties({
-        value: _.Expression, index: _.Expression }),
+        value: _.Term, index: _.Term }),
       (_: any) => _.Range.name("Expressions.SystemVerilog.Range").properties({
-        value: _.Expression, msb: _.Expression, lsb: _.Expression }),
+        value: _.Term, msb: _.Term, lsb: _.Term }),
       (_: any) => _.Inside.name("Expressions.SystemVerilog.Inside").properties({
-        value: _.Expression, items: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Expression])) }),
+        value: _.Term, items: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])) }),
       (_: any) => _.Span.name("Expressions.SystemVerilog.Span").properties({
-        low: _.Expression, high: _.Expression }),
+        low: _.Term, high: _.Term }),
       (_: any) => _.Cast.name("Expressions.SystemVerilog.Cast").properties({
-        type: S.OfStr, width: S.OfInt, operand: _.Expression }),
+        type: S.OfStr, width: S.OfInt, operand: _.Term }),
       (_: any) => _.Member.name("Expressions.SystemVerilog.Member").properties({
-        name: S.OfStr, object: _.Expression }),
+        name: S.OfStr, object: _.Term }),
       (_: any) => _.Method.name("Expressions.SystemVerilog.Method").properties({
-        name: S.OfStr, array: _.Expression }),
+        name: S.OfStr, array: _.Term }),
       (_: any) => _.Iterate.name("Expressions.SystemVerilog.Iterate").properties({
         name: S.OfStr, // the iterator
-        method: S.OfStr, array: _.Expression, body: _.Expression }),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
-        (t: any) => t.name("systemverilog").schema([_.Expression])]),
+        method: S.OfStr, array: _.Term, body: _.Term }),
+      (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("systemverilog").schema([_.Term])]),
     ])]))]);
 }
 

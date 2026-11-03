@@ -4,7 +4,8 @@
 # The API after the complete dialects' stage 2 (as settled in the port's stages 2a, 2b and 3, and the dialects' stage 2)
 
 Since the complete dialects' stage 2 ([the dialects proposal](../dialects/README.md#stages-proposed-once-decided)), Basic
-is Patterns, Python is Python3, and Ccpp is C and Cpp; `Expressions.Framework.Term` is a union of the dialects' unions.
+is Patterns, Python is Python3, and Ccpp is C and Cpp; `Expressions.Framework.Term` is the union of the dialects' `Term`s
+(`Expressions.<Dialect>.Term`, each the value union of its kinds).
 The sections below show the API as it now is; the items settled in earlier stages (below, "Settled while building", 1 to
 29) keep the names of their stage, and "Settled in the complete dialects' stage 2" says what changed.
 
@@ -111,14 +112,14 @@ every evaluator, validator and translator shares, over any dialect's kinds:
 | | |
 |---|---|
 | `Terms.term(x)` | the term value (a `Readers.OfUnion` of `Expressions.Framework.Term`) of an `Expression`, its `root` property's reader, a `Readers.OfAny` holding one, or a term value itself |
-| `Terms.kind_of(term)` | the branch its dialect's union holds, `(tag, record)`: `("call", <Readers.OfObject>)`, through `Term`'s branch where it is a value of `Term` |
-| `Terms.dialect_of(term)` | the name of its dialect's union: `"Expressions.Patterns.Expression"` |
+| `Terms.kind_of(term)` | the branch its dialect's `Term` holds, `(tag, record)`: `("call", <Readers.OfObject>)`, through `Term`'s branch where it is a value of `Term` |
+| `Terms.dialect_of(term)` | the name of its dialect's `Term`: `"Expressions.Patterns.Term"` |
 | `Terms.form(term)` | its `Form`: `kind`, `attributes` (its scalar properties set, by name: `{"callable": "add"}`) and `arguments` (its terms, in order: the term properties in declaration order, its slots, then a container of terms' elements) |
 | `Terms.name_of(term)`, `Terms.operator_of(term, kind)` | the name a reference, binding or quantifier binds or refers to; an application's or quantifier's operator, its kind's `operator` property or its tag |
 | `Terms.walk`, `Terms.fold`, `Terms.same` | as before, over term values: a term is a nested value, so there is no sharing and no cycle |
 
 Which properties are slots, variadic arguments or attributes is read from the schema: a property whose schema is
-`Expressions.Framework.Term` or a dialect's union (`Expressions.<Dialect>.Expression`) is a slot, one holding a container of terms the variadic arguments, any other an attribute.
+`Expressions.Framework.Term` or a dialect's `Term` (`Expressions.<Dialect>.Term`) is a slot, one holding a container of terms the variadic arguments, any other an attribute.
 `x + 1 > 0` reads:
 
 ```python
@@ -355,35 +356,38 @@ singleton by name was the coordinating agent's proposal, built on that direction
 Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 1, 3, 4, 7 and 9, the literal's
 two decisions, and the rename of Basic) and as the brief for stage 2 asked; each choice below is where they were silent.
 
-30. **A dialect's union is recognized by its name.** A slot is a property whose schema is `Expressions.Framework.Term`
-    or a union named `Expressions.<Dialect>.Expression`; so is a container's element (variadic arguments) and a pair's
-    member. `Terms.is_term` and `Terms.term` accept a value of either.
-31. **A `Terms.Dialect`'s branch and union are derived from its name**: `tag`, its name in lowercase (`python3`, `c`,
-    `cpp`), and `union`, `Expressions.<name>.Expression`. A dialect that extends another (`extends`) has its base's tag
+30. **A dialect's `Term` is recognized by its name.** A slot is a property whose schema is a union named
+    `Expressions.<Dialect>.Term`, `Expressions.Framework.Term` among them; so is a container's element (variadic
+    arguments) and a pair's member. `Terms.is_term` and `Terms.term` accept a value of either. (Revised 2026-11-03, as
+    the proposal's Decided, 1, was revised: a dialect's value union of its kinds is its `Term`, first built as
+    `Expressions.<Dialect>.Expression`.)
+31. **A `Terms.Dialect`'s branch and `Term` are derived from its name**: `tag`, its name in lowercase (`python3`, `c`,
+    `cpp`), and `union`, `Expressions.<name>.Term`. A dialect that extends another (`extends`) has its base's tag
     and union: its kinds are added to the base's union by schema extension (FRM-10).
 32. **Reading through two levels.** `Terms.kind_of(term)` reads through `Term`'s branch to the kind (raising "a term
-    holds no dialect" where `Term` holds none, and "a term holds no kind" where a dialect's union holds none);
-    `Terms.dialect_of(term)` is new, the name of the term's dialect's union; `Terms.same` compares dialects too, so
+    holds no dialect" where `Term` holds none, and "a term holds no kind" where a dialect's `Term` holds none);
+    `Terms.dialect_of(term)` is new, the name of the term's dialect's `Term`; `Terms.same` compares dialects too, so
     Patterns' `variable x` is not Python3's.
 33. **A writer knows its dialect.** `Terms.Writer(write, dialect)`: where it is given a value of `Term`, it selects its
-    dialect's branch, then calls `write` with that dialect's union; elsewhere it writes in the union it is given (a
+    dialect's branch, then calls `write` with that dialect's `Term`; elsewhere it writes in the union it is given (a
     shared kind's writer may write into any union listing the kind). Each dialect's `Writer` passes its tag (Latex
     gains a `Writer` class for this). `Dialect.spec(callable)` gives a writer of that dialect, so a callable is given
-    that dialect's union; `Terms.spec(callable)` with no dialect is given what is written (`Term`'s own union). A copy
+    that dialect's `Term`; `Terms.spec(callable)` with no dialect is given what is written (`Term`'s own union). A copy
     of a term value finds `Term`'s branch by the name of the value's union.
 34. **A dialect reads only its own terms**, the constraint decision 4 has validation keep: `Dialect.kind` and
-    `validate` refuse a term of another dialect's union, "a Patterns variable is not a Python3 term" (an article before
+    `validate` refuse a term of another dialect's `Term`, "a Patterns variable is not a Python3 term" (an article before
     a capitalized name is chosen by its letter, "an Excel call"). Evaluation, translation and printing read terms
     through it, so they refuse it too; a printer folds bottom-up, so it names the first such term it reads, the
     deepest. So a term of a shared kind is no longer the same value in each dialect that reuses it (as item 15 had it):
     Patterns' call in a Python3 or Excel expression is refused.
-35. **C's and C++'s shared kinds.** Each kind is defined once, `Expressions.C.<Kind>`, by C's install; Cpp's union lists
-    them by their paths (`txn.Expressions.C.Binary`), so Cpp's install runs after C's. As they belong to two dialects,
-    their slots hold `Term`, as the framework's shared kinds' do (a dialect's own kinds hold its union), so a C or C++
-    term's subterms are written with their dialect; validation tells C's terms from C++'s. The code is shared too:
-    `C.Expressions.kinds(standards)`, `C.Expressions.Writers(dialect, writer)` (C's and Cpp's writer functions),
-    `C.Evaluators.interpreter(dialect)`, `C.Text.text(expression, dialect)`; Cpp's `Domains` is C's. Today C++ has
-    exactly C's kinds.
+35. *(Superseded 2026-11-03, as the user decided, the proposal's Decided, 1, revised: "Framework.Term ->
+    Dialects.C.Term / Framework.Term -> Dialects.Cpp.Term".)* ~~C's and C++'s shared kinds: each kind defined once,
+    `Expressions.C.<Kind>`, by C's install, listed by both unions, its slots holding `Expressions.Framework.Term`.~~ Now
+    **C and C++ each define the kinds they share**: `Expressions.C.<Kind>` by C's install, its properties holding
+    `Expressions.C.Term`, and `Expressions.Cpp.<Kind>` by Cpp's, holding `Expressions.Cpp.Term`; each install stands
+    alone. The code that reads and writes them is still shared: `C.Expressions.kinds(standards)`,
+    `C.Expressions.Writers(dialect, writer)` (C's and Cpp's writer functions), `C.Evaluators.interpreter(dialect)`,
+    `C.Text.text(expression, dialect)`; Cpp's `Domains` is C's. Today C++ has kinds of exactly C's shapes.
 36. **Standards as data: `Terms.Kind.standards`**, the standards of its dialect's language that have the kind, as
     mbse-programs' `SINCE` records them per kind: `C.STANDARDS = ("C11", "C17", "C23")` and `Cpp.STANDARDS = ("C++17",
     "C++20", "C++23")`, published names, on every C and C++ kind (all of today's are in every standard); the kinds of
@@ -405,29 +409,38 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
     6); `FromText` stays as it was.
 40. **`error` and `missing`.** `Expressions.Framework.Error` (`text`, the source it spans as written; `terms`, the terms
     recovered within it, a container of `Term`) and `Expressions.Framework.Missing` (`kind`, the kind the parser expected,
-    as it names it), listed by every dialect's union. Their role is `Terms.INVALID`; every `Terms.Dialect` reads them
+    as it names it), listed by every dialect's `Term`. Their role is `Terms.INVALID`; every `Terms.Dialect` reads them
     (`Terms.INVALID_KINDS`), and a dialect declaring `error` or `missing` itself is refused ("which the framework has").
     Validation reports "invalid syntax 'text'" (or "invalid syntax") and "missing kind" (or "missing a term"), without
     validating the recovered terms. Evaluation raises `ValueError` "Python3 error is not evaluated" (SystemVerilog's
     evaluator validates first: "cannot evaluate an invalid expression: invalid syntax ..."). Every printer writes an
     error as its text and a missing term as nothing (`Terms.invalid_text`), and refuses an error with no text by name
     ("Python3 error has no text to print"). No translator has a rule for them: "Python3 error has no Matlab counterpart".
-41. **A union of one branch.** `Term` has no branch until a dialect is installed, and mbse-schemas' validation reports a
+41. **A union of one branch.** (The user decided, 2026-11-03: "yes, you may relax the one-arm union rule"; mbse-schemas
+    0.26.6 allows one, and this item is revised when it is pinned.) `Term` has no branch until a dialect is installed, and mbse-schemas' validation reports a
     union of one branch ("a union needs at least two branches"): in a store holding one dialect, `Term`, every schema
     holding it and every expression's validation report it (EXP-05). The suites install a second dialect where they
     validate schemas or expressions as data. Reported to mbse-schemas, not worked around.
 42. **Renames, no aliases**: the modules (`Dialects.Patterns`, `Dialects.Python3`, `Dialects.C`, `Dialects.Cpp`), schemas
-    (`Expressions.Patterns.*`, `Expressions.Python3.*`, `Expressions.C.*`), singletons and their `Expressions.Framework.Dialect`
+    (`Expressions.Patterns.*`, `Expressions.Python3.*`, `Expressions.C.*`, `Expressions.Cpp.*`), singletons and their `Expressions.Framework.Dialect`
     branches (`patterns`, `python3`, `c`, `cpp`), install uids (`mbse.Expressions.Patterns/1`, ...), and Deno's import
     map. SystemVerilog's `PREFIX` and `kind_of`, which stripped the prefix, go. The installs are written plainly in the
     builders' fluent syntax: Python3's and SystemVerilog's loops and tables of kinds go.
-43. **The corpus** gains `cpp` (the `c` case's expression in C++) and `invalid` (a Python3 term with an error, a missing
+43. **The corpus** gains `cpp` (the `c` case's expression in C++'s own kinds) and `invalid` (a Python3 term with an error, a missing
     operand and literals with their spelling, one with a problem and no value, whose problems CONF-04 asserts);
     `python` and `ccpp` are `python3` and `c`.
 44. **Tests**: FRM-11 (invalid syntax in every dialect), FRM-12 (a dialect's own terms; C and C++ and their standards)
     and DIA-18 (a literal's spelling in every printer) are added, in both languages; none is retired. EXP's store installs
     Python3 beside Patterns (item 41).
 45. **Tutorial 7's labels** are realigned for "Patterns" and "Python3"; the outputs are re-executed.
+46. **Each dialect's holder, `Expressions.<Dialect>.Expression`, is not built yet** (the proposal's Decided, 1, revised
+    2026-11-03): a reference object refining `Expressions.Framework.Expression` (`.refines([...])`) and narrowing its
+    `root` to the dialect's `Term`. Tried against mbse-schemas 0.26.5, a refinement redeclaring `root` as
+    `Expressions.Patterns.Term`, where the base's `root` holds `Expressions.Framework.Term` (or an unrestricted
+    `Schemas.OfAny`), fails validation, "property 'root' cannot be confirmed to narrow the refined schema's": its
+    `_narrows` confirms a schema, a refinement of it, a scalar or a container, not a branch of a union. And a
+    refinement written `.refines([...]).properties({...})` loses its redeclared member to the base's, without a word;
+    only `.properties({...}).refines([...])` keeps it. Reported to the user; the holders wait for the decision.
 
 ## What stage 2b needed (done)
 

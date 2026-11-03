@@ -2,15 +2,16 @@
  * Expressions of the Patterns dialect (formerly Basic): the core vocabulary, for constraints. `Evaluators` evaluates
  * them.
  *
- * Patterns' terms are values of its union, `Expressions.Patterns.Expression`, the branch `patterns` of
- * `Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are the
- * framework's kinds it reuses (`Framework/Terms`), one of its own, and the framework's kinds of invalid syntax:
+ * Patterns' terms are values of its `Term`, `Expressions.Patterns.Term`, the branch `patterns` of
+ * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
+ * framework's kinds it reuses (`Framework/Terms`), one of its own, and the framework's kinds of invalid
+ * syntax:
  *
  * - `literal`: a value (`value`), with its spelling (`text`) and what is wrong with it (`problems`) where it was read
  *   from source.
  * - `call`: an operation Patterns defines (`callable`) applied to ordered `arguments`, e.g. `eq(a, b)`: the arguments are
  *   the operation's variables in the order it declares them. See mbse-basis
- *   [CAP-095: Basic terms as data](../../../../../mbse-basis/docs/capabilities/CAP-095.md#terms-and-the-core-vocabulary).
+ *   [CAP-095: Basic terms as data](../../../../../../mbse-basis/docs/capabilities/CAP-095.md#terms-and-the-core-vocabulary).
  * - `variable`: the value bound to a `name`.
  * - `let`: binds a `name` to the value of one term (`value`) within another (`body`).
  * - `list` and `mapping`: the container constructors, a list of its `elements`' values and a mapping of its `entries`'
@@ -19,20 +20,21 @@
  *   `all` or `any` of them, or for how many (`count`): its `quantifier`. Its slots hold Patterns' terms.
  * - `error` and `missing`: invalid syntax, which no reader of Patterns writes.
  *
- * A term carries no domain. Patterns' operations are data: `install` defines each as a `Schemas.OfExpression` in Patterns'
- * module (`Expressions.Patterns.add`), its pattern's variables its arguments and its `result` its return, as precise as the
- * basic scalars and containers allow (`Expressions.Patterns.Number`, an int or a float; `Expressions.Patterns.Ordered`;
+ * A term carries no domain. Patterns' operations are data: `install` defines each as a `Schemas.OfExpression` in its
+ * module (`Expressions.Patterns.add`), its pattern's variables its arguments and its `result` its return, as precise as
+ * the basic scalars and containers allow (`Expressions.Patterns.Number`, an int or a float; `Expressions.Patterns.Ordered`;
  * `Expressions.Patterns.Collection`, a list or a mapping; an unrestricted `Schemas.OfAny` where any value goes), each
  * written in the builders' fluent syntax. Validation reads Patterns' vocabulary (`Domains.SIGNATURES`, the same names,
- * which a term alone, in no store, can read): a call naming an operation Patterns does not define is refused. `install` also
- * adds Patterns' kinds of domain to `Expressions.Framework.DomainKind` (`Domains`) and the schemas of its domains, and
- * Patterns' dialect, the singleton `Expressions.Patterns`; `define` writes the dialect's data: its operations by name
+ * which a term alone, in no store, can read): a call naming an operation Patterns does not define is refused. `install`
+ * also adds Patterns' kinds of domain to `Expressions.Framework.DomainKind` (`Domains`) and the schemas of its domains,
+ * and Patterns' dialect, the singleton `Expressions.Patterns`; `define` writes the dialect's data: its operations by name
  * (`Expressions.Framework.Operates`) and its domains, which it owns by name (`Expressions.Framework.Defines`).
  *
  * `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
  *
  * `Writer`s write terms with methods, through the builders: `variable('person').age.ge(18n)` is
- * `ge(get(person, 'age'), 18)`. A writer is a spec, so it goes wherever a term is written, in a transaction:
+ * `ge(get(person, 'age'), 18)`.
+ * A writer is a spec, so it goes wherever a term is written, in a transaction:
  * `store.Expressions.Framework.Expression((e: any) => e.root(variable('person').age.ge(18n)))`.
  */
 
@@ -55,7 +57,7 @@ export function install(txn: any): any {
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Patterns/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
-      Term: S.OfUnion, Expression: S.OfUnion, Quantifier: S.OfObject, // Term: the framework's, by name
+      FrameworkTerm: S.OfUnion, Term: S.OfUnion, Quantifier: S.OfObject, // FrameworkTerm: the framework's, by name
       Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and Patterns'
       DomainKind: S.OfUnion, Domain: S.OfObject, Packs: S.OfRelation,
       OfBool: S.OfObject, OfInteger: S.OfObject, OfIeee754: S.OfObject, OfBits: S.OfObject, OfBytes: S.OfObject,
@@ -82,7 +84,7 @@ export function install(txn: any): any {
 
       // --- Its union of its kinds: the framework's it reuses, its own, and invalid syntax; the branch `patterns` of the
       // framework's terms ---
-      (_: any) => _.Expression.name("Expressions.Patterns.Expression").branches([
+      (_: any) => _.Term.name("Expressions.Patterns.Term").branches([
         (t: any) => t.name("literal").schema([Framework.Literal]),
         (t: any) => t.name("call").schema([Framework.Call]),
         (t: any) => t.name("variable").schema([Framework.Variable]),
@@ -96,11 +98,11 @@ export function install(txn: any): any {
       (_: any) => _.Quantifier.name("Expressions.Patterns.Quantifier").properties({
         name: S.OfStr, // bound to each item in the body
         quantifier: S.OfStr, // all, any or count
-        collection: _.Expression,
-        body: _.Expression,
+        collection: _.Term,
+        body: _.Term,
       }),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
-        (t: any) => t.name("patterns").schema([_.Expression])]),
+      (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("patterns").schema([_.Term])]),
 
       // --- Its kinds of domain, each a standard's parameters; a packed domain's enum and representation are domains,
       // which a value cannot hold: `Packs` links them ---

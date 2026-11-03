@@ -17,7 +17,7 @@ written nested, indent 2) and `<case>.yaml`.
 | `domains` | Patterns' dialect as data, written as one document: the singleton `Expressions.Patterns` (`Expressions.Patterns.Dialect`), naming its operations (each an `Expressions.Patterns.<name>` expression schema, by its path) and owning its domains by name, an enum and a domain packing it into `uint8` among them |
 | `collections` | a Patterns quantifier over an object's entries, the collection operations and a mapping |
 | `c` | a C term: every kind (the framework's `variable` and `call`, and its own `conditional`, `binary`, `unary`, `member`, `subscript`, `cast`, `constant`), typed constants and a shared identifier |
-| `cpp` | the same expression as a C++ term: C's kinds, listed by C++'s union, each slot holding a C++ term |
+| `cpp` | the same expression as a C++ term: C++'s own kinds, of C's shapes, each property holding a C++ term |
 | `systemverilog` | a SystemVerilog term: every kind (its own and the framework's `literal`, `variable` and `call`), sized vectors in a base, casts to a type and a width, a shared identifier |
 | `invalid` | a Python3 term holding invalid syntax, the framework's `error` (the source it spans and the term recovered within it) and `missing` (the kind expected), and literals with their spelling (`text`), one holding no value but its problem (`problems`) |
 

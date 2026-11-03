@@ -2,8 +2,8 @@
  * Expressions of the Python3 dialect (formerly Python): Python 3 expressions, with the imports they need, as Python's
  * `ast` has them.
  *
- * Python3's terms are values of its union, `Expressions.Python3.Expression`, the branch `python3` of
- * `Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are the
+ * Python3's terms are values of its `Term`, `Expressions.Python3.Term`, the branch `python3` of
+ * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
  * framework's `literal`, `variable` and `let`, whose shape Python's constants, names and `(lambda name: body)(value)`
  * have, the container constructors `list` and `mapping`, its own kinds, each a value object `Expressions.Python3.<Kind>`
  * named plainly, and the framework's kinds of invalid syntax (`error`, `missing`); a term carries no domain. Its own
@@ -72,7 +72,7 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Python3/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, Term: S.OfUnion, Expression: S.OfUnion,
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       Attribute: S.OfObject, Subscript: S.OfObject, Index: S.OfObject, Call: S.OfObject,
       Compare: S.OfObject, BoolOp: S.OfObject, BinOp: S.OfObject, UnaryOp: S.OfObject,
       IfExp: S.OfObject, GeneratorExp: S.OfObject, Import: S.OfObject, ImportFrom: S.OfObject })
@@ -84,7 +84,7 @@ export function install(txn: any): any {
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("python3").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, and invalid syntax
-      (_: any) => _.Expression.name("Expressions.Python3.Expression").branches([
+      (_: any) => _.Term.name("Expressions.Python3.Term").branches([
         (t: any) => t.name("literal").schema([Framework.Literal]),
         (t: any) => t.name("variable").schema([Framework.Variable]),
         (t: any) => t.name("let").schema([Framework.Let]),
@@ -106,37 +106,37 @@ export function install(txn: any): any {
         (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
       (_: any) => _.Attribute.name("Expressions.Python3.Attribute").properties({
-        attr: S.OfStr, value: _.Expression }),
+        attr: S.OfStr, value: _.Term }),
       (_: any) => _.Subscript.name("Expressions.Python3.Subscript").properties({
-        key: S.OfStr, value: _.Expression }),
+        key: S.OfStr, value: _.Term }),
       (_: any) => _.Index.name("Expressions.Python3.Index").properties({
-        value: _.Expression, index: _.Expression }),
+        value: _.Term, index: _.Term }),
       (_: any) => _.Call.name("Expressions.Python3.Call").properties({
-        function: _.Expression,
-        arguments: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Expression])),
+        function: _.Term,
+        arguments: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
       }),
       (_: any) => _.Compare.name("Expressions.Python3.Compare").properties({
-        operator: S.OfStr, left: _.Expression, right: _.Expression }),
+        operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.BoolOp.name("Expressions.Python3.BoolOp").properties({
-        operator: S.OfStr, left: _.Expression, right: _.Expression }),
+        operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.BinOp.name("Expressions.Python3.BinOp").properties({
-        operator: S.OfStr, left: _.Expression, right: _.Expression }),
+        operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.UnaryOp.name("Expressions.Python3.UnaryOp").properties({
-        operator: S.OfStr, operand: _.Expression }),
+        operator: S.OfStr, operand: _.Term }),
       (_: any) => _.IfExp.name("Expressions.Python3.IfExp").properties({
-        test: _.Expression, body: _.Expression, orelse: _.Expression }),
+        test: _.Term, body: _.Term, orelse: _.Term }),
       (_: any) => _.GeneratorExp.name("Expressions.Python3.GeneratorExp").properties({
         name: S.OfStr, // bound to each item in the element and the conditions
-        iterable: _.Expression,
-        element: _.Expression,
-        conditions: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Expression])),
+        iterable: _.Term,
+        element: _.Term,
+        conditions: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
       }),
       (_: any) => _.Import.name("Expressions.Python3.Import").properties({
-        module: S.OfStr, alias: S.OfStr, body: _.Expression }),
+        module: S.OfStr, alias: S.OfStr, body: _.Term }),
       (_: any) => _.ImportFrom.name("Expressions.Python3.ImportFrom").properties({
-        module: S.OfStr, name: S.OfStr, alias: S.OfStr, body: _.Expression }),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
-        (t: any) => t.name("python3").schema([_.Expression])]),
+        module: S.OfStr, name: S.OfStr, alias: S.OfStr, body: _.Term }),
+      (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("python3").schema([_.Term])]),
     ])]))]);
 }
 

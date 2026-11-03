@@ -6,13 +6,13 @@ its install, its kinds' declarations, its writers, its domains, its evaluator an
 
 ## A dialect
 
-Its `install(txn)` defines its union of its kinds, `Expressions.Latex.Expression`, and adds it to
+Its `install(txn)` defines its `Term`, the value union of its kinds, `Expressions.Latex.Term`, and adds it to
 `Expressions.Framework.Term` by schema extension, as the branch named after it (`latex`): a value object schema per kind
-of its own (a term carries no domain), named plainly in its union (`frac`), a slot a property of its union, variadic
+of its own (a term carries no domain), named plainly in its `Term` (`frac`), a slot a property holding its `Term`, variadic
 arguments a container of it by an int index, attributes any other scalar property; and its dialect, the singleton
 `Expressions.Latex` of its own reference object schema `Expressions.Latex.Dialect`, a branch (`latex`) of the kind union
 `Expressions.Framework.Dialect`, which names its operations (`Expressions.Framework.Operates`) and owns its domains by
-name (`Expressions.Framework.Defines`), all written in the builders' fluent syntax. Its union lists the framework's
+name (`Expressions.Framework.Defines`), all written in the builders' fluent syntax. Its `Term` lists the framework's
 kinds it reuses, `literal`, `variable`, `let` and `call` (`callable` by name, positional `arguments`), and the container
 constructors `list` and `mapping`, wherever its kind has that shape exactly, whose slots hold any dialect's term, and
 the framework's `error` and `missing`; it keeps a kind of its own only where the shape differs (C's constant has C's
@@ -36,26 +36,26 @@ from mbse.Expressions.Framework import Terms as F
 def install(txn):                                      # LaTeX's \frac{numerator}{denominator}, among its kinds
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Latex/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Term": S.OfUnion, "Expression": S.OfUnion, "Dialects": S.OfUnion, "Dialect": S.OfObject,
-                  "Frac": S.OfObject})  # Term and Dialects: the framework's unions, by name
+        .symbols({"FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Dialects": S.OfUnion, "Dialect": S.OfObject,
+                  "Frac": S.OfObject})  # FrameworkTerm and Dialects: the framework's unions, by name
         .spec([
             lambda _: _.Dialect.name("Expressions.Latex.Dialect").ref(True).singleton("Expressions.Latex").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("latex").schema([_.Dialect])]),
-            lambda _: _.Expression.name("Expressions.Latex.Expression").branches([  # its union of its kinds
+            lambda _: _.Term.name("Expressions.Latex.Term").branches([  # its Term, the union of its kinds
                 lambda t: t.name("literal").schema([Framework.Literal]),
                 lambda t: t.name("frac").schema([_.Frac]),
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing])]),  # ... and its other kinds
             lambda _: _.Frac.name("Expressions.Latex.Frac").properties({
-                "numerator": _.Expression, "denominator": _.Expression}),
-            lambda _: _.Term.name("Expressions.Framework.Term").branches([lambda t: t.name("latex").schema([_.Expression])]),
+                "numerator": _.Term, "denominator": _.Term}),
+            lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([lambda t: t.name("latex").schema([_.Term])]),
         ])]))])
 
 DIALECT = F.Dialect("Latex", {"frac": F.Kind(F.APPLICATION, signature=Domains.FRAC), ...},
-                    domain_of=Domains.of, literal=_native)  # its union, "Expressions.Latex.Expression"; its tag, "latex"
+                    domain_of=Domains.of, literal=_native)  # its Term, "Expressions.Latex.Term"; its tag, "latex"
 
 class Writer(F.Writer):                                # a writer of its terms: in a Term, its branch first
     def __init__(self, write):

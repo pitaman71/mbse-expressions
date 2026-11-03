@@ -303,6 +303,12 @@ change as it lands.
    <-> C and Patterns <-> C++ share one rule set. The corpus has a case per dialect (`python3`, `c`, `cpp`) and one of
    invalid syntax (`invalid`). Found: mbse-schemas reports a union of one branch as invalid, so `Term` in a store of
    one dialect, and its expressions, do not validate as data (item 41).
+
+   *Revised* (2026-11-03, as Decided, 1, was revised): each dialect's value union of its kinds is
+   `Expressions.<Dialect>.Term`, `Expressions.Framework.Term` the union of them; C and C++ each define the kinds they
+   share, holding `Expressions.C.Term` and `Expressions.Cpp.Term` (API, item 35, superseded). Each dialect's holder
+   `Expressions.<Dialect>.Expression`, refining `Expressions.Framework.Expression`, waits: mbse-schemas 0.26.5 does not
+   confirm a redeclared `root` narrowed to a branch's schema (API, item 46).
 3. **`Python3` complete**: `ast`'s 29 kinds and helpers, the narrower kinds replaced, printing every construct of 3.0
    to 3.15; checked against `ast`'s node list.
 4. **`TypeScript5`**, new: expressions, types, patterns and JSX (question 5), printed.

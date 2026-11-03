@@ -1,8 +1,8 @@
 /**
  * Expressions of the Matlab dialect: MATLAB expressions over scalars and structs, as MATLAB source writes them.
  *
- * Matlab's terms are values of its union, `Expressions.Matlab.Expression`, the branch `matlab` of
- * `Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are four of
+ * Matlab's terms are values of its `Term`, `Expressions.Matlab.Term`, the branch `matlab` of
+ * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are four of
  * the framework's kinds (`Framework/Terms`), six of its own, whose slots hold Matlab's terms, and the
  * framework's kinds of invalid syntax (`error`, `missing`); a term carries no domain:
  *
@@ -48,9 +48,9 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Matlab/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, Term: S.OfUnion, Expression: S.OfUnion,
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       Binary: S.OfObject, Unary: S.OfObject, Field: S.OfObject, Index: S.OfObject,
-      Arrayfun: S.OfObject, Import: S.OfObject }) // Term: the framework's union, by name
+      Arrayfun: S.OfObject, Import: S.OfObject }) // FrameworkTerm: the framework's union, by name
     .spec([
       // its dialect: the singleton `Expressions.Matlab`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Matlab.Dialect").ref(true).singleton("Expressions.Matlab").adjacencies({
@@ -59,7 +59,7 @@ export function install(txn: any): any {
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("matlab").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, and invalid syntax
-      (_: any) => _.Expression.name("Expressions.Matlab.Expression").branches([
+      (_: any) => _.Term.name("Expressions.Matlab.Term").branches([
         (t: any) => t.name("literal").schema([Framework.Literal]),
         (t: any) => t.name("variable").schema([Framework.Variable]),
         (t: any) => t.name("call").schema([Framework.Call]),
@@ -74,21 +74,21 @@ export function install(txn: any): any {
         (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
       (_: any) => _.Binary.name("Expressions.Matlab.Binary").properties({
-        operator: S.OfStr, left: _.Expression, right: _.Expression }),
+        operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.Unary.name("Expressions.Matlab.Unary").properties({
-        operator: S.OfStr, operand: _.Expression }),
+        operator: S.OfStr, operand: _.Term }),
       (_: any) => _.Field.name("Expressions.Matlab.Field").properties({
-        name: S.OfStr, value: _.Expression }),
+        name: S.OfStr, value: _.Term }),
       (_: any) => _.Index.name("Expressions.Matlab.Index").properties({
-        value: _.Expression, index: _.Expression }),
+        value: _.Term, index: _.Term }),
       (_: any) => _.Arrayfun.name("Expressions.Matlab.Arrayfun").properties({
         name: S.OfStr, // bound to each element in the body
-        array: _.Expression, body: _.Expression }),
+        array: _.Term, body: _.Term }),
       (_: any) => _.Import.name("Expressions.Matlab.Import").properties({
         name: S.OfStr, // pkg.fn or pkg.*
-        body: _.Expression }),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
-        (t: any) => t.name("matlab").schema([_.Expression])]),
+        body: _.Term }),
+      (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("matlab").schema([_.Term])]),
     ])]))]);
 }
 

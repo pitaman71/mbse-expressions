@@ -1,6 +1,6 @@
 # Dialects
 
-A dialect is an expression language: its term kinds, its union of them (`Expressions.<Dialect>.Expression`), which its
+A dialect is an expression language: its term kinds, its `Term`, the value union of them (`Expressions.<Dialect>.Term`), which its
 `install` adds to the store's `Expressions.Framework.Term` as the branch named after it (`python3`), its vocabulary of
 operators, the domains of its values, its source text (its `Text`
 module: `ToText`, and for Python `FromText`), its evaluator, and the scope that resolves its names. Every dialect's
@@ -8,7 +8,7 @@ terms serialize, validate, infer domains and traverse the same way (`DIALECT.val
 `Framework.Terms.walk`), and `Framework.Symbolics.free(term, DIALECT)` tells which names a term needs from its scope.
 Its constructors are writers: write them in a transaction, into a store where its install has run. A dialect reads only
 its own terms: a term of another dialect is refused by name ("a Patterns variable is not a Python3 term"). Every
-dialect's union holds the framework's kinds of invalid syntax, `error` (what a parser skipped) and `missing` (the kind it
+dialect's `Term` holds the framework's kinds of invalid syntax, `error` (what a parser skipped) and `missing` (the kind it
 expected): validation reports them, printers write them as written, and evaluation refuses them. A literal keeps its
 spelling (`text`) and what is wrong with it (`problems`) beside its value: printers write the spelling where it has
 one.
@@ -22,7 +22,7 @@ one.
 | **Matlab** | MATLAB source, for constraints that live in MATLAB code or Simulink models |
 | **Excel** | worksheet formulas, for constraints that live in spreadsheets, over cells and records |
 | **Latex** | notation, for constraints in documents and specifications; it has no evaluator: translate to evaluate |
-| **C**, **Cpp** | C (C11 to C23) and C++ (C++17 to C++23) source, for constraints over the types of embedded software and interface control documents (`uint8_t`, `float`); their kinds are shared, each recording the standards that have it |
+| **C**, **Cpp** | C (C11 to C23) and C++ (C++17 to C++23) source, for constraints over the types of embedded software and interface control documents (`uint8_t`, `float`); each has its own kinds of the same shapes, each recording the standards that have it |
 | **SystemVerilog** | SystemVerilog source, for constraints over hardware signals and registers, as assertions and checks on vectors whose bits may be x or z |
 
 Write a constraint in Patterns, and translate it where it must be checked; read one written elsewhere back into Patterns

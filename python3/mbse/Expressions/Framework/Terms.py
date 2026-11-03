@@ -2,13 +2,14 @@
 translator shares.
 
 An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
-`Expressions.Framework.Term`, held nested (docs/proposals/port, Decided, 2). `Term` is a union of the dialects' unions
-(docs/proposals/dialects, Decided, 1): its branches are the dialects (`patterns`, `python3`, ...), each added by its
-dialect's install by schema extension, and each branch's schema is that dialect's union of its kinds,
-`Expressions.<Dialect>.Expression`, whose branches are its kinds, named plainly (`binop`). A dialect's own kinds name
-its union in their term slots, so its terms nest its terms; the framework's shared kinds name `Term`, holding any
-dialect's term, and each dialect's union lists the shared kinds it reuses. So a term value is either a value of `Term`,
-its dialect then its kind, or a value of a dialect's union, its kind alone: `term`, `kind_of` and `form` read both.
+`Expressions.Framework.Term`, held nested (docs/proposals/port, Decided, 2). `Term` is the union of the dialects' `Term`s
+(docs/proposals/dialects, Decided, 1, revised 2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
+each added by its dialect's install by schema extension, and each branch's schema is that dialect's `Term`, the value
+union of its kinds, `Expressions.<Dialect>.Term`, whose branches are its kinds, named plainly (`binop`). Within a term
+tree every parent-child link is a property: a dialect's own kinds hold its `Term`, so its terms nest its terms; the
+framework's shared kinds hold `Expressions.Framework.Term`, any dialect's term, and each dialect's `Term` lists the
+shared kinds it reuses. So a term value is either a value of `Term`,
+its dialect then its kind, or a value of a dialect's `Term`, its kind alone: `term`, `kind_of` and `form` read both.
 
 `install` defines the framework's schemas in a store: `Term`, with no branch until a dialect adds its own; the shared
 kinds `literal` (a domain representation, mbse-basis
@@ -35,14 +36,14 @@ scalar it narrows (`Expressions.Patterns.uint8`), which reads it through the ext
 pattern's variables are its arguments, in the order they are declared, and whose `result` is its return.
 
 Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
-branch its dialect's union holds, its properties the branch's members. Which properties are a kind's slots (a term
-each: a property whose schema is `Term` or a dialect's union), its variadic arguments (a container of terms, or of
+branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's slots (a term
+each: a property whose schema is `Expressions.Framework.Term` or a dialect's `Term`), its variadic arguments (a container of terms, or of
 value objects of terms, a mapping's pairs, read as their terms in turn) or its attributes (anything else) is read from
 the kind's schema. What the framework needs to know beyond the schema, how each kind is read, is a `Kind`: its role,
 and which properties name what it binds and its operator.
 
 - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
-- `kind_of(term)`: its kind's branch, `(tag, record)`; `dialect_of(term)`: the name of its dialect's union.
+- `kind_of(term)`: its kind's branch, `(tag, record)`; `dialect_of(term)`: the name of its dialect's `Term`.
   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`.
 - `name_of(term)`, `operator_of(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
 - `Dialect`: a dialect's kinds by tag, with `validate`, `infer` and `make(form)`, the `Writer` of a form.
@@ -103,10 +104,10 @@ def install(txn: Any) -> Any:
                   "Domain": S.OfObject, "DomainKind": S.OfUnion, "HasDomain": S.OfRelation, "OfAny": S.OfObject,
                   "Dialect": S.OfUnion, "Defines": S.OfRelation, "Operates": S.OfRelation})  # mbse-schemas' own, by name
         .spec([
-            # A union of the dialects' unions: each dialect adds its own, `Expressions.<Dialect>.Expression`, as the
+            # The union of the dialects' `Term`s: each dialect adds its own, `Expressions.<Dialect>.Term`, as the
             # branch named after it (`patterns`), by schema extension.
             lambda _: _.Term.name("Expressions.Framework.Term"),
-            # The shared kinds, which a dialect's union lists where it reuses them; their slots hold any dialect's term.
+            # The shared kinds, which a dialect's `Term` lists where it reuses them; their slots hold any dialect's term.
             lambda _: _.Literal.name("Expressions.Framework.Literal").properties({  # a domain representation (PRI-023)
                 "value": S.OfAny(lambda a: a),  # any value; absent where its text is invalid
                 "text": S.OfStr,  # its source spelling, unvalidated
@@ -125,7 +126,7 @@ def install(txn: Any) -> Any:
                 "entries": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Pair])),
             }),
             lambda _: _.Pair.name("Expressions.Framework.Pair").properties({"key": _.Term, "value": _.Term}),
-            # Invalid syntax, which every dialect's union holds: what a parser skipped, and the kind it expected.
+            # Invalid syntax, which every dialect's `Term` holds: what a parser skipped, and the kind it expected.
             lambda _: _.Error.name("Expressions.Framework.Error").properties({
                 "text": S.OfStr,  # the source it spans, as written
                 "terms": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term])),  # the terms recovered within it
@@ -190,11 +191,11 @@ def _named(schema: Any, name: str) -> bool:
 
 
 def _holds_terms(schema: Any) -> bool:
-    """Whether a schema's values are terms: `Expressions.Framework.Term`, or a dialect's union of its kinds, a union
-    named `Expressions.<Dialect>.Expression`."""
+    """Whether a schema's values are terms: `Expressions.Framework.Term`, or a dialect's `Term`, the union of its kinds,
+    named `Expressions.<Dialect>.Term`."""
     name = getattr(schema, "name", None)
     return isinstance(schema, Schemas.OfUnion.Data) and type(name) is str and (
-        name == TERM or (name.startswith("Expressions.") and name.endswith(".Expression")))
+        name.startswith("Expressions.") and name.endswith(".Term"))
 
 
 def _is_pair(schema: Any) -> bool:
@@ -240,7 +241,7 @@ def _is_any(visitor: Any) -> bool:
 
 
 def is_term(value: Any) -> bool:
-    """Whether `value` is a term value: the reader of a value of `Expressions.Framework.Term` or of a dialect's union."""
+    """Whether `value` is a term value: the reader of a value of `Expressions.Framework.Term` or of a dialect's `Term`."""
     schema = getattr(value, "as_schema", None)
     return callable(schema) and not isinstance(value, type) and not _is_any(value) and _holds_terms(schema())
 
@@ -285,12 +286,12 @@ def _dialect_value(term_: Any) -> Any:
 
 
 def dialect_of(term_: Any) -> str:
-    """The name of the union of the dialect a term value is of: `Expressions.Python3.Expression`."""
+    """The name of the `Term` of the dialect a term value is of: `Expressions.Python3.Term`."""
     return _dialect_value(term_).as_schema().name
 
 
 def kind_of(term_: Any) -> tuple[str, Any]:
-    """The branch of its dialect's union a term value holds: its tag, and its record (a `Readers.OfObject`)."""
+    """The branch of its dialect's `Term` a term value holds: its tag, and its record (a `Readers.OfObject`)."""
     held = _held(_dialect_value(term_))
     if held is None:
         raise ValueError("a term holds no kind")
@@ -410,7 +411,7 @@ def same(a: Any, b: Any) -> bool:
 class Writer:
     """A spec that writes a term through the builders: called with the `Visitors.OfProperty` of a term property, the
     `Visitors.OfAny` of a container's element or the `Visitors.OfUnion` of a term value, it selects its kind's branch
-    and writes it. `write(union)` is given the `Visitors.OfUnion` of its dialect's union: where a value of
+    and writes it. `write(union)` is given the `Visitors.OfUnion` of its dialect's `Term`: where a value of
     `Expressions.Framework.Term` is written, the writer first selects the branch of its `dialect` (`python3`), and a
     writer of no dialect is given `Term`'s own. Each dialect derives its own, with its dialect, and methods."""
 
@@ -528,13 +529,13 @@ def invalid_text(dialect: Dialect, tag: str, attributes: Mapping[str, Any]) -> s
 
 
 INVALID_KINDS = {"error": Kind(INVALID, check=_invalid_check), "missing": Kind(INVALID, check=_invalid_check)}
-"""The framework's kinds of invalid syntax, which every dialect's union holds and every dialect reads."""
+"""The framework's kinds of invalid syntax, which every dialect's `Term` holds and every dialect reads."""
 
 
 class Dialect:
     """An expression language: the kinds it reads, by tag, its `name`, and `domain_of(value)`, the domain of a literal's
-    value by the scalar it is written with (for `infer`; a term carries no domain). Its terms are values of its union,
-    `Expressions.<name>.Expression` (`union`), the branch `tag` (its name in lowercase) of `Expressions.Framework.Term`;
+    value by the scalar it is written with (for `infer`; a term carries no domain). Its terms are values of its `Term`,
+    `Expressions.<name>.Term` (`union`), the branch `tag` (its name in lowercase) of `Expressions.Framework.Term`;
     besides its own kinds it reads the framework's kinds of invalid syntax (`INVALID_KINDS`). A dialect may extend
     another (`extends`): its kinds are the base's and its own, whose tags must differ from the base's, added to the
     base's union, whose terms it reads. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its
@@ -551,7 +552,7 @@ class Dialect:
         self._name, self._kinds, self._domain_of, self.base = name, ordered, domain_of, extends
         self._literal = literal if literal is not None or extends is None else extends._literal
         self.tag = name.lower() if extends is None else extends.tag
-        self.union = f"Expressions.{name}.Expression" if extends is None else extends.union
+        self.union = f"Expressions.{name}.Term" if extends is None else extends.union
 
     def name(self) -> str:
         return self._name
@@ -567,7 +568,7 @@ class Dialect:
         union = dialect_of(term_)
         if union == self.union:
             return None
-        other = union[len("Expressions."):-len(".Expression")]
+        other = union[len("Expressions."):-len(".Term")]
         return f"{_article(other)} {kind_of(term_)[0]} is not {_article(self._name)} term"
 
     def kind(self, term_: Any) -> tuple[str, Any, Kind]:
@@ -583,7 +584,7 @@ class Dialect:
 
     def spec(self, value: Any) -> Writer:
         """The writer of a term of this dialect: see `spec`, a native value as this dialect's literal, and a callable
-        given the `Visitors.OfUnion` of this dialect's union."""
+        given the `Visitors.OfUnion` of this dialect's `Term`."""
         return spec(value, self._literal, self.tag)
 
     def make(self, form_: Form) -> Writer:

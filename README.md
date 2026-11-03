@@ -126,11 +126,11 @@ skills/                   the agent skill (SKILL.md plus per-task references); s
 ## Dialects
 
 Expressions come in dialects that implement one framework: each is serializable, traversable, validatable and
-evaluatable, and pairwise translators convert between them. A term is a value of `Expressions.Framework.Term`, a union of
-the dialects' unions: written with its dialect, then its kind. Patterns (formerly Basic), above, is the core vocabulary.
+evaluatable, and pairwise translators convert between them. A term is a value of `Expressions.Framework.Term`, the union of
+the dialects' `Term`s: written with its dialect, then its kind. Patterns (formerly Basic), above, is the core vocabulary.
 Python3 (with NumPy as a module it imports), Matlab, Excel and Latex (notation, without evaluation) model those
 languages' expressions, render as their source, resolve names, imports and cell references as those languages do, and
-evaluate by their rules; C and Cpp (C11 to C23, C++17 to C++23), which share their kinds, and SystemVerilog model those
+evaluate by their rules; C and Cpp (C11 to C23, C++17 to C++23), each with its own kinds of the same shapes, and SystemVerilog model those
 languages' expressions over their own types:
 
 ```python
@@ -144,8 +144,8 @@ ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email
 ## Status
 
 Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Patterns,
-Python3, Matlab, Excel, Latex, C, Cpp and SystemVerilog dialects, each with a union of its kinds in the framework's
-union of dialects, and translators between them; terms as values in an mbse-schemas store, with the container
+Python3, Matlab, Excel, Latex, C, Cpp and SystemVerilog dialects, each with its `Term`, the union of its kinds, in the
+framework's union of the dialects' `Term`s, and translators between them; terms as values in an mbse-schemas store, with the container
 constructors `list` and `mapping`, literals holding any value with their spelling, and the kinds of invalid syntax
 `error` and `missing`; dialects, their operations and their
 domains as data (each dialect a singleton that names its operations, each an expression schema, and owns its domains

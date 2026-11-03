@@ -2,12 +2,12 @@
  * Expressions of the C dialect: expressions of C, C11 to C23, over its arithmetic types, as its source writes them.
  * `Cpp`, the C++ dialect, shares its kinds.
  *
- * C's terms are values of its union, `Expressions.C.Expression`, the branch `c` of `Expressions.Framework.Term`, which
- * `install` defines and adds to `Term` by schema extension. Its branches are the framework's `variable` and `call`, whose
- * shape C's identifiers and calls have, kinds of its own, each a value object `Expressions.C.<Kind>` named plainly, and
- * the framework's kinds of invalid syntax (`error`, `missing`). Its own kinds are C++'s too: each schema is defined here
- * once and listed by `Cpp`'s union as well, so their slots hold `Expressions.Framework.Term`, a term of either, as the
- * framework's shared kinds' do; that a C term holds only C's terms is validation's (`Terms.Dialect`), not the schema's.
+ * C's terms are values of its `Term`, `Expressions.C.Term`, the branch `c` of `Expressions.Framework.Term`, which
+ * `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the framework's
+ * `variable` and `call`, whose shape C's identifiers and calls have, kinds of its own, each a value object
+ * `Expressions.C.<Kind>` named plainly, whose properties hold C's terms, and the framework's kinds of invalid syntax
+ * (`error`, `missing`). C++ has kinds of the same shapes, which `Cpp` defines for itself, holding C++'s terms; the code
+ * that reads and writes them is shared.
  * Each kind records the standards that have it (`Kind.standards`: `STANDARDS`, every one, as far as these kinds go):
  *
  * - `constant`: a number, a bool or a string literal (`value`), and optionally its type (`type`, one of `Domains.TYPES`),
@@ -53,9 +53,9 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.C/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, Term: S.OfUnion, Expression: S.OfUnion,
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       Constant: S.OfObject, Unary: S.OfObject, Binary: S.OfObject, Conditional: S.OfObject,
-      Cast: S.OfObject, Member: S.OfObject, Subscript: S.OfObject }) // Term: the framework's, by name
+      Cast: S.OfObject, Member: S.OfObject, Subscript: S.OfObject }) // FrameworkTerm: the framework's, by name
     .spec([
       // its dialect: the singleton `Expressions.C`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.C.Dialect").ref(true).singleton("Expressions.C").adjacencies({
@@ -64,7 +64,7 @@ export function install(txn: any): any {
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("c").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, and invalid syntax
-      (_: any) => _.Expression.name("Expressions.C.Expression").branches([
+      (_: any) => _.Term.name("Expressions.C.Term").branches([
         (t: any) => t.name("constant").schema([_.Constant]),
         (t: any) => t.name("variable").schema([Framework.Variable]),
         (t: any) => t.name("unary").schema([_.Unary]),
@@ -96,8 +96,8 @@ export function install(txn: any): any {
         object: _.Term }),
       (_: any) => _.Subscript.name("Expressions.C.Subscript").properties({
         array: _.Term, index: _.Term }),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
-        (t: any) => t.name("c").schema([_.Expression])]),
+      (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("c").schema([_.Term])]),
     ])]))]);
 }
 

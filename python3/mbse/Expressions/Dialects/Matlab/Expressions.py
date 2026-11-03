@@ -1,7 +1,7 @@
 """Expressions of the Matlab dialect: MATLAB expressions over scalars and structs, as MATLAB source writes them.
 
-Matlab's terms are values of its union, `Expressions.Matlab.Expression`, the branch `matlab` of
-`Expressions.Framework.Term`, which `install` defines and adds to `Term` by schema extension. Its branches are four of
+Matlab's terms are values of its `Term`, `Expressions.Matlab.Term`, the branch `matlab` of
+`Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are four of
 the framework's kinds (`mbse.Expressions.Framework.Terms`), six of its own, whose slots hold Matlab's terms, and the
 framework's kinds of invalid syntax (`error`, `missing`); a term carries no domain:
 
@@ -50,9 +50,9 @@ def install(txn: Any) -> Any:
     own; run again, it writes nothing."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Matlab/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "Term": S.OfUnion, "Expression": S.OfUnion,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   "Binary": S.OfObject, "Unary": S.OfObject, "Field": S.OfObject, "Index": S.OfObject,
-                  "Arrayfun": S.OfObject, "Import": S.OfObject})  # Term: the framework's union, by name
+                  "Arrayfun": S.OfObject, "Import": S.OfObject})  # FrameworkTerm: the framework's union, by name
         .spec([
             # its dialect: the singleton `Expressions.Matlab`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.Matlab.Dialect").ref(True).singleton("Expressions.Matlab").adjacencies({
@@ -61,7 +61,7 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("matlab").schema([_.Dialect])]),
             # its union of its kinds: the framework's it reuses, its own, and invalid syntax
-            lambda _: _.Expression.name("Expressions.Matlab.Expression").branches([
+            lambda _: _.Term.name("Expressions.Matlab.Term").branches([
                 lambda t: t.name("literal").schema([Framework.Literal]),
                 lambda t: t.name("variable").schema([Framework.Variable]),
                 lambda t: t.name("call").schema([Framework.Call]),
@@ -76,21 +76,21 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             lambda _: _.Binary.name("Expressions.Matlab.Binary").properties({
-                "operator": S.OfStr, "left": _.Expression, "right": _.Expression}),
+                "operator": S.OfStr, "left": _.Term, "right": _.Term}),
             lambda _: _.Unary.name("Expressions.Matlab.Unary").properties({
-                "operator": S.OfStr, "operand": _.Expression}),
+                "operator": S.OfStr, "operand": _.Term}),
             lambda _: _.Field.name("Expressions.Matlab.Field").properties({
-                "name": S.OfStr, "value": _.Expression}),
+                "name": S.OfStr, "value": _.Term}),
             lambda _: _.Index.name("Expressions.Matlab.Index").properties({
-                "value": _.Expression, "index": _.Expression}),
+                "value": _.Term, "index": _.Term}),
             lambda _: _.Arrayfun.name("Expressions.Matlab.Arrayfun").properties({
                 "name": S.OfStr,  # bound to each element in the body
-                "array": _.Expression, "body": _.Expression}),
+                "array": _.Term, "body": _.Term}),
             lambda _: _.Import.name("Expressions.Matlab.Import").properties({
                 "name": S.OfStr,  # pkg.fn or pkg.*
-                "body": _.Expression}),
-            lambda _: _.Term.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
-                lambda t: t.name("matlab").schema([_.Expression])]),
+                "body": _.Term}),
+            lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
+                lambda t: t.name("matlab").schema([_.Term])]),
         ])]))])
 
 

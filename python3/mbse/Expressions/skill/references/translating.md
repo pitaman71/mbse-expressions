@@ -47,7 +47,7 @@ or through a third dialect gives the same expression, so pick the pair you need.
 ## How translators are written
 
 A translator is a list of rules pairing two patterns: forms whose arguments and attributes may be holes. A pattern
-names a kind by its branch's tag in its dialect's union (`call`, `field`) and its attributes and arguments as
+names a kind by its branch's tag in its dialect's `Term` (`call`, `field`) and its attributes and arguments as
 `Terms.form` reads them; a literal's spelling is not matched.
 
 ```python fragment
