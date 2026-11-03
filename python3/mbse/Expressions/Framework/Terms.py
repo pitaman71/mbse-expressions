@@ -13,9 +13,9 @@ its dialect then its kind, or a value of a dialect's `Term`, its kind alone: `te
 
 `install` defines the framework's schemas in a store: `Term`, with no branch until a dialect adds its own; the shared
 kinds `literal` (a domain representation, mbse-basis
-[PRI-023: domain representations](../../../../../mbse-basis/docs/PRINCIPLES.md#PRI-023): `value`, any value, absent where
+[PRI-023: domain representations](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-023): `value`, any value, absent where
 its text is invalid; `text`, its source spelling, unvalidated; `problems`, a validation indicator for each problem its
-text has; [CAP-233: literals of any value](../../../../../mbse-basis/docs/capabilities/CAP-233.md)), `call`
+text has; [CAP-233: literals of any value](mbse:mbse-basis/docs/capabilities/CAP-233.md)), `call`
 (`callable`, by name; `arguments`, a container of terms by index), `variable` (`name`), `let` (`name`, `value`,
 `body`), and the container constructors `list` (`elements`, a container of terms by index) and `mapping` (`entries`, a
 container by index of `Expressions.Framework.Pair`s, each a `key` and a `value` term); the invalid-syntax kinds every

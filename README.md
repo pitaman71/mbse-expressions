@@ -67,7 +67,7 @@ its pinned commit, which is expected while developing; see `polyrepo.py help` fo
 is kept in mbse-basis, as `scripts/polyrepo.py`.
 
 For parallel work (several agents, or several tasks at once), give each its own workspace
-([PRI-029: parallel work in polyrepo workspaces](../mbse-basis/docs/PRINCIPLES.md#PRI-029)).
+([PRI-029: parallel work in polyrepo workspaces](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-029)).
 
 ```sh
 python3 ../mbse-basis/scripts/polyrepo.py workspace ../worktrees/a --branch a                     # this repository on a
@@ -107,7 +107,7 @@ npm test                       # type-check and run the test suites and the tuto
 | Read | For |
 |---|---|
 | [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Seven case studies (the fourth, on values with widths, deferred until domain inference), from a constraint written in code to the same constraint in C and SystemVerilog: constraints as data, unknowns, collections, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
-| mbse-basis [FEA-024: expressions as data](../mbse-basis/docs/features/FEA-024.md) | The design, as its capabilities' detail files: the Patterns dialect's (formerly Basic) terms and core vocabulary, three-valued evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, and open questions |
+| mbse-basis [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) | The design, as its capabilities' detail files: the Patterns dialect's (formerly Basic) terms and core vocabulary, three-valued evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, and open questions |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-expressions/SKILL.md), [Summary for LLMs](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
 | [Python test plan](python3/tests/TestPlan.md), [TypeScript test plan](typescript5/tests/TestPlan.md) | The test suites |
@@ -151,7 +151,7 @@ constructors `list` and `mapping`, literals holding any value with their spellin
 domains as data (each dialect a singleton that names its operations, each an expression schema, and owns its domains
 by name); writers; `validate()`, which refuses a call to an operation the dialect does not define; evaluation with
 three-valued logic over values by the schemas they are written with, collections and quantifiers. Under way: the
-complete dialects ([CAP-226: complete expression dialects](../mbse-basis/docs/capabilities/CAP-226.md)), whose stage 2,
+complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)), whose stage 2,
 the framework and the renames, is built. Not built yet: domain
 inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
 interface through which mbse-schemas will choose union branches and check constraints.

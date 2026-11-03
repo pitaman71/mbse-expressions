@@ -13,7 +13,7 @@ evaluates, and Python3, Matlab, Excel, Latex, C, Cpp and SystemVerilog. Two equi
 | Know why the mbse repositories exist, and this one's part in them | [MBSE.md](MBSE.md) |
 | Use the library: write, evaluate, store or translate constraints | [skills/mbse-expressions/SKILL.md](skills/mbse-expressions/SKILL.md), a skill. It loads its references only as needed |
 | Learn it by example, from a first constraint to C and SystemVerilog | [python3/tutorials/README.md](python3/tutorials/README.md), seven case studies (the fourth deferred); the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
-| Understand a design decision or an open question | mbse-basis [FEA-024: expressions as data](../mbse-basis/docs/features/FEA-024.md) and its capabilities' detail files |
+| Understand a design decision or an open question | mbse-basis [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) and its capabilities' detail files |
 | Change the framework, a dialect or a translator | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
 | Find or add a test case | [python3/tests/TestPlan.md](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
 | Model the data the constraints refer to | [mbse-schemas' AGENTS.md](https://github.com/pitaman71/mbse-schemas/blob/main/AGENTS.md), in the sibling checkout |
@@ -22,15 +22,22 @@ evaluates, and Python3, Matlab, Excel, Latex, C, Cpp and SystemVerilog. Two equi
 
 Agents must read these mbse-basis documents before doing any work:
 
-- [The mbse basis](../mbse-basis/docs/README.md)
-- [Principles](../mbse-basis/docs/PRINCIPLES.md)
-- [Features](../mbse-basis/docs/features/README.md)
-- [Capabilities](../mbse-basis/docs/capabilities/README.md)
+- [The mbse basis](https://github.com/pitaman71/mbse-basis/blob/main/docs/README.md)
+- [Principles](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md)
+- [Features](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/README.md)
+- [Capabilities](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md)
 
-These may be read selectively, on demand: [Vocabulary](../mbse-basis/docs/VOCABULARY.md) and
-[Qualities](../mbse-basis/docs/QUALITIES.md).
+These may be read selectively, on demand: [Vocabulary](https://github.com/pitaman71/mbse-basis/blob/main/docs/VOCABULARY.md) and
+[Qualities](https://github.com/pitaman71/mbse-basis/blob/main/docs/QUALITIES.md).
 
 Never write to `~/.claude/projects/*/memory/` or any hidden memory: what is worth keeping goes in the repository.
+
+Resolve a link written `mbse:<repo>/<path>`, as skills and source comments write a link into another mbse
+repository, to the first of these that exists: in a polyrepo checkout, `<repo root>/../<repo>/<path>`, where `<repo
+root>` is this repository's root; for a link into the installed package's own repository, `<path>` without its
+language directory (`python3/` or `typescript5/`), under the installed package's root (Python: the `site-packages`
+directory that holds `mbse/`; npm: the package's directory), where the package ships that file; otherwise
+`https://github.com/pitaman71/<repo>/blob/main/<path>`.
 
 ## Commands
 

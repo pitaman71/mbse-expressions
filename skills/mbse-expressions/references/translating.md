@@ -38,7 +38,7 @@ back = Translators.between(X.DIALECT, E.DIALECT).forward(formula)
 | a quantifier or a collection operation | SystemVerilog | an array method (`xs.and(p) with (p > 0)`, `xs.size()`, `x inside {xs}`); `unique(xs)` is written `xs.unique().size() == xs.size()`, which does not read back |
 | a quantifier or a collection operation | Matlab | `arrayfun` and array functions (`all(arrayfun(@(p) p > 0, xs))`, `numel(xs)`, `xs(i + 1)`); `unique(xs)` is written `numel(unique(xs)) == numel(xs)`, which does not read back |
 | a quantifier or a collection operation | Excel | `MAP` and `LAMBDA` and array functions (`AND(MAP(xs, LAMBDA(p, p > 0)))`, `ROWS(xs)`, `INDEX(xs, i + 1)`); `unique(xs)` is written `ROWS(UNIQUE(xs)) = ROWS(xs)`, which does not read back |
-| a quantifier or a collection operation | Latex, C, Cpp | no counterpart yet, a known gap ([CAP-102: collections translated to LaTeX and C and C++](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-102.md)); Python, MATLAB and Excel also translate collections into each other directly |
+| a quantifier or a collection operation | Latex, C, Cpp | no counterpart yet, a known gap ([CAP-102: collections translated to LaTeX and C and C++](mbse:mbse-basis/docs/capabilities/CAP-102.md)); Python, MATLAB and Excel also translate collections into each other directly |
 
 A term with no counterpart raises `ValueError` naming it, by its dialect and its kind: "Excel cell has no Matlab
 counterpart", "Patterns call 'entries' has no Python3 counterpart". Translating directly
@@ -62,7 +62,7 @@ Applying a rule co-traverses its pattern with the term, binding the holes (a hol
 writes the other pattern. The most specific rule wins. `Inline`, `Elide` and `Prelude` declare substituting lets, dropping imports and adding them;
 `Convert` maps literals whose values the dialects write differently (none of the built-in translators uses it yet: the
 conversions of typed literals, C's `(uint8_t)200` or SystemVerilog's `8'd200`, wait for domain inference
-([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)), as a term carries no domain); `Elementwise` maps a container constructor of any number of arguments (Patterns' `list(a, b)` is Excel's
+([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)), as a term carries no domain); `Elementwise` maps a container constructor of any number of arguments (Patterns' `list(a, b)` is Excel's
 `VSTACK(a, b)`, Python's `[a, b]` and MATLAB's `[a, b]`).
 A translator between a dialect and itself is a rewriting: `Pairwise(E.DIALECT, E.DIALECT, rules)`.
 
@@ -70,6 +70,6 @@ A translator between a dialect and itself is a rewriting: `Pairwise(E.DIALECT, E
 
 | Topic | Read |
 |---|---|
-| Rules, patterns, holes and co-traversal | [CAP-101: translation between dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-101.md#translators), in mbse-basis |
+| Rules, patterns, holes and co-traversal | [CAP-101: translation between dialects](mbse:mbse-basis/docs/capabilities/CAP-101.md#translators), in mbse-basis |
 | The rules of every pair | [python3/mbse/Expressions/Translators/](https://github.com/pitaman71/mbse-expressions/blob/main/python3/mbse/Expressions/Translators) |
 | Round trips, routes, sharing, refusals and evaluation, case by case | [TRN, the translators' test suite](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/07_Translators.ipynb) |

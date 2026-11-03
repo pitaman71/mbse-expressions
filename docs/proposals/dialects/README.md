@@ -1,12 +1,12 @@
 <!-- nav -->
-[← FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md) · [Home](../../../README.md) · [The gaps, dialect by dialect →](GAPS.md)
+[← FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) · [Home](../../../README.md) · [The gaps, dialect by dialect →](GAPS.md)
 
 # Complete expression dialects (a proposal, for review)
 
 mbse-programs is porting to the stabilized mbse-schemas and to this repository, and the user decided that its
 expressions are this repository's dialects, whole: "`mbse-programs` should make use of
 `mbse-expressions.Dialects.<lang_ver>.Expression`. Yes, this means the expression dialect must completely cover the
-AST" (mbse-programs, [its port](../../../../mbse-programs/docs/proposals/port/README.md#decided), Decided). Its
+AST" (mbse-programs, [its port](https://github.com/pitaman71/mbse-programs/blob/main/docs/proposals/port/README.md#decided), Decided). Its
 stage 1 is this repository's: "complete dialects by major version" (its 0.8.0). Today a dialect here holds the terms
 of a constraint, a fraction of its language's expressions. This proposes how each target dialect becomes complete, and
 asks what only the user can decide. No code is written until it is decided.
@@ -41,7 +41,7 @@ Counted in both languages alike; the tables are in [the gaps, dialect by dialect
 
 ## Decided, that applies
 
-The user's (2026-11-02, mbse-programs' [port](../../../../mbse-programs/docs/proposals/port/README.md#decided),
+The user's (2026-11-02, mbse-programs' [port](https://github.com/pitaman71/mbse-programs/blob/main/docs/proposals/port/README.md#decided),
 Decided; quoted as written):
 
 - **Complete, and gaps filled here.** "`mbse-programs` should make use of `mbse-expressions.Dialects.<lang_ver>.Expression`.
@@ -74,11 +74,11 @@ held by an `Expressions.Framework.Expression`, linked from a schema by `HasRoot`
 schema extension" and "ah, schema *extension* is the preferred form"; "a dialect reuses the framework's kinds wherever
 the shape matches" ("yes", 2026-10-30); "yes, each dialect has a singleton by name"; "Terms do not designate their
 schema", domain inference deferred. And the standing rules: "Never guess the schema"
-([PRI-025: never guess the schema](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-025)); "Never use wire format in examples";
+([PRI-025: never guess the schema](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-025)); "Never use wire format in examples";
 "Do not invent another DSL by wrapping builder syntax"
-([PRI-019: fluent builder syntax](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-019));
-[PRI-012: model published standards](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-012) and
-[PRI-002: preserve, don't lose](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-002).
+([PRI-019: fluent builder syntax](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-019));
+[PRI-012: model published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-012) and
+[PRI-002: preserve, don't lose](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-002).
 
 ## Decided
 
@@ -157,7 +157,7 @@ As the user decided (2026-11-02), on the questions below:
   no schema for (`None`, `...`, complex numbers). Its own capability item in mbse-basis.
 - **A literal is a domain representation** (2026-11-02): asked whether a literal keeps its spelling beside its value
   (the proposal's question 2, "to settle in stage 2"), the user: "See PRI-023" (mbse-basis
-  [PRI-023: domain representations](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-023): "A domain representation carries
+  [PRI-023: domain representations](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-023): "A domain representation carries
   three things at once: unvalidated data, usually in string form; a validation indicator for each possible validation
   error; and encoded properties"). Proposed, and confirmed ("it does"): a `literal` holds `text`, its source spelling,
   unvalidated, filled by parsers and kept where it does not parse (`0x10`, `r'\n'`, `8'hFF`); `problems`, a
@@ -253,8 +253,8 @@ As the user decided (2026-11-02), on the questions below:
    languages (tree-sitter grammars, the one parser alike in both; slang only in Python). (b) Here the model and the
    printers only; the parsers are mbse-programs', which reads the native parser's tree into owned statements and the
    dialect's terms in one walk, as its stage 2 has it. This keeps
-   [PRI-011: the lowest repository that can own it](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-011) ("parsers and
-   dialect bridges in mbse-programs") and [CAP-100: six languages' expression dialects](../../../../mbse-basis/docs/capabilities/CAP-100.md#decided-by-an-agent-for-review)'s
+   [PRI-011: the lowest repository that can own it](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-011) ("parsers and
+   dialect bridges in mbse-programs") and [CAP-100: six languages' expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-100.md#decided-by-an-agent-for-review)'s
    "No dialect gains a parser here", but not mbse-programs' stage 1 text ("the model, parsing and printing are
    complete"). Completeness is then checked here against each grammar's node list, kept as data (`ast`'s, a
    grammar's `node-types.json`, slang's), every node a kind or listed as not an expression. Python's `FromText` stays
@@ -283,8 +283,8 @@ Each passes both gates at 100% in both languages, with the corpora regenerated; 
 change as it lands.
 
 1. **The decisions recorded**: this proposal decided; in mbse-basis, a capability per complete dialect implementing
-   [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md) and
-   [FEA-008: expressive program models](../../../../mbse-basis/docs/features/FEA-008.md), and CAP-100's agent decision on
+   [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) and
+   [FEA-008: expressive program models](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-008.md), and CAP-100's agent decision on
    parsers revised as question 6 decides.
 2. **The framework and the renames**, with today's kinds: each dialect's `Expression` and union (question 4), the
    invalid-syntax kinds (question 7), `Python3`, the C and C++ dialects from `Ccpp`'s kinds (question 3),
@@ -333,4 +333,4 @@ change as it lands.
 ---
 
 <!-- nav -->
-[← FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md) · [Home](../../../README.md) · [The gaps, dialect by dialect →](GAPS.md)
+[← FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) · [Home](../../../README.md) · [The gaps, dialect by dialect →](GAPS.md)

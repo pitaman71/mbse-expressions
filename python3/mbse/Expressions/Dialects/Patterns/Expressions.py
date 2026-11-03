@@ -10,7 +10,7 @@ syntax:
   from source.
 - `call`: an operation Patterns defines (`callable`) applied to ordered `arguments`, e.g. `eq(a, b)`: the arguments are
   the operation's variables in the order it declares them. See mbse-basis
-  [CAP-095: Basic terms as data](../../../../../../mbse-basis/docs/capabilities/CAP-095.md#terms-and-the-core-vocabulary).
+  [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md#terms-and-the-core-vocabulary).
 - `variable`: the value bound to a `name`.
 - `let`: binds a `name` to the value of one term (`value`) within another (`body`).
 - `list` and `mapping`: the container constructors, a list of its `elements`' values and a mapping of its `entries`'
