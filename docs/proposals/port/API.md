@@ -28,11 +28,12 @@ store.transaction(Framework.install)        # Expressions.Framework: Term (no br
                                             # List, Mapping, Pair, Error, Missing, Expression, HasRoot,
                                             # Schemas.OfExpression's adjacency `expression`; Dialect, Domain, DomainKind,
                                             # Defines, Operates, HasDomain and Schemas.OfAny's adjacency `domain`
-store.transaction(Patterns.install)         # Expressions.Patterns.Expression, its union (the shared kinds, its own
+store.transaction(Patterns.install)         # Expressions.Patterns.Term, its union (the shared kinds, its own
                                             # Quantifier, error and missing), added to Term as the branch `patterns`;
+                                            # its holder Expressions.Patterns.Expression, refining Expression;
                                             # its dialect schema (singleton `Expressions.Patterns`), its kinds of
                                             # domain, its domains' schemas and its operations, each an OfExpression
-store.transaction(Python3.install)          # Expressions.Python3.Expression, the branch `python3`, and so on
+store.transaction(Python3.install)          # Expressions.Python3.Term, the branch `python3`, its holder, and so on
 store.transaction(Patterns.define)          # optional, data: Patterns' dialect naming its operations, owning its domains
 ```
 
@@ -56,7 +57,10 @@ would be a helper over the installs): a program runs the installs it needs.
 
 An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term, a value of
 `Expressions.Framework.Term`, nested: its dialect, then its kind. It is built in a store, within a transaction, through
-the builders:
+the builders. Each dialect has its own expression too, its holder: `Expressions.<Dialect>.Expression` refines
+`Expressions.Framework.Expression` and narrows its `root` to the dialect's `Term`, so its root is a term of that dialect
+alone, and `HasRoot` links it as it links any expression (item 46). A dialect's writers write a holder's root
+directly (`store.Expressions.Patterns.Expression(lambda e: e.root(person.age.ge(18)))`); spelled out with the builders:
 
 ```python
 with store.transaction():
@@ -434,14 +438,35 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
     and DIA-18 (a literal's spelling in every printer) are added, in both languages; none is retired. EXP's store installs
     Python3 beside Patterns (item 41).
 45. **Tutorial 7's labels** are realigned for "Patterns" and "Python3"; the outputs are re-executed.
-46. **Each dialect's holder, `Expressions.<Dialect>.Expression`, is not built yet** (the proposal's Decided, 1, revised
-    2026-11-03): a reference object refining `Expressions.Framework.Expression` (`.refines([...])`) and narrowing its
-    `root` to the dialect's `Term`. Tried against mbse-schemas 0.26.5, a refinement redeclaring `root` as
-    `Expressions.Patterns.Term`, where the base's `root` holds `Expressions.Framework.Term` (or an unrestricted
-    `Schemas.OfAny`), fails validation, "property 'root' cannot be confirmed to narrow the refined schema's": its
-    `_narrows` confirms a schema, a refinement of it, a scalar or a container, not a branch of a union. And a
-    refinement written `.refines([...]).properties({...})` loses its redeclared member to the base's, without a word;
-    only `.properties({...}).refines([...])` keeps it. Reported to the user; the holders wait for the decision.
+46. **Each dialect's holder, `Expressions.<Dialect>.Expression`: resolved by mbse-schemas 0.26.7.** A reference object
+    refining `Expressions.Framework.Expression` (`.refines([...])`) and narrowing its `root` to the dialect's `Term`
+    (the proposal's Decided, 1, revised 2026-11-03). Against mbse-schemas 0.26.5, a refinement redeclaring `root` as a
+    branch's schema of the base's union failed validation ("property 'root' cannot be confirmed to narrow the refined
+    schema's"), and one written `.refines([...]).properties({...})` lost its redeclared member to the base's. The user
+    chose (2026-11-03) that a refinement may narrow an inherited member from a union to one of its branches' schemas, and
+    that `.refines(...)` in either order keeps a redeclared member; mbse-schemas 0.26.7 does both, and is pinned. Each
+    install writes its holder in plain fluent builder syntax,
+    `_.Expression.name("Expressions.<Dialect>.Expression").ref(True).refines([Framework.Expression]).properties({"root":
+    _.Term})`. `Expressions.Framework.Expression` keeps `root` holding `Expressions.Framework.Term`, and `HasRoot`, which
+    links it, links every dialect's holder. FRM-04 asserts each holder validates, narrows `root`, holds only its
+    dialect's terms, round-trips through JSON, prints as its root and is linked by `HasRoot`; EXP-07 links, validates
+    and evaluates Patterns'; TRN-02 writes each translation into the target dialect's holder and translates it back.
+47. **An expression is recognized by refinement: `Terms.is_expression(schema)`** (`isExpression`), true of
+    `Expressions.Framework.Expression` and of any schema refining it, as each holder does. `Terms.term` reads a
+    holder's `root` as it reads the framework's, so the writers, readers, evaluators, validators, translators and
+    printers, which read an expression through `Terms.term`, take a dialect's holder or any `Framework.Expression`
+    unchanged.
+48. **A holder's root is written by its dialect's writers, or through its dialect's spec.** A writer of the dialect
+    (`person.age.ge(18)`, a translator's result) writes into the holder's `root`, its dialect's `Term`, directly. A term
+    value of `Expressions.Framework.Term` is not a value of the dialect's `Term`, so mbse-schemas refuses it ("property
+    'root' takes a union value or a Spec"); it is written as `dialect.spec(term)`, which copies its dialect's branch.
+    A term of another dialect is refused there by mbse-schemas, as not a member of the union.
+    So a holder's `Terms.term` is a value of the dialect's `Term`, and is serialized with that schema
+    (`JSON.ToJSON(store)(store.registered("Expressions.Patterns.Term"), Terms.term(holder))`), as the skill shows.
+49. **A translation writes the target dialect's holder by its caller**: a translator's `forward` and `backward` give a
+    writer, as before (item 37), and the caller writes it where it wants it, the target's holder among them,
+    `store.Expressions.Python3.Expression(lambda e: e.root(translator.forward(expression)))`. Translators take no store
+    and write no holder themselves.
 
 ## What stage 2b needed (done)
 

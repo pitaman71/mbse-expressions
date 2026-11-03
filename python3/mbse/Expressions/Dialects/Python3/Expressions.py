@@ -56,10 +56,12 @@ LIST, DICT = "list", "mapping"
 def install(txn: Any) -> Any:
     """Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds, and its
     dialect's schema, whose singleton is `Expressions.Python3`: run after `Framework.install`, in a transaction of its
-    own; run again, it writes nothing."""
+    own; run again, it writes nothing.
+    Its holder, `Expressions.Python3.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
+    its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Python3/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Attribute": S.OfObject, "Subscript": S.OfObject, "Index": S.OfObject, "Call": S.OfObject,
                   "Compare": S.OfObject, "BoolOp": S.OfObject, "BinOp": S.OfObject, "UnaryOp": S.OfObject,
                   "IfExp": S.OfObject, "GeneratorExp": S.OfObject, "Import": S.OfObject, "ImportFrom": S.OfObject})
@@ -122,6 +124,10 @@ def install(txn: Any) -> Any:
                 "module": S.OfStr, "alias": S.OfStr, "body": _.Term}),
             lambda _: _.ImportFrom.name("Expressions.Python3.ImportFrom").properties({
                 "module": S.OfStr, "name": S.OfStr, "alias": S.OfStr, "body": _.Term}),
+            # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
+            # to its `Term`
+            lambda _: _.Expression.name("Expressions.Python3.Expression").ref(True).refines([Framework.Expression]).properties({
+                "root": _.Term}),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("python3").schema([_.Term])]),
         ])]))])

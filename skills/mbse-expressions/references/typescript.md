@@ -46,9 +46,10 @@ const [ada, bob, eve] = store.transaction(() => [
   store.Contact((c: any) => c.name("Eve").email("eve@example.com")), // no age
 ]);
 
-// A constraint, built with writers, written as an expression's root in a transaction.
+// A constraint, built with writers, written as the root of Patterns' expression (its holder, whose root holds only
+// Patterns' terms) in a transaction.
 const contact = E.variable("contact");
-const senior = store.transaction(() => store.Expressions.Framework.Expression((e: any) => e.root(
+const senior = store.transaction(() => store.Expressions.Patterns.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
 check(E.DIALECT.validate(senior, ["contact"]).length === 0, "invalid");
 
@@ -57,8 +58,9 @@ check(Evaluators.OfAny(senior, { contact: ada }) === true, "ada");
 check(Evaluators.OfAny(senior, { contact: bob }) === false, "bob");
 check(Evaluators.OfAny(senior, { contact: eve }) === null, "eve");
 
-// It is data: a term is a value of Expressions.Framework.Term, its dialect then its kind; store it and read it back.
-const Term = store.registered("Expressions.Framework.Term");
+// It is data: the root of Patterns' expression is a value of Expressions.Patterns.Term, by its kind (a term of any
+// dialect, of Expressions.Framework.Term, its dialect then its kind); store it and read it back.
+const Term = store.registered("Expressions.Patterns.Term");
 const text = JSON.ToJSON(store)(Term, Terms.term(senior));
 const constraint = JSON.FromJSON(store)(Term, text);
 check(Terms.same(constraint, senior), "read back");

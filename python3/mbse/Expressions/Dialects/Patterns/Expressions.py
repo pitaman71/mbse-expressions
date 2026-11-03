@@ -60,10 +60,12 @@ def install(txn: Any) -> Any:
     dialect's schema, whose singleton is `Expressions.Patterns`; its kinds of domain, added to the framework's, and its
     domains' schemas; and its operations, each an expression schema of its module. Run after `Framework.install`, in a
     transaction of its own; run again, it writes nothing. Its dialect's data, its operations by name and its domains,
-    `define` writes after it."""
+    `define` writes after it.
+    Its holder, `Expressions.Patterns.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed
+    to its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Patterns/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Quantifier": S.OfObject,  # FrameworkTerm: the framework's, by name
+        .symbols({"FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject, "Quantifier": S.OfObject,  # FrameworkTerm: the framework's, by name
                   "Dialects": S.OfUnion, "Dialect": S.OfObject,  # the framework's kind union of dialects, and Patterns'
                   "DomainKind": S.OfUnion, "Domain": S.OfObject, "Packs": S.OfRelation,
                   "OfBool": S.OfObject, "OfInteger": S.OfObject, "OfIeee754": S.OfObject, "OfBits": S.OfObject,
@@ -109,6 +111,10 @@ def install(txn: Any) -> Any:
                 "collection": _.Term,
                 "body": _.Term,
             }),
+            # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
+            # to its `Term`
+            lambda _: _.Expression.name("Expressions.Patterns.Expression").ref(True).refines([Framework.Expression]).properties({
+                "root": _.Term}),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("patterns").schema([_.Term])]),
 

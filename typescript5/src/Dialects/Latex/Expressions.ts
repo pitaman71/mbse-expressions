@@ -33,12 +33,14 @@ import * as Domains from "./Domains.js";
 
 /** Latex's union of its kinds, added to the framework's terms as the branch `latex`, its own kinds, and its
  * dialect's schema, whose singleton is `Expressions.Latex`: run after `Framework.install`, in a transaction of its
- * own; run again, it writes nothing. */
+ * own; run again, it writes nothing.
+ * Its holder, `Expressions.Latex.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
+ * its `Term`. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Latex/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
       Binary: S.OfObject, Unary: S.OfObject, Frac: S.OfObject, Member: S.OfObject })
     .spec([
       // its dialect: the singleton `Expressions.Latex`, a branch of the framework's kind union of dialects
@@ -68,6 +70,10 @@ export function install(txn: any): any {
         numerator: _.Term, denominator: _.Term }),
       (_: any) => _.Member.name("Expressions.Latex.Member").properties({
         name: S.OfStr, value: _.Term }),
+      // its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
+      // to its `Term`
+      (_: any) => _.Expression.name("Expressions.Latex.Expression").ref(true).refines([Framework.Expression]).properties({
+        root: _.Term }),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("latex").schema([_.Term])]),
     ])]))]);

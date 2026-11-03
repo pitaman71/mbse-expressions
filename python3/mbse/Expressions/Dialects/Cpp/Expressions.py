@@ -30,10 +30,12 @@ STANDARDS = ("C++17", "C++20", "C++23")
 def install(txn: Any) -> Any:
     """Cpp's union of its kinds, `Expressions.Cpp.Term`, added to the framework's terms as the branch `cpp`, its own
     kinds, which have C's shapes but hold C++'s terms, and its dialect's schema, whose singleton is `Expressions.Cpp`:
-    run after `Framework.install`, in a transaction of its own; run again, it writes nothing."""
+    run after `Framework.install`, in a transaction of its own; run again, it writes nothing.
+    Its holder, `Expressions.Cpp.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
+    `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Cpp/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Constant": S.OfObject, "Unary": S.OfObject, "Binary": S.OfObject, "Conditional": S.OfObject,
                   "Cast": S.OfObject, "Member": S.OfObject, "Subscript": S.OfObject})  # FrameworkTerm: the framework's, by name
         .spec([
@@ -76,6 +78,10 @@ def install(txn: Any) -> Any:
                 "object": _.Term}),
             lambda _: _.Subscript.name("Expressions.Cpp.Subscript").properties({
                 "array": _.Term, "index": _.Term}),
+            # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
+            # to its `Term`
+            lambda _: _.Expression.name("Expressions.Cpp.Expression").ref(True).refines([Framework.Expression]).properties({
+                "root": _.Term}),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("cpp").schema([_.Term])]),
         ])]))])

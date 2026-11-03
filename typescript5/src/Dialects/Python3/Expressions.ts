@@ -67,12 +67,14 @@ export const DICT = "mapping";
 
 /** Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds, and its
  * dialect's schema, whose singleton is `Expressions.Python3`: run after `Framework.install`, in a transaction of its
- * own; run again, it writes nothing. */
+ * own; run again, it writes nothing.
+ * Its holder, `Expressions.Python3.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
+ * its `Term`. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Python3/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
       Attribute: S.OfObject, Subscript: S.OfObject, Index: S.OfObject, Call: S.OfObject,
       Compare: S.OfObject, BoolOp: S.OfObject, BinOp: S.OfObject, UnaryOp: S.OfObject,
       IfExp: S.OfObject, GeneratorExp: S.OfObject, Import: S.OfObject, ImportFrom: S.OfObject })
@@ -135,6 +137,10 @@ export function install(txn: any): any {
         module: S.OfStr, alias: S.OfStr, body: _.Term }),
       (_: any) => _.ImportFrom.name("Expressions.Python3.ImportFrom").properties({
         module: S.OfStr, name: S.OfStr, alias: S.OfStr, body: _.Term }),
+      // its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
+      // to its `Term`
+      (_: any) => _.Expression.name("Expressions.Python3.Expression").ref(true).refines([Framework.Expression]).properties({
+        root: _.Term }),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("python3").schema([_.Term])]),
     ])]))]);

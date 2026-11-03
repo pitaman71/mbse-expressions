@@ -2,7 +2,10 @@
 translator shares.
 
 An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
-`Expressions.Framework.Term`, held nested (docs/proposals/port, Decided, 2). `Term` is the union of the dialects' `Term`s
+`Expressions.Framework.Term`, held nested (docs/proposals/port, Decided, 2). Each dialect's install defines its holder,
+`Expressions.<Dialect>.Expression`, a reference object refining it whose `root` is narrowed to the dialect's `Term`
+(mbse-schemas 0.26.7 confirms a member narrowed from a union to one of its branches' schemas), so `HasRoot`, linking
+the framework's `Expression`, links any dialect's holder; `is_expression` tells either. `Term` is the union of the dialects' `Term`s
 (docs/proposals/dialects, Decided, 1, revised 2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
 each added by its dialect's install by schema extension, and each branch's schema is that dialect's `Term`, the value
 union of its kinds, `Expressions.<Dialect>.Term`, whose branches are its kinds, named plainly (`binop`). Within a term
@@ -81,7 +84,8 @@ from . import Domains, Objects
 
 __all__ = [
     "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
-    "INVALID", "INVALID_KINDS", "invalid_text", "Form", "Kind", "Dialect", "Writer", "spec", "term", "is_term", "kind_of", "dialect_of", "form",
+    "INVALID", "INVALID_KINDS", "invalid_text", "Form", "Kind", "Dialect", "Writer", "spec", "term", "is_term",
+    "is_expression", "kind_of", "dialect_of", "form",
     "name_of", "operator_of", "walk", "fold", "same",
 ]
 
@@ -240,6 +244,16 @@ def _is_any(visitor: Any) -> bool:
     return callable(getattr(type(visitor), "as_union", None))
 
 
+def is_expression(schema: Any) -> bool:
+    """Whether `schema` is `Expressions.Framework.Expression` or refines it, as each dialect's holder does
+    (`Expressions.Python3.Expression`): an expression, whose `root` holds its root term."""
+    while isinstance(schema, Schemas.OfObject.Data):
+        if _named(schema, EXPRESSION):
+            return True
+        schema = schema.refines
+    return False
+
+
 def is_term(value: Any) -> bool:
     """Whether `value` is a term value: the reader of a value of `Expressions.Framework.Term` or of a dialect's `Term`."""
     schema = getattr(value, "as_schema", None)
@@ -247,11 +261,12 @@ def is_term(value: Any) -> bool:
 
 
 def term(value: Any) -> Any:
-    """The term value of an `Expression` (its root), of a term property's reader, of a `Readers.OfAny` holding one, or a
+    """The term value of an expression (its root: an `Expressions.Framework.Expression` or a dialect's holder refining
+    it), of a term property's reader, of a `Readers.OfAny` holding one, or a
     term value itself; raises `TypeError` for anything else, and `ValueError` where there is none."""
     schema = value.as_schema() if callable(getattr(value, "as_schema", None)) and not isinstance(value, type) else None
     found: list[Any] = []
-    if isinstance(schema, Schemas.OfObject.Data) and _named(schema, EXPRESSION):
+    if is_expression(schema):
         return term(value.root)
     if isinstance(schema, Schemas.OfProperty.Data) and _holds_terms(schema.schema):
         value.as_value(lambda a: a.as_union(lambda u: found.append(u) or u))

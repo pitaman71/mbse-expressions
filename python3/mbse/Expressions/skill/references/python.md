@@ -42,10 +42,11 @@ with store.transaction():
     bob = store.Contact(lambda c: c.name("Bob").age(30))
     eve = store.Contact(lambda c: c.name("Eve").email("eve@example.com"))  # no age
 
-# A constraint, built with writers, written as an expression's root in a transaction.
+# A constraint, built with writers, written as the root of Patterns' expression (its holder, whose root holds only
+# Patterns' terms) in a transaction.
 contact = E.variable("contact")
 with store.transaction():
-    senior = store.Expressions.Framework.Expression(lambda e: e.root(contact.age.ge(65).and_(contact.has("email"))))
+    senior = store.Expressions.Patterns.Expression(lambda e: e.root(contact.age.ge(65).and_(contact.has("email"))))
 assert E.DIALECT.validate(senior, bound={"contact"}) == []
 
 # Patterns evaluates with three-valued logic: an absent property is unknown (None), and nothing is coerced.
@@ -53,8 +54,9 @@ assert Evaluators.OfAny(senior, {"contact": ada}) is True
 assert Evaluators.OfAny(senior, {"contact": bob}) is False
 assert Evaluators.OfAny(senior, {"contact": eve}) is None
 
-# It is data: a term is a value of Expressions.Framework.Term, its dialect then its kind; store it and read it back.
-Term = store.registered("Expressions.Framework.Term")
+# It is data: the root of Patterns' expression is a value of Expressions.Patterns.Term, by its kind (a term of any
+# dialect, of Expressions.Framework.Term, its dialect then its kind); store it and read it back.
+Term = store.registered("Expressions.Patterns.Term")
 text = JSON.ToJSON(store)(Term, Terms.term(senior))
 constraint = JSON.FromJSON(store)(Term, text)
 assert Terms.same(constraint, senior)
@@ -92,7 +94,8 @@ Term = store.registered("Expressions.Framework.Term")
 person = E.variable("person"); E.literal(1); E.let_("a", value, body); E.operation("name", *arguments)
 E.list_(1, person.age); E.mapping(("lo", 0.5), ("hi", 2.0))  # container constructors: a list, a mapping of key to value
 with store.transaction():
-    expression = store.Expressions.Framework.Expression(lambda e: e.root(person.age.ge(18)))  # an expression, by its root
+    expression = store.Expressions.Patterns.Expression(lambda e: e.root(person.age.ge(18)))  # Patterns' expression, by its root
+    anyone = store.Expressions.Framework.Expression(lambda e: e.root(person.age.ge(18)))   # one whose root is any dialect's
     term = store.Expressions.Framework.Term(E.DIALECT.spec(person.age.ge(18)))               # a term value alone
 person.age; person.get("eq"); person.has("email")         # .name is get(person, 'name'); get() for names like eq
 t.eq(x) .ne .lt .le .gt .ge .and_(x) .or_(x) .not_() .implies(x) .add(x) .sub(x) .mul(x) .neg()

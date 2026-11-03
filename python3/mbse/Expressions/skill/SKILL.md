@@ -38,8 +38,9 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 ## Practices that prevent most mistakes
 
 1. **Writers build data; nothing evaluates until asked.** `variable("person").age.ge(18)` writes the expression
-   `ge(get(person, 'age'), 18)` where it is given: an expression's `root`, in a store, within a transaction. Evaluate
-   it with a dialect's `Evaluators.OfAny(expression, scope)`.
+   `ge(get(person, 'age'), 18)` where it is given: an expression's `root` (a dialect's own expression,
+   `Expressions.Patterns.Expression`, whose root holds only its terms, or `Expressions.Framework.Expression`), in a
+   store, within a transaction. Evaluate it with a dialect's `Evaluators.OfAny(expression, scope)`.
 2. **Patterns is three-valued and never coerces.** An absent property is unknown (`None`/`null`), and `and`/`or` follow
    Kleene. `1 == 1.0` is unknown, since an int and a float are different kinds of value; in TypeScript, an int is a
    `bigint` (`18n`). See
@@ -56,7 +57,8 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
    (`store.transaction(Framework.install)`, `Patterns.install`, ...); a term is a nested value of
    `Expressions.Framework.Term`, the union of the dialects' `Term`s, written with its dialect, then its kind
    (`{"patterns": {"call": ...}}`), so it serializes as any mbse-schemas value: `JSON.ToJSON(store)(Term, term)`. A
-   dialect reads only its own terms.
+   dialect reads only its own terms: the root of its own expression (`Expressions.Patterns.Expression`) is a value of
+   its `Term` (`Expressions.Patterns.Term`), written by its kind alone.
 
 ## Load the reference for your task
 

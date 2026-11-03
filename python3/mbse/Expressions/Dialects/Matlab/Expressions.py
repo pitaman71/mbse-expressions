@@ -47,10 +47,12 @@ __all__ = ["install", "DIALECT", "Writer", "constant", "identifier", "binary", "
 def install(txn: Any) -> Any:
     """Matlab's union of its kinds, added to the framework's terms as the branch `matlab`, its own kinds, and its
     dialect's schema, whose singleton is `Expressions.Matlab`: run after `Framework.install`, in a transaction of its
-    own; run again, it writes nothing."""
+    own; run again, it writes nothing.
+    Its holder, `Expressions.Matlab.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
+    its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Matlab/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Binary": S.OfObject, "Unary": S.OfObject, "Field": S.OfObject, "Index": S.OfObject,
                   "Arrayfun": S.OfObject, "Import": S.OfObject})  # FrameworkTerm: the framework's union, by name
         .spec([
@@ -89,6 +91,10 @@ def install(txn: Any) -> Any:
             lambda _: _.Import.name("Expressions.Matlab.Import").properties({
                 "name": S.OfStr,  # pkg.fn or pkg.*
                 "body": _.Term}),
+            # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
+            # to its `Term`
+            lambda _: _.Expression.name("Expressions.Matlab.Expression").ref(True).refines([Framework.Expression]).properties({
+                "root": _.Term}),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("matlab").schema([_.Term])]),
         ])]))])
