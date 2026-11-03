@@ -1,7 +1,7 @@
 <!-- nav -->
 [← Porting to the stabilized mbse-schemas](README.md) · [Home](../../../README.md)
 
-# The API after the complete dialects' stage 2 (as settled in the port's stages 2a, 2b and 3, and the dialects' stage 2)
+# The API after the complete dialects' stage 3 (as settled in the port's stages 2a, 2b and 3, and the dialects' stages 2 and 3)
 
 Since the complete dialects' stage 2 ([the dialects proposal](../dialects/README.md#stages-proposed-once-decided)), Basic
 is Patterns, Python is Python3, and Ccpp is C and Cpp; `Expressions.Framework.Term` is the union of the dialects' `Term`s
@@ -467,6 +467,134 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
     writer, as before (item 37), and the caller writes it where it wants it, the target's holder among them,
     `store.Expressions.Python3.Expression(lambda e: e.root(translator.forward(expression)))`. Translators take no store
     and write no holder themselves.
+
+## Settled in stage 3 (Python3), for the user's review
+
+Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 2, 5, 6 and 8, the subscript's
+and the literal's decisions) and as the brief for stage 3 asked; each choice below is where they were silent.
+
+50. **Kinds, named and shaped as mbse-programs has them.** Each of `ast`'s expression kinds is a kind of
+    `Expressions.Python3.Term`, its schema `Expressions.Python3.<Name>` with mbse-programs' properties in source order
+    (`mbse-programs/python3/mbse/Programs/Python/Syntax.py`), its tag the name lowercased: `literal`, `constant`,
+    `variable`, `concatenatedstring`, `joinedstr`, `templatestr`, `parenthesized`, `tuple`, `list`, `set`, `dict`,
+    `listcomp`, `setcomp`, `dictcomp`, `generatorexp`, `yield`, `yieldfrom`, `attribute`, `subscript`, `slice`, `call`,
+    `starred`, `await`, `unaryop`, `binop`, `compare`, `boolop`, `namedexpr`, `ifexp`, `lambda`; with the extensions
+    `let`, `import` and `importfrom` and the framework's `error` and `missing`. An identifier is a `str` where
+    mbse-programs has an `Identifier` (or `DottedName`) node, and the expression context (`ctx`) is not represented, as
+    there. Renamed with their shapes: a call's `function` and `arguments` are `func` and `args`; an operator property
+    `operator` is `op`; `ifexp`'s properties are `body`, `test`, `orelse`, in source order (its writer keeps
+    `ifexp(test, body, orelse)`); the tag `generator` is `generatorexp`. Replaced: `subscript` (a `str` key) and `index`
+    by one `subscript` (`value`, `slice`); `generator` (one `for` over a name) by `generatorexp` of `comprehension`s;
+    `compare` of one operator by a chain; `boolop` of two operands by one of n `values`; a call without keywords by one
+    with `keywords`.
+51. **mbse-programs' shapes where they differ from `ast`'s**: a comparison chain is `left` and `comparisons`, each a
+    `comparison` (`op`, `comparator`), not `ast`'s parallel `ops` and `comparators` (the brief's parenthetical), and a
+    dict display is `items`, each a `dictitem` (`key`, `value`, without a key for `**value`), not `keys` and `values`:
+    the decision is mbse-programs' kinds, names and shapes (the proposal's Decided, 2).
+52. **The framework's kinds reused where the shape matches**: `variable` for `Name` (`ast`'s `id` is its `name`),
+    `list` for `List` (`elts` is its `elements`, whose schema holds any dialect's term: that it holds Python3's is a
+    constraint, decision 4), and `let`, an extension. Not reused: `mapping` for `Dict`, since a dict's item may have no
+    key (`**m`), which a framework pair must have; Python3's own `dict` replaces `mapping` in its `Term`, and Patterns'
+    `mapping` translates to it (`Elementwise("mapping", "dict")`). `call` stays Python3's own: its callee is a term.
+53. **Constants: two kinds, divided by what a schema holds.** A basic scalar (`bool`, `int`, `float`, `str`,
+    `bytes`) is a `literal`, `Expressions.Python3.Literal`, which refines the framework's `literal` (mbse-basis
+    CAP-167's `Schemas.Refines`: an instance of it is an instance of the framework's), so it keeps `value`, `text` and
+    `problems` and adds what its text encodes (PRI-023): `prefix` (a string's or bytes', as written: `rb`, `R`, `u`),
+    `quote` (one of Python's four), `base` (an int's: 2, 8, 10 or 16) and `separators` (whether `_` groups its digits).
+    What no schema holds is Python3's own `constant` (`Expressions.Python3.Constant`): `singleton`, `None` or `...`, or a
+    complex number's `real` and `imag`, with `text`, `problems` and `separators`; exactly one of a singleton or a
+    complex number (validation). `P.constant(value, text=None)` writes either, by the value; TypeScript writes `null`,
+    `P.ELLIPSIS` and `new P.Complex(real, imag)` (a deliberate difference). What a text also spells (an exponent, `0X`
+    against `0x`, `J` against `j`) is in `text` alone. A literal's attributes that spell it are its `Kind.spelling`,
+    which translation drops (item 38).
+54. **A lambda's body is a term.** It is an expression in Python, so `lambda` holds it as a slot; the decision that "a
+    body is not part of the term" (the proposal's Decided, 5) is read as concerning statement bodies (a function's, a
+    class's), which are mbse-programs' owned reference objects. For the user's review.
+55. **Concrete syntax kept**: `parenthesized` (`value`), which writers write and printers print as written, and which
+    `FromText` writes none of, since `ast` keeps no parentheses (printing parenthesizes by precedence); and
+    `concatenatedstring` (`values`, at least two), which `FromText` writes for adjacent string literals, found by
+    tokenizing their source, each read alone.
+56. **Extensions**: `let`, `import` and `importfrom`, listed in `EXTENSIONS`, record no standard. `FromText` reads
+    `(lambda name: body)(value)`, a lambda of one positional parameter and no default called with one positional
+    argument and no keyword, as a `let`, the idiom the extension writes, so that what evaluated keeps evaluating; any
+    other call of a lambda is a `call` of a `lambda`.
+57. **Standards as data**: `STANDARDS` names Python 3.0 to 3.15 (`Python 3.0`, ... `Python 3.15`), and each kind's
+    `Kind.standards` the versions from the one it arrived in (`namedexpr` 3.8, `await` 3.5, `yieldfrom` 3.3,
+    `joinedstr` 3.6, `templatestr` 3.14). A feature within a kind (`@` 3.5, positional-only parameters and debug fields
+    3.8, a starred index 3.11, unpacking in comprehensions 3.15, `async for` in a comprehension 3.6) is not recorded:
+    whether a term is in a version is a constraint, to come, as for C's.
+58. **Helpers, read as parts.** A value object a kind holds that is not a term and not a pair of terms (a `keyword`, a
+    `comparison`, a `comprehension`, an `arguments` and its `arg`s, an f-string's `stringtext`, `formattedvalue`,
+    `interpolation` and `formatspec`), or a container of them, or of a union of them, is a helper. `Terms.form` reads
+    each as a `Terms.Part` among the attributes (`kind`, its own `attributes`, `size`, how many of the term's arguments
+    are its terms), a container of them as a tuple (an array in TypeScript), and its terms among the arguments, after
+    the kind's slots and variadic arguments; `Dialect.make` writes them back, so translation patterns match a helper's
+    structure as attributes (`comparisons=(Part("comparison", {"op": "in"}, 1),)`). `Terms._parts` keeps its shape, a
+    helper property among the attributes, and `Terms._helpers(schema)` names them. A `dictitem` holds only terms, so it
+    is read as a mapping's pair is. The unions of f-string parts are ours, `Expressions.Python3.JoinedStrValue`
+    (`stringtext` or `formattedvalue`) and `Expressions.Python3.TemplateStrValue` (`stringtext` or `interpolation`); a
+    format spec's values are `JoinedStrValue`, as `ast` writes `FormattedValue` in a t-string's format spec too.
+59. **What a kind's role does not say, its `Kind` declares**: `optional`, the slots that may be empty, by path (`lower`,
+    `key`, `generators.target`, `args.args.default_value`), where validation would report "needs"; `scopes(record)`,
+    the names each argument has bound; `operators(attributes)` and `result(attributes, domains)` for a chain, whose
+    operators are each checked against the vocabulary when the core is asked for and whose domain is its links'
+    results; `unfold(form)`, an equivalent form translation reads (item 63); and `spelling` (item 53). Validation labels
+    a helper's argument by its path (`keywords 0 value: variable 'x' is not bound`).
+60. **What each kind binds**: a comprehension's `for` clause binds its target's names (a name's, through tuples, lists,
+    starred and parenthesized targets; an attribute or a subscript target binds none) within its own target, its
+    conditions, the later clauses and the element, and its iterable sees the earlier clauses' alone; a lambda binds its
+    parameters within its body, its defaults the scope's. A named expression binds its target within itself only: in
+    Python it binds the name in the enclosing scope, which a term does not model, so a later use of the name is the
+    caller's to bind. For the user's review.
+61. **Vocabulary**: `is`, `is not` and `@` are core operators (any two values; `@`'s result not known statically),
+    and `and` and `or` take any number of values (`Domains.Either(-1)`).
+62. **Evaluation stays shallow** (the proposal's Decided, 8): `Evaluators.EVALUATED` names the kinds evaluated today,
+    in their complete shapes: a chain evaluates as Python's (each operand once, the first false link deciding), `and`
+    and `or` of n values, a call of positional arguments, a subscript, a generator expression of any number of `for`
+    clauses over names; any other kind raises `NotImplementedError`, "Python3 lambda is not evaluated" (the
+    interpreter's new `evaluated`), and so does what an evaluated kind holds beyond that, by name: "Python3 keyword is
+    not evaluated", "Python3 dict's ** item is not evaluated", "Python3 async comprehension is not evaluated", "Python3
+    tuple target is not evaluated", and an operator its vocabulary has but no implementation, "Python3 binop '@' is not
+    evaluated", "Python3 compare 'is' is not evaluated" (where the vocabulary is open: a closed one's message stays).
+    Python3's `constant` is refused as any new kind is.
+63. **Translators keep what they translate.** Their patterns follow the new shapes (`compares` for a one-link chain,
+    `op` for operators, a generator expression of one `for` clause over a name, `ifexp` by its source order). A chain of
+    several links and `and` or `or` of more than two values, which `FromText` now reads, have no rule of their own:
+    `Kind.unfold` reads a chain as the `and` of its links, its middle operands written in each (evaluated twice where
+    Python evaluates them once: translation keeps the form), and n values as two, nested, so that reading
+    `2.0 <= c <= 8.0` into Patterns translates as it did. Patterns' nested `and`s are Python3's nested `boolop`s, printed
+    with their parentheses (`(a and b) and c`), as `ast.unparse` writes them, since a nested `boolop` is not one of n
+    values. A translation's free names over a kind with `scopes` count the names it binds too, which only a prelude's
+    test reads.
+64. **Printing**: Python's precedence, from a yield and a named expression (parenthesized wherever an expression is
+    an element or an operand, and at the root) through lambda and the conditional to `await` and the primaries; a
+    tuple in parentheses but as a subscript's index or a comprehension's target; a generator expression, a call's only
+    argument, without its own parentheses; an int's attribute as `(1).real`; a field of an f-string as its `text` where
+    it has one, else its value (and `=` for a debug field); a complex number as Python's `repr` writes it.
+65. **`FromText` reads every `ast` kind, keeping literal spellings**: a literal's text is its source segment, with what
+    it encodes; adjacent strings are a `concatenatedstring`; an f-string's or a t-string's text between its fields is
+    read as written from the source between the fields `ast` locates, and each field's expression, conversion and debug
+    `=` from its text, as Python 3.12 and later locate them (earlier, `ast` locates an f-string's parts less exactly).
+    It refuses only what is not an expression or an import before it.
+66. **Completeness as data**: `grammars/python3-ast.json` lists each node of `ast` an expression is (`expr`, and
+    `slice` before 3.9) or holds (its helpers, operators and contexts), 3.0 to 3.15, with `since` and `until`, each
+    mapped to Python3's kinds, to a helper, to an operator of a kind's vocabulary, or listed as not an expression with
+    its reason; `concrete` names `parenthesized`. DIA-20 asserts it in both languages, and, in Python, against the
+    running interpreter's `ast`.
+67. **The writers** (Decided, 10): `constant(value, text)`; `subscript(value, slice)`, `slice_`, `tuple_`, `set_`,
+    `starred`; `call(func, *args)`, `keyword(arg, value)` among the arguments; `compare(op, left, right, *(op,
+    comparator))`, `comparison`; `boolop(op, *values)`; `generatorexp`, `listcomp`, `setcomp`, `dictcomp`, each of
+    `comprehension(target, iter, ifs, is_async)`; `lambda_(body, args, posonlyargs, vararg, kwonlyargs, kwarg)` (an
+    options object in TypeScript) of `arg`s or names; `namedexpr`, `await_`, `yield_`, `yieldfrom`; `joinedstr(values,
+    prefix, quote)` and `templatestr` of text and `formattedvalue` or `interpolation`; `concatenatedstring`,
+    `parenthesized`; a helper's writer is a `Python3.Expressions.Helper`. `index` and `generator` are gone.
+68. **Tests**: FRM-02, FRM-04, FRM-05, FRM-12, DIA-01, DIA-02, TRN-05, TRN-10 and TRN-14 are adjusted under their IDs
+    (FRM's Python3 sample holds every kind); DIA-19 (the new kinds: literals' encoded properties, f-strings as
+    written, each kind's checks and bindings) and DIA-20 (completeness against `ast`) are added in both languages;
+    none is retired. The corpus's `python3` case holds every kind and a spelled literal; `invalid` writes `op`. No
+    tutorial's output changed.
+69. **Found**: the sibling mbse-schemas checkout is 0.26.8, newer than the pinned 0.26.7, which `uv run` writes into
+    `python3/uv.lock`; the lock's change is not committed, and nothing here needs 0.26.8.
 
 ## What stage 2b needed (done)
 

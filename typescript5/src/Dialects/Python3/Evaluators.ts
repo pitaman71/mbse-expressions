@@ -19,6 +19,13 @@
  *   other import throws `ImportError`.
  * - Attributes whose names start with `_` are refused.
  * - A call may call only a builtin of the scope, a value of `variables`, or a function of an allowed module.
+ *
+ * The evaluator is shallow (the dialects proposal, Decided, 8): it evaluates the kinds Python's constraints were written
+ * with before the dialect was complete (`EVALUATED`), in their complete shapes: a comparison chain, `and` and `or` of
+ * any number of values, a call of positional arguments, a subscript, a generator expression of any number of `for`
+ * clauses over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), and
+ * so are what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target
+ * that is not a name, and the operators `is`, `is not` and `@`.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -30,9 +37,10 @@ import * as F from "../../Framework/Evaluators.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
+import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
-const { AttributeError, KeyError, ValueError } = Errors;
+const { AttributeError, KeyError, NotImplementedError, ValueError } = Errors;
 const { compareStrings, pyFloat, repr, typeName } = Repr;
 
 /** A module an expression may import: named members, which may be functions, values or submodules. */
@@ -554,7 +562,12 @@ export class Scope extends S.Variables {
   }
 }
 
-function call(args: F.Thunk[], _node: unknown, scope: Scope): unknown {
+function refuse(what: string): Error {
+  return new NotImplementedError(`Python3 ${what} is not evaluated`);
+}
+
+function call(args: F.Thunk[], node: unknown, scope: Scope): unknown {
+  if (attributesOf(node).has("keywords")) throw refuse("keyword");
   const fn = (args[0] as F.Thunk)();
   if (typeof fn !== "function" || !scope.allows(fn)) {
     const what = typeof fn === "function" ? fn.name || "<lambda>" : typeName(fn);
@@ -563,42 +576,78 @@ function call(args: F.Thunk[], _node: unknown, scope: Scope): unknown {
   return (fn as (...a: unknown[]) => unknown)(...args.slice(1).map((argument) => argument()));
 }
 
-function subscript(value: unknown, key: string): unknown {
-  if (value instanceof Map) {
-    if (!value.has(key)) throw new KeyError(repr(key));
-    return value.get(key);
+/** A generator, as Python makes one: its first iterable evaluated now, the rest as it is consumed, each `for` clause
+ * binding its name within the clauses after it and the element. */
+function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
+  const terms = Terms.argumentsOf(Terms.kindOf(node)[1]);
+  const clauses: [string, any, any[]][] = [];
+  let i = 1;
+  for (const part of (attributesOf(node).get("generators") ?? []) as Terms.Part[]) {
+    if (part.attributes.get("is_async")) throw refuse("async comprehension");
+    const target = terms[i];
+    if (target === null || Terms.kindOf(target)[0] !== Expressions.NAME) {
+      throw refuse(`${target === null ? "missing" : Terms.kindOf(target)[0]} target`);
+    }
+    clauses.push([Terms.nameOf(target) as string, terms[i + 1], terms.slice(i + 2, i + part.size)]);
+    i += part.size;
   }
-  if (value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-    if (!Object.hasOwn(value, key)) throw new KeyError(repr(key));
-    return (value as Record<string, unknown>)[key];
+  if (clauses.length === 0) throw new ValueError("a generatorexp needs a for clause");
+  function* generate(k: number, inner: Scope, items: Iterable<unknown>): Generator<unknown> {
+    const [name, , conditions] = clauses[k] as [string, any, any[]];
+    for (const item of items) {
+      const bound = inner.bind(name, item);
+      if (!conditions.every((condition) => truthy(INTERPRETER.evaluate(condition, bound)))) continue;
+      if (k + 1 === clauses.length) yield INTERPRETER.evaluate(terms[0], bound);
+      else yield* generate(k + 1, bound, iterate(INTERPRETER.evaluate((clauses[k + 1] as [string, any, any[]])[1], bound)));
+    }
   }
-  throw new TypeError(`${repr(typeName(value))} object is not subscriptable`);
+  return new PyGenerator(generate(0, scope, iterate((args[2] as F.Thunk)()))); // the first iterable, after the element and the first target
 }
 
-/** A generator, as Python makes one: its iterable evaluated now, its element and conditions as it is consumed. */
-function generator(args: F.Thunk[]): PyGenerator {
-  const items = iterate((args[0] as F.Thunk)());
-  const [element, ...conditions] = args.slice(1) as unknown as ((item: unknown) => unknown)[];
-  function* produce(): Generator<unknown> {
-    for (const item of items) if (conditions.every((condition) => truthy(condition(item)))) yield (element as (item: unknown) => unknown)(item);
+/** A comparison chain, as Python evaluates one: each operand once, left to right, stopping at the first link that is
+ * false, whose result it gives, else the last link's. */
+function compare(args: F.Thunk[], node: any): unknown {
+  const operators = (attributesOf(node).get("comparisons") as Terms.Part[]).map((part) => part.attributes.get("op") as string);
+  for (const op of operators) {
+    if (!COMPARISONS.has(op)) {
+      throw Domains.COMPARE.has(op) ? refuse(`compare ${repr(op)}`) : new NotImplementedError(`${repr(op)} is not a core operation`);
+    }
   }
-  return new PyGenerator(produce());
+  let left = (args[0] as F.Thunk)();
+  let result: unknown = null;
+  for (const [i, op] of operators.entries()) {
+    const right = (args[i + 1] as F.Thunk)();
+    result = (COMPARISONS.get(op) as (a: unknown, b: unknown) => unknown)(left, right);
+    if (!result) return result;
+    left = right;
+  }
+  return result;
 }
+
+const COMPARISONS = new Map<string, (a: unknown, b: unknown) => unknown>([
+  ["==", (a, b) => equals(a, b)], ["!=", (a, b) => !equals(a, b)],
+  ["in", (a, b) => contains(b, a)], ["not in", (a, b) => !contains(b, a)],
+  ...Object.entries(ORDERS).map(([operator, test]) =>
+    [operator, (a: unknown, b: unknown) => test(order(operator, a, b))] as [string, (a: unknown, b: unknown) => unknown]),
+]);
 
 function strict(fn: (...values: unknown[]) => unknown): F.Implementation {
   return (args) => fn(...args.map((argument) => argument()));
 }
 
-/** A term's attribute `name`. */
-function attributeOf(node: any, name: string): any {
-  return Terms.attributesOf(Terms.kindOf(node)[1]).get(name);
+/** A term's attributes. */
+function attributesOf(node: any): Map<string, any> {
+  return Terms.attributesOf(Terms.kindOf(node)[1]);
 }
 
 const P = Expressions;
 
 /** The interpreter of the Python3 dialect. */
 /** A dict display's value: its keys and values evaluated in order, a later equal key's value replacing an earlier's. */
-function dict(args: F.Thunk[]): Map<unknown, unknown> {
+function dict(args: F.Thunk[], node: any): Map<unknown, unknown> {
+  if (Terms.argumentsOf(Terms.kindOf(node)[1]).some((argument, i) => i % 2 === 0 && argument === null)) {
+    throw refuse("dict's ** item");
+  }
   const result = new Map<unknown, unknown>();
   for (let i = 0; i < args.length; i += 2) {
     const key = (args[i] as F.Thunk)();
@@ -609,22 +658,23 @@ function dict(args: F.Thunk[]): Map<unknown, unknown> {
   return result;
 }
 
-export const INTERPRETER = new F.Interpreter(P.DIALECT, new Map<string, any>([
-  [P.ATTRIBUTE, (args: F.Thunk[], node: any) => attribute((args[0] as F.Thunk)(), attributeOf(node, "attr"))],
-  [P.SUBSCRIPT, (args: F.Thunk[], node: any) => subscript((args[0] as F.Thunk)(), attributeOf(node, "key"))],
-  [P.INDEX, strict((value, key) => index(value, key))],
-  [P.GENERATOR, generator],
+/** The kinds the evaluator evaluates; any other is refused by name. */
+export const EVALUATED: ReadonlySet<string> = new Set([P.LITERAL, P.NAME, P.LET, P.LIST, P.DICT, P.ATTRIBUTE, P.SUBSCRIPT,
+  P.CALL, P.COMPARE, P.BOOLOP, P.BINOP, P.UNARYOP, P.IFEXP, P.GENERATOREXP, P.IMPORT, P.IMPORTFROM]);
+
+export const INTERPRETER: F.Interpreter = new F.Interpreter(P.DIALECT, new Map<string, any>([
+  [P.ATTRIBUTE, (args: F.Thunk[], node: any) => attribute((args[0] as F.Thunk)(), attributesOf(node).get("attr"))],
+  [P.SUBSCRIPT, strict((value, key) => index(value, key))],
+  [P.GENERATOREXP, generatorexp],
   [P.CALL, call],
-  [P.COMPARE, new Map<string, F.Implementation>([
-    ["==", strict((a, b) => equals(a, b))], ["!=", strict((a, b) => !equals(a, b))],
-    ["in", strict((a, b) => contains(b, a))], ["not in", strict((a, b) => !contains(b, a))],
-    ...Object.entries(ORDERS).map(([operator, test]) =>
-      [operator, strict((a, b) => test(order(operator, a, b)))] as [string, F.Implementation]),
-  ])],
+  [P.COMPARE, compare],
   [P.BOOLOP, new Map<string, F.Implementation>(["and", "or"].map((name) => [name, (args: F.Thunk[]) => {
-    const first = (args[0] as F.Thunk)();
-    const decided = name === "and" ? !truthy(first) : truthy(first);
-    return decided ? first : (args[1] as F.Thunk)();
+    let value: unknown = null;
+    for (const argument of args) {
+      value = argument();
+      if (name === "and" ? !truthy(value) : truthy(value)) return value;
+    }
+    return value;
   }]))],
   [P.BINOP, new Map<string, F.Implementation>([
     ...["+", "-", "*", "/", "//", "%", "**"].map((operator) =>
@@ -636,10 +686,10 @@ export const INTERPRETER = new F.Interpreter(P.DIALECT, new Map<string, any>([
     ["not", strict((a) => !truthy(a))], ["-", strict((a) => negate("-", a))], ["+", strict((a) => negate("+", a))],
     ["~", strict((a) => invert(a))],
   ])],
-  [P.IFEXP, (args: F.Thunk[]) => (truthy((args[0] as F.Thunk)()) ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)())],
+  [P.IFEXP, (args: F.Thunk[]) => (truthy((args[1] as F.Thunk)()) ? (args[0] as F.Thunk)() : (args[2] as F.Thunk)())],
   [P.LIST, (args: F.Thunk[]) => args.map((argument) => argument())],
   [P.DICT, dict],
-]), { scope: (variables) => new Scope(variables) });
+]), { scope: (variables) => new Scope(variables), evaluated: EVALUATED });
 
 /** The value of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in an object
  * bound. */

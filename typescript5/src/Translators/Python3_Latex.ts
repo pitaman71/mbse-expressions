@@ -5,7 +5,7 @@
 import { DIALECT as LATEX } from "../Dialects/Latex/Expressions.js";
 import { DIALECT as PYTHON3 } from "../Dialects/Python3/Expressions.js";
 import { Elide, type Hole, Pairwise, Pattern as P, Rule, holes, renames } from "../Framework/Translators.js";
-import { Latex, Python3, value } from "./_Patterns.js";
+import { Latex, Python3, compares, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean);
 const [A, B] = holes("A", "B") as [Hole, Hole];
@@ -19,10 +19,10 @@ export const TRANSLATOR = new Pairwise(PYTHON3, LATEX, [
   new Rule(Python3.get, Latex.get),
   new Rule(Python3.has, Latex.has),
   new Rule(Python3.implies, Latex.implies),
-  new Rule(new P("binop", { operator: "/" }, A, B), Latex.frac),
-  ...renames("compare", "operator", "binary", "operator", {
-    "==": "=", "!=": "\\neq", "<": "<", "<=": "\\leq", ">": ">", ">=": "\\geq" }, 2),
-  ...renames("boolop", "operator", "binary", "operator", { and: "\\land", or: "\\lor" }, 2),
-  ...renames("binop", "operator", "binary", "operator", { "+": "+", "-": "-", "*": "\\cdot" }, 2),
-  ...renames("unaryop", "operator", "unary", "operator", { not: "\\lnot", "-": "-" }, 1),
+  new Rule(new P("binop", { op: "/" }, A, B), Latex.frac),
+  ...compares("binary", "operator", {
+    "==": "=", "!=": "\\neq", "<": "<", "<=": "\\leq", ">": ">", ">=": "\\geq" }),
+  ...renames("boolop", "op", "binary", "operator", { and: "\\land", or: "\\lor" }, 2),
+  ...renames("binop", "op", "binary", "operator", { "+": "+", "-": "-", "*": "\\cdot" }, 2),
+  ...renames("unaryop", "op", "unary", "operator", { not: "\\lnot", "-": "-" }, 1),
 ]);

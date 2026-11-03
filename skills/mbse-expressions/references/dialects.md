@@ -11,14 +11,17 @@ its own terms: a term of another dialect is refused by name ("a Patterns variabl
 dialect's `Term` holds the framework's kinds of invalid syntax, `error` (what a parser skipped) and `missing` (the kind it
 expected): validation reports them, printers write them as written, and evaluation refuses them. A literal keeps its
 spelling (`text`) and what is wrong with it (`problems`) beside its value: printers write the spelling where it has
-one.
+one; a Python literal also keeps what its text encodes (a string's prefix and quotes, an int's base, digit separators).
+A kind's helpers, the value objects it holds that are not terms (a Python call's keywords, a chain's comparisons, a
+comprehension's `for` clauses), are read as `Terms.Part`s among its form's attributes, their terms among its
+arguments.
 
 ## Which dialect
 
 | Use | For |
 |---|---|
 | **Patterns** (`mbse.Expressions`) | the constraint itself: the neutral form to store, share and analyze. Constraints every binding evaluates are Patterns', over the variables they name, using only the core vocabulary |
-| **Python3** | Python source, to check the constraint in Python or read one from Python code; NumPy style evaluates over columns |
+| **Python3** | Python source: every expression of Python 3 (3.0 to 3.15) as CPython's `ast` has it, in mbse-programs' names and shapes, to check the constraint in Python or read one from Python code (`FromText`, Python only, keeping each literal's spelling); NumPy style evaluates over columns |
 | **Matlab** | MATLAB source, for constraints that live in MATLAB code or Simulink models |
 | **Excel** | worksheet formulas, for constraints that live in spreadsheets, over cells and records |
 | **Latex** | notation, for constraints in documents and specifications; it has no evaluator: translate to evaluate |
@@ -32,8 +35,10 @@ to analyze it.
 
 ```python fragment
 from mbse.Expressions.Dialects.Python3 import Expressions as P, Text as PT
-P.compare(">=", P.attribute(P.name("person"), "age"), 18)    # ast-shaped: name, attribute, subscript, call, compare,
-P.call("np.greater_equal", P.subscript(P.name("t"), "age"), 18)  # boolop, binop, unaryop, ifexp, let, import, importfrom
+P.compare(">=", P.attribute(P.name("person"), "age"), 18)    # every kind of `ast`: a chain, compare("<", a, b, ("<=", c));
+P.call("np.greater_equal", P.subscript(P.name("t"), "age"), 18)  # a call's keywords, call(f, x, P.keyword("k", 1));
+P.subscript(P.name("t"), P.tuple_(P.slice_(1, None, 2), P.constant(...)))  # a tensor's indices; constant(None), 2j
+P.listcomp(P.name("p"), P.comprehension("p", P.name("ps"), (P.name("p"),)))  # comprehensions, lambda_, namedexpr, ...
 P.import_("numpy", body, alias="np"); PT.ToText(e); PT.FromText("import numpy as np\nnp.add(x, 1)")  # Python only
 
 from mbse.Expressions.Dialects.Matlab import Expressions as M, Text as MT
@@ -54,7 +59,7 @@ LT.ToText(e)                                             # a \geq \frac{36}{2} \
 | | Missing property | `1 == 1.0` | Logic | Other |
 |---|---|---|---|---|
 | Patterns | unknown (`None`) | unknown: no coercion | Kleene, short-circuit | only the core vocabulary evaluates |
-| Python3 | `AttributeError` | `True` | `and`/`or` give an operand | NumPy style: vectorized, missing values masked |
+| Python3 | `AttributeError` | `True` | `and`/`or` of any number give an operand | NumPy style: vectorized, missing values masked; shallow: comparison chains, calls of positional arguments, subscripts and generator expressions evaluate, and a kind it does not evaluate (a lambda, a tuple, `None`) is refused by name, "Python3 lambda is not evaluated" |
 | Matlab | error (`isfield` tests first) | true | two-valued, short-circuit | numbers are doubles; `+` concatenates strings |
 | Excel | `#FIELD!` | TRUE | `AND`/`OR` evaluate every argument | errors are values that propagate; text compares ignoring case |
 | Latex | no evaluator | | | translate to a dialect that evaluates |

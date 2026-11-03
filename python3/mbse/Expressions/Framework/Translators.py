@@ -26,8 +26,10 @@ of dialects has its own, specialized to what the two have in common, and is decl
 A pattern names a kind by its branch's tag in its dialect's `Term` (`call`, `binop`) and its attributes and arguments
 as `Terms.form` reads them: a hole in an argument binds the term in that place, slots then variadic arguments, and a
 fixed attribute must be set to an equal scalar, with every attribute of the term matched (an attribute that is not set
-is absent), but a literal's spelling (`text`, `problems`), which is its own dialect's: a literal translates by its
-value, and one with no value has no counterpart.
+is absent), but a literal's spelling (its kind's `spelling`: `text` and `problems`, and a Python literal's prefix,
+quotes, base and digit separators), which is its own dialect's: a literal translates by its value, and one with no
+value has no counterpart. A helper's structure is among a form's attributes (`Terms.Part`), so a pattern matches a
+Python comparison's operators or a comprehension's clauses as attributes, and its terms as arguments.
 
 Translating co-traverses: at each term, the first rule whose source pattern matches (the most specific first: the one
 with the most terms and fixed attributes) is applied by traversing the pattern and the term in lockstep, binding holes
@@ -35,8 +37,10 @@ to arguments and attributes, a hole bound twice to equal terms (`Terms.same`) or
 instantiated with the bound attributes and the translations of the bound arguments. A translation is a `Terms.Writer`
 of the target dialect's term, which its caller writes where it wants it, in a transaction: `store.Expressions.Framework.
 Term(translator.forward(term))`. A term is a nested value, so a let's value inlined at each use of its name is written
-at each. Pairs of corresponding source terms and target writers are appended to `trace`, if given, each term after the
-terms within it. A term that no rule matches raises `ValueError` naming it. A translation preserves the expression's
+at each. A term that no rule matches is read as its kind's `unfold` gives it, where it gives one: an equivalent `Form`
+of simpler terms (a Python comparison chain as the `and` of its links, its middle operands written in each), translated
+as a term is. Pairs of corresponding source terms (or unfolded forms) and target writers are appended to `trace`, if
+given, each term after the terms within it. A term that no rule matches raises `ValueError` naming it. A translation preserves the expression's
 form, not always its value: dialects evaluate by their own rules (see each dialect's `Evaluators`).
 """
 
@@ -193,8 +197,16 @@ def _same_native(a: Any, b: Any) -> bool:
     return Terms._same_native(a, b)
 
 
-_SPELLING = ("text", "problems")
-"""A literal's spelling in its source, and what is wrong with it: its own dialect's, which no translation carries."""
+def _form(node: Any) -> Terms.Form:
+    """A term's form, or an unfolded form itself."""
+    return node if isinstance(node, Terms.Form) else Terms.form(node)
+
+
+def _kind(dialect: Terms.Dialect, node: Any) -> tuple[str, Any, Terms.Kind]:
+    """A term's tag, record and kind, or an unfolded form's, which has no record."""
+    if isinstance(node, Terms.Form):
+        return node.kind, None, dialect.kinds()[node.kind]
+    return dialect.kind(node)
 
 
 def _describe(dialect: Terms.Dialect, node: Any) -> str:
@@ -257,6 +269,8 @@ class _Direction:
         frees = [argument.free for argument in form.arguments]
         if kind.role == Terms.REFERENCE:
             free = frozenset({name} if kind.lexical and name not in kind.ambient else ())
+        elif kind.scopes is not None:  # what its arguments bind is read from a record, which a writer is not yet:
+            free = frozenset().union(*frees)  # its arguments' names, the names it binds among them
         elif kind.role in (Terms.BINDING, Terms.QUANTIFIER):
             free = frozenset(frees[0]).union(*(f - {name} for f in frees[1:]))
         else:
@@ -279,7 +293,9 @@ class _Run:
         return result
 
     def _translate(self, node: Any, environment: dict[str, _Built]) -> _Built:
-        tag, record, kind = self.direction.source.kind(node)
+        tag, record, kind = _kind(self.direction.source, node)
+        if record is None:  # an unfolded form: a rule reads it, or its kind unfolds it further
+            return self._rules(node, tag, kind, environment) or self._unfolded(node, kind, environment)
         name = Terms.name_of(node)
         if kind.role == Terms.REFERENCE and kind.lexical and name in environment:
             return environment[name]
@@ -295,10 +311,9 @@ class _Run:
                                  f"{'value' if value is None else 'body'}")
             inner = {**environment, name: self.translate(value, environment)}
             return self.translate(body, inner)
-        for source, target in self.direction.rules.get(tag, []):
-            bindings: dict[str, Any] = {}
-            if self._match(source, node, bindings):
-                return self._instantiate(target, bindings, environment)
+        ruled = self._rules(node, tag, kind, environment)
+        if ruled is not None:
+            return ruled
         for attributes, target_kind, target_attributes in self.direction.elementwise.get(tag, []):
             form = Terms.form(node)
             if None not in form.arguments and form.attributes.keys() == attributes.keys() and all(
@@ -309,7 +324,24 @@ class _Run:
             attributes = convert(Terms.attributes_of(record))
             if attributes is not None:
                 return self.direction.build(Terms.Form(target_kind, attributes, ()))
-        raise ValueError(f"{_describe(self.direction.source, node)} has no {self.direction.target.name()} counterpart")
+        return self._unfolded(node, kind, environment)
+
+    def _rules(self, node: Any, tag: str, kind: Terms.Kind, environment: dict[str, _Built]) -> _Built | None:
+        """The translation of the first rule whose source pattern matches `node`, or None."""
+        for source, target in self.direction.rules.get(tag, []):
+            bindings: dict[str, Any] = {}
+            if self._match(source, node, bindings):
+                return self._instantiate(target, bindings, environment)
+        return None
+
+    def _unfolded(self, node: Any, kind: Terms.Kind, environment: dict[str, _Built]) -> _Built:
+        """The translation of the form `node`'s kind unfolds it into; raises naming the term where it has none."""
+        unfolded = kind.unfold(_form(node)) if kind.unfold is not None else None
+        if unfolded is not None:
+            return self.translate(unfolded, environment)
+        described = _describe(self.direction.source, node) if not isinstance(node, Terms.Form) else \
+            f"{self.direction.source.name()} {node.kind}"
+        raise ValueError(f"{described} has no {self.direction.target.name()} counterpart")
 
     def _match(self, pattern: Pattern | Hole, node: Any, bindings: dict[str, Any]) -> bool:
         """Co-traverses `pattern` and `node`, binding the pattern's holes."""
@@ -322,10 +354,11 @@ class _Run:
             return True
         if node is None:
             return False
-        form = Terms.form(node)
+        form = _form(node)
         attributes = form.attributes
-        if self.direction.source.kind(node)[2].role == Terms.LITERAL:  # a literal's spelling is its dialect's own
-            attributes = {k: v for k, v in attributes.items() if k not in _SPELLING}
+        kind = _kind(self.direction.source, node)[2]
+        if kind.role == Terms.LITERAL:  # a literal's spelling is its dialect's own
+            attributes = {k: v for k, v in attributes.items() if k not in kind.spelling}
         if form.kind != pattern.kind or attributes.keys() != pattern.attributes.keys():
             return False
         for name, expected in pattern.attributes.items():

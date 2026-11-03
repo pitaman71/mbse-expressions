@@ -1,83 +1,145 @@
 /**
- * Expressions of the Python3 dialect (formerly Python): Python 3 expressions, with the imports they need, as Python's
- * `ast` has them.
+ * Expressions of the Python3 dialect: every expression of Python 3, 3.0 to 3.15, as CPython's `ast` has them, in
+ * mbse-programs' names and shapes, with the imports they need.
  *
- * Python3's terms are values of its `Term`, `Expressions.Python3.Term`, the branch `python3` of
- * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
- * framework's `literal`, `variable` and `let`, whose shape Python's constants, names and `(lambda name: body)(value)`
- * have, the container constructors `list` and `mapping`, its own kinds, each a value object `Expressions.Python3.<Kind>`
- * named plainly, and the framework's kinds of invalid syntax (`error`, `missing`); a term carries no domain. Its own
- * kinds' slots hold Python3's terms:
+ * The dialect is complete over Python 3's expression syntax (mbse-basis
+ * [CAP-227: the Python3 expression dialect](mbse:mbse-basis/docs/capabilities/CAP-227.md), by
+ * [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules). Python3's terms are
+ * values of its `Term`, `Expressions.Python3.Term`, the branch `python3` of `Expressions.Framework.Term`, which `install`
+ * defines and adds to `Expressions.Framework.Term` by schema extension. Its kinds are named as mbse-programs names them
+ * (`mbse:mbse-programs/typescript5/src/Python/Syntax.ts`), lowercased as branch tags (`binop`, `generatorexp`), each a
+ * value object `Expressions.Python3.<Kind>` with mbse-programs' properties, in source order; an identifier is a `str`,
+ * where mbse-programs has an `Identifier` node, and the expression context (`ctx`) is not represented, as there. A term
+ * carries no domain. Its kinds:
  *
- * - `literal`, the framework's: a constant (`value`), with its spelling (`text`) where it was read from source.
- *   `variable`, the framework's: a name, the value bound to a `name`; the names of `BUILTINS` are always bound.
- * - `attribute`: `value.attr`. `subscript`: `value[key]`, for a `str` key, and `index`: `value[index]`, for an index
- *   that is an expression. `call`: a function, the slot `function`, applied to ordered `arguments`, e.g.
- *   `np.greater_equal(x, 18)`, whose function is the attribute `greater_equal` of the name `np`; its own, not the
- *   framework's `call`, whose callable is a name, since a Python callee is a term.
- * - `compare` (`==`, `!=`, `<`, `<=`, `>`, `>=`, `in`, `not in`), `boolop` (`and`, `or`), `binop` (`+`, `-`, `*`, `/`,
- *   `//`, `%`, `**`, `&`, `|`, `^`, `<<`, `>>`) and `unaryop` (`not`, `-`, `+`, `~`), each with one `operator` and two
- *   operands, `left` and `right` (one, `operand`, for `unaryop`).
- * - `ifexp`: `body if test else orelse`.
- * - `generator`: `(element for name in iterable if condition ...)`, a generator expression of one `for` and any number
- *   of `conditions`, which binds `name` to each item of `iterable` within the element and the conditions. As the only
- *   argument of a call it is written without its parentheses: `all(p.pin > 0 for p in ports)`.
- * - `let`, the framework's: `(lambda name: body)(value)`, Python's idiom for binding a name within an expression.
- * - `list` and `mapping`, the framework's container constructors: a list display, `[a, b]`, and a dict display,
- *   `{k: v}`.
- * - `import` (`import module` or `import module as alias`) and `importfrom` (`from module import name` or `... as
- *   alias`) bind a name within their `body`, which is the rest of the expression; `Text.ToText` writes them as the lines
- *   before it. What they may import is up to the scope that evaluates them (see `Evaluators`).
+ * - Atoms: `literal`, a constant a basic scalar or any value holds (`Expressions.Python3.Literal`, refining the
+ *   framework's `literal`, mbse-basis [CAP-233: literals of any value](mbse:mbse-basis/docs/capabilities/CAP-233.md),
+ *   with the properties its spelling encodes, mbse-basis
+ *   [PRI-023: domain representations](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-023): `prefix` and `quote` of a string or
+ *   bytes, `base` of an int, `separators` where digits are grouped by `_`); `constant`, Python3's own, for what no schema
+ *   holds (`singleton`, `None` or `...`; a complex number's `real` and `imag`), its spelling too; `variable`, the
+ *   framework's, a name (`ast.Name`'s `id` is its `name`), the names of `BUILTINS` always bound; `concatenatedstring`,
+ *   adjacent string literals (`values`); `joinedstr`, an f-string, and `templatestr` (3.14), a t-string: `prefix`,
+ *   `quote` and `values`, each a `stringtext` (`spelling`, as written) or a `formattedvalue` (`interpolation` in a
+ *   t-string: `value`, `text`, `debug`, `conversion`, `format_spec`, a `formatspec` of `values`); `parenthesized`,
+ *   parentheses written in the source (`value`).
+ * - Displays: `tuple`, `list` (the framework's container constructor, its `elements` `ast`'s `elts`), `set` and `dict`
+ *   (`items`, each a `dictitem`, `key` and `value`, without a key for `**value`); the comprehensions `listcomp`,
+ *   `setcomp`, `generatorexp` (`elt`) and `dictcomp` (`key`, `value`), each of `generators`, `comprehension`s
+ *   (`is_async`, `target`, `iter`, `ifs`). As a call's only argument a generator expression is written without its own
+ *   parentheses: `all(p.pin > 0 for p in ports)`.
+ * - `yield` (`value`, optional), `yieldfrom` and `await` (`value`).
+ * - Primaries: `attribute` (`value.attr`); `subscript` (`value[slice]`), whose index is any term, a `slice` (`lower`,
+ *   `upper`, `step`, each optional) or a `tuple` of them for several dimensions, so a tensor's every index; `call`
+ *   (`func`, a term, applied to `args` and `keywords`, each a `keyword`, `arg` and `value`, `**value` without an `arg`);
+ *   `starred` (`*value`).
+ * - Operators: `unaryop` (`op`, `operand`), `binop` (`left`, `op`, `right`), `compare`, a chain (`left`, then
+ *   `comparisons`, each a `comparison`, `op` and `comparator`: `a < b <= c`), `boolop` (`op`, n `values`), `namedexpr`
+ *   (`target := value`), `ifexp` (`body if test else orelse`) and `lambda` (`args`, an `arguments` of `arg`s, and its
+ *   `body`, an expression, so a term: the decision that a body is not part of the term is about statements).
+ * - Extensions, with no counterpart in Python's grammar (`EXTENSIONS`): `let`, the framework's, `(lambda name:
+ *   body)(value)`, Python's idiom for binding a name; `import` (`import module` or `... as alias`) and `importfrom`
+ *   (`from module import name` or `... as alias`), which bind a name within their `body`, the rest of the expression;
+ *   `Text.ToText` writes them as the lines before it. What they may import is up to the scope that evaluates them (see
+ *   `Evaluators`).
+ * - The framework's kinds of invalid syntax, `error` and `missing`.
  *
- * A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of calls, not a dialect.
+ * Each kind's `Kind` records the Python versions that have it (`standards`, `STANDARDS`'s names from the one it arrived
+ * in; none for an extension). A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
+ * calls, not a dialect.
  *
  * `DIALECT` reads them (`Terms.Dialect`). The writers (`constant`, `name`, `attribute`, ...) write them through the
- * builders, wherever a term is written, in a transaction. `Text.ToText` writes an expression as Python source,
- * parenthesized only where precedence requires. Reading Python source (`Text.FromText`) needs Python's own parser, so it
- * is in the Python implementation only.
+ * builders, wherever a term is written, in a transaction; a helper's writer (`keyword`, `comparison`, `comprehension`,
+ * `arg`, `formattedvalue`, ...) is given where its kind takes one. JavaScript has no complex numbers and no `Ellipsis`:
+ * `Complex` and `ELLIPSIS` stand for them where a constant is written. `Text.ToText` writes an expression as Python
+ * source, parenthesized only where precedence requires. Reading Python source (`Text.FromText`) needs Python's own
+ * parser, so it is in the Python implementation only.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Repr } from "@mbse/schemas/Framework";
+import { Repr, Schemas } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
+/** A complex number, which JavaScript has none of: what a `constant` holds of one (in Python, a `complex`). */
+export const Complex = Domains.ComplexValue;
+/** Python's `...` (`Ellipsis`), which JavaScript has none of. */
+export const ELLIPSIS = Domains.ELLIPSIS;
+
 const { repr } = Repr;
 
-export const CONSTANT = "literal";
+export const LITERAL = "literal";
+export const CONSTANT = "constant";
 export const NAME = "variable";
+export const CONCATENATEDSTRING = "concatenatedstring";
+export const JOINEDSTR = "joinedstr";
+export const TEMPLATESTR = "templatestr";
+export const PARENTHESIZED = "parenthesized";
+export const TUPLE = "tuple";
+export const LIST = "list";
+export const SET = "set";
+export const DICT = "dict";
+export const LISTCOMP = "listcomp";
+export const SETCOMP = "setcomp";
+export const DICTCOMP = "dictcomp";
+export const GENERATOREXP = "generatorexp";
+export const YIELD = "yield";
+export const YIELDFROM = "yieldfrom";
+export const AWAIT = "await";
 export const ATTRIBUTE = "attribute";
 export const SUBSCRIPT = "subscript";
-export const INDEX = "index";
+export const SLICE = "slice";
 export const CALL = "call";
+export const STARRED = "starred";
+export const UNARYOP = "unaryop";
+export const BINOP = "binop";
 export const COMPARE = "compare";
 export const BOOLOP = "boolop";
-export const BINOP = "binop";
-export const UNARYOP = "unaryop";
+export const NAMEDEXPR = "namedexpr";
 export const IFEXP = "ifexp";
-export const GENERATOR = "generator";
+export const LAMBDA = "lambda";
 export const LET = "let";
 export const IMPORT = "import";
 export const IMPORTFROM = "importfrom";
-export const LIST = "list";
-export const DICT = "mapping";
+export const COMPREHENSIONS: readonly string[] = [LISTCOMP, SETCOMP, DICTCOMP, GENERATOREXP];
 
-/** Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds, and its
- * dialect's schema, whose singleton is `Expressions.Python3`: run after `Framework.install`, in a transaction of its
- * own; run again, it writes nothing.
+/** The kinds with no counterpart in Python's grammar, kept as extensions (the dialects proposal, Decided, 2). */
+export const EXTENSIONS: ReadonlySet<string> = new Set([LET, IMPORT, IMPORTFROM]);
+
+/** The versions of Python 3 the dialect covers, by their published names, 3.0 to 3.15. */
+export const STANDARDS: readonly string[] = Array.from({ length: 16 }, (_, minor) => `Python 3.${minor}`);
+
+/** The versions from Python 3.`minor` on. */
+function since(minor: number): readonly string[] {
+  return STANDARDS.slice(minor);
+}
+
+/** Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds and the helpers
+ * they hold, and its dialect's schema, whose singleton is `Expressions.Python3`: run after `Framework.install`, in a
+ * transaction of its own; run again, it writes nothing.
  * Its holder, `Expressions.Python3.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
  * its `Term`. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
+  const terms = (_: any): any => S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term]));
   return txn.uid("mbse.Expressions.Python3/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
-      Attribute: S.OfObject, Subscript: S.OfObject, Index: S.OfObject, Call: S.OfObject,
-      Compare: S.OfObject, BoolOp: S.OfObject, BinOp: S.OfObject, UnaryOp: S.OfObject,
-      IfExp: S.OfObject, GeneratorExp: S.OfObject, Import: S.OfObject, ImportFrom: S.OfObject })
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
+      Expression: S.OfObject, Literal: S.OfObject, Constant: S.OfObject,
+      ConcatenatedString: S.OfObject, StringText: S.OfObject, FormatSpec: S.OfObject,
+      FormattedValue: S.OfObject, Interpolation: S.OfObject, JoinedStrValue: S.OfUnion,
+      TemplateStrValue: S.OfUnion, JoinedStr: S.OfObject, TemplateStr: S.OfObject,
+      Parenthesized: S.OfObject, Tuple: S.OfObject, Set: S.OfObject, DictItem: S.OfObject,
+      Dict: S.OfObject, Comprehension: S.OfObject, ListComp: S.OfObject, SetComp: S.OfObject,
+      DictComp: S.OfObject, GeneratorExp: S.OfObject, Yield: S.OfObject, YieldFrom: S.OfObject,
+      Attribute: S.OfObject, Subscript: S.OfObject, Slice: S.OfObject, Keyword: S.OfObject,
+      Call: S.OfObject, Starred: S.OfObject, Await: S.OfObject, UnaryOp: S.OfObject,
+      BinOp: S.OfObject, Comparison: S.OfObject, Compare: S.OfObject, BoolOp: S.OfObject,
+      NamedExpr: S.OfObject, IfExp: S.OfObject, Arg: S.OfObject, Arguments: S.OfObject,
+      Lambda: S.OfObject, Import: S.OfObject, ImportFrom: S.OfObject })
     .spec([
       // its dialect: the singleton `Expressions.Python3`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Python3.Dialect").ref(true).singleton("Expressions.Python3").adjacencies({
@@ -85,54 +147,129 @@ export function install(txn: any): any {
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("python3").schema([_.Dialect])]),
-      // its union of its kinds: the framework's it reuses, its own, and invalid syntax
+      // its union of its kinds: the framework's it reuses, its own, its extensions, and invalid syntax
       (_: any) => _.Term.name("Expressions.Python3.Term").branches([
-        (t: any) => t.name("literal").schema([Framework.Literal]),
+        (t: any) => t.name("literal").schema([_.Literal]),
+        (t: any) => t.name("constant").schema([_.Constant]),
         (t: any) => t.name("variable").schema([Framework.Variable]),
-        (t: any) => t.name("let").schema([Framework.Let]),
+        (t: any) => t.name("concatenatedstring").schema([_.ConcatenatedString]),
+        (t: any) => t.name("joinedstr").schema([_.JoinedStr]),
+        (t: any) => t.name("templatestr").schema([_.TemplateStr]),
+        (t: any) => t.name("parenthesized").schema([_.Parenthesized]),
+        (t: any) => t.name("tuple").schema([_.Tuple]),
         (t: any) => t.name("list").schema([Framework.List]),
-        (t: any) => t.name("mapping").schema([Framework.Mapping]),
+        (t: any) => t.name("set").schema([_.Set]),
+        (t: any) => t.name("dict").schema([_.Dict]),
+        (t: any) => t.name("listcomp").schema([_.ListComp]),
+        (t: any) => t.name("setcomp").schema([_.SetComp]),
+        (t: any) => t.name("dictcomp").schema([_.DictComp]),
+        (t: any) => t.name("generatorexp").schema([_.GeneratorExp]),
+        (t: any) => t.name("yield").schema([_.Yield]),
+        (t: any) => t.name("yieldfrom").schema([_.YieldFrom]),
         (t: any) => t.name("attribute").schema([_.Attribute]),
         (t: any) => t.name("subscript").schema([_.Subscript]),
-        (t: any) => t.name("index").schema([_.Index]),
+        (t: any) => t.name("slice").schema([_.Slice]),
         (t: any) => t.name("call").schema([_.Call]),
+        (t: any) => t.name("starred").schema([_.Starred]),
+        (t: any) => t.name("await").schema([_.Await]),
+        (t: any) => t.name("unaryop").schema([_.UnaryOp]),
+        (t: any) => t.name("binop").schema([_.BinOp]),
         (t: any) => t.name("compare").schema([_.Compare]),
         (t: any) => t.name("boolop").schema([_.BoolOp]),
-        (t: any) => t.name("binop").schema([_.BinOp]),
-        (t: any) => t.name("unaryop").schema([_.UnaryOp]),
+        (t: any) => t.name("namedexpr").schema([_.NamedExpr]),
         (t: any) => t.name("ifexp").schema([_.IfExp]),
-        (t: any) => t.name("generator").schema([_.GeneratorExp]),
+        (t: any) => t.name("lambda").schema([_.Lambda]),
+        (t: any) => t.name("let").schema([Framework.Let]),
         (t: any) => t.name("import").schema([_.Import]),
         (t: any) => t.name("importfrom").schema([_.ImportFrom]),
         (t: any) => t.name("error").schema([Framework.Error]),
         (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
-      (_: any) => _.Attribute.name("Expressions.Python3.Attribute").properties({
-        attr: S.OfStr, value: _.Term }),
-      (_: any) => _.Subscript.name("Expressions.Python3.Subscript").properties({
-        key: S.OfStr, value: _.Term }),
-      (_: any) => _.Index.name("Expressions.Python3.Index").properties({
-        value: _.Term, index: _.Term }),
-      (_: any) => _.Call.name("Expressions.Python3.Call").properties({
-        function: _.Term,
-        arguments: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
+      // atoms (Python's language reference, 6.2)
+      (_: any) => _.Literal.name("Expressions.Python3.Literal").refines([Framework.Literal]).properties({
+        prefix: S.OfStr, // a string's or bytes' prefix, as written: `r`, `b`, `Rb`
+        quote: S.OfStr, // a string's or bytes' quotes: `'`, `"`, `'''` or `"""`
+        base: S.OfInt, // an int's base: 2, 8, 10 or 16
+        separators: S.OfBool, // whether its digits are grouped by `_`
       }),
-      (_: any) => _.Compare.name("Expressions.Python3.Compare").properties({
-        operator: S.OfStr, left: _.Term, right: _.Term }),
-      (_: any) => _.BoolOp.name("Expressions.Python3.BoolOp").properties({
-        operator: S.OfStr, left: _.Term, right: _.Term }),
-      (_: any) => _.BinOp.name("Expressions.Python3.BinOp").properties({
-        operator: S.OfStr, left: _.Term, right: _.Term }),
-      (_: any) => _.UnaryOp.name("Expressions.Python3.UnaryOp").properties({
-        operator: S.OfStr, operand: _.Term }),
-      (_: any) => _.IfExp.name("Expressions.Python3.IfExp").properties({
-        test: _.Term, body: _.Term, orelse: _.Term }),
+      (_: any) => _.Constant.name("Expressions.Python3.Constant").properties({
+        singleton: S.OfStr, // `None` or `...`
+        real: S.OfFloat, imag: S.OfFloat, // a complex number's parts
+        text: S.OfStr, // its spelling, unvalidated
+        problems: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // what is wrong with it
+        separators: S.OfBool, // whether its digits are grouped by `_`
+      }),
+      (_: any) => _.ConcatenatedString.name("Expressions.Python3.ConcatenatedString").properties({ values: terms(_) }),
+      (_: any) => _.StringText.name("Expressions.Python3.StringText").properties({ spelling: S.OfStr }),
+      (_: any) => _.FormatSpec.name("Expressions.Python3.FormatSpec").properties({
+        values: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.JoinedStrValue])) }),
+      (_: any) => _.FormattedValue.name("Expressions.Python3.FormattedValue").properties({
+        value: _.Term, text: S.OfStr, debug: S.OfBool, conversion: S.OfStr, format_spec: _.FormatSpec }),
+      (_: any) => _.Interpolation.name("Expressions.Python3.Interpolation").properties({
+        value: _.Term, text: S.OfStr, debug: S.OfBool, conversion: S.OfStr, format_spec: _.FormatSpec }),
+      (_: any) => _.JoinedStrValue.name("Expressions.Python3.JoinedStrValue").branches([
+        (t: any) => t.name("stringtext").schema([_.StringText]),
+        (t: any) => t.name("formattedvalue").schema([_.FormattedValue])]),
+      (_: any) => _.TemplateStrValue.name("Expressions.Python3.TemplateStrValue").branches([
+        (t: any) => t.name("stringtext").schema([_.StringText]),
+        (t: any) => t.name("interpolation").schema([_.Interpolation])]),
+      (_: any) => _.JoinedStr.name("Expressions.Python3.JoinedStr").properties({
+        prefix: S.OfStr, quote: S.OfStr,
+        values: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.JoinedStrValue])) }),
+      (_: any) => _.TemplateStr.name("Expressions.Python3.TemplateStr").properties({
+        prefix: S.OfStr, quote: S.OfStr,
+        values: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.TemplateStrValue])) }),
+      (_: any) => _.Parenthesized.name("Expressions.Python3.Parenthesized").properties({ value: _.Term }),
+      // displays and comprehensions
+      (_: any) => _.Tuple.name("Expressions.Python3.Tuple").properties({ elts: terms(_) }),
+      (_: any) => _.Set.name("Expressions.Python3.Set").properties({ elts: terms(_) }),
+      (_: any) => _.DictItem.name("Expressions.Python3.DictItem").properties({ key: _.Term, value: _.Term }),
+      (_: any) => _.Dict.name("Expressions.Python3.Dict").properties({
+        items: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.DictItem])) }),
+      (_: any) => _.Comprehension.name("Expressions.Python3.Comprehension").properties({
+        is_async: S.OfBool, target: _.Term, iter: _.Term, ifs: terms(_) }),
+      (_: any) => _.ListComp.name("Expressions.Python3.ListComp").properties({
+        elt: _.Term, generators: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Comprehension])) }),
+      (_: any) => _.SetComp.name("Expressions.Python3.SetComp").properties({
+        elt: _.Term, generators: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Comprehension])) }),
+      (_: any) => _.DictComp.name("Expressions.Python3.DictComp").properties({
+        key: _.Term, value: _.Term,
+        generators: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Comprehension])) }),
       (_: any) => _.GeneratorExp.name("Expressions.Python3.GeneratorExp").properties({
-        name: S.OfStr, // bound to each item in the element and the conditions
-        iterable: _.Term,
-        element: _.Term,
-        conditions: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])),
+        elt: _.Term, generators: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Comprehension])) }),
+      (_: any) => _.Yield.name("Expressions.Python3.Yield").properties({ value: _.Term }),
+      (_: any) => _.YieldFrom.name("Expressions.Python3.YieldFrom").properties({ value: _.Term }),
+      // primaries (6.3)
+      (_: any) => _.Attribute.name("Expressions.Python3.Attribute").properties({ value: _.Term, attr: S.OfStr }),
+      (_: any) => _.Subscript.name("Expressions.Python3.Subscript").properties({ value: _.Term, slice: _.Term }),
+      (_: any) => _.Slice.name("Expressions.Python3.Slice").properties({ lower: _.Term, upper: _.Term, step: _.Term }),
+      (_: any) => _.Keyword.name("Expressions.Python3.Keyword").properties({ arg: S.OfStr, value: _.Term }),
+      (_: any) => _.Call.name("Expressions.Python3.Call").properties({
+        func: _.Term,
+        args: terms(_),
+        keywords: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Keyword])),
       }),
+      (_: any) => _.Starred.name("Expressions.Python3.Starred").properties({ value: _.Term }),
+      (_: any) => _.Await.name("Expressions.Python3.Await").properties({ value: _.Term }),
+      // operators (6.5 to 6.14)
+      (_: any) => _.UnaryOp.name("Expressions.Python3.UnaryOp").properties({ op: S.OfStr, operand: _.Term }),
+      (_: any) => _.BinOp.name("Expressions.Python3.BinOp").properties({ left: _.Term, op: S.OfStr, right: _.Term }),
+      (_: any) => _.Comparison.name("Expressions.Python3.Comparison").properties({ op: S.OfStr, comparator: _.Term }),
+      (_: any) => _.Compare.name("Expressions.Python3.Compare").properties({
+        left: _.Term, comparisons: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Comparison])) }),
+      (_: any) => _.BoolOp.name("Expressions.Python3.BoolOp").properties({ op: S.OfStr, values: terms(_) }),
+      (_: any) => _.NamedExpr.name("Expressions.Python3.NamedExpr").properties({ target: _.Term, value: _.Term }),
+      (_: any) => _.IfExp.name("Expressions.Python3.IfExp").properties({ body: _.Term, test: _.Term, orelse: _.Term }),
+      (_: any) => _.Arg.name("Expressions.Python3.Arg").properties({
+        arg: S.OfStr, annotation: _.Term, default_value: _.Term }),
+      (_: any) => _.Arguments.name("Expressions.Python3.Arguments").properties({
+        posonlyargs: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Arg])),
+        args: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Arg])),
+        vararg: _.Arg,
+        kwonlyargs: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Arg])),
+        kwarg: _.Arg }),
+      (_: any) => _.Lambda.name("Expressions.Python3.Lambda").properties({ args: _.Arguments, body: _.Term }),
+      // extensions: imports within an expression
       (_: any) => _.Import.name("Expressions.Python3.Import").properties({
         module: S.OfStr, alias: S.OfStr, body: _.Term }),
       (_: any) => _.ImportFrom.name("Expressions.Python3.ImportFrom").properties({
@@ -149,6 +286,8 @@ export function install(txn: any): any {
 /** The builtins an expression may use without importing them: the default builtins of a scope (see `Evaluators`). */
 export const BUILTINS: ReadonlySet<string> = new Set([
   "abs", "all", "any", "bool", "float", "getattr", "hasattr", "int", "len", "max", "min", "round", "set", "str", "sum"]);
+
+// --- Checks ---
 
 /** Python's `str.isidentifier()`. */
 export function isIdentifier(text: string): boolean {
@@ -172,7 +311,7 @@ function identifier(property: string, what: string): (record: any) => string[] {
 }
 
 /** An alias, if given, is an identifier, and not empty. */
-function aliasProblems(what: string, attributes: Map<string, any>): string[] {
+function aliasProblems(what: string, attributes: ReadonlyMap<string, any>): string[] {
   if (attributes.get("alias") === "") return [`${F.article(what)} needs an alias`];
   return identifierProblems(`${F.article(what)}'s alias`, attributes.get("alias"));
 }
@@ -201,69 +340,354 @@ function importfromNames(attributes: ReadonlyMap<string, any>): string[] {
   return [attributes.get("alias") || attributes.get("name")];
 }
 
-/** The constant of a native value: a basic scalar, the only native value `spec` gives it. */
+/** A string's quotes, as Python writes them. */
+export const QUOTES: readonly string[] = ["'", "\"", "'''", "\"\"\""];
+
+const PREFIXES = ["", "r", "u", "b", "br", "rb"]; // a literal's prefixes, by their letters
+
+function quoteProblems(what: string, attributes: ReadonlyMap<string, any>): string[] {
+  const quote = attributes.get("quote");
+  return quote === undefined || QUOTES.includes(quote) ? [] : [`${what}'s quote cannot be ${repr(quote)}`];
+}
+
+/** Problems with a string's prefix, if given: `letters` (`f`, `t`), each with or without `r`, in either case. */
+function prefixProblems(what: string, prefix: unknown, letters: string): string[] {
+  if (prefix === undefined) return [];
+  const allowed = letters !== "" ? [letters, `${letters}r`, `r${letters}`] : PREFIXES;
+  return typeof prefix === "string" && allowed.includes(prefix.toLowerCase()) ? []
+    : [`${what}'s prefix cannot be ${repr(prefix)}`];
+}
+
+/** A literal's spelling: a string's or bytes' prefix and quote, an int's base. */
+function literalCheck(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  const base = attributes.get("base");
+  const problems = [...prefixProblems("a literal", attributes.get("prefix"), ""), ...quoteProblems("a literal", attributes)];
+  return [...problems, ...(base === undefined || [2n, 8n, 10n, 16n].includes(base) ? [] : [`a literal's base cannot be ${repr(base)}`])];
+}
+
+/** The singletons Python3's `constant` holds. */
+export const SINGLETONS: readonly string[] = ["None", "..."];
+
+/** A constant holds a singleton, `None` or `...`, or a complex number, its `imag` at least. */
+function constantCheck(record: any): string[] {
+  const attributes = F.attributesOf(record);
+  const singleton = attributes.get("singleton");
+  const complex = attributes.has("imag") || attributes.has("real");
+  if (singleton === undefined && !complex) { // unless its text is invalid, its problems said
+    return attributes.has("problems") ? [] : ["a constant needs a singleton or a complex number"];
+  }
+  if (singleton !== undefined && complex) return ["a constant holds a singleton or a complex number, not both"];
+  if (singleton !== undefined && !SINGLETONS.includes(singleton)) {
+    return [`a constant's singleton must be None or ..., got ${repr(singleton)}`];
+  }
+  if (complex && !attributes.has("imag")) return ["a complex constant needs an imag"];
+  return [];
+}
+
+/** The check that a record's helpers `prop`, or its arguments, where it has no slots, number at least `least`. */
+function needs(what: string, prop: string, needed: string, least = 1): (record: any) => string[] {
+  return (record) => {
+    const held = F._helpers(record.as_schema()).includes(prop) ? F.attributesOf(record).get(prop) ?? []
+      : F.argumentsOf(record);
+    return held.length >= least ? [] : [`${F.article(what)} needs ${needed}`];
+  };
+}
+
+/** A record's helpers of a container property, in order. */
+function partsOf(record: any, prop: string): F.Part[] {
+  return F.attributesOf(record).get(prop) ?? [];
+}
+
+function callCheck(record: any): string[] {
+  return partsOf(record, "keywords").flatMap((part) => identifierProblems("a keyword's arg", part.attributes.get("arg")));
+}
+
+function compareUnfold(form: F.Form): F.Form | null {
+  const links = (form.attributes.get("comparisons") ?? []) as F.Part[];
+  if (links.length < 2) return null;
+  return new F.Form(BOOLOP, { op: "and" }, links.map((link, i) =>
+    new F.Form(COMPARE, { comparisons: [link] }, form.arguments.slice(i, i + 2))));
+}
+
+function boolopUnfold(form: F.Form): F.Form | null {
+  if (form.arguments.length < 3) return null;
+  return new F.Form(form.kind, form.attributes, [new F.Form(form.kind, form.attributes, form.arguments.slice(0, -1)),
+    form.arguments[form.arguments.length - 1]]);
+}
+
+function compareCheck(record: any): string[] {
+  const parts = partsOf(record, "comparisons");
+  if (parts.length === 0) return ["a compare needs a comparison"];
+  return parts.filter((part) => !part.attributes.has("op")).map(() => "a comparison needs an op");
+}
+
+function compareOperators(attributes: ReadonlyMap<string, any>): string[] {
+  return (attributes.get("comparisons") as F.Part[]).map((part) => part.attributes.get("op") as string);
+}
+
+/** A chain's domain: each link's operator applied to its operands, `a < b` then `b <= c`, its result theirs. */
+function compareResult(attributes: ReadonlyMap<string, any>, domains: FD.Domain[]): FD.Domain {
+  const results: FD.Domain[] = [];
+  for (const [i, operator] of compareOperators(attributes).entries()) {
+    const signature = Domains.COMPARE.get(operator);
+    const operands = domains.slice(i, i + 2);
+    if (signature === undefined) return FD.Anything; // an extension: nothing is known about it
+    const result = signature.result(operands);
+    if (result === null) {
+      const names = operands.map((domain) => domain.name()).join(", ");
+      throw new TypeError(`${operator} cannot take (${names}); it takes ${signature.describe()}`);
+    }
+    results.push(result);
+  }
+  return FD.join(results);
+}
+
+/** An f-string's or a t-string's replacement fields, those within format specs among them, in order. */
+function fieldsOf(record: any): F.Part[] {
+  return partsOf(record, "values").flatMap(fieldParts);
+}
+
+function fieldParts(part: F.Part): F.Part[] {
+  if (part.kind === "stringtext") return [];
+  const spec = part.attributes.get("format_spec") as F.Part | undefined;
+  return [part, ...((spec?.attributes.get("values") ?? []) as F.Part[]).flatMap(fieldParts)];
+}
+
+/** An f-string's or a t-string's prefix (`letters`, with or without `r`), quote and conversions. */
+function stringCheck(tag: string, letters: string): (record: any) => string[] {
+  const what = F.article(tag);
+  return (record) => {
+    const attributes = F.attributesOf(record);
+    const problems = [...prefixProblems(what, attributes.get("prefix"), letters), ...quoteProblems(what, attributes)];
+    for (const part of fieldsOf(record)) {
+      const conversion = part.attributes.get("conversion");
+      if (conversion !== undefined && !["s", "r", "a"].includes(conversion as string)) {
+        problems.push(`${F.article(part.kind)}'s conversion cannot be ${repr(conversion)}`);
+      }
+    }
+    return problems;
+  };
+}
+
+/** The names a target binds: a name's, and those of the names a tuple, a list, a starred or a parenthesized target
+ * holds; an attribute or a subscript binds none. */
+export function targetNames(term: any): Set<string> {
+  if (term === null) return new Set();
+  const [tag, record] = F.kindOf(term);
+  if (tag === NAME) return new Set([F.nameOf(term)]);
+  if ([TUPLE, LIST, STARRED, PARENTHESIZED].includes(tag)) {
+    return new Set(F.argumentsOf(record).flatMap((argument) => [...targetNames(argument)]));
+  }
+  return new Set();
+}
+
+/** What each argument of a comprehension has bound: each `for` clause's target within its own target, its conditions,
+ * the later clauses and the element; its iterable the earlier clauses' alone. */
+function comprehensionScopes(record: any): ReadonlySet<string>[] {
+  const args = F.argumentsOf(record);
+  const parts = partsOf(record, "generators");
+  const lead = args.length - parts.reduce((total, part) => total + part.size, 0);
+  const scopes: ReadonlySet<string>[] = args.map(() => new Set<string>());
+  let names: ReadonlySet<string> = new Set<string>();
+  let i = lead;
+  for (const part of parts) {
+    const bound = new Set([...names, ...targetNames(args[i])]);
+    scopes[i] = bound;
+    scopes[i + 1] = names;
+    for (let j = i + 2; j < i + part.size; j++) scopes[j] = bound;
+    names = bound;
+    i += part.size;
+  }
+  for (let j = 0; j < lead; j++) scopes[j] = names;
+  return scopes;
+}
+
+/** A lambda's parameters, in order: positional-only, positional, `*vararg`, keyword-only, `**kwarg`. */
+function parameters(record: any): F.Part[] {
+  const held = F.attributesOf(record).get("args") as F.Part | undefined;
+  if (held === undefined) return [];
+  return ["posonlyargs", "args", "vararg", "kwonlyargs", "kwarg"].flatMap((name) => {
+    const group = held.attributes.get(name);
+    return group === undefined ? [] : Array.isArray(group) ? group : [group];
+  });
+}
+
+/** A lambda's body has its parameters bound; their defaults and annotations, the scope's alone. */
+function lambdaScopes(record: any): ReadonlySet<string>[] {
+  const names = new Set(parameters(record).map((part) => part.attributes.get("arg"))
+    .filter((arg): arg is string => typeof arg === "string"));
+  return F.argumentsOf(record).map((_, i) => (i === 0 ? names : new Set<string>()));
+}
+
+function lambdaCheck(record: any): string[] {
+  const problems: string[] = [];
+  for (const part of parameters(record)) {
+    if (!part.attributes.has("arg")) problems.push("a lambda's parameter needs an arg");
+    problems.push(...identifierProblems("a lambda's parameter", part.attributes.get("arg")));
+  }
+  if (F._labelled(record).some(([, path, argument]) => path.endsWith(".annotation") && argument !== null)) {
+    problems.push("a lambda's parameters have no annotations");
+  }
+  return problems;
+}
+
+/** A named expression's target is bound within itself: it binds its name in the scope around it, which a term does not
+ * see beyond itself. */
+function namedexprScopes(record: any): ReadonlySet<string>[] {
+  return [targetNames(F.argumentsOf(record)[0]), new Set()];
+}
+
+function namedexprCheck(record: any): string[] {
+  const target = F.argumentsOf(record)[0];
+  if (target === null || F.kindOf(target)[0] === NAME) return [];
+  return ["a namedexpr's target must be a name"];
+}
+
+/** The literal of a native value: a basic scalar, the only native value `spec` gives it. */
 function native(value: unknown): Writer {
   return constant(value);
 }
 
 const ANY = new FD.Function([FD.Anything], FD.Anything);
+const ANY2 = new FD.Function([FD.Anything, FD.Anything], FD.Anything);
+const ARGUMENT_SLOTS = ["posonlyargs", "args", "vararg", "kwonlyargs", "kwarg"].flatMap((group) =>
+  ["annotation", "default_value"].map((slot) => `args.${group}.${slot}`));
 
-function operatorKind(vocabulary: ReadonlyMap<string, FD.Signature>): F.Kind {
-  return new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required: ["operator"] });
+function application(signature: FD.Signature = new FD.Opaque(), standards: readonly string[] = STANDARDS,
+  options: F.KindOptions = {}): F.Kind {
+  return new F.Kind(F.APPLICATION, { signature, standards, ...options });
+}
+
+function operatorKind(vocabulary: ReadonlyMap<string, FD.Signature>, options: F.KindOptions = {}): F.Kind {
+  return new F.Kind(F.APPLICATION, { operator: "op", vocabulary, required: ["op"], standards: STANDARDS, ...options });
 }
 
 /** The Python3 dialect: its kinds, as the framework reads them. */
 export const DIALECT = new F.Dialect("Python3", {
-  [CONSTANT]: new F.Kind(F.LITERAL),
-  [NAME]: new F.Kind(F.REFERENCE, { required: ["name"], ambient: BUILTINS, check: identifier("name", "a name") }),
+  [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "prefix", "quote", "base", "separators"],
+    check: literalCheck, standards: STANDARDS }),
+  [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "separators"], check: constantCheck,
+    typed: (record) => Domains.constant(F.attributesOf(record)), standards: STANDARDS }),
+  [NAME]: new F.Kind(F.REFERENCE, { required: ["name"], ambient: BUILTINS, check: identifier("name", "a name"),
+    standards: STANDARDS }),
+  [CONCATENATEDSTRING]: application(new FD.Opaque(Domains.Str), STANDARDS,
+    { check: needs(CONCATENATEDSTRING, "values", "two strings", 2) }),
+  [JOINEDSTR]: application(new FD.Opaque(Domains.Str), since(6), { check: stringCheck(JOINEDSTR, "f") }),
+  [TEMPLATESTR]: application(new FD.Opaque(), since(14), { check: stringCheck(TEMPLATESTR, "t") }),
+  [PARENTHESIZED]: application(ANY),
+  [TUPLE]: application(),
+  [LIST]: application(),
+  [SET]: application(new FD.Opaque(), STANDARDS, { check: needs(SET, "elts", "an element") }),
+  [DICT]: application(new FD.Opaque(), STANDARDS, { optional: ["key"] }),
+  [LISTCOMP]: application(new FD.Opaque(), STANDARDS,
+    { scopes: comprehensionScopes, check: needs(LISTCOMP, "generators", "a for clause") }),
+  [SETCOMP]: application(new FD.Opaque(), STANDARDS,
+    { scopes: comprehensionScopes, check: needs(SETCOMP, "generators", "a for clause") }),
+  [DICTCOMP]: application(new FD.Opaque(), STANDARDS,
+    { scopes: comprehensionScopes, optional: ["value"], check: needs(DICTCOMP, "generators", "a for clause") }),
+  [GENERATOREXP]: application(Domains.GENERATOR, STANDARDS,
+    { scopes: comprehensionScopes, check: needs(GENERATOREXP, "generators", "a for clause") }),
+  [YIELD]: application(new FD.Opaque(), STANDARDS, { optional: ["value"] }),
+  [YIELDFROM]: application(ANY, since(3)),
   [ATTRIBUTE]: new F.Kind(F.APPLICATION, { operator: "attr", signature: ANY, required: ["attr"],
-    check: identifier("attr", "an attribute") }),
-  [SUBSCRIPT]: new F.Kind(F.APPLICATION, { operator: "key", signature: ANY, required: ["key"] }),
-  [INDEX]: new F.Kind(F.APPLICATION, { signature: new FD.Function([FD.Anything, FD.Anything], FD.Anything) }),
-  [CALL]: new F.Kind(F.APPLICATION, { signature: new FD.Opaque() }),
-  [COMPARE]: operatorKind(Domains.COMPARE),
-  [BOOLOP]: operatorKind(Domains.BOOLOP),
-  [BINOP]: operatorKind(Domains.BINOP),
+    check: identifier("attr", "an attribute"), standards: STANDARDS }),
+  [SUBSCRIPT]: application(ANY2),
+  [SLICE]: application(new FD.Opaque(), STANDARDS, { optional: ["lower", "upper", "step"] }),
+  [CALL]: application(new FD.Opaque(), STANDARDS, { check: callCheck }),
+  [STARRED]: application(ANY),
+  [AWAIT]: application(ANY, since(5)),
   [UNARYOP]: operatorKind(Domains.UNARYOP),
-  [IFEXP]: new F.Kind(F.APPLICATION, { signature: new FD.Function([FD.Anything, FD.Anything, FD.Anything], FD.Anything) }),
-  [GENERATOR]: new F.Kind(F.QUANTIFIER, { signature: Domains.GENERATOR, required: ["name"],
-    check: identifier("name", "a generator's name") }),
+  [BINOP]: operatorKind(Domains.BINOP),
+  [COMPARE]: new F.Kind(F.APPLICATION, { vocabulary: Domains.COMPARE, operators: compareOperators, result: compareResult,
+    check: compareCheck, unfold: compareUnfold, standards: STANDARDS }),
+  [BOOLOP]: operatorKind(Domains.BOOLOP, { check: needs(BOOLOP, "values", "two values", 2), unfold: boolopUnfold }),
+  [NAMEDEXPR]: application(ANY2, since(8), { scopes: namedexprScopes, check: namedexprCheck }),
+  [IFEXP]: application(new FD.Function([FD.Anything, FD.Anything, FD.Anything], FD.Anything)),
+  [LAMBDA]: application(new FD.Opaque(), STANDARDS, { scopes: lambdaScopes, check: lambdaCheck, optional: ARGUMENT_SLOTS }),
   [LET]: new F.Kind(F.BINDING, { required: ["name"], check: identifier("name", "a let's name") }),
-  [LIST]: new F.Kind(F.APPLICATION, { signature: new FD.Opaque() }),
-  [DICT]: new F.Kind(F.APPLICATION, { signature: new FD.Opaque() }),
   [IMPORT]: new F.Kind(F.IMPORT, { required: ["module"], names: importNames, check: importCheck }),
   [IMPORTFROM]: new F.Kind(F.IMPORT, { required: ["module", "name"], names: importfromNames, check: importfromCheck }),
 }, { domain_of: Domains.of, literal: native });
 
 // --- Writers ---
 
-/** A Python term, written through the builders: a spec, which writes its term where it is given. */
+/** A Python3 term, written through the builders: a spec, which writes its term where it is given. */
 export class Writer extends F.Writer {
   constructor(write: (union: any) => any) {
     super(write, DIALECT.tag);
   }
 }
 
+/** A helper of a Python3 term (a call's keyword, a comparison's link, a comprehension's `for`, a lambda's parameter, an
+ * f-string's text or field), written through the builders: a spec given the visitor of the property or the
+ * container's element that holds it, which writes its `kind`'s branch where a union of helpers holds it. */
+export class Helper {
+  constructor(readonly kind: string, readonly write: (record: any) => any) {}
+
+  /** The spec of the helper: the function mbse-schemas calls with its visitor. */
+  spec(): (visitor: any) => any {
+    const write = (visitor: any): any => {
+      const schema = visitor.as_schema();
+      if (schema instanceof Schemas.OfProperty.Data) return visitor.as_value(write); // a property: its value
+      if (schema instanceof Schemas.OfUnion.Data) return visitor.as_union((u: any) => u[this.kind](this.write));
+      return visitor.as_object(this.write);
+    };
+    return write;
+  }
+}
+
 const spec = (value: unknown): F.Writer => DIALECT.spec(value);
 
-/** The writer of a term of kind `tag`: its attributes and its slots (specs) that are not null, and its variadic
- * arguments (specs). */
-function kind(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown>,
-  variadic: [string, unknown[]] | null = null): Writer {
+type Helpers = Record<string, Helper | Helper[] | null>;
+
+/** The writer of a record: its attributes, its slots (specs) and its variadic arguments (specs) that are not null, and
+ * its helpers (a `Helper`, or a list of them). */
+function fields(attributes: Record<string, unknown>, slots: Record<string, unknown>,
+  variadic: [string, unknown[]] | null, helpers: Helpers): (r: any) => any {
   const specs = Object.entries(slots).filter(([, value]) => value !== null && value !== undefined)
     .map(([slot, value]) => [slot, spec(value)] as const);
   const many = variadic === null ? null : [variadic[0], variadic[1].map(spec)] as const;
-  return new Writer((union: any) => union[tag]((r: any) => {
+  return (r: any) => {
     for (const [name, value] of Object.entries(attributes)) if (value !== null && value !== undefined) r[name](value);
     for (const [slot, value] of specs) r[slot](value);
     if (many !== null) r[many[0]](many[1]);
+    for (const [name, helper] of Object.entries(helpers)) {
+      if (helper === null || (Array.isArray(helper) && helper.length === 0)) continue;
+      r[name](Array.isArray(helper) ? helper.map((h) => h.spec()) : helper.spec());
+    }
     return r;
-  }));
+  };
 }
 
-/** The constant `value`, a basic scalar. */
-export function constant(value: unknown): Writer {
-  return new Writer((u: any) => u[CONSTANT]((r: any) => r.value((p: any) => p.as_scalar(value))));
+/** The writer of a term of kind `tag`. */
+function kind(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown>,
+  variadic: [string, unknown[]] | null = null, helpers: Helpers = {}): Writer {
+  const record = fields(attributes, slots, variadic, helpers);
+  return new Writer((union: any) => union[tag](record));
+}
+
+function helper(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown>,
+  variadic: [string, unknown[]] | null = null, helpers: Helpers = {}): Helper {
+  return new Helper(tag, fields(attributes, slots, variadic, helpers));
+}
+
+/** A target or a callee written as a str: a name. */
+function nameOr(value: unknown): unknown {
+  return typeof value === "string" ? name(value) : value;
+}
+
+/** A constant, `ast.Constant`'s: a basic scalar as a `literal`; `None` (null), `...` (`ELLIPSIS`) and a complex number
+ * (`Complex`) as a `constant`; with its spelling (`text`) where given, else printers write its default one. */
+export function constant(value: unknown, text: string | null = null): Writer {
+  if (value === null || value === ELLIPSIS) {
+    return kind(CONSTANT, { singleton: value === null ? "None" : "...", text }, {});
+  }
+  if (value instanceof Domains.ComplexValue) return kind(CONSTANT, { real: value.real, imag: value.imag, text }, {});
+  return new Writer((u: any) => u[LITERAL]((r: any) => {
+    r.value((p: any) => p.as_scalar(value));
+    return text === null ? r : r.text(text);
+  }));
 }
 
 /** The value bound to `name`. */
@@ -271,23 +695,138 @@ export function name(name: string): Writer {
   return new Writer((u: any) => u[NAME]((r: any) => r.name(name)));
 }
 
+/** Adjacent string literals, `'a' "b"`, which make one string. */
+export function concatenatedstring(...values: unknown[]): Writer {
+  return kind(CONCATENATEDSTRING, {}, {}, ["values", values]);
+}
+
+/** The text of an f-string, a t-string or a format spec between replacement fields, as written. */
+export function stringtext(spelling: string): Helper {
+  return new Helper("stringtext", (r: any) => r.spelling(spelling));
+}
+
+function values(written: readonly unknown[]): Helper[] {
+  return written.map((value) => (typeof value === "string" ? stringtext(value) : value as Helper));
+}
+
+function field(tag: string, value: unknown, conversion: string | null, formatSpec: readonly unknown[] | null,
+  debug: boolean, text: string | null): Helper {
+  const spec = formatSpec === null ? null : helper("formatspec", {}, {}, null, { values: values(formatSpec) });
+  return helper(tag, { text, debug: debug || null, conversion }, { value }, null, { format_spec: spec });
+}
+
+/** `{value=!conversion:format_spec}` in an f-string: a format spec's values are str (its text) or fields. */
+export function formattedvalue(value: unknown, conversion: string | null = null, formatSpec: readonly unknown[] | null = null,
+  debug = false, text: string | null = null): Helper {
+  return field("formattedvalue", value, conversion, formatSpec, debug, text);
+}
+
+/** `{value=!conversion:format_spec}` in a t-string. */
+export function interpolation(value: unknown, conversion: string | null = null, formatSpec: readonly unknown[] | null = null,
+  debug = false, text: string | null = null): Helper {
+  return field("interpolation", value, conversion, formatSpec, debug, text);
+}
+
+/** An f-string: its text (a str) and its fields (`formattedvalue`), in order. */
+export function joinedstr(written: readonly unknown[], prefix = "f", quote = "'"): Writer {
+  return kind(JOINEDSTR, { prefix, quote }, {}, null, { values: values(written) });
+}
+
+/** A t-string (Python 3.14): its text (a str) and its fields (`interpolation`), in order. */
+export function templatestr(written: readonly unknown[], prefix = "t", quote = "'"): Writer {
+  return kind(TEMPLATESTR, { prefix, quote }, {}, null, { values: values(written) });
+}
+
+/** `(value)`, parentheses written in the source. */
+export function parenthesized(value: unknown): Writer {
+  return kind(PARENTHESIZED, {}, { value });
+}
+
+/** `(elts, ...)`, a tuple display; `()` when empty. */
+export function tuple_(...elts: unknown[]): Writer {
+  return kind(TUPLE, {}, {}, ["elts", elts]);
+}
+
+/** `[elements, ...]`, a list display: the framework's container constructor. */
+export function list_(...elements: unknown[]): Writer {
+  return kind(LIST, {}, {}, ["elements", elements]);
+}
+
+/** `{elts, ...}`, a set display. */
+export function set_(...elts: unknown[]): Writer {
+  return kind(SET, {}, {}, ["elts", elts]);
+}
+
+/** `{key: value, ...}`, a dict display: `dict_(["a", 1n], ["b", x])`; a key of null is `**value`. */
+export function dict_(...items: (readonly [unknown, unknown])[]): Writer {
+  const pairs = items.map(([key, value]) => [key === null ? null : spec(key), spec(value)] as const);
+  return new Writer((u: any) => u[DICT]((r: any) => r.items(pairs.map(([key, value]) =>
+    (a: any) => a.as_object((o: any) => (key === null ? o : o.key(key)).value(value))))));
+}
+
+/** `for target in iter if condition ...`, or `async for` with `isAsync`, a clause of a comprehension; a target written
+ * as a str is a name. */
+export function comprehension(target: unknown, iter: unknown, ifs: readonly unknown[] = [], isAsync = false): Helper {
+  return helper("comprehension", { is_async: isAsync || null }, { target: nameOr(target), iter }, ["ifs", [...ifs]]);
+}
+
+/** `[elt for ...]`. */
+export function listcomp(elt: unknown, ...generators: Helper[]): Writer {
+  return kind(LISTCOMP, {}, { elt }, null, { generators });
+}
+
+/** `{elt for ...}`. */
+export function setcomp(elt: unknown, ...generators: Helper[]): Writer {
+  return kind(SETCOMP, {}, { elt }, null, { generators });
+}
+
+/** `{key: value for ...}`; a value of null is `{**key for ...}` (Python 3.15). */
+export function dictcomp(key: unknown, value: unknown, ...generators: Helper[]): Writer {
+  return kind(DICTCOMP, {}, { key, value }, null, { generators });
+}
+
+/** `(elt for ...)`. */
+export function generatorexp(elt: unknown, ...generators: Helper[]): Writer {
+  return kind(GENERATOREXP, {}, { elt }, null, { generators });
+}
+
+/** `yield value`, or `yield`. */
+export function yield_(value: unknown = null): Writer {
+  return kind(YIELD, {}, { value });
+}
+
+/** `yield from value`. */
+export function yieldfrom(value: unknown): Writer {
+  return kind(YIELDFROM, {}, { value });
+}
+
+/** `await value`. */
+export function await_(value: unknown): Writer {
+  return kind(AWAIT, {}, { value });
+}
+
 /** `value.attr`; each argument of these writers is a spec (a native value is a constant). */
 export function attribute(value: unknown, attr: string): Writer {
   return kind(ATTRIBUTE, { attr }, { value });
 }
 
-/** `value[key]`. */
-export function subscript(value: unknown, key: string): Writer {
-  return kind(SUBSCRIPT, { key }, { value });
+/** `value[slice]`: its index any term, a `slice_` or a `tuple_` of them for several dimensions. */
+export function subscript(value: unknown, slice: unknown): Writer {
+  return kind(SUBSCRIPT, {}, { value, slice });
 }
 
-/** `value[index]`. */
-export function index(value: unknown, index: unknown): Writer {
-  return kind(INDEX, {}, { value, index });
+/** `lower:upper:step`, an index of a subscript, each part optional. */
+export function slice_(lower: unknown = null, upper: unknown = null, step: unknown = null): Writer {
+  return kind(SLICE, {}, { lower, upper, step });
 }
 
-/** `fn(...args)`. A dotted name as the function is a chain of attributes: `call('np.add', 1n, 2n)` is
- * `np.add(1, 2)`. */
+/** `arg=value` in a call, or `**value` where `arg` is null. */
+export function keyword(arg: string | null, value: unknown): Helper {
+  return helper("keyword", { arg }, { value });
+}
+
+/** `fn(...args)`: its positional arguments, then its `keyword`s, in the order given. A dotted name as the function is a
+ * chain of attributes: `call('np.add', 1n, 2n)` is `np.add(1, 2)`. */
 export function call(fn: unknown, ...args: unknown[]): Writer {
   if (typeof fn === "string") {
     const [first, ...rest] = fn.split(".");
@@ -295,50 +834,76 @@ export function call(fn: unknown, ...args: unknown[]): Writer {
     for (const attr of rest) callee = attribute(callee, attr);
     fn = callee;
   }
-  return kind(CALL, {}, { function: fn }, ["arguments", args]);
+  return kind(CALL, {}, { func: fn }, ["args", args.filter((a) => !(a instanceof Helper))],
+    { keywords: args.filter((a): a is Helper => a instanceof Helper) });
 }
 
-export function compare(operator: string, left: unknown, right: unknown): Writer {
-  return kind(COMPARE, { operator }, { left, right });
+/** `*value`, unpacked in a display, a call or a subscript. */
+export function starred(value: unknown): Writer {
+  return kind(STARRED, {}, { value });
 }
 
-export function boolop(operator: string, left: unknown, right: unknown): Writer {
-  return kind(BOOLOP, { operator }, { left, right });
+/** `op operand`: `not`, `-`, `+`, `~`. */
+export function unaryop(op: string, operand: unknown): Writer {
+  return kind(UNARYOP, { op }, { operand });
 }
 
-export function binop(operator: string, left: unknown, right: unknown): Writer {
-  return kind(BINOP, { operator }, { left, right });
+/** `left op right`. */
+export function binop(op: string, left: unknown, right: unknown): Writer {
+  return kind(BINOP, { op }, { left, right });
 }
 
-export function unaryop(operator: string, operand: unknown): Writer {
-  return kind(UNARYOP, { operator }, { operand });
+/** `op comparator`, a link of a comparison chain. */
+export function comparison(op: string, comparator: unknown): Helper {
+  return helper("comparison", { op }, { comparator });
+}
+
+/** `left op right`, then each `[op, comparator]` of `more` in turn: `compare('<', a, b, ['<=', c])` is `a < b <= c`. */
+export function compare(op: string, left: unknown, right: unknown, ...more: (readonly [string, unknown])[]): Writer {
+  const links = [comparison(op, right), ...more.map(([o, c]) => comparison(o, c))];
+  return kind(COMPARE, {}, { left }, null, { comparisons: links });
+}
+
+/** `value op value ...`: `and` or `or` of n values. */
+export function boolop(op: string, ...values: unknown[]): Writer {
+  return kind(BOOLOP, { op }, {}, ["values", values]);
+}
+
+/** `target := value`; a target written as a str is a name. */
+export function namedexpr(target: unknown, value: unknown): Writer {
+  return kind(NAMEDEXPR, {}, { target: nameOr(target), value });
 }
 
 /** `body if test else orelse`. */
 export function ifexp(test: unknown, body: unknown, orelse: unknown): Writer {
-  return kind(IFEXP, {}, { test, body, orelse });
+  return kind(IFEXP, {}, { body, test, orelse });
 }
 
-/** `(element for name in iterable if condition ...)`. */
-export function generator(name: string, iterable: unknown, element: unknown, ...conditions: unknown[]): Writer {
-  return kind(GENERATOR, { name }, { iterable, element }, ["conditions", conditions]);
+/** A parameter, `arg=default_value` (a lambda's have no annotation). */
+export function arg(arg: string, defaultValue: unknown = null, annotation: unknown = null): Helper {
+  return helper("arg", { arg }, { annotation, default_value: defaultValue });
+}
+
+function asArg(value: unknown): Helper {
+  return typeof value === "string" ? arg(value) : value as Helper;
+}
+
+/** `lambda posonlyargs, /, args, *vararg, kwonlyargs, **kwarg: body`; a parameter is a str or an `arg`. */
+export function lambda_(body: unknown, args: readonly unknown[] = [], options: { posonlyargs?: readonly unknown[];
+  vararg?: unknown; kwonlyargs?: readonly unknown[]; kwarg?: unknown } = {}): Writer {
+  const parameters: Helpers = {
+    posonlyargs: (options.posonlyargs ?? []).map(asArg), args: args.map(asArg),
+    vararg: options.vararg === undefined || options.vararg === null ? null : asArg(options.vararg),
+    kwonlyargs: (options.kwonlyargs ?? []).map(asArg),
+    kwarg: options.kwarg === undefined || options.kwarg === null ? null : asArg(options.kwarg),
+  };
+  const any = Object.values(parameters).some((p) => p !== null && (!Array.isArray(p) || p.length > 0));
+  return kind(LAMBDA, {}, { body }, null, { args: any ? helper("arguments", {}, {}, null, parameters) : null });
 }
 
 /** `(lambda name: body)(value)`. */
 export function let_(name: string, value: unknown, body: unknown): Writer {
   return kind(LET, { name }, { value, body });
-}
-
-/** `[elements, ...]`, a list display. */
-export function list_(...elements: unknown[]): Writer {
-  return kind(LIST, {}, {}, ["elements", elements]);
-}
-
-/** `{key: value, ...}`, a dict display: `dict_(["a", 1n], ["b", x])`. */
-export function dict_(...entries: (readonly [unknown, unknown])[]): Writer {
-  const pairs = entries.map(([key, value]) => [spec(key), spec(value)] as const);
-  return new Writer((u: any) => u[DICT]((r: any) => r.entries(pairs.map(([key, value]) =>
-    (a: any) => a.as_object((o: any) => o.key(key).value(value))))));
 }
 
 /** `import module [as alias]`, then `body`. */

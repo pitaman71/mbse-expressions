@@ -8,7 +8,7 @@ from mbse.Expressions.Dialects.Latex.Expressions import DIALECT as LATEX
 from mbse.Expressions.Dialects.Python3.Expressions import DIALECT as PYTHON3
 from mbse.Expressions.Framework.Translators import Elide, Pairwise, Pattern as P, Rule, holes, renames
 
-from ._Patterns import Latex, Python3, value
+from ._Patterns import compares, Latex, Python3, value
 
 V = value(int, float, str, bool)
 A, B = holes("A", "B")
@@ -22,10 +22,10 @@ TRANSLATOR = Pairwise(PYTHON3, LATEX, [
     Rule(Python3.get, Latex.get),
     Rule(Python3.has, Latex.has),
     Rule(Python3.implies, Latex.implies),
-    Rule(P("binop", A, B, operator="/"), Latex.frac),
-    *renames("compare", "operator", "binary", "operator", {
-        "==": "=", "!=": "\\neq", "<": "<", "<=": "\\leq", ">": ">", ">=": "\\geq"}, 2),
-    *renames("boolop", "operator", "binary", "operator", {"and": "\\land", "or": "\\lor"}, 2),
-    *renames("binop", "operator", "binary", "operator", {"+": "+", "-": "-", "*": "\\cdot"}, 2),
-    *renames("unaryop", "operator", "unary", "operator", {"not": "\\lnot", "-": "-"}, 1),
+    Rule(P("binop", A, B, op="/"), Latex.frac),
+    *compares("binary", "operator", {
+        "==": "=", "!=": "\\neq", "<": "<", "<=": "\\leq", ">": ">", ">=": "\\geq"}),
+    *renames("boolop", "op", "binary", "operator", {"and": "\\land", "or": "\\lor"}, 2),
+    *renames("binop", "op", "binary", "operator", {"+": "+", "-": "-", "*": "\\cdot"}, 2),
+    *renames("unaryop", "op", "unary", "operator", {"not": "\\lnot", "-": "-"}, 1),
 ])

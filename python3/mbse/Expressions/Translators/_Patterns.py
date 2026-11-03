@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from mbse.Expressions.Framework.Terms import Part
 from mbse.Expressions.Framework.Translators import Hole, Pattern as P, Rule, holes
 
 A, B, C, X = holes("A", "B", "C", "X")
@@ -35,22 +36,43 @@ def _call(function: str, *arguments: P | Hole) -> P:
     return P("call", P("variable", name=function), *arguments)
 
 
+def comparison(op: str) -> tuple[Part, ...]:
+    """A Python3 comparison chain of one link, `op`, as a form's attributes hold it."""
+    return (Part("comparison", {"op": op}, 1),)
+
+
+def _for(conditions: int) -> tuple[Part, ...]:
+    """A Python3 comprehension's one `for` clause over a name, with `conditions`, as a form's attributes hold it."""
+    return (Part("comprehension", {}, 2 + conditions),)
+
+
+def compares(kind: str, attribute: str, names: dict[str, str], python: str = "left") -> list[Rule]:
+    """Rules for comparisons that are another dialect's operators of `kind`: each Python3 comparison of one link, a
+    key of `names`, is the operator its value names (or the other way round, where Python3 is on the `right`)."""
+    rules = []
+    for op, other in names.items():
+        mine, theirs = P("compare", A, B, comparisons=comparison(op)), P(kind, A, B, **{attribute: other})
+        rules.append(Rule(mine, theirs) if python == "left" else Rule(theirs, mine))
+    return rules
+
+
 class Python3:
     constant = staticmethod(lambda V: P("literal", value=V))
     name = P("variable", name=N)
     let = P("let", A, B, name=N)
     get = P("attribute", X, attr=K)
     has = P("call", P("variable", name="hasattr"), X, P("literal", value=K))
-    implies = P("ifexp", A, B, P("literal", value=True))
-    ifexp = P("ifexp", A, B, C)
-    shr = P("binop", A, B, operator=">>")
-    all_ = _call("all", P("generator", A, B, name=N))
-    any_ = _call("any", P("generator", A, B, name=N))
-    count_where = _call("sum", P("generator", A, P("literal", value=1), B, name=N))  # sum(1 for n in a if b)
+    implies = P("ifexp", B, A, P("literal", value=True))  # b if a else True
+    ifexp = P("ifexp", B, A, C)  # b if a else c
+    shr = P("binop", A, B, op=">>")
+    all_ = _call("all", P("generatorexp", B, P("variable", name=N), A, generators=_for(0)))  # all(b for n in a)
+    any_ = _call("any", P("generatorexp", B, P("variable", name=N), A, generators=_for(0)))
+    count_where = _call("sum", P("generatorexp", P("literal", value=1), P("variable", name=N), A, B,
+                                 generators=_for(1)))  # sum(1 for n in a if b)
     builtin = staticmethod(lambda function: _call(function, A))  # len, sum, min, max
-    index = P("index", A, B)
-    in_ = P("compare", A, B, operator="in")
-    unique = P("compare", _call("len", _call("set", A)), _call("len", A), operator="==")
+    index = P("subscript", A, B)
+    in_ = P("compare", A, B, comparisons=comparison("in"))
+    unique = P("compare", _call("len", _call("set", A)), _call("len", A), comparisons=comparison("=="))
 
 
 def _numpy(function: str) -> P:
@@ -65,8 +87,8 @@ class Numpy:
     """Python in NumPy style: columns by subscript, missing values masked, operations as numpy functions."""
 
     call = staticmethod(lambda function, *arguments: P("call", _numpy(function), *arguments))
-    get = P("subscript", X, key=K)
-    has = P("call", _numpy("logical_not"), P("call", _numpy("ma.getmaskarray"), P("subscript", X, key=K)))
+    get = P("subscript", X, P("literal", value=K))
+    has = P("call", _numpy("logical_not"), P("call", _numpy("ma.getmaskarray"), P("subscript", X, P("literal", value=K))))
     implies = P("call", _numpy("where"), A, B, P("literal", value=True))
     prelude = P("import", Hole("B"), module="numpy", alias="np")
 

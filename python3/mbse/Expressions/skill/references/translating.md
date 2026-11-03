@@ -30,7 +30,9 @@ back = Translators.between(X.DIALECT, E.DIALECT).forward(formula)
 | `implies(a, b)` | Matlab | written `~a \|\| b`, which reads back as `or(not(a), b)` |
 | an import (Python, Matlab) | a dialect that cannot declare it | dropped; what it brought in must translate by other rules |
 | bytes | Matlab, Excel, Latex | no counterpart |
-| a literal's spelling (`text`) | any dialect | dropped: a literal translates by its value, and one with no value has no counterpart |
+| a literal's spelling (`text`, and a Python literal's prefix, quotes, base and separators) | any dialect | dropped: a literal translates by its value, and one with no value has no counterpart |
+| a Python comparison chain (`a < b <= c`), `and` or `or` of more than two values | any dialect | the `and` of its links, its middle operands written in each, and two values nested (`(a and b) and c`): read as its kind unfolds it |
+| a Python kind no other dialect has (a lambda, a comprehension, `None`, a keyword argument) | any dialect | no counterpart |
 | invalid syntax (`error`, `missing`) | any dialect | no counterpart |
 | a Latex `\frac` | any dialect but Python, where it is `/` | no counterpart |
 | an Excel cell, a Python conditional other than `b if a else True`, an extension | a dialect without it | no counterpart |

@@ -1,13 +1,10 @@
 {
   "python3": {
     "binop": {
-      "operator": "-",
       "left": {
         "binop": {
-          "operator": "+",
           "left": {
             "binop": {
-              "operator": "+",
               "left": {
                 "literal": {
                   "value": {
@@ -16,6 +13,7 @@
                   "text": "0x10"
                 }
               },
+              "op": "+",
               "right": {
                 "error": {
                   "text": "(x +* 1)",
@@ -41,6 +39,7 @@
               }
             }
           },
+          "op": "+",
           "right": {
             "literal": {
               "text": "08",
@@ -51,6 +50,7 @@
           }
         }
       },
+      "op": "-",
       "right": {
         "missing": {
           "kind": "expression"

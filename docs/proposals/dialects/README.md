@@ -316,6 +316,20 @@ change as it lands.
    to 49).
 3. **`Python3` complete**: `ast`'s 29 kinds and helpers, the narrower kinds replaced, printing every construct of 3.0
    to 3.15; checked against `ast`'s node list.
+
+   *As built* (branch `stage3-python3`; every choice made where the decisions were silent is in
+   [the API, Settled in stage 3 (Python3)](../port/API.md#settled-in-stage-3-python3-for-the-users-review), items 50
+   to 69). `Expressions.Python3.Term` holds every expression kind of `ast`, 3.0 to 3.15, in mbse-programs' names and
+   shapes, tags lowercased (`generatorexp`); the narrower kinds are replaced (one `subscript`, with `slice` and `tuple`
+   for a tensor's indices; a comparison chain of `comparison`s; `boolop` of n values; comprehensions of several
+   `comprehension`s; a call's `keywords` and `starred` arguments), and `let`, `import` and `importfrom` are kept as
+   extensions. A literal refines the framework's, adding what its text encodes (prefix, quotes, base, separators);
+   Python3's `constant` holds `None`, `...` and complex numbers. A lambda's body is a term (item 54, for review). The
+   framework reads a kind's helpers (keywords, comparisons, comprehensions, a lambda's arguments, an f-string's parts)
+   as `Terms.Part`s, and a `Kind` declares its optional slots, scopes, chained operators, unfolding and spelling.
+   `ToText` prints every kind in both languages, and `FromText` reads every `ast` kind with each literal's spelling;
+   `grammars/python3-ast.json` keeps `ast`'s node list, which DIA-20 checks in both. Evaluation stays shallow, refusing
+   new kinds by name; the translators keep what they translated, reading a chain and n values as nested `and`s.
 4. **`TypeScript5`**, new: expressions, types, patterns and JSX (question 5), printed.
 5. **C and C++ by standard.**
 6. **`SystemVerilog` complete**, Verilog its subset.

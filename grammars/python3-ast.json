@@ -1,0 +1,592 @@
+{
+ "grammar": "CPython's ast, Python 3.0 to 3.15: every node an expression is (class `expr`, and `slice` before 3.9) or holds (its helpers, operators and contexts)",
+ "checked": "Python 3.14.7 and 3.15.0rc2 have the same `expr` classes",
+ "nodes": [
+  {
+   "node": "BoolOp",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "boolop"
+   ]
+  },
+  {
+   "node": "NamedExpr",
+   "class": "expr",
+   "since": "3.8",
+   "kinds": [
+    "namedexpr"
+   ]
+  },
+  {
+   "node": "BinOp",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "binop"
+   ]
+  },
+  {
+   "node": "UnaryOp",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "unaryop"
+   ]
+  },
+  {
+   "node": "Lambda",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "lambda"
+   ]
+  },
+  {
+   "node": "IfExp",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "ifexp"
+   ]
+  },
+  {
+   "node": "Dict",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "dict"
+   ]
+  },
+  {
+   "node": "Set",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "set"
+   ]
+  },
+  {
+   "node": "ListComp",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "listcomp"
+   ]
+  },
+  {
+   "node": "SetComp",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "setcomp"
+   ]
+  },
+  {
+   "node": "DictComp",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "dictcomp"
+   ]
+  },
+  {
+   "node": "GeneratorExp",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "generatorexp"
+   ]
+  },
+  {
+   "node": "Await",
+   "class": "expr",
+   "since": "3.5",
+   "kinds": [
+    "await"
+   ]
+  },
+  {
+   "node": "Yield",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "yield"
+   ]
+  },
+  {
+   "node": "YieldFrom",
+   "class": "expr",
+   "since": "3.3",
+   "kinds": [
+    "yieldfrom"
+   ]
+  },
+  {
+   "node": "Compare",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "compare"
+   ]
+  },
+  {
+   "node": "Call",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "call"
+   ]
+  },
+  {
+   "node": "FormattedValue",
+   "class": "expr",
+   "since": "3.6",
+   "helper": "FormattedValue"
+  },
+  {
+   "node": "Interpolation",
+   "class": "expr",
+   "since": "3.14",
+   "helper": "Interpolation"
+  },
+  {
+   "node": "JoinedStr",
+   "class": "expr",
+   "since": "3.6",
+   "kinds": [
+    "joinedstr",
+    "concatenatedstring"
+   ]
+  },
+  {
+   "node": "TemplateStr",
+   "class": "expr",
+   "since": "3.14",
+   "kinds": [
+    "templatestr",
+    "concatenatedstring"
+   ]
+  },
+  {
+   "node": "Constant",
+   "class": "expr",
+   "since": "3.6",
+   "kinds": [
+    "literal",
+    "constant",
+    "concatenatedstring"
+   ]
+  },
+  {
+   "node": "Attribute",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "attribute"
+   ]
+  },
+  {
+   "node": "Subscript",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "subscript"
+   ]
+  },
+  {
+   "node": "Starred",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "starred"
+   ]
+  },
+  {
+   "node": "Name",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "variable"
+   ]
+  },
+  {
+   "node": "List",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "list"
+   ]
+  },
+  {
+   "node": "Tuple",
+   "class": "expr",
+   "since": "3.0",
+   "kinds": [
+    "tuple"
+   ]
+  },
+  {
+   "node": "Slice",
+   "class": "expr",
+   "since": "3.9",
+   "kinds": [
+    "slice"
+   ]
+  },
+  {
+   "node": "Num",
+   "class": "expr",
+   "since": "3.0",
+   "until": "3.13",
+   "kinds": [
+    "literal",
+    "constant"
+   ],
+   "note": "a deprecated alias of Constant from 3.8, removed in 3.14"
+  },
+  {
+   "node": "Str",
+   "class": "expr",
+   "since": "3.0",
+   "until": "3.13",
+   "kinds": [
+    "literal",
+    "concatenatedstring"
+   ],
+   "note": "a deprecated alias of Constant from 3.8, removed in 3.14"
+  },
+  {
+   "node": "Bytes",
+   "class": "expr",
+   "since": "3.0",
+   "until": "3.13",
+   "kinds": [
+    "literal",
+    "concatenatedstring"
+   ],
+   "note": "a deprecated alias of Constant from 3.8, removed in 3.14"
+  },
+  {
+   "node": "NameConstant",
+   "class": "expr",
+   "since": "3.4",
+   "until": "3.13",
+   "kinds": [
+    "literal",
+    "constant"
+   ],
+   "note": "a deprecated alias of Constant from 3.8, removed in 3.14"
+  },
+  {
+   "node": "Ellipsis",
+   "class": "expr",
+   "since": "3.0",
+   "until": "3.13",
+   "kinds": [
+    "constant"
+   ],
+   "note": "a deprecated alias of Constant from 3.8, removed in 3.14"
+  },
+  {
+   "node": "Slice",
+   "class": "slice",
+   "since": "3.0",
+   "until": "3.8",
+   "kinds": [
+    "slice"
+   ]
+  },
+  {
+   "node": "ExtSlice",
+   "class": "slice",
+   "since": "3.0",
+   "until": "3.8",
+   "kinds": [
+    "tuple"
+   ]
+  },
+  {
+   "node": "Index",
+   "class": "slice",
+   "since": "3.0",
+   "until": "3.8",
+   "not": "a wrapper around a subscript's index, which is the subscript's `slice` itself since 3.9"
+  },
+  {
+   "node": "comprehension",
+   "class": "helper",
+   "since": "3.0",
+   "helper": "Comprehension"
+  },
+  {
+   "node": "arguments",
+   "class": "helper",
+   "since": "3.0",
+   "helper": "Arguments"
+  },
+  {
+   "node": "arg",
+   "class": "helper",
+   "since": "3.0",
+   "helper": "Arg"
+  },
+  {
+   "node": "keyword",
+   "class": "helper",
+   "since": "3.0",
+   "helper": "Keyword"
+  },
+  {
+   "node": "alias",
+   "class": "helper",
+   "since": "3.0",
+   "not": "a name an import statement declares; the import and importfrom extensions hold theirs as str attributes"
+  },
+  {
+   "node": "And",
+   "class": "boolop",
+   "since": "3.0",
+   "op": "and",
+   "kind": "boolop"
+  },
+  {
+   "node": "Or",
+   "class": "boolop",
+   "since": "3.0",
+   "op": "or",
+   "kind": "boolop"
+  },
+  {
+   "node": "Add",
+   "class": "operator",
+   "since": "3.0",
+   "op": "+",
+   "kind": "binop"
+  },
+  {
+   "node": "Sub",
+   "class": "operator",
+   "since": "3.0",
+   "op": "-",
+   "kind": "binop"
+  },
+  {
+   "node": "Mult",
+   "class": "operator",
+   "since": "3.0",
+   "op": "*",
+   "kind": "binop"
+  },
+  {
+   "node": "MatMult",
+   "class": "operator",
+   "since": "3.5",
+   "op": "@",
+   "kind": "binop"
+  },
+  {
+   "node": "Div",
+   "class": "operator",
+   "since": "3.0",
+   "op": "/",
+   "kind": "binop"
+  },
+  {
+   "node": "Mod",
+   "class": "operator",
+   "since": "3.0",
+   "op": "%",
+   "kind": "binop"
+  },
+  {
+   "node": "Pow",
+   "class": "operator",
+   "since": "3.0",
+   "op": "**",
+   "kind": "binop"
+  },
+  {
+   "node": "LShift",
+   "class": "operator",
+   "since": "3.0",
+   "op": "<<",
+   "kind": "binop"
+  },
+  {
+   "node": "RShift",
+   "class": "operator",
+   "since": "3.0",
+   "op": ">>",
+   "kind": "binop"
+  },
+  {
+   "node": "BitOr",
+   "class": "operator",
+   "since": "3.0",
+   "op": "|",
+   "kind": "binop"
+  },
+  {
+   "node": "BitXor",
+   "class": "operator",
+   "since": "3.0",
+   "op": "^",
+   "kind": "binop"
+  },
+  {
+   "node": "BitAnd",
+   "class": "operator",
+   "since": "3.0",
+   "op": "&",
+   "kind": "binop"
+  },
+  {
+   "node": "FloorDiv",
+   "class": "operator",
+   "since": "3.0",
+   "op": "//",
+   "kind": "binop"
+  },
+  {
+   "node": "Invert",
+   "class": "unaryop",
+   "since": "3.0",
+   "op": "~",
+   "kind": "unaryop"
+  },
+  {
+   "node": "Not",
+   "class": "unaryop",
+   "since": "3.0",
+   "op": "not",
+   "kind": "unaryop"
+  },
+  {
+   "node": "UAdd",
+   "class": "unaryop",
+   "since": "3.0",
+   "op": "+",
+   "kind": "unaryop"
+  },
+  {
+   "node": "USub",
+   "class": "unaryop",
+   "since": "3.0",
+   "op": "-",
+   "kind": "unaryop"
+  },
+  {
+   "node": "Eq",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": "==",
+   "kind": "compare"
+  },
+  {
+   "node": "NotEq",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": "!=",
+   "kind": "compare"
+  },
+  {
+   "node": "Lt",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": "<",
+   "kind": "compare"
+  },
+  {
+   "node": "LtE",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": "<=",
+   "kind": "compare"
+  },
+  {
+   "node": "Gt",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": ">",
+   "kind": "compare"
+  },
+  {
+   "node": "GtE",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": ">=",
+   "kind": "compare"
+  },
+  {
+   "node": "Is",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": "is",
+   "kind": "compare"
+  },
+  {
+   "node": "IsNot",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": "is not",
+   "kind": "compare"
+  },
+  {
+   "node": "In",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": "in",
+   "kind": "compare"
+  },
+  {
+   "node": "NotIn",
+   "class": "cmpop",
+   "since": "3.0",
+   "op": "not in",
+   "kind": "compare"
+  },
+  {
+   "node": "Load",
+   "class": "expr_context",
+   "since": "3.0",
+   "not": "the expression context, which follows from where an expression is, and is not represented, as in mbse-programs"
+  },
+  {
+   "node": "Store",
+   "class": "expr_context",
+   "since": "3.0",
+   "not": "the expression context, which follows from where an expression is, and is not represented, as in mbse-programs"
+  },
+  {
+   "node": "Del",
+   "class": "expr_context",
+   "since": "3.0",
+   "not": "the expression context, which follows from where an expression is, and is not represented, as in mbse-programs"
+  },
+  {
+   "node": "AugLoad",
+   "class": "expr_context",
+   "since": "3.0",
+   "not": "the expression context, which follows from where an expression is, and is not represented, as in mbse-programs; unused since 3.9, kept as a stub"
+  },
+  {
+   "node": "AugStore",
+   "class": "expr_context",
+   "since": "3.0",
+   "not": "the expression context, which follows from where an expression is, and is not represented, as in mbse-programs; unused since 3.9, kept as a stub"
+  },
+  {
+   "node": "Param",
+   "class": "expr_context",
+   "since": "3.0",
+   "not": "the expression context, which follows from where an expression is, and is not represented, as in mbse-programs; unused since 3.9, kept as a stub"
+  }
+ ],
+ "concrete": [
+  {
+   "kind": "parenthesized",
+   "reason": "parentheses written in the source, which `ast` does not keep"
+  }
+ ]
+}
