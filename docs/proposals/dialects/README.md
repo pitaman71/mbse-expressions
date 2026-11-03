@@ -100,6 +100,14 @@ As the user decided (2026-11-02), on the questions below:
   today; `Expressions.<Dialect>.Expression` is the dialect's union, not a holder. Tried against mbse-schemas 0.26.5: a
   union whose branches are unions validates, builds and round-trips through a snapshot. This supersedes question 1's
   prefixed tags and question 4's per-dialect holder (its options (a) to (c)).
+  Revised (2026-11-03), reviewing stage 2, where the kinds C and C++ share held `Expressions.Framework.Term`: the user,
+  "Framework.Term -> Dialects.C.Term / Framework.Term -> Dialects.Cpp.Term"; asked, "a dialect's union" - when was it
+  decided a dialect has only one union?" (it was not: question 5 gives each sublanguage a union of its own), and to
+  the structure then proposed, "yes": a dialect has several unions, `Expressions.<Dialect>.Expression` (its expression
+  kinds) beside one per sublanguage (its types, patterns, ...), and `Expressions.<Dialect>.Term` is the union of them
+  all; a slot that holds any term of its dialect names its `Term`, one that holds only an expression its
+  `Expression`; `Expressions.Framework.Term` is the union of the dialects' `Term`s. The kinds C and C++ share are
+  defined by each, their slots naming `Expressions.C.Term` and `Expressions.Cpp.Term`.
 - **2. Whose kinds**: "yes to both": mbse-programs' kinds, names and shapes, ours narrower replaced; what has no
   counterpart in the grammar kept, marked as an extension; concrete syntax kept, so source prints back as written.
 - **3. C and C++ by standard**: "it sounds like having 6 different dialects is overkill. what would you recommend?"
