@@ -103,11 +103,21 @@ As the user decided (2026-11-02), on the questions below:
   Revised (2026-11-03), reviewing stage 2, where the kinds C and C++ share held `Expressions.Framework.Term`: the user,
   "Framework.Term -> Dialects.C.Term / Framework.Term -> Dialects.Cpp.Term"; asked, "a dialect's union" - when was it
   decided a dialect has only one union?" (it was not: question 5 gives each sublanguage a union of its own), and to
-  the structure then proposed, "yes": a dialect has several unions, `Expressions.<Dialect>.Expression` (its expression
-  kinds) beside one per sublanguage (its types, patterns, ...), and `Expressions.<Dialect>.Term` is the union of them
-  all; a slot that holds any term of its dialect names its `Term`, one that holds only an expression its
-  `Expression`; `Expressions.Framework.Term` is the union of the dialects' `Term`s. The kinds C and C++ share are
-  defined by each, their slots naming `Expressions.C.Term` and `Expressions.Cpp.Term`.
+  the structure then proposed, "yes"; then, correcting it: "the parent-child relationships in the AST are sometimes
+  modeled as relations sometimes as properties. It matters in this case because Term is a value and Expression is a
+  reference object. The root of an expression tree is always an `Expression` which holds the root `Term` as a
+  property." To the model restated, "yes it does":
+  - `Expressions.<Dialect>.Term` is a value, the union of the dialect's term kinds; within a term tree every
+    parent-child link is a property (`left`, `right`, `arguments`), each holding a `Term` of its dialect. The kinds C
+    and C++ share are defined by each, their properties holding `Expressions.C.Term` and `Expressions.Cpp.Term`.
+  - `Expressions.<Dialect>.Expression` is a reference object, the root of an expression tree, holding the root `Term`
+    as its property `root`: each dialect its own holder, as "`Dialects.<lang_ver>.Expression`" first said.
+  - `Expressions.Framework.Term` is the union of the dialects' `Term`s, held by the shared kinds' properties.
+  - Between reference objects, parent-child links are relations: a statement links to an `Expression`, which holds
+    its `Term`.
+  The record before this correction, that `Expressions.<Dialect>.Expression` is the dialect's union of its kinds, was
+  the agent's misreading of "a union of `Expressions.Dialects.<lang_ver>.Expression` which is itself a union", and is
+  superseded.
 - **2. Whose kinds**: "yes to both": mbse-programs' kinds, names and shapes, ours narrower replaced; what has no
   counterpart in the grammar kept, marked as an extension; concrete syntax kept, so source prints back as written.
 - **3. C and C++ by standard**: "it sounds like having 6 different dialects is overkill. what would you recommend?"
