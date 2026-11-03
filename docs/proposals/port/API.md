@@ -41,8 +41,8 @@ store.transaction(Patterns.define)          # optional, data: Patterns' dialect 
 dialect (`dialect`) and each domain by its name. Validation and evaluation do not need it: they read Patterns'
 vocabulary, `Domains.SIGNATURES`, whose names are the operations the install writes. Every other dialect's install adds
 its singleton schema too (`Expressions.Python3.Dialect`, singleton `Expressions.Python3`), with no operations or domains
-yet (below, Settled in stage 3). Cpp's install lists C's kinds, so it runs after C's. mbse-schemas reports a union of
-one branch as invalid, so a store whose expressions are validated as data holds two dialects at least. Each install and `define` write their schemas and data in the builders' fluent syntax
+yet (below, Settled in stage 3). A store may hold one dialect only: `Term` is then a union of one branch, which
+mbse-schemas allows since 0.26.6 (item 41). Each install and `define` write their schemas and data in the builders' fluent syntax
 (P-019), not from tables of their own.
 
 `Framework.install` (in `Framework/Terms.py`, `Framework/Terms.ts`) and `Patterns.install` (in
@@ -416,11 +416,12 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
     evaluator validates first: "cannot evaluate an invalid expression: invalid syntax ..."). Every printer writes an
     error as its text and a missing term as nothing (`Terms.invalid_text`), and refuses an error with no text by name
     ("Python3 error has no text to print"). No translator has a rule for them: "Python3 error has no Matlab counterpart".
-41. **A union of one branch.** (The user decided, 2026-11-03: "yes, you may relax the one-arm union rule"; mbse-schemas
-    0.26.6 allows one, and this item is revised when it is pinned.) `Term` has no branch until a dialect is installed, and mbse-schemas' validation reports a
-    union of one branch ("a union needs at least two branches"): in a store holding one dialect, `Term`, every schema
-    holding it and every expression's validation report it (EXP-05). The suites install a second dialect where they
-    validate schemas or expressions as data. Reported to mbse-schemas, not worked around.
+41. **A union of one branch: resolved by mbse-schemas 0.26.6.** `Term` has no branch until a dialect is installed, and
+    mbse-schemas 0.26.5 reported a union of one branch ("a union needs at least two branches"), so in a store holding
+    one dialect `Term`, every schema holding it and every expression failed validation as data. The user decided
+    (2026-11-03): "yes, you may relax the one-arm union rule"; mbse-schemas 0.26.6 allows one, and is pinned. EXP-05
+    asserts that a store holding Patterns alone validates, its schemas and its expressions; the second dialects the
+    suites installed only for the old rule (EXP's and VIS's) are gone.
 42. **Renames, no aliases**: the modules (`Dialects.Patterns`, `Dialects.Python3`, `Dialects.C`, `Dialects.Cpp`), schemas
     (`Expressions.Patterns.*`, `Expressions.Python3.*`, `Expressions.C.*`, `Expressions.Cpp.*`), singletons and their `Expressions.Framework.Dialect`
     branches (`patterns`, `python3`, `c`, `cpp`), install uids (`mbse.Expressions.Patterns/1`, ...), and Deno's import
