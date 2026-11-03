@@ -1,5 +1,5 @@
 <!-- nav -->
-[← FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md) · [Home](../../../README.md)
+[← FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) · [Home](../../../README.md)
 
 # Porting to the stabilized mbse-schemas (a proposal, for review)
 
@@ -40,18 +40,18 @@ Its terms are bespoke dataclasses, its domain registry process-global, its vocab
   expressions are built and read only through mbse-schemas; dialects as pure model, an open question under P-018.
 - `scalars` (2 commits, docs only): "scalars you may analyze and reapply unless porting is much easier and
   risk-free". Reapplied by hand in stage 1, not cherry-picked: it cites mbse-schemas items that never landed (a
-  palette, `OfName`, scalars as placeholders: an experimental scalars overhaul, deferred: plain scalars now in [CAP-156: the five basic scalars with boundless domains](../../../../mbse-basis/docs/capabilities/CAP-156.md)), and
+  palette, `OfName`, scalars as placeholders: an experimental scalars overhaul, deferred: plain scalars now in [CAP-156: the five basic scalars with boundless domains](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-156.md)), and
   mbse-schemas has since made the five basic scalars real and finer scalars domains here (Store overhaul, Decided, 8
   and 9). What it records of the user's is kept, in the user's words: "I generally dislike semantics of datatypes and
   operations leaking into the modeling language as currently built"; dialects hold the semantics of datatypes and
   operations, one for each language's built-ins and for interoperation types such as IEEE 754; "the attempt to invent
   a neutral type system was a mistake. we should model standards not invent them", so a neutral Basic "should be
   removed", its expression kinds and three-valued evaluation kept; translation across languages belongs to transforms.
-  Removing Basic itself stays deferred, as [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](../../../../mbse-basis/docs/capabilities/CAP-180.md) has it (question 9).
+  Removing Basic itself stays deferred, as [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md) has it (question 9).
 
 What the user decided about domains is in mbse-schemas: Store overhaul, Decided, 8, 9 ("all scalars are domains and
 users may define domains and dialects containing domains"; "a scalar schema can have > 1 domain"; "width is a property
-of the domain, not the schema") and 22 (formats become domains); Schema extension, Decided, 9 to 13 and 21 in [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided), 14 in [CAP-112: parameters modeled as schema data](../../../../mbse-basis/docs/capabilities/CAP-112.md#decided).
+of the domain, not the schema") and 22 (formats become domains); Schema extension, Decided, 9 to 13 and 21 in [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md#decided), 14 in [CAP-112: parameters modeled as schema data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-112.md#decided).
 `DefinesDomains` is named once, with no description (Store overhaul, step 5).
 
 ## Questions for the user
@@ -62,16 +62,16 @@ of the domain, not the schema") and 22 (formats become domains); Schema extensio
    classes (b) keeps.*
 2. **How terms are stored.** (a) One nested value, held by an expression, a reference object (its root). (b) Counted
    reference objects linked by relations. (c) Today's, a reference object per term with
-   `Arguments`. *Recommended: (a), as Schema extension, Decided, 13 as revised ([FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided)) and Object identity, Decided, 82 ([CAP-123: schema objects identified by path](../../../../mbse-basis/docs/capabilities/CAP-123.md#decided)) have it.*
-3. **How `Schemas.OfExpression` gains its terms.** Schema kinds are closed (Object identity, Decided, 75 in [CAP-116: framework schemas extended, checked](../../../../mbse-basis/docs/capabilities/CAP-116.md#decided)), so by
+   `Arguments`. *Recommended: (a), as Schema extension, Decided, 13 as revised ([FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md#decided)) and Object identity, Decided, 82 ([CAP-123: schema objects identified by path](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-123.md#decided)) have it.*
+3. **How `Schemas.OfExpression` gains its terms.** Schema kinds are closed (Object identity, Decided, 75 in [CAP-116: framework schemas extended, checked](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-116.md#decided)), so by
    extension: (a) an extension adjacency from `Schemas.OfExpression` to the expression object holding the term (a
    relation of two links, as an extension's adjacency must be), as Parametrics links a definition to its parameters;
    (b) an extension property holding the term value. *Recommended: (a).*
 4. **What `DefinesDomains` is.** Proposed: a dialect is a reference object (as a module is), defining its domains by
    name, `Expressions.Framework.Defines(dialect, name, domain)` (decided: see Decided, 4); a basic scalar has one domain or more through
-   `HasDomain(schema, domain)` (Decided, 9); a domain is an object (Schema extension, Decided, 21 in [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided)). *Confirm or correct.*
+   `HasDomain(schema, domain)` (Decided, 9); a domain is an object (Schema extension, Decided, 21 in [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md#decided)). *Confirm or correct.*
 5. **How mbse-schemas' executor evaluates.** mbse-schemas cannot depend on this repository, and "takes an evaluator from
-   its caller rather than import one"; there is no global registry ([CAP-142: expressions evaluated in queries](../../../../mbse-basis/docs/capabilities/CAP-142.md#an-evaluator-given-never-imported)). (a) A protocol in mbse-schemas
+   its caller rather than import one"; there is no global registry ([CAP-142: expressions evaluated in queries](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-142.md#an-evaluator-given-never-imported)). (a) A protocol in mbse-schemas
    (`holds`, `assign`, `fold`), given to a store once (`Expressions.attach(store)`); the executor refuses as today where
    none is given. (b) Given per transaction (`store.transaction(..., evaluator=)`). *Recommended: (a).*
 6. **What a `requires` that evaluates to unknown does** (three-valued logic): drop the frame, keep it, or refuse.
@@ -84,7 +84,7 @@ of the domain, not the schema") and 22 (formats become domains); Schema extensio
 10. **Writers and `FromFunction`.** mbse-codegen-python uses the writers (`E.operation`, `E.Writer`). *Recommended:
     keep `FromFunction`; keep the writers until the dependents move.*
 11. **Scope now.** All six dialects and the twelve translators, ported with the model; vocabularies as data (functions,
-    formals, intrinsics: Schema extension, Decided, 9, 11, 22 in [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided)) and value parameters and `Parameters.Bind`/`Apply`
+    formals, intrinsics: Schema extension, Decided, 9, 11, 22 in [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md#decided)) and value parameters and `Parameters.Bind`/`Apply`
     (mbse-schemas' Parametrics) after. *Recommended as stated.*
 
 ## Decided
@@ -134,7 +134,7 @@ As the user decided (2026-10-30), on what stage 2b raised:
 Question 6, what a `requires` that evaluates to unknown does: "semantics of evaluate deserve a more in-depth
 discussion", open.
 
-As the user decided (2026-10-28), on question 7, a map's variables (the "spread" case, [CAP-142: expressions evaluated in queries](../../../../mbse-basis/docs/capabilities/CAP-142.md#the-spread-case-of-a-map)):
+As the user decided (2026-10-28), on question 7, a map's variables (the "spread" case, [CAP-142: expressions evaluated in queries](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-142.md#the-spread-case-of-a-map)):
 
 7. **A variable over a finite domain is in the plan**: "(b) is in the plan": each frame fans out into one frame per
    value the domain holds and its pattern's `requires` allows (bool, an enum). **A variable computed from the frame**,
@@ -143,7 +143,7 @@ As the user decided (2026-10-28), on question 7, a map's variables (the "spread"
 
 Question 8, a collecting reduce, is parked with map and reduce themselves: "map and reduce are not where I need them
 to be, but parking them so we can make progress on finishing the current overhaul in the dependent repos is more
-urgent" (2026-10-29; [CAP-142: expressions evaluated in queries](../../../../mbse-basis/docs/capabilities/CAP-142.md#blocked), Blocked). Stage 5's variables and collecting reduce wait on it, and its `requires`
+urgent" (2026-10-29; [CAP-142: expressions evaluated in queries](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-142.md#blocked), Blocked). Stage 5's variables and collecting reduce wait on it, and its `requires`
 on question 6; stages 1 to 4 do not.
 
 As the user decided (2026-10-30), on what stage 2b raised about `Python.Text.FromFunction` (it refused a captured
@@ -186,7 +186,7 @@ nested, a snapshot round-tripping). What they propose, for the user's review:
 - `Expressions.Framework.Term`, a union of value object kinds, `literal` (`value`, a basic scalar's), `call`
   (`callable`, by name; `arguments`, a container of terms by index), `variable` (`name`) and `let` (`name`, `value`,
   `body`): the term kinds as the starting point, `operation` named `call`. A term holds terms, nested. Every kind
-  declares `domain`, by name ("wait, all terms have a domain"; Schema extension, Decided, 21 in [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md#decided)), a dialect's kinds too.
+  declares `domain`, by name ("wait, all terms have a domain"; Schema extension, Decided, 21 in [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md#decided)), a dialect's kinds too.
 - `Expressions.Framework.Expression`, a reference object whose `root` is a term: the only instance of the kinds.
 - `Expressions.Framework.HasRoot(schema, expression)`, one expression per schema, and the extension adjacency
   `expression` it gives `Schemas.OfExpression` (question 3), with no member on it.
@@ -290,7 +290,7 @@ Each with both gates at 100% and the corpora regenerated; a stage touching mbse-
 
 1. **The decisions on `main`**: this proposal decided; `overhauls/meta-schemas`' decisions and `scalars`' recorded in
    EXPRESSIONS.md, as above (since drained into mbse-basis
-   [FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md) and its capabilities).
+   [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) and its capabilities).
 2. **Schemas as installs, terms in the store** (with reads through `Readers`, since `Terms.py` fails at import until
    both are done): `Expressions.install` and each dialect's; `Bindings` gone; tests and corpora moved.
 3. **Domains**: `HasDomain`, `Expressions.Framework.Defines`, domains as objects; dialect-scoped names in place of the global registry.
@@ -312,7 +312,7 @@ pattern, its root's domain against its result) is to be scoped with stage 3 or 5
 
 - **Cost**: every expression is written within a transaction, in a store that takes about 23 ms to make; suites and
   `FromFunction` that build many expressions need care.
-- **The commit-time rule** (Object identity, Decided, 96 in [CAP-124: writes all-or-nothing in transactions](../../../../mbse-basis/docs/capabilities/CAP-124.md#decided), kept by the store overhaul's Decided, 32): an install and the expressions using it are
+- **The commit-time rule** (Object identity, Decided, 96 in [CAP-124: writes all-or-nothing in transactions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-124.md#decided), kept by the store overhaul's Decided, 32): an install and the expressions using it are
   separate transactions.
 - **No reference between stores**: a constraint and the data it is evaluated over share a store.
 - **Extension limits**: an extension's adjacency is to a relation of two links and no properties.
@@ -323,4 +323,4 @@ pattern, its root's domain against its result) is to be scoped with stage 3 or 5
 ---
 
 <!-- nav -->
-[← FEA-024: expressions as data](../../../../mbse-basis/docs/features/FEA-024.md) · [Home](../../../README.md)
+[← FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) · [Home](../../../README.md)

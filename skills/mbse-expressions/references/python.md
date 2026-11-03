@@ -131,7 +131,7 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 - `1 == 1.0` is unknown in Patterns, and `True` is not an `int`. Write literals of the kind of value the data's schema has.
 - `x.email` is `get`, unknown when absent; whether it is present is `x.has("email")`.
 - Evaluating an operation Patterns does not define raises `NotImplementedError`: validate first. Widths, overflow and the
-  conversions wait for domain inference ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)):
+  conversions wait for domain inference ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)):
   a term carries no domain.
 - Each mbse-schemas store has its own schemas: run each install once per store, and an install and what uses it in
   separate transactions. Transactions do not nest: build what a writer needs (a translation's source term, say) before
@@ -147,5 +147,5 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
 | Topic | Read |
 |---|---|
 | Learning it by example: constraints as data, unknowns, collections, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog | [the tutorial, seven case studies](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) |
-| The Patterns dialect (formerly Basic): kinds, core vocabulary, evaluation, installs and writers | [CAP-095: Basic terms as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-095.md), in mbse-basis |
+| The Patterns dialect (formerly Basic): kinds, core vocabulary, evaluation, installs and writers | [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md), in mbse-basis |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/TestPlan.md) |

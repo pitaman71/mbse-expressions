@@ -197,7 +197,7 @@ runs in one language only.
 | SystemVerilog | tree-sitter-systemverilog 0.4.1 (gmlarumbe; claims 1800-2023) | unassessed | slang (pyslang 12.1.0; mbse-programs pins 12.0.0): IEEE 1800-2023; always builds a tree, skipped tokens as trivia, missing tokens synthesized | Python; slang builds for WASI, unpublished; its CLI writes `--cst-json` |
 
 Where the front end runs in one language, the other reads its tree as a JSON snapshot, as mbse-programs' Verilog reader
-exchange does today ([FEA-008: expressive program models](../../../../mbse-basis/docs/features/FEA-008.md#design), Design).
+exchange does today ([FEA-008: expressive program models](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-008.md#design), Design).
 
 ## Only in one repository
 

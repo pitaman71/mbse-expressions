@@ -43,11 +43,11 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 2. **Patterns is three-valued and never coerces.** An absent property is unknown (`None`/`null`), and `and`/`or` follow
    Kleene. `1 == 1.0` is unknown, since an int and a float are different kinds of value; in TypeScript, an int is a
    `bigint` (`18n`). See
-   [CAP-106: expressions evaluated three-valued](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-106.md#evaluation-in-mbse-expressions).
+   [CAP-106: expressions evaluated three-valued](mbse:mbse-basis/docs/capabilities/CAP-106.md#evaluation-in-mbse-expressions).
 3. **Only the operations a dialect defines are calls of it.** Patterns' are its data (`Expressions.Patterns.add`, ...);
    `validate` refuses a call to any other ("'contains' is not an operation Patterns defines"), and evaluating one raises.
    A term carries no domain: values are taken by the schemas they are written with, ints unbounded and floats binary64,
-   until domain inference ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)).
+   until domain inference ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
 4. **Each dialect evaluates by its own language's rules.** A translation keeps a constraint's form, not always its
    value: a missing property is unknown in Patterns, `#FIELD!` in Excel, and an error in Python and MATLAB.
 5. **Nothing is imported or called unless the scope provides it.** Python modules, MATLAB packages and Excel add-ins
@@ -67,10 +67,10 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 | Pick a dialect, write its expressions, give it a scope (imports, packages, workbooks) | [references/dialects.md](references/dialects.md) |
 | Translate between dialects, or rewrite within one; what survives a round trip | [references/translating.md](references/translating.md) |
 | Add a dialect or a translator | [references/extending.md](references/extending.md) |
-| Model the schemas the expressions refer to | the [mbse-schemas skill](https://github.com/pitaman71/mbse-schemas/blob/main/skills/mbse-schemas/SKILL.md) |
+| Model the schemas the expressions refer to | the [mbse-schemas skill](mbse:mbse-schemas/skills/mbse-schemas/SKILL.md) |
 
 Deeper material: mbse-basis
-[FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md)
+[FEA-024: expressions as data](mbse:mbse-basis/docs/features/FEA-024.md)
 holds the design, with its capabilities: every decision and the open questions. In the repository, seven tutorial
 case studies (`python3/tutorials/`, `typescript5/tutorials/`) teach it from a first constraint to C and
 SystemVerilog. Links use `https://github.com/pitaman71/mbse-expressions/blob/main/<path>`; in a

@@ -12,7 +12,7 @@ It's written for Python programmers who keep constraints about their data in mor
 TypeScript port with the same case studies and the same outputs is in the [TypeScript
 tutorial](../../typescript5/tutorials/README.md). You don't need mbse-schemas' tutorial first; mbse-patterns' tutorial
 builds validation, queries and test data on these expressions. mbse-basis
-[FEA-024: expressions as data](../../../mbse-basis/docs/features/FEA-024.md), with its capabilities, is the reference for everything here.
+[FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md), with its capabilities, is the reference for everything here.
 
 ## Running the notebooks
 
@@ -42,7 +42,7 @@ and `show`, which writes an expression as text (case study 6 explains it).
 Case study 4, *Values with widths* (a radio packet's `int16_t` and `uint8_t` members: typed literals, overflow, bits,
 conversions), is deferred, and the others keep their numbers. A term no longer carries a domain: whatever owns a
 constraint's root gives its schema, and giving each term a domain, domain inference, is a later capability
-([CAP-232: domains inferred for terms](../../../mbse-basis/docs/capabilities/CAP-232.md)). Widths,
+([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)). Widths,
 overflow, IEEE 754 formats other than binary64, enums and the conversions wait for it (the port's stage 3, Decided, 2,
 in [docs/proposals/port](../../docs/proposals/port/README.md)). Domains themselves are data meanwhile: each dialect
 owns its domains by name, and each one's schema is a named `Schemas.OfAny` of the scalar it narrows.

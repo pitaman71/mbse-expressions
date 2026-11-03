@@ -11,7 +11,7 @@ where a programmer starts, with a constraint written in code, and ends with that
 It's written for TypeScript programmers who keep constraints about their data in more than one place or language. It's a
 port of the [Python tutorial](../../python3/tutorials/README.md), with the same case studies, the same reasoning and the
 same answers; the JSON of case study 1 is byte for byte Python's. mbse-basis
-[FEA-024: expressions as data](../../../mbse-basis/docs/features/FEA-024.md), with its capabilities, is the reference for everything here.
+[FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md), with its capabilities, is the reference for everything here.
 
 Where the bindings differ, the code follows TypeScript idioms:
 
@@ -58,7 +58,7 @@ expressions, with the framework's and every dialect's kinds installed, and `show
 Case study 4, *Values with widths* (a radio packet's `int16_t` and `uint8_t` members: typed literals, overflow, bits,
 conversions), is deferred, and the others keep their numbers. A term no longer carries a domain: whatever owns a
 constraint's root gives its schema, and giving each term a domain, domain inference, is a later capability
-([CAP-232: domains inferred for terms](../../../mbse-basis/docs/capabilities/CAP-232.md)). Widths,
+([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)). Widths,
 overflow, IEEE 754 formats other than binary64, enums and the conversions wait for it (the port's stage 3, Decided, 2,
 in [docs/proposals/port](../../docs/proposals/port/README.md)). Domains themselves are data meanwhile: each dialect
 owns its domains by name, and each one's schema is a named `Schemas.OfAny` of the scalar it narrows.

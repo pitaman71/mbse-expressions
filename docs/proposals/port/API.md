@@ -47,7 +47,7 @@ a union of one branch, which mbse-schemas allows since 0.26.6 (item 41). Each in
 
 `Framework.install` (in `Framework/Terms.py`, `Framework/Terms.ts`) and `Patterns.install` (in
 `Dialects/Patterns/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
-and what uses it are separate transactions: mbse-schemas, Object identity, Decided, 96 in [CAP-124: writes all-or-nothing in transactions](../../../../mbse-basis/docs/capabilities/CAP-124.md#decided)). Run again, each writes
+and what uses it are separate transactions: mbse-schemas, Object identity, Decided, 96 in [CAP-124: writes all-or-nothing in transactions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-124.md#decided)). Run again, each writes
 nothing. Every other dialect has its own install, run after the framework's, which adds its union of its kinds to
 `Expressions.Framework.Term` by schema extension, as Patterns' does; `mbse.Expressions.install(store)` is not given (it
 would be a helper over the installs): a program runs the installs it needs.

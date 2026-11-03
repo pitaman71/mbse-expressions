@@ -9,7 +9,7 @@ unknown.
   `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the first does not
   decide.
 - No coercion. Comparisons follow mbse-basis [CAP-111: equality and ordering defined by the
-  schema](../../../../../../mbse-basis/docs/capabilities/CAP-111.md): natives of one type by value, reference objects by
+  schema](mbse:mbse-basis/docs/capabilities/CAP-111.md): natives of one type by value, reference objects by
   identity, everything else deeply (see Deep equality); values of different types are incomparable. Arithmetic takes numbers of one domain.
 - Values are taken by the schemas they are written with: a term carries no domain (the port's stage 3, Decided, 1 and
   2), so an int is an unbounded integer, a float an IEEE 754 binary64 number, and the bitwise operations and shifts take
