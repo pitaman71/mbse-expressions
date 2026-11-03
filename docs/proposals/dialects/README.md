@@ -211,6 +211,12 @@ As the user decided (2026-11-02), on the questions below:
   declare (`TSMappedType.key`, `TSNamedTupleMember.label`, `TSTypeParameter.name`, `TSQualifiedName.right`) are a
   `str`, as Python3's are where mbse-programs has an `Identifier` node, or stay mbse-programs' `Identifier`: "yes, stay
   `Identifier` terms".
+- **Every dialect has a `Pattern` union for its binding targets** (2026-11-03, building stage 4). Asked "is this done
+  consistently across typescript5 and python3? can it be?", and shown two options, (i) each dialect follows its own
+  grammar (`TypeScript5` a `Pattern` union, `Python3`'s targets holding its `Term`), or (ii) a uniform rule where every
+  dialect has a `Pattern` union for binding targets, the user: "(ii)". `Python3` gains `Expressions.Python3.Pattern`,
+  listing the term kinds a binding target may be, no new kinds, one schema in several unions as (b) has it; a
+  comprehension's and a named expression's `target` hold it; a lambda's parameters, `arg`s, stay as they are.
 
 ## Questions for the user
 

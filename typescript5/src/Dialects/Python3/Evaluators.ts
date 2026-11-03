@@ -584,11 +584,11 @@ function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
   let i = 1;
   for (const part of (attributesOf(node).get("generators") ?? []) as Terms.Part[]) {
     if (part.attributes.get("is_async")) throw refuse("async comprehension");
-    const target = terms[i];
-    if (target === null || Terms.kindOf(target)[0] !== Expressions.NAME) {
-      throw refuse(`${target === null ? "missing" : Terms.kindOf(target)[0]} target`);
+    const target = part.attributes.get("target") as Terms.Part | undefined; // a pattern, its terms the clause's last
+    if (target === undefined || target.kind !== Expressions.NAME) {
+      throw refuse(`${target === undefined ? "missing" : target.kind} target`);
     }
-    clauses.push([Terms.nameOf(target) as string, terms[i + 1], terms.slice(i + 2, i + part.size)]);
+    clauses.push([target.attributes.get("name") as string, terms[i], terms.slice(i + 1, i + part.size - target.size)]);
     i += part.size;
   }
   if (clauses.length === 0) throw new ValueError("a generatorexp needs a for clause");
@@ -601,7 +601,7 @@ function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
       else yield* generate(k + 1, bound, iterate(INTERPRETER.evaluate((clauses[k + 1] as [string, any, any[]])[1], bound)));
     }
   }
-  return new PyGenerator(generate(0, scope, iterate((args[2] as F.Thunk)()))); // the first iterable, after the element and the first target
+  return new PyGenerator(generate(0, scope, iterate((args[1] as F.Thunk)()))); // the first iterable, after the element
 }
 
 /** A comparison chain, as Python evaluates one: each operand once, left to right, stopping at the first link that is

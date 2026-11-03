@@ -173,11 +173,13 @@ class Printer {
     const written: string[] = [];
     let i = 0;
     for (const part of parts(attributes.get("generators"))) {
-      const [target, iterable, ...conditions] = args.slice(i, i + part.size);
+      const target = part.attributes.get("target") as F.Part | undefined;
+      const size = target?.size ?? 0;
+      const [iterable, ...conditions] = args.slice(i, i + part.size - size);
+      const terms = args.slice(i + part.size - size, i + part.size);
       i += part.size;
       const asynchronous = part.attributes.get("is_async") ? "async " : "";
-      const targetText = F.kindOf(target)[0] === P.TUPLE ? this.elements(F.argumentsOf(F.kindOf(target)[1]))
-        : this.write(target, BITOR);
+      const targetText = this.target(target, terms, true);
       written.push(` ${asynchronous}for ${targetText} in ${this.write(iterable, OR)}`
         + conditions.map((condition) => ` if ${this.write(condition, OR)}`).join(""));
     }
@@ -294,8 +296,17 @@ class Printer {
     return [args.map((argument) => this.write(argument, level + 1)).join(` ${op} `), level];
   }
 
-  _namedexpr(_: Attributes, args: any[]): Written {
-    return [`${this.write(args[0], PRIMARY)} := ${this.element(args[1])}`, NAMED];
+  /** A target, a pattern as a form reads it (its part and its terms), written as the term of its kind; with `bare`, a
+   * tuple without its parentheses, as a `for` clause writes it. */
+  target(target: F.Part | undefined, terms: any[], bare = false): string {
+    if (target === undefined) return "";
+    if (bare && target.kind === P.TUPLE) return this.elements(terms);
+    const [text, precedence] = (this as any)[`_${target.kind}`](target.attributes, terms) as Written;
+    return precedence >= BITOR ? text : `(${text})`;
+  }
+
+  _namedexpr(attributes: Attributes, args: any[]): Written {
+    return [`${this.target(attributes.get("target") as F.Part | undefined, args.slice(1))} := ${this.element(args[0])}`, NAMED];
   }
 
   _ifexp(_: Attributes, args: any[]): Written {

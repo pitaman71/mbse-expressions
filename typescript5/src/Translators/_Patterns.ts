@@ -39,9 +39,10 @@ export function comparison(op: string): Part[] {
   return [new Part("comparison", { op }, 1)];
 }
 
-/** A Python3 comprehension's one `for` clause over a name, with `conditions`, as a form's attributes hold it. */
+/** A Python3 comprehension's one `for` clause over a name, its target the pattern `N`, with `conditions`, as a form's
+ * attributes hold it: its iterable and its conditions its terms. */
 function forClause(conditions: number): Part[] {
-  return [new Part("comprehension", {}, 2 + conditions)];
+  return [new Part("comprehension", { target: new Part("variable", { name: N }, 0) }, 1 + conditions)];
 }
 
 /** Rules for comparisons that are another dialect's operators of `kind`: each Python3 comparison of one link, a key of
@@ -66,11 +67,10 @@ export const Python3 = {
   ifexp: new P("ifexp", {}, B, A, C),
   shr: new P("binop", { op: ">>" }, A, B),
   /** all(b for n in a). */
-  all_: call("all", new P("generatorexp", { generators: forClause(0) }, B, new P("variable", { name: N }), A)),
-  any_: call("any", new P("generatorexp", { generators: forClause(0) }, B, new P("variable", { name: N }), A)),
+  all_: call("all", new P("generatorexp", { generators: forClause(0) }, B, A)),
+  any_: call("any", new P("generatorexp", { generators: forClause(0) }, B, A)),
   /** sum(1 for n in a if b). */
-  count_where: call("sum", new P("generatorexp", { generators: forClause(1) }, new P("literal", { value: 1n }),
-    new P("variable", { name: N }), A, B)),
+  count_where: call("sum", new P("generatorexp", { generators: forClause(1) }, new P("literal", { value: 1n }), A, B)),
   /** len, sum, min, max. */
   builtin: (fn: string) => call(fn, A),
   index: new P("subscript", {}, A, B),

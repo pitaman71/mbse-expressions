@@ -5,7 +5,8 @@ of dialects has its own, specialized to what the two have in common, and is decl
 
 - `Rule(left, right)` pairs two `Pattern`s, each a form with `Hole`s: `Pattern('call', A, B, callable='eq')` matches
   the Patterns `eq(a, b)` and binds the holes `A` and `B` to its arguments. A hole in an attribute binds the attribute's
-  native value, and may restrict its type: `Hole('K', str)`. A rule applies in both directions unless its
+  native value, and may restrict its type: `Hole('K', str)`; so does a hole within a helper's attributes (a
+  `Terms.Part`), such as a Python3 comprehension's target, a pattern. A rule applies in both directions unless its
   `direction` is 'forward' or 'backward'.
 - `Inline(kind, side)` translates a binding of one side, which the other has no counterpart for, by substituting its
   value for its name in its body. The value is translated once, and written at every use.
@@ -105,8 +106,8 @@ class Pattern:
         return 1 + fixed + sum(a.size() for a in self.arguments if isinstance(a, Pattern))
 
     def holes(self) -> dict[str, str]:
-        """The holes in the pattern, by name: 'argument' or 'attribute'."""
-        found = {value.name: "attribute" for value in self.attributes.values() if isinstance(value, Hole)}
+        """The holes in the pattern, by name: 'argument' or 'attribute' (a helper's among them)."""
+        found = {hole.name: "attribute" for value in self.attributes.values() for hole in _attribute_holes(value)}
         for argument in self.arguments:
             found.update(argument.holes() if isinstance(argument, Pattern) else {argument.name: "argument"})
         return found
@@ -114,6 +115,28 @@ class Pattern:
     def __repr__(self) -> str:
         parts = [*map(repr, self.arguments), *(f"{k}={v!r}" for k, v in self.attributes.items())]
         return f"{self.kind}({', '.join(parts)})"
+
+
+def _attribute_holes(value: Any) -> list[Hole]:
+    """The holes in an attribute's pattern: itself, or those within a helper's (`Terms.Part`) or a container of them."""
+    if isinstance(value, Hole):
+        return [value]
+    if isinstance(value, Terms.Part):
+        return [hole for inner in value.attributes.values() for hole in _attribute_holes(inner)]
+    if isinstance(value, tuple):
+        return [hole for inner in value for hole in _attribute_holes(inner)]
+    return []
+
+
+def _filled(value: Any, bindings: Mapping[str, Any]) -> Any:
+    """An attribute's pattern with its holes filled, a helper's among them."""
+    if isinstance(value, Hole):
+        return bindings[value.name]
+    if isinstance(value, Terms.Part):
+        return Terms.Part(value.kind, {k: _filled(v, bindings) for k, v in value.attributes.items()}, value.size)
+    if isinstance(value, tuple):
+        return tuple(_filled(inner, bindings) for inner in value)
+    return value
 
 
 class Rule:
@@ -361,25 +384,34 @@ class _Run:
             attributes = {k: v for k, v in attributes.items() if k not in kind.spelling}
         if form.kind != pattern.kind or attributes.keys() != pattern.attributes.keys():
             return False
-        for name, expected in pattern.attributes.items():
-            value = attributes[name]
-            if not isinstance(expected, Hole):
-                if not _same_native(expected, value):
-                    return False
-            elif expected.types and type(value) not in expected.types:
-                return False
-            elif expected.name in bindings and not _same_native(bindings[expected.name], value):
-                return False
-            else:
-                bindings[expected.name] = value
+        if not all(self._attribute(pattern.attributes[name], attributes[name], bindings) for name in pattern.attributes):
+            return False
         return len(form.arguments) == len(pattern.arguments) and all(
             self._match(p, argument, bindings) for p, argument in zip(pattern.arguments, form.arguments))
+
+    def _attribute(self, expected: Any, value: Any, bindings: dict[str, Any]) -> bool:
+        """Matches an attribute's pattern: a hole binds its native value; a helper's pattern (`Terms.Part`, or a
+        container of them) matches a helper of its kind and size, its attributes in turn; anything else is equal."""
+        if isinstance(expected, Hole):
+            if expected.types and type(value) not in expected.types:
+                return False
+            if expected.name in bindings:
+                return _same_native(bindings[expected.name], value)
+            bindings[expected.name] = value
+            return True
+        if isinstance(expected, Terms.Part) and _attribute_holes(expected):
+            return (isinstance(value, Terms.Part) and value.kind == expected.kind and value.size == expected.size
+                    and value.attributes.keys() == expected.attributes.keys()
+                    and all(self._attribute(expected.attributes[k], value.attributes[k], bindings) for k in expected.attributes))
+        if isinstance(expected, tuple) and _attribute_holes(expected):
+            return isinstance(value, tuple) and len(value) == len(expected) and all(
+                self._attribute(e, v, bindings) for e, v in zip(expected, value))
+        return _same_native(expected, value)
 
     def _instantiate(self, pattern: Pattern | Hole, bindings: dict[str, Any], environment: dict[str, _Built]) -> _Built:
         if isinstance(pattern, Hole):
             return self.translate(bindings[pattern.name], environment)
-        attributes = {name: bindings[value.name] if isinstance(value, Hole) else value
-                      for name, value in pattern.attributes.items()}
+        attributes = {name: _filled(value, bindings) for name, value in pattern.attributes.items()}
         arguments = tuple(self._instantiate(argument, bindings, environment) for argument in pattern.arguments)
         return self.direction.build(Terms.Form(pattern.kind, attributes, arguments))
 

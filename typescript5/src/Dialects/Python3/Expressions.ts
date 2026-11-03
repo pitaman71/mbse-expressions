@@ -44,6 +44,12 @@
  *   `Evaluators`).
  * - The framework's kinds of invalid syntax, `error` and `missing`.
  *
+ * A binding target, a comprehension's `target` and a named expression's, holds `Expressions.Python3.Pattern`, the union
+ * of the terms a target may be (`variable`, `tuple`, `list`, `starred`, `attribute`, `subscript`, `parenthesized`), each
+ * a schema of a term too: every dialect has a `Pattern` union for its binding targets, as the dialects proposal decided
+ * ("(ii)"). The framework reads a target, as any helper, as a `Terms.Part`, its terms after the clause's own; a
+ * lambda's parameters are `arg`s, not patterns.
+ *
  * Each kind's `Kind` records the Python versions that have it (`standards`, `STANDARDS`'s names from the one it arrived
  * in; none for an extension). A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
  * calls, not a dialect.
@@ -127,7 +133,7 @@ export function install(txn: any): any {
   const Framework = txn.Expressions.Framework;
   const terms = (_: any): any => S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term]));
   return txn.uid("mbse.Expressions.Python3/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Pattern: S.OfUnion,
       Expression: S.OfObject, Literal: S.OfObject, Constant: S.OfObject,
       ConcatenatedString: S.OfObject, StringText: S.OfObject, FormatSpec: S.OfObject,
       FormattedValue: S.OfObject, Interpolation: S.OfObject, JoinedStrValue: S.OfUnion,
@@ -185,6 +191,17 @@ export function install(txn: any): any {
         (t: any) => t.name("error").schema([Framework.Error]),
         (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
+      // its patterns: what a binding target may be (Python's language reference, 7.2), each a schema of a term too, as
+      // the dialects proposal decided for every dialect ("(ii)")
+      (_: any) => _.Pattern.name("Expressions.Python3.Pattern").branches([
+        (t: any) => t.name("variable").schema([Framework.Variable]),
+        (t: any) => t.name("tuple").schema([_.Tuple]),
+        (t: any) => t.name("list").schema([Framework.List]),
+        (t: any) => t.name("starred").schema([_.Starred]),
+        (t: any) => t.name("attribute").schema([_.Attribute]),
+        (t: any) => t.name("subscript").schema([_.Subscript]),
+        (t: any) => t.name("parenthesized").schema([_.Parenthesized]),
+      ]),
       // atoms (Python's language reference, 6.2)
       (_: any) => _.Literal.name("Expressions.Python3.Literal").refines([Framework.Literal]).properties({
         prefix: S.OfStr, // a string's or bytes' prefix, as written: `r`, `b`, `Rb`
@@ -227,7 +244,7 @@ export function install(txn: any): any {
       (_: any) => _.Dict.name("Expressions.Python3.Dict").properties({
         items: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.DictItem])) }),
       (_: any) => _.Comprehension.name("Expressions.Python3.Comprehension").properties({
-        is_async: S.OfBool, target: _.Term, iter: _.Term, ifs: terms(_) }),
+        is_async: S.OfBool, target: _.Pattern, iter: _.Term, ifs: terms(_) }),
       (_: any) => _.ListComp.name("Expressions.Python3.ListComp").properties({
         elt: _.Term, generators: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Comprehension])) }),
       (_: any) => _.SetComp.name("Expressions.Python3.SetComp").properties({
@@ -258,7 +275,7 @@ export function install(txn: any): any {
       (_: any) => _.Compare.name("Expressions.Python3.Compare").properties({
         left: _.Term, comparisons: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Comparison])) }),
       (_: any) => _.BoolOp.name("Expressions.Python3.BoolOp").properties({ op: S.OfStr, values: terms(_) }),
-      (_: any) => _.NamedExpr.name("Expressions.Python3.NamedExpr").properties({ target: _.Term, value: _.Term }),
+      (_: any) => _.NamedExpr.name("Expressions.Python3.NamedExpr").properties({ target: _.Pattern, value: _.Term }),
       (_: any) => _.IfExp.name("Expressions.Python3.IfExp").properties({ body: _.Term, test: _.Term, orelse: _.Term }),
       (_: any) => _.Arg.name("Expressions.Python3.Arg").properties({
         arg: S.OfStr, annotation: _.Term, default_value: _.Term }),
@@ -472,14 +489,27 @@ function stringCheck(tag: string, letters: string): (record: any) => string[] {
 
 /** The names a target binds: a name's, and those of the names a tuple, a list, a starred or a parenthesized target
  * holds; an attribute or a subscript binds none. */
-export function targetNames(term: any): Set<string> {
-  if (term === null) return new Set();
-  const [tag, record] = F.kindOf(term);
-  if (tag === NAME) return new Set([F.nameOf(term)]);
+export function targetNames(target: any, args: readonly any[] = []): Set<string> {
+  if (target === null || target === undefined) return new Set();
+  let tag: string, attributes: ReadonlyMap<string, unknown>;
+  if (target instanceof F.Part) {
+    [tag, attributes] = [target.kind, target.attributes];
+  } else {
+    const [kind, record] = F.kindOf(target);
+    [tag, attributes, args] = [kind, F.attributesOf(record), F.argumentsOf(record)];
+  }
+  if (tag === NAME) return new Set(attributes.has("name") ? [attributes.get("name") as string] : []);
   if ([TUPLE, LIST, STARRED, PARENTHESIZED].includes(tag)) {
-    return new Set(F.argumentsOf(record).flatMap((argument) => [...targetNames(argument)]));
+    return new Set(args.flatMap((argument) => [...targetNames(argument)]));
   }
   return new Set();
+}
+
+/** A comprehension's or a named expression's target, a pattern, and its terms, the last of `args` (a helper's terms
+ * follow its own). */
+function target(part: F.Part, args: readonly any[]): [F.Part | undefined, any[]] {
+  const held = part.attributes.get("target") as F.Part | undefined;
+  return [held, args.slice(args.length - (held?.size ?? 0))];
 }
 
 /** What each argument of a comprehension has bound: each `for` clause's target within its own target, its conditions,
@@ -492,10 +522,9 @@ function comprehensionScopes(record: any): ReadonlySet<string>[] {
   let names: ReadonlySet<string> = new Set<string>();
   let i = lead;
   for (const part of parts) {
-    const bound = new Set([...names, ...targetNames(args[i])]);
-    scopes[i] = bound;
-    scopes[i + 1] = names;
-    for (let j = i + 2; j < i + part.size; j++) scopes[j] = bound;
+    const bound = new Set([...names, ...targetNames(...target(part, args.slice(i, i + part.size)))]);
+    scopes[i] = names;
+    for (let j = i + 1; j < i + part.size; j++) scopes[j] = bound;
     names = bound;
     i += part.size;
   }
@@ -535,13 +564,44 @@ function lambdaCheck(record: any): string[] {
 /** A named expression's target is bound within itself: it binds its name in the scope around it, which a term does not
  * see beyond itself. */
 function namedexprScopes(record: any): ReadonlySet<string>[] {
-  return [targetNames(F.argumentsOf(record)[0]), new Set()];
+  const args = F.argumentsOf(record);
+  const names = targetNames(...target(new F.Part(NAMEDEXPR, F.attributesOf(record)), args));
+  return args.map((_, i) => (i === 0 ? new Set<string>() : names));
+}
+
+/** A target's own checks, as its kind's: a pattern is a helper, which validation does not read (its terms it does). A
+ * name needs a name, an identifier, and an attribute's name is one. */
+function targetProblems(label: string, held: F.Part): string[] {
+  const { attributes } = held;
+  let problems: string[];
+  if (held.kind === NAME) {
+    problems = attributes.has("name") ? identifierProblems("a name", attributes.get("name")) : ["a variable needs a name"];
+  } else {
+    problems = held.kind === ATTRIBUTE ? identifierProblems("an attribute", attributes.get("attr")) : [];
+  }
+  return problems.map((problem) => `${label}: ${problem}`);
+}
+
+/** A comprehension's `for` clauses, one at least, each with its target, a pattern (a helper, which validation does not
+ * ask for). */
+function comprehensionCheck(tag: string): (record: any) => string[] {
+  const atLeast = needs(tag, "generators", "a for clause");
+  return (record) => {
+    const problems = atLeast(record);
+    partsOf(record, "generators").forEach((part, i) => {
+      const held = part.attributes.get("target") as F.Part | undefined;
+      problems.push(...(held === undefined ? [`${F.article(tag)} needs a generators ${i} target`]
+        : targetProblems(`generators ${i} target`, held)));
+    });
+    return problems;
+  };
 }
 
 function namedexprCheck(record: any): string[] {
-  const target = F.argumentsOf(record)[0];
-  if (target === null || F.kindOf(target)[0] === NAME) return [];
-  return ["a namedexpr's target must be a name"];
+  const held = F.attributesOf(record).get("target") as F.Part | undefined;
+  if (held === undefined) return ["a namedexpr needs a target"];
+  if (held.kind !== NAME) return ["a namedexpr's target must be a name"];
+  return targetProblems("target", held);
 }
 
 /** The literal of a native value: a basic scalar, the only native value `spec` gives it. */
@@ -581,13 +641,13 @@ export const DIALECT = new F.Dialect("Python3", {
   [SET]: application(new FD.Opaque(), STANDARDS, { check: needs(SET, "elts", "an element") }),
   [DICT]: application(new FD.Opaque(), STANDARDS, { optional: ["key"] }),
   [LISTCOMP]: application(new FD.Opaque(), STANDARDS,
-    { scopes: comprehensionScopes, check: needs(LISTCOMP, "generators", "a for clause") }),
+    { scopes: comprehensionScopes, check: comprehensionCheck(LISTCOMP) }),
   [SETCOMP]: application(new FD.Opaque(), STANDARDS,
-    { scopes: comprehensionScopes, check: needs(SETCOMP, "generators", "a for clause") }),
+    { scopes: comprehensionScopes, check: comprehensionCheck(SETCOMP) }),
   [DICTCOMP]: application(new FD.Opaque(), STANDARDS,
-    { scopes: comprehensionScopes, optional: ["value"], check: needs(DICTCOMP, "generators", "a for clause") }),
+    { scopes: comprehensionScopes, optional: ["value"], check: comprehensionCheck(DICTCOMP) }),
   [GENERATOREXP]: application(Domains.GENERATOR, STANDARDS,
-    { scopes: comprehensionScopes, check: needs(GENERATOREXP, "generators", "a for clause") }),
+    { scopes: comprehensionScopes, check: comprehensionCheck(GENERATOREXP) }),
   [YIELD]: application(new FD.Opaque(), STANDARDS, { optional: ["value"] }),
   [YIELDFROM]: application(ANY, since(3)),
   [ATTRIBUTE]: new F.Kind(F.APPLICATION, { operator: "attr", signature: ANY, required: ["attr"],
@@ -602,7 +662,7 @@ export const DIALECT = new F.Dialect("Python3", {
   [COMPARE]: new F.Kind(F.APPLICATION, { vocabulary: Domains.COMPARE, operators: compareOperators, result: compareResult,
     check: compareCheck, unfold: compareUnfold, standards: STANDARDS }),
   [BOOLOP]: operatorKind(Domains.BOOLOP, { check: needs(BOOLOP, "values", "two values", 2), unfold: boolopUnfold }),
-  [NAMEDEXPR]: application(ANY2, since(8), { scopes: namedexprScopes, check: namedexprCheck }),
+  [NAMEDEXPR]: application(new FD.Opaque(), since(8), { scopes: namedexprScopes, check: namedexprCheck }),
   [IFEXP]: application(new FD.Function([FD.Anything, FD.Anything, FD.Anything], FD.Anything)),
   [LAMBDA]: application(new FD.Opaque(), STANDARDS, { scopes: lambdaScopes, check: lambdaCheck, optional: ARGUMENT_SLOTS }),
   [LET]: new F.Kind(F.BINDING, { required: ["name"], check: identifier("name", "a let's name") }),

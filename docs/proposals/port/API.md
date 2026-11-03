@@ -710,6 +710,19 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
     gains `typescript5`, a term of every kind; its JSON is byte-identical, its YAML quotes `++` and `??` in TypeScript
     alone (mbse-schemas' writers, both read back alike).
 
+86. **Python3's binding targets hold its `Pattern`** (the proposal's Decided, "Every dialect has a `Pattern` union",
+    "(ii)"). `Expressions.Python3.Pattern` lists the kinds Python's grammar allows as a target (its language reference,
+    7.2): `variable`, `tuple`, `list` (the framework's), `starred`, `attribute`, `subscript` and `parenthesized`, each
+    the schema its `Term` lists; `Comprehension.target` and `NamedExpr.target` hold it. As `TypeScript5`'s, a target is
+    read as a helper, a `Terms.Part` (item 72): its terms follow the clause's own (a comprehension's iterable and
+    conditions, a named expression's value), so a form's arguments are reordered, and `make`, printing, scopes,
+    `target_names` (now of a term, or of a part and its terms), the evaluator's generator and the checks read it there.
+    A target's own checks (a name an identifier, an attribute's name one, a target present) are its holder kind's, as
+    validation does not read a helper; a namedexpr's signature is any number of arguments. A hole may now stand within
+    a helper's attributes in a translation pattern (`Translators`), as a comprehension's target `N` does in the rules
+    of `all`, `any` and counting. Stored data and the wire are unchanged: the branch names are the same, and the
+    corpus is byte-identical. A kind no target is (`binop`) is refused there by mbse-schemas. Tested in DIA-19.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,

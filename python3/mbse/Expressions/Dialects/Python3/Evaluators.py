@@ -146,10 +146,10 @@ def _generatorexp(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     for part in _attributes(node).get("generators", ()):
         if part.attributes.get("is_async"):
             raise _refuse("async comprehension")
-        target = terms[i]
-        if target is None or Terms.kind_of(target)[0] != Expressions.NAME:
-            raise _refuse(f"{'missing' if target is None else Terms.kind_of(target)[0]} target")
-        clauses.append((Terms.name_of(target), terms[i + 1], terms[i + 2:i + part.size]))
+        target = part.attributes.get("target")  # a pattern, its terms the clause's last
+        if target is None or target.kind != Expressions.NAME:
+            raise _refuse(f"{'missing' if target is None else target.kind} target")
+        clauses.append((target.attributes["name"], terms[i], terms[i + 1:i + part.size - target.size]))
         i += part.size
     if not clauses:
         raise ValueError("a generatorexp needs a for clause")
@@ -164,7 +164,7 @@ def _generatorexp(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
                 else:
                     yield from generate(k + 1, bound, INTERPRETER.evaluate(clauses[k + 1][1], bound))
 
-    return generate(0, scope, iter(arguments[1 + 1]()))  # the first iterable, after the element and the first target
+    return generate(0, scope, iter(arguments[1]()))  # the first iterable, after the element
 
 
 def _boolop(name: str) -> F.Implementation:

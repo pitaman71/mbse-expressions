@@ -43,6 +43,12 @@ carries no domain. Its kinds:
   `Evaluators`).
 - The framework's kinds of invalid syntax, `error` and `missing`.
 
+A binding target, a comprehension's `target` and a named expression's, holds `Expressions.Python3.Pattern`, the union of
+the terms a target may be (`variable`, `tuple`, `list`, `starred`, `attribute`, `subscript`, `parenthesized`), each a
+schema of a term too: every dialect has a `Pattern` union for its binding targets, as the dialects proposal decided
+("(ii)"). The framework reads a target, as any helper, as a `Terms.Part`, its terms after the clause's own; a lambda's
+parameters are `arg`s, not patterns.
+
 Each kind's `Kind` records the Python versions that have it (`standards`, `STANDARDS`'s names from the one it arrived
 in; none for an extension). A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
 calls, not a dialect.
@@ -103,6 +109,7 @@ def install(txn: Any) -> Any:
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Python3/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+                  "Pattern": S.OfUnion,
                   "Expression": S.OfObject, "Literal": S.OfObject, "Constant": S.OfObject,
                   "ConcatenatedString": S.OfObject, "StringText": S.OfObject, "FormatSpec": S.OfObject,
                   "FormattedValue": S.OfObject, "Interpolation": S.OfObject, "JoinedStrValue": S.OfUnion,
@@ -160,6 +167,17 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
+            # its patterns: what a binding target may be (Python's language reference, 7.2), each a schema of a term too,
+            # as the dialects proposal decided for every dialect ("(ii)")
+            lambda _: _.Pattern.name("Expressions.Python3.Pattern").branches([
+                lambda t: t.name("variable").schema([Framework.Variable]),
+                lambda t: t.name("tuple").schema([_.Tuple]),
+                lambda t: t.name("list").schema([Framework.List]),
+                lambda t: t.name("starred").schema([_.Starred]),
+                lambda t: t.name("attribute").schema([_.Attribute]),
+                lambda t: t.name("subscript").schema([_.Subscript]),
+                lambda t: t.name("parenthesized").schema([_.Parenthesized]),
+            ]),
             # atoms (Python's language reference, 6.2)
             lambda _: _.Literal.name("Expressions.Python3.Literal").refines([Framework.Literal]).properties({
                 "prefix": S.OfStr,  # a string's or bytes' prefix, as written: `r`, `b`, `Rb`
@@ -207,7 +225,7 @@ def install(txn: Any) -> Any:
             lambda _: _.Dict.name("Expressions.Python3.Dict").properties({
                 "items": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.DictItem]))}),
             lambda _: _.Comprehension.name("Expressions.Python3.Comprehension").properties({
-                "is_async": S.OfBool, "target": _.Term, "iter": _.Term,
+                "is_async": S.OfBool, "target": _.Pattern, "iter": _.Term,
                 "ifs": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term]))}),
             lambda _: _.ListComp.name("Expressions.Python3.ListComp").properties({
                 "elt": _.Term, "generators": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comprehension]))}),
@@ -243,7 +261,7 @@ def install(txn: Any) -> Any:
                 "left": _.Term, "comparisons": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comparison]))}),
             lambda _: _.BoolOp.name("Expressions.Python3.BoolOp").properties({
                 "op": S.OfStr, "values": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term]))}),
-            lambda _: _.NamedExpr.name("Expressions.Python3.NamedExpr").properties({"target": _.Term, "value": _.Term}),
+            lambda _: _.NamedExpr.name("Expressions.Python3.NamedExpr").properties({"target": _.Pattern, "value": _.Term}),
             lambda _: _.IfExp.name("Expressions.Python3.IfExp").properties({
                 "body": _.Term, "test": _.Term, "orelse": _.Term}),
             lambda _: _.Arg.name("Expressions.Python3.Arg").properties({
@@ -467,29 +485,43 @@ def _string_check(tag: str, letters: str) -> Any:
     return check
 
 
-def target_names(term: Any) -> frozenset[str]:
+def target_names(target: Any, arguments: Sequence[Any] = ()) -> frozenset[str]:
     """The names a target binds: a name's, and those of the names a tuple, a list, a starred or a parenthesized
-    target holds; an attribute or a subscript binds none."""
-    if term is None:
+    target holds; an attribute or a subscript binds none. A target is a term, or a pattern as a form reads it, its
+    `Terms.Part` and its `arguments` (its terms), as a comprehension and a named expression hold it."""
+    if target is None:
         return frozenset()
-    tag, record = F.kind_of(term)
+    if isinstance(target, F.Part):
+        tag, attributes = target.kind, target.attributes
+    else:
+        tag, record = F.kind_of(target)
+        attributes, arguments = F.attributes_of(record), F.arguments_of(record)
     if tag == NAME:
-        return frozenset({F.name_of(term)})
+        return frozenset({attributes["name"]}) if "name" in attributes else frozenset()
     if tag in (TUPLE, LIST, STARRED, PARENTHESIZED):
-        return frozenset().union(*(target_names(argument) for argument in F.arguments_of(record)))
+        return frozenset().union(*(target_names(argument) for argument in arguments))
     return frozenset()
 
 
+def _target(part: F.Part, arguments: Sequence[Any]) -> tuple[F.Part | None, tuple[Any, ...]]:
+    """A comprehension's or a named expression's target, a pattern, and its terms, the last of `arguments` (a helper's
+    terms follow its own)."""
+    target = part.attributes.get("target")
+    size = 0 if target is None else target.size
+    return target, tuple(arguments[len(arguments) - size:])
+
+
 def _comprehension_scopes(record: Any) -> list[frozenset[str]]:
-    """What each argument of a comprehension has bound: each `for` clause's target within its own target, its
-    conditions, the later clauses and the element; its iterable the earlier clauses' alone."""
+    """What each argument of a comprehension has bound: each `for` clause's target within its own target (a pattern,
+    its terms after its iterable and its conditions), its conditions, the later clauses and the element; its iterable
+    the earlier clauses' alone."""
     arguments, parts = F.arguments_of(record), _parts_of(record, "generators")
     lead = len(arguments) - sum(part.size for part in parts)
     scopes, names, i = [frozenset[str]()] * len(arguments), frozenset[str](), lead
     for part in parts:
-        bound = names | target_names(arguments[i])
-        scopes[i], scopes[i + 1] = bound, names
-        scopes[i + 2:i + part.size] = [bound] * (part.size - 2)
+        bound = names | target_names(*_target(part, arguments[i:i + part.size]))
+        scopes[i] = names
+        scopes[i + 1:i + part.size] = [bound] * (part.size - 1)
         names, i = bound, i + part.size
     scopes[:lead] = [names] * lead
     return scopes
@@ -525,17 +557,47 @@ def _lambda_check(record: Any) -> list[str]:
 
 
 def _namedexpr_scopes(record: Any) -> list[frozenset[str]]:
-    """A named expression's target is bound within itself: it binds its name in the scope around it, which a term
-    does not see beyond itself."""
-    target = F.arguments_of(record)[0]
-    return [target_names(target), frozenset()]
+    """A named expression's target, a pattern, is bound within itself: it binds its name in the scope around it,
+    which a term does not see beyond itself. Its value is its first argument, its target's terms the rest."""
+    arguments = F.arguments_of(record)
+    names = target_names(*_target(F.Part(NAMEDEXPR, F.attributes_of(record)), arguments))
+    return [frozenset()] + [names] * (len(arguments) - 1)
+
+
+def _target_problems(label: str, target: F.Part) -> list[str]:
+    """A target's own checks, as its kind's: a pattern is a helper, which validation does not read (its terms it does).
+    A name needs a name, an identifier, and an attribute's name is one."""
+    attributes = target.attributes
+    if target.kind == NAME:
+        problems = _identifier_problems("a name", attributes.get("name")) if "name" in attributes else ["a variable needs a name"]
+    else:
+        problems = _identifier_problems("an attribute", attributes.get("attr")) if target.kind == ATTRIBUTE else []
+    return [f"{label}: {problem}" for problem in problems]
 
 
 def _namedexpr_check(record: Any) -> list[str]:
-    target = F.arguments_of(record)[0]
-    if target is None or F.kind_of(target)[0] == NAME:
-        return []
-    return ["a namedexpr's target must be a name"]
+    target = F.attributes_of(record).get("target")
+    if target is None:
+        return ["a namedexpr needs a target"]
+    if target.kind != NAME:
+        return ["a namedexpr's target must be a name"]
+    return _target_problems("target", target)
+
+
+def _comprehension_check(tag: str) -> Any:
+    """A comprehension's `for` clauses, one at least, each with its target, a pattern (a helper, which validation
+    does not ask for)."""
+    needs = _needs(tag, "generators", "a for clause")
+
+    def check(record: Any) -> list[str]:
+        problems = needs(record)
+        for i, part in enumerate(_parts_of(record, "generators")):
+            target = part.attributes.get("target")
+            problems += [f"{F._article(tag)} needs a generators {i} target"] if target is None else _target_problems(
+                f"generators {i} target", target)
+        return problems
+
+    return check
 
 
 def _native(value: Any) -> Writer:
@@ -572,12 +634,12 @@ DIALECT = F.Dialect("Python3", {
     LIST: _application(),
     SET: _application(check=_needs(SET, "elts", "an element")),
     DICT: _application(optional=("key",)),
-    LISTCOMP: _application(scopes=_comprehension_scopes, check=_needs(LISTCOMP, "generators", "a for clause")),
-    SETCOMP: _application(scopes=_comprehension_scopes, check=_needs(SETCOMP, "generators", "a for clause")),
+    LISTCOMP: _application(scopes=_comprehension_scopes, check=_comprehension_check(LISTCOMP)),
+    SETCOMP: _application(scopes=_comprehension_scopes, check=_comprehension_check(SETCOMP)),
     DICTCOMP: _application(scopes=_comprehension_scopes, optional=("value",),
-                           check=_needs(DICTCOMP, "generators", "a for clause")),
+                           check=_comprehension_check(DICTCOMP)),
     GENERATOREXP: _application(Domains.GENERATOR, scopes=_comprehension_scopes,
-                               check=_needs(GENERATOREXP, "generators", "a for clause")),
+                               check=_comprehension_check(GENERATOREXP)),
     YIELD: _application(optional=("value",)),
     YIELDFROM: _application(_ANY, _since(3)),
     ATTRIBUTE: F.Kind(F.APPLICATION, operator="attr", signature=_ANY, required=("attr",),
@@ -592,7 +654,7 @@ DIALECT = F.Dialect("Python3", {
     COMPARE: F.Kind(F.APPLICATION, vocabulary=Domains.COMPARE, operators=_compare_operators, result=_compare_result,
                     check=_compare_check, unfold=_compare_unfold, standards=_ALL),
     BOOLOP: _operator_kind(Domains.BOOLOP, check=_needs(BOOLOP, "values", "two values", 2), unfold=_boolop_unfold),
-    NAMEDEXPR: _application(_ANY2, _since(8), scopes=_namedexpr_scopes, check=_namedexpr_check),
+    NAMEDEXPR: _application(FD.Opaque(), _since(8), scopes=_namedexpr_scopes, check=_namedexpr_check),
     IFEXP: _application(FD.Function((FD.Anything, FD.Anything, FD.Anything), FD.Anything)),
     LAMBDA: _application(scopes=_lambda_scopes, check=_lambda_check, optional=_ARGUMENT_SLOTS),
     LET: F.Kind(F.BINDING, required=("name",), check=_identifier("name", "a let's name")),

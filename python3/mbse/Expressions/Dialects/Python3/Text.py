@@ -155,11 +155,13 @@ class _Printer:
         """A comprehension's `for` clauses, after its element: each `async for target in iter if condition ...`."""
         written, i = [], 0
         for part in _parts(attributes.get("generators")):
-            target, iterable, conditions = arguments[i], arguments[i + 1], arguments[i + 2:i + part.size]
+            target = part.attributes.get("target")
+            size = 0 if target is None else target.size
+            iterable, conditions = arguments[i], arguments[i + 1:i + part.size - size]
+            terms = arguments[i + part.size - size:i + part.size]
             i += part.size
             asynchronous = "async " if part.attributes.get("is_async") else ""
-            target_text = self.elements(F.arguments_of(F.kind_of(target)[1])) if F.kind_of(target)[0] == P.TUPLE \
-                else self.write(target, _BITOR)
+            target_text = self.target(target, terms, bare=True)
             written.append(f" {asynchronous}for {target_text} in {self.write(iterable, _OR)}"
                            + "".join(f" if {self.write(condition, _OR)}" for condition in conditions))
         return "".join(written)
@@ -254,8 +256,19 @@ class _Printer:
         level = _AND if attributes["op"] == "and" else _OR
         return f" {attributes['op']} ".join(self.write(argument, level + 1) for argument in arguments), level
 
+    def target(self, target: F.Part | None, terms: tuple[Any, ...], bare: bool = False) -> str:
+        """A target, a pattern as a form reads it (its part and its terms), written as the term of its kind; with
+        `bare`, a tuple without its parentheses, as a `for` clause writes it."""
+        if target is None:
+            return ""
+        if bare and target.kind == P.TUPLE:
+            return self.elements(terms)
+        text, precedence = getattr(self, f"_{target.kind}")(target.attributes, terms)
+        return text if precedence >= _BITOR else f"({text})"
+
     def _namedexpr(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
-        return f"{self.write(arguments[0], _PRIMARY)} := {self.element(arguments[1])}", _NAMED
+        target = attributes.get("target")
+        return f"{self.target(target, arguments[1:])} := {self.element(arguments[0])}", _NAMED
 
     def _ifexp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         body, test, orelse = arguments
