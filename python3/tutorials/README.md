@@ -33,10 +33,10 @@ and `show`, which writes an expression as text (case study 6 explains it).
 |---|---|---|---|
 | 1 | [Constraints as data](01_Constraints_As_Data.ipynb) | One constraint, four hand-written copies in four languages | Writing a constraint with writers, as an expression in a store; evaluating it; the core vocabulary; validating; saving and loading |
 | 2 | [Answers you can trust](02_Answers_You_Can_Trust.ipynb) | A logger that never reported: neither true nor false | Unknown; `has`; Kleene's logic; deciding what unknown means; no coercion; what raises |
-| 3 | [Constraints over collections](03_Constraints_Over_Collections.ipynb) | Every reading, not just the last; every logger's battery | Collections; `count`, `item`, `max` and friends; quantifiers; empty collections; an object's related objects |
+| 3 | [Constraints over collections](03_Constraints_Over_Collections.ipynb) | Every reading, not just the last; every logger's battery | Collections; `count`, `item`, `max` and friends; quantifiers; empty collections; an object's related objects; lists and mappings built from terms |
 | 5 | [Deciding what you can now](05_Deciding_What_You_Can_Now.ipynb) | A constraint per product; a question that waits on the clock | Partial evaluation; templates; residuals; how Kleene's logic simplifies; lets of known values |
 | 6 | [Analyzing and rewriting constraints](06_Analyzing_And_Rewriting_Constraints.ipynb) | Which constraints read a property; one way to write each constraint | Forms; `walk`, `fold`, `same` and `free`; rewriting with patterns and holes |
-| 7 | [One constraint, many languages](07_One_Constraint_Many_Languages.ipynb) | The constraint in Excel, Python, MATLAB and LaTeX | Dialects and translators; each language's own evaluation; reading constraints back; scopes as allowlists |
+| 7 | [One constraint, many languages](07_One_Constraint_Many_Languages.ipynb) | The constraint in Excel, Python, MATLAB and LaTeX | Dialects and translators; each language's own evaluation; reading constraints back; scopes as allowlists; a dialect's operations and domains as data |
 | 8 | [Constraints for firmware and hardware](08_Constraints_For_Firmware_And_Hardware.ipynb) | A packet constraint in C and SystemVerilog | C's widths, promotions and undefined behavior; `x` and `z`; what has no counterpart |
 
 Case study 4, *Values with widths* (a radio packet's `int16_t` and `uint8_t` members: typed literals, overflow, bits,
