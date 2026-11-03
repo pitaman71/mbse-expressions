@@ -1,31 +1,37 @@
 # Dialects
 
-A dialect is an expression language: its term kinds, which its `install` adds to the store's
-`Expressions.Framework.Term`, its vocabulary of operators, the domains of its values, its source text (its `Text`
+A dialect is an expression language: its term kinds, its union of them (`Expressions.<Dialect>.Expression`), which its
+`install` adds to the store's `Expressions.Framework.Term` as the branch named after it (`python3`), its vocabulary of
+operators, the domains of its values, its source text (its `Text`
 module: `ToText`, and for Python `FromText`), its evaluator, and the scope that resolves its names. Every dialect's
 terms serialize, validate, infer domains and traverse the same way (`DIALECT.validate(term)`, `DIALECT.infer(term)`,
 `Framework.Terms.walk`), and `Framework.Symbolics.free(term, DIALECT)` tells which names a term needs from its scope.
-Its constructors are writers: write them in a transaction, into a store where its install has run.
+Its constructors are writers: write them in a transaction, into a store where its install has run. A dialect reads only
+its own terms: a term of another dialect is refused by name ("a Patterns variable is not a Python3 term"). Every
+dialect's union holds the framework's kinds of invalid syntax, `error` (what a parser skipped) and `missing` (the kind it
+expected): validation reports them, printers write them as written, and evaluation refuses them. A literal keeps its
+spelling (`text`) and what is wrong with it (`problems`) beside its value: printers write the spelling where it has
+one.
 
 ## Which dialect
 
 | Use | For |
 |---|---|
-| **Basic** (`mbse.Expressions`) | the constraint itself: the neutral form to store, share and analyze. Constraints every binding evaluates are Basic, over the variables they name, using only the core vocabulary |
-| **Python** | Python source, to check the constraint in Python or read one from Python code; NumPy style evaluates over columns |
+| **Patterns** (`mbse.Expressions`) | the constraint itself: the neutral form to store, share and analyze. Constraints every binding evaluates are Patterns', over the variables they name, using only the core vocabulary |
+| **Python3** | Python source, to check the constraint in Python or read one from Python code; NumPy style evaluates over columns |
 | **Matlab** | MATLAB source, for constraints that live in MATLAB code or Simulink models |
 | **Excel** | worksheet formulas, for constraints that live in spreadsheets, over cells and records |
 | **Latex** | notation, for constraints in documents and specifications; it has no evaluator: translate to evaluate |
-| **Ccpp** | C and C++ source, for constraints over the types of embedded software and interface control documents (`uint8_t`, `float`) |
+| **C**, **Cpp** | C (C11 to C23) and C++ (C++17 to C++23) source, for constraints over the types of embedded software and interface control documents (`uint8_t`, `float`); their kinds are shared, each recording the standards that have it |
 | **SystemVerilog** | SystemVerilog source, for constraints over hardware signals and registers, as assertions and checks on vectors whose bits may be x or z |
 
-Write a constraint in Basic, and translate it where it must be checked; read one written elsewhere back into Basic to
-analyze it.
+Write a constraint in Patterns, and translate it where it must be checked; read one written elsewhere back into Patterns
+to analyze it.
 
 ## Constructors and source text
 
 ```python fragment
-from mbse.Expressions.Dialects.Python import Expressions as P, Text as PT
+from mbse.Expressions.Dialects.Python3 import Expressions as P, Text as PT
 P.compare(">=", P.attribute(P.name("person"), "age"), 18)    # ast-shaped: name, attribute, subscript, call, compare,
 P.call("np.greater_equal", P.subscript(P.name("t"), "age"), 18)  # boolop, binop, unaryop, ifexp, let, import, importfrom
 P.import_("numpy", body, alias="np"); PT.ToText(e); PT.FromText("import numpy as np\nnp.add(x, 1)")  # Python only
@@ -47,12 +53,12 @@ LT.ToText(e)                                             # a \geq \frac{36}{2} \
 
 | | Missing property | `1 == 1.0` | Logic | Other |
 |---|---|---|---|---|
-| Basic | unknown (`None`) | unknown: no coercion | Kleene, short-circuit | only the core vocabulary evaluates |
-| Python | `AttributeError` | `True` | `and`/`or` give an operand | NumPy style: vectorized, missing values masked |
+| Patterns | unknown (`None`) | unknown: no coercion | Kleene, short-circuit | only the core vocabulary evaluates |
+| Python3 | `AttributeError` | `True` | `and`/`or` give an operand | NumPy style: vectorized, missing values masked |
 | Matlab | error (`isfield` tests first) | true | two-valued, short-circuit | numbers are doubles; `+` concatenates strings |
 | Excel | `#FIELD!` | TRUE | `AND`/`OR` evaluate every argument | errors are values that propagate; text compares ignoring case |
 | Latex | no evaluator | | | translate to a dialect that evaluates |
-| Ccpp | `KeyError` (no member) | true, after the usual conversions | `&&`/`\|\|` short-circuit, give `bool` | unsigned wraps; undefined behavior (signed overflow, ...) raises |
+| C, Cpp | `KeyError` (no member) | true, after the usual conversions | `&&`/`\|\|` short-circuit, give `bool` | unsigned wraps; undefined behavior (signed overflow, ...) raises |
 | SystemVerilog | `KeyError` (no member) | `1'b1`, compared as reals | 1, 0 or x (`1'bx`) by the truth of each operand | values are sized vectors; x and z propagate; division by zero gives x |
 
 ## Scopes: names, imports and references
@@ -61,7 +67,7 @@ An evaluator takes a mapping of variables, or a scope, which resolves names the 
 what the caller gives it, so expressions from untrusted data cannot import or call other code.
 
 ```python fragment
-Python.Evaluators.Scope(variables, modules={"numpy": numpy}, builtins=None)   # imports: only these modules
+Python3.Evaluators.Scope(variables, modules={"numpy": numpy}, builtins=None)   # imports: only these modules
 Matlab.Evaluators.Scope(variables, functions={"twice": f}, packages={"geo": {"dist": d}})   # path, import pkg.*
 Excel.Evaluators.Workbook(names, {"Sheet1": {"A1": 2}}, name="Book1", books={"Rates.xlsx": other}, add_ins={"DOUBLE": f})
 ```

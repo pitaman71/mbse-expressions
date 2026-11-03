@@ -11,17 +11,18 @@ is stored with the rest of the data ([mbse-schemas](https://github.com/pitaman71
 the same way in Python (`mbse.Expressions`) and TypeScript (`@mbse/expressions`), and translated between expression
 languages, called dialects:
 
-- **Basic**, the core vocabulary: comparisons, Kleene logic, arithmetic and bitwise operations over values, property
+- **Patterns** (formerly Basic), the core vocabulary: comparisons, Kleene logic, arithmetic and bitwise operations over values, property
   access, lets, lists and mappings, and collections with quantifiers. Every binding evaluates it, and it is the neutral
   form of every constraint. Its operations are data: each an expression schema its dialect defines by name, its
   variables its arguments, in order.
-- **Python**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
+- **Python3**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules.
 - **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.
-- **Ccpp**, C and C++ expressions over their arithmetic types: it renders as C source and evaluates by C's rules
-  (promotions, wrapping unsigned arithmetic, undefined behavior raising); it translates to and from Basic.
+- **C** and **Cpp**, C (C11 to C23) and C++ (C++17 to C++23) expressions over their arithmetic types, sharing their
+  kinds: each renders as its source and evaluates by C's rules (promotions, wrapping unsigned arithmetic, undefined
+  behavior raising); each translates to and from Patterns, by one rule set.
 - **SystemVerilog**, hardware expressions and constraints over 4-state vectors and reals: it renders as SystemVerilog
-  source and evaluates by IEEE 1800's rules (sizing by context, x and z propagating); it translates to and from Basic.
+  source and evaluates by IEEE 1800's rules (sizing by context, x and z propagating); it translates to and from Patterns.
 
 ## When to use it
 
@@ -39,21 +40,24 @@ Why the mbse repositories exist, and this one's part: [MBSE.md](https://github.c
 1. **Writers build data; nothing evaluates until asked.** `variable("person").age.ge(18)` writes the expression
    `ge(get(person, 'age'), 18)` where it is given: an expression's `root`, in a store, within a transaction. Evaluate
    it with a dialect's `Evaluators.OfAny(expression, scope)`.
-2. **Basic is three-valued and never coerces.** An absent property is unknown (`None`/`null`), and `and`/`or` follow
+2. **Patterns is three-valued and never coerces.** An absent property is unknown (`None`/`null`), and `and`/`or` follow
    Kleene. `1 == 1.0` is unknown, since an int and a float are different kinds of value; in TypeScript, an int is a
    `bigint` (`18n`). See
    [CAP-106: expressions evaluated three-valued](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-106.md#evaluation-in-mbse-expressions).
-3. **Only the operations a dialect defines are calls of it.** Basic's are its data (`Expressions.Basic.add`, ...);
-   `validate` refuses a call to any other ("'contains' is not an operation Basic defines"), and evaluating one raises.
+3. **Only the operations a dialect defines are calls of it.** Patterns' are its data (`Expressions.Patterns.add`, ...);
+   `validate` refuses a call to any other ("'contains' is not an operation Patterns defines"), and evaluating one raises.
    A term carries no domain: values are taken by the schemas they are written with, ints unbounded and floats binary64,
    until domain inference ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)).
 4. **Each dialect evaluates by its own language's rules.** A translation keeps a constraint's form, not always its
-   value: a missing property is unknown in Basic, `#FIELD!` in Excel, and an error in Python and MATLAB.
+   value: a missing property is unknown in Patterns, `#FIELD!` in Excel, and an error in Python and MATLAB.
 5. **Nothing is imported or called unless the scope provides it.** Python modules, MATLAB packages and Excel add-ins
    come from an allowlist in the scope, so expressions from untrusted data cannot reach other code.
-6. **Terms live in a store.** Run the installs first, the framework's, Basic's and each dialect's you write
-   (`store.transaction(Framework.install)`); a term is a nested value of `Expressions.Framework.Term`, which every
-   dialect extends, so it serializes as any mbse-schemas value: `JSON.ToJSON(store)(Term, term)`.
+6. **Terms live in a store.** Run the installs first, the framework's, then each dialect's you write
+   (`store.transaction(Framework.install)`, `Patterns.install`, ...); a term is a nested value of
+   `Expressions.Framework.Term`, a union of the dialects' unions, written with its dialect, then its kind
+   (`{"patterns": {"call": ...}}`), so it serializes as any mbse-schemas value: `JSON.ToJSON(store)(Term, term)`. A
+   dialect reads only its own terms. mbse-schemas holds a union of one branch invalid, so a store whose expressions are
+   validated as data holds at least two dialects.
 
 ## Load the reference for your task
 

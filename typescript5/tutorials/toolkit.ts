@@ -7,12 +7,13 @@
  */
 
 import { Framework } from "@mbse/expressions";
-import * as Basic from "@mbse/expressions/Dialects/Basic";
-import * as Ccpp from "@mbse/expressions/Dialects/Ccpp";
+import * as Patterns from "@mbse/expressions/Dialects/Patterns";
+import * as C from "@mbse/expressions/Dialects/C";
+import * as Cpp from "@mbse/expressions/Dialects/Cpp";
 import * as Excel from "@mbse/expressions/Dialects/Excel";
 import * as Latex from "@mbse/expressions/Dialects/Latex";
 import * as Matlab from "@mbse/expressions/Dialects/Matlab";
-import * as Python from "@mbse/expressions/Dialects/Python";
+import * as Python3 from "@mbse/expressions/Dialects/Python3";
 import * as SystemVerilog from "@mbse/expressions/Dialects/SystemVerilog";
 import { Terms } from "@mbse/expressions/Framework";
 import { Builders } from "@mbse/schemas/Framework";
@@ -34,11 +35,13 @@ export function install(txn: any): any {
     ])]))]);
 }
 
-/** A store of the cold chain's schemas, which also holds expressions: of the Basic dialect, and of every dialect the
+/** A store of the cold chain's schemas, which also holds expressions: of the Patterns dialect, and of every dialect the
  * case studies translate into. */
 export function cold_chain(): any {
   const store: any = new Builders.Store();
-  for (const module of [Framework, Basic, Python, Matlab, Excel, Latex, Ccpp, SystemVerilog]) store.transaction(module.install);
+  for (const module of [Framework, Patterns, Python3, Matlab, Excel, Latex, C, Cpp, SystemVerilog]) {
+    store.transaction(module.install);
+  }
   store.transaction(install);
   return store;
 }
@@ -51,7 +54,7 @@ function repr(value: unknown): string {
   return String(value);
 }
 
-/** An expression of the Basic dialect as function-call text: a literal as Python writes its value, a let, a quantifier,
+/** An expression of the Patterns dialect as function-call text: a literal as Python writes its value, a let, a quantifier,
  * and the container constructors as `[a, b]` and `{k: v}`. */
 export function show(expression: unknown): string {
   return Terms.fold(expression, (term: any, args: string[]) => {
