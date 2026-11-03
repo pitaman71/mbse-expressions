@@ -1,86 +1,95 @@
-systemverilog_binary:
-  operator: '->'
-  left:
-    systemverilog_inside:
-      value:
-        systemverilog_member:
-          name: a
-          object:
-            variable:
-              name: record
-      items:
-      - literal:
-          value: 1
-      - systemverilog_span:
-          low:
-            literal:
-              value: 2
-          high:
-            literal:
-              value: 5
-  right:
-    systemverilog_conditional:
-      condition:
-        systemverilog_unary:
-          operator: '!'
-          operand:
-            systemverilog_select:
-              value:
-                variable:
-                  name: record
-              index:
-                literal:
-                  value: 0
-      consequent:
-        systemverilog_concatenation:
-          parts:
-          - systemverilog_replication:
-              count:
-                literal:
-                  value: 6
-              value:
-                systemverilog_vector:
-                  value: '10'
-          - systemverilog_range:
-              value:
-                systemverilog_member:
-                  name: b
-                  object:
-                    variable:
-                      name: record
-              msb:
-                literal:
-                  value: 7
-              lsb:
-                literal:
-                  value: 4
-      alternative:
-        systemverilog_binary:
-          operator: '+'
-          left:
-            systemverilog_cast:
-              type: byte
-              operand:
-                call:
-                  callable: $clog2
-                  arguments:
-                  - systemverilog_iterate:
-                      name: q
-                      method: sum
-                      array:
-                        systemverilog_method:
-                          name: unique
-                          array:
-                            variable:
-                              name: record
-                      body:
-                        variable:
+systemverilog:
+  binary:
+    operator: '->'
+    left:
+      inside:
+        value:
+          member:
+            name: a
+            object:
+              variable:
+                name: record
+        items:
+        - literal:
+            value:
+              int: 1
+        - span:
+            low:
+              literal:
+                value:
+                  int: 2
+            high:
+              literal:
+                value:
+                  int: 5
+    right:
+      conditional:
+        condition:
+          unary:
+            operator: '!'
+            operand:
+              select:
+                value:
+                  variable:
+                    name: record
+                index:
+                  literal:
+                    value:
+                      int: 0
+        consequent:
+          concatenation:
+            parts:
+            - replication:
+                count:
+                  literal:
+                    value:
+                      int: 6
+                value:
+                  vector:
+                    value: '10'
+            - range:
+                value:
+                  member:
+                    name: b
+                    object:
+                      variable:
+                        name: record
+                msb:
+                  literal:
+                    value:
+                      int: 7
+                lsb:
+                  literal:
+                    value:
+                      int: 4
+        alternative:
+          binary:
+            operator: '+'
+            left:
+              cast:
+                type: byte
+                operand:
+                  call:
+                    callable: $clog2
+                    arguments:
+                    - systemverilog:
+                        iterate:
                           name: q
-          right:
-            systemverilog_cast:
-              width: 4
-              operand:
-                systemverilog_vector:
-                  value: '11111111'
-                  signed: true
-                  base: h
+                          method: sum
+                          array:
+                            method:
+                              name: unique
+                              array:
+                                variable:
+                                  name: record
+                          body:
+                            variable:
+                              name: q
+            right:
+              cast:
+                width: 4
+                operand:
+                  vector:
+                    value: '11111111'
+                    signed: true
+                    base: h

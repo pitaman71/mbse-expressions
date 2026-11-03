@@ -33,7 +33,7 @@ def ToText(expression: Any) -> str:
     one line per import around it, then the expression."""
     lines = []
     node = F.term(expression)
-    while DIALECT.kind(node)[0] == "matlab_import":
+    while DIALECT.kind(node)[0] == "import":
         form = F.form(node)
         lines.append(f"import {form.attributes['name']}")
         node = form.arguments[0]
@@ -45,24 +45,26 @@ def ToText(expression: Any) -> str:
 
         tag, record, _ = DIALECT.kind(node)
         attributes = F.attributes_of(record)
-        if tag == "literal":
-            text = _constant(attributes["value"])
+        if tag == "literal":  # its spelling, as written, or its value's
+            text = attributes["text"] if "text" in attributes else _constant(attributes["value"])
             return text, _UNARY if text.startswith("-") else _ATOM
+        if tag in ("error", "missing"):
+            return F.invalid_text(DIALECT, tag, attributes), _ATOM
         if tag == "variable":
             return attributes["name"], _ATOM
-        if tag == "matlab_field":
+        if tag == "field":
             return f"{operand(0, _ATOM)}.{attributes['name']}", _ATOM
         if tag == "call":
             return f"{attributes['callable']}({', '.join(text for text, _ in arguments)})", _ATOM
-        if tag == "matlab_index":
+        if tag == "index":
             return f"{operand(0, _ATOM)}({arguments[1][0]})", _ATOM
-        if tag == "matlab_arrayfun":
+        if tag == "arrayfun":
             return f"arrayfun(@({attributes['name']}) {arguments[1][0]}, {arguments[0][0]})", _ATOM
-        if tag == "matlab_import":
+        if tag == "import":
             raise ValueError("an import can only enclose the whole expression")
         if tag == "list":
             return f"[{', '.join(text for text, _ in arguments)}]", _ATOM
-        if tag == "matlab_unary":
+        if tag == "unary":
             return f"{attributes['operator']}{operand(0, _UNARY)}", _UNARY
         level = _PRECEDENCE[attributes["operator"]]
         return f"{operand(0, level)} {attributes['operator']} {operand(1, level + 1)}", level

@@ -73,7 +73,7 @@ This repository's ([the port](../port/README.md#decided) and [its API](../port/A
 held by an `Expressions.Framework.Expression`, linked from a schema by `HasRoot`; "refinement has been superseded by
 schema extension" and "ah, schema *extension* is the preferred form"; "a dialect reuses the framework's kinds wherever
 the shape matches" ("yes", 2026-10-30); "yes, each dialect has a singleton by name"; "Terms do not designate their
-schema", type inference deferred. And the standing rules: "Never guess the schema"
+schema", domain inference deferred. And the standing rules: "Never guess the schema"
 ([PRI-025: never guess the schema](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-025)); "Never use wire format in examples";
 "Do not invent another DSL by wrapping builder syntax"
 ([PRI-019: fluent builder syntax](../../../../mbse-basis/docs/PRINCIPLES.md#PRI-019));
@@ -100,6 +100,24 @@ As the user decided (2026-11-02), on the questions below:
   today; `Expressions.<Dialect>.Expression` is the dialect's union, not a holder. Tried against mbse-schemas 0.26.5: a
   union whose branches are unions validates, builds and round-trips through a snapshot. This supersedes question 1's
   prefixed tags and question 4's per-dialect holder (its options (a) to (c)).
+  Revised (2026-11-03), reviewing stage 2, where the kinds C and C++ share held `Expressions.Framework.Term`: the user,
+  "Framework.Term -> Dialects.C.Term / Framework.Term -> Dialects.Cpp.Term"; asked, "a dialect's union" - when was it
+  decided a dialect has only one union?" (it was not: question 5 gives each sublanguage a union of its own), and to
+  the structure then proposed, "yes"; then, correcting it: "the parent-child relationships in the AST are sometimes
+  modeled as relations sometimes as properties. It matters in this case because Term is a value and Expression is a
+  reference object. The root of an expression tree is always an `Expression` which holds the root `Term` as a
+  property." To the model restated, "yes it does":
+  - `Expressions.<Dialect>.Term` is a value, the union of the dialect's term kinds; within a term tree every
+    parent-child link is a property (`left`, `right`, `arguments`), each holding a `Term` of its dialect. The kinds C
+    and C++ share are defined by each, their properties holding `Expressions.C.Term` and `Expressions.Cpp.Term`.
+  - `Expressions.<Dialect>.Expression` is a reference object, the root of an expression tree, holding the root `Term`
+    as its property `root`: each dialect its own holder, as "`Dialects.<lang_ver>.Expression`" first said.
+  - `Expressions.Framework.Term` is the union of the dialects' `Term`s, held by the shared kinds' properties.
+  - Between reference objects, parent-child links are relations: a statement links to an `Expression`, which holds
+    its `Term`.
+  The record before this correction, that `Expressions.<Dialect>.Expression` is the dialect's union of its kinds, was
+  the agent's misreading of "a union of `Expressions.Dialects.<lang_ver>.Expression` which is itself a union", and is
+  superseded.
 - **2. Whose kinds**: "yes to both": mbse-programs' kinds, names and shapes, ours narrower replaced; what has no
   counterpart in the grammar kept, marked as an extension; concrete syntax kept, so source prints back as written.
 - **3. C and C++ by standard**: "it sounds like having 6 different dialects is overkill. what would you recommend?"
@@ -271,6 +289,26 @@ change as it lands.
 2. **The framework and the renames**, with today's kinds: each dialect's `Expression` and union (question 4), the
    invalid-syntax kinds (question 7), `Python3`, the C and C++ dialects from `Ccpp`'s kinds (question 3),
    `SystemVerilog`; the translators retargeted; corpus cases per dialect.
+
+   *As built* (branch `stage2-framework`; every choice made where the decisions were silent is in
+   [the API, Settled in the complete dialects' stage 2](../port/API.md#settled-in-the-complete-dialects-stage-2-for-the-users-review),
+   items 30 to 45). `Expressions.Framework.Term` is a union of the dialects' unions, each dialect's install adding its
+   `Expressions.<Dialect>.Expression` as the branch named after it (`patterns`, `python3`, `matlab`, `excel`, `latex`,
+   `c`, `cpp`, `systemverilog`), its kinds named plainly; a dialect's own kinds hold its union, the shared kinds and the
+   new `error` and `missing` hold `Term`. Basic is `Patterns` (its quantifier unchanged), Python is `Python3`, and `Ccpp`
+   is `C` and `Cpp`, whose kinds are defined once by C's install and listed by both unions, their slots holding `Term`,
+   each `Kind` recording its language's standards (`C11`, `C17`, `C23`; `C++17`, `C++20`, `C++23`). A dialect reads
+   only its own terms. A literal holds any value, its spelling and its problems, and printers write its spelling;
+   `error` and `missing` are validated, printed as written and refused by evaluation and translation by name. Patterns
+   <-> C and Patterns <-> C++ share one rule set. The corpus has a case per dialect (`python3`, `c`, `cpp`) and one of
+   invalid syntax (`invalid`). Found: mbse-schemas reports a union of one branch as invalid, so `Term` in a store of
+   one dialect, and its expressions, do not validate as data (item 41).
+
+   *Revised* (2026-11-03, as Decided, 1, was revised): each dialect's value union of its kinds is
+   `Expressions.<Dialect>.Term`, `Expressions.Framework.Term` the union of them; C and C++ each define the kinds they
+   share, holding `Expressions.C.Term` and `Expressions.Cpp.Term` (API, item 35, superseded). Each dialect's holder
+   `Expressions.<Dialect>.Expression`, refining `Expressions.Framework.Expression`, waits: mbse-schemas 0.26.5 does not
+   confirm a redeclared `root` narrowed to a branch's schema (API, item 46).
 3. **`Python3` complete**: `ast`'s 29 kinds and helpers, the narrower kinds replaced, printing every construct of 3.0
    to 3.15; checked against `ast`'s node list.
 4. **`TypeScript5`**, new: expressions, types, patterns and JSX (question 5), printed.

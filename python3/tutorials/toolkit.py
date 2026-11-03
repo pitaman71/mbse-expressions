@@ -6,7 +6,7 @@ per logger, with the slot it rides in). Case study 6 explains how `show` works.
 """
 
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import Basic, Ccpp, Excel, Latex, Matlab, Python, SystemVerilog
+from mbse.Expressions.Dialects import C, Cpp, Excel, Latex, Matlab, Patterns, Python3, SystemVerilog
 from mbse.Expressions.Framework import Terms
 from mbse.Schemas.Framework import Builders
 
@@ -29,17 +29,17 @@ def install(txn):
 
 
 def cold_chain():
-    """A store of the cold chain's schemas, which also holds expressions: of the Basic dialect, and of every dialect the
+    """A store of the cold chain's schemas, which also holds expressions: of the Patterns dialect, and of every dialect the
     case studies translate into."""
     store = Builders.Store()
-    for module in (Framework, Basic, Python, Matlab, Excel, Latex, Ccpp, SystemVerilog):
+    for module in (Framework, Patterns, Python3, Matlab, Excel, Latex, C, Cpp, SystemVerilog):
         store.transaction(module.install)
     store.transaction(install)
     return store
 
 
 def show(expression):
-    """An expression of the Basic dialect as function-call text: a literal as Python writes its value, a let, a
+    """An expression of the Patterns dialect as function-call text: a literal as Python writes its value, a let, a
     quantifier, and the container constructors as `[a, b]` and `{k: v}`."""
     def render(term, arguments):
         form = Terms.form(term)

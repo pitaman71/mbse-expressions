@@ -1,6 +1,6 @@
 # mbse-expressions in TypeScript
 
-Import the Basic dialect from `@mbse/expressions`, the others from `@mbse/expressions/Dialects/<Name>`, the
+Import the Patterns dialect (formerly Basic) from `@mbse/expressions`, the others from `@mbse/expressions/Dialects/<Name>`, the
 translators from `@mbse/expressions/Translators`, and the framework from `@mbse/expressions/Framework`. The API
 mirrors Python name for name, snake_case included (`Domains.items_of`), except the framework's reads of terms, in
 camelCase (`Terms.nameOf`, `Terms.kindOf`), and writes the same JSON byte for byte.
@@ -11,9 +11,9 @@ The same constraint as in Python, built with the same writers.
 
 ```typescript
 import { Evaluators, Expressions as E, Framework } from "@mbse/expressions";
-import * as Basic from "@mbse/expressions/Dialects/Basic";
 import * as Excel from "@mbse/expressions/Dialects/Excel";
-import * as Python from "@mbse/expressions/Dialects/Python";
+import * as Patterns from "@mbse/expressions/Dialects/Patterns";
+import * as Python3 from "@mbse/expressions/Dialects/Python3";
 import { Terms } from "@mbse/expressions/Framework";
 import * as Translators from "@mbse/expressions/Translators";
 import { Builders, JSON, Validators } from "@mbse/schemas/Framework";
@@ -37,8 +37,8 @@ function contacts(txn: any): any {
 }
 
 const store: any = new Builders.Store(); // an mbse-schemas store: the schemas, the objects, and the expressions about them
-for (const install of [Framework.install, Basic.install, Excel.install, Python.install, contacts]) {
-  store.transaction(install); // each dialect's install adds its kinds of term; run again, an install writes nothing
+for (const install of [Framework.install, Patterns.install, Excel.install, Python3.install, contacts]) {
+  store.transaction(install); // each dialect's install adds its Term, the union of its kinds; run again, an install writes nothing
 }
 const [ada, bob, eve] = store.transaction(() => [
   store.Contact((c: any) => c.name("Ada").age(70n).email("ada@example.com")),
@@ -52,12 +52,12 @@ const senior = store.transaction(() => store.Expressions.Framework.Expression((e
   contact.age.ge(65n).and_(contact.has("email")))));
 check(E.DIALECT.validate(senior, ["contact"]).length === 0, "invalid");
 
-// Basic evaluates with three-valued logic: an absent property is unknown (null), and nothing is coerced.
+// Patterns evaluates with three-valued logic: an absent property is unknown (null), and nothing is coerced.
 check(Evaluators.OfAny(senior, { contact: ada }) === true, "ada");
 check(Evaluators.OfAny(senior, { contact: bob }) === false, "bob");
 check(Evaluators.OfAny(senior, { contact: eve }) === null, "eve");
 
-// It is data: a term is a value of Expressions.Framework.Term; store it and read it back.
+// It is data: a term is a value of Expressions.Framework.Term, its dialect then its kind; store it and read it back.
 const Term = store.registered("Expressions.Framework.Term");
 const text = JSON.ToJSON(store)(Term, Terms.term(senior));
 const constraint = JSON.FromJSON(store)(Term, text);
@@ -69,8 +69,8 @@ const written = (writer: Terms.Writer): any => store.transaction(() => store.Exp
 const formula = written(Translators.between(E.DIALECT, Excel.Expressions.DIALECT).forward(constraint));
 check(Excel.Text.ToText(formula) === "=AND(contact.age >= 65, NOT(ISERROR(contact.email)))", "formula");
 check(Excel.Evaluators.OfAny(formula, { contact: eve }) === Excel.Evaluators.Error.of("#FIELD!"), "an error value, not unknown");
-const code = written(Translators.between(E.DIALECT, Python.Expressions.DIALECT).forward(constraint));
-check(Python.Text.ToText(code) === "contact.age >= 65 and hasattr(contact, 'email')", "python");
+const code = written(Translators.between(E.DIALECT, Python3.Expressions.DIALECT).forward(constraint));
+check(Python3.Text.ToText(code) === "contact.age >= 65 and hasattr(contact, 'email')", "python");
 
 // A union value is a record of its one branch, by name, so a constraint reads it like any object.
 const ada_card = store.transaction(() => store.Card((c: any) => c.reach((p: any) => p.as_value((a: any) => a.as_union(
@@ -89,13 +89,13 @@ check(Evaluators.OfAny(written(card.reach.has("phone")), { card: ada_card }) ===
 | `None` | `null` |
 | `Domains.OfInteger.Builder().width(8)`, domains compared with `==` | `new Domains.OfInteger.Builder().width(8n)`, compared with `.equals()` |
 | `E.mapping(("lo", 0.5), ("hi", x))`, entries as tuples | `E.mapping(["lo", 0.5], ["hi", x])`, entries as arrays |
-| a frame's symbols, `store.transaction(Basic.define)[0]["uint8"]` | a `Map`: `store.transaction(Basic.define)[0].get("uint8")` |
-| `Terms.name_of`, `Terms.kind_of`, `Terms.attributes_of` | `Terms.nameOf`, `Terms.kindOf`, `Terms.attributesOf` (a `Map`) |
+| a frame's symbols, `store.transaction(Patterns.define)[0]["uint8"]` | a `Map`: `store.transaction(Patterns.define)[0].get("uint8")` |
+| `Terms.name_of`, `Terms.kind_of`, `Terms.dialect_of`, `Terms.attributes_of` | `Terms.nameOf`, `Terms.kindOf`, `Terms.dialectOf`, `Terms.attributesOf` (a `Map`) |
 | `with store.transaction(): ...` | `store.transaction(() => ...)`, which returns what its function returns |
 | `validate(term, bound={"person"})`, keyword arguments | positional: `validate(term, ["person"])`; options objects elsewhere: `new Scope(variables, { modules })` |
 | `Pattern("call", A, B, callable="eq")` | `new Pattern("call", { callable: "eq" }, A, B)` |
-| `Python.Text.FromText(source)` | none: build Python expressions with constructors (`P.compare(">=", P.attribute(P.name("x"), "age"), 18n)`) |
-| Python expressions evaluated by Python, with real modules | a model of Python's rules; modules are `new Python.Evaluators.Module(name, { members })`; no numpy |
+| `Python3.Text.FromText(source)` | none: build Python expressions with constructors (`P.compare(">=", P.attribute(P.name("x"), "age"), 18n)`) |
+| Python expressions evaluated by Python, with real modules | a model of Python's rules; modules are `new Python3.Evaluators.Module(name, { members })`; no numpy |
 | `NameError`, `ImportError`, `ZeroDivisionError`, `OverflowError` | classes of the same names in `@mbse/expressions/Framework`'s `Errors` |
 | Excel's `Error("#FIELD!")`, equal by value | `Error.of("#FIELD!")`, one instance per code, compared with `===` |
 | a dict as a mapping | a `Map` or a plain object |

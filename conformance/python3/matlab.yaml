@@ -1,64 +1,72 @@
-matlab_import:
-  name: geo.*
-  body:
-    matlab_binary:
-      operator: '||'
-      left:
-        matlab_binary:
-          operator: '>='
-          left:
-            matlab_binary:
-              operator: +
-              left:
-                call:
-                  callable: dist
-                  arguments:
-                  - matlab_field:
-                      name: age
-                      value:
-                        variable:
-                          name: record
-                  - literal:
-                      value: 3
-              right:
-                matlab_binary:
-                  operator: .*
-                  left:
-                    matlab_unary:
-                      operator: '~'
-                      operand:
-                        call:
-                          callable: isfield
-                          arguments:
-                          - variable:
+matlab:
+  import:
+    name: geo.*
+    body:
+      binary:
+        operator: '||'
+        left:
+          binary:
+            operator: '>='
+            left:
+              binary:
+                operator: +
+                left:
+                  call:
+                    callable: dist
+                    arguments:
+                    - matlab:
+                        field:
+                          name: age
+                          value:
+                            variable:
                               name: record
-                          - literal:
-                              value:
-                                scalar:
-                                  str: email
-                  right:
-                    matlab_unary:
-                      operator: '-'
-                      operand:
+                    - matlab:
                         literal:
-                          value: 1.5
-          right:
-            matlab_index:
-              value:
-                matlab_arrayfun:
-                  name: k
-                  array:
-                    matlab_field:
-                      name: ports
-                      value:
-                        variable:
-                          name: record
-                  body:
-                    variable:
-                      name: k
+                          value:
+                            int: 3
+                right:
+                  binary:
+                    operator: .*
+                    left:
+                      unary:
+                        operator: '~'
+                        operand:
+                          call:
+                            callable: isfield
+                            arguments:
+                            - matlab:
+                                variable:
+                                  name: record
+                            - matlab:
+                                literal:
+                                  value:
+                                    str: email
+                    right:
+                      unary:
+                        operator: '-'
+                        operand:
+                          literal:
+                            value:
+                              float: 1.5
+            right:
               index:
-                literal:
-                  value: 2
-      right:
-        literal:
-          value: true
+                value:
+                  arrayfun:
+                    name: k
+                    array:
+                      field:
+                        name: ports
+                        value:
+                          variable:
+                            name: record
+                    body:
+                      variable:
+                        name: k
+                index:
+                  literal:
+                    value:
+                      int: 2
+        right:
+          literal:
+            value:
+              bool: true

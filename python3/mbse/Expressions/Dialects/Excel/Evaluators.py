@@ -3,7 +3,7 @@
 `Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from: an `Expression`, its
 root) with names bound to numbers, text, logicals and records (mappings, or data objects read through mbse-schemas'
 readers, `Framework.Objects`). Values are Python `float` (number), `str` (text), `bool` (logical) and
-`Domains.Error`. Excel's rules apply, not Basic's:
+`Domains.Error`. Excel's rules apply, not Patterns':
 
 - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
   wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for them, and
@@ -92,7 +92,7 @@ class Workbook(S.Variables):
 
     def lookup(self, reference: Any) -> Any:
         tag, record = Terms.kind_of(reference)
-        if tag != "excel_cell":
+        if tag != "cell":
             name = Terms.name_of(reference)
             return _value(self.values[name]) if name in self.values else _NAME
         attributes = Terms.attributes_of(record)
@@ -359,16 +359,16 @@ INTERPRETER = F.Interpreter(Expressions.DIALECT, {
         "SUM": _aggregate("SUM", _sum), "MIN": _aggregate("MIN", lambda numbers: min(numbers, default=0.0)),
         "MAX": _aggregate("MAX", lambda numbers: max(numbers, default=0.0)),
     },
-    "excel_infix": {
+    "infix": {
         "=": _compare(lambda a, b: a == b), "<>": _compare(lambda a, b: a != b),
         "<": _compare(lambda a, b: a < b), "<=": _compare(lambda a, b: a <= b),
         ">": _compare(lambda a, b: a > b), ">=": _compare(lambda a, b: a >= b),
         "+": _arithmetic(lambda a, b: a + b), "-": _arithmetic(lambda a, b: a - b),
         "*": _arithmetic(lambda a, b: a * b),
     },
-    "excel_prefix": {"-": _negate},
-    "excel_field": _field,
-    "excel_map": _map,
+    "prefix": {"-": _negate},
+    "field": _field,
+    "map": _map,
 }, literal=_number_of, scope=Workbook, extension=_add_in)
 
 

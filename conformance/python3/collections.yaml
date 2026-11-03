@@ -1,73 +1,90 @@
-let:
-  name: ports
-  value:
-    call:
-      callable: entries
-      arguments:
-      - variable:
-          name: record
-      - literal:
-          value:
-            scalar:
-              str: ports
-  body:
-    call:
-      callable: and
-      arguments:
-      - quantifier:
-          name: p
-          quantifier: all
-          collection:
-            variable:
-              name: ports
-          body:
-            call:
-              callable: in
-              arguments:
-              - call:
-                  callable: get
-                  arguments:
-                  - variable:
-                      name: p
-                  - literal:
-                      value:
-                        scalar:
-                          str: pin
-              - variable:
-                  name: pins
-      - call:
-          callable: le
+patterns:
+  let:
+    name: ports
+    value:
+      patterns:
+        call:
+          callable: entries
           arguments:
-          - call:
-              callable: sum
-              arguments:
-              - variable:
-                  name: sizes
-          - call:
-              callable: item
-              arguments:
-              - mapping:
-                  entries:
-                  - key:
-                      literal:
-                        value:
-                          scalar:
-                            str: most
-                    value:
-                      call:
-                        callable: count
-                        arguments:
-                        - variable:
-                            name: ports
-                  - key:
-                      literal:
-                        value:
-                          scalar:
-                            str: least
-                    value:
-                      literal:
-                        value: 0
-              - literal:
-                  value:
-                    scalar:
-                      str: most
+          - patterns:
+              variable:
+                name: record
+          - patterns:
+              literal:
+                value:
+                  str: ports
+    body:
+      patterns:
+        call:
+          callable: and
+          arguments:
+          - patterns:
+              quantifier:
+                name: p
+                quantifier: all
+                collection:
+                  variable:
+                    name: ports
+                body:
+                  call:
+                    callable: in
+                    arguments:
+                    - patterns:
+                        call:
+                          callable: get
+                          arguments:
+                          - patterns:
+                              variable:
+                                name: p
+                          - patterns:
+                              literal:
+                                value:
+                                  str: pin
+                    - patterns:
+                        variable:
+                          name: pins
+          - patterns:
+              call:
+                callable: le
+                arguments:
+                - patterns:
+                    call:
+                      callable: sum
+                      arguments:
+                      - patterns:
+                          variable:
+                            name: sizes
+                - patterns:
+                    call:
+                      callable: item
+                      arguments:
+                      - patterns:
+                          mapping:
+                            entries:
+                            - key:
+                                patterns:
+                                  literal:
+                                    value:
+                                      str: most
+                              value:
+                                patterns:
+                                  call:
+                                    callable: count
+                                    arguments:
+                                    - patterns:
+                                        variable:
+                                          name: ports
+                            - key:
+                                patterns:
+                                  literal:
+                                    value:
+                                      str: least
+                              value:
+                                patterns:
+                                  literal:
+                                    value:
+                                      int: 0
+                      - patterns:
+                          literal:
+                            value:
+                              str: most

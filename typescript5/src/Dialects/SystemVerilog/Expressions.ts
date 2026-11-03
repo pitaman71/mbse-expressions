@@ -2,10 +2,16 @@
  * Expressions of the SystemVerilog dialect: expressions and constraints of SystemVerilog (and Verilog), over its
  * 4-state and 2-state vectors and reals, as its source writes them.
  *
- * - `literal` (the framework's): a constant, an unsized decimal integer (an `integer`), a real, or a string literal; it
- *   holds no bool nor bytes, which validation reports.
- * - `vector`: a sized literal, its bits MSB first (`0`, `1`, `x`, `z`), `signed` or not, written in its `base` (`b`,
- *   `o`, `d` or `h`; binary by default, and wherever the base cannot write the bits): `8'hFF`, `4'b10x1`, `8'sd5`.
+ * SystemVerilog's terms are values of its `Term`, `Expressions.SystemVerilog.Term`, the branch `systemverilog` of
+ * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
+ * framework's `literal`, `variable` and `call`, whose shape these have, its own kinds, each a value object
+ * `Expressions.SystemVerilog.<Kind>` named plainly, whose slots hold SystemVerilog's terms, and the framework's kinds of
+ * invalid syntax (`error`, `missing`); a term carries no domain:
+ *
+ * - `literal` (the framework's): a constant, an unsized decimal integer (an `integer`), a real, or a string literal, with
+ *   its spelling (`text`) where it has one; it holds no bool nor bytes, which validation reports.
+ * - `vector`: a sized literal, its bits MSB first (`0`, `1`, `x`, `z`), `signed` or not, written in its `base` (`b`, `o`,
+ *   `d` or `h`; binary by default, and wherever the base cannot write the bits): `8'hFF`, `4'b10x1`, `8'sd5`.
  * - `variable` (the framework's): an identifier, the value bound to a variable.
  * - `unary`: `+`, `-`, `!`, `~` and the reductions `&`, `~&`, `|`, `~|`, `^`, `~^`.
  * - `binary`: `**`, `*`, `/`, `%`, `+`, `-`, `<<`, `>>`, `<<<`, `>>>`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `===`, `!==`,
@@ -24,12 +30,9 @@
  * - `iterate`: a reduction with a `with` clause, `array.method(name) with (body)`, which binds `name` (the iterator) to
  *   each item of the array within the body and reduces the body's values: `ports.and(p) with (p.pin > 0)`.
  *
- * There is no binding: translators substitute a let's value for its name. `install` adds the kinds (but `literal`,
- * `variable` and `call`, the framework's, whose shape these have) to `Expressions.Framework.Term` by schema extension,
- * each a value object `Expressions.SystemVerilog.<Kind>` (a term carries no domain), as the branch `systemverilog_<kind>`
- * (`PREFIX`): dialects share kind names, and a branch's name is unique in the union; `DIALECT` reads them. The writers
- * (`constant`, `vector`, ...) write terms through the builders, wherever a term is written, in a transaction.
- * `Text.ToText` writes an expression as SystemVerilog source, with its precedence.
+ * There is no binding: translators substitute a let's value for its name. `DIALECT` reads the kinds. The writers (`constant`,
+ * `vector`, ...) write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an
+ * expression as SystemVerilog source, with its precedence.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -51,55 +54,79 @@ export const REDUCTIONS: readonly string[] = ["sum", "product", "and", "or", "xo
 /** The array methods of no arguments. */
 export const METHODS: readonly string[] = ["size", ...REDUCTIONS, "min", "max", "unique"];
 export const BASES: Record<string, number> = { b: 1, o: 3, h: 4, d: 0 };
-/** What names each branch this dialect adds to `Expressions.Framework.Term`: `systemverilog_binary`, ... */
-export const PREFIX = "systemverilog_";
 
-/**
- * A term's kind, as this dialect names it (its branch's tag without `PREFIX`: `binary`, `literal`, `call`), and its
- * record.
- */
-export function kindOf(term: any): [string, any] {
-  const [tag, record] = F.kindOf(term);
-  return [tag.startsWith(PREFIX) ? tag.slice(PREFIX.length) : tag, record];
-}
-
-/** SystemVerilog's kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own.
- * Its `call` is the framework's. */
+/** SystemVerilog's union of its kinds, added to the framework's terms as the branch `systemverilog`, its own kinds,
+ * and its dialect's schema, whose singleton is `Expressions.SystemVerilog`: run after `Framework.install`, in a
+ * transaction of its own; run again, it writes nothing. Its `literal`, `variable` and `call` are the framework's. */
 export function install(txn: any): any {
   const S = txn.Schemas;
-  const terms = (_: any) => S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term]));
-  const kinds: Record<string, (_: any) => Record<string, unknown>> = {
-    Vector: () => ({ value: S.OfStr, signed: S.OfBool, base: S.OfStr }), // its bits, MSB first
-    Unary: (_) => ({ operator: S.OfStr, operand: _.Term }),
-    Binary: (_) => ({ operator: S.OfStr, left: _.Term, right: _.Term }),
-    Conditional: (_) => ({ condition: _.Term, consequent: _.Term, alternative: _.Term }),
-    Concatenation: (_) => ({ parts: terms(_) }),
-    Replication: (_) => ({ count: _.Term, value: _.Term }),
-    Select: (_) => ({ value: _.Term, index: _.Term }),
-    Range: (_) => ({ value: _.Term, msb: _.Term, lsb: _.Term }),
-    Inside: (_) => ({ value: _.Term, items: terms(_) }),
-    Span: (_) => ({ low: _.Term, high: _.Term }),
-    Cast: (_) => ({ type: S.OfStr, width: S.OfInt, operand: _.Term }),
-    Member: (_) => ({ name: S.OfStr, object: _.Term }),
-    Method: (_) => ({ name: S.OfStr, array: _.Term }),
-    Iterate: (_) => ({ name: S.OfStr, method: S.OfStr, array: _.Term, body: _.Term }), // name: the iterator
-  };
-  const names = Object.keys(kinds);
+  const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.SystemVerilog/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({
-      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
-      Term: S.OfUnion, ...Object.fromEntries(names.map((name) => [name, S.OfObject])) }) // the framework's union, by its name
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
+      Vector: S.OfObject, Unary: S.OfObject, Binary: S.OfObject, Conditional: S.OfObject,
+      Concatenation: S.OfObject, Replication: S.OfObject, Select: S.OfObject, Range: S.OfObject,
+      Inside: S.OfObject, Span: S.OfObject, Cast: S.OfObject, Member: S.OfObject,
+      Method: S.OfObject, Iterate: S.OfObject }) // FrameworkTerm: the framework's union, by name
     .spec([
       // its dialect: the singleton `Expressions.SystemVerilog`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.SystemVerilog.Dialect").ref(true).singleton("Expressions.SystemVerilog").adjacencies({
-        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+        domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("systemverilog").schema([_.Dialect])]),
-      ...names.map((name) => (_: any) => _[name].name(`Expressions.SystemVerilog.${name}`).properties({
-        ...(kinds[name] as (_: any) => Record<string, unknown>)(_) })),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches( // branches added: schema extension
-        names.map((name) => (t: any) => t.name(PREFIX + name.toLowerCase()).schema([_[name]]))),
+      // its union of its kinds: the framework's it reuses, its own, and invalid syntax
+      (_: any) => _.Term.name("Expressions.SystemVerilog.Term").branches([
+        (t: any) => t.name("literal").schema([Framework.Literal]),
+        (t: any) => t.name("variable").schema([Framework.Variable]),
+        (t: any) => t.name("call").schema([Framework.Call]),
+        (t: any) => t.name("vector").schema([_.Vector]),
+        (t: any) => t.name("unary").schema([_.Unary]),
+        (t: any) => t.name("binary").schema([_.Binary]),
+        (t: any) => t.name("conditional").schema([_.Conditional]),
+        (t: any) => t.name("concatenation").schema([_.Concatenation]),
+        (t: any) => t.name("replication").schema([_.Replication]),
+        (t: any) => t.name("select").schema([_.Select]),
+        (t: any) => t.name("range").schema([_.Range]),
+        (t: any) => t.name("inside").schema([_.Inside]),
+        (t: any) => t.name("span").schema([_.Span]),
+        (t: any) => t.name("cast").schema([_.Cast]),
+        (t: any) => t.name("member").schema([_.Member]),
+        (t: any) => t.name("method").schema([_.Method]),
+        (t: any) => t.name("iterate").schema([_.Iterate]),
+        (t: any) => t.name("error").schema([Framework.Error]),
+        (t: any) => t.name("missing").schema([Framework.Missing]),
+      ]),
+      (_: any) => _.Vector.name("Expressions.SystemVerilog.Vector").properties({
+        value: S.OfStr, signed: S.OfBool, base: S.OfStr }), // its bits, MSB first
+      (_: any) => _.Unary.name("Expressions.SystemVerilog.Unary").properties({
+        operator: S.OfStr, operand: _.Term }),
+      (_: any) => _.Binary.name("Expressions.SystemVerilog.Binary").properties({
+        operator: S.OfStr, left: _.Term, right: _.Term }),
+      (_: any) => _.Conditional.name("Expressions.SystemVerilog.Conditional").properties({
+        condition: _.Term, consequent: _.Term, alternative: _.Term }),
+      (_: any) => _.Concatenation.name("Expressions.SystemVerilog.Concatenation").properties({
+        parts: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])) }),
+      (_: any) => _.Replication.name("Expressions.SystemVerilog.Replication").properties({
+        count: _.Term, value: _.Term }),
+      (_: any) => _.Select.name("Expressions.SystemVerilog.Select").properties({
+        value: _.Term, index: _.Term }),
+      (_: any) => _.Range.name("Expressions.SystemVerilog.Range").properties({
+        value: _.Term, msb: _.Term, lsb: _.Term }),
+      (_: any) => _.Inside.name("Expressions.SystemVerilog.Inside").properties({
+        value: _.Term, items: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term])) }),
+      (_: any) => _.Span.name("Expressions.SystemVerilog.Span").properties({
+        low: _.Term, high: _.Term }),
+      (_: any) => _.Cast.name("Expressions.SystemVerilog.Cast").properties({
+        type: S.OfStr, width: S.OfInt, operand: _.Term }),
+      (_: any) => _.Member.name("Expressions.SystemVerilog.Member").properties({
+        name: S.OfStr, object: _.Term }),
+      (_: any) => _.Method.name("Expressions.SystemVerilog.Method").properties({
+        name: S.OfStr, array: _.Term }),
+      (_: any) => _.Iterate.name("Expressions.SystemVerilog.Iterate").properties({
+        name: S.OfStr, // the iterator
+        method: S.OfStr, array: _.Term, body: _.Term }),
+      (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("systemverilog").schema([_.Term])]),
     ])]))]);
 }
 
@@ -157,39 +184,41 @@ function native(value: unknown): Writer | null {
 /** The SystemVerilog dialect: its kinds, as the framework reads them. */
 export const DIALECT = new F.Dialect("SystemVerilog", {
   literal: new F.Kind(F.LITERAL, { check: literalCheck }),
-  [PREFIX + "vector"]: new F.Kind(F.LITERAL, { check: vectorCheck, typed: vectorTyped }),
+  vector: new F.Kind(F.LITERAL, { check: vectorCheck, typed: vectorTyped }),
   variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
-  [PREFIX + "unary"]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
-  [PREFIX + "binary"]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
-  [PREFIX + "conditional"]: new F.Kind(F.APPLICATION, { signature: Domains.CONDITIONAL }),
-  [PREFIX + "concatenation"]: new F.Kind(F.APPLICATION, { signature: Domains.CONCATENATION }),
-  [PREFIX + "replication"]: new F.Kind(F.APPLICATION, { signature: Domains.REPLICATION }),
-  [PREFIX + "select"]: new F.Kind(F.APPLICATION, { signature: Domains.SELECT }),
-  [PREFIX + "range"]: new F.Kind(F.APPLICATION, { signature: Domains.RANGE }),
-  [PREFIX + "inside"]: new F.Kind(F.APPLICATION, { signature: Domains.INSIDE }),
-  [PREFIX + "span"]: new F.Kind(F.APPLICATION, { signature: Domains.SPAN }),
-  [PREFIX + "cast"]: new F.Kind(F.APPLICATION, { signature: Domains.CAST, check: castCheck, typed: castTyped }),
-  [PREFIX + "member"]: new F.Kind(F.APPLICATION, { signature: Domains.MEMBER, required: ["name"] }),
+  unary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
+  binary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
+  conditional: new F.Kind(F.APPLICATION, { signature: Domains.CONDITIONAL }),
+  concatenation: new F.Kind(F.APPLICATION, { signature: Domains.CONCATENATION }),
+  replication: new F.Kind(F.APPLICATION, { signature: Domains.REPLICATION }),
+  select: new F.Kind(F.APPLICATION, { signature: Domains.SELECT }),
+  range: new F.Kind(F.APPLICATION, { signature: Domains.RANGE }),
+  inside: new F.Kind(F.APPLICATION, { signature: Domains.INSIDE }),
+  span: new F.Kind(F.APPLICATION, { signature: Domains.SPAN }),
+  cast: new F.Kind(F.APPLICATION, { signature: Domains.CAST, check: castCheck, typed: castTyped }),
+  member: new F.Kind(F.APPLICATION, { signature: Domains.MEMBER, required: ["name"] }),
   call: new F.Kind(F.APPLICATION, { operator: "callable", signature: Domains.CALL, required: ["callable"] }),
-  [PREFIX + "method"]: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.METHOD, required: ["name"], check: methodCheck }),
-  [PREFIX + "iterate"]: new F.Kind(F.QUANTIFIER, { operator: "method", signature: Domains.ITERATE, required: ["name", "method"],
+  method: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.METHOD, required: ["name"], check: methodCheck }),
+  iterate: new F.Kind(F.QUANTIFIER, { operator: "method", signature: Domains.ITERATE, required: ["name", "method"],
     check: iterateCheck }),
 }, { domain_of: Domains.of, literal: native });
 
 // --- Writers ---
 
 /** A SystemVerilog term, written through the builders where it is given. */
-export class Writer extends F.Writer {}
+export class Writer extends F.Writer {
+  constructor(write: (union: any) => any) {
+    super(write, DIALECT.tag);
+  }
+}
 
-/** The framework's kinds, whose branches are not prefixed. */
-const FRAMEWORK = ["variable", "call"];
 
 /** The writer of a term of `tag`: its attributes (those not null), its slots (specs) and its variadic arguments. */
 function kind(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown> = {},
   variadic: [string, unknown[]] | null = null): Writer {
   const specs = Object.entries(slots).map(([name, value]) => [name, DIALECT.spec(value)] as const);
   const elements = variadic === null ? null : [variadic[0], variadic[1].map((value) => DIALECT.spec(value))] as const;
-  return new Writer((u: any) => u[FRAMEWORK.includes(tag) ? tag : PREFIX + tag]((r: any) => {
+  return new Writer((u: any) => u[tag]((r: any) => {
     for (const [name, value] of Object.entries(attributes)) {
       if (value !== null && value !== undefined) r[name]((p: any) => p.as_scalar(value));
     }

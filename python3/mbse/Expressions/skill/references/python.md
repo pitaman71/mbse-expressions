@@ -1,7 +1,7 @@
 # mbse-expressions in Python
 
-Install `mbse-expressions` (the `numpy` extra lets Python expressions import numpy), then import the Basic dialect
-from `mbse.Expressions`, the others from `mbse.Expressions.Dialects.<Name>`, and the framework from
+Install `mbse-expressions` (the `numpy` extra lets Python expressions import numpy), then import the Patterns dialect
+(formerly Basic) from `mbse.Expressions`, the others from `mbse.Expressions.Dialects.<Name>`, and the framework from
 `mbse.Expressions.Framework`. Expressions are stored in an mbse-schemas store (`Builders.Store()`), whose schemas the
 framework's install and each dialect's define.
 
@@ -11,9 +11,9 @@ A constraint about contacts, evaluated, stored, translated to Excel and Python, 
 
 ```python
 from mbse.Expressions import Evaluators, Expressions as E, Framework, Translators
-from mbse.Expressions.Dialects import Basic, Excel, Python
+from mbse.Expressions.Dialects import Excel, Patterns, Python3
 from mbse.Expressions.Dialects.Excel import Evaluators as ExcelEvaluators, Text as ExcelText
-from mbse.Expressions.Dialects.Python import Text as PythonText
+from mbse.Expressions.Dialects.Python3 import Text as PythonText
 from mbse.Expressions.Framework import Terms
 from mbse.Schemas.Framework import Builders, JSON, Validators
 
@@ -35,8 +35,8 @@ def contacts(txn):
 
 
 store = Builders.Store()  # an mbse-schemas store: the schemas, the objects, and the expressions about them
-for install in (Framework.install, Basic.install, Excel.install, Python.install, contacts):
-    store.transaction(install)  # each dialect's install adds its kinds of term; run again, an install writes nothing
+for install in (Framework.install, Patterns.install, Excel.install, Python3.install, contacts):
+    store.transaction(install)  # each dialect's install adds its Term, the union of its kinds; run again, an install writes nothing
 with store.transaction():
     ada = store.Contact(lambda c: c.name("Ada").age(70).email("ada@example.com"))
     bob = store.Contact(lambda c: c.name("Bob").age(30))
@@ -48,12 +48,12 @@ with store.transaction():
     senior = store.Expressions.Framework.Expression(lambda e: e.root(contact.age.ge(65).and_(contact.has("email"))))
 assert E.DIALECT.validate(senior, bound={"contact"}) == []
 
-# Basic evaluates with three-valued logic: an absent property is unknown (None), and nothing is coerced.
+# Patterns evaluates with three-valued logic: an absent property is unknown (None), and nothing is coerced.
 assert Evaluators.OfAny(senior, {"contact": ada}) is True
 assert Evaluators.OfAny(senior, {"contact": bob}) is False
 assert Evaluators.OfAny(senior, {"contact": eve}) is None
 
-# It is data: a term is a value of Expressions.Framework.Term; store it and read it back.
+# It is data: a term is a value of Expressions.Framework.Term, its dialect then its kind; store it and read it back.
 Term = store.registered("Expressions.Framework.Term")
 text = JSON.ToJSON(store)(Term, Terms.term(senior))
 constraint = JSON.FromJSON(store)(Term, text)
@@ -68,7 +68,7 @@ def written(writer):
 formula = written(Translators.between(E.DIALECT, Excel.Expressions.DIALECT).forward(constraint))
 assert ExcelText.ToText(formula) == "=AND(contact.age >= 65, NOT(ISERROR(contact.email)))"
 assert ExcelEvaluators.OfAny(formula, {"contact": eve}) == ExcelEvaluators.Error("#FIELD!")  # an error value, not unknown
-code = written(Translators.between(E.DIALECT, Python.Expressions.DIALECT).forward(constraint))
+code = written(Translators.between(E.DIALECT, Python3.Expressions.DIALECT).forward(constraint))
 assert PythonText.ToText(code) == "contact.age >= 65 and hasattr(contact, 'email')"
 
 # A union value is a record of its one branch, by name, so a constraint reads it like any object.
@@ -84,8 +84,8 @@ assert Evaluators.OfAny(written(card.reach.has("phone")), {"card": ada_card}) is
 ## Cheat sheet
 
 ```python fragment
-# Installs: one transaction each, the framework's first; a dialect's adds its kinds to Expressions.Framework.Term.
-store = Builders.Store(); store.transaction(Framework.install); store.transaction(Basic.install)  # then Python.install, ...
+# Installs: one transaction each, the framework's first; a dialect's adds its Term to Expressions.Framework.Term.
+store = Builders.Store(); store.transaction(Framework.install); store.transaction(Patterns.install)  # then Python3.install, ...
 Term = store.registered("Expressions.Framework.Term")
 
 # Writers: methods that write terms where they are given, within a transaction.
@@ -103,33 +103,34 @@ block.entries("wires")                             # an object's entries in an a
 # Reading: a term is read through mbse-schemas' readers; Terms gives the generic reads.
 Terms.term(expression)                     # the root term of an Expression (or a term itself)
 Terms.kind_of(term); Terms.form(term)      # ("call", record); Form(kind, attributes, arguments)
-E.DIALECT.validate(term, bound={"person"})                   # problems, [] when valid; a call Basic doesn't define is one
-E.DIALECT.infer(term, {"person": Domains.Object})            # from mbse.Expressions.Dialects.Basic import Domains
+Terms.dialect_of(term)                     # "Expressions.Patterns.Term": the Term of the dialect it is of
+E.DIALECT.validate(term, bound={"person"})                   # problems, [] when valid; a call Patterns doesn't define is one
+E.DIALECT.infer(term, {"person": Domains.Object})            # from mbse.Expressions.Dialects.Patterns import Domains
 
 # Evaluation: a scope, or a mapping of variables.
 Evaluators.OfAny(expression, {"person": value})             # True, False, a value, or None when unknown
 Partials.OfAny(constraint, {"person": value})               # the residual: a writer, what is known evaluated, the rest kept
 
 # Dialects, operations and domains are data: a dialect is a singleton owning its domains by name.
-store.transaction(Basic.define)            # Basic's dialect's data, after its install: its operations and domains
-basic = store.Instances.Expressions.Basic; [str(e.name) for e in basic.operations]   # by its path: "get", "has", ...
-basic.operations({"name": "add"}).pattern.variables   # its arguments, in order: a, b; .result its return
-Domains.read(basic.domains({"name": "uint8"}))        # an owned domain, by its path; its kind's data: width 8, unsigned
+store.transaction(Patterns.define)         # Patterns' dialect's data, after its install: its operations and domains
+patterns = store.Instances.Expressions.Patterns; [str(e.name) for e in patterns.operations]   # by its path: "get", ...
+patterns.operations({"name": "add"}).pattern.variables   # its arguments, in order: a, b; .result its return
+Domains.read(patterns.domains({"name": "uint8"}))        # an owned domain, by its path; its kind's data: width 8, unsigned
 
 # Storage, traversal, translation: the same calls in every dialect.
 JSON.ToJSON(store)(Term, term); JSON.FromJSON(store)(Term, text)   # YAML likewise; a term reads back as a term value
 Terms.walk(e); Terms.fold(e, lambda term, results: ...); Terms.same(a, b)   # from mbse.Expressions.Framework import Terms
 Symbolics.free(e, E.DIALECT); Symbolics.imports(e, P.DIALECT)  # the names e needs from its scope, and the imports it declares
 Translators.between(E.DIALECT, Excel.DIALECT).forward(e, trace=[])   # a writer of the Excel term; write it in a transaction
-Translators.Basic_Python.NUMPY.forward(e)
+Translators.Patterns_Python3.NUMPY.forward(e)
 ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmath.floor(x)")  # FromText: Python only, a writer
 ```
 
 ## Traps
 
-- `1 == 1.0` is unknown in Basic, and `True` is not an `int`. Write literals of the kind of value the data's schema has.
+- `1 == 1.0` is unknown in Patterns, and `True` is not an `int`. Write literals of the kind of value the data's schema has.
 - `x.email` is `get`, unknown when absent; whether it is present is `x.has("email")`.
-- Evaluating an operation Basic does not define raises `NotImplementedError`: validate first. Widths, overflow and the
+- Evaluating an operation Patterns does not define raises `NotImplementedError`: validate first. Widths, overflow and the
   conversions wait for domain inference ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)):
   a term carries no domain.
 - Each mbse-schemas store has its own schemas: run each install once per store, and an install and what uses it in
@@ -137,12 +138,16 @@ ExcelText.ToText(e); PythonText.ToText(e); PythonText.FromText("import math\nmat
   opening the one that writes it.
 - A translation and a residual give writers, not terms: write them (`store.Expressions.Framework.Term(w)`
   in a transaction) before rendering or evaluating them.
-- A Python-dialect scope imports nothing by default: `Python.Evaluators.Scope(variables, modules={"numpy": numpy})`.
+- A Python3 scope imports nothing by default: `Python3.Evaluators.Scope(variables, modules={"numpy": numpy})`.
+- A dialect reads only its own terms: Patterns' `variable` is not a term of Python3, though both have the kind. Write a
+  dialect's terms with its own writers, or translate them.
+- A store holding one dialect only has a union of one branch, `Expressions.Framework.Term`, which mbse-schemas' validation reports: validate
+  stored expressions in a store holding at least two dialects.
 
 ## Go deeper
 
 | Topic | Read |
 |---|---|
 | Learning it by example: constraints as data, unknowns, collections, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog | [the tutorial, seven case studies](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) |
-| The Basic dialect: kinds, core vocabulary, evaluation, installs and writers | [CAP-095: Basic terms as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-095.md), in mbse-basis |
+| The Patterns dialect (formerly Basic): kinds, core vocabulary, evaluation, installs and writers | [CAP-095: Basic terms as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-095.md), in mbse-basis |
 | Every behavior, as test cases | [the test plan](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tests/TestPlan.md) |

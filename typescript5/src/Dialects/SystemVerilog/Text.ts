@@ -6,7 +6,7 @@
 import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
-import { BASES, kindOf } from "./Expressions.js";
+import { BASES, DIALECT } from "./Expressions.js";
 
 const { repr } = Repr;
 const { ValueError } = Errors;
@@ -69,14 +69,15 @@ export function ToText(expression: unknown): string {
       return precedence >= level ? written : `(${written})`;
     };
     const texts = args.map(([written]) => written);
-    const [tag, record] = kindOf(node);
+    const [tag, record] = DIALECT.kind(node);
     const attributes = F.attributesOf(record);
     const name = attributes.get("name");
     switch (tag) {
-      case "literal": {
-        const written = constantText(attributes.get("value"));
+      case "literal": { // its spelling, as written, or its value's
+        const written = attributes.has("text") ? attributes.get("text") : constantText(attributes.get("value"));
         return [written, written.includes("/") ? MULTIPLICATIVE : written.startsWith("-") ? UNARY : PRIMARY];
       }
+      case "error": case "missing": return [F.invalidText(DIALECT, tag, attributes), PRIMARY];
       case "vector": return [vectorText(attributes), PRIMARY];
       case "variable": return [name, PRIMARY];
       case "member": return [`${operand(0, PRIMARY)}.${name}`, PRIMARY];
@@ -97,8 +98,7 @@ export function ToText(expression: unknown): string {
     if (tag === "conditional") { // right-associative
       return [`${operand(0, OR)} ? ${operand(1, CONDITIONAL)} : ${operand(2, CONDITIONAL)}`, CONDITIONAL];
     }
-    if (tag !== "binary") throw new ValueError(`SystemVerilog has no kind ${repr(tag)}`);
-    const level = LEVELS[operator] as number;
+    const level = LEVELS[operator] as number; // a binary
     if (level === IMPLY) return [`${operand(0, level + 1)} ${operator} ${operand(1, level)}`, level]; // right-associative, the loosest
     return [`${operand(0, level)} ${operator} ${operand(1, level + 1)}`, level];
   };

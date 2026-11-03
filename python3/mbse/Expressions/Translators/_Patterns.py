@@ -17,7 +17,7 @@ def value(*types: type) -> Hole:
     return Hole("V", *types)
 
 
-class Basic:
+class Patterns:
     literal = staticmethod(lambda V: P("literal", value=V))
     variable = P("variable", name=N)
     let = P("let", A, B, name=N)
@@ -32,43 +32,43 @@ class Basic:
 
 
 def _call(function: str, *arguments: P | Hole) -> P:
-    return P("python_call", P("variable", name=function), *arguments)
+    return P("call", P("variable", name=function), *arguments)
 
 
-class Python:
+class Python3:
     constant = staticmethod(lambda V: P("literal", value=V))
     name = P("variable", name=N)
     let = P("let", A, B, name=N)
-    get = P("python_attribute", X, attr=K)
-    has = P("python_call", P("variable", name="hasattr"), X, P("literal", value=K))
-    implies = P("python_ifexp", A, B, P("literal", value=True))
-    ifexp = P("python_ifexp", A, B, C)
-    shr = P("python_binop", A, B, operator=">>")
-    all_ = _call("all", P("python_generator", A, B, name=N))
-    any_ = _call("any", P("python_generator", A, B, name=N))
-    count_where = _call("sum", P("python_generator", A, P("literal", value=1), B, name=N))  # sum(1 for n in a if b)
+    get = P("attribute", X, attr=K)
+    has = P("call", P("variable", name="hasattr"), X, P("literal", value=K))
+    implies = P("ifexp", A, B, P("literal", value=True))
+    ifexp = P("ifexp", A, B, C)
+    shr = P("binop", A, B, operator=">>")
+    all_ = _call("all", P("generator", A, B, name=N))
+    any_ = _call("any", P("generator", A, B, name=N))
+    count_where = _call("sum", P("generator", A, P("literal", value=1), B, name=N))  # sum(1 for n in a if b)
     builtin = staticmethod(lambda function: _call(function, A))  # len, sum, min, max
-    index = P("python_index", A, B)
-    in_ = P("python_compare", A, B, operator="in")
-    unique = P("python_compare", _call("len", _call("set", A)), _call("len", A), operator="==")
+    index = P("index", A, B)
+    in_ = P("compare", A, B, operator="in")
+    unique = P("compare", _call("len", _call("set", A)), _call("len", A), operator="==")
 
 
 def _numpy(function: str) -> P:
     """The function `np.<function>`, e.g. `np.ma.getmaskarray` for 'ma.getmaskarray'."""
     callee = P("variable", name="np")
     for attr in function.split("."):
-        callee = P("python_attribute", callee, attr=attr)
+        callee = P("attribute", callee, attr=attr)
     return callee
 
 
 class Numpy:
     """Python in NumPy style: columns by subscript, missing values masked, operations as numpy functions."""
 
-    call = staticmethod(lambda function, *arguments: P("python_call", _numpy(function), *arguments))
-    get = P("python_subscript", X, key=K)
-    has = P("python_call", _numpy("logical_not"), P("python_call", _numpy("ma.getmaskarray"), P("python_subscript", X, key=K)))
-    implies = P("python_call", _numpy("where"), A, B, P("literal", value=True))
-    prelude = P("python_import", Hole("B"), module="numpy", alias="np")
+    call = staticmethod(lambda function, *arguments: P("call", _numpy(function), *arguments))
+    get = P("subscript", X, key=K)
+    has = P("call", _numpy("logical_not"), P("call", _numpy("ma.getmaskarray"), P("subscript", X, key=K)))
+    implies = P("call", _numpy("where"), A, B, P("literal", value=True))
+    prelude = P("import", Hole("B"), module="numpy", alias="np")
 
     @staticmethod
     def renames(kind: str, attribute: str, names: dict[str, str], arity: int) -> list[Rule]:
@@ -80,69 +80,71 @@ class Numpy:
 class Matlab:
     constant = staticmethod(lambda V: P("literal", value=V))
     identifier = P("variable", name=N)
-    get = P("matlab_field", X, name=K)
+    get = P("field", X, name=K)
     has = P("call", X, P("literal", value=K), callable="isfield")
-    implies = P("matlab_binary", P("matlab_unary", A, operator="~"), B, operator="||")
-    shr = P("call", A, P("matlab_unary", B, operator="-"), callable="bitshift")  # a negative shift is to the right
-    over = staticmethod(lambda function: P("call", P("matlab_arrayfun", A, B, name=N), callable=function))  # all(arrayfun(@(n) b, a))
+    implies = P("binary", P("unary", A, operator="~"), B, operator="||")
+    shr = P("call", A, P("unary", B, operator="-"), callable="bitshift")  # a negative shift is to the right
+    over = staticmethod(lambda function: P("call", P("arrayfun", A, B, name=N), callable=function))  # all(arrayfun(@(n) b, a))
     function = staticmethod(lambda name: P("call", A, callable=name))  # numel, sum, min, max
-    index = P("matlab_index", A, P("matlab_binary", B, P("literal", value=1), operator="+"))  # a(b + 1): MATLAB counts from 1
+    index = P("index", A, P("binary", B, P("literal", value=1), operator="+"))  # a(b + 1): MATLAB counts from 1
     ismember = P("call", A, B, callable="ismember")
-    unique = P("matlab_binary", P("call", P("call", A, callable="unique"), callable="numel"), P("call", A, callable="numel"), operator="==")
+    unique = P("binary", P("call", P("call", A, callable="unique"), callable="numel"), P("call", A, callable="numel"), operator="==")
 
 
-class Ccpp:
-    constant = staticmethod(lambda V: P("ccpp_constant", value=V))  # untyped
+class CFamily:
+    """The kinds of the C family, which C and C++ share."""
+
+    constant = staticmethod(lambda V: P("constant", value=V))  # untyped
     identifier = P("variable", name=N)
-    get = P("ccpp_member", X, name=K)  # with '.'
-    implies = P("ccpp_binary", P("ccpp_unary", A, operator="!"), B, operator="||")
+    get = P("member", X, name=K)  # with '.'
+    implies = P("binary", P("unary", A, operator="!"), B, operator="||")
 
 
 class SystemVerilog:
     constant = staticmethod(lambda V: P("literal", value=V))
     identifier = P("variable", name=N)
-    get = P("systemverilog_member", X, name=K)
-    implies = P("systemverilog_binary", A, B, operator="->")
-    iterate = staticmethod(lambda method: P("systemverilog_iterate", A, B, method=method, name=N))  # a.method(n) with (b)
-    count_where = P("systemverilog_iterate", A, P("systemverilog_cast", B, type="int"), method="sum", name=N)  # a.sum(n) with (int'(b))
-    method = staticmethod(lambda name: P("systemverilog_method", A, name=name))  # size, sum
-    locate = staticmethod(lambda name: P("systemverilog_select", P("systemverilog_method", A, name=name), P("literal", value=0)))  # a.min()[0]
-    select = P("systemverilog_select", A, B)
-    inside = P("systemverilog_inside", A, B)
-    unique = P("systemverilog_binary", P("systemverilog_method", P("systemverilog_method", A, name="unique"), name="size"), P("systemverilog_method", A, name="size"), operator="==")
+    get = P("member", X, name=K)
+    implies = P("binary", A, B, operator="->")
+    iterate = staticmethod(lambda method: P("iterate", A, B, method=method, name=N))  # a.method(n) with (b)
+    count_where = P("iterate", A, P("cast", B, type="int"), method="sum", name=N)  # a.sum(n) with (int'(b))
+    method = staticmethod(lambda name: P("method", A, name=name))  # size, sum
+    locate = staticmethod(lambda name: P("select", P("method", A, name=name), P("literal", value=0)))  # a.min()[0]
+    select = P("select", A, B)
+    inside = P("inside", A, B)
+    unique = P("binary", P("method", P("method", A, name="unique"), name="size"), P("method", A, name="size"), operator="==")
 
 
 class Excel:
     constant = staticmethod(lambda V: P("literal", value=V))
     name = P("variable", name=N)
     let = P("let", A, B, name=N)
-    get = P("excel_field", X, name=K)
-    has = P("call", P("call", P("excel_field", X, name=K), callable="ISERROR"), callable="NOT")
+    get = P("field", X, name=K)
+    has = P("call", P("call", P("field", X, name=K), callable="ISERROR"), callable="NOT")
     implies = P("call", A, B, P("literal", value=True), callable="IF")
     if_ = P("call", A, B, C, callable="IF")
     shr = P("call", A, B, callable="BITRSHIFT")
-    over = staticmethod(lambda function: P("call", P("excel_map", A, B, name=N), callable=function))  # AND(MAP(a, LAMBDA(n, b)))
-    count_where = P("call", P("excel_map", A, P("call", B, P("literal", value=1), P("literal", value=0), callable="IF"), name=N),
+    over = staticmethod(lambda function: P("call", P("map", A, B, name=N), callable=function))  # AND(MAP(a, LAMBDA(n, b)))
+    count_where = P("call", P("map", A, P("call", B, P("literal", value=1), P("literal", value=0), callable="IF"), name=N),
                     callable="SUM")  # SUM(MAP(a, LAMBDA(n, IF(b, 1, 0))))
     function = staticmethod(lambda name: P("call", A, callable=name))  # ROWS, SUM, MIN, MAX
-    index = P("call", A, P("excel_infix", B, P("literal", value=1), operator="+"), callable="INDEX")  # INDEX(a, b + 1)
+    index = P("call", A, P("infix", B, P("literal", value=1), operator="+"), callable="INDEX")  # INDEX(a, b + 1)
     match = P("call", P("call", A, B, P("literal", value=0), callable="MATCH"), callable="ISNUMBER")  # ISNUMBER(MATCH(a, b, 0))
-    unique = P("excel_infix", P("call", P("call", A, callable="UNIQUE"), callable="ROWS"), P("call", A, callable="ROWS"), operator="=")
+    unique = P("infix", P("call", P("call", A, callable="UNIQUE"), callable="ROWS"), P("call", A, callable="ROWS"), operator="=")
 
 
 class Latex:
     constant = staticmethod(lambda V: P("literal", value=V))
     symbol = P("variable", name=N)
     where = P("let", A, B, name=N)
-    get = P("latex_member", X, name=K)
+    get = P("member", X, name=K)
     has = P("call", X, P("literal", value=K), callable="has")
-    implies = P("latex_binary", A, B, operator="\\implies")
-    frac = P("latex_frac", A, B)
+    implies = P("binary", A, B, operator="\\implies")
+    frac = P("frac", A, B)
 
 
 COLLECTIONS: dict[str, dict[str, P]] = {
-    "Python": {"all": Python.all_, "any": Python.any_, "count where": Python.count_where, "count": Python.builtin("len"),
-               **{name: Python.builtin(name) for name in ("sum", "min", "max")}, "item": Python.index, "in": Python.in_},
+    "Python": {"all": Python3.all_, "any": Python3.any_, "count where": Python3.count_where, "count": Python3.builtin("len"),
+               **{name: Python3.builtin(name) for name in ("sum", "min", "max")}, "item": Python3.index, "in": Python3.in_},
     "Matlab": {"all": Matlab.over("all"), "any": Matlab.over("any"), "count where": Matlab.over("nnz"),
                "count": Matlab.function("numel"), **{name: Matlab.function(name) for name in ("sum", "min", "max")},
                "item": Matlab.index, "in": Matlab.ismember},

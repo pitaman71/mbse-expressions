@@ -30,7 +30,7 @@ function constantText(value: unknown): string {
 export function ToText(expression: unknown): string {
   const lines: string[] = [];
   let node = F.term(expression);
-  while (DIALECT.kind(node)[0] === "matlab_import") {
+  while (DIALECT.kind(node)[0] === "import") {
     const form = F.form(node);
     lines.push(`import ${form.attributes.get("name")}`);
     node = form.arguments[0];
@@ -42,20 +42,21 @@ export function ToText(expression: unknown): string {
     };
     const [tag, record] = DIALECT.kind(term);
     const attributes = F.attributesOf(record);
-    if (tag === "literal") {
-      const text = constantText(attributes.get("value"));
+    if (tag === "literal") { // its spelling, as written, or its value's
+      const text = attributes.has("text") ? attributes.get("text") : constantText(attributes.get("value"));
       return [text, text.startsWith("-") ? UNARY : ATOM];
     }
+    if (tag === "error" || tag === "missing") return [F.invalidText(DIALECT, tag, attributes), ATOM];
     if (tag === "variable") return [attributes.get("name"), ATOM];
-    if (tag === "matlab_field") return [`${operand(0, ATOM)}.${attributes.get("name")}`, ATOM];
+    if (tag === "field") return [`${operand(0, ATOM)}.${attributes.get("name")}`, ATOM];
     if (tag === "call") return [`${attributes.get("callable")}(${args.map(([text]) => text).join(", ")})`, ATOM];
-    if (tag === "matlab_index") return [`${operand(0, ATOM)}(${args[1]?.[0]})`, ATOM];
-    if (tag === "matlab_arrayfun") {
+    if (tag === "index") return [`${operand(0, ATOM)}(${args[1]?.[0]})`, ATOM];
+    if (tag === "arrayfun") {
       return [`arrayfun(@(${attributes.get("name")}) ${args[1]?.[0]}, ${args[0]?.[0]})`, ATOM];
     }
-    if (tag === "matlab_import") throw new Errors.ValueError("an import can only enclose the whole expression");
+    if (tag === "import") throw new Errors.ValueError("an import can only enclose the whole expression");
     if (tag === "list") return [`[${args.map(([text]) => text).join(", ")}]`, ATOM];
-    if (tag === "matlab_unary") return [`${attributes.get("operator")}${operand(0, UNARY)}`, UNARY];
+    if (tag === "unary") return [`${attributes.get("operator")}${operand(0, UNARY)}`, UNARY];
     const operator = attributes.get("operator") as string;
     const level = PRECEDENCE[operator] as number;
     return [`${operand(0, level)} ${operator} ${operand(1, level + 1)}`, level];

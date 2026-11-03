@@ -6,6 +6,7 @@
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
+import { DIALECT } from "./Expressions.js";
 
 // --- Rendering ---
 
@@ -56,21 +57,25 @@ export function ToText(expression: unknown): string {
       const [written, precedence] = args[index] as [string, number];
       return precedence >= level ? written : `(${written})`;
     };
-    const [tag, record] = F.kindOf(node);
+    const [tag, record] = DIALECT.kind(node);
     const attributes = F.attributesOf(record);
-    if (tag === "literal") return constantText(attributes.get("value"));
+    if (tag === "literal") {
+      if (attributes.has("text")) return [attributes.get("text"), attributes.get("text").startsWith("-") ? UNARY : ATOM]; // its spelling
+      return constantText(attributes.get("value"));
+    }
+    if (tag === "error" || tag === "missing") return [F.invalidText(DIALECT, tag, attributes), ATOM];
     if (tag === "variable") return [nameText(attributes.get("name")), ATOM];
-    if (tag === "latex_member") return [`${operand(0, ATOM)}.${nameText(attributes.get("name"))}`, ATOM];
+    if (tag === "member") return [`${operand(0, ATOM)}.${nameText(attributes.get("name"))}`, ATOM];
     if (tag === "call") {
       return [`\\operatorname{${attributes.get("callable")}}(${args.map(([t]) => t).join(", ")})`, ATOM];
     }
-    if (tag === "latex_frac") return [`\\frac{${args[0]?.[0]}}{${args[1]?.[0]}}`, ATOM];
+    if (tag === "frac") return [`\\frac{${args[0]?.[0]}}{${args[1]?.[0]}}`, ATOM];
     if (tag === "let") {
       const name = nameText(attributes.get("name"));
       return [`${operand(1, IMPLIES)} \\quad \\text{where } ${name} = ${operand(0, IMPLIES)}`, WHERE];
     }
     const operator: string = attributes.get("operator");
-    if (tag === "latex_unary") {
+    if (tag === "unary") {
       if (operator === "\\lnot") return [`\\lnot ${operand(0, UNARY)}`, UNARY];
       return [`${operator}${operand(0, ATOM)}`, UNARY];
     }

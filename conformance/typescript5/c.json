@@ -1,0 +1,82 @@
+{
+  "c": {
+    "conditional": {
+      "condition": {
+        "binary": {
+          "operator": "&&",
+          "left": {
+            "unary": {
+              "operator": "!",
+              "operand": {
+                "member": {
+                  "name": "a",
+                  "object": {
+                    "variable": {
+                      "name": "record"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "right": {
+            "binary": {
+              "operator": ">",
+              "left": {
+                "subscript": {
+                  "array": {
+                    "member": {
+                      "name": "b",
+                      "operator": "->",
+                      "object": {
+                        "variable": {
+                          "name": "record"
+                        }
+                      }
+                    }
+                  },
+                  "index": {
+                    "constant": {
+                      "value": 0
+                    }
+                  }
+                }
+              },
+              "right": {
+                "constant": {
+                  "value": 1.5,
+                  "type": "float"
+                }
+              }
+            }
+          }
+        }
+      },
+      "consequent": {
+        "cast": {
+          "type": "uint8_t",
+          "operand": {
+            "call": {
+              "callable": "f",
+              "arguments": [
+                {
+                  "c": {
+                    "constant": {
+                      "value": 1
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      "alternative": {
+        "constant": {
+          "value": 5,
+          "type": "unsigned int"
+        }
+      }
+    }
+  }
+}

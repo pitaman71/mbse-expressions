@@ -1,76 +1,87 @@
-let:
-  name: a
-  value:
-    excel_field:
-      name: age
-      value:
-        variable:
-          name: record
-  body:
-    call:
-      callable: IF
-      arguments:
-      - call:
-          callable: AND
+excel:
+  let:
+    name: a
+    value:
+      excel:
+        field:
+          name: age
+          value:
+            variable:
+              name: record
+    body:
+      excel:
+        call:
+          callable: IF
           arguments:
-          - excel_infix:
-              operator: '>='
-              left:
-                variable:
-                  name: a
-              right:
-                literal:
-                  value: 18
-          - call:
-              callable: NOT
-              arguments:
-              - call:
-                  callable: ISERROR
-                  arguments:
-                  - excel_field:
-                      name: email
-                      value:
+          - excel:
+              call:
+                callable: AND
+                arguments:
+                - excel:
+                    infix:
+                      operator: '>='
+                      left:
                         variable:
-                          name: record
-      - excel_infix:
-          operator: '-'
-          left:
-            excel_infix:
-              operator: '*'
-              left:
-                variable:
-                  name: a
-              right:
-                call:
-                  callable: SUM
-                  arguments:
-                  - excel_map:
-                      name: q
-                      array:
-                        excel_field:
-                          name: ports
+                          name: a
+                      right:
+                        literal:
                           value:
-                            variable:
-                              name: record
-                      body:
-                        variable:
-                          name: q
-          right:
-            excel_cell:
-              address: B2
-              sheet: Sheet1
-      - excel_infix:
-          operator: +
-          left:
-            excel_prefix:
-              operator: '-'
-              operand:
-                excel_cell:
-                  address: C3
-                  sheet: Rates
-                  book: Book.xlsx
-          right:
-            literal:
-              value:
-                scalar:
-                  str: x
+                            int: 18
+                - excel:
+                    call:
+                      callable: NOT
+                      arguments:
+                      - excel:
+                          call:
+                            callable: ISERROR
+                            arguments:
+                            - excel:
+                                field:
+                                  name: email
+                                  value:
+                                    variable:
+                                      name: record
+          - excel:
+              infix:
+                operator: '-'
+                left:
+                  infix:
+                    operator: '*'
+                    left:
+                      variable:
+                        name: a
+                    right:
+                      call:
+                        callable: SUM
+                        arguments:
+                        - excel:
+                            map:
+                              name: q
+                              array:
+                                field:
+                                  name: ports
+                                  value:
+                                    variable:
+                                      name: record
+                              body:
+                                variable:
+                                  name: q
+                right:
+                  cell:
+                    address: B2
+                    sheet: Sheet1
+          - excel:
+              infix:
+                operator: +
+                left:
+                  prefix:
+                    operator: '-'
+                    operand:
+                      cell:
+                        address: C3
+                        sheet: Rates
+                        book: Book.xlsx
+                right:
+                  literal:
+                    value:
+                      str: x

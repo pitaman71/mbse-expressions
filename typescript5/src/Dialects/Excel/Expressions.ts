@@ -1,30 +1,31 @@
 /**
  * Expressions of the Excel dialect: worksheet formulas.
  *
- * Excel's terms are the framework's kinds (`Framework/Terms`) where a formula's construct has their shape, and five of
- * its own, which `install` adds to `Expressions.Framework.Term` by schema extension, each a branch named
- * `excel_<kind>` (dialects share kind names) holding a value object `Expressions.Excel.<Kind>` (a term carries no
- * domain):
+ * Excel's terms are values of its `Term`, `Expressions.Excel.Term`, the branch `excel` of
+ * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
+ * framework's kinds (`Framework/Terms`) where a formula's construct has their shape, five of its own,
+ * each a value object `Expressions.Excel.<Kind>` whose slots hold Excel's terms, and the framework's kinds of invalid
+ * syntax (`error`, `missing`); a term carries no domain:
  *
- * - `literal` (the framework's): a constant, a number (int or float), text (str) or a logical (boolean).
+ * - `literal` (the framework's): a constant, a number (`int` or `float`), text (`str`) or a logical (`bool`), with its
+ *   spelling (`text`) where it has one.
  * - `variable` (the framework's): the value bound to a `name`, by `LET` or as a defined name.
  * - `let` (the framework's): `LET(name, value, body)`.
  * - `call` (the framework's): a worksheet function (`callable`) applied to ordered `arguments`, for the functions in
  *   `Domains.FUNCTIONS` (`AND`, `OR`, `NOT`, `IF`, `ISERROR`, the bit functions, `ROWS`, `INDEX`, `MATCH`,
  *   `ISNUMBER`, `SUM`, `MIN`, `MAX` and `UNIQUE` of arrays, and `VSTACK`, which makes one); other names are add-in
  *   functions, which the workbook provides.
- * - `excel_cell`: a cell reference (`address`): `A1` on the current sheet, `Sheet1!A1` (`sheet`), or
- *   `[Book.xlsx]Sheet1!A1` (`book`) in another workbook. A workbook (see `Evaluators`) resolves it; it need not be
- *   bound.
- * - `excel_map`: `MAP(array, LAMBDA(name, body))`, the body's values for each element of the `array`, bound to `name`.
- * - `excel_infix`: `left <operator> right`, for `=`, `<>`, `<`, `<=`, `>`, `>=`, `+`, `-` and `*`.
- * - `excel_prefix`: `-operand`.
- * - `excel_field`: `value.name`, a field of a record (Excel's data types).
+ * - `cell`: a cell reference (`address`): `A1` on the current sheet, `Sheet1!A1` (`sheet`), or
+ *   `[Book.xlsx]Sheet1!A1` (`book`) in another workbook. A workbook (see `Evaluators`) resolves it; it need not be bound.
+ * - `map`: `MAP(array, LAMBDA(name, body))`, the body's values for each element of the `array`, bound to `name`.
+ * - `infix`: `left <operator> right`, for `=`, `<>`, `<`, `<=`, `>`, `>=`, `+`, `-` and `*`.
+ * - `prefix`: `-operand`.
+ * - `field`: `value.name`, a field of a record (Excel's data types).
  *
  * `DIALECT` reads them (`Terms.Dialect`), validates and infers. The writers (`constant`, `name`, `cell`, `let_`,
  * `function`, `infix`, `prefix`, `field`, `map_`) write terms through the builders, in a transaction:
- * `store.Expressions.Framework.Term(function("AND", infix(">=", name("age"), 18n), true))`. `Text.ToText` writes a
- * term as a formula, e.g. `=AND(this.age >= 18, NOT(ISERROR(this.email)))`.
+ * `store.Expressions.Framework.Term(function("AND", infix(">=", name("age"), 18), True))`. `Text.ToText` writes a term
+ * as a formula, e.g. `=AND(this.age >= 18, NOT(ISERROR(this.email)))`.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -36,21 +37,37 @@ import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
 
-/** Excel's own kinds, added to the framework's terms: run after `Framework.install`, in a transaction of its own. */
+/** Excel's union of its kinds, added to the framework's terms as the branch `excel`, its own kinds, and its
+ * dialect's schema, whose singleton is `Expressions.Excel`: run after `Framework.install`, in a transaction of its
+ * own; run again, it writes nothing. */
 export function install(txn: any): any {
   const S = txn.Schemas;
+  const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Excel/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({
-      Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
-      Term: S.OfUnion, Cell: S.OfObject, Map: S.OfObject, Infix: S.OfObject, Prefix: S.OfObject,
-      Field: S.OfObject }) // the framework's union, found by its name
+    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
+      Cell: S.OfObject, Map: S.OfObject, Infix: S.OfObject, Prefix: S.OfObject,
+      Field: S.OfObject }) // FrameworkTerm: the framework's union, by name
     .spec([
       // its dialect: the singleton `Expressions.Excel`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Excel.Dialect").ref(true).singleton("Expressions.Excel").adjacencies({
-        domains: (a: any) => a.relation([txn.Expressions.Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([txn.Expressions.Framework.Operates]).me("dialect") }),
+        domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("excel").schema([_.Dialect])]),
+      // its union of its kinds: the framework's it reuses, its own, and invalid syntax
+      (_: any) => _.Term.name("Expressions.Excel.Term").branches([
+        (t: any) => t.name("literal").schema([Framework.Literal]),
+        (t: any) => t.name("variable").schema([Framework.Variable]),
+        (t: any) => t.name("let").schema([Framework.Let]),
+        (t: any) => t.name("call").schema([Framework.Call]),
+        (t: any) => t.name("cell").schema([_.Cell]),
+        (t: any) => t.name("map").schema([_.Map]),
+        (t: any) => t.name("infix").schema([_.Infix]),
+        (t: any) => t.name("prefix").schema([_.Prefix]),
+        (t: any) => t.name("field").schema([_.Field]),
+        (t: any) => t.name("error").schema([Framework.Error]),
+        (t: any) => t.name("missing").schema([Framework.Missing]),
+      ]),
       (_: any) => _.Cell.name("Expressions.Excel.Cell").properties({
         address: S.OfStr, sheet: S.OfStr, book: S.OfStr }),
       (_: any) => _.Map.name("Expressions.Excel.Map").properties({
@@ -61,13 +78,8 @@ export function install(txn: any): any {
         operator: S.OfStr, operand: _.Term }),
       (_: any) => _.Field.name("Expressions.Excel.Field").properties({
         name: S.OfStr, value: _.Term }),
-      (_: any) => _.Term.name("Expressions.Framework.Term").branches([ // branches added: schema extension
-        (t: any) => t.name("excel_cell").schema([_.Cell]),
-        (t: any) => t.name("excel_map").schema([_.Map]),
-        (t: any) => t.name("excel_infix").schema([_.Infix]),
-        (t: any) => t.name("excel_prefix").schema([_.Prefix]),
-        (t: any) => t.name("excel_field").schema([_.Field]),
-      ]),
+      (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
+        (t: any) => t.name("excel").schema([_.Term])]),
     ])]))]);
 }
 
@@ -117,20 +129,24 @@ function native(value: unknown): Writer {
 export const DIALECT = new F.Dialect("Excel", {
   literal: new F.Kind(F.LITERAL, { check: literalCheck }),
   variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
-  excel_cell: new F.Kind(F.REFERENCE, { lexical: false, required: ["address"], check: cellCheck }),
+  cell: new F.Kind(F.REFERENCE, { lexical: false, required: ["address"], check: cellCheck }),
   let: new F.Kind(F.BINDING, { required: ["name"] }),
   call: new F.Kind(F.APPLICATION, { operator: "callable", vocabulary: Domains.FUNCTIONS, required: ["callable"],
     check: callCheck }),
-  excel_infix: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.INFIX, required: ["operator"] }),
-  excel_prefix: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.PREFIX, required: ["operator"] }),
-  excel_field: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.FIELD, required: ["name"] }),
-  excel_map: new F.Kind(F.QUANTIFIER, { signature: Domains.MAP, required: ["name"] }),
+  infix: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.INFIX, required: ["operator"] }),
+  prefix: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.PREFIX, required: ["operator"] }),
+  field: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.FIELD, required: ["name"] }),
+  map: new F.Kind(F.QUANTIFIER, { signature: Domains.MAP, required: ["name"] }),
 }, { domain_of: Domains.of, literal: native });
 
 // --- Writers ---
 
 /** A term of the Excel dialect, written through the builders: a spec, written where it is given. */
-export class Writer extends F.Writer {}
+export class Writer extends F.Writer {
+  constructor(write: (union: any) => any) {
+    super(write, DIALECT.tag);
+  }
+}
 
 function specOf(value: unknown): F.Writer | null {
   return value === null || value === undefined ? null : DIALECT.spec(value);
@@ -155,7 +171,7 @@ export function name(name: string): Writer {
 
 /** The cell at `address`, on `sheet` (by default the current one) of `book` (by default this one). */
 export function cell(address: string, sheet: string | null = null, book: string | null = null): Writer {
-  return new Writer((u: any) => u.excel_cell((r: any) => {
+  return new Writer((u: any) => u.cell((r: any) => {
     r.address(address);
     if (sheet !== null) r.sheet(sheet);
     return book === null ? r : r.book(book);
@@ -178,23 +194,23 @@ export { function_ as function };
 /** `left <operator> right`. */
 export function infix(operator: string, left: unknown, right: unknown): Writer {
   const slots = { left: specOf(left), right: specOf(right) };
-  return new Writer((u: any) => u.excel_infix((r: any) => setSlots(r.operator(operator), slots)));
+  return new Writer((u: any) => u.infix((r: any) => setSlots(r.operator(operator), slots)));
 }
 
 /** `<operator>operand`. */
 export function prefix(operator: string, operand: unknown): Writer {
   const slots = { operand: specOf(operand) };
-  return new Writer((u: any) => u.excel_prefix((r: any) => setSlots(r.operator(operator), slots)));
+  return new Writer((u: any) => u.prefix((r: any) => setSlots(r.operator(operator), slots)));
 }
 
 /** `value.name`. */
 export function field(value: unknown, name: string): Writer {
   const slots = { value: specOf(value) };
-  return new Writer((u: any) => u.excel_field((r: any) => setSlots(r.name(name), slots)));
+  return new Writer((u: any) => u.field((r: any) => setSlots(r.name(name), slots)));
 }
 
 /** `MAP(array, LAMBDA(name, body))`. */
 export function map_(name: string, array: unknown, body: unknown): Writer {
   const slots = { array: specOf(array), body: specOf(body) };
-  return new Writer((u: any) => u.excel_map((r: any) => setSlots(r.name(name), slots)));
+  return new Writer((u: any) => u.map((r: any) => setSlots(r.name(name), slots)));
 }

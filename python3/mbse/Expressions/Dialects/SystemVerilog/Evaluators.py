@@ -4,7 +4,7 @@
 `Scope(variables, functions)` and gives a `Domains.Logic` for an
 integral result or a float for a real one. A variable's type is its value's: a `Logic` its own, a bool a `bit`, an int
 an `integer` (or a `longint` beyond 32 bits), a float a `real`, and a string a vector of its bytes (in UTF-8) (a value
-carries no domain: a variable of another type waits for type inference, the port's stage 3, Decided, 2). IEEE 1800's
+carries no domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). IEEE 1800's
 rules apply:
 
 - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
@@ -34,7 +34,7 @@ import math
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Dialects.Basic import Ieee754
+from mbse.Expressions.Dialects.Patterns import Ieee754
 from mbse.Expressions.Framework import Errors, Objects, Symbolics as S, Terms as F
 
 from . import Domains, Expressions as X
@@ -178,12 +178,12 @@ def _number(value: Logic) -> int:
 
 
 class _Node:
-    """A term read once for one evaluation: its `kind` (as `Expressions.kind_of` names it), and its members as
+    """A term read once for one evaluation: its `kind` (as `Expressions.DIALECT` reads it), and its members as
     attributes, its attributes (None where not set), its slots (a `_Node`) and its variadic arguments (a tuple of
     `_Node`s). `term` is the term value read."""
 
     def __init__(self, term: Any):
-        tag, record = X.kind_of(term)
+        tag, record, _ = X.DIALECT.kind(term)
         slots, variadic, names = F._parts(record.as_schema())
         arguments = F.arguments_of(record)
         members: dict[str, Any] = dict.fromkeys(names)

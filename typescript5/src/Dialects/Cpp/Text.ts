@@ -1,0 +1,9 @@
+/** Text of the Cpp dialect: `ToText(expression)` is a term of C++ as C++ source, as C's printer writes its kinds. */
+
+import { text } from "../C/Text.js";
+import { DIALECT } from "./Expressions.js";
+
+/** The expression as C++ source, parenthesized only where precedence requires. */
+export function ToText(expression: unknown): string {
+  return text(expression, DIALECT);
+}

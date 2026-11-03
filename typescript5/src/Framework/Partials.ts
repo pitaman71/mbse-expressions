@@ -9,7 +9,7 @@
  * stays only while the reduced body still refers to its name; a binding of an unknown value hides any known variable
  * of its name, and so does a quantifier, whose collection and body are reduced. Any other term is rebuilt from its
  * reduced arguments, unless `simplify(node, results)` gives a simpler result from what is known of them (Kleene's
- * short-circuits, in Basic). A reference the scope does not know stays.
+ * short-circuits, in Patterns). A reference the scope does not know stays.
  *
  * The residual is a `Writer` (see `Terms`), which its caller writes where it wants it, in a transaction; a subterm it
  * keeps is the term value read, which writing copies. It agrees with the expression wherever the expression evaluates

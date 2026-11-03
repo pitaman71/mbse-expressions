@@ -8,6 +8,8 @@ from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
 
+from .Expressions import DIALECT
+
 __all__ = ["ToText"]
 
 
@@ -57,23 +59,27 @@ def ToText(expression: Any) -> str:
             text, precedence = arguments[index]
             return text if precedence >= level else f"({text})"
 
-        tag, record = F.kind_of(node)
+        tag, record, _ = DIALECT.kind(node)
         attributes = F.attributes_of(record)
         if tag == "literal":
+            if "text" in attributes:  # its spelling, as written
+                return attributes["text"], _UNARY if attributes["text"].startswith("-") else _ATOM
             return _constant(attributes["value"])
+        if tag in ("error", "missing"):
+            return F.invalid_text(DIALECT, tag, attributes), _ATOM
         if tag == "variable":
             return _name(attributes["name"]), _ATOM
-        if tag == "latex_member":
+        if tag == "member":
             return f"{operand(0, _ATOM)}.{_name(attributes['name'])}", _ATOM
         if tag == "call":
             return f"\\operatorname{{{attributes['callable']}}}({', '.join(text for text, _ in arguments)})", _ATOM
-        if tag == "latex_frac":
+        if tag == "frac":
             return f"\\frac{{{arguments[0][0]}}}{{{arguments[1][0]}}}", _ATOM
         if tag == "let":
             return (f"{operand(1, _IMPLIES)} \\quad \\text{{where }} {_name(attributes['name'])} = "
                     f"{operand(0, _IMPLIES)}"), _WHERE
         operator = attributes["operator"]
-        if tag == "latex_unary":
+        if tag == "unary":
             if operator == "\\lnot":
                 return f"\\lnot {operand(0, _UNARY)}", _UNARY
             return f"{operator}{operand(0, _ATOM)}", _UNARY

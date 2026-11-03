@@ -1,21 +1,21 @@
 """The pairwise translators between the dialects, one module per pair, each with its `TRANSLATOR`. `between(a, b)`
-finds the translator from dialect `a` to dialect `b`, whichever way round its module declares it. `Basic_Python.NUMPY`
-is a second translator between Basic and Python, which writes NumPy's functions. See
-`mbse.Expressions.Framework.Translators`."""
+finds the translator from dialect `a` to dialect `b`, whichever way round its module declares it. `Patterns_Python3.NUMPY`
+is a second translator between Patterns and Python3, which writes NumPy's functions. Patterns <-> C and Patterns <->
+Cpp are one rule set, `Patterns_C.RULES`, applied to each. See `mbse.Expressions.Framework.Translators`."""
 
 from __future__ import annotations
 
 from mbse.Expressions.Framework.Terms import Dialect
 from mbse.Expressions.Framework.Translators import Pairwise
 
-from . import (Basic_Ccpp, Basic_Excel, Basic_Latex, Basic_Matlab, Basic_Python, Basic_SystemVerilog, Excel_Latex,
-               Matlab_Excel, Matlab_Latex, Python_Excel, Python_Latex, Python_Matlab)
+from . import (Excel_Latex, Matlab_Excel, Matlab_Latex, Patterns_C, Patterns_Cpp, Patterns_Excel, Patterns_Latex,
+               Patterns_Matlab, Patterns_Python3, Patterns_SystemVerilog, Python3_Excel, Python3_Latex, Python3_Matlab)
 
 __all__ = ["between", "TRANSLATORS"]
 
 TRANSLATORS: list[Pairwise] = [module.TRANSLATOR for module in (
-    Basic_Python, Basic_Matlab, Basic_Excel, Basic_Latex, Basic_Ccpp, Basic_SystemVerilog, Python_Matlab, Python_Excel,
-    Python_Latex, Matlab_Excel, Matlab_Latex, Excel_Latex)]
+    Patterns_Python3, Patterns_Matlab, Patterns_Excel, Patterns_Latex, Patterns_C, Patterns_Cpp, Patterns_SystemVerilog,
+    Python3_Matlab, Python3_Excel, Python3_Latex, Matlab_Excel, Matlab_Latex, Excel_Latex)]
 """Every pairwise translator."""
 
 

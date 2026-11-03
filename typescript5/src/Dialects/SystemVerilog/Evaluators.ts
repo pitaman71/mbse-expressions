@@ -4,7 +4,7 @@
  * `Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
  * `new Scope(variables, { functions })` and gives a `Domains.Logic` for an integral result or a number for a real one.
  * A variable's type is its value's: a `Logic` its own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32 bits), a number a `real`, a string a vector
- * of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for type inference, the port's
+ * of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for domain inference, the port's
  * stage 3, Decided, 2). IEEE 1800's rules apply:
  *
  * - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
@@ -36,7 +36,7 @@ import { NameError, OverflowError } from "../../Framework/Errors.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as F from "../../Framework/Terms.js";
-import * as Ieee754 from "../Basic/Ieee754.js";
+import * as Ieee754 from "../Patterns/Ieee754.js";
 import { isMapping } from "../Matlab/Domains.js";
 import * as Domains from "./Domains.js";
 import * as X from "./Expressions.js";
@@ -198,13 +198,13 @@ function power(base: bigint, exponent: bigint, modulus: bigint): bigint {
 
 // --- The evaluation ---
 
-/** A term read once for one evaluation: its `tag` (as `Expressions.kindOf` names it), and its members by name, its attributes (null where not set), its
+/** A term read once for one evaluation: its `tag` (as `Expressions.DIALECT` reads it), and its members by name, its attributes (null where not set), its
  * slots (a `Node`) and its variadic arguments (an array of `Node`s). `term` is the term value read. */
 class Node {
   [member: string]: any;
 
   constructor(readonly term: any) {
-    const [tag, record] = X.kindOf(term);
+    const [tag, record] = X.DIALECT.kind(term);
     const [slots, variadic, names] = F._parts(record.as_schema());
     const args = F.argumentsOf(record);
     for (const name of names) this[name] = null;

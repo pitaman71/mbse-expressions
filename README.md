@@ -16,12 +16,12 @@ rest of your data, sent between programs, and evaluated the same way in Python a
 
 ```python
 from mbse.Expressions import Evaluators, Expressions, Framework
-from mbse.Expressions.Dialects import Basic
+from mbse.Expressions.Dialects import Patterns
 from mbse.Schemas.Framework import Builders
 
 store = Builders.Store()  # expressions are stored in an mbse-schemas store, with the data they constrain
 store.transaction(Framework.install)
-store.transaction(Basic.install)
+store.transaction(Patterns.install)
 contact = Expressions.variable("contact")
 with store.transaction():
     senior = store.Expressions.Framework.Expression(lambda e: e.root(
@@ -31,12 +31,12 @@ Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value
 
 ```typescript
 import { Evaluators, Expressions, Framework } from "@mbse/expressions";
-import * as Basic from "@mbse/expressions/Dialects/Basic";
+import * as Patterns from "@mbse/expressions/Dialects/Patterns";
 import { Builders } from "@mbse/schemas/Framework";
 
 const store: any = new Builders.Store(); // expressions are stored in an mbse-schemas store, with the data they constrain
 store.transaction(Framework.install);
-store.transaction(Basic.install);
+store.transaction(Patterns.install);
 const contact = Expressions.variable("contact");
 const senior = store.transaction(() => store.Expressions.Framework.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
@@ -106,8 +106,8 @@ npm test                       # type-check and run the test suites and the tuto
 
 | Read | For |
 |---|---|
-| [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Seven case studies (the fourth, on values with widths, deferred until type inference), from a constraint written in code to the same constraint in C and SystemVerilog: constraints as data, unknowns, collections, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
-| mbse-basis [FEA-024: expressions as data](../mbse-basis/docs/features/FEA-024.md) | The design, as its capabilities' detail files: the Basic dialect's terms and core vocabulary, three-valued evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, and open questions |
+| [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | Seven case studies (the fourth, on values with widths, deferred until domain inference), from a constraint written in code to the same constraint in C and SystemVerilog: constraints as data, unknowns, collections, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
+| mbse-basis [FEA-024: expressions as data](../mbse-basis/docs/features/FEA-024.md) | The design, as its capabilities' detail files: the Patterns dialect's (formerly Basic) terms and core vocabulary, three-valued evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, and open questions |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-expressions/SKILL.md), [Summary for LLMs](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill also ships inside both packages |
 | [Python test plan](python3/tests/TestPlan.md), [TypeScript test plan](typescript5/tests/TestPlan.md) | The test suites |
@@ -126,9 +126,12 @@ skills/                   the agent skill (SKILL.md plus per-task references); s
 ## Dialects
 
 Expressions come in dialects that implement one framework: each is serializable, traversable, validatable and
-evaluatable, and pairwise translators convert between them. Basic, above, is the core vocabulary. Python (with NumPy
-as a module it imports), Matlab, Excel and Latex (notation, without evaluation) model those languages' expressions, render as their source, resolve names,
-imports and cell references as those languages do, and evaluate by their rules:
+evaluatable, and pairwise translators convert between them. A term is a value of `Expressions.Framework.Term`, the union of
+the dialects' `Term`s: written with its dialect, then its kind. Patterns (formerly Basic), above, is the core vocabulary.
+Python3 (with NumPy as a module it imports), Matlab, Excel and Latex (notation, without evaluation) model those
+languages' expressions, render as their source, resolve names, imports and cell references as those languages do, and
+evaluate by their rules; C and Cpp (C11 to C23, C++17 to C++23), each with its own kinds of the same shapes, and SystemVerilog model those
+languages' expressions over their own types:
 
 ```python
 from mbse.Expressions import Translators
@@ -140,12 +143,16 @@ ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email
 
 ## Status
 
-Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Basic,
-Python, Matlab, Excel, Latex, Ccpp and SystemVerilog dialects, and translators between them; terms as values in an
-mbse-schemas store, with the container constructors `list` and `mapping`; dialects, their operations and their
+Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Patterns,
+Python3, Matlab, Excel, Latex, C, Cpp and SystemVerilog dialects, each with its `Term`, the union of its kinds, in the
+framework's union of the dialects' `Term`s, and translators between them; terms as values in an mbse-schemas store, with the container
+constructors `list` and `mapping`, literals holding any value with their spelling, and the kinds of invalid syntax
+`error` and `missing`; dialects, their operations and their
 domains as data (each dialect a singleton that names its operations, each an expression schema, and owns its domains
 by name); writers; `validate()`, which refuses a call to an operation the dialect does not define; evaluation with
-three-valued logic over values by the schemas they are written with, collections and quantifiers. Not built yet: type
+three-valued logic over values by the schemas they are written with, collections and quantifiers. Under way: the
+complete dialects ([CAP-226: complete expression dialects](../mbse-basis/docs/capabilities/CAP-226.md)), whose stage 2,
+the framework and the renames, is built. Not built yet: domain
 inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
 interface through which mbse-schemas will choose union branches and check constraints.
 

@@ -5,7 +5,7 @@
  * pair of dialects has its own, specialized to what the two have in common, and is declared as a list of rules:
  *
  * - `new Rule(left, right)` pairs two `Pattern`s, each a form with `Hole`s: `new Pattern('call', { callable: 'eq' },
- *   A, B)` matches the Basic `eq(a, b)` and binds the holes `A` and `B` to its arguments. A hole in an attribute binds
+ *   A, B)` matches the Patterns `eq(a, b)` and binds the holes `A` and `B` to its arguments. A hole in an attribute binds
  *   the attribute's native value, and may restrict its type: `new Hole('K', String)`. A rule applies in both
  *   directions unless its `direction` is 'forward' or 'backward'.
  * - `new Inline(kind, side)` translates a binding of one side, which the other has no counterpart for, by substituting
@@ -18,15 +18,17 @@
  *   the other side lacks, say). Conversions are tried after the rules of their kind.
  * - `new Elementwise(leftKind, rightKind, leftAttributes, rightAttributes)` translates a term of any number of
  *   arguments, a container constructor, into the other side's, its arguments translated in order: a `leftKind` term
- *   whose attributes are `leftAttributes` is the `rightKind` term of `rightAttributes` (Basic's `list(a, b)` is Excel's
+ *   whose attributes are `leftAttributes` is the `rightKind` term of `rightAttributes` (Patterns' `list(a, b)` is Excel's
  *   `VSTACK(a, b)`), both ways unless its `direction` says otherwise.
  * - `new Prelude(pattern, side)` adds an import to what is translated to `side`: `pattern` is the import with its body
  *   as its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds,
  *   e.g. `import numpy as np` around an expression that uses `np`.
  *
- * A pattern names a kind by its branch's tag (`call`, `python_binop`) and its attributes and arguments as `Terms.form`
- * reads them: a hole in an argument binds the term in that place, slots then variadic arguments, and a fixed attribute
- * must be set to an equal scalar, with every attribute of the term matched (an attribute that is not set is absent).
+ * A pattern names a kind by its branch's tag in its dialect's `Term` (`call`, `binop`) and its attributes and arguments
+ * as `Terms.form` reads them: a hole in an argument binds the term in that place, slots then variadic arguments, and a
+ * fixed attribute must be set to an equal scalar, with every attribute of the term matched (an attribute that is not set
+ * is absent), but a literal's spelling (`text`, `problems`), which is its own dialect's: a literal translates by its
+ * value, and one with no value has no counterpart.
  *
  * Translating co-traverses: at each term, the first rule whose source pattern matches (the most specific first: the
  * one with the most terms and fixed attributes) is applied by traversing the pattern and the term in lockstep, binding
@@ -190,7 +192,7 @@ export class Prelude {
 }
 
 /** Rules for operators that differ only in name: each `left` name applied to `arity` arguments is the `right` name
- * applied to the same arguments, e.g. `renames('call', 'callable', 'python_compare', 'operator', { eq: '==' }, 2)`. */
+ * applied to the same arguments, e.g. `renames('call', 'callable', 'compare', 'operator', { eq: '==' }, 2)`. */
 export function renames(leftKind: string, leftAttribute: string, rightKind: string, rightAttribute: string,
   names: Record<string, string>, arity: number): Rule[] {
   const args = holes(...Array.from({ length: arity }, (_, i) => `A${i}`));
@@ -198,15 +200,12 @@ export function renames(leftKind: string, leftAttribute: string, rightKind: stri
     new Pattern(rightKind, { [rightAttribute]: b }, ...args)));
 }
 
-/** A kind's tag as a message names it: without its dialect's prefix (`python_call` is Python's `call`). */
-function label(dialect: Terms.Dialect, tag: string): string {
-  const prefix = dialect.name().toLowerCase() + "_";
-  return tag.startsWith(prefix) ? tag.slice(prefix.length) : tag;
-}
+/** A literal's spelling in its source, and what is wrong with it: its own dialect's, which no translation carries. */
+const SPELLING = ["text", "problems"];
 
 function describe(dialect: Terms.Dialect, node: unknown): string {
   const [tag, record, kind] = dialect.kind(node);
-  const named = `${dialect.name()} ${label(dialect, tag)}`;
+  const named = `${dialect.name()} ${tag}`;
   if ((kind.role === Terms.APPLICATION || kind.role === Terms.QUANTIFIER) && kind.operator !== null) {
     return `${named} ${repr(Terms.operatorOf(node, kind))}`;
   }
@@ -305,13 +304,13 @@ class Run {
     if (this.direction.elides.has(tag)) {
       const args = Terms.argumentsOf(record);
       const body = args[args.length - 1];
-      if (body === null) throw new ValueError(`${Terms.article(label(this.direction.source, tag))} needs a body`);
+      if (body === null) throw new ValueError(`${Terms.article(tag)} needs a body`);
       return this.translate(body, environment);
     }
     if (this.direction.inlines.has(tag)) {
       const [value, body] = Terms.argumentsOf(record);
       if (value === null || body === null) {
-        throw new ValueError(`${Terms.article(label(this.direction.source, tag))} needs a ${value === null ? "value" : "body"}`);
+        throw new ValueError(`${Terms.article(tag)} needs a ${value === null ? "value" : "body"}`);
       }
       const inner = new Map([...environment, [name, this.translate(value, environment)]]);
       return this.translate(body, inner);
@@ -347,10 +346,14 @@ class Run {
     }
     if (node === null) return false;
     const form = Terms.form(node);
-    if (form.kind !== pattern.kind || form.attributes.size !== pattern.attributes.size
-      || ![...pattern.attributes.keys()].every((k) => form.attributes.has(k))) return false;
+    let attributes = form.attributes;
+    if (this.direction.source.kind(node)[2].role === Terms.LITERAL) { // a literal's spelling is its dialect's own
+      attributes = new Map([...attributes].filter(([k]) => !SPELLING.includes(k)));
+    }
+    if (form.kind !== pattern.kind || attributes.size !== pattern.attributes.size
+      || ![...pattern.attributes.keys()].every((k) => attributes.has(k))) return false;
     for (const [name, expected] of pattern.attributes) {
-      const value = form.attributes.get(name);
+      const value = attributes.get(name);
       if (!(expected instanceof Hole)) {
         if (!Terms.sameNative(expected, value)) return false;
       } else if (expected.types.length > 0 && !expected.types.some((type) => Schemas.isScalarOf(type, value))) {

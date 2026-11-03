@@ -2,10 +2,11 @@
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
  * `build()` returns the cases, name -> [root schema, root, store]: each case but `domains` a term value of
- * `Expressions.Framework.Term`, built in one store holding the framework's install and every dialect's, written
- * nested. `DIALECTS` names the dialect that reads each case other than Basic's. The `domains` case is data: Basic's
- * dialect, the singleton `Expressions.Basic` (`Expressions.Basic.Dialect`), naming its operations and owning its domains
- * by name, a packed one among them, written as one document. Each implementation writes its
+ * `Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
+ * dialect's, written nested. `DIALECTS` names the dialect that reads each case other than Patterns'. The `domains` case
+ * is data: Patterns' dialect, the singleton `Expressions.Patterns` (`Expressions.Patterns.Dialect`), naming its
+ * operations and owning its domains by name, a packed one among them, written as one document. The `invalid` case is a
+ * Python3 term holding invalid syntax and literals with their spelling. Each implementation writes its
  * snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
  * implementation's files (see the CONF test suite). Keep record module and `python3/mbse/Expressions/Conformance/Corpus.py`
  * in lockstep: same cases, same values, same order of statements.
@@ -15,26 +16,29 @@
 
 import { Builders } from "@mbse/schemas/Framework";
 
-import * as Expressions from "../Dialects/Basic/Expressions.js";
-import * as Basic from "../Dialects/Basic/index.js";
-import * as Ccpp from "../Dialects/Ccpp/index.js";
+import * as C from "../Dialects/C/index.js";
+import * as Cpp from "../Dialects/Cpp/index.js";
 import * as Excel from "../Dialects/Excel/index.js";
 import * as Latex from "../Dialects/Latex/index.js";
 import * as Matlab from "../Dialects/Matlab/index.js";
-import * as Python from "../Dialects/Python/index.js";
+import * as Expressions from "../Dialects/Patterns/Expressions.js";
+import * as Patterns from "../Dialects/Patterns/index.js";
+import * as Python3 from "../Dialects/Python3/index.js";
 import * as SystemVerilog from "../Dialects/SystemVerilog/index.js";
 import * as Framework from "../Framework/index.js";
 import type * as Terms from "../Framework/Terms.js";
 
-const [C, X, L, M, P] = [Ccpp.Expressions, Excel.Expressions, Latex.Expressions, Matlab.Expressions, Python.Expressions];
+const [CE, CPP, X, L, M, P] = [C.Expressions, Cpp.Expressions, Excel.Expressions, Latex.Expressions, Matlab.Expressions,
+  Python3.Expressions];
 const SV = SystemVerilog.Expressions;
 
-export const CASES = ["expression", "python", "matlab", "excel", "latex", "domains", "collections", "ccpp", "systemverilog"] as const;
+export const CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp",
+  "systemverilog", "invalid"] as const;
 
-/** The dialect that reads each case, where it is not Basic. */
+/** The dialect that reads each case, where it is not Patterns. */
 export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
-  ["python", P.DIALECT], ["matlab", M.DIALECT], ["excel", X.DIALECT], ["latex", L.DIALECT], ["ccpp", C.DIALECT],
-  ["systemverilog", SV.DIALECT],
+  ["python3", P.DIALECT], ["matlab", M.DIALECT], ["excel", X.DIALECT], ["latex", L.DIALECT], ["c", CE.DIALECT],
+  ["cpp", CPP.DIALECT], ["systemverilog", SV.DIALECT], ["invalid", P.DIALECT],
 ]);
 
 /** A case: its root schema, its root term, and the store it is built in. */
@@ -44,16 +48,17 @@ export function build(): Map<string, Case> {
   const E = Expressions;
   const store: any = new Builders.Store();
   store.transaction(Framework.install);
-  store.transaction(Basic.install);
-  store.transaction(Python.install);
+  store.transaction(Patterns.install);
+  store.transaction(Python3.install);
   store.transaction(Matlab.install);
   store.transaction(Excel.install);
   store.transaction(Latex.install);
-  store.transaction(Ccpp.install);
+  store.transaction(C.install);
+  store.transaction(Cpp.install);
   store.transaction(SystemVerilog.install);
-  const defined = store.transaction(Basic.define)[0]; // Basic's dialect, its operations and its domains
+  const defined = store.transaction(Patterns.define)[0]; // Patterns' dialect, its operations and its domains
 
-  // --- domains: Basic's dialect, its operations by name and its domains, owned by name; an enum and a domain packing it
+  // --- domains: Patterns' dialect, its operations by name and its domains, owned by name; an enum and a domain packing it
   // into uint8 added ---
   store.transaction(() => {
     const state = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
@@ -61,7 +66,7 @@ export function build(): Map<string, Case> {
     const mode = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
       (u: any) => u.packed((e: any) => e.codes([0n, 1n]))))).packs((a: any) => a.insert(
       (e: any) => e.domain(state).representation(defined.get("uint8")))));
-    store.Expressions.Basic.Dialect(defined.get("dialect"), (b: any) => b.domains({
+    store.Expressions.Patterns.Dialect(defined.get("dialect"), (b: any) => b.domains({
       state: (e: any) => e.domain(state), mode: (e: any) => e.domain(mode) }));
   });
 
@@ -70,10 +75,10 @@ export function build(): Map<string, Case> {
   const expression = E.let_("age", self.age, age.ge(18n).and_(
     age.lt(65.5).or_(self.has("email").not_()).implies(E.literal(new Uint8Array([0x00, 0xff])).in_(E.list_("x", true)))));
 
-  // --- python: every kind, a let and its names --- import numpy as np / from math import floor /
+  // --- python3: every kind, a let and its names --- import numpy as np / from math import floor /
   // (lambda a: floor(a.x * 2.5) if not a['k'] >= 18 or np.pi else (p[b'\x00'] for p in a.y if p))(record)
   const [a, item] = [P.name("a"), P.name("p")];
-  const python = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("record"), P.ifexp(
+  const python3 = P.import_("numpy", P.importfrom("math", "floor", P.let_("a", P.name("record"), P.ifexp(
     P.boolop("or", P.unaryop("not", P.compare(">=", P.subscript(a, "k"), 18n)), P.attribute(P.name("np"), "pi")),
     P.call("floor", P.binop("*", P.attribute(a, "x"), 2.5)),
     P.generator("p", P.attribute(a, "y"), P.index(item, new Uint8Array([0x00])), item)))), "np");
@@ -105,11 +110,17 @@ export function build(): Map<string, Case> {
   const collections = E.let_("ports", self.entries("ports"), ports!.all("p", p!.get("pin").in_(pins)).and_(
     sizes!.sum().le(E.mapping(["most", ports!.count()], ["least", 0n]).item("most"))));
 
-  // --- ccpp: every kind, typed constants and a shared identifier --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
-  const me = C.identifier("record");
-  const ccpp = C.conditional(C.binary("&&", C.unary("!", C.member(me, "a")), C.binary(
-    ">", C.subscript(C.member(me, "b", "->"), 0n), C.constant(1.5, "float"))),
-    C.cast("uint8_t", C.call("f", 1n)), C.constant(5n, "unsigned int"));
+  // --- c: every kind, typed constants and a shared identifier --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+  const me = CE.identifier("record");
+  const c = CE.conditional(CE.binary("&&", CE.unary("!", CE.member(me, "a")), CE.binary(
+    ">", CE.subscript(CE.member(me, "b", "->"), 0n), CE.constant(1.5, "float"))),
+    CE.cast("uint8_t", CE.call("f", 1n)), CE.constant(5n, "unsigned int"));
+
+  // --- cpp: C's kinds, as C++'s terms --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+  const meCpp = CPP.identifier("record");
+  const cpp = CPP.conditional(CPP.binary("&&", CPP.unary("!", CPP.member(meCpp, "a")), CPP.binary(
+    ">", CPP.subscript(CPP.member(meCpp, "b", "->"), 0n), CPP.constant(1.5, "float"))),
+    CPP.cast("uint8_t", CPP.call("f", 1n)), CPP.constant(5n, "unsigned int"));
 
   // --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
   // record.a inside {1, [2:5]} -> !record[0] ? {{6{2'b10}}, record.b[7:4]} : byte'($clog2(record.unique().sum(q) with (q))) + 4'(8'shff)
@@ -120,11 +131,20 @@ export function build(): Map<string, Case> {
     sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
       sv.cast(4n, sv.vector("11111111", true, "h")))));
 
+  // --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
+  // their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
+  // (a binop's operands are Python3's terms, written in its union)
+  const invalid = P.binop("-", P.binop("+", P.binop("+", (e: any) => e.literal(
+    (r: any) => r.value((p: any) => p.as_scalar(16n)).text("0x10")), (e: any) => e.error(
+    (r: any) => r.text("(x +* 1)").terms([P.name("x"), P.constant(1n)]))), (e: any) => e.literal(
+    (r: any) => r.text("08").problems(["leading zeros in a decimal integer literal are not permitted"]))),
+  (e: any) => e.missing((r: any) => r.kind("expression")));
+
   const terms = store.transaction(() => new Map<string, any>(([
-    ["expression", expression], ["python", python], ["matlab", matlab], ["excel", excel], ["latex", latex],
-    ["collections", collections], ["ccpp", ccpp], ["systemverilog", systemverilog]
+    ["expression", expression], ["python3", python3], ["matlab", matlab], ["excel", excel], ["latex", latex],
+    ["collections", collections], ["c", c], ["cpp", cpp], ["systemverilog", systemverilog], ["invalid", invalid],
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   terms.set("domains", defined.get("dialect"));
-  const [Term, Dialect] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.Basic.Dialect")];
+  const [Term, Dialect] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.Patterns.Dialect")];
   return new Map<string, Case>(CASES.map((name) => [name, [name === "domains" ? Dialect : Term, terms.get(name), store]]));
 }

@@ -9,18 +9,20 @@ written nested, indent 2) and `<case>.yaml`.
 
 | Case | Covers |
 |---|---|
-| `expression` | a Basic term, written nested under `Expressions.Framework.Term`: every kind and literal type, a let and its variable, a list |
-| `python` | a Python term: every kind (the framework's `literal`, `variable` and `let`, and `python_import`, `python_importfrom`, `python_ifexp`, `python_boolop`, `python_unaryop`, `python_compare`, `python_subscript`, `python_attribute`, `python_call`, `python_binop`, `python_generator`, `python_index`), imports included, shared names |
-| `matlab` | a Matlab term: every kind (the framework's `literal`, `variable` and `call`, and `matlab_binary`, `matlab_unary`, `matlab_field`, `matlab_index`, `matlab_arrayfun`, `matlab_import`), shared identifiers |
-| `excel` | an Excel term: every kind (the framework's `literal`, `variable`, `let` and `call`, and `excel_infix`, `excel_prefix`, `excel_field`, `excel_map`, `excel_cell`), cells in other sheets and books included, shared names |
-| `latex` | a Latex term: every kind (the framework's `literal`, `variable`, `let` and `call`, and `latex_member`, `latex_binary`, `latex_unary`, `latex_frac`), with shared symbols |
-| `domains` | Basic's dialect as data, written as one document: the singleton `Expressions.Basic` (`Expressions.Basic.Dialect`), naming its operations (each an `Expressions.Basic.<name>` expression schema, by its path) and owning its domains by name, an enum and a domain packing it into `uint8` among them |
-| `collections` | a Basic quantifier over an object's entries, the collection operations and a mapping |
-| `ccpp` | a Ccpp term: every kind (the framework's `variable` and `call`, and `ccpp_conditional`, `ccpp_binary`, `ccpp_unary`, `ccpp_member`, `ccpp_subscript`, `ccpp_cast`, `ccpp_constant`), typed constants and a shared identifier |
-| `systemverilog` | a SystemVerilog term: every kind (its own, as `systemverilog_<kind>` branches, and the framework's `literal`, `variable` and `call`), sized vectors in a base, casts to a type and a width, a shared identifier |
+| `expression` | a Patterns term, written nested under `Expressions.Framework.Term`, its dialect then its kind: every kind and literal type, a let and its variable, a list |
+| `python3` | a Python3 term: every kind (the framework's `literal`, `variable` and `let`, and its own `import`, `importfrom`, `ifexp`, `boolop`, `unaryop`, `compare`, `subscript`, `attribute`, `call`, `binop`, `generator`, `index`), imports included, shared names |
+| `matlab` | a Matlab term: every kind (the framework's `literal`, `variable` and `call`, and its own `binary`, `unary`, `field`, `index`, `arrayfun`, `import`), shared identifiers |
+| `excel` | an Excel term: every kind (the framework's `literal`, `variable`, `let` and `call`, and its own `infix`, `prefix`, `field`, `map`, `cell`), cells in other sheets and books included, shared names |
+| `latex` | a Latex term: every kind (the framework's `literal`, `variable`, `let` and `call`, and its own `member`, `binary`, `unary`, `frac`), with shared symbols |
+| `domains` | Patterns' dialect as data, written as one document: the singleton `Expressions.Patterns` (`Expressions.Patterns.Dialect`), naming its operations (each an `Expressions.Patterns.<name>` expression schema, by its path) and owning its domains by name, an enum and a domain packing it into `uint8` among them |
+| `collections` | a Patterns quantifier over an object's entries, the collection operations and a mapping |
+| `c` | a C term: every kind (the framework's `variable` and `call`, and its own `conditional`, `binary`, `unary`, `member`, `subscript`, `cast`, `constant`), typed constants and a shared identifier |
+| `cpp` | the same expression as a C++ term: C++'s own kinds, of C's shapes, each property holding a C++ term |
+| `systemverilog` | a SystemVerilog term: every kind (its own and the framework's `literal`, `variable` and `call`), sized vectors in a base, casts to a type and a width, a shared identifier |
+| `invalid` | a Python3 term holding invalid syntax, the framework's `error` (the source it spans and the term recovered within it) and `missing` (the kind expected), and literals with their spelling (`text`), one holding no value but its problem (`problems`) |
 
 Each case is a term value in one store holding the framework's install and every dialect's, and validates in its own
-dialect (`DIALECTS` in the corpus; Basic's by default).
+dialect (`DIALECTS` in the corpus; Patterns' by default); `invalid`'s problems are reported.
 
 The CONF test suite in each implementation checks that its own files are current, that the JSON files are
 byte-identical across implementations, that every implementation's YAML reads back to the same snapshot (also under a

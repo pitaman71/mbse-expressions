@@ -4,7 +4,7 @@
  * `Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from: an `Expression`, its
  * root) with names bound to numbers, text, logicals and records (mappings, or data objects read through mbse-schemas'
  * readers, `Framework.Objects`). Values are `number`, `string` (text), `boolean` (logical) and
- * `Domains.Error`. Excel's rules apply, not Basic's:
+ * `Domains.Error`. Excel's rules apply, not Patterns':
  *
  * - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
  *   wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for them,
@@ -102,7 +102,7 @@ export class Workbook extends S.Variables {
 
   override lookup(reference: any): unknown {
     const [tag, record] = Terms.kindOf(reference);
-    if (tag !== "excel_cell") {
+    if (tag !== "cell") {
       const [found, value] = this.find(Terms.nameOf(reference));
       return found ? valueOf(value) : NAME;
     }
@@ -371,15 +371,15 @@ export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string
     ["ISNUMBER", (args) => typeof (args[0] as F.Thunk)() === "number"],
     ["SUM", aggregate("SUM", sum)], ["MIN", aggregate("MIN", extreme((a, b) => a < b))], ["MAX", aggregate("MAX", extreme((a, b) => a > b))],
   ])],
-  ["excel_infix", new Map<string, F.Implementation>([
+  ["infix", new Map<string, F.Implementation>([
     ["=", compare((o) => o === 0)], ["<>", compare((o) => o !== 0)],
     ["<", compare((o) => o < 0)], ["<=", compare((o) => o <= 0)],
     [">", compare((o) => o > 0)], [">=", compare((o) => o >= 0)],
     ["+", arithmetic((a, b) => a + b)], ["-", arithmetic((a, b) => a - b)], ["*", arithmetic((a, b) => a * b)],
   ])],
-  ["excel_prefix", new Map<string, F.Implementation>([["-", negate]])],
-  ["excel_field", field],
-  ["excel_map", map],
+  ["prefix", new Map<string, F.Implementation>([["-", negate]])],
+  ["field", field],
+  ["map", map],
 ]), { literal: numberOf, scope: (names) => new Workbook(names), extension: addIn });
 
 /** The value of a formula (a term value, or anything `Terms.term` reads one from) in a workbook, or with the defined

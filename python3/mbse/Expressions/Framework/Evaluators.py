@@ -15,7 +15,8 @@ implementations decide which arguments to evaluate and when, and so does a quant
 and evaluates the body with the name bound to it; the implementation of a kind whose vocabulary is open is
 one callable for every name, and operators outside a closed vocabulary go to `extension`, if given. It raises on what
 `Dialect.validate` reports: operations outside the vocabulary, wrong numbers of arguments, unbound references and missing
-values. An evaluator takes a term value, or anything `Terms.term` reads one from (an `Expression`, a term property).
+values; invalid syntax (`error`, `missing`) is refused by name. An evaluator takes a term value, or anything
+`Terms.term` reads one from (an `Expression`, a term property).
 """
 
 from __future__ import annotations
@@ -63,6 +64,8 @@ class Interpreter:
 
     def evaluate(self, node: Any, scope: Any) -> Any:
         tag, record, kind = self.dialect.kind(node)
+        if kind.role == Terms.INVALID:
+            raise ValueError(f"{self.dialect.name()} {tag} is not evaluated")
         if kind.role == Terms.LITERAL:
             value = Terms.attributes_of(record).get("value")
             if value is None:

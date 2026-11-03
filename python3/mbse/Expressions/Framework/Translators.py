@@ -4,7 +4,7 @@ A `Translator` between two dialects, `left` and `right`, translates `forward` (l
 of dialects has its own, specialized to what the two have in common, and is declared as a list of rules:
 
 - `Rule(left, right)` pairs two `Pattern`s, each a form with `Hole`s: `Pattern('call', A, B, callable='eq')` matches
-  the Basic `eq(a, b)` and binds the holes `A` and `B` to its arguments. A hole in an attribute binds the attribute's
+  the Patterns `eq(a, b)` and binds the holes `A` and `B` to its arguments. A hole in an attribute binds the attribute's
   native value, and may restrict its type: `Hole('K', str)`. A rule applies in both directions unless its
   `direction` is 'forward' or 'backward'.
 - `Inline(kind, side)` translates a binding of one side, which the other has no counterpart for, by substituting its
@@ -17,15 +17,17 @@ of dialects has its own, specialized to what the two have in common, and is decl
   the other side lacks, say). Conversions are tried after the rules of their kind.
 - `Elementwise(left_kind, right_kind, left_attributes, right_attributes)` translates a term of any number of arguments,
   a container constructor, into the other side's, its arguments translated in order: a `left_kind` term whose
-  attributes are `left_attributes` is the `right_kind` term of `right_attributes` (Basic's `list(a, b)` is Excel's
+  attributes are `left_attributes` is the `right_kind` term of `right_attributes` (Patterns' `list(a, b)` is Excel's
   `VSTACK(a, b)`), both ways unless its `direction` says otherwise.
 - `Prelude(pattern, side)` adds an import to what is translated to `side`: `pattern` is the import with its body as
   its one argument, a hole, and it wraps the translation if the translation refers to a name the import binds, e.g.
   `import numpy as np` around an expression that uses `np`.
 
-A pattern names a kind by its branch's tag (`call`, `python_binop`) and its attributes and arguments as `Terms.form`
-reads them: a hole in an argument binds the term in that place, slots then variadic arguments, and a fixed attribute
-must be set to an equal scalar, with every attribute of the term matched (an attribute that is not set is absent).
+A pattern names a kind by its branch's tag in its dialect's `Term` (`call`, `binop`) and its attributes and arguments
+as `Terms.form` reads them: a hole in an argument binds the term in that place, slots then variadic arguments, and a
+fixed attribute must be set to an equal scalar, with every attribute of the term matched (an attribute that is not set
+is absent), but a literal's spelling (`text`, `problems`), which is its own dialect's: a literal translates by its
+value, and one with no value has no counterpart.
 
 Translating co-traverses: at each term, the first rule whose source pattern matches (the most specific first: the one
 with the most terms and fixed attributes) is applied by traversing the pattern and the term in lockstep, binding holes
@@ -181,7 +183,7 @@ class Prelude:
 def renames(left_kind: str, left_attribute: str, right_kind: str, right_attribute: str, names: Mapping[str, str],
             arity: int) -> list[Rule]:
     """Rules for operators that differ only in name: each `left` name applied to `arity` arguments is the `right`
-    name applied to the same arguments, e.g. `renames('call', 'callable', 'python_compare', 'operator', {'eq': '=='}, 2)`."""
+    name applied to the same arguments, e.g. `renames('call', 'callable', 'compare', 'operator', {'eq': '=='}, 2)`."""
     arguments = holes(*(f"A{i}" for i in range(arity)))
     return [Rule(Pattern(left_kind, *arguments, **{left_attribute: a}),
                  Pattern(right_kind, *arguments, **{right_attribute: b})) for a, b in names.items()]
@@ -191,15 +193,13 @@ def _same_native(a: Any, b: Any) -> bool:
     return Terms._same_native(a, b)
 
 
-def _label(dialect: Terms.Dialect, tag: str) -> str:
-    """A kind's tag as a message names it: without its dialect's prefix (`python_call` is Python's `call`)."""
-    prefix = dialect.name().lower() + "_"
-    return tag[len(prefix):] if tag.startswith(prefix) else tag
+_SPELLING = ("text", "problems")
+"""A literal's spelling in its source, and what is wrong with it: its own dialect's, which no translation carries."""
 
 
 def _describe(dialect: Terms.Dialect, node: Any) -> str:
     tag, record, kind = dialect.kind(node)
-    label = f"{dialect.name()} {_label(dialect, tag)}"
+    label = f"{dialect.name()} {tag}"
     if kind.role in (Terms.APPLICATION, Terms.QUANTIFIER) and kind.operator is not None:
         return f"{label} {Terms.operator_of(node, kind)!r}"
     if kind.role == Terms.LITERAL:
@@ -286,12 +286,12 @@ class _Run:
         if tag in self.direction.elides:
             body = Terms.arguments_of(record)[-1]
             if body is None:
-                raise ValueError(f"{Terms._article(_label(self.direction.source, tag))} needs a body")
+                raise ValueError(f"{Terms._article(tag)} needs a body")
             return self.translate(body, environment)
         if tag in self.direction.inlines:
             value, body = Terms.arguments_of(record)
             if value is None or body is None:
-                raise ValueError(f"{Terms._article(_label(self.direction.source, tag))} needs a "
+                raise ValueError(f"{Terms._article(tag)} needs a "
                                  f"{'value' if value is None else 'body'}")
             inner = {**environment, name: self.translate(value, environment)}
             return self.translate(body, inner)
@@ -323,10 +323,13 @@ class _Run:
         if node is None:
             return False
         form = Terms.form(node)
-        if form.kind != pattern.kind or form.attributes.keys() != pattern.attributes.keys():
+        attributes = form.attributes
+        if self.direction.source.kind(node)[2].role == Terms.LITERAL:  # a literal's spelling is its dialect's own
+            attributes = {k: v for k, v in attributes.items() if k not in _SPELLING}
+        if form.kind != pattern.kind or attributes.keys() != pattern.attributes.keys():
             return False
         for name, expected in pattern.attributes.items():
-            value = form.attributes[name]
+            value = attributes[name]
             if not isinstance(expected, Hole):
                 if not _same_native(expected, value):
                     return False

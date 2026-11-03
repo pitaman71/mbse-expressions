@@ -22,7 +22,7 @@
                               "i": "schemas",
                               "o": "",
                               "properties": {
-                                "name": "Basic"
+                                "name": "Patterns"
                               },
                               "next": {
                                 "entry": {
@@ -65,7 +65,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -109,7 +109,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -153,7 +153,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -197,7 +197,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -241,7 +241,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -285,7 +285,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -329,7 +329,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -373,7 +373,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -417,7 +417,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -461,7 +461,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Basic",
+                                                "singleton": "Expressions.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -531,7 +531,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -593,7 +593,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -655,7 +655,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -717,7 +717,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -779,7 +779,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -841,7 +841,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -903,7 +903,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -965,7 +965,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1027,7 +1027,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1089,7 +1089,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1151,7 +1151,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1213,7 +1213,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1275,7 +1275,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1337,7 +1337,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1399,7 +1399,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1461,7 +1461,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1523,7 +1523,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1585,7 +1585,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1647,7 +1647,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1709,7 +1709,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1771,7 +1771,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1833,7 +1833,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1895,7 +1895,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -1957,7 +1957,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -2019,7 +2019,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -2081,7 +2081,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -2143,7 +2143,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -2205,7 +2205,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -2267,7 +2267,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
@@ -2329,7 +2329,7 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Basic"
+                                                          "name": "Patterns"
                                                         },
                                                         "next": {
                                                           "entry": {
