@@ -61,7 +61,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Repr, Schemas } from "@mbse/schemas/Framework";
+import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
@@ -570,46 +570,14 @@ export function install(txn: any): any {
 
 // --- Reading a term with its helpers nested ---
 
-/** A term or a helper, its helpers nested: its `kind` (its tag, or its helper's), its `attributes` (scalars, and
- * containers of scalars, by name), its `slots` (its terms by property, null where empty), its `many` (its variadic
- * arguments: terms, or a pair's members in turn) and its `helpers` (by property: a `Node`, or an array of them). */
-export class Node {
-  constructor(readonly kind: string, readonly attributes: ReadonlyMap<string, any> = new Map(),
-    readonly slots: ReadonlyMap<string, any> = new Map(), readonly many: readonly any[] = [],
-    readonly helpers: ReadonlyMap<string, Node | readonly Node[]> = new Map()) {}
-}
+/** A term or a helper, its helpers nested (`Terms.Node`). */
+export const Node = F.Node;
+export type Node = F.Node;
 
 /** A helper property's nodes: one, or each of many. */
 function nodes(value: Node | readonly Node[] | undefined): readonly Node[] {
   if (value === undefined) return [];
   return value instanceof Node ? [value] : value;
-}
-
-/** A record's `Node`, from its schema, its form's attributes and its arguments, as `Terms.form` reads them. */
-function nest(schema: any, kind: string, attributes: ReadonlyMap<string, any>, args: readonly any[]): Node {
-  const [slotNames] = F._parts(schema);
-  const held = new Map<string, any>();
-  for (const name of F._helpers(schema)) if (attributes.has(name)) held.set(name, attributes.get(name));
-  let size = 0;
-  for (const value of held.values()) for (const part of (Array.isArray(value) ? value : [value])) size += part.size;
-  let i = args.length - size;
-  const helpers = new Map<string, Node | readonly Node[]>();
-  for (const [name, value] of held) {
-    const prop = schema.properties.get(name).schema;
-    const element = prop instanceof Schemas.OfContainer.Data ? prop.element : prop;
-    const found: Node[] = [];
-    for (const part of (Array.isArray(value) ? value : [value]) as F.Part[]) {
-      const sub = element instanceof Schemas.OfUnion.Data
-        ? (element.branches as readonly Schemas.OfUnion.Branch[]).find((branch) => branch.name === part.kind)!.schema
-        : element;
-      found.push(nest(sub, part.kind, part.attributes, args.slice(i, i + part.size)));
-      i += part.size;
-    }
-    helpers.set(name, Array.isArray(value) ? found : found[0] as Node);
-  }
-  const plain = new Map([...attributes].filter(([name]) => !held.has(name)));
-  const slots = new Map(slotNames.map((name, j) => [name, args[j]] as [string, any]));
-  return new Node(kind, plain, slots, args.slice(slotNames.length, args.length - size), helpers);
 }
 
 /** A TypeScript5 term's `Node`, its helpers nested: its patterns, types and JSX among them. */
@@ -619,7 +587,7 @@ export function tree(term: any): Node {
 }
 
 function recordNode(tag: string, record: any): Node {
-  return nest(record.as_schema(), tag, F.attributesOf(record), F.argumentsOf(record));
+  return F.node(tag, record);
 }
 
 /** The names a pattern binds, a term's or a `Node`'s: an identifier's, and those within an array, an object, a default,

@@ -51,7 +51,8 @@ kind is read, is a `Kind`: its role, and which properties name what it binds and
 
 - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
 - `kind_of(term)`: its kind's branch, `(tag, record)`; `dialect_of(term)`: the name of its dialect's `Term`.
-  `form(term)`: its `Form`, `kind`, `attributes` and `arguments`.
+  `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers nested,
+  as a dialect whose kinds hold sublanguages reads them to print and check them.
 - `name_of(term)`, `operator_of(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
 - `Dialect`: a dialect's kinds by tag, with `validate`, `infer` and `make(form)`, the `Writer` of a form.
 - `Writer`: a spec that writes a term of its dialect through the builders; `spec(x)` makes one of a writer, a native
@@ -88,8 +89,8 @@ from . import Domains, Objects
 
 __all__ = [
     "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
-    "INVALID", "INVALID_KINDS", "invalid_text", "Form", "Part", "Kind", "Dialect", "Writer", "spec", "term", "is_term",
-    "is_expression", "kind_of", "dialect_of", "form",
+    "INVALID", "INVALID_KINDS", "invalid_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
+    "spec", "term", "is_term", "is_expression", "kind_of", "dialect_of", "form", "node",
     "name_of", "operator_of", "walk", "fold", "same",
 ]
 
@@ -445,6 +446,47 @@ def form(term_: Any) -> Form:
     return Form(tag, attributes_of(record), arguments_of(record))
 
 
+@dataclass(frozen=True)
+class Node:
+    """A term or a helper, its helpers nested: its `kind` (its tag, or its helper's), its `attributes` (scalars, and
+    containers of scalars, by name), its `slots` (its terms by property, None where empty), its `many` (its variadic
+    arguments: terms, or a pair's members in turn) and its `helpers` (by property: a `Node`, or a tuple of them)."""
+
+    kind: str
+    attributes: Mapping[str, Any] = field(default_factory=dict)
+    slots: Mapping[str, Any] = field(default_factory=dict)
+    many: tuple[Any, ...] = ()
+    helpers: Mapping[str, Any] = field(default_factory=dict)
+
+
+def _nest(schema: Any, kind: str, attributes: Mapping[str, Any], arguments: tuple[Any, ...]) -> Node:
+    """A record's `Node`, from its schema, its form's attributes and its arguments, as `form` reads them."""
+    slot_names, _, _ = _parts(schema)
+    helper_names = _helpers(schema)
+    held = {name: attributes[name] for name in helper_names if name in attributes}
+    size = sum(part.size for value in held.values() for part in (value if isinstance(value, tuple) else (value,)))
+    i = len(arguments) - size
+    helpers: dict[str, Any] = {}
+    for name, value in held.items():
+        prop = schema.properties[name].schema
+        element = prop.element if isinstance(prop, Schemas.OfContainer.Data) else prop
+        nodes = []
+        for part in (value if isinstance(value, tuple) else (value,)):
+            sub = ({branch.name: branch.schema for branch in element.branches}[part.kind]
+                   if isinstance(element, Schemas.OfUnion.Data) else element)
+            nodes.append(_nest(sub, part.kind, part.attributes, arguments[i:i + part.size]))
+            i += part.size
+        helpers[name] = tuple(nodes) if isinstance(value, tuple) else nodes[0]
+    plain = {name: value for name, value in attributes.items() if name not in held}
+    slots = dict(zip(slot_names, arguments))
+    return Node(kind, plain, slots, tuple(arguments[len(slot_names):len(arguments) - size]), helpers)
+
+
+def node(tag: str, record: Any) -> Node:
+    """A record's `Node`, a term's (its tag and record, as `kind_of` gives them) or a helper's, its helpers nested."""
+    return _nest(record.as_schema(), tag, attributes_of(record), arguments_of(record))
+
+
 def name_of(term_: Any) -> Any:
     """The name a reference refers to, or a binding, quantifier or import binds: its `name`; None if it has none."""
     _, record = kind_of(term_)
@@ -679,7 +721,8 @@ class Kind:
     term carries no domain); and the standards of its dialect's language that have it (`standards`: `C11`, `C++17`),
     where its dialect covers several, as mbse-programs' standards record when each kind arrived.
     Where its role says too little: the slots that may be empty (`optional`, by path: a slot's name, a pair's member's,
-    or a helper property's name, a dot, and the path within the helper: `generators.target`); the names each of its
+    or a helper property's name, a dot, and the path within the helper: `generators.target`; or, written `*.size`, a
+    helper's slot of that name at any depth, as a type name's declarators nest); the names each of its
     arguments has bound, besides its scope's (`scopes(record)`, one set per argument: a comprehension's targets, a
     lambda's parameters); the operators it applies, where it applies several (`operators(attributes)`: a comparison
     chain's), each checked against its vocabulary, and the domain they give (`result(attributes, domains)`); an
@@ -707,12 +750,19 @@ class Kind:
     spelling: tuple[str, ...] = ("text", "problems")
 
 
-def _invalid_check(record: Any) -> list[str]:
-    """What invalid syntax is: an error, the source it spans; a missing term, the kind the parser expected."""
-    tag, attributes = record.as_schema().name, attributes_of(record)
-    if tag == "Expressions.Framework.Error":
+def invalid_problems(tag: str, attributes: Mapping[str, Any]) -> list[str]:
+    """What invalid syntax is, `error` or `missing` by its tag: an error, the source it spans; a missing term, the kind
+    the parser expected. Where a sublanguage's union holds invalid syntax (a dialect's `Type` or `Pattern`), the
+    dialect's checks report it so, as validation reads a helper's own problems no further."""
+    if tag == "error":
         return ["invalid syntax" + (f" {attributes['text']!r}" if "text" in attributes else "")]
     return [f"missing {attributes.get('kind', 'a term')}"]
+
+
+def _invalid_check(record: Any) -> list[str]:
+    """What invalid syntax is: an error, the source it spans; a missing term, the kind the parser expected."""
+    tag = "error" if record.as_schema().name == "Expressions.Framework.Error" else "missing"
+    return invalid_problems(tag, attributes_of(record))
 
 
 def invalid_text(dialect: Dialect, tag: str, attributes: Mapping[str, Any]) -> str:
@@ -860,7 +910,8 @@ class Dialect:
                     problems.append(f"{operator!r} is not a core operation")
         for (label, path, argument), scope in zip(labelled, scopes):
             if argument is None:
-                if path not in kind.optional:
+                if path not in kind.optional and not any(
+                        entry.startswith("*.") and path.endswith(entry[1:]) for entry in kind.optional):
                     problems.append(f"{what} needs {_article(label)}")
             else:
                 problems += [f"{label}: {problem}" for problem in self._problems(argument, scope, core)]

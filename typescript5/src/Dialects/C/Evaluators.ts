@@ -19,11 +19,21 @@
  * - Division truncates toward zero, and `%` takes the dividend's sign; `>>` of a negative value is arithmetic.
  * - Comparisons and `&&`, `||` and `!` give `bool`, as in C++ (C's `int` results compute alike once promoted); `&&` and
  *   `||` evaluate their second operand only when the first does not decide.
- * - A cast converts: to an integer type by wrapping into its width (as C++20 defines), from a floating value by
- *   truncation; to a floating type by rounding; to `bool` by comparing with zero.
+ * - A cast converts, to an arithmetic type: to an integer type by wrapping into its width (as C++20 defines), from a
+ *   floating value by truncation; to a floating type by rounding; to `bool` by comparing with zero.
  * - `condition ? a : b` evaluates only the operand it chooses, and keeps that operand's type.
  * - `object.name` and `object->name` read a member (a property of a data object, read through mbse-schemas' readers
- *   (`Framework.Objects`), or a key of a mapping); `array[index]` an element of an array, or of a container; `f(args)` calls a function the scope provides, and nothing else.
+ *   (`Framework.Objects`), or a key of a mapping); `array[index]` an element of an array, or of a container; `f(args)`
+ *   calls a function the scope provides, by its name, and nothing else.
+ *
+ * A literal's type is what its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's
+ * `int` and C++'s `char`), else its value's. Evaluation stays shallow (the dialects proposal, Decided, 8): `EVALUATED`
+ * names the kinds C evaluated before it was complete, in their complete shapes; any other kind throws
+ * `NotImplementedError` by name ("C sizeofexpression is not evaluated"), and so does what an evaluated kind holds beyond
+ * its former shape: an operator its vocabulary has but no rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not
+ * evaluated"), a literal of a type no evaluator has values of ("C literal of wchar_t is not evaluated"), a cast to a type
+ * that is not arithmetic, a subscript of several indices, a call of a callee that is not a function's name, a member that
+ * is not an identifier, and GNU's conditional without a consequence.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -39,7 +49,7 @@ import * as Ieee754 from "../Patterns/Ieee754.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
-const { KeyError, ValueError } = Errors;
+const { KeyError, NotImplementedError, ValueError } = Errors;
 const { repr, typeName } = Repr;
 type CType = Domains.CType;
 type Fn = (...args: any[]) => unknown;
@@ -64,8 +74,22 @@ function typed(value: unknown): Typed {
   return new Typed(null, value);
 }
 
-function constant(ctype: CType, value: unknown): Typed {
-  return new Typed(ctype, value);
+function refuse(dialect: Terms.Dialect, what: string): Error {
+  return new NotImplementedError(`${dialect.name()} ${what} is not evaluated`);
+}
+
+/** A literal of the type its text encodes: an integer that its type holds, a floating value rounded to its type; a
+ * type no evaluator has values of is refused. */
+function literal(dialect: Terms.Dialect): (domain: any, value: unknown) => Typed {
+  return (domain, value) => {
+    if (!(domain instanceof Domains.CType)) {
+      if (domain === Domains.String) return new Typed(null, value);
+      throw refuse(dialect, `literal of ${domain.name()}`);
+    }
+    if (domain.kind === "floating") return convert(new Typed(Domains.Double, value), domain);
+    if (!domain.contains(value)) throw new OverflowError(`integer literal ${value} does not fit '${domain.name()}'`);
+    return new Typed(domain, value);
+  };
 }
 
 function arithmetic(value: Typed, operator: string): CType {
@@ -212,8 +236,11 @@ function unary(operator: string): F.Implementation {
   };
 }
 
-function conditional(args: F.Thunk[]): Typed {
-  return truth((args[0] as F.Thunk)(), "?:") ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)();
+function conditional(dialect: Terms.Dialect): F.Implementation {
+  return (args, node) => {
+    if (Terms.argumentsOf(Terms.kindOf(node)[1])[1] === null) throw refuse(dialect, "conditionalexpression without a consequence");
+    return truth((args[0] as F.Thunk)(), "?:") ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)();
+  };
 }
 
 /** A mapping: a `Map`, or a plain object. */
@@ -226,8 +253,12 @@ function attributes(node: any): Map<string, any> {
   return Terms.attributesOf(Terms.kindOf(node)[1]);
 }
 
-function cast(args: F.Thunk[], node: any): Typed {
-  return convert((args[0] as F.Thunk)(), type(attributes(node).get("type")));
+function cast(dialect: Terms.Dialect): F.Implementation {
+  return (args, node) => {
+    const name = Expressions.typeName(attributes(node).get("type"));
+    if (name === null) throw refuse(dialect, "castexpression to a type that is not arithmetic");
+    return convert((args[0] as F.Thunk)(), type(name));
+  };
 }
 
 /** A member's value: a list as an array of its items, lists of lists too. */
@@ -235,19 +266,29 @@ function array(value: unknown): unknown {
   return value instanceof Objects.Listed ? value.values.map(array) : value;
 }
 
-function member(args: F.Thunk[], node: any): Typed {
-  const target = (args[0] as F.Thunk)().value;
-  let members: ReadonlyMap<string, unknown>;
-  if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
-  else if (Objects.isObject(target)) members = Objects.properties(target);
-  else throw new TypeError(`member reference base type '${typeName(target)}' is not a structure`);
-  const name: string = attributes(node).get("name");
-  if (!members.has(name)) throw new KeyError(`no member named '${name}'`);
-  return typed(array(members.get(name)));
+function member(dialect: Terms.Dialect): F.Implementation {
+  return (args, node) => {
+    const held = attributes(node);
+    const name = Expressions.spelling(held.get("member"));
+    if (name === null || held.get("template_keyword")) throw refuse(dialect, "memberexpression of a member that is not an identifier");
+    const target = (args[0] as F.Thunk)().value;
+    let members: ReadonlyMap<string, unknown>;
+    if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
+    else if (Objects.isObject(target)) members = Objects.properties(target);
+    else throw new TypeError(`member reference base type '${typeName(target)}' is not a structure`);
+    if (!members.has(name)) throw new KeyError(`no member named '${name}'`);
+    return typed(array(members.get(name)));
+  };
 }
 
-function subscript(args: F.Thunk[]): Typed {
-  const [target, index] = [(args[0] as F.Thunk)(), (args[1] as F.Thunk)()];
+function subscript(dialect: Terms.Dialect): F.Implementation {
+  return (args) => {
+    if (args.length !== 2) throw refuse(dialect, "subscriptexpression of several indices");
+    return element((args[0] as F.Thunk)(), (args[1] as F.Thunk)());
+  };
+}
+
+function element(target: Typed, index: Typed): Typed {
   if (!Array.isArray(target.value)) throw new TypeError(`subscripted value is not an array: '${nameOf(target)}'`);
   if (index.ctype === null || index.ctype.kind === "floating") throw new TypeError(`array subscript is not an integer: '${nameOf(index)}'`);
   const position = BigInt(index.value);
@@ -257,9 +298,13 @@ function subscript(args: F.Thunk[]): Typed {
   return typed(target.value[Number(position)]);
 }
 
-function call(args: F.Thunk[], node: any, scope: Scope): Typed {
-  const fn = scope.function(attributes(node).get("callable"));
-  return typed(fn(...args.map((argument) => (argument() as Typed).value)));
+function call(dialect: Terms.Dialect): F.Implementation {
+  return (args, node, scope) => {
+    const callee = Terms.argumentsOf(Terms.kindOf(node)[1])[0];
+    if (Terms.kindOf(callee)[0] !== Expressions.VARIABLE) throw refuse(dialect, "callexpression of a callee that is not a function's name");
+    const fn = (scope as Scope).function(Terms.nameOf(callee));
+    return typed(fn(...args.slice(1).map((argument) => (argument() as Typed).value)));
+  };
 }
 
 /** C's scope for an expression: `variables`, and the `functions` it may call. */
@@ -286,21 +331,25 @@ export class Scope extends S.Variables {
   }
 }
 
-const OPERATIONS = new Map<string, any>([
-  ["binary", new Map<string, F.Implementation>([
-    ...["+", "-", "*", "/", "%", "&", "^", "|"].map((op) => [op, binaryArithmetic(op)] as [string, F.Implementation]),
-    ...["<<", ">>"].map((op) => [op, shift(op)] as [string, F.Implementation]),
-    ...["<", "<=", ">", ">=", "==", "!="].map((op) => [op, comparison(op)] as [string, F.Implementation]),
-    ...["&&", "||"].map((op) => [op, logical(op)] as [string, F.Implementation]),
-  ])],
-  ["unary", new Map<string, F.Implementation>(["+", "-", "~", "!"].map((op) => [op, unary(op)]))],
-  ["conditional", conditional], ["cast", cast], ["member", member], ["subscript", subscript],
-  ["call", call],
-]);
+/** The kinds the evaluator evaluates, those C evaluated before it was complete; any other is refused by name. */
+export const EVALUATED: ReadonlySet<string> = new Set([Expressions.LITERAL, Expressions.VARIABLE, Expressions.UNARYEXPRESSION,
+  Expressions.BINARYEXPRESSION, Expressions.CONDITIONALEXPRESSION, Expressions.CASTEXPRESSION, Expressions.MEMBEREXPRESSION,
+  Expressions.SUBSCRIPTEXPRESSION, Expressions.CALLEXPRESSION]);
 
-/** The interpreter of a dialect of the C family, whose kinds are C's: its values carry their C types. */
+/** The interpreter of a dialect of the C family, `C`'s or `Cpp`'s: its values carry their C types. */
 export function interpreter(dialect: Terms.Dialect): F.Interpreter {
-  return new F.Interpreter(dialect, OPERATIONS, { literal: typed, typed: constant, scope: (variables) => new Scope(variables) });
+  return new F.Interpreter(dialect, new Map<string, any>([
+    [Expressions.BINARYEXPRESSION, new Map<string, F.Implementation>([
+      ...["+", "-", "*", "/", "%", "&", "^", "|"].map((op) => [op, binaryArithmetic(op)] as [string, F.Implementation]),
+      ...["<<", ">>"].map((op) => [op, shift(op)] as [string, F.Implementation]),
+      ...["<", "<=", ">", ">=", "==", "!="].map((op) => [op, comparison(op)] as [string, F.Implementation]),
+      ...["&&", "||"].map((op) => [op, logical(op)] as [string, F.Implementation]),
+    ])],
+    [Expressions.UNARYEXPRESSION, new Map<string, F.Implementation>(["+", "-", "~", "!"].map((op) => [op, unary(op)]))],
+    [Expressions.CONDITIONALEXPRESSION, conditional(dialect)], [Expressions.CASTEXPRESSION, cast(dialect)],
+    [Expressions.MEMBEREXPRESSION, member(dialect)], [Expressions.SUBSCRIPTEXPRESSION, subscript(dialect)],
+    [Expressions.CALLEXPRESSION, call(dialect)],
+  ]), { literal: typed, typed: literal(dialect), scope: (variables) => new Scope(variables), evaluated: EVALUATED });
 }
 
 /** The interpreter of the C dialect. */

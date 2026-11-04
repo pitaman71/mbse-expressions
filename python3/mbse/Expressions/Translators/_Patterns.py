@@ -114,12 +114,13 @@ class Matlab:
 
 
 class CFamily:
-    """The kinds of the C family, which C and C++ share."""
+    """The kinds of the C family, which C and C++ share; a member's name is C's `str`, and C++'s `Name`, an
+    identifier (`CFamily.member(name)`)."""
 
-    constant = staticmethod(lambda V: P("constant", value=V))  # untyped
+    literal = staticmethod(lambda V: P("literal", value=V))  # its suffix and prefix, its type, are not spelling
     identifier = P("variable", name=N)
-    get = P("member", X, name=K)  # with '.'
-    implies = P("binary", P("unary", A, operator="!"), B, operator="||")
+    member = staticmethod(lambda name: P("memberexpression", X, operator=".", member=name))
+    implies = P("binaryexpression", P("unaryexpression", A, operator="!"), B, operator="||")
 
 
 class SystemVerilog:

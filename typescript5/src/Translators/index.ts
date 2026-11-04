@@ -1,8 +1,8 @@
 /** The pairwise translators between the dialects, one module per pair, each with its `TRANSLATOR`. `between(a, b)`
  * finds the translator from dialect `a` to dialect `b`, whichever way round its module declares it.
  * `Patterns_Python3.NUMPY` is a second translator between Patterns and Python3, which writes NumPy's functions.
- * Patterns <-> C and Patterns <-> Cpp are one rule set, `Patterns_C.RULES`, applied to each. See
- * `Framework/Translators`. */
+ * Patterns <-> C and Patterns <-> Cpp are one rule set, `Patterns_C.rules`, applied to each, a member's name written as
+ * each writes it. See `Framework/Translators`. */
 
 import { Errors } from "@mbse/schemas/Framework";
 

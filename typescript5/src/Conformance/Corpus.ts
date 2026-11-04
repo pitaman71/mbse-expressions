@@ -128,17 +128,81 @@ export function build(): Map<string, Case> {
   const collections = E.let_("ports", self.entries("ports"), ports!.all("p", p!.get("pin").in_(pins)).and_(
     sizes!.sum().le(E.mapping(["most", ports!.count()], ["least", 0n]).item("most"))));
 
-  // --- c: every kind, typed constants and a shared identifier --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+  // --- c: every kind, written through the builders and its writers, typed literals, a literal with its spelling and a
+  // shared identifier --- the text ToText writes: {!record.a && record->b[0] > 1.5f ? (uint8_t)record(1) : 5u, nullptr,
+  // "a" "b", (record), _Generic(record, int: 1, default: 0x0), record++, sizeof(int), _Alignof(record), record += 1,
+  // .x[0] = record, (int[]){1}, ({}), __extension__ record}
   const me = CE.identifier("record");
-  const c = CE.conditional(CE.binary("&&", CE.unary("!", CE.member(me, "a")), CE.binary(
-    ">", CE.subscript(CE.member(me, "b", "->"), 0n), CE.constant(1.5, "float"))),
-    CE.cast("uint8_t", CE.call("f", 1n)), CE.constant(5n, "unsigned int"));
+  const cInt = (t: any) => t.typeid((i: any) => i.specifiers([(s: any) => s.primitivetypespecifier((k: any) => k.keyword("int"))]));
+  const c = CE.DIALECT.spec((u: any) => u.initializerlist((r: any) => r.items([
+    CE.conditional(CE.binary("&&", CE.unary("!", CE.member(me, "a")), CE.binary(">", CE.subscript(CE.member(me, "b", "->"), 0n),
+                                         CE.literal(1.5, "f"))), CE.cast("uint8_t", CE.call("record", 1n)), CE.literal(5n, "u")),
+    (i: any) => i.constant((k: any) => k.singleton("nullptr")),
+    (i: any) => i.concatenatedstring((k: any) => k.parts([CE.literal("a"), CE.literal("b")])),
+    (i: any) => i.parenthesizedexpression((k: any) => k.expression(me)),
+    (i: any) => i.genericselection((g: any) => g.controlling(me).associations([
+      (a: any) => a.type(cInt).value(CE.literal(1n)), (a: any) => a.value((v: any) => v.literal(
+        (li: any) => li.value((n: any) => n.as_scalar(0n)).text("0x0").base(16n)))])),
+    (i: any) => i.postfixexpression((k: any) => k.operand(me).operator("++")),
+    (i: any) => i.sizeofexpression((k: any) => k.operand(cInt)),
+    (i: any) => i.alignofexpression((k: any) => k.keyword("_Alignof").operand(me)),
+    (i: any) => i.assignmentexpression((a: any) => a.left(me).operator("+=").right(CE.literal(1n))),
+    (i: any) => i.designatedinitializer((d: any) => d.designators([(g: any) => g.fielddesignator((f: any) => f.name("x")),
+                                  (g: any) => g.indexdesignator((f: any) => f.index(CE.literal(0n)))]).initializer(
+      (g: any) => g.equalinitializer((e: any) => e.value(me)))),
+    (i: any) => i.compoundliteralexpression((k: any) => k.type((t: any) => t.typeid((y: any) => y.specifiers([
+      (s: any) => s.primitivetypespecifier((p: any) => p.keyword("int"))]).declarator((d: any) => d.arraydeclarator((a: any) => a)))).initializer(
+      (li: any) => li.items([CE.literal(1n)]))),
+    (i: any) => i.statementexpression((k: any) => k),
+    (i: any) => i.extensionexpression((k: any) => k.operand(me)),
+  ])));
 
-  // --- cpp: C's kinds, as C++'s terms --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+  // --- cpp: every kind, written through the builders and its writers, a C++ name, a lambda, a requires expression and a
+  // shared identifier --- the text ToText writes: {!record.a && record->b[0] > 1.5f ? (uint8_t)record(1) : 5u, nullptr,
+  // 10_km, "a" R"(b)", std::cout, this, (record), [=, &record](auto y) {}, (record + ...), requires (int z) { z + 1; },
+  // int(record), record--, static_cast<int>(record), typeid(record), co_await record, sizeof(int), sizeof...(Ts),
+  // alignof(int), noexcept(record), new int{1}, delete[] record, record = 0, throw, co_yield record, record..., .x =
+  // record, ({}), __extension__ record}
   const meCpp = CPP.identifier("record");
-  const cpp = CPP.conditional(CPP.binary("&&", CPP.unary("!", CPP.member(meCpp, "a")), CPP.binary(
-    ">", CPP.subscript(CPP.member(meCpp, "b", "->"), 0n), CPP.constant(1.5, "float"))),
-    CPP.cast("uint8_t", CPP.call("f", 1n)), CPP.constant(5n, "unsigned int"));
+  const name = (spelling: string) => (n: any) => n.identifier((i: any) => i.spelling(spelling));
+  const cpp = CPP.DIALECT.spec((u: any) => u.initializerlist((r: any) => r.items([
+    CPP.conditional(CPP.binary("&&", CPP.unary("!", CPP.member(meCpp, "a")), CPP.binary(">", CPP.subscript(CPP.member(meCpp, "b", "->"), 0n),
+                                          CPP.literal(1.5, "f"))), CPP.cast("uint8_t", CPP.call("record", 1n)), CPP.literal(5n, "u")),
+    (i: any) => i.constant((k: any) => k.singleton("nullptr")),
+    (i: any) => i.userdefinedliteral((d: any) => d.literal((li: any) => li.value((v: any) => v.as_scalar(10n))).suffix("_km")),
+    (i: any) => i.concatenatedstring((k: any) => k.parts([CPP.literal("a"), (x: any) => x.literal((li: any) => li.value((v: any) => v.as_scalar("b")).raw(true))])),
+    (i: any) => i.idexpression((d: any) => d.name((n: any) => n.qualifiedname((q: any) => q.qualifiers([name("std")]).name(name("cout"))))),
+    (i: any) => i.thisexpression((k: any) => k),
+    (i: any) => i.parenthesizedexpression((k: any) => k.expression(meCpp)),
+    (i: any) => i.lambdaexpression((la: any) => la.captures([(k: any) => k.defaultcapture((d: any) => d.mode("=")),
+                              (k: any) => k.simplecapture((s: any) => s.by_reference(true).name("record"))]).declarator(
+      (d: any) => d.parameters([(q: any) => q.parameterdeclaration((pd: any) => pd.specifiers([(s: any) => s.placeholdertypespecifier((h: any) => h)]).declarator(
+        (dd: any) => dd.iddeclarator((i2: any) => i2.name(name("y")))))]))),
+    (i: any) => i.foldexpression((f: any) => f.left(meCpp).operator("+")),
+    (i: any) => i.requiresexpression((q: any) => q.parameters([(a: any) => a.parameterdeclaration((pd: any) => pd.specifiers([
+      (s: any) => s.primitivetypespecifier((k: any) => k.keyword("int"))]).declarator((dd: any) => dd.iddeclarator((i2: any) => i2.name(name("z")))))]).requirements([
+      (r2: any) => r2.simplerequirement((s: any) => s.expression(CPP.binary("+", CPP.identifier("z"), 1n)))])),
+    (i: any) => i.functionalcastexpression((f: any) => f.type((s: any) => s.primitivetypespecifier((k: any) => k.keyword("int"))).initializer(
+      (x: any) => x.parenthesizedinitializer((pi: any) => pi.arguments([meCpp])))),
+    (i: any) => i.postfixexpression((x: any) => x.operand(meCpp).operator("--")),
+    (i: any) => i.namedcastexpression((n: any) => n.operator("static_cast").type(cInt).operand(meCpp)),
+    (i: any) => i.typeidexpression((t: any) => t.operand(meCpp)),
+    (i: any) => i.awaitexpression((a: any) => a.operand(meCpp)),
+    (i: any) => i.sizeofexpression((s: any) => s.operand(cInt)),
+    (i: any) => i.sizeofpackexpression((s: any) => s.pack("Ts")),
+    (i: any) => i.alignofexpression((s: any) => s.keyword("alignof").operand(cInt)),
+    (i: any) => i.noexceptexpression((s: any) => s.operand(meCpp)),
+    (i: any) => i.newexpression((n: any) => n.type(cInt).initializer((x: any) => x.initializerlist((il: any) => il.items([CPP.literal(1n)])))),
+    (i: any) => i.deleteexpression((d: any) => d.array(true).operand(meCpp)),
+    (i: any) => i.assignmentexpression((a: any) => a.left(meCpp).operator("=").right(CPP.literal(0n))),
+    (i: any) => i.throwexpression((t: any) => t),
+    (i: any) => i.yieldexpression((y: any) => y.operand(meCpp)),
+    (i: any) => i.packexpansion((x: any) => x.pattern(meCpp)),
+    (i: any) => i.designatedinitializer((d: any) => d.designators([(x: any) => x.fielddesignator((f: any) => f.name("x"))]).initializer(
+      (x: any) => x.equalinitializer((e: any) => e.value(meCpp)))),
+    (i: any) => i.statementexpression((s: any) => s),
+    (i: any) => i.extensionexpression((e: any) => e.operand(meCpp)),
+  ])));
 
   // --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
   // record.a inside {1, [2:5]} -> !record[0] ? {{6{2'b10}}, record.b[7:4]} : byte'($clog2(record.unique().sum(q) with (q))) + 4'(8'shff)

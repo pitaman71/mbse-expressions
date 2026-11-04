@@ -1,4 +1,5 @@
-"""Text of the Cpp dialect: `ToText(expression)` is a term of C++ as C++ source, as C's printer writes its kinds."""
+"""Text of the Cpp dialect: `ToText(expression)` is a term of C++ as C++ source, as C's printer writes the kinds of
+the C family (`C.Text.text`)."""
 
 from __future__ import annotations
 

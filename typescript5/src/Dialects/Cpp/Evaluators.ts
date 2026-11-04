@@ -3,10 +3,10 @@
  * functions)`. */
 
 import type * as S from "../../Framework/Symbolics.js";
-import { interpreter, Scope } from "../C/Evaluators.js";
+import { EVALUATED, interpreter, Scope } from "../C/Evaluators.js";
 import * as Expressions from "./Expressions.js";
 
-export { Scope };
+export { EVALUATED, Scope };
 
 /** The interpreter of the Cpp dialect; its values carry their C++ types. */
 export const INTERPRETER = interpreter(Expressions.DIALECT);

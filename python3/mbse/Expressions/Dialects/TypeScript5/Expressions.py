@@ -60,11 +60,9 @@ helpers nested, as its printer and its checks read it.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
 from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
-from mbse.Schemas.Framework import Schemas
 
 from . import Domains
 
@@ -551,40 +549,8 @@ def install(txn: Any) -> Any:
 # --- Reading a term with its helpers nested ---
 
 
-@dataclass(frozen=True)
-class Node:
-    """A term or a helper, its helpers nested: its `kind` (its tag, or its helper's), its `attributes` (scalars, and
-    containers of scalars, by name), its `slots` (its terms by property, None where empty), its `many` (its variadic
-    arguments: terms, or a pair's members in turn) and its `helpers` (by property: a `Node`, or a tuple of them)."""
-
-    kind: str
-    attributes: Mapping[str, Any] = field(default_factory=dict)
-    slots: Mapping[str, Any] = field(default_factory=dict)
-    many: tuple[Any, ...] = ()
-    helpers: Mapping[str, Any] = field(default_factory=dict)
-
-
-def _nest(schema: Any, kind: str, attributes: Mapping[str, Any], arguments: tuple[Any, ...]) -> Node:
-    """A record's `Node`, from its schema, its form's attributes and its arguments, as `Terms.form` reads them."""
-    slot_names, _, _ = F._parts(schema)
-    helper_names = F._helpers(schema)
-    held = {name: attributes[name] for name in helper_names if name in attributes}
-    size = sum(part.size for value in held.values() for part in (value if isinstance(value, tuple) else (value,)))
-    i = len(arguments) - size
-    helpers: dict[str, Any] = {}
-    for name, value in held.items():
-        prop = schema.properties[name].schema
-        element = prop.element if isinstance(prop, Schemas.OfContainer.Data) else prop
-        nodes = []
-        for part in (value if isinstance(value, tuple) else (value,)):
-            sub = ({branch.name: branch.schema for branch in element.branches}[part.kind]
-                   if isinstance(element, Schemas.OfUnion.Data) else element)
-            nodes.append(_nest(sub, part.kind, part.attributes, arguments[i:i + part.size]))
-            i += part.size
-        helpers[name] = tuple(nodes) if isinstance(value, tuple) else nodes[0]
-    plain = {name: value for name, value in attributes.items() if name not in held}
-    slots = dict(zip(slot_names, arguments))
-    return Node(kind, plain, slots, tuple(arguments[len(slot_names):len(arguments) - size]), helpers)
+Node = F.Node
+"""A term or a helper, its helpers nested (`Terms.Node`)."""
 
 
 def tree(term: Any) -> Node:
@@ -594,7 +560,7 @@ def tree(term: Any) -> Node:
 
 
 def _record_node(tag: str, record: Any) -> Node:
-    return _nest(record.as_schema(), tag, F.attributes_of(record), F.arguments_of(record))
+    return F.node(tag, record)
 
 
 def _nodes(value: Any) -> tuple[Node, ...]:

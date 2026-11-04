@@ -1,5 +1,5 @@
 """Domains of the C dialect: C's and C++'s arithmetic types, under the LP64 data model, and the signatures of their
-operators.
+operators, which `Cpp` shares.
 
 A `CType` is a type and a domain: `bool`; the integers by width and signedness (`char`, `signed char`, `unsigned
 char`, `short`, `int`, `long`, `long long` and their unsigned forms, and `<stdint.h>`'s `int8_t` ... `uint64_t` and
@@ -11,8 +11,19 @@ and `binary128` (`long double`). Under LP64 `char` is signed and 8 bits wide, `s
 usual arithmetic conversions: the wider floating type if either is floating, otherwise the promoted types, the wider if
 they agree in signedness, else the unsigned one when it is at least as wide, else the signed one. The signatures follow
 the evaluator's rules (see `Evaluators`): arithmetic gives the common type, shifts the promoted left operand's,
-comparisons and logic `bool`. `of(value)` gives a constant's type: `int`, `long` or `unsigned long` for an int, as the
-first that holds it, `double` for a float, `bool`, and `String` for text.
+comparisons and logic `bool`. `of(value)` gives a native value's type: `int`, `long` or `unsigned long` for an int, as
+the first that holds it, `double` for a float, `bool`, and `String` for text.
+
+A literal's type is what its text encodes (`literal(attributes, language)`), as C's and C++'s standards give it: an
+integer's by its suffix and its base, the first of the types they allow that holds its value (an `unsigned int` for
+`5u`; a decimal integer without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`,
+`long double` for `L`); a character literal's (an int, its code) `int` in C and `char` in C++; a string's `String`. What
+an encoding prefix (`L`, `u8`, `u`, `U`) or any other suffix encodes is a domain named by its type (`wchar_t`,
+`_Float16`), which no evaluator has values of. `arithmetic(names)` is the arithmetic type a type name's specifiers
+name (`unsigned int`, `uint8_t`), or None.
+
+The other operators, which no evaluator computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`, `->*`,
+its folds and named casts), have signatures that say only how many operands each takes.
 """
 
 from __future__ import annotations
@@ -24,8 +35,9 @@ from typing import Any
 from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 
-__all__ = ["CType", "TYPES", "Bool", "Int", "Double", "String", "Anything", "promoted", "common", "of", "BINARY",
-           "UNARY", "MEMBER", "SUBSCRIPT", "CALL", "CONDITIONAL", "CAST"]
+__all__ = ["CType", "TYPES", "Bool", "Int", "Double", "String", "Anything", "promoted", "common", "of", "literal",
+           "arithmetic", "NULLPTR", "BINARY", "BINARY_CPP", "UNARY", "POSTFIX", "ASSIGNMENT", "FOLD", "CASTS", "MEMBER",
+           "SUBSCRIPT", "CALL", "CONDITIONAL", "CAST", "SIZE"]
 
 
 @dataclass(frozen=True)
@@ -82,6 +94,8 @@ TYPES: dict[str, CType] = {
 """The types, by the names they are written with."""
 
 Bool, Int, Double = TYPES["bool"], TYPES["int"], TYPES["double"]
+NULLPTR = D.OfTypes("nullptr_t", type(None))
+"""`nullptr`'s type, C23's and C++'s."""
 UnsignedInt, Long, UnsignedLong = TYPES["unsigned int"], TYPES["long"], TYPES["unsigned long"]
 String = D.OfTypes("string", str)
 
@@ -170,13 +184,120 @@ UNARY: dict[str, D.Signature] = {
 }
 """The unary operators."""
 
-MEMBER = D.Function((Anything,), Anything)
-"""A member of a struct or class."""
-SUBSCRIPT = D.Function((Anything, Anything), Anything)
-"""An element of an array."""
+_ONE = D.Function((Anything,), Anything)
+_TWO = D.Function((Anything, Anything), Anything)
+
+BINARY_CPP: dict[str, D.Signature] = {**BINARY, **{op: _TWO for op in (",", "<=>", ".*", "->*")}}
+"""C++'s binary operators: C's, and the comma, the three-way comparison and the pointers to members."""
+BINARY.update({",": _TWO})
+
+UNARY.update({op: _ONE for op in ("*", "&", "++", "--")})
+
+POSTFIX: dict[str, D.Signature] = {op: _ONE for op in ("++", "--")}
+"""The postfix operators."""
+
+ASSIGNMENT: dict[str, D.Signature] = {op: _TWO for op in (
+    "=", "*=", "/=", "%=", "+=", "-=", ">>=", "<<=", "&=", "^=", "|=")}
+"""The assignment operators."""
+
+FOLD: dict[str, D.Signature] = {op: D.Opaque() for op in (
+    "+", "-", "*", "/", "%", "^", "&", "|", "<<", ">>", "+=", "-=", "*=", "/=", "%=", "^=", "&=", "|=", "<<=", ">>=",
+    "=", "==", "!=", "<", ">", "<=", ">=", "&&", "||", ",", ".*", "->*")}
+"""C++'s fold operators: a fold has one operand or two."""
+
+CASTS: dict[str, D.Signature] = {op: D.Opaque() for op in (
+    "static_cast", "dynamic_cast", "const_cast", "reinterpret_cast")}
+"""C++'s named casts (the terms their type names hold among their arguments)."""
+
+MEMBER = D.Opaque()
+"""A member of a struct or class (in C++, a name, whose template arguments are its terms too)."""
+SUBSCRIPT = D.Opaque()
+"""An element of an array, of one index or several (C++23)."""
 CALL = D.Opaque()
 """A function the scope provides."""
-CONDITIONAL = D.Function((Anything, Anything, Anything), Anything)
-"""`condition ? a : b`."""
-CAST = D.Function((Anything,), Anything)
-"""`(type) operand`, whose domain is its type (the term's own)."""
+CONDITIONAL = D.Opaque()
+"""`condition ? a : b`, or GNU's `condition ?: b`."""
+CAST = D.Opaque()
+"""`(type) operand`, whose domain is its type, where it is arithmetic (the terms a type name holds, an array's size,
+among its arguments)."""
+SIZE = D.Opaque(TYPES["size_t"])
+"""`sizeof` and `alignof`, of an expression or a type: a `size_t`."""
+
+_ENCODINGS = {"L": "wchar_t", "u8": "char8_t", "u": "char16_t", "U": "char32_t"}
+_FLOATING = {"f": "float", "F": "float", "l": "long double", "L": "long double"}
+_EXTENDED = {"f16": "_Float16", "f32": "_Float32", "f64": "_Float64", "f128": "_Float128", "f32x": "_Float32x",
+             "f64x": "_Float64x", "f128x": "_Float128x", "bf16": "std::bfloat16_t", "df": "_Decimal32",
+             "dd": "_Decimal64", "dl": "_Decimal128"}
+_DECIMAL = {"": ("int", "long", "long long"), "u": ("unsigned int", "unsigned long", "unsigned long long"),
+            "l": ("long", "long long"), "ul": ("unsigned long", "unsigned long long"), "ll": ("long long",),
+            "ull": ("unsigned long long",), "z": ("long",), "uz": ("size_t",)}
+_OTHER = {"": ("int", "unsigned int", "long", "unsigned long", "long long", "unsigned long long"),
+          "l": ("long", "unsigned long", "long long", "unsigned long long"), "ll": ("long long", "unsigned long long")}
+
+
+def _integer_suffix(suffix: str) -> str:
+    """An integer suffix in one spelling: lowercase, `u` first (`LLU` is `ull`)."""
+    lower = suffix.lower()
+    return "u" + lower.replace("u", "") if "u" in lower else lower
+
+
+def literal(attributes: Any, language: str = "C") -> D.Domain | None:
+    """A literal's type, by what its text encodes (its `prefix`, `quote`, `base` and `suffix`) and its value, in
+    `language` (`C` or `C++`); None where it is its value's own (`of`): a decimal integer or a floating literal without
+    a suffix, a bool. A domain of a type no evaluator has values of is named by it (`wchar_t`, `_BitInt`)."""
+    value, prefix, suffix = attributes.get("value"), attributes.get("prefix"), attributes.get("suffix")
+    if type(value) is str:
+        return String if prefix is None else D.OfTypes(f"{_ENCODINGS.get(prefix, prefix)} string", str)
+    if type(value) is float:
+        if suffix is None:
+            return None
+        named = _FLOATING.get(suffix) or _EXTENDED.get(suffix.lower(), suffix)
+        return TYPES[named] if named in TYPES else D.OfTypes(named, float)
+    if type(value) is not int:
+        return None
+    if attributes.get("quote") == "'":  # a character literal: its code
+        if prefix is None:
+            return Int if language == "C" else TYPES["char"]
+        if prefix == "u8" and language == "C":
+            return TYPES["unsigned char"]
+        return D.OfTypes(_ENCODINGS.get(prefix, prefix), int)
+    normal = _integer_suffix(suffix or "")
+    if normal in ("wb", "uwb"):
+        return D.OfTypes("unsigned _BitInt" if normal == "uwb" else "_BitInt", int)
+    decimal = attributes.get("base") in (None, 10)
+    if not normal and decimal:
+        return None
+    names = (_DECIMAL if decimal else {**_DECIMAL, **_OTHER}).get(normal)
+    if names is None:
+        return D.OfTypes(f"an integer of suffix {suffix!r}", int)
+    return next((TYPES[name] for name in names if TYPES[name].contains(value)), TYPES[names[-1]])
+
+
+_KEYWORDS = frozenset({"signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"})
+_QUALIFIERS = frozenset({"const", "volatile", "restrict", "__restrict", "__restrict__"})
+
+
+def arithmetic(names: Any) -> CType | None:
+    """The arithmetic type a type name's specifiers name, by their keywords and type names in any order (`unsigned
+    long int`, `uint8_t`), cv-qualifiers aside; None for any other type."""
+    words = [name for name in names if name not in _QUALIFIERS]
+    if len(words) == 1 and words[0] in TYPES:
+        return TYPES[words[0]]
+    if not words or any(word not in _KEYWORDS for word in words):
+        return None
+    signed, unsigned, longs = "signed" in words, "unsigned" in words, words.count("long")
+    rest = sorted(word for word in words if word not in ("signed", "unsigned", "long"))
+    if (signed and unsigned) or len(set(rest)) != len(rest) or words.count("signed") + words.count("unsigned") > 1:
+        return None
+    sign = signed or unsigned
+    # a lone keyword that names a type (`float`, `char`) is among `TYPES`, above
+    if rest == ["_Bool"] and not longs and not sign:
+        return TYPES["bool"]
+    if rest == ["double"] and longs == 1 and not sign:
+        return TYPES["long double"]
+    if rest == ["char"] and not longs and sign:
+        return TYPES["unsigned char" if unsigned else "signed char"]
+    if rest in ([], ["int"], ["short"], ["int", "short"]) and longs <= 2 and not ("short" in rest and longs):
+        base = "short" if "short" in rest else ("int", "long", "long long")[longs]
+        return TYPES[("unsigned " if unsigned else "") + base]
+    return None
