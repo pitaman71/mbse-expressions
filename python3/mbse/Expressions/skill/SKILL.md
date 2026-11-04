@@ -35,6 +35,7 @@ how links its case in the tutorials or tests of each language, where it runs, wi
 language. Where the languages spell a thing differently, [In each language](#in-each-language) says so.
 
 ## When to use it
+<!-- no case: says when to use the package, not how -->
 
 - A constraint belongs to an interface or model, and several programs, languages or tools must apply it identically.
 - The constraint must be stored, versioned, diffed or sent as data, then analyzed or rewritten, not just evaluated.
@@ -206,6 +207,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [COL-07: Collections have domains for inference: a quantifier's name has the items' domain](mbse:mbse-expressions/python3/tests/10_Collections.ipynb#COL-07) · TypeScript: [COL-07: Collections have domains for inference: a quantifier's name has the items' domain](mbse:mbse-expressions/typescript5/tests/10_Collections.ipynb#COL-07)
 
 ## Load the reference for your task
+<!-- no case: a table routing each task to its reference -->
 
 | Task | Read |
 |---|---|
@@ -277,6 +279,7 @@ each case shows its own:
   - Python: [T02.5: What raises](mbse:mbse-expressions/python3/tutorials/02_Answers_You_Can_Trust.ipynb#T02.5) · TypeScript: [T02.5: What raises](mbse:mbse-expressions/typescript5/tutorials/02_Answers_You_Can_Trust.ipynb#T02.5)
 
 ## Learn it by example
+<!-- no case: points to the tutorials and the test plan as a whole -->
 
 The tutorials teach it in seven case studies (the fourth deferred), from a first constraint to C and SystemVerilog,
 each a notebook committed with its outputs and run as a test: [Python](mbse:mbse-expressions/python3/tutorials/README.md)

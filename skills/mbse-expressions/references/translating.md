@@ -87,6 +87,7 @@ DIALECT, rules)`, is a rewriting.
 - Python: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-01) · TypeScript: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-01)
 
 ## Go deeper
+<!-- no case: points to the design, the sources and the test suite for reading further -->
 
 | Topic | Read |
 |---|---|
