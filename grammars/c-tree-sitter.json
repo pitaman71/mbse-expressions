@@ -1,0 +1,819 @@
+{
+ "grammar": "tree-sitter-c's named node types: every node an expression, a type or a literal is, or holds, mapped to C's kinds (`kinds`), the branches of its `Type` union (`types`) or its helpers' schemas (`helpers`), each with the supertypes the grammar puts it in (`supertypes`); every other node listed as not an expression, with its reason",
+ "checked": "tree-sitter-c 0.23.6, as mbse-programs installs it (the grammar tree-sitter-cpp 0.23.4 extends; mbse-programs reads C with tree-sitter-cpp): its 125 named node types",
+ "nodes": [
+  {
+   "node": "abstract_array_declarator",
+   "supertypes": [
+    "_abstract_declarator"
+   ],
+   "helpers": [
+    "ArrayDeclarator"
+   ]
+  },
+  {
+   "node": "abstract_function_declarator",
+   "supertypes": [
+    "_abstract_declarator"
+   ],
+   "helpers": [
+    "FunctionDeclarator"
+   ]
+  },
+  {
+   "node": "abstract_parenthesized_declarator",
+   "supertypes": [
+    "_abstract_declarator"
+   ],
+   "helpers": [
+    "ParenthesizedDeclarator"
+   ]
+  },
+  {
+   "node": "abstract_pointer_declarator",
+   "supertypes": [
+    "_abstract_declarator"
+   ],
+   "helpers": [
+    "PointerDeclarator"
+   ]
+  },
+  {
+   "node": "alignas_qualifier",
+   "helpers": [
+    "AlignasSpecifier"
+   ]
+  },
+  {
+   "node": "alignof_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "alignofexpression"
+   ]
+  },
+  {
+   "node": "argument_list",
+   "not": "the parentheses around a call's arguments, its `arguments`"
+  },
+  {
+   "node": "array_declarator",
+   "supertypes": [
+    "_declarator",
+    "_field_declarator",
+    "_type_declarator"
+   ],
+   "helpers": [
+    "ArrayDeclarator"
+   ]
+  },
+  {
+   "node": "assignment_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "assignmentexpression"
+   ]
+  },
+  {
+   "node": "attribute",
+   "helpers": [
+    "Attribute"
+   ]
+  },
+  {
+   "node": "attribute_declaration",
+   "helpers": [
+    "StandardAttributeSpecifier"
+   ]
+  },
+  {
+   "node": "attribute_specifier",
+   "helpers": [
+    "GnuAttributeSpecifier"
+   ]
+  },
+  {
+   "node": "attributed_declarator",
+   "supertypes": [
+    "_declarator",
+    "_field_declarator",
+    "_type_declarator"
+   ],
+   "not": "attributes after a declarator, which mbse-programs holds as that declarator's `attributes`"
+  },
+  {
+   "node": "attributed_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "binary_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "binaryexpression"
+   ]
+  },
+  {
+   "node": "bitfield_clause",
+   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+  },
+  {
+   "node": "break_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "call_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "callexpression"
+   ]
+  },
+  {
+   "node": "case_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "cast_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "castexpression"
+   ]
+  },
+  {
+   "node": "char_literal",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "literal"
+   ]
+  },
+  {
+   "node": "comma_expression",
+   "kinds": [
+    "binaryexpression"
+   ]
+  },
+  {
+   "node": "compound_literal_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "compoundliteralexpression"
+   ]
+  },
+  {
+   "node": "compound_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "concatenated_string",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "concatenatedstring"
+   ]
+  },
+  {
+   "node": "conditional_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "conditionalexpression"
+   ]
+  },
+  {
+   "node": "continue_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "declaration",
+   "not": "a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "declaration_list",
+   "not": "a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "do_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "else_clause",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "enum_specifier",
+   "supertypes": [
+    "type_specifier"
+   ],
+   "helpers": [
+    "EnumSpecifier"
+   ]
+  },
+  {
+   "node": "enumerator",
+   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+  },
+  {
+   "node": "enumerator_list",
+   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+  },
+  {
+   "node": "expression_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "extension_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "extensionexpression"
+   ]
+  },
+  {
+   "node": "field_declaration",
+   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+  },
+  {
+   "node": "field_declaration_list",
+   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+  },
+  {
+   "node": "field_designator",
+   "helpers": [
+    "FieldDesignator"
+   ]
+  },
+  {
+   "node": "field_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "memberexpression"
+   ]
+  },
+  {
+   "node": "for_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "function_declarator",
+   "supertypes": [
+    "_declarator",
+    "_field_declarator",
+    "_type_declarator"
+   ],
+   "helpers": [
+    "FunctionDeclarator"
+   ]
+  },
+  {
+   "node": "function_definition",
+   "not": "a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "generic_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "genericselection"
+   ],
+   "helpers": [
+    "GenericAssociation"
+   ]
+  },
+  {
+   "node": "gnu_asm_clobber_list",
+   "not": "GNU's inline assembly, which mbse-programs reads as an AsmDeclaration, a declaration, not a term"
+  },
+  {
+   "node": "gnu_asm_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "not": "GNU's inline assembly, which mbse-programs reads as an AsmDeclaration, a declaration, not a term"
+  },
+  {
+   "node": "gnu_asm_goto_list",
+   "not": "GNU's inline assembly, which mbse-programs reads as an AsmDeclaration, a declaration, not a term"
+  },
+  {
+   "node": "gnu_asm_input_operand",
+   "not": "GNU's inline assembly, which mbse-programs reads as an AsmDeclaration, a declaration, not a term"
+  },
+  {
+   "node": "gnu_asm_input_operand_list",
+   "not": "GNU's inline assembly, which mbse-programs reads as an AsmDeclaration, a declaration, not a term"
+  },
+  {
+   "node": "gnu_asm_output_operand",
+   "not": "GNU's inline assembly, which mbse-programs reads as an AsmDeclaration, a declaration, not a term"
+  },
+  {
+   "node": "gnu_asm_output_operand_list",
+   "not": "GNU's inline assembly, which mbse-programs reads as an AsmDeclaration, a declaration, not a term"
+  },
+  {
+   "node": "gnu_asm_qualifier",
+   "not": "GNU's inline assembly, which mbse-programs reads as an AsmDeclaration, a declaration, not a term"
+  },
+  {
+   "node": "goto_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "if_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "init_declarator",
+   "not": "a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "initializer_list",
+   "kinds": [
+    "initializerlist"
+   ]
+  },
+  {
+   "node": "initializer_pair",
+   "kinds": [
+    "designatedinitializer"
+   ]
+  },
+  {
+   "node": "labeled_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "linkage_specification",
+   "not": "a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "macro_type_specifier",
+   "supertypes": [
+    "type_specifier"
+   ],
+   "not": "a macro invoked in a type, which the preprocessor expands; mbse-programs' parser refuses it"
+  },
+  {
+   "node": "ms_based_modifier",
+   "not": "a Microsoft modifier, which mbse-programs' parser refuses as unsupported syntax"
+  },
+  {
+   "node": "ms_call_modifier",
+   "not": "a Microsoft modifier, which mbse-programs' parser refuses as unsupported syntax"
+  },
+  {
+   "node": "ms_declspec_modifier",
+   "helpers": [
+    "DeclspecSpecifier"
+   ]
+  },
+  {
+   "node": "ms_pointer_modifier",
+   "not": "a Microsoft modifier, which mbse-programs' parser refuses as unsupported syntax"
+  },
+  {
+   "node": "ms_unaligned_ptr_modifier",
+   "not": "a Microsoft modifier, which mbse-programs' parser refuses as unsupported syntax"
+  },
+  {
+   "node": "null",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "constant",
+    "variable"
+   ]
+  },
+  {
+   "node": "offsetof_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "callexpression",
+    "typeid"
+   ]
+  },
+  {
+   "node": "parameter_declaration",
+   "helpers": [
+    "ParameterDeclaration"
+   ]
+  },
+  {
+   "node": "parameter_list",
+   "not": "the parentheses around a function declarator's parameters, its `parameters`"
+  },
+  {
+   "node": "parenthesized_declarator",
+   "supertypes": [
+    "_declarator",
+    "_field_declarator",
+    "_type_declarator"
+   ],
+   "helpers": [
+    "ParenthesizedDeclarator"
+   ]
+  },
+  {
+   "node": "parenthesized_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "parenthesizedexpression",
+    "statementexpression"
+   ]
+  },
+  {
+   "node": "pointer_declarator",
+   "supertypes": [
+    "_declarator",
+    "_field_declarator",
+    "_type_declarator"
+   ],
+   "helpers": [
+    "PointerDeclarator"
+   ]
+  },
+  {
+   "node": "pointer_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "unaryexpression"
+   ]
+  },
+  {
+   "node": "preproc_call",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_def",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_defined",
+   "not": "`defined(name)`, a preprocessing condition's, which mbse-programs reads as a DefinedExpression, a preprocessor kind"
+  },
+  {
+   "node": "preproc_elif",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_elifdef",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_else",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_function_def",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_if",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_ifdef",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_include",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_params",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "return_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "seh_except_clause",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "seh_finally_clause",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "seh_leave_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "seh_try_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "sized_type_specifier",
+   "supertypes": [
+    "type_specifier"
+   ],
+   "helpers": [
+    "PrimitiveTypeSpecifier"
+   ]
+  },
+  {
+   "node": "sizeof_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "sizeofexpression"
+   ]
+  },
+  {
+   "node": "storage_class_specifier",
+   "helpers": [
+    "DeclSpecifier"
+   ]
+  },
+  {
+   "node": "string_literal",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "literal"
+   ]
+  },
+  {
+   "node": "struct_specifier",
+   "supertypes": [
+    "type_specifier"
+   ],
+   "helpers": [
+    "ClassSpecifier"
+   ]
+  },
+  {
+   "node": "subscript_designator",
+   "helpers": [
+    "IndexDesignator"
+   ]
+  },
+  {
+   "node": "subscript_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "subscriptexpression"
+   ]
+  },
+  {
+   "node": "subscript_range_designator",
+   "helpers": [
+    "IndexDesignator"
+   ]
+  },
+  {
+   "node": "switch_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "translation_unit",
+   "not": "a source file, which mbse-programs holds as an owned reference object"
+  },
+  {
+   "node": "type_definition",
+   "not": "a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "type_descriptor",
+   "kinds": [
+    "typeid"
+   ],
+   "types": [
+    "typeid"
+   ]
+  },
+  {
+   "node": "type_qualifier",
+   "helpers": [
+    "CvQualifier"
+   ]
+  },
+  {
+   "node": "unary_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "unaryexpression"
+   ]
+  },
+  {
+   "node": "union_specifier",
+   "supertypes": [
+    "type_specifier"
+   ],
+   "helpers": [
+    "ClassSpecifier"
+   ]
+  },
+  {
+   "node": "update_expression",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "unaryexpression",
+    "postfixexpression"
+   ]
+  },
+  {
+   "node": "variadic_parameter",
+   "helpers": [
+    "EllipsisParameter"
+   ]
+  },
+  {
+   "node": "while_statement",
+   "supertypes": [
+    "statement"
+   ],
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "character",
+   "not": "part of a literal's text, which a literal holds as written (`text`)"
+  },
+  {
+   "node": "comment",
+   "not": "a comment, between tokens, which is not a term's (mbse-programs keeps those among declarations and statements)"
+  },
+  {
+   "node": "escape_sequence",
+   "not": "part of a literal's text, which a literal holds as written (`text`)"
+  },
+  {
+   "node": "false",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "literal"
+   ]
+  },
+  {
+   "node": "field_identifier",
+   "supertypes": [
+    "_field_declarator"
+   ],
+   "not": "a member's or a field's name, which C holds as a `str` (a memberexpression's `member`)"
+  },
+  {
+   "node": "identifier",
+   "supertypes": [
+    "_declarator",
+    "expression"
+   ],
+   "kinds": [
+    "variable"
+   ],
+   "helpers": [
+    "IdDeclarator"
+   ]
+  },
+  {
+   "node": "ms_restrict_modifier",
+   "not": "a Microsoft modifier, which mbse-programs' parser refuses as unsupported syntax"
+  },
+  {
+   "node": "ms_signed_ptr_modifier",
+   "not": "a Microsoft modifier, which mbse-programs' parser refuses as unsupported syntax"
+  },
+  {
+   "node": "ms_unsigned_ptr_modifier",
+   "not": "a Microsoft modifier, which mbse-programs' parser refuses as unsupported syntax"
+  },
+  {
+   "node": "number_literal",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "literal"
+   ]
+  },
+  {
+   "node": "preproc_arg",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "preproc_directive",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "primitive_type",
+   "supertypes": [
+    "_type_declarator",
+    "type_specifier"
+   ],
+   "helpers": [
+    "PrimitiveTypeSpecifier"
+   ]
+  },
+  {
+   "node": "statement_identifier",
+   "not": "a label's name, in a statement"
+  },
+  {
+   "node": "string_content",
+   "not": "part of a literal's text, which a literal holds as written (`text`)"
+  },
+  {
+   "node": "system_lib_string",
+   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+  },
+  {
+   "node": "true",
+   "supertypes": [
+    "expression"
+   ],
+   "kinds": [
+    "literal"
+   ]
+  },
+  {
+   "node": "type_identifier",
+   "supertypes": [
+    "_type_declarator",
+    "type_specifier"
+   ],
+   "helpers": [
+    "NamedTypeSpecifier"
+   ]
+  }
+ ]
+}
