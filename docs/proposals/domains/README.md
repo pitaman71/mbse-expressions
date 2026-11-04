@@ -85,6 +85,21 @@ One form of a domain: the stored one. Concretely:
 5. **Validation reads stored domains.** A literal out of range is reported against the domain its dialect stores for
    it, not a code constant.
 
+## Decided, on this proposal
+
+As the user decided (2026-11-04), on the questions below:
+
+- **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
+  release; CAP-232 builds on stored domains.
+- **3. `Anything` and `Opaque`**: "agreed. Schemas.OfAny kind of handles that": no stored "anything" domain; where
+  nothing is known, a result's domain is absent, its value an unrestricted `Schemas.OfAny`.
+- **4. Kinds shared per standard**: "proceed with this for now. I will review": Patterns' kinds (two's complement,
+  IEEE 754, IEEE 1164, ...) shared, each dialect's domains instances of them under its own names.
+- **5. Typing C literals by suffix**: "1,5. yes before per your recommendation": kept, as a lookup of the stored domain
+  by the literal's suffix and base.
+- **2.** Asked what "code intrinsics" meant (the first draft's word, for a rule implemented as a function registered by
+  the operation's name, which "inferred properties are still properties" rules out); open, as revised below.
+
 ## Questions for the user
 
 1. **Order with domain inference (CAP-232).** (a) This first, as its own release: inference then builds on stored
