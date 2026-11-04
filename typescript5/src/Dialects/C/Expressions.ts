@@ -10,8 +10,10 @@
  * (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`), with mbse-programs' names, lowercased as branch tags
  * (`binaryexpression`), and its properties in source order (`template_keyword`, `trailing_comma`), each a value object
  * `Expressions.C.<Kind>`; a property only C++ has is not C's (`Cpp` defines its own copy of each kind the two share,
- * holding C++'s terms). C has no name but an identifier, so where mbse-programs holds a `Name` or an `Identifier`, C holds
- * its spelling, a `str`. A term carries no domain. Its kinds:
+ * holding C++'s terms). A name is as the grammar makes it (the dialects proposal, Decided): where mbse-programs holds a
+ * `Name`, C holds its `Name` union, whose one branch is `identifier` (`Expressions.C.Identifier`, its `spelling`), C's one
+ * name; where it holds an `Identifier`, an `Identifier`; where it holds a `str` (an attribute's name), a `str`. A term
+ * carries no domain. Its kinds:
  *
  * - Literals: `literal` (`Expressions.C.Literal`, refining the framework's `literal`, mbse-basis
  *   [CAP-233: literals of any value](mbse:mbse-basis/docs/capabilities/CAP-233.md): an integer, a floating, a character or
@@ -55,7 +57,8 @@
  *
  * Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: `constant` C23's alone, an
  * extension none). `DIALECT` reads them (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...)
- * write the kinds C evaluated before it was complete through the builders, in a transaction:
+ * write the kinds C evaluated before it was complete through the builders, in a transaction, a cast's type a spec of
+ * `Type`, written through the builders too:
  * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through the builders
  * (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an
  * expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
@@ -108,11 +111,6 @@ export const SUFFIXES: Suffixes = {
   floating: /^(?:[fFlL]|df|dd|dl|DF|DD|DL|[fF](?:16|32|64|128|32x|64x|128x))$/,
 };
 
-/** The keywords that name a type, C's and its extensions' (a word the writers write as a primitive specifier). */
-export const PRIMITIVES: ReadonlySet<string> = new Set(["void", "char", "bool", "_Bool", "short", "int", "long", "signed",
-  "unsigned", "float", "double", "_Complex", "_Imaginary", "_Decimal32", "_Decimal64", "_Decimal128", "_Float16",
-  "_Float32", "_Float64", "_Float128", "_Float32x", "_Float64x", "_Float128x", "__int128", "__float128"]);
-
 /** C's union of its kinds, added to the framework's terms as the branch `c`, its own kinds, its sublanguages' unions
  * (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is `Expressions.C`: run
  * after `Framework.install`, in a transaction of its own; run again, it writes nothing.
@@ -125,7 +123,7 @@ export function install(txn: any): any {
   return txn.uid("mbse.Expressions.C/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
-      Type: S.OfUnion, Pattern: S.OfUnion, Specifier: S.OfUnion, Declarator: S.OfUnion,
+      Type: S.OfUnion, Pattern: S.OfUnion, Name: S.OfUnion, Specifier: S.OfUnion, Declarator: S.OfUnion,
       Parameter: S.OfUnion, AttributeSpecifier: S.OfUnion, Designator: S.OfUnion,
       Initializer: S.OfUnion, Expression: S.OfObject,
       Literal: S.OfObject, Constant: S.OfObject, ConcatenatedString: S.OfObject,
@@ -146,7 +144,7 @@ export function install(txn: any): any {
       ParenthesizedDeclarator: S.OfObject, ParameterDeclaration: S.OfObject,
       EllipsisParameter: S.OfObject, StandardAttributeSpecifier: S.OfObject,
       Attribute: S.OfObject, AlignasSpecifier: S.OfObject, GnuAttributeSpecifier: S.OfObject,
-      DeclspecSpecifier: S.OfObject }) // FrameworkTerm: the framework's, by name
+      DeclspecSpecifier: S.OfObject, Identifier: S.OfObject }) // FrameworkTerm: the framework's, by name
     .spec([
       // its dialect: the singleton `Expressions.C`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.C.Dialect").ref(true).singleton("Expressions.C").adjacencies({
@@ -193,6 +191,10 @@ export function install(txn: any): any {
       (_: any) => _.Pattern.name("Expressions.C.Pattern").branches([
         (t: any) => t.name("error").schema([Framework.Error]),
         (t: any) => t.name("missing").schema([Framework.Missing]),
+      ]),
+      // its names: an identifier, C's one name (mbse-programs' `Name`)
+      (_: any) => _.Name.name("Expressions.C.Name").branches([
+        (t: any) => t.name("identifier").schema([_.Identifier]),
       ]),
       // a type name's specifiers, the attribute specifiers among them (mbse-programs' `Specifier`)
       (_: any) => _.Specifier.name("Expressions.C.Specifier").branches([
@@ -263,7 +265,7 @@ export function install(txn: any): any {
       (_: any) => _.CallExpression.name("Expressions.C.CallExpression").properties({
         function: _.Term, arguments: many(_.Term)}),
       (_: any) => _.MemberExpression.name("Expressions.C.MemberExpression").properties({
-        object: _.Term, operator: S.OfStr, member: S.OfStr}),
+        object: _.Term, operator: S.OfStr, member: _.Name}),
       (_: any) => _.PostfixExpression.name("Expressions.C.PostfixExpression").properties({
         operand: _.Term, operator: S.OfStr}),
       (_: any) => _.CompoundLiteralExpression.name("Expressions.C.CompoundLiteralExpression").properties({
@@ -287,7 +289,7 @@ export function install(txn: any): any {
         items: many(_.Term), trailing_comma: S.OfBool}),
       (_: any) => _.DesignatedInitializer.name("Expressions.C.DesignatedInitializer").properties({
         designators: many(_.Designator), initializer: _.Initializer}),
-      (_: any) => _.FieldDesignator.name("Expressions.C.FieldDesignator").properties({name: S.OfStr}),
+      (_: any) => _.FieldDesignator.name("Expressions.C.FieldDesignator").properties({name: _.Identifier}),
       (_: any) => _.IndexDesignator.name("Expressions.C.IndexDesignator").properties({
         index: _.Term, last: _.Term}), // last: GNU's range, `[index ... last]`
       (_: any) => _.EqualInitializer.name("Expressions.C.EqualInitializer").properties({value: _.Term}),
@@ -301,12 +303,12 @@ export function install(txn: any): any {
       (_: any) => _.CvQualifier.name("Expressions.C.CvQualifier").properties({keyword: S.OfStr}),
       (_: any) => _.PrimitiveTypeSpecifier.name("Expressions.C.PrimitiveTypeSpecifier").properties({
         keyword: S.OfStr}),
-      (_: any) => _.NamedTypeSpecifier.name("Expressions.C.NamedTypeSpecifier").properties({name: S.OfStr}),
+      (_: any) => _.NamedTypeSpecifier.name("Expressions.C.NamedTypeSpecifier").properties({name: _.Name}),
       (_: any) => _.ClassSpecifier.name("Expressions.C.ClassSpecifier").properties({
-        key: S.OfStr, attributes: many(_.AttributeSpecifier), name: S.OfStr,
+        key: S.OfStr, attributes: many(_.AttributeSpecifier), name: _.Name,
         body: S.OfBool}), // whether it has a body, whose member declarations are not part of the term
       (_: any) => _.EnumSpecifier.name("Expressions.C.EnumSpecifier").properties({
-        key: S.OfStr, attributes: many(_.AttributeSpecifier), name: S.OfStr, base: _.Type,
+        key: S.OfStr, attributes: many(_.AttributeSpecifier), name: _.Name, base: _.Type,
         body: S.OfBool}), // whether it has a body, whose enumerators are not part of the term
       (_: any) => _.PlaceholderTypeSpecifier.name("Expressions.C.PlaceholderTypeSpecifier"),
       (_: any) => _.TypeofSpecifier.name("Expressions.C.TypeofSpecifier").properties({
@@ -314,7 +316,7 @@ export function install(txn: any): any {
       (_: any) => _.AtomicTypeSpecifier.name("Expressions.C.AtomicTypeSpecifier").properties({type: _.Type}),
       (_: any) => _.BitIntSpecifier.name("Expressions.C.BitIntSpecifier").properties({width: _.Term}),
       (_: any) => _.IdDeclarator.name("Expressions.C.IdDeclarator").properties({
-        name: S.OfStr, attributes: many(_.AttributeSpecifier)}),
+        name: _.Name, attributes: many(_.AttributeSpecifier)}),
       (_: any) => _.PointerDeclarator.name("Expressions.C.PointerDeclarator").properties({
         attributes: many(_.AttributeSpecifier), qualifiers: many(_.CvQualifier),
         declarator: _.Declarator}),
@@ -330,6 +332,8 @@ export function install(txn: any): any {
         attributes: many(_.AttributeSpecifier), specifiers: many(_.Specifier),
         declarator: _.Declarator}),
       (_: any) => _.EllipsisParameter.name("Expressions.C.EllipsisParameter"),
+      // names
+      (_: any) => _.Identifier.name("Expressions.C.Identifier").properties({spelling: S.OfStr}),
       // attributes
       (_: any) => _.StandardAttributeSpecifier.name("Expressions.C.StandardAttributeSpecifier").properties({
         attributes: many(_.Attribute)}),
@@ -361,13 +365,9 @@ function nodes(value: Held): readonly F.Node[] {
   return value instanceof F.Node ? [value] : value;
 }
 
-/** A name's spelling: C's, a `string`; C++'s, an identifier's `spelling` (a `Terms.Part` or a `Node`), or null for
- * any other name. */
-export function spelling(name: unknown): string | null {
-  if (name instanceof F.Part || name instanceof F.Node) {
-    return name.kind === "identifier" ? (name.attributes.get("spelling") ?? null) as string | null : null;
-  }
-  return (name ?? null) as string | null;
+/** A name's spelling: an identifier's `spelling` (a `Terms.Part` or a `Node`), or null for any other name, or none. */
+export function spelling(name: F.Part | F.Node | undefined): string | null {
+  return name !== undefined && name.kind === "identifier" ? (name.attributes.get("spelling") ?? null) as string | null : null;
 }
 
 /** The arithmetic type a type name names (a `typeid`'s `Terms.Part`, as a cast's form holds it), by `Domains.TYPES`'
@@ -380,7 +380,7 @@ export function typeName(part: F.Part | null | undefined): string | null {
     if (specifier.kind === "primitivetypespecifier" || specifier.kind === "cvqualifier") {
       names.push((specifier.attributes.get("keyword") ?? null) as string | null);
     } else if (specifier.kind === "namedtypespecifier") {
-      names.push(spelling(specifier.attributes.get("name")));
+      names.push(spelling(specifier.attributes.get("name") as F.Part | undefined));
     } else return null;
   }
   const found = Domains.arithmetic(names);
@@ -391,7 +391,7 @@ export function typeName(part: F.Part | null | undefined): string | null {
 function declared(node: F.Node | undefined): ReadonlySet<string> {
   while (node !== undefined && node.kind !== "iddeclarator") node = node.helpers.get("declarator") as F.Node | undefined;
   if (node === undefined) return new Set();
-  const name = spelling(node.attributes.get("name") ?? node.helpers.get("name"));
+  const name = spelling(node.helpers.get("name") as F.Node | undefined);
   return new Set(name === null ? [] : [name]);
 }
 
@@ -405,7 +405,10 @@ export function boundNames(node: F.Node): ReadonlySet<string> {
   for (const p of held) {
     if (p.kind === "parameterdeclaration") for (const name of declared(p.helpers.get("declarator") as F.Node | undefined)) found.add(name);
   }
-  for (const p of held) if (p.kind === "initcapture" && p.attributes.has("name")) found.add(p.attributes.get("name"));
+  for (const p of held) {
+    const name = p.kind === "initcapture" ? spelling(p.helpers.get("name") as F.Node | undefined) : null;
+    if (name !== null) found.add(name);
+  }
   return found;
 }
 
@@ -428,11 +431,9 @@ export function scopes(tag: string): (record: any) => ReadonlySet<string>[] {
 
 const IDENTIFIER = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
-/** The kinds and helpers that hold an identifier's spelling, and where. */
-const NAMES: ReadonlyMap<string, string> = new Map([["variable", "name"], ["memberexpression", "member"],
-  ["fielddesignator", "name"], ["iddeclarator", "name"], ["namedtypespecifier", "name"], ["classspecifier", "name"],
-  ["enumspecifier", "name"], ["identifier", "spelling"], ["sizeofpackexpression", "pack"], ["simplecapture", "name"],
-  ["initcapture", "name"], ["typeparameter", "name"], ["templatetemplateparameter", "name"]]);
+/** The kinds and helpers that hold an identifier's spelling, and where: the framework's variable, and an identifier,
+ * wherever a name is held. */
+const NAMES: ReadonlyMap<string, string> = new Map([["variable", "name"], ["identifier", "spelling"]]);
 
 /** An identifier, as mbse-programs checks it: letters, digits, `_` and `$`, not starting with a digit; characters
  * beyond ASCII are taken to be letters. */
@@ -442,8 +443,10 @@ function identifierProblems(value: unknown): string[] {
   return IDENTIFIER.test(ascii) ? [] : [`${repr(value)} is not an identifier`];
 }
 
-/** A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes. */
-function literalProblems(attributes: ReadonlyMap<string, any>, prefixes: readonly string[], suffixes: Suffixes): string[] {
+/** A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes, and its
+ * value, one of its type (`Domains.outOfRange`). */
+function literalProblems(attributes: ReadonlyMap<string, any>, prefixes: readonly string[], suffixes: Suffixes,
+  language: string): string[] {
   const problems: string[] = [];
   const [prefix, quote, base, suffix] = ["prefix", "quote", "base", "suffix"].map((name) => attributes.get(name));
   if (prefix !== undefined && !prefixes.includes(prefix)) problems.push(`a literal's prefix cannot be ${repr(prefix)}`);
@@ -454,6 +457,8 @@ function literalProblems(attributes: ReadonlyMap<string, any>, prefixes: readonl
     const allowed = typeof value === "bigint" ? suffixes.integer : typeof value === "number" ? suffixes.floating : null;
     if (allowed === null || !allowed.test(suffix)) problems.push(`a literal's suffix cannot be ${repr(suffix)}`);
   }
+  const out = Domains.outOfRange(attributes, language);
+  if (out !== null) problems.push(out);
   return problems;
 }
 
@@ -465,8 +470,10 @@ function constantProblems(attributes: ReadonlyMap<string, any>): string[] {
 }
 
 /** A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
- * identifier's spelling, a literal's encoded properties, a member's operator, invalid syntax in a sublanguage. */
-export function problems(node: F.Node, suffixes: Suffixes = SUFFIXES, prefixes: readonly string[] = PREFIXES): string[] {
+ * identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), a
+ * member's operator, invalid syntax in a sublanguage. */
+export function problems(node: F.Node, suffixes: Suffixes = SUFFIXES, prefixes: readonly string[] = PREFIXES,
+  language = "C"): string[] {
   const { kind, attributes } = node;
   const found = kind === "error" || kind === "missing" ? F.invalidProblems(kind, attributes) : [];
   found.push(...identifierProblems(attributes.get(NAMES.get(kind) ?? "")));
@@ -475,8 +482,10 @@ export function problems(node: F.Node, suffixes: Suffixes = SUFFIXES, prefixes: 
     found.push(`a memberexpression's operator must be '.' or '->', got ${repr(operator)}`);
   }
   if (kind === CONSTANT) found.push(...constantProblems(attributes));
-  if (kind === LITERAL) found.push(...literalProblems(attributes, prefixes, suffixes));
-  for (const value of node.helpers.values()) for (const inner of nodes(value)) found.push(...problems(inner, suffixes, prefixes));
+  if (kind === LITERAL) found.push(...literalProblems(attributes, prefixes, suffixes, language));
+  for (const value of node.helpers.values()) {
+    for (const inner of nodes(value)) found.push(...problems(inner, suffixes, prefixes, language));
+  }
   return found;
 }
 
@@ -493,12 +502,19 @@ function typedCast(record: any): FD.Domain | null {
   return name === null ? null : Domains.TYPES.get(name) as FD.Domain;
 }
 
+/** A literal's spelling, in each language: what its text writes beside its value, not what it is. A character's quote is
+ * C's spelling, `'a'` an `int` as `97` is, and not C++'s, where `'a'` is a `char`: there it is what the literal is. */
+export const SPELLING: { readonly C: readonly string[]; readonly "C++": readonly string[] } = {
+  C: ["text", "problems", "quote", "base", "separators"],
+  "C++": ["text", "problems", "base", "separators", "raw", "delimiter"],
+};
+
 /** How the framework reads the kinds of the C family that a dialect has (`tags`, in its `Term`'s order: those it shares
  * with the other language of the family), each with the standards of its language that have it (`standards`), in
  * `language` (`C` or `C++`), whose binary operators, literals' types, prefixes and suffixes differ. */
 export function kinds(language: string, tags: readonly string[], standards: ReadonlyMap<string, readonly string[]>,
   prefixes: readonly string[], suffixes: Suffixes): Record<string, F.Kind> {
-  const check = (tag: string) => (record: any) => problems(F.node(tag, record), suffixes, prefixes);
+  const check = (tag: string) => (record: any) => problems(F.node(tag, record), suffixes, prefixes, language);
   const of = (tag: string) => standards.get(tag) as readonly string[];
   const application = (tag: string, signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}) =>
     new F.Kind(F.APPLICATION, { signature, standards: of(tag), check: check(tag), scopes: scopes(tag), ...options,
@@ -506,8 +522,7 @@ export function kinds(language: string, tags: readonly string[], standards: Read
   const operator = (tag: string, vocabulary: ReadonlyMap<string, FD.Signature>) => new F.Kind(F.APPLICATION, {
     operator: "operator", vocabulary, required: ["operator"], standards: of(tag), check: check(tag), scopes: scopes(tag) });
   const every: Record<string, () => F.Kind> = {
-    [LITERAL]: () => new F.Kind(F.LITERAL, { spelling: ["text", "problems", "quote", "base", "separators", "raw", "delimiter"],
-      check: check(LITERAL), typed: (record: any) => Domains.literal(F.attributesOf(record), language), standards: of(LITERAL) }),
+    [LITERAL]: () => new F.Kind(F.LITERAL, { spelling: SPELLING[language as "C" | "C++"], check: check(LITERAL), typed: (record: any) => Domains.literal(F.attributesOf(record), language), standards: of(LITERAL) }),
     [CONSTANT]: () => new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: check(CONSTANT),
       typed: () => Domains.NULLPTR, standards: of(CONSTANT) }),
     [CONCATENATEDSTRING]: () => application(CONCATENATEDSTRING, new FD.Opaque(Domains.String)),
@@ -561,12 +576,15 @@ export class Writer extends F.Writer {
   }
 }
 
+/** A name that is an identifier: its spelling, written in a `Name`. */
+function identifierName(spelling: string): (n: any) => any {
+  return (n: any) => n.identifier((i: any) => i.spelling(spelling));
+}
+
 /** The writers of the kinds the C family evaluates, for one dialect: its `Terms.Dialect`, whose `spec` writes a native
- * value as its literal, its `Writer`, and how it writes a name (`name`: C's a `string`, C++'s an identifier). C's are
- * this module's functions; `Cpp`'s, its own. */
+ * value as its literal, and its `Writer`. C's are this module's functions; `Cpp`'s, its own. */
 export class Writers<W extends F.Writer> {
-  constructor(readonly dialect: F.Dialect, readonly writer: new (write: (union: any) => any) => W,
-    readonly name: (name: string) => any = (name: string) => name) {}
+  constructor(readonly dialect: F.Dialect, readonly writer: new (write: (union: any) => any) => W) {}
 
   /** The literal `value` (a bool, a bigint, a number or a string), with `suffix` as written (`u`, `ull`, `f`, `L`),
    * which gives its type. */
@@ -596,23 +614,18 @@ export class Writers<W extends F.Writer> {
     return new this.writer((u: any) => u.conditionalexpression((r: any) => r.condition(a).consequence(b).alternative(c)));
   };
 
-  /** `(type) operand`, `type` a type name of keywords and type names (`unsigned int`, `uint8_t`): each word a primitive
-   * specifier where it is a keyword (`PRIMITIVES`), a named type's otherwise. */
-  cast = (type: string, operand: unknown): W => {
+  /** `(type) operand`, `type` a spec of the dialect's `Type`, written through the builders (`(t) => t.typeid(
+   * (i) => i.specifiers([(s) => s.primitivetypespecifier((p) => p.keyword("int"))]))`). */
+  cast = (type: (t: any) => any, operand: unknown): W => {
     const operandSpec = this.dialect.spec(operand);
-    const specifier = (word: string) => (PRIMITIVES.has(word)
-      ? (s: any) => s.primitivetypespecifier((p: any) => p.keyword(word))
-      : (s: any) => s.namedtypespecifier((n: any) => n.name(this.name(word))));
-    const specifiers = type.split(" ").filter((word) => word !== "").map(specifier);
-    return new this.writer((u: any) => u.castexpression((r: any) => r.type(
-      (t: any) => t.typeid((i: any) => i.specifiers(specifiers))).operand(operandSpec)));
+    return new this.writer((u: any) => u.castexpression((r: any) => r.type(type).operand(operandSpec)));
   };
 
   /** `object.name`, or `object->name` with the operator '->'. */
   member = (object: unknown, name: string, operator = "."): W => {
     const objectSpec = this.dialect.spec(object);
     return new this.writer((u: any) => u.memberexpression(
-      (r: any) => r.object(objectSpec).operator(operator).member(this.name(name))));
+      (r: any) => r.object(objectSpec).operator(operator).member(identifierName(name))));
   };
 
   /** `object[index]` (C++23's `object[i, j]` with several). */

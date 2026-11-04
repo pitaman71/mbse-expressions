@@ -1,4 +1,4 @@
-"""Patterns <-> C, and the rules Patterns <-> Cpp shares (`rules(member)`, over the kinds of the C family). Patterns
+"""Patterns <-> C, and the rules Patterns <-> Cpp shares (`RULES`, over the kinds of the C family). Patterns
 operations are C's operators (`binaryexpression`, `unaryexpression`), `get` a member (`x.name`), and `implies(a, b)` is
 written `!a || b`, which translates back as `or(not(a), b)`. C has no let expression, so lets are inlined: a let's
 translated value is shared by every use of its name. C has no `has`, and no container constructor.
@@ -11,34 +11,25 @@ of the same value; C23's `bool` is Patterns'. Every other kind of C's has no cou
 
 from __future__ import annotations
 
-from typing import Any
-
 from mbse.Expressions.Dialects.C.Expressions import DIALECT as C_DIALECT
 from mbse.Expressions.Dialects.Patterns.Expressions import DIALECT as PATTERNS
 from mbse.Expressions.Framework.Translators import Inline, Pairwise, Rule, renames
 
-from ._Patterns import CFamily, K, Patterns, value
+from ._Patterns import CFamily, Patterns, value
 
 V = value(int, float, str, bool)
 
-
-def rules(member: Any) -> list[Any]:
-    """The rules between Patterns and a dialect of the C family, whose member's name is written `member` (a hole, or a
-    `Terms.Part` of one): one set for C and for C++ (the proposal's question 9)."""
-    return [
-        Rule(Patterns.literal(V), CFamily.literal(V)),
-        Rule(Patterns.variable, CFamily.identifier),
-        Inline("let", "left"),
-        Rule(Patterns.get, CFamily.member(member)),
-        Rule(Patterns.implies, CFamily.implies, "forward"),
-        *renames("call", "callable", "binaryexpression", "operator", {
-            "eq": "==", "ne": "!=", "lt": "<", "le": "<=", "gt": ">", "ge": ">=", "and": "&&", "or": "||", "add": "+",
-            "sub": "-", "mul": "*", "bitand": "&", "bitor": "|", "bitxor": "^", "shl": "<<", "shr": ">>"}, 2),
-        *renames("call", "callable", "unaryexpression", "operator", {"not": "!", "neg": "-", "bitnot": "~"}, 1),
-    ]
-
-
-RULES = rules(K)
-"""The rules between Patterns and C, whose member's name is a `str`."""
+RULES = [
+    Rule(Patterns.literal(V), CFamily.literal(V)),
+    Rule(Patterns.variable, CFamily.identifier),
+    Inline("let", "left"),
+    Rule(Patterns.get, CFamily.member),
+    Rule(Patterns.implies, CFamily.implies, "forward"),
+    *renames("call", "callable", "binaryexpression", "operator", {
+        "eq": "==", "ne": "!=", "lt": "<", "le": "<=", "gt": ">", "ge": ">=", "and": "&&", "or": "||", "add": "+",
+        "sub": "-", "mul": "*", "bitand": "&", "bitor": "|", "bitxor": "^", "shl": "<<", "shr": ">>"}, 2),
+    *renames("call", "callable", "unaryexpression", "operator", {"not": "!", "neg": "-", "bitnot": "~"}, 1),
+]
+"""The rules between Patterns and the C family, C's and C++'s alike (the proposal's question 9)."""
 
 TRANSLATOR = Pairwise(PATTERNS, C_DIALECT, RULES)

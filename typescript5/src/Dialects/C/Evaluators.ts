@@ -33,7 +33,8 @@
  * its former shape: an operator its vocabulary has but no rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not
  * evaluated"), a literal of a type no evaluator has values of ("C literal of wchar_t is not evaluated"), a cast to a type
  * that is not arithmetic, a subscript of several indices, a call of a callee that is not a function's name, a member that
- * is not an identifier, and GNU's conditional without a consequence.
+ * is not an identifier, and GNU's conditional without a consequence. Invalid syntax throws `ValueError` by name, as every
+ * dialect's does ("C error is not evaluated"), where a cast's type stands too.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -255,7 +256,11 @@ function attributes(node: any): Map<string, any> {
 
 function cast(dialect: Terms.Dialect): F.Implementation {
   return (args, node) => {
-    const name = Expressions.typeName(attributes(node).get("type"));
+    const type_ = attributes(node).get("type") as Terms.Part;
+    if (Terms.INVALID_KINDS.has(type_.kind)) { // invalid syntax where the type stands, refused as every dialect refuses it
+      throw new ValueError(`${dialect.name()} ${type_.kind} is not evaluated`);
+    }
+    const name = Expressions.typeName(type_);
     if (name === null) throw refuse(dialect, "castexpression to a type that is not arithmetic");
     return convert((args[0] as F.Thunk)(), type(name));
   };

@@ -13,9 +13,9 @@ share (`Expressions.Cpp.BinaryExpression`), holding C++'s terms, without what on
 `static`, C's index designators, `_Generic`, compound literals, `typeof`, `_Atomic(type)`, `_BitInt`). Where
 mbse-programs holds a `Name`, Cpp holds its `Name` union (`identifier`, `qualifiedname`, `templateid`,
 `operatorname`, `conversionname`, `literaloperatorname`, `destructorname`, and, where a name's place holds it, a
-`decltypespecifier`); where it holds an `Identifier` alone, its spelling, a `str`. A term carries no domain. Beyond C's
-kinds (see `C.Expressions`), with C++'s own literal (`Expressions.Cpp.Literal`, also a raw string's `raw` and
-`delimiter`) and `constant` (`nullptr`):
+`decltypespecifier`); where it holds an `Identifier` alone, an `Identifier`; where it holds a `str`, a `str`. A term
+carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own literal (`Expressions.Cpp.Literal`, also a
+raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
 
 - `userdefinedliteral` (`literal`, a `literal`'s value object, and its `suffix`, `10_km`);
 - names: `idexpression`, a name that is not an identifier used as an expression (`std::cout`, `f<int>`,
@@ -304,10 +304,10 @@ def install(txn: Any) -> Any:
                 "trailing_return": _.Type, "requires": _.Term}),
             lambda _: _.DefaultCapture.name("Expressions.Cpp.DefaultCapture").properties({"mode": S.OfStr}),
             lambda _: _.SimpleCapture.name("Expressions.Cpp.SimpleCapture").properties({
-                "by_reference": S.OfBool, "name": S.OfStr, "pack": S.OfBool}),
+                "by_reference": S.OfBool, "name": _.Identifier, "pack": S.OfBool}),
             lambda _: _.ThisCapture.name("Expressions.Cpp.ThisCapture").properties({"copy": S.OfBool}),
             lambda _: _.InitCapture.name("Expressions.Cpp.InitCapture").properties({
-                "by_reference": S.OfBool, "pack": S.OfBool, "name": S.OfStr, "initializer": _.Initializer}),
+                "by_reference": S.OfBool, "pack": S.OfBool, "name": _.Identifier, "initializer": _.Initializer}),
             lambda _: _.FoldExpression.name("Expressions.Cpp.FoldExpression").properties({
                 "left": _.Term, "operator": S.OfStr, "right": _.Term}),
             lambda _: _.RequiresExpression.name("Expressions.Cpp.RequiresExpression").properties({
@@ -338,7 +338,7 @@ def install(txn: Any) -> Any:
             lambda _: _.AwaitExpression.name("Expressions.Cpp.AwaitExpression").properties({"operand": _.Term}),
             lambda _: _.SizeofExpression.name("Expressions.Cpp.SizeofExpression").properties({"operand": _.Term}),
             lambda _: _.SizeofPackExpression.name("Expressions.Cpp.SizeofPackExpression").properties({
-                "pack": S.OfStr}),
+                "pack": _.Identifier}),
             lambda _: _.AlignofExpression.name("Expressions.Cpp.AlignofExpression").properties({
                 "keyword": S.OfStr, "operand": _.Term}),
             lambda _: _.NoexceptExpression.name("Expressions.Cpp.NoexceptExpression").properties({"operand": _.Term}),
@@ -364,7 +364,7 @@ def install(txn: Any) -> Any:
                 "items": many(_.Term), "trailing_comma": S.OfBool}),
             lambda _: _.DesignatedInitializer.name("Expressions.Cpp.DesignatedInitializer").properties({
                 "designators": many(_.Designator), "initializer": _.Initializer}),
-            lambda _: _.FieldDesignator.name("Expressions.Cpp.FieldDesignator").properties({"name": S.OfStr}),
+            lambda _: _.FieldDesignator.name("Expressions.Cpp.FieldDesignator").properties({"name": _.Identifier}),
             lambda _: _.EqualInitializer.name("Expressions.Cpp.EqualInitializer").properties({"value": _.Term}),
             lambda _: _.ParenthesizedInitializer.name("Expressions.Cpp.ParenthesizedInitializer").properties({
                 "arguments": many(_.Term)}),
@@ -427,10 +427,10 @@ def install(txn: Any) -> Any:
                 "declarator": _.Declarator, "default": _.Term}),
             lambda _: _.EllipsisParameter.name("Expressions.Cpp.EllipsisParameter"),
             lambda _: _.TypeParameter.name("Expressions.Cpp.TypeParameter").properties({
-                "key": S.OfStr, "constraint": _.Name, "pack": S.OfBool, "name": S.OfStr, "default": _.Type}),
+                "key": S.OfStr, "constraint": _.Name, "pack": S.OfBool, "name": _.Identifier, "default": _.Type}),
             lambda _: _.TemplateTemplateParameter.name("Expressions.Cpp.TemplateTemplateParameter").properties({
                 "parameters": many(_.TemplateParameter), "requires": _.Term, "key": S.OfStr, "pack": S.OfBool,
-                "name": S.OfStr, "default": _.Name}),
+                "name": _.Identifier, "default": _.Name}),
             lambda _: _.NoexceptSpecifier.name("Expressions.Cpp.NoexceptSpecifier").properties({
                 "condition": _.Term}),
             lambda _: _.ThrowSpecifier.name("Expressions.Cpp.ThrowSpecifier").properties({"types": many(_.Term)}),
@@ -478,7 +478,7 @@ def _application(tag: str, signature: FD.Signature = FD.Opaque(), optional: tupl
 
 
 def _check(tag: str) -> Any:
-    return lambda record: C.problems(F.node(tag, record), SUFFIXES, PREFIXES)
+    return lambda record: C.problems(F.node(tag, record), SUFFIXES, PREFIXES, "C++")
 
 
 _OWN = {
@@ -527,12 +527,7 @@ class Writer(F.Writer):
         super().__init__(write, DIALECT.tag)
 
 
-def _identifier(spelling: str) -> Any:
-    """A name that is an identifier: its spelling, written in a `Name`."""
-    return lambda n: n.identifier(lambda i: i.spelling(spelling))
-
-
-_WRITERS = C.Writers(DIALECT, Writer, _identifier)
+_WRITERS = C.Writers(DIALECT, Writer)
 literal, identifier, unary, binary = _WRITERS.literal, _WRITERS.identifier, _WRITERS.unary, _WRITERS.binary
 conditional, cast, member, subscript, call = (
     _WRITERS.conditional, _WRITERS.cast, _WRITERS.member, _WRITERS.subscript, _WRITERS.call)

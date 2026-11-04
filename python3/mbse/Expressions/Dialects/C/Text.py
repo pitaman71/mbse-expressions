@@ -143,9 +143,8 @@ class _Printer:
         return self.TEXTS[node.kind](self, node)
 
     def name(self, node: F.Node, property: str) -> str:
-        """A node's name, by its property: C's spelling, an attribute; C++'s `Name`, a helper."""
-        value = node.attributes.get(property)
-        return value if value is not None else self.text(node.helpers[property])
+        """A node's name, by its property: a `Name`, or an identifier, a helper."""
+        return self.text(node.helpers[property])
 
     def list(self, values: Any) -> str:
         """Arguments: expressions or type names, separated by commas."""
@@ -259,7 +258,7 @@ class _Printer:
 
     def designator(self, node: F.Node) -> str:
         if node.kind == "fielddesignator":
-            return "." + node.attributes["name"]
+            return "." + self.name(node, "name")
         last = node.slots["last"]
         range_ = f" ... {self.expression(last, CONDITIONAL)}" if last is not None else ""
         return f"[{self.expression(node.slots['index'], CONDITIONAL)}{range_}]"
@@ -320,8 +319,8 @@ class _Printer:
             return "*this" if attributes.get("copy") else "this"
         reference = "&" if attributes.get("by_reference") else ""
         if node.kind == "simplecapture":
-            return reference + attributes["name"] + ("..." if attributes.get("pack") else "")
-        return (reference + ("..." if attributes.get("pack") else "") + attributes["name"]
+            return reference + self.name(node, "name") + ("..." if attributes.get("pack") else "")
+        return (reference + ("..." if attributes.get("pack") else "") + self.name(node, "name")
                 + self.initializer(node.helpers["initializer"]))
 
     def requires(self, node: F.Node) -> str:
@@ -396,7 +395,7 @@ class _Printer:
     def class_(self, node: F.Node) -> str:
         attributes = node.attributes
         written = attributes["key"] + self.attributes_after(node)
-        if "name" in attributes or "name" in node.helpers:
+        if "name" in node.helpers:
             written += " " + self.name(node, "name")
         if attributes.get("final"):
             written += " final"
@@ -414,7 +413,7 @@ class _Printer:
 
     def enum(self, node: F.Node) -> str:
         written = node.attributes["key"] + self.attributes_after(node)
-        if "name" in node.attributes or "name" in node.helpers:
+        if "name" in node.helpers:
             written += " " + self.name(node, "name")
         if "base" in node.helpers:
             written += " : " + self.text(node.helpers["base"])
@@ -490,8 +489,8 @@ class _Printer:
                 written += " requires " + self.constraint(node.slots["requires"])
             written += " " + attributes["key"]
         written += "..." if attributes.get("pack") else ""
-        if "name" in attributes:
-            written += " " + attributes["name"]
+        if "name" in node.helpers:
+            written += " " + self.name(node, "name")
         return written + (" = " + self.text(node.helpers["default"]) if "default" in node.helpers else "")
 
     def exception(self, node: F.Node) -> str:
@@ -546,7 +545,7 @@ class _Printer:
         "unaryexpression": unary,
         "awaitexpression": lambda self, node: "co_await " + self.expression(node.slots["operand"], UNARY),
         "sizeofexpression": sizeof,
-        "sizeofpackexpression": lambda self, node: f"sizeof...({node.attributes['pack']})",
+        "sizeofpackexpression": lambda self, node: f"sizeof...({self.name(node, 'pack')})",
         "alignofexpression": lambda self, node: self.keyword_call(node.attributes["keyword"], node.slots["operand"]),
         "noexceptexpression": lambda self, node: self.keyword_call("noexcept", node.slots["operand"]),
         "newexpression": new, "deleteexpression": delete, "castexpression": cast, "binaryexpression": binary,

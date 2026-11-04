@@ -114,12 +114,12 @@ class Matlab:
 
 
 class CFamily:
-    """The kinds of the C family, which C and C++ share; a member's name is C's `str`, and C++'s `Name`, an
-    identifier (`CFamily.member(name)`)."""
+    """The kinds of the C family, which C and C++ share; a member's name is an identifier, a `Name`."""
 
     literal = staticmethod(lambda V: P("literal", value=V))  # its suffix and prefix, its type, are not spelling
+    string = P("literal", value=value(str), quote='"')  # C++'s string, whose quote is not its spelling
     identifier = P("variable", name=N)
-    member = staticmethod(lambda name: P("memberexpression", X, operator=".", member=name))
+    member = P("memberexpression", X, operator=".", member=Part("identifier", {"spelling": K}, 0))
     implies = P("binaryexpression", P("unaryexpression", A, operator="!"), B, operator="||")
 
 

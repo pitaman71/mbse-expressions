@@ -30,7 +30,8 @@ evaluated"), and so does what an evaluated kind holds beyond its former shape: a
 rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not evaluated"), a literal of a type no evaluator has values
 of ("C literal of wchar_t is not evaluated"), a cast to a type that is not arithmetic, a subscript of several indices,
 a call of a callee that is not a function's name, a member that is not an identifier, and GNU's conditional without a
-consequence.
+consequence. Invalid syntax raises `ValueError` by name, as every dialect's does ("C error is not evaluated"), where a
+cast's type stands too.
 """
 
 from __future__ import annotations
@@ -263,7 +264,10 @@ def _attributes(node: Any) -> dict[str, Any]:
 
 def _cast(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
-        name = Expressions.type_name(_attributes(node)["type"])
+        type_ = _attributes(node)["type"]
+        if type_.kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, refused as every dialect refuses it
+            raise ValueError(f"{dialect.name()} {type_.kind} is not evaluated")
+        name = Expressions.type_name(type_)
         if name is None:
             raise _refuse(dialect, "castexpression to a type that is not arithmetic")
         return _convert(arguments[0](), Domains.TYPES[name])

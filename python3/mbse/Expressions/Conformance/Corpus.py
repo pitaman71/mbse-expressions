@@ -118,10 +118,12 @@ def build():
     # "a" "b", (record), _Generic(record, int: 1, default: 0x0), record++, sizeof(int), _Alignof(record), record += 1,
     # .x[0] = record, (int[]){1}, ({}), __extension__ record}
     me = CE.identifier("record")
+    name = lambda spelling: lambda n: n.identifier(lambda i: i.spelling(spelling))  # noqa: E731
+    uint8 = lambda t: t.typeid(lambda i: i.specifiers([lambda s: s.namedtypespecifier(lambda n: n.name(name("uint8_t")))]))  # noqa: E731
     c_int = lambda t: t.typeid(lambda i: i.specifiers([lambda s: s.primitivetypespecifier(lambda k: k.keyword("int"))]))  # noqa: E731
     c = CE.DIALECT.spec(lambda u: u.initializerlist(lambda r: r.items([
         CE.conditional(CE.binary("&&", CE.unary("!", CE.member(me, "a")), CE.binary(">", CE.subscript(CE.member(me, "b", "->"), 0),
-                                                                                   CE.literal(1.5, "f"))), CE.cast("uint8_t", CE.call("record", 1)), CE.literal(5, "u")),
+                                                                                   CE.literal(1.5, "f"))), CE.cast(uint8, CE.call("record", 1)), CE.literal(5, "u")),
         lambda i: i.constant(lambda k: k.singleton("nullptr")),
         lambda i: i.concatenatedstring(lambda k: k.parts([CE.literal("a"), CE.literal("b")])),
         lambda i: i.parenthesizedexpression(lambda k: k.expression(me)),
@@ -132,7 +134,7 @@ def build():
         lambda i: i.sizeofexpression(lambda k: k.operand(c_int)),
         lambda i: i.alignofexpression(lambda k: k.keyword("_Alignof").operand(me)),
         lambda i: i.assignmentexpression(lambda a: a.left(me).operator("+=").right(CE.literal(1))),
-        lambda i: i.designatedinitializer(lambda d: d.designators([lambda g: g.fielddesignator(lambda f: f.name("x")),
+        lambda i: i.designatedinitializer(lambda d: d.designators([lambda g: g.fielddesignator(lambda f: f.name(lambda i: i.spelling("x"))),
                                                                     lambda g: g.indexdesignator(lambda f: f.index(CE.literal(0)))]).initializer(
             lambda g: g.equalinitializer(lambda e: e.value(me)))),
         lambda i: i.compoundliteralexpression(lambda k: k.type(lambda t: t.typeid(lambda y: y.specifiers([
@@ -149,10 +151,9 @@ def build():
     # alignof(int), noexcept(record), new int{1}, delete[] record, record = 0, throw, co_yield record, record..., .x =
     # record, ({}), __extension__ record}
     me = CPP.identifier("record")
-    name = lambda spelling: lambda n: n.identifier(lambda i: i.spelling(spelling))  # noqa: E731
     cpp = CPP.DIALECT.spec(lambda u: u.initializerlist(lambda r: r.items([
         CPP.conditional(CPP.binary("&&", CPP.unary("!", CPP.member(me, "a")), CPP.binary(">", CPP.subscript(CPP.member(me, "b", "->"), 0),
-                                                                                     CPP.literal(1.5, "f"))), CPP.cast("uint8_t", CPP.call("record", 1)), CPP.literal(5, "u")),
+                                                                                     CPP.literal(1.5, "f"))), CPP.cast(uint8, CPP.call("record", 1)), CPP.literal(5, "u")),
         lambda i: i.constant(lambda k: k.singleton("nullptr")),
         lambda i: i.userdefinedliteral(lambda d: d.literal(lambda li: li.value(lambda v: v.as_scalar(10))).suffix("_km")),
         lambda i: i.concatenatedstring(lambda k: k.parts([CPP.literal("a"), lambda x: x.literal(lambda li: li.value(lambda v: v.as_scalar("b")).raw(True))])),
@@ -160,7 +161,7 @@ def build():
         lambda i: i.thisexpression(lambda k: k),
         lambda i: i.parenthesizedexpression(lambda k: k.expression(me)),
         lambda i: i.lambdaexpression(lambda la: la.captures([lambda k: k.defaultcapture(lambda d: d.mode("=")),
-                                                             lambda k: k.simplecapture(lambda s: s.by_reference(True).name("record"))]).declarator(
+                                                             lambda k: k.simplecapture(lambda s: s.by_reference(True).name(lambda i: i.spelling("record")))]).declarator(
             lambda d: d.parameters([lambda q: q.parameterdeclaration(lambda pd: pd.specifiers([lambda s: s.placeholdertypespecifier(lambda h: h)]).declarator(
                 lambda dd: dd.iddeclarator(lambda i2: i2.name(name("y")))))]))),
         lambda i: i.foldexpression(lambda f: f.left(me).operator("+")),
@@ -174,7 +175,7 @@ def build():
         lambda i: i.typeidexpression(lambda t: t.operand(me)),
         lambda i: i.awaitexpression(lambda a: a.operand(me)),
         lambda i: i.sizeofexpression(lambda s: s.operand(c_int)),
-        lambda i: i.sizeofpackexpression(lambda s: s.pack("Ts")),
+        lambda i: i.sizeofpackexpression(lambda s: s.pack(lambda i: i.spelling("Ts"))),
         lambda i: i.alignofexpression(lambda s: s.keyword("alignof").operand(c_int)),
         lambda i: i.noexceptexpression(lambda s: s.operand(me)),
         lambda i: i.newexpression(lambda n: n.type(c_int).initializer(lambda x: x.initializerlist(lambda il: il.items([CPP.literal(1)])))),
@@ -183,7 +184,7 @@ def build():
         lambda i: i.throwexpression(lambda t: t),
         lambda i: i.yieldexpression(lambda y: y.operand(me)),
         lambda i: i.packexpansion(lambda x: x.pattern(me)),
-        lambda i: i.designatedinitializer(lambda d: d.designators([lambda x: x.fielddesignator(lambda f: f.name("x"))]).initializer(
+        lambda i: i.designatedinitializer(lambda d: d.designators([lambda x: x.fielddesignator(lambda f: f.name(lambda i: i.spelling("x")))]).initializer(
             lambda x: x.equalinitializer(lambda e: e.value(me)))),
         lambda i: i.statementexpression(lambda s: s),
         lambda i: i.extensionexpression(lambda e: e.operand(me)),

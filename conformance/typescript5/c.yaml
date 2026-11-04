@@ -13,7 +13,9 @@ c:
                       variable:
                         name: record
                     operator: '.'
-                    member: a
+                    member:
+                      identifier:
+                        spelling: a
             operator: '&&'
             right:
               binaryexpression:
@@ -25,7 +27,9 @@ c:
                           variable:
                             name: record
                         operator: '->'
-                        member: b
+                        member:
+                          identifier:
+                            spelling: b
                     indices:
                     - literal:
                         value:
@@ -42,7 +46,9 @@ c:
               typeid:
                 specifiers:
                 - namedtypespecifier:
-                    name: uint8_t
+                    name:
+                      identifier:
+                        spelling: uint8_t
             operand:
               callexpression:
                 function:
@@ -119,7 +125,8 @@ c:
     - designatedinitializer:
         designators:
         - fielddesignator:
-            name: x
+            name:
+              spelling: x
         - indexdesignator:
             index:
               literal:

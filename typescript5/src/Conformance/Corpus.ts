@@ -133,10 +133,12 @@ export function build(): Map<string, Case> {
   // "a" "b", (record), _Generic(record, int: 1, default: 0x0), record++, sizeof(int), _Alignof(record), record += 1,
   // .x[0] = record, (int[]){1}, ({}), __extension__ record}
   const me = CE.identifier("record");
+  const name = (spelling: string) => (n: any) => n.identifier((i: any) => i.spelling(spelling));
+  const uint8 = (t: any) => t.typeid((i: any) => i.specifiers([(s: any) => s.namedtypespecifier((n: any) => n.name(name("uint8_t")))]));
   const cInt = (t: any) => t.typeid((i: any) => i.specifiers([(s: any) => s.primitivetypespecifier((k: any) => k.keyword("int"))]));
   const c = CE.DIALECT.spec((u: any) => u.initializerlist((r: any) => r.items([
     CE.conditional(CE.binary("&&", CE.unary("!", CE.member(me, "a")), CE.binary(">", CE.subscript(CE.member(me, "b", "->"), 0n),
-                                         CE.literal(1.5, "f"))), CE.cast("uint8_t", CE.call("record", 1n)), CE.literal(5n, "u")),
+                                         CE.literal(1.5, "f"))), CE.cast(uint8, CE.call("record", 1n)), CE.literal(5n, "u")),
     (i: any) => i.constant((k: any) => k.singleton("nullptr")),
     (i: any) => i.concatenatedstring((k: any) => k.parts([CE.literal("a"), CE.literal("b")])),
     (i: any) => i.parenthesizedexpression((k: any) => k.expression(me)),
@@ -147,7 +149,7 @@ export function build(): Map<string, Case> {
     (i: any) => i.sizeofexpression((k: any) => k.operand(cInt)),
     (i: any) => i.alignofexpression((k: any) => k.keyword("_Alignof").operand(me)),
     (i: any) => i.assignmentexpression((a: any) => a.left(me).operator("+=").right(CE.literal(1n))),
-    (i: any) => i.designatedinitializer((d: any) => d.designators([(g: any) => g.fielddesignator((f: any) => f.name("x")),
+    (i: any) => i.designatedinitializer((d: any) => d.designators([(g: any) => g.fielddesignator((f: any) => f.name((i: any) => i.spelling("x"))),
                                   (g: any) => g.indexdesignator((f: any) => f.index(CE.literal(0n)))]).initializer(
       (g: any) => g.equalinitializer((e: any) => e.value(me)))),
     (i: any) => i.compoundliteralexpression((k: any) => k.type((t: any) => t.typeid((y: any) => y.specifiers([
@@ -164,10 +166,9 @@ export function build(): Map<string, Case> {
   // alignof(int), noexcept(record), new int{1}, delete[] record, record = 0, throw, co_yield record, record..., .x =
   // record, ({}), __extension__ record}
   const meCpp = CPP.identifier("record");
-  const name = (spelling: string) => (n: any) => n.identifier((i: any) => i.spelling(spelling));
   const cpp = CPP.DIALECT.spec((u: any) => u.initializerlist((r: any) => r.items([
     CPP.conditional(CPP.binary("&&", CPP.unary("!", CPP.member(meCpp, "a")), CPP.binary(">", CPP.subscript(CPP.member(meCpp, "b", "->"), 0n),
-                                          CPP.literal(1.5, "f"))), CPP.cast("uint8_t", CPP.call("record", 1n)), CPP.literal(5n, "u")),
+                                          CPP.literal(1.5, "f"))), CPP.cast(uint8, CPP.call("record", 1n)), CPP.literal(5n, "u")),
     (i: any) => i.constant((k: any) => k.singleton("nullptr")),
     (i: any) => i.userdefinedliteral((d: any) => d.literal((li: any) => li.value((v: any) => v.as_scalar(10n))).suffix("_km")),
     (i: any) => i.concatenatedstring((k: any) => k.parts([CPP.literal("a"), (x: any) => x.literal((li: any) => li.value((v: any) => v.as_scalar("b")).raw(true))])),
@@ -175,7 +176,7 @@ export function build(): Map<string, Case> {
     (i: any) => i.thisexpression((k: any) => k),
     (i: any) => i.parenthesizedexpression((k: any) => k.expression(meCpp)),
     (i: any) => i.lambdaexpression((la: any) => la.captures([(k: any) => k.defaultcapture((d: any) => d.mode("=")),
-                              (k: any) => k.simplecapture((s: any) => s.by_reference(true).name("record"))]).declarator(
+                              (k: any) => k.simplecapture((s: any) => s.by_reference(true).name((i: any) => i.spelling("record")))]).declarator(
       (d: any) => d.parameters([(q: any) => q.parameterdeclaration((pd: any) => pd.specifiers([(s: any) => s.placeholdertypespecifier((h: any) => h)]).declarator(
         (dd: any) => dd.iddeclarator((i2: any) => i2.name(name("y")))))]))),
     (i: any) => i.foldexpression((f: any) => f.left(meCpp).operator("+")),
@@ -189,7 +190,7 @@ export function build(): Map<string, Case> {
     (i: any) => i.typeidexpression((t: any) => t.operand(meCpp)),
     (i: any) => i.awaitexpression((a: any) => a.operand(meCpp)),
     (i: any) => i.sizeofexpression((s: any) => s.operand(cInt)),
-    (i: any) => i.sizeofpackexpression((s: any) => s.pack("Ts")),
+    (i: any) => i.sizeofpackexpression((s: any) => s.pack((i: any) => i.spelling("Ts"))),
     (i: any) => i.alignofexpression((s: any) => s.keyword("alignof").operand(cInt)),
     (i: any) => i.noexceptexpression((s: any) => s.operand(meCpp)),
     (i: any) => i.newexpression((n: any) => n.type(cInt).initializer((x: any) => x.initializerlist((il: any) => il.items([CPP.literal(1n)])))),
@@ -198,7 +199,7 @@ export function build(): Map<string, Case> {
     (i: any) => i.throwexpression((t: any) => t),
     (i: any) => i.yieldexpression((y: any) => y.operand(meCpp)),
     (i: any) => i.packexpansion((x: any) => x.pattern(meCpp)),
-    (i: any) => i.designatedinitializer((d: any) => d.designators([(x: any) => x.fielddesignator((f: any) => f.name("x"))]).initializer(
+    (i: any) => i.designatedinitializer((d: any) => d.designators([(x: any) => x.fielddesignator((f: any) => f.name((i: any) => i.spelling("x")))]).initializer(
       (x: any) => x.equalinitializer((e: any) => e.value(meCpp)))),
     (i: any) => i.statementexpression((s: any) => s),
     (i: any) => i.extensionexpression((e: any) => e.operand(meCpp)),

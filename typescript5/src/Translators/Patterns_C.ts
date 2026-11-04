@@ -1,4 +1,4 @@
-/** Patterns <-> C, and the rules Patterns <-> Cpp shares (`rules(member)`, over the kinds of the C family). Patterns
+/** Patterns <-> C, and the rules Patterns <-> Cpp shares (`RULES`, over the kinds of the C family). Patterns
  * operations are C's operators (`binaryexpression`, `unaryexpression`), `get` a member (`x.name`), and `implies(a, b)` is
  * written `!a || b`, which translates back as `or(not(a), b)`. C has no let expression, so lets are inlined: a let's
  * translated value is shared by every use of its name. C has no `has`, and no container constructor.
@@ -12,27 +12,21 @@
 import { DIALECT as C_DIALECT } from "../Dialects/C/Expressions.js";
 import { DIALECT as PATTERNS } from "../Dialects/Patterns/Expressions.js";
 import { Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
-import { CFamily, K, Patterns, value } from "./_Patterns.js";
+import { CFamily, Patterns, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean);
 
-/** The rules between Patterns and a dialect of the C family, whose member's name is written `member` (a hole, or a
- * `Terms.Part` of one): one set for C and for C++ (the proposal's question 9). */
-export function rules(member: unknown): readonly (Rule | Inline)[] {
-  return [
-    new Rule(Patterns.literal(V), CFamily.literal(V)),
-    new Rule(Patterns.variable, CFamily.identifier),
-    new Inline("let", "left"),
-    new Rule(Patterns.get, CFamily.member(member)),
-    new Rule(Patterns.implies, CFamily.implies, "forward"),
-    ...renames("call", "callable", "binaryexpression", "operator", {
-      eq: "==", ne: "!=", lt: "<", le: "<=", gt: ">", ge: ">=", and: "&&", or: "||", add: "+", sub: "-", mul: "*",
-      bitand: "&", bitor: "|", bitxor: "^", shl: "<<", shr: ">>" }, 2),
-    ...renames("call", "callable", "unaryexpression", "operator", { not: "!", neg: "-", bitnot: "~" }, 1),
-  ];
-}
-
-/** The rules between Patterns and C, whose member's name is a `string`. */
-export const RULES = rules(K);
+/** The rules between Patterns and the C family, C's and C++'s alike (the proposal's question 9). */
+export const RULES: readonly (Rule | Inline)[] = [
+  new Rule(Patterns.literal(V), CFamily.literal(V)),
+  new Rule(Patterns.variable, CFamily.identifier),
+  new Inline("let", "left"),
+  new Rule(Patterns.get, CFamily.member),
+  new Rule(Patterns.implies, CFamily.implies, "forward"),
+  ...renames("call", "callable", "binaryexpression", "operator", {
+    eq: "==", ne: "!=", lt: "<", le: "<=", gt: ">", ge: ">=", and: "&&", or: "||", add: "+", sub: "-", mul: "*",
+    bitand: "&", bitor: "|", bitxor: "^", shl: "<<", shr: ">>" }, 2),
+  ...renames("call", "callable", "unaryexpression", "operator", { not: "!", neg: "-", bitnot: "~" }, 1),
+];
 
 export const TRANSLATOR = new Pairwise(PATTERNS, C_DIALECT, RULES);

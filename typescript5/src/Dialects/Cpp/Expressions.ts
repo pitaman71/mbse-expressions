@@ -14,9 +14,9 @@
  * `static`, C's index designators, `_Generic`, compound literals, `typeof`, `_Atomic(type)`, `_BitInt`). Where
  * mbse-programs holds a `Name`, Cpp holds its `Name` union (`identifier`, `qualifiedname`, `templateid`,
  * `operatorname`, `conversionname`, `literaloperatorname`, `destructorname`, and, where a name's place holds it, a
- * `decltypespecifier`); where it holds an `Identifier` alone, its spelling, a `str`. A term carries no domain. Beyond C's
- * kinds (see `C.Expressions`), with C++'s own literal (`Expressions.Cpp.Literal`, also a raw string's `raw` and
- * `delimiter`) and `constant` (`nullptr`):
+ * `decltypespecifier`); where it holds an `Identifier` alone, an `Identifier`; where it holds a `str`, a `str`. A term
+ * carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own literal (`Expressions.Cpp.Literal`, also a
+ * raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
  *
  * - `userdefinedliteral` (`literal`, a `literal`'s value object, and its `suffix`, `10_km`);
  * - names: `idexpression`, a name that is not an identifier used as an expression (`std::cout`, `f<int>`,
@@ -298,10 +298,10 @@ export function install(txn: any): any {
         trailing_return: _.Type, requires: _.Term}),
       (_: any) => _.DefaultCapture.name("Expressions.Cpp.DefaultCapture").properties({mode: S.OfStr}),
       (_: any) => _.SimpleCapture.name("Expressions.Cpp.SimpleCapture").properties({
-        by_reference: S.OfBool, name: S.OfStr, pack: S.OfBool}),
+        by_reference: S.OfBool, name: _.Identifier, pack: S.OfBool}),
       (_: any) => _.ThisCapture.name("Expressions.Cpp.ThisCapture").properties({copy: S.OfBool}),
       (_: any) => _.InitCapture.name("Expressions.Cpp.InitCapture").properties({
-        by_reference: S.OfBool, pack: S.OfBool, name: S.OfStr, initializer: _.Initializer}),
+        by_reference: S.OfBool, pack: S.OfBool, name: _.Identifier, initializer: _.Initializer}),
       (_: any) => _.FoldExpression.name("Expressions.Cpp.FoldExpression").properties({
         left: _.Term, operator: S.OfStr, right: _.Term}),
       (_: any) => _.RequiresExpression.name("Expressions.Cpp.RequiresExpression").properties({
@@ -332,7 +332,7 @@ export function install(txn: any): any {
       (_: any) => _.AwaitExpression.name("Expressions.Cpp.AwaitExpression").properties({operand: _.Term}),
       (_: any) => _.SizeofExpression.name("Expressions.Cpp.SizeofExpression").properties({operand: _.Term}),
       (_: any) => _.SizeofPackExpression.name("Expressions.Cpp.SizeofPackExpression").properties({
-        pack: S.OfStr}),
+        pack: _.Identifier}),
       (_: any) => _.AlignofExpression.name("Expressions.Cpp.AlignofExpression").properties({
         keyword: S.OfStr, operand: _.Term}),
       (_: any) => _.NoexceptExpression.name("Expressions.Cpp.NoexceptExpression").properties({operand: _.Term}),
@@ -358,7 +358,7 @@ export function install(txn: any): any {
         items: many(_.Term), trailing_comma: S.OfBool}),
       (_: any) => _.DesignatedInitializer.name("Expressions.Cpp.DesignatedInitializer").properties({
         designators: many(_.Designator), initializer: _.Initializer}),
-      (_: any) => _.FieldDesignator.name("Expressions.Cpp.FieldDesignator").properties({name: S.OfStr}),
+      (_: any) => _.FieldDesignator.name("Expressions.Cpp.FieldDesignator").properties({name: _.Identifier}),
       (_: any) => _.EqualInitializer.name("Expressions.Cpp.EqualInitializer").properties({value: _.Term}),
       (_: any) => _.ParenthesizedInitializer.name("Expressions.Cpp.ParenthesizedInitializer").properties({
         arguments: many(_.Term)}),
@@ -421,10 +421,10 @@ export function install(txn: any): any {
         declarator: _.Declarator, default: _.Term}),
       (_: any) => _.EllipsisParameter.name("Expressions.Cpp.EllipsisParameter"),
       (_: any) => _.TypeParameter.name("Expressions.Cpp.TypeParameter").properties({
-        key: S.OfStr, constraint: _.Name, pack: S.OfBool, name: S.OfStr, default: _.Type}),
+        key: S.OfStr, constraint: _.Name, pack: S.OfBool, name: _.Identifier, default: _.Type}),
       (_: any) => _.TemplateTemplateParameter.name("Expressions.Cpp.TemplateTemplateParameter").properties({
         parameters: many(_.TemplateParameter), requires: _.Term, key: S.OfStr, pack: S.OfBool,
-        name: S.OfStr, default: _.Name}),
+        name: _.Identifier, default: _.Name}),
       (_: any) => _.NoexceptSpecifier.name("Expressions.Cpp.NoexceptSpecifier").properties({
         condition: _.Term}),
       (_: any) => _.ThrowSpecifier.name("Expressions.Cpp.ThrowSpecifier").properties({types: many(_.Term)}),
@@ -466,7 +466,7 @@ const STANDARDS_OF: ReadonlyMap<string, readonly string[]> = new Map([
 const ANY1 = new FD.Function([FD.Anything], FD.Anything);
 
 function check(tag: string): (record: any) => string[] {
-  return (record: any) => C.problems(F.node(tag, record), SUFFIXES, PREFIXES);
+  return (record: any) => C.problems(F.node(tag, record), SUFFIXES, PREFIXES, "C++");
 }
 
 function application(tag: string, signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}): F.Kind {
@@ -515,10 +515,5 @@ export class Writer extends F.Writer {
   }
 }
 
-/** A name that is an identifier: its spelling, written in a `Name`. */
-function identifierName(spelling: string): any {
-  return (n: any) => n.identifier((i: any) => i.spelling(spelling));
-}
-
-const WRITERS = new C.Writers(DIALECT, Writer, identifierName);
+const WRITERS = new C.Writers(DIALECT, Writer);
 export const { literal, identifier, unary, binary, conditional, cast, member, subscript, call } = WRITERS;

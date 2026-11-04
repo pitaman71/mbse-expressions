@@ -730,7 +730,9 @@
    "supertypes": [
     "_field_declarator"
    ],
-   "not": "a member's or a field's name, which C holds as a `str` (a memberexpression's `member`)"
+   "helpers": [
+    "Identifier"
+   ]
   },
   {
    "node": "identifier",
@@ -742,6 +744,7 @@
     "variable"
    ],
    "helpers": [
+    "Identifier",
     "IdDeclarator"
    ]
   },

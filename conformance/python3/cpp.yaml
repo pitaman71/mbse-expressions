@@ -99,7 +99,8 @@ cpp:
             mode: '='
         - simplecapture:
             by_reference: true
-            name: record
+            name:
+              spelling: record
         declarator:
           parameters:
           - parameterdeclaration:
@@ -177,7 +178,8 @@ cpp:
             - primitivetypespecifier:
                 keyword: int
     - sizeofpackexpression:
-        pack: Ts
+        pack:
+          spelling: Ts
     - alignofexpression:
         keyword: alignof
         operand:
@@ -227,7 +229,8 @@ cpp:
     - designatedinitializer:
         designators:
         - fielddesignator:
-            name: x
+            name:
+              spelling: x
         initializer:
           equalinitializer:
             value:

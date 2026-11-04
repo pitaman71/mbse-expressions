@@ -35,7 +35,8 @@ to analyze it.
    as its language names it: Python3's `compare`, `attribute`, `call`, `subscript`, `boolop`, comprehensions, `lambda_`
    and imports, every node of `ast`; MATLAB's `binary`, `field`, `call` and imports; Excel's `infix`, `function`,
    `field`, `cell` and `let_`; LaTeX's `binary`, `member`, `frac` and `where`; C's and C++'s literals with their suffixes,
-   casts, members, calls and operators, the kinds they evaluate (their other kinds written through the builders); SystemVerilog's sized literals, casts and system functions. Each dialect's `Text.ToText` writes an
+   casts (to a type name written through the builders, a value of the dialect's `Type`), members, calls and operators,
+   the kinds they evaluate (their other kinds written through the builders, a name an `identifier` wherever one is held); SystemVerilog's sized literals, casts and system functions. Each dialect's `Text.ToText` writes an
    expression as its source. TypeScript5 has no writers: write its terms through the builders, a sublanguage's value
    where a type or a pattern goes; its `ToText` writes TypeScript, a body of statements, which is not part of a term,
    as `{}`.

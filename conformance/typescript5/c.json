@@ -17,7 +17,11 @@
                           }
                         },
                         "operator": ".",
-                        "member": "a"
+                        "member": {
+                          "identifier": {
+                            "spelling": "a"
+                          }
+                        }
                       }
                     }
                   }
@@ -35,7 +39,11 @@
                               }
                             },
                             "operator": "->",
-                            "member": "b"
+                            "member": {
+                              "identifier": {
+                                "spelling": "b"
+                              }
+                            }
                           }
                         },
                         "indices": [
@@ -69,7 +77,11 @@
                     "specifiers": [
                       {
                         "namedtypespecifier": {
-                          "name": "uint8_t"
+                          "name": {
+                            "identifier": {
+                              "spelling": "uint8_t"
+                            }
+                          }
                         }
                       }
                     ]
@@ -238,7 +250,9 @@
             "designators": [
               {
                 "fielddesignator": {
-                  "name": "x"
+                  "name": {
+                    "spelling": "x"
+                  }
                 }
               },
               {

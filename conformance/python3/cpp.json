@@ -196,7 +196,9 @@
               {
                 "simplecapture": {
                   "by_reference": true,
-                  "name": "record"
+                  "name": {
+                    "spelling": "record"
+                  }
                 }
               }
             ],
@@ -369,7 +371,9 @@
         },
         {
           "sizeofpackexpression": {
-            "pack": "Ts"
+            "pack": {
+              "spelling": "Ts"
+            }
           }
         },
         {
@@ -478,7 +482,9 @@
             "designators": [
               {
                 "fielddesignator": {
-                  "name": "x"
+                  "name": {
+                    "spelling": "x"
+                  }
                 }
               }
             ],

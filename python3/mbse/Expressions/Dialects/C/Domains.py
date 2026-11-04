@@ -19,7 +19,9 @@ integer's by its suffix and its base, the first of the types they allow that hol
 `5u`; a decimal integer without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`,
 `long double` for `L`); a character literal's (an int, its code) `int` in C and `char` in C++; a string's `String`. What
 an encoding prefix (`L`, `u8`, `u`, `U`) or any other suffix encodes is a domain named by its type (`wchar_t`,
-`_Float16`), which no evaluator has values of. `arithmetic(names)` is the arithmetic type a type name's specifiers
+`_Float16`), which no evaluator has values of; a suffix the language does not write gives `Anything`, its type unknown.
+`out_of_range(attributes, language)` says what is wrong with an integer literal that its type does not hold, one that
+fits none of the types its suffix and base allow (a value out of range, PRI-023). `arithmetic(names)` is the arithmetic type a type name's specifiers
 name (`unsigned int`, `uint8_t`), or None.
 
 The other operators, which no evaluator computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`, `->*`,
@@ -36,7 +38,7 @@ from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 
 __all__ = ["CType", "TYPES", "Bool", "Int", "Double", "String", "Anything", "promoted", "common", "of", "literal",
-           "arithmetic", "NULLPTR", "BINARY", "BINARY_CPP", "UNARY", "POSTFIX", "ASSIGNMENT", "FOLD", "CASTS", "MEMBER",
+           "out_of_range", "arithmetic", "NULLPTR", "BINARY", "BINARY_CPP", "UNARY", "POSTFIX", "ASSIGNMENT", "FOLD", "CASTS", "MEMBER",
            "SUBSCRIPT", "CALL", "CONDITIONAL", "CAST", "SIZE"]
 
 
@@ -167,31 +169,31 @@ def _truth(types: Sequence[CType]) -> CType:
     return Bool
 
 
-BINARY: dict[str, D.Signature] = {
+_ONE = D.Function((Anything,), Anything)
+_TWO = D.Function((Anything, Anything), Anything)
+
+_ARITHMETIC: dict[str, D.Signature] = {
     **{op: _Typed(2, _arithmetic, "(arithmetic, arithmetic) -> their common type") for op in ("+", "-", "*", "/")},
     **{op: _Typed(2, _integral, "(integer, integer) -> their common type") for op in ("%", "&", "^", "|")},
     **{op: _Typed(2, _shift, "(integer, integer) -> the promoted left type") for op in ("<<", ">>")},
     **{op: _Typed(2, _truth, "(arithmetic, arithmetic) -> bool", Bool) for op in ("<", "<=", ">", ">=", "==", "!=")},
     **{op: _Typed(2, _truth, "(scalar, scalar) -> bool", Bool) for op in ("&&", "||")},
 }
-"""The binary operators."""
+
+BINARY: dict[str, D.Signature] = {**_ARITHMETIC, ",": _TWO}
+"""The binary operators: the arithmetic ones, and the comma."""
+
+BINARY_CPP: dict[str, D.Signature] = {**_ARITHMETIC, **{op: _TWO for op in (",", "<=>", ".*", "->*")}}
+"""C++'s binary operators: C's, and the three-way comparison and the pointers to members."""
 
 UNARY: dict[str, D.Signature] = {
     "+": _Typed(1, lambda types: promoted(types[0]), "(arithmetic) -> its promoted type"),
     "-": _Typed(1, lambda types: promoted(types[0]), "(arithmetic) -> its promoted type"),
     "~": _Typed(1, lambda types: promoted(types[0]) if types[0].kind != "floating" else None, "(integer) -> its promoted type"),
     "!": _Typed(1, _truth, "(scalar) -> bool", Bool),
+    **{op: _ONE for op in ("*", "&", "++", "--")},
 }
 """The unary operators."""
-
-_ONE = D.Function((Anything,), Anything)
-_TWO = D.Function((Anything, Anything), Anything)
-
-BINARY_CPP: dict[str, D.Signature] = {**BINARY, **{op: _TWO for op in (",", "<=>", ".*", "->*")}}
-"""C++'s binary operators: C's, and the comma, the three-way comparison and the pointers to members."""
-BINARY.update({",": _TWO})
-
-UNARY.update({op: _ONE for op in ("*", "&", "++", "--")})
 
 POSTFIX: dict[str, D.Signature] = {op: _ONE for op in ("++", "--")}
 """The postfix operators."""
@@ -268,9 +270,23 @@ def literal(attributes: Any, language: str = "C") -> D.Domain | None:
     if not normal and decimal:
         return None
     names = (_DECIMAL if decimal else {**_DECIMAL, **_OTHER}).get(normal)
-    if names is None:
-        return D.OfTypes(f"an integer of suffix {suffix!r}", int)
+    if names is None:  # a suffix the language does not write: its type is unknown
+        return Anything
     return next((TYPES[name] for name in names if TYPES[name].contains(value)), TYPES[names[-1]])
+
+
+def out_of_range(attributes: Any, language: str = "C") -> str | None:
+    """What is wrong with an integer literal's value, if it is not a value of its type (`literal`, else its value's
+    own, `of`): one that fits none of the types its suffix and base allow (`2**70`, `2**70` with `u`, `-5` with `u`);
+    None for any other literal."""
+    value = attributes.get("value")
+    if type(value) is not int:
+        return None
+    domain = literal(attributes, language)
+    domain = of(value) if domain is None else domain
+    if isinstance(domain, CType):
+        return None if domain.contains(value) else f"integer literal {value} does not fit '{domain.name()}'"
+    return f"integer literal {value} does not fit any type" if domain is Anything and "suffix" not in attributes else None
 
 
 _KEYWORDS = frozenset({"signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"})

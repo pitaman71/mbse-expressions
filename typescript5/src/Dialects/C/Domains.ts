@@ -20,7 +20,9 @@
  * `5u`; a decimal integer without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`,
  * `long double` for `L`); a character literal's (an int, its code) `int` in C and `char` in C++; a string's `String`.
  * What an encoding prefix (`L`, `u8`, `u`, `U`) or any other suffix encodes is a domain named by its type (`wchar_t`,
- * `_Float16`), which no evaluator has values of. `arithmetic(names)` is the arithmetic type a type name's specifiers
+ * `_Float16`), which no evaluator has values of; a suffix the language does not write gives `Anything`, its type
+ * unknown. `outOfRange(attributes, language)` says what is wrong with an integer literal that its type does not hold,
+ * one that fits none of the types its suffix and base allow (a value out of range, PRI-023). `arithmetic(names)` is the arithmetic type a type name's specifiers
  * name (`unsigned int`, `uint8_t`), or null.
  *
  * The other operators, which no evaluator computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`,
@@ -254,8 +256,19 @@ export function literal(attributes: ReadonlyMap<string, any>, language = "C"): D
   const decimal = base === undefined || base === 10n;
   if (normal === "" && decimal) return null;
   const names = (decimal ? DECIMAL : new Map([...DECIMAL, ...OTHER])).get(normal);
-  if (names === undefined) return new D.OfTypes(`an integer of suffix '${suffix}'`, BigInt);
+  if (names === undefined) return Anything; // a suffix the language does not write: its type is unknown
   return names.map(type).find((t) => t.contains(value)) ?? type(names[names.length - 1] as string);
+}
+
+/** What is wrong with an integer literal's value, if it is not a value of its type (`literal`, else its value's own,
+ * `of`): one that fits none of the types its suffix and base allow (`2**70`, `2**70` with `u`, `-5` with `u`); null for
+ * any other literal. */
+export function outOfRange(attributes: ReadonlyMap<string, any>, language = "C"): string | null {
+  const value = attributes.get("value");
+  if (typeof value !== "bigint") return null;
+  const domain = literal(attributes, language) ?? of(value);
+  if (domain instanceof CType) return domain.contains(value) ? null : `integer literal ${value} does not fit '${domain.name()}'`;
+  return domain === Anything && !attributes.has("suffix") ? `integer literal ${value} does not fit any type` : null;
 }
 
 const KEYWORDS: ReadonlySet<string> = new Set(["signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"]);

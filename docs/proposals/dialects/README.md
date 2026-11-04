@@ -217,6 +217,16 @@ As the user decided (2026-11-02), on the questions below:
   dialect has a `Pattern` union for binding targets, the user: "(ii)". `Python3` gains `Expressions.Python3.Pattern`,
   listing the term kinds a binding target may be, no new kinds, one schema in several unions as (b) has it; a
   comprehension's and a named expression's `target` hold it; a lambda's parameters, `arg`s, stay as they are.
+- **A name is whatever the language's own grammar makes it** (2026-11-04, reviewing stage 5, where C held a member's,
+  a field's, a type's and a declarator's names as a `str`). Asked "Is there a judgement call we can make that settles
+  this for good?", the user answered "Yes" to the rule: a name is whatever the language's own grammar makes it: a term
+  where the grammar has a node for it, a plain string where the grammar treats it as a bare token. It is Decided, 2's
+  "mbse-programs' kinds, names and shapes", since mbse-programs follows each reference grammar: `Python3` keeps
+  `ast`'s strings (`Attribute.attr`, `keyword.arg`, `arg.arg`); `TypeScript5` keeps its `Identifier` nodes; `C` and
+  `Cpp` hold an `Identifier` (a `Name`, where mbse-programs has one) wherever tree-sitter and mbse-programs have a
+  name node ("Names are syntax nodes (category `Name`) wherever they occur", `mbse-programs/python3/mbse/Programs/
+  Ccpp/Syntax.py`), and a `str` where mbse-programs has a `str` (an attribute's `name` and `namespace`, a
+  `using_namespace`).
 
 ## Questions for the user
 
@@ -373,11 +383,11 @@ change as it lands.
 
    *As built* (branch `stage5-c-cpp`; every choice made where the decisions were silent is in
    [the API, Settled in stage 5 (C and Cpp)](../port/API.md#settled-in-stage-5-c-and-cpp-for-the-users-review), items 87
-   to 103). `Expressions.C.Term` holds every expression of C, C11 to C23, and `Expressions.Cpp.Term` every expression of
+   to 106). `Expressions.C.Term` holds every expression of C, C11 to C23, and `Expressions.Cpp.Term` every expression of
    C++, C++17 to C++23, in mbse-programs' Ccpp names and shapes, tags lowercased (`binaryexpression`,
    `lambdaexpression`); each defines its own copy of the kinds they share, holding its own terms, and each kind records
    the standards that have it (GNU's extensions none). An identifier used as an expression is `variable`, C++'s other
-   names `idexpression`. Each has a `Type` union, a type name (`typeid`, which `Term` lists too), and a `Pattern` union
+   names `idexpression`, and every other name an `Identifier` node wherever mbse-programs has a name node. Each has a `Type` union, a type name (`typeid`, which `Term` lists too), and a `Pattern` union
    of invalid syntax alone, as no C or C++ expression binds a name; a type name's and a lambda's parts are helpers,
    their unions named after mbse-programs' categories. A literal refines the framework's, adding its prefix, quote,
    base, separators and suffix (C++'s raw strings too); `constant` holds `nullptr`. A body of statements or

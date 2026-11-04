@@ -144,10 +144,9 @@ class Printer {
     return (TEXTS[node.kind] as Text)(this, node);
   }
 
-  /** A node's name, by its property: C's spelling, an attribute; C++'s `Name`, a helper. */
+  /** A node's name, by its property: a `Name`, or an identifier, a helper. */
   name(node: F.Node, property: string): string {
-    const value = node.attributes.get(property);
-    return value !== undefined ? value : this.text(one(node.helpers.get(property)) as F.Node);
+    return this.text(one(node.helpers.get(property)) as F.Node);
   }
 
   /** Arguments: expressions or type names, separated by commas. */
@@ -268,7 +267,7 @@ class Printer {
   }
 
   designator(node: F.Node): string {
-    if (node.kind === "fielddesignator") return "." + node.attributes.get("name");
+    if (node.kind === "fielddesignator") return "." + this.name(node, "name");
     const last = node.slots.get("last");
     const range = last !== null ? ` ... ${this.expression(last, CONDITIONAL)}` : "";
     return `[${this.expression(node.slots.get("index"), CONDITIONAL)}${range}]`;
@@ -326,8 +325,8 @@ class Printer {
     if (node.kind === "defaultcapture") return attributes.get("mode");
     if (node.kind === "thiscapture") return attributes.get("copy") ? "*this" : "this";
     const reference = attributes.get("by_reference") ? "&" : "";
-    if (node.kind === "simplecapture") return reference + attributes.get("name") + (attributes.get("pack") ? "..." : "");
-    return reference + (attributes.get("pack") ? "..." : "") + attributes.get("name")
+    if (node.kind === "simplecapture") return reference + this.name(node, "name") + (attributes.get("pack") ? "..." : "");
+    return reference + (attributes.get("pack") ? "..." : "") + this.name(node, "name")
       + this.initializer(one(node.helpers.get("initializer")) as F.Node);
   }
 
@@ -395,7 +394,7 @@ class Printer {
   classText(node: F.Node): string {
     const attributes = node.attributes;
     let written = attributes.get("key") + this.attributesAfter(node);
-    if (attributes.has("name") || node.helpers.has("name")) written += " " + this.name(node, "name");
+    if (node.helpers.has("name")) written += " " + this.name(node, "name");
     if (attributes.get("final")) written += " final";
     const bases = nodes(node.helpers.get("bases"));
     if (bases.length > 0) written += " : " + bases.map((b) => this.text(b)).join(", ");
@@ -412,7 +411,7 @@ class Printer {
 
   enumText(node: F.Node): string {
     let written = node.attributes.get("key") + this.attributesAfter(node);
-    if (node.attributes.has("name") || node.helpers.has("name")) written += " " + this.name(node, "name");
+    if (node.helpers.has("name")) written += " " + this.name(node, "name");
     if (node.helpers.has("base")) written += " : " + this.text(one(node.helpers.get("base")) as F.Node);
     return written + (node.attributes.get("body") ? " {}" : ""); // its enumerators, not part of the term
   }
@@ -486,7 +485,7 @@ class Printer {
       written += " " + attributes.get("key");
     }
     written += attributes.get("pack") ? "..." : "";
-    if (attributes.has("name")) written += " " + attributes.get("name");
+    if (node.helpers.has("name")) written += " " + this.name(node, "name");
     return written + (node.helpers.has("default") ? " = " + this.text(one(node.helpers.get("default")) as F.Node) : "");
   }
 
@@ -548,7 +547,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   unaryexpression: (p, n) => p.unary(n),
   awaitexpression: (p, n) => "co_await " + p.expression(n.slots.get("operand"), UNARY),
   sizeofexpression: (p, n) => p.sizeof(n),
-  sizeofpackexpression: (p, n) => `sizeof...(${n.attributes.get("pack")})`,
+  sizeofpackexpression: (p, n) => `sizeof...(${p.name(n, "pack")})`,
   alignofexpression: (p, n) => p.keywordCall(n.attributes.get("keyword"), n.slots.get("operand")),
   noexceptexpression: (p, n) => p.keywordCall("noexcept", n.slots.get("operand")),
   newexpression: (p, n) => p.newText(n), deleteexpression: (p, n) => p.deleteText(n), castexpression: (p, n) => p.cast(n),
