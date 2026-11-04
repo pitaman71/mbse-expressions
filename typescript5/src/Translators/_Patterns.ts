@@ -118,12 +118,13 @@ export const Matlab = {
     new P("call", { callable: "numel" }, A)),
 };
 
-/** The kinds of the C family, which C and C++ share. */
+/** The kinds of the C family, which C and C++ share; a member's name is an identifier, a `Name`. */
 export const CFamily = {
-  constant: (V: Hole) => new P("constant", { value: V }), // untyped
+  literal: (V: Hole) => new P("literal", { value: V }), // its suffix and prefix, its type, are not spelling
+  string: new P("literal", { value: value(String), quote: '"' }), // C++'s string, whose quote is not its spelling
   identifier: new P("variable", { name: N }),
-  get: new P("member", { name: K }, X), // with '.'
-  implies: new P("binary", { operator: "||" }, new P("unary", { operator: "!" }, A), B),
+  member: new P("memberexpression", { operator: ".", member: new Part("identifier", { spelling: K }, 0) }, X),
+  implies: new P("binaryexpression", { operator: "||" }, new P("unaryexpression", { operator: "!" }, A), B),
 };
 
 const method = (name: string, array: P | Hole) => new P("method", { name }, array);

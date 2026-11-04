@@ -1,47 +1,157 @@
 c:
-  conditional:
-    condition:
-      binary:
-        operator: '&&'
-        left:
-          unary:
-            operator: '!'
-            operand:
-              member:
-                name: a
-                object:
-                  variable:
-                    name: record
-        right:
-          binary:
-            operator: '>'
+  initializerlist:
+    items:
+    - conditionalexpression:
+        condition:
+          binaryexpression:
             left:
-              subscript:
-                array:
-                  member:
-                    name: b
-                    operator: ->
+              unaryexpression:
+                operator: '!'
+                operand:
+                  memberexpression:
                     object:
                       variable:
                         name: record
-                index:
-                  constant:
-                    value: 0
+                    operator: '.'
+                    member:
+                      identifier:
+                        spelling: a
+            operator: '&&'
             right:
-              constant:
-                value: 1.5
-                type: float
-    consequent:
-      cast:
-        type: uint8_t
+              binaryexpression:
+                left:
+                  subscriptexpression:
+                    object:
+                      memberexpression:
+                        object:
+                          variable:
+                            name: record
+                        operator: ->
+                        member:
+                          identifier:
+                            spelling: b
+                    indices:
+                    - literal:
+                        value:
+                          int: 0
+                operator: '>'
+                right:
+                  literal:
+                    value:
+                      float: 1.5
+                    suffix: f
+        consequence:
+          castexpression:
+            type:
+              typeid:
+                specifiers:
+                - namedtypespecifier:
+                    name:
+                      identifier:
+                        spelling: uint8_t
+            operand:
+              callexpression:
+                function:
+                  variable:
+                    name: record
+                arguments:
+                - literal:
+                    value:
+                      int: 1
+        alternative:
+          literal:
+            value:
+              int: 5
+            suffix: u
+    - constant:
+        singleton: nullptr
+    - concatenatedstring:
+        parts:
+        - literal:
+            value:
+              str: a
+        - literal:
+            value:
+              str: b
+    - parenthesizedexpression:
+        expression:
+          variable:
+            name: record
+    - genericselection:
+        controlling:
+          variable:
+            name: record
+        associations:
+        - type:
+            typeid:
+              specifiers:
+              - primitivetypespecifier:
+                  keyword: int
+          value:
+            literal:
+              value:
+                int: 1
+        - value:
+            literal:
+              value:
+                int: 0
+              text: '0x0'
+              base: 16
+    - postfixexpression:
         operand:
-          call:
-            callable: f
-            arguments:
-            - c:
-                constant:
-                  value: 1
-    alternative:
-      constant:
-        value: 5
-        type: unsigned int
+          variable:
+            name: record
+        operator: ++
+    - sizeofexpression:
+        operand:
+          typeid:
+            specifiers:
+            - primitivetypespecifier:
+                keyword: int
+    - alignofexpression:
+        keyword: _Alignof
+        operand:
+          variable:
+            name: record
+    - assignmentexpression:
+        left:
+          variable:
+            name: record
+        operator: +=
+        right:
+          literal:
+            value:
+              int: 1
+    - designatedinitializer:
+        designators:
+        - fielddesignator:
+            name:
+              spelling: x
+        - indexdesignator:
+            index:
+              literal:
+                value:
+                  int: 0
+        initializer:
+          equalinitializer:
+            value:
+              variable:
+                name: record
+    - compoundliteralexpression:
+        type:
+          typeid:
+            specifiers:
+            - primitivetypespecifier:
+                keyword: int
+            declarator:
+              arraydeclarator: {}
+        initializer:
+          items:
+          - literal:
+              value:
+                int: 1
+    - statementexpression: {}
+    - extensionexpression:
+        operand:
+          variable:
+            name: record

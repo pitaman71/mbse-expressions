@@ -45,7 +45,8 @@ As the user decided ("(b) as you recommended"), one schema is a branch of every 
 lists, beside its own kinds, the terms a target may be (`identifier`, `memberexpression`, `parenthesizedexpression`,
 `tsasexpression`, `tssatisfiesexpression`, `tstypeassertion`, `tsnonnullexpression`), and `Type` lists the terms a type
 holds (`identifier` and `thisexpression` for an entity name, `literal`, `unaryexpression` and `templateliteral` for a
-literal type, `objectexpression` for an import type's options). Which terms are allowed where, beyond that, is a
+literal type, `objectexpression` for an import type's options). Each holds invalid syntax too (the framework's `error`
+and `missing`), as every dialect's `Type` and `Pattern` do. Which terms are allowed where, beyond that, is a
 constraint. Names that only declare (a mapped type's `key`, a tuple member's `label`, a type parameter's `name`, a
 qualified name's `right`) are `Identifier`s, as mbse-programs has them ("yes, stay `Identifier` terms"). The framework
 reads a value of a sublanguage, as of any helper, as a `Terms.Part`.
@@ -60,11 +61,9 @@ helpers nested, as its printer and its checks read it.
 from __future__ import annotations
 
 from collections.abc import Mapping
-from dataclasses import dataclass, field
 from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
-from mbse.Schemas.Framework import Schemas
 
 from . import Domains
 
@@ -235,6 +234,8 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("property").schema([_.Property]),
                 lambda t: t.name("elision").schema([_.Elision]),
                 lambda t: t.name("tsparameterproperty").schema([_.TSParameterProperty]),
+                lambda t: t.name("error").schema([Framework.Error]),
+                lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             # its types: TypeScript's type nodes, and the terms a type holds
             lambda _: _.Type.name("Expressions.TypeScript5.Type").branches([
@@ -281,6 +282,8 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("unaryexpression").schema([_.UnaryExpression]),
                 lambda t: t.name("templateliteral").schema([_.TemplateLiteral]),
                 lambda t: t.name("objectexpression").schema([_.ObjectExpression]),
+                lambda t: t.name("error").schema([Framework.Error]),
+                lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             # an object type's members (typescript-estree's `TypeElement`), comments among them as mbse-programs keeps them
             lambda _: _.TypeElement.name("Expressions.TypeScript5.TypeElement").branches([
@@ -551,40 +554,8 @@ def install(txn: Any) -> Any:
 # --- Reading a term with its helpers nested ---
 
 
-@dataclass(frozen=True)
-class Node:
-    """A term or a helper, its helpers nested: its `kind` (its tag, or its helper's), its `attributes` (scalars, and
-    containers of scalars, by name), its `slots` (its terms by property, None where empty), its `many` (its variadic
-    arguments: terms, or a pair's members in turn) and its `helpers` (by property: a `Node`, or a tuple of them)."""
-
-    kind: str
-    attributes: Mapping[str, Any] = field(default_factory=dict)
-    slots: Mapping[str, Any] = field(default_factory=dict)
-    many: tuple[Any, ...] = ()
-    helpers: Mapping[str, Any] = field(default_factory=dict)
-
-
-def _nest(schema: Any, kind: str, attributes: Mapping[str, Any], arguments: tuple[Any, ...]) -> Node:
-    """A record's `Node`, from its schema, its form's attributes and its arguments, as `Terms.form` reads them."""
-    slot_names, _, _ = F._parts(schema)
-    helper_names = F._helpers(schema)
-    held = {name: attributes[name] for name in helper_names if name in attributes}
-    size = sum(part.size for value in held.values() for part in (value if isinstance(value, tuple) else (value,)))
-    i = len(arguments) - size
-    helpers: dict[str, Any] = {}
-    for name, value in held.items():
-        prop = schema.properties[name].schema
-        element = prop.element if isinstance(prop, Schemas.OfContainer.Data) else prop
-        nodes = []
-        for part in (value if isinstance(value, tuple) else (value,)):
-            sub = ({branch.name: branch.schema for branch in element.branches}[part.kind]
-                   if isinstance(element, Schemas.OfUnion.Data) else element)
-            nodes.append(_nest(sub, part.kind, part.attributes, arguments[i:i + part.size]))
-            i += part.size
-        helpers[name] = tuple(nodes) if isinstance(value, tuple) else nodes[0]
-    plain = {name: value for name, value in attributes.items() if name not in held}
-    slots = dict(zip(slot_names, arguments))
-    return Node(kind, plain, slots, tuple(arguments[len(slot_names):len(arguments) - size]), helpers)
+Node = F.Node
+"""A term or a helper, its helpers nested (`Terms.Node`)."""
 
 
 def tree(term: Any) -> Node:
@@ -594,7 +565,7 @@ def tree(term: Any) -> Node:
 
 
 def _record_node(tag: str, record: Any) -> Node:
-    return _nest(record.as_schema(), tag, F.attributes_of(record), F.arguments_of(record))
+    return F.node(tag, record)
 
 
 def _nodes(value: Any) -> tuple[Node, ...]:
@@ -662,6 +633,8 @@ def _needs(node: Node, many: tuple[Any, ...], least: int, what: str) -> list[str
 def _node_problems(node: Node) -> list[str]:
     """A node's own checks, as mbse-programs has them: names, quasis, unions and lists that need members."""
     kind, attributes = node.kind, node.attributes
+    if kind in F.INVALID_KINDS:  # invalid syntax in a type or a pattern
+        return F.invalid_problems(kind, attributes)
     if kind in (IDENTIFIER, PRIVATEIDENTIFIER):
         return _identifier_problems(kind, attributes.get("name"))
     if kind == LITERAL:

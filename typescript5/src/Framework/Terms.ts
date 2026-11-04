@@ -49,7 +49,8 @@
  *
  * - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
  * - `kindOf(term)`: its kind's branch, `(tag, record)`; `dialectOf(term)`: the name of its dialect's `Term`.
- *   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`.
+ *   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers
+ *   nested, as a dialect whose kinds hold sublanguages reads them to print and check them.
  * - `nameOf(term)`, `operatorOf(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
  * - `Dialect`: a dialect's kinds by tag, with `validate`, `infer` and `make(form)`, the `Writer` of a form.
  * - `Writer`: a spec that writes a term of its dialect through the builders; `spec(x)` makes one of a writer, a native
@@ -485,6 +486,47 @@ export function form(term_: any): Form {
   return new Form(tag, attributesOf(record), argumentsOf(record));
 }
 
+/** A term or a helper, its helpers nested: its `kind` (its tag, or its helper's), its `attributes` (scalars, and
+ * containers of scalars, by name), its `slots` (its terms by property, null where empty), its `many` (its variadic
+ * arguments: terms, or a pair's members in turn) and its `helpers` (by property: a `Node`, or an array of them). */
+export class Node {
+  constructor(readonly kind: string, readonly attributes: ReadonlyMap<string, any> = new Map(),
+    readonly slots: ReadonlyMap<string, any> = new Map(), readonly many: readonly any[] = [],
+    readonly helpers: ReadonlyMap<string, Node | readonly Node[]> = new Map()) {}
+}
+
+/** A record's `Node`, from its schema, its form's attributes and its arguments, as `form` reads them. */
+function nest(schema: any, kind: string, attributes: ReadonlyMap<string, any>, args: readonly any[]): Node {
+  const [slotNames] = _parts(schema);
+  const held = new Map<string, any>();
+  for (const name of _helpers(schema)) if (attributes.has(name)) held.set(name, attributes.get(name));
+  let size = 0;
+  for (const value of held.values()) for (const part of (Array.isArray(value) ? value : [value])) size += part.size;
+  let i = args.length - size;
+  const helpers = new Map<string, Node | readonly Node[]>();
+  for (const [name, value] of held) {
+    const prop = schema.properties.get(name).schema;
+    const element = prop instanceof Schemas.OfContainer.Data ? prop.element : prop;
+    const found: Node[] = [];
+    for (const part of (Array.isArray(value) ? value : [value]) as Part[]) {
+      const sub = element instanceof Schemas.OfUnion.Data
+        ? (element.branches as readonly Schemas.OfUnion.Branch[]).find((branch) => branch.name === part.kind)!.schema
+        : element;
+      found.push(nest(sub, part.kind, part.attributes, args.slice(i, i + part.size)));
+      i += part.size;
+    }
+    helpers.set(name, Array.isArray(value) ? found : found[0] as Node);
+  }
+  const plain = new Map([...attributes].filter(([name]) => !held.has(name)));
+  const slots = new Map(slotNames.map((name, j) => [name, args[j]] as [string, any]));
+  return new Node(kind, plain, slots, args.slice(slotNames.length, args.length - size), helpers);
+}
+
+/** A record's `Node`, a term's (its tag and record, as `kindOf` gives them) or a helper's, its helpers nested. */
+export function node(tag: string, record: any): Node {
+  return nest(record.as_schema(), tag, attributesOf(record), argumentsOf(record));
+}
+
 /** The name a reference refers to, or a binding, quantifier or import binds: its `name`; null if it has none. */
 export function nameOf(term_: any): any {
   const [, record] = kindOf(term_);
@@ -758,7 +800,8 @@ export interface KindOptions {
  * domain); and the standards of its dialect's language that have it (`standards`: `C11`, `C++17`), where its dialect
  * covers several, as mbse-programs' standards record when each kind arrived.
  * Where its role says too little: the slots that may be empty (`optional`, by path: a slot's name, a pair's member's, or
- * a helper property's name, a dot, and the path within the helper: `generators.target`); the names each of its
+ * a helper property's name, a dot, and the path within the helper: `generators.target`; or, written `*.size`, a
+ * helper's slot of that name at any depth, as a type name's declarators nest); the names each of its
  * arguments has bound, besides its scope's (`scopes(record)`, one set per argument: a comprehension's targets, a
  * lambda's parameters); the operators it applies, where it applies several (`operators(attributes)`: a comparison
  * chain's), each checked against its vocabulary, and the domain they give (`result(attributes, domains)`); an
@@ -806,13 +849,17 @@ export class Kind {
   }
 }
 
+/** What invalid syntax is, `error` or `missing` by its tag: an error, the source it spans; a missing term, the kind the
+ * parser expected. Where a sublanguage's union holds invalid syntax (a dialect's `Type` or `Pattern`), the dialect's
+ * checks report it so, as validation reads a helper's own problems no further. */
+export function invalidProblems(tag: string, attributes: ReadonlyMap<string, any>): string[] {
+  if (tag === "error") return ["invalid syntax" + (attributes.has("text") ? ` ${repr(attributes.get("text"))}` : "")];
+  return [`missing ${attributes.get("kind") ?? "a term"}`];
+}
+
 /** What invalid syntax is: an error, the source it spans; a missing term, the kind the parser expected. */
 function invalidCheck(record: any): string[] {
-  const attributes = attributesOf(record);
-  if (record.as_schema().name === "Expressions.Framework.Error") {
-    return ["invalid syntax" + (attributes.has("text") ? ` ${repr(attributes.get("text"))}` : "")];
-  }
-  return [`missing ${attributes.get("kind") ?? "a term"}`];
+  return invalidProblems(record.as_schema().name === "Expressions.Framework.Error" ? "error" : "missing", attributesOf(record));
 }
 
 /** How a printer writes invalid syntax: an error as the source it spans, as written, and a missing term as nothing; an
@@ -998,7 +1045,9 @@ export class Dialect {
     }
     labelled.forEach(([label, path, argument], i) => {
       if (argument === null) {
-        if (!kind.optional.includes(path)) problems.push(`${what} needs ${article(label)}`);
+        if (!kind.optional.includes(path) && !kind.optional.some((entry) => entry.startsWith("*.") && path.endsWith(entry.slice(1)))) {
+          problems.push(`${what} needs ${article(label)}`);
+        }
       } else problems.push(...this.problems(argument, scopes[i] as ReadonlySet<string>, core).map((p) => `${label}: ${p}`));
     });
     return problems;

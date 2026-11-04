@@ -113,17 +113,82 @@ def build():
     collections = E.let_("ports", record.entries("ports"), ports.all("p", p.get("pin").in_(pins)).and_(
         sizes.sum().le(E.mapping(("most", ports.count()), ("least", 0)).item("most"))))
 
-    # --- c: every kind, typed constants and a shared identifier --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+    # --- c: every kind, written through the builders and its writers, typed literals, a literal with its spelling and a
+    # shared identifier --- the text ToText writes: {!record.a && record->b[0] > 1.5f ? (uint8_t)record(1) : 5u, nullptr,
+    # "a" "b", (record), _Generic(record, int: 1, default: 0x0), record++, sizeof(int), _Alignof(record), record += 1,
+    # .x[0] = record, (int[]){1}, ({}), __extension__ record}
     me = CE.identifier("record")
-    c = CE.conditional(CE.binary("&&", CE.unary("!", CE.member(me, "a")), CE.binary(
-        ">", CE.subscript(CE.member(me, "b", "->"), 0), CE.constant(1.5, "float"))),
-        CE.cast("uint8_t", CE.call("f", 1)), CE.constant(5, "unsigned int"))
+    name = lambda spelling: lambda n: n.identifier(lambda i: i.spelling(spelling))  # noqa: E731
+    uint8 = lambda t: t.typeid(lambda i: i.specifiers([lambda s: s.namedtypespecifier(lambda n: n.name(name("uint8_t")))]))  # noqa: E731
+    c_int = lambda t: t.typeid(lambda i: i.specifiers([lambda s: s.primitivetypespecifier(lambda k: k.keyword("int"))]))  # noqa: E731
+    c = CE.DIALECT.spec(lambda u: u.initializerlist(lambda r: r.items([
+        CE.conditional(CE.binary("&&", CE.unary("!", CE.member(me, "a")), CE.binary(">", CE.subscript(CE.member(me, "b", "->"), 0),
+                                                                                   CE.literal(1.5, "f"))), CE.cast(uint8, CE.call("record", 1)), CE.literal(5, "u")),
+        lambda i: i.constant(lambda k: k.singleton("nullptr")),
+        lambda i: i.concatenatedstring(lambda k: k.parts([CE.literal("a"), CE.literal("b")])),
+        lambda i: i.parenthesizedexpression(lambda k: k.expression(me)),
+        lambda i: i.genericselection(lambda g: g.controlling(me).associations([
+            lambda a: a.type(c_int).value(CE.literal(1)), lambda a: a.value(lambda v: v.literal(
+                lambda li: li.value(lambda n: n.as_scalar(0)).text("0x0").base(16)))])),
+        lambda i: i.postfixexpression(lambda k: k.operand(me).operator("++")),
+        lambda i: i.sizeofexpression(lambda k: k.operand(c_int)),
+        lambda i: i.alignofexpression(lambda k: k.keyword("_Alignof").operand(me)),
+        lambda i: i.assignmentexpression(lambda a: a.left(me).operator("+=").right(CE.literal(1))),
+        lambda i: i.designatedinitializer(lambda d: d.designators([lambda g: g.fielddesignator(lambda f: f.name(lambda i: i.spelling("x"))),
+                                                                    lambda g: g.indexdesignator(lambda f: f.index(CE.literal(0)))]).initializer(
+            lambda g: g.equalinitializer(lambda e: e.value(me)))),
+        lambda i: i.compoundliteralexpression(lambda k: k.type(lambda t: t.typeid(lambda y: y.specifiers([
+            lambda s: s.primitivetypespecifier(lambda p: p.keyword("int"))]).declarator(lambda d: d.arraydeclarator(lambda a: a)))).initializer(
+            lambda li: li.items([CE.literal(1)]))),
+        lambda i: i.statementexpression(lambda k: k),
+        lambda i: i.extensionexpression(lambda k: k.operand(me)),
+    ])))
 
-    # --- cpp: C's kinds, as C++'s terms --- !record.a && record->b[0] > 1.5f ? (uint8_t)f(1) : 5u
+    # --- cpp: every kind, written through the builders and its writers, a C++ name, a lambda, a requires expression and a
+    # shared identifier --- the text ToText writes: {!record.a && record->b[0] > 1.5f ? (uint8_t)record(1) : 5u, nullptr,
+    # 10_km, "a" R"(b)", std::cout, this, (record), [=, &record](auto y) {}, (record + ...), requires (int z) { z + 1; },
+    # int(record), record--, static_cast<int>(record), typeid(record), co_await record, sizeof(int), sizeof...(Ts),
+    # alignof(int), noexcept(record), new int{1}, delete[] record, record = 0, throw, co_yield record, record..., .x =
+    # record, ({}), __extension__ record}
     me = CPP.identifier("record")
-    cpp = CPP.conditional(CPP.binary("&&", CPP.unary("!", CPP.member(me, "a")), CPP.binary(
-        ">", CPP.subscript(CPP.member(me, "b", "->"), 0), CPP.constant(1.5, "float"))),
-        CPP.cast("uint8_t", CPP.call("f", 1)), CPP.constant(5, "unsigned int"))
+    cpp = CPP.DIALECT.spec(lambda u: u.initializerlist(lambda r: r.items([
+        CPP.conditional(CPP.binary("&&", CPP.unary("!", CPP.member(me, "a")), CPP.binary(">", CPP.subscript(CPP.member(me, "b", "->"), 0),
+                                                                                     CPP.literal(1.5, "f"))), CPP.cast(uint8, CPP.call("record", 1)), CPP.literal(5, "u")),
+        lambda i: i.constant(lambda k: k.singleton("nullptr")),
+        lambda i: i.userdefinedliteral(lambda d: d.literal(lambda li: li.value(lambda v: v.as_scalar(10))).suffix("_km")),
+        lambda i: i.concatenatedstring(lambda k: k.parts([CPP.literal("a"), lambda x: x.literal(lambda li: li.value(lambda v: v.as_scalar("b")).raw(True))])),
+        lambda i: i.idexpression(lambda d: d.name(lambda n: n.qualifiedname(lambda q: q.qualifiers([name("std")]).name(name("cout"))))),
+        lambda i: i.thisexpression(lambda k: k),
+        lambda i: i.parenthesizedexpression(lambda k: k.expression(me)),
+        lambda i: i.lambdaexpression(lambda la: la.captures([lambda k: k.defaultcapture(lambda d: d.mode("=")),
+                                                             lambda k: k.simplecapture(lambda s: s.by_reference(True).name(lambda i: i.spelling("record")))]).declarator(
+            lambda d: d.parameters([lambda q: q.parameterdeclaration(lambda pd: pd.specifiers([lambda s: s.placeholdertypespecifier(lambda h: h)]).declarator(
+                lambda dd: dd.iddeclarator(lambda i2: i2.name(name("y")))))]))),
+        lambda i: i.foldexpression(lambda f: f.left(me).operator("+")),
+        lambda i: i.requiresexpression(lambda q: q.parameters([lambda a: a.parameterdeclaration(lambda pd: pd.specifiers([
+            lambda s: s.primitivetypespecifier(lambda k: k.keyword("int"))]).declarator(lambda dd: dd.iddeclarator(lambda i2: i2.name(name("z")))))]).requirements([
+            lambda r2: r2.simplerequirement(lambda s: s.expression(CPP.binary("+", CPP.identifier("z"), 1)))])),
+        lambda i: i.functionalcastexpression(lambda f: f.type(lambda s: s.primitivetypespecifier(lambda k: k.keyword("int"))).initializer(
+            lambda x: x.parenthesizedinitializer(lambda pi: pi.arguments([me])))),
+        lambda i: i.postfixexpression(lambda x: x.operand(me).operator("--")),
+        lambda i: i.namedcastexpression(lambda n: n.operator("static_cast").type(c_int).operand(me)),
+        lambda i: i.typeidexpression(lambda t: t.operand(me)),
+        lambda i: i.awaitexpression(lambda a: a.operand(me)),
+        lambda i: i.sizeofexpression(lambda s: s.operand(c_int)),
+        lambda i: i.sizeofpackexpression(lambda s: s.pack(lambda i: i.spelling("Ts"))),
+        lambda i: i.alignofexpression(lambda s: s.keyword("alignof").operand(c_int)),
+        lambda i: i.noexceptexpression(lambda s: s.operand(me)),
+        lambda i: i.newexpression(lambda n: n.type(c_int).initializer(lambda x: x.initializerlist(lambda il: il.items([CPP.literal(1)])))),
+        lambda i: i.deleteexpression(lambda d: d.array(True).operand(me)),
+        lambda i: i.assignmentexpression(lambda a: a.left(me).operator("=").right(CPP.literal(0))),
+        lambda i: i.throwexpression(lambda t: t),
+        lambda i: i.yieldexpression(lambda y: y.operand(me)),
+        lambda i: i.packexpansion(lambda x: x.pattern(me)),
+        lambda i: i.designatedinitializer(lambda d: d.designators([lambda x: x.fielddesignator(lambda f: f.name(lambda i: i.spelling("x")))]).initializer(
+            lambda x: x.equalinitializer(lambda e: e.value(me)))),
+        lambda i: i.statementexpression(lambda s: s),
+        lambda i: i.extensionexpression(lambda e: e.operand(me)),
+    ])))
 
     # --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
     # record.a inside {1, [2:5]} -> !record[0] ? {{6{2'b10}}, record.b[7:4]} : byte'($clog2(record.unique().sum(q) with (q))) + 4'(8'shff)

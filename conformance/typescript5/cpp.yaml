@@ -1,47 +1,243 @@
 cpp:
-  conditional:
-    condition:
-      binary:
-        operator: '&&'
-        left:
-          unary:
-            operator: '!'
-            operand:
-              member:
-                name: a
-                object:
-                  variable:
-                    name: record
-        right:
-          binary:
-            operator: '>'
+  initializerlist:
+    items:
+    - conditionalexpression:
+        condition:
+          binaryexpression:
             left:
-              subscript:
-                array:
-                  member:
-                    name: b
-                    operator: '->'
+              unaryexpression:
+                operator: '!'
+                operand:
+                  memberexpression:
                     object:
                       variable:
                         name: record
-                index:
-                  constant:
-                    value: 0
+                    operator: '.'
+                    member:
+                      identifier:
+                        spelling: a
+            operator: '&&'
             right:
-              constant:
-                value: 1.5
-                type: float
-    consequent:
-      cast:
-        type: uint8_t
-        operand:
-          call:
-            callable: f
+              binaryexpression:
+                left:
+                  subscriptexpression:
+                    object:
+                      memberexpression:
+                        object:
+                          variable:
+                            name: record
+                        operator: '->'
+                        member:
+                          identifier:
+                            spelling: b
+                    indices:
+                    - literal:
+                        value:
+                          int: 0
+                operator: '>'
+                right:
+                  literal:
+                    value:
+                      float: 1.5
+                    suffix: f
+        consequence:
+          castexpression:
+            type:
+              typeid:
+                specifiers:
+                - namedtypespecifier:
+                    name:
+                      identifier:
+                        spelling: uint8_t
+            operand:
+              callexpression:
+                function:
+                  variable:
+                    name: record
+                arguments:
+                - literal:
+                    value:
+                      int: 1
+        alternative:
+          literal:
+            value:
+              int: 5
+            suffix: u
+    - constant:
+        singleton: nullptr
+    - userdefinedliteral:
+        literal:
+          value:
+            int: 10
+        suffix: _km
+    - concatenatedstring:
+        parts:
+        - literal:
+            value:
+              str: a
+        - literal:
+            value:
+              str: b
+            raw: true
+    - idexpression:
+        name:
+          qualifiedname:
+            qualifiers:
+            - identifier:
+                spelling: std
+            name:
+              identifier:
+                spelling: cout
+    - thisexpression: {}
+    - parenthesizedexpression:
+        expression:
+          variable:
+            name: record
+    - lambdaexpression:
+        captures:
+        - defaultcapture:
+            mode: '='
+        - simplecapture:
+            by_reference: true
+            name:
+              spelling: record
+        declarator:
+          parameters:
+          - parameterdeclaration:
+              specifiers:
+              - placeholdertypespecifier: {}
+              declarator:
+                iddeclarator:
+                  name:
+                    identifier:
+                      spelling: 'y'
+    - foldexpression:
+        left:
+          variable:
+            name: record
+        operator: '+'
+    - requiresexpression:
+        parameters:
+        - parameterdeclaration:
+            specifiers:
+            - primitivetypespecifier:
+                keyword: int
+            declarator:
+              iddeclarator:
+                name:
+                  identifier:
+                    spelling: z
+        requirements:
+        - simplerequirement:
+            expression:
+              binaryexpression:
+                left:
+                  variable:
+                    name: z
+                operator: '+'
+                right:
+                  literal:
+                    value:
+                      int: 1
+    - functionalcastexpression:
+        type:
+          primitivetypespecifier:
+            keyword: int
+        initializer:
+          parenthesizedinitializer:
             arguments:
-            - cpp:
-                constant:
-                  value: 1
-    alternative:
-      constant:
-        value: 5
-        type: unsigned int
+            - variable:
+                name: record
+    - postfixexpression:
+        operand:
+          variable:
+            name: record
+        operator: '--'
+    - namedcastexpression:
+        operator: static_cast
+        type:
+          typeid:
+            specifiers:
+            - primitivetypespecifier:
+                keyword: int
+        operand:
+          variable:
+            name: record
+    - typeidexpression:
+        operand:
+          variable:
+            name: record
+    - awaitexpression:
+        operand:
+          variable:
+            name: record
+    - sizeofexpression:
+        operand:
+          typeid:
+            specifiers:
+            - primitivetypespecifier:
+                keyword: int
+    - sizeofpackexpression:
+        pack:
+          spelling: Ts
+    - alignofexpression:
+        keyword: alignof
+        operand:
+          typeid:
+            specifiers:
+            - primitivetypespecifier:
+                keyword: int
+    - noexceptexpression:
+        operand:
+          variable:
+            name: record
+    - newexpression:
+        type:
+          typeid:
+            specifiers:
+            - primitivetypespecifier:
+                keyword: int
+        initializer:
+          initializerlist:
+            items:
+            - literal:
+                value:
+                  int: 1
+    - deleteexpression:
+        array: true
+        operand:
+          variable:
+            name: record
+    - assignmentexpression:
+        left:
+          variable:
+            name: record
+        operator: '='
+        right:
+          literal:
+            value:
+              int: 0
+    - throwexpression: {}
+    - yieldexpression:
+        operand:
+          variable:
+            name: record
+    - packexpansion:
+        pattern:
+          variable:
+            name: record
+    - designatedinitializer:
+        designators:
+        - fielddesignator:
+            name:
+              spelling: x
+        initializer:
+          equalinitializer:
+            value:
+              variable:
+                name: record
+    - statementexpression: {}
+    - extensionexpression:
+        operand:
+          variable:
+            name: record

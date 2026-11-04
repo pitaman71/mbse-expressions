@@ -25,11 +25,11 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
    evaluated alike in every dialect that has it. *How*: its `Term` lists the framework's kinds it reuses, `literal`,
    `variable`, `let` and `call` (`callable` by name, positional `arguments`), and the container constructors `list`
    and `mapping`, wherever its kind has that shape exactly, whose slots hold any dialect's term, and the framework's
-   `error` and `missing`. It keeps a kind of its own only where the shape differs (C's constant has C's `type`;
-   Python3's call has a term for its callee); a restriction of its own on a reused kind ("no bytes") is its `Kind`'s
+   `error` and `missing`. It keeps a kind of its own only where the shape differs (Python3's call has a term for its
+   callee; C's literal adds what its text encodes); a restriction of its own on a reused kind ("no bytes") is its `Kind`'s
    check.
    - Python: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share, each recording its standards](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-12) · TypeScript: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share, each recording its standards](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-12)
-   - Python: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term` holds them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-11) · TypeScript: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term` holds them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-11)
+   - Python: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-11) · TypeScript: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-11)
 3. **Declare how each kind is read.** *Why*: validation, inference, evaluation and translation read every dialect
    through these declarations, never through its code. *How*: its `Terms.Dialect` declares a `Terms.Kind` per tag,
    whose role tells them how to treat it:

@@ -21,8 +21,9 @@ and translated between expression languages, called dialects:
   destructuring patterns and JSX: it renders as TypeScript and evaluates its literals alone, refusing the others by
   name; it has no translator yet, and its terms are written through the builders.
 - **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.
-- **C** and **Cpp**, C (C11 to C23) and C++ (C++17 to C++23) expressions over their arithmetic types: each renders as
-  its source and evaluates by C's rules (promotions, wrapping unsigned arithmetic, undefined behavior raising).
+- **C** and **Cpp**, every expression of C (C11 to C23) and of C++ (C++17 to C++23) as mbse-programs has them, with the
+  type names they hold: each renders as its source and evaluates, over its arithmetic types, by C's rules (promotions,
+  wrapping unsigned arithmetic, undefined behavior raising), refusing the other kinds by name.
 - **SystemVerilog**, hardware expressions and constraints over 4-state vectors and reals: it renders as its source and
   evaluates by IEEE 1800's rules (sizing by context, x and z propagating).
 

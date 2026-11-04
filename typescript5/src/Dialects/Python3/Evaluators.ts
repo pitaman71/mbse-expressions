@@ -585,6 +585,7 @@ function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
   for (const part of (attributesOf(node).get("generators") ?? []) as Terms.Part[]) {
     if (part.attributes.get("is_async")) throw refuse("async comprehension");
     const target = part.attributes.get("target") as Terms.Part | undefined; // a pattern, its terms the clause's last
+    if (target !== undefined && Terms.INVALID_KINDS.has(target.kind)) throw new ValueError(`Python3 ${target.kind} is not evaluated`); // invalid syntax, refused as every dialect refuses it
     if (target === undefined || target.kind !== Expressions.NAME) {
       throw refuse(`${target === undefined ? "missing" : target.kind} target`);
     }

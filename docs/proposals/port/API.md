@@ -723,6 +723,162 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
     of `all`, `any` and counting. Stored data and the wire are unchanged: the branch names are the same, and the
     corpus is byte-identical. A kind no target is (`binop`) is refused there by mbse-schemas. Tested in DIA-19.
 
+## Settled in stage 5 (C and Cpp), for the user's review
+
+Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 3, 5, 6, 8 and 9, the revision
+of 2026-11-03 that each of C and C++ defines the kinds they share, the sublanguage unions' "(b)", "Every dialect has
+a `Pattern` union", "(ii)", and, from the review of 2026-11-04, "A name is whatever the language's own grammar makes
+it") and as the brief for stage 5 asked; each choice below is where they were silent. Items 88, 90, 92 to 94, 96, 98
+and 100 are revised by that review, and items 104 to 106 added.
+
+87. **Kinds, named and shaped as mbse-programs has them** (`mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`): each a
+    value object `Expressions.C.<Name>` or `Expressions.Cpp.<Name>`, with mbse-programs' properties in source order,
+    its tag the name lowercased. `Expressions.C.Term` has 25 branches: `literal`, `constant`, `concatenatedstring`,
+    `variable`, `parenthesizedexpression`, `genericselection`, `subscriptexpression`, `callexpression`,
+    `memberexpression`, `postfixexpression`, `unaryexpression`, `sizeofexpression`, `alignofexpression`,
+    `castexpression`, `binaryexpression`, `conditionalexpression`, `assignmentexpression`, `initializerlist`,
+    `designatedinitializer`, `compoundliteralexpression`, `statementexpression`, `extensionexpression`, `typeid`,
+    `error` and `missing`. `Expressions.Cpp.Term` has 40: C's but `genericselection` and
+    `compoundliteralexpression`, and `userdefinedliteral`, `idexpression`, `thisexpression`, `lambdaexpression`,
+    `foldexpression`, `requiresexpression`, `functionalcastexpression`, `namedcastexpression`, `typeidexpression`,
+    `awaitexpression`, `sizeofpackexpression`, `noexceptexpression`, `newexpression`, `deleteexpression`,
+    `throwexpression`, `yieldexpression` and `packexpansion`. The kinds C held before (`constant`, `variable`,
+    `call`, `member`, `subscript`, `unary`, `binary`, `conditional`, `cast`) are replaced by these; the writers keep
+    their names (item 94).
+88. **Names, as the grammar makes them** (the proposal's Decided, "A name is whatever the language's own grammar makes
+    it"). An identifier used as an expression is the framework's `variable` (mbse-programs' `IdExpression` of an
+    `Identifier`), in both; C++'s other names used as expressions (`std::cout`, `f<int>`, `operator+`) are
+    `idexpression`, holding Cpp's `Name` union (`identifier`, `qualifiedname`, `templateid`, `operatorname`,
+    `conversionname`, `literaloperatorname`, `destructorname`, and `decltypespecifier` where a name's place holds it).
+    Elsewhere a name is a node wherever mbse-programs (and tree-sitter) has one: where mbse-programs holds a `Name`,
+    each dialect holds its `Name` union, C's of one branch, `identifier` (`Expressions.C.Identifier`, its `spelling`),
+    as an identifier is C's one name (a member's `member`, a named type's, a struct's or an enum's `name`, an
+    identifier declarator's `name`); where mbse-programs holds an `Identifier` alone, its `Identifier` directly (C's
+    and C++'s field designator's `name`; C++'s simple and init captures' `name`, `sizeof...`'s `pack`, a type
+    parameter's and a template template parameter's `name`). A `str` stays where mbse-programs has one: an
+    attribute's `name` and `namespace`, a `using_namespace`. An identifier is checked as mbse-programs checks it
+    (letters, digits, `_` and `$`, not starting with a digit) wherever one is held: the framework's variable's `name`,
+    and every `identifier`'s `spelling`.
+89. **Sublanguages and helpers, each a union of its own, a schema a branch of every union whose positions hold it**
+    ("(b)"). `Type` is a type name, `typeid` (its `specifiers` and abstract `declarator`), and invalid syntax; `Term`
+    lists `typeid` too, for the positions that hold an expression or a type alike (`sizeof(int)`, `_Generic`'s
+    controlling operand, `offsetof`'s first argument), and `designatedinitializer`, an initializer list's item.
+    `Pattern` holds invalid syntax alone ("(ii)"): no C or C++ expression binds a name as a target (a lambda's
+    captures and parameters, a requires expression's parameters, are declarations; structured bindings are not
+    expressions). The helpers' unions are named after mbse-programs' categories: C's `Name`, `Specifier`, `Declarator`,
+    `Parameter`, `AttributeSpecifier`, `Designator` and `Initializer`; C++'s `Name`, `Capture`, `Requirement`,
+    `Designator`, `Initializer`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`,
+    `ExceptionSpecification` and `AttributeSpecifier`. `Specifier` lists the attribute specifiers, as `TypeId` lists
+    them among its specifiers; C++'s `TemplateParameter` a `parameterdeclaration` and its `Initializer` an
+    `initializerlist`. Each dialect defines its own copy of each kind and helper they share (`Expressions.Cpp.TypeId`
+    holds C++'s specifiers), without what only the other has (C's array declarator's `static`, its index designators,
+    `_Generic`, compound literals, `typeof`, `_Atomic(type)` and `_BitInt` are C's alone). The framework reads a
+    sublanguage's or a helper's value as a `Terms.Part`, and `Terms.node(tag, record)` reads it nested.
+90. **Literals refine the framework's** (CAP-233, PRI-023): `Expressions.C.Literal` adds the encoding `prefix` (`L`,
+    `u8`, `u`, `U`), its `quote` (`'` a character, `"` a string), an integer's `base`, `separators` (`'` between
+    digits) and the `suffix` as written; `Expressions.Cpp.Literal` adds a raw string's `raw` and `delimiter`. An
+    integer is an int, a floating literal a float, C23's and C++'s `true` and `false` a bool, a string a str, and a
+    character its code, an int (its text keeps the character). `SUFFIXES` are each language's, by the value's type, as
+    regular expressions (C's `u`, `l`, `ll`, `wb`, in either case and order, `f`, `l`, `df`, `f32`, ...; C++'s `z`,
+    `f16`, `bf16`, ...); a suffix or a prefix the language does not write is a problem, and so is a value out of range
+    (PRI-023), an integer that fits none of the types its suffix and base allow (`Domains.out_of_range`: `2**70`,
+    "integer literal 1180591620717411303424 does not fit any type"; `2**70` or `-5` with `u`, "... does not fit
+    'unsigned long long'", the last type the suffix allows), its type the one evaluation gives it, so that validation
+    reports what evaluation would refuse. The prefix and the suffix are what the literal is, not its spelling: two
+    literals of one value and different suffixes are different terms. A character's quote is C's spelling, as `'a'` is
+    an `int` there, as `97` is, and not C++'s, where `'a'` is a `char`: what the literal is (PRI-002: a translation
+    keeps it or refuses it, never turns it into an int silently). `SPELLING` names each language's: C's `text`,
+    `problems`, `quote`, `base` and `separators`; C++'s `text`, `problems`, `base`, `separators`, `raw` and
+    `delimiter`. A suffix neither language writes types the literal as `Anything`, unknown, not as a domain named in
+    prose. `constant` is each dialect's own,
+    for what no schema holds: `nullptr`, its `singleton` (C23's alone in C). C++'s `userdefinedliteral` holds a
+    `literal` and its `suffix` (`10_km`).
+91. **What each kind binds**: a function declarator's parameters, a lambda's parameters and init captures, and a
+    requires expression's parameters, within it (`scopes(tag)`, `bound_names`). A callee is a term (`callexpression`'s
+    `function`), whose names must be bound, as every reference's.
+92. **Slots that may be empty**: `optional` paths written `"*.slot"` match that slot at any helper depth
+    (`Terms.Kind`'s, new): an array declarator's `size`, a designator's range's `last`, a noexcept specifier's
+    `condition`, a parameter's `default` argument, and a lambda's or a template parameter's `requires` clause, wherever
+    a type name or a lambda nests them (`OPTIONAL`). A kind's own: GNU's `a ?: b`'s `consequence`, a fold's `left` or
+    `right` (`(x + ...)` has one of them), a `throw`'s `operand`, a lambda's `template_requires`. A compound literal
+    requires only its type (an empty initializer list `{}` is an empty value object, item 99).
+93. **A body of statements or declarations is not part of the term** (Decided, 5, "(i)"): a lambda's and a statement
+    expression's, which always have one, are not held at all, and printed `{}`; a struct's, a union's or an enum's,
+    which may be absent (`struct S` names a type, `struct S {}` defines one), is said by `body`, a bool, printed `{}`
+    where it is true.
+94. **Writers kept, writing the complete kinds** (PRI-019 for every other term): `literal(value, suffix)`,
+    `identifier`, `unary`, `binary`, `conditional`, `cast(type, operand)`, `member(object, name, operator=".")`,
+    `subscript(object, *indices)` and `call(function, *arguments)`, as a `Writers(dialect, writer)` each dialect has;
+    both write a member's name as an `identifier`, its `Name`. A cast's `type` is a spec of the dialect's `Type`,
+    written through the builders: the writer does not read a type name from a string, which would guess whether each
+    word is a keyword or a type's name (PRI-025), so `PRIMITIVES` is gone. A native value is written as its literal (a
+    bytes has none).
+95. **Standards as data**: `STANDARDS` names C11, C17 and C23, and C++17, C++20 and C++23; each kind's `standards` names
+    those that have it (C's `constant` C23's alone; C++'s `requiresexpression`, `awaitexpression`,
+    `yieldexpression` and `designatedinitializer` C++20's and C++23's; GNU's `statementexpression` and
+    `extensionexpression`, `EXTENSIONS`, none). A feature within a kind or a helper (C23's `typeof`, `alignof` beside
+    `_Alignof`, C++20's lambda template parameters, C++23's `a[i, j]`) is not recorded: whether a term is in a
+    standard is a constraint, to come. C++26 (pack indexing, reflection, splices, contracts) is outside `Cpp`.
+96. **Evaluation keeps what C evaluated** (Decided, 8): `Evaluators.EVALUATED` names the kinds that replaced C's
+    former ones, evaluated in their complete shapes by C's rules (`Cpp`'s interpreter is C's, over its dialect); a
+    literal's type is what its text encodes (`Domains.literal(attributes, language)`: its suffix and base, as C's
+    tables give them; `'a'` C's `int` and C++'s `char`), an integer that does not fit raising "integer literal N does
+    not fit 'T'". Every other kind, and what an evaluated kind holds beyond its former shape (an operator with no rule
+    here, a literal of a type no evaluator has values of, a cast to a type that is not arithmetic, several indices, a
+    callee that is not a name, GNU's `?:`), is refused by name. Invalid syntax is refused by name first, `ValueError`,
+    as every dialect refuses it, where a term stands and where a cast's type does ("C error is not evaluated"), before
+    the check that the type is arithmetic. `Domains` gains the vocabularies of the new operators,
+    `size_t` for `sizeof` and `alignof`, and `nullptr_t`; `arithmetic(names)` reads a type
+    name's keywords to an arithmetic type.
+97. **Printing**: `Text.ToText` ports mbse-programs' printer (`Ccpp/_Printer.py`) for both, byte-identical in both
+    languages: C's precedence and C++'s (`<=>`, `.*`, `->*`), parentheses around a template argument that holds `>`, a
+    literal with no text written with what it encodes (`5u`, `0x1fu`, `u8"s"`, a character as its character, C's
+    escapes, a raw string in its delimiter's parentheses, an infinity or a NaN as `INFINITY` or `NAN`), a named
+    cast's operand at the comma's precedence as mbse-programs writes it. Invalid syntax is written as written,
+    wherever it stands. `FromText` is mbse-programs' (Decided, 6).
+98. **Translators keep what they translated** (Decided, 9): Patterns <-> C and Patterns <-> Cpp share one rule set,
+    `Patterns_C.RULES`, over the complete kinds (`_Patterns.CFamily`), a member's name an identifier in both; C++'s
+    add one backward rule, a string written with its quote (`"s"`) as Patterns' string, since a quote is not C++'s
+    spelling (item 90). A C++ character (`'a'`, a `char`), a literal with a suffix or a prefix, a cast and every other
+    kind have no Patterns counterpart and are refused by name ("Cpp literal 97 of char has no Patterns counterpart",
+    "C castexpression has no Patterns counterpart").
+99. **Found: mbse-schemas stores no empty value object held directly as a property**: an empty initializer list in a
+    compound literal reads back absent (printed `{}`, hence not required, item 92), and a lambda's empty declarator
+    `()` reads back absent, `[]() {}` as `[] {}`. A union branch holding an empty object is stored.
+100. **Completeness as data**: `grammars/c-tree-sitter.json` (tree-sitter-c 0.23.6, 125 named node types) and
+    `grammars/cpp-tree-sitter.json` (tree-sitter-cpp 0.23.4, 206), each node mapped to `Term`'s kinds, `Type`'s
+    branches, a helper, or listed as not an expression with its reason, with the grammar's supertypes. DIA-26 asserts
+    every branch of each `Term` and `Type` is the grammar's but invalid syntax; no test reads tree-sitter, which
+    neither implementation depends on. tree-sitter-cpp's index and range designators are C's and GNU's, not C++'s.
+    tree-sitter-c's `identifier` and `field_identifier` map to C's `Identifier` helper, as tree-sitter-cpp's do to
+    C++'s.
+101. **Invalid syntax in every sublanguage** (CAP-227, CAP-228): every dialect's `Type` and `Pattern` (Python3's
+    `Pattern`, TypeScript5's `Type` and `Pattern`, C's and C++'s) list `error` and `missing`, so that invalid syntax
+    stands where a type or a target does; it is reported as a problem (`Terms.invalid_problems`, new, which each
+    dialect's checks read within a helper), printed as written, and refused by Python3's evaluator, "Python3 error is
+    not evaluated". This supersedes item 71's "`error` and `missing` are `Term`'s alone".
+102. **The framework**: `Terms.Node` and `Terms.node(tag, record)`, a term or a helper read nested, move from
+    TypeScript5 into the framework, which C and C++ read too (TypeScript5's `Expressions.Node` is it).
+103. **Tests**: DIA-11 (C) and DIA-12 (C's evaluation) are rewritten over the complete kinds under their IDs; DIA-18
+    gains C's and C++'s literal spellings; DIA-24 (kinds), DIA-25 (printing) and DIA-26 (completeness) are added in
+    both languages; FRM's samples hold every kind of each (FRM-11 prints them, and checks invalid syntax in each
+    `Type` and `Pattern`); TRN-08 is rewritten for the shared rules; tutorial 8 writes its cast through `cast`, its type
+    through the builders. None is retired. The review of 2026-11-04 adds, under the same IDs: DIA-11 a literal out of
+    range; DIA-24 C's `Name` and where each dialect holds an identifier, a field designator's identifier checked, the
+    quote in C's spelling and not C++'s, a C++ term refused by C's validation ("a Cpp variable is not a C term", as
+    stage 2 asserted), and invalid syntax refused by C's evaluator; TRN-08 a member's name an identifier in C, a C++
+    string with its quote translated, and a C++ character refused. The corpus's `c` and `cpp` cases hold every kind; their JSON is byte-identical. Steps A and B of the
+    brief, kinds and printing, landed in one commit, as FRM-02 needs each sample to hold every kind and FRM-11 prints
+    them.
+104. **Domains' tables are not mutated**: `BINARY` (the arithmetic operators and the comma) and `BINARY_CPP` (them, the
+    comma, `<=>`, `.*` and `->*`) are each built whole from the arithmetic operators, and `UNARY` holds `*`, `&`, `++`
+    and `--` from the start, so that no module table changes after another is built from it.
+105. **The corpus**: the `c` and `cpp` cases write their names as identifiers and their cast's type through the
+    builders; their text is unchanged, their JSON byte-identical in both languages.
+106. **Not changed here, waiting on the user**: the empty value object workarounds (item 99), `variable` beside
+    `idexpression` in C++ (item 88), typing literals by their suffix before CAP-232 (item 96), C's and C++'s `Pattern`
+    of invalid syntax alone (item 89), and whether C keeps its writers (item 94).
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,

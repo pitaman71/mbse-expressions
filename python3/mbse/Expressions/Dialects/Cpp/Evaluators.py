@@ -6,11 +6,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from mbse.Expressions.Dialects.C.Evaluators import Scope, interpreter
+from mbse.Expressions.Dialects.C.Evaluators import EVALUATED, Scope, interpreter
 
 from . import Expressions
 
-__all__ = ["OfAny", "Scope", "INTERPRETER"]
+__all__ = ["OfAny", "Scope", "INTERPRETER", "EVALUATED"]
 
 INTERPRETER = interpreter(Expressions.DIALECT)
 """The interpreter of the Cpp dialect; its values carry their C++ types."""

@@ -261,6 +261,8 @@ class _Printer:
         `bare`, a tuple without its parentheses, as a `for` clause writes it."""
         if target is None:
             return ""
+        if target.kind in F.INVALID_KINDS:  # invalid syntax where a target stands, as written
+            return F.invalid_text(P.DIALECT, target.kind, target.attributes)
         if bare and target.kind == P.TUPLE:
             return self.elements(terms)
         text, precedence = getattr(self, f"_{target.kind}")(target.attributes, terms)

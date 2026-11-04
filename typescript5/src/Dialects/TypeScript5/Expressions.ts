@@ -47,7 +47,8 @@
  * `memberexpression`, `parenthesizedexpression`, `tsasexpression`, `tssatisfiesexpression`, `tstypeassertion`,
  * `tsnonnullexpression`), and `Type` lists the terms a type holds (`identifier` and `thisexpression` for an entity name,
  * `literal`, `unaryexpression` and `templateliteral` for a literal type, `objectexpression` for an import type's
- * options). Which terms are allowed where, beyond that, is a constraint. Names that only declare (a mapped type's `key`,
+ * options). Each holds invalid syntax too (the framework's `error` and `missing`), as every dialect's `Type` and
+ * `Pattern` do. Which terms are allowed where, beyond that, is a constraint. Names that only declare (a mapped type's `key`,
  * a tuple member's `label`, a type parameter's `name`, a qualified name's `right`) are `Identifier`s, as mbse-programs
  * has them ("yes, stay `Identifier` terms"). The framework reads a value of a sublanguage, as of any helper, as a
  * `Terms.Part`.
@@ -61,7 +62,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Repr, Schemas } from "@mbse/schemas/Framework";
+import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
@@ -255,6 +256,8 @@ export function install(txn: any): any {
           (t: any) => t.name("property").schema([_.Property]),
           (t: any) => t.name("elision").schema([_.Elision]),
           (t: any) => t.name("tsparameterproperty").schema([_.TSParameterProperty]),
+          (t: any) => t.name("error").schema([Framework.Error]),
+          (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
       // its types: TypeScript's type nodes, and the terms a type holds
       (_: any) => _.Type.name("Expressions.TypeScript5.Type").branches([
@@ -301,6 +304,8 @@ export function install(txn: any): any {
           (t: any) => t.name("unaryexpression").schema([_.UnaryExpression]),
           (t: any) => t.name("templateliteral").schema([_.TemplateLiteral]),
           (t: any) => t.name("objectexpression").schema([_.ObjectExpression]),
+          (t: any) => t.name("error").schema([Framework.Error]),
+          (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
       // an object type's members (typescript-estree's `TypeElement`), comments among them as mbse-programs keeps them
       (_: any) => _.TypeElement.name("Expressions.TypeScript5.TypeElement").branches([
@@ -570,46 +575,14 @@ export function install(txn: any): any {
 
 // --- Reading a term with its helpers nested ---
 
-/** A term or a helper, its helpers nested: its `kind` (its tag, or its helper's), its `attributes` (scalars, and
- * containers of scalars, by name), its `slots` (its terms by property, null where empty), its `many` (its variadic
- * arguments: terms, or a pair's members in turn) and its `helpers` (by property: a `Node`, or an array of them). */
-export class Node {
-  constructor(readonly kind: string, readonly attributes: ReadonlyMap<string, any> = new Map(),
-    readonly slots: ReadonlyMap<string, any> = new Map(), readonly many: readonly any[] = [],
-    readonly helpers: ReadonlyMap<string, Node | readonly Node[]> = new Map()) {}
-}
+/** A term or a helper, its helpers nested (`Terms.Node`). */
+export const Node = F.Node;
+export type Node = F.Node;
 
 /** A helper property's nodes: one, or each of many. */
 function nodes(value: Node | readonly Node[] | undefined): readonly Node[] {
   if (value === undefined) return [];
   return value instanceof Node ? [value] : value;
-}
-
-/** A record's `Node`, from its schema, its form's attributes and its arguments, as `Terms.form` reads them. */
-function nest(schema: any, kind: string, attributes: ReadonlyMap<string, any>, args: readonly any[]): Node {
-  const [slotNames] = F._parts(schema);
-  const held = new Map<string, any>();
-  for (const name of F._helpers(schema)) if (attributes.has(name)) held.set(name, attributes.get(name));
-  let size = 0;
-  for (const value of held.values()) for (const part of (Array.isArray(value) ? value : [value])) size += part.size;
-  let i = args.length - size;
-  const helpers = new Map<string, Node | readonly Node[]>();
-  for (const [name, value] of held) {
-    const prop = schema.properties.get(name).schema;
-    const element = prop instanceof Schemas.OfContainer.Data ? prop.element : prop;
-    const found: Node[] = [];
-    for (const part of (Array.isArray(value) ? value : [value]) as F.Part[]) {
-      const sub = element instanceof Schemas.OfUnion.Data
-        ? (element.branches as readonly Schemas.OfUnion.Branch[]).find((branch) => branch.name === part.kind)!.schema
-        : element;
-      found.push(nest(sub, part.kind, part.attributes, args.slice(i, i + part.size)));
-      i += part.size;
-    }
-    helpers.set(name, Array.isArray(value) ? found : found[0] as Node);
-  }
-  const plain = new Map([...attributes].filter(([name]) => !held.has(name)));
-  const slots = new Map(slotNames.map((name, j) => [name, args[j]] as [string, any]));
-  return new Node(kind, plain, slots, args.slice(slotNames.length, args.length - size), helpers);
 }
 
 /** A TypeScript5 term's `Node`, its helpers nested: its patterns, types and JSX among them. */
@@ -619,7 +592,7 @@ export function tree(term: any): Node {
 }
 
 function recordNode(tag: string, record: any): Node {
-  return nest(record.as_schema(), tag, F.attributesOf(record), F.argumentsOf(record));
+  return F.node(tag, record);
 }
 
 /** The names a pattern binds, a term's or a `Node`'s: an identifier's, and those within an array, an object, a default,
@@ -686,6 +659,7 @@ function needs(node: Node, count: number, least: number, what: string): string[]
 /** A node's own checks, as mbse-programs has them: names, quasis, unions and lists that need members. */
 function nodeProblems(node: Node): string[] {
   const { kind, attributes } = node;
+  if (F.INVALID_KINDS.has(kind)) return F.invalidProblems(kind, attributes); // invalid syntax in a type or a pattern
   if (kind === IDENTIFIER || kind === PRIVATEIDENTIFIER) return identifierProblems(kind, attributes.get("name"));
   if (kind === LITERAL) return literalProblems(attributes);
   if (kind === TEMPLATELITERAL || kind === "tstemplateliteraltype") {
