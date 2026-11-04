@@ -336,14 +336,17 @@ typescript5:
               identifier:
                 name: record
         - jsxfragment:
+            openingFragment: {}
             children:
             - jsxtext:
                 raw: text
+            closingFragment: {}
         closingElement:
           name:
             jsxidentifier:
               name: div
     - jsxfragment:
+        openingFragment: {}
         children:
         - jsxelement:
             openingElement:
@@ -351,6 +354,7 @@ typescript5:
                 jsxidentifier:
                   name: br
               selfClosing: true
+        closingFragment: {}
     - chainexpression:
         expression:
           memberexpression:

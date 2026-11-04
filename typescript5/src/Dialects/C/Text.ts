@@ -306,6 +306,7 @@ class Printer {
     const requires = node.slots.get("template_requires");
     if (requires !== null) written += " requires " + this.constraint(requires);
     written += this.attributesAfter(node);
+    // without a declarator, the lambda has no parameter list: `[] { ... }`
     if (node.helpers.has("declarator")) written += (requires !== null ? " " : "") + this.text(one(node.helpers.get("declarator")) as F.Node);
     return written + " {}"; // its body of statements, not part of the term
   }
@@ -559,7 +560,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   designatedinitializer: (p, n) => p.designated(n), fielddesignator: (p, n) => p.designator(n),
   indexdesignator: (p, n) => p.designator(n),
   compoundliteralexpression: (p, n) => `(${p.text(one(n.helpers.get("type")) as F.Node)})`
-    + (n.helpers.has("initializer") ? p.initializerList(one(n.helpers.get("initializer")) as F.Node) : "{}"),
+    + p.initializerList(one(n.helpers.get("initializer")) as F.Node),
   statementexpression: () => "({})", // its body of statements, not part of the term
   extensionexpression: (p, n) => "__extension__ " + p.expression(n.slots.get("operand"), UNARY),
   typeid: (p, n) => p.typeId(n),

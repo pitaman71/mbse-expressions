@@ -664,8 +664,9 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
     absent body `{}`, where mbse-programs writes the statements it relates; a class's members are its body's.
 76. **Concrete syntax kept**: `parenthesizedexpression` and `tsparenthesizedtype`, written and printed as written; an
     array's hole is an `elision`, as mbse-programs has it (typescript-estree writes `null`). An empty value object
-    held as a property (a fragment's opening and closing, an empty template) is not stored by mbse-schemas, so it reads
-    back absent; a printer does not need them (found, mbse-schemas 0.26.8).
+    held as a property (a fragment's opening and closing, an empty template) read back absent in mbse-schemas 0.26.8;
+    resolved by 0.26.9 (EMB-13), which stores it present and empty, distinct from absent, so each is held and printed
+    as written (DIA-21 asserts the round trip).
 77. **Roles**: `identifier` is a lexical reference; `privateidentifier`, `thisexpression` and `super` references
     resolved by no scope; `literal` and `constant` literals; every other kind an application, whose operator, where it
     has one, is its `operator` property, its vocabulary mbse-programs' operators (`Domains.UNARY`, `UPDATE`,
@@ -816,7 +817,8 @@ generation"), and item 107 added.
     `condition`, a parameter's `default` argument, and a lambda's or a template parameter's `requires` clause, wherever
     a type name or a lambda nests them (`OPTIONAL`). A kind's own: GNU's `a ?: b`'s `consequence`, a fold's `left` or
     `right` (`(x + ...)` has one of them), a `throw`'s `operand`, a lambda's `template_requires`. A compound literal
-    requires only its type (an empty initializer list `{}` is an empty value object, item 99).
+    requires its type and its initializer list, an empty one (`{}`) held as written since mbse-schemas 0.26.9 (item
+    99); the printer writes the list it holds.
 93. **A body of statements or declarations is not part of the term** (Decided, 5, "(i)"): a lambda's and a statement
     expression's, which always have one, are not held at all, and printed `{}`; a struct's, a union's or an enum's,
     which may be absent (`struct S` names a type, `struct S {}` defines one), is said by `body`, a bool, printed `{}`
@@ -864,9 +866,13 @@ generation"), and item 107 added.
     string, since a quote is not C++'s spelling (item 90). A C++ character (`'a'`, a `char`), a literal with a suffix or
     a prefix, a cast and every other kind have no Patterns counterpart and are refused by name ("Cpp literal 97 of char
     has no Patterns counterpart", "C castexpression has no Patterns counterpart").
-99. **Found: mbse-schemas stores no empty value object held directly as a property**: an empty initializer list in a
-    compound literal reads back absent (printed `{}`, hence not required, item 92), and a lambda's empty declarator
-    `()` reads back absent, `[]() {}` as `[] {}`. A union branch holding an empty object is stored.
+99. **Found, and resolved by mbse-schemas 0.26.9: an empty value object held directly as a property**: in 0.26.8 an
+    empty initializer list in a compound literal read back absent (so it was printed `{}` and not required), and a
+    lambda's empty declarator `()` read back absent, `[]() {}` as `[] {}`. mbse-schemas 0.26.9 (EMB-13) stores an
+    empty value object held as a property, a container element or an inserted element present and empty, distinct
+    from absent, so the workarounds are removed: a compound literal requires its initializer list again (item 92), and
+    mbse-programs' distinction is restored, "Without a declarator, the lambda has no parameter list: `[] { ... }`":
+    `[]() {}` reads back as `[]() {}`. DIA-24 and DIA-25 assert both round trips.
 100. **Completeness as data**: `grammars/c-tree-sitter.json` (tree-sitter-c 0.23.6, 125 named node types) and
     `grammars/cpp-tree-sitter.json` (tree-sitter-cpp 0.23.4, 206), each node mapped to `Term`'s kinds, `Type`'s
     branches, a helper, or listed as not an expression with its reason, with the grammar's supertypes. DIA-26 asserts
@@ -901,8 +907,8 @@ generation"), and item 107 added.
     writes each name used as an expression as an `idexpression`, and its lambda an init capture (`n = 1`) whose name is
     a `Pattern`; Python's builds it under a name of its own (`cpp_me`), so that the `c` case's terms, written later,
     keep C's identifier.
-106. **Not changed here, waiting on the user**: the empty value object workarounds (item 99), waiting on mbse-schemas
-    0.26.9, and typing literals by their suffix before CAP-232 (item 96). Decided on 2026-11-04 (the proposal's
+106. **Not changed here, waiting on the user**: typing literals by their suffix before CAP-232 (item 96). The empty
+    value object workarounds (items 76, 92 and 99) are resolved by mbse-schemas 0.26.9, now pinned. Decided on 2026-11-04 (the proposal's
     Decided): C++ writes a name used as an expression only as `idexpression` (item 88), C++'s init capture holds its
     name as a `Pattern` and nothing holds C's (item 89), and C's writers stay, for code generation (item 94).
 107. **A reference's name may be a name node** (settled in stage 5's follow-up, for the user's review): the framework

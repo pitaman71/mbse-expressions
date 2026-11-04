@@ -549,7 +549,7 @@ def kinds(language: str, tags: tuple[str, ...], standards: Mapping[str, tuple[st
         ASSIGNMENTEXPRESSION: lambda: operator(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT),
         INITIALIZERLIST: lambda: application(INITIALIZERLIST),
         DESIGNATEDINITIALIZER: lambda: application(DESIGNATEDINITIALIZER, required=("initializer",)),
-        COMPOUNDLITERALEXPRESSION: lambda: application(COMPOUNDLITERALEXPRESSION, required=("type",)),
+        COMPOUNDLITERALEXPRESSION: lambda: application(COMPOUNDLITERALEXPRESSION, required=("type", "initializer")),
         STATEMENTEXPRESSION: lambda: application(STATEMENTEXPRESSION),
         EXTENSIONEXPRESSION: lambda: application(EXTENSIONEXPRESSION, _ANY1),
         TYPEID: lambda: application(TYPEID),

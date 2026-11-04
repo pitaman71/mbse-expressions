@@ -683,13 +683,15 @@
               },
               {
                 "jsxfragment": {
+                  "openingFragment": {},
                   "children": [
                     {
                       "jsxtext": {
                         "raw": "text"
                       }
                     }
-                  ]
+                  ],
+                  "closingFragment": {}
                 }
               }
             ],
@@ -704,6 +706,7 @@
         },
         {
           "jsxfragment": {
+            "openingFragment": {},
             "children": [
               {
                 "jsxelement": {
@@ -717,7 +720,8 @@
                   }
                 }
               }
-            ]
+            ],
+            "closingFragment": {}
           }
         },
         {
