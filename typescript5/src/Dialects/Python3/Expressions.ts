@@ -46,7 +46,8 @@
  *
  * A binding target, a comprehension's `target` and a named expression's, holds `Expressions.Python3.Pattern`, the union
  * of the terms a target may be (`variable`, `tuple`, `list`, `starred`, `attribute`, `subscript`, `parenthesized`), each
- * a schema of a term too: every dialect has a `Pattern` union for its binding targets, as the dialects proposal decided
+ * a schema of a term too, and invalid syntax (the framework's `error` and `missing`), as every dialect's `Type` and
+ * `Pattern` hold it: every dialect has a `Pattern` union for its binding targets, as the dialects proposal decided
  * ("(ii)"). The framework reads a target, as any helper, as a `Terms.Part`, its terms after the clause's own; a
  * lambda's parameters are `arg`s, not patterns.
  *
@@ -201,6 +202,8 @@ export function install(txn: any): any {
         (t: any) => t.name("attribute").schema([_.Attribute]),
         (t: any) => t.name("subscript").schema([_.Subscript]),
         (t: any) => t.name("parenthesized").schema([_.Parenthesized]),
+        (t: any) => t.name("error").schema([Framework.Error]),
+        (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
       // atoms (Python's language reference, 6.2)
       (_: any) => _.Literal.name("Expressions.Python3.Literal").refines([Framework.Literal]).properties({
@@ -573,6 +576,7 @@ function namedexprScopes(record: any): ReadonlySet<string>[] {
  * name needs a name, an identifier, and an attribute's name is one. */
 function targetProblems(label: string, held: F.Part): string[] {
   const { attributes } = held;
+  if (F.INVALID_KINDS.has(held.kind)) return F.invalidProblems(held.kind, attributes).map((problem) => `${label}: ${problem}`);
   let problems: string[];
   if (held.kind === NAME) {
     problems = attributes.has("name") ? identifierProblems("a name", attributes.get("name")) : ["a variable needs a name"];
@@ -600,7 +604,7 @@ function comprehensionCheck(tag: string): (record: any) => string[] {
 function namedexprCheck(record: any): string[] {
   const held = F.attributesOf(record).get("target") as F.Part | undefined;
   if (held === undefined) return ["a namedexpr needs a target"];
-  if (held.kind !== NAME) return ["a namedexpr's target must be a name"];
+  if (held.kind !== NAME && !F.INVALID_KINDS.has(held.kind)) return ["a namedexpr's target must be a name"];
   return targetProblems("target", held);
 }
 

@@ -300,6 +300,7 @@ class Printer {
    * tuple without its parentheses, as a `for` clause writes it. */
   target(target: F.Part | undefined, terms: any[], bare = false): string {
     if (target === undefined) return "";
+    if (F.INVALID_KINDS.has(target.kind)) return F.invalidText(P.DIALECT, target.kind, target.attributes); // invalid syntax where a target stands, as written
     if (bare && target.kind === P.TUPLE) return this.elements(terms);
     const [text, precedence] = (this as any)[`_${target.kind}`](target.attributes, terms) as Written;
     return precedence >= BITOR ? text : `(${text})`;

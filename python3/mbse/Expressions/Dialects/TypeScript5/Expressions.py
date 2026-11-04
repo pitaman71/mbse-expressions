@@ -45,7 +45,8 @@ As the user decided ("(b) as you recommended"), one schema is a branch of every 
 lists, beside its own kinds, the terms a target may be (`identifier`, `memberexpression`, `parenthesizedexpression`,
 `tsasexpression`, `tssatisfiesexpression`, `tstypeassertion`, `tsnonnullexpression`), and `Type` lists the terms a type
 holds (`identifier` and `thisexpression` for an entity name, `literal`, `unaryexpression` and `templateliteral` for a
-literal type, `objectexpression` for an import type's options). Which terms are allowed where, beyond that, is a
+literal type, `objectexpression` for an import type's options). Each holds invalid syntax too (the framework's `error`
+and `missing`), as every dialect's `Type` and `Pattern` do. Which terms are allowed where, beyond that, is a
 constraint. Names that only declare (a mapped type's `key`, a tuple member's `label`, a type parameter's `name`, a
 qualified name's `right`) are `Identifier`s, as mbse-programs has them ("yes, stay `Identifier` terms"). The framework
 reads a value of a sublanguage, as of any helper, as a `Terms.Part`.
@@ -233,6 +234,8 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("property").schema([_.Property]),
                 lambda t: t.name("elision").schema([_.Elision]),
                 lambda t: t.name("tsparameterproperty").schema([_.TSParameterProperty]),
+                lambda t: t.name("error").schema([Framework.Error]),
+                lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             # its types: TypeScript's type nodes, and the terms a type holds
             lambda _: _.Type.name("Expressions.TypeScript5.Type").branches([
@@ -279,6 +282,8 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("unaryexpression").schema([_.UnaryExpression]),
                 lambda t: t.name("templateliteral").schema([_.TemplateLiteral]),
                 lambda t: t.name("objectexpression").schema([_.ObjectExpression]),
+                lambda t: t.name("error").schema([Framework.Error]),
+                lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             # an object type's members (typescript-estree's `TypeElement`), comments among them as mbse-programs keeps them
             lambda _: _.TypeElement.name("Expressions.TypeScript5.TypeElement").branches([
@@ -628,6 +633,8 @@ def _needs(node: Node, many: tuple[Any, ...], least: int, what: str) -> list[str
 def _node_problems(node: Node) -> list[str]:
     """A node's own checks, as mbse-programs has them: names, quasis, unions and lists that need members."""
     kind, attributes = node.kind, node.attributes
+    if kind in F.INVALID_KINDS:  # invalid syntax in a type or a pattern
+        return F.invalid_problems(kind, attributes)
     if kind in (IDENTIFIER, PRIVATEIDENTIFIER):
         return _identifier_problems(kind, attributes.get("name"))
     if kind == LITERAL:

@@ -45,7 +45,8 @@ carries no domain. Its kinds:
 
 A binding target, a comprehension's `target` and a named expression's, holds `Expressions.Python3.Pattern`, the union of
 the terms a target may be (`variable`, `tuple`, `list`, `starred`, `attribute`, `subscript`, `parenthesized`), each a
-schema of a term too: every dialect has a `Pattern` union for its binding targets, as the dialects proposal decided
+schema of a term too, and invalid syntax (the framework's `error` and `missing`), as every dialect's `Type` and
+`Pattern` hold it: every dialect has a `Pattern` union for its binding targets, as the dialects proposal decided
 ("(ii)"). The framework reads a target, as any helper, as a `Terms.Part`, its terms after the clause's own; a lambda's
 parameters are `arg`s, not patterns.
 
@@ -177,6 +178,8 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("attribute").schema([_.Attribute]),
                 lambda t: t.name("subscript").schema([_.Subscript]),
                 lambda t: t.name("parenthesized").schema([_.Parenthesized]),
+                lambda t: t.name("error").schema([Framework.Error]),
+                lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             # atoms (Python's language reference, 6.2)
             lambda _: _.Literal.name("Expressions.Python3.Literal").refines([Framework.Literal]).properties({
@@ -568,6 +571,8 @@ def _target_problems(label: str, target: F.Part) -> list[str]:
     """A target's own checks, as its kind's: a pattern is a helper, which validation does not read (its terms it does).
     A name needs a name, an identifier, and an attribute's name is one."""
     attributes = target.attributes
+    if target.kind in F.INVALID_KINDS:  # invalid syntax where a target stands
+        return [f"{label}: {problem}" for problem in F.invalid_problems(target.kind, attributes)]
     if target.kind == NAME:
         problems = _identifier_problems("a name", attributes.get("name")) if "name" in attributes else ["a variable needs a name"]
     else:
@@ -579,7 +584,7 @@ def _namedexpr_check(record: Any) -> list[str]:
     target = F.attributes_of(record).get("target")
     if target is None:
         return ["a namedexpr needs a target"]
-    if target.kind != NAME:
+    if target.kind != NAME and target.kind not in F.INVALID_KINDS:
         return ["a namedexpr's target must be a name"]
     return _target_problems("target", target)
 

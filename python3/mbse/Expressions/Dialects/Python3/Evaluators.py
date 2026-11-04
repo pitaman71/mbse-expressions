@@ -147,6 +147,8 @@ def _generatorexp(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
         if part.attributes.get("is_async"):
             raise _refuse("async comprehension")
         target = part.attributes.get("target")  # a pattern, its terms the clause's last
+        if target is not None and target.kind in Terms.INVALID_KINDS:  # invalid syntax, refused as every dialect refuses it
+            raise ValueError(f"Python3 {target.kind} is not evaluated")
         if target is None or target.kind != Expressions.NAME:
             raise _refuse(f"{'missing' if target is None else target.kind} target")
         clauses.append((target.attributes["name"], terms[i], terms[i + 1:i + part.size - target.size]))

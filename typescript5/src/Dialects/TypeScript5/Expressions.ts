@@ -47,7 +47,8 @@
  * `memberexpression`, `parenthesizedexpression`, `tsasexpression`, `tssatisfiesexpression`, `tstypeassertion`,
  * `tsnonnullexpression`), and `Type` lists the terms a type holds (`identifier` and `thisexpression` for an entity name,
  * `literal`, `unaryexpression` and `templateliteral` for a literal type, `objectexpression` for an import type's
- * options). Which terms are allowed where, beyond that, is a constraint. Names that only declare (a mapped type's `key`,
+ * options). Each holds invalid syntax too (the framework's `error` and `missing`), as every dialect's `Type` and
+ * `Pattern` do. Which terms are allowed where, beyond that, is a constraint. Names that only declare (a mapped type's `key`,
  * a tuple member's `label`, a type parameter's `name`, a qualified name's `right`) are `Identifier`s, as mbse-programs
  * has them ("yes, stay `Identifier` terms"). The framework reads a value of a sublanguage, as of any helper, as a
  * `Terms.Part`.
@@ -255,6 +256,8 @@ export function install(txn: any): any {
           (t: any) => t.name("property").schema([_.Property]),
           (t: any) => t.name("elision").schema([_.Elision]),
           (t: any) => t.name("tsparameterproperty").schema([_.TSParameterProperty]),
+          (t: any) => t.name("error").schema([Framework.Error]),
+          (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
       // its types: TypeScript's type nodes, and the terms a type holds
       (_: any) => _.Type.name("Expressions.TypeScript5.Type").branches([
@@ -301,6 +304,8 @@ export function install(txn: any): any {
           (t: any) => t.name("unaryexpression").schema([_.UnaryExpression]),
           (t: any) => t.name("templateliteral").schema([_.TemplateLiteral]),
           (t: any) => t.name("objectexpression").schema([_.ObjectExpression]),
+          (t: any) => t.name("error").schema([Framework.Error]),
+          (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
       // an object type's members (typescript-estree's `TypeElement`), comments among them as mbse-programs keeps them
       (_: any) => _.TypeElement.name("Expressions.TypeScript5.TypeElement").branches([
@@ -654,6 +659,7 @@ function needs(node: Node, count: number, least: number, what: string): string[]
 /** A node's own checks, as mbse-programs has them: names, quasis, unions and lists that need members. */
 function nodeProblems(node: Node): string[] {
   const { kind, attributes } = node;
+  if (F.INVALID_KINDS.has(kind)) return F.invalidProblems(kind, attributes); // invalid syntax in a type or a pattern
   if (kind === IDENTIFIER || kind === PRIVATEIDENTIFIER) return identifierProblems(kind, attributes.get("name"));
   if (kind === LITERAL) return literalProblems(attributes);
   if (kind === TEMPLATELITERAL || kind === "tstemplateliteraltype") {
