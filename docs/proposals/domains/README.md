@@ -65,13 +65,20 @@ One form of a domain: the stored one. Concretely:
    objects, owned by its singleton through `Defines`, by name: Patterns' defaults (`int`, `float`, ...), C's and C++'s
    types (`int`, `unsigned long long`, `size_t`, ...), SystemVerilog's (`logic`, `bit`, sized vectors), Python's,
    TypeScript's, MATLAB's, Excel's and LaTeX's value domains.
-2. **What a domain means is functions over its stored parameters, not methods of a class.** `contains`, `compare`,
-   `fit` (wrap, saturate, raise), IEEE 754 rounding and C's conversions read a domain's parameters (width, signedness,
-   overflow, format, rounding) through mbse-schemas' readers, by its kind. The functions are the intrinsics: code,
-   found by the kind's name. The dataclasses and `read` go.
+2. **What a domain means is its properties, inferred ones included.** As the user decided (2026-11-04), correcting
+   this proposal's first draft ("What a domain means becomes functions"): "no. inferred properties are still
+   properties. For now they must be hand populated, but eventually they will be computed by constraint resolution."
+   A domain stores its parameters (width, signedness, overflow, format, rounding) and the properties that follow from
+   them (its least and greatest values, whether it is ordered, the domain a result is fitted into, ...) alike, as
+   properties of its kind; the inferred ones are populated by hand in each dialect's define until constraint
+   resolution computes them ([CAP-043: constraints resolved in any direction](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-043.md)). No domain is a class or a function; the
+   dataclasses and `read` go. Evaluation's arithmetic (adding two values, rounding a result) is the evaluator's, as
+   now, reading the domain's properties.
 3. **Operator signatures are the stored operations.** An operation's argument and result schemas say what
-   `SIGNATURES` says; the code tables go, and validation and inference read the stored operations. What a rule computes
-   (C's usual arithmetic conversions, "the same domain as its arguments") is an intrinsic, named by the operation.
+   `SIGNATURES` says; the code tables go, and validation and inference read the stored operations. What a rule would
+   compute (C's usual arithmetic conversions, "the same domain as its arguments") is, by the same decision, an inferred
+   property: the result domain for each combination of argument domains, populated by hand until constraint
+   resolution computes it (question 2).
 4. **The framework keeps only protocols.** `Domain`, `Signature` and friends become the reading interface over stored
    domains and operations; `Anything` and `Opaque` become stored domains of the framework, or the absence of one
    (question 3).
@@ -83,10 +90,12 @@ One form of a domain: the stored one. Concretely:
 1. **Order with domain inference (CAP-232).** (a) This first, as its own release: inference then builds on stored
    domains. (b) Together with inference, since much of what reads domains today exists for want of inference.
    *Recommended: (a)*: it is a model change, inference is a capability on top.
-2. **Rules: data or code.** A signature like "the result is the common type of the operands after promotion" (C) or
-   "the same domain as its arguments" (`Same`) is a rule, not a fixed schema. (a) Each rule an intrinsic, named by the
-   operation, its code the only code. (b) Rules written as constraints over the operation's variables, evaluated by the
-   dialect's evaluator. *Recommended: (a) now*: (b) needs the evaluator protocol and the parked map and reduce.
+2. **How a rule's results are populated by hand.** "The same domain as its arguments" is one property per operation;
+   C's usual arithmetic conversions are a result domain per pair of arithmetic types (about a dozen types, so on the
+   order of a hundred entries in C, fewer in C++'s overlap). (a) Stored as entries of a relation from an operation and
+   its argument domains to its result domain, written in each dialect's define. (b) A smaller rule-shaped model (a
+   rank per type and "the higher rank wins"), itself properties. *Recommended: (a)*: it is plain data, and what
+   constraint resolution will later compute is exactly those entries.
 3. **`Anything` and `Opaque`.** (a) Stored domains of the framework, `Expressions.Framework.Anything`, every
    dialect's result where nothing is known. (b) The absence of a domain, an operation's result left unconstrained.
    *Recommended: (b)*, since a term's domain is already absent where not inferred.
@@ -104,7 +113,8 @@ One form of a domain: the stored one. Concretely:
 Each passes both gates at 100% in both languages, on every supported Node version, with the corpora regenerated, and a
 whole-record review before it is brought to the user.
 
-1. The framework: domain kinds by extension in every dialect, the reading interface, the intrinsics' registry.
+1. The framework: domain kinds by extension in every dialect, their parameters and inferred properties, the relation
+   holding operations' result domains, and the reading interface.
 2. Patterns: its domains stored, its dataclasses and `read` gone, `SIGNATURES` replaced by its stored operations.
 3. C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its domains stored.
 4. Records in mbse-basis (CAP-097, CAP-232, CAP-226), and release.
@@ -112,9 +122,11 @@ whole-record review before it is brought to the user.
 ## Risks
 
 - **Cost**: stores hold hundreds more objects (every dialect's types), and installs grow; suites build stores often.
-- **Equivalence**: the intrinsics in both languages, byte-identical messages.
-- **Semantics drift**: today's dataclasses are tested; each moved function must keep their behavior, which the suites
-  pin.
+- **Equivalence**: the hand-populated properties written once, as data each dialect's define writes in both
+  languages, byte-identical on the wire.
+- **Hand-populated properties drift**: what today's dataclasses compute (a domain's bounds, a result's domain) is
+  written by hand until constraint resolution; the suites pin each against today's behavior, and a property that
+  disagrees with its parameters is a constraint a later resolver reports.
 
 ## A stopping point for the overhaul
 
