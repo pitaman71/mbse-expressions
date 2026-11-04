@@ -74,7 +74,7 @@ One form of a domain: the stored one. Concretely:
    resolution computes them ([CAP-043: constraints resolved in any direction](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-043.md)). No domain is a class or a function; the
    dataclasses and `read` go. Evaluation's arithmetic (adding two values, rounding a result) is the evaluator's, as
    now, reading the domain's properties.
-3. **Operator signatures are the stored operations.** An operation's argument and result schemas say what
+3. **Operator signatures are the stored operations** (their result domains deferred to CAP-232, Decided, 2). An operation's argument and result schemas say what
    `SIGNATURES` says; the code tables go, and validation and inference read the stored operations. What a rule would
    compute (C's usual arithmetic conversions, "the same domain as its arguments") is, by the same decision, an inferred
    property: the result domain for each combination of argument domains, populated by hand until constraint
@@ -97,8 +97,15 @@ As the user decided (2026-11-04), on the questions below:
   IEEE 754, IEEE 1164, ...) shared, each dialect's domains instances of them under its own names.
 - **5. Typing C literals by suffix**: "1,5. yes before per your recommendation": kept, as a lookup of the stored domain
   by the literal's suffix and base.
-- **2.** Asked what "code intrinsics" meant (the first draft's word, for a rule implemented as a function registered by
-  the operation's name, which "inferred properties are still properties" rules out); open, as revised below.
+- **2. Operations' result domains: deferred to CAP-232.** Asked what "code intrinsics" meant (the first draft's word,
+  for a rule implemented as a function registered by the operation's name, which "inferred properties are still
+  properties" rules out), then shown that the question is the relation from an operation's argument domains to its
+  result domain: "I wasn't expecting that to become an issue until CAP-232." Proposed and agreed ("yes"): this
+  proposal stores each dialect's domains, their parameters and hand-populated properties, and each operation's
+  argument and result schemas as stage 3 has them; the relation from argument domains to result domain, and how it is
+  populated, are domain inference's ([CAP-232](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)). Until then `Dialect.infer`'s signatures stay as they are, marked as CAP-232's to
+  replace, and evaluation's arithmetic (C's usual arithmetic conversions applied to the values it computes) is the
+  evaluator's, as now.
 
 ## Questions for the user
 
