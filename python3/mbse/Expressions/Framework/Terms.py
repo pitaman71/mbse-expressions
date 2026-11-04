@@ -53,7 +53,7 @@ kind is read, is a `Kind`: its role, and which properties name what it binds and
 - `kind_of(term)`: its kind's branch, `(tag, record)`; `dialect_of(term)`: the name of its dialect's `Term`.
   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers nested,
   as a dialect whose kinds hold sublanguages reads them to print and check them.
-- `name_of(term)`, `operator_of(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
+- `name_of(term)`, `reference_name(name)`, `operator_of(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
 - `Dialect`: a dialect's kinds by tag, with `validate`, `infer` and `make(form)`, the `Writer` of a form.
 - `Writer`: a spec that writes a term of its dialect through the builders; `spec(x)` makes one of a writer, a native
   value (a literal), a term value (copied) or a callable taking the `Visitors.OfUnion` of a term value.
@@ -63,7 +63,10 @@ The roles are:
 - `LITERAL`: a value, its `value`.
 - `REFERENCE`: a value the scope resolves. A lexical reference (the default) is the value bound to its name, by an
   enclosing binding or import or by the scope; others, such as Excel's cell references, are resolved by the scope
-  alone, and validation does not require them to be bound. `ambient` names are bound without being declared.
+  alone, and validation does not require them to be bound. `ambient` names are bound without being declared. A
+  reference's name is its `name`: a string, or a name node, a helper (C++'s `idexpression`, holding its `Name`), whose
+  name is an identifier's spelling (`reference_name`); a name node that is not an identifier (`std::cout`) is
+  resolved by the scope alone, and the terms it holds (a template's arguments) are its arguments.
 - `APPLICATION`: an operator, named by the property `operator` (or, if it is None, by the kind's tag), applied to
   arguments. A kind's `vocabulary` maps operator names to signatures; operators outside it are extensions, unless the
   vocabulary is None, when any name is accepted and `signature` applies to all, or the kind is `closed`, when they
@@ -91,7 +94,7 @@ __all__ = [
     "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
     "INVALID", "INVALID_KINDS", "invalid_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
     "spec", "term", "is_term", "is_expression", "kind_of", "dialect_of", "form", "node",
-    "name_of", "operator_of", "walk", "fold", "same",
+    "name_of", "reference_name", "operator_of", "walk", "fold", "same",
 ]
 
 TERM = "Expressions.Framework.Term"
@@ -487,10 +490,24 @@ def node(tag: str, record: Any) -> Node:
     return _nest(record.as_schema(), tag, attributes_of(record), arguments_of(record))
 
 
+def reference_name(value: Any) -> Any:
+    """The name an attribute `name` gives: a string, or, where a name is a node (C++'s `idexpression`, holding its
+    `Name`), an identifier's spelling; None for a name node that is not an identifier (`std::cout`), or none."""
+    if isinstance(value, Part):
+        return value.attributes.get("spelling") if value.kind == "identifier" else None
+    return value
+
+
 def name_of(term_: Any) -> Any:
-    """The name a reference refers to, or a binding, quantifier or import binds: its `name`; None if it has none."""
+    """The name a reference refers to, or a binding, quantifier or import binds: its `name`, a string, or the spelling
+    of the identifier its name node is (C++'s `idexpression`); None if it has none, or its name is not an identifier."""
     _, record = kind_of(term_)
-    return _scalar(record, "name") if "name" in record.as_schema().properties else None
+    schema = record.as_schema()
+    if "name" not in schema.properties:
+        return None
+    if "name" in _helpers(schema):  # a name node
+        return reference_name(attributes_of(record).get("name"))
+    return _scalar(record, "name")
 
 
 def operator_of(term_: Any, kind: Kind) -> str:
@@ -879,11 +896,14 @@ class Dialect:
                 problems.append(f"{what}'s {name} must be a {scalar.type.__name__}, got {_type_name(value)}")
         if kind.check is not None:
             problems += kind.check(record)
-        name = attributes.get("name")
+        name = reference_name(attributes.get("name"))
         if kind.role == REFERENCE:
-            if kind.lexical and not problems and name not in bound and name not in kind.ambient:
+            if kind.lexical and not problems and name is not None and name not in bound and name not in kind.ambient:
                 problems.append(f"{tag} {name!r} is not bound")
-            return problems
+            if not isinstance(attributes.get("name"), Part):
+                return problems
+            # a name node: a name that is not an identifier is resolved by the scope alone (`std::cout`), and the terms
+            # within it (a template's arguments) are checked as an application's are
         labelled = _labelled(record)
         arguments = [argument for _, _, argument in labelled]
         scopes = [bound] * len(arguments)

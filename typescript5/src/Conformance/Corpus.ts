@@ -161,8 +161,8 @@ export function build(): Map<string, Case> {
 
   // --- cpp: every kind, written through the builders and its writers, a C++ name, a lambda, a requires expression and a
   // shared identifier --- the text ToText writes: {!record.a && record->b[0] > 1.5f ? (uint8_t)record(1) : 5u, nullptr,
-  // 10_km, "a" R"(b)", std::cout, this, (record), [=, &record](auto y) {}, (record + ...), requires (int z) { z + 1; },
-  // int(record), record--, static_cast<int>(record), typeid(record), co_await record, sizeof(int), sizeof...(Ts),
+  // 10_km, "a" R"(b)", std::cout, this, (record), [=, &record, n = 1](auto y) {}, (record + ...), requires (int z) {
+  // z + 1; }, int(record), record--, static_cast<int>(record), typeid(record), co_await record, sizeof(int), sizeof...(Ts),
   // alignof(int), noexcept(record), new int{1}, delete[] record, record = 0, throw, co_yield record, record..., .x =
   // record, ({}), __extension__ record}
   const meCpp = CPP.identifier("record");
@@ -176,7 +176,9 @@ export function build(): Map<string, Case> {
     (i: any) => i.thisexpression((k: any) => k),
     (i: any) => i.parenthesizedexpression((k: any) => k.expression(meCpp)),
     (i: any) => i.lambdaexpression((la: any) => la.captures([(k: any) => k.defaultcapture((d: any) => d.mode("=")),
-                              (k: any) => k.simplecapture((s: any) => s.by_reference(true).name((i: any) => i.spelling("record")))]).declarator(
+                              (k: any) => k.simplecapture((s: any) => s.by_reference(true).name((i: any) => i.spelling("record"))),
+                              (k: any) => k.initcapture((s: any) => s.name(name("n")).initializer(
+                                (x: any) => x.equalinitializer((e: any) => e.value(CPP.literal(1n)))))]).declarator(
       (d: any) => d.parameters([(q: any) => q.parameterdeclaration((pd: any) => pd.specifiers([(s: any) => s.placeholdertypespecifier((h: any) => h)]).declarator(
         (dd: any) => dd.iddeclarator((i2: any) => i2.name(name("y")))))]))),
     (i: any) => i.foldexpression((f: any) => f.left(meCpp).operator("+")),

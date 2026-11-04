@@ -44,15 +44,15 @@ carries no domain. Its kinds:
 The sublanguages are unions of their own beside `Term` (the dialects proposal, Decided, 5): `Expressions.C.Type`, a type
 name (`typeid`: its `specifiers` and its abstract `declarator`), held by a cast, a compound literal, a generic
 association and an enumeration's fixed type, and `Expressions.C.Pattern`, for binding targets, which every dialect has
-("(ii)"): no C expression binds a name, so it holds invalid syntax alone. As the user decided ("(b)"), one schema is a
-branch of every union whose positions hold it: `Term` lists `typeid`, for the positions that hold an expression or a
-type, and `designatedinitializer`, for an initializer list's items. A type name's parts are helpers, each union named
-after mbse-programs' category: `Specifier` (keywords, a named type, a struct, union or enum, C23's `typeof`,
-`_Atomic(type)`, C23's `_BitInt(width)`, and, as `TypeId` lists them among its specifiers, the attribute specifiers),
-`Declarator` (an identifier, a pointer, an array, a function, parentheses), `Parameter`, `AttributeSpecifier`,
-`Designator` and `Initializer`. A struct's or an enum's body, its member or enumerator declarations, is not part of the
-term ("(i)"): `body` says whether it has one. The framework reads a value of a sublanguage, as of any helper, as a
-`Terms.Part`.
+("(ii)"): C expressions bind no names, so it holds invalid syntax alone and nothing holds it, as the user decided
+(2026-11-04). As the user decided ("(b)"), one schema is a branch of every union whose positions hold it: `Term` lists
+`typeid`, for the positions that hold an expression or a type, and `designatedinitializer`, for an initializer list's
+items. A type name's parts are helpers, each union named after mbse-programs' category: `Specifier` (keywords, a named
+type, a struct, union or enum, C23's `typeof`, `_Atomic(type)`, C23's `_BitInt(width)`, and, as `TypeId` lists them
+among its specifiers, the attribute specifiers), `Declarator` (an identifier, a pointer, an array, a function,
+parentheses), `Parameter`, `AttributeSpecifier`, `Designator` and `Initializer`. A struct's or an enum's body, its
+member or enumerator declarations, is not part of the term ("(i)"): `body` says whether it has one. The framework reads
+a value of a sublanguage, as of any helper, as a `Terms.Part`.
 
 Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: `constant` C23's alone, an
 extension none). `DIALECT` reads them (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...)
@@ -184,7 +184,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
-            # its binding targets: no C expression binds a name, so invalid syntax alone ("(ii)")
+            # its binding targets: C expressions bind no names, so invalid syntax alone, held by nothing ("(ii)")
             lambda _: _.Pattern.name("Expressions.C.Pattern").branches([
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),

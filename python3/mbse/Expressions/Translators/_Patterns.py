@@ -114,11 +114,13 @@ class Matlab:
 
 
 class CFamily:
-    """The kinds of the C family, which C and C++ share; a member's name is an identifier, a `Name`."""
+    """The kinds of the C family, which C and C++ share; a member's name is an identifier, a `Name`. A name used as an
+    expression is C's `variable`, and C++'s `idexpression` holding its identifier, as each grammar makes it."""
 
     literal = staticmethod(lambda V: P("literal", value=V))  # its suffix and prefix, its type, are not spelling
     string = P("literal", value=value(str), quote='"')  # C++'s string, whose quote is not its spelling
     identifier = P("variable", name=N)
+    idexpression = P("idexpression", name=Part("identifier", {"spelling": N}, 0))  # C++'s identifier
     member = P("memberexpression", X, operator=".", member=Part("identifier", {"spelling": K}, 0))
     implies = P("binaryexpression", P("unaryexpression", A, operator="!"), B, operator="||")
 

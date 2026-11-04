@@ -29,8 +29,10 @@ complete, in their complete shapes; any other kind raises `NotImplementedError` 
 evaluated"), and so does what an evaluated kind holds beyond its former shape: an operator its vocabulary has but no
 rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not evaluated"), a literal of a type no evaluator has values
 of ("C literal of wchar_t is not evaluated"), a cast to a type that is not arithmetic, a subscript of several indices,
-a call of a callee that is not a function's name, a member that is not an identifier, and GNU's conditional without a
-consequence. Invalid syntax raises `ValueError` by name, as every dialect's does ("C error is not evaluated"), where a
+a call of a callee that is not a function's name, a member that is not an identifier, C++'s name used as an expression
+that is not an identifier (`std::cout`, "Cpp idexpression of a name that is not an identifier is not evaluated"), and
+GNU's conditional without a consequence. C's name used as an expression is the framework's `variable`, and C++'s an
+`idexpression` holding its identifier (`Cpp.Evaluators.EVALUATED`). Invalid syntax raises `ValueError` by name, as every dialect's does ("C error is not evaluated"), where a
 cast's type stands too.
 """
 
@@ -323,7 +325,7 @@ def _element(array: _Typed, index: _Typed) -> _Typed:
 def _call(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Scope) -> _Typed:
         callee = Terms.arguments_of(Terms.kind_of(node)[1])[0]
-        if Terms.kind_of(callee)[0] != Expressions.VARIABLE:
+        if dialect.kind(callee)[2].role != Terms.REFERENCE or Terms.name_of(callee) is None:
             raise _refuse(dialect, "callexpression of a callee that is not a function's name")
         function = scope.function(Terms.name_of(callee))
         return _typed(function(*(_native(argument()) for argument in arguments[1:])))
@@ -344,6 +346,10 @@ class Scope(S.Variables):
         self.functions = dict(functions or {})
 
     def lookup(self, reference: Any) -> Any:
+        if Terms.name_of(reference) is None:  # C++'s idexpression of a name that is not an identifier: `std::cout`
+            dialect = Terms.dialect_of(reference)[len("Expressions."):-len(".Term")]
+            raise NotImplementedError(
+                f"{dialect} {Terms.kind_of(reference)[0]} of a name that is not an identifier is not evaluated")
         return _typed(super().lookup(reference))
 
     def unbound(self, reference: Any) -> Any:
@@ -361,8 +367,9 @@ EVALUATED = frozenset({Expressions.LITERAL, Expressions.VARIABLE, Expressions.UN
 """The kinds the evaluator evaluates, those C evaluated before it was complete; any other is refused by name."""
 
 
-def interpreter(dialect: Any) -> F.Interpreter:
-    """The interpreter of a dialect of the C family, `C`'s or `Cpp`'s: its values carry their C types."""
+def interpreter(dialect: Any, evaluated: frozenset[str] = EVALUATED) -> F.Interpreter:
+    """The interpreter of a dialect of the C family, `C`'s or `Cpp`'s, evaluating the kinds `evaluated` names: its values
+    carry their C types."""
     return F.Interpreter(dialect, {
         Expressions.BINARYEXPRESSION: {
             **{op: _binary_arithmetic(op) for op in ("+", "-", "*", "/", "%", "&", "^", "|")},
@@ -374,7 +381,7 @@ def interpreter(dialect: Any) -> F.Interpreter:
         Expressions.CONDITIONALEXPRESSION: _conditional(dialect), Expressions.CASTEXPRESSION: _cast(dialect),
         Expressions.MEMBEREXPRESSION: _member(dialect), Expressions.SUBSCRIPTEXPRESSION: _subscript(dialect),
         Expressions.CALLEXPRESSION: _call(dialect),
-    }, literal=_typed, typed=_literal(dialect), scope=Scope, evaluated=EVALUATED)
+    }, literal=_typed, typed=_literal(dialect), scope=Scope, evaluated=evaluated)
 
 
 INTERPRETER = interpreter(Expressions.DIALECT)

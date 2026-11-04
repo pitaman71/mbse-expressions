@@ -33,8 +33,11 @@
  * its former shape: an operator its vocabulary has but no rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not
  * evaluated"), a literal of a type no evaluator has values of ("C literal of wchar_t is not evaluated"), a cast to a type
  * that is not arithmetic, a subscript of several indices, a call of a callee that is not a function's name, a member that
- * is not an identifier, and GNU's conditional without a consequence. Invalid syntax throws `ValueError` by name, as every
- * dialect's does ("C error is not evaluated"), where a cast's type stands too.
+ * is not an identifier, C++'s name used as an expression that is not an identifier (`std::cout`, "Cpp idexpression of a
+ * name that is not an identifier is not evaluated"), and GNU's conditional without a consequence. C's name used as an
+ * expression is the framework's `variable`, and C++'s an `idexpression` holding its identifier (`Cpp/Evaluators`'
+ * `EVALUATED`). Invalid syntax throws `ValueError` by name, as every dialect's does ("C error is not evaluated"), where a
+ * cast's type stands too.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -306,7 +309,9 @@ function element(target: Typed, index: Typed): Typed {
 function call(dialect: Terms.Dialect): F.Implementation {
   return (args, node, scope) => {
     const callee = Terms.argumentsOf(Terms.kindOf(node)[1])[0];
-    if (Terms.kindOf(callee)[0] !== Expressions.VARIABLE) throw refuse(dialect, "callexpression of a callee that is not a function's name");
+    if (dialect.kind(callee)[2].role !== Terms.REFERENCE || Terms.nameOf(callee) === null) {
+      throw refuse(dialect, "callexpression of a callee that is not a function's name");
+    }
     const fn = (scope as Scope).function(Terms.nameOf(callee));
     return typed(fn(...args.slice(1).map((argument) => (argument() as Typed).value)));
   };
@@ -322,6 +327,11 @@ export class Scope extends S.Variables {
   }
 
   override lookup(reference: any): unknown {
+    if (Terms.nameOf(reference) === null) { // C++'s idexpression of a name that is not an identifier: `std::cout`
+      const dialect = Terms.dialectOf(reference).slice("Expressions.".length, -".Term".length);
+      throw new NotImplementedError(
+        `${dialect} ${Terms.kindOf(reference)[0]} of a name that is not an identifier is not evaluated`);
+    }
     return typed(super.lookup(reference));
   }
 
@@ -341,8 +351,9 @@ export const EVALUATED: ReadonlySet<string> = new Set([Expressions.LITERAL, Expr
   Expressions.BINARYEXPRESSION, Expressions.CONDITIONALEXPRESSION, Expressions.CASTEXPRESSION, Expressions.MEMBEREXPRESSION,
   Expressions.SUBSCRIPTEXPRESSION, Expressions.CALLEXPRESSION]);
 
-/** The interpreter of a dialect of the C family, `C`'s or `Cpp`'s: its values carry their C types. */
-export function interpreter(dialect: Terms.Dialect): F.Interpreter {
+/** The interpreter of a dialect of the C family, `C`'s or `Cpp`'s, evaluating the kinds `evaluated` names: its values
+ * carry their C types. */
+export function interpreter(dialect: Terms.Dialect, evaluated: ReadonlySet<string> = EVALUATED): F.Interpreter {
   return new F.Interpreter(dialect, new Map<string, any>([
     [Expressions.BINARYEXPRESSION, new Map<string, F.Implementation>([
       ...["+", "-", "*", "/", "%", "&", "^", "|"].map((op) => [op, binaryArithmetic(op)] as [string, F.Implementation]),
@@ -354,7 +365,7 @@ export function interpreter(dialect: Terms.Dialect): F.Interpreter {
     [Expressions.CONDITIONALEXPRESSION, conditional(dialect)], [Expressions.CASTEXPRESSION, cast(dialect)],
     [Expressions.MEMBEREXPRESSION, member(dialect)], [Expressions.SUBSCRIPTEXPRESSION, subscript(dialect)],
     [Expressions.CALLEXPRESSION, call(dialect)],
-  ]), { literal: typed, typed: literal(dialect), scope: (variables) => new Scope(variables), evaluated: EVALUATED });
+  ]), { literal: typed, typed: literal(dialect), scope: (variables) => new Scope(variables), evaluated });
 }
 
 /** The interpreter of the C dialect. */

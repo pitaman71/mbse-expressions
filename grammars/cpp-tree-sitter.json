@@ -659,7 +659,7 @@
    ],
    "kinds": [
     "constant",
-    "variable"
+    "idexpression"
    ]
   },
   {
@@ -1224,7 +1224,7 @@
     "expression"
    ],
    "kinds": [
-    "variable"
+    "idexpression"
    ],
    "helpers": [
     "Identifier",

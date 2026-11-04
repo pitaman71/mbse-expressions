@@ -19,9 +19,12 @@ from ._Patterns import CFamily, Patterns, value
 
 V = value(int, float, str, bool)
 
+IDENTIFIER = Rule(Patterns.variable, CFamily.identifier)
+"""A Patterns variable is C's: a name used as an expression, which C++ writes as an `idexpression` instead."""
+
 RULES = [
     Rule(Patterns.literal(V), CFamily.literal(V)),
-    Rule(Patterns.variable, CFamily.identifier),
+    IDENTIFIER,
     Inline("let", "left"),
     Rule(Patterns.get, CFamily.member),
     Rule(Patterns.implies, CFamily.implies, "forward"),
@@ -30,6 +33,7 @@ RULES = [
         "sub": "-", "mul": "*", "bitand": "&", "bitor": "|", "bitxor": "^", "shl": "<<", "shr": ">>"}, 2),
     *renames("call", "callable", "unaryexpression", "operator", {"not": "!", "neg": "-", "bitnot": "~"}, 1),
 ]
-"""The rules between Patterns and the C family, C's and C++'s alike (the proposal's question 9)."""
+"""The rules between Patterns and the C family, C's and C++'s alike (the proposal's question 9), but for a name used as
+an expression (`IDENTIFIER`), which each language's grammar makes its own."""
 
 TRANSLATOR = Pairwise(PATTERNS, C_DIALECT, RULES)

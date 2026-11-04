@@ -288,10 +288,10 @@ class _Direction:
         """The target term of a form whose arguments are translated terms, and the names it needs, as
         `Symbolics.free` reads them."""
         kind = self.target.kinds()[form.kind]
-        name = form.attributes.get("name")
+        name = Terms.reference_name(form.attributes.get("name"))
         frees = [argument.free for argument in form.arguments]
-        if kind.role == Terms.REFERENCE:
-            free = frozenset({name} if kind.lexical and name not in kind.ambient else ())
+        if kind.role == Terms.REFERENCE:  # its name, and a name node's terms' names (a template's arguments)
+            free = frozenset({name} if kind.lexical and name not in kind.ambient else ()).union(*frees)
         elif kind.scopes is not None:  # what its arguments bind is read from a record, which a writer is not yet:
             free = frozenset().union(*frees)  # its arguments' names, the names it binds among them
         elif kind.role in (Terms.BINDING, Terms.QUANTIFIER):

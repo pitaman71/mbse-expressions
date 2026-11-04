@@ -118,11 +118,13 @@ export const Matlab = {
     new P("call", { callable: "numel" }, A)),
 };
 
-/** The kinds of the C family, which C and C++ share; a member's name is an identifier, a `Name`. */
+/** The kinds of the C family, which C and C++ share; a member's name is an identifier, a `Name`. A name used as an
+ * expression is C's `variable`, and C++'s `idexpression` holding its identifier, as each grammar makes it. */
 export const CFamily = {
   literal: (V: Hole) => new P("literal", { value: V }), // its suffix and prefix, its type, are not spelling
   string: new P("literal", { value: value(String), quote: '"' }), // C++'s string, whose quote is not its spelling
   identifier: new P("variable", { name: N }),
+  idexpression: new P("idexpression", { name: new Part("identifier", { spelling: N }, 0) }), // C++'s identifier
   member: new P("memberexpression", { operator: ".", member: new Part("identifier", { spelling: K }, 0) }, X),
   implies: new P("binaryexpression", { operator: "||" }, new P("unaryexpression", { operator: "!" }, A), B),
 };

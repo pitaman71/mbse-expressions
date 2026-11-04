@@ -227,6 +227,25 @@ As the user decided (2026-11-02), on the questions below:
   name node ("Names are syntax nodes (category `Name`) wherever they occur", `mbse-programs/python3/mbse/Programs/
   Ccpp/Syntax.py`), and a `str` where mbse-programs has a `str` (an attribute's `name` and `namespace`, a
   `using_namespace`).
+- **C++ writes a name used as an expression only as `idexpression`** (2026-11-04, following up stage 5, its API's item
+  106). Shown "C++ uses only `idexpression`, mbse-programs' one kind, so `variable` isn't listed in C++'s union... C
+  keeps `variable`, since C's grammar has a plain identifier expression", the user: "1, 2: confirmed". `Cpp`'s `Term`
+  has no `variable`: every C++ name used as an expression, an identifier among them, is an `idexpression` holding its
+  `Name` (`x` an `idexpression` of the identifier `x`, `std::cout` of a qualified name), as mbse-programs and
+  tree-sitter-cpp have it, its readers, printer, evaluation, scopes and translators following. `C` keeps the framework's
+  `variable`, an identifier used as an expression. The rule that a dialect reads only its own terms (Decided, 4) still
+  holds: a C++ term in C is refused.
+- **C++'s init capture holds its name as a `Pattern`** (2026-11-04, the same review). Shown "C++'s init capture holds
+  its name as a `Pattern`, which becomes `Identifier` plus the invalid-syntax kinds. C's `Pattern` exists but nothing
+  holds it, and the record says why: C expressions bind no names", the user: "3 = (a) is fine". `Expressions.Cpp.Pattern`
+  lists `identifier` (`Expressions.Cpp.Identifier`), `error` and `missing`, and an init capture's `name` (`[n = 1]`)
+  holds it, the binding target "Every dialect has a `Pattern` union" asks for. `Expressions.C.Pattern` stays invalid
+  syntax alone, and nothing holds it: C expressions bind no names.
+- **C's writers stay, for code generation** (2026-11-04, the same review, on whether C keeps its writers): "4. for
+  codegen, we keep the writers separately because they emit code not just wire format for the model". C's and C++'s
+  writers (`literal`, `identifier`, `binary`, `cast`, ...) are kept as they are, beside the builders through which every
+  other term is written (PRI-019): code generation writes terms through them to emit source, not only the model's wire
+  format.
 
 ## Questions for the user
 
@@ -381,21 +400,25 @@ change as it lands.
    both. Evaluation refuses every kind but a literal by name; there is no translator and no writer.
 5. **C and C++ by standard.**
 
-   *As built* (branch `stage5-c-cpp`; every choice made where the decisions were silent is in
-   [the API, Settled in stage 5 (C and Cpp)](../port/API.md#settled-in-stage-5-c-and-cpp-for-the-users-review), items 87
-   to 106). `Expressions.C.Term` holds every expression of C, C11 to C23, and `Expressions.Cpp.Term` every expression of
-   C++, C++17 to C++23, in mbse-programs' Ccpp names and shapes, tags lowercased (`binaryexpression`,
-   `lambdaexpression`); each defines its own copy of the kinds they share, holding its own terms, and each kind records
-   the standards that have it (GNU's extensions none). An identifier used as an expression is `variable`, C++'s other
-   names `idexpression`, and every other name an `Identifier` node wherever mbse-programs has a name node. Each has a `Type` union, a type name (`typeid`, which `Term` lists too), and a `Pattern` union
-   of invalid syntax alone, as no C or C++ expression binds a name; a type name's and a lambda's parts are helpers,
-   their unions named after mbse-programs' categories. A literal refines the framework's, adding its prefix, quote,
-   base, separators and suffix (C++'s raw strings too); `constant` holds `nullptr`. A body of statements or
-   declarations is a `body` flag, printed `{}`. `ToText` prints every kind of both in both languages;
-   `grammars/c-tree-sitter.json` and `grammars/cpp-tree-sitter.json` keep tree-sitter-c's and tree-sitter-cpp's node
-   types, which DIA-26 checks in both. Evaluation keeps what C evaluated, a literal typed by its suffix and base, and
-   refuses every other kind by name; the translators keep what they translated, Patterns <-> C and Patterns <-> Cpp
-   one rule set. Every dialect's `Type` and `Pattern` now hold `error` and `missing`.
+   *As built* (branch `stage5-c-cpp`, and its follow-up `stage5-followup`; every choice made where the decisions were
+   silent is in [the API, Settled in stage 5 (C and
+   Cpp)](../port/API.md#settled-in-stage-5-c-and-cpp-for-the-users-review), items 87 to 107). `Expressions.C.Term` holds
+   every expression of C, C11 to C23, and `Expressions.Cpp.Term` every expression of C++, C++17 to C++23, in
+   mbse-programs' Ccpp names and shapes, tags lowercased (`binaryexpression`, `lambdaexpression`); each defines its own
+   copy of the kinds they share, holding its own terms, and each kind records the standards that have it (GNU's
+   extensions none). A name used as an expression is C's `variable` and C++'s `idexpression`, holding its `Name`
+   (Decided, "C++ writes a name used as an expression only as `idexpression`"), and every other name an `Identifier`
+   node wherever mbse-programs has a name node. Each has a `Type` union, a type name (`typeid`, which `Term` lists too),
+   and a `Pattern` union: C's of invalid syntax alone, held by nothing, as C expressions bind no names, and C++'s an
+   identifier or invalid syntax, held by an init capture's name (Decided, "C++'s init capture holds its name as a
+   `Pattern`"); a type name's and a lambda's parts are helpers, their unions named after mbse-programs' categories. A
+   literal refines the framework's, adding its prefix, quote, base, separators and suffix (C++'s raw strings too);
+   `constant` holds `nullptr`. A body of statements or declarations is a `body` flag, printed `{}`. `ToText` prints
+   every kind of both in both languages; `grammars/c-tree-sitter.json` and `grammars/cpp-tree-sitter.json` keep
+   tree-sitter-c's and tree-sitter-cpp's node types, which DIA-26 checks in both. Evaluation keeps what C evaluated, a
+   literal typed by its suffix and base, and refuses every other kind by name; the translators keep what they
+   translated, Patterns <-> C and Patterns <-> Cpp one rule set. Every dialect's `Type` and `Pattern` now hold `error`
+   and `missing`.
 6. **`SystemVerilog` complete**, Verilog its subset.
 7. **Tutorials, skill, README, EQUIVALENCE; release 0.8.0.** Then mbse-programs' stage 2, mbse-patterns and
    mbse-codegen-python.
