@@ -28,7 +28,7 @@ does, and why by rules, is mbse-basis'
 
 ## What a translation keeps
 
-- **The form, not always the value.** Each dialect evaluates by its own rules (see [dialects.md](dialects.md)), so a
+- **The form, not always the value.** Each dialect evaluates by its own rules (see [Dialects](dialects.md)), so a
   translated constraint can give a different answer on the same data: missing values, `1 == 1.0`, case in text.
   - Python: [T07.2: Each language evaluates by its own rules](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.2) · TypeScript: [T07.2: Each language evaluates by its own rules](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.2)
   - Python: [TRN-06: Translations evaluate alike where the dialects' rules agree, and apart where they do not](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-06) · TypeScript: [TRN-06: Translations evaluate alike where the dialects' rules agree, and apart where they do not](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-06)
@@ -70,7 +70,7 @@ does, and why by rules, is mbse-basis'
 
 *Why*: one mechanism, rules pairing patterns, serves every pair and every rewriting, and a term no rule covers is
 refused rather than copied. *When*: rewriting constraints within a dialect, or writing a translator
-([extending.md](extending.md#a-translator)). *How*: a translator is a list of rules, each pairing two patterns: forms
+([Adding a dialect or a translator](extending.md#a-translator)). *How*: a translator is a list of rules, each pairing two patterns: forms
 whose arguments and attributes may be holes (`Hole("X")`, which may also require its binding's type). A pattern
 names a kind by its branch's tag in its dialect's `Term` (`call`, `field`) and its attributes and arguments as
 `Terms.form` reads them; a literal's spelling is not matched. Applying a rule co-traverses its pattern with the term,

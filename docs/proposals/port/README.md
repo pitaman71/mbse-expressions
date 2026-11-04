@@ -179,7 +179,7 @@ missing there (CAP-112, "Schema parameters now or later"), now with no user in t
 
 ## Stage 2's model, drafted for review
 
-[Framework.py](Framework.py) and [Basic.py](Basic.py) draft the installs; [check.py](check.py) runs them against
+`Framework.py` and `Basic.py` draft the installs; `check.py` runs them against
 mbse-schemas 0.26 (installs valid, run again writing nothing, `x + 1 > 0` built through the builders and written
 nested, a snapshot round-tripping). What they propose, for the user's review:
 
@@ -281,7 +281,7 @@ schemas), the translators (their conversions of typed literals deferred), the co
 ## Stages (proposed, once decided)
 
 Stage 1 is done; stage 2 is split in two: 2a, the framework and Basic as installs, terms in the store, with the API
-settled in [API.md](API.md); 2b, the other dialects and the translators on it. 2a pins mbse-schemas 0.26.3, which
+settled in [The API after the complete dialects' stage 4 (as settled in the port's stages 2a, 2b and 3, and the dialects' stages 2 to 4)](API.md); 2b, the other dialects and the translators on it. 2a pins mbse-schemas 0.26.3, which
 writes a restricted `OfAny`'s value unambiguously, so a literal's `value` is the drafted `OfAny` of the five basic
 scalars (API.md, Settled while building, 1).
 

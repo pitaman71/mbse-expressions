@@ -78,7 +78,7 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
 
 *Why*: each pair is declared once, by rules both languages read alike. *How*: add a module per pair to `Translators/`,
 declaring `TRANSLATOR = Pairwise(left, right, rules)` with patterns from `_Patterns`, and list it in the package's
-`Translators` index so `between` finds it (see [translating.md](translating.md#how-translators-are-written)).
+`Translators` index so `between` finds it (see [Translating](translating.md#how-translators-are-written)).
 
 - Python: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-01) · TypeScript: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-01)
 - Python: [TRN-02: Every pair translates both ways; forms round-trip where both dialects have them](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-02) · TypeScript: [TRN-02: Every pair translates both ways; forms round-trip where both dialects have them](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-02)
@@ -87,12 +87,12 @@ declaring `TRANSLATOR = Pairwise(left, right, rules)` with patterns from `_Patte
 ## Obligations in this repository
 
 - Change Python and TypeScript together, with the same names, messages and JSON. A difference not listed in
-  [EQUIVALENCE.md](mbse:mbse-expressions/docs/EQUIVALENCE.md#deliberate-differences) is a bug.
+  [Equivalence of the implementations](mbse:mbse-expressions/docs/EQUIVALENCE.md#deliberate-differences) is a bug.
 - Add a conformance case for a new dialect, with its install in the corpus's store and its `DIALECTS` entry, so both
   implementations are checked to write the same JSON.
   - Python: [CONF-02: Every implementation has the same cases, and JSON is byte-identical across implementations](mbse:mbse-expressions/python3/tests/04_Conformance.ipynb#CONF-02) · TypeScript: [CONF-02: Every implementation has the same cases, and JSON is byte-identical across implementations](mbse:mbse-expressions/typescript5/tests/04_Conformance.ipynb#CONF-02)
 - Keep coverage at 100% in both, with assertions in shared test cases.
-- See [AGENTS.md](mbse:mbse-expressions/AGENTS.md) for the commands and invariants.
+- See [Guide for AI agents](mbse:mbse-expressions/AGENTS.md) for the commands and invariants.
 
 ## Go deeper
 
