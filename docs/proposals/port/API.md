@@ -10,7 +10,7 @@ The sections below show the API as it now is; the items settled in earlier stage
 29) keep the names of their stage, and "Settled in the complete dialects' stage 2" says what changed.
 
 The port's stage 2 replaces `Framework/Terms` and mbse-schemas' `Bindings` with terms stored in a store
-([the proposal](README.md), Decided, 1 and 2; its model, [Framework.py](Framework.py) and [Basic.py](Basic.py)). This
+([the proposal](README.md), Decided, 1 and 2; its model, `Framework.py` and `Basic.py`). This
 page says what replaces the old API, the smallest change that satisfies the decisions, so that stage 2b ports the other
 dialects and the translators to it. Python is shown; TypeScript has the same names (functions in camelCase where the
 old API had them so: `nameOf`, `formOf`), `store.transaction(() => ...)` for `with store.transaction():`, `bigint` for
@@ -82,7 +82,7 @@ it (`problems`), where a parser read it.
 
 A term value may also be built alone, a value with no identity, `store.Expressions.Framework.Term(spec)`, within a
 transaction: what tests and evaluators that need no expression object use. A transaction's expression (an upsert, as
-[check.py](check.py) writes `x + 1 > 0`) builds one the same way.
+`check.py` writes `x + 1 > 0`) builds one the same way.
 
 **Writers stay** (Decided, 10, until mbse-codegen-python moves off them; then they go with the builders' `set`,
 `argument` and `arguments`). A `Writer` is now a spec: a callable that writes a term through the builders. Called with
@@ -187,7 +187,7 @@ Basic's `operation` is the framework's `call`: its property `name` is `callable`
 
 1. **Resolved, by mbse-schemas 0.26.3: a literal's `value` is the drafted `OfAny` of the five basic scalars**
    (`S.OfAny(lambda a: a.schemas([S.OfBool, S.OfInt, S.OfFloat, S.OfStr, S.OfBytes]))`, as in
-   [Framework.py](Framework.py)). Under 0.26.2 it was briefly a value of any schema, because 0.26.2 wrote a restricted
+   `Framework.py`). Under 0.26.2 it was briefly a value of any schema, because 0.26.2 wrote a restricted
    `OfAny`'s value untagged and could not read a `str`, a `bytes` or a NaN back. 0.26.3 writes such a value bare only
    where exactly one of its schemas writes that form, otherwise wrapped, kind then schema, and reads it back without
    guessing (mbse-basis PRI-025, PRI-026, CAP-069): `{"literal": {"value": 1}}`, `1.5`, `true`, `-0.0`, but

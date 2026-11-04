@@ -42,7 +42,7 @@ language. Where the languages spell a thing differently, [In each language](#in-
 - You are choosing branches of an mbse-schemas union, or checking its values with `Validators.Validate`.
 
 It is a poor fit for logic that is simply part of one program; write that in the program's own language. Why the mbse
-repositories exist, and this one's part: [MBSE.md](mbse:mbse-expressions/MBSE.md).
+repositories exist, and this one's part: [Why the mbse repositories exist](mbse:mbse-expressions/MBSE.md).
 
 ## Practices that prevent most mistakes
 
@@ -150,7 +150,7 @@ repositories exist, and this one's part: [MBSE.md](mbse:mbse-expressions/MBSE.md
    attributes and ordered arguments; `Terms.walk` visits each term, parents first; `Terms.fold` computes bottom up;
    `Terms.same` compares by structure; `Symbolics.free(term, DIALECT)` gives the names it needs from its scope, and
    `Symbolics.imports` the imports it declares. A
-   rewriting is a translator from a dialect to itself, a list of rules ([references/translating.md](references/translating.md)).
+   rewriting is a translator from a dialect to itself, a list of rules ([Translating](references/translating.md)).
    [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#the-framework).
    - Python: [T06.1: A constraint is a tree of terms](mbse:mbse-expressions/python3/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.1) · TypeScript: [T06.1: A constraint is a tree of terms](mbse:mbse-expressions/typescript5/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.1)
    - Python: [T06.2: Which constraints read a property](mbse:mbse-expressions/python3/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.2) · TypeScript: [T06.2: Which constraints read a property](mbse:mbse-expressions/typescript5/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.2)
@@ -164,8 +164,8 @@ repositories exist, and this one's part: [MBSE.md](mbse:mbse-expressions/MBSE.md
    Patterns, `#FIELD!` in Excel, an error in Python and MATLAB). *When*: a constraint must run in a spreadsheet, a
    pipeline, firmware or hardware, or be read back from one. *How*: `Translators.between(source, target).forward(term)`
    gives a writer of the target's term, written in a transaction; its `Text.ToText` writes its source; evaluate it with
-   the target's evaluator, which models its rules. Load [references/dialects.md](references/dialects.md) and
-   [references/translating.md](references/translating.md).
+   the target's evaluator, which models its rules. Load [Dialects](references/dialects.md) and
+   [Translating](references/translating.md).
    [CAP-100: six languages' expression dialects](mbse:mbse-basis/docs/capabilities/CAP-100.md#dialects),
    [CAP-101: translation between dialects](mbse:mbse-basis/docs/capabilities/CAP-101.md#translators).
    - Python: [T07.1: Translating](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1) · TypeScript: [T07.1: Translating](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1)
@@ -177,7 +177,7 @@ repositories exist, and this one's part: [MBSE.md](mbse:mbse-expressions/MBSE.md
 10. **Nothing is imported or called unless the scope provides it.** *Why*: constraints travel as data, sometimes from
    people you do not fully trust. *When*: evaluating a dialect whose expressions import or call (Python, MATLAB,
    Excel). *How*: give its evaluator a scope that allowlists what it may reach: Python's modules, MATLAB's functions
-   and packages, Excel's workbooks and add-ins ([references/dialects.md](references/dialects.md#scopes-names-imports-and-references)).
+   and packages, Excel's workbooks and add-ins ([Dialects](references/dialects.md#scopes-names-imports-and-references)).
    - Python: [T07.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.4) · TypeScript: [T07.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.4)
    - Python: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-02) · TypeScript: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-02)
    - Python: [DIA-05: Matlab resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-05) · TypeScript: [DIA-05: Matlab resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-05)
@@ -208,15 +208,15 @@ repositories exist, and this one's part: [MBSE.md](mbse:mbse-expressions/MBSE.md
 
 | Task | Read |
 |---|---|
-| Pick a dialect, write its expressions, give it a scope (imports, packages, workbooks) | [references/dialects.md](references/dialects.md) |
-| Translate between dialects, or rewrite within one; what survives a round trip | [references/translating.md](references/translating.md) |
-| Add a dialect or a translator | [references/extending.md](references/extending.md) |
+| Pick a dialect, write its expressions, give it a scope (imports, packages, workbooks) | [Dialects](references/dialects.md) |
+| Translate between dialects, or rewrite within one; what survives a round trip | [Translating](references/translating.md) |
+| Add a dialect or a translator | [Adding a dialect or a translator](references/extending.md) |
 | Model the schemas the expressions refer to | the [mbse-schemas skill](mbse:mbse-schemas/skills/mbse-schemas/SKILL.md) |
 
 ## In each language
 
 The two implementations are equivalent: the same names, results, messages and JSON. Where a language forces a
-difference (mbse-expressions' [EQUIVALENCE.md](mbse:mbse-expressions/docs/EQUIVALENCE.md#deliberate-differences)),
+difference (mbse-expressions' [Equivalence of the implementations](mbse:mbse-expressions/docs/EQUIVALENCE.md#deliberate-differences)),
 each case shows its own:
 
 - **Values.** Python's ints and floats are `int` and `float` (`18`, `18.0`), and unknown is `None`; TypeScript's are
@@ -280,4 +280,4 @@ each case shows its own:
 The tutorials teach it in seven case studies (the fourth deferred), from a first constraint to C and SystemVerilog,
 each a notebook committed with its outputs and run as a test: [Python](mbse:mbse-expressions/python3/tutorials/README.md)
 and [TypeScript](mbse:mbse-expressions/typescript5/tutorials/README.md). The test plan,
-[TestPlan.md](mbse:mbse-expressions/python3/tests/TestPlan.md), lists every case.
+[Test plan — python3](mbse:mbse-expressions/python3/tests/TestPlan.md), lists every case.
