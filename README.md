@@ -145,7 +145,7 @@ ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email
 ## Status
 
 Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Patterns,
-Python3, Matlab, Excel, Latex, C, Cpp and SystemVerilog dialects, each with its `Term`, the union of its kinds, in the
+Python3, TypeScript5, Matlab, Excel, Latex, C, Cpp and SystemVerilog dialects, each with its `Term`, the union of its kinds, in the
 framework's union of the dialects' `Term`s, and translators between them; terms as values in an mbse-schemas store, with the container
 constructors `list` and `mapping`, literals holding any value with their spelling, and the kinds of invalid syntax
 `error` and `missing`; dialects, their operations and their
@@ -155,7 +155,10 @@ three-valued logic over values by the schemas they are written with, collections
 complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)), whose stage 2,
 the framework and the renames, is built, and stage 3, `Python3` complete over Python 3's expressions
 ([CAP-227: the Python3 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-227.md)), printed in both languages, read by
-`FromText` in Python and checked against `ast`'s node list; its evaluator stays shallow. Not built yet: domain
+`FromText` in Python and checked against `ast`'s node list; its evaluator stays shallow; and stage 4, `TypeScript5`, new,
+over TypeScript 5's expressions with its types, destructuring patterns and JSX
+([CAP-228: the TypeScript5 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-228.md)), printed in both languages and
+checked against typescript-estree's node types; it evaluates its literals alone, and has no translator yet. Not built yet: domain
 inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
 interface through which mbse-schemas will choose union branches and check constraints.
 

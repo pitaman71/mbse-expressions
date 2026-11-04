@@ -6,7 +6,8 @@
  *
  * - `new Rule(left, right)` pairs two `Pattern`s, each a form with `Hole`s: `new Pattern('call', { callable: 'eq' },
  *   A, B)` matches the Patterns `eq(a, b)` and binds the holes `A` and `B` to its arguments. A hole in an attribute binds
- *   the attribute's native value, and may restrict its type: `new Hole('K', String)`. A rule applies in both
+ *   the attribute's native value, and may restrict its type: `new Hole('K', String)`; so does a hole within a helper's
+ *   attributes (a `Terms.Part`), such as a Python3 comprehension's target, a pattern. A rule applies in both
  *   directions unless its `direction` is 'forward' or 'backward'.
  * - `new Inline(kind, side)` translates a binding of one side, which the other has no counterpart for, by substituting
  *   its value for its name in its body. The value is translated once, and written at every use.
@@ -102,10 +103,10 @@ export class Pattern {
     return 1 + fixed + this.args.reduce((sum, a) => sum + (a instanceof Pattern ? a.size() : 0), 0);
   }
 
-  /** The holes in the pattern, by name: 'argument' or 'attribute'. */
+  /** The holes in the pattern, by name: 'argument' or 'attribute' (a helper's among them). */
   holes(): Map<string, string> {
     const found = new Map<string, string>();
-    for (const value of this.attributes.values()) if (value instanceof Hole) found.set(value.name, "attribute");
+    for (const value of this.attributes.values()) for (const hole of attributeHoles(value)) found.set(hole.name, "attribute");
     for (const argument of this.args) {
       if (argument instanceof Pattern) for (const [name, role] of argument.holes()) found.set(name, role);
       else found.set(argument.name, "argument");
@@ -121,6 +122,24 @@ export class Pattern {
 }
 
 const DIRECTIONS = ["both", "forward", "backward"];
+
+/** The holes in an attribute's pattern: itself, or those within a helper's (`Terms.Part`) or a container of them. */
+function attributeHoles(value: unknown): Hole[] {
+  if (value instanceof Hole) return [value];
+  if (value instanceof Terms.Part) return [...value.attributes.values()].flatMap(attributeHoles);
+  if (Array.isArray(value)) return value.flatMap(attributeHoles);
+  return [];
+}
+
+/** An attribute's pattern with its holes filled, a helper's among them. */
+function filled(value: unknown, bindings: Map<string, unknown>): unknown {
+  if (value instanceof Hole) return bindings.get(value.name);
+  if (value instanceof Terms.Part) {
+    return new Terms.Part(value.kind, new Map([...value.attributes].map(([k, v]) => [k, filled(v, bindings)])), value.size);
+  }
+  if (Array.isArray(value)) return value.map((inner) => filled(inner, bindings));
+  return value;
+}
 
 /** Two patterns that translate into each other; `direction` 'both', 'forward' (left to right only) or 'backward'. */
 export class Rule {
@@ -387,26 +406,37 @@ class Run {
     }
     if (form.kind !== pattern.kind || attributes.size !== pattern.attributes.size
       || ![...pattern.attributes.keys()].every((k) => attributes.has(k))) return false;
-    for (const [name, expected] of pattern.attributes) {
-      const value = attributes.get(name);
-      if (!(expected instanceof Hole)) {
-        if (!Terms.sameNative(expected, value)) return false;
-      } else if (expected.types.length > 0 && !expected.types.some((type) => Schemas.isScalarOf(type, value))) {
-        return false;
-      } else if (bindings.has(expected.name) && !Terms.sameNative(bindings.get(expected.name), value)) {
-        return false;
-      } else {
-        bindings.set(expected.name, value);
-      }
+    if (![...pattern.attributes].every(([name, expected]) => this.attribute(expected, attributes.get(name), bindings))) {
+      return false;
     }
     return form.arguments.length === pattern.args.length
       && pattern.args.every((p, i) => this.match(p, form.arguments[i], bindings));
   }
 
+  /** Matches an attribute's pattern: a hole binds its native value; a helper's pattern (`Terms.Part`, or a container
+   * of them) matches a helper of its kind and size, its attributes in turn; anything else is equal. */
+  private attribute(expected: unknown, value: unknown, bindings: Map<string, unknown>): boolean {
+    if (expected instanceof Hole) {
+      if (expected.types.length > 0 && !expected.types.some((type) => Schemas.isScalarOf(type, value))) return false;
+      if (bindings.has(expected.name)) return Terms.sameNative(bindings.get(expected.name), value);
+      bindings.set(expected.name, value);
+      return true;
+    }
+    if (expected instanceof Terms.Part && attributeHoles(expected).length > 0) {
+      return value instanceof Terms.Part && value.kind === expected.kind && value.size === expected.size
+        && value.attributes.size === expected.attributes.size
+        && [...expected.attributes].every(([k, v]) => value.attributes.has(k) && this.attribute(v, value.attributes.get(k), bindings));
+    }
+    if (Array.isArray(expected) && attributeHoles(expected).length > 0) {
+      return Array.isArray(value) && value.length === expected.length
+        && expected.every((inner, i) => this.attribute(inner, value[i], bindings));
+    }
+    return Terms.sameNative(expected, value);
+  }
+
   private instantiate(pattern: Pattern | Hole, bindings: Map<string, unknown>, environment: Environment): Built {
     if (pattern instanceof Hole) return this.translate(bindings.get(pattern.name), environment);
-    const attributes = new Map([...pattern.attributes].map(([name, value]) =>
-      [name, value instanceof Hole ? bindings.get(value.name) : value] as [string, unknown]));
+    const attributes = new Map([...pattern.attributes].map(([name, value]) => [name, filled(value, bindings)] as [string, unknown]));
     const args = pattern.args.map((argument) => this.instantiate(argument, bindings, environment));
     return this.direction.build(new Terms.Form(pattern.kind, attributes, args));
   }

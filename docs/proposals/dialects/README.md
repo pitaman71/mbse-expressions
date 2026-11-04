@@ -191,6 +191,32 @@ As the user decided (2026-11-02), on the questions below:
   value (the container must hold it) or a variable (bound to each element), whose schema is compatible with the
   element's; an adjacency's takes a symbol (bound to each object at the other end) or a builder (an object the spec
   writes there), whose schema is compatible with that end's.
+- **A sublanguage's union holds the terms its positions hold, as branches** (2026-11-03, in building stage 4,
+  `TypeScript5`). Asked how a property holds a kind from two unions, where mbse-programs types it as a mix of a term
+  kind and a sublanguage's kind (an arrow's parameter `x` is an `Identifier`, a term; `a.b = 1`, `x! = 1`,
+  `(x as T) = 1` and `(x) = 1` have targets that are terms; a type's entity name is `Identifier | ThisExpression |
+  TSQualifiedName`; a literal type holds `Literal | UnaryExpression | TemplateLiteral`; an import type an
+  `ObjectExpression`), each sublanguage being a union of its own beside `Term` (question 5): (a) a `term` branch in
+  each sublanguage's union, holding `Term`, a level of wrapping on the wire; (b) one schema listed as a branch of
+  several unions, `Pattern` listing `identifier` and `memberexpression` (typescript-estree's `DestructuringPattern`)
+  and the expressions an assignment's target may be, `Type` listing `identifier` and `thisexpression` for entity
+  names; (c) a union of its own for each mixed position (`Target`, `EntityName`); (d) the pattern kinds in `Term`, as
+  typescript-estree's `Expression` has them. The user: "(b) as you recommended": `Pattern` lists, beside its own
+  pattern kinds, the term kinds typescript-estree's `DestructuringPattern` allows (`identifier`, `memberexpression`)
+  and, for an assignment's target, the expression kinds valid there (`tsnonnullexpression`, `tsasexpression`,
+  `tssatisfiesexpression`, `tstypeassertion`, `parenthesizedexpression`); `Type` lists `identifier` and
+  `thisexpression` for entity names, and what else a type position holds (`TSLiteralType.literal`'s terms,
+  `TSImportType`'s), each listed directly, with no wrapping level; which terms are allowed where beyond the schema is
+  a constraint, consistent with decision 4; a literal type holds its terms the same way. Asked whether names that only
+  declare (`TSMappedType.key`, `TSNamedTupleMember.label`, `TSTypeParameter.name`, `TSQualifiedName.right`) are a
+  `str`, as Python3's are where mbse-programs has an `Identifier` node, or stay mbse-programs' `Identifier`: "yes, stay
+  `Identifier` terms".
+- **Every dialect has a `Pattern` union for its binding targets** (2026-11-03, building stage 4). Asked "is this done
+  consistently across typescript5 and python3? can it be?", and shown two options, (i) each dialect follows its own
+  grammar (`TypeScript5` a `Pattern` union, `Python3`'s targets holding its `Term`), or (ii) a uniform rule where every
+  dialect has a `Pattern` union for binding targets, the user: "(ii)". `Python3` gains `Expressions.Python3.Pattern`,
+  listing the term kinds a binding target may be, no new kinds, one schema in several unions as (b) has it; a
+  comprehension's and a named expression's `target` hold it; a lambda's parameters, `arg`s, stay as they are.
 
 ## Questions for the user
 
@@ -331,6 +357,18 @@ change as it lands.
    `grammars/python3-ast.json` keeps `ast`'s node list, which DIA-20 checks in both. Evaluation stays shallow, refusing
    new kinds by name; the translators keep what they translated, reading a chain and n values as nested `and`s.
 4. **`TypeScript5`**, new: expressions, types, patterns and JSX (question 5), printed.
+
+   *As built* (branch `stage4-typescript5`; every choice made where the decisions were silent is in
+   [the API, Settled in stage 4 (TypeScript5)](../port/API.md#settled-in-stage-4-typescript5-for-the-users-review), items 70
+   to 85). `Expressions.TypeScript5.Term` holds typescript-estree's expression kinds, TypeScript 5.0 to 5.9, in
+   mbse-programs' names and shapes, tags lowercased (`binaryexpression`, `tsasexpression`), with JSX as an extension;
+   its types and destructuring patterns are unions of their own, `Expressions.TypeScript5.Type` and
+   `Expressions.TypeScript5.Pattern`, a schema a branch of every union whose positions hold it (Decided, "A
+   sublanguage's union holds the terms its positions hold"). A literal refines the framework's, adding its quote, base
+   and separators, a number a float and a bigint an int; TypeScript5's `constant` holds `null` and regular expressions.
+   A body of statements is absent, printed `{}`; an arrow's expression body is a term. `ToText` prints every kind in
+   both languages; `grammars/typescript5-estree.json` keeps typescript-estree's node types, which DIA-23 checks in
+   both. Evaluation refuses every kind but a literal by name; there is no translator and no writer.
 5. **C and C++ by standard.**
 6. **`SystemVerilog` complete**, Verilog its subset.
 7. **Tutorials, skill, README, EQUIVALENCE; release 0.8.0.** Then mbse-programs' stage 2, mbse-patterns and

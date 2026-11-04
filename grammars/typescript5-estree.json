@@ -1,0 +1,997 @@
+{
+ "grammar": "typescript-estree's node types (AST_NODE_TYPES), TypeScript 5.0 to 5.9: every node an expression, a type or a pattern is, or holds, mapped to TypeScript5's kinds (`kinds`), the branches of its `Type` (`types`) and `Pattern` (`patterns`) unions, or a helper; every other node listed as not an expression, with its reason",
+ "checked": "@typescript-eslint/types 8.71.0 (TypeScript 5.9.3), as mbse-programs installs it: its 168 node types, those its `Expression` union holds (`class` Expression, a literal's as `LiteralExpression`), and those its `TypeNode` holds",
+ "nodes": [
+  {
+   "node": "AccessorProperty",
+   "not": "a class's member, in its body, which is not part of the term"
+  },
+  {
+   "node": "ArrayExpression",
+   "class": "Expression",
+   "kinds": [
+    "arrayexpression"
+   ]
+  },
+  {
+   "node": "ArrayPattern",
+   "class": "Expression",
+   "kinds": [
+    "arraypattern"
+   ],
+   "patterns": [
+    "arraypattern"
+   ]
+  },
+  {
+   "node": "ArrowFunctionExpression",
+   "class": "Expression",
+   "kinds": [
+    "arrowfunctionexpression"
+   ]
+  },
+  {
+   "node": "AssignmentExpression",
+   "class": "Expression",
+   "kinds": [
+    "assignmentexpression"
+   ]
+  },
+  {
+   "node": "AssignmentPattern",
+   "kinds": [
+    "assignmentpattern"
+   ],
+   "patterns": [
+    "assignmentpattern"
+   ]
+  },
+  {
+   "node": "AwaitExpression",
+   "class": "Expression",
+   "kinds": [
+    "awaitexpression"
+   ]
+  },
+  {
+   "node": "BinaryExpression",
+   "class": "Expression",
+   "kinds": [
+    "binaryexpression"
+   ]
+  },
+  {
+   "node": "BlockStatement",
+   "not": "a body of statements, which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+  },
+  {
+   "node": "BreakStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "CallExpression",
+   "class": "Expression",
+   "kinds": [
+    "callexpression"
+   ]
+  },
+  {
+   "node": "CatchClause",
+   "not": "part of a try statement"
+  },
+  {
+   "node": "ChainExpression",
+   "class": "Expression",
+   "kinds": [
+    "chainexpression"
+   ]
+  },
+  {
+   "node": "ClassBody",
+   "not": "a class's body, which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+  },
+  {
+   "node": "ClassDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ClassExpression",
+   "class": "Expression",
+   "kinds": [
+    "classexpression"
+   ]
+  },
+  {
+   "node": "ConditionalExpression",
+   "class": "Expression",
+   "kinds": [
+    "conditionalexpression"
+   ]
+  },
+  {
+   "node": "ContinueStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "DebuggerStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "Decorator",
+   "helper": "Decorator"
+  },
+  {
+   "node": "DoWhileStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "EmptyStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ExportAllDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ExportDefaultDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ExportNamedDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ExportSpecifier",
+   "not": "part of an export declaration"
+  },
+  {
+   "node": "ExpressionStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ForInStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ForOfStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ForStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "FunctionDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "FunctionExpression",
+   "class": "Expression",
+   "kinds": [
+    "functionexpression"
+   ]
+  },
+  {
+   "node": "Identifier",
+   "class": "Expression",
+   "kinds": [
+    "identifier"
+   ],
+   "types": [
+    "identifier"
+   ],
+   "patterns": [
+    "identifier"
+   ]
+  },
+  {
+   "node": "IfStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ImportAttribute",
+   "not": "part of an import or export declaration"
+  },
+  {
+   "node": "ImportDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ImportDefaultSpecifier",
+   "not": "part of an import declaration"
+  },
+  {
+   "node": "ImportExpression",
+   "class": "Expression",
+   "kinds": [
+    "importexpression"
+   ]
+  },
+  {
+   "node": "ImportNamespaceSpecifier",
+   "not": "part of an import declaration"
+  },
+  {
+   "node": "ImportSpecifier",
+   "not": "part of an import declaration"
+  },
+  {
+   "node": "JSXAttribute",
+   "helper": "JSXAttribute"
+  },
+  {
+   "node": "JSXClosingElement",
+   "helper": "JSXClosingElement"
+  },
+  {
+   "node": "JSXClosingFragment",
+   "helper": "JSXClosingFragment"
+  },
+  {
+   "node": "JSXElement",
+   "class": "Expression",
+   "kinds": [
+    "jsxelement"
+   ]
+  },
+  {
+   "node": "JSXEmptyExpression",
+   "kinds": [
+    "jsxemptyexpression"
+   ]
+  },
+  {
+   "node": "JSXExpressionContainer",
+   "helper": "JSXExpressionContainer"
+  },
+  {
+   "node": "JSXFragment",
+   "class": "Expression",
+   "kinds": [
+    "jsxfragment"
+   ]
+  },
+  {
+   "node": "JSXIdentifier",
+   "helper": "JSXIdentifier"
+  },
+  {
+   "node": "JSXMemberExpression",
+   "helper": "JSXMemberExpression"
+  },
+  {
+   "node": "JSXNamespacedName",
+   "helper": "JSXNamespacedName"
+  },
+  {
+   "node": "JSXOpeningElement",
+   "helper": "JSXOpeningElement"
+  },
+  {
+   "node": "JSXOpeningFragment",
+   "helper": "JSXOpeningFragment"
+  },
+  {
+   "node": "JSXSpreadAttribute",
+   "helper": "JSXSpreadAttribute"
+  },
+  {
+   "node": "JSXSpreadChild",
+   "helper": "JSXSpreadChild"
+  },
+  {
+   "node": "JSXText",
+   "helper": "JSXText"
+  },
+  {
+   "node": "LabeledStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "Literal",
+   "class": "Expression",
+   "kinds": [
+    "literal",
+    "constant"
+   ],
+   "types": [
+    "literal"
+   ]
+  },
+  {
+   "node": "LogicalExpression",
+   "class": "Expression",
+   "kinds": [
+    "logicalexpression"
+   ]
+  },
+  {
+   "node": "MemberExpression",
+   "class": "Expression",
+   "kinds": [
+    "memberexpression"
+   ],
+   "patterns": [
+    "memberexpression"
+   ]
+  },
+  {
+   "node": "MetaProperty",
+   "class": "Expression",
+   "kinds": [
+    "metaproperty"
+   ]
+  },
+  {
+   "node": "MethodDefinition",
+   "not": "a class's member, in its body, which is not part of the term"
+  },
+  {
+   "node": "NewExpression",
+   "class": "Expression",
+   "kinds": [
+    "newexpression"
+   ]
+  },
+  {
+   "node": "ObjectExpression",
+   "class": "Expression",
+   "kinds": [
+    "objectexpression"
+   ],
+   "types": [
+    "objectexpression"
+   ]
+  },
+  {
+   "node": "ObjectPattern",
+   "class": "Expression",
+   "kinds": [
+    "objectpattern"
+   ],
+   "patterns": [
+    "objectpattern"
+   ]
+  },
+  {
+   "node": "PrivateIdentifier",
+   "kinds": [
+    "privateidentifier"
+   ]
+  },
+  {
+   "node": "Program",
+   "not": "a source file, mbse-programs'"
+  },
+  {
+   "node": "Property",
+   "kinds": [
+    "property"
+   ],
+   "patterns": [
+    "property"
+   ]
+  },
+  {
+   "node": "PropertyDefinition",
+   "not": "a class's member, in its body, which is not part of the term"
+  },
+  {
+   "node": "RestElement",
+   "patterns": [
+    "restelement"
+   ]
+  },
+  {
+   "node": "ReturnStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "SequenceExpression",
+   "class": "Expression",
+   "kinds": [
+    "sequenceexpression"
+   ]
+  },
+  {
+   "node": "SpreadElement",
+   "kinds": [
+    "spreadelement"
+   ]
+  },
+  {
+   "node": "StaticBlock",
+   "not": "a class's member, in its body, which is not part of the term"
+  },
+  {
+   "node": "Super",
+   "class": "Expression",
+   "kinds": [
+    "super"
+   ]
+  },
+  {
+   "node": "SwitchCase",
+   "not": "part of a switch statement"
+  },
+  {
+   "node": "SwitchStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TaggedTemplateExpression",
+   "class": "Expression",
+   "kinds": [
+    "taggedtemplateexpression"
+   ]
+  },
+  {
+   "node": "TemplateElement",
+   "helper": "TemplateElement"
+  },
+  {
+   "node": "TemplateLiteral",
+   "class": "Expression",
+   "kinds": [
+    "templateliteral"
+   ],
+   "types": [
+    "templateliteral"
+   ]
+  },
+  {
+   "node": "ThisExpression",
+   "class": "Expression",
+   "kinds": [
+    "thisexpression"
+   ],
+   "types": [
+    "thisexpression"
+   ]
+  },
+  {
+   "node": "ThrowStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TryStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "UnaryExpression",
+   "class": "Expression",
+   "kinds": [
+    "unaryexpression"
+   ],
+   "types": [
+    "unaryexpression"
+   ]
+  },
+  {
+   "node": "UpdateExpression",
+   "class": "Expression",
+   "kinds": [
+    "updateexpression"
+   ]
+  },
+  {
+   "node": "VariableDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "VariableDeclarator",
+   "not": "part of a variable declaration"
+  },
+  {
+   "node": "WhileStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "WithStatement",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "YieldExpression",
+   "class": "Expression",
+   "kinds": [
+    "yieldexpression"
+   ]
+  },
+  {
+   "node": "TSAbstractAccessorProperty",
+   "not": "a class's member, in its body, which is not part of the term"
+  },
+  {
+   "node": "TSAbstractKeyword",
+   "class": "TypeNode",
+   "not": "a modifier keyword, which typescript-estree's parser never writes: a modifier is its declaration's attribute, as mbse-programs has it"
+  },
+  {
+   "node": "TSAbstractMethodDefinition",
+   "not": "a class's member, in its body, which is not part of the term"
+  },
+  {
+   "node": "TSAbstractPropertyDefinition",
+   "not": "a class's member, in its body, which is not part of the term"
+  },
+  {
+   "node": "TSAnyKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsanykeyword"
+   ]
+  },
+  {
+   "node": "TSArrayType",
+   "class": "TypeNode",
+   "types": [
+    "tsarraytype"
+   ]
+  },
+  {
+   "node": "TSAsExpression",
+   "class": "Expression",
+   "kinds": [
+    "tsasexpression"
+   ],
+   "patterns": [
+    "tsasexpression"
+   ]
+  },
+  {
+   "node": "TSAsyncKeyword",
+   "class": "TypeNode",
+   "not": "a modifier keyword, which typescript-estree's parser never writes: a modifier is its declaration's attribute, as mbse-programs has it"
+  },
+  {
+   "node": "TSBigIntKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsbigintkeyword"
+   ]
+  },
+  {
+   "node": "TSBooleanKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsbooleankeyword"
+   ]
+  },
+  {
+   "node": "TSCallSignatureDeclaration",
+   "helper": "TSCallSignatureDeclaration"
+  },
+  {
+   "node": "TSClassImplements",
+   "helper": "TSClassImplements"
+  },
+  {
+   "node": "TSConditionalType",
+   "class": "TypeNode",
+   "types": [
+    "tsconditionaltype"
+   ]
+  },
+  {
+   "node": "TSConstructorType",
+   "class": "TypeNode",
+   "types": [
+    "tsconstructortype"
+   ]
+  },
+  {
+   "node": "TSConstructSignatureDeclaration",
+   "helper": "TSConstructSignatureDeclaration"
+  },
+  {
+   "node": "TSDeclareFunction",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TSDeclareKeyword",
+   "class": "TypeNode",
+   "not": "a modifier keyword, which typescript-estree's parser never writes: a modifier is its declaration's attribute, as mbse-programs has it"
+  },
+  {
+   "node": "TSEmptyBodyFunctionExpression",
+   "kinds": [
+    "tsemptybodyfunctionexpression"
+   ]
+  },
+  {
+   "node": "TSEnumBody",
+   "not": "part of an enum declaration"
+  },
+  {
+   "node": "TSEnumDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TSEnumMember",
+   "not": "part of an enum declaration"
+  },
+  {
+   "node": "TSExportAssignment",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TSExportKeyword",
+   "class": "TypeNode",
+   "not": "a modifier keyword, which typescript-estree's parser never writes: a modifier is its declaration's attribute, as mbse-programs has it"
+  },
+  {
+   "node": "TSExternalModuleReference",
+   "not": "part of an import-equals declaration"
+  },
+  {
+   "node": "TSFunctionType",
+   "class": "TypeNode",
+   "types": [
+    "tsfunctiontype"
+   ]
+  },
+  {
+   "node": "TSImportEqualsDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TSImportType",
+   "class": "TypeNode",
+   "types": [
+    "tsimporttype"
+   ]
+  },
+  {
+   "node": "TSIndexedAccessType",
+   "class": "TypeNode",
+   "types": [
+    "tsindexedaccesstype"
+   ]
+  },
+  {
+   "node": "TSIndexSignature",
+   "helper": "TSIndexSignature"
+  },
+  {
+   "node": "TSInferType",
+   "class": "TypeNode",
+   "types": [
+    "tsinfertype"
+   ]
+  },
+  {
+   "node": "TSInstantiationExpression",
+   "class": "Expression",
+   "kinds": [
+    "tsinstantiationexpression"
+   ]
+  },
+  {
+   "node": "TSInterfaceBody",
+   "not": "part of an interface declaration"
+  },
+  {
+   "node": "TSInterfaceDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TSInterfaceHeritage",
+   "not": "part of an interface declaration"
+  },
+  {
+   "node": "TSIntersectionType",
+   "class": "TypeNode",
+   "types": [
+    "tsintersectiontype"
+   ]
+  },
+  {
+   "node": "TSIntrinsicKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsintrinsickeyword"
+   ]
+  },
+  {
+   "node": "TSLiteralType",
+   "class": "TypeNode",
+   "types": [
+    "tsliteraltype"
+   ]
+  },
+  {
+   "node": "TSMappedType",
+   "class": "TypeNode",
+   "types": [
+    "tsmappedtype"
+   ]
+  },
+  {
+   "node": "TSMethodSignature",
+   "helper": "TSMethodSignature"
+  },
+  {
+   "node": "TSModuleBlock",
+   "not": "part of a namespace or module declaration"
+  },
+  {
+   "node": "TSModuleDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TSNamedTupleMember",
+   "class": "TypeNode",
+   "types": [
+    "tsnamedtuplemember"
+   ]
+  },
+  {
+   "node": "TSNamespaceExportDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TSNeverKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsneverkeyword"
+   ]
+  },
+  {
+   "node": "TSNonNullExpression",
+   "class": "Expression",
+   "kinds": [
+    "tsnonnullexpression"
+   ],
+   "patterns": [
+    "tsnonnullexpression"
+   ]
+  },
+  {
+   "node": "TSNullKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsnullkeyword"
+   ]
+  },
+  {
+   "node": "TSNumberKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsnumberkeyword"
+   ]
+  },
+  {
+   "node": "TSObjectKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsobjectkeyword"
+   ]
+  },
+  {
+   "node": "TSOptionalType",
+   "class": "TypeNode",
+   "types": [
+    "tsoptionaltype"
+   ]
+  },
+  {
+   "node": "TSParameterProperty",
+   "patterns": [
+    "tsparameterproperty"
+   ]
+  },
+  {
+   "node": "TSPrivateKeyword",
+   "class": "TypeNode",
+   "not": "a modifier keyword, which typescript-estree's parser never writes: a modifier is its declaration's attribute, as mbse-programs has it"
+  },
+  {
+   "node": "TSPropertySignature",
+   "helper": "TSPropertySignature"
+  },
+  {
+   "node": "TSProtectedKeyword",
+   "class": "TypeNode",
+   "not": "a modifier keyword, which typescript-estree's parser never writes: a modifier is its declaration's attribute, as mbse-programs has it"
+  },
+  {
+   "node": "TSPublicKeyword",
+   "class": "TypeNode",
+   "not": "a modifier keyword, which typescript-estree's parser never writes: a modifier is its declaration's attribute, as mbse-programs has it"
+  },
+  {
+   "node": "TSQualifiedName",
+   "class": "TypeNode",
+   "types": [
+    "tsqualifiedname"
+   ]
+  },
+  {
+   "node": "TSReadonlyKeyword",
+   "class": "TypeNode",
+   "not": "a modifier keyword, which typescript-estree's parser never writes: a modifier is its declaration's attribute, as mbse-programs has it"
+  },
+  {
+   "node": "TSRestType",
+   "class": "TypeNode",
+   "types": [
+    "tsresttype"
+   ]
+  },
+  {
+   "node": "TSSatisfiesExpression",
+   "class": "Expression",
+   "kinds": [
+    "tssatisfiesexpression"
+   ],
+   "patterns": [
+    "tssatisfiesexpression"
+   ]
+  },
+  {
+   "node": "TSStaticKeyword",
+   "class": "TypeNode",
+   "not": "a modifier keyword, which typescript-estree's parser never writes: a modifier is its declaration's attribute, as mbse-programs has it"
+  },
+  {
+   "node": "TSStringKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsstringkeyword"
+   ]
+  },
+  {
+   "node": "TSSymbolKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tssymbolkeyword"
+   ]
+  },
+  {
+   "node": "TSTemplateLiteralType",
+   "class": "TypeNode",
+   "types": [
+    "tstemplateliteraltype"
+   ]
+  },
+  {
+   "node": "TSThisType",
+   "class": "TypeNode",
+   "types": [
+    "tsthistype"
+   ]
+  },
+  {
+   "node": "TSTupleType",
+   "class": "TypeNode",
+   "types": [
+    "tstupletype"
+   ]
+  },
+  {
+   "node": "TSTypeAliasDeclaration",
+   "not": "a statement or a declaration, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TSTypeAnnotation",
+   "helper": "TSTypeAnnotation"
+  },
+  {
+   "node": "TSTypeAssertion",
+   "class": "Expression",
+   "kinds": [
+    "tstypeassertion"
+   ],
+   "patterns": [
+    "tstypeassertion"
+   ]
+  },
+  {
+   "node": "TSTypeLiteral",
+   "class": "TypeNode",
+   "types": [
+    "tstypeliteral"
+   ]
+  },
+  {
+   "node": "TSTypeOperator",
+   "class": "TypeNode",
+   "types": [
+    "tstypeoperator"
+   ]
+  },
+  {
+   "node": "TSTypeParameter",
+   "helper": "TSTypeParameter"
+  },
+  {
+   "node": "TSTypeParameterDeclaration",
+   "helper": "TSTypeParameterDeclaration"
+  },
+  {
+   "node": "TSTypeParameterInstantiation",
+   "helper": "TSTypeParameterInstantiation"
+  },
+  {
+   "node": "TSTypePredicate",
+   "class": "TypeNode",
+   "types": [
+    "tstypepredicate"
+   ]
+  },
+  {
+   "node": "TSTypeQuery",
+   "class": "TypeNode",
+   "types": [
+    "tstypequery"
+   ]
+  },
+  {
+   "node": "TSTypeReference",
+   "class": "TypeNode",
+   "types": [
+    "tstypereference"
+   ]
+  },
+  {
+   "node": "TSUndefinedKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsundefinedkeyword"
+   ]
+  },
+  {
+   "node": "TSUnionType",
+   "class": "TypeNode",
+   "types": [
+    "tsuniontype"
+   ]
+  },
+  {
+   "node": "TSUnknownKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsunknownkeyword"
+   ]
+  },
+  {
+   "node": "TSVoidKeyword",
+   "class": "TypeNode",
+   "types": [
+    "tsvoidkeyword"
+   ]
+  }
+ ],
+ "concrete": [
+  {
+   "union": "Term",
+   "kind": "parenthesizedexpression",
+   "reason": "parentheses written in the source, which typescript-estree does not keep (mbse-programs' `ParenthesizedExpression`)"
+  },
+  {
+   "union": "Pattern",
+   "kind": "parenthesizedexpression",
+   "reason": "parentheses written around an assignment's target, which typescript-estree does not keep"
+  },
+  {
+   "union": "Term",
+   "kind": "elision",
+   "reason": "a hole in an array, which typescript-estree writes as null (mbse-programs' `Elision`)"
+  },
+  {
+   "union": "Pattern",
+   "kind": "elision",
+   "reason": "a hole in an array pattern, which typescript-estree writes as null"
+  },
+  {
+   "union": "Type",
+   "kind": "tsparenthesizedtype",
+   "reason": "parentheses written around a type, which typescript-estree does not keep (mbse-programs' `TSParenthesizedType`)"
+  },
+  {
+   "union": "TypeElement",
+   "kind": "comment",
+   "reason": "a comment among an object type's members, which mbse-programs keeps and typescript-estree does not"
+  }
+ ]
+}

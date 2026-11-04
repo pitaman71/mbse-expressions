@@ -13,6 +13,7 @@
     "@mbse/expressions/Framework/": "./src/Framework/",
     "@mbse/expressions/Dialects/Patterns": "./src/Dialects/Patterns/index.ts",
     "@mbse/expressions/Dialects/Python3": "./src/Dialects/Python3/index.ts",
+    "@mbse/expressions/Dialects/TypeScript5": "./src/Dialects/TypeScript5/index.ts",
     "@mbse/expressions/Dialects/Matlab": "./src/Dialects/Matlab/index.ts",
     "@mbse/expressions/Dialects/Excel": "./src/Dialects/Excel/index.ts",
     "@mbse/expressions/Dialects/Latex": "./src/Dialects/Latex/index.ts",

@@ -42,8 +42,9 @@ def comparison(op: str) -> tuple[Part, ...]:
 
 
 def _for(conditions: int) -> tuple[Part, ...]:
-    """A Python3 comprehension's one `for` clause over a name, with `conditions`, as a form's attributes hold it."""
-    return (Part("comprehension", {}, 2 + conditions),)
+    """A Python3 comprehension's one `for` clause over a name, its target the pattern `N`, with `conditions`, as a
+    form's attributes hold it: its iterable and its conditions its terms."""
+    return (Part("comprehension", {"target": Part("variable", {"name": N}, 0)}, 1 + conditions),)
 
 
 def compares(kind: str, attribute: str, names: dict[str, str], python: str = "left") -> list[Rule]:
@@ -65,10 +66,9 @@ class Python3:
     implies = P("ifexp", B, A, P("literal", value=True))  # b if a else True
     ifexp = P("ifexp", B, A, C)  # b if a else c
     shr = P("binop", A, B, op=">>")
-    all_ = _call("all", P("generatorexp", B, P("variable", name=N), A, generators=_for(0)))  # all(b for n in a)
-    any_ = _call("any", P("generatorexp", B, P("variable", name=N), A, generators=_for(0)))
-    count_where = _call("sum", P("generatorexp", P("literal", value=1), P("variable", name=N), A, B,
-                                 generators=_for(1)))  # sum(1 for n in a if b)
+    all_ = _call("all", P("generatorexp", B, A, generators=_for(0)))  # all(b for n in a)
+    any_ = _call("any", P("generatorexp", B, A, generators=_for(0)))
+    count_where = _call("sum", P("generatorexp", P("literal", value=1), A, B, generators=_for(1)))  # sum(1 for n in a if b)
     builtin = staticmethod(lambda function: _call(function, A))  # len, sum, min, max
     index = P("subscript", A, B)
     in_ = P("compare", A, B, comparisons=comparison("in"))

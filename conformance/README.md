@@ -19,6 +19,7 @@ written nested, indent 2) and `<case>.yaml`.
 | `c` | a C term: every kind (the framework's `variable` and `call`, and its own `conditional`, `binary`, `unary`, `member`, `subscript`, `cast`, `constant`), typed constants and a shared identifier |
 | `cpp` | the same expression as a C++ term: C++'s own kinds, of C's shapes, each property holding a C++ term |
 | `systemverilog` | a SystemVerilog term: every kind (its own and the framework's `literal`, `variable` and `call`), sized vectors in a base, casts to a type and a width, a shared identifier |
+| `typescript5` | a TypeScript5 term of every kind of TypeScript 5's expressions, written through the builders: its types, destructuring patterns and JSX within it, a literal with its spelling, `null` and a regular expression (its `constant`), and a shared identifier |
 | `invalid` | a Python3 term holding invalid syntax, the framework's `error` (the source it spans and the term recovered within it) and `missing` (the kind expected), and literals with their spelling (`text`), one holding no value but its problem (`problems`) |
 
 Each case is a term value in one store holding the framework's install and every dialect's, and validates in its own

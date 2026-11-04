@@ -231,11 +231,14 @@ function isPair(schema: any): boolean {
     && [...(schema.properties as Map<string, Schemas.OfProperty.Data>).values()].every((prop) => holdsTerms(prop.schema));
 }
 
-/** Whether a schema is a helper's: a value object that is not a pair, or a union whose branches all are. */
+/** Whether a schema is a helper's: a value object that is not a pair, or a union, not of terms, whose branches are all
+ * value objects, helpers or pairs (a branch of terms alone, such as TypeScript5's `parenthesizedexpression` among its
+ * patterns, is a helper there). */
 function isHelper(schema: any): boolean {
   if (schema instanceof Schemas.OfUnion.Data) {
     return !holdsTerms(schema) && schema.branches.length > 0
-      && (schema.branches as readonly Schemas.OfUnion.Branch[]).every((branch) => isHelper(branch.schema));
+      && (schema.branches as readonly Schemas.OfUnion.Branch[]).every((branch) => isHelper(branch.schema)
+        || isPair(branch.schema));
   }
   return schema instanceof Schemas.OfObject.Data && !schema.ref && !isPair(schema);
 }

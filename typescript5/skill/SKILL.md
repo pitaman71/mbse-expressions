@@ -17,6 +17,9 @@ and translated between expression languages, called dialects:
 - **Python3**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules. Python3 holds every expression of Python 3 (3.0 to 3.15), as CPython's `ast` has it, and
   evaluates the kinds constraints use, refusing the others by name.
+- **TypeScript5**, every expression of TypeScript 5 (5.0 to 5.9) as typescript-estree has it, with its types,
+  destructuring patterns and JSX: it renders as TypeScript and evaluates its literals alone, refusing the others by
+  name; it has no translator yet, and its terms are written through the builders.
 - **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.
 - **C** and **Cpp**, C (C11 to C23) and C++ (C++17 to C++23) expressions over their arithmetic types: each renders as
   its source and evaluates by C's rules (promotions, wrapping unsigned arithmetic, undefined behavior raising).

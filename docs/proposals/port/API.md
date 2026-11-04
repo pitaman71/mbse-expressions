@@ -1,7 +1,7 @@
 <!-- nav -->
 [← Porting to the stabilized mbse-schemas](README.md) · [Home](../../../README.md)
 
-# The API after the complete dialects' stage 3 (as settled in the port's stages 2a, 2b and 3, and the dialects' stages 2 and 3)
+# The API after the complete dialects' stage 4 (as settled in the port's stages 2a, 2b and 3, and the dialects' stages 2 to 4)
 
 Since the complete dialects' stage 2 ([the dialects proposal](../dialects/README.md#stages-proposed-once-decided)), Basic
 is Patterns, Python is Python3, and Ccpp is C and Cpp; `Expressions.Framework.Term` is the union of the dialects' `Term`s
@@ -21,7 +21,7 @@ old API had them so: `nameOf`, `formOf`), `store.transaction(() => ...)` for `wi
 ```python
 from mbse.Schemas.Framework import Builders
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import Patterns, Python3
+from mbse.Expressions.Dialects import Patterns, Python3, TypeScript5
 
 store = Builders.Store()
 store.transaction(Framework.install)        # Expressions.Framework: Term (no branch yet), Literal, Call, Variable, Let,
@@ -34,6 +34,7 @@ store.transaction(Patterns.install)         # Expressions.Patterns.Term, its uni
                                             # its dialect schema (singleton `Expressions.Patterns`), its kinds of
                                             # domain, its domains' schemas and its operations, each an OfExpression
 store.transaction(Python3.install)          # Expressions.Python3.Term, the branch `python3`, its holder, and so on
+store.transaction(TypeScript5.install)      # Expressions.TypeScript5.Term, Type and Pattern, the branch `typescript5`, ...
 store.transaction(Patterns.define)          # optional, data: Patterns' dialect naming its operations, owning its domains
 ```
 
@@ -595,6 +596,132 @@ and the literal's decisions) and as the brief for stage 3 asked; each choice bel
     tutorial's output changed.
 69. **Found**: the sibling mbse-schemas checkout is 0.26.8, newer than the pinned 0.26.7, which `uv run` writes into
     `python3/uv.lock`; the lock's change is not committed, and nothing here needs 0.26.8.
+
+## Settled in stage 4 (TypeScript5), for the user's review
+
+Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 2, 5, 6, 8 and 9, the literal's
+decisions, and the sublanguage unions' decision of 2026-11-03: "(b) as you recommended", "yes, stay `Identifier`
+terms") and as the brief for stage 4 asked; each choice below is where they were silent.
+
+70. **Kinds, named and shaped as mbse-programs has them**, which is as typescript-estree has them
+    (`mbse-programs/python3/mbse/Programs/TypeScript/Syntax.py`): each a value object `Expressions.TypeScript5.<Name>`
+    with mbse-programs' properties in source order (`isAsync` for estree's `async`, `propertyKind` for its `kind`), its
+    tag the name lowercased. `Expressions.TypeScript5.Term` has 46 branches: mbse-programs' 35 expression kinds
+    (`identifier`, `privateidentifier`, `literal`, `templateliteral`, `taggedtemplateexpression`, `thisexpression`,
+    `super`, `parenthesizedexpression`, `arrayexpression`, `objectexpression`, `functionexpression`,
+    `arrowfunctionexpression`, `classexpression`, `metaproperty`, `memberexpression`, `callexpression`,
+    `chainexpression`, `newexpression`, `importexpression`, `updateexpression`, `unaryexpression`, `awaitexpression`,
+    `binaryexpression`, `logicalexpression`, `conditionalexpression`, `assignmentexpression`, `sequenceexpression`,
+    `yieldexpression`, `tsasexpression`, `tssatisfiesexpression`, `tstypeassertion`, `tsnonnullexpression`,
+    `tsinstantiationexpression`, `jsxelement`, `jsxfragment`), TypeScript5's `constant` (item 74), the helpers an
+    expression's place holds beside expressions (`spreadelement`, `elision`, `property`, `jsxemptyexpression`,
+    `tsemptybodyfunctionexpression`: item 72), the patterns an expression's place holds (`arraypattern`,
+    `objectpattern`, `assignmentpattern`: item 71), and the framework's `error` and `missing`.
+71. **Sublanguages, each a union of its own, a schema a branch of every union whose positions hold it** (as the user
+    decided, (b)). `Expressions.TypeScript5.Pattern` (14 branches): the four patterns (`arraypattern`,
+    `objectpattern`, `assignmentpattern`, `restelement`), the terms a target may be (`identifier`,
+    `memberexpression`, `parenthesizedexpression`, `tsasexpression`, `tssatisfiesexpression`, `tstypeassertion`,
+    `tsnonnullexpression`), and what an object or array pattern or a parameter list holds beside them (`property`,
+    `elision`, `tsparameterproperty`); it is held by a function's, an arrow's, a method signature's, a function
+    type's and an index signature's parameters, and an assignment's `left`. `Expressions.TypeScript5.Type` (43
+    branches): mbse-programs' 37 type nodes (typescript-estree's 36 and `tsparenthesizedtype`), and the terms a type
+    holds (`identifier`, `thisexpression`, `literal`, `unaryexpression`, `templateliteral`, `objectexpression`); held
+    by `as`, `satisfies` and `<T>x`, type annotations, type arguments and parameters' constraints and defaults. The
+    other way, for review: `Term` lists `arraypattern`, `objectpattern` and `assignmentpattern`, as typescript-estree's
+    `Expression` lists the first two and its `Property.value` the third, since one `property` serves an object and an
+    object pattern, its `value` holding `Term`; so `ParenthesizedExpression.expression`, mbse-programs' `Expression |
+    Pattern`, holds `Term`. `error` and `missing` are `Term`'s alone: invalid syntax within a type or a pattern has no
+    branch yet (for review).
+72. **Helpers an expression's place mixes with expressions are `Term`'s kinds**: `spreadelement` and `elision` (an
+    array's and a call's elements), `property` (an object's), `jsxemptyexpression` (a JSX container's `{}`) and
+    `tsemptybodyfunctionexpression` (a method's value without a body), as Python3's `starred` is, so that an array,
+    a call, an object and a container hold a container of `Term`. The others are helpers, read as `Terms.Part`s
+    (item 58): `templateelement`, `decorator`, `tstypeannotation`, `tstypeparameter`, the parameter declarations
+    and instantiations, `tsclassimplements`, the signatures, `comment`, and JSX's names, attributes, children,
+    containers and opening and closing elements. Unions of helpers are named after typescript-estree's types where it
+    names them (`TypeElement`, `JSXTagNameExpression`, `JSXChild`), else ours (`JSXAttributeName`,
+    `JSXAttributeValue`, `JSXAttributeItem`). An object type's members keep comments (`comment`), as mbse-programs
+    keeps them. The framework now reads a union of value objects, pairs among them (a branch of terms alone, such as
+    `Pattern`'s `parenthesizedexpression`), as a helper (`Terms._is_helper`); before, such a union was an attribute.
+73. **The framework's kinds reused where the shape matches exactly**: `arrayexpression` is the framework's `list`
+    (`elements`, each any dialect's term: that it holds TypeScript5's is a constraint, decision 4). Not reused:
+    `variable` for `Identifier`, which has `decorators`, `optional` and `typeAnnotation`; `call`, whose callee is a
+    term; `mapping`, an object's members being properties, spreads and methods; `let`, which TypeScript has no
+    expression of.
+74. **Literals: two kinds, divided by what a schema holds** (as Python3's, item 53). A boolean, a number, a bigint and a
+    string are a `literal`, `Expressions.TypeScript5.Literal`, refining the framework's: a number's value is a float
+    (binary64, as JavaScript's numbers are) and a bigint's an int, so the `n` suffix is the value's type, not an
+    attribute; it adds what its text encodes, `quote` (`'` or `"`), `base` (2, 8, 10 or 16) and `separators`. `null`
+    and a regular expression have no schema: TypeScript5's own `constant` holds `null` (`singleton`) or a regular
+    expression (`pattern` and `flags`, each as written), with `text` and `problems`, exactly one of them
+    (validation); a regular expression is not a kind of its own, as mbse-programs has none. `undefined` is an
+    `identifier`, as in TypeScript.
+75. **A body of statements is absent** (the proposal's Decided, 5, "(i)"): `functionexpression`,
+    `classexpression` and `tsemptybodyfunctionexpression` have no body property, and an arrow's `body` slot, optional,
+    holds an expression body as a term, as Python3's lambda's (item 54), and is absent for a block. A printer writes an
+    absent body `{}`, where mbse-programs writes the statements it relates; a class's members are its body's.
+76. **Concrete syntax kept**: `parenthesizedexpression` and `tsparenthesizedtype`, written and printed as written; an
+    array's hole is an `elision`, as mbse-programs has it (typescript-estree writes `null`). An empty value object
+    held as a property (a fragment's opening and closing, an empty template) is not stored by mbse-schemas, so it reads
+    back absent; a printer does not need them (found, mbse-schemas 0.26.8).
+77. **Roles**: `identifier` is a lexical reference; `privateidentifier`, `thisexpression` and `super` references
+    resolved by no scope; `literal` and `constant` literals; every other kind an application, whose operator, where it
+    has one, is its `operator` property, its vocabulary mbse-programs' operators (`Domains.UNARY`, `UPDATE`,
+    `BINARY`, `LOGICAL`, `ASSIGNMENT`, not closed, as Python3's); a printer refuses an operator outside a binary
+    one's ("TypeScript5 binaryexpression has no operator '<>'"). A kind requires what its printer needs: an operator,
+    a tagged template's `quasi`, a meta property's names, an assignment's `left`, the type of `as`, `satisfies` and
+    `<T>x`, an instantiation's type arguments, an element's opening.
+78. **What each kind binds**: a function's, an arrow's and an empty body's parameters, everything within it (their
+    defaults among it: in TypeScript a default sees the parameters before it); a member's property and a key, not
+    computed, are names rather than references, a property signature's and a method signature's within a type
+    included; an identifier a type or a pattern holds is a part, not a term, so names no reference.
+79. **Checks within helpers**: mbse-programs' checks (a name an identifier, one more quasi than expressions or types,
+    a union or an intersection of two types, a type parameter declaration of one, a sequence of two) apply to a kind's
+    helpers too, its types and patterns among them, which the framework's validation does not read within a helper.
+    `TypeScript5.Expressions.tree(term)` reads a term with its helpers nested (`Node`: `kind`, `attributes`, `slots`,
+    `many`, `helpers`), as the printer and the checks read it, and `binding_names` (`bindingNames`) gives the names a
+    pattern binds.
+80. **Standards as data**: `STANDARDS` names TypeScript 5.0 to 5.9; every kind is older than 5.0, so each kind's
+    `Kind.standards` is all of them; JSX's kinds (`EXTENSIONS`: `jsxelement`, `jsxfragment`, `jsxemptyexpression`)
+    record none, an extension outside every version. A feature within a kind (`import.defer` 5.9, an import's options
+    5.3, a `const` type parameter 5.0) is not recorded: whether a term is in a version is a constraint, to come.
+81. **No writers**: TypeScript5's terms are written through the builders (PRI-019), in tests, the corpus and the
+    skill; `DIALECT.spec(native)` writes a native value as a `literal` (a bytes has none), which `Dialect.make` needs.
+82. **Evaluation stays shallow** (the proposal's Decided, 8): the framework's interpreter evaluates a literal by its
+    role, which falls out of it (`Evaluators.EVALUATED`, `literal` alone); every other kind, `constant` among them, is
+    refused by name, "TypeScript5 binaryexpression is not evaluated". No translator (Decided, 9).
+83. **Printing**: `Text.ToText` ports mbse-programs' printer for expressions, patterns, types and JSX, byte-identical in
+    both languages: its precedence, `??` beside `||` and `&&`, an arrow's object body, a `new`'s callee that calls, a
+    number's member, a negative value's `**` (`(-5n) ** 1`), and the root parenthesized where an expression statement
+    would start with `{`, `function`, `class` or `let [`. A literal with no `text` is written in its value's default
+    spelling: a number as JavaScript's `String(number)` (`Text.number`, written in Python to match), a bigint with its
+    `n`, a string in its `quote` or `"` with its escapes (`Text.string`: a backslash, the quote, `\b \f \n \r \t \v`,
+    the other C0 controls and DEL as `\xHH`, the line and paragraph separators as `\uHHHH`). An arrow's lone
+    unconstrained type parameter is written `<T,>`, as mbse-programs writes it for a `.tsx` file, so the text reads
+    alike in both; an object type with comments is written one member a line.
+84. **Completeness as data**: `grammars/typescript5-estree.json` lists typescript-estree's 168 node types
+    (@typescript-eslint/types 8.71.0, TypeScript 5.9.3), each mapped to `Term`'s kinds, `Type`'s and `Pattern`'s
+    branches (several at once where a schema is in several unions), a helper, or listed as not an expression with its
+    reason; `concrete` names what typescript-estree does not keep. DIA-23 asserts it in both languages; no test reads
+    typescript-estree itself, which neither implementation depends on.
+85. **Tests**: FRM-01 to FRM-12 hold TypeScript5 with every dialect (its sample of every kind, written through the
+    builders, printed in FRM-11); DIA-18 its literal's spelling; DIA-21 (its unions, literals, checks, bindings and
+    evaluation), DIA-22 (printing) and DIA-23 (completeness) are added in both languages; none is retired. The corpus
+    gains `typescript5`, a term of every kind; its JSON is byte-identical, its YAML quotes `++` and `??` in TypeScript
+    alone (mbse-schemas' writers, both read back alike).
+
+86. **Python3's binding targets hold its `Pattern`** (the proposal's Decided, "Every dialect has a `Pattern` union",
+    "(ii)"). `Expressions.Python3.Pattern` lists the kinds Python's grammar allows as a target (its language reference,
+    7.2): `variable`, `tuple`, `list` (the framework's), `starred`, `attribute`, `subscript` and `parenthesized`, each
+    the schema its `Term` lists; `Comprehension.target` and `NamedExpr.target` hold it. As `TypeScript5`'s, a target is
+    read as a helper, a `Terms.Part` (item 72): its terms follow the clause's own (a comprehension's iterable and
+    conditions, a named expression's value), so a form's arguments are reordered, and `make`, printing, scopes,
+    `target_names` (now of a term, or of a part and its terms), the evaluator's generator and the checks read it there.
+    A target's own checks (a name an identifier, an attribute's name one, a target present) are its holder kind's, as
+    validation does not read a helper; a namedexpr's signature is any number of arguments. A hole may now stand within
+    a helper's attributes in a translation pattern (`Translators`), as a comprehension's target `N` does in the rules
+    of `all`, `any` and counting. Stored data and the wire are unchanged: the branch names are the same, and the
+    corpus is byte-identical. A kind no target is (`binop`) is refused there by mbse-schemas. Tested in DIA-19.
 
 ## What stage 2b needed (done)
 
