@@ -8,12 +8,14 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
 ## A dialect
 
 1. **Its install defines its kinds, as schemas.** *Why*: a dialect's terms must be stored, serialized and validated as
-   any mbse-schemas value is, in both languages alike. *How*: its `install(txn)` defines its `Term`, the value union of
-   its kinds (`Expressions.Latex.Term`), and adds it to `Expressions.Framework.Term` by schema extension, as the branch
+   any mbse-schemas value is, in both languages alike. *How*: it lives under its family, at its path (`LaTeX.Expressions`:
+   the package `mbse.Expressions.LaTeX.Expressions`, the directory `src/LaTeX/Expressions`), which names its schemas. Its
+   `install(txn)` defines its `Term`, the value union of
+   its kinds (`Expressions.LaTeX.Expressions.Term`), and adds it to `Expressions.Framework.Term` by schema extension, as the branch
    named after it (`latex`): a value object schema per kind of its own (a term carries no domain), named plainly in its
    `Term` (`frac`), a slot a property holding its `Term`, variadic arguments a container of it by an int index,
-   attributes any other scalar property. It also defines its dialect, the singleton `Expressions.Latex` of its own
-   reference object schema `Expressions.Latex.Dialect`, a branch (`latex`) of the kind union
+   attributes any other scalar property. It also defines its dialect, the singleton `Expressions.LaTeX.Expressions` of its own
+   reference object schema `Expressions.LaTeX.Expressions.Dialect`, a branch (`latex`) of the kind union
    `Expressions.Framework.Dialect`, which names its operations (`Expressions.Framework.Operates`) and owns its domains
    by name (`Expressions.Framework.Defines`). All of it is written in the builders' fluent syntax, as mbse-schemas'
    installs are, in one upsert that run again writes nothing.
@@ -31,7 +33,8 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
    - Python: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share, each recording its standards](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-12) · TypeScript: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share, each recording its standards](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-12)
    - Python: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-11) · TypeScript: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-11)
 3. **Declare how each kind is read.** *Why*: validation, inference, evaluation and translation read every dialect
-   through these declarations, never through its code. *How*: its `Terms.Dialect` declares a `Terms.Kind` per tag,
+   through these declarations, never through its code. *How*: its `Terms.Dialect`, made with its path
+   (`Terms.Dialect("LaTeX.Expressions", kinds, ...)`, named `LaTeX`), declares a `Terms.Kind` per tag,
    whose role tells them how to treat it:
 
 | Role | Is | Declares |
@@ -100,5 +103,5 @@ declaring `TRANSLATOR = Pairwise(left, right, rules)` with patterns from `_Patte
 | Topic | Read |
 |---|---|
 | The framework: terms and roles, symbolics and scopes, domains, the interpreter | [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#the-framework), in mbse-basis |
-| A complete dialect to copy | the Excel dialect, in [Python](mbse:mbse-expressions/python3/mbse/Expressions/Dialects/Excel) and [TypeScript](mbse:mbse-expressions/typescript5/src/Dialects/Excel) |
+| A complete dialect to copy | the Excel dialect, in [Python](mbse:mbse-expressions/python3/mbse/Expressions/Excel/Expressions) and [TypeScript](mbse:mbse-expressions/typescript5/src/Excel/Expressions) |
 | The framework, case by case | FRM, the framework's test suite, in [Python](mbse:mbse-expressions/python3/tests/05_Framework.ipynb) and [TypeScript](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb) |

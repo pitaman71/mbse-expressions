@@ -11,10 +11,10 @@ written nested, indent 2) and `<case>.yaml`.
 |---|---|
 | `expression` | a Patterns term, written nested under `Expressions.Framework.Term`, its dialect then its kind: every kind and literal type, a let and its variable, a list |
 | `python3` | a Python3 term of every kind of Python 3's expressions (its literal refining the framework's, one with its spelling and its base; its `constant` for `None`, `...` and a complex number; a comparison chain, `and` and `or` of n values, keywords and unpacking, a tensor's indices, comprehensions, a lambda, a named expression, `await` and `yield`, f- and t-strings, adjacent strings, parentheses) and its extensions `let`, `import` and `importfrom`, imports included, shared names |
-| `matlab` | a Matlab term: every kind (the framework's `literal`, `variable` and `call`, and its own `binary`, `unary`, `field`, `index`, `arrayfun`, `import`), shared identifiers |
+| `matlab` | a MATLAB term: every kind (the framework's `literal`, `variable` and `call`, and its own `binary`, `unary`, `field`, `index`, `arrayfun`, `import`), shared identifiers |
 | `excel` | an Excel term: every kind (the framework's `literal`, `variable`, `let` and `call`, and its own `infix`, `prefix`, `field`, `map`, `cell`), cells in other sheets and books included, shared names |
-| `latex` | a Latex term: every kind (the framework's `literal`, `variable`, `let` and `call`, and its own `member`, `binary`, `unary`, `frac`), with shared symbols |
-| `domains` | Patterns' dialect as data, written as one document: the singleton `Expressions.Patterns` (`Expressions.Patterns.Dialect`), naming its operations (each an `Expressions.Patterns.<name>` expression schema, by its path) and owning its domains by name, an enum and a domain packing it into `uint8` among them |
+| `latex` | a LaTeX term: every kind (the framework's `literal`, `variable`, `let` and `call`, and its own `member`, `binary`, `unary`, `frac`), with shared symbols |
+| `domains` | Patterns' dialect as data, written as one document: the singleton `Expressions.Framework.Patterns` (`Expressions.Framework.Patterns.Dialect`), naming its operations (each an `Expressions.Framework.Patterns.<name>` expression schema, by its path) and owning its domains by name, an enum and a domain packing it into `uint8` among them |
 | `collections` | a Patterns quantifier over an object's entries, the collection operations and a mapping |
 | `c` | a C term: every kind (the framework's `variable` and `call`, and its own `conditional`, `binary`, `unary`, `member`, `subscript`, `cast`, `constant`), typed constants and a shared identifier |
 | `cpp` | the same expression as a C++ term: C++'s own kinds, of C's shapes, each property holding a C++ term |

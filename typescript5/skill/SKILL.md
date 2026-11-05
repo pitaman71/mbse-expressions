@@ -14,13 +14,13 @@ and translated between expression languages, called dialects:
 - **Patterns** (formerly Basic), the core vocabulary: comparisons, Kleene logic, arithmetic and bitwise operations over
   values, property access, lets, lists and mappings, and collections with quantifiers. Every binding evaluates it, and
   it is the neutral form of every constraint.
-- **Python3**, **Matlab** and **Excel**, which model those languages' expressions: each renders as its source text and
+- **Python3**, **MATLAB** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules. Python3 holds every expression of Python 3 (3.0 to 3.15), as CPython's `ast` has it, and
   evaluates the kinds constraints use, refusing the others by name.
 - **TypeScript5**, every expression of TypeScript 5 (5.0 to 5.9) as typescript-estree has it, with its types,
   destructuring patterns and JSX: it renders as TypeScript and evaluates its literals alone, refusing the others by
   name; it has no translator yet, and its terms are written through the builders.
-- **Latex**, mathematical notation: it renders, validates and translates, but has no evaluator.
+- **LaTeX**, mathematical notation: it renders, validates and translates, but has no evaluator.
 - **C** and **Cpp**, every expression of C (C11 to C23) and of C++ (C++17 to C++23) as mbse-programs has them, with the
   type names they hold: each renders as its source and evaluates, over its arithmetic types, by C's rules (promotions,
   wrapping unsigned arithmetic, undefined behavior raising), refusing the other kinds by name.
@@ -56,7 +56,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    `E.let_(name, value, body)` and `E.operation(name, ...)`; reading a property of a writer is `get` (`x.age`, or
    `x.get(name)` for a name a writer has as a method), and its methods build calls (`.ge(18)`, `.and_(...)`). A
    writer builds data and evaluates nothing. Write it within a transaction, as the root of an expression
-   (`Expressions.Patterns.Expression`, whose root holds Patterns' terms only, or `Expressions.Framework.Expression`,
+   (`Expressions.Framework.Patterns.Expression`, whose root holds Patterns' terms only, or `Expressions.Framework.Expression`,
    any dialect's), or as a term alone (`Expressions.Framework.Term`). A value of the program becomes a literal, so the
    constraint never refers back to it.
    [FEA-024: expressions as data](mbse:mbse-basis/docs/features/FEA-024.md),
@@ -182,7 +182,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    and packages, Excel's workbooks and add-ins ([Dialects](references/dialects.md#scopes-names-imports-and-references)).
    - Python: [T07.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.4) · TypeScript: [T07.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.4)
    - Python: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-02) · TypeScript: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-02)
-   - Python: [DIA-05: Matlab resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-05) · TypeScript: [DIA-05: Matlab resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-05)
+   - Python: [DIA-05: MATLAB resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-05) · TypeScript: [DIA-05: MATLAB resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-05)
    - Python: [DIA-08: Excel reads cells from workbooks, and add-in functions from the workbook's add-ins](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-08) · TypeScript: [DIA-08: Excel reads cells from workbooks, and add-in functions from the workbook's add-ins](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-08)
 11. **A dialect reads only its own terms.** *Why*: a kind of the same name means another thing in another language.
    *When*: mixing dialects in one store or one expression. *How*: each dialect's `Term` is the union of its kinds, a
@@ -194,7 +194,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
 12. **Dialects, operations and domains are data.** *Why*: a program learns what a dialect can say from the store,
    without its code, and a domain is named once. *When*: listing a dialect's vocabulary, or reading a domain. *How*:
    a dialect's `define`, run after its install in a transaction of its own, writes its singleton, found by its global
-   name (`store.Instances.Expressions.Patterns`), which names its operations and owns its domains by name. An operation
+   name (`store.Instances.Expressions.Framework.Patterns`), which names its operations and owns its domains by name. An operation
    is an expression schema: its pattern's variables are its arguments, in order, and its `result` is its return. Read
    a domain with `Domains.read`. `DIALECT.infer(term, domains)` finds a term's domain from its vocabulary's signatures
    and the domains its variables are given; a quantifier's name has its items' domain.

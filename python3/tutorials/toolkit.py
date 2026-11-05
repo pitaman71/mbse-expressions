@@ -6,7 +6,14 @@ per logger, with the slot it rides in). Case study 6 explains how `show` works.
 """
 
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import C, Cpp, Excel, Latex, Matlab, Patterns, Python3, SystemVerilog
+from mbse.Expressions.C import Expressions as C
+from mbse.Expressions.Cpp import Expressions as Cpp
+from mbse.Expressions.Excel import Expressions as Excel
+from mbse.Expressions.LaTeX import Expressions as Latex
+from mbse.Expressions.MATLAB import Expressions as Matlab
+from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.Python import Python3
+from mbse.Expressions.SystemVerilog import Expressions as SystemVerilog
 from mbse.Expressions.Framework import Terms
 from mbse.Schemas.Framework import Builders
 

@@ -9,8 +9,8 @@
  * a Patterns literal, its spelling (its text, quote, base and digit separators) aside, and a Patterns literal a C literal
  * of the same value; C23's `bool` is Patterns'. Every other kind of C's has no counterpart, and is refused by name. */
 
-import { DIALECT as C_DIALECT } from "../Dialects/C/Expressions.js";
-import { DIALECT as PATTERNS } from "../Dialects/Patterns/Expressions.js";
+import { DIALECT as C_DIALECT } from "../C/Expressions/Expressions.js";
+import { DIALECT as PATTERNS } from "../Framework/Patterns/Expressions.js";
 import { Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { CFamily, Patterns, value } from "./_Patterns.js";
 

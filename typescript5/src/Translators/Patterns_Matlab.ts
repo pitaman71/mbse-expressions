@@ -1,4 +1,4 @@
-/** Patterns <-> Matlab. Patterns operations are MATLAB operators, `get` a field, and `has` is `isfield`. `implies(a, b)` is
+/** Patterns <-> MATLAB. Patterns operations are MATLAB operators, `get` a field, and `has` is `isfield`. `implies(a, b)` is
  * written `~a || b`, which translates back as `or(not(a), b)`. MATLAB has no let expression, so lets are inlined: a
  * let's translated value is shared by every use of its name. MATLAB's imports, which Patterns cannot declare, are
  * dropped. MATLAB has no bytes. The bitwise operations are MATLAB's bit functions, `shr(a, n)` being
@@ -10,8 +10,8 @@
  * which does not read back as `unique`, and `entries` has no counterpart. A `list` is a concatenation, `[a, b]`; a
  * `mapping` has no counterpart. */
 
-import { DIALECT as PATTERNS } from "../Dialects/Patterns/Expressions.js";
-import { DIALECT as MATLAB } from "../Dialects/Matlab/Expressions.js";
+import { DIALECT as PATTERNS } from "../Framework/Patterns/Expressions.js";
+import { DIALECT as MATLAB } from "../MATLAB/Expressions/Expressions.js";
 import { Elementwise, Elide, Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Patterns, Matlab, value } from "./_Patterns.js";
 

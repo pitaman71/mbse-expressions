@@ -1,4 +1,4 @@
-"""Patterns <-> Matlab. Patterns operations are MATLAB operators, `get` a field, and `has` is `isfield`. `implies(a, b)` is
+"""Patterns <-> MATLAB. Patterns operations are MATLAB operators, `get` a field, and `has` is `isfield`. `implies(a, b)` is
 written `~a || b`, which translates back as `or(not(a), b)`. MATLAB has no let expression, so lets are inlined: a
 let's translated value is shared by every use of its name. MATLAB's imports, which Patterns cannot declare, are dropped.
 MATLAB has no bytes. The bitwise operations are MATLAB's bit functions, `shr(a, n)` being `bitshift(a, -n)`; MATLAB
@@ -12,8 +12,8 @@ which does not read back as `unique`, and `entries` has no counterpart. A `list`
 
 from __future__ import annotations
 
-from mbse.Expressions.Dialects.Patterns.Expressions import DIALECT as PATTERNS
-from mbse.Expressions.Dialects.Matlab.Expressions import DIALECT as MATLAB
+from mbse.Expressions.Framework.Patterns.Expressions import DIALECT as PATTERNS
+from mbse.Expressions.MATLAB.Expressions.Expressions import DIALECT as MATLAB
 from mbse.Expressions.Framework.Translators import Elementwise, Elide, Inline, Pairwise, Rule, renames
 
 from ._Patterns import Patterns, Matlab, value

@@ -1,9 +1,9 @@
-/** Excel <-> Latex. Excel's operators are LaTeX's, `AND`, `OR` and `NOT` are `\land`, `\lor` and `\lnot`, a field is
+/** Excel <-> LaTeX. Excel's operators are LaTeX's, `AND`, `OR` and `NOT` are `\land`, `\lor` and `\lnot`, a field is
  * a member, `NOT(ISERROR(x.name))` is `\operatorname{has}`, `IF(a, b, TRUE)` is `a \implies b`, and `LET` is `where`.
  * Cells and other `IF`s have no LaTeX counterpart here. */
 
-import { DIALECT as EXCEL } from "../Dialects/Excel/Expressions.js";
-import { DIALECT as LATEX } from "../Dialects/Latex/Expressions.js";
+import { DIALECT as EXCEL } from "../Excel/Expressions/Expressions.js";
+import { DIALECT as LATEX } from "../LaTeX/Expressions/Expressions.js";
 import { Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Excel, Latex, value } from "./_Patterns.js";
 

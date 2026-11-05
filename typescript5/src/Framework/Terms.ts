@@ -26,12 +26,12 @@
  * term carries no domain: whatever owns the root term gives its schema.
  *
  * Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
- * (`Expressions.Patterns`), of its own reference object schema (`Expressions.Patterns.Dialect`), a branch of the kind
+ * (`Expressions.Framework.Patterns`), of its own reference object schema (`Expressions.Framework.Patterns.Dialect`), a branch of the kind
  * union `Expressions.Framework.Dialect`, which each dialect extends. It owns its domains by name
  * (`Expressions.Framework.Defines(dialect, name, domain)`), so a domain's path is its dialect's and its name; a domain is
  * an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
  * a union each dialect extends with its kinds of domain. A domain's schema is a named `Schemas.OfAny` restricted to the
- * scalar it narrows (`Expressions.Patterns.uint8`), which reads it through the extension adjacency `domain`
+ * scalar it narrows (`Expressions.Framework.Patterns.uint8`), which reads it through the extension adjacency `domain`
  * (`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
  * (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module defines, whose
  * pattern's variables are its arguments, in the order they are declared, and whose `result` is its return.
@@ -48,7 +48,8 @@
  * kind is read, is a `Kind`: its role, and which properties name what it binds and its operator.
  *
  * - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
- * - `kindOf(term)`: its kind's branch, `(tag, record)`; `dialectOf(term)`: the name of its dialect's `Term`.
+ * - `kindOf(term)`: its kind's branch, `(tag, record)`; `dialectOf(term)`: the name of its dialect's `Term`;
+ *   `dialectName(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`).
  *   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers
  *   nested, as a dialect whose kinds hold sublanguages reads them to print and check them.
  * - `nameOf(term)`, `referenceName(name)`, `operatorOf(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
@@ -146,7 +147,7 @@ export function install(txn: any): any {
         (t: any) => t.name("schema"), (t: any) => t.name("expression")]).uniques("expression"),
       (_: any) => _.OfExpression.name("Schemas.OfExpression").adjacencies([ // by extension: no member on it
         (t: any) => t.name("expression").relation([_.HasRoot]).me("schema")]),
-      // A dialect: a singleton, its identity its global name (`Expressions.Patterns`), the root of its domains' paths.
+      // A dialect: a singleton, its identity its global name (`Expressions.Framework.Patterns`), the root of its domains' paths.
       // mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object schemas, to which
       // each dialect adds its own by schema extension, as it adds its kinds to `Term`.
       (_: any) => _.Dialect.name("Expressions.Framework.Dialect"),
@@ -299,7 +300,7 @@ function schemaOf(value: any): unknown {
 }
 
 /** Whether `schema` is `Expressions.Framework.Expression` or refines it, as each dialect's holder does
- * (`Expressions.Python3.Expression`): an expression, whose `root` holds its root term. */
+ * (`Expressions.Python.Python3.Expression`): an expression, whose `root` holds its root term. */
 export function isExpression(schema: unknown): boolean {
   let current: any = schema;
   while (current instanceof Schemas.OfObject.Data) {
@@ -358,7 +359,7 @@ function dialectValue(term_: any): any {
   return held[1];
 }
 
-/** The name of the `Term` of the dialect a term value is of: `Expressions.Python3.Term`. */
+/** The name of the `Term` of the dialect a term value is of: `Expressions.Python.Python3.Term`. */
 export function dialectOf(term_: any): string {
   return dialectValue(term_).as_schema().name;
 }
@@ -905,32 +906,48 @@ export interface DialectOptions {
 
 type Environment = Record<string, Domains.Domain>;
 
-/** An expression language: the kinds it reads, by tag, its `name`, and `domain_of(value)`, the domain of a literal's
+/** A dialect's name, of its path below `Expressions` (its family's name and its own): its own (`Python.Python3`'s is
+ * `Python3`, `Framework.Patterns`' `Patterns`), or its family's where its own says only that it is the family's
+ * expressions (`C.Expressions`' is `C`). */
+export function dialectName(path: string): string {
+  const parts = path.split(".");
+  const own = parts[parts.length - 1] as string;
+  return own === "Expressions" && parts.length > 1 ? parts[parts.length - 2] as string : own;
+}
+
+/** An expression language: the kinds it reads, by tag, its `path`, its family's and its own name (`Python.Python3`,
+ * `C.Expressions`), its `name` (`dialectName(path)`: `Python3`, `C`), and `domain_of(value)`, the domain of a literal's
  * value by the scalar it is written with (for `infer`; a term carries no domain). Its terms are values of its `Term`,
- * `Expressions.<name>.Term` (`union`), the branch `tag` (its name in lowercase) of `Expressions.Framework.Term`;
+ * `Expressions.<path>.Term` (`union`), the branch `tag` (its name in lowercase) of `Expressions.Framework.Term`;
  * besides its own kinds it reads the framework's kinds of invalid syntax (`INVALID_KINDS`). A dialect may extend another
  * (`extends`): its kinds are the base's and its own, whose tags must differ from the base's, added to the base's union,
  * whose terms it reads. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its kinds. */
 export class Dialect {
   readonly base: Dialect | null;
   readonly tag: string;
+  readonly path: string;
   readonly union: string;
   private readonly byTag: Map<string, Kind>;
   private readonly domainOf: (value: unknown) => Domains.Domain;
   readonly _literal: ((value: unknown) => Writer | null) | null;
 
-  constructor(private readonly dialectName: string, kinds: Record<string, Kind>, options: DialectOptions) {
-    const own = new Map(Object.entries(kinds));
+  private readonly own: string;
+
+  constructor(path: string, kinds: Record<string, Kind>, options: DialectOptions) {
+    const own = dialectName(path);
+    const declared = new Map(Object.entries(kinds));
     const base = options.extends ?? null;
     const inherited = base === null ? INVALID_KINDS : base.kinds();
-    const clashes = [...own.keys()].filter((tag) => inherited.has(tag)).sort();
+    const clashes = [...declared.keys()].filter((tag) => inherited.has(tag)).sort();
     if (clashes.length > 0) {
       const what = base === null ? "the framework" : base.name();
-      throw new ValueError(`${dialectName} would declare ${clashes.map((tag) => repr(tag)).join(", ")}, which ${what} has`);
+      throw new ValueError(`${own} would declare ${clashes.map((tag) => repr(tag)).join(", ")}, which ${what} has`);
     }
-    this.byTag = base === null ? new Map([...own, ...inherited]) : new Map([...inherited, ...own]); // the base's first
-    this.tag = base === null ? dialectName.toLowerCase() : base.tag;
-    this.union = base === null ? `Expressions.${dialectName}.Term` : base.union;
+    this.byTag = base === null ? new Map([...declared, ...inherited]) : new Map([...inherited, ...declared]); // the base's first
+    this.tag = base === null ? own.toLowerCase() : base.tag;
+    this.own = own;
+    this.path = path;
+    this.union = base === null ? `Expressions.${path}.Term` : base.union;
     this.domainOf = options.domain_of;
     this.base = base;
     this._literal = options.literal !== undefined && options.literal !== null || base === null
@@ -938,7 +955,7 @@ export class Dialect {
   }
 
   name(): string {
-    return this.dialectName;
+    return this.own;
   }
 
   kinds(): Map<string, Kind> {
@@ -946,7 +963,7 @@ export class Dialect {
   }
 
   toString(): string {
-    return `<dialect ${this.dialectName}>`;
+    return `<dialect ${this.own}>`;
   }
 
   [Repr.REPR](): string {
@@ -957,8 +974,8 @@ export class Dialect {
   private foreign(term_: any): string | null {
     const union = dialectOf(term_);
     if (union === this.union) return null;
-    const other = union.slice("Expressions.".length, -".Term".length);
-    return `${article(other)} ${kindOf(term_)[0]} is not ${article(this.dialectName)} term`;
+    const other = dialectName(union.slice("Expressions.".length, -".Term".length));
+    return `${article(other)} ${kindOf(term_)[0]} is not ${article(this.own)} term`;
   }
 
   /** A term's tag, record and `Kind`; throws `ValueError` for a term of another dialect, or of a kind the dialect does
@@ -968,7 +985,7 @@ export class Dialect {
     if (foreign !== null) throw new ValueError(foreign);
     const [tag, record] = kindOf(term_);
     const kind = this.byTag.get(tag);
-    if (kind === undefined) throw new ValueError(`${this.dialectName} has no kind ${repr(tag)}`);
+    if (kind === undefined) throw new ValueError(`${this.own} has no kind ${repr(tag)}`);
     return [tag, record, kind];
   }
 
@@ -982,7 +999,7 @@ export class Dialect {
    * helper's `Part` as the helper), its arguments (specs: terms, writers, native values) to its slots in order, then to
    * its variadic property, then to its helpers, each its part's size. */
   make(form_: Form): Writer {
-    if (!this.byTag.has(form_.kind)) throw new ValueError(`${this.dialectName} has no kind ${repr(form_.kind)}`);
+    if (!this.byTag.has(form_.kind)) throw new ValueError(`${this.own} has no kind ${repr(form_.kind)}`);
     const args = form_.arguments.map((a) => (a === null ? null : this.spec(a)));
     return new Writer((union: any) => union[form_.kind]((r: any) => fill(r, form_.kind, form_.attributes, args)), this.tag);
   }
@@ -1000,7 +1017,7 @@ export class Dialect {
     if (foreign !== null) return [foreign];
     const [tag, record] = kindOf(node);
     const kind = this.byTag.get(tag);
-    if (kind === undefined) return [`${this.dialectName} has no kind ${repr(tag)}`];
+    if (kind === undefined) return [`${this.own} has no kind ${repr(tag)}`];
     const what = article(tag);
     const attributes = attributesOf(record);
     const declared = record.as_schema().properties as Map<string, Schemas.OfProperty.Data>;
@@ -1053,7 +1070,7 @@ export class Dialect {
         if (signature !== undefined && ![-1, args.length].includes(signature.arity())) { // -1: any number
           problems.push(`${operator} takes ${signature.arity()} arguments, got ${args.length}`);
         } else if (kind.closed && signature === undefined) {
-          problems.push(`${repr(operator)} is not an operation ${this.dialectName} defines`);
+          problems.push(`${repr(operator)} is not an operation ${this.own} defines`);
         } else if (core && signature === undefined) {
           problems.push(`${repr(operator)} is not a core operation`);
         }

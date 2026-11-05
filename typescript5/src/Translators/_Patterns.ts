@@ -190,7 +190,7 @@ export const COLLECTIONS: Record<string, Record<string, P>> = {
     all: Python3.all_, any: Python3.any_, "count where": Python3.count_where, count: Python3.builtin("len"),
     ...Object.fromEntries(["sum", "min", "max"].map((name) => [name, Python3.builtin(name)])), item: Python3.index, in: Python3.in_,
   },
-  Matlab: {
+  MATLAB: {
     all: Matlab.over("all"), any: Matlab.over("any"), "count where": Matlab.over("nnz"), count: Matlab.function("numel"),
     ...Object.fromEntries(["sum", "min", "max"].map((name) => [name, Matlab.function(name)])), item: Matlab.index, in: Matlab.ismember,
   },

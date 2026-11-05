@@ -170,7 +170,7 @@ class Latex:
 COLLECTIONS: dict[str, dict[str, P]] = {
     "Python": {"all": Python3.all_, "any": Python3.any_, "count where": Python3.count_where, "count": Python3.builtin("len"),
                **{name: Python3.builtin(name) for name in ("sum", "min", "max")}, "item": Python3.index, "in": Python3.in_},
-    "Matlab": {"all": Matlab.over("all"), "any": Matlab.over("any"), "count where": Matlab.over("nnz"),
+    "MATLAB": {"all": Matlab.over("all"), "any": Matlab.over("any"), "count where": Matlab.over("nnz"),
                "count": Matlab.function("numel"), **{name: Matlab.function(name) for name in ("sum", "min", "max")},
                "item": Matlab.index, "in": Matlab.ismember},
     "Excel": {"all": Excel.over("AND"), "any": Excel.over("OR"), "count where": Excel.count_where,

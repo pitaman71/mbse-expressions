@@ -28,12 +28,12 @@ dialect's union holds, `error` (`text`, the source it spans as written; `terms`,
 term carries no domain: whatever owns the root term gives its schema.
 
 Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
-(`Expressions.Patterns`), of its own reference object schema (`Expressions.Patterns.Dialect`), a branch of the kind
+(`Expressions.Framework.Patterns`), of its own reference object schema (`Expressions.Framework.Patterns.Dialect`), a branch of the kind
 union `Expressions.Framework.Dialect`, which each dialect extends. It owns its domains by name
 (`Expressions.Framework.Defines(dialect, name, domain)`), so a domain's path is its dialect's and its name; a domain is
 an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
 a union each dialect extends with its kinds of domain. A domain's schema is a named `Schemas.OfAny` restricted to the
-scalar it narrows (`Expressions.Patterns.uint8`), which reads it through the extension adjacency `domain`
+scalar it narrows (`Expressions.Framework.Patterns.uint8`), which reads it through the extension adjacency `domain`
 (`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
 (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module defines, whose
 pattern's variables are its arguments, in the order they are declared, and whose `result` is its return.
@@ -50,7 +50,8 @@ and its terms in its arguments, and `make` writes it back. What the framework ne
 kind is read, is a `Kind`: its role, and which properties name what it binds and its operator.
 
 - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
-- `kind_of(term)`: its kind's branch, `(tag, record)`; `dialect_of(term)`: the name of its dialect's `Term`.
+- `kind_of(term)`: its kind's branch, `(tag, record)`; `dialect_of(term)`: the name of its dialect's `Term`;
+  `dialect_name(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`).
   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers nested,
   as a dialect whose kinds hold sublanguages reads them to print and check them.
 - `name_of(term)`, `reference_name(name)`, `operator_of(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
@@ -93,7 +94,7 @@ from . import Domains, Objects
 __all__ = [
     "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
     "INVALID", "INVALID_KINDS", "invalid_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
-    "spec", "term", "is_term", "is_expression", "kind_of", "dialect_of", "form", "node",
+    "spec", "term", "is_term", "is_expression", "kind_of", "dialect_of", "dialect_name", "form", "node",
     "name_of", "reference_name", "operator_of", "walk", "fold", "same",
 ]
 
@@ -151,7 +152,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("schema"), lambda t: t.name("expression")]).uniques("expression"),
             lambda _: _.OfExpression.name("Schemas.OfExpression").adjacencies([  # by extension: no member on it
                 lambda t: t.name("expression").relation([_.HasRoot]).me("schema")]),
-            # A dialect: a singleton, its identity its global name (`Expressions.Patterns`), the root of its domains'
+            # A dialect: a singleton, its identity its global name (`Expressions.Framework.Patterns`), the root of its domains'
             # paths. mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object
             # schemas, to which each dialect adds its own by schema extension, as it adds its kinds to `Term`.
             lambda _: _.Dialect.name("Expressions.Framework.Dialect"),
@@ -286,7 +287,7 @@ def _is_any(visitor: Any) -> bool:
 
 def is_expression(schema: Any) -> bool:
     """Whether `schema` is `Expressions.Framework.Expression` or refines it, as each dialect's holder does
-    (`Expressions.Python3.Expression`): an expression, whose `root` holds its root term."""
+    (`Expressions.Python.Python3.Expression`): an expression, whose `root` holds its root term."""
     while isinstance(schema, Schemas.OfObject.Data):
         if _named(schema, EXPRESSION):
             return True
@@ -341,7 +342,7 @@ def _dialect_value(term_: Any) -> Any:
 
 
 def dialect_of(term_: Any) -> str:
-    """The name of the `Term` of the dialect a term value is of: `Expressions.Python3.Term`."""
+    """The name of the `Term` of the dialect a term value is of: `Expressions.Python.Python3.Term`."""
     return _dialect_value(term_).as_schema().name
 
 
@@ -796,17 +797,28 @@ INVALID_KINDS = {"error": Kind(INVALID, check=_invalid_check), "missing": Kind(I
 """The framework's kinds of invalid syntax, which every dialect's `Term` holds and every dialect reads."""
 
 
+def dialect_name(path: str) -> str:
+    """A dialect's name, of its path below `Expressions` (its family's name and its own): its own (`Python.Python3`'s
+    is `Python3`, `Framework.Patterns`' `Patterns`), or its family's where its own says only that it is the family's
+    expressions (`C.Expressions`' is `C`)."""
+    family, _, own = path.rpartition(".")
+    return family.rpartition(".")[2] if own == "Expressions" and family else own
+
+
 class Dialect:
-    """An expression language: the kinds it reads, by tag, its `name`, and `domain_of(value)`, the domain of a literal's
-    value by the scalar it is written with (for `infer`; a term carries no domain). Its terms are values of its `Term`,
-    `Expressions.<name>.Term` (`union`), the branch `tag` (its name in lowercase) of `Expressions.Framework.Term`;
+    """An expression language: the kinds it reads, by tag, its `path`, its family's and its own name
+    (`Python.Python3`, `C.Expressions`), its `name` (`dialect_name(path)`: `Python3`, `C`), and `domain_of(value)`,
+    the domain of a literal's value by the scalar it is written with (for `infer`; a term carries no domain). Its terms
+    are values of its `Term`, `Expressions.<path>.Term` (`union`), the branch `tag` (its name in lowercase) of
+    `Expressions.Framework.Term`;
     besides its own kinds it reads the framework's kinds of invalid syntax (`INVALID_KINDS`). A dialect may extend
     another (`extends`): its kinds are the base's and its own, whose tags must differ from the base's, added to the
     base's union, whose terms it reads. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its
     kinds."""
 
-    def __init__(self, name: str, kinds: Mapping[str, Kind], *, domain_of: Callable[[Any], Domains.Domain],
+    def __init__(self, path: str, kinds: Mapping[str, Kind], *, domain_of: Callable[[Any], Domains.Domain],
                  literal: Callable[[Any], Writer | None] | None = None, extends: Dialect | None = None):
+        name = dialect_name(path)
         inherited = INVALID_KINDS if extends is None else extends.kinds()
         clashes = sorted(tag for tag in kinds if tag in inherited)
         if clashes:
@@ -816,7 +828,8 @@ class Dialect:
         self._name, self._kinds, self._domain_of, self.base = name, ordered, domain_of, extends
         self._literal = literal if literal is not None or extends is None else extends._literal
         self.tag = name.lower() if extends is None else extends.tag
-        self.union = f"Expressions.{name}.Term" if extends is None else extends.union
+        self.path = path
+        self.union = f"Expressions.{path}.Term" if extends is None else extends.union
 
     def name(self) -> str:
         return self._name
@@ -832,7 +845,7 @@ class Dialect:
         union = dialect_of(term_)
         if union == self.union:
             return None
-        other = union[len("Expressions."):-len(".Term")]
+        other = dialect_name(union[len("Expressions."):-len(".Term")])
         return f"{_article(other)} {kind_of(term_)[0]} is not {_article(self._name)} term"
 
     def kind(self, term_: Any) -> tuple[str, Any, Kind]:

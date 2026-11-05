@@ -1,9 +1,9 @@
-/** Matlab <-> Latex. MATLAB's operators are LaTeX's, a field is a member, and `isfield` is `\operatorname{has}`.
+/** MATLAB <-> LaTeX. MATLAB's operators are LaTeX's, a field is a member, and `isfield` is `\operatorname{has}`.
  * `a \implies b` is written `~a || b`, which translates back as `\lnot a \lor b`. MATLAB has no let expression, so a
  * `where` is inlined: its translated value is shared by every use of its name. MATLAB's imports are dropped. */
 
-import { DIALECT as LATEX } from "../Dialects/Latex/Expressions.js";
-import { DIALECT as MATLAB } from "../Dialects/Matlab/Expressions.js";
+import { DIALECT as LATEX } from "../LaTeX/Expressions/Expressions.js";
+import { DIALECT as MATLAB } from "../MATLAB/Expressions/Expressions.js";
 import { Elide, Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Latex, Matlab, value } from "./_Patterns.js";
 

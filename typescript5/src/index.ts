@@ -7,12 +7,13 @@
  * practices that prevent most mistakes, and which reference to load for a task.
  *
  * `Expressions`, `Evaluators`, `Domains` and `Partials` are the Patterns dialect's (formerly Basic), the neutral form of
- * every constraint. The framework is `@mbse/expressions/Framework`, the dialects are under `@mbse/expressions/Dialects/<name>`, and the
- * translators between them are `@mbse/expressions/Translators`. Expressions are stored in an mbse-schemas store, whose
+ * every constraint. The framework is `@mbse/expressions/Framework`, each dialect is under its family, at
+ * `@mbse/expressions/<Family>/<Dialect>` (`@mbse/expressions/Framework/Patterns`, `@mbse/expressions/Python/Python3`,
+ * `@mbse/expressions/C/Expressions`), and the translators between them are `@mbse/expressions/Translators`. Expressions are stored in an mbse-schemas store, whose
  * schemas `Framework.install` and each dialect's `install` define (docs/proposals/port/API.md). */
 
-export * as Domains from "./Dialects/Patterns/Domains.js";
-export * as Evaluators from "./Dialects/Patterns/Evaluators.js";
-export * as Expressions from "./Dialects/Patterns/Expressions.js";
+export * as Domains from "./Framework/Patterns/Domains.js";
+export * as Evaluators from "./Framework/Patterns/Evaluators.js";
+export * as Expressions from "./Framework/Patterns/Expressions.js";
 export * as Framework from "./Framework/index.js";
-export * as Partials from "./Dialects/Patterns/Partials.js";
+export * as Partials from "./Framework/Patterns/Partials.js";
