@@ -90,8 +90,9 @@ export function free(term: unknown, dialect: Terms.Dialect): Set<string> {
     const [, record, kind] = dialect.kind(node);
     const name = Terms.nameOf(node);
     if (kind.role === Terms.REFERENCE) {
-      if (kind.lexical && !bound.has(name) && !kind.ambient.has(name)) found.add(name);
-      return;
+      if (kind.lexical && name !== null && !bound.has(name) && !kind.ambient.has(name)) found.add(name);
+      // a name node's terms (a template's arguments) are its arguments, as an application's
+      if (!(Terms.attributesOf(record).get("name") instanceof Terms.Part)) return;
     }
     const args = Terms.argumentsOf(record);
     let scopes: ReadonlySet<string>[] = args.map(() => bound);

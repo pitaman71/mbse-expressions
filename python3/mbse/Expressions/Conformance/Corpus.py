@@ -146,48 +146,50 @@ def build():
 
     # --- cpp: every kind, written through the builders and its writers, a C++ name, a lambda, a requires expression and a
     # shared identifier --- the text ToText writes: {!record.a && record->b[0] > 1.5f ? (uint8_t)record(1) : 5u, nullptr,
-    # 10_km, "a" R"(b)", std::cout, this, (record), [=, &record](auto y) {}, (record + ...), requires (int z) { z + 1; },
-    # int(record), record--, static_cast<int>(record), typeid(record), co_await record, sizeof(int), sizeof...(Ts),
+    # 10_km, "a" R"(b)", std::cout, this, (record), [=, &record, n = 1](auto y) {}, (record + ...), requires (int z) {
+    # z + 1; }, int(record), record--, static_cast<int>(record), typeid(record), co_await record, sizeof(int), sizeof...(Ts),
     # alignof(int), noexcept(record), new int{1}, delete[] record, record = 0, throw, co_yield record, record..., .x =
     # record, ({}), __extension__ record}
-    me = CPP.identifier("record")
+    cpp_me = CPP.identifier("record")
     cpp = CPP.DIALECT.spec(lambda u: u.initializerlist(lambda r: r.items([
-        CPP.conditional(CPP.binary("&&", CPP.unary("!", CPP.member(me, "a")), CPP.binary(">", CPP.subscript(CPP.member(me, "b", "->"), 0),
+        CPP.conditional(CPP.binary("&&", CPP.unary("!", CPP.member(cpp_me, "a")), CPP.binary(">", CPP.subscript(CPP.member(cpp_me, "b", "->"), 0),
                                                                                      CPP.literal(1.5, "f"))), CPP.cast(uint8, CPP.call("record", 1)), CPP.literal(5, "u")),
         lambda i: i.constant(lambda k: k.singleton("nullptr")),
         lambda i: i.userdefinedliteral(lambda d: d.literal(lambda li: li.value(lambda v: v.as_scalar(10))).suffix("_km")),
         lambda i: i.concatenatedstring(lambda k: k.parts([CPP.literal("a"), lambda x: x.literal(lambda li: li.value(lambda v: v.as_scalar("b")).raw(True))])),
         lambda i: i.idexpression(lambda d: d.name(lambda n: n.qualifiedname(lambda q: q.qualifiers([name("std")]).name(name("cout"))))),
         lambda i: i.thisexpression(lambda k: k),
-        lambda i: i.parenthesizedexpression(lambda k: k.expression(me)),
+        lambda i: i.parenthesizedexpression(lambda k: k.expression(cpp_me)),
         lambda i: i.lambdaexpression(lambda la: la.captures([lambda k: k.defaultcapture(lambda d: d.mode("=")),
-                                                             lambda k: k.simplecapture(lambda s: s.by_reference(True).name(lambda i: i.spelling("record")))]).declarator(
+                                                             lambda k: k.simplecapture(lambda s: s.by_reference(True).name(lambda i: i.spelling("record"))),
+                                                             lambda k: k.initcapture(lambda s: s.name(name("n")).initializer(
+                                                                 lambda x: x.equalinitializer(lambda e: e.value(CPP.literal(1)))))]).declarator(
             lambda d: d.parameters([lambda q: q.parameterdeclaration(lambda pd: pd.specifiers([lambda s: s.placeholdertypespecifier(lambda h: h)]).declarator(
                 lambda dd: dd.iddeclarator(lambda i2: i2.name(name("y")))))]))),
-        lambda i: i.foldexpression(lambda f: f.left(me).operator("+")),
+        lambda i: i.foldexpression(lambda f: f.left(cpp_me).operator("+")),
         lambda i: i.requiresexpression(lambda q: q.parameters([lambda a: a.parameterdeclaration(lambda pd: pd.specifiers([
             lambda s: s.primitivetypespecifier(lambda k: k.keyword("int"))]).declarator(lambda dd: dd.iddeclarator(lambda i2: i2.name(name("z")))))]).requirements([
             lambda r2: r2.simplerequirement(lambda s: s.expression(CPP.binary("+", CPP.identifier("z"), 1)))])),
         lambda i: i.functionalcastexpression(lambda f: f.type(lambda s: s.primitivetypespecifier(lambda k: k.keyword("int"))).initializer(
-            lambda x: x.parenthesizedinitializer(lambda pi: pi.arguments([me])))),
-        lambda i: i.postfixexpression(lambda x: x.operand(me).operator("--")),
-        lambda i: i.namedcastexpression(lambda n: n.operator("static_cast").type(c_int).operand(me)),
-        lambda i: i.typeidexpression(lambda t: t.operand(me)),
-        lambda i: i.awaitexpression(lambda a: a.operand(me)),
+            lambda x: x.parenthesizedinitializer(lambda pi: pi.arguments([cpp_me])))),
+        lambda i: i.postfixexpression(lambda x: x.operand(cpp_me).operator("--")),
+        lambda i: i.namedcastexpression(lambda n: n.operator("static_cast").type(c_int).operand(cpp_me)),
+        lambda i: i.typeidexpression(lambda t: t.operand(cpp_me)),
+        lambda i: i.awaitexpression(lambda a: a.operand(cpp_me)),
         lambda i: i.sizeofexpression(lambda s: s.operand(c_int)),
         lambda i: i.sizeofpackexpression(lambda s: s.pack(lambda i: i.spelling("Ts"))),
         lambda i: i.alignofexpression(lambda s: s.keyword("alignof").operand(c_int)),
-        lambda i: i.noexceptexpression(lambda s: s.operand(me)),
+        lambda i: i.noexceptexpression(lambda s: s.operand(cpp_me)),
         lambda i: i.newexpression(lambda n: n.type(c_int).initializer(lambda x: x.initializerlist(lambda il: il.items([CPP.literal(1)])))),
-        lambda i: i.deleteexpression(lambda d: d.array(True).operand(me)),
-        lambda i: i.assignmentexpression(lambda a: a.left(me).operator("=").right(CPP.literal(0))),
+        lambda i: i.deleteexpression(lambda d: d.array(True).operand(cpp_me)),
+        lambda i: i.assignmentexpression(lambda a: a.left(cpp_me).operator("=").right(CPP.literal(0))),
         lambda i: i.throwexpression(lambda t: t),
-        lambda i: i.yieldexpression(lambda y: y.operand(me)),
-        lambda i: i.packexpansion(lambda x: x.pattern(me)),
+        lambda i: i.yieldexpression(lambda y: y.operand(cpp_me)),
+        lambda i: i.packexpansion(lambda x: x.pattern(cpp_me)),
         lambda i: i.designatedinitializer(lambda d: d.designators([lambda x: x.fielddesignator(lambda f: f.name(lambda i: i.spelling("x")))]).initializer(
-            lambda x: x.equalinitializer(lambda e: e.value(me)))),
+            lambda x: x.equalinitializer(lambda e: e.value(cpp_me)))),
         lambda i: i.statementexpression(lambda s: s),
-        lambda i: i.extensionexpression(lambda e: e.operand(me)),
+        lambda i: i.extensionexpression(lambda e: e.operand(cpp_me)),
     ])))
 
     # --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---

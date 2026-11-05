@@ -295,7 +295,7 @@ class _Printer:
         if requires is not None:
             written += " requires " + self.constraint(requires)
         written += self.attributes_after(node)
-        if "declarator" in node.helpers:
+        if "declarator" in node.helpers:  # without a declarator, the lambda has no parameter list: `[] { ... }`
             written += (" " if requires is not None else "") + self.text(node.helpers["declarator"])
         return written + " {}"  # its body of statements, not part of the term
 
@@ -555,8 +555,8 @@ class _Printer:
         "yieldexpression": lambda self, node: "co_yield " + self.expression(node.slots["operand"], ASSIGNMENT),
         "packexpansion": pack_expansion, "initializerlist": initializer_list, "designatedinitializer": designated,
         "fielddesignator": designator, "indexdesignator": designator,
-        "compoundliteralexpression": lambda self, node: (f"({self.text(node.helpers['type'])})" + (
-            self.initializer_list(node.helpers["initializer"]) if "initializer" in node.helpers else "{}")),
+        "compoundliteralexpression": lambda self, node: (f"({self.text(node.helpers['type'])})"
+                                                         + self.initializer_list(node.helpers["initializer"])),
         "statementexpression": lambda self, node: "({})",  # its body of statements, not part of the term
         "extensionexpression": lambda self, node: "__extension__ " + self.expression(node.slots["operand"], UNARY),
         "typeid": type_id,

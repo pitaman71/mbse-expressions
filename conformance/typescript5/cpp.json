@@ -12,8 +12,12 @@
                     "operand": {
                       "memberexpression": {
                         "object": {
-                          "variable": {
-                            "name": "record"
+                          "idexpression": {
+                            "name": {
+                              "identifier": {
+                                "spelling": "record"
+                              }
+                            }
                           }
                         },
                         "operator": ".",
@@ -34,8 +38,12 @@
                         "object": {
                           "memberexpression": {
                             "object": {
-                              "variable": {
-                                "name": "record"
+                              "idexpression": {
+                                "name": {
+                                  "identifier": {
+                                    "spelling": "record"
+                                  }
+                                }
                               }
                             },
                             "operator": "->",
@@ -90,8 +98,12 @@
                 "operand": {
                   "callexpression": {
                     "function": {
-                      "variable": {
-                        "name": "record"
+                      "idexpression": {
+                        "name": {
+                          "identifier": {
+                            "spelling": "record"
+                          }
+                        }
                       }
                     },
                     "arguments": [
@@ -179,8 +191,12 @@
         {
           "parenthesizedexpression": {
             "expression": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             }
           }
@@ -198,6 +214,26 @@
                   "by_reference": true,
                   "name": {
                     "spelling": "record"
+                  }
+                }
+              },
+              {
+                "initcapture": {
+                  "name": {
+                    "identifier": {
+                      "spelling": "n"
+                    }
+                  },
+                  "initializer": {
+                    "equalinitializer": {
+                      "value": {
+                        "literal": {
+                          "value": {
+                            "int": 1
+                          }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -229,8 +265,12 @@
         {
           "foldexpression": {
             "left": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             },
             "operator": "+"
@@ -266,8 +306,12 @@
                   "expression": {
                     "binaryexpression": {
                       "left": {
-                        "variable": {
-                          "name": "z"
+                        "idexpression": {
+                          "name": {
+                            "identifier": {
+                              "spelling": "z"
+                            }
+                          }
                         }
                       },
                       "operator": "+",
@@ -296,8 +340,12 @@
               "parenthesizedinitializer": {
                 "arguments": [
                   {
-                    "variable": {
-                      "name": "record"
+                    "idexpression": {
+                      "name": {
+                        "identifier": {
+                          "spelling": "record"
+                        }
+                      }
                     }
                   }
                 ]
@@ -308,8 +356,12 @@
         {
           "postfixexpression": {
             "operand": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             },
             "operator": "--"
@@ -330,8 +382,12 @@
               }
             },
             "operand": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             }
           }
@@ -339,8 +395,12 @@
         {
           "typeidexpression": {
             "operand": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             }
           }
@@ -348,8 +408,12 @@
         {
           "awaitexpression": {
             "operand": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             }
           }
@@ -395,8 +459,12 @@
         {
           "noexceptexpression": {
             "operand": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             }
           }
@@ -433,8 +501,12 @@
           "deleteexpression": {
             "array": true,
             "operand": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             }
           }
@@ -442,8 +514,12 @@
         {
           "assignmentexpression": {
             "left": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             },
             "operator": "=",
@@ -462,8 +538,12 @@
         {
           "yieldexpression": {
             "operand": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             }
           }
@@ -471,8 +551,12 @@
         {
           "packexpansion": {
             "pattern": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             }
           }
@@ -491,8 +575,12 @@
             "initializer": {
               "equalinitializer": {
                 "value": {
-                  "variable": {
-                    "name": "record"
+                  "idexpression": {
+                    "name": {
+                      "identifier": {
+                        "spelling": "record"
+                      }
+                    }
                   }
                 }
               }
@@ -505,8 +593,12 @@
         {
           "extensionexpression": {
             "operand": {
-              "variable": {
-                "name": "record"
+              "idexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "record"
+                  }
+                }
               }
             }
           }

@@ -10,8 +10,10 @@ cpp:
                 operand:
                   memberexpression:
                     object:
-                      variable:
-                        name: record
+                      idexpression:
+                        name:
+                          identifier:
+                            spelling: record
                     operator: '.'
                     member:
                       identifier:
@@ -24,8 +26,10 @@ cpp:
                     object:
                       memberexpression:
                         object:
-                          variable:
-                            name: record
+                          idexpression:
+                            name:
+                              identifier:
+                                spelling: record
                         operator: '->'
                         member:
                           identifier:
@@ -52,8 +56,10 @@ cpp:
             operand:
               callexpression:
                 function:
-                  variable:
-                    name: record
+                  idexpression:
+                    name:
+                      identifier:
+                        spelling: record
                 arguments:
                 - literal:
                     value:
@@ -91,8 +97,10 @@ cpp:
     - thisexpression: {}
     - parenthesizedexpression:
         expression:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
     - lambdaexpression:
         captures:
         - defaultcapture:
@@ -101,6 +109,16 @@ cpp:
             by_reference: true
             name:
               spelling: record
+        - initcapture:
+            name:
+              identifier:
+                spelling: 'n'
+            initializer:
+              equalinitializer:
+                value:
+                  literal:
+                    value:
+                      int: 1
         declarator:
           parameters:
           - parameterdeclaration:
@@ -113,8 +131,10 @@ cpp:
                       spelling: 'y'
     - foldexpression:
         left:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
         operator: '+'
     - requiresexpression:
         parameters:
@@ -132,8 +152,10 @@ cpp:
             expression:
               binaryexpression:
                 left:
-                  variable:
-                    name: z
+                  idexpression:
+                    name:
+                      identifier:
+                        spelling: z
                 operator: '+'
                 right:
                   literal:
@@ -146,12 +168,16 @@ cpp:
         initializer:
           parenthesizedinitializer:
             arguments:
-            - variable:
-                name: record
+            - idexpression:
+                name:
+                  identifier:
+                    spelling: record
     - postfixexpression:
         operand:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
         operator: '--'
     - namedcastexpression:
         operator: static_cast
@@ -161,16 +187,22 @@ cpp:
             - primitivetypespecifier:
                 keyword: int
         operand:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
     - typeidexpression:
         operand:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
     - awaitexpression:
         operand:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
     - sizeofexpression:
         operand:
           typeid:
@@ -189,8 +221,10 @@ cpp:
                 keyword: int
     - noexceptexpression:
         operand:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
     - newexpression:
         type:
           typeid:
@@ -206,12 +240,16 @@ cpp:
     - deleteexpression:
         array: true
         operand:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
     - assignmentexpression:
         left:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
         operator: '='
         right:
           literal:
@@ -220,12 +258,16 @@ cpp:
     - throwexpression: {}
     - yieldexpression:
         operand:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
     - packexpansion:
         pattern:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record
     - designatedinitializer:
         designators:
         - fielddesignator:
@@ -234,10 +276,14 @@ cpp:
         initializer:
           equalinitializer:
             value:
-              variable:
-                name: record
+              idexpression:
+                name:
+                  identifier:
+                    spelling: record
     - statementexpression: {}
     - extensionexpression:
         operand:
-          variable:
-            name: record
+          idexpression:
+            name:
+              identifier:
+                spelling: record

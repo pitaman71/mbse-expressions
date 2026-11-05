@@ -85,10 +85,12 @@ transaction: what tests and evaluators that need no expression object use. A tra
 `check.py` writes `x + 1 > 0`) builds one the same way.
 
 **Writers stay** (Decided, 10, until mbse-codegen-python moves off them; then they go with the builders' `set`,
-`argument` and `arguments`). A `Writer` is now a spec: a callable that writes a term through the builders. Called with
-the `Visitors.OfProperty` of a term property (`root`), the `Visitors.OfAny` of a container's element (`arguments`) or
-the `Visitors.OfUnion` of a term value (`Term(...)`), it selects its kind's branch and writes its members, so it goes
-wherever a term is written:
+`argument` and `arguments`). C's writers stay beyond that (and C++'s, which are C's, writing C++'s terms), as the user
+decided reviewing stage 5 (2026-11-04, [the dialects proposal's Decided](../dialects/README.md#decided)): "4. for
+codegen, we keep the writers separately because they emit code not just wire format for the model". A `Writer` is now a
+spec: a callable that writes a term through the builders. Called with the `Visitors.OfProperty` of a term property
+(`root`), the `Visitors.OfAny` of a container's element (`arguments`) or the `Visitors.OfUnion` of a term value
+(`Term(...)`), it selects its kind's branch and writes its members, so it goes wherever a term is written:
 
 ```python
 from mbse.Expressions.Dialects.Patterns import Expressions as E
@@ -662,8 +664,9 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
     absent body `{}`, where mbse-programs writes the statements it relates; a class's members are its body's.
 76. **Concrete syntax kept**: `parenthesizedexpression` and `tsparenthesizedtype`, written and printed as written; an
     array's hole is an `elision`, as mbse-programs has it (typescript-estree writes `null`). An empty value object
-    held as a property (a fragment's opening and closing, an empty template) is not stored by mbse-schemas, so it reads
-    back absent; a printer does not need them (found, mbse-schemas 0.26.8).
+    held as a property (a fragment's opening and closing, an empty template) read back absent in mbse-schemas 0.26.8;
+    resolved by 0.26.9 (EMB-13), which stores it present and empty, distinct from absent, so each is held and printed
+    as written (DIA-21 asserts the round trip).
 77. **Roles**: `identifier` is a lexical reference; `privateidentifier`, `thisexpression` and `super` references
     resolved by no scope; `literal` and `constant` literals; every other kind an application, whose operator, where it
     has one, is its `operator` property, its vocabulary mbse-programs' operators (`Domains.UNARY`, `UPDATE`,
@@ -726,10 +729,13 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
 ## Settled in stage 5 (C and Cpp), for the user's review
 
 Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 3, 5, 6, 8 and 9, the revision
-of 2026-11-03 that each of C and C++ defines the kinds they share, the sublanguage unions' "(b)", "Every dialect has
-a `Pattern` union", "(ii)", and, from the review of 2026-11-04, "A name is whatever the language's own grammar makes
+of 2026-11-03 that each of C and C++ defines the kinds they share, the sublanguage unions' "(b)", "Every dialect has a
+`Pattern` union", "(ii)", and, from the review of 2026-11-04, "A name is whatever the language's own grammar makes
 it") and as the brief for stage 5 asked; each choice below is where they were silent. Items 88, 90, 92 to 94, 96, 98
-and 100 are revised by that review, and items 104 to 106 added.
+and 100 are revised by that review, and items 104 to 106 added; items 87 to 89, 91, 94, 96, 98, 100, 103, 105 and 106
+are revised by the user's decisions of 2026-11-04 on item 106 (the proposal's Decided, "C++ writes a name used as an
+expression only as `idexpression`", "C++'s init capture holds its name as a `Pattern`" and "C's writers stay, for code
+generation"), and item 107 added.
 
 87. **Kinds, named and shaped as mbse-programs has them** (`mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`): each a
     value object `Expressions.C.<Name>` or `Expressions.Cpp.<Name>`, with mbse-programs' properties in source order,
@@ -738,7 +744,7 @@ and 100 are revised by that review, and items 104 to 106 added.
     `memberexpression`, `postfixexpression`, `unaryexpression`, `sizeofexpression`, `alignofexpression`,
     `castexpression`, `binaryexpression`, `conditionalexpression`, `assignmentexpression`, `initializerlist`,
     `designatedinitializer`, `compoundliteralexpression`, `statementexpression`, `extensionexpression`, `typeid`,
-    `error` and `missing`. `Expressions.Cpp.Term` has 40: C's but `genericselection` and
+    `error` and `missing`. `Expressions.Cpp.Term` has 39: C's but `variable`, `genericselection` and
     `compoundliteralexpression`, and `userdefinedliteral`, `idexpression`, `thisexpression`, `lambdaexpression`,
     `foldexpression`, `requiresexpression`, `functionalcastexpression`, `namedcastexpression`, `typeidexpression`,
     `awaitexpression`, `sizeofpackexpression`, `noexceptexpression`, `newexpression`, `deleteexpression`,
@@ -746,16 +752,22 @@ and 100 are revised by that review, and items 104 to 106 added.
     `call`, `member`, `subscript`, `unary`, `binary`, `conditional`, `cast`) are replaced by these; the writers keep
     their names (item 94).
 88. **Names, as the grammar makes them** (the proposal's Decided, "A name is whatever the language's own grammar makes
-    it"). An identifier used as an expression is the framework's `variable` (mbse-programs' `IdExpression` of an
-    `Identifier`), in both; C++'s other names used as expressions (`std::cout`, `f<int>`, `operator+`) are
-    `idexpression`, holding Cpp's `Name` union (`identifier`, `qualifiedname`, `templateid`, `operatorname`,
-    `conversionname`, `literaloperatorname`, `destructorname`, and `decltypespecifier` where a name's place holds it).
+    it", and "C++ writes a name used as an expression only as `idexpression`"). In C, an identifier used as an
+    expression is the framework's `variable` (`name`), as C's grammar has a plain identifier expression. In C++, every
+    name used as an expression is an `idexpression` (mbse-programs' `IdExpression`, its one kind), holding Cpp's `Name`
+    union (`identifier`, `qualifiedname`, `templateid`, `operatorname`, `conversionname`, `literaloperatorname`,
+    `destructorname`, and `decltypespecifier` where a name's place holds it): `x` is an `idexpression` of the identifier
+    `x`, and `Expressions.Cpp.Term` has no `variable`. An `idexpression` is a lexical reference (item 107): of an
+    identifier, to its spelling, which validation requires bound and evaluation resolves; of any other name
+    (`std::cout`, `f<int>`), resolved by the scope alone, the terms it holds (a template's arguments) checked in scope,
+    and refused by evaluation by name.
     Elsewhere a name is a node wherever mbse-programs (and tree-sitter) has one: where mbse-programs holds a `Name`,
     each dialect holds its `Name` union, C's of one branch, `identifier` (`Expressions.C.Identifier`, its `spelling`),
     as an identifier is C's one name (a member's `member`, a named type's, a struct's or an enum's `name`, an
     identifier declarator's `name`); where mbse-programs holds an `Identifier` alone, its `Identifier` directly (C's
-    and C++'s field designator's `name`; C++'s simple and init captures' `name`, `sizeof...`'s `pack`, a type
-    parameter's and a template template parameter's `name`). A `str` stays where mbse-programs has one: an
+    and C++'s field designator's `name`; C++'s simple capture's `name`, `sizeof...`'s `pack`, a type parameter's and a
+    template template parameter's `name`); an init capture's `name`, a binding target, holds C++'s `Pattern` (item
+    89). A `str` stays where mbse-programs has one: an
     attribute's `name` and `namespace`, a `using_namespace`. An identifier is checked as mbse-programs checks it
     (letters, digits, `_` and `$`, not starting with a digit) wherever one is held: the framework's variable's `name`,
     and every `identifier`'s `spelling`.
@@ -763,17 +775,20 @@ and 100 are revised by that review, and items 104 to 106 added.
     ("(b)"). `Type` is a type name, `typeid` (its `specifiers` and abstract `declarator`), and invalid syntax; `Term`
     lists `typeid` too, for the positions that hold an expression or a type alike (`sizeof(int)`, `_Generic`'s
     controlling operand, `offsetof`'s first argument), and `designatedinitializer`, an initializer list's item.
-    `Pattern` holds invalid syntax alone ("(ii)"): no C or C++ expression binds a name as a target (a lambda's
-    captures and parameters, a requires expression's parameters, are declarations; structured bindings are not
-    expressions). The helpers' unions are named after mbse-programs' categories: C's `Name`, `Specifier`, `Declarator`,
-    `Parameter`, `AttributeSpecifier`, `Designator` and `Initializer`; C++'s `Name`, `Capture`, `Requirement`,
-    `Designator`, `Initializer`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`,
-    `ExceptionSpecification` and `AttributeSpecifier`. `Specifier` lists the attribute specifiers, as `TypeId` lists
-    them among its specifiers; C++'s `TemplateParameter` a `parameterdeclaration` and its `Initializer` an
-    `initializerlist`. Each dialect defines its own copy of each kind and helper they share (`Expressions.Cpp.TypeId`
-    holds C++'s specifiers), without what only the other has (C's array declarator's `static`, its index designators,
-    `_Generic`, compound literals, `typeof`, `_Atomic(type)` and `_BitInt` are C's alone). The framework reads a
-    sublanguage's or a helper's value as a `Terms.Part`, and `Terms.node(tag, record)` reads it nested.
+    `Pattern` is each dialect's binding targets ("(ii)"): C's holds invalid syntax alone and nothing holds it, as C
+    expressions bind no names; C++'s lists `identifier` (`Expressions.Cpp.Identifier`, one schema in `Name` and `Pattern`, "(b)")
+    beside `error` and `missing`, and an init capture's `name` holds it (the proposal's Decided, "C++'s init capture
+    holds its name as a `Pattern`"), the one target a C++ expression binds (a lambda's parameters and a requires
+    expression's are declarations; structured bindings are not expressions). The helpers' unions are named after
+    mbse-programs' categories: C's `Name`, `Specifier`, `Declarator`, `Parameter`, `AttributeSpecifier`, `Designator`
+    and `Initializer`; C++'s `Name`, `Capture`, `Requirement`, `Designator`, `Initializer`, `Specifier`, `Declarator`,
+    `Parameter`, `TemplateParameter`, `ExceptionSpecification` and `AttributeSpecifier`. `Specifier` lists the attribute
+    specifiers, as `TypeId` lists them among its specifiers; C++'s `TemplateParameter` a `parameterdeclaration` and its
+    `Initializer` an `initializerlist`. Each dialect defines its own copy of each kind and helper they share
+    (`Expressions.Cpp.TypeId` holds C++'s specifiers), without what only the other has (C's array declarator's `static`,
+    its index designators, `_Generic`, compound literals, `typeof`, `_Atomic(type)` and `_BitInt` are C's alone). The
+    framework reads a sublanguage's or a helper's value as a `Terms.Part`, and `Terms.node(tag, record)` reads it
+    nested.
 90. **Literals refine the framework's** (CAP-233, PRI-023): `Expressions.C.Literal` adds the encoding `prefix` (`L`,
     `u8`, `u`, `U`), its `quote` (`'` a character, `"` a string), an integer's `base`, `separators` (`'` between
     digits) and the `suffix` as written; `Expressions.Cpp.Literal` adds a raw string's `raw` and `delimiter`. An
@@ -793,15 +808,17 @@ and 100 are revised by that review, and items 104 to 106 added.
     prose. `constant` is each dialect's own,
     for what no schema holds: `nullptr`, its `singleton` (C23's alone in C). C++'s `userdefinedliteral` holds a
     `literal` and its `suffix` (`10_km`).
-91. **What each kind binds**: a function declarator's parameters, a lambda's parameters and init captures, and a
-    requires expression's parameters, within it (`scopes(tag)`, `bound_names`). A callee is a term (`callexpression`'s
+91. **What each kind binds**: a function declarator's parameters, a lambda's parameters and init captures (an init
+    capture's `Pattern`, where it is an identifier; invalid syntax binds none), and a requires expression's parameters,
+    within it (`scopes(tag)`, `bound_names`). A callee is a term (`callexpression`'s
     `function`), whose names must be bound, as every reference's.
 92. **Slots that may be empty**: `optional` paths written `"*.slot"` match that slot at any helper depth
     (`Terms.Kind`'s, new): an array declarator's `size`, a designator's range's `last`, a noexcept specifier's
     `condition`, a parameter's `default` argument, and a lambda's or a template parameter's `requires` clause, wherever
     a type name or a lambda nests them (`OPTIONAL`). A kind's own: GNU's `a ?: b`'s `consequence`, a fold's `left` or
     `right` (`(x + ...)` has one of them), a `throw`'s `operand`, a lambda's `template_requires`. A compound literal
-    requires only its type (an empty initializer list `{}` is an empty value object, item 99).
+    requires its type and its initializer list, an empty one (`{}`) held as written since mbse-schemas 0.26.9 (item
+    99); the printer writes the list it holds.
 93. **A body of statements or declarations is not part of the term** (Decided, 5, "(i)"): a lambda's and a statement
     expression's, which always have one, are not held at all, and printed `{}`; a struct's, a union's or an enum's,
     which may be absent (`struct S` names a type, `struct S {}` defines one), is said by `body`, a bool, printed `{}`
@@ -809,7 +826,10 @@ and 100 are revised by that review, and items 104 to 106 added.
 94. **Writers kept, writing the complete kinds** (PRI-019 for every other term): `literal(value, suffix)`,
     `identifier`, `unary`, `binary`, `conditional`, `cast(type, operand)`, `member(object, name, operator=".")`,
     `subscript(object, *indices)` and `call(function, *arguments)`, as a `Writers(dialect, writer)` each dialect has;
-    both write a member's name as an `identifier`, its `Name`. A cast's `type` is a spec of the dialect's `Type`,
+    both write a member's name as an `identifier`, its `Name`; `identifier(name)`, and a callee named by a string, is
+    C's `variable` and C++'s `idexpression` of the identifier (Cpp's `Writers` derives C's, its one difference). They
+    stay, for code generation, as the user decided (2026-11-04): "4. for codegen, we keep the writers separately
+    because they emit code not just wire format for the model". A cast's `type` is a spec of the dialect's `Type`,
     written through the builders: the writer does not read a type name from a string, which would guess whether each
     word is a keyword or a type's name (PRI-025), so `PRIMITIVES` is gone. A native value is written as its literal (a
     bytes has none).
@@ -820,12 +840,14 @@ and 100 are revised by that review, and items 104 to 106 added.
     `_Alignof`, C++20's lambda template parameters, C++23's `a[i, j]`) is not recorded: whether a term is in a
     standard is a constraint, to come. C++26 (pack indexing, reflection, splices, contracts) is outside `Cpp`.
 96. **Evaluation keeps what C evaluated** (Decided, 8): `Evaluators.EVALUATED` names the kinds that replaced C's
-    former ones, evaluated in their complete shapes by C's rules (`Cpp`'s interpreter is C's, over its dialect); a
+    former ones, evaluated in their complete shapes by C's rules (`Cpp`'s interpreter is C's, over its dialect, its
+    `EVALUATED` C's with `idexpression` in place of `variable`, `interpreter(dialect, evaluated)`); a
     literal's type is what its text encodes (`Domains.literal(attributes, language)`: its suffix and base, as C's
     tables give them; `'a'` C's `int` and C++'s `char`), an integer that does not fit raising "integer literal N does
     not fit 'T'". Every other kind, and what an evaluated kind holds beyond its former shape (an operator with no rule
     here, a literal of a type no evaluator has values of, a cast to a type that is not arithmetic, several indices, a
-    callee that is not a name, GNU's `?:`), is refused by name. Invalid syntax is refused by name first, `ValueError`,
+    callee that is not a name, a C++ name that is not an identifier, "Cpp idexpression of a name that is not an
+    identifier is not evaluated", GNU's `?:`), is refused by name. Invalid syntax is refused by name first, `ValueError`,
     as every dialect refuses it, where a term stands and where a cast's type does ("C error is not evaluated"), before
     the check that the type is arithmetic. `Domains` gains the vocabularies of the new operators,
     `size_t` for `sizeof` and `alignof`, and `nullptr_t`; `arithmetic(names)` reads a type
@@ -837,21 +859,28 @@ and 100 are revised by that review, and items 104 to 106 added.
     cast's operand at the comma's precedence as mbse-programs writes it. Invalid syntax is written as written,
     wherever it stands. `FromText` is mbse-programs' (Decided, 6).
 98. **Translators keep what they translated** (Decided, 9): Patterns <-> C and Patterns <-> Cpp share one rule set,
-    `Patterns_C.RULES`, over the complete kinds (`_Patterns.CFamily`), a member's name an identifier in both; C++'s
-    add one backward rule, a string written with its quote (`"s"`) as Patterns' string, since a quote is not C++'s
-    spelling (item 90). A C++ character (`'a'`, a `char`), a literal with a suffix or a prefix, a cast and every other
-    kind have no Patterns counterpart and are refused by name ("Cpp literal 97 of char has no Patterns counterpart",
-    "C castexpression has no Patterns counterpart").
-99. **Found: mbse-schemas stores no empty value object held directly as a property**: an empty initializer list in a
-    compound literal reads back absent (printed `{}`, hence not required, item 92), and a lambda's empty declarator
-    `()` reads back absent, `[]() {}` as `[] {}`. A union branch holding an empty object is stored.
+    `Patterns_C.RULES`, over the complete kinds (`_Patterns.CFamily`), a member's name an identifier in both, but for a
+    name used as an expression (`Patterns_C.IDENTIFIER`), a Patterns `variable` C's `variable` and C++'s `idexpression`
+    of the identifier (`CFamily.idexpression`), a C++ name that is not an identifier refused by name ("Cpp idexpression
+    has no Patterns counterpart"); C++'s add one backward rule, a string written with its quote (`"s"`) as Patterns'
+    string, since a quote is not C++'s spelling (item 90). A C++ character (`'a'`, a `char`), a literal with a suffix or
+    a prefix, a cast and every other kind have no Patterns counterpart and are refused by name ("Cpp literal 97 of char
+    has no Patterns counterpart", "C castexpression has no Patterns counterpart").
+99. **Found, and resolved by mbse-schemas 0.26.9: an empty value object held directly as a property**: in 0.26.8 an
+    empty initializer list in a compound literal read back absent (so it was printed `{}` and not required), and a
+    lambda's empty declarator `()` read back absent, `[]() {}` as `[] {}`. mbse-schemas 0.26.9 (EMB-13) stores an
+    empty value object held as a property, a container element or an inserted element present and empty, distinct
+    from absent, so the workarounds are removed: a compound literal requires its initializer list again (item 92), and
+    mbse-programs' distinction is restored, "Without a declarator, the lambda has no parameter list: `[] { ... }`":
+    `[]() {}` reads back as `[]() {}`. DIA-24 and DIA-25 assert both round trips.
 100. **Completeness as data**: `grammars/c-tree-sitter.json` (tree-sitter-c 0.23.6, 125 named node types) and
     `grammars/cpp-tree-sitter.json` (tree-sitter-cpp 0.23.4, 206), each node mapped to `Term`'s kinds, `Type`'s
     branches, a helper, or listed as not an expression with its reason, with the grammar's supertypes. DIA-26 asserts
     every branch of each `Term` and `Type` is the grammar's but invalid syntax; no test reads tree-sitter, which
     neither implementation depends on. tree-sitter-cpp's index and range designators are C's and GNU's, not C++'s.
     tree-sitter-c's `identifier` and `field_identifier` map to C's `Identifier` helper, as tree-sitter-cpp's do to
-    C++'s.
+    C++'s; tree-sitter-c's `identifier` as an expression is C's `variable`, tree-sitter-cpp's C++'s `idexpression` (as
+    is its `null`, which holds `NULL`).
 101. **Invalid syntax in every sublanguage** (CAP-227, CAP-228): every dialect's `Type` and `Pattern` (Python3's
     `Pattern`, TypeScript5's `Type` and `Pattern`, C's and C++'s) list `error` and `missing`, so that invalid syntax
     stands where a type or a target does; it is reported as a problem (`Terms.invalid_problems`, new, which each
@@ -860,24 +889,43 @@ and 100 are revised by that review, and items 104 to 106 added.
 102. **The framework**: `Terms.Node` and `Terms.node(tag, record)`, a term or a helper read nested, move from
     TypeScript5 into the framework, which C and C++ read too (TypeScript5's `Expressions.Node` is it).
 103. **Tests**: DIA-11 (C) and DIA-12 (C's evaluation) are rewritten over the complete kinds under their IDs; DIA-18
-    gains C's and C++'s literal spellings; DIA-24 (kinds), DIA-25 (printing) and DIA-26 (completeness) are added in
-    both languages; FRM's samples hold every kind of each (FRM-11 prints them, and checks invalid syntax in each
-    `Type` and `Pattern`); TRN-08 is rewritten for the shared rules; tutorial 8 writes its cast through `cast`, its type
-    through the builders. None is retired. The review of 2026-11-04 adds, under the same IDs: DIA-11 a literal out of
-    range; DIA-24 C's `Name` and where each dialect holds an identifier, a field designator's identifier checked, the
-    quote in C's spelling and not C++'s, a C++ term refused by C's validation ("a Cpp variable is not a C term", as
-    stage 2 asserted), and invalid syntax refused by C's evaluator; TRN-08 a member's name an identifier in C, a C++
-    string with its quote translated, and a C++ character refused. The corpus's `c` and `cpp` cases hold every kind; their JSON is byte-identical. Steps A and B of the
-    brief, kinds and printing, landed in one commit, as FRM-02 needs each sample to hold every kind and FRM-11 prints
-    them.
+    gains C's and C++'s literal spellings; DIA-24 (kinds), DIA-25 (printing) and DIA-26 (completeness) are added in both
+    languages; FRM's samples hold every kind of each (FRM-11 prints them, and checks invalid syntax in each `Type` and
+    `Pattern`); TRN-08 is rewritten for the shared rules; tutorial 8 writes its cast through `cast`, its type through
+    the builders. None is retired. The review of 2026-11-04 adds, under the same IDs: DIA-11 a literal out of range;
+    DIA-24 C's `Name` and where each dialect holds an identifier, a field designator's identifier checked, the quote in
+    C's spelling and not C++'s, a C++ term refused by C's validation ("a Cpp idexpression is not a C term", since
+    2026-11-04, as stage 2 asserted of a variable), and invalid syntax refused by C's evaluator; TRN-08 a member's name
+    an identifier in C, a C++ string with its quote translated, and a C++ character refused. The corpus's `c` and `cpp`
+    cases hold every kind; their JSON is byte-identical. Steps A and B of the brief, kinds and printing, landed in one
+    commit, as FRM-02 needs each sample to hold every kind and FRM-11 prints them.
 104. **Domains' tables are not mutated**: `BINARY` (the arithmetic operators and the comma) and `BINARY_CPP` (them, the
     comma, `<=>`, `.*` and `->*`) are each built whole from the arithmetic operators, and `UNARY` holds `*`, `&`, `++`
     and `--` from the start, so that no module table changes after another is built from it.
 105. **The corpus**: the `c` and `cpp` cases write their names as identifiers and their cast's type through the
-    builders; their text is unchanged, their JSON byte-identical in both languages.
-106. **Not changed here, waiting on the user**: the empty value object workarounds (item 99), `variable` beside
-    `idexpression` in C++ (item 88), typing literals by their suffix before CAP-232 (item 96), C's and C++'s `Pattern`
-    of invalid syntax alone (item 89), and whether C keeps its writers (item 94).
+    builders; their text is unchanged, their JSON byte-identical in both languages. Since 2026-11-04 the `cpp` case
+    writes each name used as an expression as an `idexpression`, and its lambda an init capture (`n = 1`) whose name is
+    a `Pattern`; Python's builds it under a name of its own (`cpp_me`), so that the `c` case's terms, written later,
+    keep C's identifier.
+106. **Not changed here, waiting on the user**: typing literals by their suffix before CAP-232 (item 96). The empty
+    value object workarounds (items 76, 92 and 99) are resolved by mbse-schemas 0.26.9, now pinned. Decided on 2026-11-04 (the proposal's
+    Decided): C++ writes a name used as an expression only as `idexpression` (item 88), C++'s init capture holds its
+    name as a `Pattern` and nothing holds C's (item 89), and C's writers stay, for code generation (item 94).
+107. **A reference's name may be a name node** (settled in stage 5's follow-up, for the user's review): the framework
+    read a reference's name as its `name`, a string, and C++'s `idexpression` holds a `Name`, a helper.
+    `Terms.name_of` (`nameOf`) and `Terms.reference_name(name)` (`referenceName`, new) read a name node as its
+    identifier's spelling, and any other name node (`std::cout`, `f<int>`, an identifier with no spelling) as no name
+    (None, null). Validation requires a named lexical reference bound and not one with no name, and checks the terms a
+    name node holds as an application's, in the kind's scopes ("name argument 0: idexpression 'w' is not bound");
+    `Symbolics.free` collects their names; a translation's built reference adds its arguments' names; C's scope refuses
+    a reference with no name by name, and a call's callee must be a named reference. A string `name` reads as before,
+    so every other dialect is unchanged. Tests, under their IDs in both languages: FRM-01 (C++'s union has no
+    `variable`), FRM-11 (C++'s recovered name an `idexpression`), DIA-24 (names as `idexpression`s, validation, scopes
+    and evaluation of names that are not identifiers, an init capture's `Pattern`, invalid syntax there binding none,
+    a term there refused, "'idexpression' is not a member of a union value", and C's `Pattern` held by nothing),
+    DIA-25 (C++'s names printed from `idexpression`s, init captures' names as `Pattern`s), DIA-26 (tree-sitter-cpp's
+    `identifier` and `null` an `idexpression`) and TRN-08 (C's rule set but for a name, a Patterns `variable` C++'s
+    `idexpression` and back, a C++ name that is not an identifier refused).
 
 ## What stage 2b needed (done)
 

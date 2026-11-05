@@ -51,7 +51,7 @@
  * - `kindOf(term)`: its kind's branch, `(tag, record)`; `dialectOf(term)`: the name of its dialect's `Term`.
  *   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers
  *   nested, as a dialect whose kinds hold sublanguages reads them to print and check them.
- * - `nameOf(term)`, `operatorOf(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
+ * - `nameOf(term)`, `referenceName(name)`, `operatorOf(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
  * - `Dialect`: a dialect's kinds by tag, with `validate`, `infer` and `make(form)`, the `Writer` of a form.
  * - `Writer`: a spec that writes a term of its dialect through the builders; `spec(x)` makes one of a writer, a native
  *   value (a literal), a term value (copied) or a callable taking the `Visitors.OfUnion` of a term value.
@@ -61,7 +61,10 @@
  * - `LITERAL`: a value, its `value`.
  * - `REFERENCE`: a value the scope resolves. A lexical reference (the default) is the value bound to its name, by an
  *   enclosing binding or import or by the scope; others, such as Excel's cell references, are resolved by the scope
- *   alone, and validation does not require them to be bound. `ambient` names are bound without being declared.
+ *   alone, and validation does not require them to be bound. `ambient` names are bound without being declared. A
+ *   reference's name is its `name`: a string, or a name node, a helper (C++'s `idexpression`, holding its `Name`),
+ *   whose name is an identifier's spelling (`referenceName`); a name node that is not an identifier (`std::cout`) is
+ *   resolved by the scope alone, and the terms it holds (a template's arguments) are its arguments.
  * - `APPLICATION`: an operator, named by the property `operator` (or, if it is null, by the kind's tag), applied to
  *   arguments. A kind's `vocabulary` maps operator names to signatures; operators outside it are extensions, unless the
  *   vocabulary is None, when any name is accepted and `signature` applies to all, or the kind is `closed`, when they
@@ -527,10 +530,21 @@ export function node(tag: string, record: any): Node {
   return nest(record.as_schema(), tag, attributesOf(record), argumentsOf(record));
 }
 
-/** The name a reference refers to, or a binding, quantifier or import binds: its `name`; null if it has none. */
+/** The name an attribute `name` gives: a string, or, where a name is a node (C++'s `idexpression`, holding its
+ * `Name`), an identifier's spelling; null for a name node that is not an identifier (`std::cout`), or none. */
+export function referenceName(value: unknown): any {
+  if (value instanceof Part) return value.kind === "identifier" ? value.attributes.get("spelling") ?? null : null;
+  return value ?? null;
+}
+
+/** The name a reference refers to, or a binding, quantifier or import binds: its `name`, a string, or the spelling of
+ * the identifier its name node is (C++'s `idexpression`); null if it has none, or its name is not an identifier. */
 export function nameOf(term_: any): any {
   const [, record] = kindOf(term_);
-  return record.as_schema().properties.has("name") ? scalar(record, "name") : null;
+  const schema = record.as_schema();
+  if (!schema.properties.has("name")) return null;
+  if (_helpers(schema).includes("name")) return referenceName(attributesOf(record).get("name")); // a name node
+  return scalar(record, "name");
 }
 
 /** An application's or a quantifier's operator: its `kind.operator` property, or its tag. */
@@ -1007,12 +1021,14 @@ export class Dialect {
       }
     }
     if (kind.check !== null) problems.push(...kind.check(record));
-    const name = attributes.get("name") ?? null;
+    const name = referenceName(attributes.get("name"));
     if (kind.role === REFERENCE) {
-      if (kind.lexical && problems.length === 0 && !bound.has(name) && !kind.ambient.has(name)) {
+      if (kind.lexical && problems.length === 0 && name !== null && !bound.has(name) && !kind.ambient.has(name)) {
         problems.push(`${tag} ${repr(name)} is not bound`);
       }
-      return problems;
+      if (!(attributes.get("name") instanceof Part)) return problems;
+      // a name node: a name that is not an identifier is resolved by the scope alone (`std::cout`), and the terms
+      // within it (a template's arguments) are checked as an application's are
     }
     const labelled = _labelled(record);
     const args = labelled.map(([, , argument]) => argument);

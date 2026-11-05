@@ -19,8 +19,10 @@
  * raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
  *
  * - `userdefinedliteral` (`literal`, a `literal`'s value object, and its `suffix`, `10_km`);
- * - names: `idexpression`, a name that is not an identifier used as an expression (`std::cout`, `f<int>`,
- *   `operator+`); `thisexpression`;
+ * - names: `idexpression`, every name used as an expression, holding its `Name` (`x`, `std::cout`, `f<int>`,
+ *   `operator+`), as C++'s grammar makes it: C++ has no `variable` (the user's decision of 2026-11-04, in the dialects
+ *   proposal's Decided), and an `idexpression` of an identifier is a lexical reference to its spelling, which validation
+ *   requires bound and evaluation resolves; `thisexpression`;
  * - `lambdaexpression` (`captures`, `template_parameters`, `template_requires`, `attributes`, `declarator`), whose body of
  *   statements is not part of the term (the dialects proposal, Decided, 5, "(i)"); `foldexpression`;
  *   `requiresexpression` (`parameters`, `requirements`);
@@ -30,18 +32,18 @@
  *   `noexceptexpression`, `newexpression`, `deleteexpression`, `throwexpression`, `packexpansion` (`pattern...`).
  *
  * Its sublanguages are unions of their own: `Expressions.Cpp.Type`, a type name (`typeid`), and
- * `Expressions.Cpp.Pattern`, for binding targets ("(ii)"): no C++ expression binds a name as a target (a lambda's
- * captures and parameters, a requires expression's parameters, are declarations; structured bindings are not
- * expressions), so it holds invalid syntax alone. As the user decided ("(b)"), one schema is a branch of every union
- * whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does, `Name` lists
- * `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a `parameterdeclaration` and
- * `Initializer` an `initializerlist`. A type name's and a lambda's parts are helpers, each union named after
+ * `Expressions.Cpp.Pattern`, for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an `identifier`, or
+ * invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch of every union
+ * whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does, `Pattern` lists `identifier`,
+ * `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a `parameterdeclaration`
+ * and `Initializer` an `initializerlist`. A type name's and a lambda's parts are helpers, each union named after
  * mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`, `Capture`,
  * `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and `AttributeSpecifier`.
  *
  * Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: C++20's kinds, `co_await`,
  * `co_yield`, `requires` and designated initializers, C++20 and C++23; an extension none). `DIALECT` reads them
- * (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms:
+ * (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
+ * expression an `idexpression` (`identifier("x")`, and a callee named by a string):
  * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
  */
 
@@ -141,7 +143,6 @@ export function install(txn: any): any {
         (t: any) => t.name("constant").schema([_.Constant]),
         (t: any) => t.name("userdefinedliteral").schema([_.UserDefinedLiteral]),
         (t: any) => t.name("concatenatedstring").schema([_.ConcatenatedString]),
-        (t: any) => t.name("variable").schema([Framework.Variable]),
         (t: any) => t.name("idexpression").schema([_.IdExpression]),
         (t: any) => t.name("thisexpression").schema([_.ThisExpression]),
         (t: any) => t.name("parenthesizedexpression").schema([_.ParenthesizedExpression]),
@@ -184,8 +185,9 @@ export function install(txn: any): any {
         (t: any) => t.name("error").schema([Framework.Error]),
         (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
-      // its binding targets: no C++ expression binds a name as a target, so invalid syntax alone ("(ii)")
+      // its binding targets: an init capture's name, an identifier, and invalid syntax ("(ii)")
       (_: any) => _.Pattern.name("Expressions.Cpp.Pattern").branches([
+        (t: any) => t.name("identifier").schema([_.Identifier]),
         (t: any) => t.name("error").schema([Framework.Error]),
         (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
@@ -301,7 +303,7 @@ export function install(txn: any): any {
         by_reference: S.OfBool, name: _.Identifier, pack: S.OfBool}),
       (_: any) => _.ThisCapture.name("Expressions.Cpp.ThisCapture").properties({copy: S.OfBool}),
       (_: any) => _.InitCapture.name("Expressions.Cpp.InitCapture").properties({
-        by_reference: S.OfBool, pack: S.OfBool, name: _.Identifier, initializer: _.Initializer}),
+        by_reference: S.OfBool, pack: S.OfBool, name: _.Pattern, initializer: _.Initializer}),
       (_: any) => _.FoldExpression.name("Expressions.Cpp.FoldExpression").properties({
         left: _.Term, operator: S.OfStr, right: _.Term}),
       (_: any) => _.RequiresExpression.name("Expressions.Cpp.RequiresExpression").properties({
@@ -449,7 +451,7 @@ export function install(txn: any): any {
     ])]))]);
 }
 
-const TAGS: readonly string[] = [C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CONCATENATEDSTRING, C.VARIABLE, IDEXPRESSION,
+const TAGS: readonly string[] = [C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CONCATENATEDSTRING, IDEXPRESSION,
   THISEXPRESSION, C.PARENTHESIZEDEXPRESSION, LAMBDAEXPRESSION, FOLDEXPRESSION, REQUIRESEXPRESSION, C.SUBSCRIPTEXPRESSION,
   C.CALLEXPRESSION, FUNCTIONALCASTEXPRESSION, C.MEMBEREXPRESSION, C.POSTFIXEXPRESSION, NAMEDCASTEXPRESSION,
   TYPEIDEXPRESSION, C.UNARYEXPRESSION, AWAITEXPRESSION, C.SIZEOFEXPRESSION, SIZEOFPACKEXPRESSION, C.ALIGNOFEXPRESSION,
@@ -476,7 +478,8 @@ function application(tag: string, signature: FD.Signature = new FD.Opaque(), opt
 
 const OWN: Record<string, F.Kind> = {
   [USERDEFINEDLITERAL]: application(USERDEFINEDLITERAL, new FD.Opaque(), { required: ["literal", "suffix"] }),
-  [IDEXPRESSION]: application(IDEXPRESSION, new FD.Opaque(), { required: ["name"] }),
+  [IDEXPRESSION]: new F.Kind(F.REFERENCE, { required: ["name"], standards: STANDARDS, check: check(IDEXPRESSION),
+    scopes: C.scopes(IDEXPRESSION), optional: C.OPTIONAL }),
   [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false, standards: STANDARDS }),
   [LAMBDAEXPRESSION]: application(LAMBDAEXPRESSION, new FD.Opaque(), { optional: ["template_requires"] }),
   [FOLDEXPRESSION]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.FOLD, required: ["operator"],
@@ -515,5 +518,12 @@ export class Writer extends F.Writer {
   }
 }
 
-const WRITERS = new C.Writers(DIALECT, Writer);
+/** C's writers, writing C++'s terms: a name used as an expression is an `idexpression`, holding its `Name`. */
+class Writers extends C.Writers<Writer> {
+  /** The identifier `name` used as an expression: an `idexpression` holding it. */
+  override identifier = (name: string): Writer => new this.writer((u: any) => u.idexpression(
+    (r: any) => r.name((n: any) => n.identifier((i: any) => i.spelling(name)))));
+}
+
+const WRITERS = new Writers(DIALECT, Writer);
 export const { literal, identifier, unary, binary, conditional, cast, member, subscript, call } = WRITERS;

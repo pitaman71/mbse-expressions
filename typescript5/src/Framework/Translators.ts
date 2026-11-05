@@ -302,11 +302,11 @@ class Direction {
    * reads them. */
   build(form: Terms.Form): Built {
     const kind = this.target.kinds().get(form.kind) as Terms.Kind;
-    const name = form.attributes.get("name") as string;
+    const name = Terms.referenceName(form.attributes.get("name")) as string;
     const frees = (form.arguments as Built[]).map((argument) => argument.free);
     let free: Set<string>;
-    if (kind.role === Terms.REFERENCE) {
-      free = new Set(kind.lexical && !kind.ambient.has(name) ? [name] : []);
+    if (kind.role === Terms.REFERENCE) { // its name, and a name node's terms' names (a template's arguments)
+      free = new Set([...(kind.lexical && !kind.ambient.has(name) ? [name] : []), ...frees.flatMap((f) => [...f])]);
     } else if (kind.scopes !== null) { // what its arguments bind is read from a record, which a writer is not yet:
       free = new Set(frees.flatMap((f) => [...f])); // its arguments' names, the names it binds among them
     } else if (kind.role === Terms.BINDING || kind.role === Terms.QUANTIFIER) {

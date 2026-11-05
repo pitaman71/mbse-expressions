@@ -16,10 +16,14 @@ import { CFamily, Patterns, value } from "./_Patterns.js";
 
 const V = value(BigInt, Number, String, Boolean);
 
-/** The rules between Patterns and the C family, C's and C++'s alike (the proposal's question 9). */
+/** A Patterns variable is C's: a name used as an expression, which C++ writes as an `idexpression` instead. */
+export const IDENTIFIER = new Rule(Patterns.variable, CFamily.identifier);
+
+/** The rules between Patterns and the C family, C's and C++'s alike (the proposal's question 9), but for a name used
+ * as an expression (`IDENTIFIER`), which each language's grammar makes its own. */
 export const RULES: readonly (Rule | Inline)[] = [
   new Rule(Patterns.literal(V), CFamily.literal(V)),
-  new Rule(Patterns.variable, CFamily.identifier),
+  IDENTIFIER,
   new Inline("let", "left"),
   new Rule(Patterns.get, CFamily.member),
   new Rule(Patterns.implies, CFamily.implies, "forward"),

@@ -21,7 +21,7 @@ evaluates, is mbse-basis'
 | **Matlab** | MATLAB source, for constraints that live in MATLAB code or Simulink models |
 | **Excel** | worksheet formulas, for constraints that live in spreadsheets, over cells and records |
 | **Latex** | notation, for constraints in documents and specifications; it has no evaluator: translate to evaluate |
-| **C**, **Cpp** | C (C11 to C23) and C++ (C++17 to C++23) source, for constraints over the types of embedded software and interface control documents (`uint8_t`, `float`): every expression of each language as mbse-programs has it, in its names and shapes, a type name and binding targets each a union of its own (`Expressions.C.Type`, `Expressions.C.Pattern`), each kind recording the standards that have it; C++ is not a superset of C, so each defines its own copy of the kinds they share ([CAP-229: the C expression dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md), [CAP-230: the C++ expression dialect](mbse:mbse-basis/docs/capabilities/CAP-230.md)) |
+| **C**, **Cpp** | C (C11 to C23) and C++ (C++17 to C++23) source, for constraints over the types of embedded software and interface control documents (`uint8_t`, `float`): every expression of each language as mbse-programs has it, in its names and shapes, a type name and binding targets each a union of its own (`Expressions.C.Type`, `Expressions.C.Pattern`, held by nothing in C, whose expressions bind no names, and by C++'s init capture's name), each kind recording the standards that have it; C++ is not a superset of C, so each defines its own copy of the kinds they share ([CAP-229: the C expression dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md), [CAP-230: the C++ expression dialect](mbse:mbse-basis/docs/capabilities/CAP-230.md)) |
 | **SystemVerilog** | SystemVerilog source, for constraints over hardware signals and registers, as assertions and checks on vectors whose bits may be x or z |
 
 Write a constraint in Patterns, and translate it where it must be checked; read one written elsewhere back into Patterns
@@ -39,7 +39,9 @@ to analyze it.
    and imports, every node of `ast`; MATLAB's `binary`, `field`, `call` and imports; Excel's `infix`, `function`,
    `field`, `cell` and `let_`; LaTeX's `binary`, `member`, `frac` and `where`; C's and C++'s literals with their suffixes,
    casts (to a type name written through the builders, a value of the dialect's `Type`), members, calls and operators,
-   the kinds they evaluate (their other kinds written through the builders, a name an `identifier` wherever one is held); SystemVerilog's sized literals, casts and system functions. Each dialect's `Text.ToText` writes an
+   the kinds they evaluate (their other kinds written through the builders, a name an `identifier` wherever one is held,
+   and a name used as an expression as each grammar makes it: C's the framework's `variable`, C++'s an `idexpression`
+   holding its `Name`); SystemVerilog's sized literals, casts and system functions. Each dialect's `Text.ToText` writes an
    expression as its source. TypeScript5 has no writers: write its terms through the builders, a sublanguage's value
    where a type or a pattern goes; its `ToText` writes TypeScript, a body of statements, which is not part of a term,
    as `{}`.

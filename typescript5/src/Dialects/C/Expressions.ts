@@ -542,7 +542,7 @@ export function kinds(language: string, tags: readonly string[], standards: Read
     [ASSIGNMENTEXPRESSION]: () => operator(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT),
     [INITIALIZERLIST]: () => application(INITIALIZERLIST),
     [DESIGNATEDINITIALIZER]: () => application(DESIGNATEDINITIALIZER, new FD.Opaque(), { required: ["initializer"] }),
-    [COMPOUNDLITERALEXPRESSION]: () => application(COMPOUNDLITERALEXPRESSION, new FD.Opaque(), { required: ["type"] }),
+    [COMPOUNDLITERALEXPRESSION]: () => application(COMPOUNDLITERALEXPRESSION, new FD.Opaque(), { required: ["type", "initializer"] }),
     [STATEMENTEXPRESSION]: () => application(STATEMENTEXPRESSION),
     [EXTENSIONEXPRESSION]: () => application(EXTENSIONEXPRESSION, ANY1),
     [TYPEID]: () => application(TYPEID),

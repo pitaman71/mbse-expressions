@@ -79,9 +79,10 @@ def free(term: Any, dialect: Terms.Dialect) -> set[str]:
         tag, record, kind = dialect.kind(node)
         name = Terms.name_of(node)
         if kind.role == Terms.REFERENCE:
-            if kind.lexical and name not in bound and name not in kind.ambient:
+            if kind.lexical and name is not None and name not in bound and name not in kind.ambient:
                 found.add(name)
-            return
+            if not isinstance(Terms.attributes_of(record).get("name"), Terms.Part):
+                return  # a name node's terms (a template's arguments) are its arguments, as an application's
         arguments = Terms.arguments_of(record)
         scopes = [bound] * len(arguments)
         if kind.scopes is not None:  # the names each argument has bound: a comprehension's targets, say
