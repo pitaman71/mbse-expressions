@@ -95,6 +95,7 @@ declaring `TRANSLATOR = Pairwise(left, right, rules)` with patterns from `_Patte
 - See [Guide for AI agents](mbse:mbse-expressions/AGENTS.md) for the commands and invariants.
 
 ## Go deeper
+<!-- no case: points to the design, the sources and the test suite for reading further -->
 
 | Topic | Read |
 |---|---|

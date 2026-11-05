@@ -27,6 +27,9 @@ evaluates, is mbse-basis'
 Write a constraint in Patterns, and translate it where it must be checked; read one written elsewhere back into Patterns
 to analyze it.
 
+- Python: [T07.1: Translating](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1) · TypeScript: [T07.1: Translating](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1)
+- Python: [T07.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.3) · TypeScript: [T07.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.3)
+
 ## Constructors and source text
 
 1. **Each dialect's constructors write its own kinds, as its language has them.** *Why*: a translated constraint must
@@ -137,6 +140,7 @@ mapping of variables, or its dialect's scope, which resolves names the dialect's
 - Python: [DIA-08: Excel reads cells from workbooks, and add-in functions from the workbook's add-ins](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-08) · TypeScript: [DIA-08: Excel reads cells from workbooks, and add-in functions from the workbook's add-ins](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-08)
 
 ## Go deeper
+<!-- no case: points to the design and the test suite for reading further -->
 
 | Topic | Read |
 |---|---|
