@@ -1,4 +1,4 @@
-"""Python3 <-> Matlab. Python's operators are MATLAB's, an attribute is a field, and `hasattr` is `isfield`. `b if a
+"""Python3 <-> MATLAB. Python's operators are MATLAB's, an attribute is a field, and `hasattr` is `isfield`. `b if a
 else True` is written `~a || b`, which translates back as `not a or b`; other conditional expressions have no MATLAB
 expression. MATLAB has no let expression, so lets are inlined, and imports on either side, which the other cannot
 declare, are dropped: what they brought in has no counterpart. MATLAB has no bytes. Python's bitwise operators are
@@ -7,8 +7,8 @@ MATLAB's bit functions, `a >> n` being `bitshift(a, -n)`; `~` has no counterpart
 
 from __future__ import annotations
 
-from mbse.Expressions.Dialects.Matlab.Expressions import DIALECT as MATLAB
-from mbse.Expressions.Dialects.Python3.Expressions import DIALECT as PYTHON3
+from mbse.Expressions.MATLAB.Expressions.Expressions import DIALECT as MATLAB
+from mbse.Expressions.Python.Python3.Expressions import DIALECT as PYTHON3
 from mbse.Expressions.Framework.Translators import Elementwise, Elide, Inline, Pairwise, Rule, renames
 
 from ._Patterns import compares, Matlab, Python3, collections, value
@@ -32,6 +32,6 @@ TRANSLATOR = Pairwise(PYTHON3, MATLAB, [
     *renames("unaryop", "op", "unary", "operator", {"not": "~", "-": "-"}, 1),
     *renames("binop", "op", "call", "callable", {"&": "bitand", "|": "bitor", "^": "bitxor", "<<": "bitshift"}, 2),
     Rule(Python3.shr, Matlab.shr),
-    *collections("Python", "Matlab"),
+    *collections("Python", "MATLAB"),
     Elementwise("list", "list"),
 ])

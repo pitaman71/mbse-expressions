@@ -20,10 +20,10 @@ Everything that uses a domain uses code objects instead:
 | Module (Python; TypeScript has the same) | Lines | What it holds |
 |---|---|---|
 | `Framework/Domains.py` | 268 | `Domain` (a protocol: `contains`, `includes`), `Signature`, `OfTypes`, `OfValues`, `OfUnion`, `Anything`, `Function`, `Same`, `Overloaded`, `Opaque`, `Either` |
-| `Dialects/Patterns/Domains.py` | 739 | 14 dataclasses (`_Integer`, `_Ieee754`, `_Bits`, `_Bytes`, `_Unicode`, `_Enum`, `_Packed`, ...), the defaults, `SIGNATURES`, and `read`, which turns a stored domain into one of these |
-| `Dialects/C/Domains.py` | 319 | `CType`, C's integer and floating types as module constants, promotion and the usual arithmetic conversions, operator signatures |
-| `Dialects/SystemVerilog/Domains.py` | 216 | 4-state logic vectors, their widths and signedness |
-| `Dialects/{Excel,Matlab,Latex,Python3,TypeScript5}/Domains.py` | 48 to 103 each | each dialect's value domains and operator signatures |
+| `Framework/Patterns/Domains.py` | 739 | 14 dataclasses (`_Integer`, `_Ieee754`, `_Bits`, `_Bytes`, `_Unicode`, `_Enum`, `_Packed`, ...), the defaults, `SIGNATURES`, and `read`, which turns a stored domain into one of these |
+| `C/Expressions/Domains.py` | 319 | `CType`, C's integer and floating types as module constants, promotion and the usual arithmetic conversions, operator signatures |
+| `SystemVerilog/Expressions/Domains.py` | 216 | 4-state logic vectors, their widths and signedness |
+| `{Excel,MATLAB,LaTeX}/Expressions/Domains.py`, `Python/Python3/Domains.py`, `TypeScript/TypeScript5/Domains.py` | 48 to 103 each | each dialect's value domains and operator signatures |
 
 So there are two forms of a Patterns domain, the stored one and the dataclass it is read into, and one form, code only,
 of every other dialect's. Operator signatures are code too, though stage 3 modeled every Patterns operation as data, a

@@ -4,8 +4,8 @@
  * operators are Excel's bit functions; `~` has no counterpart. A list display is `VSTACK(a, b)`; a dict display has no
  * counterpart. */
 
-import { DIALECT as EXCEL } from "../Dialects/Excel/Expressions.js";
-import { DIALECT as PYTHON3 } from "../Dialects/Python3/Expressions.js";
+import { DIALECT as EXCEL } from "../Excel/Expressions/Expressions.js";
+import { DIALECT as PYTHON3 } from "../Python/Python3/Expressions.js";
 import { Elementwise, Elide, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Excel, Python3, collections, compares, value } from "./_Patterns.js";
 

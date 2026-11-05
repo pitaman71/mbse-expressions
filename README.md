@@ -16,7 +16,7 @@ rest of your data, sent between programs, and evaluated the same way in Python a
 
 ```python
 from mbse.Expressions import Evaluators, Expressions, Framework
-from mbse.Expressions.Dialects import Patterns
+from mbse.Expressions.Framework import Patterns
 from mbse.Schemas.Framework import Builders
 
 store = Builders.Store()  # expressions are stored in an mbse-schemas store, with the data they constrain
@@ -24,21 +24,21 @@ store.transaction(Framework.install)
 store.transaction(Patterns.install)
 contact = Expressions.variable("contact")
 with store.transaction():
-    senior = store.Expressions.Patterns.Expression(lambda e: e.root(
+    senior = store.Expressions.Framework.Patterns.Expression(lambda e: e.root(
         contact.age.ge(65).and_(contact.has("email"))))
 Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value is unknown
 ```
 
 ```typescript
 import { Evaluators, Expressions, Framework } from "@mbse/expressions";
-import * as Patterns from "@mbse/expressions/Dialects/Patterns";
+import * as Patterns from "@mbse/expressions/Framework/Patterns";
 import { Builders } from "@mbse/schemas/Framework";
 
 const store: any = new Builders.Store(); // expressions are stored in an mbse-schemas store, with the data they constrain
 store.transaction(Framework.install);
 store.transaction(Patterns.install);
 const contact = Expressions.variable("contact");
-const senior = store.transaction(() => store.Expressions.Patterns.Expression((e: any) => e.root(
+const senior = store.transaction(() => store.Expressions.Framework.Patterns.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
 Evaluators.OfAny(senior, { contact: ada });
 ```
@@ -117,8 +117,10 @@ npm test                       # type-check and run the test suites and the tuto
 
 ```
 docs/                     how the implementations are kept equivalent (EQUIVALENCE.md); the design is mbse-basis FEA-024's
-python3/                  Python implementation: mbse/Expressions (Framework, Dialects, Translators), tests, tutorials
-typescript5/              TypeScript implementation: src (Expressions, Evaluators), tests, tutorials
+python3/                  Python implementation: mbse/Expressions (Framework, each dialect under its family, Translators),
+                          tests, tutorials
+typescript5/              TypeScript implementation: src (Framework, each dialect under its family, Translators), tests,
+                          tutorials
 conformance/              snapshots each implementation writes; each must read the other's
 skills/                   the agent skill (SKILL.md plus per-task references, linking the notebooks' cases); skills/sync.sh
                           copies it into both packages
@@ -129,23 +131,29 @@ skills/                   the agent skill (SKILL.md plus per-task references, li
 Expressions come in dialects that implement one framework: each is serializable, traversable, validatable and
 evaluatable, and pairwise translators convert between them. A term is a value of `Expressions.Framework.Term`, the union of
 the dialects' `Term`s: written with its dialect, then its kind. Patterns (formerly Basic), above, is the core vocabulary.
-Python3 (every expression of Python 3, 3.0 to 3.15, as CPython's `ast` has it, with NumPy as a module it imports), Matlab,
-Excel and Latex (notation, without evaluation) model those languages' expressions, render as their source, resolve names, imports and cell references as those languages do, and
+Python3 (every expression of Python 3, 3.0 to 3.15, as CPython's `ast` has it, with NumPy as a module it imports), MATLAB,
+Excel and LaTeX (notation, without evaluation) model those languages' expressions, render as their source, resolve names, imports and cell references as those languages do, and
 evaluate by their rules; C and Cpp (every expression of C11 to C23 and of C++17 to C++23, with their type names, each
 with its own copy of the kinds they share) and SystemVerilog model those languages' expressions over their own types:
 
 ```python
 from mbse.Expressions import Translators
-from mbse.Expressions.Dialects.Excel import Expressions as Excel, Text as ExcelText
+from mbse.Expressions.Excel.Expressions import Expressions as Excel, Text as ExcelText
 
 formula = Translators.between(Expressions.DIALECT, Excel.DIALECT).forward(senior)
 ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email)))'
 ```
 
+Each dialect lives under its family, at `Expressions.<Family>.<Dialect>`, the framework being Patterns' family:
+`Framework.Patterns`, `Python.Python3`, `TypeScript.TypeScript5`, and `C.Expressions`, `Cpp.Expressions`,
+`SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions` and `LaTeX.Expressions`. Its schemas
+(`Expressions.C.Expressions.Term`), its Python package (`mbse.Expressions.C.Expressions`) and its TypeScript module
+(`@mbse/expressions/C/Expressions`) are named by that path.
+
 ## Status
 
 Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Patterns,
-Python3, TypeScript5, Matlab, Excel, Latex, C, Cpp and SystemVerilog dialects, each with its `Term`, the union of its kinds, in the
+Python3, TypeScript5, MATLAB, Excel, LaTeX, C, Cpp and SystemVerilog dialects, each with its `Term`, the union of its kinds, in the
 framework's union of the dialects' `Term`s, and translators between them; terms as values in an mbse-schemas store, with the container
 constructors `list` and `mapping`, literals holding any value with their spelling, and the kinds of invalid syntax
 `error` and `missing`; dialects, their operations and their

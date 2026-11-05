@@ -7,14 +7,14 @@
  */
 
 import { Framework } from "@mbse/expressions";
-import * as Patterns from "@mbse/expressions/Dialects/Patterns";
-import * as C from "@mbse/expressions/Dialects/C";
-import * as Cpp from "@mbse/expressions/Dialects/Cpp";
-import * as Excel from "@mbse/expressions/Dialects/Excel";
-import * as Latex from "@mbse/expressions/Dialects/Latex";
-import * as Matlab from "@mbse/expressions/Dialects/Matlab";
-import * as Python3 from "@mbse/expressions/Dialects/Python3";
-import * as SystemVerilog from "@mbse/expressions/Dialects/SystemVerilog";
+import * as Patterns from "@mbse/expressions/Framework/Patterns";
+import * as C from "@mbse/expressions/C/Expressions";
+import * as Cpp from "@mbse/expressions/Cpp/Expressions";
+import * as Excel from "@mbse/expressions/Excel/Expressions";
+import * as Latex from "@mbse/expressions/LaTeX/Expressions";
+import * as Matlab from "@mbse/expressions/MATLAB/Expressions";
+import * as Python3 from "@mbse/expressions/Python/Python3";
+import * as SystemVerilog from "@mbse/expressions/SystemVerilog/Expressions";
 import { Terms } from "@mbse/expressions/Framework";
 import { Builders } from "@mbse/schemas/Framework";
 

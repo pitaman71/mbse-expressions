@@ -1,4 +1,4 @@
-"""Matlab <-> Excel. MATLAB's comparison and arithmetic operators are Excel's, `&&`, `||` and `~` are `AND`, `OR` and
+"""MATLAB <-> Excel. MATLAB's comparison and arithmetic operators are Excel's, `&&`, `||` and `~` are `AND`, `OR` and
 `NOT`, a field is a field, and `isfield(x, "name")` is `NOT(ISERROR(x.name))`. MATLAB has no let expression, so
 `LET`s are inlined: a let's translated value is shared by every use of its name. MATLAB's imports, which Excel cannot
 declare, are dropped. MATLAB's bit functions are Excel's, `bitshift(a, -n)` being `BITRSHIFT(a, n)`. A concatenation,
@@ -6,8 +6,8 @@ declare, are dropped. MATLAB's bit functions are Excel's, `bitshift(a, -n)` bein
 
 from __future__ import annotations
 
-from mbse.Expressions.Dialects.Excel.Expressions import DIALECT as EXCEL
-from mbse.Expressions.Dialects.Matlab.Expressions import DIALECT as MATLAB
+from mbse.Expressions.Excel.Expressions.Expressions import DIALECT as EXCEL
+from mbse.Expressions.MATLAB.Expressions.Expressions import DIALECT as MATLAB
 from mbse.Expressions.Framework.Translators import Elementwise, Elide, Inline, Pairwise, Rule, renames
 
 from ._Patterns import Excel, Matlab, collections, value
@@ -29,6 +29,6 @@ TRANSLATOR = Pairwise(MATLAB, EXCEL, [
     *renames("call", "callable", "call", "callable", {
         "bitand": "BITAND", "bitor": "BITOR", "bitxor": "BITXOR", "bitshift": "BITLSHIFT"}, 2),
     Rule(Matlab.shr, Excel.shr),
-    *collections("Matlab", "Excel"),
+    *collections("MATLAB", "Excel"),
     Elementwise("list", "call", {}, {"callable": "VSTACK"}),
 ])

@@ -1,12 +1,12 @@
-/** Python3 <-> Matlab. Python's operators are MATLAB's, an attribute is a field, and `hasattr` is `isfield`. `b if a
+/** Python3 <-> MATLAB. Python's operators are MATLAB's, an attribute is a field, and `hasattr` is `isfield`. `b if a
  * else True` is written `~a || b`, which translates back as `not a or b`; other conditional expressions have no MATLAB
  * expression. MATLAB has no let expression, so lets are inlined, and imports on either side, which the other cannot
  * declare, are dropped: what they brought in has no counterpart. MATLAB has no bytes. Python's bitwise operators are
  * MATLAB's bit functions, `a >> n` being `bitshift(a, -n)`; `~` has no counterpart. A list display is a concatenation,
  * `[a, b]`; a dict display has no counterpart. */
 
-import { DIALECT as MATLAB } from "../Dialects/Matlab/Expressions.js";
-import { DIALECT as PYTHON3 } from "../Dialects/Python3/Expressions.js";
+import { DIALECT as MATLAB } from "../MATLAB/Expressions/Expressions.js";
+import { DIALECT as PYTHON3 } from "../Python/Python3/Expressions.js";
 import { Elementwise, Elide, Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Matlab, Python3, collections, compares, value } from "./_Patterns.js";
 
@@ -29,6 +29,6 @@ export const TRANSLATOR = new Pairwise(PYTHON3, MATLAB, [
   ...renames("unaryop", "op", "unary", "operator", { not: "~", "-": "-" }, 1),
   ...renames("binop", "op", "call", "callable", { "&": "bitand", "|": "bitor", "^": "bitxor", "<<": "bitshift" }, 2),
   new Rule(Python3.shr, Matlab.shr),
-  ...collections("Python", "Matlab"),
+  ...collections("Python", "MATLAB"),
   new Elementwise("list", "list"),
 ]);

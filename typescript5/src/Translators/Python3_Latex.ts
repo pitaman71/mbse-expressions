@@ -1,9 +1,9 @@
-/** Python3 <-> Latex. Python's operators are LaTeX's, `a / b` is `\frac{a}{b}`, an attribute is a member, `hasattr` is
+/** Python3 <-> LaTeX. Python's operators are LaTeX's, `a / b` is `\frac{a}{b}`, an attribute is a member, `hasattr` is
  * `\operatorname{has}`, `b if a else True` is `a \implies b`, and a let is `where`. Other conditional expressions have
  * no LaTeX counterpart here, and Python's imports, which notation cannot declare, are dropped. */
 
-import { DIALECT as LATEX } from "../Dialects/Latex/Expressions.js";
-import { DIALECT as PYTHON3 } from "../Dialects/Python3/Expressions.js";
+import { DIALECT as LATEX } from "../LaTeX/Expressions/Expressions.js";
+import { DIALECT as PYTHON3 } from "../Python/Python3/Expressions.js";
 import { Elide, type Hole, Pairwise, Pattern as P, Rule, holes, renames } from "../Framework/Translators.js";
 import { Latex, Python3, compares, value } from "./_Patterns.js";
 

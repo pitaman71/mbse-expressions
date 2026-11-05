@@ -18,7 +18,15 @@
   "exports": {
     ".": "./src/index.ts",
     "./Framework": "./src/Framework/index.ts",
-    "./Dialects/*": "./src/Dialects/*/index.ts",
+    "./Framework/Patterns": "./src/Framework/Patterns/index.ts",
+    "./Python/Python3": "./src/Python/Python3/index.ts",
+    "./TypeScript/TypeScript5": "./src/TypeScript/TypeScript5/index.ts",
+    "./C/Expressions": "./src/C/Expressions/index.ts",
+    "./Cpp/Expressions": "./src/Cpp/Expressions/index.ts",
+    "./SystemVerilog/Expressions": "./src/SystemVerilog/Expressions/index.ts",
+    "./MATLAB/Expressions": "./src/MATLAB/Expressions/index.ts",
+    "./Excel/Expressions": "./src/Excel/Expressions/index.ts",
+    "./LaTeX/Expressions": "./src/LaTeX/Expressions/index.ts",
     "./Translators": "./src/Translators/index.ts",
     "./Framework/*": "./src/Framework/*.ts"
   },

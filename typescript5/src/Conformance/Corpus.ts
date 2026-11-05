@@ -4,7 +4,7 @@
  * `build()` returns the cases, name -> [root schema, root, store]: each case but `domains` a term value of
  * `Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
  * dialect's, written nested. `DIALECTS` names the dialect that reads each case other than Patterns'. The `domains` case
- * is data: Patterns' dialect, the singleton `Expressions.Patterns` (`Expressions.Patterns.Dialect`), naming its
+ * is data: Patterns' dialect, the singleton `Expressions.Framework.Patterns` (`Expressions.Framework.Patterns.Dialect`), naming its
  * operations and owning its domains by name, a packed one among them, written as one document. The `invalid` case is a
  * Python3 term holding invalid syntax and literals with their spelling; the `typescript5` case a TypeScript5 term of every
  * kind, written through the builders. Each implementation writes its
@@ -17,16 +17,16 @@
 
 import { Builders } from "@mbse/schemas/Framework";
 
-import * as C from "../Dialects/C/index.js";
-import * as Cpp from "../Dialects/Cpp/index.js";
-import * as Excel from "../Dialects/Excel/index.js";
-import * as Latex from "../Dialects/Latex/index.js";
-import * as Matlab from "../Dialects/Matlab/index.js";
-import * as Expressions from "../Dialects/Patterns/Expressions.js";
-import * as Patterns from "../Dialects/Patterns/index.js";
-import * as Python3 from "../Dialects/Python3/index.js";
-import * as SystemVerilog from "../Dialects/SystemVerilog/index.js";
-import * as TypeScript5 from "../Dialects/TypeScript5/index.js";
+import * as C from "../C/Expressions/index.js";
+import * as Cpp from "../Cpp/Expressions/index.js";
+import * as Excel from "../Excel/Expressions/index.js";
+import * as Latex from "../LaTeX/Expressions/index.js";
+import * as Matlab from "../MATLAB/Expressions/index.js";
+import * as Expressions from "../Framework/Patterns/Expressions.js";
+import * as Patterns from "../Framework/Patterns/index.js";
+import * as Python3 from "../Python/Python3/index.js";
+import * as SystemVerilog from "../SystemVerilog/Expressions/index.js";
+import * as TypeScript5 from "../TypeScript/TypeScript5/index.js";
 import * as Framework from "../Framework/index.js";
 import type * as Terms from "../Framework/Terms.js";
 
@@ -71,7 +71,7 @@ export function build(): Map<string, Case> {
     const mode = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
       (u: any) => u.packed((e: any) => e.codes([0n, 1n]))))).packs((a: any) => a.insert(
       (e: any) => e.domain(state).representation(defined.get("uint8")))));
-    store.Expressions.Patterns.Dialect(defined.get("dialect"), (b: any) => b.domains({
+    store.Expressions.Framework.Patterns.Dialect(defined.get("dialect"), (b: any) => b.domains({
       state: (e: any) => e.domain(state), mode: (e: any) => e.domain(mode) }));
   });
 
@@ -307,6 +307,6 @@ export function build(): Map<string, Case> {
     ["typescript5", TS.DIALECT.spec(typescript5)], ["invalid", invalid],
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   terms.set("domains", defined.get("dialect"));
-  const [Term, Dialect] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.Patterns.Dialect")];
+  const [Term, Dialect] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.Framework.Patterns.Dialect")];
   return new Map<string, Case>(CASES.map((name) => [name, [name === "domains" ? Dialect : Term, terms.get(name), store]]));
 }

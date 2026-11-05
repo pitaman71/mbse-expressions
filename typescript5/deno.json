@@ -8,17 +8,16 @@
     "@mbse/schemas/Framework/": "../../mbse-schemas/typescript5/src/Framework/",
     "@mbse/expressions": "./src/index.ts",
     "@mbse/expressions/Framework": "./src/Framework/index.ts",
-    "@mbse/expressions/Dialects/": "./src/Dialects/",
     "@mbse/expressions/Translators": "./src/Translators/index.ts",
     "@mbse/expressions/Framework/": "./src/Framework/",
-    "@mbse/expressions/Dialects/Patterns": "./src/Dialects/Patterns/index.ts",
-    "@mbse/expressions/Dialects/Python3": "./src/Dialects/Python3/index.ts",
-    "@mbse/expressions/Dialects/TypeScript5": "./src/Dialects/TypeScript5/index.ts",
-    "@mbse/expressions/Dialects/Matlab": "./src/Dialects/Matlab/index.ts",
-    "@mbse/expressions/Dialects/Excel": "./src/Dialects/Excel/index.ts",
-    "@mbse/expressions/Dialects/Latex": "./src/Dialects/Latex/index.ts",
-    "@mbse/expressions/Dialects/C": "./src/Dialects/C/index.ts",
-    "@mbse/expressions/Dialects/Cpp": "./src/Dialects/Cpp/index.ts",
-    "@mbse/expressions/Dialects/SystemVerilog": "./src/Dialects/SystemVerilog/index.ts"
+    "@mbse/expressions/Framework/Patterns": "./src/Framework/Patterns/index.ts",
+    "@mbse/expressions/Python/Python3": "./src/Python/Python3/index.ts",
+    "@mbse/expressions/TypeScript/TypeScript5": "./src/TypeScript/TypeScript5/index.ts",
+    "@mbse/expressions/MATLAB/Expressions": "./src/MATLAB/Expressions/index.ts",
+    "@mbse/expressions/Excel/Expressions": "./src/Excel/Expressions/index.ts",
+    "@mbse/expressions/LaTeX/Expressions": "./src/LaTeX/Expressions/index.ts",
+    "@mbse/expressions/C/Expressions": "./src/C/Expressions/index.ts",
+    "@mbse/expressions/Cpp/Expressions": "./src/Cpp/Expressions/index.ts",
+    "@mbse/expressions/SystemVerilog/Expressions": "./src/SystemVerilog/Expressions/index.ts"
   }
 }

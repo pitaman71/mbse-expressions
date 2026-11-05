@@ -3,7 +3,7 @@
 `build()` returns `{case: (root schema, root, store)}`: each case but `domains` a term value of
 `Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
 dialect's, written nested. `DIALECTS` names the dialect that reads each case other than Patterns'. The `domains` case
-is data: Patterns' dialect, the singleton `Expressions.Patterns` (`Expressions.Patterns.Dialect`), naming its
+is data: Patterns' dialect, the singleton `Expressions.Framework.Patterns` (`Expressions.Framework.Patterns.Dialect`), naming its
 operations and owning its domains by name, a packed one among them, written as one document. The `typescript5` case
 is a TypeScript5 term of every kind, written through the builders. The `invalid` case is a Python3 term holding invalid
 syntax and literals with their spelling. Each implementation writes its snapshots to
@@ -15,16 +15,24 @@ values, same order of statements.
 from __future__ import annotations
 
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import C, Cpp, Excel, Latex, Matlab, Patterns, Python3, SystemVerilog, TypeScript5
-from mbse.Expressions.Dialects.C import Expressions as CE
-from mbse.Expressions.Dialects.Cpp import Expressions as CPP
-from mbse.Expressions.Dialects.Excel import Expressions as X
-from mbse.Expressions.Dialects.Latex import Expressions as L
-from mbse.Expressions.Dialects.Matlab import Expressions as M
-from mbse.Expressions.Dialects.Patterns import Expressions
-from mbse.Expressions.Dialects.Python3 import Expressions as P
-from mbse.Expressions.Dialects.SystemVerilog import Expressions as SV
-from mbse.Expressions.Dialects.TypeScript5 import Expressions as TS
+from mbse.Expressions.C import Expressions as C
+from mbse.Expressions.Cpp import Expressions as Cpp
+from mbse.Expressions.Excel import Expressions as Excel
+from mbse.Expressions.LaTeX import Expressions as Latex
+from mbse.Expressions.MATLAB import Expressions as Matlab
+from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.Python import Python3
+from mbse.Expressions.SystemVerilog import Expressions as SystemVerilog
+from mbse.Expressions.TypeScript import TypeScript5
+from mbse.Expressions.C.Expressions import Expressions as CE
+from mbse.Expressions.Cpp.Expressions import Expressions as CPP
+from mbse.Expressions.Excel.Expressions import Expressions as X
+from mbse.Expressions.LaTeX.Expressions import Expressions as L
+from mbse.Expressions.MATLAB.Expressions import Expressions as M
+from mbse.Expressions.Framework.Patterns import Expressions
+from mbse.Expressions.Python.Python3 import Expressions as P
+from mbse.Expressions.SystemVerilog.Expressions import Expressions as SV
+from mbse.Expressions.TypeScript.TypeScript5 import Expressions as TS
 from mbse.Schemas.Framework import Builders
 
 CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp", "systemverilog",
@@ -57,7 +65,7 @@ def build():
         mode = store.Expressions.Framework.Domain(lambda d: d.kind(lambda k: k.as_value(lambda a: a.as_union(
             lambda u: u.packed(lambda e: e.codes([0, 1]))))).packs(lambda a: a.insert(
             lambda e: e.domain(state).representation(defined["uint8"]))))
-        store.Expressions.Patterns.Dialect(defined["dialect"], lambda b: b.domains({
+        store.Expressions.Framework.Patterns.Dialect(defined["dialect"], lambda b: b.domains({
             "state": lambda e: e.domain(state), "mode": lambda e: e.domain(mode)}))
 
     # --- expression: every kind and literal type, a let and its variable, a list ---
@@ -298,5 +306,5 @@ def build():
             ("collections", collections), ("c", c), ("cpp", cpp), ("systemverilog", systemverilog),
             ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid)]}
     terms["domains"] = defined["dialect"]
-    Term, Dialect = store.registered("Expressions.Framework.Term"), store.registered("Expressions.Patterns.Dialect")
+    Term, Dialect = store.registered("Expressions.Framework.Term"), store.registered("Expressions.Framework.Patterns.Dialect")
     return {case: (Dialect if case == "domains" else Term, terms[case], store) for case in CASES}

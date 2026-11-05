@@ -22,17 +22,26 @@
                               "i": "schemas",
                               "o": "",
                               "properties": {
-                                "name": "Patterns"
+                                "name": "Framework"
                               },
                               "next": {
                                 "entry": {
                                   "i": "schemas",
                                   "o": "",
                                   "properties": {
-                                    "name": "Dialect"
+                                    "name": "Patterns"
                                   },
                                   "next": {
-                                    "target": {}
+                                    "entry": {
+                                      "i": "schemas",
+                                      "o": "",
+                                      "properties": {
+                                        "name": "Dialect"
+                                      },
+                                      "next": {
+                                        "target": {}
+                                      }
+                                    }
                                   }
                                 }
                               }
@@ -65,7 +74,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -109,7 +118,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -153,7 +162,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -197,7 +206,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -241,7 +250,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -285,7 +294,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -329,7 +338,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -373,7 +382,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -417,7 +426,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -461,7 +470,7 @@
                                           "set": {
                                             "ref": {
                                               "path": {
-                                                "singleton": "Expressions.Patterns",
+                                                "singleton": "Expressions.Framework.Patterns",
                                                 "next": {
                                                   "entry": {
                                                     "i": "domains",
@@ -531,17 +540,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "add"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "add"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -593,17 +611,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "and"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "and"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -655,17 +682,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "bitand"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "bitand"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -717,17 +753,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "bitnot"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "bitnot"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -779,17 +824,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "bitor"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "bitor"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -841,17 +895,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "bitxor"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "bitxor"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -903,17 +966,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "count"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "count"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -965,17 +1037,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "entries"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "entries"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1027,17 +1108,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "eq"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "eq"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1089,17 +1179,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "ge"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "ge"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1151,17 +1250,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "get"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "get"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1213,17 +1321,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "gt"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "gt"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1275,17 +1392,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "has"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "has"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1337,17 +1463,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "implies"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "implies"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1399,17 +1534,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "in"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "in"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1461,17 +1605,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "item"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "item"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1523,17 +1676,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "le"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "le"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1585,17 +1747,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "lt"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "lt"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1647,17 +1818,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "max"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "max"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1709,17 +1889,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "min"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "min"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1771,17 +1960,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "mul"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "mul"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1833,17 +2031,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "ne"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "ne"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1895,17 +2102,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "neg"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "neg"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -1957,17 +2173,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "not"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "not"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -2019,17 +2244,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "or"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "or"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -2081,17 +2315,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "shl"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "shl"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -2143,17 +2386,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "shr"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "shr"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -2205,17 +2457,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "sub"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "sub"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -2267,17 +2528,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "sum"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "sum"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }
@@ -2329,17 +2599,26 @@
                                                         "i": "schemas",
                                                         "o": "",
                                                         "properties": {
-                                                          "name": "Patterns"
+                                                          "name": "Framework"
                                                         },
                                                         "next": {
                                                           "entry": {
                                                             "i": "schemas",
                                                             "o": "",
                                                             "properties": {
-                                                              "name": "unique"
+                                                              "name": "Patterns"
                                                             },
                                                             "next": {
-                                                              "target": {}
+                                                              "entry": {
+                                                                "i": "schemas",
+                                                                "o": "",
+                                                                "properties": {
+                                                                  "name": "unique"
+                                                                },
+                                                                "next": {
+                                                                  "target": {}
+                                                                }
+                                                              }
                                                             }
                                                           }
                                                         }

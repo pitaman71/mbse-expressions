@@ -6,8 +6,8 @@ counterpart."""
 
 from __future__ import annotations
 
-from mbse.Expressions.Dialects.Excel.Expressions import DIALECT as EXCEL
-from mbse.Expressions.Dialects.Python3.Expressions import DIALECT as PYTHON3
+from mbse.Expressions.Excel.Expressions.Expressions import DIALECT as EXCEL
+from mbse.Expressions.Python.Python3.Expressions import DIALECT as PYTHON3
 from mbse.Expressions.Framework.Translators import Elementwise, Elide, Pairwise, Rule, renames
 
 from ._Patterns import compares, Excel, Python3, collections, value

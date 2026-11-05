@@ -36,21 +36,21 @@ does, and why by rules, is mbse-basis'
 
 | Source | Target | What changes |
 |---|---|---|
-| a let (Patterns, Python3, Excel, Latex `where`) | Matlab, C, Cpp, SystemVerilog, which have no let | its value is substituted for its name at every use; it comes back without the let |
-| `implies(a, b)` | Matlab | written `~a \|\| b`, which reads back as `or(not(a), b)` |
-| an import (Python, Matlab) | a dialect that cannot declare it | dropped; what it brought in must translate by other rules |
-| bytes | Matlab, Excel, Latex | no counterpart |
+| a let (Patterns, Python3, Excel, LaTeX `where`) | MATLAB, C, Cpp, SystemVerilog, which have no let | its value is substituted for its name at every use; it comes back without the let |
+| `implies(a, b)` | MATLAB | written `~a \|\| b`, which reads back as `or(not(a), b)` |
+| an import (Python, MATLAB) | a dialect that cannot declare it | dropped; what it brought in must translate by other rules |
+| bytes | MATLAB, Excel, LaTeX | no counterpart |
 | a literal's spelling (`text`, and a Python literal's prefix, quotes, base and separators) | any dialect | dropped: a literal translates by its value, and one with no value has no counterpart |
 | a Python comparison chain (`a < b <= c`), `and` or `or` of more than two values | any dialect | the `and` of its links, its middle operands written in each, and two values nested (`(a and b) and c`): read as its kind unfolds it |
 | a Python kind no other dialect has (a lambda, a comprehension, `None`, a keyword argument) | any dialect | no counterpart |
 | invalid syntax (`error`, `missing`) | any dialect | no counterpart |
-| a Latex `\frac` | any dialect but Python, where it is `/` | no counterpart |
+| a LaTeX `\frac` | any dialect but Python, where it is `/` | no counterpart |
 | an Excel cell, a Python conditional other than `b if a else True`, an extension | a dialect without it | no counterpart |
 | a quantifier or a collection operation | Python | a generator expression or a builtin (`all(p > 0 for p in xs)`, `len(xs)`, `xs[i]`); `unique(xs)` is written `len(set(xs)) == len(xs)`, which does not read back |
 | a quantifier or a collection operation | SystemVerilog | an array method (`xs.and(p) with (p > 0)`, `xs.size()`, `x inside {xs}`); `unique(xs)` is written `xs.unique().size() == xs.size()`, which does not read back |
-| a quantifier or a collection operation | Matlab | `arrayfun` and array functions (`all(arrayfun(@(p) p > 0, xs))`, `numel(xs)`, `xs(i + 1)`); `unique(xs)` is written `numel(unique(xs)) == numel(xs)`, which does not read back |
+| a quantifier or a collection operation | MATLAB | `arrayfun` and array functions (`all(arrayfun(@(p) p > 0, xs))`, `numel(xs)`, `xs(i + 1)`); `unique(xs)` is written `numel(unique(xs)) == numel(xs)`, which does not read back |
 | a quantifier or a collection operation | Excel | `MAP` and `LAMBDA` and array functions (`AND(MAP(xs, LAMBDA(p, p > 0)))`, `ROWS(xs)`, `INDEX(xs, i + 1)`); `unique(xs)` is written `ROWS(UNIQUE(xs)) = ROWS(xs)`, which does not read back |
-| a quantifier or a collection operation | Latex, C, Cpp | no counterpart yet, a known gap ([CAP-102: collections translated to LaTeX and C and C++](mbse:mbse-basis/docs/capabilities/CAP-102.md)); Python, MATLAB and Excel also translate collections into each other directly |
+| a quantifier or a collection operation | LaTeX, C, Cpp | no counterpart yet, a known gap ([CAP-102: collections translated to LaTeX and C and C++](mbse:mbse-basis/docs/capabilities/CAP-102.md)); Python, MATLAB and Excel also translate collections into each other directly |
 
 - Python: [TRN-02: Every pair translates both ways; forms round-trip where both dialects have them](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-02) · TypeScript: [TRN-02: Every pair translates both ways; forms round-trip where both dialects have them](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-02)
 - Python: [TRN-08: Patterns and C, and Patterns and C++, translate into each other by one rule set; lets are inlined, and `has`, `->`, typed literals, casts and the other kinds have no counterpart](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-08) · TypeScript: [TRN-08: Patterns and C, and Patterns and C++, translate into each other by one rule set; lets are inlined, and `has`, `->`, typed literals, casts and the other kinds have no counterpart](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-08)
@@ -61,7 +61,7 @@ does, and why by rules, is mbse-basis'
 - Python: [TRN-13: Collections translate to Excel's arrays: MAP and LAMBDA, INDEX and MATCH and array functions, and evaluate alike](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-13) · TypeScript: [TRN-13: Collections translate to Excel's arrays: MAP and LAMBDA, INDEX and MATCH and array functions, and evaluate alike](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-13)
 - Python: [TRN-14: Collections translate directly between Python, MATLAB and Excel, as they do through Patterns](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-14) · TypeScript: [TRN-14: Collections translate directly between Python, MATLAB and Excel, as they do through Patterns](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-14)
 - **What it cannot say, it refuses.** A term with no counterpart raises `ValueError` naming it, by its dialect and its
-  kind: "Excel cell has no Matlab counterpart", "Patterns call 'entries' has no Python3 counterpart".
+  kind: "Excel cell has no MATLAB counterpart", "Patterns call 'entries' has no Python3 counterpart".
   - Python: [T07.1: Translating](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1) · TypeScript: [T07.1: Translating](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1)
   - Python: [T08.5: What has no counterpart](mbse:mbse-expressions/python3/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.5) · TypeScript: [T08.5: What has no counterpart](mbse:mbse-expressions/typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.5)
   - Python: [TRN-05: What a dialect cannot say is refused, naming the term](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-05) · TypeScript: [TRN-05: What a dialect cannot say is refused, naming the term](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-05)

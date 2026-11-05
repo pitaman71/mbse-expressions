@@ -8,8 +8,8 @@ constructor."""
 
 from __future__ import annotations
 
-from mbse.Expressions.Dialects.Cpp.Expressions import DIALECT as CPP
-from mbse.Expressions.Dialects.Patterns.Expressions import DIALECT as PATTERNS
+from mbse.Expressions.Cpp.Expressions.Expressions import DIALECT as CPP
+from mbse.Expressions.Framework.Patterns.Expressions import DIALECT as PATTERNS
 from mbse.Expressions.Framework.Translators import Pairwise, Rule
 
 from ._Patterns import CFamily, Patterns, value

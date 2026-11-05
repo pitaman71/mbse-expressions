@@ -17,15 +17,21 @@ mutations:
                       i: schemas
                       o: ''
                       properties:
-                        name: Patterns
+                        name: Framework
                       next:
                         entry:
                           i: schemas
                           o: ''
                           properties:
-                            name: Dialect
+                            name: Patterns
                           next:
-                            target: {}
+                            entry:
+                              i: schemas
+                              o: ''
+                              properties:
+                                name: Dialect
+                              next:
+                                target: {}
       spec:
       - '0':
         - as_adjacency:
@@ -40,7 +46,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -61,7 +67,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -82,7 +88,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -103,7 +109,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -124,7 +130,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -145,7 +151,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -166,7 +172,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -187,7 +193,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -208,7 +214,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -229,7 +235,7 @@ mutations:
                       - set:
                           ref:
                             path:
-                              singleton: Expressions.Patterns
+                              singleton: Expressions.Framework.Patterns
                               next:
                                 entry:
                                   i: domains
@@ -267,15 +273,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: add
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: add
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -300,15 +312,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: and
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: and
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -333,15 +351,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: bitand
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: bitand
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -366,15 +390,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: bitnot
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: bitnot
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -399,15 +429,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: bitor
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: bitor
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -432,15 +468,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: bitxor
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: bitxor
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -465,15 +507,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: count
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: count
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -498,15 +546,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: entries
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: entries
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -531,15 +585,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: eq
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: eq
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -564,15 +624,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: ge
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: ge
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -597,15 +663,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: get
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: get
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -630,15 +702,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: gt
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: gt
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -663,15 +741,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: has
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: has
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -696,15 +780,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: implies
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: implies
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -729,15 +819,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: in
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: in
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -762,15 +858,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: item
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: item
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -795,15 +897,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: le
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: le
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -828,15 +936,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: lt
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: lt
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -861,15 +975,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: max
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: max
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -894,15 +1014,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: min
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: min
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -927,15 +1053,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: mul
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: mul
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -960,15 +1092,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: ne
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: ne
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -993,15 +1131,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: neg
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: neg
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -1026,15 +1170,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: not
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: not
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -1059,15 +1209,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: or
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: or
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -1092,15 +1248,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: shl
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: shl
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -1125,15 +1287,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: shr
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: shr
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -1158,15 +1326,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: sub
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: sub
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -1191,15 +1365,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: sum
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: sum
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:
@@ -1224,15 +1404,21 @@ mutations:
                                       i: schemas
                                       o: ''
                                       properties:
-                                        name: Patterns
+                                        name: Framework
                                       next:
                                         entry:
                                           i: schemas
                                           o: ''
                                           properties:
-                                            name: unique
+                                            name: Patterns
                                           next:
-                                            target: {}
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: unique
+                                              next:
+                                                target: {}
                   - as_property:
                       name: name
                       mutations:

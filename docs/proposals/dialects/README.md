@@ -246,6 +246,26 @@ As the user decided (2026-11-02), on the questions below:
   writers (`literal`, `identifier`, `binary`, `cast`, ...) are kept as they are, beside the builders through which every
   other term is written (PRI-019): code generation writes terms through them to emit source, not only the model's wire
   format.
+- **The namespace: `Expressions.<family>.<dialect>`** (decided in stage 6's decisions, recorded on its branch,
+  `stage6-decisions`; the questions it left open, 2026-11-05). The user chose "the middle path:
+  `Expressions.<family>.<dialect>`, a family named as its standard names the language, each dialect recording the
+  standard that defines it", and, to the names `Expressions.Python.Python3`, `Expressions.TypeScript.TypeScript5`,
+  `Expressions.C.Expressions`, `Expressions.SystemVerilog.Expressions` and sublanguages by what they are: "agreed"; "The
+  rename is a step of its own, before stage 6's build." Asked eight questions it left open, each with a recommendation,
+  the user: "yes, go":
+  1. Patterns, the neutral form and no standard's language, is `Expressions.Framework.Patterns`.
+  2. C++'s family, `C++` being no name, is `Cpp`: `Expressions.Cpp.Expressions`.
+  3. The families with one unversioned dialect name it `Expressions`, as C's and SystemVerilog's do:
+     `Expressions.MATLAB.Expressions`, `Expressions.Excel.Expressions`, `Expressions.LaTeX.Expressions` (not
+     `.Formulas` or `.Math`), the families spelled as their makers spell them.
+  4. `Expressions.Framework.Term`'s branch tags stay (`patterns`, `python3`, `c`, ...), for now.
+  5. A singleton is named by its full path: `Expressions.Python.Python3`.
+  6. Python's modules are at `mbse/Expressions/<Family>/<Dialect>/` (`Dialects/` goes).
+  7. TypeScript's are at `src/<Family>/<Dialect>/`, the package's exports matching (`@mbse/expressions/C/Expressions`).
+  8. No alias for the old names.
+
+  Built as [the API, Settled in the namespace rename](../port/API.md#settled-in-the-namespace-rename-for-the-users-review),
+  items 108 to 111.
 
 ## Questions for the user
 

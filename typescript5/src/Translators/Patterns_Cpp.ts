@@ -6,8 +6,8 @@
  * mbse-basis [CAP-235: `has` translated to C++](mbse:mbse-basis/docs/capabilities/CAP-235.md)), and no container
  * constructor. */
 
-import { DIALECT as CPP } from "../Dialects/Cpp/Expressions.js";
-import { DIALECT as PATTERNS } from "../Dialects/Patterns/Expressions.js";
+import { DIALECT as CPP } from "../Cpp/Expressions/Expressions.js";
+import { DIALECT as PATTERNS } from "../Framework/Patterns/Expressions.js";
 import { Inline, Pairwise, Rule } from "../Framework/Translators.js";
 import { CFamily, Patterns, value } from "./_Patterns.js";
 import { IDENTIFIER, RULES as C_RULES } from "./Patterns_C.js";

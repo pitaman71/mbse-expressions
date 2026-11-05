@@ -14,8 +14,8 @@
  * single bit, `1'b1` or `1'b0`, and back a vector without a base of a single 0 or 1 is a bool. Patterns' container
  * constructors, `list` and `mapping`, have no counterpart. */
 
-import { DIALECT as PATTERNS } from "../Dialects/Patterns/Expressions.js";
-import { DIALECT as SYSTEMVERILOG } from "../Dialects/SystemVerilog/Expressions.js";
+import { DIALECT as PATTERNS } from "../Framework/Patterns/Expressions.js";
+import { DIALECT as SYSTEMVERILOG } from "../SystemVerilog/Expressions/Expressions.js";
 import { Inline, Pairwise, Pattern, Rule, renames } from "../Framework/Translators.js";
 import { Patterns, SystemVerilog, value } from "./_Patterns.js";
 

@@ -8,8 +8,8 @@
  * `unique(xs)` is written `ROWS(UNIQUE(xs)) = ROWS(xs)`, which does not read back as `unique`, and `entries` has no
  * counterpart. A `list` is `VSTACK(a, b)`, a column of its elements; a `mapping` has no counterpart. */
 
-import { DIALECT as PATTERNS } from "../Dialects/Patterns/Expressions.js";
-import { DIALECT as EXCEL } from "../Dialects/Excel/Expressions.js";
+import { DIALECT as PATTERNS } from "../Framework/Patterns/Expressions.js";
+import { DIALECT as EXCEL } from "../Excel/Expressions/Expressions.js";
 import { Elementwise, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Patterns, Excel, value } from "./_Patterns.js";
 

@@ -1,11 +1,11 @@
-"""Excel <-> Latex. Excel's operators are LaTeX's, `AND`, `OR` and `NOT` are `\\land`, `\\lor` and `\\lnot`, a field
+"""Excel <-> LaTeX. Excel's operators are LaTeX's, `AND`, `OR` and `NOT` are `\\land`, `\\lor` and `\\lnot`, a field
 is a member, `NOT(ISERROR(x.name))` is `\\operatorname{has}`, `IF(a, b, TRUE)` is `a \\implies b`, and `LET` is
 `where`. Cells and other `IF`s have no LaTeX counterpart here."""
 
 from __future__ import annotations
 
-from mbse.Expressions.Dialects.Excel.Expressions import DIALECT as EXCEL
-from mbse.Expressions.Dialects.Latex.Expressions import DIALECT as LATEX
+from mbse.Expressions.Excel.Expressions.Expressions import DIALECT as EXCEL
+from mbse.Expressions.LaTeX.Expressions.Expressions import DIALECT as LATEX
 from mbse.Expressions.Framework.Translators import Pairwise, Rule, renames
 
 from ._Patterns import Excel, Latex, value

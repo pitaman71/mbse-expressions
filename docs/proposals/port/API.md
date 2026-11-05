@@ -5,7 +5,11 @@
 
 Since the complete dialects' stage 2 ([the dialects proposal](../dialects/README.md#stages-proposed-once-decided)), Basic
 is Patterns, Python is Python3, and Ccpp is C and Cpp; `Expressions.Framework.Term` is the union of the dialects' `Term`s
-(`Expressions.<Dialect>.Term`, each the value union of its kinds).
+(`Expressions.<path>.Term`, each the value union of its kinds). Since the namespace rename, each dialect lives at
+`Expressions.<Family>.<Dialect>`, its path (`Framework.Patterns`, `Python.Python3`, `TypeScript.TypeScript5`,
+`C.Expressions`, `Cpp.Expressions`, `SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions`,
+`LaTeX.Expressions`): its schemas, its Python package (`mbse.Expressions.C.Expressions`) and its TypeScript module
+(`src/C/Expressions`, `@mbse/expressions/C/Expressions`) are named by it, and its name is `Terms.dialect_name(path)`.
 The sections below show the API as it now is; the items settled in earlier stages (below, "Settled while building", 1 to
 29) keep the names of their stage, and "Settled in the complete dialects' stage 2" says what changed.
 
@@ -21,34 +25,38 @@ old API had them so: `nameOf`, `formOf`), `store.transaction(() => ...)` for `wi
 ```python
 from mbse.Schemas.Framework import Builders
 from mbse.Expressions import Framework
-from mbse.Expressions.Dialects import Patterns, Python3, TypeScript5
+from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.Python import Python3
+from mbse.Expressions.TypeScript import TypeScript5
 
 store = Builders.Store()
 store.transaction(Framework.install)        # Expressions.Framework: Term (no branch yet), Literal, Call, Variable, Let,
                                             # List, Mapping, Pair, Error, Missing, Expression, HasRoot,
                                             # Schemas.OfExpression's adjacency `expression`; Dialect, Domain, DomainKind,
                                             # Defines, Operates, HasDomain and Schemas.OfAny's adjacency `domain`
-store.transaction(Patterns.install)         # Expressions.Patterns.Term, its union (the shared kinds, its own
-                                            # Quantifier, error and missing), added to Term as the branch `patterns`;
-                                            # its holder Expressions.Patterns.Expression, refining Expression;
-                                            # its dialect schema (singleton `Expressions.Patterns`), its kinds of
-                                            # domain, its domains' schemas and its operations, each an OfExpression
-store.transaction(Python3.install)          # Expressions.Python3.Term, the branch `python3`, its holder, and so on
-store.transaction(TypeScript5.install)      # Expressions.TypeScript5.Term, Type and Pattern, the branch `typescript5`, ...
+store.transaction(Patterns.install)         # Expressions.Framework.Patterns.Term, its union (the shared kinds, its
+                                            # own Quantifier, error and missing), added to Term as the branch
+                                            # `patterns`; its holder Expressions.Framework.Patterns.Expression,
+                                            # refining Expression; its dialect schema (singleton
+                                            # `Expressions.Framework.Patterns`), its kinds of domain, its domains'
+                                            # schemas and its operations, each an OfExpression
+store.transaction(Python3.install)          # Expressions.Python.Python3.Term, the branch `python3`, its holder, ...
+store.transaction(TypeScript5.install)      # Expressions.TypeScript.TypeScript5.Term, Type and Pattern, the branch
+                                            # `typescript5`, ...
 store.transaction(Patterns.define)          # optional, data: Patterns' dialect naming its operations, owning its domains
 ```
 
-`Patterns.define` writes Patterns' dialect's data: the singleton `Expressions.Patterns` names each operation
+`Patterns.define` writes Patterns' dialect's data: the singleton `Expressions.Framework.Patterns` names each operation
 (`Expressions.Framework.Operates`) and owns each domain by name (`Expressions.Framework.Defines`); its frame binds the
 dialect (`dialect`) and each domain by its name. Validation and evaluation do not need it: they read Patterns'
 vocabulary, `Domains.SIGNATURES`, whose names are the operations the install writes. Every other dialect's install adds
-its singleton schema too (`Expressions.Python3.Dialect`, singleton `Expressions.Python3`), with no operations or domains
+its singleton schema too (`Expressions.Python.Python3.Dialect`, singleton `Expressions.Python.Python3`), with no operations or domains
 yet (below, Settled in stage 3). A store holds any number of dialects, each install adding its own; where it holds a single one, `Framework.Term` is
 a union of one branch, which mbse-schemas allows since 0.26.6 (item 41). Each install and `define` write their schemas and data in the builders' fluent syntax
 (P-019), not from tables of their own.
 
 `Framework.install` (in `Framework/Terms.py`, `Framework/Terms.ts`) and `Patterns.install` (in
-`Dialects/Patterns/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
+`Framework/Patterns/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
 and what uses it are separate transactions: mbse-schemas, Object identity, Decided, 96 in [CAP-124: writes all-or-nothing in transactions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-124.md#decided)). Run again, each writes
 nothing. Every other dialect has its own install, run after the framework's, which adds its union of its kinds to
 `Expressions.Framework.Term` by schema extension, as Patterns' does; `mbse.Expressions.install(store)` is not given (it
@@ -58,10 +66,10 @@ would be a helper over the installs): a program runs the installs it needs.
 
 An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term, a value of
 `Expressions.Framework.Term`, nested: its dialect, then its kind. It is built in a store, within a transaction, through
-the builders. Each dialect has its own expression too, its holder: `Expressions.<Dialect>.Expression` refines
+the builders. Each dialect has its own expression too, its holder: `Expressions.<path>.Expression` refines
 `Expressions.Framework.Expression` and narrows its `root` to the dialect's `Term`, so its root is a term of that dialect
 alone, and `HasRoot` links it as it links any expression (item 46). A dialect's writers write a holder's root
-directly (`store.Expressions.Patterns.Expression(lambda e: e.root(person.age.ge(18)))`); spelled out with the builders:
+directly (`store.Expressions.Framework.Patterns.Expression(lambda e: e.root(person.age.ge(18)))`); spelled out with the builders:
 
 ```python
 with store.transaction():
@@ -93,7 +101,7 @@ spec: a callable that writes a term through the builders. Called with the `Visit
 (`Term(...)`), it selects its kind's branch and writes its members, so it goes wherever a term is written:
 
 ```python
-from mbse.Expressions.Dialects.Patterns import Expressions as E
+from mbse.Expressions.Framework.Patterns import Expressions as E
 
 x = E.variable("x")
 with store.transaction():
@@ -120,13 +128,13 @@ every evaluator, validator and translator shares, over any dialect's kinds:
 |---|---|
 | `Terms.term(x)` | the term value (a `Readers.OfUnion` of `Expressions.Framework.Term`) of an `Expression`, its `root` property's reader, a `Readers.OfAny` holding one, or a term value itself |
 | `Terms.kind_of(term)` | the branch its dialect's `Term` holds, `(tag, record)`: `("call", <Readers.OfObject>)`, through `Term`'s branch where it is a value of `Term` |
-| `Terms.dialect_of(term)` | the name of its dialect's `Term`: `"Expressions.Patterns.Term"` |
+| `Terms.dialect_of(term)` | the name of its dialect's `Term`: `"Expressions.Framework.Patterns.Term"` |
 | `Terms.form(term)` | its `Form`: `kind`, `attributes` (its scalar properties set, by name: `{"callable": "add"}`) and `arguments` (its terms, in order: the term properties in declaration order, its slots, then a container of terms' elements) |
 | `Terms.name_of(term)`, `Terms.operator_of(term, kind)` | the name a reference, binding or quantifier binds or refers to; an application's or quantifier's operator, its kind's `operator` property or its tag |
 | `Terms.walk`, `Terms.fold`, `Terms.same` | as before, over term values: a term is a nested value, so there is no sharing and no cycle |
 
 Which properties are slots, variadic arguments or attributes is read from the schema: a property whose schema is
-`Expressions.Framework.Term` or a dialect's `Term` (`Expressions.<Dialect>.Term`) is a slot, one holding a container of terms the variadic arguments, any other an attribute.
+`Expressions.Framework.Term` or a dialect's `Term` (`Expressions.<path>.Term`) is a slot, one holding a container of terms the variadic arguments, any other an attribute.
 `x + 1 > 0` reads:
 
 ```python
@@ -144,7 +152,7 @@ assert Terms.name_of(Terms.form(form.arguments[0]).arguments[0]) == "x"
 An evaluator takes a term value (or anything `Terms.term` reads one from) and a scope, as before:
 
 ```python
-from mbse.Expressions.Dialects.Patterns import Evaluators
+from mbse.Expressions.Framework.Patterns import Evaluators
 assert Evaluators.OfAny(positive, {"x": 1}) is True       # an Expression, or Terms.term(positive)
 assert Evaluators.OfAny(term, {"x": -1}) is False
 ```
@@ -161,17 +169,23 @@ read. Partial evaluation gives its residual as a `Writer`, written where the cal
 | | Python | TypeScript |
 |---|---|---|
 | its install, adding its union of its kinds to `Term` | `Expressions.install(txn)` | `Expressions.install(txn)` |
-| its kinds: how the framework reads each branch it adds (a `Terms.Kind`: its role, the properties naming what it binds and its operator, its vocabulary and whether it is `closed`, its required properties, its own checks) and its `Terms.Dialect` (name, kinds, a native's domain), with `validate` and `infer` | `Expressions.DIALECT` | `Expressions.DIALECT` |
+| its kinds: how the framework reads each branch it adds (a `Terms.Kind`: its role, the properties naming what it binds and its operator, its vocabulary and whether it is `closed`, its required properties, its own checks) and its `Terms.Dialect` (path, kinds, a native's domain), with `validate` and `infer` | `Expressions.DIALECT` | `Expressions.DIALECT` |
 | its operations and domains as data (Patterns only, so far); their number of arguments | `Expressions.define(txn)`; `Expressions.CORE` | the same |
 | its writers, while they stay | `Expressions.Writer`, `variable`, `literal`, ... | the same |
 | its evaluator | `Evaluators.OfAny(term, scope)`, `Evaluators.INTERPRETER` | the same |
 
-A `Terms.Dialect` names its kinds by the branch tags of its union, `union` (`Expressions.<name>.Expression`), the branch
-`tag` (its name in lowercase) of `Term`; it reads the framework's kinds of invalid syntax besides its own, and only its
+A `Terms.Dialect` names its kinds by the branch tags of its union, `union` (`Expressions.<path>.Term`), the branch
+`tag` (its name in lowercase) of `Term`; its `path` (`"C.Expressions"`) gives its `name()`, by `Terms.dialect_name`
+(TypeScript `Terms.dialectName`): its own name, or its family's where its own is `Expressions` (`C`, `MATLAB`,
+`LaTeX`); it reads the framework's kinds of invalid syntax besides its own, and only its
 own union's terms. `Dialect.make(form)` gives the `Writer` of a
 form, so a translator builds the target term through the builders, and its caller writes it in a transaction.
 
 ## What goes
+
+Since the namespace rename: the package `mbse.Expressions.Dialects` (TypeScript `src/Dialects`, and the exports
+`@mbse/expressions/Dialects/<name>`), each dialect's schemas named `Expressions.<name>`, and the names `Matlab` and
+`Latex` (now `MATLAB` and `LaTeX`), with no alias.
 
 Since the complete dialects' stage 2: the modules `Dialects.Basic`, `Dialects.Python` and `Dialects.Ccpp` (renamed, no
 alias), the `<dialect>_<kind>` branch tags, SystemVerilog's `PREFIX` and `kind_of`, and the translators' `_label`.
@@ -926,6 +940,59 @@ generation"), and item 107 added.
     DIA-25 (C++'s names printed from `idexpression`s, init captures' names as `Pattern`s), DIA-26 (tree-sitter-cpp's
     `identifier` and `null` an `idexpression`) and TRN-08 (C's rule set but for a name, a Patterns `variable` C++'s
     `idexpression` and back, a C++ name that is not an identifier refused).
+
+## Settled in the namespace rename, for the user's review
+
+Built as [the dialects proposal](../dialects/README.md#decided) decided ("Namespace": `Expressions.<family>.<dialect>`)
+and as the user answered its eight questions (2026-11-05, "yes, go"); a rename only, each choice below is where they
+were silent. The JSON corpora change only where a schema or singleton name appears (`domains`), byte-identical across
+the languages; every other case's wire is unchanged, since branch tags are.
+
+108. **The mapping.** Each dialect's schemas, singleton, install, Python package and TypeScript module are named by its
+     path, below `Expressions`; no alias for the old names:
+
+     | Old | Path (schemas, singleton) | Python package | TypeScript module, package export |
+     |---|---|---|---|
+     | `Patterns` | `Expressions.Framework.Patterns` | `mbse.Expressions.Framework.Patterns` | `src/Framework/Patterns`, `@mbse/expressions/Framework/Patterns` |
+     | `Python3` | `Expressions.Python.Python3` | `mbse.Expressions.Python.Python3` | `src/Python/Python3`, `@mbse/expressions/Python/Python3` |
+     | `TypeScript5` | `Expressions.TypeScript.TypeScript5` | `mbse.Expressions.TypeScript.TypeScript5` | `src/TypeScript/TypeScript5`, `@mbse/expressions/TypeScript/TypeScript5` |
+     | `C` | `Expressions.C.Expressions` | `mbse.Expressions.C.Expressions` | `src/C/Expressions`, `@mbse/expressions/C/Expressions` |
+     | `Cpp` | `Expressions.Cpp.Expressions` | `mbse.Expressions.Cpp.Expressions` | `src/Cpp/Expressions`, `@mbse/expressions/Cpp/Expressions` |
+     | `SystemVerilog` | `Expressions.SystemVerilog.Expressions` | `mbse.Expressions.SystemVerilog.Expressions` | `src/SystemVerilog/Expressions`, `@mbse/expressions/SystemVerilog/Expressions` |
+     | `Matlab` | `Expressions.MATLAB.Expressions` | `mbse.Expressions.MATLAB.Expressions` | `src/MATLAB/Expressions`, `@mbse/expressions/MATLAB/Expressions` |
+     | `Excel` | `Expressions.Excel.Expressions` | `mbse.Expressions.Excel.Expressions` | `src/Excel/Expressions`, `@mbse/expressions/Excel/Expressions` |
+     | `Latex` | `Expressions.LaTeX.Expressions` | `mbse.Expressions.LaTeX.Expressions` | `src/LaTeX/Expressions`, `@mbse/expressions/LaTeX/Expressions` |
+
+     So `Expressions.Python3.BinOp` is `Expressions.Python.Python3.BinOp`, the singleton `Expressions.C` is
+     `Expressions.C.Expressions` (`store.Instances.Expressions.C.Expressions`), a Patterns domain
+     `Expressions.Framework.Patterns.uint8`, and an install's uid `mbse.Expressions.C.Expressions/1`. The package
+     `mbse.Expressions.Dialects`, the directory `src/Dialects` and the export `@mbse/expressions/Dialects/*` go; the
+     package exports and `deno.json` list each dialect by its path. Each family is a package of its own in Python
+     (`mbse.Expressions.C`, whose docstring names its standard), holding its dialect; TypeScript's family directory
+     holds only its dialect. A dialect's modules keep their names (`mbse.Expressions.C.Expressions.Expressions`, its
+     kinds; `.Text`, `.Evaluators`, `.Domains`), and `mbse.Expressions`' own `Expressions`, `Evaluators`, `Domains`
+     and `Partials` are still Patterns'. Tests: every case under its ID, renamed; CONF (the `domains` case).
+
+109. **The branch tags stay** (the user's answer 4): `Expressions.Framework.Term`'s branches are still `patterns`,
+     `python3`, `typescript5`, `c`, `cpp`, `systemverilog`, `matlab`, `excel` and `latex`, each its dialect's name in
+     lowercase, as before.
+
+110. **A dialect is made by its path, and named by it.** `Terms.Dialect(path, kinds, ...)` takes its path below
+     `Expressions` (`"Python.Python3"`, `"C.Expressions"`), kept as `path`; its `union` is `Expressions.<path>.Term`,
+     and its `name()` is `Terms.dialect_name(path)` (TypeScript `Terms.dialectName`), added: its own name, or its
+     family's where its own says only that it is the family's expressions. The names are `Patterns`, `Python3`,
+     `TypeScript5`, `C`, `Cpp`, `SystemVerilog`, `MATLAB`, `Excel` and `LaTeX`: MATLAB's and LaTeX's are now spelled as
+     their families are, the makers' way, so the messages that name a dialect say so ("a Patterns let is not a MATLAB
+     term", "Patterns quantifier 'all' has no LaTeX counterpart"), and the tags are unchanged, lowercase. A dialect's
+     name read from another's union (a foreign term's message, C's scope refusing a name that is not an identifier)
+     is `dialect_name` of that union's path. Tests: FRM-01 (the names), FRM-04 (holders by path), and the messages in
+     FRM-11, FRM-12, DIA-03, DIA-09, TRN-01, TRN-05, TRN-07, TRN-12, TRN-14 and COL-06.
+
+111. **What keeps its name.** The translators' modules (`Translators.Patterns_Matlab`, `Excel_Latex`, ...) and the
+     classes and aliases of code that name a dialect (`_Patterns.Matlab`, `from mbse.Expressions.MATLAB import
+     Expressions as Matlab` in the tests and tutorials) are identifiers, not schema or module paths of a dialect, and
+     are not renamed; the translators' collection forms are keyed by the dialect's name (`"MATLAB"`), as their
+     messages are. Renaming the translators' modules to the families' spellings is left for the user to decide.
 
 ## What stage 2b needed (done)
 
