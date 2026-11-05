@@ -267,6 +267,93 @@ As the user decided (2026-11-02), on the questions below:
   Built as [the API, Settled in the namespace rename](../port/API.md#settled-in-the-namespace-rename-for-the-users-review),
   items 108 to 111.
 
+### Decided for stage 6 (SystemVerilog) and after (2026-11-05)
+
+Reviewed interactively with the user, question by question; the questions were stage 6's design pass. Each answer is
+quoted as given.
+
+**Principles the user stated** (asked about what counts as an expression):
+
+> - nodes in the language syntax are represented faithfully as statement
+>   or expression nodes in the mbse-programs model
+> - wrapper nodes in the parser syntax may be omitted provided that does
+>   not introduce a round-trip ambiguity
+> - language standards generally provide a very clean separation between
+>   statements and expressions and the mbse-programs model must abide that
+>   boundary
+> - constraints, regexes and patterns are expression dialects
+> - should AST-visible macro definitions and usages be their own dialect?
+> - most languages will have a dialect for type expressions
+> - any expression kind that binds symbol(s) should be modeled as variations of `let`
+> - `mbse-expressions` provides tools for evaluating statement-free expressions.
+>   Contruction of a full evaluator for expressions with embedded statements
+>   is deferred to `mbse-programs`
+
+- **Sublanguages are dialects.** Asked whether constraints, regexes and patterns become dialects of their own: "separate
+  dialects but they are also probably referenced by other dialets via union"; and "yes, if the standard says it's a
+  sublanguage then it's definitely at least a separate dialect". So SystemVerilog Assertions (sequences and
+  properties, IEEE 1800 clause 16), constraints (clause 18), patterns, types ("most languages will have a dialect for
+  type expressions"), regular expressions (ECMA-262's, Python's `re`) and the preprocessors (Verilog's compiler
+  directives, clause 22; C's and C++'s) are each a dialect, referenced from its host's unions by "(b)". This
+  supersedes, for stage 6 on, the sublanguage unions within a dialect (question 5's (a), Q1 below), which become these
+  dialects' `Term`s.
+- **Q1, the unions** (sequences, properties, patterns, constraints, types): "(a)"; recast by the rule above as dialects.
+- **Q2, a holder per sublanguage**: "(a)": each sublanguage dialect has its own holder, refining
+  `Expressions.Framework.Expression`, so that a property, a sequence, a constraint or a type can be an expression's
+  root; applied to every dialect.
+- **Q3, SystemVerilog's literals**: "(b)": `literal` holds what a scalar schema can (unsized integers, reals,
+  strings, time literals with their unit); SystemVerilog's own `constant` holds what has no schema (`null`, the fills
+  `'0 '1 'x 'z`, 4-state vectors, by bits, size and signedness, the base its spelling).
+- **Q4, names**: "(b)": every name used as a value is a `nameexpression` holding its `Name`, as mbse-programs has it,
+  with no `variable` in SystemVerilog's union, as for C++.
+- **Q5, what counts as an expression**: settled by the principles above: slang's text-less wrappers omitted; a
+  pattern's parentheses kept as a kind (dropping them would change the text), mbse-programs' omission of them a gap to
+  report; assertions, `let` declarations and coverage bin selections are statements and declarations; assignments and
+  increments in expressions are expression nodes.
+- **Macros**: the preprocessor is a dialect per family (C's, shared by C and C++ as each standard defines it;
+  Verilog's compiler directives), a macro usage in an expression position a term of it held by "(b)"; a macro
+  definition a directive, mbse-programs'.
+- **Q6, directives and comments inside constraints**: "agreed": directives are the preprocessor dialect's terms,
+  comments helpers.
+- **Q7, a struct's or enum's members in a type**: by "most languages will have a dialect for type expressions", its
+  members are kinds of the type dialect, as data; C's `body` flag (API 93) revisited the same way.
+- **Q8 and binding**: "any expression kind that binds symbol(s) should be modeled as variations of `let`"; asked how,
+  "(a)": every binding kind refines the framework's `Let`, the framework knowing a binder as one that is a `Let`. It
+  needs mbse-schemas to accept a refinement where a property's value is held, as links do now: an mbse-schemas release
+  first.
+- **Q9, completeness data**: "yes": every slang syntax kind, at mbse-programs' pyslang, as data, checked in both
+  languages, with no slang dependency.
+- **Q10, standards**: "label standards using the convention the standards body itself uses"; then "If we treat
+  standards as tags, we could support both", and, to a standard reference that is either formal (a body by
+  reverse-domain name, one or a joint pair; a number; a revision that is a year, an edition or a version) or common (a
+  name such as `C11`), each edition stored with its designation and its common names as tags: "yes". Built with
+  domains as data; until then stage 6 records SystemVerilog's editions in code by designation (`IEEE Std 1800-2023`).
+- **Q11, evaluation**: by the principle above, and, as the user put the design: "If I'm being honest, providing a full
+  function evaluator in mbse-expressions at all was never a primary goal. I tolerated it as a potentially useful
+  feature. But the original design was that mbse-expressions would provide a expression simplifier in stages:"
+
+  > - start with a simple recursive simplifiation-by-substitution algorithm,
+  >   no resolution or statement execution
+  > - support replacing argument, variable, and parameter references with schema-compatible expressions
+  > - support applying operator implementations registered with the evaluator as
+  >   imperative native code plugins that expect either a concrete value or
+  >   an "unknown" bound to every operation formal
+
+  So stage 6 extends no evaluator: SystemVerilog's evaluation keeps what it does today, its new kinds modeled,
+  printed and complete to the standard but not evaluated; the staged simplifier is its own proposal, after domains as
+  data. The model is the whole standard ("not supporting the full standard is prohibited"); only evaluation is partial.
+- **Q12, domains**: "approved": stage 6 adds nothing to the code-only domains.
+- **Namespace**: asked about `Expressions.<standard>.<dialect>` and `<family>.<standard>.<dialect>`, the user chose
+  the middle path: `Expressions.<family>.<dialect>`, a family named as its standard names the language, each dialect
+  recording the standard that defines it; then, to the names `Expressions.Python.Python3`,
+  `Expressions.TypeScript.TypeScript5`, `Expressions.C.Expressions`, `Expressions.SystemVerilog.Expressions` and
+  sublanguages by what they are (`.Types`, `.Patterns`, `.Assertions`, `.Constraints`, `.Preprocessor`, `.RegExp`):
+  "agreed". The rename is a step of its own, before stage 6's build.
+- **The sequence of work**: "I agree with this sequencing of work but we need to discuss timing against current INI
+  priorities": mbse-schemas' refinement of property values; the namespace rename; SystemVerilog's expression dialect;
+  its types, patterns, assertions, constraints and preprocessor dialects in parallel; closing work; then the retrofit
+  of the other dialects (type, pattern, regex and preprocessor dialects, `let` variations). Its timing is open.
+
 ## Questions for the user
 
 1. **Names.** Proposed: the module, schemas and singleton renamed by dialect (`Python` to `Python3`,
