@@ -41,7 +41,7 @@ It cuts against [PRI-018: no model needs code to read or write](https://github.c
 
 ## Decided, that applies
 
-- **Domains are objects, defined by dialects** (2026-10-28; mbse-basis [CAP-226](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided) and [CAP-097](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#decided)):
+- **Domains are objects, defined by dialects** (2026-10-28; mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided) and [CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#decided)):
   "all scalars are domains and users may define domains and dialects containing domains"; "a scalar schema can have >
   1 domain"; "width is a property of the domain, not the schema"; a dialect defines its domains by name, through
   `Expressions.Framework.Defines(dialect, name, domain)`.
@@ -50,11 +50,11 @@ It cuts against [PRI-018: no model needs code to read or write](https://github.c
   owns the root term must specify its schema." "For the time being, evaluation will need to do without an external
   source specifying the domain for every term, as that involves building a type inference system which should be a
   follow-up capability" ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)).
-- **Only intrinsics' implementations are code** (schema extension 9, in [FEA-024](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md#decided)): "printers and parsers go
+- **Only intrinsics' implementations are code** (schema extension 9, in [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md#decided)): "printers and parsers go
   through Visitor just like everything else"; only intrinsics' implementations are code, each found through its named
   reference object.
-- **Standing rules**: "Never guess the schema"; no DSL wrapping builder syntax ([PRI-019](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-019)); concrete references are paths
-  ([PRI-015](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-015)).
+- **Standing rules**: "Never guess the schema"; no DSL wrapping builder syntax ([PRI-019: fluent builder syntax](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-019)); concrete references are paths
+  ([PRI-015: concrete references are programmatic](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-015)).
 
 ## Proposed
 
@@ -103,7 +103,7 @@ As the user decided (2026-11-04), on the questions below:
   result domain: "I wasn't expecting that to become an issue until CAP-232." Proposed and agreed ("yes"): this
   proposal stores each dialect's domains, their parameters and hand-populated properties, and each operation's
   argument and result schemas as stage 3 has them; the relation from argument domains to result domain, and how it is
-  populated, are domain inference's ([CAP-232](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)). Until then `Dialect.infer`'s signatures stay as they are, marked as CAP-232's to
+  populated, are domain inference's ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)). Until then `Dialect.infer`'s signatures stay as they are, marked as CAP-232's to
   replace, and evaluation's arithmetic (C's usual arithmetic conversions applied to the values it computes) is the
   evaluator's, as now.
 
@@ -152,23 +152,26 @@ whole-record review before it is brought to the user.
 
 ## A stopping point for the overhaul
 
-Where the plan stands: mbse-schemas has its 0.26.x fixes; mbse-expressions has stages 2 to 5 of the complete dialects
-(the framework, Python3, TypeScript5, C and Cpp) on main, unreleased; stage 6 (SystemVerilog complete) and stage 7
-(docs and the 0.8.0 release) remain; then mbse-programs' port, mbse-patterns' re-scoping, and mbse-codegen-python.
+Where the plan stands: mbse-schemas has its 0.26.x fixes; mbse-expressions 0.8.0 holds stages 1 to 5 of the complete
+dialects (the framework, Python3, TypeScript5, C and Cpp) and the namespace rename, on mbse-schemas 0.26.10; stage 6
+(SystemVerilog complete) and the retrofit of the other dialects are 0.9.0's; then mbse-programs' port, mbse-patterns'
+re-scoping, and mbse-codegen-python.
 
-Recommended stopping point: **mbse-expressions 0.8.0, released after stage 6**, with #19's open questions settled
-(the empty value object in mbse-schemas, C++'s two ways to write a name, the C and Cpp `Pattern` held by nothing, C's
-writers) and stages 4 and 5 recorded in mbse-basis. Then pause, and take up this proposal before mbse-programs' port.
+The stopping point first recommended here was mbse-expressions 0.8.0 released after stage 6, so that no dialect would
+be released as a subset of its language. The user chose instead to release 0.8.0 after stage 5, stage 6 and the
+retrofit coming in 0.9.0 ([the dialects proposal](../dialects/README.md#decided), Decided, "0.8.0 holds stages 1 to
+5"), so `SystemVerilog` is released in 0.8.0 as it stands. #19's open questions are settled (the empty value object in
+mbse-schemas, C++'s two ways to write a name, the C and Cpp `Pattern` held by nothing, C's writers). Stage 4 is
+recorded in mbse-basis ([CAP-228: the TypeScript5 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-228.md)); stage 5 is not yet
+([CAP-229: the C expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-229.md) and
+[CAP-230: the C++ expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-230.md) have no As built). This proposal
+is still taken up before mbse-programs' port; whether after 0.8.0 or after 0.9.0 is open.
 
-Why there:
+Why before mbse-programs' port:
 
-- **0.8.0 is a coherent release**: every dialect complete over its language, as the user decided, a stable target for
-  every dependent. Stopping before stage 6 would release SystemVerilog as a subset, which the user ruled out ("There is
-  no reason for an expression dialect to exist that is ia subset").
 - **Domains change the model under every dialect.** Doing them before mbse-programs builds on the dialects means
   mbse-programs ports once. Doing them inside the 0.8.0 effort would reopen four merged stages mid-flight.
-- **The open defects and decisions are small and known**; settling them before the release keeps 0.8.0 honest
-  (no workarounds shipped).
+- **The open defects and decisions were small and known**, and are settled, so 0.8.0 ships no workarounds.
 - **It resets the process** the user asked for: smaller stages, more agents, design passes before builds,
   whole-record reviews, at a natural boundary.
 

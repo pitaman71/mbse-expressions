@@ -266,6 +266,16 @@ As the user decided (2026-11-02), on the questions below:
 
   Built as [the API, Settled in the namespace rename](../port/API.md#settled-in-the-namespace-rename-for-the-users-review),
   items 108 to 111.
+- **0.8.0 holds stages 1 to 5; stage 6 and the retrofit move to 0.9.0** (2026-11-05). Offered two options, "(a):
+  Release 0.8.0 now. It contains stages 1 to 5, the rename and a pin to 0.26.10. Stage 6 and the retrofit of the other
+  dialects come in 0.9.0, and INI-040 can start now." and "(b): build stage 6 first", the user answered "(a)". So
+  0.8.0 is released after stage 5: stages 1 to 5, the namespace rename (the old `Dialects` names gone, with no alias)
+  and mbse-schemas 0.26.10 pinned. `SystemVerilog` is released in 0.8.0 as it stands, not yet complete to IEEE
+  1800-2023. Stage 6 (SystemVerilog's expression dialect complete, Verilog its subset, its types, patterns,
+  assertions, constraints and preprocessor dialects, and the closing work) and the retrofit of the other dialects (type,
+  pattern, regex and preprocessor dialects, `let` variations) are released as 0.9.0. This supersedes stage 7's release
+  of 0.8.0 after stage 6 (Stages, below) and the stopping point [the domains proposal](../domains/README.md#a-stopping-point-for-the-overhaul)
+  recommended.
 
 ### Decided for stage 6 (SystemVerilog) and after (2026-11-05)
 
@@ -352,7 +362,8 @@ quoted as given.
 - **The sequence of work**: "I agree with this sequencing of work but we need to discuss timing against current INI
   priorities": mbse-schemas' refinement of property values; the namespace rename; SystemVerilog's expression dialect;
   its types, patterns, assertions, constraints and preprocessor dialects in parallel; closing work; then the retrofit
-  of the other dialects (type, pattern, regex and preprocessor dialects, `let` variations). Its timing is open.
+  of the other dialects (type, pattern, regex and preprocessor dialects, `let` variations). Its timing against the INI
+  priorities is open; which release holds what is decided (Decided, "0.8.0 holds stages 1 to 5").
 
 ## Questions for the user
 
@@ -526,9 +537,12 @@ change as it lands.
    literal typed by its suffix and base, and refuses every other kind by name; the translators keep what they
    translated, Patterns <-> C and Patterns <-> Cpp one rule set. Every dialect's `Type` and `Pattern` now hold `error`
    and `missing`.
-6. **`SystemVerilog` complete**, Verilog its subset.
-7. **Tutorials, skill, README, EQUIVALENCE; release 0.8.0.** Then mbse-programs' stage 2, mbse-patterns and
-   mbse-codegen-python.
+6. **`SystemVerilog` complete**, Verilog its subset; released as 0.9.0, with the retrofit of the other dialects
+   (Decided, "0.8.0 holds stages 1 to 5").
+7. **Tutorials, skill, README, EQUIVALENCE; the releases.** The tutorials and the skill followed each stage as it
+   landed. **0.8.0 is released after stage 5**, as the user decided (Decided, "0.8.0 holds stages 1 to 5"): stages 1
+   to 5 and the namespace rename, a breaking change, on mbse-schemas 0.26.10. 0.9.0 follows stage 6 and the retrofit.
+   Then mbse-programs' stage 2, mbse-patterns and mbse-codegen-python.
 
 ## Risks
 
@@ -542,6 +556,17 @@ change as it lands.
 - **Extension limits**: an extension's adjacency is to a relation of two links and no properties.
 - **Dependents break** at 0.8.0: mbse-programs' bridges (until its stage 2), mbse-patterns (`Dialects.Python.Text`)
   and mbse-codegen-python (the writers).
+- **Tech debt, type specificity** (counted at 0.8.0, against 0.7.0). The installs, writers and corpus build schemas
+  and terms in fluent syntax through mbse-schemas' dynamic proxies, which no type checker sees, so each builder
+  callback is `any` in TypeScript: `typescript5/src` has 2,349 `any`s (931 at 0.7.0), 1,711 of them `(_: any) =>`
+  callbacks, most in the dialects' `Expressions.ts`; its tests 2,979 (545); `python3/mbse` 1,265 `Any`s (905). New
+  `as any` casts: the printers of `Python3` and `TypeScript5` dispatch on a kind's tag by method name
+  (``(this as any)[`_${tag}`]``, in `Python/Python3/Text.ts`, twice, and `TypeScript/TypeScript5/Text.ts`), and
+  `Framework/Terms.ts` walks a schema's `refines` through `as any`. A misspelled property or a term of the wrong kind
+  is then caught by validation or a test, not by the compiler. Typed bindings for the dialects' schemas
+  ([PRI-015: concrete references are programmatic](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-015),
+  "any model used in code has typed bindings") and a typed dispatch table would close it; it is to become a capability
+  of an internal feature in mbse-basis.
 
 ---
 

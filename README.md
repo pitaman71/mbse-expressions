@@ -159,9 +159,10 @@ constructors `list` and `mapping`, literals holding any value with their spellin
 `error` and `missing`; dialects, their operations and their
 domains as data (each dialect a singleton that names its operations, each an expression schema, and owns its domains
 by name); writers; `validate()`, which refuses a call to an operation the dialect does not define; evaluation with
-three-valued logic over values by the schemas they are written with, collections and quantifiers. Under way: the
-complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)), whose stage 2,
-the framework and the renames, is built, and stage 3, `Python3` complete over Python 3's expressions
+three-valued logic over values by the schemas they are written with, collections and quantifiers. Released in 0.8.0,
+on mbse-schemas 0.26.10: stages 1 to 5 of the complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md))
+and the namespace rename (`Expressions.<Family>.<Dialect>`; the old `Dialects` names are gone, with no alias): stage 2,
+the framework and the renames; stage 3, `Python3` complete over Python 3's expressions
 ([CAP-227: the Python3 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-227.md)), printed in both languages, read by
 `FromText` in Python and checked against `ast`'s node list; its evaluator stays shallow; and stage 4, `TypeScript5`, new,
 over TypeScript 5's expressions with its types, destructuring patterns and JSX
@@ -171,7 +172,10 @@ checked against typescript-estree's node types; it evaluates its literals alone,
 ([CAP-229: the C expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-229.md),
 [CAP-230: the C++ expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-230.md)), printed in both languages and checked
 against tree-sitter-c's and tree-sitter-cpp's node types; their evaluators keep what C evaluated, over its arithmetic
-types, and every dialect's `Type` and `Pattern` hold invalid syntax. Not built yet: domain
+types, and every dialect's `Type` and `Pattern` hold invalid syntax. Coming in 0.9.0: stage 6, `SystemVerilog` complete
+over IEEE 1800-2023, Verilog its subset ([CAP-231: the SystemVerilog expression dialect, complete](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-231.md)),
+with its sublanguages as dialects, and the retrofit of the other dialects (type, pattern, regex and preprocessor
+dialects, binding kinds as variations of `let`); until then `SystemVerilog` is the subset it was. Not built yet: domain
 inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
 interface through which mbse-schemas will choose union branches and check constraints.
 
