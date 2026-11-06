@@ -12,8 +12,9 @@ proposes one form of a domain, and asks what only the user can decide. Nothing i
 
 Since stage 3 of the port, a domain can be stored: an `Expressions.Framework.Domain`, a reference object holding its
 `kind`, a value of the union `Expressions.Framework.DomainKind`, owned by its dialect through
-`Expressions.Framework.Defines(dialect, name, domain)` and linked to its scalar schema by `HasDomain`. Only the
-Patterns dialect (formerly Basic) defines domain kinds, and only Patterns stores domains.
+`Expressions.Framework.Defines(dialect, name, domain)` and linked to its scalar schema by `HasDomain`. At 0.8.0 only
+the Patterns dialect (formerly Basic) defined domain kinds and stored domains; since stage 1 (below) the standard
+dialects do, and each language's dialect defines its own kinds.
 
 Everything that uses a domain uses code objects instead:
 

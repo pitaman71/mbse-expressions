@@ -174,7 +174,7 @@ read. Partial evaluation gives its residual as a `Writer`, written where the cal
 |---|---|---|
 | its install, adding its union of its kinds to `Term` | `Expressions.install(txn)` | `Expressions.install(txn)` |
 | its kinds: how the framework reads each branch it adds (a `Terms.Kind`: its role, the properties naming what it binds and its operator, its vocabulary and whether it is `closed`, its required properties, its own checks) and its `Terms.Dialect` (path, kinds, a native's domain), with `validate` and `infer` | `Expressions.DIALECT` | `Expressions.DIALECT` |
-| its operations and domains as data (Patterns only, so far); their number of arguments | `Expressions.define(txn)`; `Expressions.CORE` | the same |
+| its operations and domains as data (Patterns' operations; the standard dialects' domains, item 112); their number of arguments | `Expressions.define(txn)`; `Expressions.CORE` | the same |
 | its writers, while they stay | `Expressions.Writer`, `variable`, `literal`, ... | the same |
 | its evaluator | `Evaluators.OfAny(term, scope)`, `Evaluators.INTERPRETER` | the same |
 
@@ -970,7 +970,7 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
      So `Expressions.Python3.BinOp` is `Expressions.Python.Python3.BinOp`, the singleton `Expressions.C` is
      `Expressions.C.Expressions` (`store.Instances.Expressions.C.Expressions`), a Patterns domain
-     `Expressions.Framework.Patterns.uint8`, and an install's uid `mbse.Expressions.C.Expressions/1`. The package
+     `Expressions.Framework.Patterns.uint8` (ISO/IEC 11404's since item 112, `Expressions.ISOIEC11404.Expressions.uint8`), and an install's uid `mbse.Expressions.C.Expressions/1`. The package
      `mbse.Expressions.Dialects`, the directory `src/Dialects` and the export `@mbse/expressions/Dialects/*` go; the
      package exports and `deno.json` list each dialect by its path. Each family is a package of its own in Python
      (`mbse.Expressions.C`, whose docstring names its standard), holding its dialect; TypeScript's family directory
