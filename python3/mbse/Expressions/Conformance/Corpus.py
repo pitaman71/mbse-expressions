@@ -3,8 +3,9 @@
 `build()` returns `{case: (root schema, root, store)}`: each case but `domains` a term value of
 `Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
 dialect's, written nested. `DIALECTS` names the dialect that reads each case other than Patterns'. The `domains` case
-is data: Patterns' dialect, the singleton `Expressions.Framework.Patterns` (`Expressions.Framework.Patterns.Dialect`), naming its
-operations and owning its domains by name, a packed one among them, written as one document. The `typescript5` case
+is data: ISO/IEC 11404's dialect, the singleton `Expressions.ISOIEC11404.Expressions`
+(`Expressions.ISOIEC11404.Expressions.Dialect`), owning its domains by name, each kind its dialect's then its own, an
+enum and a packed one among them, written as one document. The `typescript5` case
 is a TypeScript5 term of every kind, written through the builders. The `invalid` case is a Python3 term holding invalid
 syntax and literals with their spelling. Each implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
@@ -21,7 +22,11 @@ from mbse.Expressions.Excel import Expressions as Excel
 from mbse.Expressions.LaTeX import Expressions as Latex
 from mbse.Expressions.MATLAB import Expressions as Matlab
 from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
+from mbse.Expressions.IEEE754 import Expressions as IEEE754
+from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
 from mbse.Expressions.Python import Python3
+from mbse.Expressions.Unicode import Expressions as Unicode
 from mbse.Expressions.SystemVerilog import Expressions as SystemVerilog
 from mbse.Expressions.TypeScript import TypeScript5
 from mbse.Expressions.C.Expressions import Expressions as CE
@@ -46,6 +51,10 @@ def build():
     E = Expressions
     store = Builders.Store()
     store.transaction(Framework.install)
+    store.transaction(ISOIEC11404.install)  # the standard dialects, before the dialects that use them
+    store.transaction(IEEE754.install)
+    store.transaction(IEEE1164.install)
+    store.transaction(Unicode.install)
     store.transaction(Patterns.install)
     store.transaction(Python3.install)
     store.transaction(Matlab.install)
@@ -55,17 +64,17 @@ def build():
     store.transaction(Cpp.install)
     store.transaction(SystemVerilog.install)
     store.transaction(TypeScript5.install)
-    defined = store.transaction(Patterns.define)[0]  # Patterns' dialect, its operations and its domains
+    defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
 
-    # --- domains: Patterns' dialect, its operations by name and its domains, owned by name; an enum and a domain packing
-    # it into uint8 added ---
+    # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; an enum and a domain packing it into uint8
+    # added ---
     with store.transaction():
         state = store.Expressions.Framework.Domain(lambda d: d.kind(lambda k: k.as_value(lambda a: a.as_union(
-            lambda u: u.enum(lambda e: e.members(["IDLE", "RUN"]))))))
+            lambda u: u.isoiec11404(lambda v: v.enum(lambda e: e.members(["IDLE", "RUN"]).ordered(False)))))))
         mode = store.Expressions.Framework.Domain(lambda d: d.kind(lambda k: k.as_value(lambda a: a.as_union(
-            lambda u: u.packed(lambda e: e.codes([0, 1]))))).packs(lambda a: a.insert(
+            lambda u: u.isoiec11404(lambda v: v.packed(lambda e: e.codes([0, 1]).ordered(True)))))).packs(lambda a: a.insert(
             lambda e: e.domain(state).representation(defined["uint8"]))))
-        store.Expressions.Framework.Patterns.Dialect(defined["dialect"], lambda b: b.domains({
+        store.Expressions.ISOIEC11404.Expressions.Dialect(defined["dialect"], lambda b: b.domains({
             "state": lambda e: e.domain(state), "mode": lambda e: e.domain(mode)}))
 
     # --- expression: every kind and literal type, a let and its variable, a list ---
@@ -306,5 +315,5 @@ def build():
             ("collections", collections), ("c", c), ("cpp", cpp), ("systemverilog", systemverilog),
             ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid)]}
     terms["domains"] = defined["dialect"]
-    Term, Dialect = store.registered("Expressions.Framework.Term"), store.registered("Expressions.Framework.Patterns.Dialect")
+    Term, Dialect = store.registered("Expressions.Framework.Term"), store.registered("Expressions.ISOIEC11404.Expressions.Dialect")
     return {case: (Dialect if case == "domains" else Term, terms[case], store) for case in CASES}

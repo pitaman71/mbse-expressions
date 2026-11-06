@@ -32,11 +32,17 @@ Dialects, domains and operations are data too. A dialect is a singleton whose id
 union `Expressions.Framework.Dialect`, which each dialect extends. It owns its domains by name
 (`Expressions.Framework.Defines(dialect, name, domain)`), so a domain's path is its dialect's and its name; a domain is
 an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
-a union each dialect extends with its kinds of domain. A domain's schema is a named `Schemas.OfAny` restricted to the
-scalar it narrows (`Expressions.Framework.Patterns.uint8`), which reads it through the extension adjacency `domain`
+the union of the dialects' unions of kinds, as `Term` is of their `Term`s: with no branch until a dialect that has kinds
+adds its own, `Expressions.<Family>.<Dialect>.DomainKind`, as the branch named by its tag (`isoiec11404`), so a kind
+is written its dialect, then its kind (`{"ieee754": {"ieee754": {"format": "binary32", ...}}}`). The standard
+dialects, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode (`mbse.Expressions.ISOIEC11404` and the others), hold the
+kinds and the domains of their standards. A domain's schema is a named `Schemas.OfAny` restricted to the
+scalar it narrows (`Expressions.ISOIEC11404.Expressions.uint8`), which reads it through the extension adjacency `domain`
 (`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
 (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module defines, whose
-pattern's variables are its arguments, in the order they are declared, and whose `result` is its return.
+pattern's variables are its arguments, in the order they are declared, and whose `result` is its return. A dialect
+that uses another's kinds or schemas says so (`Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`,
+each dialect's adjacency `uses`). `Domains` reads stored domains and operations.
 
 Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
 branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's slots (a term
@@ -106,8 +112,9 @@ QUANTIFIER, INVALID = "quantifier", "invalid"
 
 def install(txn: Any) -> Any:
     """The framework's schemas: terms, expressions and an expression schema's root; domains and the schemas they
-    restrict; dialects and the operations they define. Run again in a store, it finds each by its name and writes
-    nothing."""
+    restrict; dialects, the operations they define and the dialects they use. Run first, before the standard dialects'
+    installs and then the others', each in a transaction of its own. Run again in a store, it finds each by its name
+    and writes nothing."""
     S = txn.Schemas
     return txn.uid("mbse.Expressions.Framework/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Term": S.OfUnion, "Literal": S.OfObject, "Call": S.OfObject, "Variable": S.OfObject,
@@ -115,7 +122,8 @@ def install(txn: Any) -> Any:
                   "Error": S.OfObject, "Missing": S.OfObject,
                   "Expression": S.OfObject, "HasRoot": S.OfRelation, "OfExpression": S.OfObject,
                   "Domain": S.OfObject, "DomainKind": S.OfUnion, "HasDomain": S.OfRelation, "OfAny": S.OfObject,
-                  "Dialect": S.OfUnion, "Defines": S.OfRelation, "Operates": S.OfRelation})  # mbse-schemas' own, by name
+                  "Dialect": S.OfUnion, "Defines": S.OfRelation, "Operates": S.OfRelation,
+                  "Uses": S.OfRelation})  # mbse-schemas' own, by name
         .spec([
             # The union of the dialects' `Term`s: each dialect adds its own, `Expressions.<Dialect>.Term`, as the
             # branch named after it (`patterns`), by schema extension.
@@ -156,10 +164,14 @@ def install(txn: Any) -> Any:
             # paths. mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object
             # schemas, to which each dialect adds its own by schema extension, as it adds its kinds to `Term`.
             lambda _: _.Dialect.name("Expressions.Framework.Dialect"),
-            # A domain: a reference object holding its kind, a value of a union that dialects extend, owned by the
-            # dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the scalar it
-            # narrows, reads it through the extension adjacency `domain`.
-            lambda _: _.DomainKind.name("Expressions.Framework.DomainKind"),  # a dialect adds its kinds
+            # A dialect that uses another's kinds or schemas: written by the install of the one that uses them.
+            lambda _: _.Uses.name("Expressions.Framework.Uses").links([
+                lambda t: t.name("dialect").schema([_.Dialect]), lambda t: t.name("used").schema([_.Dialect])
+            ]).uniques([["dialect", "used"]]),
+            # A domain: a reference object holding its kind, a value of the union of the dialects' unions of kinds,
+            # owned by the dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the
+            # scalar it narrows, reads it through the extension adjacency `domain`.
+            lambda _: _.DomainKind.name("Expressions.Framework.DomainKind"),  # a dialect adds its union of kinds
             lambda _: _.Domain.name("Expressions.Framework.Domain").ref(True).properties({"kind": _.DomainKind}).adjacencies({
                 "dialect": lambda a: a.relation([_.Defines]).me("domain").owner(True),  # its path: its dialect's, its name
                 "schema": lambda a: a.relation([_.HasDomain]).me("domain")}),

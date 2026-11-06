@@ -127,7 +127,8 @@ def install(txn: Any) -> Any:
             # its dialect: the singleton `Expressions.Python.Python3`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.Python.Python3.Dialect").ref(True).singleton("Expressions.Python.Python3").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "uses": lambda a: a.relation([Framework.Uses]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("python3").schema([_.Dialect])]),
             # its union of its kinds: the framework's it reuses, its own, its extensions, and invalid syntax

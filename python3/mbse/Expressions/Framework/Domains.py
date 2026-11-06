@@ -1,5 +1,16 @@
 """Domains: the types of the values expressions denote, and the signatures of operators over them.
 
+The reading interface over stored domains and operations, each a `Readers.OfObject` found by its path
+(`dialect.domains({"name": "uint8"})`) or a schema's `domain`:
+
+- `kind_of(domain)`: its kind, `(tag, record)`, read through its dialect's union of kinds (`integer`, and the record of
+  `Expressions.ISOIEC11404.Expressions.OfInteger`); "a domain needs a kind" where it holds none.
+- `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by name;
+  a container as a tuple of its elements.
+- `name_of(domain)`: the name its dialect defines it by (its `Defines` entry's), or None.
+- `operations(dialect)`: a dialect's operations by name, in the order its singleton names them, each its
+  `Schemas.OfExpression`; `arity(operation)`: the number of its pattern's variables, its arguments.
+
 A `Domain` is a set of values: `contains(value)` tests membership at run time, and `includes(other)` tests statically
 that every value of `other` is also one of its own. A `Signature` gives an operator's number of arguments and the domain
 of its result for the domains of its arguments, or `None` when it does not apply to them. A dialect's vocabulary maps
@@ -16,10 +27,63 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Any, Protocol, runtime_checkable
 
+from . import Objects
+
 __all__ = [
+    "kind_of", "properties", "name_of", "operations", "arity",
     "Domain", "Signature", "OfTypes", "OfValues", "OfUnion", "Anything", "Function", "Same", "Overloaded", "Opaque",
     "Either", "overlaps",
 ]
+
+
+# --- Reading stored domains and operations ---
+
+
+def _branch(union: Any) -> tuple[str, Any] | None:
+    """The tag and the visitor of the branch a union value holds, or None where it holds none."""
+    schema = union.as_schema()
+    return next(((branch.name, getattr(union, branch.name)) for branch in (schema.branches if schema else ())
+                 if getattr(union, branch.name).as_schema() is not None), None)
+
+
+def kind_of(domain: Any) -> tuple[str, Any]:
+    """A stored domain's kind, `(tag, record)`: the branch of its dialect's union of kinds it holds, read through the
+    branch of `Expressions.Framework.DomainKind` that names its dialect."""
+    found: list[Any] = []
+    domain.kind.as_value(lambda a: a.as_union(lambda u: found.append(u) or u))
+    dialect = _branch(found[0])
+    if dialect is None:
+        raise ValueError("a domain needs a kind")
+    return _branch(dialect[1])  # type: ignore[return-value]  # a union value holds exactly one branch
+
+
+def properties(domain: Any) -> dict[str, Any]:
+    """A stored domain's kind's properties that are set, its parameters and its inferred properties alike, by name, in
+    its kind's schema's order: a scalar as itself, a container as a tuple of its elements."""
+    return {name: tuple(value.values) if isinstance(value, Objects.Listed) else value
+            for name, value in Objects.properties(kind_of(domain)[1]).items()}
+
+
+def name_of(domain: Any) -> str | None:
+    """The name a stored domain's dialect defines it by, its `Expressions.Framework.Defines` entry's; None where no
+    dialect defines it."""
+    return next((entry.values["name"] for entry in Objects.entries(domain, "dialect")), None)
+
+
+def operations(dialect: Any) -> dict[str, Any]:
+    """A dialect's operations by name, in the order its singleton names them (`Expressions.Framework.Operates`), each
+    its `Schemas.OfExpression`."""
+    return {entry.values["name"]: entry.targets["operation"] for entry in Objects.entries(dialect, "operations")}
+
+
+def arity(operation: Any) -> int:
+    """An operation's number of arguments: its pattern's variables."""
+    return len(operation.pattern.variables)
+
+
+# --- Domains and signatures in code ---
+# These are `Dialect.infer`'s, CAP-232's to replace with stored domains and operations, as domain inference reads them:
+# mbse:mbse-basis/docs/capabilities/CAP-232.md
 
 
 @runtime_checkable

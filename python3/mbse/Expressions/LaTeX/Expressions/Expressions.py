@@ -48,7 +48,8 @@ def install(txn: Any) -> Any:
             # its dialect: the singleton `Expressions.LaTeX.Expressions`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.LaTeX.Expressions.Dialect").ref(True).singleton("Expressions.LaTeX.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "uses": lambda a: a.relation([Framework.Uses]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("latex").schema([_.Dialect])]),
             # its union of its kinds: the framework's it reuses, its own, and invalid syntax
