@@ -26,6 +26,11 @@
  * `function`, `infix`, `prefix`, `field`, `map_`) write terms through the builders, in a transaction:
  * `store.Expressions.Framework.Term(function("AND", infix(">=", name("age"), 18), True))`. `Text.ToText` writes a term
  * as a formula, e.g. `=AND(this.age >= 18, NOT(ISERROR(this.email)))`.
+ *
+ * Its kind of domain, the branch of its union `Expressions.Excel.Expressions.DomainKind`, which `install` adds to the
+ * framework's `Expressions.Framework.DomainKind` as the branch `excel`: `error` (`OfError`), Excel's error values, its
+ * `members` their codes (`#DIV/0!`, ...), by index; inferred `ordered`. Its domains are stage 3's of the domains-as-data
+ * proposal.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -46,14 +51,16 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Excel.Expressions/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
+    .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, OfError: S.OfObject, // Kinds: the framework's
+      Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
       Cell: S.OfObject, Map: S.OfObject, Infix: S.OfObject, Prefix: S.OfObject,
       Field: S.OfObject }) // FrameworkTerm: the framework's union, by name
     .spec([
       // its dialect: the singleton `Expressions.Excel.Expressions`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Excel.Expressions.Dialect").ref(true).singleton("Expressions.Excel.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        uses: (a: any) => a.relation([Framework.Uses]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("excel").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, and invalid syntax
@@ -84,6 +91,15 @@ export function install(txn: any): any {
       // to its `Term`
       (_: any) => _.Expression.name("Expressions.Excel.Expressions.Expression").ref(true).refines([Framework.Expression]).properties({
         root: _.Term }),
+      // --- its kind of domain: its error values, their codes its members, then what follows from them ---
+      (_: any) => _.OfError.name("Expressions.Excel.Expressions.OfError").properties({
+        members: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // its error codes
+        ordered: S.OfBool }), // inferred
+      (_: any) => _.DomainKind.name("Expressions.Excel.Expressions.DomainKind").branches([
+        (t: any) => t.name("error").schema([_.OfError]),
+      ]),
+      (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
+        (t: any) => t.name("excel").schema([_.DomainKind])]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("excel").schema([_.Term])]),
     ])]))]);

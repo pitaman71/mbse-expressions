@@ -4,8 +4,9 @@
  * `build()` returns the cases, name -> [root schema, root, store]: each case but `domains` a term value of
  * `Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
  * dialect's, written nested. `DIALECTS` names the dialect that reads each case other than Patterns'. The `domains` case
- * is data: Patterns' dialect, the singleton `Expressions.Framework.Patterns` (`Expressions.Framework.Patterns.Dialect`), naming its
- * operations and owning its domains by name, a packed one among them, written as one document. The `invalid` case is a
+ * is data: ISO/IEC 11404's dialect, the singleton `Expressions.ISOIEC11404.Expressions`
+ * (`Expressions.ISOIEC11404.Expressions.Dialect`), owning its domains by name, each kind its dialect's then its own, an
+ * enum and a packed one among them, written as one document. The `invalid` case is a
  * Python3 term holding invalid syntax and literals with their spelling; the `typescript5` case a TypeScript5 term of every
  * kind, written through the builders. Each implementation writes its
  * snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
@@ -24,7 +25,11 @@ import * as Latex from "../LaTeX/Expressions/index.js";
 import * as Matlab from "../MATLAB/Expressions/index.js";
 import * as Expressions from "../Framework/Patterns/Expressions.js";
 import * as Patterns from "../Framework/Patterns/index.js";
+import * as IEEE1164 from "../IEEE1164/Expressions.js";
+import * as IEEE754 from "../IEEE754/Expressions.js";
+import * as ISOIEC11404 from "../ISOIEC11404/Expressions.js";
 import * as Python3 from "../Python/Python3/index.js";
+import * as Unicode from "../Unicode/Expressions.js";
 import * as SystemVerilog from "../SystemVerilog/Expressions/index.js";
 import * as TypeScript5 from "../TypeScript/TypeScript5/index.js";
 import * as Framework from "../Framework/index.js";
@@ -52,6 +57,10 @@ export function build(): Map<string, Case> {
   const E = Expressions;
   const store: any = new Builders.Store();
   store.transaction(Framework.install);
+  store.transaction(ISOIEC11404.install); // the standard dialects, before the dialects that use them
+  store.transaction(IEEE754.install);
+  store.transaction(IEEE1164.install);
+  store.transaction(Unicode.install);
   store.transaction(Patterns.install);
   store.transaction(Python3.install);
   store.transaction(Matlab.install);
@@ -61,17 +70,17 @@ export function build(): Map<string, Case> {
   store.transaction(Cpp.install);
   store.transaction(SystemVerilog.install);
   store.transaction(TypeScript5.install);
-  const defined = store.transaction(Patterns.define)[0]; // Patterns' dialect, its operations and its domains
+  const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
 
-  // --- domains: Patterns' dialect, its operations by name and its domains, owned by name; an enum and a domain packing it
-  // into uint8 added ---
+  // --- domains: ISO/IEC 11404's dialect and its domains, owned by name; an enum and a domain packing it into uint8
+  // added ---
   store.transaction(() => {
     const state = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
-      (u: any) => u.enum((e: any) => e.members(["IDLE", "RUN"]))))));
+      (u: any) => u.isoiec11404((v: any) => v.enum((e: any) => e.members(["IDLE", "RUN"]).ordered(false)))))));
     const mode = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
-      (u: any) => u.packed((e: any) => e.codes([0n, 1n]))))).packs((a: any) => a.insert(
+      (u: any) => u.isoiec11404((v: any) => v.packed((e: any) => e.codes([0n, 1n]).ordered(true)))))).packs((a: any) => a.insert(
       (e: any) => e.domain(state).representation(defined.get("uint8")))));
-    store.Expressions.Framework.Patterns.Dialect(defined.get("dialect"), (b: any) => b.domains({
+    store.Expressions.ISOIEC11404.Expressions.Dialect(defined.get("dialect"), (b: any) => b.domains({
       state: (e: any) => e.domain(state), mode: (e: any) => e.domain(mode) }));
   });
 
@@ -307,6 +316,6 @@ export function build(): Map<string, Case> {
     ["typescript5", TS.DIALECT.spec(typescript5)], ["invalid", invalid],
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   terms.set("domains", defined.get("dialect"));
-  const [Term, Dialect] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.Framework.Patterns.Dialect")];
+  const [Term, Dialect] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.ISOIEC11404.Expressions.Dialect")];
   return new Map<string, Case>(CASES.map((name) => [name, [name === "domains" ? Dialect : Term, terms.get(name), store]]));
 }

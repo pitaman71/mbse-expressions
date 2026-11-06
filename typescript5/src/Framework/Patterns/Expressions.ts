@@ -26,9 +26,10 @@
  * `Expressions.Framework.Patterns.Collection`, a list or a mapping; an unrestricted `Schemas.OfAny` where any value goes), each
  * written in the builders' fluent syntax. Validation reads Patterns' vocabulary (`Domains.SIGNATURES`, the same names,
  * which a term alone, in no store, can read): a call naming an operation Patterns does not define is refused. `install`
- * also adds Patterns' kinds of domain to `Expressions.Framework.DomainKind` (`Domains`) and the schemas of its domains,
- * and Patterns' dialect, the singleton `Expressions.Framework.Patterns`; `define` writes the dialect's data: its operations by name
- * (`Expressions.Framework.Operates`) and its domains, which it owns by name (`Expressions.Framework.Defines`).
+ * also adds Patterns' dialect, the singleton `Expressions.Framework.Patterns`; `define` writes the dialect's data, its
+ * operations by name (`Expressions.Framework.Operates`). Patterns has no kinds of domain and owns no domains: the kinds
+ * and the domains its values take are the standard dialects' (ISO/IEC 11404's, IEEE 754's, IEEE 1164's and Unicode's,
+ * `@mbse/expressions/ISOIEC11404/Expressions` and the others), whose installs run before Patterns'.
  *
  * `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
  *
@@ -48,10 +49,9 @@ export const CORE: ReadonlyMap<string, number> = new Map(
   [...Domains.SIGNATURES].map(([name, signature]) => [name, signature.arity()]));
 
 /** Patterns' union of its kinds, added to the framework's terms as the branch `patterns`, and its own kind; its
- * dialect's schema, whose singleton is `Expressions.Framework.Patterns`; its kinds of domain, added to the framework's, and its
- * domains' schemas; and its operations, each an expression schema of its module. Run after `Framework.install`, in a
- * transaction of its own; run again, it writes nothing. Its dialect's data, its operations by name and its domains,
- * `define` writes after it.
+ * dialect's schema, whose singleton is `Expressions.Framework.Patterns`; and its operations, each an expression schema
+ * of its module. Run after `Framework.install` and the standard dialects' installs, in a transaction of its own; run
+ * again, it writes nothing. Its dialect's data, its operations by name, `define` writes after it.
  * Its holder, `Expressions.Framework.Patterns.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
  * `Term`. */
 export function install(txn: any): any {
@@ -61,11 +61,6 @@ export function install(txn: any): any {
     .symbols({
       FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject, Quantifier: S.OfObject, // FrameworkTerm: the framework's, by name
       Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and Patterns'
-      DomainKind: S.OfUnion, Domain: S.OfObject, Packs: S.OfRelation,
-      OfBool: S.OfObject, OfInteger: S.OfObject, OfIeee754: S.OfObject, OfBits: S.OfObject, OfBytes: S.OfObject,
-      OfUnicode: S.OfObject, OfIeee1164: S.OfObject, OfEnum: S.OfObject, OfPacked: S.OfObject,
-      bool: S.OfAny, int: S.OfAny, float: S.OfAny, str: S.OfAny, bytes: S.OfAny, uint8: S.OfAny, binary32: S.OfAny,
-      std_logic: S.OfAny,
       Number: S.OfAny, Ordered: S.OfAny, Collection: S.OfAny,
       op_get: S.OfExpression, op_has: S.OfExpression, op_eq: S.OfExpression, op_ne: S.OfExpression,
       op_lt: S.OfExpression, op_le: S.OfExpression, op_gt: S.OfExpression, op_ge: S.OfExpression,
@@ -80,7 +75,8 @@ export function install(txn: any): any {
       // --- Patterns' dialect: the singleton `Expressions.Framework.Patterns`, a branch of the framework's kind union ---
       (_: any) => _.Dialect.name("Expressions.Framework.Patterns.Dialect").ref(true).singleton("Expressions.Framework.Patterns").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        uses: (a: any) => a.relation([Framework.Uses]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("patterns").schema([_.Dialect])]),
 
@@ -109,47 +105,6 @@ export function install(txn: any): any {
         root: _.Term }),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("patterns").schema([_.Term])]),
-
-      // --- Its kinds of domain, each a standard's parameters; a packed domain's enum and representation are domains,
-      // which a value cannot hold: `Packs` links them ---
-      (_: any) => _.OfBool.name("Expressions.Framework.Patterns.OfBool"),
-      (_: any) => _.OfInteger.name("Expressions.Framework.Patterns.OfInteger").properties({
-        width: S.OfInt, signed: S.OfBool, overflow: S.OfStr }),
-      (_: any) => _.OfIeee754.name("Expressions.Framework.Patterns.OfIeee754").properties({ format: S.OfStr, rounding: S.OfStr }),
-      (_: any) => _.OfBits.name("Expressions.Framework.Patterns.OfBits").properties({ width: S.OfInt }),
-      (_: any) => _.OfBytes.name("Expressions.Framework.Patterns.OfBytes").properties({ width: S.OfInt }),
-      (_: any) => _.OfUnicode.name("Expressions.Framework.Patterns.OfUnicode"),
-      (_: any) => _.OfIeee1164.name("Expressions.Framework.Patterns.OfIeee1164").properties({ width: S.OfInt }),
-      (_: any) => _.OfEnum.name("Expressions.Framework.Patterns.OfEnum").properties({
-        members: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])) }),
-      (_: any) => _.OfPacked.name("Expressions.Framework.Patterns.OfPacked").properties({
-        codes: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfInt])) }),
-      (_: any) => _.DomainKind.name("Expressions.Framework.DomainKind").branches([
-        (t: any) => t.name("bool").schema([_.OfBool]),
-        (t: any) => t.name("integer").schema([_.OfInteger]),
-        (t: any) => t.name("ieee754").schema([_.OfIeee754]),
-        (t: any) => t.name("bits").schema([_.OfBits]),
-        (t: any) => t.name("bytes").schema([_.OfBytes]),
-        (t: any) => t.name("unicode").schema([_.OfUnicode]),
-        (t: any) => t.name("ieee1164").schema([_.OfIeee1164]),
-        (t: any) => t.name("enum").schema([_.OfEnum]),
-        (t: any) => t.name("packed").schema([_.OfPacked]),
-      ]),
-      (_: any) => _.Packs.name("Expressions.Framework.Patterns.Packs").links([
-        (t: any) => t.name("packed"), (t: any) => t.name("domain").schema([_.Domain]),
-        (t: any) => t.name("representation").schema([_.Domain])]).uniques([["packed"]]),
-      (_: any) => _.Domain.name("Expressions.Framework.Domain").adjacencies({
-        packs: (a: any) => a.relation([_.Packs]).me("packed") }),
-
-      // --- Its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
-      (_: any) => _.bool.name("Expressions.Framework.Patterns.bool").schemas([S.OfBool]),
-      (_: any) => _.int.name("Expressions.Framework.Patterns.int").schemas([S.OfInt]),
-      (_: any) => _.float.name("Expressions.Framework.Patterns.float").schemas([S.OfFloat]),
-      (_: any) => _.str.name("Expressions.Framework.Patterns.str").schemas([S.OfStr]),
-      (_: any) => _.bytes.name("Expressions.Framework.Patterns.bytes").schemas([S.OfBytes]),
-      (_: any) => _.uint8.name("Expressions.Framework.Patterns.uint8").schemas([S.OfInt]),
-      (_: any) => _.binary32.name("Expressions.Framework.Patterns.binary32").schemas([S.OfFloat]),
-      (_: any) => _.std_logic.name("Expressions.Framework.Patterns.std_logic").schemas([S.OfStr]),
 
       // --- Its operations: the schemas their variables share, and each operation, which its dialect defines: its
       // pattern's variables its arguments, in order, and its result its return ---
@@ -244,16 +199,13 @@ export function install(txn: any): any {
     ])]))]);
 }
 
-/** Patterns' dialect as data: the singleton `Expressions.Framework.Patterns` naming its operations (`operations`, through
- * `Expressions.Framework.Operates`) and owning its domains by name (`domains`, through `Expressions.Framework.Defines`),
- * each related to its schema (`Expressions.Framework.Patterns.uint8`) by `Expressions.Framework.HasDomain`. Run after `install`, in a
- * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its
- * name: `store.transaction(Patterns.define)[0].get("uint8")`. */
+/** Patterns' dialect as data: the singleton `Expressions.Framework.Patterns` naming its operations (`operations`,
+ * through `Expressions.Framework.Operates`); it owns no domains. Run after `install`, in a transaction of its own; run
+ * again, it writes nothing. Its frame binds the dialect: `store.transaction(Patterns.define)[0].get("dialect")`. */
 export function define(txn: any): any {
-  const [Patterns, Domain] = [txn.Expressions.Framework.Patterns, txn.Expressions.Framework.Domain];
+  const Patterns = txn.Expressions.Framework.Patterns;
   return txn.uid("mbse.Expressions.Patterns.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: Patterns.Dialect, bool: Domain, int: Domain, float: Domain, str: Domain, bytes: Domain,
-      uint8: Domain, binary32: Domain, std_logic: Domain })
+    .symbols({ dialect: Patterns.Dialect })
     .spec([
       (_: any) => _.dialect.operations({
         get: (e: any) => e.operation(Patterns.get), has: (e: any) => e.operation(Patterns.has),
@@ -271,28 +223,7 @@ export function define(txn: any): any {
         in: (e: any) => e.operation(Patterns.in), sum: (e: any) => e.operation(Patterns.sum),
         min: (e: any) => e.operation(Patterns.min), max: (e: any) => e.operation(Patterns.max),
         unique: (e: any) => e.operation(Patterns.unique), entries: (e: any) => e.operation(Patterns.entries),
-      }).domains({
-        bool: (e: any) => e.domain(_.bool), int: (e: any) => e.domain(_.int),
-        float: (e: any) => e.domain(_.float), str: (e: any) => e.domain(_.str),
-        bytes: (e: any) => e.domain(_.bytes), uint8: (e: any) => e.domain(_.uint8),
-        binary32: (e: any) => e.domain(_.binary32), std_logic: (e: any) => e.domain(_.std_logic),
       }),
-      (_: any) => _.bool.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.bool((d: any) => d)))).schema([
-        Patterns.bool]),
-      (_: any) => _.int.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.integer(
-        (d: any) => d.signed(true).overflow("raise"))))).schema([Patterns.int]),
-      (_: any) => _.float.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754(
-        (d: any) => d.format("binary64").rounding("roundTiesToEven"))))).schema([Patterns.float]),
-      (_: any) => _.str.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.unicode((d: any) => d)))).schema([
-        Patterns.str]),
-      (_: any) => _.bytes.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.bytes((d: any) => d)))).schema([
-        Patterns.bytes]),
-      (_: any) => _.uint8.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.integer(
-        (d: any) => d.width(8n).signed(false).overflow("wrap"))))).schema([Patterns.uint8]),
-      (_: any) => _.binary32.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754(
-        (d: any) => d.format("binary32").rounding("roundTiesToEven"))))).schema([Patterns.binary32]),
-      (_: any) => _.std_logic.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee1164((d: any) => d))))
-        .schema([Patterns.std_logic]),
     ])]))]);
 }
 

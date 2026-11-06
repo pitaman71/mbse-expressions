@@ -46,7 +46,8 @@ export function install(txn: any): any {
       // its dialect: the singleton `Expressions.LaTeX.Expressions`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.LaTeX.Expressions.Dialect").ref(true).singleton("Expressions.LaTeX.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        uses: (a: any) => a.relation([Framework.Uses]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("latex").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, and invalid syntax
