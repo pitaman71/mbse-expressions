@@ -25,6 +25,11 @@ syntax (`error`, `missing`); a term carries no domain:
 `function`, `infix`, `prefix`, `field`, `map_`) write terms through the builders, in a transaction:
 `store.Expressions.Framework.Term(function("AND", infix(">=", name("age"), 18), True))`. `Text.ToText` writes a term
 as a formula, e.g. `=AND(this.age >= 18, NOT(ISERROR(this.email)))`.
+
+Its kind of domain, the branch of its union `Expressions.Excel.Expressions.DomainKind`, which `install` adds to the
+framework's `Expressions.Framework.DomainKind` as the branch `excel`: `error` (`OfError`), Excel's error values, its
+`members` their codes (`#DIV/0!`, ...), by index; inferred `ordered`. Its domains are stage 3's of the domains-as-data
+proposal.
 """
 
 from __future__ import annotations
@@ -48,7 +53,8 @@ def install(txn: Any) -> Any:
     its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Excel.Expressions/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
+        .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion, "OfError": S.OfObject,  # Kinds: the framework's
+                  "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Cell": S.OfObject, "Map": S.OfObject, "Infix": S.OfObject, "Prefix": S.OfObject,
                   "Field": S.OfObject})  # FrameworkTerm: the framework's union, by name
         .spec([
@@ -87,6 +93,15 @@ def install(txn: Any) -> Any:
             # to its `Term`
             lambda _: _.Expression.name("Expressions.Excel.Expressions.Expression").ref(True).refines([Framework.Expression]).properties({
                 "root": _.Term}),
+            # --- its kind of domain: its error values, their codes its members, then what follows from them ---
+            lambda _: _.OfError.name("Expressions.Excel.Expressions.OfError").properties({
+                "members": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfStr])),  # its error codes
+                "ordered": S.OfBool}),  # inferred
+            lambda _: _.DomainKind.name("Expressions.Excel.Expressions.DomainKind").branches([
+                lambda t: t.name("error").schema([_.OfError]),
+            ]),
+            lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
+                lambda t: t.name("excel").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("excel").schema([_.Term])]),
         ])]))])

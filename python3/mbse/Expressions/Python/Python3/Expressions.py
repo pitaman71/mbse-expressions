@@ -58,6 +58,12 @@ calls, not a dialect.
 builders, wherever a term is written, in a transaction; a helper's writer (`keyword`, `comparison`, `comprehension`,
 `arg`, `formattedvalue`, ...) is given where its kind takes one. `Text.ToText` writes an expression as Python source,
 parenthesized only where precedence requires, and `Text.FromText` reads one back: imports, then one expression.
+
+Its kinds of domain, the branches of its union `Expressions.Python.Python3.DomainKind`, which `install` adds to the
+framework's `Expressions.Framework.DomainKind` as the branch `python3`, each with the inferred `ordered`: `str`
+(`OfStr`), sequences of code points, lone surrogates included; and the tokens `nonetype` (`OfNoneType`), `None`'s type,
+and `ellipsis` (`OfEllipsis`), `...`'s. A token's domain has no schema: its value is a `constant`'s. Its domains are
+stage 3's of the domains-as-data proposal.
 """
 
 from __future__ import annotations
@@ -109,7 +115,9 @@ def install(txn: Any) -> Any:
     its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Python.Python3/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion,  # Kinds: the framework's
+                  "OfStr": S.OfObject, "OfNoneType": S.OfObject, "OfEllipsis": S.OfObject,
+                  "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   "Pattern": S.OfUnion,
                   "Expression": S.OfObject, "Literal": S.OfObject, "Constant": S.OfObject,
                   "ConcatenatedString": S.OfObject, "StringText": S.OfObject, "FormatSpec": S.OfObject,
@@ -286,6 +294,17 @@ def install(txn: Any) -> Any:
             # to its `Term`
             lambda _: _.Expression.name("Expressions.Python.Python3.Expression").ref(True).refines([Framework.Expression]).properties({
                 "root": _.Term}),
+            # --- its kinds of domain: `str`, and the tokens of `None` and `...`; each inferred `ordered` ---
+            lambda _: _.OfStr.name("Expressions.Python.Python3.OfStr").properties({"ordered": S.OfBool}),
+            lambda _: _.OfNoneType.name("Expressions.Python.Python3.OfNoneType").properties({"ordered": S.OfBool}),
+            lambda _: _.OfEllipsis.name("Expressions.Python.Python3.OfEllipsis").properties({"ordered": S.OfBool}),
+            lambda _: _.DomainKind.name("Expressions.Python.Python3.DomainKind").branches([
+                lambda t: t.name("str").schema([_.OfStr]),
+                lambda t: t.name("nonetype").schema([_.OfNoneType]),
+                lambda t: t.name("ellipsis").schema([_.OfEllipsis]),
+            ]),
+            lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
+                lambda t: t.name("python3").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("python3").schema([_.Term])]),
         ])]))])

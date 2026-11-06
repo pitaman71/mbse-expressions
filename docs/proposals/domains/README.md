@@ -263,9 +263,27 @@ imaginary number is a `literal` holding one (its `constant` keeps `None` and `..
 
 **Uses** (Decided, F). `Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`, each dialect's singleton
 the adjacency `uses`, written by the install of a dialect that uses another's kinds or schemas. In stage 1, Python3
-uses IEEE 754 (`Complex`); the others gain their uses with their domains in stage 3. The installs run in the order
+uses IEEE 754 (`Complex`), pending I and J; the others gain their uses with their domains in stage 3. The installs run in the order
 Framework, the four standard dialects, then the dialects that use them, in every caller (tests, tutorials, toolkit,
 skill, corpus).
+
+**Found while building, for the user** (I and J; built without them meanwhile). Each comes from a rule of
+mbse-schemas, not a defect, and is not worked around:
+
+- **I. Who writes `Uses`.** An install cannot write its dialect's `Uses` entry: binding a singleton takes its schema by
+  its registered name when the transaction is made, before the install's upsert has made the schema (`LookupError: no
+  schema registered as 'Expressions.Python.Python3.Dialect'`), as an install and what uses it are separate
+  transactions ([API](../port/API.md), the installs). (a) The dialect's `define` writes it, with its other data; a
+  dialect with no `define` today (the standard dialects have one) gains one where it uses another. (b) mbse-schemas
+  lets one transaction bind a singleton whose schema it makes, a sibling's change. *Recommended: (a)*: a use is the
+  dialect's data, as its domains and operations are, and `define` writes those.
+- **J. Python3's complex number.** A literal's `value` is an unrestricted `Schemas.OfAny`, which takes a value already
+  built, carrying its schema, never a spec (mbse-schemas' ANY-02), and a writer reaches no store to build one; so no
+  writer (`P.constant(1j)`, `FromText`) can write a literal holding a `Complex`. (a) Python3's `constant` holds it:
+  its `complex` property, of `Expressions.Python.Python3.Complex` (`real`, `imag`, each IEEE 754's `binary64`),
+  written through a spec as any value object, its `singleton` the other case. (b) The writers take the store, or a
+  built `Complex` (an API change). (c) mbse-schemas lets a spec of an unrestricted `OfAny` name its schema, a sibling's
+  change. *Recommended: (a)*: `complex` is a value schema, as H decided, held where a schema can say so.
 
 **The reading interface**, in `Framework.Domains` (TypeScript the same, camelCase), over a stored domain's
 `Readers.OfObject`, found by its path (`dialect.domains({"name": "uint8"})`,
