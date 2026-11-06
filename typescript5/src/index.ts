@@ -9,7 +9,10 @@
  * `Expressions`, `Evaluators`, `Domains` and `Partials` are the Patterns dialect's (formerly Basic), the neutral form of
  * every constraint. The framework is `@mbse/expressions/Framework`, each dialect is under its family, at
  * `@mbse/expressions/<Family>/<Dialect>` (`@mbse/expressions/Framework/Patterns`, `@mbse/expressions/Python/Python3`,
- * `@mbse/expressions/C/Expressions`), and the translators between them are `@mbse/expressions/Translators`. Expressions are stored in an mbse-schemas store, whose
+ * `@mbse/expressions/C/Expressions`), and the translators between them are `@mbse/expressions/Translators`. The kinds
+ * of value domain and the domains are the standard dialects' (`@mbse/expressions/ISOIEC11404/Expressions`,
+ * `IEEE754/Expressions`, `IEEE1164/Expressions` and `Unicode/Expressions`), installed after the framework and before
+ * the dialects that use them. Expressions are stored in an mbse-schemas store, whose
  * schemas `Framework.install` and each dialect's `install` define (docs/proposals/port/API.md). */
 
 export * as Domains from "./Framework/Patterns/Domains.js";

@@ -45,6 +45,11 @@
  * (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
  * expression an `idexpression` (`identifier("x")`, and a callee named by a string):
  * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
+ *
+ * Its kind of domain, the branch of its union `Expressions.Cpp.Expressions.DomainKind`, which `install` adds to the
+ * framework's `Expressions.Framework.DomainKind` as the branch `cpp`: the token `nullptr_t` (`OfNullptr`), C++'s own, with
+ * the inferred `ordered`; its domain has no schema, its value a `constant`'s. Its domains are stage 3's of the
+ * domains-as-data proposal.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -90,6 +95,7 @@ export function install(txn: any): any {
   const many = (element: any): any => S.OfContainer((c: any) => c.index([S.OfInt]).element([element]));
   return txn.uid("mbse.Expressions.Cpp.Expressions/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
+      Kinds: S.OfUnion, DomainKind: S.OfUnion, OfNullptr: S.OfObject, // Kinds: the framework's
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       Type: S.OfUnion, Pattern: S.OfUnion, Name: S.OfUnion, Capture: S.OfUnion,
       Requirement: S.OfUnion, Designator: S.OfUnion, Initializer: S.OfUnion,
@@ -133,7 +139,8 @@ export function install(txn: any): any {
       // its dialect: the singleton `Expressions.Cpp.Expressions`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(true).singleton("Expressions.Cpp.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect")}),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        uses: (a: any) => a.relation([Framework.Uses]).me("dialect")}),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("cpp").schema([_.Dialect])]),
       // its union of its kinds: its own, the framework's it reuses, a type name, an initializer list's
@@ -445,6 +452,13 @@ export function install(txn: any): any {
       // narrowed to its `Term`
       (_: any) => _.Expression.name("Expressions.Cpp.Expressions.Expression").ref(true).refines([Framework.Expression]).properties({
         root: _.Term}),
+      // --- its kind of domain: the token of `nullptr`, its own, not C's; inferred `ordered` ---
+      (_: any) => _.OfNullptr.name("Expressions.Cpp.Expressions.OfNullptr").properties({ ordered: S.OfBool }),
+      (_: any) => _.DomainKind.name("Expressions.Cpp.Expressions.DomainKind").branches([
+        (t: any) => t.name("nullptr_t").schema([_.OfNullptr]),
+      ]),
+      (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
+        (t: any) => t.name("cpp").schema([_.DomainKind])]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("cpp").schema([_.Term])]),
 

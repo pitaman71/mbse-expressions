@@ -3,8 +3,9 @@
 
 # Test plan — typescript5
 
-Scope: everything under `typescript5/src` (the framework, the Patterns, Python3, MATLAB, Excel, LaTeX, C, Cpp and
-SystemVerilog dialects, and the translators between them) and cross-implementation conformance. The design reference is
+Scope: everything under `typescript5/src` (the framework, the standard dialects ISO/IEC 11404, IEEE 754, IEEE 1164 and
+Unicode, the Patterns, Python3, MATLAB, Excel, LaTeX, C, Cpp and SystemVerilog dialects, and the translators between
+them) and cross-implementation conformance. The design reference is
 mbse-basis [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md), with its capabilities;
 this plan and the Python one mirror each other case for case, with the deliberate differences of
 `../../docs/EQUIVALENCE.md`. mbse-schemas is tested in mbse-schemas.
@@ -31,7 +32,7 @@ Each case's and each tutorial step's markdown cell starts with its anchor, as in
 | `06_Dialects.ipynb` | DIA | 26 | as in Python, with Python3 expressions written by constructors (DIA-01 asserts `Python3.Text` has no `FromText`), Python's rules checked against the same tables of values and errors as the Python suite, and a `Module` in place of numpy; DIA-20 reads the same node list of `ast`, but checks it against the running Python's `ast` in Python only, and DIA-19 writes through the builders the literals and f-strings the Python suite also reads with `FromText`; JavaScript has no complex numbers or `...`, written `Complex` and `ELLIPSIS`; the data objects' integers are bigints, and a `Map` is a mapping too (Python, MATLAB, Excel, SystemVerilog); TypeScript5's number is a `number` and its bigint a `bigint` (DIA-21), and `Text.number` is JavaScript's `String` (DIA-22); C's and C++'s integers are bigints and their floats numbers (DIA-11, DIA-12, DIA-24) |
 | `07_Translators.ipynb` | TRN | 14 | as in Python, but for evaluating the NumPy style over columns |
 | `08_Skill.ipynb` | SKL | 3 | as in Python, SKL-02 retired |
-| `09_Domains.ipynb` | DOM | 11 | as in Python; domains compare with `equals()`, widths and codes are `bigint`s, and builders are classes (`new D.OfInteger.Builder()`); the IEEE 754 table is checked against `decimal` and the host's floats in Python only |
+| `09_Domains.ipynb` | DOM | 13 | as in Python; domains compare with `equals()`, widths and codes are `bigint`s, and builders are classes (`new D.OfInteger.Builder()`); the IEEE 754 table is checked against `decimal` and the host's floats in Python only; the reading interface is camelCase (`Domains.kindOf`, `nameOf`), its properties and operations `Map`s and a container an array, and a standard dialect's module is checked by its import path (DOM-17) |
 | `10_Collections.ipynb` | COL | 8 | as in Python; a mapping's entries are arrays; collections, records and collection domains compare with `equals()`, and a record's fields are a `Map` |
 | `11_Partials.ipynb` | PAR | 4 | as in Python; the reducer is called with `REDUCER.run(term, variables)` |
 
@@ -49,7 +50,7 @@ A retired case's ID is not reused; the cases after it keep theirs.
 | DOM-16 | `pack` gave a packed value's code in its representation, and `unpack` the packed value of a code | Deferred with domain inference (stage 3, Decided, 2) |
 | SKL-02 | Every complete program in the skill ran: Python's, and TypeScript's type-checked strictly first | The skill holds no programs, as the user decided (2026-11-03): its hows are these suites' and the tutorials' cases, which SKL-03 checks it links in both languages |
 
-Total: 103 cases (FRM-11, FRM-12 and DIA-18 added in stage 2; DIA-19 and DIA-20 in stage 3, `Python3` complete; DIA-21, DIA-22 and DIA-23 in stage 4, `TypeScript5`; DIA-24, DIA-25 and DIA-26 in stage 5, `C` and `Cpp`; SKL-04 added, for skill gaps; SKL-02 retired), with the same IDs in the same order in both implementations.
+Total: 105 cases (FRM-11, FRM-12 and DIA-18 added in stage 2; DIA-19 and DIA-20 in stage 3, `Python3` complete; DIA-21, DIA-22 and DIA-23 in stage 4, `TypeScript5`; DIA-24, DIA-25 and DIA-26 in stage 5, `C` and `Cpp`; SKL-04 added, for skill gaps; SKL-02 retired; DOM-17 added in domains as data's stage 1, the standard dialects, and DOM-18, a language's own kinds), with the same IDs in the same order in both implementations.
 
 ---
 

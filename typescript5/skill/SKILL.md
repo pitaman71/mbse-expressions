@@ -51,8 +51,10 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
 1. **A constraint is data, written by writers, in a store.** *Why*: data can be stored beside what it is about,
    versioned, sent, and loaded by a program in another language; code can only be run, and only by its own language.
    *When*: every constraint. *How*: in an mbse-schemas store, run the framework's install, then each dialect's you
-   write, each in a transaction of its own, once per store (`store.transaction(Framework.install)`, then
-   `Patterns.install`, ...). Build a constraint with writers: `E.variable(name)`, `E.literal(value)`,
+   write, each in a transaction of its own, once per store: the framework's, then the standard dialects' whose kinds of
+   domain the others use (`ISOIEC11404`, `IEEE754`, `IEEE1164`, `Unicode`), then the rest
+   (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...); an
+   install whose dialects are missing is refused. Build a constraint with writers: `E.variable(name)`, `E.literal(value)`,
    `E.let_(name, value, body)` and `E.operation(name, ...)`; reading a property of a writer is `get` (`x.age`, or
    `x.get(name)` for a name a writer has as a method), and its methods build calls (`.ge(18)`, `.and_(...)`). A
    writer builds data and evaluates nothing. Write it within a transaction, as the root of an expression
@@ -194,13 +196,19 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
 12. **Dialects, operations and domains are data.** *Why*: a program learns what a dialect can say from the store,
    without its code, and a domain is named once. *When*: listing a dialect's vocabulary, or reading a domain. *How*:
    a dialect's `define`, run after its install in a transaction of its own, writes its singleton, found by its global
-   name (`store.Instances.Expressions.Framework.Patterns`), which names its operations and owns its domains by name. An operation
-   is an expression schema: its pattern's variables are its arguments, in order, and its `result` is its return. Read
-   a domain with `Domains.read`. `DIALECT.infer(term, domains)` finds a term's domain from its vocabulary's signatures
+   name (`store.Instances.Expressions.Framework.Patterns`), which names its operations and owns its domains by name. A
+   published standard is a dialect of its own, holding its kinds of domain and its domains (`ISOIEC11404`'s
+   `integer` and `uint8`, `IEEE754`'s `binary32`, ...), and a dialect uses another's kinds as its uses say. An
+   operation is an expression schema: its pattern's variables are its arguments, in order, and its `result` is its
+   return. Read a stored domain with the framework's `Domains.kind_of`, `Domains.properties` (its parameters and its
+   inferred properties, such as an integer's `least` and `greatest`) and `Domains.name_of`, and a dialect's operations
+   with `Domains.operations` and `Domains.arity`. `DIALECT.infer(term, domains)` finds a term's domain from its vocabulary's signatures
    and the domains its variables are given; a quantifier's name has its items' domain.
    [CAP-097: value domains of published standards](mbse:mbse-basis/docs/capabilities/CAP-097.md#value-domains).
    - Python: [T07.5: A dialect is data](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.5) · TypeScript: [T07.5: A dialect is data](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.5)
    - Python: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
+   - Python: [DOM-17: The standard dialects own the kinds and domains, with their inferred properties, read through the framework's interface](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-17) · TypeScript: [DOM-17: The standard dialects own the kinds and domains, with their inferred properties, read through the framework's interface](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-17)
+   - Python: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic, Python3's and TypeScript5's strings, the tokens and Excel's errors](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-18) · TypeScript: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic, Python3's and TypeScript5's strings, the tokens and Excel's errors](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-18)
    - Python: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-03) · TypeScript: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-03)
    - Python: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-07) · TypeScript: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-07)
    - Python: [DOM-09: Signatures take any domain of a family, so inference follows the domains an environment gives](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-09) · TypeScript: [DOM-09: Signatures take any domain of a family, so inference follows the domains an environment gives](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-09)

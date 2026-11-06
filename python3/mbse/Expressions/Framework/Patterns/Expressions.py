@@ -25,9 +25,10 @@ the basic scalars and containers allow (`Expressions.Framework.Patterns.Number`,
 `Expressions.Framework.Patterns.Collection`, a list or a mapping; an unrestricted `Schemas.OfAny` where any value goes), each
 written in the builders' fluent syntax. Validation reads Patterns' vocabulary (`Domains.SIGNATURES`, the same names,
 which a term alone, in no store, can read): a call naming an operation Patterns does not define is refused. `install`
-also adds Patterns' kinds of domain to `Expressions.Framework.DomainKind` (`Domains`) and the schemas of its domains,
-and Patterns' dialect, the singleton `Expressions.Framework.Patterns`; `define` writes the dialect's data: its operations by name
-(`Expressions.Framework.Operates`) and its domains, which it owns by name (`Expressions.Framework.Defines`).
+also adds Patterns' dialect, the singleton `Expressions.Framework.Patterns`; `define` writes the dialect's data, its
+operations by name (`Expressions.Framework.Operates`). Patterns has no kinds of domain and owns no domains: the kinds
+and the domains its values take are the standard dialects' (ISO/IEC 11404's, IEEE 754's, IEEE 1164's and Unicode's,
+`mbse.Expressions.ISOIEC11404` and the others), whose installs run before Patterns'.
 
 `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
 
@@ -57,22 +58,15 @@ CORE: dict[str, int] = {name: signature.arity() for name, signature in Domains.S
 
 def install(txn: Any) -> Any:
     """Patterns' union of its kinds, added to the framework's terms as the branch `patterns`, and its own kind; its
-    dialect's schema, whose singleton is `Expressions.Framework.Patterns`; its kinds of domain, added to the framework's, and its
-    domains' schemas; and its operations, each an expression schema of its module. Run after `Framework.install`, in a
-    transaction of its own; run again, it writes nothing. Its dialect's data, its operations by name and its domains,
-    `define` writes after it.
+    dialect's schema, whose singleton is `Expressions.Framework.Patterns`; and its operations, each an expression schema
+    of its module. Run after `Framework.install` and the standard dialects' installs, in a transaction of its own; run
+    again, it writes nothing. Its dialect's data, its operations by name, `define` writes after it.
     Its holder, `Expressions.Framework.Patterns.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed
     to its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.Framework.Patterns/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject, "Quantifier": S.OfObject,  # FrameworkTerm: the framework's, by name
                   "Dialects": S.OfUnion, "Dialect": S.OfObject,  # the framework's kind union of dialects, and Patterns'
-                  "DomainKind": S.OfUnion, "Domain": S.OfObject, "Packs": S.OfRelation,
-                  "OfBool": S.OfObject, "OfInteger": S.OfObject, "OfIeee754": S.OfObject, "OfBits": S.OfObject,
-                  "OfBytes": S.OfObject, "OfUnicode": S.OfObject, "OfIeee1164": S.OfObject, "OfEnum": S.OfObject,
-                  "OfPacked": S.OfObject,
-                  "bool": S.OfAny, "int": S.OfAny, "float": S.OfAny, "str": S.OfAny, "bytes": S.OfAny, "uint8": S.OfAny,
-                  "binary32": S.OfAny, "std_logic": S.OfAny,
                   "Number": S.OfAny, "Ordered": S.OfAny, "Collection": S.OfAny,
                   "op_get": S.OfExpression, "op_has": S.OfExpression, "op_eq": S.OfExpression, "op_ne": S.OfExpression,
                   "op_lt": S.OfExpression, "op_le": S.OfExpression, "op_gt": S.OfExpression, "op_ge": S.OfExpression,
@@ -88,7 +82,8 @@ def install(txn: Any) -> Any:
             # --- Patterns' dialect: the singleton `Expressions.Framework.Patterns`, a branch of the framework's kind union ---
             lambda _: _.Dialect.name("Expressions.Framework.Patterns.Dialect").ref(True).singleton("Expressions.Framework.Patterns").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "uses": lambda a: a.relation([Framework.Uses]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("patterns").schema([_.Dialect])]),
 
@@ -117,47 +112,6 @@ def install(txn: Any) -> Any:
                 "root": _.Term}),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("patterns").schema([_.Term])]),
-
-            # --- Its kinds of domain, each a standard's parameters; a packed domain's enum and representation are
-            # domains, which a value cannot hold: `Packs` links them ---
-            lambda _: _.OfBool.name("Expressions.Framework.Patterns.OfBool"),
-            lambda _: _.OfInteger.name("Expressions.Framework.Patterns.OfInteger").properties({
-                "width": S.OfInt, "signed": S.OfBool, "overflow": S.OfStr}),
-            lambda _: _.OfIeee754.name("Expressions.Framework.Patterns.OfIeee754").properties({"format": S.OfStr, "rounding": S.OfStr}),
-            lambda _: _.OfBits.name("Expressions.Framework.Patterns.OfBits").properties({"width": S.OfInt}),
-            lambda _: _.OfBytes.name("Expressions.Framework.Patterns.OfBytes").properties({"width": S.OfInt}),
-            lambda _: _.OfUnicode.name("Expressions.Framework.Patterns.OfUnicode"),
-            lambda _: _.OfIeee1164.name("Expressions.Framework.Patterns.OfIeee1164").properties({"width": S.OfInt}),
-            lambda _: _.OfEnum.name("Expressions.Framework.Patterns.OfEnum").properties({
-                "members": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfStr]))}),
-            lambda _: _.OfPacked.name("Expressions.Framework.Patterns.OfPacked").properties({
-                "codes": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfInt]))}),
-            lambda _: _.DomainKind.name("Expressions.Framework.DomainKind").branches([
-                lambda t: t.name("bool").schema([_.OfBool]),
-                lambda t: t.name("integer").schema([_.OfInteger]),
-                lambda t: t.name("ieee754").schema([_.OfIeee754]),
-                lambda t: t.name("bits").schema([_.OfBits]),
-                lambda t: t.name("bytes").schema([_.OfBytes]),
-                lambda t: t.name("unicode").schema([_.OfUnicode]),
-                lambda t: t.name("ieee1164").schema([_.OfIeee1164]),
-                lambda t: t.name("enum").schema([_.OfEnum]),
-                lambda t: t.name("packed").schema([_.OfPacked]),
-            ]),
-            lambda _: _.Packs.name("Expressions.Framework.Patterns.Packs").links([
-                lambda t: t.name("packed"), lambda t: t.name("domain").schema([_.Domain]),
-                lambda t: t.name("representation").schema([_.Domain])]).uniques([["packed"]]),
-            lambda _: _.Domain.name("Expressions.Framework.Domain").adjacencies({
-                "packs": lambda a: a.relation([_.Packs]).me("packed")}),
-
-            # --- Its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
-            lambda _: _.bool.name("Expressions.Framework.Patterns.bool").schemas([S.OfBool]),
-            lambda _: _.int.name("Expressions.Framework.Patterns.int").schemas([S.OfInt]),
-            lambda _: _.float.name("Expressions.Framework.Patterns.float").schemas([S.OfFloat]),
-            lambda _: _.str.name("Expressions.Framework.Patterns.str").schemas([S.OfStr]),
-            lambda _: _.bytes.name("Expressions.Framework.Patterns.bytes").schemas([S.OfBytes]),
-            lambda _: _.uint8.name("Expressions.Framework.Patterns.uint8").schemas([S.OfInt]),
-            lambda _: _.binary32.name("Expressions.Framework.Patterns.binary32").schemas([S.OfFloat]),
-            lambda _: _.std_logic.name("Expressions.Framework.Patterns.std_logic").schemas([S.OfStr]),
 
             # --- Its operations: the schemas their variables share, and each operation, which its dialect defines:
             # its pattern's variables its arguments, in order, and its result its return ---
@@ -253,15 +207,12 @@ def install(txn: Any) -> Any:
 
 
 def define(txn: Any) -> Any:
-    """Patterns' dialect as data: the singleton `Expressions.Framework.Patterns` naming its operations (`operations`, through
-    `Expressions.Framework.Operates`) and owning its domains by name (`domains`, through `Expressions.Framework.Defines`),
-    each related to its schema (`Expressions.Framework.Patterns.uint8`) by `Expressions.Framework.HasDomain`. Run after `install`, in
-    a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by
-    its name: `store.transaction(Patterns.define)[0]["uint8"]`."""
-    Patterns, Domain = txn.Expressions.Framework.Patterns, txn.Expressions.Framework.Domain
+    """Patterns' dialect as data: the singleton `Expressions.Framework.Patterns` naming its operations (`operations`,
+    through `Expressions.Framework.Operates`); it owns no domains. Run after `install`, in a transaction of its own; run
+    again, it writes nothing. Its frame binds the dialect: `store.transaction(Patterns.define)[0]["dialect"]`."""
+    Patterns = txn.Expressions.Framework.Patterns
     return txn.uid("mbse.Expressions.Patterns.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": Patterns.Dialect, "bool": Domain, "int": Domain, "float": Domain, "str": Domain,
-                  "bytes": Domain, "uint8": Domain, "binary32": Domain, "std_logic": Domain})
+        .symbols({"dialect": Patterns.Dialect})
         .spec([
             lambda _: _.dialect.operations({
                 "get": lambda e: e.operation(Patterns.get), "has": lambda e: e.operation(Patterns.has),
@@ -279,28 +230,7 @@ def define(txn: Any) -> Any:
                 "in": lambda e: e.operation(getattr(Patterns, "in")), "sum": lambda e: e.operation(Patterns.sum),
                 "min": lambda e: e.operation(Patterns.min), "max": lambda e: e.operation(Patterns.max),
                 "unique": lambda e: e.operation(Patterns.unique), "entries": lambda e: e.operation(Patterns.entries),
-            }).domains({
-                "bool": lambda e: e.domain(_.bool), "int": lambda e: e.domain(_.int),
-                "float": lambda e: e.domain(_.float), "str": lambda e: e.domain(_.str),
-                "bytes": lambda e: e.domain(_.bytes), "uint8": lambda e: e.domain(_.uint8),
-                "binary32": lambda e: e.domain(_.binary32), "std_logic": lambda e: e.domain(_.std_logic),
             }),
-            lambda _: _.bool.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.bool(lambda d: d)))).schema([
-                Patterns.bool]),
-            lambda _: _.int.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.integer(
-                lambda d: d.signed(True).overflow("raise"))))).schema([Patterns.int]),
-            lambda _: _.float.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(
-                lambda d: d.format("binary64").rounding("roundTiesToEven"))))).schema([Patterns.float]),
-            lambda _: _.str.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.unicode(lambda d: d)))).schema([
-                Patterns.str]),
-            lambda _: _.bytes.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.bytes(lambda d: d)))).schema([
-                Patterns.bytes]),
-            lambda _: _.uint8.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.integer(
-                lambda d: d.width(8).signed(False).overflow("wrap"))))).schema([Patterns.uint8]),
-            lambda _: _.binary32.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(
-                lambda d: d.format("binary32").rounding("roundTiesToEven"))))).schema([Patterns.binary32]),
-            lambda _: _.std_logic.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee1164(lambda d: d)))).schema([
-                Patterns.std_logic]),
         ])]))])
 
 

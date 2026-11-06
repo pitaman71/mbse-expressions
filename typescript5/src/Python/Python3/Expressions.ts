@@ -61,6 +61,12 @@
  * `Complex` and `ELLIPSIS` stand for them where a constant is written. `Text.ToText` writes an expression as Python
  * source, parenthesized only where precedence requires. Reading Python source (`Text.FromText`) needs Python's own
  * parser, so it is in the Python implementation only.
+ *
+ * Its kinds of domain, the branches of its union `Expressions.Python.Python3.DomainKind`, which `install` adds to the
+ * framework's `Expressions.Framework.DomainKind` as the branch `python3`, each with the inferred `ordered`: `str`
+ * (`OfStr`), sequences of code points, lone surrogates included; and the tokens `nonetype` (`OfNoneType`), `None`'s type,
+ * and `ellipsis` (`OfEllipsis`), `...`'s. A token's domain has no schema: its value is a `constant`'s. Its domains are
+ * stage 3's of the domains-as-data proposal.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -134,7 +140,9 @@ export function install(txn: any): any {
   const Framework = txn.Expressions.Framework;
   const terms = (_: any): any => S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term]));
   return txn.uid("mbse.Expressions.Python.Python3/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Pattern: S.OfUnion,
+    .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, // Kinds: the framework's
+      OfStr: S.OfObject, OfNoneType: S.OfObject, OfEllipsis: S.OfObject,
+      Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Pattern: S.OfUnion,
       Expression: S.OfObject, Literal: S.OfObject, Constant: S.OfObject,
       ConcatenatedString: S.OfObject, StringText: S.OfObject, FormatSpec: S.OfObject,
       FormattedValue: S.OfObject, Interpolation: S.OfObject, JoinedStrValue: S.OfUnion,
@@ -151,7 +159,8 @@ export function install(txn: any): any {
       // its dialect: the singleton `Expressions.Python.Python3`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Python.Python3.Dialect").ref(true).singleton("Expressions.Python.Python3").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        uses: (a: any) => a.relation([Framework.Uses]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("python3").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, its extensions, and invalid syntax
@@ -298,6 +307,17 @@ export function install(txn: any): any {
       // to its `Term`
       (_: any) => _.Expression.name("Expressions.Python.Python3.Expression").ref(true).refines([Framework.Expression]).properties({
         root: _.Term }),
+      // --- its kinds of domain: `str`, and the tokens of `None` and `...`; each inferred `ordered` ---
+      (_: any) => _.OfStr.name("Expressions.Python.Python3.OfStr").properties({ ordered: S.OfBool }),
+      (_: any) => _.OfNoneType.name("Expressions.Python.Python3.OfNoneType").properties({ ordered: S.OfBool }),
+      (_: any) => _.OfEllipsis.name("Expressions.Python.Python3.OfEllipsis").properties({ ordered: S.OfBool }),
+      (_: any) => _.DomainKind.name("Expressions.Python.Python3.DomainKind").branches([
+        (t: any) => t.name("str").schema([_.OfStr]),
+        (t: any) => t.name("nonetype").schema([_.OfNoneType]),
+        (t: any) => t.name("ellipsis").schema([_.OfEllipsis]),
+      ]),
+      (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
+        (t: any) => t.name("python3").schema([_.DomainKind])]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("python3").schema([_.Term])]),
     ])]))]);

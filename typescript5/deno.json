@@ -18,6 +18,14 @@
     "@mbse/expressions/LaTeX/Expressions": "./src/LaTeX/Expressions/index.ts",
     "@mbse/expressions/C/Expressions": "./src/C/Expressions/index.ts",
     "@mbse/expressions/Cpp/Expressions": "./src/Cpp/Expressions/index.ts",
-    "@mbse/expressions/SystemVerilog/Expressions": "./src/SystemVerilog/Expressions/index.ts"
+    "@mbse/expressions/SystemVerilog/Expressions": "./src/SystemVerilog/Expressions/index.ts",
+    "@mbse/expressions/ISOIEC11404": "./src/ISOIEC11404/index.ts",
+    "@mbse/expressions/ISOIEC11404/Expressions": "./src/ISOIEC11404/Expressions.ts",
+    "@mbse/expressions/IEEE754": "./src/IEEE754/index.ts",
+    "@mbse/expressions/IEEE754/Expressions": "./src/IEEE754/Expressions.ts",
+    "@mbse/expressions/IEEE1164": "./src/IEEE1164/index.ts",
+    "@mbse/expressions/IEEE1164/Expressions": "./src/IEEE1164/Expressions.ts",
+    "@mbse/expressions/Unicode": "./src/Unicode/index.ts",
+    "@mbse/expressions/Unicode/Expressions": "./src/Unicode/Expressions.ts"
   }
 }

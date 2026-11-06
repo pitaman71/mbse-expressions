@@ -32,6 +32,12 @@ invalid syntax (`error`, `missing`); a term carries no domain:
 There is no binding: translators substitute a let's value for its name. `DIALECT` reads the kinds. The writers (`constant`,
 `vector`, ...) write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an
 expression as SystemVerilog source, with its precedence.
+
+Its kind of domain, the branch of its union `Expressions.SystemVerilog.Expressions.DomainKind`, which `install` adds
+to the framework's `Expressions.Framework.DomainKind` as the branch `systemverilog`: `logic`
+(`Expressions.SystemVerilog.Expressions.OfLogic`), IEEE 1800's 4-state integral, of a `width` in bits, `signed` or
+not; inferred (populated by hand until constraint resolution computes them) `least` and `greatest`, of its known values,
+and `ordered`. Its domains are stage 3's of the domains-as-data proposal.
 """
 
 from __future__ import annotations
@@ -65,7 +71,8 @@ def install(txn: Any) -> Any:
     narrowed to its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.SystemVerilog.Expressions/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
+        .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion, "OfLogic": S.OfObject,  # Kinds: the framework's
+                  "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Vector": S.OfObject, "Unary": S.OfObject, "Binary": S.OfObject, "Conditional": S.OfObject,
                   "Concatenation": S.OfObject, "Replication": S.OfObject, "Select": S.OfObject, "Range": S.OfObject,
                   "Inside": S.OfObject, "Span": S.OfObject, "Cast": S.OfObject, "Member": S.OfObject,
@@ -74,7 +81,8 @@ def install(txn: Any) -> Any:
             # its dialect: the singleton `Expressions.SystemVerilog.Expressions`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.SystemVerilog.Expressions.Dialect").ref(True).singleton("Expressions.SystemVerilog.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "uses": lambda a: a.relation([Framework.Uses]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("systemverilog").schema([_.Dialect])]),
             # its union of its kinds: the framework's it reuses, its own, and invalid syntax
@@ -132,6 +140,15 @@ def install(txn: Any) -> Any:
             # to its `Term`
             lambda _: _.Expression.name("Expressions.SystemVerilog.Expressions.Expression").ref(True).refines([Framework.Expression]).properties({
                 "root": _.Term}),
+            # --- its kind of domain: IEEE 1800's 4-state integral, its parameters, then what follows from them ---
+            lambda _: _.OfLogic.name("Expressions.SystemVerilog.Expressions.OfLogic").properties({
+                "width": S.OfInt, "signed": S.OfBool,
+                "least": S.OfInt, "greatest": S.OfInt, "ordered": S.OfBool}),  # inferred, of its known values
+            lambda _: _.DomainKind.name("Expressions.SystemVerilog.Expressions.DomainKind").branches([
+                lambda t: t.name("logic").schema([_.OfLogic]),
+            ]),
+            lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
+                lambda t: t.name("systemverilog").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("systemverilog").schema([_.Term])]),
         ])]))])

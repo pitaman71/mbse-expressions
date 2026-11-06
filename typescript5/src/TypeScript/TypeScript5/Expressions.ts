@@ -58,6 +58,11 @@
  * is written through the builders, in a transaction (mbse-basis
  * [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its
  * helpers nested, as its printer and its checks read it.
+ *
+ * Its kinds of domain, the branches of its union `Expressions.TypeScript.TypeScript5.DomainKind`, which `install` adds
+ * to the framework's `Expressions.Framework.DomainKind` as the branch `typescript5`, each with the inferred `ordered`:
+ * `string` (`OfString`), sequences of UTF-16 code units; and the token `null` (`OfNull`), whose domain has no schema: its
+ * value is a `constant`'s. Its domains are stage 3's of the domains-as-data proposal.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -138,7 +143,9 @@ export function install(txn: any): any {
   const Framework = txn.Expressions.Framework;
   const many = (element: any): any => S.OfContainer((c: any) => c.index([S.OfInt]).element([element]));
   return txn.uid("mbse.Expressions.TypeScript.TypeScript5/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
+    .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, // Kinds: the framework's
+      OfString: S.OfObject, OfNull: S.OfObject,
+      Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       Type: S.OfUnion, Pattern: S.OfUnion, TypeElement: S.OfUnion, JSXTagNameExpression: S.OfUnion,
       JSXAttributeName: S.OfUnion, JSXAttributeValue: S.OfUnion, JSXAttributeItem: S.OfUnion,
       JSXChild: S.OfUnion, Expression: S.OfObject,
@@ -187,7 +194,8 @@ export function install(txn: any): any {
       // its dialect: the singleton `Expressions.TypeScript.TypeScript5`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.TypeScript.TypeScript5.Dialect").ref(true).singleton("Expressions.TypeScript.TypeScript5").adjacencies({
           domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-          operations: (a: any) => a.relation([Framework.Operates]).me("dialect")}),
+          operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+          uses: (a: any) => a.relation([Framework.Uses]).me("dialect")}),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
           (t: any) => t.name("typescript5").schema([_.Dialect])]),
       // its union of its kinds: its own, the framework's it reuses, the patterns expressions hold, JSX, and
@@ -568,6 +576,15 @@ export function install(txn: any): any {
       // narrowed to its `Term`
       (_: any) => _.Expression.name("Expressions.TypeScript.TypeScript5.Expression").ref(true).refines([Framework.Expression]).properties({
           root: _.Term}),
+      // --- its kinds of domain: `string`, and the token of `null`; each inferred `ordered` ---
+      (_: any) => _.OfString.name("Expressions.TypeScript.TypeScript5.OfString").properties({ ordered: S.OfBool }),
+      (_: any) => _.OfNull.name("Expressions.TypeScript.TypeScript5.OfNull").properties({ ordered: S.OfBool }),
+      (_: any) => _.DomainKind.name("Expressions.TypeScript.TypeScript5.DomainKind").branches([
+        (t: any) => t.name("string").schema([_.OfString]),
+        (t: any) => t.name("null").schema([_.OfNull]),
+      ]),
+      (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
+        (t: any) => t.name("typescript5").schema([_.DomainKind])]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([  // a branch added: schema extension
           (t: any) => t.name("typescript5").schema([_.Term])]),
     ])]))]);

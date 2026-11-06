@@ -1,5 +1,5 @@
 /**
- * Domains of the Patterns dialect: its kinds of value domain, the domains it defines as data, and the values its core
+ * Domains of the Patterns dialect: the code form of the kinds of value domain its values take, and the values its core
  * operations take and give.
  *
  * Value domains name the standard they implement, with only its parameters (see mbse-basis
@@ -17,13 +17,16 @@
  * - `OfPacked`: an enum (its `domain`) represented in a fixed-width integer or bits (its `representation`), member `i`
  *   by `codes[i]`.
  *
- * A domain is data: an `Expressions.Framework.Domain`, holding its `kind`, a value of `Expressions.Framework.DomainKind`,
- * whose branches `Expressions.install` adds, one per kind above (`integer`, with `width`, `signed` and `overflow`, ...),
- * and owned by the dialect that defines it, by name: its path is the dialect's singleton (`Expressions.Framework.Patterns`), then its
- * name. A packed domain links its enum and its representation through `Expressions.Framework.Patterns.Packs`. Its schema is a named
- * `Schemas.OfAny` restricted to the scalar it narrows (`Expressions.Framework.Patterns.uint8`), which reads it through `domain`
- * (`Expressions.Framework.HasDomain`). `Expressions.define` writes the domains Patterns defines, and
- * `read(domain)` gives the data of a stored one, so that what its parameters mean can be asked of it.
+ * Patterns holds no kinds of domain and owns no domains: as data they are the standard dialects'. A domain is an
+ * `Expressions.Framework.Domain`, holding its `kind`, a value of `Expressions.Framework.DomainKind`, the union of the
+ * dialects' unions of kinds: ISO/IEC 11404's (`Expressions.ISOIEC11404.Expressions.DomainKind`: `bool`, `integer`,
+ * `bits`, `bytes`, `enum`, `packed`), IEEE 754's (`ieee754`), IEEE 1164's (`ieee1164`) and Unicode's (`unicode`), each
+ * kind with its parameters and the properties inferred from them. It is owned by the dialect that defines it, by name: its
+ * path is the dialect's singleton (`Expressions.ISOIEC11404.Expressions`), then its name. A packed domain links its enum
+ * and its representation through `Expressions.ISOIEC11404.Expressions.Packs`. Its schema is a named `Schemas.OfAny`
+ * restricted to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.uint8`), which reads it through `domain`
+ * (`Expressions.Framework.HasDomain`). Each standard dialect's `define` writes its domains, and `read(domain)` gives the
+ * data of a stored one, its parameters (ignoring its inferred properties), so that what they mean can be asked of it.
  *
  * Each kind's data, `OfX.Data`, is compared by structure (`equals`), built by `OfX.Builder` (`create()`, `clone()`,
  * `update()`; none validate), with `validate()`. A domain is a `Domain`: a value is in it (`contains`) when it has the
@@ -865,28 +868,18 @@ export function of(value: unknown): D.Domain {
 
 // --- Domains as data ---
 
-/** The data of a stored domain, an `Expressions.Framework.Domain`: its kind's, with the parameters it holds (a packed
- * domain's enum and representation read in turn), so that it can be validated and asked what it holds. */
+/** The data of a stored domain, an `Expressions.Framework.Domain`: its kind's, read through its dialect's union of
+ * kinds (`Framework/Domains.kindOf`), with the parameters it holds (a packed domain's enum and representation, through
+ * `packs`, read in turn) and not its inferred properties, so that it can be validated and asked what it holds. */
 export function read(domain: any): Domain {
-  const found: any[] = [];
-  domain.kind.as_value((a: any) => a.as_union((u: any) => {
-    found.push(u);
-    return u;
-  }));
-  if (found.length === 0 || found[0].as_schema() === null) throw new Errors.ValueError("a domain needs a kind");
-  const union = found[0];
-  const branch = (union.as_schema().branches as readonly { name: string }[])
-    .find((b) => union[b.name].as_schema() !== null) as { name: string };
-  const parameters = new Map<string, unknown>();
-  for (const [name, value] of Objects.properties(union[branch.name])) {
-    parameters.set(name, value instanceof Objects.Listed ? [...value.values] : value);
-  }
-  if (branch.name === "packed") {
+  const [tag] = D.kindOf(domain);
+  const data = KINDS.get(tag) as DomainClass;
+  const parameters = D.properties(domain);
+  if (tag === "packed") {
     for (const entry of domain.packs) {
       parameters.set("domain", read(entry.domain));
       parameters.set("representation", read(entry.representation));
     }
   }
-  const data = KINDS.get(branch.name) as DomainClass;
   return new data(...data.FIELDS.map((name) => parameters.get(name)));
 }

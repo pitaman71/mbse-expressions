@@ -1,6 +1,17 @@
 /**
  * Domains: the types of the values expressions denote, and the signatures of operators over them.
  *
+ * The reading interface over stored domains and operations, each a `Readers.OfObject` found by its path
+ * (`dialect.domains({ name: "uint8" })`) or a schema's `domain`:
+ *
+ * - `kindOf(domain)`: its kind, `[tag, record]`, read through its dialect's union of kinds (`integer`, and the record
+ *   of `Expressions.ISOIEC11404.Expressions.OfInteger`); "a domain needs a kind" where it holds none.
+ * - `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by
+ *   name; a container as an array of its elements.
+ * - `nameOf(domain)`: the name its dialect defines it by (its `Defines` entry's), or null.
+ * - `operations(dialect)`: a dialect's operations by name, in the order its singleton names them, each its
+ *   `Schemas.OfExpression`; `arity(operation)`: the number of its pattern's variables, its arguments.
+ *
  * A `Domain` is a set of values: `contains(value)` tests membership at run time, and `includes(other)` tests
  * statically that every value of `other` is also one of its own. A `Signature` gives an operator's number of arguments
  * and the domain of its result for the domains of its arguments, or `null` when it does not apply to them. A dialect's
@@ -12,6 +23,66 @@
  *
  * The implementations here are generic; each dialect's `Domains` module defines its own domains with them.
  */
+
+import { Errors } from "@mbse/schemas/Framework";
+
+import * as Objects from "./Objects.js";
+
+// --- Reading stored domains and operations ---
+
+/** The tag and the visitor of the branch a union value holds, or null where it holds none. */
+function branch(union: any): [string, any] | null {
+  const schema = union.as_schema();
+  const found = ((schema?.branches ?? []) as readonly { name: string }[])
+    .find((b) => union[b.name].as_schema() !== null);
+  return found === undefined ? null : [found.name, union[found.name]];
+}
+
+/** A stored domain's kind, `[tag, record]`: the branch of its dialect's union of kinds it holds, read through the
+ * branch of `Expressions.Framework.DomainKind` that names its dialect. */
+export function kindOf(domain: any): [string, any] {
+  const found: any[] = [];
+  domain.kind.as_value((a: any) => a.as_union((u: any) => {
+    found.push(u);
+    return u;
+  }));
+  const dialect = branch(found[0]);
+  if (dialect === null) throw new Errors.ValueError("a domain needs a kind");
+  return branch(dialect[1]) as [string, any]; // a union value holds exactly one branch
+}
+
+/** A stored domain's kind's properties that are set, its parameters and its inferred properties alike, by name, in
+ * its kind's schema's order: a scalar as itself, a container as an array of its elements. */
+export function properties(domain: any): Map<string, unknown> {
+  const found = new Map<string, unknown>();
+  for (const [name, value] of Objects.properties(kindOf(domain)[1])) {
+    found.set(name, value instanceof Objects.Listed ? [...value.values] : value);
+  }
+  return found;
+}
+
+/** The name a stored domain's dialect defines it by, its `Expressions.Framework.Defines` entry's; null where no
+ * dialect defines it. */
+export function nameOf(domain: any): string | null {
+  const [entry] = Objects.entries(domain, "dialect");
+  return entry === undefined ? null : entry.values.get("name") as string;
+}
+
+/** A dialect's operations by name, in the order its singleton names them (`Expressions.Framework.Operates`), each
+ * its `Schemas.OfExpression`. */
+export function operations(dialect: any): Map<string, any> {
+  return new Map(Objects.entries(dialect, "operations").map(
+    (entry) => [entry.values.get("name") as string, entry.targets.get("operation")]));
+}
+
+/** An operation's number of arguments: its pattern's variables. */
+export function arity(operation: any): number {
+  return operation.pattern.variables.size;
+}
+
+// --- Domains and signatures in code ---
+// These are `Dialect.infer`'s, CAP-232's to replace with stored domains and operations, as domain inference reads them:
+// mbse:mbse-basis/docs/capabilities/CAP-232.md
 
 /** A set of values. */
 export interface Domain {
