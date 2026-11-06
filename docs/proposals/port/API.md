@@ -406,7 +406,8 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
     `Expressions.C.<Kind>`, by C's install, listed by both unions, its slots holding `Expressions.Framework.Term`.~~ Now
     **C and C++ each define the kinds they share**: `Expressions.C.<Kind>` by C's install, its properties holding
     `Expressions.C.Term`, and `Expressions.Cpp.<Kind>` by Cpp's, holding `Expressions.Cpp.Term`; each install stands
-    alone. The code that reads and writes them is still shared: `C.Expressions.kinds(standards)`,
+    alone (superseded 2026-11-06 where a dialect uses another's kinds of domain: its install then depends on
+    theirs, [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, A). The code that reads and writes them is still shared: `C.Expressions.kinds(standards)`,
     `C.Expressions.Writers(dialect, writer)` (C's and Cpp's writer functions), `C.Evaluators.interpreter(dialect)`,
     `C.Text.text(expression, dialect)`; Cpp's `Domains` is C's. Today C++ has kinds of exactly C's shapes.
 36. **Standards as data: `Terms.Kind.standards`**, the standards of its dialect's language that have the kind, as

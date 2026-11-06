@@ -172,7 +172,7 @@ checked against typescript-estree's node types; it evaluates its literals alone,
 ([CAP-229: the C expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-229.md),
 [CAP-230: the C++ expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-230.md)), printed in both languages and checked
 against tree-sitter-c's and tree-sitter-cpp's node types; their evaluators keep what C evaluated, over its arithmetic
-types, and every dialect's `Type` and `Pattern` hold invalid syntax. Coming in 0.9.0: stage 6, `SystemVerilog` complete
+types, and every dialect's `Type` and `Pattern` hold invalid syntax. Coming in 0.9.0: domains as data, every dialect's domains stored ([the domains proposal](docs/proposals/domains/README.md)); in 0.10.0: stage 6, `SystemVerilog` complete
 over IEEE 1800-2023, Verilog its subset ([CAP-231: the SystemVerilog expression dialect, complete](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-231.md)),
 with its sublanguages as dialects, and the retrofit of the other dialects (type, pattern, regex and preprocessor
 dialects, binding kinds as variations of `let`); until then `SystemVerilog` is the subset it was. Not built yet: domain
