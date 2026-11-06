@@ -108,6 +108,36 @@ As the user decided (2026-11-04), on the questions below:
     (`Proxies.store_of`); nothing is designed for a term alone.
   - **D. The releases**: "agreed": domains as data is released as 0.9.0; stage 6 of the complete dialects and the
     retrofit of the other dialects as 0.10.0.
+- **On stage 1's design, E to H** (2026-11-06), each approved "yes" as the coordinating agent put it, the user's words
+  quoted:
+  - **E. An ISO/IEC 11404 dialect, and Patterns holds no kinds or domains.** To (a)'s "don't invent a standard where
+    none exists" the user answered that it is at odds with (b): ISO/IEC 11404 is a published standard, which has the
+    six kinds (integer, boolean, bit string, octet string, enumerated, packing), so by PRI-012 they are its dialect's,
+    as [CAP-180](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md) has it ("ISO/IEC 11404 replaces Basic expression dialect", "Datatype
+    operations are modeled, not coded"). In stage 1 the ISO/IEC 11404 dialect holds those six kinds beside the IEEE
+    754, IEEE 1164 and Unicode dialects; replacing Patterns entirely, and modeling 11404's operations, stay CAP-180's.
+    And: "I am sensing repeated suggestions to consolidate things under `Patterns` and I don't know where that comes
+    from". Where it came from: Patterns was Basic, which held the scalar kinds and domains, never moved out when it
+    was renamed for its quantifiers over `OfPattern`; this proposal's question 4 recommended "Patterns' `integer`
+    kind, shared", writing that inheritance into a decision; and the package root re-exports Patterns' `Domains`,
+    `Evaluators`, `Expressions` and `Partials` as "the neutral form of every constraint". So Patterns' eight domains
+    and its kinds move to the standard dialects, and Patterns uses their domains as any dialect does.
+  - **F. (a)**: the caller runs each install in order, each its own transaction, as the tutorials' toolkit and the
+    tests do; an install names the kinds it uses by their schemas' names, so mbse-schemas refuses it where they are
+    not installed; each install writes its uses as data, `Uses(dialect, used)`; no `install_all`. Every caller's list
+    (tests, tutorials, toolkit, skill) installs the standard dialects before the dialects that use them.
+  - **G. Already decided**: "I think this was already resolved and you may be leaking context". The namespace's rule,
+    "`Expressions.<family>.<dialect>`, a family named as its standard names the language", and a family of one
+    unversioned dialect naming it `Expressions` (the dialects proposal's Decided, Namespace), give
+    `Expressions.IEEE754.Expressions` and the others, each family spelled as its standards body spells the standard.
+    Standards as tagged data is "Built with domains as data" (the dialects proposal's Decided, Q10), in the stage the
+    design names. A standard dialect's shape (a singleton, no terms yet) stands as the agent's choice.
+  - **H.** (1) To `complex`: "what is Python's `complex` ? Seems like an object to me". It is two IEEE 754 binary64
+    floats, `real` and `imag`, immutable and compared by value: not a domain but a value schema of Python3's, its
+    properties held by IEEE 754's binary64, which Python3's imaginary literal holds. (2) `RegExp`: not a domain. (3)
+    Excel's error values: Excel's own domain, of its own kind, its members the error codes. (4) Compound values: not
+    domains; they have schemas. The tokens (`nullptr_t`, Python's `None`'s and `...`'s types, TypeScript's `null`)
+    each have a domain of their own, as B decided.
   - Stage 1's text, leaving the result-domain relation to CAP-232 (Stages, 1), was put to the user with these, and
     stands.
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
@@ -115,8 +145,9 @@ As the user decided (2026-11-04), on the questions below:
 - **3. `Anything` and `Opaque`**: "agreed. Schemas.OfAny kind of handles that": no stored "anything" domain; where
   nothing is known, a result's domain is absent, its value an unrestricted `Schemas.OfAny`.
 - **4. Kinds shared per standard**: "proceed with this for now. I will review": Patterns' kinds (two's complement,
-  IEEE 754, IEEE 1164, ...) shared, each dialect's domains instances of them under its own names. Refined by A, above
-  (2026-11-06): a standard's kinds are its own dialect's.
+  IEEE 754, IEEE 1164, ...) shared, each dialect's domains instances of them under its own names. *Superseded*
+  (2026-11-06) by A and E, above: a standard's kinds are its own dialect's, and Patterns holds none; "Patterns'
+  kinds" recorded an inheritance from Basic, not a choice (E says where it came from).
 - **5. Typing C literals by suffix**: "1,5. yes before per your recommendation": kept, as a lookup of the stored domain
   by the literal's suffix and base.
 - **2. Operations' result domains: deferred to CAP-232.** Asked what "code intrinsics" meant (the first draft's word,
@@ -158,130 +189,117 @@ Each passes both gates at 100% in both languages, on every supported Node versio
 whole-record review before it is brought to the user.
 
 1. The framework: domain kinds by extension in every dialect, their parameters and inferred properties, and the
-   reading interface. The relation holding operations' result domains, first listed here, is domain inference's, its
-   population with it (Decided, on this proposal, 2): stage 1 stores none of it. Its design is below.
-2. Patterns: its domains stored, its dataclasses and `read` gone, `SIGNATURES` replaced by its stored operations.
-3. C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its domains stored.
-4. Records in mbse-basis (CAP-097, CAP-232, CAP-226), and release.
+   reading interface; the standard dialects (ISO/IEC 11404, IEEE 754, IEEE 1164, Unicode) holding the kinds and
+   domains Patterns held (Decided, E). The relation holding operations' result domains, first listed here, is domain
+   inference's, its population with it (Decided, 2): stage 1 stores none of it. Its design is below.
+2. Patterns: its code domains gone (its dataclasses and `read`), its validation reading its stored operations through
+   the holder (Decided, C) in place of `SIGNATURES`.
+3. C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its domains stored, with its
+   uses.
+4. Standards as tagged data (the dialects proposal's Decided, Q10), every dialect's standards.
+5. Records in mbse-basis (CAP-097, CAP-180, CAP-232, CAP-226), and release as 0.9.0 (Decided, D).
 
-## Stage 1's design (for review; paused on E to H)
+## Stage 1's design
 
-Based on the code at 0.8.0 (`python3/mbse/Expressions/`, `typescript5/src/`, the same in both), revised by the user's
-answers of 2026-11-06 (Decided, on this proposal, A to D). Where the decisions are silent the choices below are the
-agent's, for review; E to H are choices the answers leave open, asked before building.
+As the user decided (Decided, on this proposal, A to H), on the code at 0.8.0 (`python3/mbse/Expressions/`,
+`typescript5/src/`, the same in both). What the decisions leave open is the agent's, for review, marked *(agent)*.
 
-**Schemas.** `Expressions.Framework.Domain`, `DomainKind`, `Defines` and `HasDomain` stay as stage 3 has them. No
-stored "anything" domain (Decided, 3), and no relation from argument domains to a result domain (Decided, 2). Each
-kind's schema gains its inferred properties beside its parameters, as properties of the kind (Proposed, 2), all
-optional, populated by hand in the define of each dialect that writes a domain of the kind. Today's nine kinds, under
-the owners E proposes:
+**The standard dialects.** Four dialects of the standards that define today's nine kinds, each a family with one
+unversioned dialect (Decided, G), its Python package `mbse.Expressions.<Family>.Expressions` and TypeScript module
+`src/<Family>/Expressions` (`@mbse/expressions/<Family>/Expressions`), each with `install` and `define`:
 
-| Kind | Owner (E) | Parameters (unchanged) | Inferred properties, new | Today computed by |
-|---|---|---|---|---|
-| `ieee754` | IEEE 754 | `format`, `rounding` | `radix`, `precision`, `emax`, the parameters IEEE 754-2019 gives each interchange format; `ordered` (true) | `Ieee754.FORMATS` |
-| `ieee1164` | IEEE 1164 | `width` | `ordered` (false) | `ORDERED` |
-| `unicode` | Unicode | none | `ordered` (true) | `ORDERED` |
-| `bool` | Patterns | none | `ordered` (false) | `ORDERED` |
-| `integer` | Patterns | `width`, `signed`, `overflow` | `least`, `greatest` (ints, absent where unbounded), `ordered` (true) | `bounds()` |
-| `bits`, `bytes` | Patterns | `width` | `ordered` (false, true) | `ORDERED` |
-| `enum`, `packed` | Patterns | `members`; `codes`, and `Packs` | `ordered` (false, true) | `ORDERED` |
-
-What a result is fitted into is the domain's own parameters for an integer (`overflow`), and for C a rule over argument
-domains (the promotions, the usual arithmetic conversions), which is the relation Decided, 2 leaves to
-[CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md); so no kind gains a link to another domain. A
-domain's name is the name its dialect defines it by (its `Defines` entry), so no kind stores one.
-
-**A language's own kinds** (Decided, B), each its dialect's, added to `DomainKind` by its install, with no parameters
-but where shown; stage 3 writes their domains:
-
-| Dialect | Its own kinds | Its domains of other dialects' kinds (stage 3) |
+| Dialect (path; name) | Kinds (tag: schema `Expressions.<Family>.Expressions.<Of...>`) | Domains its `define` writes, and their schemas |
 |---|---|---|
-| SystemVerilog | `logic`: IEEE 1800's 4-state integral, `width`, `signed`; inferred `least`, `greatest` (of its known values), `ordered` (true) | its 2-state types (`integer`), `real`, `shortreal` (`ieee754`) |
-| Python3 | `str` (code points, lone surrogates included), `ordered` (true); the tokens `nonetype`, `ellipsis`, and H's | `bool`, `int`, `float`, `bytes` |
-| TypeScript5 | `string` (UTF-16 code units), `ordered` (true); the token `null`, and H's | `boolean`, `bigint` (`integer`), `number` (`ieee754`) |
-| C, Cpp | the token `nullptr_t`, each its own (as each defines the kinds they share, [API](../port/API.md), 35) | the integer and character types (`integer`), the floating types (`ieee754`), strings (`unicode`) |
-| MATLAB, Excel, LaTeX | H's | their logicals, numbers and text (`bool`, `ieee754`, `integer`, `unicode`) |
+| `ISOIEC11404.Expressions`; `ISOIEC11404` | `bool`, `integer`, `bits`, `bytes`, `enum`, `packed`, and `Packs` | `boolean`, `integer`, `octetstring`, `uint8` |
+| `IEEE754.Expressions`; `IEEE754` | `ieee754` | `binary64`, `binary32` |
+| `IEEE1164.Expressions`; `IEEE1164` | `ieee1164` | `std_logic` |
+| `Unicode.Expressions`; `Unicode` | `unicode` | `string` |
 
-A token's domain has no schema (`HasDomain`): no basic scalar holds its value, which its dialect's `constant` writes.
-Compound values (data objects, records, structs, lists, mappings) are not domains: they have schemas
-(H proposes so). C's `_Decimal32` needs IEEE 754's `decimal32`, a parameter value, which stage 3 adds.
+ISO/IEC 11404 is spelled as ISO writes it, without the slash a name cannot hold, as IEEE 754 is without its space.
+A standard dialect is a singleton of its own schema, a branch of `Expressions.Framework.Dialect`, with no `Term`,
+holder or `Terms.Dialect` until it has terms (Decided, G). Each names its standard in code by designation
+(`STANDARDS = ("IEEE Std 754-2019",)`, `ISO/IEC 11404:2007`, `IEEE Std 1164-1993`, `The Unicode Standard`), until
+standards are tagged data, its own stage (below) *(agent)*. Patterns' eight domains are these, renamed by their
+standards *(agent)*: `bool`, `int`, `bytes` and `uint8` are 11404's `boolean`, `integer`, `octetstring` and `uint8`;
+`float` and `binary32` IEEE 754's `binary64` and `binary32`; `std_logic` IEEE 1164's; `str` Unicode's `string`. The
+kinds keep their tags *(agent)*: only their schemas' paths move.
+
+**Each dialect's kinds, nested.** `Expressions.Framework.DomainKind` becomes a union of the dialects' unions of kinds,
+as `Expressions.Framework.Term` is of their `Term`s: each dialect that has kinds adds its own,
+`Expressions.<Family>.<Dialect>.DomainKind`, as the branch named as its `Term` branch is (`isoiec11404`, `ieee754`,
+`python3`, ...), so that C's and C++'s `nullptr_t` are each their own *(agent)*. A domain's `kind` is so written
+`{"ieee754": {"ieee754": {"format": "binary32", ...}}}`.
+
+**Inferred properties**, beside the parameters, all optional, populated by hand by the define that writes a domain
+of the kind (Decided, 2; Proposed, 2):
+
+| Kind | Parameters (unchanged) | Inferred, new |
+|---|---|---|
+| `integer` | `width`, `signed`, `overflow` | `least`, `greatest` (ints, absent where unbounded), `ordered` |
+| `ieee754` | `format`, `rounding` | `radix`, `precision`, `emax` (IEEE 754-2019's parameters of each interchange format), `ordered` |
+| every other kind | as now | `ordered` |
+
+`ordered` is true of `integer`, `ieee754`, `bytes`, `unicode`, `packed`, SystemVerilog's `logic` and the two string
+kinds below, false of the others, as `ORDERED` is today. What a result is fitted into is an integer's own `overflow`,
+and for C a rule over argument domains, which is the relation left to
+[CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md) (Decided, 2): no kind links another domain. A
+domain's name is its `Defines` entry's.
+
+**A language's own kinds** (Decided, B and H), each its dialect's, with no parameters but where shown; their domains
+are stage 3's:
+
+| Dialect | Its kinds |
+|---|---|
+| SystemVerilog | `logic`, IEEE 1800's 4-state integral: `width`, `signed`; inferred `least`, `greatest` (of its known values), `ordered` |
+| Python3 | `str` (code points, lone surrogates included); the tokens `nonetype`, `ellipsis` |
+| TypeScript5 | `string` (UTF-16 code units); the token `null` |
+| C, Cpp | the token `nullptr_t`, each its own |
+| Excel | `error`: `members`, its error codes |
+
+A token's domain has no schema: no basic scalar holds its value, which its dialect's `constant` writes. Compound values,
+`RegExp` and `complex` are not domains (Decided, H). Python3's `Complex` is a value schema,
+`Expressions.Python.Python3.Complex`, `real` and `imag` each held by IEEE 754's `binary64` schema, and Python3's
+imaginary number is a `literal` holding one (its `constant` keeps `None` and `...` alone) *(agent, as H reads)*.
+
+**Uses** (Decided, F). `Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`, each dialect's singleton
+the adjacency `uses`, written by the install of a dialect that uses another's kinds or schemas. In stage 1, Python3
+uses IEEE 754 (`Complex`); the others gain their uses with their domains in stage 3. The installs run in the order
+Framework, the four standard dialects, then the dialects that use them, in every caller (tests, tutorials, toolkit,
+skill, corpus).
 
 **The reading interface**, in `Framework.Domains` (TypeScript the same, camelCase), over a stored domain's
 `Readers.OfObject`, found by its path (`dialect.domains({"name": "uint8"})`,
 [PRI-015: concrete references are programmatic](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-015)) or its schema's `domain`:
+`kind_of(domain)`, its kind `(tag, record)` read through its dialect's union ("a domain needs a kind" where it holds
+none); `properties(domain)`, its kind's properties set, parameters and inferred alike, by name (a container as a tuple,
+an array in TypeScript); `name_of(domain)`, the name its dialect defines it by, or None; `operations(dialect)`, a
+dialect's operations by name, each its `Schemas.OfExpression`; and `arity(operation)`, its pattern's number of
+variables. Stage 2 reads them in place of `read` and of validation's `SIGNATURES` (`CORE`, a closed kind's
+vocabulary). `Domain`, `Signature`, `OfTypes`, ..., `overlaps` stay, `Dialect.infer`'s, each marked in a source comment
+as CAP-232's to replace; so do the dialects' vocabularies.
 
-- `kind_of(domain)`: its kind, `(tag, record)`, as `Terms.kind_of` reads a term's ("a domain needs a kind" where it
-  holds none).
-- `properties(domain)`: its kind's properties set, parameters and inferred alike, by name (a container as a tuple, an
-  array in TypeScript): what `read` gave as a dataclass's fields.
-- `name_of(domain)`: the name its dialect defines it by, or None.
-- `operations(dialect)`: a dialect's operations by name, each its `Schemas.OfExpression`, and `arity(operation)`, its
-  pattern's number of variables: what validation reads from `SIGNATURES` today.
+**Through the holder** (Decided, C). From stage 2, validation and inference read stored data from the store of a
+term's holder (`Proxies.store_of`), with no new argument. What does so of a lone term today, to change then: the
+suites' `term(spec)` helper ([API](../port/API.md), 8), behind about 210 `validate` and 50 `infer` calls in each
+language's tests, which then writes a holder; SystemVerilog's evaluator, validating a term's structure before it
+evaluates it, which reads no stored data; and the skill's `DIALECT.validate(term, bound)`. Tutorial 1's three calls
+already take holders. Stage 1 changes none of it.
 
-They replace `read` (and the dataclasses' fields) and validation's reads of `SIGNATURES` (`CORE`, a closed kind's
-vocabulary) in stage 2. `Domain`, `Signature`, `OfTypes`, `OfValues`, `OfUnion`, `Anything`, `Function`, `Same`,
-`Overloaded`, `Opaque`, `Either` and `overlaps` stay, as `Dialect.infer`'s, each marked in a source comment as
-CAP-232's to replace (Decided, 2); so do each dialect's vocabularies, as infer's signatures.
+**Patterns, after stage 1.** Its install keeps its `Term`, `Quantifier`, holder, singleton and operations' schemas;
+its kinds, `Packs` and domains' schemas leave it, and its `define` writes its operations alone. Its operations and
+terms stay until [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md)
+(Decided, E). Its `Domains` dataclasses and `read` stay, code, until stage 2: `read` reads a stored domain of the
+moved kinds, ignoring inferred properties. The package root's re-export of Patterns' modules (`from mbse.Expressions
+import Domains`) is not changed here: what it should export instead is asked in the pull request, a breaking change.
 
-**Through the holder** (Decided, C). In stage 2, validation and inference read a dialect's stored data from the store
-of the term's holder (`Proxies.store_of`), which `Terms.term` already reads a term from; no argument is added. What
-validates or infers a lone term today, to change then: the suites' `term(spec)` helper ([API](../port/API.md), 8),
-behind about 210 `validate` and 50 `infer` calls in each language's tests, which then writes a holder; tutorial 1's
-three `E.DIALECT.validate` calls are of holders already, unchanged; SystemVerilog's evaluator, which validates a term's structure
-before evaluating it, reading no stored data; and the skill's `DIALECT.validate(term, bound)`. Evaluation, which reads
-no domain, still takes any term. Stage 1 changes none of it.
+**Tests and corpus.** DOM gains a case for the standard dialects, the inferred properties and the reading interface;
+FRM-01 lists the new dialects and each dialect's kinds; DIA-19 Python3's `Complex`; the corpus's `domains` case holds
+the standard dialects' singletons and domains, its JSON regenerated, byte-identical in both languages.
 
-**What changes in stage 1.** The framework: the reading interface. The standard dialects (E): each its install, its
-singleton and its kinds, IEEE 754's, IEEE 1164's and Unicode's moved out of Patterns. Patterns: its kinds' inferred
-properties; its `define` populates them for its eight domains, its `float`, `binary32`, `str` and `std_logic` now of the
-standard dialects' kinds, so it uses them (F); `read` ignores inferred properties until stage 2 removes it.
-SystemVerilog, Python3, TypeScript5, C and Cpp: their own kinds, above. MATLAB, Excel and LaTeX: H's. No other
-dialect's domain is written (stage 3), and no evaluator, validator or translator changes.
-
-**Tests and corpus.** DOM gains a case for the inferred properties and the reading interface; FRM-01 lists the new
-dialects and kinds; the corpus's `domains` case gains the inferred properties and the standard dialects' kinds, its
-JSON regenerated, byte-identical in both languages.
-
-**E. Which standards are dialects, and what Patterns keeps.** Of today's nine kinds, three have a published standard
-of their own: IEEE 754-2019, IEEE 1164-1993 and the Unicode Standard. Two's complement integers, booleans, bit and
-octet strings, enumerations and packings have none of their own; ISO/IEC 11404 has them all, and replacing Patterns
-with it is [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md), a
-capability of its own. (a) The three are dialects; Patterns keeps the other six (and `Packs`) until CAP-180. (b) An
-ISO/IEC 11404 dialect now, holding the six, CAP-180 begun here. (c) Each of the six a dialect of its own. *Recommended:
-(a)*: each kind is its standard's where one exists, and none is invented where none does
-([PRI-012: model published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-012)).
-
-**F. How a dialect declares and installs the dialects it uses.** An install is one transaction, and "a program runs
-the installs it needs" (no helper over them, [API](../port/API.md), The installs). (a) The caller runs the installs in
-order of use; an install names the kinds it uses by their schemas' names, so mbse-schemas refuses it where they are
-not installed; and the use is data, a relation `Expressions.Framework.Uses(dialect, used)`, unique both ways together,
-the singleton's adjacency `uses`, which the dialect's install writes. (b) As (a), with no `Uses`. (c) Each dialect
-module also exports `install_all(store)`, running its uses' installs then its own: a helper over the installs.
-*Recommended: (a)*: the dependency is model data, and no helper wraps the installs.
-
-**G. A standard dialect's name and shape.** (1) Its path, by the namespace's rule (a family named as its standard names
-the language, its dialect named by what it is): (a) `Expressions.IEEE754.Expressions`, `Expressions.IEEE1164.Expressions`,
-`Expressions.Unicode.Expressions`, named `IEEE754`, `IEEE1164` and `Unicode` as `C.Expressions` is `C`; (b)
-`Expressions.IEEE754.Domains`, ..., named by what they hold today; (c) the body as the family, `Expressions.IEEE.IEEE754`.
-*Recommended: (a)*: a standard dialect may gain operations and terms (IEEE 754's operations), and its name stays its
-standard's. (2) Its shape: a singleton of its own schema, a branch of `Expressions.Framework.Dialect`, with its kinds of
-domain, and no `Term`, holder or `Terms.Dialect` until it has terms. (3) Its standard, as tagged data (the dialects
-proposal's Decided, Q10: "each edition stored with its designation and its common names as tags", "built with domains
-as data"): the standards model is not designed yet. (a) A stage of this proposal of its own, after stage 3, every
-dialect's standards then data (`Terms.Kind.standards` among them); until then each standard dialect names its standard
-in code by designation (`IEEE Std 754-2019`), as stage 6 does SystemVerilog's. (b) Designed and built in stage 1.
-*Recommended: (a)*: one model for every dialect's standards, designed once.
-
-**H. Which other values are type inference tokens** (Decided, B, "like `nullptr_t`"). Tokens, each a stored domain of a
-kind of its own: `nullptr_t` (C, Cpp), `None`'s and `...`'s types (Python3) and `null`'s (TypeScript5), each a type of
-exactly one value its dialect's `constant` writes. Not clear-cut: (1) Python's `complex`: a number, a pair of binary64
-parts, not one value; (a) Python3's own domain, of its own kind; (b) not a domain, its code domain staying inference's.
-*Recommended: (a)*, a scalar of Python's numeric tower. (2) TypeScript's `RegExp`: an object of ECMA-262, not a value
-of a type of its own; (a) not a domain; (b) TypeScript5's own domain. *Recommended: (a)*. (3) Excel's error values
-(`#N/A`, `#VALUE!`, ...), which formulas compute with: (a) Excel's own domain, of its own kind (its members the error
-codes); (b) Patterns' `enum`; (c) not a domain. *Recommended: (a)*. (4) Compound values (data objects, records,
-structs, lists, mappings): (a) not domains, as they have schemas, their code domains inference's; (b) domains.
-*Recommended: (a)*.
+**Stages, revised.** Stage 1 is the above. Stage 2 is Patterns' code domains gone (its dataclasses, `read`), its
+validation reading its stored operations through the holder. Stage 3 is every other dialect's domains stored, with
+their uses. Standards as tagged data, every dialect's `STANDARDS` and `Kind.standards` among them, is a stage after
+stage 3 *(agent)*, before the records and the release.
 
 ## Risks
 
