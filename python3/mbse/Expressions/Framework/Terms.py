@@ -2,11 +2,12 @@
 translator shares.
 
 An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
-`Expressions.Framework.Term`, held nested (docs/proposals/port, Decided, 2). Each dialect's install defines its holder,
+`Expressions.Framework.Term`, held nested ([Porting to the stabilized mbse-schemas](../../../../docs/proposals/port/README.md#decided), Decided, 2). Each dialect's install defines its holder,
 `Expressions.<Dialect>.Expression`, a reference object refining it whose `root` is narrowed to the dialect's `Term`
 (mbse-schemas 0.26.7 confirms a member narrowed from a union to one of its branches' schemas), so `HasRoot`, linking
 the framework's `Expression`, links any dialect's holder; `is_expression` tells either. `Term` is the union of the dialects' `Term`s
-(docs/proposals/dialects, Decided, 1, revised 2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
+([Complete expression dialects](../../../../docs/proposals/dialects/README.md#decided), Decided, 1, revised
+2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
 each added by its dialect's install by schema extension, and each branch's schema is that dialect's `Term`, the value
 union of its kinds, `Expressions.<Dialect>.Term`, whose branches are its kinds, named plainly (`binop`). Within a term
 tree every parent-child link is a property: a dialect's own kinds hold its `Term`, so its terms nest its terms; the
@@ -165,7 +166,7 @@ def install(txn: Any) -> Any:
             # schemas, to which each dialect adds its own by schema extension, as it adds its kinds to `Term`.
             lambda _: _.Dialect.name("Expressions.Framework.Dialect"),
             # No relation records which dialects one uses: its caller's install order is its dependencies, checked by
-            # mbse-schemas' refusal of an unregistered schema (docs/proposals/domains, Decided, I).
+            # mbse-schemas' refusal of an unregistered schema ([Domains as data](../../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, I).
             # A domain: a reference object holding its kind, a value of the union of the dialects' unions of kinds,
             # owned by the dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the
             # scalar it narrows, reads it through the extension adjacency `domain`.

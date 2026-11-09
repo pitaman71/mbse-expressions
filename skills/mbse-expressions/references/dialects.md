@@ -18,7 +18,7 @@ evaluates, is mbse-basis'
 
 | Use | For |
 |---|---|
-| **Patterns** | the constraint itself: the neutral form to store, share and analyze. Constraints every binding evaluates are Patterns', over the variables they name, using only the core vocabulary |
+| **Patterns** | the constraint itself, to store, share and analyze. Constraints every binding evaluates are Patterns', over the variables they name, using only the core vocabulary |
 | **Python3** | Python source: every expression of Python 3 (3.0 to 3.15) as CPython's `ast` has it, in mbse-programs' names and shapes, to check the constraint in Python or read one from Python code; NumPy style evaluates over columns ([CAP-227: the Python3 expression dialect](mbse:mbse-basis/docs/capabilities/CAP-227.md)) |
 | **TypeScript5** | TypeScript source: every expression of TypeScript 5 (5.0 to 5.9) as typescript-estree has it, in mbse-programs' names and shapes, its types and destructuring patterns each a union of its own (`Expressions.TypeScript.TypeScript5.Type`, `Expressions.TypeScript.TypeScript5.Pattern`), JSX an extension; to model TypeScript code, as mbse-programs does; no translator yet ([CAP-228: the TypeScript5 expression dialect](mbse:mbse-basis/docs/capabilities/CAP-228.md)) |
 | **MATLAB** | MATLAB source, for constraints that live in MATLAB code or Simulink models |

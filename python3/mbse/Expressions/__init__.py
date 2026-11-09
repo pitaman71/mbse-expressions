@@ -12,7 +12,7 @@ under its family, at `mbse.Expressions.<Family>.<Dialect>` (`mbse.Expressions.Pa
 `mbse.Expressions.Translators`. The kinds of value domain and the domains are the standard dialects'
 (`mbse.Expressions.ISOIEC11404.Expressions`, `IEEE754.Expressions`, `IEEE1164.Expressions` and `Unicode.Expressions`),
 installed after the framework and before the dialects that use them. Expressions are stored in an mbse-schemas store,
-whose schemas `Framework.install` and each dialect's `install` define (docs/proposals/port/API.md)."""
+whose schemas `Framework.install` and each dialect's `install` define ([the API](../../../docs/proposals/port/API.md))."""
 
 from . import Framework
 

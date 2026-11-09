@@ -12,8 +12,7 @@ data, as [mbse-schemas](https://github.com/pitaman71/mbse-schemas) values, evalu
 and translated between expression languages, called dialects:
 
 - **Patterns** (formerly Basic), the core vocabulary: comparisons, Kleene logic, arithmetic and bitwise operations over
-  values, property access, lets, lists and mappings, and collections with quantifiers. Every binding evaluates it, and
-  it is the neutral form of every constraint.
+  values, property access, lets, lists and mappings, and collections with quantifiers. Every binding evaluates it.
 - **Python3**, **MATLAB** and **Excel**, which model those languages' expressions: each renders as its source text and
   evaluates by its own rules. Python3 holds every expression of Python 3 (3.0 to 3.15), as CPython's `ast` has it, and
   evaluates the kinds constraints use, refusing the others by name.
@@ -26,6 +25,9 @@ and translated between expression languages, called dialects:
   wrapping unsigned arithmetic, undefined behavior raising), refusing the other kinds by name.
 - **SystemVerilog**, hardware expressions and constraints over 4-state vectors and reals: it renders as its source and
   evaluates by IEEE 1800's rules (sizing by context, x and z propagating).
+- **ISOIEC11404**, **IEEE754**, **IEEE1164** and **Unicode**, the standard dialects: each holds a published standard's
+  kinds of domain and its domains, named as the standard names them (ISO/IEC 11404's `integer` and `octet`, IEEE 754's
+  `binary64`), and has no terms yet. The other dialects' values take their domains.
 
 What it can do is mbse-basis' [FEA-024: expressions as data](mbse:mbse-basis/docs/features/FEA-024.md) and its
 capabilities.
@@ -129,13 +131,14 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/python3/tests/10_Collections.ipynb#COL-08) · TypeScript: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/typescript5/tests/10_Collections.ipynb#COL-08)
 6. **Store and send a constraint as a value.** *Why*: one constraint, read by every program in every language, byte
    for byte. *When*: saving, loading or sending a constraint. *How*: a term is a nested value of
-   `Expressions.Framework.Term`, written as its dialect, then its kind (`{"patterns": {"call": ...}}`), so it
-   serializes as any mbse-schemas value does: `JSON.ToJSON(store)(Term, term)` and `JSON.FromJSON(store)(Term, text)`
+   `Expressions.Framework.Term`, written as its dialect, then its kind (the corpus's `expression` case pins the bytes,
+   the same in both languages), so it serializes as any mbse-schemas value does: `JSON.ToJSON(store)(Term, term)` and `JSON.FromJSON(store)(Term, text)`
    (YAML likewise). `Terms.term(expression)` reads an expression's root term. A term is a value, not an object: a
    subterm used twice is written twice, and a term holds no cycle. An expression is a reference object, validated as
    any is; a schema of an expression (`Schemas.OfExpression`) links the expression it holds.
    [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md#validation-storage-and-writers).
    - Python: [T01.6: Saving and loading](mbse:mbse-expressions/python3/tutorials/01_Constraints_As_Data.ipynb#T01.6) · TypeScript: [T01.6: Saving and loading](mbse:mbse-expressions/typescript5/tutorials/01_Constraints_As_Data.ipynb#T01.6)
+   - Python: [CONF-02: Every implementation has the same cases, and JSON is byte-identical across implementations](mbse:mbse-expressions/python3/tests/04_Conformance.ipynb#CONF-02) · TypeScript: [CONF-02: Every implementation has the same cases, and JSON is byte-identical across implementations](mbse:mbse-expressions/typescript5/tests/04_Conformance.ipynb#CONF-02)
    - Python: [EXP-03: A term is a nested value: written into another it is copied, so it holds no cycle](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-03) · TypeScript: [EXP-03: A term is a nested value: written into another it is copied, so it holds no cycle](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-03)
    - Python: [EXP-06: Round trips through Plain, JSON and YAML: a term written nested, its kind its branch's name](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-06) · TypeScript: [EXP-06: Round trips through Plain, JSON and YAML: a term written nested, its kind its branch's name](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-06)
    - Python: [EXP-07: An expression is a reference object; a schema's expression is linked by `HasRoot`, an extension adjacency](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-07) · TypeScript: [EXP-07: An expression is a reference object; a schema's expression is linked by `HasRoot`, an extension adjacency](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-07)
@@ -198,10 +201,11 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
 12. **Dialects, operations and domains are data.** *Why*: a program learns what a dialect can say from the store,
    without its code, and a domain is named once. *When*: listing a dialect's vocabulary, or reading a domain. *How*:
    a dialect's `define`, run after its install in a transaction of its own, writes its singleton, found by its global
-   name (`store.Instances.Expressions.Patterns.Expressions`), which names its operations and owns its domains by name. A
-   published standard is a dialect of its own, holding its kinds of domain and its domains (`ISOIEC11404`'s
-   `integer` and `octet`, `IEEE754`'s `binary32`, ...; each kind and domain named as its standard names it), installed before the dialects that use its kinds or its
-   domains' schemas (Python3's complex number holds IEEE 754's `binary64`s). An
+   name (`store.Instances.Expressions.Patterns.Expressions`), which names its operations; a standard dialect's
+   (`store.Instances.Expressions.ISOIEC11404.Expressions`) owns its domains by name. A published standard is a dialect
+   of its own, holding its kinds of domain and its domains (`ISOIEC11404`'s `integer` and `octet`, `IEEE754`'s
+   `binary32`, ...; each kind and domain named as its standard names it), installed before the dialects that use its
+   kinds or its domains' schemas (Python3's complex number holds IEEE 754's `binary64`s). An
    operation is an expression schema: its pattern's variables are its arguments, in order, and its `result` is its
    return. Read a stored domain with the framework's `Domains.kind_of` (its dialect's tag, then its kind's: C's `nullptr_t` is not C++'s), `Domains.properties` (its parameters and its
    inferred properties, such as an integer's `least` and `greatest`) and `Domains.name_of`, and a dialect's operations
@@ -209,7 +213,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    and the domains its variables are given; a quantifier's name has its items' domain.
    [CAP-097: value domains of published standards](mbse:mbse-basis/docs/capabilities/CAP-097.md#value-domains).
    - Python: [T07.5: A dialect is data](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.5) · TypeScript: [T07.5: A dialect is data](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.5)
-   - Python: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
+   - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
    - Python: [DOM-17: The standard dialects own the kinds and domains, with their inferred properties, read through the framework's interface](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-17) · TypeScript: [DOM-17: The standard dialects own the kinds and domains, with their inferred properties, read through the framework's interface](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-17)
    - Python: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic, Python3's and TypeScript5's strings, the tokens and Excel's errors](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-18) · TypeScript: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic, Python3's and TypeScript5's strings, the tokens and Excel's errors](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-18)
    - Python: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-03) · TypeScript: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-03)
@@ -251,7 +255,7 @@ each case shows its own:
   and a transaction's frame is a `dict` in Python, a `Map` in TypeScript (`.get("octet")`).
   - Python: [T03.5: Building a list or a mapping](mbse:mbse-expressions/python3/tutorials/03_Constraints_Over_Collections.ipynb#T03.5) · TypeScript: [T03.5: Building a list or a mapping](mbse:mbse-expressions/typescript5/tutorials/03_Constraints_Over_Collections.ipynb#T03.5)
   - Python: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/python3/tests/10_Collections.ipynb#COL-08) · TypeScript: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/typescript5/tests/10_Collections.ipynb#COL-08)
-  - Python: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
+  - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
 - **Names.** The API is the same name for name, snake_case included (`Domains.items_of`), except the framework's reads
   of terms, camelCase in TypeScript: `Terms.name_of`, `kind_of`, `dialect_of` and `attributes_of` are `Terms.nameOf`,
   `kindOf`, `dialectOf` and `attributesOf` (a `Map`). A translator's pattern takes its attributes by keyword in Python
@@ -264,7 +268,7 @@ each case shows its own:
 - **Domains.** Python compares domains with `==`; TypeScript with `.equals()`, and builds them with `new`, widths as
   `bigint`s (`new Domains.OfInteger.Builder().width(8n)`).
   - Python: [DOM-01: Value domains name standards, with only their parameters, are compared by structure and validated](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-01) · TypeScript: [DOM-01: Value domains name standards, with only their parameters, are compared by structure and validated](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-01)
-  - Python: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
+  - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
 - **Python's expressions.** Python's Python3 dialect evaluates with real modules (numpy among them, with the `numpy`
   extra) and parses source with `Text.FromText`; TypeScript's models Python's rules, its modules are
   `new Python3.Evaluators.Module(name, { members })`, it has no numpy, and it has no `FromText`: build the same

@@ -25,8 +25,10 @@ The implementations here are generic; each dialect's `Domains` module defines it
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from typing import Any, Protocol, runtime_checkable
+from collections.abc import Callable, Sequence, Sized
+from typing import Any, Protocol, cast, runtime_checkable
+
+from mbse.Schemas.Framework import Readers
 
 from . import Objects
 
@@ -40,52 +42,61 @@ __all__ = [
 # --- Reading stored domains and operations ---
 
 
-def _branch(union: Any) -> tuple[str, Any] | None:
+def _branch(union: Readers.OfUnion) -> tuple[str, Readers.OfUnion] | None:
     """The tag and the visitor of the branch a union value holds, or None where it holds none."""
     schema = union.as_schema()
-    return next(((branch.name, getattr(union, branch.name)) for branch in (schema.branches if schema else ())
-                 if getattr(union, branch.name).as_schema() is not None), None)
+    if schema is None:  # an absent value holds no branch
+        return None
+    held = [(branch.name, cast(Readers.OfUnion, getattr(union, branch.name))) for branch in schema.branches]
+    return next(((name, visitor) for name, visitor in held if visitor.as_schema() is not None), None)
 
 
-def kind_of(domain: Any) -> tuple[str, str, Any]:
+def kind_of(domain: Readers.OfObject) -> tuple[str, str, Readers.OfObject]:
     """A stored domain's kind, `(dialect, tag, record)`: the branch of `Expressions.Framework.DomainKind` that names its
     dialect, and the branch of that dialect's union of kinds it holds."""
-    found: list[Any] = []
-    domain.kind.as_value(lambda a: a.as_union(lambda u: found.append(u) or u))
+    found: list[Readers.OfUnion] = []
+    kind: Readers.OfProperty = domain.kind
+
+    def held(union: Readers.OfUnion) -> Readers.OfUnion:
+        found.append(union)
+        return union
+
+    kind.as_value(lambda a: a.as_union(held))
     dialect = _branch(found[0])
     if dialect is None:
         raise ValueError("a domain needs a kind")
-    tag, record = _branch(dialect[1])  # type: ignore[misc]  # a union value holds exactly one branch
+    tag, record = cast(tuple[str, Readers.OfObject], _branch(dialect[1]))  # exactly one branch
     return dialect[0], tag, record
 
 
-def properties(domain: Any) -> dict[str, Any]:
+def properties(domain: Readers.OfObject) -> dict[str, object]:
     """A stored domain's kind's properties that are set, its parameters and its inferred properties alike, by name, in
     its kind's schema's order: a scalar as itself, a container as a tuple of its elements."""
     return {name: tuple(value.values) if isinstance(value, Objects.Listed) else value
             for name, value in Objects.properties(kind_of(domain)[2]).items()}
 
 
-def name_of(domain: Any) -> str | None:
+def name_of(domain: Readers.OfObject) -> str | None:
     """The name a stored domain's dialect defines it by, its `Expressions.Framework.Defines` entry's; None where no
     dialect defines it."""
-    return next((entry.values["name"] for entry in Objects.entries(domain, "dialect")), None)
+    return next((str(entry.values["name"]) for entry in Objects.entries(domain, "dialect")), None)
 
 
-def operations(dialect: Any) -> dict[str, Any]:
+def operations(dialect: Readers.OfObject) -> dict[str, Readers.OfObject]:
     """A dialect's operations by name, in the order its singleton names them (`Expressions.Framework.Operates`), each
     its `Schemas.OfExpression`."""
-    return {entry.values["name"]: entry.targets["operation"] for entry in Objects.entries(dialect, "operations")}
+    return {str(entry.values["name"]): entry.targets["operation"] for entry in Objects.entries(dialect, "operations")}
 
 
-def arity(operation: Any) -> int:
+def arity(operation: Readers.OfObject) -> int:
     """An operation's number of arguments: its pattern's variables."""
-    return len(operation.pattern.variables)
+    variables: Sized = operation.pattern.variables
+    return len(variables)
 
 
 # --- Domains and signatures in code ---
-# These are `Dialect.infer`'s, CAP-232's to replace with stored domains and operations, as domain inference reads them:
-# mbse:mbse-basis/docs/capabilities/CAP-232.md
+# These are `Dialect.infer`'s, to be replaced with stored domains and operations, as domain inference reads them
+# ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
 
 
 @runtime_checkable

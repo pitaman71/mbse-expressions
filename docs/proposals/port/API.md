@@ -1004,7 +1004,7 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
 ## Settled in domains as data's stage 1, for the user's review
 
-Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) decided (its Decided, A to I) and as its
+Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) decided (its Decided, A to J, the package root's exports and stage 1's review) and as its
 [stage 1's design](../domains/README.md#stage-1s-design) specifies; each choice below is where they were silent.
 
 112. **The standard dialects.** `ISOIEC11404`, `IEEE754`, `IEEE1164` and `Unicode`, each a family holding its one
@@ -1064,8 +1064,8 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      reads it as a helper, `Part("complex", {"real": 0.0, "imag": 2.0})`; `P.constant(2j)` (TypeScript
      `P.constant(new P.Complex(0, 2))`) and `Text.FromText` write it through a spec, with no store. Python3's install
      so names IEEE 754's schemas and runs after IEEE 754's, as every caller's list has it (item 118); mbse-schemas
-     refuses it otherwise. On the wire, `{"constant": {"complex": {"real": 0.0, "imag": 2.0}}}` (the corpus's `python3`
-     case). Its checks' messages are unchanged. `1` stays a framework `literal` while `2j`, `None` and `...` are
+     refuses it otherwise. Written `P.constant(2j)` (TypeScript `P.constant(new P.Complex(0, 2))`); the corpus's
+     `python3` case pins its bytes. Its checks' messages are unchanged. `1` stays a framework `literal` while `2j`, `None` and `...` are
      Python3 `constant`s, a split that follows mbse-schemas' basic scalars rather than Python's grammar, kept for now.
      Tests: DIA-19.
 121. **The package root exports `Framework` alone** (2026-11-09, as the user decided, "approved",

@@ -3,8 +3,9 @@
  * translator shares.
  *
  * An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
- * `Expressions.Framework.Term`, held nested (docs/proposals/port, Decided, 2). `Term` is the union of the dialects' `Term`s
- * (docs/proposals/dialects, Decided, 1, revised 2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
+ * `Expressions.Framework.Term`, held nested ([Porting to the stabilized mbse-schemas](../../../docs/proposals/port/README.md#decided), Decided, 2). `Term` is the union of the dialects' `Term`s
+ * ([Complete expression dialects](../../../docs/proposals/dialects/README.md#decided), Decided, 1, revised
+ * 2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
  * each added by its dialect's install by schema extension, and each branch's schema is that dialect's `Term`, the value
  * union of its kinds, `Expressions.<Dialect>.Term`, whose branches are its kinds, named plainly (`binop`). Within a term
  * tree every parent-child link is a property: a dialect's own kinds hold its `Term`, so its terms nest its terms; the
@@ -161,7 +162,7 @@ export function install(txn: any): any {
       // each dialect adds its own by schema extension, as it adds its kinds to `Term`.
       (_: any) => _.Dialect.name("Expressions.Framework.Dialect"),
       // No relation records which dialects one uses: its caller's install order is its dependencies, checked by
-      // mbse-schemas' refusal of an unregistered schema (docs/proposals/domains, Decided, I).
+      // mbse-schemas' refusal of an unregistered schema ([Domains as data](../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, I).
       // A domain: a reference object holding its kind, a value of the union of the dialects' unions of kinds, owned by
       // the dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the scalar it narrows,
       // reads it through the extension adjacency `domain`.

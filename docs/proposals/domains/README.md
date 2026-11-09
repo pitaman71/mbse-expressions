@@ -113,8 +113,8 @@ As the user decided (2026-11-04), on the questions below:
   quoted:
   - **E. An ISO/IEC 11404 dialect, and Patterns holds no kinds or domains.** To (a)'s "don't invent a standard where
     none exists" the user answered that it is at odds with (b): ISO/IEC 11404 is a published standard, which has the
-    six kinds (integer, boolean, bit string, octet string, enumerated, packing), so by PRI-012 they are its dialect's,
-    as [CAP-180](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md) has it ("ISO/IEC 11404 replaces Basic expression dialect", "Datatype
+    six kinds (integer, boolean, bit string, octet string, enumerated, packing), so by [PRI-012: model published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-012) they are its dialect's,
+    as [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md) has it ("ISO/IEC 11404 replaces Basic expression dialect", "Datatype
     operations are modeled, not coded"). In stage 1 the ISO/IEC 11404 dialect holds those six kinds beside the IEEE
     754, IEEE 1164 and Unicode dialects; replacing Patterns entirely, and modeling 11404's operations, stay CAP-180's.
     And: "I am sensing repeated suggestions to consolidate things under `Patterns` and I don't know where that comes
@@ -295,11 +295,12 @@ whole-record review before it is brought to the user.
    C++'s enums are stored as enumerations packed into their integer types, not as integer domains (Decided, "On stage
    1's review").
 4. Standards as tagged data (the dialects proposal's Decided, Q10), every dialect's standards.
-5. Records in mbse-basis (CAP-097, CAP-180, CAP-232, CAP-226), and release as 0.9.0 (Decided, D).
+5. Records in mbse-basis ([CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md), [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md),
+   [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md), [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)), and release as 0.9.0 (Decided, D).
 
 ## Stage 1's design
 
-As the user decided (Decided, on this proposal, A to I), on the code at 0.8.0 (`python3/mbse/Expressions/`,
+As the user decided (Decided, on this proposal, A to J, the package root's exports and stage 1's review), on the code at 0.8.0 (`python3/mbse/Expressions/`,
 `typescript5/src/`, the same in both). What the decisions leave open is the agent's, for review, marked *(agent)*.
 
 **The standard dialects.** Four dialects of the standards that define today's nine kinds, each a family with one

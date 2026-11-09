@@ -26,36 +26,37 @@
  */
 
 import { Errors } from "@mbse/schemas/Framework";
+import type { Readers, Schemas } from "@mbse/schemas/Framework";
 
 import * as Objects from "./Objects.js";
 
 // --- Reading stored domains and operations ---
 
 /** The tag and the visitor of the branch a union value holds, or null where it holds none. */
-function branch(union: any): [string, any] | null {
-  const schema = union.as_schema();
-  const found = ((schema?.branches ?? []) as readonly { name: string }[])
-    .find((b) => union[b.name].as_schema() !== null);
-  return found === undefined ? null : [found.name, union[found.name]];
+function branch(union: Readers.OfUnion): [string, Readers.OfUnion] | null {
+  const schema = union.as_schema() as Schemas.OfUnion.Data | null; // null: an absent value, which holds no branch
+  const held = (schema?.branches ?? []).map((b): [string, Readers.OfUnion] => [b.name, union[b.name] as Readers.OfUnion]);
+  const found = held.find(([, visitor]) => visitor.as_schema() !== null);
+  return found === undefined ? null : found;
 }
 
 /** A stored domain's kind, `[dialect, tag, record]`: the branch of `Expressions.Framework.DomainKind` that names its
  * dialect, and the branch of that dialect's union of kinds it holds. */
-export function kindOf(domain: any): [string, string, any] {
-  const found: any[] = [];
-  domain.kind.as_value((a: any) => a.as_union((u: any) => {
+export function kindOf(domain: Readers.OfObject): [string, string, Readers.OfObject] {
+  const found: Readers.OfUnion[] = [];
+  (domain.kind as Readers.OfProperty).as_value((a) => a.as_union((u) => {
     found.push(u);
     return u;
   }));
-  const dialect = branch(found[0]);
+  const dialect = branch(found[0] as Readers.OfUnion);
   if (dialect === null) throw new Errors.ValueError("a domain needs a kind");
-  const [tag, record] = branch(dialect[1]) as [string, any]; // a union value holds exactly one branch
-  return [dialect[0], tag, record];
+  const [tag, record] = branch(dialect[1]) as [string, unknown]; // a union value holds exactly one branch
+  return [dialect[0], tag, record as Readers.OfObject];
 }
 
 /** A stored domain's kind's properties that are set, its parameters and its inferred properties alike, by name, in
  * its kind's schema's order: a scalar as itself, a container as an array of its elements. */
-export function properties(domain: any): Map<string, unknown> {
+export function properties(domain: Readers.OfObject): Map<string, unknown> {
   const found = new Map<string, unknown>();
   for (const [name, value] of Objects.properties(kindOf(domain)[2])) {
     found.set(name, value instanceof Objects.Listed ? [...value.values] : value);
@@ -65,26 +66,26 @@ export function properties(domain: any): Map<string, unknown> {
 
 /** The name a stored domain's dialect defines it by, its `Expressions.Framework.Defines` entry's; null where no
  * dialect defines it. */
-export function nameOf(domain: any): string | null {
+export function nameOf(domain: Readers.OfObject): string | null {
   const [entry] = Objects.entries(domain, "dialect");
   return entry === undefined ? null : entry.values.get("name") as string;
 }
 
 /** A dialect's operations by name, in the order its singleton names them (`Expressions.Framework.Operates`), each
  * its `Schemas.OfExpression`. */
-export function operations(dialect: any): Map<string, any> {
+export function operations(dialect: Readers.OfObject): Map<string, Readers.OfObject> {
   return new Map(Objects.entries(dialect, "operations").map(
-    (entry) => [entry.values.get("name") as string, entry.targets.get("operation")]));
+    (entry) => [entry.values.get("name") as string, entry.targets.get("operation") as Readers.OfObject]));
 }
 
 /** An operation's number of arguments: its pattern's variables. */
-export function arity(operation: any): number {
-  return operation.pattern.variables.size;
+export function arity(operation: Readers.OfObject): number {
+  return (operation.pattern as { readonly variables: ReadonlyMap<string, unknown> }).variables.size;
 }
 
 // --- Domains and signatures in code ---
-// These are `Dialect.infer`'s, CAP-232's to replace with stored domains and operations, as domain inference reads them:
-// mbse:mbse-basis/docs/capabilities/CAP-232.md
+// These are `Dialect.infer`'s, to be replaced with stored domains and operations, as domain inference reads them
+// ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
 
 /** A set of values. */
 export interface Domain {
