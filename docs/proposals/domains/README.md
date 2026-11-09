@@ -120,9 +120,10 @@ As the user decided (2026-11-04), on the questions below:
     And: "I am sensing repeated suggestions to consolidate things under `Patterns` and I don't know where that comes
     from". Where it came from: Patterns was Basic, which held the scalar kinds and domains, never moved out when it
     was renamed for its quantifiers over `OfPattern`; this proposal's question 4 recommended "Patterns' `integer`
-    kind, shared", writing that inheritance into a decision; and the package root re-exports Patterns' `Domains`,
-    `Evaluators`, `Expressions` and `Partials` as "the neutral form of every constraint". So Patterns' eight domains
-    and its kinds move to the standard dialects, and Patterns uses their domains as any dialect does.
+    kind, shared", writing that inheritance into a decision; and the package root re-exported Patterns' `Domains`,
+    `Evaluators`, `Expressions` and `Partials` as "the neutral form of every constraint" (no longer: "The package root
+    exports `Framework` alone", below). So Patterns' eight domains and its kinds move to the standard dialects, and
+    Patterns uses their domains as any dialect does.
   - **F. (a)**: the caller runs each install in order, each its own transaction, as the tutorials' toolkit and the
     tests do; an install names the kinds it uses by their schemas' names, so mbse-schemas refuses it where they are
     not installed; ~~each install writes its uses as data, `Uses(dialect, used)`~~ (*superseded* 2026-11-09 by I,
@@ -137,10 +138,9 @@ As the user decided (2026-11-04), on the questions below:
   - **H.** (1) To `complex`: "what is Python's `complex` ? Seems like an object to me". It is two IEEE 754 binary64
     floats, `real` and `imag`, immutable and compared by value: not a domain but a value schema of Python3's, its
     properties held by IEEE 754's binary64, which Python3's `constant` holds (J, below; first read as its imaginary
-    literal's). (2) `RegExp`: not a domain. (3)
-    Excel's error values: Excel's own domain, of its own kind, its members the error codes. (4) Compound values: not
-    domains; they have schemas. The tokens (`nullptr_t`, Python's `None`'s and `...`'s types, TypeScript's `null`)
-    each have a domain of their own, as B decided.
+    literal's). (2) `RegExp`: not a domain. (3) Excel's error values: Excel's own domain, of its own kind, its members
+    the error codes. (4) Compound values: not domains; they have schemas. The tokens (`nullptr_t`, Python's `None`'s
+    and `...`'s types, TypeScript's `null`) each have a domain of their own, as B decided.
   - Stage 1's text, leaving the result-domain relation to CAP-232 (Stages, 1), was put to the user with these, and
     stands.
 - **I. No `Uses`** (2026-11-09), on stage 1's question I (who writes `Uses`): "drop `Uses` and monitor for reasons to
@@ -183,7 +183,7 @@ As the user decided (2026-11-04), on the questions below:
   and its docstring's "the neutral form of every constraint" with them: they were one source of the habit of
   consolidating things under Patterns (E, above). Patterns is imported from `mbse.Expressions.Framework.Patterns`
   (TypeScript: `@mbse/expressions/Framework/Patterns`), as every other dialect is from its path; every caller that
-  relied on the root (the tests, the tutorials, the corpus, the skill and the README) does so. It is a breaking
+  relied on the root (the TypeScript tests, the tutorials, the skill and the README) does so. It is a breaking
   change, in 0.9.0, a breaking release anyway ([API](../port/API.md), 121).
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
   release; CAP-232 builds on stored domains.

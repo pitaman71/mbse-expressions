@@ -1065,7 +1065,8 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      as every dialect is: `from mbse.Expressions.Framework.Patterns import Evaluators, Expressions as E`, TypeScript
      `import { Evaluators, Expressions as E } from "@mbse/expressions/Framework/Patterns"`.
      `mbse.Expressions.Translators` and every dialect's path are unchanged (a subpackage still imports as
-     `from mbse.Expressions import Translators`). The tests, the tutorials, the skill and the README import so.
+     `from mbse.Expressions import Translators`). The TypeScript tests, the tutorials, the skill and the README import
+     so; FRM-01 asserts the root's exports.
 
 ## What stage 2b needed (done)
 
