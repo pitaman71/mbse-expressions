@@ -66,14 +66,14 @@ def build():
     store.transaction(TypeScript5.install)
     defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
 
-    # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; an enum and a domain packing it into uint8
+    # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
     # added ---
     with store.transaction():
         state = store.Expressions.Framework.Domain(lambda d: d.kind(lambda k: k.as_value(lambda a: a.as_union(
-            lambda u: u.isoiec11404(lambda v: v.enum(lambda e: e.members(["IDLE", "RUN"]).ordered(False)))))))
+            lambda u: u.isoiec11404(lambda v: v.state(lambda e: e.members(["IDLE", "RUN"]).ordered(False)))))))
         mode = store.Expressions.Framework.Domain(lambda d: d.kind(lambda k: k.as_value(lambda a: a.as_union(
             lambda u: u.isoiec11404(lambda v: v.packed(lambda e: e.codes([0, 1]).ordered(True)))))).packs(lambda a: a.insert(
-            lambda e: e.domain(state).representation(defined["uint8"]))))
+            lambda e: e.domain(state).representation(defined["octet"]))))
         store.Expressions.ISOIEC11404.Expressions.Dialect(defined["dialect"], lambda b: b.domains({
             "state": lambda e: e.domain(state), "mode": lambda e: e.domain(mode)}))
 

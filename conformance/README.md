@@ -14,7 +14,7 @@ written nested, indent 2) and `<case>.yaml`.
 | `matlab` | a MATLAB term: every kind (the framework's `literal`, `variable` and `call`, and its own `binary`, `unary`, `field`, `index`, `arrayfun`, `import`), shared identifiers |
 | `excel` | an Excel term: every kind (the framework's `literal`, `variable`, `let` and `call`, and its own `infix`, `prefix`, `field`, `map`, `cell`), cells in other sheets and books included, shared names |
 | `latex` | a LaTeX term: every kind (the framework's `literal`, `variable`, `let` and `call`, and its own `member`, `binary`, `unary`, `frac`), with shared symbols |
-| `domains` | ISO/IEC 11404's dialect as data, written as one document: the singleton `Expressions.ISOIEC11404.Expressions` (`Expressions.ISOIEC11404.Expressions.Dialect`), owning its domains by name, each domain's kind its dialect's then its own, an enum and a domain packing it into `uint8` among them |
+| `domains` | ISO/IEC 11404's dialect as data, written as one document: the singleton `Expressions.ISOIEC11404.Expressions` (`Expressions.ISOIEC11404.Expressions.Dialect`), owning its domains by name, each domain's kind its dialect's then its own, a state domain and a domain packing it into `octet` among them |
 | `collections` | a Patterns quantifier over an object's entries, the collection operations and a mapping |
 | `c` | a C term: every kind (the framework's `variable` and `call`, and its own `conditional`, `binary`, `unary`, `member`, `subscript`, `cast`, `constant`), typed constants and a shared identifier |
 | `cpp` | the same expression as a C++ term: C++'s own kinds, of C's shapes, each property holding a C++ term |

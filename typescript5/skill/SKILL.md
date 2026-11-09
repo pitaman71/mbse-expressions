@@ -200,10 +200,10 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    a dialect's `define`, run after its install in a transaction of its own, writes its singleton, found by its global
    name (`store.Instances.Expressions.Framework.Patterns`), which names its operations and owns its domains by name. A
    published standard is a dialect of its own, holding its kinds of domain and its domains (`ISOIEC11404`'s
-   `integer` and `uint8`, `IEEE754`'s `binary32`, ...), installed before the dialects that use its kinds or its
+   `integer` and `octet`, `IEEE754`'s `binary32`, ...; each kind and domain named as its standard names it), installed before the dialects that use its kinds or its
    domains' schemas (Python3's complex number holds IEEE 754's `binary64`s). An
    operation is an expression schema: its pattern's variables are its arguments, in order, and its `result` is its
-   return. Read a stored domain with the framework's `Domains.kind_of`, `Domains.properties` (its parameters and its
+   return. Read a stored domain with the framework's `Domains.kind_of` (its dialect's tag, then its kind's: C's `nullptr_t` is not C++'s), `Domains.properties` (its parameters and its
    inferred properties, such as an integer's `least` and `greatest`) and `Domains.name_of`, and a dialect's operations
    with `Domains.operations` and `Domains.arity`. `DIALECT.infer(term, domains)` finds a term's domain from its vocabulary's signatures
    and the domains its variables are given; a quantifier's name has its items' domain.
@@ -248,7 +248,7 @@ each case shows its own:
   - Python: [T07.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.4) · TypeScript: [T07.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.4)
 - **Mappings and frames.** A mapping's entries are tuples in Python (`E.mapping(("lo", 0.5))`), arrays in TypeScript
   (`E.mapping(["lo", 0.5])`); a mapping given as data is a `dict` in Python, a `Map` or a plain object in TypeScript,
-  and a transaction's frame is a `dict` in Python, a `Map` in TypeScript (`.get("uint8")`).
+  and a transaction's frame is a `dict` in Python, a `Map` in TypeScript (`.get("octet")`).
   - Python: [T03.5: Building a list or a mapping](mbse:mbse-expressions/python3/tutorials/03_Constraints_Over_Collections.ipynb#T03.5) · TypeScript: [T03.5: Building a list or a mapping](mbse:mbse-expressions/typescript5/tutorials/03_Constraints_Over_Collections.ipynb#T03.5)
   - Python: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/python3/tests/10_Collections.ipynb#COL-08) · TypeScript: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/typescript5/tests/10_Collections.ipynb#COL-08)
   - Python: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: a dialect's singleton names its operations and owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)

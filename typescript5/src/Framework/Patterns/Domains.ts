@@ -24,7 +24,7 @@
  * kind with its parameters and the properties inferred from them. It is owned by the dialect that defines it, by name: its
  * path is the dialect's singleton (`Expressions.ISOIEC11404.Expressions`), then its name. A packed domain links its enum
  * and its representation through `Expressions.ISOIEC11404.Expressions.Packs`. Its schema is a named `Schemas.OfAny`
- * restricted to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.uint8`), which reads it through `domain`
+ * restricted to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.octet`), which reads it through `domain`
  * (`Expressions.Framework.HasDomain`). Each standard dialect's `define` writes its domains, and `read(domain)` gives the
  * data of a stored one, its parameters (ignoring its inferred properties), so that what they mean can be asked of it.
  *
@@ -574,8 +574,12 @@ export const OfUnicode = new Kind(UnicodeDomain, UnicodeBuilder);
 export const OfIeee1164 = new Kind(Ieee1164Domain, Ieee1164Builder);
 export const OfEnum = new Kind(EnumDomain, EnumBuilder);
 export const OfPacked = new Kind(PackedDomain, PackedBuilder);
-const KINDS = new Map<string, DomainClass>([BoolDomain, IntegerDomain, Ieee754Domain, BitsDomain, BytesDomain,
-  UnicodeDomain, Ieee1164Domain, EnumDomain, PackedDomain].map((kind) => [kind.KIND, kind as DomainClass]));
+/** By the stored kind, its dialect's tag and its own: each the standard dialect's, named by its standard. */
+const KINDS = new Map<string, DomainClass>([
+  ["isoiec11404 boolean", BoolDomain], ["isoiec11404 integer", IntegerDomain], ["isoiec11404 bitstring", BitsDomain],
+  ["isoiec11404 octetstring", BytesDomain], ["isoiec11404 state", EnumDomain], ["isoiec11404 packed", PackedDomain],
+  ["ieee754 ieee754", Ieee754Domain], ["ieee1164 ieee1164", Ieee1164Domain], ["unicode unicode", UnicodeDomain],
+].map(([key, kind]) => [key as string, kind as DomainClass]));
 
 // --- Collections ---
 
@@ -872,8 +876,8 @@ export function of(value: unknown): D.Domain {
  * kinds (`Framework/Domains.kindOf`), with the parameters it holds (a packed domain's enum and representation, through
  * `packs`, read in turn) and not its inferred properties, so that it can be validated and asked what it holds. */
 export function read(domain: any): Domain {
-  const [tag] = D.kindOf(domain);
-  const data = KINDS.get(tag) as DomainClass;
+  const [dialect, tag] = D.kindOf(domain);
+  const data = KINDS.get(`${dialect} ${tag}`) as DomainClass;
   const parameters = D.properties(domain);
   if (tag === "packed") {
     for (const entry of domain.packs) {

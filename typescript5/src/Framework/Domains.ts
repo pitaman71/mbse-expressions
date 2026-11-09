@@ -2,10 +2,11 @@
  * Domains: the types of the values expressions denote, and the signatures of operators over them.
  *
  * The reading interface over stored domains and operations, each a `Readers.OfObject` found by its path
- * (`dialect.domains({ name: "uint8" })`) or a schema's `domain`:
+ * (`dialect.domains({ name: "octet" })`) or a schema's `domain`:
  *
- * - `kindOf(domain)`: its kind, `[tag, record]`, read through its dialect's union of kinds (`integer`, and the record
- *   of `Expressions.ISOIEC11404.Expressions.OfInteger`); "a domain needs a kind" where it holds none.
+ * - `kindOf(domain)`: its kind, `[dialect, tag, record]`, read through its dialect's union of kinds (`isoiec11404`,
+ *   `integer`, and the record of `Expressions.ISOIEC11404.Expressions.OfInteger`), the dialect's tag telling apart kinds
+ *   two dialects name alike (C's and C++'s `nullptr_t`); "a domain needs a kind" where it holds none.
  * - `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by
  *   name; a container as an array of its elements.
  * - `nameOf(domain)`: the name its dialect defines it by (its `Defines` entry's), or null.
@@ -38,9 +39,9 @@ function branch(union: any): [string, any] | null {
   return found === undefined ? null : [found.name, union[found.name]];
 }
 
-/** A stored domain's kind, `[tag, record]`: the branch of its dialect's union of kinds it holds, read through the
- * branch of `Expressions.Framework.DomainKind` that names its dialect. */
-export function kindOf(domain: any): [string, any] {
+/** A stored domain's kind, `[dialect, tag, record]`: the branch of `Expressions.Framework.DomainKind` that names its
+ * dialect, and the branch of that dialect's union of kinds it holds. */
+export function kindOf(domain: any): [string, string, any] {
   const found: any[] = [];
   domain.kind.as_value((a: any) => a.as_union((u: any) => {
     found.push(u);
@@ -48,14 +49,15 @@ export function kindOf(domain: any): [string, any] {
   }));
   const dialect = branch(found[0]);
   if (dialect === null) throw new Errors.ValueError("a domain needs a kind");
-  return branch(dialect[1]) as [string, any]; // a union value holds exactly one branch
+  const [tag, record] = branch(dialect[1]) as [string, any]; // a union value holds exactly one branch
+  return [dialect[0], tag, record];
 }
 
 /** A stored domain's kind's properties that are set, its parameters and its inferred properties alike, by name, in
  * its kind's schema's order: a scalar as itself, a container as an array of its elements. */
 export function properties(domain: any): Map<string, unknown> {
   const found = new Map<string, unknown>();
-  for (const [name, value] of Objects.properties(kindOf(domain)[1])) {
+  for (const [name, value] of Objects.properties(kindOf(domain)[2])) {
     found.set(name, value instanceof Objects.Listed ? [...value.values] : value);
   }
   return found;

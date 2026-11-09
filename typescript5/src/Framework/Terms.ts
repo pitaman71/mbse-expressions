@@ -32,10 +32,12 @@
  * an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
  * the union of the dialects' unions of kinds, as `Term` is of their `Term`s: with no branch until a dialect that has kinds
  * adds its own, `Expressions.<Family>.<Dialect>.DomainKind`, as the branch named by its tag (`isoiec11404`), so a kind
- * is written its dialect, then its kind (`{"ieee754": {"ieee754": {"format": "binary32", ...}}}`). The standard
+ * is written its dialect, then its kind
+ * (`d.kind((k) => k.as_value((a) => a.as_union((u) => u.ieee754((v) => v.ieee754((f) => f.format("binary32")))))))`).
+ * The standard
  * dialects, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode (`@mbse/expressions/ISOIEC11404/Expressions` and the
  * others), hold the kinds and the domains of their standards. A domain's schema is a named `Schemas.OfAny` restricted
- * to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.uint8`), which reads it through the extension
+ * to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.octet`), which reads it through the extension
  * adjacency `domain` (`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its
  * operations (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module
  * defines, whose pattern's variables are its arguments, in the order they are declared, and whose `result` is its

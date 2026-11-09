@@ -115,6 +115,27 @@ mutations:
                                   i: domains
                                   o: dialect
                                   properties:
+                                    name: octet
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: octet
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.ISOIEC11404.Expressions
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
                                     name: octetstring
                                   next:
                                     target: {}
@@ -144,24 +165,3 @@ mutations:
                       mutations:
                       - set:
                           value: state
-                - mutations:
-                  - as_link:
-                      name: domain
-                      mutations:
-                      - set:
-                          ref:
-                            path:
-                              singleton: Expressions.ISOIEC11404.Expressions
-                              next:
-                                entry:
-                                  i: domains
-                                  o: dialect
-                                  properties:
-                                    name: uint8
-                                  next:
-                                    target: {}
-                  - as_property:
-                      name: name
-                      mutations:
-                      - set:
-                          value: uint8

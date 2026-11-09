@@ -72,14 +72,14 @@ export function build(): Map<string, Case> {
   store.transaction(TypeScript5.install);
   const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
 
-  // --- domains: ISO/IEC 11404's dialect and its domains, owned by name; an enum and a domain packing it into uint8
+  // --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
   // added ---
   store.transaction(() => {
     const state = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
-      (u: any) => u.isoiec11404((v: any) => v.enum((e: any) => e.members(["IDLE", "RUN"]).ordered(false)))))));
+      (u: any) => u.isoiec11404((v: any) => v.state((e: any) => e.members(["IDLE", "RUN"]).ordered(false)))))));
     const mode = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
       (u: any) => u.isoiec11404((v: any) => v.packed((e: any) => e.codes([0n, 1n]).ordered(true)))))).packs((a: any) => a.insert(
-      (e: any) => e.domain(state).representation(defined.get("uint8")))));
+      (e: any) => e.domain(state).representation(defined.get("octet")))));
     store.Expressions.ISOIEC11404.Expressions.Dialect(defined.get("dialect"), (b: any) => b.domains({
       state: (e: any) => e.domain(state), mode: (e: any) => e.domain(mode) }));
   });

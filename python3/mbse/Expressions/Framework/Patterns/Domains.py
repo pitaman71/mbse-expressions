@@ -23,7 +23,7 @@ dialects' unions of kinds: ISO/IEC 11404's (`Expressions.ISOIEC11404.Expressions
 kind with its parameters and the properties inferred from them. It is owned by the dialect that defines it, by name: its
 path is the dialect's singleton (`Expressions.ISOIEC11404.Expressions`), then its name. A packed domain links its enum
 and its representation through `Expressions.ISOIEC11404.Expressions.Packs`. Its schema is a named `Schemas.OfAny`
-restricted to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.uint8`), which reads it through `domain`
+restricted to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.octet`), which reads it through `domain`
 (`Expressions.Framework.HasDomain`). Each standard dialect's `define` writes its domains, and `read(domain)` gives the
 data of a stored one, its parameters (ignoring its inferred properties), so that what they mean can be asked of it.
 
@@ -722,16 +722,18 @@ def of(value: Any) -> D.Domain:
 
 # --- Domains as data ---
 
-_DATA = {kind.Data.KIND: kind for kind in (OfBool, OfInteger, OfIeee754, OfBits, OfBytes, OfUnicode, OfIeee1164, OfEnum,
-                                            OfPacked)}
+_DATA = {  # by the stored kind, its dialect's tag and its own: each the standard dialect's, named by its standard
+    ("isoiec11404", "boolean"): OfBool, ("isoiec11404", "integer"): OfInteger, ("isoiec11404", "bitstring"): OfBits,
+    ("isoiec11404", "octetstring"): OfBytes, ("isoiec11404", "state"): OfEnum, ("isoiec11404", "packed"): OfPacked,
+    ("ieee754", "ieee754"): OfIeee754, ("ieee1164", "ieee1164"): OfIeee1164, ("unicode", "unicode"): OfUnicode}
 
 
 def read(domain: Any) -> _Domain:
     """The data of a stored domain, an `Expressions.Framework.Domain`: its kind's, read through its dialect's union of
-    kinds (`Framework.Domains.kind_of`), with the parameters it holds (a packed domain's enum and representation, through
-    `packs`, read in turn) and not its inferred properties, so that it can be validated and asked what it holds."""
-    tag, _ = D.kind_of(domain)
-    data = _DATA[tag].Data
+    kinds (`Framework.Domains.kind_of`), with the parameters it holds (a packed domain's state domain and representation,
+    through `packs`, read in turn) and not its inferred properties, so that it can be validated and asked what it holds."""
+    dialect, tag, _ = D.kind_of(domain)
+    data = _DATA[dialect, tag].Data
     fields = {field.name for field in dataclasses.fields(data)}
     parameters = {name: value for name, value in D.properties(domain).items() if name in fields}
     if tag == "packed":

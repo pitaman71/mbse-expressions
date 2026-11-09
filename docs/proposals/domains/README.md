@@ -185,6 +185,47 @@ As the user decided (2026-11-04), on the questions below:
   (TypeScript: `@mbse/expressions/Framework/Patterns`), as every other dialect is from its path; every caller that
   relied on the root (the TypeScript tests, the tutorials, the skill and the README) does so. It is a breaking
   change, in 0.9.0, a breaking release anyway ([API](../port/API.md), 121).
+- **On stage 1's review** (2026-11-09): the user's answers on
+  [#27's review](https://github.com/pitaman71/mbse-expressions/pull/27#pullrequestreview-5832969295), to the choices
+  stage 1 left for review and to the review's questions:
+  - **Names are the standards' own.** To naming the standard dialects' domains by their standards: "yes, adopt names
+    the standard uses for datatypes it defines (is this even a question?)"; and to the kinds keeping their tags: "there
+    is no need to preserve the old tags imo". So every domain and kind is named by its standard's own identifier, its
+    tag and its schema too, with no alias for the old names. ISO/IEC 11404's are its declarations' lowercase names.
+    `uint8` is not one, as the user had checked: it is C's `uint8_t`. 11404 (§10.1.7) defines "`type octet = new
+    integer range (0..255)`", so the domain `uint8` is `octet`. The kinds `bool`, `bits`, `bytes` and `enum` are
+    `boolean`, `bitstring`, `octetstring` and `state` (`OfBoolean`, `OfBitstring`, `OfOctetstring`, `OfState`);
+    `integer` was already 11404's. IEEE 754's (`binary64`), IEEE 1164's (`std_logic`) and Unicode's names were already
+    their standards' own, and stay. Where the standards were silent *(agent)*: `enum` is 11404's `state`, its unordered
+    enumeration, since the kind is unordered (`ordered` false, as the code domain's `ORDERED`), 11404's `enumerated`
+    being ordered; `packed`, which 11404 does not define, keeps its name; and the kinds `ieee754`, `ieee1164` and
+    `unicode` keep theirs, each the standard's own designation, as their families are.
+  - **`DomainKind` stays two-level**, as built: the dialect, then its kind, the pattern of `Term`, which the user
+    decided ("Framework.Term -> Dialects.C.Term / Framework.Term -> Dialects.Cpp.Term"; [the dialects
+    proposal](../dialects/README.md#decided), Decided, 1). Its examples are written in builder calls, not wire format
+    ([PRI-019: fluent builder syntax](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-019)).
+  - **Standards as tagged data, a stage of its own**: "yes", after stage 3 (Stages, revised, below).
+  - **The integer kind keeps its parameters**: asked whether 11404's `integer` may carry `width`, `signed` and
+    `overflow`, which 11404 does not define, against
+    [PRI-012: model published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-012)'s
+    "with only the parameters a standard defines": "PRI-012 is overstated, adding extra parameters does not count as a
+    "second order invention" IMO". They stay; PRI-012's wording is corrected in
+    [mbse-basis#77](https://github.com/pitaman71/mbse-basis/pull/77).
+  - **An enumeration is not an integer**: "models should not conflate integers and enums as C does". So `packed` and
+    `Packs` stay, keeping an enumeration apart from the integer that represents it; nothing is removed. For stage 3:
+    C's and C++'s enums are to be stored as enumerations packed into their integer types, not as integer domains.
+  - **`kind_of` gives the dialect too**: "yes, dialect too". `Domains.kind_of` (`kindOf`) returns `(dialect, tag,
+    record)`, the dialect's tag in `Expressions.Framework.DomainKind` first, so that C's and C++'s `nullptr_t` are
+    told apart, in both languages.
+  - **mbse-domains is not a priority**: asked whether the standard dialects belong in the repository mbse-domains,
+    which [CAP-211: text as words, phrases, paragraphs and documents](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-211.md)
+    and [CAP-212: dates, times, durations and intervals in ISO 8601](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-212.md)
+    plan: "refactoring domain dialects out of mbse-expressions is not a priority right now". They stay here (Where
+    the standard dialects live, below).
+  - **An install's uid: tech debt**: asked whether an install whose content changed may keep its uid (Patterns' and
+    Python3's keep `/1`): "this is an important question, but not priority. find a place to store it as tech debt".
+    It is mbse-basis [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/pull/76),
+    proposed in that pull request; the uids are left as they are.
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
   release; CAP-232 builds on stored domains.
 - **3. `Anything` and `Opaque`**: "agreed. Schemas.OfAny kind of handles that": no stored "anything" domain; where
@@ -239,7 +280,9 @@ whole-record review before it is brought to the user.
    inference's, its population with it (Decided, 2): stage 1 stores none of it. Its design is below.
 2. Patterns: its code domains gone (its dataclasses and `read`), its validation reading its stored operations through
    the holder (Decided, C) in place of `SIGNATURES`.
-3. C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its domains stored.
+3. C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its domains stored. C's and
+   C++'s enums are stored as enumerations packed into their integer types, not as integer domains (Decided, "On stage
+   1's review").
 4. Standards as tagged data (the dialects proposal's Decided, Q10), every dialect's standards.
 5. Records in mbse-basis (CAP-097, CAP-180, CAP-232, CAP-226), and release as 0.9.0 (Decided, D).
 
@@ -256,7 +299,7 @@ Decided, Namespace, 6 and 7): its Python package `mbse.Expressions.<Family>.Expr
 
 | Dialect (path; name) | Kinds (tag: schema `Expressions.<Family>.Expressions.<Of...>`) | Domains its `define` writes, and their schemas |
 |---|---|---|
-| `ISOIEC11404.Expressions`; `ISOIEC11404` | `bool`, `integer`, `bits`, `bytes`, `enum`, `packed`, and `Packs` | `boolean`, `integer`, `octetstring`, `uint8` |
+| `ISOIEC11404.Expressions`; `ISOIEC11404` | `boolean`, `integer`, `bitstring`, `octetstring`, `state`, `packed`, and `Packs` | `boolean`, `integer`, `octetstring`, `octet` |
 | `IEEE754.Expressions`; `IEEE754` | `ieee754` | `binary64`, `binary32` |
 | `IEEE1164.Expressions`; `IEEE1164` | `ieee1164` | `std_logic` |
 | `Unicode.Expressions`; `Unicode` | `unicode` | `string` |
@@ -265,16 +308,24 @@ ISO/IEC 11404 is spelled as ISO writes it, without the slash a name cannot hold,
 A standard dialect is a singleton of its own schema, a branch of `Expressions.Framework.Dialect`, with no `Term`,
 holder or `Terms.Dialect` until it has terms (Decided, G). Each names its standard in code by designation
 (`STANDARDS = ("IEEE Std 754-2019",)`, `ISO/IEC 11404:2007`, `IEEE Std 1164-1993`, `The Unicode Standard`), until
-standards are tagged data, its own stage (below) *(agent)*. Patterns' eight domains are these, renamed by their
-standards *(agent)*: `bool`, `int`, `bytes` and `uint8` are 11404's `boolean`, `integer`, `octetstring` and `uint8`;
-`float` and `binary32` IEEE 754's `binary64` and `binary32`; `std_logic` IEEE 1164's; `str` Unicode's `string`. The
-kinds keep their tags *(agent)*: only their schemas' paths move.
+standards are tagged data, its own stage (below; Decided, "On stage 1's review"). Patterns' eight domains are these,
+each named as its standard names it (Decided, "On stage 1's review", "Names are the standards' own"): `bool`, `int`,
+`bytes` and `uint8` are 11404's `boolean`, `integer`, `octetstring` and `octet`; `float` and `binary32` IEEE 754's
+`binary64` and `binary32`; `std_logic` IEEE 1164's; `str` Unicode's `string`. The kinds are named so too: 11404's
+`boolean`, `integer`, `bitstring`, `octetstring` and `state`, and `packed`, which 11404 does not name.
+
+**Where the standard dialects live.** In mbse-expressions, beside the dialects that use them. The repository
+mbse-domains, which [CAP-211: text as words, phrases, paragraphs and documents](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-211.md)
+and [CAP-212: dates, times, durations and intervals in ISO 8601](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-212.md)
+plan for dialects of standards' domains, may take them later; refactoring them out is not a priority, as the user
+decided (Decided, "On stage 1's review").
 
 **Each dialect's kinds, nested.** `Expressions.Framework.DomainKind` becomes a union of the dialects' unions of kinds,
 as `Expressions.Framework.Term` is of their `Term`s: each dialect that has kinds adds its own,
 `Expressions.<Family>.<Dialect>.DomainKind`, as the branch named as its `Term` branch is (`isoiec11404`, `ieee754`,
-`python3`, ...), so that C's and C++'s `nullptr_t` are each their own *(agent)*. A domain's `kind` is so written
-`{"ieee754": {"ieee754": {"format": "binary32", ...}}}`.
+`python3`, ...), so that C's and C++'s `nullptr_t` are each their own; kept so, as the user decided (Decided, "On stage
+1's review"). A domain's `kind` is so written its dialect, then its kind:
+`d.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(lambda f: f.format("binary32")))))))`.
 
 **Inferred properties**, beside the parameters, all optional, populated by hand by the define that writes a domain
 of the kind (Decided, 2; Proposed, 2):
@@ -285,7 +336,7 @@ of the kind (Decided, 2; Proposed, 2):
 | `ieee754` | `format`, `rounding` | `radix`, `precision`, `emax` (IEEE 754-2019's parameters of each interchange format), `ordered` |
 | every other kind | as now | `ordered` |
 
-`ordered` is true of `integer`, `ieee754`, `bytes`, `unicode`, `packed`, SystemVerilog's `logic` and the two string
+`ordered` is true of `integer`, `ieee754`, `octetstring`, `unicode`, `packed`, SystemVerilog's `logic` and the two string
 kinds below, false of the others, as `ORDERED` is today. What a result is fitted into is an integer's own `overflow`,
 and for C a rule over argument domains, which is the relation left to
 [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md) (Decided, 2): no kind links another domain. A
@@ -324,9 +375,10 @@ J came from a rule of mbse-schemas, not a defect, and was not worked around; it 
   change. *Recommended: (a)*: `complex` is a value schema, as H decided, held where a schema can say so.
 
 **The reading interface**, in `Framework.Domains` (TypeScript the same, camelCase), over a stored domain's
-`Readers.OfObject`, found by its path (`dialect.domains({"name": "uint8"})`,
+`Readers.OfObject`, found by its path (`dialect.domains({"name": "octet"})`,
 [PRI-015: concrete references are programmatic](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-015)) or its schema's `domain`:
-`kind_of(domain)`, its kind `(tag, record)` read through its dialect's union ("a domain needs a kind" where it holds
+`kind_of(domain)`, its kind `(dialect, tag, record)` read through its dialect's union, the dialect's tag first (Decided,
+"On stage 1's review") ("a domain needs a kind" where it holds
 none); `properties(domain)`, its kind's properties set, parameters and inferred alike, by name (a container as a tuple,
 an array in TypeScript); `name_of(domain)`, the name its dialect defines it by, or None; `operations(dialect)`, a
 dialect's operations by name, each its `Schemas.OfExpression`; and `arity(operation)`, its pattern's number of
@@ -355,8 +407,8 @@ the standard dialects' singletons and domains, its JSON regenerated, byte-identi
 
 **Stages, revised.** Stage 1 is the above. Stage 2 is Patterns' code domains gone (its dataclasses, `read`), its
 validation reading its stored operations through the holder. Stage 3 is every other dialect's domains stored. Standards
-as tagged data, every dialect's `STANDARDS` and `Kind.standards` among them, is a stage after stage 3 *(agent)*, before
-the records and the release.
+as tagged data, every dialect's `STANDARDS` and `Kind.standards` among them, is a stage after stage 3, before the
+records and the release, as the user decided ("yes"; Decided, "On stage 1's review").
 
 ## Risks
 

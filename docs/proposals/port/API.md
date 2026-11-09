@@ -973,7 +973,7 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
      So `Expressions.Python3.BinOp` is `Expressions.Python.Python3.BinOp`, the singleton `Expressions.C` is
      `Expressions.C.Expressions` (`store.Instances.Expressions.C.Expressions`), a Patterns domain
-     `Expressions.Framework.Patterns.uint8` (ISO/IEC 11404's since item 112, `Expressions.ISOIEC11404.Expressions.uint8`), and an install's uid `mbse.Expressions.C.Expressions/1`. The package
+     `Expressions.Framework.Patterns.uint8` (ISO/IEC 11404's `octet` since item 112, `Expressions.ISOIEC11404.Expressions.octet`), and an install's uid `mbse.Expressions.C.Expressions/1`. The package
      `mbse.Expressions.Dialects`, the directory `src/Dialects` and the export `@mbse/expressions/Dialects/*` go; the
      package exports and `deno.json` list each dialect by its path. Each family is a package of its own in Python
      (`mbse.Expressions.C`, whose docstring names its standard), holding its dialect; TypeScript's family directory
@@ -1014,13 +1014,22 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      `src/<Family>/Expressions/`, exported as `@mbse/expressions/<Family>/Expressions` and nothing for the family. Each
      dialect is a singleton of its own schema, `Expressions.<Family>.Expressions`, a branch of `Expressions.Framework.Dialect`
      (`isoiec11404`, `ieee754`, `ieee1164`, `unicode`), with its kinds of domain and no terms. Their `define`s write
-     Patterns' former eight domains under their standards' names: `boolean`, `integer`, `octetstring`, `uint8`;
-     `binary64`, `binary32`; `std_logic`; `string`; their uids are `mbse.Expressions.<Family>.Expressions.define/1`.
+     Patterns' former eight domains under their standards' names: `boolean`, `integer`, `octetstring`, `octet`
+     (11404's "`type octet = new integer range (0..255)`", formerly `uint8`, which is C's name, not 11404's);
+     `binary64`, `binary32`; `std_logic`; `string`; their uids are `mbse.Expressions.<Family>.Expressions.define/1`
+     (an install's uid kept while its content changes is mbse-basis
+     [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/pull/76), as the
+     user decided, the domains proposal's Decided, "On stage 1's review").
      Patterns' install keeps its terms, holder, singleton and operations; its `define` writes its operations alone.
 113. **`Expressions.Framework.DomainKind` is a union of the dialects' kind unions**, as `Term` is of their `Term`s:
      each dialect with kinds adds `Expressions.<path>.DomainKind`, the branch named by its tag, so a domain's `kind` is
-     written `{"ieee754": {"ieee754": {...}}}`, and C's and C++'s `nullptr_t` are each their own. The kinds keep their
-     tags (`integer`, `ieee754`, ...), their schemas their dialects' (`Expressions.ISOIEC11404.Expressions.OfInteger`).
+     written its dialect, then its kind (`u.ieee754(lambda v: v.ieee754(...))` within `d.kind(lambda k:
+     k.as_value(lambda a: a.as_union(...)))`), and C's and C++'s `nullptr_t` are each their own. Each kind is named by
+     its standard, its tag and its schema alike (2026-11-09, as the user decided, "there is no need to preserve the old
+     tags imo"): ISO/IEC 11404's `boolean`, `integer`, `bitstring`, `octetstring`, `state` and `packed`
+     (`Expressions.ISOIEC11404.Expressions.OfBoolean`, ..., `OfState`, `OfPacked`), formerly `bool`, `bits`, `bytes`
+     and `enum`; IEEE 754's `ieee754`, IEEE 1164's `ieee1164` and Unicode's `unicode`, unchanged. Patterns' code
+     domains (`Domains.read`, until stage 2) read each by its dialect's tag and its own.
 114. **Inferred properties, populated by hand**: `ordered` on every kind; an integer's (and SystemVerilog's `logic`'s)
      `least` and `greatest`; IEEE 754's `radix`, `precision` and `emax`. `Domains.read` (Patterns', until stage 2)
      ignores them.
@@ -1035,7 +1044,9 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      refusing an install that names a schema not yet registered. Tests: FRM-01 and DOM-17 assert each dialect's
      adjacencies, `domains` and `operations`.
 117. **The reading interface**, `Framework.Domains`: `kind_of` (`kindOf`), `properties`, `name_of` (`nameOf`),
-     `operations` and `arity`; "a domain needs a kind". The code domains and signatures stay, `Dialect.infer`'s,
+     `operations` and `arity`; "a domain needs a kind". `kind_of` gives `(dialect, tag, record)`, the dialect's tag
+     first (2026-11-09, as the user decided, "yes, dialect too"), so that C's and C++'s `nullptr_t` are told apart
+     (DOM-18). The code domains and signatures stay, `Dialect.infer`'s,
      marked as CAP-232's to replace.
 118. **Every caller installs the standard dialects first**: tests, tutorials, the toolkit, the corpus and the skill. The
      corpus's `domains` case is ISO/IEC 11404's singleton and its domains, an enum and a packed domain among them.
