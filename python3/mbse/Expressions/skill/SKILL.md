@@ -54,13 +54,15 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    write, each in a transaction of its own, once per store: the framework's, then the standard dialects' whose kinds of
    domain the others use (`ISOIEC11404`, `IEEE754`, `IEEE1164`, `Unicode`), then the rest
    (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...); an
-   install whose dialects are missing is refused. Build a constraint with writers: `E.variable(name)`, `E.literal(value)`,
-   `E.let_(name, value, body)` and `E.operation(name, ...)`; reading a property of a writer is `get` (`x.age`, or
-   `x.get(name)` for a name a writer has as a method), and its methods build calls (`.ge(18)`, `.and_(...)`). A
-   writer builds data and evaluates nothing. Write it within a transaction, as the root of an expression
-   (`Expressions.Framework.Patterns.Expression`, whose root holds Patterns' terms only, or `Expressions.Framework.Expression`,
-   any dialect's), or as a term alone (`Expressions.Framework.Term`). A value of the program becomes a literal, so the
-   constraint never refers back to it.
+   install whose dialects are missing is refused. The package exports the framework alone (`Framework`); import each
+   dialect from its own path, Patterns' writers from `mbse.Expressions.Framework.Patterns` (TypeScript:
+   `@mbse/expressions/Framework/Patterns`), as `E`. Build a constraint with writers: `E.variable(name)`,
+   `E.literal(value)`, `E.let_(name, value, body)` and `E.operation(name, ...)`; reading a property of a writer is `get`
+   (`x.age`, or `x.get(name)` for a name a writer has as a method), and its methods build calls (`.ge(18)`,
+   `.and_(...)`). A writer builds data and evaluates nothing. Write it within a transaction, as the root of an
+   expression (`Expressions.Framework.Patterns.Expression`, whose root holds Patterns' terms only, or
+   `Expressions.Framework.Expression`, any dialect's), or as a term alone (`Expressions.Framework.Term`). A value of the
+   program becomes a literal, so the constraint never refers back to it.
    [FEA-024: expressions as data](mbse:mbse-basis/docs/features/FEA-024.md),
    [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md).
    - Python: [T01.1: Writing a constraint](mbse:mbse-expressions/python3/tutorials/01_Constraints_As_Data.ipynb#T01.1) · TypeScript: [T01.1: Writing a constraint](mbse:mbse-expressions/typescript5/tutorials/01_Constraints_As_Data.ipynb#T01.1)

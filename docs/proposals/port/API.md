@@ -1043,7 +1043,8 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      DOM-13 to DOM-16 being retired IDs; EXP-05, EXP-06, EXP-13, FRM-01, DOM-03, DOM-05 and CONF-04 adjusted under
      their IDs; tutorial 7's T07.5 reads ISO/IEC 11404's domains through `Framework.Domains`.
 119. **Not changed, for the user**: the package root's re-export of Patterns' `Domains`, `Evaluators`, `Expressions`
-     and `Partials`, and Python3's complex number (the domains proposal's question J; *decided* 2026-11-09: item 120).
+     and `Partials` (*decided* 2026-11-09: item 121), and Python3's complex number (the domains proposal's question
+     J; *decided* 2026-11-09: item 120).
 120. **Python3's complex number is its `constant`'s `complex`** (2026-11-09, as the user decided,
      [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, J: "This distinction feels
      academic to me", so (a), the smallest change). `Expressions.Python.Python3.Constant` holds `singleton` (`None` or
@@ -1056,6 +1057,15 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      case). Its checks' messages are unchanged. `1` stays a framework `literal` while `2j`, `None` and `...` are
      Python3 `constant`s, a split that follows mbse-schemas' basic scalars rather than Python's grammar, kept for now.
      Tests: DIA-19.
+121. **The package root exports `Framework` alone** (2026-11-09, as the user decided, "approved",
+     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "The package root exports
+     `Framework` alone"). A breaking change, in 0.9.0: `mbse.Expressions` (`__all__ = ["Framework"]`) and
+     `@mbse/expressions` (`export * as Framework`) no longer re-export Patterns' `Domains`, `Evaluators`, `Expressions`
+     and `Partials`, nor call Patterns "the neutral form of every constraint". Patterns is imported from its own path,
+     as every dialect is: `from mbse.Expressions.Framework.Patterns import Evaluators, Expressions as E`, TypeScript
+     `import { Evaluators, Expressions as E } from "@mbse/expressions/Framework/Patterns"`.
+     `mbse.Expressions.Translators` and every dialect's path are unchanged (a subpackage still imports as
+     `from mbse.Expressions import Translators`). The tests, the tutorials, the skill and the README import so.
 
 ## What stage 2b needed (done)
 

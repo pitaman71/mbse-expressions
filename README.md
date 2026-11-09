@@ -15,8 +15,9 @@ rest of your data, sent between programs, and evaluated the same way in Python a
 [mbse-patterns](https://github.com/pitaman71/mbse-patterns) uses them as constraints on mbse-schemas data, and as queries.
 
 ```python
-from mbse.Expressions import Evaluators, Expressions, Framework
+from mbse.Expressions import Framework
 from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.Framework.Patterns import Evaluators, Expressions
 from mbse.Schemas.Framework import Builders
 
 store = Builders.Store()  # expressions are stored in an mbse-schemas store, with the data they constrain
@@ -30,8 +31,9 @@ Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value
 ```
 
 ```typescript
-import { Evaluators, Expressions, Framework } from "@mbse/expressions";
+import { Framework } from "@mbse/expressions";
 import * as Patterns from "@mbse/expressions/Framework/Patterns";
+import { Evaluators, Expressions } from "@mbse/expressions/Framework/Patterns";
 import { Builders } from "@mbse/schemas/Framework";
 
 const store: any = new Builders.Store(); // expressions are stored in an mbse-schemas store, with the data they constrain
@@ -45,7 +47,9 @@ Evaluators.OfAny(senior, { contact: ada });
 
 Like mbse-schemas, it has two equivalent implementations, in Python and TypeScript, with the same API, the same
 messages and byte-identical JSON. Python imports it from `mbse.Expressions` (next to `mbse.Schemas`, in the shared `mbse`
-namespace package), TypeScript from `@mbse/expressions` (next to `@mbse/schemas`).
+namespace package), TypeScript from `@mbse/expressions` (next to `@mbse/schemas`). The package exports the framework
+alone; each dialect is imported from its own path (`mbse.Expressions.Framework.Patterns`,
+`@mbse/expressions/Framework/Patterns`).
 
 ## Getting started
 

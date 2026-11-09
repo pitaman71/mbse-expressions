@@ -177,6 +177,14 @@ As the user decided (2026-11-04), on the questions below:
 
   This settles J and supersedes stage 1's design's reading of H, a `literal` holding a `Complex` ([API](../port/API.md),
   120).
+- **The package root exports `Framework` alone** (2026-11-09): to the proposal, asked in stage 1's pull request, that
+  `mbse.Expressions` (and `@mbse/expressions`) export `Framework` alone, each dialect imported from its own path, the
+  user: "approved". So the root's re-exports of Patterns' `Domains`, `Evaluators`, `Expressions` and `Partials` go,
+  and its docstring's "the neutral form of every constraint" with them: they were one source of the habit of
+  consolidating things under Patterns (E, above). Patterns is imported from `mbse.Expressions.Framework.Patterns`
+  (TypeScript: `@mbse/expressions/Framework/Patterns`), as every other dialect is from its path; every caller that
+  relied on the root (the tests, the tutorials, the corpus, the skill and the README) does so. It is a breaking
+  change, in 0.9.0, a breaking release anyway ([API](../port/API.md), 121).
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
   release; CAP-232 builds on stored domains.
 - **3. `Anything` and `Opaque`**: "agreed. Schemas.OfAny kind of handles that": no stored "anything" domain; where
@@ -337,8 +345,9 @@ already take holders. Stage 1 changes none of it.
 its kinds, `Packs` and domains' schemas leave it, and its `define` writes its operations alone. Its operations and
 terms stay until [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md)
 (Decided, E). Its `Domains` dataclasses and `read` stay, code, until stage 2: `read` reads a stored domain of the
-moved kinds, ignoring inferred properties. The package root's re-export of Patterns' modules (`from mbse.Expressions
-import Domains`) is not changed here: what it should export instead is asked in the pull request, a breaking change.
+moved kinds, ignoring inferred properties. The package root no longer re-exports Patterns' modules: it exports
+`Framework` alone, and Patterns is imported from its own path (Decided, "The package root exports `Framework`
+alone").
 
 **Tests and corpus.** DOM gains a case for the standard dialects, the inferred properties and the reading interface;
 FRM-01 lists the new dialects and each dialect's kinds; DIA-19 Python3's `Complex`; the corpus's `domains` case holds
