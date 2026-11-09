@@ -214,12 +214,14 @@ whole-record review before it is brought to the user.
 
 ## Stage 1's design
 
-As the user decided (Decided, on this proposal, A to H), on the code at 0.8.0 (`python3/mbse/Expressions/`,
+As the user decided (Decided, on this proposal, A to I), on the code at 0.8.0 (`python3/mbse/Expressions/`,
 `typescript5/src/`, the same in both). What the decisions leave open is the agent's, for review, marked *(agent)*.
 
 **The standard dialects.** Four dialects of the standards that define today's nine kinds, each a family with one
-unversioned dialect (Decided, G), its Python package `mbse.Expressions.<Family>.Expressions` and TypeScript module
-`src/<Family>/Expressions` (`@mbse/expressions/<Family>/Expressions`), each with `install` and `define`:
+unversioned dialect (Decided, G), laid out as the namespace decision lays out every dialect (the dialects proposal's
+Decided, Namespace, 6 and 7): its Python package `mbse.Expressions.<Family>.Expressions`, at
+`mbse/Expressions/<Family>/Expressions/`, and its TypeScript module at `src/<Family>/Expressions/`, exported as
+`@mbse/expressions/<Family>/Expressions`, each with `install` and `define`:
 
 | Dialect (path; name) | Kinds (tag: schema `Expressions.<Family>.Expressions.<Of...>`) | Domains its `define` writes, and their schemas |
 |---|---|---|

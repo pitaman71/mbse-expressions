@@ -146,7 +146,8 @@ ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email
 
 Each dialect lives under its family, at `Expressions.<Family>.<Dialect>`, the framework being Patterns' family:
 `Framework.Patterns`, `Python.Python3`, `TypeScript.TypeScript5`, and `C.Expressions`, `Cpp.Expressions`,
-`SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions` and `LaTeX.Expressions`. Its schemas
+`SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions` and `LaTeX.Expressions`, and the standard
+dialects `ISOIEC11404.Expressions`, `IEEE754.Expressions`, `IEEE1164.Expressions` and `Unicode.Expressions`. Its schemas
 (`Expressions.C.Expressions.Term`), its Python package (`mbse.Expressions.C.Expressions`) and its TypeScript module
 (`@mbse/expressions/C/Expressions`) are named by that path.
 

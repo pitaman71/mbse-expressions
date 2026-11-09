@@ -28,7 +28,10 @@ from mbse.Expressions import Framework
 from mbse.Expressions.Framework import Patterns
 from mbse.Expressions.Python import Python3
 from mbse.Expressions.TypeScript import TypeScript5
-from mbse.Expressions import IEEE754, IEEE1164, ISOIEC11404, Unicode
+from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
+from mbse.Expressions.IEEE754 import Expressions as IEEE754
+from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
+from mbse.Expressions.Unicode import Expressions as Unicode
 
 store = Builders.Store()
 store.transaction(Framework.install)        # Expressions.Framework: Term (no branch yet), Literal, Call, Variable, Let,
@@ -36,7 +39,7 @@ store.transaction(Framework.install)        # Expressions.Framework: Term (no br
                                             # Schemas.OfExpression's adjacency `expression`; Dialect, Domain, DomainKind,
                                             # Defines, Operates, HasDomain and Schemas.OfAny's adjacency `domain`
 for standard in (ISOIEC11404, IEEE754, IEEE1164, Unicode):  # the standard dialects, before those that use them:
-    store.transaction(standard.Expressions.install)          # each its singleton, its kinds of domain, its domains' schemas
+    store.transaction(standard.install)                      # each its singleton, its kinds of domain, its domains' schemas
 store.transaction(Patterns.install)         # Expressions.Framework.Patterns.Term, its union (the shared kinds, its
                                             # own Quantifier, error and missing), added to Term as the branch
                                             # `patterns`; its holder Expressions.Framework.Patterns.Expression,
@@ -1001,12 +1004,15 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
 ## Settled in domains as data's stage 1, for the user's review
 
-Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) decided (its Decided, A to H) and as its
+Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) decided (its Decided, A to I) and as its
 [stage 1's design](../domains/README.md#stage-1s-design) specifies; each choice below is where they were silent.
 
-112. **The standard dialects.** `ISOIEC11404`, `IEEE754`, `IEEE1164` and `Unicode`, each `mbse.Expressions.<Family>`
-     holding the module `Expressions` (`install`, `define`, `STANDARDS`), TypeScript `src/<Family>/Expressions`: a
-     singleton of its own schema, `Expressions.<Family>.Expressions`, a branch of `Expressions.Framework.Dialect`
+112. **The standard dialects.** `ISOIEC11404`, `IEEE754`, `IEEE1164` and `Unicode`, each a family holding its one
+     dialect, `Expressions`, laid out as every dialect is (item 108; the dialects proposal's Decided, Namespace, 6 and
+     7): the Python package `mbse.Expressions.<Family>.Expressions`, at `mbse/Expressions/<Family>/Expressions/`, its
+     module `Expressions` holding `install`, `define` and `STANDARDS`, which the package exports; TypeScript's at
+     `src/<Family>/Expressions/`, exported as `@mbse/expressions/<Family>/Expressions` and nothing for the family. Each
+     dialect is a singleton of its own schema, `Expressions.<Family>.Expressions`, a branch of `Expressions.Framework.Dialect`
      (`isoiec11404`, `ieee754`, `ieee1164`, `unicode`), with its kinds of domain and no terms. Their `define`s write
      Patterns' former eight domains under their standards' names: `boolean`, `integer`, `octetstring`, `uint8`;
      `binary64`, `binary32`; `std_logic`; `string`; their uids are `mbse.Expressions.<Family>.Expressions.define/1`.

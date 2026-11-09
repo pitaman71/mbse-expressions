@@ -35,10 +35,10 @@ an `Expressions.Framework.Domain`, a reference object holding its `kind`, a valu
 the union of the dialects' unions of kinds, as `Term` is of their `Term`s: with no branch until a dialect that has kinds
 adds its own, `Expressions.<Family>.<Dialect>.DomainKind`, as the branch named by its tag (`isoiec11404`), so a kind
 is written its dialect, then its kind (`{"ieee754": {"ieee754": {"format": "binary32", ...}}}`). The standard
-dialects, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode (`mbse.Expressions.ISOIEC11404` and the others), hold the
-kinds and the domains of their standards. A domain's schema is a named `Schemas.OfAny` restricted to the
-scalar it narrows (`Expressions.ISOIEC11404.Expressions.uint8`), which reads it through the extension adjacency `domain`
-(`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
+dialects, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode (`mbse.Expressions.ISOIEC11404.Expressions` and the
+others), hold the kinds and the domains of their standards. A domain's schema is a named `Schemas.OfAny` restricted
+to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.uint8`), which reads it through the extension
+adjacency `domain` (`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
 (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module defines, whose
 pattern's variables are its arguments, in the order they are declared, and whose `result` is its return. A dialect
 that uses another's kinds or schemas depends on its caller's install order, nothing recording it as data: mbse-schemas

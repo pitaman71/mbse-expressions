@@ -28,7 +28,7 @@ which a term alone, in no store, can read): a call naming an operation Patterns 
 also adds Patterns' dialect, the singleton `Expressions.Framework.Patterns`; `define` writes the dialect's data, its
 operations by name (`Expressions.Framework.Operates`). Patterns has no kinds of domain and owns no domains: the kinds
 and the domains its values take are the standard dialects' (ISO/IEC 11404's, IEEE 754's, IEEE 1164's and Unicode's,
-`mbse.Expressions.ISOIEC11404` and the others), whose installs run before Patterns'.
+`mbse.Expressions.ISOIEC11404.Expressions` and the others), whose installs run before Patterns'.
 
 `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
 
