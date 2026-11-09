@@ -136,7 +136,8 @@ As the user decided (2026-11-04), on the questions below:
     design names. A standard dialect's shape (a singleton, no terms yet) stands as the agent's choice.
   - **H.** (1) To `complex`: "what is Python's `complex` ? Seems like an object to me". It is two IEEE 754 binary64
     floats, `real` and `imag`, immutable and compared by value: not a domain but a value schema of Python3's, its
-    properties held by IEEE 754's binary64, which Python3's imaginary literal holds. (2) `RegExp`: not a domain. (3)
+    properties held by IEEE 754's binary64, which Python3's `constant` holds (J, below; first read as its imaginary
+    literal's). (2) `RegExp`: not a domain. (3)
     Excel's error values: Excel's own domain, of its own kind, its members the error codes. (4) Compound values: not
     domains; they have schemas. The tokens (`nullptr_t`, Python's `None`'s and `...`'s types, TypeScript's `null`)
     each have a domain of their own, as B decided.
@@ -154,6 +155,28 @@ As the user decided (2026-11-04), on the questions below:
   - **Standing instruction**, the user's: "monitor for reasons to reinstate it in the future, stop and ask if you find
     one". An agent that finds a reason for `Uses`, something that needs to read as data which dialects a dialect uses,
     stops and asks the user before building it or anything in its place.
+- **J. Python3's complex number: (a)** (2026-11-09), on stage 1's question J (Stage 1's design, Found while building).
+  Discussing it, the user asked "Is `j` a keyword in python?" and "Is 1 a constant?"; shown that it comes down to when
+  a Python constant is also a framework literal, the user said: "This distinction feels academic to me". So (a), the
+  smallest change, was taken:
+  - **The schema.** Python3's `constant` holds a complex number as one property, `complex`, of the value schema
+    `Expressions.Python.Python3.Complex`, whose `real` and `imag` are each typed by IEEE 754's `binary64`. They replace
+    the flat `real` and `imag` floats `Constant` had. Its other case, `singleton` (`None` or `...`), is unchanged.
+  - **Written through a spec**, as any value object, so the writers (`P.constant(2j)`) and the parser (`FromText`)
+    need no store.
+  - **What follows.** Python3's install uses IEEE 754's schemas, so it runs after IEEE 754's, as every caller's list
+    already has it (Decided, I); mbse-schemas refuses it otherwise. The printers, the validators (`constant`'s check),
+    `Domains`, the corpus's `python3` case and DIA-19 read and write `complex`; no evaluator or translator reads a
+    constant's parts (the evaluators refuse `constant` by name, and no translation rule matches it). Python3's use of
+    IEEE 754 is only that install order, which nothing needs to read as data: it gives no reason to reinstate `Uses`
+    (Decided, I).
+  - **Kept for now: a literal or a constant.** `1` is a framework `literal`, while `2j`, `None` and `...` are Python3
+    `constant`s: a split that follows mbse-schemas' basic scalars (a value a basic scalar holds is a literal's), not
+    Python's grammar, where each is an `ast.Constant`. It is kept for now, as the user decided ("This distinction
+    feels academic to me"), and may be revisited if it ever matters in practice.
+
+  This settles J and supersedes stage 1's design's reading of H, a `literal` holding a `Complex` ([API](../port/API.md),
+  120).
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
   release; CAP-232 builds on stored domains.
 - **3. `Anything` and `Opaque`**: "agreed. Schemas.OfAny kind of handles that": no stored "anything" domain; where
@@ -274,15 +297,15 @@ are stage 3's:
 A token's domain has no schema: no basic scalar holds its value, which its dialect's `constant` writes. Compound values,
 `RegExp` and `complex` are not domains (Decided, H). Python3's `Complex` is a value schema,
 `Expressions.Python.Python3.Complex`, `real` and `imag` each held by IEEE 754's `binary64` schema, and Python3's
-imaginary number is a `literal` holding one (its `constant` keeps `None` and `...` alone) *(agent, as H reads)*.
+`constant` holds one as its `complex`, beside its `singleton` (Decided, J).
 
 **Install order** (Decided, F and I). A dialect's dependencies are its caller's install order, recorded nowhere as
 data: the installs run in the order Framework, the four standard dialects, then the dialects that use them, in every
 caller (tests, tutorials, toolkit, skill, corpus), and mbse-schemas refuses an install that names a schema not yet
-registered. Python3 will use IEEE 754 (`Complex`), pending J.
+registered. Python3 uses IEEE 754 (`Complex`, Decided, J).
 
-**Found while building, for the user** (J; built without it meanwhile). It comes from a rule of mbse-schemas, not a
-defect, and is not worked around. (Question I, who writes `Uses`, is decided: there is no `Uses`, Decided, I.)
+**Found while building, decided.** Question I, who writes `Uses`, is decided: there is no `Uses` (Decided, I). Question
+J came from a rule of mbse-schemas, not a defect, and was not worked around; it is decided, (a) (Decided, J):
 
 - **J. Python3's complex number.** A literal's `value` is an unrestricted `Schemas.OfAny`, which takes a value already
   built, carrying its schema, never a spec (mbse-schemas' ANY-02), and a writer reaches no store to build one; so no

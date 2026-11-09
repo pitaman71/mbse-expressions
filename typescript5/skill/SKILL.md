@@ -198,7 +198,8 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    a dialect's `define`, run after its install in a transaction of its own, writes its singleton, found by its global
    name (`store.Instances.Expressions.Framework.Patterns`), which names its operations and owns its domains by name. A
    published standard is a dialect of its own, holding its kinds of domain and its domains (`ISOIEC11404`'s
-   `integer` and `uint8`, `IEEE754`'s `binary32`, ...), installed before the dialects that use its kinds. An
+   `integer` and `uint8`, `IEEE754`'s `binary32`, ...), installed before the dialects that use its kinds or its
+   domains' schemas (Python3's complex number holds IEEE 754's `binary64`s). An
    operation is an expression schema: its pattern's variables are its arguments, in order, and its `result` is its
    return. Read a stored domain with the framework's `Domains.kind_of`, `Domains.properties` (its parameters and its
    inferred properties, such as an integer's `least` and `greatest`) and `Domains.name_of`, and a dialect's operations

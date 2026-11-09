@@ -299,8 +299,10 @@
                               },
                               "value": {
                                 "constant": {
-                                  "real": 0.0,
-                                  "imag": 2.0
+                                  "complex": {
+                                    "real": 0.0,
+                                    "imag": 2.0
+                                  }
                                 }
                               },
                               "generators": [

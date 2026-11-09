@@ -67,12 +67,14 @@ to analyze it.
 3. **A literal keeps its spelling.** *Why*: a literal read from source must print as it was written, and a broken one
    must be kept to be reported. *How*: a literal keeps its spelling (`text`) and what is wrong with it (`problems`)
    beside its value: printers write the spelling where it has one; a Python literal also keeps what its text encodes
-   (a string's prefix and quotes, an int's base, digit separators), and a TypeScript literal its quote, base and
-   separators, a number a float and a bigint an int, `null` and a regular expression TypeScript5's `constant`; a C or
-   C++ literal its encoding prefix, its quote (a character's value is its code), its base, digit separators and its
-   suffix, which gives its type (`5u`), `nullptr` their `constant`. Every dialect's `Term`, `Type` and `Pattern` hold the
-   framework's kinds of invalid syntax, `error` (what a parser skipped) and `missing` (the kind it expected): validation
-   reports them, printers write them as written, and evaluation refuses them.
+   (a string's prefix and quotes, an int's base, digit separators), `None`, `...` and a complex number being Python3's
+   `constant`, a complex number its `complex`, whose `real` and `imag` are IEEE 754's `binary64`s; a TypeScript
+   literal its quote, base and separators, a number a float and a bigint an int, `null` and a regular expression
+   TypeScript5's `constant`; a C or C++ literal its encoding prefix, its quote (a character's value is its code), its
+   base, digit separators and its suffix, which gives its type (`5u`), `nullptr` their `constant`. Every dialect's
+   `Term`, `Type` and `Pattern` hold the framework's kinds of invalid syntax, `error` (what a parser skipped) and
+   `missing` (the kind it expected): validation reports them, printers write them as written, and evaluation refuses
+   them.
    [CAP-233: literals of any value](mbse:mbse-basis/docs/capabilities/CAP-233.md).
    - Python: [DIA-18: A literal is a domain representation: printers write its spelling where it has one, else a default spelling; its value is what evaluates](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-18) · TypeScript: [DIA-18: A literal is a domain representation: printers write its spelling where it has one, else a default spelling; its value is what evaluates](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-18)
    - Python: [DIA-19: Python3's kinds beyond the narrower ones: literals keeping what their text encodes, f-strings as written, each kind's own checks and what it binds, stored as any term](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-19) · TypeScript: [DIA-19: Python3's kinds beyond the narrower ones: literals keeping what their text encodes, f-strings as written, each kind's own checks and what it binds, stored as any term](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-19)

@@ -19,7 +19,8 @@ export const Int = new D.OfTypes("int", BigInt);
 export const Float = new D.OfTypes("float", Number);
 export const Str = new D.OfTypes("str", String);
 export const Bytes = new D.OfTypes("bytes", Uint8Array);
-/** A complex number, which JavaScript has none of: what Python3's `constant` holds of one (in Python, a `complex`). */
+/** A complex number, which JavaScript has none of: what Python3's `constant` holds as its `complex` (in Python, a
+ * `complex`). */
 export class ComplexValue {
   constructor(readonly real: number, readonly imag: number) {}
 }
@@ -78,7 +79,7 @@ export function of(value: unknown): D.Domain {
   return NATIVES.get(Repr.typeName(value)) as D.Domain;
 }
 
-/** The domain of Python3's own constant, by its attributes: `None`'s, `...`'s or a complex number's. */
+/** The domain of Python3's own constant, by its attributes: `None`'s, `...`'s or a complex number's (its `complex`). */
 export function constant(attributes: ReadonlyMap<string, unknown>): D.Domain {
   const singleton = attributes.get("singleton");
   return singleton === "None" ? NoneType : singleton === "..." ? Ellipsis : Complex;

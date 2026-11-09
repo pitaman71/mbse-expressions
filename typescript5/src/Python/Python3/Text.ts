@@ -83,7 +83,8 @@ class Printer {
       }
       if (tag === P.LITERAL) return constantText(attributes.get("value"));
       if (attributes.has("singleton")) return [attributes.get("singleton"), PRIMARY];
-      const text = complexText(attributes.get("real") ?? 0, attributes.get("imag"));
+      const parts = (attributes.get("complex") as F.Part).attributes; // a complex number's, `Expressions.Python.Python3.Complex`
+      const text = complexText((parts.get("real") as number | undefined) ?? 0, parts.get("imag") as number);
       return [text, text.startsWith("-") ? UNARY : PRIMARY];
     }
     if (tag === "error" || tag === "missing") return [F.invalidText(P.DIALECT, tag, attributes), PRIMARY];

@@ -1043,7 +1043,19 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      DOM-13 to DOM-16 being retired IDs; EXP-05, EXP-06, EXP-13, FRM-01, DOM-03, DOM-05 and CONF-04 adjusted under
      their IDs; tutorial 7's T07.5 reads ISO/IEC 11404's domains through `Framework.Domains`.
 119. **Not changed, for the user**: the package root's re-export of Patterns' `Domains`, `Evaluators`, `Expressions`
-     and `Partials`, and Python3's complex number (the domains proposal's question J).
+     and `Partials`, and Python3's complex number (the domains proposal's question J; *decided* 2026-11-09: item 120).
+120. **Python3's complex number is its `constant`'s `complex`** (2026-11-09, as the user decided,
+     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, J: "This distinction feels
+     academic to me", so (a), the smallest change). `Expressions.Python.Python3.Constant` holds `singleton` (`None` or
+     `...`, unchanged) or `complex`, a value of `Expressions.Python.Python3.Complex`, whose `real` and `imag` are each
+     IEEE 754's `binary64` (`Expressions.IEEE754.Expressions.binary64`); the flat `real` and `imag` floats go. A form
+     reads it as a helper, `Part("complex", {"real": 0.0, "imag": 2.0})`; `P.constant(2j)` (TypeScript
+     `P.constant(new P.Complex(0, 2))`) and `Text.FromText` write it through a spec, with no store. Python3's install
+     so names IEEE 754's schemas and runs after IEEE 754's, as every caller's list has it (item 118); mbse-schemas
+     refuses it otherwise. On the wire, `{"constant": {"complex": {"real": 0.0, "imag": 2.0}}}` (the corpus's `python3`
+     case). Its checks' messages are unchanged. `1` stays a framework `literal` while `2j`, `None` and `...` are
+     Python3 `constant`s, a split that follows mbse-schemas' basic scalars rather than Python's grammar, kept for now.
+     Tests: DIA-19.
 
 ## What stage 2b needed (done)
 
