@@ -19,11 +19,11 @@
  *
  * Patterns holds no kinds of domain and owns no domains: as data they are the standard dialects'. A domain is an
  * `Expressions.Framework.Domain`, holding its `kind`, a value of `Expressions.Framework.DomainKind`, the union of the
- * dialects' unions of kinds: ISO/IEC 11404's (`Expressions.ISOIEC11404.Expressions.DomainKind`: `bool`, `integer`,
- * `bits`, `bytes`, `enum`, `packed`), IEEE 754's (`ieee754`), IEEE 1164's (`ieee1164`) and Unicode's (`unicode`), each
+ * dialects' unions of kinds: ISO/IEC 11404's (`Expressions.ISOIEC11404.Expressions.DomainKind`: `boolean`, `integer`,
+ * `bitstring`, `octetstring`, `state`, `packed`), IEEE 754's (`ieee754`), IEEE 1164's (`ieee1164`) and Unicode's (`unicode`), each
  * kind with its parameters and the properties inferred from them. It is owned by the dialect that defines it, by name: its
- * path is the dialect's singleton (`Expressions.ISOIEC11404.Expressions`), then its name. A packed domain links its enum
- * and its representation through `Expressions.ISOIEC11404.Expressions.Packs`. Its schema is a named `Schemas.OfAny`
+ * path is the dialect's singleton (`Expressions.ISOIEC11404.Expressions`), then its name. A packed domain links its state
+ * domain and its representation through `Expressions.ISOIEC11404.Expressions.Packs`. Its schema is a named `Schemas.OfAny`
  * restricted to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.octet`), which reads it through `domain`
  * (`Expressions.Framework.HasDomain`). Each standard dialect's `define` writes its domains, and `read(domain)` gives the
  * data of a stored one, its parameters (ignoring its inferred properties), so that what they mean can be asked of it.

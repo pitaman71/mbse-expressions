@@ -6,11 +6,10 @@
  *
  * Its kinds of domain, the branches of its union `Expressions.ISOIEC11404.Expressions.DomainKind`, which `install` adds
  * to the framework's `Expressions.Framework.DomainKind` as the branch `isoiec11404`, each with the standard's parameters
- * and the properties that follow from them (inferred; populated by hand until constraint resolution computes them):
- *
+ * and the properties that follow from them (inferred; populated by hand until constraint resolution computes them).
  * Each kind is named as the standard declares its datatype: `boolean`, `integer`, `bitstring`, `octetstring` and
  * `state` (11404's unordered enumeration; its `enumerated` is ordered). `packed` has no 11404 name: it keeps a state
- * value apart from the integer or bits that represent it.
+ * value apart from the integer or bits that represent it. The kinds:
  *
  * - `boolean` (`OfBoolean`): true and false; `ordered`.
  * - `integer` (`OfInteger`): two's complement integers of a `width` in bits, or unbounded, `signed` or not, whose

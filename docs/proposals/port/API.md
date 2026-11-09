@@ -961,7 +961,7 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
      | Old | Path (schemas, singleton) | Python package | TypeScript module, package export |
      |---|---|---|---|
-     | `Patterns` | `Expressions.Framework.Patterns` (*superseded* 2026-11-09 by item 122: `Expressions.Patterns.Expressions`) | `mbse.Expressions.Framework.Patterns` | `src/Framework/Patterns`, `@mbse/expressions/Framework/Patterns` |
+     | `Patterns` (*superseded* 2026-11-09 by item 122: `Expressions.Patterns.Expressions`) | `Expressions.Framework.Patterns` | `mbse.Expressions.Framework.Patterns` | `src/Framework/Patterns`, `@mbse/expressions/Framework/Patterns` |
      | `Python3` | `Expressions.Python.Python3` | `mbse.Expressions.Python.Python3` | `src/Python/Python3`, `@mbse/expressions/Python/Python3` |
      | `TypeScript5` | `Expressions.TypeScript.TypeScript5` | `mbse.Expressions.TypeScript.TypeScript5` | `src/TypeScript/TypeScript5`, `@mbse/expressions/TypeScript/TypeScript5` |
      | `C` | `Expressions.C.Expressions` | `mbse.Expressions.C.Expressions` | `src/C/Expressions`, `@mbse/expressions/C/Expressions` |
@@ -1004,8 +1004,8 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
 ## Settled in domains as data's stage 1, for the user's review
 
-Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) decided (its Decided, A to J, the package root's exports and stage 1's review) and as its
-[stage 1's design](../domains/README.md#stage-1s-design) specifies; each choice below is where they were silent.
+Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) decided (its Decided, A to J, the
+package root's exports and stage 1's review) and as its [stage 1's design](../domains/README.md#stage-1s-design) specifies; each choice below is where they were silent.
 
 112. **The standard dialects.** `ISOIEC11404`, `IEEE754`, `IEEE1164` and `Unicode`, each a family holding its one
      dialect, `Expressions`, laid out as every dialect is (item 108; the dialects proposal's Decided, Namespace, 6 and
@@ -1049,7 +1049,7 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      (DOM-18). The code domains and signatures stay, `Dialect.infer`'s,
      marked as CAP-232's to replace.
 118. **Every caller installs the standard dialects first**: tests, tutorials, the toolkit, the corpus and the skill. The
-     corpus's `domains` case is ISO/IEC 11404's singleton and its domains, an enum and a packed domain among them.
+     corpus's `domains` case is ISO/IEC 11404's singleton and its domains, a state domain and a domain packing it into `octet` among them.
      Tests: DOM-17 (the standard dialects and the reading interface) and DOM-18 (each language's kinds) are added,
      DOM-13 to DOM-16 being retired IDs; EXP-05, EXP-06, EXP-13, FRM-01, DOM-03, DOM-05 and CONF-04 adjusted under
      their IDs; tutorial 7's T07.5 reads ISO/IEC 11404's domains through `Framework.Domains`.
@@ -1064,8 +1064,7 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      reads it as a helper, `Part("complex", {"real": 0.0, "imag": 2.0})`; `P.constant(2j)` (TypeScript
      `P.constant(new P.Complex(0, 2))`) and `Text.FromText` write it through a spec, with no store. Python3's install
      so names IEEE 754's schemas and runs after IEEE 754's, as every caller's list has it (item 118); mbse-schemas
-     refuses it otherwise. Written `P.constant(2j)` (TypeScript `P.constant(new P.Complex(0, 2))`); the corpus's
-     `python3` case pins its bytes. Its checks' messages are unchanged. `1` stays a framework `literal` while `2j`, `None` and `...` are
+     refuses it otherwise. The corpus's `python3` case pins its bytes. Its checks' messages are unchanged. `1` stays a framework `literal` while `2j`, `None` and `...` are
      Python3 `constant`s, a split that follows mbse-schemas' basic scalars rather than Python's grammar, kept for now.
      Tests: DIA-19.
 121. **The package root exports `Framework` alone** (2026-11-09, as the user decided, "approved",

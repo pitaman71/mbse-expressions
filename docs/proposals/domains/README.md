@@ -117,6 +117,9 @@ As the user decided (2026-11-04), on the questions below:
     as [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md) has it ("ISO/IEC 11404 replaces Basic expression dialect", "Datatype
     operations are modeled, not coded"). In stage 1 the ISO/IEC 11404 dialect holds those six kinds beside the IEEE
     754, IEEE 1164 and Unicode dialects; replacing Patterns entirely, and modeling 11404's operations, stay CAP-180's.
+    (Their names, *revised* 2026-11-09: the kinds are named as 11404 declares them, `enumerated` read as 11404's
+    unordered `state`, and packing is not an 11404 datatype; Decided, "On stage 1's review", "Names are the standards'
+    own".)
     And: "I am sensing repeated suggestions to consolidate things under `Patterns` and I don't know where that comes
     from". Where it came from: Patterns was Basic, which held the scalar kinds and domains, never moved out when it
     was renamed for its quantifiers over `OfPattern`; this proposal's question 4 recommended "Patterns' `integer`
@@ -181,9 +184,10 @@ As the user decided (2026-11-04), on the questions below:
   `mbse.Expressions` (and `@mbse/expressions`) export `Framework` alone, each dialect imported from its own path, the
   user: "approved". So the root's re-exports of Patterns' `Domains`, `Evaluators`, `Expressions` and `Partials` go,
   and its docstring's "the neutral form of every constraint" with them: they were one source of the habit of
-  consolidating things under Patterns (E, above). Patterns is imported from `mbse.Expressions.Framework.Patterns`
-  (TypeScript: `@mbse/expressions/Framework/Patterns`; since 2026-11-09 `mbse.Expressions.Patterns.Expressions`,
-  Decided, "On stage 1's review", "Patterns' place"), as every other dialect is from its path; every caller that
+  consolidating things under Patterns (E, above). Patterns is imported from its own path, as every other dialect is:
+  then `mbse.Expressions.Framework.Patterns` (TypeScript: `@mbse/expressions/Framework/Patterns`), *superseded*
+  2026-11-09 by `mbse.Expressions.Patterns.Expressions` (`@mbse/expressions/Patterns/Expressions`; Decided, "On stage
+  1's review", "Patterns' place"); every caller that
   relied on the root (the TypeScript tests, the tutorials, the skill and the README) does so. It is a breaking
   change, in 0.9.0, a breaking release anyway ([API](../port/API.md), 121).
 - **On stage 1's review** (2026-11-09): the user's answers on
@@ -236,7 +240,7 @@ As the user decided (2026-11-04), on the questions below:
   - **An install's uid: tech debt**: asked whether an install whose content changed may keep its uid (Patterns' and
     Python3's keep `/1`): "this is an important question, but not priority. find a place to store it as tech debt".
     It is mbse-basis [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/pull/76),
-    proposed in that pull request; the uids are left as they are.
+    proposed in that pull request; the uids' versions are left as they are (`/1`).
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
   release; CAP-232 builds on stored domains.
 - **3. `Anything` and `Opaque`**: "agreed. Schemas.OfAny kind of handles that": no stored "anything" domain; where
@@ -300,8 +304,8 @@ whole-record review before it is brought to the user.
 
 ## Stage 1's design
 
-As the user decided (Decided, on this proposal, A to J, the package root's exports and stage 1's review), on the code at 0.8.0 (`python3/mbse/Expressions/`,
-`typescript5/src/`, the same in both). What the decisions leave open is the agent's, for review, marked *(agent)*.
+As the user decided (Decided, on this proposal, A to J, the package root's exports and stage 1's review), on the code
+at 0.8.0 (`python3/mbse/Expressions/`, `typescript5/src/`, the same in both). What the decisions leave open is the agent's, for review, marked *(agent)*.
 
 **The standard dialects.** Four dialects of the standards that define today's nine kinds, each a family with one
 unversioned dialect (Decided, G), laid out as the namespace decision lays out every dialect (the dialects proposal's
@@ -337,7 +341,7 @@ as `Expressions.Framework.Term` is of their `Term`s: each dialect that has kinds
 `Expressions.<Family>.<Dialect>.DomainKind`, as the branch named as its `Term` branch is (`isoiec11404`, `ieee754`,
 `python3`, ...), so that C's and C++'s `nullptr_t` are each their own; kept so, as the user decided (Decided, "On stage
 1's review"). A domain's `kind` is so written its dialect, then its kind:
-`d.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(lambda f: f.format("binary32")))))))`.
+`d.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(lambda f: f.format("binary32"))))))`.
 
 **Inferred properties**, beside the parameters, all optional, populated by hand by the define that writes a domain
 of the kind (Decided, 2; Proposed, 2):

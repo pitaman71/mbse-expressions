@@ -162,8 +162,8 @@ Python3, TypeScript5, MATLAB, Excel, LaTeX, C, Cpp and SystemVerilog dialects, e
 framework's union of the dialects' `Term`s, and translators between them; terms as values in an mbse-schemas store, with the container
 constructors `list` and `mapping`, literals holding any value with their spelling, and the kinds of invalid syntax
 `error` and `missing`; dialects, their operations and their
-domains as data (each dialect a singleton that names its operations, each an expression schema, and owns its domains
-by name; the published standards that define kinds of domain, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode,
+domains as data (each dialect a singleton that names its operations, each an expression schema, and may own domains
+by name, as the standard dialects do; the published standards that define kinds of domain, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode,
 dialects of their own since domains as data's stage 1, unreleased until 0.9.0); writers; `validate()`, which refuses a call to an operation the dialect does not define; evaluation with
 three-valued logic over values by the schemas they are written with, collections and quantifiers. Released in 0.8.0,
 on mbse-schemas 0.26.10: stages 1 to 5 of the complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md))

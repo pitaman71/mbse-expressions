@@ -60,8 +60,8 @@ conversions), is deferred, and the others keep their numbers. A term no longer c
 constraint's root gives its schema, and giving each term a domain, domain inference, is a later capability
 ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)). Widths,
 overflow, IEEE 754 formats other than binary64, enums and the conversions wait for it (the port's stage 3, Decided, 2,
-in [docs/proposals/port](../../docs/proposals/port/README.md)). Domains themselves are data meanwhile: each dialect
-owns its domains by name, and each one's schema is a named `Schemas.OfAny` of the scalar it narrows.
+in [docs/proposals/port](../../docs/proposals/port/README.md)). Domains themselves are data meanwhile: the standard
+dialects (ISO/IEC 11404, IEEE 754, IEEE 1164, Unicode) own them by name, and each one's schema is a named `Schemas.OfAny` of the scalar it narrows.
 
 ---
 

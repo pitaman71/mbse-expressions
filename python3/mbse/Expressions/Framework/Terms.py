@@ -30,13 +30,13 @@ term carries no domain: whatever owns the root term gives its schema.
 
 Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
 (`Expressions.Patterns.Expressions`), of its own reference object schema (`Expressions.Patterns.Expressions.Dialect`), a branch of the kind
-union `Expressions.Framework.Dialect`, which each dialect extends. It owns its domains by name
-(`Expressions.Framework.Defines(dialect, name, domain)`), so a domain's path is its dialect's and its name; a domain is
+union `Expressions.Framework.Dialect`, which each dialect extends. A dialect may own domains by name, as a standard
+dialect's does (`Expressions.ISOIEC11404.Expressions`), through `Expressions.Framework.Defines(dialect, name, domain)`, so a domain's path is its dialect's and its name; a domain is
 an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
 the union of the dialects' unions of kinds, as `Term` is of their `Term`s: with no branch until a dialect that has kinds
 adds its own, `Expressions.<Family>.<Dialect>.DomainKind`, as the branch named by its tag (`isoiec11404`), so a kind
 is written its dialect, then its kind
-(`d.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(lambda f: f.format("binary32")))))))`).
+(`d.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(lambda f: f.format("binary32"))))))`).
 The standard
 dialects, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode (`mbse.Expressions.ISOIEC11404.Expressions` and the
 others), hold the kinds and the domains of their standards. A domain's schema is a named `Schemas.OfAny` restricted
