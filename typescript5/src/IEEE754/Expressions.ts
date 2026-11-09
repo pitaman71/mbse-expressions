@@ -38,8 +38,7 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.IEEE754.Expressions.Dialect").ref(true).singleton(
         "Expressions.IEEE754.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        uses: (a: any) => a.relation([Framework.Uses]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("ieee754").schema([_.Dialect])]),
 

@@ -34,7 +34,7 @@ store = Builders.Store()
 store.transaction(Framework.install)        # Expressions.Framework: Term (no branch yet), Literal, Call, Variable, Let,
                                             # List, Mapping, Pair, Error, Missing, Expression, HasRoot,
                                             # Schemas.OfExpression's adjacency `expression`; Dialect, Domain, DomainKind,
-                                            # Defines, Operates, Uses, HasDomain and Schemas.OfAny's adjacency `domain`
+                                            # Defines, Operates, HasDomain and Schemas.OfAny's adjacency `domain`
 for standard in (ISOIEC11404, IEEE754, IEEE1164, Unicode):  # the standard dialects, before those that use them:
     store.transaction(standard.Expressions.install)          # each its singleton, its kinds of domain, its domains' schemas
 store.transaction(Patterns.install)         # Expressions.Framework.Patterns.Term, its union (the shared kinds, its
@@ -1021,8 +1021,13 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
 115. **Each language's own kinds**: SystemVerilog's `logic` (`width`, `signed`), Python3's `str`, `nonetype` and
      `ellipsis`, TypeScript5's `string` and `null`, C's and C++'s `nullptr_t`, Excel's `error` (`members`); their
      domains are stage 3's. DOM-18 writes one of each by hand: a domain needs its dialect as owner.
-116. **`Expressions.Framework.Uses(dialect, used)`**, unique `[dialect, used]`, every dialect's adjacency `uses`. No
-     entry is written yet: an install cannot bind its own singleton (the domains proposal's question I).
+116. *(Superseded 2026-11-09, as the user decided, [the domains proposal](../domains/README.md#decided-on-this-proposal),
+     Decided, I: "drop `Uses`".)* ~~`Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`, every
+     dialect's adjacency `uses`. No entry is written yet: an install cannot bind its own singleton (the domains
+     proposal's question I).~~ Now **no `Uses`**: the relation and every dialect's adjacency `uses` are removed, in both
+     languages. A dialect's dependencies are its caller's install order (item 118), which mbse-schemas checks by
+     refusing an install that names a schema not yet registered. Tests: FRM-01 and DOM-17 assert each dialect's
+     adjacencies, `domains` and `operations`.
 117. **The reading interface**, `Framework.Domains`: `kind_of` (`kindOf`), `properties`, `name_of` (`nameOf`),
      `operations` and `arity`; "a domain needs a kind". The code domains and signatures stay, `Dialect.infer`'s,
      marked as CAP-232's to replace.

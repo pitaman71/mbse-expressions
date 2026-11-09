@@ -82,8 +82,7 @@ def install(txn: Any) -> Any:
             # --- Patterns' dialect: the singleton `Expressions.Framework.Patterns`, a branch of the framework's kind union ---
             lambda _: _.Dialect.name("Expressions.Framework.Patterns.Dialect").ref(True).singleton("Expressions.Framework.Patterns").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "uses": lambda a: a.relation([Framework.Uses]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("patterns").schema([_.Dialect])]),
 

@@ -125,8 +125,9 @@ As the user decided (2026-11-04), on the questions below:
     and its kinds move to the standard dialects, and Patterns uses their domains as any dialect does.
   - **F. (a)**: the caller runs each install in order, each its own transaction, as the tutorials' toolkit and the
     tests do; an install names the kinds it uses by their schemas' names, so mbse-schemas refuses it where they are
-    not installed; each install writes its uses as data, `Uses(dialect, used)`; no `install_all`. Every caller's list
-    (tests, tutorials, toolkit, skill) installs the standard dialects before the dialects that use them.
+    not installed; ~~each install writes its uses as data, `Uses(dialect, used)`~~ (*superseded* 2026-11-09 by I,
+    below: there is no `Uses`); no `install_all`. Every caller's list (tests, tutorials, toolkit, skill) installs the
+    standard dialects before the dialects that use them.
   - **G. Already decided**: "I think this was already resolved and you may be leaking context". The namespace's rule,
     "`Expressions.<family>.<dialect>`, a family named as its standard names the language", and a family of one
     unversioned dialect naming it `Expressions` (the dialects proposal's Decided, Namespace), give
@@ -141,6 +142,18 @@ As the user decided (2026-11-04), on the questions below:
     each have a domain of their own, as B decided.
   - Stage 1's text, leaving the result-domain relation to CAP-232 (Stages, 1), was put to the user with these, and
     stands.
+- **I. No `Uses`** (2026-11-09), on stage 1's question I (who writes `Uses`): "drop `Uses` and monitor for reasons to
+  reinstate it in the future, stop and ask if you find one". Of the explicit install list every caller writes,
+  `for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
+  SystemVerilog): store.transaction(module.install)`, the user had said "I mean for now this looks pretty clean", and
+  of `Uses`, "`Uses` is why we were discussing dependency notation". With the list kept, `Uses` has no job: **a
+  dialect's dependencies are its caller's install order**, and mbse-schemas' refusal of an install that names a schema
+  not yet registered (a kind's, a domain's) is the check; nothing read `Uses`. So `Expressions.Framework.Uses` and
+  every dialect's adjacency `uses` are removed, in both languages, with their tests ([API](../port/API.md), 116). This
+  supersedes F (a)'s `Uses`, above, and closes question I (Stage 1's design).
+  - **Standing instruction**, the user's: "monitor for reasons to reinstate it in the future, stop and ask if you find
+    one". An agent that finds a reason for `Uses`, something that needs to read as data which dialects a dialect uses,
+    stops and asks the user before building it or anything in its place.
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
   release; CAP-232 builds on stored domains.
 - **3. `Anything` and `Opaque`**: "agreed. Schemas.OfAny kind of handles that": no stored "anything" domain; where
@@ -195,8 +208,7 @@ whole-record review before it is brought to the user.
    inference's, its population with it (Decided, 2): stage 1 stores none of it. Its design is below.
 2. Patterns: its code domains gone (its dataclasses and `read`), its validation reading its stored operations through
    the holder (Decided, C) in place of `SIGNATURES`.
-3. C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its domains stored, with its
-   uses.
+3. C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its domains stored.
 4. Standards as tagged data (the dialects proposal's Decided, Q10), every dialect's standards.
 5. Records in mbse-basis (CAP-097, CAP-180, CAP-232, CAP-226), and release as 0.9.0 (Decided, D).
 
@@ -262,22 +274,14 @@ A token's domain has no schema: no basic scalar holds its value, which its diale
 `Expressions.Python.Python3.Complex`, `real` and `imag` each held by IEEE 754's `binary64` schema, and Python3's
 imaginary number is a `literal` holding one (its `constant` keeps `None` and `...` alone) *(agent, as H reads)*.
 
-**Uses** (Decided, F). `Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`, each dialect's singleton
-the adjacency `uses`, written by the install of a dialect that uses another's kinds or schemas. In stage 1, Python3
-uses IEEE 754 (`Complex`), pending I and J; the others gain their uses with their domains in stage 3. The installs run in the order
-Framework, the four standard dialects, then the dialects that use them, in every caller (tests, tutorials, toolkit,
-skill, corpus).
+**Install order** (Decided, F and I). A dialect's dependencies are its caller's install order, recorded nowhere as
+data: the installs run in the order Framework, the four standard dialects, then the dialects that use them, in every
+caller (tests, tutorials, toolkit, skill, corpus), and mbse-schemas refuses an install that names a schema not yet
+registered. Python3 will use IEEE 754 (`Complex`), pending J.
 
-**Found while building, for the user** (I and J; built without them meanwhile). Each comes from a rule of
-mbse-schemas, not a defect, and is not worked around:
+**Found while building, for the user** (J; built without it meanwhile). It comes from a rule of mbse-schemas, not a
+defect, and is not worked around. (Question I, who writes `Uses`, is decided: there is no `Uses`, Decided, I.)
 
-- **I. Who writes `Uses`.** An install cannot write its dialect's `Uses` entry: binding a singleton takes its schema by
-  its registered name when the transaction is made, before the install's upsert has made the schema (`LookupError: no
-  schema registered as 'Expressions.Python.Python3.Dialect'`), as an install and what uses it are separate
-  transactions ([API](../port/API.md), the installs). (a) The dialect's `define` writes it, with its other data; a
-  dialect with no `define` today (the standard dialects have one) gains one where it uses another. (b) mbse-schemas
-  lets one transaction bind a singleton whose schema it makes, a sibling's change. *Recommended: (a)*: a use is the
-  dialect's data, as its domains and operations are, and `define` writes those.
 - **J. Python3's complex number.** A literal's `value` is an unrestricted `Schemas.OfAny`, which takes a value already
   built, carrying its schema, never a spec (mbse-schemas' ANY-02), and a writer reaches no store to build one; so no
   writer (`P.constant(1j)`, `FromText`) can write a literal holding a `Complex`. (a) Python3's `constant` holds it:
@@ -316,9 +320,9 @@ FRM-01 lists the new dialects and each dialect's kinds; DIA-19 Python3's `Comple
 the standard dialects' singletons and domains, its JSON regenerated, byte-identical in both languages.
 
 **Stages, revised.** Stage 1 is the above. Stage 2 is Patterns' code domains gone (its dataclasses, `read`), its
-validation reading its stored operations through the holder. Stage 3 is every other dialect's domains stored, with
-their uses. Standards as tagged data, every dialect's `STANDARDS` and `Kind.standards` among them, is a stage after
-stage 3 *(agent)*, before the records and the release.
+validation reading its stored operations through the holder. Stage 3 is every other dialect's domains stored. Standards
+as tagged data, every dialect's `STANDARDS` and `Kind.standards` among them, is a stage after stage 3 *(agent)*, before
+the records and the release.
 
 ## Risks
 

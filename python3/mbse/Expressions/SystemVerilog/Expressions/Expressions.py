@@ -81,8 +81,7 @@ def install(txn: Any) -> Any:
             # its dialect: the singleton `Expressions.SystemVerilog.Expressions`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.SystemVerilog.Expressions.Dialect").ref(True).singleton("Expressions.SystemVerilog.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "uses": lambda a: a.relation([Framework.Uses]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("systemverilog").schema([_.Dialect])]),
             # its union of its kinds: the framework's it reuses, its own, and invalid syntax

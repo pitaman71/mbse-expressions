@@ -75,8 +75,7 @@ export function install(txn: any): any {
       // --- Patterns' dialect: the singleton `Expressions.Framework.Patterns`, a branch of the framework's kind union ---
       (_: any) => _.Dialect.name("Expressions.Framework.Patterns.Dialect").ref(true).singleton("Expressions.Framework.Patterns").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        uses: (a: any) => a.relation([Framework.Uses]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("patterns").schema([_.Dialect])]),
 

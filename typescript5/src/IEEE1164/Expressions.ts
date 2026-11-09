@@ -37,8 +37,7 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.IEEE1164.Expressions.Dialect").ref(true).singleton(
         "Expressions.IEEE1164.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        uses: (a: any) => a.relation([Framework.Uses]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("ieee1164").schema([_.Dialect])]),
 

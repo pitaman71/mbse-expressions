@@ -38,8 +38,7 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Unicode.Expressions.Dialect").ref(True).singleton(
                 "Expressions.Unicode.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "uses": lambda a: a.relation([Framework.Uses]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("unicode").schema([_.Dialect])]),
 

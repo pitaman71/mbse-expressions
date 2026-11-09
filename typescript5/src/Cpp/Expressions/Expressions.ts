@@ -139,8 +139,7 @@ export function install(txn: any): any {
       // its dialect: the singleton `Expressions.Cpp.Expressions`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(true).singleton("Expressions.Cpp.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        uses: (a: any) => a.relation([Framework.Uses]).me("dialect")}),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect")}),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("cpp").schema([_.Dialect])]),
       // its union of its kinds: its own, the framework's it reuses, a type name, an initializer list's

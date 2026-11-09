@@ -194,8 +194,7 @@ export function install(txn: any): any {
       // its dialect: the singleton `Expressions.TypeScript.TypeScript5`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.TypeScript.TypeScript5.Dialect").ref(true).singleton("Expressions.TypeScript.TypeScript5").adjacencies({
           domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-          operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-          uses: (a: any) => a.relation([Framework.Uses]).me("dialect")}),
+          operations: (a: any) => a.relation([Framework.Operates]).me("dialect")}),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
           (t: any) => t.name("typescript5").schema([_.Dialect])]),
       // its union of its kinds: its own, the framework's it reuses, the patterns expressions hold, JSX, and

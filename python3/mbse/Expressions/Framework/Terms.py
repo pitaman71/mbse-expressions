@@ -41,8 +41,8 @@ scalar it narrows (`Expressions.ISOIEC11404.Expressions.uint8`), which reads it 
 (`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
 (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module defines, whose
 pattern's variables are its arguments, in the order they are declared, and whose `result` is its return. A dialect
-that uses another's kinds or schemas says so (`Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`,
-each dialect's adjacency `uses`). `Domains` reads stored domains and operations.
+that uses another's kinds or schemas depends on its caller's install order, nothing recording it as data: mbse-schemas
+refuses an install that names a schema not yet installed. `Domains` reads stored domains and operations.
 
 Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
 branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's slots (a term
@@ -112,9 +112,8 @@ QUANTIFIER, INVALID = "quantifier", "invalid"
 
 def install(txn: Any) -> Any:
     """The framework's schemas: terms, expressions and an expression schema's root; domains and the schemas they
-    restrict; dialects, the operations they define and the dialects they use. Run first, before the standard dialects'
-    installs and then the others', each in a transaction of its own. Run again in a store, it finds each by its name
-    and writes nothing."""
+    restrict; dialects and the operations they define. Run first, before the standard dialects' installs and then
+    the others', each in a transaction of its own. Run again in a store, it finds each by its name and writes nothing."""
     S = txn.Schemas
     return txn.uid("mbse.Expressions.Framework/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Term": S.OfUnion, "Literal": S.OfObject, "Call": S.OfObject, "Variable": S.OfObject,
@@ -122,8 +121,7 @@ def install(txn: Any) -> Any:
                   "Error": S.OfObject, "Missing": S.OfObject,
                   "Expression": S.OfObject, "HasRoot": S.OfRelation, "OfExpression": S.OfObject,
                   "Domain": S.OfObject, "DomainKind": S.OfUnion, "HasDomain": S.OfRelation, "OfAny": S.OfObject,
-                  "Dialect": S.OfUnion, "Defines": S.OfRelation, "Operates": S.OfRelation,
-                  "Uses": S.OfRelation})  # mbse-schemas' own, by name
+                  "Dialect": S.OfUnion, "Defines": S.OfRelation, "Operates": S.OfRelation})  # mbse-schemas' own, by name
         .spec([
             # The union of the dialects' `Term`s: each dialect adds its own, `Expressions.<Dialect>.Term`, as the
             # branch named after it (`patterns`), by schema extension.
@@ -164,10 +162,8 @@ def install(txn: Any) -> Any:
             # paths. mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object
             # schemas, to which each dialect adds its own by schema extension, as it adds its kinds to `Term`.
             lambda _: _.Dialect.name("Expressions.Framework.Dialect"),
-            # A dialect that uses another's kinds or schemas: written by the install of the one that uses them.
-            lambda _: _.Uses.name("Expressions.Framework.Uses").links([
-                lambda t: t.name("dialect").schema([_.Dialect]), lambda t: t.name("used").schema([_.Dialect])
-            ]).uniques([["dialect", "used"]]),
+            # No relation records which dialects one uses: its caller's install order is its dependencies, checked by
+            # mbse-schemas' refusal of an unregistered schema (docs/proposals/domains, Decided, I).
             # A domain: a reference object holding its kind, a value of the union of the dialects' unions of kinds,
             # owned by the dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the
             # scalar it narrows, reads it through the extension adjacency `domain`.
