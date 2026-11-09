@@ -253,7 +253,11 @@ As the user decided (2026-11-02), on the questions below:
   `Expressions.C.Expressions`, `Expressions.SystemVerilog.Expressions` and sublanguages by what they are: "agreed"; "The
   rename is a step of its own, before stage 6's build." Asked eight questions it left open, each with a recommendation,
   the user: "yes, go":
-  1. Patterns, the neutral form and no standard's language, is `Expressions.Framework.Patterns`.
+  1. Patterns, the neutral form and no standard's language, is `Expressions.Framework.Patterns`. *Superseded*
+     (2026-11-09) by the user's "(b)": Patterns is `Expressions.Patterns.Expressions`, a family with one dialect named
+     `Expressions`, as 3 has MATLAB's, Excel's and LaTeX's; and "the neutral form" is retired, describing Patterns
+     nowhere ([the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "On stage 1's review",
+     "Patterns' place").
   2. C++'s family, `C++` being no name, is `Cpp`: `Expressions.Cpp.Expressions`.
   3. The families with one unversioned dialect name it `Expressions`, as C's and SystemVerilog's do:
      `Expressions.MATLAB.Expressions`, `Expressions.Excel.Expressions`, `Expressions.LaTeX.Expressions` (not

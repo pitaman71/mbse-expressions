@@ -21,7 +21,7 @@ from mbse.Expressions.Cpp import Expressions as Cpp
 from mbse.Expressions.Excel import Expressions as Excel
 from mbse.Expressions.LaTeX import Expressions as Latex
 from mbse.Expressions.MATLAB import Expressions as Matlab
-from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.Patterns import Expressions as Patterns
 from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
 from mbse.Expressions.IEEE754 import Expressions as IEEE754
 from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
@@ -34,7 +34,7 @@ from mbse.Expressions.Cpp.Expressions import Expressions as CPP
 from mbse.Expressions.Excel.Expressions import Expressions as X
 from mbse.Expressions.LaTeX.Expressions import Expressions as L
 from mbse.Expressions.MATLAB.Expressions import Expressions as M
-from mbse.Expressions.Framework.Patterns import Expressions
+from mbse.Expressions.Patterns.Expressions import Expressions
 from mbse.Expressions.Python.Python3 import Expressions as P
 from mbse.Expressions.SystemVerilog.Expressions import Expressions as SV
 from mbse.Expressions.TypeScript.TypeScript5 import Expressions as TS

@@ -3,7 +3,7 @@
 A dialect is an expression language: its term kinds, its `Term`, the value union of them (`Expressions.<path>.Term`),
 which its `install` adds to the store's `Expressions.Framework.Term` as the branch named after it (`python3`), its
 vocabulary of operators, the domains of its values, its source text (its `Text` module: `ToText`, and in Python, for
-Python, `FromText`), its evaluator, and the scope that resolves its names. Its path, its family's name and its own (`Framework.Patterns`,
+Python, `FromText`), its evaluator, and the scope that resolves its names. Its path, its family's name and its own (`Patterns.Expressions`,
 `Python.Python3`, `C.Expressions`), names its schemas (`Expressions.C.Expressions.Term`), its Python package
 (`mbse.Expressions.C.Expressions`) and its TypeScript module (`@mbse/expressions/C/Expressions`); its name is its own,
 or its family's where its own is `Expressions` (`C`, `MATLAB`, `LaTeX`). Every dialect's terms serialize, validate,

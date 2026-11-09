@@ -7,7 +7,7 @@
  * constructor. */
 
 import { DIALECT as CPP } from "../Cpp/Expressions/Expressions.js";
-import { DIALECT as PATTERNS } from "../Framework/Patterns/Expressions.js";
+import { DIALECT as PATTERNS } from "../Patterns/Expressions/Expressions.js";
 import { Inline, Pairwise, Rule } from "../Framework/Translators.js";
 import { CFamily, Patterns, value } from "./_Patterns.js";
 import { IDENTIFIER, RULES as C_RULES } from "./Patterns_C.js";

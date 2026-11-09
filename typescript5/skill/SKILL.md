@@ -55,12 +55,12 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    domain the others use (`ISOIEC11404`, `IEEE754`, `IEEE1164`, `Unicode`), then the rest
    (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...); an
    install whose dialects are missing is refused. The package exports the framework alone (`Framework`); import each
-   dialect from its own path, Patterns' writers from `mbse.Expressions.Framework.Patterns` (TypeScript:
-   `@mbse/expressions/Framework/Patterns`), as `E`. Build a constraint with writers: `E.variable(name)`,
+   dialect from its own path, Patterns' writers from `mbse.Expressions.Patterns.Expressions` (TypeScript:
+   `@mbse/expressions/Patterns/Expressions`), as `E`. Build a constraint with writers: `E.variable(name)`,
    `E.literal(value)`, `E.let_(name, value, body)` and `E.operation(name, ...)`; reading a property of a writer is `get`
    (`x.age`, or `x.get(name)` for a name a writer has as a method), and its methods build calls (`.ge(18)`,
    `.and_(...)`). A writer builds data and evaluates nothing. Write it within a transaction, as the root of an
-   expression (`Expressions.Framework.Patterns.Expression`, whose root holds Patterns' terms only, or
+   expression (`Expressions.Patterns.Expressions.Expression`, whose root holds Patterns' terms only, or
    `Expressions.Framework.Expression`, any dialect's), or as a term alone (`Expressions.Framework.Term`). A value of the
    program becomes a literal, so the constraint never refers back to it.
    [FEA-024: expressions as data](mbse:mbse-basis/docs/features/FEA-024.md),
@@ -198,7 +198,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
 12. **Dialects, operations and domains are data.** *Why*: a program learns what a dialect can say from the store,
    without its code, and a domain is named once. *When*: listing a dialect's vocabulary, or reading a domain. *How*:
    a dialect's `define`, run after its install in a transaction of its own, writes its singleton, found by its global
-   name (`store.Instances.Expressions.Framework.Patterns`), which names its operations and owns its domains by name. A
+   name (`store.Instances.Expressions.Patterns.Expressions`), which names its operations and owns its domains by name. A
    published standard is a dialect of its own, holding its kinds of domain and its domains (`ISOIEC11404`'s
    `integer` and `octet`, `IEEE754`'s `binary32`, ...; each kind and domain named as its standard names it), installed before the dialects that use its kinds or its
    domains' schemas (Python3's complex number holds IEEE 754's `binary64`s). An

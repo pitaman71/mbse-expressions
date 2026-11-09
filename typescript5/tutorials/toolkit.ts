@@ -7,7 +7,7 @@
  */
 
 import { Framework } from "@mbse/expressions";
-import * as Patterns from "@mbse/expressions/Framework/Patterns";
+import * as Patterns from "@mbse/expressions/Patterns/Expressions";
 import * as IEEE1164 from "@mbse/expressions/IEEE1164/Expressions";
 import * as IEEE754 from "@mbse/expressions/IEEE754/Expressions";
 import * as ISOIEC11404 from "@mbse/expressions/ISOIEC11404/Expressions";

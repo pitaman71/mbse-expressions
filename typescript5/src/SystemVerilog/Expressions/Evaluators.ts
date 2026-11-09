@@ -36,7 +36,7 @@ import { NameError, OverflowError } from "../../Framework/Errors.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as F from "../../Framework/Terms.js";
-import * as Ieee754 from "../../Framework/Patterns/Ieee754.js";
+import * as Ieee754 from "../../Patterns/Expressions/Ieee754.js";
 import { isMapping } from "../../MATLAB/Expressions/Domains.js";
 import * as Domains from "./Domains.js";
 import * as X from "./Expressions.js";

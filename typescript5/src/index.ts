@@ -8,7 +8,7 @@
  *
  * The package exports the framework alone, `Framework` (also `@mbse/expressions/Framework`). Each dialect is imported
  * from its own export, under its family, at `@mbse/expressions/<Family>/<Dialect>`
- * (`@mbse/expressions/Framework/Patterns`, `@mbse/expressions/Python/Python3`, `@mbse/expressions/C/Expressions`), and
+ * (`@mbse/expressions/Patterns/Expressions`, `@mbse/expressions/Python/Python3`, `@mbse/expressions/C/Expressions`), and
  * the translators between them from `@mbse/expressions/Translators`. The kinds of value domain and the domains are the
  * standard dialects' (`@mbse/expressions/ISOIEC11404/Expressions`, `IEEE754/Expressions`, `IEEE1164/Expressions` and
  * `Unicode/Expressions`), installed after the framework and before the dialects that use them. Expressions are stored

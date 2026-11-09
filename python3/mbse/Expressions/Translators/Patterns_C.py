@@ -12,7 +12,7 @@ of the same value; C23's `bool` is Patterns'. Every other kind of C's has no cou
 from __future__ import annotations
 
 from mbse.Expressions.C.Expressions.Expressions import DIALECT as C_DIALECT
-from mbse.Expressions.Framework.Patterns.Expressions import DIALECT as PATTERNS
+from mbse.Expressions.Patterns.Expressions.Expressions import DIALECT as PATTERNS
 from mbse.Expressions.Framework.Translators import Inline, Pairwise, Rule, renames
 
 from ._Patterns import CFamily, Patterns, value

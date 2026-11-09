@@ -26,7 +26,7 @@
  * term carries no domain: whatever owns the root term gives its schema.
  *
  * Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
- * (`Expressions.Framework.Patterns`), of its own reference object schema (`Expressions.Framework.Patterns.Dialect`), a branch of the kind
+ * (`Expressions.Patterns.Expressions`), of its own reference object schema (`Expressions.Patterns.Expressions.Dialect`), a branch of the kind
  * union `Expressions.Framework.Dialect`, which each dialect extends. It owns its domains by name
  * (`Expressions.Framework.Defines(dialect, name, domain)`), so a domain's path is its dialect's and its name; a domain is
  * an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
@@ -156,7 +156,7 @@ export function install(txn: any): any {
         (t: any) => t.name("schema"), (t: any) => t.name("expression")]).uniques("expression"),
       (_: any) => _.OfExpression.name("Schemas.OfExpression").adjacencies([ // by extension: no member on it
         (t: any) => t.name("expression").relation([_.HasRoot]).me("schema")]),
-      // A dialect: a singleton, its identity its global name (`Expressions.Framework.Patterns`), the root of its domains' paths.
+      // A dialect: a singleton, its identity its global name (`Expressions.Patterns.Expressions`), the root of its domains' paths.
       // mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object schemas, to which
       // each dialect adds its own by schema extension, as it adds its kinds to `Term`.
       (_: any) => _.Dialect.name("Expressions.Framework.Dialect"),
@@ -918,7 +918,7 @@ export interface DialectOptions {
 type Environment = Record<string, Domains.Domain>;
 
 /** A dialect's name, of its path below `Expressions` (its family's name and its own): its own (`Python.Python3`'s is
- * `Python3`, `Framework.Patterns`' `Patterns`), or its family's where its own says only that it is the family's
+ * `Python3`, `Patterns.Expressions`' `Patterns`), or its family's where its own says only that it is the family's
  * expressions (`C.Expressions`' is `C`). */
 export function dialectName(path: string): string {
   const parts = path.split(".");

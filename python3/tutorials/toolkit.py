@@ -11,7 +11,7 @@ from mbse.Expressions.Cpp import Expressions as Cpp
 from mbse.Expressions.Excel import Expressions as Excel
 from mbse.Expressions.LaTeX import Expressions as Latex
 from mbse.Expressions.MATLAB import Expressions as Matlab
-from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.Patterns import Expressions as Patterns
 from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
 from mbse.Expressions.IEEE754 import Expressions as IEEE754
 from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404

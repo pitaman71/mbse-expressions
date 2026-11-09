@@ -10,7 +10,7 @@
     "@mbse/expressions/Framework": "./src/Framework/index.ts",
     "@mbse/expressions/Translators": "./src/Translators/index.ts",
     "@mbse/expressions/Framework/": "./src/Framework/",
-    "@mbse/expressions/Framework/Patterns": "./src/Framework/Patterns/index.ts",
+    "@mbse/expressions/Patterns/Expressions": "./src/Patterns/Expressions/index.ts",
     "@mbse/expressions/Python/Python3": "./src/Python/Python3/index.ts",
     "@mbse/expressions/TypeScript/TypeScript5": "./src/TypeScript/TypeScript5/index.ts",
     "@mbse/expressions/MATLAB/Expressions": "./src/MATLAB/Expressions/index.ts",

@@ -16,8 +16,8 @@ rest of your data, sent between programs, and evaluated the same way in Python a
 
 ```python
 from mbse.Expressions import Framework
-from mbse.Expressions.Framework import Patterns
-from mbse.Expressions.Framework.Patterns import Evaluators, Expressions
+from mbse.Expressions.Patterns import Expressions as Patterns
+from mbse.Expressions.Patterns.Expressions import Evaluators, Expressions
 from mbse.Schemas.Framework import Builders
 
 store = Builders.Store()  # expressions are stored in an mbse-schemas store, with the data they constrain
@@ -25,22 +25,22 @@ store.transaction(Framework.install)
 store.transaction(Patterns.install)
 contact = Expressions.variable("contact")
 with store.transaction():
-    senior = store.Expressions.Framework.Patterns.Expression(lambda e: e.root(
+    senior = store.Expressions.Patterns.Expressions.Expression(lambda e: e.root(
         contact.age.ge(65).and_(contact.has("email"))))
 Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value is unknown
 ```
 
 ```typescript
 import { Framework } from "@mbse/expressions";
-import * as Patterns from "@mbse/expressions/Framework/Patterns";
-import { Evaluators, Expressions } from "@mbse/expressions/Framework/Patterns";
+import * as Patterns from "@mbse/expressions/Patterns/Expressions";
+import { Evaluators, Expressions } from "@mbse/expressions/Patterns/Expressions";
 import { Builders } from "@mbse/schemas/Framework";
 
 const store: any = new Builders.Store(); // expressions are stored in an mbse-schemas store, with the data they constrain
 store.transaction(Framework.install);
 store.transaction(Patterns.install);
 const contact = Expressions.variable("contact");
-const senior = store.transaction(() => store.Expressions.Framework.Patterns.Expression((e: any) => e.root(
+const senior = store.transaction(() => store.Expressions.Patterns.Expressions.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
 Evaluators.OfAny(senior, { contact: ada });
 ```
@@ -48,8 +48,8 @@ Evaluators.OfAny(senior, { contact: ada });
 Like mbse-schemas, it has two equivalent implementations, in Python and TypeScript, with the same API, the same
 messages and byte-identical JSON. Python imports it from `mbse.Expressions` (next to `mbse.Schemas`, in the shared `mbse`
 namespace package), TypeScript from `@mbse/expressions` (next to `@mbse/schemas`). The package exports the framework
-alone; each dialect is imported from its own path (`mbse.Expressions.Framework.Patterns`,
-`@mbse/expressions/Framework/Patterns`).
+alone; each dialect is imported from its own path (`mbse.Expressions.Patterns.Expressions`,
+`@mbse/expressions/Patterns/Expressions`).
 
 ## Getting started
 
@@ -148,8 +148,8 @@ formula = Translators.between(Expressions.DIALECT, Excel.DIALECT).forward(senior
 ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email)))'
 ```
 
-Each dialect lives under its family, at `Expressions.<Family>.<Dialect>`, the framework being Patterns' family:
-`Framework.Patterns`, `Python.Python3`, `TypeScript.TypeScript5`, and `C.Expressions`, `Cpp.Expressions`,
+Each dialect lives under its family, at `Expressions.<Family>.<Dialect>`: `Python.Python3`,
+`TypeScript.TypeScript5`, and `Patterns.Expressions`, `C.Expressions`, `Cpp.Expressions`,
 `SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions` and `LaTeX.Expressions`, and the standard
 dialects `ISOIEC11404.Expressions`, `IEEE754.Expressions`, `IEEE1164.Expressions` and `Unicode.Expressions`. Its schemas
 (`Expressions.C.Expressions.Term`), its Python package (`mbse.Expressions.C.Expressions`) and its TypeScript module

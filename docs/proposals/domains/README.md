@@ -21,7 +21,7 @@ Everything that uses a domain uses code objects instead:
 | Module (Python; TypeScript has the same) | Lines | What it holds |
 |---|---|---|
 | `Framework/Domains.py` | 268 | `Domain` (a protocol: `contains`, `includes`), `Signature`, `OfTypes`, `OfValues`, `OfUnion`, `Anything`, `Function`, `Same`, `Overloaded`, `Opaque`, `Either` |
-| `Framework/Patterns/Domains.py` | 739 | 14 dataclasses (`_Integer`, `_Ieee754`, `_Bits`, `_Bytes`, `_Unicode`, `_Enum`, `_Packed`, ...), the defaults, `SIGNATURES`, and `read`, which turns a stored domain into one of these |
+| `Patterns/Expressions/Domains.py` | 739 | 14 dataclasses (`_Integer`, `_Ieee754`, `_Bits`, `_Bytes`, `_Unicode`, `_Enum`, `_Packed`, ...), the defaults, `SIGNATURES`, and `read`, which turns a stored domain into one of these |
 | `C/Expressions/Domains.py` | 319 | `CType`, C's integer and floating types as module constants, promotion and the usual arithmetic conversions, operator signatures |
 | `SystemVerilog/Expressions/Domains.py` | 216 | 4-state logic vectors, their widths and signedness |
 | `{Excel,MATLAB,LaTeX}/Expressions/Domains.py`, `Python/Python3/Domains.py`, `TypeScript/TypeScript5/Domains.py` | 48 to 103 each | each dialect's value domains and operator signatures |
@@ -182,7 +182,8 @@ As the user decided (2026-11-04), on the questions below:
   user: "approved". So the root's re-exports of Patterns' `Domains`, `Evaluators`, `Expressions` and `Partials` go,
   and its docstring's "the neutral form of every constraint" with them: they were one source of the habit of
   consolidating things under Patterns (E, above). Patterns is imported from `mbse.Expressions.Framework.Patterns`
-  (TypeScript: `@mbse/expressions/Framework/Patterns`), as every other dialect is from its path; every caller that
+  (TypeScript: `@mbse/expressions/Framework/Patterns`; since 2026-11-09 `mbse.Expressions.Patterns.Expressions`,
+  Decided, "On stage 1's review", "Patterns' place"), as every other dialect is from its path; every caller that
   relied on the root (the TypeScript tests, the tutorials, the skill and the README) does so. It is a breaking
   change, in 0.9.0, a breaking release anyway ([API](../port/API.md), 121).
 - **On stage 1's review** (2026-11-09): the user's answers on
@@ -222,6 +223,16 @@ As the user decided (2026-11-04), on the questions below:
     and [CAP-212: dates, times, durations and intervals in ISO 8601](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-212.md)
     plan: "refactoring domain dialects out of mbse-expressions is not a priority right now". They stay here (Where
     the standard dialects live, below).
+  - **Patterns' place: (b)**. The user did not remember creating `Expressions.Framework.Patterns`: it came from the
+    agent's recommendation in the namespace rename's batch ("Patterns, the neutral form and no standard's language";
+    [the dialects proposal](../dialects/README.md#decided), Decided, Namespace, 1), approved with "yes, go". Shown the
+    options, the user chose "(b)": `Expressions.Patterns.Expressions`, a family with one dialect named `Expressions`,
+    as C's, MATLAB's and Excel's are. Renamed everywhere, in both languages, with no alias: its schemas, singleton,
+    holder, install's and define's uids, Python package (`mbse/Expressions/Patterns/Expressions/`), TypeScript module
+    (`src/Patterns/Expressions/`), the package's exports and every import, test, tutorial, the toolkit, the corpus,
+    the skill, the README, llms.txt and EQUIVALENCE ([API](../port/API.md), 122). "The neutral form" is retired: it
+    describes Patterns nowhere. The branch tag of `Expressions.Framework.Term` stays `patterns`, as the tags do "for
+    now" (the dialects proposal's Decided, Namespace, 4).
   - **An install's uid: tech debt**: asked whether an install whose content changed may keep its uid (Patterns' and
     Python3's keep `/1`): "this is an important question, but not priority. find a place to store it as tech debt".
     It is mbse-basis [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/pull/76),

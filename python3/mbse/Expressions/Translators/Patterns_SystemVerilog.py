@@ -16,7 +16,7 @@ constructors, `list` and `mapping`, have no counterpart."""
 
 from __future__ import annotations
 
-from mbse.Expressions.Framework.Patterns.Expressions import DIALECT as PATTERNS
+from mbse.Expressions.Patterns.Expressions.Expressions import DIALECT as PATTERNS
 from mbse.Expressions.SystemVerilog.Expressions.Expressions import DIALECT as SYSTEMVERILOG
 from mbse.Expressions.Framework.Translators import Inline, Pairwise, Pattern, Rule, renames
 

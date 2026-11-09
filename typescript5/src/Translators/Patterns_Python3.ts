@@ -16,7 +16,7 @@
  * Python counterpart, and `NUMPY` writes no collections. The container constructors are Python's displays: a `list` its
  * list display, `[a, b]`, and a `mapping` its dict display, `{k: v}`, a `dict` (its `**` items have no counterpart). */
 
-import { DIALECT as PATTERNS } from "../Framework/Patterns/Expressions.js";
+import { DIALECT as PATTERNS } from "../Patterns/Expressions/Expressions.js";
 import { DIALECT as PYTHON3 } from "../Python/Python3/Expressions.js";
 import { Elementwise, Elide, Pairwise, Prelude, Rule, renames } from "../Framework/Translators.js";
 import { Patterns, Numpy, Python3, compares, value } from "./_Patterns.js";

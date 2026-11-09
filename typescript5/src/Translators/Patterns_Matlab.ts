@@ -10,7 +10,7 @@
  * which does not read back as `unique`, and `entries` has no counterpart. A `list` is a concatenation, `[a, b]`; a
  * `mapping` has no counterpart. */
 
-import { DIALECT as PATTERNS } from "../Framework/Patterns/Expressions.js";
+import { DIALECT as PATTERNS } from "../Patterns/Expressions/Expressions.js";
 import { DIALECT as MATLAB } from "../MATLAB/Expressions/Expressions.js";
 import { Elementwise, Elide, Inline, Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Patterns, Matlab, value } from "./_Patterns.js";

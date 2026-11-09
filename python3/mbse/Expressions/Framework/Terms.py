@@ -28,7 +28,7 @@ dialect's union holds, `error` (`text`, the source it spans as written; `terms`,
 term carries no domain: whatever owns the root term gives its schema.
 
 Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
-(`Expressions.Framework.Patterns`), of its own reference object schema (`Expressions.Framework.Patterns.Dialect`), a branch of the kind
+(`Expressions.Patterns.Expressions`), of its own reference object schema (`Expressions.Patterns.Expressions.Dialect`), a branch of the kind
 union `Expressions.Framework.Dialect`, which each dialect extends. It owns its domains by name
 (`Expressions.Framework.Defines(dialect, name, domain)`), so a domain's path is its dialect's and its name; a domain is
 an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
@@ -160,7 +160,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("schema"), lambda t: t.name("expression")]).uniques("expression"),
             lambda _: _.OfExpression.name("Schemas.OfExpression").adjacencies([  # by extension: no member on it
                 lambda t: t.name("expression").relation([_.HasRoot]).me("schema")]),
-            # A dialect: a singleton, its identity its global name (`Expressions.Framework.Patterns`), the root of its domains'
+            # A dialect: a singleton, its identity its global name (`Expressions.Patterns.Expressions`), the root of its domains'
             # paths. mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object
             # schemas, to which each dialect adds its own by schema extension, as it adds its kinds to `Term`.
             lambda _: _.Dialect.name("Expressions.Framework.Dialect"),
@@ -809,7 +809,7 @@ INVALID_KINDS = {"error": Kind(INVALID, check=_invalid_check), "missing": Kind(I
 
 def dialect_name(path: str) -> str:
     """A dialect's name, of its path below `Expressions` (its family's name and its own): its own (`Python.Python3`'s
-    is `Python3`, `Framework.Patterns`' `Patterns`), or its family's where its own says only that it is the family's
+    is `Python3`, `Patterns.Expressions`' `Patterns`), or its family's where its own says only that it is the family's
     expressions (`C.Expressions`' is `C`)."""
     family, _, own = path.rpartition(".")
     return family.rpartition(".")[2] if own == "Expressions" and family else own

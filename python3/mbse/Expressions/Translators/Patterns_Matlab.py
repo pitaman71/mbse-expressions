@@ -12,7 +12,7 @@ which does not read back as `unique`, and `entries` has no counterpart. A `list`
 
 from __future__ import annotations
 
-from mbse.Expressions.Framework.Patterns.Expressions import DIALECT as PATTERNS
+from mbse.Expressions.Patterns.Expressions.Expressions import DIALECT as PATTERNS
 from mbse.Expressions.MATLAB.Expressions.Expressions import DIALECT as MATLAB
 from mbse.Expressions.Framework.Translators import Elementwise, Elide, Inline, Pairwise, Rule, renames
 

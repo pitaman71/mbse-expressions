@@ -2,7 +2,7 @@
  * member, `has` is `\operatorname{has}`, and a let is `where`. Every Patterns expression without bytes or container
  * constructors round-trips: LaTeX has no bytes, and Patterns' `list` and `mapping` have no counterpart. */
 
-import { DIALECT as PATTERNS } from "../Framework/Patterns/Expressions.js";
+import { DIALECT as PATTERNS } from "../Patterns/Expressions/Expressions.js";
 import { DIALECT as LATEX } from "../LaTeX/Expressions/Expressions.js";
 import { Pairwise, Rule, renames } from "../Framework/Translators.js";
 import { Patterns, Latex, value } from "./_Patterns.js";

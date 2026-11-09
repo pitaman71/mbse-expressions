@@ -7,7 +7,7 @@ For AI agents: read `skill/SKILL.md` next to this file first. It says when to us
 prevent most mistakes, and which reference to load for a task.
 
 The package exports the framework alone, `mbse.Expressions.Framework`. Each dialect is imported from its own path,
-under its family, at `mbse.Expressions.<Family>.<Dialect>` (`mbse.Expressions.Framework.Patterns`,
+under its family, at `mbse.Expressions.<Family>.<Dialect>` (`mbse.Expressions.Patterns.Expressions`,
 `mbse.Expressions.Python.Python3`, `mbse.Expressions.C.Expressions`), and the translators between them from
 `mbse.Expressions.Translators`. The kinds of value domain and the domains are the standard dialects'
 (`mbse.Expressions.ISOIEC11404.Expressions`, `IEEE754.Expressions`, `IEEE1164.Expressions` and `Unicode.Expressions`),

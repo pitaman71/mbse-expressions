@@ -18,7 +18,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./Framework": "./src/Framework/index.ts",
-    "./Framework/Patterns": "./src/Framework/Patterns/index.ts",
+    "./Patterns/Expressions": "./src/Patterns/Expressions/index.ts",
     "./Python/Python3": "./src/Python/Python3/index.ts",
     "./TypeScript/TypeScript5": "./src/TypeScript/TypeScript5/index.ts",
     "./C/Expressions": "./src/C/Expressions/index.ts",

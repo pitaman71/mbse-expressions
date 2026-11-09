@@ -6,7 +6,7 @@
 Since the complete dialects' stage 2 ([the dialects proposal](../dialects/README.md#stages-proposed-once-decided)), Basic
 is Patterns, Python is Python3, and Ccpp is C and Cpp; `Expressions.Framework.Term` is the union of the dialects' `Term`s
 (`Expressions.<path>.Term`, each the value union of its kinds). Since the namespace rename, each dialect lives at
-`Expressions.<Family>.<Dialect>`, its path (`Framework.Patterns`, `Python.Python3`, `TypeScript.TypeScript5`,
+`Expressions.<Family>.<Dialect>`, its path (`Patterns.Expressions`, `Python.Python3`, `TypeScript.TypeScript5`,
 `C.Expressions`, `Cpp.Expressions`, `SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions`,
 `LaTeX.Expressions`): its schemas, its Python package (`mbse.Expressions.C.Expressions`) and its TypeScript module
 (`src/C/Expressions`, `@mbse/expressions/C/Expressions`) are named by it, and its name is `Terms.dialect_name(path)`.
@@ -25,7 +25,7 @@ old API had them so: `nameOf`, `formOf`), `store.transaction(() => ...)` for `wi
 ```python
 from mbse.Schemas.Framework import Builders
 from mbse.Expressions import Framework
-from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.Patterns import Expressions as Patterns
 from mbse.Expressions.Python import Python3
 from mbse.Expressions.TypeScript import TypeScript5
 from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
@@ -40,11 +40,11 @@ store.transaction(Framework.install)        # Expressions.Framework: Term (no br
                                             # Defines, Operates, HasDomain and Schemas.OfAny's adjacency `domain`
 for standard in (ISOIEC11404, IEEE754, IEEE1164, Unicode):  # the standard dialects, before those that use them:
     store.transaction(standard.install)                      # each its singleton, its kinds of domain, its domains' schemas
-store.transaction(Patterns.install)         # Expressions.Framework.Patterns.Term, its union (the shared kinds, its
+store.transaction(Patterns.install)         # Expressions.Patterns.Expressions.Term, its union (the shared kinds, its
                                             # own Quantifier, error and missing), added to Term as the branch
-                                            # `patterns`; its holder Expressions.Framework.Patterns.Expression,
+                                            # `patterns`; its holder Expressions.Patterns.Expressions.Expression,
                                             # refining Expression; its dialect schema (singleton
-                                            # `Expressions.Framework.Patterns`) and its operations, each an
+                                            # `Expressions.Patterns.Expressions`) and its operations, each an
                                             # OfExpression
 store.transaction(Python3.install)          # Expressions.Python.Python3.Term, the branch `python3`, its holder, ...
 store.transaction(TypeScript5.install)      # Expressions.TypeScript.TypeScript5.Term, Type and Pattern, the branch
@@ -52,7 +52,7 @@ store.transaction(TypeScript5.install)      # Expressions.TypeScript.TypeScript5
 store.transaction(Patterns.define)          # optional, data: Patterns' dialect naming its operations
 ```
 
-`Patterns.define` writes Patterns' dialect's data: the singleton `Expressions.Framework.Patterns` names each operation
+`Patterns.define` writes Patterns' dialect's data: the singleton `Expressions.Patterns.Expressions` names each operation
 (`Expressions.Framework.Operates`); its frame binds the dialect (`dialect`). The domains Patterns owned are the standard
 dialects' since domains as data's stage 1 (item 112): each standard dialect's `define` owns its domains by name
 (`Expressions.Framework.Defines`), its frame binding the dialect and each domain by its name. Validation and evaluation do not need it: they read Patterns'
@@ -63,7 +63,7 @@ a union of one branch, which mbse-schemas allows since 0.26.6 (item 41). Each in
 (P-019), not from tables of their own.
 
 `Framework.install` (in `Framework/Terms.py`, `Framework/Terms.ts`) and `Patterns.install` (in
-`Framework/Patterns/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
+`Patterns/Expressions/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
 and what uses it are separate transactions: mbse-schemas, Object identity, Decided, 96 in [CAP-124: writes all-or-nothing in transactions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-124.md#decided)). Run again, each writes
 nothing. Every other dialect has its own install, run after the framework's, which adds its union of its kinds to
 `Expressions.Framework.Term` by schema extension, as Patterns' does; `mbse.Expressions.install(store)` is not given (it
@@ -76,7 +76,7 @@ An expression is an `Expressions.Framework.Expression`, a reference object whose
 the builders. Each dialect has its own expression too, its holder: `Expressions.<path>.Expression` refines
 `Expressions.Framework.Expression` and narrows its `root` to the dialect's `Term`, so its root is a term of that dialect
 alone, and `HasRoot` links it as it links any expression (item 46). A dialect's writers write a holder's root
-directly (`store.Expressions.Framework.Patterns.Expression(lambda e: e.root(person.age.ge(18)))`); spelled out with the builders:
+directly (`store.Expressions.Patterns.Expressions.Expression(lambda e: e.root(person.age.ge(18)))`); spelled out with the builders:
 
 ```python
 with store.transaction():
@@ -108,7 +108,7 @@ spec: a callable that writes a term through the builders. Called with the `Visit
 (`Term(...)`), it selects its kind's branch and writes its members, so it goes wherever a term is written:
 
 ```python
-from mbse.Expressions.Framework.Patterns import Expressions as E
+from mbse.Expressions.Patterns.Expressions import Expressions as E
 
 x = E.variable("x")
 with store.transaction():
@@ -135,7 +135,7 @@ every evaluator, validator and translator shares, over any dialect's kinds:
 |---|---|
 | `Terms.term(x)` | the term value (a `Readers.OfUnion` of `Expressions.Framework.Term`) of an `Expression`, its `root` property's reader, a `Readers.OfAny` holding one, or a term value itself |
 | `Terms.kind_of(term)` | the branch its dialect's `Term` holds, `(tag, record)`: `("call", <Readers.OfObject>)`, through `Term`'s branch where it is a value of `Term` |
-| `Terms.dialect_of(term)` | the name of its dialect's `Term`: `"Expressions.Framework.Patterns.Term"` |
+| `Terms.dialect_of(term)` | the name of its dialect's `Term`: `"Expressions.Patterns.Expressions.Term"` |
 | `Terms.form(term)` | its `Form`: `kind`, `attributes` (its scalar properties set, by name: `{"callable": "add"}`) and `arguments` (its terms, in order: the term properties in declaration order, its slots, then a container of terms' elements) |
 | `Terms.name_of(term)`, `Terms.operator_of(term, kind)` | the name a reference, binding or quantifier binds or refers to; an application's or quantifier's operator, its kind's `operator` property or its tag |
 | `Terms.walk`, `Terms.fold`, `Terms.same` | as before, over term values: a term is a nested value, so there is no sharing and no cycle |
@@ -159,7 +159,7 @@ assert Terms.name_of(Terms.form(form.arguments[0]).arguments[0]) == "x"
 An evaluator takes a term value (or anything `Terms.term` reads one from) and a scope, as before:
 
 ```python
-from mbse.Expressions.Framework.Patterns import Evaluators
+from mbse.Expressions.Patterns.Expressions import Evaluators
 assert Evaluators.OfAny(positive, {"x": 1}) is True       # an Expression, or Terms.term(positive)
 assert Evaluators.OfAny(term, {"x": -1}) is False
 ```
@@ -961,7 +961,7 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
      | Old | Path (schemas, singleton) | Python package | TypeScript module, package export |
      |---|---|---|---|
-     | `Patterns` | `Expressions.Framework.Patterns` | `mbse.Expressions.Framework.Patterns` | `src/Framework/Patterns`, `@mbse/expressions/Framework/Patterns` |
+     | `Patterns` | `Expressions.Framework.Patterns` (*superseded* 2026-11-09 by item 122: `Expressions.Patterns.Expressions`) | `mbse.Expressions.Framework.Patterns` | `src/Framework/Patterns`, `@mbse/expressions/Framework/Patterns` |
      | `Python3` | `Expressions.Python.Python3` | `mbse.Expressions.Python.Python3` | `src/Python/Python3`, `@mbse/expressions/Python/Python3` |
      | `TypeScript5` | `Expressions.TypeScript.TypeScript5` | `mbse.Expressions.TypeScript.TypeScript5` | `src/TypeScript/TypeScript5`, `@mbse/expressions/TypeScript/TypeScript5` |
      | `C` | `Expressions.C.Expressions` | `mbse.Expressions.C.Expressions` | `src/C/Expressions`, `@mbse/expressions/C/Expressions` |
@@ -1073,11 +1073,25 @@ Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) d
      `Framework` alone"). A breaking change, in 0.9.0: `mbse.Expressions` (`__all__ = ["Framework"]`) and
      `@mbse/expressions` (`export * as Framework`) no longer re-export Patterns' `Domains`, `Evaluators`, `Expressions`
      and `Partials`, nor call Patterns "the neutral form of every constraint". Patterns is imported from its own path,
-     as every dialect is: `from mbse.Expressions.Framework.Patterns import Evaluators, Expressions as E`, TypeScript
-     `import { Evaluators, Expressions as E } from "@mbse/expressions/Framework/Patterns"`.
+     as every dialect is: `from mbse.Expressions.Patterns.Expressions import Evaluators, Expressions as E`, TypeScript
+     `import { Evaluators, Expressions as E } from "@mbse/expressions/Patterns/Expressions"` (its path since item 122).
      `mbse.Expressions.Translators` and every dialect's path are unchanged (a subpackage still imports as
      `from mbse.Expressions import Translators`). The TypeScript tests, the tutorials, the skill and the README import
      so; FRM-01 asserts the root's exports.
+
+122. **Patterns is `Expressions.Patterns.Expressions`** (2026-11-09, as the user decided, "(b)",
+     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "On stage 1's review"). Patterns
+     is a family with one dialect named `Expressions`, as C's, MATLAB's and Excel's are, not a part of the framework:
+     its schemas and singleton `Expressions.Patterns.Expressions` (`Expressions.Patterns.Expressions.Term`, `.Dialect`,
+     `.Expression`, `.add`, ...; `store.Instances.Expressions.Patterns.Expressions`), its install's and define's uids
+     `mbse.Expressions.Patterns.Expressions/1` and `mbse.Expressions.Patterns.Expressions.define/1`, its Python package
+     `mbse.Expressions.Patterns.Expressions` (at `mbse/Expressions/Patterns/Expressions/`, its family
+     `mbse.Expressions.Patterns` a package whose docstring says what it is), its TypeScript module
+     `src/Patterns/Expressions/`, exported as `@mbse/expressions/Patterns/Expressions`, and its `Terms.Dialect` path
+     `"Patterns.Expressions"`, whose name is still `Patterns`. This supersedes item 108's row for Patterns (the dialects
+     proposal's Decided, Namespace, 1). No alias for the old names. Unchanged: the branch tag `patterns` (item 109,
+     "for now"), the translators' modules (`Translators.Patterns_Matlab`, item 111), and the wire, so the corpora are
+     unchanged. Tests: every case that names Patterns' path, under its ID.
 
 ## What stage 2b needed (done)
 

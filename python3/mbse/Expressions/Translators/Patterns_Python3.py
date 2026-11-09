@@ -17,7 +17,7 @@ list display, `[a, b]`, and a `mapping` its dict display, `{k: v}`, a `dict` (it
 
 from __future__ import annotations
 
-from mbse.Expressions.Framework.Patterns.Expressions import DIALECT as PATTERNS
+from mbse.Expressions.Patterns.Expressions.Expressions import DIALECT as PATTERNS
 from mbse.Expressions.Python.Python3.Expressions import DIALECT as PYTHON3
 from mbse.Expressions.Framework.Translators import Elementwise, Elide, Pairwise, Prelude, Rule, renames
 

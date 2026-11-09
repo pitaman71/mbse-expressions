@@ -34,7 +34,7 @@ import math
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework.Patterns import Ieee754
+from mbse.Expressions.Patterns.Expressions import Ieee754
 from mbse.Expressions.Framework import Errors, Objects, Symbolics as S, Terms as F
 
 from . import Domains, Expressions as X
