@@ -563,7 +563,7 @@ change as it lands.
 - **Extension limits**: an extension's adjacency is to a relation of two links and no properties.
 - **Dependents break** at 0.8.0: mbse-programs' bridges (until its stage 2), mbse-patterns (`Dialects.Python.Text`)
   and mbse-codegen-python (the writers).
-- **Tech debt, type specificity**: [CAP-255: mbse-expressions' installs, writers and corpus typed](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-255.md).
+- **Tech debt, type specificity**: [CAP-255: type checkers catch mistakes in code that builds expressions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-255.md).
 
 ---
 
