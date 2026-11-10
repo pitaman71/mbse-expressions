@@ -470,6 +470,95 @@ validation reading its stored operations through the holder. Stage 3 is every ot
 as tagged data, every dialect's `STANDARDS` and `Kind.standards` among them, is a stage after stage 3, before the
 records and the release, as the user decided ("yes"; Decided, "On stage 1's review").
 
+## Stage 2's design
+
+As the record has it: "Stage 2 is Patterns' code domains gone (its dataclasses, `read`), its validation reading its
+stored operations through the holder" (Stage 1's design, Stages, revised); validation and inference within a term's
+holder, reaching its store, with no new argument (Decided, C; Stage 1's design, Through the holder); validation reading
+`Domains.operations` and `Domains.arity` in place of `SIGNATURES` and `CORE`, while `Domain`, `Signature`, `OfTypes`,
+..., `overlaps` and the dialects' vocabularies stay, `Dialect.infer`'s, CAP-232's to replace (Stage 1's design, The
+reading interface; Decided, 2). On the code at main (d1bcd5d), the same in both languages. What the record leaves open
+is the agent's, for review, marked *(agent)*.
+
+**What is removed**, in both languages:
+
+- From Patterns' `Domains`: its eleven kinds of code domain, `OfBool`, `OfInteger`, `OfModulo`, `OfOctet`,
+  `OfIeee754`, `OfBits`, `OfBytes`, `OfUnicode`, `OfIeee1164`, `OfEnum` and `OfPacked` (each its data class, its
+  builder and its `Kind`), their base `Domain` (TypeScript's `equals` among it), and `read` with its table. With them
+  go what only they read: `FORMATS`, `ROUNDINGS`, `OVERFLOWS` and `STATES`, the standards' enumerations the data
+  classes validated against, which the standard dialects' kinds now hold as data; and the signatures' families
+  (`_VALUES`, `_ORDERED_KINDS`, `_NUMERIC`, `_BITWISE`, `_INTEGERS`), which took any domain of those kinds.
+- `Expressions.CORE`, the operations' names and arities computed from `SIGNATURES`: the stored operations are both.
+
+**What stays**: `Ieee754`, the evaluators' arithmetic, which C's and SystemVerilog's evaluators use (Decided, 2:
+"evaluation's arithmetic ... is the evaluator's, as now"); `Collection` and `Record`, evaluation's values; and
+inference's code (Decided, 2; Stage 1's design, The reading interface): `SIGNATURES`, `QUANTIFIERS`, `LIST`,
+`MAPPING`, `List`, `Keyed`, `Records`, `Object`, `items_of`, `of` and `Anything`. Their natives' domains, `Bool`,
+`Int`, `Float`, `Str` and `Bytes`, were instances of the data classes; they become the framework's generic `OfTypes`
+(`Domains.OfTypes("int", int)`), named as before, as Python3's are, each signature keeping its shape (`Same`,
+`Function`, `_Shift`, `_Collective`, ...) without a family. So inference keeps its natives and the collections', and no
+longer takes an environment's domain of a width, a format or an enumeration: no code can now build one, and inferring
+in widths is [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)'s,
+over stored domains. Each is marked in a source comment as CAP-232's to replace.
+
+**What replaces each reader**:
+
+| Reader, today | Reads | After |
+|---|---|---|
+| `Dialect.validate`, Patterns' `call` | `SIGNATURES`: an operation's name, its arity; `closed` | The operations Patterns' singleton names in the term's store (`Domains.operations`), each one's arity its pattern's variables (`Domains.arity`), through the holder (below); the same messages |
+| `Dialect.infer` | `validate`, then `SIGNATURES` | `validate` as above, then `SIGNATURES`, rebuilt on `OfTypes` |
+| Patterns' `Evaluators` (`_domain`, `_operands`) | `_NATIVES`, the data classes `OfInteger.Data` and `OfIeee754.Data` | The values' native types (an int, a float; TypeScript's `bigint` and `number`); the same messages |
+| Patterns' `Partials` (a residual's literal) | `_NATIVES` | Whether the value is a native, as `Expressions._native` already asks |
+| The tests' reads of a stored domain | `read`, compared with a data class | `Framework.Domains.kind_of`, `properties` and `name_of` (stage 1's interface) |
+| The tests of what a domain means (`contains`, `compare`, `fit`, `bounds`, `validate`, `ORDERED`) | the data classes | Nothing: no code but the tests read them. What `bounds` and `ORDERED` computed, the hand-populated `least`, `greatest` and `ordered` hold (DOM-17 pins them); what `validate` checked of a domain (a width positive, a code per member) is a constraint for a later resolver (Risks) |
+
+**Through the holder** (Decided, C):
+
+- `Terms.Kind` gains `operations`: for a kind whose operations are data, `operations(store)` gives those its dialect
+  defines in a store, by name, each its `Schemas.OfExpression` *(agent)*. Patterns' `call` gives it as
+  `Domains.operations(store.Instances.Expressions.Patterns.Expressions)`, its singleton by its path
+  ([PRI-015: concrete references are programmatic](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-015)),
+  and keeps `vocabulary`, `SIGNATURES`, for `infer`.
+- Validation of a term of such a kind finds its store with `Proxies.store_of(term)`. A term held in an `Expression`,
+  however deep, reaches its holder's store, as its value objects are owned in turn (checked at main in both languages);
+  a lone term belongs to no store, and mbse-schemas' `TypeError`, "the value does not belong to a store", stands: no
+  argument and no fallback is designed for it *(agent)*.
+- An operation the store's dialect does not name is refused ("'f' is not an operation Patterns defines"), and one given
+  another number of arguments reported ("add takes 2 arguments, got 1"), as now.
+- So `Patterns.define`, which writes the singleton's `Operates` entries, runs before a Patterns term is validated or
+  inferred: the install cannot write them, as it cannot bind its own singleton (API, 116, struck). Every caller's list
+  runs it after the installs: the suites, the tutorials' toolkit, the corpus's CONF-04 and the skill. A store where it
+  has not run names no operation, and every call is refused so: the data says so *(agent)*.
+- Only a kind that reads stored data reaches the store. Every other dialect's validation reads its code vocabularies
+  until stage 3, so its lone terms validate as now, and SystemVerilog's evaluator, which validates a term's structure
+  before evaluating it and reads no stored data, is unchanged *(agent)*: nothing is added for a lone term.
+- Evaluation is unchanged: its implementations are code, and a call outside them raises as now.
+
+**Tests and the API**, under their IDs, in both languages:
+
+- **The suites' `term(spec)` helper** (EXP, EVL, FRM, DIA, TRN, DOM, COL, PAR) writes a holder,
+  `store.Expressions.Framework.Expression(lambda e: e.root(dialect.spec(spec)))`, and gives its root, `Terms.term(holder)`;
+  its callers, about 210 `validate` and 50 `infer` calls in each language, are unchanged. Each suite's setup runs
+  `Patterns.define`. A case that validates a term decoded alone writes it into a holder first.
+- **DOM**: DOM-01 is rewritten as inference's natives' domains (`OfTypes`, `of`, `Object`); DOM-02, the data classes'
+  membership and inclusion, is retired, as DOM-13 to DOM-16 are; DOM-03, DOM-05 and DOM-17 read stored domains through
+  the interface; DOM-06 and DOM-07 keep evaluation's comparisons and arithmetic, losing the data classes'; DOM-09 keeps
+  signatures and inference over natives and collections, losing the families; DOM-10 to DOM-12 test `Ieee754` directly
+  (`Ieee754.contains(format, value)`), with the rounding directions spelled out.
+- **EXP**: EXP-13 asserts that validation reads the stored operations (`SIGNATURES`, `infer`'s, holds the same names in
+  order; `CORE` is gone) and that a lone Patterns call is refused; EXP-06 and EXP-13 read domains through the
+  interface. **CONF-04** validates each case within a holder, in the corpus's store after `Patterns.define`; the corpus
+  itself is unchanged, its JSON regenerated byte-identical. **FRM-01**, **COL** and the others, where they name what is
+  removed.
+- **The skill, EQUIVALENCE and the test plans**: validation of a held term, `Patterns.define` in the install list; the
+  deliberate difference "Python compares domains with `==`; TypeScript with `.equals()`" goes with the data classes.
+- **The API**: Settled in domains as data's stage 2, items 124 onward. A breaking change, in 0.9.0, a breaking release
+  anyway: the removed exports, `Patterns.define` required to validate, and a lone Patterns call refused.
+
+**Not changed here**: where the corpus's and the tests' own domains (`state`, `mode`) are written, which is open with
+the user; C's, C++'s and the other dialects' code domains, stage 3's. Nothing here reads which dialects a dialect uses,
+so nothing gives a reason to reinstate `Uses` (Decided, I).
+
 ## Risks
 
 - **Cost**: stores hold hundreds more objects (every dialect's types), and installs grow; suites build stores often.
