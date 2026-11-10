@@ -10,7 +10,7 @@
  * (`Expressions.Framework.HasAbi`, the holder's adjacency `abi`: `Expressions.SystemV.AMD64` or
  * `Expressions.Arm.AAPCS64`, which hold `int`, `long`, `char`, `long double`, `size_t`, ...); a C++ term's among C++'s
  * (`Expressions.Cpp.Expressions`) then its holder's ABI's ([Domains as
- * data](../../../../../docs/proposals/domains/README.md#stage-3s-design), Decided, P and Q). `new Types(term, path)`
+ * data](../../../../docs/proposals/domains/README.md#stage-3s-design), Decided, P and Q). `new Types(term, path)`
  * finds the holder from any term or record within it (`Terms.holderOf`: a lone term is refused, mbse-schemas'
  * TypeError, "the value does not belong to a store") when it first reads a type, and reads each once: `named(name)` is
  * the type, a `CType` labelled with its `Defines` name and keeping the domain it was read from and the `Types` it was
@@ -34,7 +34,7 @@
  *
  * A literal's type is what its text encodes (`literal(attributes, language, types)`), as C's and C++'s standards give
  * it, a stored domain found by name ([Domains as
- * data](../../../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, 5): an integer's by its
+ * data](../../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, 5): an integer's by its
  * suffix and its base, the first of the types they allow that holds its value (an `unsigned int` for `5u`; a decimal
  * integer without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double`
  * for `L`, `_Float16` for `f16` in C and `std::float16_t` in C++), else `double`; a character literal's (an int, its
