@@ -55,8 +55,8 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    *When*: every constraint. *How*: in an mbse-schemas store, run the framework's install, then each dialect's you
    write, each in a transaction of its own, once per store: the framework's, then the standard dialects' whose kinds of
    domain the others use (`ISOIEC11404`, `IEEE754`, `IEEE1164`, `Unicode`), then the rest
-   (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...); an
-   install whose dialects are missing is refused. The package exports the framework alone (`Framework`); import each
+   (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...). The
+   package exports the framework alone (`Framework`); import each
    dialect from its own path, Patterns' writers from `mbse.Expressions.Patterns.Expressions` (TypeScript:
    `@mbse/expressions/Patterns/Expressions`), as `E`. Build a constraint with writers: `E.variable(name)`,
    `E.literal(value)`, `E.let_(name, value, body)` and `E.operation(name, ...)`; reading a property of a writer is `get`

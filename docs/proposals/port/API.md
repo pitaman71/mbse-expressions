@@ -1040,8 +1040,8 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      Decided, I: "drop `Uses`".)* ~~`Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`, every
      dialect's adjacency `uses`. No entry is written yet: an install cannot bind its own singleton (the domains
      proposal's question I).~~ Now **no `Uses`**: the relation and every dialect's adjacency `uses` are removed, in both
-     languages. A dialect's dependencies are its caller's install order (item 118), which mbse-schemas checks by
-     refusing an install that names a schema not yet registered. Tests: FRM-01 and DOM-17 assert each dialect's
+     languages. A dialect's dependencies are its caller's install order (item 118); nothing checks it (the domains
+     proposal, Decided, I). Tests: FRM-01 and DOM-17 assert each dialect's
      adjacencies, `domains` and `operations`.
 117. **The reading interface**, `Framework.Domains`: `kind_of` (`kindOf`), `properties`, `name_of` (`nameOf`),
      `operations` and `arity`; "a domain needs a kind". `kind_of` gives `(dialect, tag, record)`, the dialect's tag

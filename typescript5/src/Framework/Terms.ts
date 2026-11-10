@@ -43,8 +43,7 @@
  * operations (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module
  * defines, whose pattern's variables are its arguments, in the order they are declared, and whose `result` is its
  * return. A dialect that uses another's kinds or schemas depends on its caller's install order, nothing recording it as
- * data: mbse-schemas refuses an install that names a schema not yet installed. `Domains` reads stored domains and
- * operations.
+ * data. `Domains` reads stored domains and operations.
  *
  * Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
  * branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's slots (a term
@@ -161,8 +160,8 @@ export function install(txn: any): any {
       // mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object schemas, to which
       // each dialect adds its own by schema extension, as it adds its kinds to `Term`.
       (_: any) => _.Dialect.name("Expressions.Framework.Dialect"),
-      // No relation records which dialects one uses: its caller's install order is its dependencies, checked by
-      // mbse-schemas' refusal of an unregistered schema ([Domains as data](../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, I).
+      // No relation records which dialects one uses: its caller's install order is its dependencies
+      // ([Domains as data](../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, I).
       // A domain: a reference object holding its kind, a value of the union of the dialects' unions of kinds, owned by
       // the dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the scalar it narrows,
       // reads it through the extension adjacency `domain`.

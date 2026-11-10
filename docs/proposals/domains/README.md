@@ -151,10 +151,16 @@ As the user decided (2026-11-04), on the questions below:
   `for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
   SystemVerilog): store.transaction(module.install)`, the user had said "I mean for now this looks pretty clean", and
   of `Uses`, "`Uses` is why we were discussing dependency notation". With the list kept, `Uses` has no job: **a
-  dialect's dependencies are its caller's install order**, and mbse-schemas' refusal of an install that names a schema
-  not yet registered (a kind's, a domain's) is the check; nothing read `Uses`. So `Expressions.Framework.Uses` and
+  dialect's dependencies are its caller's install order**; nothing read `Uses`. So `Expressions.Framework.Uses` and
   every dialect's adjacency `uses` are removed, in both languages, with their tests ([API](../port/API.md), 116). This
   supersedes F (a)'s `Uses`, above, and closes question I (Stage 1's design).
+  - **No check of install order** (2026-11-09). The first record of I called mbse-schemas' refusal of an install that
+    names a schema not yet registered "the check" of install order; stage 1's review found it checks only an install
+    that names another dialect's schemas (Python3's of IEEE 754's), not every dialect, though the skill said "an
+    install whose dialects are missing is refused" (review finding 1). Asked whether that was an overclaim or a reason
+    to reinstate `Uses`, the user: "the whole thing seems a bit contrived if you ask me". So nothing claims to check
+    install order: the order is the caller's list, the claim is removed from the records, the skill and the
+    framework's docstrings, and no test is added for it; `Uses` stays dropped.
   - **Standing instruction**, the user's: "monitor for reasons to reinstate it in the future, stop and ask if you find
     one". An agent that finds a reason for `Uses`, something that needs to read as data which dialects a dialect uses,
     stops and asks the user before building it or anything in its place.
@@ -375,8 +381,7 @@ A token's domain has no schema: no basic scalar holds its value, which its diale
 
 **Install order** (Decided, F and I). A dialect's dependencies are its caller's install order, recorded nowhere as
 data: the installs run in the order Framework, the four standard dialects, then the dialects that use them, in every
-caller (tests, tutorials, toolkit, skill, corpus), and mbse-schemas refuses an install that names a schema not yet
-registered. Python3 uses IEEE 754 (`Complex`, Decided, J).
+caller (tests, tutorials, toolkit, skill, corpus). Python3 uses IEEE 754 (`Complex`, Decided, J).
 
 **Found while building, decided.** Question I, who writes `Uses`, is decided: there is no `Uses` (Decided, I). Question
 J came from a rule of mbse-schemas, not a defect, and was not worked around; it is decided, (a) (Decided, J):
