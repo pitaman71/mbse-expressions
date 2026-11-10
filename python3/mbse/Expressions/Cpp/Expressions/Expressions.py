@@ -64,8 +64,8 @@ from mbse.Expressions.C.Expressions import Domains
 from mbse.Expressions.C.Expressions import Expressions as C
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 
-__all__ = ["install", "define", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal", "identifier",
-           "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
+__all__ = ["install", "define", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal",
+           "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
 
 USERDEFINEDLITERAL, IDEXPRESSION, THISEXPRESSION, LAMBDAEXPRESSION = (
     "userdefinedliteral", "idexpression", "thisexpression", "lambdaexpression")
@@ -151,8 +151,9 @@ def install(txn: Any) -> Any:
                   "std_float16_t": S.OfAny, "std_float32_t": S.OfAny, "std_float64_t": S.OfAny,
                   "std_float128_t": S.OfAny, "std_bfloat16_t": S.OfAny})  # its domains' schemas
         .spec([
-            # its dialect: the singleton `Expressions.Cpp.Expressions`, a branch of the framework's kind union of dialects
-            lambda _: _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(True).singleton("Expressions.Cpp.Expressions").adjacencies({
+            # its dialect: the singleton `Expressions.Cpp.Expressions`, a branch of the framework's union of dialects
+            lambda _: _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(True)
+                .singleton("Expressions.Cpp.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
@@ -329,8 +330,10 @@ def install(txn: Any) -> Any:
                 "left": _.Term, "operator": S.OfStr, "right": _.Term}),
             lambda _: _.RequiresExpression.name("Expressions.Cpp.Expressions.RequiresExpression").properties({
                 "parameters": many(_.Parameter), "requirements": many(_.Requirement)}),
-            lambda _: _.SimpleRequirement.name("Expressions.Cpp.Expressions.SimpleRequirement").properties({"expression": _.Term}),
-            lambda _: _.TypeRequirement.name("Expressions.Cpp.Expressions.TypeRequirement").properties({"name": _.Name}),
+            lambda _: _.SimpleRequirement.name("Expressions.Cpp.Expressions.SimpleRequirement")
+                .properties({"expression": _.Term}),
+            lambda _: _.TypeRequirement.name("Expressions.Cpp.Expressions.TypeRequirement")
+                .properties({"name": _.Name}),
             lambda _: _.CompoundRequirement.name("Expressions.Cpp.Expressions.CompoundRequirement").properties({
                 "expression": _.Term, "noexcept": S.OfBool, "return_type": _.Name}),
             lambda _: _.NestedRequirement.name("Expressions.Cpp.Expressions.NestedRequirement").properties({
@@ -340,7 +343,8 @@ def install(txn: Any) -> Any:
                 "object": _.Term, "indices": many(_.Term)}),
             lambda _: _.CallExpression.name("Expressions.Cpp.Expressions.CallExpression").properties({
                 "function": _.Term, "arguments": many(_.Term)}),
-            lambda _: _.FunctionalCastExpression.name("Expressions.Cpp.Expressions.FunctionalCastExpression").properties({
+            lambda _: _.FunctionalCastExpression.name("Expressions.Cpp.Expressions.FunctionalCastExpression")
+                .properties({
                 "type": _.Specifier, "initializer": _.Initializer}),
             lambda _: _.MemberExpression.name("Expressions.Cpp.Expressions.MemberExpression").properties({
                 "object": _.Term, "operator": S.OfStr, "template_keyword": S.OfBool, "member": _.Name}),
@@ -348,17 +352,21 @@ def install(txn: Any) -> Any:
                 "operand": _.Term, "operator": S.OfStr}),
             lambda _: _.NamedCastExpression.name("Expressions.Cpp.Expressions.NamedCastExpression").properties({
                 "operator": S.OfStr, "type": _.Type, "operand": _.Term}),
-            lambda _: _.TypeidExpression.name("Expressions.Cpp.Expressions.TypeidExpression").properties({"operand": _.Term}),
+            lambda _: _.TypeidExpression.name("Expressions.Cpp.Expressions.TypeidExpression")
+                .properties({"operand": _.Term}),
             # unary expressions
             lambda _: _.UnaryExpression.name("Expressions.Cpp.Expressions.UnaryExpression").properties({
                 "operator": S.OfStr, "operand": _.Term}),
-            lambda _: _.AwaitExpression.name("Expressions.Cpp.Expressions.AwaitExpression").properties({"operand": _.Term}),
-            lambda _: _.SizeofExpression.name("Expressions.Cpp.Expressions.SizeofExpression").properties({"operand": _.Term}),
+            lambda _: _.AwaitExpression.name("Expressions.Cpp.Expressions.AwaitExpression")
+                .properties({"operand": _.Term}),
+            lambda _: _.SizeofExpression.name("Expressions.Cpp.Expressions.SizeofExpression")
+                .properties({"operand": _.Term}),
             lambda _: _.SizeofPackExpression.name("Expressions.Cpp.Expressions.SizeofPackExpression").properties({
                 "pack": _.Identifier}),
             lambda _: _.AlignofExpression.name("Expressions.Cpp.Expressions.AlignofExpression").properties({
                 "keyword": S.OfStr, "operand": _.Term}),
-            lambda _: _.NoexceptExpression.name("Expressions.Cpp.Expressions.NoexceptExpression").properties({"operand": _.Term}),
+            lambda _: _.NoexceptExpression.name("Expressions.Cpp.Expressions.NoexceptExpression")
+                .properties({"operand": _.Term}),
             lambda _: _.NewExpression.name("Expressions.Cpp.Expressions.NewExpression").properties({
                 "global_scope": S.OfBool, "placement": many(_.Term), "parenthesized_type": S.OfBool, "type": _.Type,
                 "initializer": _.Initializer}),
@@ -373,17 +381,22 @@ def install(txn: Any) -> Any:
                 "condition": _.Term, "consequence": _.Term, "alternative": _.Term}),
             lambda _: _.AssignmentExpression.name("Expressions.Cpp.Expressions.AssignmentExpression").properties({
                 "left": _.Term, "operator": S.OfStr, "right": _.Term}),
-            lambda _: _.ThrowExpression.name("Expressions.Cpp.Expressions.ThrowExpression").properties({"operand": _.Term}),
-            lambda _: _.YieldExpression.name("Expressions.Cpp.Expressions.YieldExpression").properties({"operand": _.Term}),
+            lambda _: _.ThrowExpression.name("Expressions.Cpp.Expressions.ThrowExpression")
+                .properties({"operand": _.Term}),
+            lambda _: _.YieldExpression.name("Expressions.Cpp.Expressions.YieldExpression")
+                .properties({"operand": _.Term}),
             lambda _: _.PackExpansion.name("Expressions.Cpp.Expressions.PackExpansion").properties({"pattern": _.Term}),
             # initializers
             lambda _: _.InitializerList.name("Expressions.Cpp.Expressions.InitializerList").properties({
                 "items": many(_.Term), "trailing_comma": S.OfBool}),
             lambda _: _.DesignatedInitializer.name("Expressions.Cpp.Expressions.DesignatedInitializer").properties({
                 "designators": many(_.Designator), "initializer": _.Initializer}),
-            lambda _: _.FieldDesignator.name("Expressions.Cpp.Expressions.FieldDesignator").properties({"name": _.Identifier}),
-            lambda _: _.EqualInitializer.name("Expressions.Cpp.Expressions.EqualInitializer").properties({"value": _.Term}),
-            lambda _: _.ParenthesizedInitializer.name("Expressions.Cpp.Expressions.ParenthesizedInitializer").properties({
+            lambda _: _.FieldDesignator.name("Expressions.Cpp.Expressions.FieldDesignator")
+                .properties({"name": _.Identifier}),
+            lambda _: _.EqualInitializer.name("Expressions.Cpp.Expressions.EqualInitializer")
+                .properties({"value": _.Term}),
+            lambda _: _.ParenthesizedInitializer.name("Expressions.Cpp.Expressions.ParenthesizedInitializer")
+                .properties({
                 "arguments": many(_.Term)}),
             # GNU's extensions: a statement expression's body of statements is not part of the term
             lambda _: _.StatementExpression.name("Expressions.Cpp.Expressions.StatementExpression"),
@@ -403,12 +416,15 @@ def install(txn: Any) -> Any:
             # type names: specifiers and an abstract declarator
             lambda _: _.TypeId.name("Expressions.Cpp.Expressions.TypeId").properties({
                 "specifiers": many(_.Specifier), "declarator": _.Declarator}),
-            lambda _: _.DeclSpecifier.name("Expressions.Cpp.Expressions.DeclSpecifier").properties({"keyword": S.OfStr}),
+            lambda _: _.DeclSpecifier.name("Expressions.Cpp.Expressions.DeclSpecifier")
+                .properties({"keyword": S.OfStr}),
             lambda _: _.CvQualifier.name("Expressions.Cpp.Expressions.CvQualifier").properties({"keyword": S.OfStr}),
             lambda _: _.PrimitiveTypeSpecifier.name("Expressions.Cpp.Expressions.PrimitiveTypeSpecifier").properties({
                 "keyword": S.OfStr}),
-            lambda _: _.NamedTypeSpecifier.name("Expressions.Cpp.Expressions.NamedTypeSpecifier").properties({"name": _.Name}),
-            lambda _: _.TypenameSpecifier.name("Expressions.Cpp.Expressions.TypenameSpecifier").properties({"name": _.Name}),
+            lambda _: _.NamedTypeSpecifier.name("Expressions.Cpp.Expressions.NamedTypeSpecifier")
+                .properties({"name": _.Name}),
+            lambda _: _.TypenameSpecifier.name("Expressions.Cpp.Expressions.TypenameSpecifier")
+                .properties({"name": _.Name}),
             lambda _: _.ClassSpecifier.name("Expressions.Cpp.Expressions.ClassSpecifier").properties({
                 "key": S.OfStr, "attributes": many(_.AttributeSpecifier), "name": _.Name, "final": S.OfBool,
                 "bases": many(_.BaseSpecifier),
@@ -421,11 +437,13 @@ def install(txn: Any) -> Any:
                 "body": S.OfBool}),  # whether it has a body, whose enumerators are not part of the term
             lambda _: _.DecltypeSpecifier.name("Expressions.Cpp.Expressions.DecltypeSpecifier").properties({
                 "expression": _.Term}),
-            lambda _: _.PlaceholderTypeSpecifier.name("Expressions.Cpp.Expressions.PlaceholderTypeSpecifier").properties({
+            lambda _: _.PlaceholderTypeSpecifier.name("Expressions.Cpp.Expressions.PlaceholderTypeSpecifier")
+                .properties({
                 "constraint": _.Name, "decltype": S.OfBool}),
             lambda _: _.IdDeclarator.name("Expressions.Cpp.Expressions.IdDeclarator").properties({
                 "name": _.Name, "attributes": many(_.AttributeSpecifier)}),
-            lambda _: _.PackDeclarator.name("Expressions.Cpp.Expressions.PackDeclarator").properties({"declarator": _.Declarator}),
+            lambda _: _.PackDeclarator.name("Expressions.Cpp.Expressions.PackDeclarator")
+                .properties({"declarator": _.Declarator}),
             lambda _: _.PointerDeclarator.name("Expressions.Cpp.Expressions.PointerDeclarator").properties({
                 "scope": _.Name, "attributes": many(_.AttributeSpecifier), "qualifiers": many(_.CvQualifier),
                 "declarator": _.Declarator}),
@@ -445,14 +463,17 @@ def install(txn: Any) -> Any:
             lambda _: _.EllipsisParameter.name("Expressions.Cpp.Expressions.EllipsisParameter"),
             lambda _: _.TypeParameter.name("Expressions.Cpp.Expressions.TypeParameter").properties({
                 "key": S.OfStr, "constraint": _.Name, "pack": S.OfBool, "name": _.Identifier, "default": _.Type}),
-            lambda _: _.TemplateTemplateParameter.name("Expressions.Cpp.Expressions.TemplateTemplateParameter").properties({
+            lambda _: _.TemplateTemplateParameter.name("Expressions.Cpp.Expressions.TemplateTemplateParameter")
+                .properties({
                 "parameters": many(_.TemplateParameter), "requires": _.Term, "key": S.OfStr, "pack": S.OfBool,
                 "name": _.Identifier, "default": _.Name}),
             lambda _: _.NoexceptSpecifier.name("Expressions.Cpp.Expressions.NoexceptSpecifier").properties({
                 "condition": _.Term}),
-            lambda _: _.ThrowSpecifier.name("Expressions.Cpp.Expressions.ThrowSpecifier").properties({"types": many(_.Term)}),
+            lambda _: _.ThrowSpecifier.name("Expressions.Cpp.Expressions.ThrowSpecifier")
+                .properties({"types": many(_.Term)}),
             # attributes
-            lambda _: _.StandardAttributeSpecifier.name("Expressions.Cpp.Expressions.StandardAttributeSpecifier").properties({
+            lambda _: _.StandardAttributeSpecifier.name("Expressions.Cpp.Expressions.StandardAttributeSpecifier")
+                .properties({
                 "using_namespace": S.OfStr, "attributes": many(_.Attribute)}),
             lambda _: _.Attribute.name("Expressions.Cpp.Expressions.Attribute").properties({
                 "namespace": S.OfStr, "name": S.OfStr, "arguments": many(_.Term), "pack": S.OfBool}),
@@ -464,7 +485,8 @@ def install(txn: Any) -> Any:
                 "attributes": many(_.Attribute)}),
             # its holder, the root of an expression tree: a reference object refining the framework's, its `root`
             # narrowed to its `Term`
-            lambda _: _.Expression.name("Expressions.Cpp.Expressions.Expression").ref(True).refines([Framework.Expression]).properties({
+            lambda _: _.Expression.name("Expressions.Cpp.Expressions.Expression").ref(True)
+                .refines([Framework.Expression]).properties({
                 "root": _.Term}),
             # --- its kind of domain: the token of `nullptr`, its own, not C's; inferred `ordered` ---
             lambda _: _.OfNullptr.name("Expressions.Cpp.Expressions.OfNullptr").properties({"ordered": S.OfBool}),
@@ -507,7 +529,8 @@ def define(txn: Any) -> Any:
     its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled
     as its schema's is: `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`."""
     OWN, Domain = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain
-    return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+    return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([lambda mu: mu.upsert(
+        lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect,
                   "bool": Domain, "int8_t": Domain, "int16_t": Domain, "int32_t": Domain, "int64_t": Domain,
                   "uint8_t": Domain, "uint16_t": Domain, "uint32_t": Domain, "uint64_t": Domain,
@@ -672,7 +695,8 @@ class _Writers(C.Writers):
 
     def identifier(self, name: str) -> Any:
         """The identifier `name` used as an expression: an `idexpression` holding it."""
-        return self.writer(lambda u: u.idexpression(lambda r: r.name(lambda n: n.identifier(lambda i: i.spelling(name)))))
+        return self.writer(lambda u: u.idexpression(
+            lambda r: r.name(lambda n: n.identifier(lambda i: i.spelling(name)))))
 
 
 _WRITERS = _Writers(DIALECT, Writer)

@@ -40,8 +40,8 @@ of ("C literal of _BitInt is not evaluated"), a cast to a type that is not arith
 a call of a callee that is not a function's name, a member that is not an identifier, C++'s name used as an expression
 that is not an identifier (`std::cout`, "Cpp idexpression of a name that is not an identifier is not evaluated"), and
 GNU's conditional without a consequence. C's name used as an expression is the framework's `variable`, and C++'s an
-`idexpression` holding its identifier (`Cpp.Evaluators.EVALUATED`). Invalid syntax raises `ValueError` by name, as every dialect's does ("C error is not evaluated"), where a
-cast's type stands too.
+`idexpression` holding its identifier (`Cpp.Evaluators.EVALUATED`). Invalid syntax raises `ValueError` by name, as
+every dialect's does ("C error is not evaluated"), where a cast's type stands too.
 """
 
 from __future__ import annotations
@@ -185,7 +185,8 @@ def _binary_arithmetic(operator: str) -> F.Implementation:
         if ctype.kind == "floating":
             if operator not in _FLOATING_OPERATORS:
                 raise TypeError(f"invalid operands to binary {operator} ('{ctype.name()}' and '{ctype.name()}')")
-            return _Typed(ctype, Ieee754.operate(_FLOATING_OPERATORS[operator], ctype.format, _EVEN, [a.value, b.value]))
+            return _Typed(ctype, Ieee754.operate(_FLOATING_OPERATORS[operator], ctype.format, _EVEN, [a.value,
+                b.value]))
         x, y = a.value, b.value
         if operator in "/%" and y == 0:
             raise ZeroDivisionError("integer division by zero")
@@ -202,7 +203,8 @@ def _binary_arithmetic(operator: str) -> F.Implementation:
 def _shift(operator: str) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
         left, right = arguments[0](), arguments[1]()
-        ctype, count_type = Domains.promoted(_arithmetic(left, operator)), Domains.promoted(_arithmetic(right, operator))
+        ctype, count_type = Domains.promoted(_arithmetic(left, operator)), Domains.promoted(_arithmetic(right,
+            operator))
         if ctype.kind == "floating" or count_type.kind == "floating":
             raise TypeError(f"invalid operands to binary {operator} ('{_name(left)}' and '{_name(right)}')")
         value, count = int(left.value), int(right.value)
@@ -269,7 +271,8 @@ def _unary(operator: str) -> F.Implementation:
         if ctype.kind == "floating":
             if operator == "~":
                 raise TypeError(f"invalid argument type '{ctype.name()}' to unary expression")
-            return promoted if operator == "+" else _Typed(ctype, Ieee754.operate("neg", ctype.format, _EVEN, [promoted.value]))
+            return promoted if operator == "+" else _Typed(ctype, Ieee754.operate("neg", ctype.format, _EVEN,
+                [promoted.value]))
         number = promoted.value
         return _integer_result(ctype, operator, {"+": number, "-": -number, "~": ~number}[operator])
 
@@ -292,7 +295,7 @@ def _attributes(node: Any) -> dict[str, Any]:
 def _cast(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
         type_ = _attributes(node)["type"]
-        if type_.kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, refused as every dialect refuses it
+        if type_.kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, refused as every dialect does
             raise ValueError(f"{dialect.name()} {type_.kind} is not evaluated")
         target = Expressions.cast_type(Expressions.type_name(type_), _types(node, dialect))
         if target is None:
@@ -393,8 +396,8 @@ EVALUATED = frozenset({Expressions.LITERAL, Expressions.VARIABLE, Expressions.UN
 
 
 def interpreter(dialect: Any, evaluated: frozenset[str] = EVALUATED) -> F.Interpreter:
-    """The interpreter of a dialect of the C family, `C`'s or `Cpp`'s, evaluating the kinds `evaluated` names: its values
-    carry their C types."""
+    """The interpreter of a dialect of the C family, `C`'s or `Cpp`'s, evaluating the kinds `evaluated` names: its
+    values carry their C types."""
     return F.Interpreter(dialect, {
         Expressions.BINARYEXPRESSION: {
             **{op: _binary_arithmetic(op) for op in ("+", "-", "*", "/", "%", "&", "^", "|")},

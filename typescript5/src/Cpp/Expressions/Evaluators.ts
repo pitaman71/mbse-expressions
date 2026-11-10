@@ -8,7 +8,8 @@ import * as Expressions from "./Expressions.js";
 
 export { Scope };
 
-/** The kinds C++'s evaluator evaluates: C's, a name used as an expression an `idexpression`, as C++'s grammar makes it. */
+/** The kinds C++'s evaluator evaluates: C's, a name used as an expression an `idexpression`, as C++'s grammar makes
+ * it. */
 export const EVALUATED: ReadonlySet<string> = new Set([...[...C_EVALUATED].filter((tag) => tag !== "variable"),
   Expressions.IDEXPRESSION]);
 

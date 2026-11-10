@@ -96,7 +96,8 @@ import * as Domains from "./Domains.js";
 const { ValueError } = Errors;
 const { repr } = Repr;
 
-export const [LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE] = ["literal", "constant", "concatenatedstring", "variable"] as const;
+export const [LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE] = ["literal", "constant", "concatenatedstring",
+    "variable"] as const;
 export const [PARENTHESIZEDEXPRESSION, GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION] = [
   "parenthesizedexpression", "genericselection", "subscriptexpression", "callexpression"] as const;
 export const [MEMBEREXPRESSION, POSTFIXEXPRESSION, UNARYEXPRESSION, SIZEOFEXPRESSION] = [
@@ -105,7 +106,8 @@ export const [ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEX
   "alignofexpression", "castexpression", "binaryexpression", "conditionalexpression"] as const;
 export const [ASSIGNMENTEXPRESSION, INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION] = [
   "assignmentexpression", "initializerlist", "designatedinitializer", "compoundliteralexpression"] as const;
-export const [STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID] = ["statementexpression", "extensionexpression", "typeid"] as const;
+export const [STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID] = ["statementexpression", "extensionexpression",
+    "typeid"] as const;
 
 /** GNU's extensions, outside every standard, as mbse-programs marks them. */
 export const EXTENSIONS: ReadonlySet<string> = new Set([STATEMENTEXPRESSION, EXTENSIONEXPRESSION]);
@@ -142,7 +144,8 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   const many = (element: any): any => S.OfContainer((c: any) => c.index([S.OfInt]).element([element]));
-  return txn.uid("mbse.Expressions.C.Expressions/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+  return txn.uid("mbse.Expressions.C.Expressions/1")
+      .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
       Kinds: S.OfUnion, DomainKind: S.OfUnion, OfNullptr: S.OfObject, // Kinds: the framework's
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
@@ -174,7 +177,8 @@ export function install(txn: any): any {
       Decimal32: S.OfAny, Decimal64: S.OfAny, Decimal128: S.OfAny })
     .spec([
       // its dialect: the singleton `Expressions.C.Expressions`, a branch of the framework's kind union of dialects
-      (_: any) => _.Dialect.name("Expressions.C.Expressions.Dialect").ref(true).singleton("Expressions.C.Expressions").adjacencies({
+      (_: any) => _.Dialect.name("Expressions.C.Expressions.Dialect").ref(true).singleton("Expressions.C.Expressions")
+          .adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect")}),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
@@ -278,7 +282,8 @@ export function install(txn: any): any {
         text: S.OfStr, // its spelling, unvalidated
         problems: many(S.OfStr), // what is wrong with it
       }),
-      (_: any) => _.ConcatenatedString.name("Expressions.C.Expressions.ConcatenatedString").properties({parts: many(_.Term)}),
+      (_: any) => _.ConcatenatedString.name("Expressions.C.Expressions.ConcatenatedString")
+          .properties({parts: many(_.Term)}),
       // primary and postfix expressions
       (_: any) => _.ParenthesizedExpression.name("Expressions.C.Expressions.ParenthesizedExpression").properties({
         expression: _.Term}),
@@ -322,7 +327,8 @@ export function install(txn: any): any {
       (_: any) => _.EqualInitializer.name("Expressions.C.Expressions.EqualInitializer").properties({value: _.Term}),
       // GNU's extensions: a statement expression's body of statements is not part of the term
       (_: any) => _.StatementExpression.name("Expressions.C.Expressions.StatementExpression"),
-      (_: any) => _.ExtensionExpression.name("Expressions.C.Expressions.ExtensionExpression").properties({operand: _.Term}),
+      (_: any) => _.ExtensionExpression.name("Expressions.C.Expressions.ExtensionExpression")
+          .properties({operand: _.Term}),
       // type names: specifiers and an abstract declarator
       (_: any) => _.TypeId.name("Expressions.C.Expressions.TypeId").properties({
         specifiers: many(_.Specifier), declarator: _.Declarator}),
@@ -340,7 +346,8 @@ export function install(txn: any): any {
       (_: any) => _.PlaceholderTypeSpecifier.name("Expressions.C.Expressions.PlaceholderTypeSpecifier"),
       (_: any) => _.TypeofSpecifier.name("Expressions.C.Expressions.TypeofSpecifier").properties({
         keyword: S.OfStr, operand: _.Term}),
-      (_: any) => _.AtomicTypeSpecifier.name("Expressions.C.Expressions.AtomicTypeSpecifier").properties({type: _.Type}),
+      (_: any) => _.AtomicTypeSpecifier.name("Expressions.C.Expressions.AtomicTypeSpecifier")
+          .properties({type: _.Type}),
       (_: any) => _.BitIntSpecifier.name("Expressions.C.Expressions.BitIntSpecifier").properties({width: _.Term}),
       (_: any) => _.IdDeclarator.name("Expressions.C.Expressions.IdDeclarator").properties({
         name: _.Name, attributes: many(_.AttributeSpecifier)}),
@@ -374,7 +381,8 @@ export function install(txn: any): any {
         attributes: many(_.Attribute)}),
       // its holder, the root of an expression tree: a reference object refining the framework's, its `root`
       // narrowed to its `Term`
-      (_: any) => _.Expression.name("Expressions.C.Expressions.Expression").ref(true).refines([Framework.Expression]).properties({
+      (_: any) => _.Expression.name("Expressions.C.Expressions.Expression").ref(true).refines([Framework.Expression])
+          .properties({
         root: _.Term}),
       // --- its kind of domain: the token of `nullptr`, its own, not C++'s; inferred `ordered` ---
       (_: any) => _.OfNullptr.name("Expressions.C.Expressions.OfNullptr").properties({ ordered: S.OfBool }),
@@ -419,7 +427,8 @@ export function install(txn: any): any {
 export function define(txn: any): any {
   const OWN = txn.Expressions.C.Expressions;
   const Domain = txn.Expressions.Framework.Domain;
-  return txn.uid("mbse.Expressions.C.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+  return txn.uid("mbse.Expressions.C.Expressions.define/1")
+      .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
       dialect: OWN.Dialect,
       bool: Domain, int8_t: Domain, int16_t: Domain, int32_t: Domain, int64_t: Domain,
@@ -528,7 +537,8 @@ function nodes(value: Held): readonly F.Node[] {
 
 /** A name's spelling: an identifier's `spelling` (a `Terms.Part` or a `Node`), or null for any other name, or none. */
 export function spelling(name: F.Part | F.Node | undefined): string | null {
-  return name !== undefined && name.kind === "identifier" ? (name.attributes.get("spelling") ?? null) as string | null : null;
+  return name !== undefined && name.kind === "identifier" ? (name.attributes.get("spelling") ?? null) as string | null
+    : null;
 }
 
 /** The name of the arithmetic type a type name names (a `typeid`'s `Terms.Part`, as a cast's form holds it), by
@@ -549,7 +559,9 @@ export function typeName(part: F.Part | null | undefined): string | null {
 
 /** The name a declarator declares, within its parentheses, pointers, arrays and functions: none, if abstract. */
 function declared(node: F.Node | undefined): ReadonlySet<string> {
-  while (node !== undefined && node.kind !== "iddeclarator") node = node.helpers.get("declarator") as F.Node | undefined;
+  while (node !== undefined && node.kind !== "iddeclarator") {
+    node = node.helpers.get("declarator") as F.Node | undefined;
+  }
   if (node === undefined) return new Set();
   const name = spelling(node.helpers.get("name") as F.Node | undefined);
   return new Set(name === null ? [] : [name]);
@@ -560,10 +572,13 @@ function declared(node: F.Node | undefined): ReadonlySet<string> {
 export function boundNames(node: F.Node): ReadonlySet<string> {
   const held = [...nodes(node.helpers.get("parameters")), ...nodes(node.helpers.get("captures"))];
   const declarator = node.helpers.get("declarator") as F.Node | undefined; // a lambda's, its parameters
-  if (declarator !== undefined && node.kind === "lambdaexpression") held.push(...nodes(declarator.helpers.get("parameters")));
+  if (declarator !== undefined && node.kind === "lambdaexpression") {
+    held.push(...nodes(declarator.helpers.get("parameters")));
+  }
   const found = new Set<string>();
   for (const p of held) {
-    if (p.kind === "parameterdeclaration") for (const name of declared(p.helpers.get("declarator") as F.Node | undefined)) found.add(name);
+    if (p.kind !== "parameterdeclaration") continue;
+    for (const name of declared(p.helpers.get("declarator") as F.Node | undefined)) found.add(name);
   }
   for (const p of held) {
     const name = p.kind === "initcapture" ? spelling(p.helpers.get("name") as F.Node | undefined) : null;
@@ -611,7 +626,9 @@ function literalProblems(attributes: ReadonlyMap<string, any>, prefixes: readonl
   const [prefix, quote, base, suffix] = ["prefix", "quote", "base", "suffix"].map((name) => attributes.get(name));
   if (prefix !== undefined && !prefixes.includes(prefix)) problems.push(`a literal's prefix cannot be ${repr(prefix)}`);
   if (quote !== undefined && !QUOTES.includes(quote)) problems.push(`a literal's quote cannot be ${repr(quote)}`);
-  if (base !== undefined && ![2n, 8n, 10n, 16n].includes(base)) problems.push(`a literal's base cannot be ${repr(base)}`);
+  if (base !== undefined && ![2n, 8n, 10n, 16n].includes(base)) {
+    problems.push(`a literal's base cannot be ${repr(base)}`);
+  }
   if (suffix !== undefined) {
     const value = attributes.get("value");
     const allowed = typeof value === "bigint" ? suffixes.integer : typeof value === "number" ? suffixes.floating : null;
@@ -694,8 +711,9 @@ function operatorTruth(language: string): (record: any) => FD.Domain | null {
   return (record) => (TRUTHS.has(F.attributesOf(record).get("operator")) ? read(record) : null);
 }
 
-/** A literal's spelling, in each language: what its text writes beside its value, not what it is. A character's quote is
- * C's spelling, `'a'` an `int` as `97` is, and not C++'s, where `'a'` is a `char`: there it is what the literal is. */
+/** A literal's spelling, in each language: what its text writes beside its value, not what it is. A character's quote
+ * is C's spelling, `'a'` an `int` as `97` is, and not C++'s, where `'a'` is a `char`: there it is what the literal
+ * is. */
 export const SPELLING: { readonly C: readonly string[]; readonly "C++": readonly string[] } = {
   C: ["text", "problems", "quote", "base", "separators"],
   "C++": ["text", "problems", "base", "separators", "raw", "delimiter"],
@@ -706,7 +724,8 @@ export const SPELLING: { readonly C: readonly string[]; readonly "C++": readonly
  * `language` (`C` or `C++`), whose binary operators, literals' types, prefixes and suffixes differ. */
 export function kinds(language: string, tags: readonly string[], standards: ReadonlyMap<string, readonly string[]>,
   prefixes: readonly string[], suffixes: Suffixes): Record<string, F.Kind> {
-  const check = (tag: string) => (record: any) => problems(F.node(tag, record), new Domains.Types(record, pathOf(language)),
+  const check = (tag: string) => (record: any) => problems(F.node(tag, record),
+    new Domains.Types(record, pathOf(language)),
     suffixes, prefixes, language);
   /** A cast's arithmetic type, which is its domain, read from the store of the term's holder. */
   const typedCast = (record: any): FD.Domain | null =>
@@ -716,11 +735,13 @@ export function kinds(language: string, tags: readonly string[], standards: Read
     new F.Kind(F.APPLICATION, { signature, standards: of(tag), check: check(tag), scopes: scopes(tag), ...options,
       optional: [...(options.optional ?? []), ...OPTIONAL] });
   const operator = (tag: string, vocabulary: ReadonlyMap<string, FD.Signature>, options: F.KindOptions = {}) =>
-    new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required: ["operator"], standards: of(tag), check: check(tag),
+    new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required: ["operator"], standards: of(tag),
+      check: check(tag),
       scopes: scopes(tag), ...options });
   const every: Record<string, () => F.Kind> = {
     [LITERAL]: () => new F.Kind(F.LITERAL, { spelling: SPELLING[language as "C" | "C++"], check: check(LITERAL),
-      typed: (record: any) => Domains.literal(F.attributesOf(record), language, new Domains.Types(record, pathOf(language))),
+      typed: (record: any) => Domains.literal(F.attributesOf(record), language, new Domains.Types(record,
+        pathOf(language))),
       standards: of(LITERAL) }),
     [CONSTANT]: () => new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: check(CONSTANT),
       typed: () => Domains.NULLPTR, standards: of(CONSTANT) }),
@@ -734,15 +755,18 @@ export function kinds(language: string, tags: readonly string[], standards: Read
     [POSTFIXEXPRESSION]: () => operator(POSTFIXEXPRESSION, Domains.POSTFIX),
     [UNARYEXPRESSION]: () => operator(UNARYEXPRESSION, Domains.UNARY, { typed: operatorTruth(language) }),
     [SIZEOFEXPRESSION]: () => application(SIZEOFEXPRESSION, Domains.SIZE, { typed: size(language) }),
-    [ALIGNOFEXPRESSION]: () => application(ALIGNOFEXPRESSION, Domains.SIZE, { required: ["keyword"], typed: size(language) }),
+    [ALIGNOFEXPRESSION]: () => application(ALIGNOFEXPRESSION, Domains.SIZE, { required: ["keyword"],
+      typed: size(language) }),
     [CASTEXPRESSION]: () => application(CASTEXPRESSION, Domains.CAST, { required: ["type"], typed: typedCast }),
     [BINARYEXPRESSION]: () => operator(BINARYEXPRESSION, language === "C" ? Domains.BINARY : Domains.BINARY_CPP,
       { typed: operatorTruth(language) }),
-    [CONDITIONALEXPRESSION]: () => application(CONDITIONALEXPRESSION, Domains.CONDITIONAL, { optional: ["consequence"] }),
+    [CONDITIONALEXPRESSION]: () => application(CONDITIONALEXPRESSION, Domains.CONDITIONAL,
+      { optional: ["consequence"] }),
     [ASSIGNMENTEXPRESSION]: () => operator(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT),
     [INITIALIZERLIST]: () => application(INITIALIZERLIST),
     [DESIGNATEDINITIALIZER]: () => application(DESIGNATEDINITIALIZER, new FD.Opaque(), { required: ["initializer"] }),
-    [COMPOUNDLITERALEXPRESSION]: () => application(COMPOUNDLITERALEXPRESSION, new FD.Opaque(), { required: ["type", "initializer"] }),
+    [COMPOUNDLITERALEXPRESSION]: () => application(COMPOUNDLITERALEXPRESSION, new FD.Opaque(), { required: ["type",
+      "initializer"] }),
     [STATEMENTEXPRESSION]: () => application(STATEMENTEXPRESSION),
     [EXTENSIONEXPRESSION]: () => application(EXTENSIONEXPRESSION, ANY1),
     [TYPEID]: () => application(TYPEID),
@@ -750,12 +774,13 @@ export function kinds(language: string, tags: readonly string[], standards: Read
   return Object.fromEntries(tags.filter((tag) => tag in every).map((tag) => [tag, (every[tag] as () => F.Kind)()]));
 }
 
-const C_TAGS: readonly string[] = [LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE, PARENTHESIZEDEXPRESSION, GENERICSELECTION,
-  SUBSCRIPTEXPRESSION, CALLEXPRESSION, MEMBEREXPRESSION, POSTFIXEXPRESSION, UNARYEXPRESSION, SIZEOFEXPRESSION,
-  ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION, ASSIGNMENTEXPRESSION, INITIALIZERLIST,
-  DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID];
+const C_TAGS: readonly string[] = [LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE, PARENTHESIZEDEXPRESSION,
+  GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION, MEMBEREXPRESSION, POSTFIXEXPRESSION, UNARYEXPRESSION,
+  SIZEOFEXPRESSION, ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION, ASSIGNMENTEXPRESSION,
+  INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID];
 
-const C_STANDARDS: ReadonlyMap<string, readonly string[]> = new Map([...C_TAGS.map((tag) => [tag, STANDARDS] as [string, readonly string[]]),
+const C_STANDARDS: ReadonlyMap<string, readonly string[]> = new Map([
+  ...C_TAGS.map((tag) => [tag, STANDARDS] as [string, readonly string[]]),
   [CONSTANT, ["C23"]], [STATEMENTEXPRESSION, []], [EXTENSIONEXPRESSION, []]]);
 
 /** The literal of a native value: a number, a bool or a string; a bytes has none. */
@@ -811,13 +836,15 @@ export class Writers<W extends F.Writer> {
   /** `left <operator> right`; each operand is a spec. */
   binary = (operator: string, left: unknown, right: unknown): W => {
     const [leftSpec, rightSpec] = [this.dialect.spec(left), this.dialect.spec(right)];
-    return new this.writer((u: any) => u.binaryexpression((r: any) => r.left(leftSpec).operator(operator).right(rightSpec)));
+    return new this.writer((u: any) => u.binaryexpression((r: any) => r.left(leftSpec).operator(operator)
+        .right(rightSpec)));
   };
 
   /** `condition ? consequence : alternative`. */
   conditional = (condition: unknown, consequence: unknown, alternative: unknown): W => {
     const [a, b, c] = [this.dialect.spec(condition), this.dialect.spec(consequence), this.dialect.spec(alternative)];
-    return new this.writer((u: any) => u.conditionalexpression((r: any) => r.condition(a).consequence(b).alternative(c)));
+    return new this.writer((u: any) => u.conditionalexpression((r: any) => r.condition(a).consequence(b)
+        .alternative(c)));
   };
 
   /** `(type) operand`, `type` a spec of the dialect's `Type`, written through the builders (`(t) => t.typeid(

@@ -132,7 +132,8 @@ class Types:
             dialect = functools.reduce(getattr, self._path.split("."), Proxies.store_of(holder).Instances.Expressions)
             abis = [entry.targets["abi"] for entry in Objects.entries(holder, "abi")]
             abi = abis[0] if abis else None
-            name = None if abi is None else Terms.dialect_name(abi.as_schema().name[len("Expressions."):-len(".Dialect")])
+            name = None if abi is None else Terms.dialect_name(abi.as_schema()
+                .name[len("Expressions."):-len(".Dialect")])
             self._domains = D.domains(dialect), {} if abi is None else D.domains(abi), name
         return self._domains
 
@@ -143,9 +144,11 @@ class Types:
         if kind == "boolean":
             return CType("bool", 1, False, None, name, domain, self)
         if kind == "integer":
-            return CType("integer", properties["width"], properties["signed"], None, name, domain, self)  # type: ignore[arg-type]
+            width, signed = properties["width"], properties["signed"]
+            return CType("integer", width, signed, None, name, domain, self)  # type: ignore[arg-type]
         if kind == "modulo":  # unsigned: its width, of its modulus
-            return CType("integer", properties["modulus"].bit_length() - 1, False, None, name, domain, self)  # type: ignore[attr-defined]
+            width = properties["modulus"].bit_length() - 1  # type: ignore[attr-defined]
+            return CType("integer", width, False, None, name, domain, self)
         if kind == "ieee754":  # a format by its name, or by its parameters where IEEE 754 names none
             format = properties.get("format") or (properties["radix"], properties["precision"], properties["emax"])
             return CType("floating", properties["width"], True, format, name, domain, self)  # type: ignore[arg-type]
@@ -190,7 +193,8 @@ def _types(ctype: CType) -> Types:
 
 
 def promoted(ctype: CType) -> CType:
-    """The integer promotions: a bool or an integer narrower than `int` becomes `int`, read through the type's `Types`."""
+    """The integer promotions: a bool or an integer narrower than `int` becomes `int`, read through the type's
+    `Types`."""
     if ctype.kind == "floating":
         return ctype
     int_ = _types(ctype).named("int")
@@ -221,8 +225,8 @@ def of(value: Any, types: Types) -> str | None:
 
 
 class _Typed:
-    """A signature over arithmetic types: `result_type` gives the result type of the argument types, or None when they do not
-    apply; an argument of unknown domain makes the result unknown."""
+    """A signature over arithmetic types: `result_type` gives the result type of the argument types, or None when they
+    do not apply; an argument of unknown domain makes the result unknown."""
 
     def __init__(self, arity: int, result_type: Callable[[Sequence[CType]], CType | None], text: str):
         self._arity, self._result_type, self._text = arity, result_type, text
@@ -277,7 +281,8 @@ BINARY_CPP: dict[str, D.Signature] = {**_ARITHMETIC, **{op: _TWO for op in (",",
 UNARY: dict[str, D.Signature] = {
     "+": _Typed(1, lambda types: promoted(types[0]), "(arithmetic) -> its promoted type"),
     "-": _Typed(1, lambda types: promoted(types[0]), "(arithmetic) -> its promoted type"),
-    "~": _Typed(1, lambda types: promoted(types[0]) if types[0].kind != "floating" else None, "(integer) -> its promoted type"),
+    "~": _Typed(1, lambda types: promoted(types[0]) if types[0].kind != "floating" else None,
+        "(integer) -> its promoted type"),
     "!": _Typed(1, _truth, "(scalar) -> bool"),
     **{op: _ONE for op in ("*", "&", "++", "--")},
 }

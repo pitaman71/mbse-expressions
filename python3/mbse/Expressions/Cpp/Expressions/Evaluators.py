@@ -14,7 +14,8 @@ from . import Expressions
 __all__ = ["OfAny", "Scope", "INTERPRETER", "EVALUATED"]
 
 EVALUATED = C_EVALUATED - {"variable"} | {Expressions.IDEXPRESSION}
-"""The kinds C++'s evaluator evaluates: C's, a name used as an expression an `idexpression`, as C++'s grammar makes it."""
+"""The kinds C++'s evaluator evaluates: C's, a name used as an expression an `idexpression`, as C++'s grammar makes
+it."""
 
 INTERPRETER = interpreter(Expressions.DIALECT, EVALUATED)
 """The interpreter of the Cpp dialect; its values carry their C++ types."""

@@ -100,7 +100,8 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   const many = (element: any): any => S.OfContainer((c: any) => c.index([S.OfInt]).element([element]));
-  return txn.uid("mbse.Expressions.Cpp.Expressions/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+  return txn.uid("mbse.Expressions.Cpp.Expressions/1")
+      .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
       Kinds: S.OfUnion, DomainKind: S.OfUnion, OfNullptr: S.OfObject, // Kinds: the framework's
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
@@ -148,7 +149,8 @@ export function install(txn: any): any {
       std_bfloat16_t: S.OfAny })
     .spec([
       // its dialect: the singleton `Expressions.Cpp.Expressions`, a branch of the framework's kind union of dialects
-      (_: any) => _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(true).singleton("Expressions.Cpp.Expressions").adjacencies({
+      (_: any) => _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(true)
+          .singleton("Expressions.Cpp.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect")}),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
@@ -325,7 +327,8 @@ export function install(txn: any): any {
         left: _.Term, operator: S.OfStr, right: _.Term}),
       (_: any) => _.RequiresExpression.name("Expressions.Cpp.Expressions.RequiresExpression").properties({
         parameters: many(_.Parameter), requirements: many(_.Requirement)}),
-      (_: any) => _.SimpleRequirement.name("Expressions.Cpp.Expressions.SimpleRequirement").properties({expression: _.Term}),
+      (_: any) => _.SimpleRequirement.name("Expressions.Cpp.Expressions.SimpleRequirement")
+          .properties({expression: _.Term}),
       (_: any) => _.TypeRequirement.name("Expressions.Cpp.Expressions.TypeRequirement").properties({name: _.Name}),
       (_: any) => _.CompoundRequirement.name("Expressions.Cpp.Expressions.CompoundRequirement").properties({
         expression: _.Term, noexcept: S.OfBool, return_type: _.Name}),
@@ -354,7 +357,8 @@ export function install(txn: any): any {
         pack: _.Identifier}),
       (_: any) => _.AlignofExpression.name("Expressions.Cpp.Expressions.AlignofExpression").properties({
         keyword: S.OfStr, operand: _.Term}),
-      (_: any) => _.NoexceptExpression.name("Expressions.Cpp.Expressions.NoexceptExpression").properties({operand: _.Term}),
+      (_: any) => _.NoexceptExpression.name("Expressions.Cpp.Expressions.NoexceptExpression")
+          .properties({operand: _.Term}),
       (_: any) => _.NewExpression.name("Expressions.Cpp.Expressions.NewExpression").properties({
         global_scope: S.OfBool, placement: many(_.Term), parenthesized_type: S.OfBool, type: _.Type,
         initializer: _.Initializer}),
@@ -377,7 +381,8 @@ export function install(txn: any): any {
         items: many(_.Term), trailing_comma: S.OfBool}),
       (_: any) => _.DesignatedInitializer.name("Expressions.Cpp.Expressions.DesignatedInitializer").properties({
         designators: many(_.Designator), initializer: _.Initializer}),
-      (_: any) => _.FieldDesignator.name("Expressions.Cpp.Expressions.FieldDesignator").properties({name: _.Identifier}),
+      (_: any) => _.FieldDesignator.name("Expressions.Cpp.Expressions.FieldDesignator")
+          .properties({name: _.Identifier}),
       (_: any) => _.EqualInitializer.name("Expressions.Cpp.Expressions.EqualInitializer").properties({value: _.Term}),
       (_: any) => _.ParenthesizedInitializer.name("Expressions.Cpp.Expressions.ParenthesizedInitializer").properties({
         arguments: many(_.Term)}),
@@ -403,7 +408,8 @@ export function install(txn: any): any {
       (_: any) => _.CvQualifier.name("Expressions.Cpp.Expressions.CvQualifier").properties({keyword: S.OfStr}),
       (_: any) => _.PrimitiveTypeSpecifier.name("Expressions.Cpp.Expressions.PrimitiveTypeSpecifier").properties({
         keyword: S.OfStr}),
-      (_: any) => _.NamedTypeSpecifier.name("Expressions.Cpp.Expressions.NamedTypeSpecifier").properties({name: _.Name}),
+      (_: any) => _.NamedTypeSpecifier.name("Expressions.Cpp.Expressions.NamedTypeSpecifier")
+          .properties({name: _.Name}),
       (_: any) => _.TypenameSpecifier.name("Expressions.Cpp.Expressions.TypenameSpecifier").properties({name: _.Name}),
       (_: any) => _.ClassSpecifier.name("Expressions.Cpp.Expressions.ClassSpecifier").properties({
         key: S.OfStr, attributes: many(_.AttributeSpecifier), name: _.Name, final: S.OfBool,
@@ -421,7 +427,8 @@ export function install(txn: any): any {
         constraint: _.Name, decltype: S.OfBool}),
       (_: any) => _.IdDeclarator.name("Expressions.Cpp.Expressions.IdDeclarator").properties({
         name: _.Name, attributes: many(_.AttributeSpecifier)}),
-      (_: any) => _.PackDeclarator.name("Expressions.Cpp.Expressions.PackDeclarator").properties({declarator: _.Declarator}),
+      (_: any) => _.PackDeclarator.name("Expressions.Cpp.Expressions.PackDeclarator")
+          .properties({declarator: _.Declarator}),
       (_: any) => _.PointerDeclarator.name("Expressions.Cpp.Expressions.PointerDeclarator").properties({
         scope: _.Name, attributes: many(_.AttributeSpecifier), qualifiers: many(_.CvQualifier),
         declarator: _.Declarator}),
@@ -448,7 +455,8 @@ export function install(txn: any): any {
         condition: _.Term}),
       (_: any) => _.ThrowSpecifier.name("Expressions.Cpp.Expressions.ThrowSpecifier").properties({types: many(_.Term)}),
       // attributes
-      (_: any) => _.StandardAttributeSpecifier.name("Expressions.Cpp.Expressions.StandardAttributeSpecifier").properties({
+      (_: any) => _.StandardAttributeSpecifier.name("Expressions.Cpp.Expressions.StandardAttributeSpecifier")
+          .properties({
         using_namespace: S.OfStr, attributes: many(_.Attribute)}),
       (_: any) => _.Attribute.name("Expressions.Cpp.Expressions.Attribute").properties({
         namespace: S.OfStr, name: S.OfStr, arguments: many(_.Term), pack: S.OfBool}),
@@ -460,7 +468,8 @@ export function install(txn: any): any {
         attributes: many(_.Attribute)}),
       // its holder, the root of an expression tree: a reference object refining the framework's, its `root`
       // narrowed to its `Term`
-      (_: any) => _.Expression.name("Expressions.Cpp.Expressions.Expression").ref(true).refines([Framework.Expression]).properties({
+      (_: any) => _.Expression.name("Expressions.Cpp.Expressions.Expression").ref(true).refines([Framework.Expression])
+          .properties({
         root: _.Term}),
       // --- its kind of domain: the token of `nullptr`, its own, not C's; inferred `ordered` ---
       (_: any) => _.OfNullptr.name("Expressions.Cpp.Expressions.OfNullptr").properties({ ordered: S.OfBool }),
@@ -504,7 +513,8 @@ export function install(txn: any): any {
 export function define(txn: any): any {
   const OWN = txn.Expressions.Cpp.Expressions;
   const Domain = txn.Expressions.Framework.Domain;
-  return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+  return txn.uid("mbse.Expressions.Cpp.Expressions.define/1")
+      .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
       dialect: OWN.Dialect,
       bool: Domain, int8_t: Domain, int16_t: Domain, int32_t: Domain, int64_t: Domain,
@@ -592,7 +602,8 @@ export function define(txn: any): any {
 }
 
 const TAGS: readonly string[] = [C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CONCATENATEDSTRING, IDEXPRESSION,
-  THISEXPRESSION, C.PARENTHESIZEDEXPRESSION, LAMBDAEXPRESSION, FOLDEXPRESSION, REQUIRESEXPRESSION, C.SUBSCRIPTEXPRESSION,
+  THISEXPRESSION, C.PARENTHESIZEDEXPRESSION, LAMBDAEXPRESSION, FOLDEXPRESSION, REQUIRESEXPRESSION,
+    C.SUBSCRIPTEXPRESSION,
   C.CALLEXPRESSION, FUNCTIONALCASTEXPRESSION, C.MEMBEREXPRESSION, C.POSTFIXEXPRESSION, NAMEDCASTEXPRESSION,
   TYPEIDEXPRESSION, C.UNARYEXPRESSION, AWAITEXPRESSION, C.SIZEOFEXPRESSION, SIZEOFPACKEXPRESSION, C.ALIGNOFEXPRESSION,
   NOEXCEPTEXPRESSION, NEWEXPRESSION, DELETEEXPRESSION, C.CASTEXPRESSION, C.BINARYEXPRESSION, C.CONDITIONALEXPRESSION,
@@ -602,18 +613,21 @@ const TAGS: readonly string[] = [C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CO
 const SINCE_20: readonly string[] = ["C++20", "C++23"];
 const STANDARDS_OF: ReadonlyMap<string, readonly string[]> = new Map([
   ...TAGS.map((tag) => [tag, STANDARDS] as [string, readonly string[]]), [REQUIRESEXPRESSION, SINCE_20],
-  [AWAITEXPRESSION, SINCE_20], [YIELDEXPRESSION, SINCE_20], [C.DESIGNATEDINITIALIZER, SINCE_20], [C.STATEMENTEXPRESSION, []],
+  [AWAITEXPRESSION, SINCE_20], [YIELDEXPRESSION, SINCE_20], [C.DESIGNATEDINITIALIZER, SINCE_20], [C.STATEMENTEXPRESSION,
+    []],
   [C.EXTENSIONEXPRESSION, []]]);
 
 const ANY1 = new FD.Function([FD.Anything], FD.Anything);
 
 function check(tag: string): (record: any) => string[] {
-  return (record: any) => C.problems(F.node(tag, record), new Domains.Types(record, "Cpp.Expressions"), SUFFIXES, PREFIXES,
+  return (record: any) => C.problems(F.node(tag, record), new Domains.Types(record, "Cpp.Expressions"), SUFFIXES,
+      PREFIXES,
     "C++");
 }
 
 function application(tag: string, signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}): F.Kind {
-  return new F.Kind(F.APPLICATION, { signature, standards: STANDARDS_OF.get(tag) as readonly string[], check: check(tag),
+  return new F.Kind(F.APPLICATION, { signature, standards: STANDARDS_OF.get(tag) as readonly string[],
+      check: check(tag),
     scopes: C.scopes(tag), ...options, optional: [...(options.optional ?? []), ...C.OPTIONAL] });
 }
 
@@ -624,9 +638,11 @@ const OWN: Record<string, F.Kind> = {
   [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false, standards: STANDARDS }),
   [LAMBDAEXPRESSION]: application(LAMBDAEXPRESSION, new FD.Opaque(), { optional: ["template_requires"] }),
   [FOLDEXPRESSION]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.FOLD, required: ["operator"],
-    optional: ["left", "right"], standards: STANDARDS, check: check(FOLDEXPRESSION), scopes: C.scopes(FOLDEXPRESSION) }),
+    optional: ["left", "right"], standards: STANDARDS, check: check(FOLDEXPRESSION),
+      scopes: C.scopes(FOLDEXPRESSION) }),
   [REQUIRESEXPRESSION]: application(REQUIRESEXPRESSION),
-  [FUNCTIONALCASTEXPRESSION]: application(FUNCTIONALCASTEXPRESSION, new FD.Opaque(), { required: ["type", "initializer"] }),
+  [FUNCTIONALCASTEXPRESSION]: application(FUNCTIONALCASTEXPRESSION, new FD.Opaque(), { required: ["type",
+    "initializer"] }),
   [NAMEDCASTEXPRESSION]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.CASTS,
     required: ["operator", "type"], optional: C.OPTIONAL, standards: STANDARDS, check: check(NAMEDCASTEXPRESSION),
     scopes: C.scopes(NAMEDCASTEXPRESSION) }),
@@ -649,7 +665,8 @@ function native(value: unknown): Writer | null {
 }
 
 /** The Cpp dialect: its kinds, as the framework reads them. */
-export const DIALECT: F.Dialect = new F.Dialect("Cpp.Expressions", Object.fromEntries(TAGS.map((tag) => [tag, SHARED[tag] ?? OWN[tag] as F.Kind])),
+export const DIALECT: F.Dialect = new F.Dialect("Cpp.Expressions", Object.fromEntries(TAGS.map((tag) => [tag,
+    SHARED[tag] ?? OWN[tag] as F.Kind])),
   { domain_of: C.untyped, literal: native });
 
 /** A term of the Cpp dialect, written through the builders where it is given (a spec). */

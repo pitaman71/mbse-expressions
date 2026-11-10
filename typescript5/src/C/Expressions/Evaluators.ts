@@ -147,7 +147,8 @@ function convert(value: Typed, target: CType): Typed {
     if (target.kind === "integer") return new Typed(target, wrap(target, number));
     return new Typed(target, Ieee754.from_integer(number, target.format as Ieee754.Format, EVEN));
   }
-  if (target.kind === "floating") return new Typed(target, Ieee754.convert(source.format as Ieee754.Format, native, target.format as Ieee754.Format, EVEN));
+  if (target.kind === "floating") return new Typed(target, Ieee754.convert(source.format as Ieee754.Format, native,
+      target.format as Ieee754.Format, EVEN));
   const whole = Ieee754.to_integer(source.format as Ieee754.Format, native, ZERO);
   if (typeof whole === "number" || !target.contains(whole)) {
     const shown = typeof native === "string" ? native : repr(native);
@@ -159,7 +160,8 @@ function convert(value: Typed, target: CType): Typed {
 function common(left: Typed, right: Typed, operator: string): [CType, Typed, Typed] {
   const [a, b] = [arithmetic(left, operator), arithmetic(right, operator)];
   const ctype = Domains.common(a, b);
-  if (ctype === null) { // a decimal floating type and a binary one: a constraint C's usual arithmetic conversions impose
+  // a decimal floating type and a binary one: a constraint C's usual arithmetic conversions impose
+  if (ctype === null) {
     throw new TypeError(`invalid operands to binary ${operator} ('${a.name()}' and '${b.name()}')`);
   }
   return [ctype, convert(left, ctype), convert(right, ctype)];
@@ -168,7 +170,9 @@ function common(left: Typed, right: Typed, operator: string): [CType, Typed, Typ
 /** An integer result: wrapped when unsigned; outside a signed type, undefined. */
 function integerResult(ctype: CType, operator: string, value: bigint): Typed {
   if (!ctype.signed) return new Typed(ctype, wrap(ctype, value));
-  if (!ctype.contains(value)) throw new OverflowError(`signed overflow in ${operator}: ${value} does not fit '${ctype.name()}'`);
+  if (!ctype.contains(value)) {
+    throw new OverflowError(`signed overflow in ${operator}: ${value} does not fit '${ctype.name()}'`);
+  }
   return new Typed(ctype, value);
 }
 
@@ -183,7 +187,8 @@ function binaryArithmetic(operator: string): F.Implementation {
       if (!(operator in FLOATING_OPERATORS)) {
         throw new TypeError(`invalid operands to binary ${operator} ('${ctype.name()}' and '${ctype.name()}')`);
       }
-      return new Typed(ctype, Ieee754.operate(FLOATING_OPERATORS[operator] as string, ctype.format as Ieee754.Format, EVEN, [a.value, b.value]));
+      return new Typed(ctype, Ieee754.operate(FLOATING_OPERATORS[operator] as string, ctype.format as Ieee754.Format,
+          EVEN, [a.value, b.value]));
     }
     const [x, y] = [a.value as bigint, b.value as bigint];
     if ((operator === "/" || operator === "%") && y === 0n) throw new ZeroDivisionError("integer division by zero");
@@ -198,12 +203,15 @@ function binaryArithmetic(operator: string): F.Implementation {
 function shift(operator: string): F.Implementation {
   return (args) => {
     const [left, right] = [(args[0] as F.Thunk)(), (args[1] as F.Thunk)()];
-    const [ctype, countType] = [Domains.promoted(arithmetic(left, operator)), Domains.promoted(arithmetic(right, operator))];
+    const ctype = Domains.promoted(arithmetic(left, operator));
+    const countType = Domains.promoted(arithmetic(right, operator));
     if (ctype.kind === "floating" || countType.kind === "floating") {
       throw new TypeError(`invalid operands to binary ${operator} ('${nameOf(left)}' and '${nameOf(right)}')`);
     }
     const [value, count] = [BigInt(left.value), BigInt(right.value)];
-    if (count < 0n || count >= BigInt(ctype.width)) throw new ValueError(`shift by ${count} is undefined for '${ctype.name()}'`);
+    if (count < 0n || count >= BigInt(ctype.width)) {
+      throw new ValueError(`shift by ${count} is undefined for '${ctype.name()}'`);
+    }
     if (operator === ">>") return new Typed(ctype, value >> count);
     if (value < 0n) throw new ValueError("left shift of a negative value is undefined");
     return integerResult(ctype, operator, value << count);
@@ -219,7 +227,8 @@ function ieeeOrder(format: Ieee754.Format, a: unknown, b: unknown): number {
 
 function comparison(operator: string): F.Implementation {
   const tests: Record<string, (o: number) => boolean> = {
-    "<": (o) => o < 0, "<=": (o) => o <= 0, ">": (o) => o > 0, ">=": (o) => o >= 0, "==": (o) => o === 0, "!=": (o) => o !== 0,
+    "<": (o) => o < 0, "<=": (o) => o <= 0, ">": (o) => o > 0, ">=": (o) => o >= 0,
+    "==": (o) => o === 0, "!=": (o) => o !== 0,
   };
   return (args) => {
     const [ctype, a, b] = common((args[0] as F.Thunk)(), (args[1] as F.Thunk)(), operator);
@@ -260,7 +269,8 @@ function unary(operator: string): F.Implementation {
     const promoted = convert(value, ctype);
     if (ctype.kind === "floating") {
       if (operator === "~") throw new TypeError(`invalid argument type '${ctype.name()}' to unary expression`);
-      return operator === "+" ? promoted : new Typed(ctype, Ieee754.operate("neg", ctype.format as Ieee754.Format, EVEN, [promoted.value]));
+      return operator === "+" ? promoted : new Typed(ctype, Ieee754.operate("neg", ctype.format as Ieee754.Format, EVEN,
+          [promoted.value]));
     }
     const number = promoted.value as bigint;
     return integerResult(ctype, operator, operator === "+" ? number : operator === "-" ? -number : ~number);
@@ -269,7 +279,8 @@ function unary(operator: string): F.Implementation {
 
 function conditional(dialect: Terms.Dialect): F.Implementation {
   return (args, node) => {
-    if (Terms.argumentsOf(Terms.kindOf(node)[1])[1] === null) throw refuse(dialect, "conditionalexpression without a consequence");
+    if (Terms.argumentsOf(Terms.kindOf(node)[1])[1] === null) throw refuse(dialect,
+        "conditionalexpression without a consequence");
     return truth((args[0] as F.Thunk)(), "?:").value ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)();
   };
 }
@@ -287,7 +298,8 @@ function attributes(node: any): Map<string, any> {
 function cast(dialect: Terms.Dialect): F.Implementation {
   return (args, node) => {
     const type_ = attributes(node).get("type") as Terms.Part;
-    if (Terms.INVALID_KINDS.has(type_.kind)) { // invalid syntax where the type stands, refused as every dialect refuses it
+    // invalid syntax where the type stands, refused as every dialect refuses it
+    if (Terms.INVALID_KINDS.has(type_.kind)) {
       throw new ValueError(`${dialect.name()} ${type_.kind} is not evaluated`);
     }
     const target = Expressions.castType(Expressions.typeName(type_), typesOf(node, dialect));
@@ -305,7 +317,8 @@ function member(dialect: Terms.Dialect): F.Implementation {
   return (args, node) => {
     const held = attributes(node);
     const name = Expressions.spelling(held.get("member"));
-    if (name === null || held.get("template_keyword")) throw refuse(dialect, "memberexpression of a member that is not an identifier");
+    if (name === null || held.get("template_keyword")) throw refuse(dialect,
+        "memberexpression of a member that is not an identifier");
     const target = (args[0] as F.Thunk)().value;
     let members: ReadonlyMap<string, unknown>;
     if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
@@ -325,7 +338,9 @@ function subscript(dialect: Terms.Dialect): F.Implementation {
 
 function element(target: Typed, index: Typed, types: Domains.Types): Typed {
   if (!Array.isArray(target.value)) throw new TypeError(`subscripted value is not an array: '${nameOf(target)}'`);
-  if (index.ctype === null || index.ctype.kind === "floating") throw new TypeError(`array subscript is not an integer: '${nameOf(index)}'`);
+  if (index.ctype === null || index.ctype.kind === "floating") {
+    throw new TypeError(`array subscript is not an integer: '${nameOf(index)}'`);
+  }
   const position = BigInt(index.value);
   if (position < 0n || position >= BigInt(target.value.length)) {
     throw new ValueError(`index ${position} is out of bounds of an array of ${target.value.length}`);
@@ -374,9 +389,10 @@ export class Scope extends S.Variables {
 }
 
 /** The kinds the evaluator evaluates, those C evaluated before it was complete; any other is refused by name. */
-export const EVALUATED: ReadonlySet<string> = new Set([Expressions.LITERAL, Expressions.VARIABLE, Expressions.UNARYEXPRESSION,
-  Expressions.BINARYEXPRESSION, Expressions.CONDITIONALEXPRESSION, Expressions.CASTEXPRESSION, Expressions.MEMBEREXPRESSION,
-  Expressions.SUBSCRIPTEXPRESSION, Expressions.CALLEXPRESSION]);
+export const EVALUATED: ReadonlySet<string> = new Set([Expressions.LITERAL, Expressions.VARIABLE,
+  Expressions.UNARYEXPRESSION, Expressions.BINARYEXPRESSION, Expressions.CONDITIONALEXPRESSION,
+  Expressions.CASTEXPRESSION, Expressions.MEMBEREXPRESSION, Expressions.SUBSCRIPTEXPRESSION,
+  Expressions.CALLEXPRESSION]);
 
 /** The interpreter of a dialect of the C family, `C`'s or `Cpp`'s, evaluating the kinds `evaluated` names: its values
  * carry their C types. */

@@ -62,7 +62,8 @@ const { ValueError } = Errors;
 const { repr } = Repr;
 export const Anything = D.Anything;
 
-const NATIVE: readonly string[] = ["binary16", "binary32", "binary64"]; // the formats whose values are numbers; any other's are text
+// the formats whose values are numbers; any other's are text
+const NATIVE: readonly string[] = ["binary16", "binary32", "binary64"];
 
 /** Whether two formats are the same: by name, or by their parameters (each written as its text). */
 function sameFormat(a: Ieee754.Format | null, b: Ieee754.Format | null): boolean {
@@ -90,7 +91,9 @@ export class CType implements D.Domain {
   /** Whether a native is a value of this type. */
   contains(value: unknown): boolean {
     if (this.kind === "bool") return typeof value === "boolean";
-    if (this.kind === "floating") return typeof value === (NATIVE.includes(this.format as string) ? "number" : "string");
+    if (this.kind === "floating") {
+      return typeof value === (NATIVE.includes(this.format as string) ? "number" : "string");
+    }
     if (typeof value !== "bigint") return false;
     const low = this.signed ? -(1n << BigInt(this.width - 1)) : 0n;
     return low <= value && value < low + (1n << BigInt(this.width));
@@ -103,7 +106,8 @@ export class CType implements D.Domain {
 
   /** The same type, whatever its name. */
   equals(other: unknown): boolean {
-    return other instanceof CType && other.kind === this.kind && other.width === this.width && other.signed === this.signed
+    return other instanceof CType && other.kind === this.kind && other.width === this.width
+      && other.signed === this.signed
       && sameFormat(other.format, this.format);
   }
 
@@ -114,8 +118,8 @@ export class CType implements D.Domain {
 
 /** C's names of its standard types, in the order its standard lists them: a result is named by the first of them its
  * types define equal to it, else by its own. */
-export const NAMES: readonly string[] = ["bool", "char", "signed char", "unsigned char", "short", "unsigned short", "int",
-  "unsigned int", "long", "unsigned long", "long long", "unsigned long long", "float", "double", "long double"];
+export const NAMES: readonly string[] = ["bool", "char", "signed char", "unsigned char", "short", "unsigned short",
+  "int", "unsigned int", "long", "unsigned long", "long long", "unsigned long long", "float", "double", "long double"];
 
 type Stored = [Map<string, Readers.OfObject>, Map<string, Readers.OfObject>, string | null];
 
@@ -140,7 +144,8 @@ export class Types {
       const abis = Objects.entries(holder, "abi").map((entry) => entry.targets.get("abi") as Readers.OfObject);
       const abi = abis[0] ?? null;
       const name = abi === null ? null
-        : Terms.dialectName((abi.as_schema() as { name: string }).name.slice("Expressions.".length, -".Dialect".length));
+        : Terms.dialectName((abi.as_schema() as { name: string }).name
+          .slice("Expressions.".length, -".Dialect".length));
       this.domains = [D.domains(dialect), abi === null ? new Map() : D.domains(abi), name];
     }
     return this.domains;
@@ -152,14 +157,17 @@ export class Types {
     const properties = D.properties(domain);
     if (kind === "boolean") return new CType("bool", 1, false, null, name, domain, this);
     if (kind === "integer") {
-      return new CType("integer", Number(properties.get("width")), properties.get("signed") as boolean, null, name, domain, this);
+      const width = Number(properties.get("width"));
+      return new CType("integer", width, properties.get("signed") as boolean, null, name, domain, this);
     }
     if (kind === "modulo") { // unsigned: its width, of its modulus
-      return new CType("integer", (properties.get("modulus") as bigint).toString(2).length - 1, false, null, name, domain, this);
+      const width = (properties.get("modulus") as bigint).toString(2).length - 1;
+      return new CType("integer", width, false, null, name, domain, this);
     }
     if (kind === "ieee754") { // a format by its name, or by its parameters where IEEE 754 names none
       const format = (properties.get("format") as string | undefined)
-        ?? [properties.get("radix") as bigint, Number(properties.get("precision")), Number(properties.get("emax"))] as const;
+        ?? [properties.get("radix") as bigint, Number(properties.get("precision")),
+          Number(properties.get("emax"))] as const;
       return new CType("floating", Number(properties.get("width")), true, format, name, domain, this);
     }
     return null;
@@ -188,7 +196,9 @@ export class Types {
   /** The type defined by `name`; throws ValueError where neither dialect defines it. */
   named(name: string): CType {
     const found = this.find(name);
-    if (found === null) throw new ValueError(`${repr(name)} is not a type ${this.dialect} or ${this.stored()[2]} defines`);
+    if (found === null) {
+      throw new ValueError(`${repr(name)} is not a type ${this.dialect} or ${this.stored()[2]} defines`);
+    }
     return found;
   }
 
@@ -230,7 +240,8 @@ export function common(a: CType, b: CType): CType | null {
 /** The name of a constant's type: the first of `int`, `long` and `unsigned long` that holds a bigint, `double` for a
  * number, `bool`; null for anything else, or a bigint none holds. */
 export function of(value: unknown, types: Types): string | null {
-  if (typeof value === "bigint") return ["int", "long", "unsigned long"].find((name) => types.named(name).contains(value)) ?? null;
+  if (typeof value === "bigint") return ["int", "long", "unsigned long"].find((name) => types.named(name)
+      .contains(value)) ?? null;
   if (typeof value === "boolean") return "bool";
   return typeof value === "number" ? "double" : null;
 }
@@ -264,14 +275,19 @@ const truth = (types: CType[]) => typesOf(types[0] as CType).named("bool");
 
 const ONE = new D.Function([Anything], Anything);
 const TWO = new D.Function([Anything, Anything], Anything);
-const pairs = (ops: readonly string[], signature: D.Signature) => ops.map((op) => [op, signature] as [string, D.Signature]);
+const pairs = (ops: readonly string[], signature: D.Signature) =>
+  ops.map((op) => [op, signature] as [string, D.Signature]);
 
 /** The binary operators: C's, and its comma. */
 export const BINARY: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
-  ...["+", "-", "*", "/"].map((op) => [op, new Typed(2, commonOf, "(arithmetic, arithmetic) -> their common type")] as [string, D.Signature]),
-  ...["%", "&", "^", "|"].map((op) => [op, new Typed(2, integral, "(integer, integer) -> their common type")] as [string, D.Signature]),
-  ...["<<", ">>"].map((op) => [op, new Typed(2, shift, "(integer, integer) -> the promoted left type")] as [string, D.Signature]),
-  ...["<", "<=", ">", ">=", "==", "!="].map((op) => [op, new Typed(2, truth, "(arithmetic, arithmetic) -> bool")] as [string, D.Signature]),
+  ...["+", "-", "*", "/"].map((op) => [op, new Typed(2, commonOf,
+    "(arithmetic, arithmetic) -> their common type")] as [string, D.Signature]),
+  ...["%", "&", "^", "|"].map((op) => [op, new Typed(2, integral,
+    "(integer, integer) -> their common type")] as [string, D.Signature]),
+  ...["<<", ">>"].map((op) => [op, new Typed(2, shift,
+    "(integer, integer) -> the promoted left type")] as [string, D.Signature]),
+  ...["<", "<=", ">", ">=", "==", "!="].map((op) => [op, new Typed(2, truth,
+    "(arithmetic, arithmetic) -> bool")] as [string, D.Signature]),
   ...["&&", "||"].map((op) => [op, new Typed(2, truth, "(scalar, scalar) -> bool")] as [string, D.Signature]),
   [",", TWO],
 ]);
@@ -283,7 +299,8 @@ export const BINARY_CPP: ReadonlyMap<string, D.Signature> = new Map([...BINARY, 
 export const UNARY: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>([
   ["+", new Typed(1, (types) => promoted(types[0] as CType), "(arithmetic) -> its promoted type")],
   ["-", new Typed(1, (types) => promoted(types[0] as CType), "(arithmetic) -> its promoted type")],
-  ["~", new Typed(1, (types) => ((types[0] as CType).kind !== "floating" ? promoted(types[0] as CType) : null), "(integer) -> its promoted type")],
+  ["~", new Typed(1, (types) => ((types[0] as CType).kind !== "floating" ? promoted(types[0] as CType) : null),
+    "(integer) -> its promoted type")],
   ["!", new Typed(1, truth, "(scalar) -> bool")],
   ...pairs(["*", "&", "++", "--"], ONE),
 ]);
@@ -318,19 +335,22 @@ export const CAST = new D.Opaque();
 /** `sizeof` and `alignof`, of an expression or a type: a `size_t`, which the dialect's kinds read from the store. */
 export const SIZE = new D.Opaque();
 
-const ENCODINGS: ReadonlyMap<string, string> = new Map([["L", "wchar_t"], ["u8", "char8_t"], ["u", "char16_t"], ["U", "char32_t"]]);
-const FLOATING: ReadonlyMap<string, string> = new Map([["f", "float"], ["F", "float"], ["l", "long double"], ["L", "long double"]]);
+const ENCODINGS: ReadonlyMap<string, string> = new Map([
+  ["L", "wchar_t"], ["u8", "char8_t"], ["u", "char16_t"], ["U", "char32_t"]]);
+const FLOATING: ReadonlyMap<string, string> = new Map([
+  ["f", "float"], ["F", "float"], ["l", "long double"], ["L", "long double"]]);
 /** The extended floating suffixes each language writes, and the types they name. */
 const EXTENDED: ReadonlyMap<string, ReadonlyMap<string, string>> = new Map([
-  ["C", new Map([["f16", "_Float16"], ["f32", "_Float32"], ["f64", "_Float64"], ["f128", "_Float128"], ["f32x", "_Float32x"],
-    ["f64x", "_Float64x"], ["f128x", "_Float128x"], ["df", "_Decimal32"], ["dd", "_Decimal64"], ["dl", "_Decimal128"]])],
-  ["C++", new Map([["f16", "std::float16_t"], ["f32", "std::float32_t"], ["f64", "std::float64_t"], ["f128", "std::float128_t"],
-    ["bf16", "std::bfloat16_t"]])],
+  ["C", new Map([["f16", "_Float16"], ["f32", "_Float32"], ["f64", "_Float64"], ["f128", "_Float128"],
+    ["f32x", "_Float32x"], ["f64x", "_Float64x"], ["f128x", "_Float128x"], ["df", "_Decimal32"], ["dd", "_Decimal64"],
+    ["dl", "_Decimal128"]])],
+  ["C++", new Map([["f16", "std::float16_t"], ["f32", "std::float32_t"], ["f64", "std::float64_t"],
+    ["f128", "std::float128_t"], ["bf16", "std::bfloat16_t"]])],
 ]);
 const DECIMAL: ReadonlyMap<string, readonly string[]> = new Map([["", ["int", "long", "long long"]],
   ["u", ["unsigned int", "unsigned long", "unsigned long long"]], ["l", ["long", "long long"]],
-  ["ul", ["unsigned long", "unsigned long long"]], ["ll", ["long long"]], ["ull", ["unsigned long long"]], ["z", ["long"]],
-  ["uz", ["size_t"]]]);
+  ["ul", ["unsigned long", "unsigned long long"]], ["ll", ["long long"]], ["ull", ["unsigned long long"]],
+  ["z", ["long"]], ["uz", ["size_t"]]]);
 const OTHER: ReadonlyMap<string, readonly string[]> = new Map([
   ["", ["int", "unsigned int", "long", "unsigned long", "long long", "unsigned long long"]],
   ["l", ["long", "unsigned long", "long long", "unsigned long long"]], ["ll", ["long long", "unsigned long long"]]]);
@@ -354,7 +374,8 @@ export function literal(attributes: ReadonlyMap<string, any>, language: string, 
   if (typeof value === "boolean") return types.named("bool");
   if (typeof value === "number") {
     if (suffix === undefined) return types.named("double");
-    const named = FLOATING.get(suffix) ?? (EXTENDED.get(language) as ReadonlyMap<string, string>).get(suffix.toLowerCase());
+    const named = FLOATING.get(suffix) ?? (EXTENDED.get(language) as ReadonlyMap<string, string>)
+        .get(suffix.toLowerCase());
     return named === undefined ? Anything : types.named(named); // a suffix the language does not write: unknown
   }
   if (typeof value !== "bigint") return null;
@@ -365,7 +386,9 @@ export function literal(attributes: ReadonlyMap<string, any>, language: string, 
     return encoded === undefined ? new D.OfTypes(prefix, BigInt) : types.named(encoded);
   }
   const normal = integerSuffix(suffix ?? "");
-  if (normal === "wb" || normal === "uwb") return new D.OfTypes(normal === "uwb" ? "unsigned _BitInt" : "_BitInt", BigInt);
+  if (normal === "wb" || normal === "uwb") {
+    return new D.OfTypes(normal === "uwb" ? "unsigned _BitInt" : "_BitInt", BigInt);
+  }
   const base = attributes.get("base");
   const decimal = base === undefined || base === 10n;
   if (normal === "" && decimal) {
@@ -386,11 +409,13 @@ export function outOfRange(attributes: ReadonlyMap<string, any>, language: strin
   if (typeof value !== "bigint") return null;
   const domain = literal(attributes, language, types);
   if (domain === null) return `integer literal ${value} does not fit any type`;
-  if (domain instanceof CType) return domain.contains(value) ? null : `integer literal ${value} does not fit '${domain.name()}'`;
+  if (domain instanceof CType) return domain.contains(value) ? null
+    : `integer literal ${value} does not fit '${domain.name()}'`;
   return null;
 }
 
-const KEYWORDS: ReadonlySet<string> = new Set(["signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"]);
+const KEYWORDS: ReadonlySet<string> = new Set([
+  "signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"]);
 const QUALIFIERS: ReadonlySet<string> = new Set(["const", "volatile", "restrict", "__restrict", "__restrict__"]);
 
 /** The name of the arithmetic type a type name's specifiers name, by their keywords and type names in any order
@@ -407,9 +432,11 @@ export function arithmetic(names: readonly (string | null)[]): string | null {
   const [signed, unsigned, longs] = [count("signed") > 0, count("unsigned") > 0, count("long")];
   const rest = (words as string[]).filter((word) => !["signed", "unsigned", "long"].includes(word)).sort();
   const same = (list: readonly string[]) => rest.length === list.length && rest.every((word, i) => word === list[i]);
-  if ((signed && unsigned) || new Set(rest).size !== rest.length || count("signed") + count("unsigned") > 1) return null;
+  if ((signed && unsigned) || new Set(rest)
+      .size !== rest.length || count("signed") + count("unsigned") > 1) return null;
   const sign = signed || unsigned;
-  if ((same(["char"]) || same(["float"]) || same(["double"]) || same(["bool"])) && longs === 0 && !sign) return rest[0] as string;
+  if ((same(["char"]) || same(["float"]) || same(["double"]) || same(["bool"])) && longs === 0
+    && !sign) return rest[0] as string;
   if (same(["_Bool"]) && longs === 0 && !sign) return "bool";
   if (same(["double"]) && longs === 1 && !sign) return "long double";
   if (same(["char"]) && longs === 0 && sign) return unsigned ? "unsigned char" : "signed char";
