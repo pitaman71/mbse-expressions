@@ -41,7 +41,7 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
 |---|---|---|
 | `LITERAL` | a value, its `value` (and its spelling, `text`, and `problems`) | `typed(record)`, the domain its own attributes give it (C's `type`) |
 | `REFERENCE` | what the scope resolves, by its `name` | `lexical=False` for references that need no binding (Excel cells), `ambient` for names always bound (Python's builtins) |
-| `APPLICATION` | an operator applied to arguments | `operator` (the property naming it, or none when the tag does), `vocabulary` (names to signatures) or `signature` for an open vocabulary; `closed=True` refuses names outside the vocabulary |
+| `APPLICATION` | an operator applied to arguments | `operator` (the property naming it, or none when the tag does), `vocabulary` (names to signatures) or `signature` for an open vocabulary; `closed=True` refuses names its dialect does not define, which `operations(store)` reads as data where they are (Patterns' operations), from the store of the term's holder |
 | `BINDING` | a let: binds its `name` | its slots, value then body |
 | `QUANTIFIER` | binds its `name` to each item of a collection | `operator`, `vocabulary`, as an application |
 | `IMPORT` | makes something available within its body | `names(attributes)`, the names it binds; the scope resolves it with `enter` |

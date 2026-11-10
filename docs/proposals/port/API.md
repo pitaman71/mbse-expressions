@@ -1152,7 +1152,20 @@ Built as [the domains proposal's stage 2's design](../domains/README.md#stage-2s
 128. **The suites' `term(spec)` helper writes a holder**, `store.Expressions.Framework.Expression(lambda e:
      e.root(dialect.spec(spec)))`, and gives its root (`Terms.term(holder)`): item 8's helper, now within a holder
      (Decided, C). A case that validates a term decoded or built alone writes it into a holder first.
-129. **Tests**, under their IDs in both languages: TESTS_PLACEHOLDER
+129. **Tests**, under their IDs in both languages: DOM-01 rewritten as inference's natives' domains (`OfTypes`, `of`,
+     `Object`); DOM-02 retired; DOM-03, DOM-05 and DOM-17 read stored domains through `kind_of`, `properties` and
+     `name_of`; DOM-06 and DOM-07 keep evaluation's comparisons and arithmetic; DOM-09 signatures over natives and
+     collections; DOM-10 to DOM-12 `Ieee754` directly; EXP-06 and EXP-13 (the stored operations are what validation
+     reads, `SIGNATURES` the same names in order, a lone Patterns call refused, a store without `Patterns.define`
+     refusing every call); CONF-04 (each case validated within a holder); FRM-04 (a decoded term validated within a
+     holder); COL-07; and every suite's `term` helper and setup. SKL-03's count of links follows the skill. The skill,
+     EQUIVALENCE and the test plans follow; the deliberate difference in comparing domains (`==`, `.equals()`) goes
+     with the data classes.
+130. **What only Patterns' code used goes**: `Same`'s `family` (`Framework.Domains`), and validation's refusal of an
+     operator outside a closed kind's code vocabulary (`Terms`), a closed kind's operations now read as data; code no
+     input reaches is removed (mbse-basis
+     [PRI-039: 100% coverage of both](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-039)).
+     `closed` stays, evaluation's.
 
 ## What stage 2b needed (done)
 
