@@ -96,7 +96,8 @@ def define(txn: Any) -> Any:
     by `Expressions.Framework.HasDomain`. Run after `install`, in a transaction of its own; run again, it writes
     nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled as its schema's is
     (`unsigned long` as `unsigned_long`): `store.transaction(AAPCS64.define)[0]["unsigned_long"]`."""
-    ABI, Domain, Standard = txn.Expressions.Arm.AAPCS64, txn.Expressions.Framework.Domain, txn.Expressions.Framework.Standard
+    ABI, Domain = txn.Expressions.Arm.AAPCS64, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
     uid = "mbse.Expressions.Arm.AAPCS64.define/1"
     return txn.uid(uid).mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": ABI.Dialect, "standard": Standard,
@@ -143,7 +144,8 @@ def define(txn: Any) -> Any:
                 "_Float32x": lambda e: e.domain(_.Float32x),
                 "_Float64x": lambda e: e.domain(_.Float64x),
             }),
-            lambda _: _.dialect.standards({"Procedure Call Standard for the Arm 64-bit Architecture (AArch64)": lambda e: e.standard(_.standard)}),
+            lambda _: _.dialect.standards({
+                "Procedure Call Standard for the Arm 64-bit Architecture (AArch64)": lambda e: e.standard(_.standard)}),
             lambda _: _.standard.bodies(["com.arm"]).names(["AAPCS64"]),
             lambda _: _.char.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.modulo(
                 lambda d: d.modulus(256).least(0).greatest(255).ordered(True)))))).schema([ABI.char]),

@@ -16,7 +16,9 @@ Since stage 3 of the port, a domain can be stored: an `Expressions.Framework.Dom
 the Patterns dialect (formerly Basic) defined domain kinds and stored domains; since stage 1 (below) the standard
 dialects do, and each language's dialect defines its own kinds; since stage 3, every dialect but LaTeX stores its
 domains, for C and C++ with the ABI dialects `SystemV.AMD64` and `Arm.AAPCS64`, and C's, C++'s and SystemVerilog's
-code type tables are gone (Stage 3's design). What follows describes the code at 0.8.0, which the stages replace.
+code type tables are gone (Stage 3's design); since stage 4, the standards every dialect names are data too, each an
+edition its dialect covers by designation, holding its common names and the kinds it has (Standards' design). What
+follows describes the code at 0.8.0, which the stages replace.
 
 At 0.8.0, everything that used a domain used code objects instead:
 
@@ -1138,8 +1140,9 @@ revision; no number or revision where none is named.
   snapshot, as by mbse-schemas' writing a relation's entries sorted by its key, they come by designation
   ([PRI-001: declaration order](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-001)'s
   exception), so nothing claims their order but the define's, as `Domains.operations` claims none (Stage 2's design).
-- **The symbols** of a define's frame are the editions' common names, or their designations, spelled as identifiers
-  (`C11`, `Cpp17`, `Python_3_12`, `TypeScript_5_0`, `IEEE_Std_754_2019`), as a domain's are its name's.
+- **The symbols** of a define's frame: a dialect covering one edition binds it as `standard`, as it binds itself as
+  `dialect`; one covering several binds each by its common name, or its published name, spelled as an identifier
+  (`C11`, `Cpp17`, `Python_3_12`, `TypeScript_5_0`), as a domain's are its name's.
 - **SystemVerilog** names no standard in code yet: its editions, IEEE Std 1800-2005 to 1800-2023 and Verilog's IEEE
   Std 1364, are stage 6's, which records them as this model has them (the dialects proposal's Decided, Q10: "until
   then stage 6 records SystemVerilog's editions in code by designation", now built before it). Patterns, MATLAB, Excel
@@ -1155,8 +1158,8 @@ revision; no number or revision where none is named.
   "C11")` and `find(C, "ISO/IEC 9899:2011")` give the same edition.
 - `properties(standard)`: its formal reference's parts and its common names that are set, by name, a container a
   tuple, `revision` its branch and its value (`("year", 2011)`), as `Domains.properties` reads a domain's.
-- `kinds(standard)`: the schemas of the kinds it has; `of(kind)`: the editions that have a kind, given its schema, by
-  designation, in the order the store holds the entries.
+- `kinds(standard)`: the schemas of the kinds it has; `of(dialect, kind)`: the editions of a dialect that have a kind,
+  given its schema, by designation. A kind's schema reads the same entries from its side, through `standards`.
 
 **What goes**, in both languages: every module's `STANDARDS` and its package's export of it; `Terms.Kind`'s
 `standards`; the `standards` argument of C's `kinds(...)`, which C++ shares, and C's, C++'s, Python3's and
@@ -1183,6 +1186,20 @@ kinds; nothing reads which dialects a dialect uses, so this gives no reason to r
   test plans, the skill where it names how a dialect records its standards, and mbse-basis
   [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)'s
   Decided by an agent, for review.
+
+**Found while building**, each taken the simplest way consistent with the record, *(agent)*, for review (API, 154
+onward):
+
+- **A schema object is no `Readers.OfObject`**: the framework's readers (`Objects.entries`) read a data object's
+  adjacencies, and a kind's schema is a schema object, read through a builder over it, as DOM-03 reads a schema's
+  `domain`. So `of` takes the dialect too and reads each of its editions' `kinds`, rather than the kind's own
+  `standards`, which FRM-13 reads directly; its result is per dialect, as a shared kind (`literal`) is every dialect's.
+- **A define reads its kinds' schemas through its transaction**: `txn.<path>.Term.as_schema()` gives the dialect's union,
+  whose branches are its kinds by tag, so an edition's `kinds` are written from the union, an extension and invalid
+  syntax left out, and nothing names a kind's schema twice.
+- **The cost**: Python3's define writes 16 editions and 444 `HasStandard` entries, TypeScript5's 10 and 410, C's 3 and
+  61, C++'s 3 and 101; the suites run Python3's and TypeScript5's defines only where they read their standards or
+  their domains (FRM-13, DOM-21, the corpus).
 
 **Open** *(agent, not built)*: whether Excel's formulas are recorded as ISO/IEC 29500-1's (Office Open XML's formula
 grammar), and MATLAB's, Patterns' and LaTeX's as any standard, is left for the user: no code names one.

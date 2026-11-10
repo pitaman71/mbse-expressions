@@ -9,12 +9,12 @@
  * designation, written as one document; `domains` is ISO/IEC 11404's dialect, the singleton
  * `Expressions.ISOIEC11404.Expressions` (`Expressions.ISOIEC11404.Expressions.Dialect`), an enum and a packed one among
  * its domains. The `standards` case is data too (`STANDARD`): an edition, C23's, ISO/IEC 9899:2024, written as one
- * document of `Expressions.Framework.Standard`, its formal reference's parts, its common name and the kinds it has. The `invalid` case is a
- * Python3 term holding invalid syntax and literals with their spelling; the `typescript5` case a TypeScript5 term of every
- * kind, written through the builders. Each implementation writes its
- * snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
- * implementation's files (see the CONF test suite). Keep record module and `python3/mbse/Expressions/Conformance/Corpus.py`
- * in lockstep: same cases, same values, same order of statements.
+ * document of `Expressions.Framework.Standard`, its formal reference's parts, its common name and the kinds it has. The
+ * `invalid` case is a Python3 term holding invalid syntax and literals with their spelling; the `typescript5` case a
+ * TypeScript5 term of every kind, written through the builders. Each implementation writes its snapshots to
+ * `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files
+ * (see the CONF test suite). Keep record module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
+ * cases, same values, same order of statements.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -47,7 +47,8 @@ const TS = TypeScript5.Expressions;
 
 export const CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp",
   "systemverilog", "typescript5", "invalid", "systemverilog_domains", "python3_domains", "typescript5_domains",
-  "matlab_domains", "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains", "standards"] as const;
+  "matlab_domains", "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains",
+  "standards"] as const;
 
 /** The dialect that reads each case, where it is not Patterns. */
 export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
@@ -349,7 +350,8 @@ export function build(): Map<string, Case> {
   for (const [name, [path, designation]] of STANDARD) { // an edition, by its path
     terms.set(name, store.singleton(path).standards({ designation }));
   }
-  const [Term, Standard] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.Framework.Standard")];
+  const [Term, Standard] = [store.registered("Expressions.Framework.Term"),
+    store.registered("Expressions.Framework.Standard")];
   return new Map<string, Case>(CASES.map((name) => [name, [
     DOMAINS.has(name) ? store.registered(`${DOMAINS.get(name)}.Dialect`) : STANDARD.has(name) ? Standard : Term,
     terms.get(name), store]]));

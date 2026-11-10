@@ -144,7 +144,9 @@ export function define(txn: any): any {
         "_Float32x": (e: any) => e.domain(_.Float32x),
         "_Float64x": (e: any) => e.domain(_.Float64x),
       }),
-      (_: any) => _.dialect.standards({ "System V Application Binary Interface, AMD64 Architecture Processor Supplement": (e: any) => e.standard(_.standard) }),
+      (_: any) => _.dialect.standards({
+        "System V Application Binary Interface, AMD64 Architecture Processor Supplement":
+          (e: any) => e.standard(_.standard) }),
       (_: any) => _.char.kind((k: any) => k.as_value((a: any) => a.as_union(
         (u: any) => u.isoiec11404((v: any) => v.integer(
         (d: any) => d.width(8n).signed(true).overflow("raise")

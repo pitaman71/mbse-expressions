@@ -143,7 +143,8 @@ export function define(txn: any): any {
         "_Float32x": (e: any) => e.domain(_.Float32x),
         "_Float64x": (e: any) => e.domain(_.Float64x),
       }),
-      (_: any) => _.dialect.standards({ "Procedure Call Standard for the Arm 64-bit Architecture (AArch64)": (e: any) => e.standard(_.standard) }),
+      (_: any) => _.dialect.standards({
+        "Procedure Call Standard for the Arm 64-bit Architecture (AArch64)": (e: any) => e.standard(_.standard) }),
       (_: any) => _.standard.bodies(["com.arm"]).names(["AAPCS64"]),
       (_: any) => _.char.kind((k: any) => k.as_value((a: any) => a.as_union(
         (u: any) => u.isoiec11404((v: any) => v.modulo(

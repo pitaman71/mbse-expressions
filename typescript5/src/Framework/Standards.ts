@@ -72,8 +72,8 @@ export function properties(standard: Readers.OfObject): Map<string, unknown> {
   return found;
 }
 
-/** The schemas of the kinds a stored edition has (`Expressions.Framework.HasStandard`), in the order the store holds the
- * entries. */
+/** The schemas of the kinds a stored edition has (`Expressions.Framework.HasStandard`), in the order the store holds
+ * the entries. */
 export function kinds(standard: Readers.OfObject): unknown[] {
   return Objects.entries(standard, "kinds").map((entry) => entry.targets.get("kind"));
 }

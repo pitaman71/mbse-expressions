@@ -58,7 +58,8 @@ def define(txn: Any) -> Any:
     (`Expressions.Unicode.Expressions.string`) by `Expressions.Framework.HasDomain`. Run after `install`, in a
     transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and its domain by its
     name: `store.transaction(Unicode.define)[0]["string"]`."""
-    Unicode, Domain, Standard = txn.Expressions.Unicode.Expressions, txn.Expressions.Framework.Domain, txn.Expressions.Framework.Standard
+    Unicode, Domain = txn.Expressions.Unicode.Expressions, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
     return txn.uid("mbse.Expressions.Unicode.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": Unicode.Dialect, "standard": Standard, "string": Domain})
         .spec([

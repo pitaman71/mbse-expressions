@@ -54,9 +54,9 @@ reads a value of a sublanguage, as of any helper, as a `Terms.Part`.
 The versions of TypeScript 5 the dialect covers are data, which `define` writes, each owned by its published name,
 TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each has
 them all, and an extension none. `DIALECT` reads the kinds (`Terms.Dialect`). There are no writers: a TypeScript5 term
-is written through the builders, in a transaction (mbse-basis
-[PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its
-helpers nested, as its printer and its checks read it.
+is written through the builders, in a transaction (mbse-basis [PRI-019: fluent builder
+syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its helpers nested, as its printer
+and its checks read it.
 
 Its kinds of domain, the branches of its union `Expressions.TypeScript.TypeScript5.DomainKind`, which `install` adds
 to the framework's `Expressions.Framework.DomainKind` as the branch `typescript5`, each with the inferred `ordered`:
@@ -592,7 +592,8 @@ def define(txn: Any) -> Any:
     TypeScript5, Domain = txn.Expressions.TypeScript.TypeScript5, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     every = [branch.schema for branch in TypeScript5.Term.as_schema().branches  # each kind's schema, every version's,
-             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS]  # but an extension and invalid syntax
+             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS]  # but an extension and invalid
+    # syntax
     MICROSOFT = ["com.microsoft"]
     return txn.uid("mbse.Expressions.TypeScript.TypeScript5.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": TypeScript5.Dialect, **{f"TypeScript_5_{minor}": Standard for minor in range(10)},
@@ -601,11 +602,16 @@ def define(txn: Any) -> Any:
         .spec([
             # --- the versions of TypeScript 5 it covers, each by its published name, with the kinds it has: all ---
             lambda _: _.dialect.standards({
-                "TypeScript 5.0": lambda e: e.standard(_.TypeScript_5_0), "TypeScript 5.1": lambda e: e.standard(_.TypeScript_5_1),
-                "TypeScript 5.2": lambda e: e.standard(_.TypeScript_5_2), "TypeScript 5.3": lambda e: e.standard(_.TypeScript_5_3),
-                "TypeScript 5.4": lambda e: e.standard(_.TypeScript_5_4), "TypeScript 5.5": lambda e: e.standard(_.TypeScript_5_5),
-                "TypeScript 5.6": lambda e: e.standard(_.TypeScript_5_6), "TypeScript 5.7": lambda e: e.standard(_.TypeScript_5_7),
-                "TypeScript 5.8": lambda e: e.standard(_.TypeScript_5_8), "TypeScript 5.9": lambda e: e.standard(_.TypeScript_5_9),
+                "TypeScript 5.0": lambda e: e.standard(_.TypeScript_5_0),
+                "TypeScript 5.1": lambda e: e.standard(_.TypeScript_5_1),
+                "TypeScript 5.2": lambda e: e.standard(_.TypeScript_5_2),
+                "TypeScript 5.3": lambda e: e.standard(_.TypeScript_5_3),
+                "TypeScript 5.4": lambda e: e.standard(_.TypeScript_5_4),
+                "TypeScript 5.5": lambda e: e.standard(_.TypeScript_5_5),
+                "TypeScript 5.6": lambda e: e.standard(_.TypeScript_5_6),
+                "TypeScript 5.7": lambda e: e.standard(_.TypeScript_5_7),
+                "TypeScript 5.8": lambda e: e.standard(_.TypeScript_5_8),
+                "TypeScript 5.9": lambda e: e.standard(_.TypeScript_5_9),
             }),
             lambda _: _.TypeScript_5_0.bodies(MICROSOFT).revision(lambda r: r.version("5.0")).kinds(every),
             lambda _: _.TypeScript_5_1.bodies(MICROSOFT).revision(lambda r: r.version("5.1")).kinds(every),

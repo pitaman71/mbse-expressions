@@ -217,7 +217,8 @@ def install(txn: Any) -> Any:
                 "number": S.OfStr, "revision": _.Revision,
                 "names": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfStr])),  # its common names
             }).adjacencies({
-                "dialect": lambda a: a.relation([_.Covers]).me("standard").owner(True),  # its dialect's, its designation
+                "dialect": lambda a: a.relation([_.Covers]).me("standard").owner(True),  # its dialect's, then its
+                # designation
                 "kinds": lambda a: a.relation([_.HasStandard]).me("standard")}),
             lambda _: _.Covers.name("Expressions.Framework.Covers").links([
                 lambda t: t.name("dialect").schema([_.Dialect]), lambda t: t.name("standard")]).properties({

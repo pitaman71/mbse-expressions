@@ -60,11 +60,11 @@
  * The editions C covers are data, which `define` writes, each owned by its designation and holding the kinds it has
  * (`Framework.Standards`): ISO/IEC 9899:2011, 2018 and 2024, C11, C17 and C23 (C17 is C11's corrigenda, with no new
  * syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. `DIALECT` reads the
- * kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated before it was complete through the builders, in a transaction, a cast's type a spec of
- * `Type`, written through the builders too:
- * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through the builders
- * (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an
- * expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
+ * kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated
+ * before it was complete through the builders, in a transaction, a cast's type a spec of `Type`, written through the
+ * builders too: `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written
+ * through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)).
+ * `Text.ToText` writes an expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
  *
  * Its kind of domain, the branch of its union `Expressions.C.Expressions.DomainKind`, which `install` adds to the
  * framework's `Expressions.Framework.DomainKind` as the branch `c`: the token `nullptr_t` (`OfNullptr`), C23's, with
@@ -446,11 +446,14 @@ export function define(txn: any): any {
       (_: any) => _.dialect.standards({
         "ISO/IEC 9899:2011": (e: any) => e.standard(_.C11), "ISO/IEC 9899:2018": (e: any) => e.standard(_.C17),
         "ISO/IEC 9899:2024": (e: any) => e.standard(_.C23) }),
-      (_: any) => _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2011n)).names(["C11"]).kinds(
+      (_: any) => _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2011n)).names(
+        ["C11"]).kinds(
         [...every].filter(([tag]) => tag !== CONSTANT).map(([, schema]) => schema)),
-      (_: any) => _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2018n)).names(["C17"]).kinds(
+      (_: any) => _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2018n)).names(
+        ["C17"]).kinds(
         [...every].filter(([tag]) => tag !== CONSTANT).map(([, schema]) => schema)),
-      (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(["C23"]).kinds(
+      (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(
+        ["C23"]).kinds(
         [...every.values()]),
       // --- its domains ---
       (_: any) => _.dialect.domains({

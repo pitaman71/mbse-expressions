@@ -355,7 +355,8 @@ export function define(txn: any): any {
   const every = (Python3.Term.as_schema().branches as { name: string; schema: unknown }[]) // each kind's schema, by its
     .filter((b) => !EXTENSIONS.has(b.name) && !F.INVALID_KINDS.has(b.name)); // tag, but an extension and invalid syntax
   /** The kinds Python 3.`minor` has: each from the version it arrived in. */
-  const since = (minor: number): unknown[] => every.filter((b) => (SINCE.get(b.name) ?? 0) <= minor).map((b) => b.schema);
+  const since = (minor: number): unknown[] => every.filter((b) => (SINCE.get(b.name) ?? 0) <= minor)
+    .map((b) => b.schema);
   const PSF = ["org.python"];
   const versions = Object.fromEntries(Array.from({ length: 16 }, (_, minor) => [`Python_3_${minor}`, Standard]));
   return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p

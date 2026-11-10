@@ -1296,6 +1296,63 @@ group 2 (SystemVerilog) 141 to 148, group 3 (Python3, TypeScript5, MATLAB and Ex
      `typescript5_domains`, `matlab_domains` and `excel_domains`, its data cases listed in `DOMAINS` *(agent)*, which
      CONF-04 reads.
 
+## Settled in domains as data's stage 4, for the user's review
+
+Built as [the domains proposal's standards' design](../domains/README.md#standards-design) specifies, from the dialects
+proposal's Decided, Q10 ("If we treat standards as tags, we could support both"; each edition "stored with its
+designation and its common names as tags": "yes"), and the domains proposal's Decided ("Standards as tagged data, a
+stage of its own": "yes"); each choice where they were silent is marked *(agent)*. A breaking change, in 0.9.0, a
+breaking release anyway.
+
+154. **The model**, added by the framework's install *(agent, its names and shape)*:
+     `Expressions.Framework.Standard`, a reference object, one edition, its properties `bodies` (by reverse-domain
+     name, `["org.iso", "ch.iec"]`), `number`, `revision` (a value of `Expressions.Framework.Revision`, the union of
+     `year`, `edition` and `version`) and `names` (its common names), each optional, and its adjacencies `dialect`
+     (its owner) and `kinds`; `Expressions.Framework.Covers(dialect, standard)`, its property `designation`, unique
+     `[dialect, designation]` and `[standard]`, through which a dialect owns each edition it covers by its designation
+     as its standards body writes it (`dialect.standards({"designation": "ISO/IEC 9899:2011"})`), as `Defines` owns a
+     domain by its name; and `Expressions.Framework.HasStandard(kind, standard)`, a set, linking an edition to each
+     kind's schema it has, through `Schemas.OfObject`'s extension adjacency `standards`, as `Schemas.OfAny` has
+     `domain`. Every dialect's schema gains the adjacency `standards`, beside `domains` and `operations`.
+155. **The reading interface**, `Framework.Standards`, new *(agent)*: `standards(dialect)`, a dialect's editions by
+     designation; `designation_of(standard)` (`designationOf`); `tags(standard)`, its designation then its common
+     names; `find(dialect, tag)`, the edition whose designation or common name is `tag`, or None (null), so either
+     kind of reference finds it; `properties(standard)`, as `Domains.properties` reads a domain's, a container a tuple
+     (an array) and its revision its branch and its value (`("year", 2011)`; TypeScript `["year", 2011n]`);
+     `kinds(standard)`, its kinds' schemas; and `of(dialect, kind)`, the editions of a dialect that have a kind. A
+     kind's schema reads the same entries from its side through `standards` (FRM-13 reads them through
+     `Builders.OfObject.Builder(schema, False, store)`).
+156. **Each define writes its dialect's editions**, owned by designation, with their formal reference's parts and common
+     names, and, where the dialect has terms, the kinds each has, from the table its kinds' `standards` came from, now
+     the define's *(agent)*: ISO/IEC 11404:2007, IEEE Std 754-2019 and IEEE Std 1164-1993, each its bodies, number and
+     year; The Unicode Standard, its body alone; the AMD64 psABI, its title alone; AAPCS64, its title, Arm's body and
+     its abbreviation `AAPCS64` as its common name; C's ISO/IEC 9899:2011, 2018 and 2024 (`C11`, `C17`, `C23`), every
+     kind in each but `constant`, C23's alone; C++'s ISO/IEC 14882:2017, 2020 and 2024 (`C++17`, `C++20`, `C++23`),
+     every kind in each but C++20's four, in C++20 and C++23 alone; Python 3.0 to 3.15, the Python Software
+     Foundation's (`org.python`), each its version and the kinds it has from the version each arrived in (`_SINCE`:
+     `yield from` 3.3, `await` 3.5, an f-string 3.6, `:=` 3.8, a t-string 3.14); TypeScript 5.0 to 5.9, Microsoft's,
+     each every kind. An extension and invalid syntax are in none. A revision, a number or a body is held only where
+     the designation or the code names one *(agent)*: none is invented for Unicode, the psABIs or AAPCS64's document
+     number.
+157. **A define's frame binds each edition** *(agent)*: a dialect covering one as `standard`; one covering several, each
+     by its common name or its published name spelled as an identifier (`C11`, `Cpp17`, `Python_3_8`,
+     `TypeScript_5_0`).
+158. **What goes**, in both languages: every module's `STANDARDS` and its package's export of it, `Terms.Kind`'s
+     `standards` (its option, in TypeScript), the `standards` argument of C's `kinds(...)`, which C++ shares, and C's,
+     C++'s, Python3's and TypeScript5's tables of standards by kind (`_C_STANDARDS`, `_STANDARDS` and `_SINCE_20`'s
+     names, `_since`, `_ALL`), each now the define's table. `EXTENSIONS` stays.
+159. **SystemVerilog, Patterns, MATLAB, Excel and LaTeX cover none** *(agent)*: their code names no standard.
+     SystemVerilog's editions are stage 6's, which records them in this model (the dialects proposal's Decided, Q10).
+160. **The corpus** *(agent)*: each data case that writes a dialect's singleton as one document now holds its `Covers`
+     entries; a new data case, `standards` (`STANDARD`), writes C23's edition, ISO/IEC 9899:2024, as one document of
+     `Expressions.Framework.Standard`, pinning an edition's properties and its kinds byte for byte; CONF-04 reads both
+     back.
+161. **Tests**, under their IDs in both languages: FRM-13, new (standards as data, its model, its reading interface,
+     each edition's tags and properties, each kind's editions); FRM-12's assertions of `STANDARDS` and `Kind.standards`
+     moved there, its title no longer naming standards; FRM-01 (`standards` among each dialect's adjacencies); DOM-17
+     and DOM-19 (each standard and ABI dialect's edition read from the store); CONF-04 (each data case's editions, and
+     the `standards` case); SKL-03's count of links follows the skill.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,

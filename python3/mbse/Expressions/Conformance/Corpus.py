@@ -8,13 +8,12 @@ its domains by name, each kind its dialect's then its own, and the editions of t
 written as one document; `domains` is ISO/IEC 11404's dialect, the singleton `Expressions.ISOIEC11404.Expressions`
 (`Expressions.ISOIEC11404.Expressions.Dialect`), an enum and a packed one among its domains. The `standards` case is
 data too (`STANDARD`): an edition, C23's, ISO/IEC 9899:2024, written as one document of
-`Expressions.Framework.Standard`, its formal reference's parts, its common name and the kinds it has. The `typescript5` case
-is a TypeScript5 term of every kind, written through the builders. The `invalid` case is a Python3 term holding invalid
-syntax and literals with their spelling. Each implementation writes its snapshots to
+`Expressions.Framework.Standard`, its formal reference's parts, its common name and the kinds it has. The `typescript5`
+case is a TypeScript5 term of every kind, written through the builders. The `invalid` case is a Python3 term holding
+invalid syntax and literals with their spelling. Each implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
-the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same
-values, same order of statements.
-"""
+the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values,
+same order of statements. """
 
 from __future__ import annotations
 

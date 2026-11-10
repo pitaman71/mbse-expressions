@@ -42,8 +42,8 @@ union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`, `P
 The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
 (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
 (`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone, and an extension in none.
-`DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
-expression an `idexpression` (`identifier("x")`, and a callee named by a string):
+`DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a
+name used as an expression an `idexpression` (`identifier("x")`, and a callee named by a string):
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
 
 Its kind of domain, the branch of its union `Expressions.Cpp.Expressions.DomainKind`, which `install` adds to the
@@ -528,10 +528,13 @@ def define(txn: Any) -> Any:
     designation (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts, its
     common name and the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing.
     Its frame binds the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as
-    `Cpp17`) and each domain by its name, spelled as its schema's is: `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`."""
-    OWN, Domain, Standard = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain, txn.Expressions.Framework.Standard
-    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each kind's schema, by its tag,
-             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # but an extension and invalid syntax
+    `Cpp17`) and each domain by its name, spelled as its schema's is:
+    `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`."""
+    OWN, Domain = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
+    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each kind's schema, by its
+             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # tag, but an extension and
+    # invalid syntax
     return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([lambda mu: mu.upsert(
         lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "Cpp17": Standard, "Cpp20": Standard, "Cpp23": Standard,
@@ -543,7 +546,8 @@ def define(txn: Any) -> Any:
             # --- the editions C++ covers, each by its designation, with the kinds it has: every kind but GNU's
             # extensions and invalid syntax, C++20's own in C++20 and C++23 alone ---
             lambda _: _.dialect.standards({
-                "ISO/IEC 14882:2017": lambda e: e.standard(_.Cpp17), "ISO/IEC 14882:2020": lambda e: e.standard(_.Cpp20),
+                "ISO/IEC 14882:2017": lambda e: e.standard(_.Cpp17),
+                "ISO/IEC 14882:2020": lambda e: e.standard(_.Cpp20),
                 "ISO/IEC 14882:2024": lambda e: e.standard(_.Cpp23)}),
             lambda _: _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2017)).names(
                 ["C++17"]).kinds([schema for tag, schema in every.items() if tag not in _SINCE_20]),

@@ -37,7 +37,8 @@ def standards(dialect: Readers.OfObject) -> dict[str, Readers.OfObject]:
     """A dialect's editions by designation (`Expressions.Framework.Covers`), each its `Expressions.Framework.Standard`,
     in the order the store holds the entries: as its `define` wrote them, or, read back from a snapshot, by
     designation, as mbse-schemas writes a relation's entries sorted by its key."""
-    return {str(entry.values["designation"]): entry.targets["standard"] for entry in Objects.entries(dialect, "standards")}
+    return {str(entry.values["designation"]): entry.targets["standard"]
+            for entry in Objects.entries(dialect, "standards")}
 
 
 def designation_of(standard: Readers.OfObject) -> str | None:
@@ -52,7 +53,8 @@ def _names(standard: Readers.OfObject) -> tuple[str, ...]:
 
 
 def tags(standard: Readers.OfObject) -> tuple[str, ...]:
-    """The references a stored edition is found by: its designation, where a dialect covers it, then its common names."""
+    """The references a stored edition is found by: its designation, where a dialect covers it, then its common
+    names."""
     designation = designation_of(standard)
     return (*([] if designation is None else [designation]), *_names(standard))
 

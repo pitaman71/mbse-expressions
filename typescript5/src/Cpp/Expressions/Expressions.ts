@@ -45,8 +45,8 @@
  * The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
  * (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
  * (`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone, and an extension in none.
- * `DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
- * expression an `idexpression` (`identifier("x")`, and a callee named by a string):
+ * `DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms,
+ * a name used as an expression an `idexpression` (`identifier("x")`, and a callee named by a string):
  * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++
  * source.
  *
@@ -639,7 +639,8 @@ function check(tag: string): (record: any) => string[] {
 }
 
 function application(tag: string, signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}): F.Kind {
-  return new F.Kind(F.APPLICATION, { signature, check: check(tag), scopes: C.scopes(tag), ...options, optional: [...(options.optional ?? []), ...C.OPTIONAL] });
+  return new F.Kind(F.APPLICATION, { signature, check: check(tag), scopes: C.scopes(tag), ...options,
+    optional: [...(options.optional ?? []), ...C.OPTIONAL] });
 }
 
 const OWN: Record<string, F.Kind> = {

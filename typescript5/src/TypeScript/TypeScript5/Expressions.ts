@@ -55,10 +55,10 @@
  *
  * The versions of TypeScript 5 the dialect covers are data, which `define` writes, each owned by its published name,
  * TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each
- * has them all, and an extension none. `DIALECT` reads the kinds (`Terms.Dialect`). There are no writers: a TypeScript5 term
- * is written through the builders, in a transaction (mbse-basis
- * [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its
- * helpers nested, as its printer and its checks read it.
+ * has them all, and an extension none. `DIALECT` reads the kinds (`Terms.Dialect`). There are no writers: a TypeScript5
+ * term is written through the builders, in a transaction (mbse-basis [PRI-019: fluent builder
+ * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its helpers nested, as its
+ * printer and its checks read it.
  *
  * Its kinds of domain, the branches of its union `Expressions.TypeScript.TypeScript5.DomainKind`, which `install` adds
  * to the framework's `Expressions.Framework.DomainKind` as the branch `typescript5`, each with the inferred `ordered`:
@@ -624,11 +624,16 @@ export function define(txn: any): any {
     .spec([
       // --- the versions of TypeScript 5 it covers, each by its published name, with the kinds it has: all ---
       (_: any) => _.dialect.standards({
-        "TypeScript 5.0": (e: any) => e.standard(_.TypeScript_5_0), "TypeScript 5.1": (e: any) => e.standard(_.TypeScript_5_1),
-        "TypeScript 5.2": (e: any) => e.standard(_.TypeScript_5_2), "TypeScript 5.3": (e: any) => e.standard(_.TypeScript_5_3),
-        "TypeScript 5.4": (e: any) => e.standard(_.TypeScript_5_4), "TypeScript 5.5": (e: any) => e.standard(_.TypeScript_5_5),
-        "TypeScript 5.6": (e: any) => e.standard(_.TypeScript_5_6), "TypeScript 5.7": (e: any) => e.standard(_.TypeScript_5_7),
-        "TypeScript 5.8": (e: any) => e.standard(_.TypeScript_5_8), "TypeScript 5.9": (e: any) => e.standard(_.TypeScript_5_9),
+        "TypeScript 5.0": (e: any) => e.standard(_.TypeScript_5_0),
+        "TypeScript 5.1": (e: any) => e.standard(_.TypeScript_5_1),
+        "TypeScript 5.2": (e: any) => e.standard(_.TypeScript_5_2),
+        "TypeScript 5.3": (e: any) => e.standard(_.TypeScript_5_3),
+        "TypeScript 5.4": (e: any) => e.standard(_.TypeScript_5_4),
+        "TypeScript 5.5": (e: any) => e.standard(_.TypeScript_5_5),
+        "TypeScript 5.6": (e: any) => e.standard(_.TypeScript_5_6),
+        "TypeScript 5.7": (e: any) => e.standard(_.TypeScript_5_7),
+        "TypeScript 5.8": (e: any) => e.standard(_.TypeScript_5_8),
+        "TypeScript 5.9": (e: any) => e.standard(_.TypeScript_5_9),
       }),
       (_: any) => _.TypeScript_5_0.bodies(MICROSOFT).revision((r: any) => r.version("5.0")).kinds(every),
       (_: any) => _.TypeScript_5_1.bodies(MICROSOFT).revision((r: any) => r.version("5.1")).kinds(every),
@@ -834,7 +839,8 @@ function operatorKind(tag: string, vocabulary: ReadonlyMap<string, FD.Signature>
 export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
   [IDENTIFIER]: new F.Kind(F.REFERENCE, { required: ["name"], check: check(IDENTIFIER) }),
   [PRIVATEIDENTIFIER]: new F.Kind(F.REFERENCE, { required: ["name"], lexical: false, check: check(PRIVATEIDENTIFIER) }),
-  [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "quote", "base", "separators"], check: check(LITERAL) }),
+  [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "quote", "base", "separators"],
+    check: check(LITERAL) }),
   [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: check(CONSTANT),
     typed: (record) => Domains.constant(F.attributesOf(record)) }),
   [TEMPLATELITERAL]: application(TEMPLATELITERAL, new FD.Opaque(Domains.String)),

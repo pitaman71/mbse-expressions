@@ -57,9 +57,9 @@ sublanguage, as of any helper, as a `Terms.Part`.
 
 The editions C covers are data, which `define` writes, each owned by its designation and holding the kinds it has
 (`Framework.Standards`): ISO/IEC 9899:2011, 2018 and 2024, C11, C17 and C23 (C17 is C11's corrigenda, with no new
-syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. `DIALECT` reads the
-kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated before it was complete through the builders, in a transaction, a cast's type a spec of
-`Type`, written through the builders too:
+syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. `DIALECT` reads the kinds
+(`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated before it
+was complete through the builders, in a transaction, a cast's type a spec of `Type`, written through the builders too:
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through the builders
 (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an
 expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
@@ -427,9 +427,11 @@ def define(txn: Any) -> Any:
     reference's parts, its common name and the kinds it has. Run after `install`, in a transaction of its own; run
     again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each
     domain by its name: `store.transaction(C.define)[0]["int32_t"]`."""
-    OWN, Domain, Standard = txn.Expressions.C.Expressions, txn.Expressions.Framework.Domain, txn.Expressions.Framework.Standard
-    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each kind's schema, by its tag,
-             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # but an extension and invalid syntax
+    OWN, Domain = txn.Expressions.C.Expressions, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
+    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each kind's schema, by its
+             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # tag, but an extension and
+    # invalid syntax
     return txn.uid("mbse.Expressions.C.Expressions.define/1").mutations([lambda mu: mu.upsert(
         lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "C11": Standard, "C17": Standard, "C23": Standard,
@@ -443,12 +445,12 @@ def define(txn: Any) -> Any:
             lambda _: _.dialect.standards({
                 "ISO/IEC 9899:2011": lambda e: e.standard(_.C11), "ISO/IEC 9899:2018": lambda e: e.standard(_.C17),
                 "ISO/IEC 9899:2024": lambda e: e.standard(_.C23)}),
-            lambda _: _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2011)).names(["C11"]).kinds(
-                [schema for tag, schema in every.items() if tag != CONSTANT]),
-            lambda _: _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2018)).names(["C17"]).kinds(
-                [schema for tag, schema in every.items() if tag != CONSTANT]),
-            lambda _: _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2024)).names(["C23"]).kinds(
-                list(every.values())),
+            lambda _: _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2011)).names(
+                ["C11"]).kinds(                [schema for tag, schema in every.items() if tag != CONSTANT]),
+            lambda _: _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2018)).names(
+                ["C17"]).kinds(                [schema for tag, schema in every.items() if tag != CONSTANT]),
+            lambda _: _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2024)).names(
+                ["C23"]).kinds(                list(every.values())),
             # --- its domains ---
             lambda _: _.dialect.domains({
                 "bool": lambda e: e.domain(_.bool),

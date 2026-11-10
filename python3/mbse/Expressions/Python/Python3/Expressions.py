@@ -336,9 +336,11 @@ def define(txn: Any) -> Any:
     with its body, its version and the kinds it has. Run after the installs, in a transaction of its own; run again, it
     writes nothing. Its frame binds the dialect (`dialect`), each version by its name spelled as an identifier
     (`Python_3_8`) and each domain by its name: `store.transaction(Python3.define)[0]["int"]`."""
-    Python3, Domain, Standard = txn.Expressions.Python.Python3, txn.Expressions.Framework.Domain, txn.Expressions.Framework.Standard
-    every = {branch.name: branch.schema for branch in Python3.Term.as_schema().branches  # each kind's schema, by its tag,
-             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # but an extension and invalid syntax
+    Python3, Domain = txn.Expressions.Python.Python3, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
+    every = {branch.name: branch.schema for branch in Python3.Term.as_schema().branches  # each kind's schema, by its
+             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # tag, but an extension and
+    # invalid syntax
 
     def since(minor: int) -> list[Any]:
         """The kinds Python 3.`minor` has: each from the version it arrived in."""
@@ -346,7 +348,8 @@ def define(txn: Any) -> Any:
 
     PSF = ["org.python"]
     return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": Python3.Dialect, **{f"Python_3_{minor}": Standard for minor in range(16)}, "bool": Domain, "int": Domain, "float": Domain, "str": Domain,
+        .symbols({"dialect": Python3.Dialect, **{f"Python_3_{minor}": Standard for minor in range(16)},
+                  "bool": Domain, "int": Domain, "float": Domain, "str": Domain,
                   "bytes": Domain, "NoneType": Domain, "ellipsis": Domain})
         .spec([
             # --- the versions of Python 3 it covers, each by its published name, with the kinds it has ---

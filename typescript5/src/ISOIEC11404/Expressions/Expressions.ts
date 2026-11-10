@@ -119,7 +119,8 @@ export function define(txn: any): any {
     txn.Expressions.Framework.Standard];
   return txn.uid("mbse.Expressions.ISOIEC11404.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
-      dialect: ISOIEC11404.Dialect, standard: Standard, boolean: Domain, integer: Domain, octetstring: Domain, octet: Domain, modulo_256: Domain,
+      dialect: ISOIEC11404.Dialect, standard: Standard,
+      boolean: Domain, integer: Domain, octetstring: Domain, octet: Domain, modulo_256: Domain,
     })
     .spec([
       (_: any) => _.dialect.domains({

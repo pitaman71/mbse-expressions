@@ -116,9 +116,11 @@ def define(txn: Any) -> Any:
     `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
     each domain by its name, spelled as its schema's is (`modulo(256)` as `modulo_256`):
     `store.transaction(ISOIEC11404.define)[0]["octet"]`."""
-    ISOIEC11404, Domain, Standard = txn.Expressions.ISOIEC11404.Expressions, txn.Expressions.Framework.Domain, txn.Expressions.Framework.Standard
+    ISOIEC11404, Domain = txn.Expressions.ISOIEC11404.Expressions, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
     return txn.uid("mbse.Expressions.ISOIEC11404.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": ISOIEC11404.Dialect, "standard": Standard, "boolean": Domain, "integer": Domain, "octetstring": Domain,
+        .symbols({"dialect": ISOIEC11404.Dialect, "standard": Standard,
+                  "boolean": Domain, "integer": Domain, "octetstring": Domain,
                   "octet": Domain, "modulo_256": Domain})
         .spec([
             lambda _: _.dialect.domains({
