@@ -14,9 +14,11 @@ Since stage 3 of the port, a domain can be stored: an `Expressions.Framework.Dom
 `kind`, a value of the union `Expressions.Framework.DomainKind`, owned by its dialect through
 `Expressions.Framework.Defines(dialect, name, domain)` and linked to its scalar schema by `HasDomain`. At 0.8.0 only
 the Patterns dialect (formerly Basic) defined domain kinds and stored domains; since stage 1 (below) the standard
-dialects do, and each language's dialect defines its own kinds.
+dialects do, and each language's dialect defines its own kinds; since stage 3, every dialect but LaTeX stores its
+domains, for C and C++ with the ABI dialects `SystemV.AMD64` and `Arm.AAPCS64`, and C's, C++'s and SystemVerilog's
+code type tables are gone (Stage 3's design). What follows describes the code at 0.8.0, which the stages replace.
 
-Everything that uses a domain uses code objects instead:
+At 0.8.0, everything that used a domain used code objects instead:
 
 | Module (Python; TypeScript has the same) | Lines | What it holds |
 |---|---|---|
@@ -316,9 +318,8 @@ As the user decided (2026-11-04), on the questions below:
     - there is no `Defines` entry for them in the ISO/IEC 11404 singleton, or any other;
     - there is no test dialect.
 
-    Not yet built: mbse-schemas refuses it as the model stands, and how to settle that is question R, open (Stage 3's
-    design, Questions for the user (stage 3), R); until then the fixtures stay in ISO/IEC 11404's singleton, as they
-    are.
+    Not built: mbse-schemas refuses a domain with no owner as the model stands, and question R, how to settle that,
+    is decided (a), below: the fixtures stay in ISO/IEC 11404's singleton, as they are.
   - **One dialect per ABI, holding only domains** (2026-11-10). Asked whether C and C++ should have a dialect for each
     ABI, the user was shown about 12 mainstream ABIs (x86-64 System V, Microsoft x64, i386 System V and Windows,
     AArch64 AAPCS64, Apple and Windows, ARM32 AAPCS, RISC-V LP64D, PowerPC64 ELFv2, s390x, wasm32), across which what
@@ -712,7 +713,7 @@ populated by hand (Proposed, 2); typing a C literal by its suffix is a lookup of
 literal out of range is reported against the domain its dialect stores for it (Proposed, 5). Inference's rules stay
 CAP-232's to replace (Decided, 2). On the code at main (3711f8a), the same in both languages. What the record leaves
 open is the agent's, for review, marked *(agent)*; what neither the record nor the standards settle is a question,
-below, and nothing is built on it until it is answered: P and Q are answered, R open (Decided, "On stage 3's design").
+below, and nothing is built on it until it is answered: P, Q and R are answered (Decided, "On stage 3's design").
 
 **Each dialect's `define`.** C, Cpp, the two ABI dialects, SystemVerilog, Python3, TypeScript5, MATLAB and Excel each
 have a `define`, as the standard dialects do: run after the installs, in a transaction of its own, writing its domains
