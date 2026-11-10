@@ -1170,6 +1170,132 @@ Built as [the domains proposal's stage 2's design](../domains/README.md#stage-2s
      [PRI-039: 100% coverage of both](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-039)).
      `closed` stays, evaluation's.
 
+## Settled in domains as data's stage 3, for the user's review
+
+Built as [the domains proposal's stage 3's design](../domains/README.md#stage-3s-design) specifies, from its Decided
+("On stage 3's design": K, N, the scope of stored domains, one dialect per ABI, M, P, Q, R and the links between
+dialects); each choice where they were silent is marked *(agent)*. Group 1 (C, C++ and the ABI dialects) is 131 to 140,
+group 2 (SystemVerilog) 141 to 148, group 3 (Python3, TypeScript5, MATLAB and Excel) 149 to 153. A breaking change, in
+0.9.0, a breaking release anyway.
+
+131. **C's and C++'s domains stored.** Each install adds its domains' schemas, each a `Schemas.OfAny` of the scalar it
+     narrows (an int, a float, or `str` where the format's values are text), named as a dotted identifier with no
+     leading `_` *(agent)*, since mbse-schemas refuses a symbol beginning with `_`: `Expressions.C.Expressions.Float16`,
+     `Decimal32`, `int32_t`, `bool`; `Expressions.Cpp.Expressions.std_float16_t`, `std_bfloat16_t`. `C.define` (uid
+     `mbse.Expressions.C.Expressions.define/1`) and `Cpp.define` (`mbse.Expressions.Cpp.Expressions.define/1`), run
+     after the installs in a transaction of their own, idempotent, write, in the design's order *(agent)*, `bool`,
+     `int8_t` to `int64_t` (11404's `integer`), `uint8_t` to `uint64_t` (11404's `modulo`), then C's `_Float16` to
+     `_Float128` and `_Decimal32` to `_Decimal128`, or C++'s `std::float16_t` to `std::float128_t` and
+     `std::bfloat16_t` (no `format`: `width` 16, `radix` 2, `precision` 8, `emax` 127), then the token `nullptr_t`,
+     each with its inferred properties. The frame binds each domain by its schema's spelling (`[0]["Float16"]`;
+     TypeScript `[0].get("std_bfloat16_t")`). Both packages export `define`.
+132. **The ABI dialects**, `mbse.Expressions.SystemV.AMD64` and `mbse.Expressions.Arm.AAPCS64`
+     (`@mbse/expressions/SystemV/AMD64`, `@mbse/expressions/Arm/AAPCS64`, in `package.json`'s exports and
+     `deno.json`'s imports), each a singleton with no terms and no kinds, exporting `install`, `define` and `STANDARDS`;
+     each `define` (`mbse.Expressions.SystemV.AMD64.define/1`, `mbse.Expressions.Arm.AAPCS64.define/1`) writes the
+     types the C and C++ standards leave to the implementation, as the design's table lists them (Decided, Q): plain
+     `char` signed on AMD64 and unsigned on AAPCS64, `wchar_t` `int` and `unsigned int`, `long double` and `_Float64x`
+     x87's extended format (no `format`; `width` 80, `precision` 64, `emax` 16383) and `binary128`. Each dialect's
+     schema declares an anonymous adjacency to `HasAbi` through `abi`, so that a holder naming as its ABI a dialect that
+     is not one is refused by validation *(agent)*.
+133. **`C.Domains.Types(value, path="C.Expressions")`** (TypeScript `new Types(value, path)`) *(agent)*: the types a C
+     or C++ term reads, through its holder (`Terms.holder_of`): its own dialect's domains first, then those of the ABI
+     the holder names (`abi`), each read once. `named(name)` gives a `CType`; `find(name)` None (null) where the holder
+     names an ABI and neither defines the name; `label(ctype)` names a result. Its refusals are `ValueError`s:
+     `'int' is not a type C defines, and its expression names no ABI` (or `Cpp`), and `'int' is not a type C or AMD64
+     defines`; a lone term is refused by mbse-schemas' `TypeError`.
+134. **`CType(kind, width, signed, format, label, domain, types)`**: the working value the arithmetic computes on,
+     built from a stored domain (`boolean` gives `bool`, `integer` its width and signedness, `modulo` unsigned of width
+     log2 of its modulus, `ieee754` `floating`, or `decimal` for radix 10; any other kind is not arithmetic); `format`
+     IEEE 754's name or its parameters (x87's `(2, 64, 16383)`, TypeScript `[2n, 64, 16383]`); `domain` and `types`
+     compared by nothing. It keeps `types`, the holder's lookup, beside `domain` *(agent)*: a type of C's own
+     (`int8_t`) cannot reach the ABI through its domain, and the promotions need the ABI's `int`.
+135. **The code type tables go** (Decided, K): `TYPES`, `Bool`, `Int`, `Double`, `UnsignedInt`, `Long` and
+     `UnsignedLong`. `SIZE` is a plain `Opaque()`; `NULLPTR` stays a code token *(agent)*, nothing reading `nullptr_t`
+     arithmetically, and `String` stays, a string's type being no stored domain (Decided, H, 4). `NAMES` lists C's and
+     C++'s standard type names in the standard's order, which names a result (`int` before `int32_t`) *(agent)*.
+136. **The rules take the types**: `promoted(ctype)` reads `int` through the type's `Types`; `common(a, b)` is None
+     for a decimal type with a binary floating one; `of(value, types)` names a constant's type; `literal(attributes,
+     language, types)` gives a type for any number or bool (a value's own `int`, `double` or `bool` included), None only
+     for no value or an int no type holds; `out_of_range(attributes, language, types)` (`outOfRange`); `arithmetic(names)`
+     gives a name, a single name that is no keyword itself (`my_t`); `Expressions.problems(node, types, ...)` takes
+     `types` second; and `Expressions` gains `cast_type(name, types)` (`castType`), `truth(language)`, `size(language)`
+     and `untyped(value)`.
+137. **What reads a type from the store**: a literal's type and its range check, a lookup's failure in validation a
+     problem and in inference and evaluation raised *(agent)*; a cast's target, where a name C's keywords spell must be
+     defined and a single identifier neither dialect defines is a program's own type, not arithmetic *(agent)*; `bool`
+     for comparisons, `&&`, `||`, `!` and C++'s `noexcept`, and `size_t` for `sizeof`, `alignof` and `sizeof...`,
+     through `Kind.typed`; and evaluation of literals, variables, members, elements, calls and the promotions. The
+     `_FloatN` and decimal types, and `L'a'`, now evaluate in their formats *(agent)*; a decimal literal's value is held
+     as the binary64 float its literal holds (`0.1df` is `0.1000000`) *(agent)*; a decimal with a binary floating
+     operand is refused (`invalid operands to binary + ('_Decimal32' and 'double')`; inference: `+ cannot take
+     (_Decimal32, double)`). A floating suffix the language does not write gives `Anything`, and `_Float128x`, which
+     neither ABI provides, is refused by name *(agent)*. A character literal with an encoding prefix is typed by the
+     ABI's types; a prefix no language has stays an `OfTypes` *(agent)*. C++'s literals are typed by C++'s names
+     (`1.0f16` a `std::float16_t`); C++'s `df` is unknown.
+138. **`HasAbi`'s unique clause is `uniques("abi")`**, in both languages: in mbse-schemas `unique(S)` says S is
+     determined by the other links, so a holder names one ABI at most. The design's `unique [expression]` had let one
+     holder hold two.
+139. **Every caller installs and defines C, Cpp, AMD64 and AAPCS64** after the standard dialects, and names an ABI on
+     its C and C++ holders: the suites' setups and `term` helpers (05, 06, 07, 09), which name AMD64 by default
+     *(agent)*, 07's on every holder; CONF-04 and the corpus, which gains `c_domains`, `cpp_domains`, `amd64_domains`
+     and `aapcs64_domains`; the toolkit's `cold_chain`; tutorial 8, which names AMD64 and gains a step showing
+     `(char)200` under both ABIs *(agent)*; and the skill. A C or C++ term evaluated or validated alone, or under a
+     holder naming no ABI, is refused where it reads a type.
+140. **The framework's links between dialects**, for the user's review (Decided, "The links between dialects"):
+     `Expressions.Framework.HasAbi(expression, abi)` and `Expression`'s adjacency `abi` (item 138), added by the
+     framework's install *(agent, its names)*; `Terms.holder_of(value)` (`holderOf`), a term's holding `Expression`
+     found by its owners *(agent)*; and `Framework.Domains.domains(dialect)`, a dialect's domains by name, which C's,
+     C++'s and SystemVerilog's lookups read. IEEE 754's kind gains `width`, inferred, written on every `ieee754`
+     domain *(agent)*; `Ieee754.FORMATS` gains `decimal32`; and `Ieee754`'s operations take a format by its name or,
+     where IEEE 754 names none, by its radix, precision and emax (`parameters`, `Format`), its values text *(agent)*.
+141. **SystemVerilog's kinds and schemas.** Its install adds the kind `bit`, IEEE 1800's 2-state integral
+     (`Expressions.SystemVerilog.Expressions.OfBit`: `width`, `signed`; inferred `least`, `greatest`, `ordered`), beside
+     `logic`, and its 2-state domains' schemas, each a `Schemas.OfAny` of the scalar it narrows (`bit`, `byte`,
+     `shortint`, `int` and `longint` of ints, `real` and `shortreal` of floats). A 4-state type has no schema: no basic
+     scalar holds x or z.
+142. **`SystemVerilog.define`** (`mbse.Expressions.SystemVerilog.Expressions.define/1`, exported by the package), run
+     after the installs, idempotent: the singleton owns by name, in order, `logic`, `reg`, `integer`, `time` (kind
+     `logic`), `bit`, `byte`, `shortint`, `int`, `longint` (kind `bit`), each with `least`, `greatest` and `ordered`,
+     and `real`, `shortreal` (IEEE 754's `binary64` and `binary32`, with `width`), each 2-state one related to its
+     schema; `reg` its own domain, of `logic`'s properties.
+143. **SystemVerilog's type table goes** (Decided, K): `Domains.TYPES`, `Real`, `Integer`, `Bit`, `Longint` and
+     `Expressions.CASTS`. `Domains.named(store, name)` *(agent)* reads the type SystemVerilog defines by `name` as an
+     `SvType` of its kind's properties, labelled with its name and keeping its domain (`SvType.domain`, compared by
+     nothing) *(agent)*; a name it defines none by is refused, `'int' is not a type SystemVerilog defines` *(agent)*.
+144. **What stays code** (Decided, 2): `SvType`, `Logic`, `vector`, `common` and the signatures. `Domains.of(value)`
+     names a constant's type *(agent)*; `common`'s `real` for a `shortreal` among integrals is read from the store of
+     that operand's domain *(agent)*; `===`'s and `!==`'s `bit` is named from the store by the `binary` kind's `typed`
+     *(agent)*.
+145. **Through the holder, only where a named type is read** *(agent)*: validation (a cast naming a type, its refusal
+     `'word' is not a type SystemVerilog defines`, replacing "a cast's type must be a built-in type"), inference (an
+     unsized constant's type and a cast's through `Kind.typed`; `domain_of` gives `Anything` for a constant no type
+     holds) and evaluation (every named type it computes in, each read once per evaluation). A lone term that reads
+     none (`4'b1010 & 4'b0110`) is read as before.
+146. **Every caller runs `SystemVerilog.define`**: the suites' setups, the toolkit, the corpus's store (for its
+     `systemverilog_domains` case and CONF-04's validation of the `systemverilog` case's `byte'(...)`), and the skill.
+147. **Tests**: DOM-20 (new), DOM-18 (the kind `bit`), FRM-01, DIA-13, DIA-14, the corpus's `systemverilog_domains`
+     and CONF-04.
+148. **Breaking**, in 0.9.0: the removed exports, `Domains.of`'s result, SystemVerilog's define required to read a
+     named type, a lone term refused there, and the cast's message.
+149. **Python3's, TypeScript5's, MATLAB's and Excel's stored domains.** Each gains a `define`
+     (`mbse.Expressions.<path>.define/1`), run after the installs, idempotent, exported by its package, writing its
+     domains owned by name, each named as its language names its type, each but a token's related to its schema
+     (`Expressions.<path>.<name>`, an `OfAny` of the scalar it narrows): Python3's `bool`, `int`, `float`, `str`,
+     `bytes` and the tokens `NoneType` and `ellipsis`; TypeScript5's `boolean`, `number`, `bigint`, `string` and the
+     token `null`; MATLAB's `double`, `logical` and `string`; Excel's `number`, `logical`, `text` and `error`, its
+     `members` the fifteen error values in `ERROR.TYPE`'s order then those added since *(agent)*. Their evaluators and
+     inference are unchanged: their code domains stay inference's `OfTypes`, CAP-232's to replace *(agent)*.
+150. **Two new kinds, each its dialect's own** *(agent)*: MATLAB's `string` (`OfString`) and Excel's `text`
+     (`OfText`), UTF-16 code units as TypeScript5's `string`, each with `ordered`; MATLAB's install so gains its union
+     of kinds, the branch `matlab`; Excel's lists `text` before `error`.
+151. **An Excel error's schema narrows `str`**, its value its code, as Excel's evaluator holds one *(agent)*.
+152. **Smaller choices** *(agent)*: a domain's schema keeps its language's spelling; MATLAB's and Excel's numbers narrow
+     `float`; TypeScript5's `bigint` narrows `int`; Excel's error codes are written in its `define` alone.
+153. **Tests**: DOM-21 (new), DOM-18 (MATLAB's union, Excel's `text`), FRM-01, and the corpus's `python3_domains`,
+     `typescript5_domains`, `matlab_domains` and `excel_domains`, its data cases listed in `DOMAINS` *(agent)*, which
+     CONF-04 reads.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,
