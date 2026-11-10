@@ -21,6 +21,10 @@
  * greatest exponent at which it is exact, but at most 0); `to_integer` rounds to an integer by the source's direction.
  * `to_bits` and `from_bits` convert a binary format's values to and from their interchange encoding, a NaN to the
  * canonical quiet NaN.
+ *
+ * A format is named (`binary64`, a key of `FORMATS`), or, where IEEE 754 names none, given by its parameters, its radix,
+ * its precision and its emax (`[2n, 64, 16383]`, x87's extended format; `[2n, 8, 127]`, bfloat16): every operation but
+ * the encodings takes either (`parameters` reads both). Its values are text, as `binary128`'s are.
  */
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
@@ -30,8 +34,19 @@ const { ValueError } = Errors;
 /** Each format's base, precision in digits of that base, and greatest exponent. */
 export const FORMATS: ReadonlyMap<string, readonly [bigint, number, number]> = new Map<string, readonly [bigint, number, number]>([
   ["binary16", [2n, 11, 15]], ["binary32", [2n, 24, 127]], ["binary64", [2n, 53, 1023]], ["binary128", [2n, 113, 16383]],
-  ["decimal64", [10n, 16, 384]], ["decimal128", [10n, 34, 6144]],
+  ["decimal32", [10n, 7, 96]], ["decimal64", [10n, 16, 384]], ["decimal128", [10n, 34, 6144]],
 ]);
+
+/** A format: its name, a key of `FORMATS`, or its parameters, its base, precision and greatest exponent. */
+export type Format = string | readonly [bigint, number, number];
+
+/** A format's base, its precision in digits of that base, and its greatest exponent: a named format's `FORMATS` entry,
+ * or the parameters themselves. */
+export function parameters(format: Format): readonly [bigint, number, number] {
+  return typeof format === "string" ? FORMATS.get(format) as readonly [bigint, number, number] : format;
+}
+
+const NATIVE: readonly string[] = ["binary16", "binary32", "binary64"]; // the formats whose values are numbers
 
 /** The width in bits of each binary format's interchange encoding. */
 export const WIDTHS: ReadonlyMap<string, number> = new Map([["binary16", 16], ["binary32", 32], ["binary64", 64], ["binary128", 128]]);
@@ -51,8 +66,8 @@ export class Datum {
 export const NAN = new Datum("nan");
 
 /** The base, the precision, and the least and greatest exponents of a coefficient of `precision` digits. */
-function limits(format: string): [bigint, number, number, number] {
-  const [base, precision, emax] = FORMATS.get(format) as readonly [bigint, number, number];
+function limits(format: Format): [bigint, number, number, number] {
+  const [base, precision, emax] = parameters(format);
   return [base, precision, 2 - emax - precision, emax - precision + 1];
 }
 
@@ -80,14 +95,14 @@ function up(rounding: string, negative: boolean, coefficient: bigint, twiceRest:
   return rounding === (negative ? NEGATIVE : POSITIVE);
 }
 
-function overflow(format: string, rounding: string, negative: boolean): Datum {
+function overflow(format: Format, rounding: string, negative: boolean): Datum {
   const [base, precision, , qmax] = limits(format);
   if (rounding === EVEN || rounding === AWAY || rounding === (negative ? NEGATIVE : POSITIVE)) return new Datum("inf", negative);
   return new Datum(null, negative, base ** BigInt(precision) - 1n, qmax);
 }
 
 /** The datum, its exponent folded down into the format's by padding the coefficient, or an overflow. */
-function fold(format: string, rounding: string, negative: boolean, coefficient: bigint, exponent: number): Datum {
+function fold(format: Format, rounding: string, negative: boolean, coefficient: bigint, exponent: number): Datum {
   const [base, precision, , qmax] = limits(format);
   if (exponent > qmax) {
     const padded = coefficient * base ** BigInt(exponent - qmax);
@@ -99,7 +114,7 @@ function fold(format: string, rounding: string, negative: boolean, coefficient: 
 
 /** The datum of `format` that `rounding` gives for the exact value `(-1)**negative * num / den`. With an `ideal`
  * exponent (a decimal operation's preferred one), an exact result keeps it when the format allows. */
-export function round_to(format: string, rounding: string, negative: boolean, num: bigint, den: bigint = 1n,
+export function round_to(format: Format, rounding: string, negative: boolean, num: bigint, den: bigint = 1n,
   ideal: number | null = null): Datum {
   const [base, precision, qmin, qmax] = limits(format);
   if (num === 0n) return new Datum(null, negative, 0n, Math.min(Math.max(ideal ?? 0, qmin), qmax));
@@ -131,13 +146,13 @@ function negate(datum: Datum): Datum {
   return datum.special === "nan" ? datum : new Datum(datum.special, !datum.negative, datum.coefficient, datum.exponent);
 }
 
-function add(format: string, rounding: string, a: Datum, b: Datum): Datum {
+function add(format: Format, rounding: string, a: Datum, b: Datum): Datum {
   if (a.special === "nan" || b.special === "nan") return NAN;
   if (a.special === "inf" || b.special === "inf") {
     if (a.special === b.special && a.negative !== b.negative) return NAN;
     return a.special === "inf" ? a : b;
   }
-  const base = (FORMATS.get(format) as readonly [bigint, number, number])[0];
+  const base = parameters(format)[0];
   const exponent = Math.min(a.exponent, b.exponent);
   const total = [a, b].reduce((sum, x) => sum + (x.negative ? -1n : 1n) * x.coefficient * base ** BigInt(x.exponent - exponent), 0n);
   const ideal = base === 10n ? exponent : null;
@@ -148,14 +163,14 @@ function add(format: string, rounding: string, a: Datum, b: Datum): Datum {
   return round_to(format, rounding, total < 0n, ...scale(total < 0n ? -total : total, 1n, base, exponent), ideal);
 }
 
-function multiply(format: string, rounding: string, a: Datum, b: Datum): Datum {
+function multiply(format: Format, rounding: string, a: Datum, b: Datum): Datum {
   const negative = a.negative !== b.negative;
   if (a.special === "nan" || b.special === "nan") return NAN;
   if (a.special === "inf" || b.special === "inf") {
     const other = a.special === "inf" ? b : a;
     return other.special === null && other.coefficient === 0n ? NAN : new Datum("inf", negative);
   }
-  const base = (FORMATS.get(format) as readonly [bigint, number, number])[0];
+  const base = parameters(format)[0];
   const exponent = a.exponent + b.exponent;
   return round_to(format, rounding, negative, ...scale(a.coefficient * b.coefficient, 1n, base, exponent),
     base === 10n ? exponent : null);
@@ -194,7 +209,7 @@ function exactExponent(num: bigint, den: bigint): number | null {
 
 /** The quotient; a decimal one that is exact keeps the exponent nearest the ideal one (the dividend's less the
  * divisor's) at which it is exact, as the General Decimal Arithmetic specification's divide does. */
-function divide(format: string, rounding: string, a: Datum, b: Datum): Datum {
+function divide(format: Format, rounding: string, a: Datum, b: Datum): Datum {
   const negative = a.negative !== b.negative;
   const [base, , qmin] = limits(format);
   if (a.special === "nan" || b.special === "nan" || (a.special !== null && b.special !== null)) return NAN;
@@ -209,7 +224,7 @@ function divide(format: string, rounding: string, a: Datum, b: Datum): Datum {
 }
 
 /** The value of the arithmetic operation `name` (`add`, `sub`, `mul`, `div` or `neg`) on values of `format`. */
-export function operate(name: string, format: string, rounding: string, values: readonly unknown[]): unknown {
+export function operate(name: string, format: Format, rounding: string, values: readonly unknown[]): unknown {
   const data = values.map((value) => decode(format, value)) as Datum[];
   let result: Datum;
   if (name === "neg") result = negate(data[0] as Datum);
@@ -228,11 +243,11 @@ function magnitude(a: Datum, b: Datum, base: bigint): number {
 
 /** How two values of `format` compare: by IEEE 754's totalOrder (-0 before 0, and cohort members by exponent, the
  * smaller first among positives), except that NaNs equal each other and are incomparable with numbers. */
-export function compare(format: string, x: unknown, y: unknown): number | null {
+export function compare(format: Format, x: unknown, y: unknown): number | null {
   const [a, b] = [decode(format, x), decode(format, y)];
   if (a.special === "nan" || b.special === "nan") return a.special === b.special ? 0 : null;
   if (a.negative !== b.negative) return a.negative ? -1 : 1;
-  const base = (FORMATS.get(format) as readonly [bigint, number, number])[0];
+  const base = parameters(format)[0];
   let order = magnitude(a, b, base);
   if (order === 0 && a.special === null) order = a.exponent > b.exponent ? 1 : a.exponent < b.exponent ? -1 : 0;
   return a.negative ? -order : order;
@@ -284,7 +299,7 @@ function floatDatum(value: number): Datum {
 
 /** The datum a value of `format` holds: a float's exact value, a decimal text's coefficient and exponent, or the
  * `binary128` number nearest a text. Throws ValueError for text a decimal format cannot hold. */
-export function decode(format: string, value: unknown): Datum {
+export function decode(format: Format, value: unknown): Datum {
   const [base, precision, qmin, qmax] = limits(format);
   if (typeof value === "number") return floatDatum(value);
   const datum = parse(value as string);
@@ -298,8 +313,9 @@ export function decode(format: string, value: unknown): Datum {
   return round_to(format, EVEN, datum.negative, ...scale(datum.coefficient, 1n, 10n, datum.exponent));
 }
 
-/** A finite `binary128` datum's text: the fewest significant digits that round back to it. */
-function shortest(datum: Datum): string {
+/** A finite datum's text, of a binary format whose values are text (`binary128`, or one given by its parameters): the
+ * fewest significant digits that round back to it. */
+function shortest(format: Format, datum: Datum): string {
   if (datum.coefficient === 0n) return datum.negative ? "-0" : "0";
   const [num, den] = rational(datum, 2n);
   for (let count = 1; ; count++) {
@@ -310,7 +326,7 @@ function shortest(datum: Datum): string {
     const [n, d] = scale(num, den, 10n, -exponent);
     let coefficient = n / d;
     if (up(EVEN, false, coefficient, 2n * (n % d), d)) coefficient += 1n;
-    const back = round_to("binary128", EVEN, false, ...scale(coefficient, 1n, 10n, exponent));
+    const back = round_to(format, EVEN, false, ...scale(coefficient, 1n, 10n, exponent));
     const [bn, bd] = rational(back, 2n);
     if (back.special === null && bn * den === num * bd) {
       while (coefficient % 10n === 0n) {
@@ -329,19 +345,19 @@ function ldexp(coefficient: bigint, exponent: number): number {
 }
 
 /** The value of `format` that holds `datum`. */
-export function encode(format: string, datum: Datum): unknown {
-  if (format === "binary16" || format === "binary32" || format === "binary64") {
+export function encode(format: Format, datum: Datum): unknown {
+  if (typeof format === "string" && NATIVE.includes(format)) {
     if (datum.special === "nan") return NaN;
     if (datum.special === "inf") return datum.negative ? -Infinity : Infinity;
     const magnitudeValue = ldexp(datum.coefficient, datum.exponent);
     return datum.negative ? -magnitudeValue : magnitudeValue;
   }
-  if (format === "binary128" && datum.special === null) return shortest(datum);
+  if (parameters(format)[0] === 2n && datum.special === null) return shortest(format, datum);
   return text(datum);
 }
 
 /** Whether `value` is a value of `format`: a float that the format holds exactly, or canonical text. */
-export function contains(format: string, value: unknown): boolean {
+export function contains(format: Format, value: unknown): boolean {
   if (typeof value === "number") {
     const datum = decode(format, value);
     if (datum.special !== null || format === "binary64") return true;
@@ -367,12 +383,12 @@ function normalized(datum: Datum, base: bigint): Datum {
   return new Datum(datum.special, datum.negative, coefficient, exponent);
 }
 
-function baseOf(format: string): bigint {
-  return (FORMATS.get(format) as readonly [bigint, number, number])[0];
+function baseOf(format: Format): bigint {
+  return parameters(format)[0];
 }
 
 /** A value of `source` as a value of `target`, rounded by `rounding`. */
-export function convert(source: string, value: unknown, target: string, rounding: string): unknown {
+export function convert(source: Format, value: unknown, target: Format, rounding: string): unknown {
   const datum = decode(source, value);
   if (datum.special !== null) return encode(target, datum);
   const base = baseOf(source);
@@ -382,14 +398,14 @@ export function convert(source: string, value: unknown, target: string, rounding
 }
 
 /** An integer as a value of `target`, rounded by `rounding`. */
-export function from_integer(value: bigint, target: string, rounding: string): unknown {
+export function from_integer(value: bigint, target: Format, rounding: string): unknown {
   const ideal = baseOf(target) === 10n ? 0 : null;
   return encode(target, round_to(target, rounding, value < 0n, value < 0n ? -value : value, 1n, ideal));
 }
 
 /** A value of `source` rounded to an integer by `rounding`: a bigint, or an infinity as a number. Throws ValueError for
  * NaN. */
-export function to_integer(source: string, value: unknown, rounding: string): bigint | number {
+export function to_integer(source: Format, value: unknown, rounding: string): bigint | number {
   const datum = decode(source, value);
   if (datum.special === "nan") throw new ValueError("NaN has no integer value");
   if (datum.special !== null) return datum.negative ? -Infinity : Infinity;

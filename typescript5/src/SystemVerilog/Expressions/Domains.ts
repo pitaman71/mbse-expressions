@@ -8,7 +8,7 @@
  * `define` writes (`logic`, `reg`, `integer`, `time`, `bit`, `byte`, `shortint`, `int`, `longint`, `real`, `shortreal`),
  * and `named(store, name)` reads one as an `SvType`, labelled with its `Defines` name: its width and signedness from its
  * kind's properties (`Framework.Domains.kindOf` and `properties`), its states from its kind (`logic` 4, `bit` 2), and a
- * real's format from IEEE 754's kind, its width that format's interchange width. A type no stored domain names is refused
+ * real's format and width from IEEE 754's kind. A type no stored domain names is refused
  * by name. `vector(width, signed, states)` is a sized vector's type, which no domain names (`logic [7:0]`).
  *
  * A value of an integral type is a `Logic`: its type and two patterns of its width, `aval` and `bval`, which encode each
@@ -26,8 +26,6 @@ import { Errors, Proxies, Repr } from "@mbse/schemas/Framework";
 import type { Readers } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
-import * as Objects from "../../Framework/Objects.js";
-import * as Ieee754 from "../../Patterns/Expressions/Ieee754.js";
 
 const { ValueError } = Errors;
 const { repr } = Repr;
@@ -75,15 +73,13 @@ export function vector(width: number, signed = false, states = 4): SvType {
 /** The type SystemVerilog defines in `store` by `name`: the domain its dialect's singleton owns by that name, read as
  * an `SvType`; throws ValueError where it defines none (its `define` has not run, or no type has the name). */
 export function named(store: any, name: string): SvType {
-  const entries = Objects.entries(store.Instances.Expressions.SystemVerilog.Expressions, "domains");
-  const entry = entries.find((e) => e.values.get("name") === name);
-  if (entry === undefined) throw new ValueError(`${repr(name)} is not a type SystemVerilog defines`);
-  const domain = entry.targets.get("domain") as Readers.OfObject;
+  const domain = D.domains(store.Instances.Expressions.SystemVerilog.Expressions).get(name);
+  if (domain === undefined) throw new ValueError(`${repr(name)} is not a type SystemVerilog defines`);
   const [, kind] = D.kindOf(domain);
   const properties = D.properties(domain);
   if (kind === "ieee754") { // IEEE 754's: a real, of its format
     const format = properties.get("format") as string;
-    return new SvType("real", Ieee754.WIDTHS.get(format) as number, true, 2, format, name, domain);
+    return new SvType("real", Number(properties.get("width")), true, 2, format, name, domain);
   }
   return new SvType("integral", Number(properties.get("width")), properties.get("signed") as boolean,
     kind === "logic" ? 4 : 2, null, name, domain);

@@ -365,7 +365,7 @@ export function define(txn: any): any {
       (_: any) => _.int.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.integer(
         (d: any) => d.signed(true).overflow("raise").ordered(true)))))).schema([Python3.int]), // unbounded
       (_: any) => _.float.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
-        (d: any) => d.format("binary64").rounding("roundTiesToEven").radix(2n).precision(53n).emax(1023n).ordered(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n).radix(2n).precision(53n).emax(1023n).ordered(
           true)))))).schema([Python3.float]),
       (_: any) => _.str.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.python3((v: any) => v.str(
         (d: any) => d.ordered(true)))))).schema([Python3.str]),

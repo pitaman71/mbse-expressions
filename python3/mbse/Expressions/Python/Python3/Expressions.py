@@ -352,7 +352,7 @@ def define(txn: Any) -> Any:
             lambda _: _.int.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.integer(
                 lambda d: d.signed(True).overflow("raise").ordered(True)))))).schema([Python3.int]),  # unbounded
             lambda _: _.float.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
-                lambda d: d.format("binary64").rounding("roundTiesToEven").radix(2).precision(53).emax(1023).ordered(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").width(64).radix(2).precision(53).emax(1023).ordered(
                     True)))))).schema([Python3.float]),
             lambda _: _.str.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.python3(lambda v: v.str(
                 lambda d: d.ordered(True)))))).schema([Python3.str]),

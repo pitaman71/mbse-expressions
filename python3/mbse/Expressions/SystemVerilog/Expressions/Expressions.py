@@ -225,10 +225,10 @@ def define(txn: Any) -> Any:
                     True)))))).schema([SV.longint]),
             # IEEE 754's, as its own binary64 and binary32 are
             lambda _: _.real.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
-                lambda d: d.format("binary64").rounding("roundTiesToEven").radix(2).precision(53).emax(1023).ordered(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").width(64).radix(2).precision(53).emax(1023).ordered(
                     True)))))).schema([SV.real]),
             lambda _: _.shortreal.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
-                lambda d: d.format("binary32").rounding("roundTiesToEven").radix(2).precision(24).emax(127).ordered(
+                lambda d: d.format("binary32").rounding("roundTiesToEven").width(32).radix(2).precision(24).emax(127).ordered(
                     True)))))).schema([SV.shortreal]),
         ])]))])
 

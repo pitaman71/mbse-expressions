@@ -18,6 +18,10 @@ exponent of an exact decimal result (the source's from a decimal, 0 from an inte
 greatest exponent at which it is exact, but at most 0); `to_integer` rounds to an integer by the source's direction.
 `to_bits` and `from_bits` convert a binary format's values to and from their interchange encoding, a NaN to the
 canonical quiet NaN.
+
+A format is named (`binary64`, a key of `FORMATS`), or, where IEEE 754 names none, given by its parameters, a tuple of
+its radix, its precision and its emax (`(2, 64, 16383)`, x87's extended format; `(2, 8, 127)`, bfloat16): every
+operation but the encodings takes either (`parameters` reads both). Its values are text, as `binary128`'s are.
 """
 
 from __future__ import annotations
@@ -26,14 +30,17 @@ import math
 import re
 from dataclasses import dataclass, replace
 
-__all__ = ["FORMATS", "WIDTHS", "Datum", "NAN", "decode", "encode", "contains", "round_to", "operate", "compare", "text",
+__all__ = ["FORMATS", "WIDTHS", "Format", "parameters", "Datum", "NAN", "decode", "encode", "contains", "round_to", "operate", "compare", "text",
            "convert", "from_integer", "to_integer", "to_bits", "from_bits"]
 
 FORMATS: dict[str, tuple[int, int, int]] = {
     "binary16": (2, 11, 15), "binary32": (2, 24, 127), "binary64": (2, 53, 1023), "binary128": (2, 113, 16383),
-    "decimal64": (10, 16, 384), "decimal128": (10, 34, 6144),
+    "decimal32": (10, 7, 96), "decimal64": (10, 16, 384), "decimal128": (10, 34, 6144),
 }
 """Each format's base, precision in digits of that base, and greatest exponent."""
+Format = str | tuple[int, int, int]
+"""A format: its name, a key of `FORMATS`, or its parameters, its base, precision and greatest exponent."""
+_NATIVE = ("binary16", "binary32", "binary64")  # the formats whose values are floats
 WIDTHS: dict[str, int] = {"binary16": 16, "binary32": 32, "binary64": 64, "binary128": 128}
 """The width in bits of each binary format's interchange encoding."""
 
@@ -54,9 +61,15 @@ class Datum:
 NAN = Datum("nan")
 
 
-def _limits(format: str) -> tuple[int, int, int, int]:
+def parameters(format: Format) -> tuple[int, int, int]:
+    """A format's base, its precision in digits of that base, and its greatest exponent: a named format's `FORMATS`
+    entry, or the parameters themselves."""
+    return FORMATS[format] if isinstance(format, str) else format
+
+
+def _limits(format: Format) -> tuple[int, int, int, int]:
     """The base, the precision, and the least and greatest exponents of a coefficient of `precision` digits."""
-    base, precision, emax = FORMATS[format]
+    base, precision, emax = parameters(format)
     return base, precision, 2 - emax - precision, emax - precision + 1
 
 
@@ -84,14 +97,14 @@ def _up(rounding: str, negative: bool, coefficient: int, twice_rest: int, den: i
     return rounding == (NEGATIVE if negative else POSITIVE)
 
 
-def _overflow(format: str, rounding: str, negative: bool) -> Datum:
+def _overflow(format: Format, rounding: str, negative: bool) -> Datum:
     base, precision, _, qmax = _limits(format)
     if rounding in (EVEN, AWAY) or rounding == (NEGATIVE if negative else POSITIVE):
         return Datum("inf", negative)
     return Datum(None, negative, base ** precision - 1, qmax)
 
 
-def _fold(format: str, rounding: str, negative: bool, coefficient: int, exponent: int) -> Datum:
+def _fold(format: Format, rounding: str, negative: bool, coefficient: int, exponent: int) -> Datum:
     """The datum, its exponent folded down into the format's by padding the coefficient, or an overflow."""
     base, precision, _, qmax = _limits(format)
     if exponent > qmax:
@@ -102,7 +115,7 @@ def _fold(format: str, rounding: str, negative: bool, coefficient: int, exponent
     return Datum(None, negative, coefficient, exponent)
 
 
-def round_to(format: str, rounding: str, negative: bool, num: int, den: int = 1, ideal: int | None = None) -> Datum:
+def round_to(format: Format, rounding: str, negative: bool, num: int, den: int = 1, ideal: int | None = None) -> Datum:
     """The datum of `format` that `rounding` gives for the exact value `(-1)**negative * num / den`. With an `ideal`
     exponent (a decimal operation's preferred one), an exact result keeps it when the format allows."""
     base, precision, qmin, qmax = _limits(format)
@@ -137,14 +150,14 @@ def _negate(datum: Datum) -> Datum:
     return datum if datum.special == "nan" else replace(datum, negative=not datum.negative)
 
 
-def _add(format: str, rounding: str, a: Datum, b: Datum) -> Datum:
+def _add(format: Format, rounding: str, a: Datum, b: Datum) -> Datum:
     if a.special == "nan" or b.special == "nan":
         return NAN
     if a.special == "inf" or b.special == "inf":
         if a.special == b.special and a.negative != b.negative:
             return NAN
         return a if a.special == "inf" else b
-    base = FORMATS[format][0]
+    base = parameters(format)[0]
     exponent = min(a.exponent, b.exponent)
     total = sum((-1 if x.negative else 1) * x.coefficient * base ** (x.exponent - exponent) for x in (a, b))
     ideal = exponent if base == 10 else None
@@ -154,14 +167,14 @@ def _add(format: str, rounding: str, a: Datum, b: Datum) -> Datum:
     return round_to(format, rounding, total < 0, *_scale(abs(total), 1, base, exponent), ideal)
 
 
-def _multiply(format: str, rounding: str, a: Datum, b: Datum) -> Datum:
+def _multiply(format: Format, rounding: str, a: Datum, b: Datum) -> Datum:
     negative = a.negative != b.negative
     if a.special == "nan" or b.special == "nan":
         return NAN
     if a.special == "inf" or b.special == "inf":
         other = b if a.special == "inf" else a
         return NAN if other.special is None and other.coefficient == 0 else Datum("inf", negative)
-    base = FORMATS[format][0]
+    base = parameters(format)[0]
     exponent = a.exponent + b.exponent
     return round_to(format, rounding, negative, *_scale(a.coefficient * b.coefficient, 1, base, exponent),
                     exponent if base == 10 else None)
@@ -194,7 +207,7 @@ def _exact_exponent(num: int, den: int) -> int | None:
     return _multiplicity(coefficient, 10) - shift
 
 
-def _divide(format: str, rounding: str, a: Datum, b: Datum) -> Datum:
+def _divide(format: Format, rounding: str, a: Datum, b: Datum) -> Datum:
     """The quotient; a decimal one that is exact keeps the exponent nearest the ideal one (the dividend's less the
     divisor's) at which it is exact, as the General Decimal Arithmetic specification's divide does."""
     negative = a.negative != b.negative
@@ -215,7 +228,7 @@ def _divide(format: str, rounding: str, a: Datum, b: Datum) -> Datum:
     return round_to(format, rounding, negative, num, den, None if exact is None else min(ideal, exact))
 
 
-def operate(name: str, format: str, rounding: str, values: list[object]) -> object:
+def operate(name: str, format: Format, rounding: str, values: list[object]) -> object:
     """The value of the arithmetic operation `name` (`add`, `sub`, `mul`, `div` or `neg`) on values of `format`."""
     data = [decode(format, value) for value in values]
     if name == "neg":
@@ -237,7 +250,7 @@ def _magnitude(a: Datum, b: Datum, base: int) -> int:
     return (an * bd > bn * ad) - (an * bd < bn * ad)
 
 
-def compare(format: str, x: object, y: object) -> int | None:
+def compare(format: Format, x: object, y: object) -> int | None:
     """How two values of `format` compare: by IEEE 754's totalOrder (-0 before 0, and cohort members by exponent, the
     smaller first among positives), except that NaNs equal each other and are incomparable with numbers."""
     a, b = decode(format, x), decode(format, y)
@@ -245,7 +258,7 @@ def compare(format: str, x: object, y: object) -> int | None:
         return 0 if a.special == b.special else None
     if a.negative != b.negative:
         return -1 if a.negative else 1
-    base = FORMATS[format][0]
+    base = parameters(format)[0]
     order = _magnitude(a, b, base)
     if order == 0 and a.special is None:
         order = (a.exponent > b.exponent) - (a.exponent < b.exponent)
@@ -288,7 +301,7 @@ def _parse(value: str) -> Datum:
     return Datum(None, bool(sign), int(whole + fraction), int(exponent or 0) - len(fraction))
 
 
-def decode(format: str, value: object) -> Datum:
+def decode(format: Format, value: object) -> Datum:
     """The datum a value of `format` holds: a float's exact value, a decimal text's coefficient and exponent, or the
     `binary128` number nearest a text. Raises ValueError for text a decimal format cannot hold."""
     base, precision, qmin, qmax = _limits(format)
@@ -309,8 +322,9 @@ def decode(format: str, value: object) -> Datum:
     return round_to(format, EVEN, datum.negative, *_scale(datum.coefficient, 1, 10, datum.exponent))
 
 
-def _shortest(datum: Datum) -> str:
-    """A finite `binary128` datum's text: the fewest significant digits that round back to it."""
+def _shortest(format: Format, datum: Datum) -> str:
+    """A finite datum's text, of a binary format whose values are text (`binary128`, or one given by its parameters):
+    the fewest significant digits that round back to it."""
     if datum.coefficient == 0:
         return "-0" if datum.negative else "0"
     num, den = _rational(datum, 2)
@@ -325,7 +339,7 @@ def _shortest(datum: Datum) -> str:
         coefficient, rest = divmod(n, d)
         if _up(EVEN, False, coefficient, 2 * rest, d):
             coefficient += 1
-        back = round_to("binary128", EVEN, False, *_scale(coefficient, 1, 10, exponent))
+        back = round_to(format, EVEN, False, *_scale(coefficient, 1, 10, exponent))
         bn, bd = _rational(back, 2)
         if back.special is None and bn * den == num * bd:
             while coefficient % 10 == 0:
@@ -334,21 +348,21 @@ def _shortest(datum: Datum) -> str:
         digits += 1
 
 
-def encode(format: str, datum: Datum) -> object:
+def encode(format: Format, datum: Datum) -> object:
     """The value of `format` that holds `datum`."""
-    if format in ("binary16", "binary32", "binary64"):
+    if format in _NATIVE:
         if datum.special == "nan":
             return math.nan
         if datum.special == "inf":
             return -math.inf if datum.negative else math.inf
         magnitude = math.ldexp(datum.coefficient, datum.exponent)
         return -magnitude if datum.negative else magnitude
-    if format == "binary128" and datum.special is None:
-        return _shortest(datum)
+    if parameters(format)[0] == 2 and datum.special is None:
+        return _shortest(format, datum)
     return text(datum)
 
 
-def contains(format: str, value: object) -> bool:
+def contains(format: Format, value: object) -> bool:
     """Whether `value` is a value of `format`: a float that the format holds exactly, or canonical text."""
     if isinstance(value, float):
         datum = decode(format, value)
@@ -373,25 +387,25 @@ def _normalized(datum: Datum, base: int) -> Datum:
     return replace(datum, coefficient=coefficient, exponent=exponent)
 
 
-def convert(source: str, value: object, target: str, rounding: str) -> object:
+def convert(source: Format, value: object, target: Format, rounding: str) -> object:
     """A value of `source` as a value of `target`, rounded by `rounding`."""
     datum = decode(source, value)
     if datum.special:
         return encode(target, datum)
-    base = FORMATS[source][0]
+    base = parameters(source)[0]
     ideal = None
-    if FORMATS[target][0] == 10:
+    if parameters(target)[0] == 10:
         ideal = datum.exponent if base == 10 else min(0, _normalized(datum, 2).exponent)
     return encode(target, round_to(target, rounding, datum.negative, *_rational(datum, base), ideal))
 
 
-def from_integer(value: int, target: str, rounding: str) -> object:
+def from_integer(value: int, target: Format, rounding: str) -> object:
     """An integer as a value of `target`, rounded by `rounding`."""
-    ideal = 0 if FORMATS[target][0] == 10 else None
+    ideal = 0 if parameters(target)[0] == 10 else None
     return encode(target, round_to(target, rounding, value < 0, abs(value), 1, ideal))
 
 
-def to_integer(source: str, value: object, rounding: str) -> int | float:
+def to_integer(source: Format, value: object, rounding: str) -> int | float:
     """A value of `source` rounded to an integer by `rounding`: an int, or an infinity as a float. Raises ValueError for
     NaN."""
     datum = decode(source, value)
@@ -399,7 +413,7 @@ def to_integer(source: str, value: object, rounding: str) -> int | float:
         raise ValueError("NaN has no integer value")
     if datum.special:
         return -math.inf if datum.negative else math.inf
-    num, den = _rational(datum, FORMATS[source][0])
+    num, den = _rational(datum, parameters(source)[0])
     whole, rest = divmod(num, den)
     whole += _up(rounding, datum.negative, whole, 2 * rest, den)
     return -whole if datum.negative else whole

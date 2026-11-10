@@ -7,7 +7,7 @@ a named type is a stored domain of SystemVerilog's dialect, `Expressions.SystemV
 `define` writes (`logic`, `reg`, `integer`, `time`, `bit`, `byte`, `shortint`, `int`, `longint`, `real`, `shortreal`),
 and `named(store, name)` reads one as an `SvType`, labelled with its `Defines` name: its width and signedness from its
 kind's properties (`Framework.Domains.kind_of` and `properties`), its states from its kind (`logic` 4, `bit` 2), and a
-real's format from IEEE 754's kind, its width that format's interchange width. A type no stored domain names is refused
+real's format and width from IEEE 754's kind. A type no stored domain names is refused
 by name. `vector(width, signed, states)` is a sized vector's type, which no domain names (`logic [7:0]`).
 
 A value of an integral type is a `Logic`: its type and two patterns of its width, `aval` and `bval`, which encode each
@@ -27,8 +27,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from mbse.Expressions.Patterns.Expressions import Ieee754
-from mbse.Expressions.Framework import Domains as D, Objects
+from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 from mbse.Schemas.Framework import Proxies
 
@@ -78,15 +77,14 @@ def vector(width: int, signed: bool = False, states: int = 4) -> SvType:
 def named(store: Any, name: str) -> SvType:
     """The type SystemVerilog defines in `store` by `name`: the domain its dialect's singleton owns by that name, read as
     an `SvType`; raises ValueError where it defines none (its `define` has not run, or no type has the name)."""
-    entries = Objects.entries(store.Instances.Expressions.SystemVerilog.Expressions, "domains")
-    domain = next((entry.targets["domain"] for entry in entries if entry.values["name"] == name), None)
+    domain = D.domains(store.Instances.Expressions.SystemVerilog.Expressions).get(name)
     if domain is None:
         raise ValueError(f"{name!r} is not a type SystemVerilog defines")
     _, kind, _ = D.kind_of(domain)
     properties = D.properties(domain)
     if kind == "ieee754":  # IEEE 754's: a real, of its format
         format = properties["format"]
-        return SvType("real", Ieee754.WIDTHS[format], True, 2, format, name, domain)
+        return SvType("real", properties["width"], True, 2, format, name, domain)
     return SvType("integral", properties["width"], properties["signed"], 4 if kind == "logic" else 2, None, name, domain)
 
 

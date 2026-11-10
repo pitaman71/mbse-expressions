@@ -25,8 +25,11 @@ text has; [CAP-233: literals of any value](mbse:mbse-basis/docs/capabilities/CAP
 container by index of `Expressions.Framework.Pair`s, each a `key` and a `value` term); the invalid-syntax kinds every
 dialect's union holds, `error` (`text`, the source it spans as written; `terms`, the terms recovered within it) and
 `missing` (`kind`, the kind the parser expected), modeled for parsers that keep invalid syntax and written by none yet;
-`Expression`; and `HasRoot(schema, expression)`, the extension adjacency `expression` it gives `Schemas.OfExpression`. A
-term carries no domain: whatever owns the root term gives its schema.
+`Expression`; `HasRoot(schema, expression)`, the extension adjacency `expression` it gives `Schemas.OfExpression`; and
+`HasAbi(expression, abi)`, unique by the expression, through `Expression`'s adjacency `abi`: the dialect of the ABI an
+expression's terms are read under, which C's and C++'s read the types their standards leave to the implementation from
+([Domains as data](../../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, P). A term carries
+no domain: whatever owns the root term gives its schema.
 
 Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
 (`Expressions.Patterns.Expressions`), of its own reference object schema (`Expressions.Patterns.Expressions.Dialect`), a branch of the kind
@@ -58,6 +61,7 @@ and its terms in its arguments, and `make` writes it back. What the framework ne
 kind is read, is a `Kind`: its role, and which properties name what it binds and its operator.
 
 - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
+  `holder_of(term)`: the reference object holding it, its `Expression`, found by its owners.
 - `kind_of(term)`: its kind's branch, `(tag, record)`; `dialect_of(term)`: the name of its dialect's `Term`;
   `dialect_name(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`).
   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers nested,
@@ -103,7 +107,7 @@ from . import Domains, Objects
 __all__ = [
     "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
     "INVALID", "INVALID_KINDS", "invalid_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
-    "spec", "term", "is_term", "is_expression", "kind_of", "dialect_of", "dialect_name", "form", "node",
+    "spec", "term", "is_term", "is_expression", "holder_of", "kind_of", "dialect_of", "dialect_name", "form", "node",
     "name_of", "reference_name", "operator_of", "walk", "fold", "same",
 ]
 
@@ -122,7 +126,7 @@ def install(txn: Any) -> Any:
         .symbols({"Term": S.OfUnion, "Literal": S.OfObject, "Call": S.OfObject, "Variable": S.OfObject,
                   "Let": S.OfObject, "List": S.OfObject, "Mapping": S.OfObject, "Pair": S.OfObject,
                   "Error": S.OfObject, "Missing": S.OfObject,
-                  "Expression": S.OfObject, "HasRoot": S.OfRelation, "OfExpression": S.OfObject,
+                  "Expression": S.OfObject, "HasRoot": S.OfRelation, "HasAbi": S.OfRelation, "OfExpression": S.OfObject,
                   "Domain": S.OfObject, "DomainKind": S.OfUnion, "HasDomain": S.OfRelation, "OfAny": S.OfObject,
                   "Dialect": S.OfUnion, "Defines": S.OfRelation, "Operates": S.OfRelation})  # mbse-schemas' own, by name
         .spec([
@@ -156,9 +160,15 @@ def install(txn: Any) -> Any:
             lambda _: _.Missing.name("Expressions.Framework.Missing").properties({
                 "kind": S.OfStr,  # the kind the parser expected, as it names it
             }),
-            lambda _: _.Expression.name("Expressions.Framework.Expression").ref(True).properties({"root": _.Term}),
+            lambda _: _.Expression.name("Expressions.Framework.Expression").ref(True).properties({"root": _.Term}).adjacencies({
+                "abi": lambda a: a.relation([_.HasAbi]).me("expression")}),  # the ABI its terms are read under
             lambda _: _.HasRoot.name("Expressions.Framework.HasRoot").links([
                 lambda t: t.name("schema"), lambda t: t.name("expression")]).uniques("expression"),
+            # The dialect of the ABI an expression's terms are read under, one at most: C's and C++'s read the types
+            # their standards leave to the implementation from it (Domains as data, Decided, P).
+            lambda _: _.HasAbi.name("Expressions.Framework.HasAbi").links([
+                lambda t: t.name("expression").schema([_.Expression]), lambda t: t.name("abi").schema([_.Dialect])
+            ]).uniques("expression"),
             lambda _: _.OfExpression.name("Schemas.OfExpression").adjacencies([  # by extension: no member on it
                 lambda t: t.name("expression").relation([_.HasRoot]).me("schema")]),
             # A dialect: a singleton, its identity its global name (`Expressions.Patterns.Expressions`), the root of its domains'
@@ -304,6 +314,16 @@ def is_expression(schema: Any) -> bool:
             return True
         schema = schema.refines
     return False
+
+
+def holder_of(value: Any) -> Any:
+    """The reference object that holds a term, or anything a term holds (its record, a helper): the owner of its owner,
+    in turn, up to the `Expression` whose `root` holds the tree. A term held by no store, a lone one, is refused as
+    mbse-schemas refuses it (`Proxies.store_of`): TypeError, "the value does not belong to a store"."""
+    Proxies.store_of(value)
+    while (owner := Proxies.owner_of(value)) is not None:
+        value = owner
+    return value
 
 
 def is_term(value: Any) -> bool:

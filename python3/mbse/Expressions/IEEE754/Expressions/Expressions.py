@@ -6,8 +6,9 @@ Its kind of domain, the branch of its union `Expressions.IEEE754.Expressions.Dom
 framework's `Expressions.Framework.DomainKind` as the branch `ieee754`:
 
 - `ieee754` (`OfIeee754`): an interchange `format`, with a `rounding`-direction attribute; inferred (populated by hand
-  until constraint resolution computes them) the format's parameters, its `radix`, `precision` (in digits) and `emax`,
-  and `ordered`.
+  until constraint resolution computes them) the format's `width` in bits and its parameters, its `radix`, `precision`
+  (in digits) and `emax`, and `ordered`. A format IEEE 754 does not name (x87's extended format, bfloat16) is a domain
+  of the kind with no `format`, given by its `width` and parameters, which `Ieee754` computes in.
 
 Its dialect is the singleton `Expressions.IEEE754.Expressions`, of its schema `Expressions.IEEE754.Expressions.Dialect`,
 the branch `ieee754` of `Expressions.Framework.Dialect`. `define` writes its domains, owned by name, each related to its
@@ -46,7 +47,7 @@ def install(txn: Any) -> Any:
             # --- Its kind of domain: the standard's parameters, then what follows from them ---
             lambda _: _.OfIeee754.name("Expressions.IEEE754.Expressions.OfIeee754").properties({
                 "format": S.OfStr, "rounding": S.OfStr,
-                "radix": S.OfInt, "precision": S.OfInt, "emax": S.OfInt, "ordered": S.OfBool}),  # inferred
+                "width": S.OfInt, "radix": S.OfInt, "precision": S.OfInt, "emax": S.OfInt, "ordered": S.OfBool}),  # inferred
             lambda _: _.DomainKind.name("Expressions.IEEE754.Expressions.DomainKind").branches([
                 lambda t: t.name("ieee754").schema([_.OfIeee754])]),
             lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
@@ -72,9 +73,9 @@ def define(txn: Any) -> Any:
                 "binary64": lambda e: e.domain(_.binary64), "binary32": lambda e: e.domain(_.binary32),
             }),
             lambda _: _.binary64.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
-                lambda d: d.format("binary64").rounding("roundTiesToEven").radix(2).precision(53).emax(1023).ordered(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").width(64).radix(2).precision(53).emax(1023).ordered(
                     True)))))).schema([IEEE754.binary64]),
             lambda _: _.binary32.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
-                lambda d: d.format("binary32").rounding("roundTiesToEven").radix(2).precision(24).emax(127).ordered(
+                lambda d: d.format("binary32").rounding("roundTiesToEven").width(32).radix(2).precision(24).emax(127).ordered(
                     True)))))).schema([IEEE754.binary32]),
         ])]))])

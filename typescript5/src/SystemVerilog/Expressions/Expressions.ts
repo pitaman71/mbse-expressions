@@ -222,10 +222,10 @@ export function define(txn: any): any {
         (d: any) => d.width(64n).signed(true).least(-9223372036854775808n).greatest(9223372036854775807n).ordered(true)))))).schema([SV.longint]),
       // IEEE 754's, as its own binary64 and binary32 are
       (_: any) => _.real.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
-        (d: any) => d.format("binary64").rounding("roundTiesToEven").radix(2n).precision(53n).emax(1023n).ordered(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n).radix(2n).precision(53n).emax(1023n).ordered(
           true)))))).schema([SV.real]),
       (_: any) => _.shortreal.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
-        (d: any) => d.format("binary32").rounding("roundTiesToEven").radix(2n).precision(24n).emax(127n).ordered(
+        (d: any) => d.format("binary32").rounding("roundTiesToEven").width(32n).radix(2n).precision(24n).emax(127n).ordered(
           true)))))).schema([SV.shortreal]),
     ])]))]);
 }

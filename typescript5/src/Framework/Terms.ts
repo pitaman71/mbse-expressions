@@ -23,8 +23,11 @@
  * container by index of `Expressions.Framework.Pair`s, each a `key` and a `value` term); the invalid-syntax kinds every
  * dialect's union holds, `error` (`text`, the source it spans as written; `terms`, the terms recovered within it) and
  * `missing` (`kind`, the kind the parser expected), modeled for parsers that keep invalid syntax and written by none yet;
- * `Expression`; and `HasRoot(schema, expression)`, the extension adjacency `expression` it gives `Schemas.OfExpression`. A
- * term carries no domain: whatever owns the root term gives its schema.
+ * `Expression`; `HasRoot(schema, expression)`, the extension adjacency `expression` it gives `Schemas.OfExpression`; and
+ * `HasAbi(expression, abi)`, unique by the expression, through `Expression`'s adjacency `abi`: the dialect of the ABI an
+ * expression's terms are read under, which C's and C++'s read the types their standards leave to the implementation from
+ * ([Domains as data](../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, P). A term carries
+ * no domain: whatever owns the root term gives its schema.
  *
  * Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
  * (`Expressions.Patterns.Expressions`), of its own reference object schema (`Expressions.Patterns.Expressions.Dialect`), a branch of the kind
@@ -57,6 +60,7 @@
  * kind is read, is a `Kind`: its role, and which properties name what it binds and its operator.
  *
  * - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
+ * - `holderOf(term)`: the reference object holding it, its `Expression`, found by its owners.
  * - `kindOf(term)`: its kind's branch, `(tag, record)`; `dialectOf(term)`: the name of its dialect's `Term`;
  *   `dialectName(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`).
  *   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers
@@ -117,7 +121,7 @@ export function install(txn: any): any {
     .symbols({
       Term: S.OfUnion, Literal: S.OfObject, Call: S.OfObject, Variable: S.OfObject, Let: S.OfObject,
       List: S.OfObject, Mapping: S.OfObject, Pair: S.OfObject, Error: S.OfObject, Missing: S.OfObject,
-      Expression: S.OfObject, HasRoot: S.OfRelation,
+      Expression: S.OfObject, HasRoot: S.OfRelation, HasAbi: S.OfRelation,
       OfExpression: S.OfObject, Domain: S.OfObject, DomainKind: S.OfUnion, HasDomain: S.OfRelation, OfAny: S.OfObject,
       Dialect: S.OfUnion, Defines: S.OfRelation, Operates: S.OfRelation, // mbse-schemas' own, by name
     })
@@ -152,9 +156,15 @@ export function install(txn: any): any {
       (_: any) => _.Missing.name("Expressions.Framework.Missing").properties({
         kind: S.OfStr, // the kind the parser expected, as it names it
       }),
-      (_: any) => _.Expression.name("Expressions.Framework.Expression").ref(true).properties({ root: _.Term }),
+      (_: any) => _.Expression.name("Expressions.Framework.Expression").ref(true).properties({ root: _.Term }).adjacencies({
+        abi: (a: any) => a.relation([_.HasAbi]).me("expression")}), // the ABI its terms are read under
       (_: any) => _.HasRoot.name("Expressions.Framework.HasRoot").links([
         (t: any) => t.name("schema"), (t: any) => t.name("expression")]).uniques("expression"),
+      // The dialect of the ABI an expression's terms are read under, one at most: C's and C++'s read the types their
+      // standards leave to the implementation from it (Domains as data, Decided, P).
+      (_: any) => _.HasAbi.name("Expressions.Framework.HasAbi").links([
+        (t: any) => t.name("expression").schema([_.Expression]), (t: any) => t.name("abi").schema([_.Dialect]),
+      ]).uniques("expression"),
       (_: any) => _.OfExpression.name("Schemas.OfExpression").adjacencies([ // by extension: no member on it
         (t: any) => t.name("expression").relation([_.HasRoot]).me("schema")]),
       // A dialect: a singleton, its identity its global name (`Expressions.Patterns.Expressions`), the root of its domains' paths.
@@ -320,6 +330,15 @@ export function isExpression(schema: unknown): boolean {
     current = (current as any).refines;
   }
   return false;
+}
+
+/** The reference object that holds a term, or anything a term holds (its record, a helper): the owner of its owner, in
+ * turn, up to the `Expression` whose `root` holds the tree. A term held by no store, a lone one, is refused as
+ * mbse-schemas refuses it (`Proxies.store_of`): TypeError, "the value does not belong to a store". */
+export function holderOf(value: unknown): unknown {
+  Proxies.store_of(value);
+  for (let owner = Proxies.owner_of(value); owner !== null; owner = Proxies.owner_of(value)) value = owner;
+  return value;
 }
 
 /** Whether `value` is a term value: the reader of a value of `Expressions.Framework.Term` or of a dialect's `Term`. */

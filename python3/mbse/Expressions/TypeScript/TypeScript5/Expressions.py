@@ -600,7 +600,7 @@ def define(txn: Any) -> Any:
             lambda _: _.boolean.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.boolean(
                 lambda d: d.ordered(False)))))).schema([TypeScript5.boolean]),
             lambda _: _.number.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
-                lambda d: d.format("binary64").rounding("roundTiesToEven").radix(2).precision(53).emax(1023).ordered(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").width(64).radix(2).precision(53).emax(1023).ordered(
                     True)))))).schema([TypeScript5.number]),
             lambda _: _.bigint.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.integer(
                 lambda d: d.signed(True).overflow("raise").ordered(True)))))).schema([TypeScript5.bigint]),  # unbounded

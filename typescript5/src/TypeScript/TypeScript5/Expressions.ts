@@ -622,7 +622,7 @@ export function define(txn: any): any {
       (_: any) => _.boolean.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.boolean(
         (d: any) => d.ordered(false)))))).schema([TypeScript5.boolean]),
       (_: any) => _.number.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
-        (d: any) => d.format("binary64").rounding("roundTiesToEven").radix(2n).precision(53n).emax(1023n).ordered(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n).radix(2n).precision(53n).emax(1023n).ordered(
           true)))))).schema([TypeScript5.number]),
       (_: any) => _.bigint.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.integer(
         (d: any) => d.signed(true).overflow("raise").ordered(true)))))).schema([TypeScript5.bigint]), // unbounded

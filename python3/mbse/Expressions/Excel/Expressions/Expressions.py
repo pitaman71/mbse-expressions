@@ -138,7 +138,7 @@ def define(txn: Any) -> Any:
                 "text": lambda e: e.domain(_.text), "error": lambda e: e.domain(_.error),
             }),
             lambda _: _.number.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
-                lambda d: d.format("binary64").rounding("roundTiesToEven").radix(2).precision(53).emax(1023).ordered(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").width(64).radix(2).precision(53).emax(1023).ordered(
                     True)))))).schema([Excel.number]),
             lambda _: _.logical.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.boolean(
                 lambda d: d.ordered(False)))))).schema([Excel.logical]),
