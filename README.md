@@ -173,14 +173,9 @@ Python3, TypeScript5, MATLAB, Excel, LaTeX, C, Cpp and SystemVerilog dialects, e
 framework's union of the dialects' `Term`s, and translators between them; terms as values in an mbse-schemas store, with the container
 constructors `list` and `mapping`, literals holding any value with their spelling, and the kinds of invalid syntax
 `error` and `missing`; dialects, their operations and their
-domains as data (each dialect a singleton that names its operations, each an expression schema, and may own domains
-by name, as the standard dialects do; the published standards that define kinds of domain, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode,
-dialects of their own since domains as data's stage 1, unreleased until 0.9.0; since its stage 2, Patterns' code
-domains gone, its validation reading the operations its dialect names in the store of the expression that holds a
-term, so that `Patterns.define` runs first and a lone Patterns call is refused; since its stage 3, C's, C++'s,
-SystemVerilog's, Python3's, TypeScript5's, MATLAB's and Excel's domains stored by their `define`s, the code type tables
-of C, C++ and SystemVerilog gone, and the ABI dialects `SystemV.AMD64` and `Arm.AAPCS64`, which a C or C++ expression
-names as its `abi`); writers; `validate()`, which refuses a
+domains as data (each dialect a singleton that names its operations, each an expression schema, owns its domains by
+name, and covers the editions of its standards; the published standards that define kinds of domain, ISO/IEC 11404,
+IEEE 754, IEEE 1164 and Unicode, dialects of their own); writers; `validate()`, which refuses a
 call to an operation the dialect does not define; evaluation with
 three-valued logic over values by the schemas they are written with, collections and quantifiers. Released in 0.8.0,
 on mbse-schemas 0.26.10: stages 1 to 5 of the complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md))
@@ -195,7 +190,15 @@ checked against typescript-estree's node types; it evaluates its literals alone,
 ([CAP-229: the C expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-229.md),
 [CAP-230: the C++ expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-230.md)), printed in both languages and checked
 against tree-sitter-c's and tree-sitter-cpp's node types; their evaluators keep what C evaluated, over its arithmetic
-types, and every dialect's `Type` and `Pattern` hold invalid syntax. Coming in 0.9.0: domains as data, every dialect's domains stored ([the domains proposal](docs/proposals/domains/README.md)); in 0.10.0: stage 6, `SystemVerilog` complete
+types, and every dialect's `Type` and `Pattern` hold invalid syntax. Released in 0.9.0, on mbse-schemas 0.26.10:
+domains as data ([CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md)): one form of a domain, the stored
+one, every dialect's domains but LaTeX's written by its `define`, only for the types its standard defines, of kinds the
+standards' own dialects hold or its own; Patterns' code domains and C's, C++'s and SystemVerilog's code type tables
+gone; a term that reads stored data read within the expression that holds it, so that a lone term is refused; C and C++
+read under the ABI their expression names, `SystemV.AMD64` or `Arm.AAPCS64`
+([CAP-267: C and C++ terms read under the ABI their holder names](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-267.md)); and standards as tagged data
+([CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md)). The package root exports `Framework` alone, and Patterns is
+`Expressions.Patterns.Expressions`. Coming in 0.10.0: stage 6, `SystemVerilog` complete
 over IEEE 1800-2023, Verilog its subset ([CAP-231: the SystemVerilog expression dialect, complete](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-231.md)),
 with its sublanguages as dialects, and the retrofit of the other dialects (type, pattern, regex and preprocessor
 dialects, binding kinds as variations of `let`); until then `SystemVerilog` is the subset it was. Not built yet: domain

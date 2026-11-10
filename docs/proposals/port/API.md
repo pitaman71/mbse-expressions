@@ -418,7 +418,7 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
     **C and C++ each define the kinds they share**: `Expressions.C.<Kind>` by C's install, its properties holding
     `Expressions.C.Term`, and `Expressions.Cpp.<Kind>` by Cpp's, holding `Expressions.Cpp.Term`; each install stands
     alone (superseded 2026-11-06 where a dialect uses another's kinds of domain: its install then depends on
-    theirs, [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, A). The code that reads and writes them is still shared: `C.Expressions.kinds(standards)`,
+    theirs, mbse-basis [CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#decided), A). The code that reads and writes them is still shared: `C.Expressions.kinds(standards)`,
     `C.Expressions.Writers(dialect, writer)` (C's and Cpp's writer functions), `C.Evaluators.interpreter(dialect)`,
     `C.Text.text(expression, dialect)`; Cpp's `Domains` is C's. Today C++ has kinds of exactly C's shapes.
 36. **Standards as data: `Terms.Kind.standards`**, the standards of its dialect's language that have the kind, as
@@ -1009,8 +1009,9 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
 ## Settled in domains as data's stage 1, for the user's review
 
-Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) decided (its Decided, A to J, the
-package root's exports and stage 1's review) and as its [stage 1's design](../domains/README.md#stage-1s-design) specifies; each choice below is where they were silent.
+Built in domains as data's stage 1 (#27) as the user decided, the decisions now recorded in mbse-basis [CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#decided),
+[CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md#decided), [CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md#decided) and [CAP-227: the Python3 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-227.md#decided), from [the domains proposal](../domains/README.md); each choice below is where they were
+silent.
 
 112. **The standard dialects.** `ISOIEC11404`, `IEEE754`, `IEEE1164` and `Unicode`, each a family holding its one
      dialect, `Expressions`, laid out as every dialect is (item 108; the dialects proposal's Decided, Namespace, 6 and
@@ -1024,18 +1025,18 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      `std_logic`; `string`; their uids are `mbse.Expressions.<Family>.Expressions.define/1`
      (an install's uid kept while its content changes is mbse-basis
      [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-254.md), as the
-     user decided, the domains proposal's Decided, "On stage 1's review").
+     user decided).
      Patterns' install keeps its terms, holder, singleton and operations; its `define` writes its operations alone.
 113. **`Expressions.Framework.DomainKind` is a union of the dialects' kind unions**, as `Term` is of their `Term`s:
      each dialect with kinds adds `Expressions.<path>.DomainKind`, the branch named by its tag, so a domain's `kind` is
      written its dialect, then its kind (`u.ieee754(lambda v: v.ieee754(...))` within `d.kind(lambda k:
      k.as_value(lambda a: a.as_union(...)))`), and C's and C++'s `nullptr_t` are each their own. Each kind is named by
-     its standard, its tag and its schema alike (2026-11-09, as the user decided, "there is no need to preserve the old
-     tags imo"): ISO/IEC 11404's `boolean`, `integer`, `modulo`, `bitstring`, `octet`, `octetstring`, `state` and
+     its standard, its tag and its schema alike (2026-11-09, as the user decided: mbse-basis [CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#decided),
+     "Names are the standards' own"): ISO/IEC 11404's `boolean`, `integer`, `modulo`, `bitstring`, `octet`, `octetstring`, `state` and
      `packed` (`Expressions.ISOIEC11404.Expressions.OfBoolean`, ..., `OfState`, `OfPacked`), formerly `bool`, `bits`,
      `bytes` and `enum`, `modulo` and `octet` new (item 123); `state` is the generic enumeration, 11404's ordered
-     `enumerated` added only when a dialect needs an order ("yes, well, then that is a generic enough enum, eh?"), and
-     `packed` keeps its name ("packed and packs does not go"), both decided 2026-11-09; IEEE 754's `ieee754`, IEEE 1164's `ieee1164` and Unicode's `unicode`, unchanged. Patterns' code
+     `enumerated` added only when a dialect needs an order, and `packed` keeps its name, both decided 2026-11-09
+     ([CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md#decided)); IEEE 754's `ieee754`, IEEE 1164's `ieee1164` and Unicode's `unicode`, unchanged. Patterns' code
      domains (`Domains.read`, until stage 2) read each by its dialect's tag and its own.
 114. **Inferred properties, populated by hand**: `ordered` on every kind; an integer's, a modulo's (and SystemVerilog's
      `logic`'s) `least` and `greatest`; IEEE 754's `radix`, `precision` and `emax`. `Domains.read` (Patterns', until stage 2)
@@ -1043,16 +1044,15 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
 115. **Each language's own kinds**: SystemVerilog's `logic` (`width`, `signed`), Python3's `str`, `nonetype` and
      `ellipsis`, TypeScript5's `string` and `null`, C's and C++'s `nullptr_t`, Excel's `error` (`members`); their
      domains are stage 3's. DOM-18 writes one of each by hand: a domain needs its dialect as owner.
-116. *(Superseded 2026-11-09, as the user decided, [the domains proposal](../domains/README.md#decided-on-this-proposal),
-     Decided, I: "drop `Uses`".)* ~~`Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`, every
-     dialect's adjacency `uses`. No entry is written yet: an install cannot bind its own singleton (the domains
-     proposal's question I).~~ Now **no `Uses`**: the relation and every dialect's adjacency `uses` are removed, in both
-     languages. A dialect's dependencies are its caller's install order (item 118); nothing checks it (the domains
-     proposal, Decided, I). Tests: FRM-01 and DOM-17 assert each dialect's
+116. *(Superseded 2026-11-09, as the user decided, mbse-basis [CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md#decided), "No `Uses`".)* ~~`Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`, every
+     dialect's adjacency `uses`. No entry is written yet: an install cannot bind its own singleton.~~ Now **no `Uses`**: the relation and every dialect's adjacency `uses` are removed, in both
+     languages. A dialect's dependencies are its caller's install order (item 118); nothing checks it (the same
+     decision). Tests: FRM-01 and DOM-17 assert each dialect's
      adjacencies, `domains` and `operations`.
 117. **The reading interface**, `Framework.Domains`: `kind_of` (`kindOf`), `properties`, `name_of` (`nameOf`),
      `operations` and `arity`; "a domain needs a kind". `kind_of` gives `(dialect, tag, record)`, the dialect's tag
-     first (2026-11-09, as the user decided, "yes, dialect too"), so that C's and C++'s `nullptr_t` are told apart
+     first (2026-11-09, as the user decided: mbse-basis [CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#decided),
+     "`kind_of` gives the dialect too"), so that C's and C++'s `nullptr_t` are told apart
      (DOM-18). The code domains and signatures stay, `Dialect.infer`'s,
      marked as CAP-232's to replace. *(The code domains superseded by item 124, domains as data's stage 2; the
      signatures stay, without families.)*
@@ -1062,11 +1062,10 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      DOM-13 to DOM-16 being retired IDs; EXP-05, EXP-06, EXP-13, FRM-01, DOM-03, DOM-05 and CONF-04 adjusted under
      their IDs; tutorial 7's T07.5 reads ISO/IEC 11404's domains through `Framework.Domains`.
 119. **Not changed, for the user**: the package root's re-export of Patterns' `Domains`, `Evaluators`, `Expressions`
-     and `Partials` (*decided* 2026-11-09: item 121), and Python3's complex number (the domains proposal's question
-     J; *decided* 2026-11-09: item 120).
-120. **Python3's complex number is its `constant`'s `complex`** (2026-11-09, as the user decided,
-     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, J: "This distinction feels
-     academic to me", so (a), the smallest change). `Expressions.Python.Python3.Constant` holds `singleton` (`None` or
+     and `Partials` (*decided* 2026-11-09: item 121), and Python3's complex number (*decided* 2026-11-09:
+     item 120).
+120. **Python3's complex number is its `constant`'s `complex`** (2026-11-09, as the user decided, (a),
+     the smallest change: mbse-basis [CAP-227: the Python3 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-227.md#decided), J). `Expressions.Python.Python3.Constant` holds `singleton` (`None` or
      `...`, unchanged) or `complex`, a value of `Expressions.Python.Python3.Complex`, whose `real` and `imag` are each
      IEEE 754's `binary64` (`Expressions.IEEE754.Expressions.binary64`); the flat `real` and `imag` floats go. A form
      reads it as a helper, `Part("complex", {"real": 0.0, "imag": 2.0})`; `P.constant(2j)` (TypeScript
@@ -1075,9 +1074,8 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      refuses it otherwise. The corpus's `python3` case pins its bytes. Its checks' messages are unchanged. `1` stays a framework `literal` while `2j`, `None` and `...` are
      Python3 `constant`s, a split that follows mbse-schemas' basic scalars rather than Python's grammar, kept for now.
      Tests: DIA-19.
-121. **The package root exports `Framework` alone** (2026-11-09, as the user decided, "approved",
-     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "The package root exports
-     `Framework` alone"). A breaking change, in 0.9.0: `mbse.Expressions` (`__all__ = ["Framework"]`) and
+121. **The package root exports `Framework` alone** (2026-11-09, as the user decided: mbse-basis
+     [CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md#decided), "The package root exports `Framework` alone"). A breaking change, in 0.9.0: `mbse.Expressions` (`__all__ = ["Framework"]`) and
      `@mbse/expressions` (`export * as Framework`) no longer re-export Patterns' `Domains`, `Evaluators`, `Expressions`
      and `Partials`, nor call Patterns "the neutral form of every constraint". Patterns is imported from its own path,
      as every dialect is: `from mbse.Expressions.Patterns.Expressions import Evaluators, Expressions as E`, TypeScript
@@ -1086,8 +1084,8 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      `from mbse.Expressions import Translators`). The TypeScript tests, the tutorials, the skill and the README import
      so; FRM-01 asserts the root's exports.
 
-122. **Patterns is `Expressions.Patterns.Expressions`** (2026-11-09, as the user decided, "(b)",
-     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "On stage 1's review"). Patterns
+122. **Patterns is `Expressions.Patterns.Expressions`** (2026-11-09, as the user decided, (b):
+     mbse-basis [CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md#decided), "Patterns' place"). Patterns
      is a family with one dialect named `Expressions`, as C's, MATLAB's and Excel's are, not a part of the framework:
      its schemas and singleton `Expressions.Patterns.Expressions` (`Expressions.Patterns.Expressions.Term`, `.Dialect`,
      `.Expression`, `.add`, ...; `store.Instances.Expressions.Patterns.Expressions`), its install's and define's uids
@@ -1100,10 +1098,8 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      "for now"), the translators' modules (`Translators.Patterns_Matlab`, item 111), and the wire, so the corpora are
      unchanged. Tests: every case that names Patterns' path, under its ID.
 
-123. **`uint8` split by ISO/IEC 11404's own definitions** (2026-11-09, as the user decided,
-     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "On stage 1's review": "yes, adopt
-     names the standard uses for datatypes it defines (is this even a question?)"; "didn't you already resolve
-     that?"). The former `uint8`, 8 bits, unsigned and wrapping, was misnamed `octet` (item 112): 11404's `octet`
+123. **`uint8` split by ISO/IEC 11404's own definitions** (2026-11-09, as the user decided: mbse-basis
+     [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md#decided), "`uint8` split by 11404's own definitions"). The former `uint8`, 8 bits, unsigned and wrapping, was misnamed `octet` (item 112): 11404's `octet`
      (§10.1.7) is a code, non-numeric, with no arithmetic, and wrapping arithmetic is its `modulo` (§10.1.2). So ISO/IEC
      11404's install adds two kinds, `octet` (`Expressions.ISOIEC11404.Expressions.OfOctet`: `ordered` alone) and
      `modulo` (`OfModulo`: `modulus`; inferred `least`, `greatest`, `ordered`), and its `define` writes the domains
@@ -1124,8 +1120,8 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
 
 ## Settled in domains as data's stage 2, for the user's review
 
-Built as [the domains proposal's stage 2's design](../domains/README.md#stage-2s-design) specifies, from its Decided
-(C, 2) and stage 1's design; each choice where they were silent is marked *(agent)*.
+Built in domains as data's stage 2 (#28), from the user's decisions now recorded in mbse-basis [CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md#decided) ("No lone
+terms") and [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md#decided); each choice where they were silent is marked *(agent)*.
 
 124. **Patterns' code domains go**, in both languages: the kinds `OfBool`, `OfInteger`, `OfModulo`, `OfOctet`,
      `OfIeee754`, `OfBits`, `OfBytes`, `OfUnicode`, `OfIeee1164`, `OfEnum` and `OfPacked` (their data classes, builders
@@ -1172,9 +1168,10 @@ Built as [the domains proposal's stage 2's design](../domains/README.md#stage-2s
 
 ## Settled in domains as data's stage 3, for the user's review
 
-Built as [the domains proposal's stage 3's design](../domains/README.md#stage-3s-design) specifies, from its Decided
-("On stage 3's design": K, N, the scope of stored domains, one dialect per ABI, M, P, Q, R and the links between
-dialects); each choice where they were silent is marked *(agent)*. Group 1 (C, C++ and the ABI dialects) is 131 to 140,
+Built in domains as data's stage 3 (#30), from the user's decisions now recorded in mbse-basis [CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#decided) (K, N, the
+scope of stored domains, R and the links between dialects), [CAP-267: C and C++ terms read under the ABI their holder names](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-267.md#decided) (one dialect per ABI, M, P and Q) and
+[CAP-230: the C++ expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-230.md#decided) (M); each choice where they were silent is marked
+*(agent)*. Group 1 (C, C++ and the ABI dialects) is 131 to 140,
 group 2 (SystemVerilog) 141 to 148, group 3 (Python3, TypeScript5, MATLAB and Excel) 149 to 153. A breaking change, in
 0.9.0, a breaking release anyway.
 
@@ -1298,10 +1295,9 @@ group 2 (SystemVerilog) 141 to 148, group 3 (Python3, TypeScript5, MATLAB and Ex
 
 ## Settled in domains as data's stage 4, for the user's review
 
-Built as [the domains proposal's standards' design](../domains/README.md#standards-design) specifies, from the dialects
-proposal's Decided, Q10 ("If we treat standards as tags, we could support both"; each edition "stored with its
-designation and its common names as tags": "yes"), and the domains proposal's Decided ("Standards as tagged data, a
-stage of its own": "yes"); each choice where they were silent is marked *(agent)*. A breaking change, in 0.9.0, a
+Built in domains as data's stage 4 (#31), from the user's decisions now recorded in mbse-basis [CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md#decided) (the dialects
+proposal's Decided, Q10, and "Standards as tagged data, a stage of its own"); each choice where they were silent is
+marked *(agent)*. A breaking change, in 0.9.0, a
 breaking release anyway.
 
 154. **The model**, added by the framework's install *(agent, its names and shape)*:
