@@ -135,9 +135,7 @@
   },
   {
    "node": "AscendingRangeSelect",
-   "kinds": [
-    "Expressions.rangeselect"
-   ]
+   "not": "a select's inside, `[i]`, `[l +: w]` or `[l -: w]`, which its ElementSelect's kind (`indexexpression`, `rangeselect`) holds as its `index`, or its `left`, `operator` and `right`; or a dimension's, or a count of ticks or repetitions, held as the expression it is"
   },
   {
    "node": "AssertPropertyStatement",
@@ -261,9 +259,7 @@
   },
   {
    "node": "BitSelect",
-   "kinds": [
-    "Expressions.indexexpression"
-   ]
+   "not": "a select's inside, `[i]`, `[l +: w]` or `[l -: w]`, which its ElementSelect's kind (`indexexpression`, `rangeselect`) holds as its `index`, or its `left`, `operator` and `right`; or a dimension's, or a count of ticks or repetitions, held as the expression it is"
   },
   {
    "node": "BitType",
@@ -706,9 +702,7 @@
   },
   {
    "node": "DescendingRangeSelect",
-   "kinds": [
-    "Expressions.rangeselect"
-   ]
+   "not": "a select's inside, `[i]`, `[l +: w]` or `[l -: w]`, which its ElementSelect's kind (`indexexpression`, `rangeselect`) holds as its `index`, or its `left`, `operator` and `right`; or a dimension's, or a count of ticks or repetitions, held as the expression it is"
   },
   {
    "node": "DisableConstraint",
@@ -788,7 +782,10 @@
   },
   {
    "node": "ElementSelect",
-   "not": "the brackets around a select, which the select's kind (`indexexpression`, `rangeselect`) holds"
+   "kinds": [
+    "Expressions.indexexpression",
+    "Expressions.rangeselect"
+   ]
   },
   {
    "node": "ElementSelectExpression",
@@ -916,7 +913,8 @@
   {
    "node": "EventControl",
    "helpers": [
-    "Assertions.EventControl"
+    "Assertions.EventControl",
+    "Assertions.EventExpression"
    ]
   },
   {
@@ -1530,9 +1528,6 @@
    "node": "NamedConditionalDirectiveExpression",
    "kinds": [
     "Expressions.nameexpression"
-   ],
-   "helpers": [
-    "Expressions.Identifier"
    ]
   },
   {
@@ -1748,7 +1743,8 @@
   {
    "node": "ParenthesizedSequenceExpr",
    "kinds": [
-    "Assertions.parenthesizedsequence"
+    "Assertions.parenthesizedsequence",
+    "Assertions.repetitionsequence"
    ]
   },
   {
@@ -2022,9 +2018,7 @@
   },
   {
    "node": "SequenceRepetition",
-   "kinds": [
-    "Assertions.repetitionsequence"
-   ]
+   "not": "a repetition, `[*n]`, `[->n]`, `[=n]`, `[*]` or `[+]`, which the RepetitionSequence made of the sequence it follows holds as its `operator` and `count`"
   },
   {
    "node": "SequenceType",
@@ -2084,13 +2078,14 @@
   {
    "node": "SimpleRangeSelect",
    "kinds": [
-    "Expressions.rangeselect",
     "Assertions.cyclerange"
    ]
   },
   {
    "node": "SimpleSequenceExpr",
-   "not": "an expression where a sequence is, held as that expression (in a RepetitionSequence where it repeats), since `Assertions.Term` lists `Expressions.Term`'s branches"
+   "kinds": [
+    "Assertions.repetitionsequence"
+   ]
   },
   {
    "node": "SolveBeforeConstraint",
