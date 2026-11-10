@@ -26,7 +26,7 @@
  * `Expression`; `HasRoot(schema, expression)`, the extension adjacency `expression` it gives `Schemas.OfExpression`; and
  * `HasAbi(expression, abi)`, one ABI per expression at most (`uniques("abi")`), through `Expression`'s adjacency
  * `abi`: the dialect of the ABI an expression's terms are read under, which C's and C++'s read the types their standards leave to the implementation from
- * ([Domains as data](../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, P). A term carries
+ * (mbse-basis [CAP-267: C and C++ terms read under the ABI their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md#decided)). A term carries
  * no domain: whatever owns the root term gives its schema.
  *
  * Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
@@ -170,7 +170,8 @@ export function install(txn: any): any {
       (_: any) => _.HasRoot.name("Expressions.Framework.HasRoot").links([
         (t: any) => t.name("schema"), (t: any) => t.name("expression")]).uniques("expression"),
       // The dialect of the ABI an expression's terms are read under, one at most: C's and C++'s read the types their
-      // standards leave to the implementation from it (Domains as data, Decided, P).
+      // standards leave to the implementation from it (mbse-basis
+      // [CAP-267: C and C++ terms read under the ABI their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md#decided)).
       (_: any) => _.HasAbi.name("Expressions.Framework.HasAbi").links([
         (t: any) => t.name("expression").schema([_.Expression]), (t: any) => t.name("abi").schema([_.Dialect]),
       ]).uniques("abi"),
@@ -181,7 +182,7 @@ export function install(txn: any): any {
       // each dialect adds its own by schema extension, as it adds its kinds to `Term`.
       (_: any) => _.Dialect.name("Expressions.Framework.Dialect"),
       // No relation records which dialects one uses: its caller's install order is its dependencies
-      // ([Domains as data](../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, I).
+      // (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)).
       // A domain: a reference object holding its kind, a value of the union of the dialects' unions of kinds, owned by
       // the dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the scalar it narrows,
       // reads it through the extension adjacency `domain`.
@@ -204,8 +205,8 @@ export function install(txn: any): any {
       ]).properties({ name: S.OfStr }).uniques([["dialect", "name"], ["operation"]]),
       // A standard: one edition, owned by the dialect that covers it by its designation, as its standards body writes
       // it; its formal reference's parts and its common names, the tags it is found by besides its designation; and
-      // the kinds it has, each by its schema, which reads them through the extension adjacency `standards` (Domains as
-      // data, Standards' design; the dialects proposal's Decided, Q10).
+      // the kinds it has, each by its schema, which reads them through the extension adjacency `standards` (mbse-basis
+      // [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md)).
       (_: any) => _.Revision.name("Expressions.Framework.Revision").branches([
         (t: any) => t.name("year").schema([S.OfInt]), (t: any) => t.name("edition").schema([S.OfInt]),
         (t: any) => t.name("version").schema([S.OfStr])]),

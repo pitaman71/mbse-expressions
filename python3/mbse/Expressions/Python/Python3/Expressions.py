@@ -211,8 +211,8 @@ def install(txn: Any) -> Any:
                 "problems": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfStr])),  # what is wrong with it
                 "separators": S.OfBool,  # whether its digits are grouped by `_`
             }),
-            # a complex number, a value of two IEEE 754 binary64 floats, as Python's `complex` is (the domains proposal,
-            # Decided, H and J)
+            # a complex number, a value of two IEEE 754 binary64 floats, as Python's `complex` is (mbse-basis
+            # [CAP-227: the Python3 expression dialect](mbse:mbse-basis/docs/capabilities/CAP-227.md#decided))
             lambda _: _.Complex.name("Expressions.Python.Python3.Complex").properties({
                 "real": IEEE754.binary64, "imag": IEEE754.binary64}),
             lambda _: _.ConcatenatedString.name("Expressions.Python.Python3.ConcatenatedString").properties({

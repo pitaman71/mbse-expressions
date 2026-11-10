@@ -256,8 +256,7 @@ As the user decided (2026-11-02), on the questions below:
   1. Patterns, the neutral form and no standard's language, is `Expressions.Framework.Patterns`. *Superseded*
      (2026-11-09) by the user's "(b)": Patterns is `Expressions.Patterns.Expressions`, a family with one dialect named
      `Expressions`, as 3 has MATLAB's, Excel's and LaTeX's; and "the neutral form" is retired, describing Patterns
-     nowhere ([the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "On stage 1's review",
-     "Patterns' place").
+     nowhere (mbse-basis [CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md#decided), "Patterns' place").
   2. C++'s family, `C++` being no name, is `Cpp`: `Expressions.Cpp.Expressions`.
   3. The families with one unversioned dialect name it `Expressions`, as C's and SystemVerilog's do:
      `Expressions.MATLAB.Expressions`, `Expressions.Excel.Expressions`, `Expressions.LaTeX.Expressions` (not
@@ -271,7 +270,7 @@ As the user decided (2026-11-02), on the questions below:
   Built as [the API, Settled in the namespace rename](../port/API.md#settled-in-the-namespace-rename-for-the-users-review),
   items 108 to 111.
 - **0.8.0 holds stages 1 to 5; stage 6 and the retrofit follow, now as 0.10.0** (2026-11-05; the version revised
-  2026-11-06, [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, D: domains as data is 0.9.0). Offered two options, "(a):
+  2026-11-06: domains as data is 0.9.0, mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided), "The releases"). Offered two options, "(a):
   Release 0.8.0 now. It contains stages 1 to 5, the rename and a pin to 0.26.10. Stage 6 and the retrofit of the other
   dialects come in 0.9.0, and INI-040 can start now." and "(b): build stage 6 first", the user answered "(a)". So
   0.8.0 is released after stage 5: stages 1 to 5, the namespace rename (the old `Dialects` names gone, with no alias)
@@ -280,7 +279,7 @@ As the user decided (2026-11-02), on the questions below:
   assertions, constraints and preprocessor dialects, and the closing work) and the retrofit of the other dialects (type,
   pattern, regex and preprocessor dialects, `let` variations) are released as 0.10.0, after domains as data's 0.9.0
   (asked to number them so, the user answered "agreed", 2026-11-06). This supersedes stage 7's release
-  of 0.8.0 after stage 6 (Stages, below) and the stopping point [the domains proposal](../domains/README.md#a-stopping-point-for-the-overhaul)
+  of 0.8.0 after stage 6 (Stages, below) and the stopping point [the domains proposal](../domains/README.md) first
   recommended.
 
 ### Decided for stage 6 (SystemVerilog) and after (2026-11-05)
@@ -345,7 +344,7 @@ quoted as given.
   name such as `C11`), each edition stored with its designation and its common names as tags: "yes". Built with
   domains as data; until then stage 6 records SystemVerilog's editions in code by designation (`IEEE Std 1800-2023`).
   Built in domains as data's stage 4, before stage 6, which so records SystemVerilog's editions as data
-  ([the domains proposal](../domains/README.md#standards-design), Standards' design).
+  (mbse-basis [CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md)).
 - **Q11, evaluation**: by the principle above, and, as the user put the design: "If I'm being honest, providing a full
   function evaluator in mbse-expressions at all was never a primary goal. I tolerated it as a potentially useful
   feature. But the original design was that mbse-expressions would provide a expression simplifier in stages:"
@@ -564,7 +563,7 @@ change as it lands.
 - **Extension limits**: an extension's adjacency is to a relation of two links and no properties.
 - **Dependents break** at 0.8.0: mbse-programs' bridges (until its stage 2), mbse-patterns (`Dialects.Python.Text`)
   and mbse-codegen-python (the writers).
-- **Tech debt, type specificity**: [CAP-255: mbse-expressions' installs, writers and corpus typed](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-255.md).
+- **Tech debt, type specificity**: [CAP-255: type checkers catch mistakes in code that builds expressions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-255.md).
 
 ---
 
