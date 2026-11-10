@@ -160,7 +160,9 @@ ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email
 Each dialect lives under its family, at `Expressions.<Family>.<Dialect>`: `Python.Python3`,
 `TypeScript.TypeScript5`, and `Patterns.Expressions`, `C.Expressions`, `Cpp.Expressions`,
 `SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions` and `LaTeX.Expressions`, and the standard
-dialects `ISOIEC11404.Expressions`, `IEEE754.Expressions`, `IEEE1164.Expressions` and `Unicode.Expressions`. Its schemas
+dialects `ISOIEC11404.Expressions`, `IEEE754.Expressions`, `IEEE1164.Expressions` and `Unicode.Expressions`, and the ABI
+dialects `SystemV.AMD64` and `Arm.AAPCS64`, which hold the C and C++ types those languages' standards leave to the
+implementation, read under the ABI the expression holding a C or C++ term names. Its schemas
 (`Expressions.C.Expressions.Term`), its Python package (`mbse.Expressions.C.Expressions`) and its TypeScript module
 (`@mbse/expressions/C/Expressions`) are named by that path.
 
@@ -175,7 +177,10 @@ domains as data (each dialect a singleton that names its operations, each an exp
 by name, as the standard dialects do; the published standards that define kinds of domain, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode,
 dialects of their own since domains as data's stage 1, unreleased until 0.9.0; since its stage 2, Patterns' code
 domains gone, its validation reading the operations its dialect names in the store of the expression that holds a
-term, so that `Patterns.define` runs first and a lone Patterns call is refused); writers; `validate()`, which refuses a
+term, so that `Patterns.define` runs first and a lone Patterns call is refused; since its stage 3, C's, C++'s,
+SystemVerilog's, Python3's, TypeScript5's, MATLAB's and Excel's domains stored by their `define`s, the code type tables
+of C, C++ and SystemVerilog gone, and the ABI dialects `SystemV.AMD64` and `Arm.AAPCS64`, which a C or C++ expression
+names as its `abi`); writers; `validate()`, which refuses a
 call to an operation the dialect does not define; evaluation with
 three-valued logic over values by the schemas they are written with, collections and quantifiers. Released in 0.8.0,
 on mbse-schemas 0.26.10: stages 1 to 5 of the complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md))

@@ -25,7 +25,7 @@ uv run --with jupyterlab jupyter lab tutorials/   # or open them in VS Code with
 Each notebook runs top to bottom in a fresh kernel. They're committed with their outputs, so you can just read them;
 `uv run pytest tutorials` runs them all as tests. `toolkit.py` holds the cold chain's schemas (its `install`),
 `cold_chain()`, a store of them that also holds expressions, with the framework's and every dialect's kinds installed,
-and `show`, which writes an expression as text (case study 6 explains it).
+Patterns' operations and C's, C++'s, the ABIs' and SystemVerilog's types defined, and `show`, which writes an expression as text (case study 6 explains it).
 
 ## The case studies
 

@@ -336,11 +336,12 @@ As the user decided (2026-11-04), on the questions below:
     - The ABI dialects are named by the namespace rule ("`Expressions.<family>.<dialect>`, a family named as its
       standard names the language"; the dialects proposal's Decided, Namespace), each spelled as its psABI document
       names itself. The names chosen are the agent's, for review (Stage 3's design).
-    - **What this replaces**: the single LP64 data model C's evaluation assumes (mbse-basis
+    - **What this replaces**: the single LP64 data model C's evaluation assumed until stage 3 (mbse-basis
       [CAP-100: six languages' expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-100.md),
       "C's arithmetic types under LP64 ... `long double` as IEEE 754 `binary128`"), and stage 3's design's `long
       double` as `binary128`. Under an ABI dialect, `long double` is whatever that ABI says: x87's 80-bit format on
-      x86-64 System V, `binary128` on AAPCS64. CAP-100's record follows with the records (Stages, 5).
+      x86-64 System V, `binary128` on AAPCS64. Built so in stage 3: C's evaluation reads no data model of its own,
+      only its holder's ABI. CAP-100's record, which still says LP64, is corrected with the records (Stages, 5).
   - **M** (2026-11-10), the design below approved as a whole with "yes":
     - Under an ABI, the formats of `_Float32x`, `_Float64x` and `_Float128x` are fixed by that ABI, though C23's
       Annex H leaves them to the implementation. So each ABI dialect stores them as its ABI fixes them.
@@ -842,7 +843,7 @@ which C++ shares with C.
 - **Literals.** A C++ literal is typed by C++'s names: `1.0f16` is a `std::float16_t`, `1.0bf16` a `std::bfloat16_t`,
   and `1.0df`, which C++ does not write, has no stored type, its type unknown, as an unknown suffix's is today.
 
-**SystemVerilog** (IEEE 1800-2023): the built-in types its `Domains.TYPES` names, one for one, owned by
+**SystemVerilog** (IEEE 1800-2023): the built-in types its `Domains.TYPES` named, one for one (the table gone since), owned by
 `Expressions.SystemVerilog.Expressions`.
 
 | Domains | Kind | Parameters and inferred properties |
