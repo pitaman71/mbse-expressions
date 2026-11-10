@@ -711,3 +711,29 @@ mutations:
                       mutations:
                       - set:
                           value: wchar_t
+        - as_adjacency:
+            name: standards
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: standard
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.Arm.AAPCS64
+                              next:
+                                entry:
+                                  i: standards
+                                  o: dialect
+                                  properties:
+                                    designation: 'Procedure Call Standard for the Arm 64-bit Architecture (AArch64)'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: designation
+                      mutations:
+                      - set:
+                          value: 'Procedure Call Standard for the Arm 64-bit Architecture (AArch64)'

@@ -57,13 +57,14 @@
  * the term ("(i)"): `body` says whether it has one. The framework reads a value of a sublanguage, as of any helper, as
  * a `Terms.Part`.
  *
- * Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: `constant` C23's alone, an
- * extension none). `DIALECT` reads them (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...)
- * write the kinds C evaluated before it was complete through the builders, in a transaction, a cast's type a spec of
- * `Type`, written through the builders too:
- * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through the builders
- * (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an
- * expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
+ * The editions C covers are data, which `define` writes, each owned by its designation and holding the kinds it has
+ * (`Framework.Standards`): ISO/IEC 9899:2011, 2018 and 2024, C11, C17 and C23 (C17 is C11's corrigenda, with no new
+ * syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. `DIALECT` reads the
+ * kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated
+ * before it was complete through the builders, in a transaction, a cast's type a spec of `Type`, written through the
+ * builders too: `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written
+ * through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)).
+ * `Text.ToText` writes an expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
  *
  * Its kind of domain, the branch of its union `Expressions.C.Expressions.DomainKind`, which `install` adds to the
  * framework's `Expressions.Framework.DomainKind` as the branch `c`: the token `nullptr_t` (`OfNullptr`), C23's, with
@@ -111,9 +112,6 @@ export const [STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID] = ["statementexp
 
 /** GNU's extensions, outside every standard, as mbse-programs marks them. */
 export const EXTENSIONS: ReadonlySet<string> = new Set([STATEMENTEXPRESSION, EXTENSIONEXPRESSION]);
-
-/** The standards this dialect covers, ISO/IEC 9899:2011, 2018 and 2024: C17 is C11's corrigenda, with no new syntax. */
-export const STANDARDS: readonly string[] = ["C11", "C17", "C23"];
 
 /** A character's or a string's encoding prefixes. */
 export const PREFIXES: readonly string[] = ["L", "u8", "u", "U"];
@@ -180,7 +178,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.C.Expressions.Dialect").ref(true).singleton("Expressions.C.Expressions")
           .adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect")}),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("c").schema([_.Dialect])]),
       // its union of its kinds: its own, the framework's it reuses, a type name, an initializer list's
@@ -421,22 +420,42 @@ export function install(txn: any): any {
  * overflow, as C leaves it undefined) and `uint8_t` to `uint64_t` (11404's `modulo`, wrapping); `_Float16`, `_Float32`,
  * `_Float64` and `_Float128` (IEEE 754's `binary16` to `binary128`) and `_Decimal32`, `_Decimal64` and `_Decimal128`
  * (its decimal formats), each rounding ties to even; and `nullptr_t`, of C's own kind. What C leaves to the
- * implementation (`int`, `long`, `char`, `long double`, `size_t`, ...) is each ABI dialect's. Run after `install`, in a
- * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its
- * name: `store.transaction(C.define)[0].get("int32_t")`. */
+ * implementation (`int`, `long`, `char`, `long double`, `size_t`, ...) is each ABI dialect's. And the editions of C it
+ * covers, by designation (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts,
+ * its common name and the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing.
+ * Its frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each domain by its name:
+ * `store.transaction(C.define)[0].get("int32_t")`. */
 export function define(txn: any): any {
   const OWN = txn.Expressions.C.Expressions;
-  const Domain = txn.Expressions.Framework.Domain;
+  const Domain = txn.Expressions.Framework.Domain, Standard = txn.Expressions.Framework.Standard;
+  const every = new Map((OWN.Term.as_schema().branches as { name: string; schema: unknown }[]) // each kind's schema,
+    .filter((b) => !EXTENSIONS.has(b.name) && !F.INVALID_KINDS.has(b.name)) // by its tag, but an extension and
+    .map((b) => [b.name, b.schema])); // invalid syntax
   return txn.uid("mbse.Expressions.C.Expressions.define/1")
       .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
-      dialect: OWN.Dialect,
+      dialect: OWN.Dialect, C11: Standard, C17: Standard, C23: Standard,
       bool: Domain, int8_t: Domain, int16_t: Domain, int32_t: Domain, int64_t: Domain,
       uint8_t: Domain, uint16_t: Domain, uint32_t: Domain, uint64_t: Domain,
       Float16: Domain, Float32: Domain, Float64: Domain, Float128: Domain,
       Decimal32: Domain, Decimal64: Domain, Decimal128: Domain, nullptr_t: Domain,
     })
     .spec([
+      // --- the editions C covers, each by its designation, with the kinds it has: every kind but GNU's extensions and
+      // invalid syntax, `constant` (`nullptr`) C23's alone; C17 is C11's corrigenda ---
+      (_: any) => _.dialect.standards({
+        "ISO/IEC 9899:2011": (e: any) => e.standard(_.C11), "ISO/IEC 9899:2018": (e: any) => e.standard(_.C17),
+        "ISO/IEC 9899:2024": (e: any) => e.standard(_.C23) }),
+      (_: any) => _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2011n)).names(
+        ["C11"]).kinds(
+        [...every].filter(([tag]) => tag !== CONSTANT).map(([, schema]) => schema)),
+      (_: any) => _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2018n)).names(
+        ["C17"]).kinds(
+        [...every].filter(([tag]) => tag !== CONSTANT).map(([, schema]) => schema)),
+      (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(
+        ["C23"]).kinds(
+        [...every.values()]),
+      // --- its domains ---
       (_: any) => _.dialect.domains({
         "bool": (e: any) => e.domain(_.bool),
         "int8_t": (e: any) => e.domain(_.int8_t),
@@ -720,33 +739,30 @@ export const SPELLING: { readonly C: readonly string[]; readonly "C++": readonly
 };
 
 /** How the framework reads the kinds of the C family that a dialect has (`tags`, in its `Term`'s order: those it shares
- * with the other language of the family), each with the standards of its language that have it (`standards`), in
- * `language` (`C` or `C++`), whose binary operators, literals' types, prefixes and suffixes differ. */
-export function kinds(language: string, tags: readonly string[], standards: ReadonlyMap<string, readonly string[]>,
-  prefixes: readonly string[], suffixes: Suffixes): Record<string, F.Kind> {
+ * with the other language of the family), in `language` (`C` or `C++`), whose binary operators, literals' types,
+ * prefixes and suffixes differ. */
+export function kinds(language: string, tags: readonly string[], prefixes: readonly string[],
+  suffixes: Suffixes): Record<string, F.Kind> {
   const check = (tag: string) => (record: any) => problems(F.node(tag, record),
     new Domains.Types(record, pathOf(language)),
     suffixes, prefixes, language);
   /** A cast's arithmetic type, which is its domain, read from the store of the term's holder. */
   const typedCast = (record: any): FD.Domain | null =>
     castType(typeName(F.attributesOf(record).get("type")), new Domains.Types(record, pathOf(language)));
-  const of = (tag: string) => standards.get(tag) as readonly string[];
   const application = (tag: string, signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}) =>
-    new F.Kind(F.APPLICATION, { signature, standards: of(tag), check: check(tag), scopes: scopes(tag), ...options,
+    new F.Kind(F.APPLICATION, { signature, check: check(tag), scopes: scopes(tag), ...options,
       optional: [...(options.optional ?? []), ...OPTIONAL] });
   const operator = (tag: string, vocabulary: ReadonlyMap<string, FD.Signature>, options: F.KindOptions = {}) =>
-    new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required: ["operator"], standards: of(tag),
-      check: check(tag),
+    new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required: ["operator"], check: check(tag),
       scopes: scopes(tag), ...options });
   const every: Record<string, () => F.Kind> = {
     [LITERAL]: () => new F.Kind(F.LITERAL, { spelling: SPELLING[language as "C" | "C++"], check: check(LITERAL),
       typed: (record: any) => Domains.literal(F.attributesOf(record), language, new Domains.Types(record,
-        pathOf(language))),
-      standards: of(LITERAL) }),
+        pathOf(language))) }),
     [CONSTANT]: () => new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: check(CONSTANT),
-      typed: () => Domains.NULLPTR, standards: of(CONSTANT) }),
+      typed: () => Domains.NULLPTR }),
     [CONCATENATEDSTRING]: () => application(CONCATENATEDSTRING, new FD.Opaque(Domains.String)),
-    [VARIABLE]: () => new F.Kind(F.REFERENCE, { required: ["name"], check: check(VARIABLE), standards: of(VARIABLE) }),
+    [VARIABLE]: () => new F.Kind(F.REFERENCE, { required: ["name"], check: check(VARIABLE) }),
     [PARENTHESIZEDEXPRESSION]: () => application(PARENTHESIZEDEXPRESSION, ANY1),
     [GENERICSELECTION]: () => application(GENERICSELECTION),
     [SUBSCRIPTEXPRESSION]: () => application(SUBSCRIPTEXPRESSION, Domains.SUBSCRIPT),
@@ -779,10 +795,6 @@ const C_TAGS: readonly string[] = [LITERAL, CONSTANT, CONCATENATEDSTRING, VARIAB
   SIZEOFEXPRESSION, ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION, ASSIGNMENTEXPRESSION,
   INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID];
 
-const C_STANDARDS: ReadonlyMap<string, readonly string[]> = new Map([
-  ...C_TAGS.map((tag) => [tag, STANDARDS] as [string, readonly string[]]),
-  [CONSTANT, ["C23"]], [STATEMENTEXPRESSION, []], [EXTENSIONEXPRESSION, []]]);
-
 /** The literal of a native value: a number, a bool or a string; a bytes has none. */
 function native(value: unknown): Writer | null {
   return ["bigint", "number", "boolean", "string"].includes(typeof value) ? literal(value) : null;
@@ -795,7 +807,7 @@ export function untyped(value?: unknown): FD.Domain { // eslint-disable-line @ty
 }
 
 /** The C dialect: its kinds, as the framework reads them. */
-export const DIALECT: F.Dialect = new F.Dialect("C.Expressions", kinds("C", C_TAGS, C_STANDARDS, PREFIXES, SUFFIXES),
+export const DIALECT: F.Dialect = new F.Dialect("C.Expressions", kinds("C", C_TAGS, PREFIXES, SUFFIXES),
   { domain_of: untyped, literal: native });
 
 // --- Writers ---

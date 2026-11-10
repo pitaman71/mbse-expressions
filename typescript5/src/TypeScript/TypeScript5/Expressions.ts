@@ -53,11 +53,12 @@
  * has them ("yes, stay `Identifier` terms"). The framework reads a value of a sublanguage, as of any helper, as a
  * `Terms.Part`.
  *
- * Each kind's `Kind` records the TypeScript versions that have it (`standards`, `STANDARDS`, 5.0 to 5.9, every kind
- * being older; none for an extension). `DIALECT` reads them (`Terms.Dialect`). There are no writers: a TypeScript5 term
- * is written through the builders, in a transaction (mbse-basis
- * [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its
- * helpers nested, as its printer and its checks read it.
+ * The versions of TypeScript 5 the dialect covers are data, which `define` writes, each owned by its published name,
+ * TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each
+ * has them all, and an extension none. `DIALECT` reads the kinds (`Terms.Dialect`). There are no writers: a TypeScript5
+ * term is written through the builders, in a transaction (mbse-basis [PRI-019: fluent builder
+ * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its helpers nested, as its
+ * printer and its checks read it.
  *
  * Its kinds of domain, the branches of its union `Expressions.TypeScript.TypeScript5.DomainKind`, which `install` adds
  * to the framework's `Expressions.Framework.DomainKind` as the branch `typescript5`, each with the inferred `ordered`:
@@ -130,9 +131,6 @@ export const JSXEMPTYEXPRESSION = "jsxemptyexpression";
 /** JSX, an extension outside every version of TypeScript, which a `.tsx` file accepts (mbse-programs marks it so). */
 export const EXTENSIONS: ReadonlySet<string> = new Set([JSXELEMENT, JSXFRAGMENT, JSXEMPTYEXPRESSION]);
 
-/** The versions of TypeScript 5 the dialect covers, by their published names, 5.0 to 5.9. */
-export const STANDARDS: readonly string[] = Array.from({ length: 10 }, (_, minor) => `TypeScript 5.${minor}`);
-
 /** A string's quotes, as TypeScript writes them. */
 export const QUOTES: readonly string[] = ["'", '"'];
 
@@ -202,7 +200,8 @@ export function install(txn: any): any {
       // its dialect: the singleton `Expressions.TypeScript.TypeScript5`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.TypeScript.TypeScript5.Dialect").ref(true).singleton("Expressions.TypeScript.TypeScript5").adjacencies({
           domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-          operations: (a: any) => a.relation([Framework.Operates]).me("dialect")}),
+          operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+          standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
           (t: any) => t.name("typescript5").schema([_.Dialect])]),
       // its union of its kinds: its own, the framework's it reuses, the patterns expressions hold, JSX, and
@@ -605,15 +604,48 @@ export function install(txn: any): any {
 /** TypeScript5's domains as data: the singleton `Expressions.TypeScript.TypeScript5` owning its domains by name
  * (`domains`, through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each
  * but a token's related to its schema (`Expressions.TypeScript.TypeScript5.number`) by
- * `Expressions.Framework.HasDomain`: `boolean`, `number`, `bigint` and `string`, and the token `null`. Run after the
- * installs, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
- * each domain by its name: `store.transaction(TypeScript5.define)[0].get("number")`. */
+ * `Expressions.Framework.HasDomain`: `boolean`, `number`, `bigint` and `string`, and the token `null`. And the
+ * versions of TypeScript 5 it covers, by their published names (`standards`, through `Expressions.Framework.Covers`),
+ * TypeScript 5.0 to 5.9, each with its body, its version and the kinds it has. Run after the installs, in a
+ * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its
+ * name spelled as an identifier (`TypeScript_5_0`) and each domain by its name:
+ * `store.transaction(TypeScript5.define)[0].get("number")`. */
 export function define(txn: any): any {
   const [TypeScript5, Domain] = [txn.Expressions.TypeScript.TypeScript5, txn.Expressions.Framework.Domain];
+  const Standard = txn.Expressions.Framework.Standard;
+  const every = (TypeScript5.Term.as_schema().branches as { name: string; schema: unknown }[]) // each kind's schema,
+    .filter((b) => !EXTENSIONS.has(b.name) && !F.INVALID_KINDS.has(b.name)) // every version's, but an extension and
+    .map((b) => b.schema); // invalid syntax
+  const MICROSOFT = ["com.microsoft"];
+  const versions = Object.fromEntries(Array.from({ length: 10 }, (_, minor) => [`TypeScript_5_${minor}`, Standard]));
   return txn.uid("mbse.Expressions.TypeScript.TypeScript5.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: TypeScript5.Dialect, boolean: Domain, number: Domain, bigint: Domain,
+    .symbols({ dialect: TypeScript5.Dialect, ...versions, boolean: Domain, number: Domain, bigint: Domain,
       string: Domain, null: Domain })
     .spec([
+      // --- the versions of TypeScript 5 it covers, each by its published name, with the kinds it has: all ---
+      (_: any) => _.dialect.standards({
+        "TypeScript 5.0": (e: any) => e.standard(_.TypeScript_5_0),
+        "TypeScript 5.1": (e: any) => e.standard(_.TypeScript_5_1),
+        "TypeScript 5.2": (e: any) => e.standard(_.TypeScript_5_2),
+        "TypeScript 5.3": (e: any) => e.standard(_.TypeScript_5_3),
+        "TypeScript 5.4": (e: any) => e.standard(_.TypeScript_5_4),
+        "TypeScript 5.5": (e: any) => e.standard(_.TypeScript_5_5),
+        "TypeScript 5.6": (e: any) => e.standard(_.TypeScript_5_6),
+        "TypeScript 5.7": (e: any) => e.standard(_.TypeScript_5_7),
+        "TypeScript 5.8": (e: any) => e.standard(_.TypeScript_5_8),
+        "TypeScript 5.9": (e: any) => e.standard(_.TypeScript_5_9),
+      }),
+      (_: any) => _.TypeScript_5_0.bodies(MICROSOFT).revision((r: any) => r.version("5.0")).kinds(every),
+      (_: any) => _.TypeScript_5_1.bodies(MICROSOFT).revision((r: any) => r.version("5.1")).kinds(every),
+      (_: any) => _.TypeScript_5_2.bodies(MICROSOFT).revision((r: any) => r.version("5.2")).kinds(every),
+      (_: any) => _.TypeScript_5_3.bodies(MICROSOFT).revision((r: any) => r.version("5.3")).kinds(every),
+      (_: any) => _.TypeScript_5_4.bodies(MICROSOFT).revision((r: any) => r.version("5.4")).kinds(every),
+      (_: any) => _.TypeScript_5_5.bodies(MICROSOFT).revision((r: any) => r.version("5.5")).kinds(every),
+      (_: any) => _.TypeScript_5_6.bodies(MICROSOFT).revision((r: any) => r.version("5.6")).kinds(every),
+      (_: any) => _.TypeScript_5_7.bodies(MICROSOFT).revision((r: any) => r.version("5.7")).kinds(every),
+      (_: any) => _.TypeScript_5_8.bodies(MICROSOFT).revision((r: any) => r.version("5.8")).kinds(every),
+      (_: any) => _.TypeScript_5_9.bodies(MICROSOFT).revision((r: any) => r.version("5.9")).kinds(every),
+      // --- its domains ---
       (_: any) => _.dialect.domains({
         boolean: (e: any) => e.domain(_.boolean), number: (e: any) => e.domain(_.number),
         bigint: (e: any) => e.domain(_.bigint), string: (e: any) => e.domain(_.string),
@@ -792,30 +824,29 @@ function native(value: unknown): F.Writer | null {
 const ANY = new FD.Function([FD.Anything], FD.Anything);
 const ANY2 = new FD.Function([FD.Anything, FD.Anything], FD.Anything);
 
-function application(tag: string, signature: FD.Signature = new FD.Opaque(), standards: readonly string[] = STANDARDS,
+function application(tag: string, signature: FD.Signature = new FD.Opaque(),
   options: F.KindOptions = {}): F.Kind {
-  return new F.Kind(F.APPLICATION, { signature, standards, check: check(tag), scopes: scopes(tag), ...options });
+  return new F.Kind(F.APPLICATION, { signature, check: check(tag), scopes: scopes(tag), ...options });
 }
 
 function operatorKind(tag: string, vocabulary: ReadonlyMap<string, FD.Signature>,
   required: readonly string[] = ["operator"]): F.Kind {
-  return new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required, standards: STANDARDS,
+  return new F.Kind(F.APPLICATION, { operator: "operator", vocabulary, required,
     check: check(tag), scopes: scopes(tag) });
 }
 
 /** The TypeScript5 dialect: its kinds, as the framework reads them. */
 export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
-  [IDENTIFIER]: new F.Kind(F.REFERENCE, { required: ["name"], check: check(IDENTIFIER), standards: STANDARDS }),
-  [PRIVATEIDENTIFIER]: new F.Kind(F.REFERENCE, { required: ["name"], lexical: false, check: check(PRIVATEIDENTIFIER),
-    standards: STANDARDS }),
-  [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "quote", "base", "separators"], check: check(LITERAL),
-    standards: STANDARDS }),
+  [IDENTIFIER]: new F.Kind(F.REFERENCE, { required: ["name"], check: check(IDENTIFIER) }),
+  [PRIVATEIDENTIFIER]: new F.Kind(F.REFERENCE, { required: ["name"], lexical: false, check: check(PRIVATEIDENTIFIER) }),
+  [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "quote", "base", "separators"],
+    check: check(LITERAL) }),
   [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: check(CONSTANT),
-    typed: (record) => Domains.constant(F.attributesOf(record)), standards: STANDARDS }),
+    typed: (record) => Domains.constant(F.attributesOf(record)) }),
   [TEMPLATELITERAL]: application(TEMPLATELITERAL, new FD.Opaque(Domains.String)),
-  [TAGGEDTEMPLATEEXPRESSION]: application(TAGGEDTEMPLATEEXPRESSION, new FD.Opaque(), STANDARDS, { required: ["quasi"] }),
-  [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false, standards: STANDARDS }),
-  [SUPER]: new F.Kind(F.REFERENCE, { lexical: false, standards: STANDARDS }),
+  [TAGGEDTEMPLATEEXPRESSION]: application(TAGGEDTEMPLATEEXPRESSION, new FD.Opaque(), { required: ["quasi"] }),
+  [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false }),
+  [SUPER]: new F.Kind(F.REFERENCE, { lexical: false }),
   [PARENTHESIZEDEXPRESSION]: application(PARENTHESIZEDEXPRESSION, ANY),
   [ELISION]: application(ELISION),
   [SPREADELEMENT]: application(SPREADELEMENT, ANY),
@@ -823,15 +854,15 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
   [PROPERTY]: application(PROPERTY),
   [OBJECTEXPRESSION]: application(OBJECTEXPRESSION),
   [FUNCTIONEXPRESSION]: application(FUNCTIONEXPRESSION),
-  [ARROWFUNCTIONEXPRESSION]: application(ARROWFUNCTIONEXPRESSION, new FD.Opaque(), STANDARDS, { optional: ["body"] }),
-  [CLASSEXPRESSION]: application(CLASSEXPRESSION, new FD.Opaque(), STANDARDS, { optional: ["superClass"] }),
+  [ARROWFUNCTIONEXPRESSION]: application(ARROWFUNCTIONEXPRESSION, new FD.Opaque(), { optional: ["body"] }),
+  [CLASSEXPRESSION]: application(CLASSEXPRESSION, new FD.Opaque(), { optional: ["superClass"] }),
   [TSEMPTYBODYFUNCTIONEXPRESSION]: application(TSEMPTYBODYFUNCTIONEXPRESSION),
-  [METAPROPERTY]: application(METAPROPERTY, new FD.Opaque(), STANDARDS, { required: ["meta", "property"] }),
+  [METAPROPERTY]: application(METAPROPERTY, new FD.Opaque(), { required: ["meta", "property"] }),
   [MEMBEREXPRESSION]: application(MEMBEREXPRESSION, ANY2),
   [CALLEXPRESSION]: application(CALLEXPRESSION),
   [CHAINEXPRESSION]: application(CHAINEXPRESSION, ANY),
   [NEWEXPRESSION]: application(NEWEXPRESSION),
-  [IMPORTEXPRESSION]: application(IMPORTEXPRESSION, new FD.Opaque(), STANDARDS, { optional: ["options"] }),
+  [IMPORTEXPRESSION]: application(IMPORTEXPRESSION, new FD.Opaque(), { optional: ["options"] }),
   [UPDATEEXPRESSION]: operatorKind(UPDATEEXPRESSION, Domains.UPDATE),
   [UNARYEXPRESSION]: operatorKind(UNARYEXPRESSION, Domains.UNARY),
   [AWAITEXPRESSION]: application(AWAITEXPRESSION, ANY),
@@ -841,16 +872,16 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
     new FD.Function([FD.Anything, FD.Anything, FD.Anything], FD.Anything)),
   [ASSIGNMENTEXPRESSION]: operatorKind(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT, ["left", "operator"]),
   [SEQUENCEEXPRESSION]: application(SEQUENCEEXPRESSION),
-  [YIELDEXPRESSION]: application(YIELDEXPRESSION, new FD.Opaque(), STANDARDS, { optional: ["argument"] }),
-  [TSASEXPRESSION]: application(TSASEXPRESSION, new FD.Opaque(), STANDARDS, { required: ["typeAnnotation"] }),
-  [TSSATISFIESEXPRESSION]: application(TSSATISFIESEXPRESSION, new FD.Opaque(), STANDARDS, { required: ["typeAnnotation"] }),
-  [TSTYPEASSERTION]: application(TSTYPEASSERTION, new FD.Opaque(), STANDARDS, { required: ["typeAnnotation"] }),
+  [YIELDEXPRESSION]: application(YIELDEXPRESSION, new FD.Opaque(), { optional: ["argument"] }),
+  [TSASEXPRESSION]: application(TSASEXPRESSION, new FD.Opaque(), { required: ["typeAnnotation"] }),
+  [TSSATISFIESEXPRESSION]: application(TSSATISFIESEXPRESSION, new FD.Opaque(), { required: ["typeAnnotation"] }),
+  [TSTYPEASSERTION]: application(TSTYPEASSERTION, new FD.Opaque(), { required: ["typeAnnotation"] }),
   [TSNONNULLEXPRESSION]: application(TSNONNULLEXPRESSION, ANY),
-  [TSINSTANTIATIONEXPRESSION]: application(TSINSTANTIATIONEXPRESSION, new FD.Opaque(), STANDARDS, { required: ["typeArguments"] }),
+  [TSINSTANTIATIONEXPRESSION]: application(TSINSTANTIATIONEXPRESSION, new FD.Opaque(), { required: ["typeArguments"] }),
   [ARRAYPATTERN]: application(ARRAYPATTERN),
   [OBJECTPATTERN]: application(OBJECTPATTERN),
   [ASSIGNMENTPATTERN]: application(ASSIGNMENTPATTERN),
-  [JSXELEMENT]: application(JSXELEMENT, new FD.Opaque(), [], { required: ["openingElement"] }),
-  [JSXFRAGMENT]: application(JSXFRAGMENT, new FD.Opaque(), []),
-  [JSXEMPTYEXPRESSION]: application(JSXEMPTYEXPRESSION, new FD.Opaque(), []),
+  [JSXELEMENT]: application(JSXELEMENT, new FD.Opaque(), { required: ["openingElement"] }),
+  [JSXFRAGMENT]: application(JSXFRAGMENT, new FD.Opaque()),
+  [JSXEMPTYEXPRESSION]: application(JSXEMPTYEXPRESSION, new FD.Opaque()),
 }, { domain_of: Domains.of, literal: native });

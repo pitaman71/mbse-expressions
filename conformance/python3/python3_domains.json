@@ -377,6 +377,723 @@
                         }
                       ]
                     }
+                  },
+                  {
+                    "as_adjacency": {
+                      "name": "standards",
+                      "mutations": [
+                        {
+                          "insert": {
+                            "entries": [
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.0"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.0"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.1"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.1"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.10"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.10"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.11"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.11"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.12"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.12"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.13"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.13"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.14"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.14"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.15"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.15"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.2"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.2"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.3"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.3"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.4"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.4"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.5"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.5"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.6"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.6"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.7"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.7"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.8"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.8"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "Python 3.9"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "Python 3.9"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
                   }
                 ]
               }

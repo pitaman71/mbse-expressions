@@ -52,8 +52,9 @@
  * ("(ii)"). The framework reads a target, as any helper, as a `Terms.Part`, its terms after the clause's own; a
  * lambda's parameters are `arg`s, not patterns.
  *
- * Each kind's `Kind` records the Python versions that have it (`standards`, `STANDARDS`'s names from the one it arrived
- * in; none for an extension). A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
+ * The versions of Python 3 the dialect covers are data, which `define` writes, each owned by its published name, Python
+ * 3.0 to 3.15, and holding the kinds it has, from the version each arrived in (`Framework.Standards`); an extension is
+ * in none. A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
  * calls, not a dialect.
  *
  * `DIALECT` reads them (`Terms.Dialect`). The writers (`constant`, `name`, `attribute`, ...) write them through the
@@ -129,13 +130,10 @@ export const COMPREHENSIONS: readonly string[] = [LISTCOMP, SETCOMP, DICTCOMP, G
 /** The kinds with no counterpart in Python's grammar, kept as extensions (the dialects proposal, Decided, 2). */
 export const EXTENSIONS: ReadonlySet<string> = new Set([LET, IMPORT, IMPORTFROM]);
 
-/** The versions of Python 3 the dialect covers, by their published names, 3.0 to 3.15. */
-export const STANDARDS: readonly string[] = Array.from({ length: 16 }, (_, minor) => `Python 3.${minor}`);
-
-/** The versions from Python 3.`minor` on. */
-function since(minor: number): readonly string[] {
-  return STANDARDS.slice(minor);
-}
+/** The minor version of Python 3 each kind arrived in, where it is not 3.0, from which `define` writes the kinds each
+ * version has. */
+const SINCE: ReadonlyMap<string, number> = new Map([[YIELDFROM, 3], [AWAIT, 5], [JOINEDSTR, 6], [NAMEDEXPR, 8],
+  [TEMPLATESTR, 14]]);
 
 /** Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds and the helpers
  * they hold, and its dialect's schema, whose singleton is `Expressions.Python.Python3`: run after `Framework.install` and
@@ -169,7 +167,8 @@ export function install(txn: any): any {
       // its dialect: the singleton `Expressions.Python.Python3`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Python.Python3.Dialect").ref(true).singleton("Expressions.Python.Python3").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("python3").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, its extensions, and invalid syntax
@@ -345,15 +344,53 @@ export function install(txn: any): any {
 /** Python3's domains as data: the singleton `Expressions.Python.Python3` owning its domains by name (`domains`,
  * through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each but a
  * token's related to its schema (`Expressions.Python.Python3.int`) by `Expressions.Framework.HasDomain`: `bool`,
- * `int`, `float`, `str` and `bytes`, and the tokens `NoneType` and `ellipsis`. Run after the installs, in a
- * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its
- * name: `store.transaction(Python3.define)[0].get("int")`. */
+ * `int`, `float`, `str` and `bytes`, and the tokens `NoneType` and `ellipsis`. And the versions of Python 3 it covers,
+ * by their published names (`standards`, through `Expressions.Framework.Covers`), Python 3.0 to 3.15, each with its
+ * body, its version and the kinds it has. Run after the installs, in a transaction of its own; run again, it writes
+ * nothing. Its frame binds the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_8`)
+ * and each domain by its name: `store.transaction(Python3.define)[0].get("int")`. */
 export function define(txn: any): any {
-  const [Python3, Domain] = [txn.Expressions.Python.Python3, txn.Expressions.Framework.Domain];
+  const [Python3, Domain, Standard] = [txn.Expressions.Python.Python3, txn.Expressions.Framework.Domain,
+    txn.Expressions.Framework.Standard];
+  const every = (Python3.Term.as_schema().branches as { name: string; schema: unknown }[]) // each kind's schema, by its
+    .filter((b) => !EXTENSIONS.has(b.name) && !F.INVALID_KINDS.has(b.name)); // tag, but an extension and invalid syntax
+  /** The kinds Python 3.`minor` has: each from the version it arrived in. */
+  const since = (minor: number): unknown[] => every.filter((b) => (SINCE.get(b.name) ?? 0) <= minor)
+    .map((b) => b.schema);
+  const PSF = ["org.python"];
+  const versions = Object.fromEntries(Array.from({ length: 16 }, (_, minor) => [`Python_3_${minor}`, Standard]));
   return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: Python3.Dialect, bool: Domain, int: Domain, float: Domain, str: Domain,
+    .symbols({ dialect: Python3.Dialect, ...versions, bool: Domain, int: Domain, float: Domain, str: Domain,
       bytes: Domain, NoneType: Domain, ellipsis: Domain })
     .spec([
+      // --- the versions of Python 3 it covers, each by its published name, with the kinds it has ---
+      (_: any) => _.dialect.standards({
+        "Python 3.0": (e: any) => e.standard(_.Python_3_0), "Python 3.1": (e: any) => e.standard(_.Python_3_1),
+        "Python 3.2": (e: any) => e.standard(_.Python_3_2), "Python 3.3": (e: any) => e.standard(_.Python_3_3),
+        "Python 3.4": (e: any) => e.standard(_.Python_3_4), "Python 3.5": (e: any) => e.standard(_.Python_3_5),
+        "Python 3.6": (e: any) => e.standard(_.Python_3_6), "Python 3.7": (e: any) => e.standard(_.Python_3_7),
+        "Python 3.8": (e: any) => e.standard(_.Python_3_8), "Python 3.9": (e: any) => e.standard(_.Python_3_9),
+        "Python 3.10": (e: any) => e.standard(_.Python_3_10), "Python 3.11": (e: any) => e.standard(_.Python_3_11),
+        "Python 3.12": (e: any) => e.standard(_.Python_3_12), "Python 3.13": (e: any) => e.standard(_.Python_3_13),
+        "Python 3.14": (e: any) => e.standard(_.Python_3_14), "Python 3.15": (e: any) => e.standard(_.Python_3_15),
+      }),
+      (_: any) => _.Python_3_0.bodies(PSF).revision((r: any) => r.version("3.0")).kinds(since(0)),
+      (_: any) => _.Python_3_1.bodies(PSF).revision((r: any) => r.version("3.1")).kinds(since(1)),
+      (_: any) => _.Python_3_2.bodies(PSF).revision((r: any) => r.version("3.2")).kinds(since(2)),
+      (_: any) => _.Python_3_3.bodies(PSF).revision((r: any) => r.version("3.3")).kinds(since(3)),
+      (_: any) => _.Python_3_4.bodies(PSF).revision((r: any) => r.version("3.4")).kinds(since(4)),
+      (_: any) => _.Python_3_5.bodies(PSF).revision((r: any) => r.version("3.5")).kinds(since(5)),
+      (_: any) => _.Python_3_6.bodies(PSF).revision((r: any) => r.version("3.6")).kinds(since(6)),
+      (_: any) => _.Python_3_7.bodies(PSF).revision((r: any) => r.version("3.7")).kinds(since(7)),
+      (_: any) => _.Python_3_8.bodies(PSF).revision((r: any) => r.version("3.8")).kinds(since(8)),
+      (_: any) => _.Python_3_9.bodies(PSF).revision((r: any) => r.version("3.9")).kinds(since(9)),
+      (_: any) => _.Python_3_10.bodies(PSF).revision((r: any) => r.version("3.10")).kinds(since(10)),
+      (_: any) => _.Python_3_11.bodies(PSF).revision((r: any) => r.version("3.11")).kinds(since(11)),
+      (_: any) => _.Python_3_12.bodies(PSF).revision((r: any) => r.version("3.12")).kinds(since(12)),
+      (_: any) => _.Python_3_13.bodies(PSF).revision((r: any) => r.version("3.13")).kinds(since(13)),
+      (_: any) => _.Python_3_14.bodies(PSF).revision((r: any) => r.version("3.14")).kinds(since(14)),
+      (_: any) => _.Python_3_15.bodies(PSF).revision((r: any) => r.version("3.15")).kinds(since(15)),
+      // --- its domains ---
       (_: any) => _.dialect.domains({
         bool: (e: any) => e.domain(_.bool), int: (e: any) => e.domain(_.int),
         float: (e: any) => e.domain(_.float), str: (e: any) => e.domain(_.str),
@@ -693,57 +730,55 @@ const ANY2 = new FD.Function([FD.Anything, FD.Anything], FD.Anything);
 const ARGUMENT_SLOTS = ["posonlyargs", "args", "vararg", "kwonlyargs", "kwarg"].flatMap((group) =>
   ["annotation", "default_value"].map((slot) => `args.${group}.${slot}`));
 
-function application(signature: FD.Signature = new FD.Opaque(), standards: readonly string[] = STANDARDS,
-  options: F.KindOptions = {}): F.Kind {
-  return new F.Kind(F.APPLICATION, { signature, standards, ...options });
+function application(signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}): F.Kind {
+  return new F.Kind(F.APPLICATION, { signature, ...options });
 }
 
 function operatorKind(vocabulary: ReadonlyMap<string, FD.Signature>, options: F.KindOptions = {}): F.Kind {
-  return new F.Kind(F.APPLICATION, { operator: "op", vocabulary, required: ["op"], standards: STANDARDS, ...options });
+  return new F.Kind(F.APPLICATION, { operator: "op", vocabulary, required: ["op"], ...options });
 }
 
 /** The Python3 dialect: its kinds, as the framework reads them. */
 export const DIALECT = new F.Dialect("Python.Python3", {
   [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "prefix", "quote", "base", "separators"],
-    check: literalCheck, standards: STANDARDS }),
+    check: literalCheck }),
   [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "separators"], check: constantCheck,
-    typed: (record) => Domains.constant(F.attributesOf(record)), standards: STANDARDS }),
-  [NAME]: new F.Kind(F.REFERENCE, { required: ["name"], ambient: BUILTINS, check: identifier("name", "a name"),
-    standards: STANDARDS }),
-  [CONCATENATEDSTRING]: application(new FD.Opaque(Domains.Str), STANDARDS,
+    typed: (record) => Domains.constant(F.attributesOf(record)) }),
+  [NAME]: new F.Kind(F.REFERENCE, { required: ["name"], ambient: BUILTINS, check: identifier("name", "a name") }),
+  [CONCATENATEDSTRING]: application(new FD.Opaque(Domains.Str),
     { check: needs(CONCATENATEDSTRING, "values", "two strings", 2) }),
-  [JOINEDSTR]: application(new FD.Opaque(Domains.Str), since(6), { check: stringCheck(JOINEDSTR, "f") }),
-  [TEMPLATESTR]: application(new FD.Opaque(), since(14), { check: stringCheck(TEMPLATESTR, "t") }),
+  [JOINEDSTR]: application(new FD.Opaque(Domains.Str), { check: stringCheck(JOINEDSTR, "f") }),
+  [TEMPLATESTR]: application(new FD.Opaque(), { check: stringCheck(TEMPLATESTR, "t") }),
   [PARENTHESIZED]: application(ANY),
   [TUPLE]: application(),
   [LIST]: application(),
-  [SET]: application(new FD.Opaque(), STANDARDS, { check: needs(SET, "elts", "an element") }),
-  [DICT]: application(new FD.Opaque(), STANDARDS, { optional: ["key"] }),
-  [LISTCOMP]: application(new FD.Opaque(), STANDARDS,
+  [SET]: application(new FD.Opaque(), { check: needs(SET, "elts", "an element") }),
+  [DICT]: application(new FD.Opaque(), { optional: ["key"] }),
+  [LISTCOMP]: application(new FD.Opaque(),
     { scopes: comprehensionScopes, check: comprehensionCheck(LISTCOMP) }),
-  [SETCOMP]: application(new FD.Opaque(), STANDARDS,
+  [SETCOMP]: application(new FD.Opaque(),
     { scopes: comprehensionScopes, check: comprehensionCheck(SETCOMP) }),
-  [DICTCOMP]: application(new FD.Opaque(), STANDARDS,
+  [DICTCOMP]: application(new FD.Opaque(),
     { scopes: comprehensionScopes, optional: ["value"], check: comprehensionCheck(DICTCOMP) }),
-  [GENERATOREXP]: application(Domains.GENERATOR, STANDARDS,
+  [GENERATOREXP]: application(Domains.GENERATOR,
     { scopes: comprehensionScopes, check: comprehensionCheck(GENERATOREXP) }),
-  [YIELD]: application(new FD.Opaque(), STANDARDS, { optional: ["value"] }),
-  [YIELDFROM]: application(ANY, since(3)),
+  [YIELD]: application(new FD.Opaque(), { optional: ["value"] }),
+  [YIELDFROM]: application(ANY),
   [ATTRIBUTE]: new F.Kind(F.APPLICATION, { operator: "attr", signature: ANY, required: ["attr"],
-    check: identifier("attr", "an attribute"), standards: STANDARDS }),
+    check: identifier("attr", "an attribute") }),
   [SUBSCRIPT]: application(ANY2),
-  [SLICE]: application(new FD.Opaque(), STANDARDS, { optional: ["lower", "upper", "step"] }),
-  [CALL]: application(new FD.Opaque(), STANDARDS, { check: callCheck }),
+  [SLICE]: application(new FD.Opaque(), { optional: ["lower", "upper", "step"] }),
+  [CALL]: application(new FD.Opaque(), { check: callCheck }),
   [STARRED]: application(ANY),
-  [AWAIT]: application(ANY, since(5)),
+  [AWAIT]: application(ANY),
   [UNARYOP]: operatorKind(Domains.UNARYOP),
   [BINOP]: operatorKind(Domains.BINOP),
   [COMPARE]: new F.Kind(F.APPLICATION, { vocabulary: Domains.COMPARE, operators: compareOperators, result: compareResult,
-    check: compareCheck, unfold: compareUnfold, standards: STANDARDS }),
+    check: compareCheck, unfold: compareUnfold }),
   [BOOLOP]: operatorKind(Domains.BOOLOP, { check: needs(BOOLOP, "values", "two values", 2), unfold: boolopUnfold }),
-  [NAMEDEXPR]: application(new FD.Opaque(), since(8), { scopes: namedexprScopes, check: namedexprCheck }),
+  [NAMEDEXPR]: application(new FD.Opaque(), { scopes: namedexprScopes, check: namedexprCheck }),
   [IFEXP]: application(new FD.Function([FD.Anything, FD.Anything, FD.Anything], FD.Anything)),
-  [LAMBDA]: application(new FD.Opaque(), STANDARDS, { scopes: lambdaScopes, check: lambdaCheck, optional: ARGUMENT_SLOTS }),
+  [LAMBDA]: application(new FD.Opaque(), { scopes: lambdaScopes, check: lambdaCheck, optional: ARGUMENT_SLOTS }),
   [LET]: new F.Kind(F.BINDING, { required: ["name"], check: identifier("name", "a let's name") }),
   [IMPORT]: new F.Kind(F.IMPORT, { required: ["module"], names: importNames, check: importCheck }),
   [IMPORTFROM]: new F.Kind(F.IMPORT, { required: ["module", "name"], names: importfromNames, check: importfromCheck }),

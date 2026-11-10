@@ -17,11 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["install", "define", "STANDARDS"]
-
-STANDARDS = ("The Unicode Standard",)
-"""The standards this dialect implements, by designation."""
-
+__all__ = ["install", "define"]
 
 def install(txn: Any) -> Any:
     """Unicode's kind of domain, its union of kinds added to the framework's as the branch `unicode`; its domain's
@@ -38,7 +34,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Unicode.Expressions.Dialect").ref(True).singleton(
                 "Expressions.Unicode.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("unicode").schema([_.Dialect])]),
 
@@ -58,14 +55,19 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """Unicode's dialect as data: the singleton `Expressions.Unicode.Expressions` owning its domain by name (`domains`,
     through `Expressions.Framework.Defines`), with its inferred properties, and related to its schema
-    (`Expressions.Unicode.Expressions.string`) by `Expressions.Framework.HasDomain`. Run after `install`, in a
-    transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and its domain by its
-    name: `store.transaction(Unicode.define)[0]["string"]`."""
+    (`Expressions.Unicode.Expressions.string`) by `Expressions.Framework.HasDomain`. And the edition of the standard it
+    covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its formal reference's parts held
+    apart. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
+    (`dialect`), its edition (`standard`) and its domain by its name:
+    `store.transaction(Unicode.define)[0]["string"]`."""
     Unicode, Domain = txn.Expressions.Unicode.Expressions, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
     return txn.uid("mbse.Expressions.Unicode.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": Unicode.Dialect, "string": Domain})
+        .symbols({"dialect": Unicode.Dialect, "standard": Standard, "string": Domain})
         .spec([
             lambda _: _.dialect.domains({"string": lambda e: e.domain(_.string)}),
+            lambda _: _.dialect.standards({"The Unicode Standard": lambda e: e.standard(_.standard)}),
+            lambda _: _.standard.bodies(["org.unicode"]),
             lambda _: _.string.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.unicode(lambda v: v.unicode(
                 lambda d: d.ordered(True)))))).schema([Unicode.string]),
         ])]))])

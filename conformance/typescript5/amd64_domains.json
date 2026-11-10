@@ -1477,6 +1477,63 @@
                         }
                       ]
                     }
+                  },
+                  {
+                    "as_adjacency": {
+                      "name": "standards",
+                      "mutations": [
+                        {
+                          "insert": {
+                            "entries": [
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemV.AMD64",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "System V Application Binary Interface, AMD64 Architecture Processor Supplement"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "System V Application Binary Interface, AMD64 Architecture Processor Supplement"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
                   }
                 ]
               }

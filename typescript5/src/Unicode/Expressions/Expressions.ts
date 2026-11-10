@@ -16,9 +16,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** The standards this dialect implements, by designation. */
-export const STANDARDS: readonly string[] = ["The Unicode Standard"];
-
 /** Unicode's kind of domain, its union of kinds added to the framework's as the branch `unicode`; its domain's
  * schema; and its dialect's schema, whose singleton is `Expressions.Unicode.Expressions`. Run after
  * `Framework.install`, in a transaction of its own; run again, it writes nothing. Its domain `define` writes after
@@ -37,7 +34,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.Unicode.Expressions.Dialect").ref(true).singleton(
         "Expressions.Unicode.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("unicode").schema([_.Dialect])]),
 
@@ -56,15 +54,20 @@ export function install(txn: any): any {
 
 /** Unicode's dialect as data: the singleton `Expressions.Unicode.Expressions` owning its domain by name (`domains`,
  * through `Expressions.Framework.Defines`), with its inferred properties, and related to its schema
- * (`Expressions.Unicode.Expressions.string`) by `Expressions.Framework.HasDomain`. Run after `install`, in a
- * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and its domain by its
- * name: `store.transaction(Unicode.define)[0].get("string")`. */
+ * (`Expressions.Unicode.Expressions.string`) by `Expressions.Framework.HasDomain`. And the edition of the standard it
+ * covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its formal reference's parts held
+ * apart. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
+ * (`dialect`), its edition (`standard`) and its domain by its name:
+ * `store.transaction(Unicode.define)[0].get("string")`. */
 export function define(txn: any): any {
-  const [Unicode, Domain] = [txn.Expressions.Unicode.Expressions, txn.Expressions.Framework.Domain];
+  const [Unicode, Domain, Standard] = [txn.Expressions.Unicode.Expressions, txn.Expressions.Framework.Domain,
+    txn.Expressions.Framework.Standard];
   return txn.uid("mbse.Expressions.Unicode.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: Unicode.Dialect, string: Domain })
+    .symbols({ dialect: Unicode.Dialect, standard: Standard, string: Domain })
     .spec([
       (_: any) => _.dialect.domains({ string: (e: any) => e.domain(_.string) }),
+      (_: any) => _.dialect.standards({ "The Unicode Standard": (e: any) => e.standard(_.standard) }),
+      (_: any) => _.standard.bodies(["org.unicode"]),
       (_: any) => _.string.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.unicode((v: any) => v.unicode(
         (d: any) => d.ordered(true)))))).schema([Unicode.string]),
     ])]))]);

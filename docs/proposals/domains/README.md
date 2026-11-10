@@ -16,7 +16,9 @@ Since stage 3 of the port, a domain can be stored: an `Expressions.Framework.Dom
 the Patterns dialect (formerly Basic) defined domain kinds and stored domains; since stage 1 (below) the standard
 dialects do, and each language's dialect defines its own kinds; since stage 3, every dialect but LaTeX stores its
 domains, for C and C++ with the ABI dialects `SystemV.AMD64` and `Arm.AAPCS64`, and C's, C++'s and SystemVerilog's
-code type tables are gone (Stage 3's design). What follows describes the code at 0.8.0, which the stages replace.
+code type tables are gone (Stage 3's design); since stage 4, the standards every dialect names are data too, each an
+edition its dialect covers by designation, holding its common names and the kinds it has (Standards' design). What
+follows describes the code at 0.8.0, which the stages replace.
 
 At 0.8.0, everything that used a domain used code objects instead:
 
@@ -467,7 +469,8 @@ whole-record review before it is brought to the user.
    `state` domain; 11404's `enumerated`, ordered, is added only when a dialect first needs an order, as
    SystemVerilog's `.first()`, `.next()` and `.prev()` may (Decided, "On stage 1's review", "`state` is the generic
    enumeration").
-4. Standards as tagged data (the dialects proposal's Decided, Q10), every dialect's standards.
+4. Standards as tagged data (the dialects proposal's Decided, Q10), every dialect's standards. Its design is below
+   (Standards' design).
 5. Records in mbse-basis ([CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md), [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md),
    [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md), [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)), and release as 0.9.0 (Decided, D).
 
@@ -493,7 +496,8 @@ ISO/IEC 11404 is spelled as ISO writes it, without the slash a name cannot hold,
 A standard dialect is a singleton of its own schema, a branch of `Expressions.Framework.Dialect`, with no `Term`,
 holder or `Terms.Dialect` until it has terms (Decided, G). Each names its standard in code by designation
 (`STANDARDS = ("IEEE Std 754-2019",)`, `ISO/IEC 11404:2007`, `IEEE Std 1164-1993`, `The Unicode Standard`), until
-standards are tagged data, its own stage (below; Decided, "On stage 1's review"). Patterns' eight domains are these,
+standards are tagged data, its own stage (below; Decided, "On stage 1's review"), built in stage 4 (Standards'
+design), which replaced `STANDARDS` with the edition each define writes. Patterns' eight domains are these,
 each named as its standard names it (Decided, "On stage 1's review", "Names are the standards' own"): `bool`, `int` and
 `bytes` are 11404's `boolean`, `integer` and `octetstring`, and `uint8` is split into 11404's `octet`, for codes, and
 `modulo(256)`, for wrapping arithmetic (Decided, "On stage 1's review", "`uint8` split by 11404's own definitions");
@@ -787,7 +791,7 @@ dialect is (the dialects proposal's Decided, Namespace, 6 and 7), each a singlet
 and IEEE 754's kinds. Each serves C and C++ alike. Their names are the agent's, for review, each spelled as its psABI
 document names itself:
 
-| Dialect (path; name; tag) | Its standard (`STANDARDS`) |
+| Dialect (path; name; tag) | Its standard (`STANDARDS`, an edition its define writes since stage 4) |
 |---|---|
 | `SystemV.AMD64`; `AMD64`; `amd64` | "System V Application Binary Interface, AMD64 Architecture Processor Supplement", its LP64 programming model |
 | `Arm.AAPCS64`; `AAPCS64`; `aapcs64` | "Procedure Call Standard for the Arm 64-bit Architecture (AArch64)", AAPCS64, its LP64 data model |
@@ -1048,6 +1052,158 @@ K to R are decided (Decided, "On stage 3's design"). R, for the record:
   error values packed into their `ERROR.TYPE` codes.
   Decided (a): (d) was the user's preference where Microsoft's documentation gives the codes, and it gives eight of
   Excel's fifteen (Decided, "On stage 3's design", R).
+
+## Standards' design
+
+As the record has it: "label standards using the convention the standards body itself uses"; "If we treat standards
+as tags, we could support both"; a standard reference "either formal (a body by reverse-domain name, one or a joint
+pair; a number; a revision that is a year, an edition or a version) or common (a name such as `C11`), each edition
+stored with its designation and its common names as tags: "yes". Built with domains as data" (the dialects proposal's
+Decided, Q10); "every dialect's `STANDARDS` and `Kind.standards`", a stage after stage 3, as the user decided ("yes";
+Decided, "On stage 1's review"; Stages, 4); C and C++ "each kind recording as data the standards that have it" (the
+dialects proposal's Decided, 3); the designations and common names the standards bodies' own
+([PRI-012: model published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-012)),
+the model schema data ([PRI-018: no model needs code to read or write](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-018)),
+written in fluent builder syntax ([PRI-019: fluent builder syntax](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-019)).
+On the code at main (e39dce0), the same in both languages. What the record leaves open is the agent's, for review,
+marked *(agent)*.
+
+**What names a standard today**, every place in code, in both languages:
+
+| Dialect | In code | Its kinds' `standards` |
+|---|---|---|
+| ISO/IEC 11404, IEEE 754, IEEE 1164, Unicode | `STANDARDS`, one designation each: `ISO/IEC 11404:2007`, `IEEE Std 754-2019`, `IEEE Std 1164-1993`, `The Unicode Standard` | no terms |
+| `SystemV.AMD64`, `Arm.AAPCS64` | `STANDARDS`, the psABI document's title | no terms |
+| C | `STANDARDS = ("C11", "C17", "C23")` | every kind all three, but `constant` (`nullptr`) C23's alone; GNU's extensions none |
+| Cpp | `("C++17", "C++20", "C++23")` | all three, but `requires`, `co_await`, `co_yield` and a designated initializer C++20's and C++23's; GNU's extensions none |
+| Python3 | `Python 3.0` to `Python 3.15` | from the version each kind arrived in (`_since`: an f-string 3.6, `yield from` 3.3, `await` 3.5, `:=` 3.8, a t-string 3.14); its extensions (`let`, `import`, `importfrom`) none |
+| TypeScript5 | `TypeScript 5.0` to `TypeScript 5.9` | every kind all ten; JSX, an extension, none |
+| SystemVerilog, Patterns, MATLAB, Excel, LaTeX | none (SystemVerilog's docstrings cite IEEE 1800) | none |
+
+Nothing reads them but the tests (FRM-12, DOM-17, DOM-19), and invalid syntax (`error`, `missing`) has none.
+
+**The model**, added by the framework's install, beside `Domain` and `Defines`:
+
+- **`Expressions.Framework.Standard`**, a reference object: one edition of a standard, owned by the dialect that
+  covers it. Its properties are its formal reference's parts and its common names, each optional: `bodies`, the
+  standards bodies by reverse-domain name, one or a joint pair (`["org.iso", "ch.iec"]`); `number` (`"9899"`);
+  `revision`, a value of `Expressions.Framework.Revision`, the union of `year` (an int), `edition` (an int) and
+  `version` (a str); and `names`, its common names (`["C11"]`). Its adjacencies: `dialect`, its owner, and `kinds`.
+- **`Expressions.Framework.Covers(dialect, standard)`**, its property `designation`, unique `[dialect, designation]`
+  and `[standard]`: a dialect owns each edition it covers by its designation, as its standards body writes it
+  (`ISO/IEC 9899:2011`), as `Defines` owns a domain by its name; so an edition's path is its dialect's and its
+  designation, `store.Instances.Expressions.C.Expressions.standards({"designation": "ISO/IEC 9899:2011"})`
+  ([PRI-015: concrete references are programmatic](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-015)),
+  and its designation is its `Covers` entry's, as a domain's name is its `Defines` entry's.
+- **`Expressions.Framework.HasStandard(kind, standard)`**, a set (`uniques([])`): an edition has a kind, `kind` the
+  kind's schema, a `Schemas.OfObject`; `Schemas.OfObject` gains the extension adjacency `standards` through it, as
+  `Schemas.OfAny` has `domain` through `HasDomain`. So a kind records the standards that have it as data, read from
+  its schema, and an edition the kinds it has. A kind no edition has is an extension or invalid syntax.
+- **Every dialect's schema gains the adjacency `standards`**, through `Covers`, beside `domains` and `operations`, so
+  that every dialect may cover standards, whether its code names one yet or not.
+
+So an edition carries both of Q10's references as tags: its designation, the formal one as its body writes it, and its
+common names; `Standards.find(dialect, tag)` (below) takes either. Its formal reference's parts are held apart too, by
+property, so that a reference by body, number and revision needs no parsing of the designation.
+
+**What each define writes** *(agent: each part as below)*: each dialect that names a standard in code writes its
+editions in its `define` (each dialect that names one has a `define` since stage 3), owned by designation, with their
+properties and, for a dialect with terms, the kinds each has, from the table its kinds' `standards` came from, which
+moves into the define: C's `constant` C23's alone, C++'s four C++20 kinds, Python3's version each kind arrived in, and
+no edition for an extension or invalid syntax. Each holds what its code or the record names, and nothing invented: a
+designation, a number and a year where the designation is a standards body's; a version where a release is the
+revision; no number or revision where none is named.
+
+| Dialect | Designation (`Covers`) | `bodies` | `number` | `revision` | `names` |
+|---|---|---|---|---|---|
+| ISO/IEC 11404 | `ISO/IEC 11404:2007` | `org.iso`, `ch.iec` | `11404` | year 2007 | |
+| IEEE 754 | `IEEE Std 754-2019` | `org.ieee` | `754` | year 2019 | |
+| IEEE 1164 | `IEEE Std 1164-1993` | `org.ieee` | `1164` | year 1993 | |
+| Unicode | `The Unicode Standard` | `org.unicode` | | | |
+| `SystemV.AMD64` | `System V Application Binary Interface, AMD64 Architecture Processor Supplement` | | | | |
+| `Arm.AAPCS64` | `Procedure Call Standard for the Arm 64-bit Architecture (AArch64)` | `com.arm` | | | `AAPCS64` |
+| C | `ISO/IEC 9899:2011`, `ISO/IEC 9899:2018`, `ISO/IEC 9899:2024` | `org.iso`, `ch.iec` | `9899` | year 2011, 2018, 2024 | `C11`, `C17`, `C23` |
+| Cpp | `ISO/IEC 14882:2017`, `ISO/IEC 14882:2020`, `ISO/IEC 14882:2024` | `org.iso`, `ch.iec` | `14882` | year 2017, 2020, 2024 | `C++17`, `C++20`, `C++23` |
+| Python3 | `Python 3.0` to `Python 3.15` | `org.python` | | version `3.0` to `3.15` | |
+| TypeScript5 | `TypeScript 5.0` to `TypeScript 5.9` | `com.microsoft` | | version `5.0` to `5.9` | |
+
+- **Designations are the bodies' own**: ISO and IEC write `ISO/IEC 9899:2011`, the IEEE `IEEE Std 754-2019`; the
+  Python Software Foundation names a release `Python 3.12`, and Microsoft `TypeScript 5.0`; a psABI document its title.
+  The common names are WG14's and WG21's own (`C11`, `C++17`), and AAPCS64 the document's abbreviation (stage 3's
+  design); IEEE 754's, 1164's and 11404's have none their bodies give. The designations C's and C++'s docstrings already
+  name, "ISO/IEC 9899:2011, 2018 and 2024" and "ISO/IEC 14882:2017, 2020 and 2024", are these.
+- **A body's reverse-domain name** is its web domain reversed: `iso.org`, `iec.ch`, `ieee.org`, `unicode.org`,
+  `arm.com`, `python.org`, `microsoft.com`. The x86-64 psABI names no body, its editors only, so it has none.
+- **No revision where the code names none**: Unicode's and the two psABIs' are unversioned in code today, and what the
+  dialects read of them (Unicode's code points; the ABIs' sizes and formats) is the same in every revision in use, so
+  none is chosen for them; nor is AAPCS64's document number, which the code does not name.
+- **The order of editions** is the order each define writes them, the standard's, oldest first; read back from a
+  snapshot, as by mbse-schemas' writing a relation's entries sorted by its key, they come by designation
+  ([PRI-001: declaration order](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-001)'s
+  exception), so nothing claims their order but the define's, as `Domains.operations` claims none (Stage 2's design).
+- **The symbols** of a define's frame: a dialect covering one edition binds it as `standard`, as it binds itself as
+  `dialect`; one covering several binds each by its common name, or its published name, spelled as an identifier
+  (`C11`, `Cpp17`, `Python_3_12`, `TypeScript_5_0`), as a domain's are its name's.
+- **SystemVerilog** names no standard in code yet: its editions, IEEE Std 1800-2005 to 1800-2023 and Verilog's IEEE
+  Std 1364, are stage 6's, which records them as this model has them (the dialects proposal's Decided, Q10: "until
+  then stage 6 records SystemVerilog's editions in code by designation", now built before it). Patterns, MATLAB, Excel
+  and LaTeX name none, and none is added: no standard their code follows is named in it (Open, below).
+
+**The reading interface**, `Framework.Standards`, new, beside `Framework.Domains` (TypeScript the same, camelCase):
+
+- `standards(dialect)`: a dialect's editions by designation, each its `Expressions.Framework.Standard`, in the order the
+  store holds the entries.
+- `designation_of(standard)` (`designationOf`): the designation its dialect covers it by, or None.
+- `tags(standard)`: its designation, then its common names, the references it is found by.
+- `find(dialect, tag)`: the edition the dialect covers whose designation or common name is `tag`, or None: `find(C,
+  "C11")` and `find(C, "ISO/IEC 9899:2011")` give the same edition.
+- `properties(standard)`: its formal reference's parts and its common names that are set, by name, a container a
+  tuple, `revision` its branch and its value (`("year", 2011)`), as `Domains.properties` reads a domain's.
+- `kinds(standard)`: the schemas of the kinds it has; `of(dialect, kind)`: the editions of a dialect that have a kind,
+  given its schema, by designation. A kind's schema reads the same entries from its side, through `standards`.
+
+**What goes**, in both languages: every module's `STANDARDS` and its package's export of it; `Terms.Kind`'s
+`standards`; the `standards` argument of C's `kinds(...)`, which C++ shares, and C's, C++'s, Python3's and
+TypeScript5's tables of standards by kind, each moved into its define as the table it writes from. `EXTENSIONS` stays,
+as the kinds each dialect's grammar does not have. A breaking change, in 0.9.0, a breaking release anyway.
+
+**`Uses`** (Decided, I): `Covers` and `HasStandard` link a dialect to its own editions and an edition to its dialect's
+kinds; nothing reads which dialects a dialect uses, so this gives no reason to reinstate `Uses`.
+
+**Tests, corpus and records**, under their IDs in both languages:
+
+- **FRM-13**, new: standards are data: each dialect covers its editions by designation, each its formal reference's
+  parts and its common names as tags, found by either, and records the kinds it has, read from the store. FRM-12's
+  assertions of `STANDARDS` and `Kind.standards` move there, reading the stored editions of C, C++, Python3 and
+  TypeScript5, and that no other dialect's kinds have one. FRM-01 each dialect's adjacencies (`standards`) and the
+  framework's new schemas. DOM-17 and DOM-19 read each standard dialect's and ABI dialect's edition from the store, in
+  place of `STANDARDS`.
+- **The corpus**: the data cases that write a dialect's singleton as one document (`domains`, `c_domains`, ...) gain its
+  `Covers` entries, each its designation and a reference to its edition; a new data case, `standards` *(agent)*, writes
+  C23's edition, `ISO/IEC 9899:2024`, as one document of `Expressions.Framework.Standard`, pinning an edition's
+  properties and its kinds byte for byte, C23 since its kinds differ from C17's (`constant`); its JSON regenerated,
+  byte-identical in both languages, and read back by CONF-04.
+- **The API**: Settled in domains as data's stage 4, items 154 onward; EQUIVALENCE (the reading interface's types), both
+  test plans, the skill where it names how a dialect records its standards, and mbse-basis
+  [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)'s
+  Decided by an agent, for review.
+
+**Found while building**, each taken the simplest way consistent with the record, *(agent)*, for review (API, 154
+onward):
+
+- **A schema object is no `Readers.OfObject`**: the framework's readers (`Objects.entries`) read a data object's
+  adjacencies, and a kind's schema is a schema object, read through a builder over it, as DOM-03 reads a schema's
+  `domain`. So `of` takes the dialect too and reads each of its editions' `kinds`, rather than the kind's own
+  `standards`, which FRM-13 reads directly; its result is per dialect, as a shared kind (`literal`) is every dialect's.
+- **A define reads its kinds' schemas through its transaction**: `txn.<path>.Term.as_schema()` gives the dialect's union,
+  whose branches are its kinds by tag, so an edition's `kinds` are written from the union, an extension and invalid
+  syntax left out, and nothing names a kind's schema twice.
+- **The cost**: Python3's define writes 16 editions and 444 `HasStandard` entries, TypeScript5's 10 and 410, C's 3 and
+  61, C++'s 3 and 101; the suites run Python3's and TypeScript5's defines only where they read their standards or
+  their domains (FRM-13, DOM-21, the corpus).
+
+**Open** *(agent, not built)*: whether Excel's formulas are recorded as ISO/IEC 29500-1's (Office Open XML's formula
+grammar), and MATLAB's, Patterns' and LaTeX's as any standard, is left for the user: no code names one.
 
 ## Risks
 

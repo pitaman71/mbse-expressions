@@ -17,11 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["install", "define", "STANDARDS"]
-
-STANDARDS = ("IEEE Std 1164-1993",)
-"""The standards this dialect implements, by designation."""
-
+__all__ = ["install", "define"]
 
 def install(txn: Any) -> Any:
     """IEEE 1164's kind of domain, its union of kinds added to the framework's as the branch `ieee1164`; its domain's
@@ -38,7 +34,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.IEEE1164.Expressions.Dialect").ref(True).singleton(
                 "Expressions.IEEE1164.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("ieee1164").schema([_.Dialect])]),
 
@@ -58,14 +55,19 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """IEEE 1164's dialect as data: the singleton `Expressions.IEEE1164.Expressions` owning its domain by name
     (`domains`, through `Expressions.Framework.Defines`), with its inferred properties, and related to its schema
-    (`Expressions.IEEE1164.Expressions.std_logic`) by `Expressions.Framework.HasDomain`. Run after `install`, in a
-    transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and its domain by its
-    name: `store.transaction(IEEE1164.define)[0]["std_logic"]`."""
+    (`Expressions.IEEE1164.Expressions.std_logic`) by `Expressions.Framework.HasDomain`. And the edition of the standard
+    it covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its formal reference's parts
+    held apart. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
+    dialect (`dialect`), its edition (`standard`) and its domain by its name:
+    `store.transaction(IEEE1164.define)[0]["std_logic"]`."""
     IEEE1164, Domain = txn.Expressions.IEEE1164.Expressions, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
     return txn.uid("mbse.Expressions.IEEE1164.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": IEEE1164.Dialect, "std_logic": Domain})
+        .symbols({"dialect": IEEE1164.Dialect, "standard": Standard, "std_logic": Domain})
         .spec([
             lambda _: _.dialect.domains({"std_logic": lambda e: e.domain(_.std_logic)}),
+            lambda _: _.dialect.standards({"IEEE Std 1164-1993": lambda e: e.standard(_.standard)}),
+            lambda _: _.standard.bodies(["org.ieee"]).number("1164").revision(lambda r: r.year(1993)),
             lambda _: _.std_logic.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee1164(lambda v: v.ieee1164(
                 lambda d: d.ordered(False)))))).schema([IEEE1164.std_logic]),
         ])]))])

@@ -24,11 +24,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["install", "define", "STANDARDS"]
-
-STANDARDS = ("Procedure Call Standard for the Arm 64-bit Architecture (AArch64)",)
-"""The standard this dialect implements, by its title."""
-
+__all__ = ["install", "define"]
 
 def install(txn: Any) -> Any:
     """AAPCS64's dialect's schema, whose singleton is `Expressions.Arm.AAPCS64`, and its domains' schemas. Run after
@@ -52,7 +48,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Arm.AAPCS64.Dialect").ref(True).singleton(
                 "Expressions.Arm.AAPCS64").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}).adjacencies([
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}).adjacencies([
                 lambda t: t.relation([Framework.HasAbi]).me("abi")]),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("aapcs64").schema([_.Dialect])]),
@@ -95,14 +92,17 @@ def install(txn: Any) -> Any:
 
 def define(txn: Any) -> Any:
     """AAPCS64's dialect as data: the singleton `Expressions.Arm.AAPCS64` owning its domains by name (`domains`, through
-    `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its schema
-    by `Expressions.Framework.HasDomain`. Run after `install`, in a transaction of its own; run again, it writes
-    nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled as its schema's is
-    (`unsigned long` as `unsigned_long`): `store.transaction(AAPCS64.define)[0]["unsigned_long"]`."""
+    `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its schema by
+    `Expressions.Framework.HasDomain`. And the edition of the standard it covers, by its designation (`standards`,
+    through `Expressions.Framework.Covers`), its formal reference's parts held apart. Run after `install`, in a
+    transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), its edition
+    (`standard`) and each domain by its name, spelled as its schema's is (`unsigned long` as `unsigned_long`):
+    `store.transaction(AAPCS64.define)[0]["unsigned_long"]`."""
     ABI, Domain = txn.Expressions.Arm.AAPCS64, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
     uid = "mbse.Expressions.Arm.AAPCS64.define/1"
     return txn.uid(uid).mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": ABI.Dialect,
+        .symbols({"dialect": ABI.Dialect, "standard": Standard,
                   "char": Domain, "signed_char": Domain, "unsigned_char": Domain, "short": Domain,
                   "unsigned_short": Domain, "int": Domain, "unsigned_int": Domain, "long": Domain,
                   "unsigned_long": Domain, "long_long": Domain, "unsigned_long_long": Domain, "float": Domain,
@@ -146,6 +146,9 @@ def define(txn: Any) -> Any:
                 "_Float32x": lambda e: e.domain(_.Float32x),
                 "_Float64x": lambda e: e.domain(_.Float64x),
             }),
+            lambda _: _.dialect.standards({
+                "Procedure Call Standard for the Arm 64-bit Architecture (AArch64)": lambda e: e.standard(_.standard)}),
+            lambda _: _.standard.bodies(["com.arm"]).names(["AAPCS64"]),
             lambda _: _.char.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.modulo(
                 lambda d: d.modulus(256).least(0).greatest(255).ordered(True)))))).schema([ABI.char]),
             lambda _: _.signed_char.kind(lambda k: k.as_value(lambda a: a.as_union(
