@@ -562,17 +562,7 @@ change as it lands.
 - **Extension limits**: an extension's adjacency is to a relation of two links and no properties.
 - **Dependents break** at 0.8.0: mbse-programs' bridges (until its stage 2), mbse-patterns (`Dialects.Python.Text`)
   and mbse-codegen-python (the writers).
-- **Tech debt, type specificity** (counted at 0.8.0, against 0.7.0). The installs, writers and corpus build schemas
-  and terms in fluent syntax through mbse-schemas' dynamic proxies, which no type checker sees, so each builder
-  callback is `any` in TypeScript: `typescript5/src` has 2,349 `any`s (931 at 0.7.0), 1,711 of them `(_: any) =>`
-  callbacks, most in the dialects' `Expressions.ts`; its tests 2,979 (545); `python3/mbse` 1,265 `Any`s (905). New
-  `as any` casts: the printers of `Python3` and `TypeScript5` dispatch on a kind's tag by method name
-  (``(this as any)[`_${tag}`]``, in `Python/Python3/Text.ts`, twice, and `TypeScript/TypeScript5/Text.ts`), and
-  `Framework/Terms.ts` walks a schema's `refines` through `as any`. A misspelled property or a term of the wrong kind
-  is then caught by validation or a test, not by the compiler. Typed bindings for the dialects' schemas
-  ([PRI-015: concrete references are programmatic](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-015),
-  "any model used in code has typed bindings") and a typed dispatch table would close it; it is to become a capability
-  of an internal feature in mbse-basis.
+- **Tech debt, type specificity**: [CAP-255: mbse-expressions' installs, writers and corpus typed](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-255.md).
 
 ---
 
