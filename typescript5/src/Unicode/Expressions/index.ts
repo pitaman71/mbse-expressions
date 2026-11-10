@@ -6,4 +6,4 @@
  */
 
 export * as Expressions from "./Expressions.js";
-export { STANDARDS, define, install } from "./Expressions.js";
+export { define, install } from "./Expressions.js";

@@ -4,9 +4,11 @@
 `Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
 dialect's, and each dialect's `define`, written nested. `DIALECTS` names the dialect that reads each case other than
 Patterns'. The `domains` case and the `<dialect>_domains` cases are data (`DOMAINS`): each a dialect's singleton, owning
-its domains by name, each kind its dialect's then its own, written as one document; `domains` is ISO/IEC 11404's
-dialect, the singleton `Expressions.ISOIEC11404.Expressions` (`Expressions.ISOIEC11404.Expressions.Dialect`), an enum
-and a packed one among its domains. The `typescript5` case
+its domains by name, each kind its dialect's then its own, and the editions of the standards it covers by designation,
+written as one document; `domains` is ISO/IEC 11404's dialect, the singleton `Expressions.ISOIEC11404.Expressions`
+(`Expressions.ISOIEC11404.Expressions.Dialect`), an enum and a packed one among its domains. The `standards` case is
+data too (`STANDARD`): an edition, C23's, ISO/IEC 9899:2024, written as one document of
+`Expressions.Framework.Standard`, its formal reference's parts, its common name and the kinds it has. The `typescript5` case
 is a TypeScript5 term of every kind, written through the builders. The `invalid` case is a Python3 term holding invalid
 syntax and literals with their spelling. Each implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
@@ -45,7 +47,7 @@ from mbse.Schemas.Framework import Builders
 
 CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp", "systemverilog",
          "typescript5", "invalid", "systemverilog_domains", "python3_domains", "typescript5_domains", "matlab_domains",
-         "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains"]
+         "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains", "standards"]
 
 DIALECTS = {"python3": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex": L.DIALECT, "c": CE.DIALECT,
             "cpp": CPP.DIALECT, "systemverilog": SV.DIALECT, "typescript5": TS.DIALECT, "invalid": P.DIALECT}
@@ -58,6 +60,10 @@ DOMAINS = {"domains": "Expressions.ISOIEC11404.Expressions", "systemverilog_doma
            "amd64_domains": "Expressions.SystemV.AMD64", "aapcs64_domains": "Expressions.Arm.AAPCS64"}
 """The cases that are data, not terms: each a dialect's singleton, by its path, written as one document of its schema,
 the path's `Dialect`."""
+
+STANDARD = {"standards": ("Expressions.C.Expressions", "ISO/IEC 9899:2024")}
+"""The case that is an edition of a standard: its dialect, by its path, and its designation, written as one document of
+`Expressions.Framework.Standard`."""
 
 def build():
     E = Expressions
@@ -334,6 +340,8 @@ def build():
             ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid)]}
     terms["domains"] = defined["dialect"]
     terms.update(stored)
-    Term = store.registered("Expressions.Framework.Term")
-    return {case: (store.registered(f"{DOMAINS[case]}.Dialect") if case in DOMAINS else Term, terms[case], store)
-            for case in CASES}
+    terms.update({case: store.singleton(path).standards({"designation": designation})  # an edition, by its path
+                  for case, (path, designation) in STANDARD.items()})
+    Term, Standard = store.registered("Expressions.Framework.Term"), store.registered("Expressions.Framework.Standard")
+    return {case: (store.registered(f"{DOMAINS[case]}.Dialect") if case in DOMAINS else Standard if case in STANDARD
+                   else Term, terms[case], store) for case in CASES}

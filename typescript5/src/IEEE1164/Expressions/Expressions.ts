@@ -16,9 +16,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** The standards this dialect implements, by designation. */
-export const STANDARDS: readonly string[] = ["IEEE Std 1164-1993"];
-
 /** IEEE 1164's kind of domain, its union of kinds added to the framework's as the branch `ieee1164`; its domain's
  * schema; and its dialect's schema, whose singleton is `Expressions.IEEE1164.Expressions`. Run after
  * `Framework.install`, in a transaction of its own; run again, it writes nothing. Its domain `define` writes after
@@ -37,7 +34,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.IEEE1164.Expressions.Dialect").ref(true).singleton(
         "Expressions.IEEE1164.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("ieee1164").schema([_.Dialect])]),
 
@@ -60,11 +58,14 @@ export function install(txn: any): any {
  * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and its domain by its
  * name: `store.transaction(IEEE1164.define)[0].get("std_logic")`. */
 export function define(txn: any): any {
-  const [IEEE1164, Domain] = [txn.Expressions.IEEE1164.Expressions, txn.Expressions.Framework.Domain];
+  const [IEEE1164, Domain, Standard] = [txn.Expressions.IEEE1164.Expressions, txn.Expressions.Framework.Domain,
+    txn.Expressions.Framework.Standard];
   return txn.uid("mbse.Expressions.IEEE1164.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: IEEE1164.Dialect, std_logic: Domain })
+    .symbols({ dialect: IEEE1164.Dialect, standard: Standard, std_logic: Domain })
     .spec([
       (_: any) => _.dialect.domains({ std_logic: (e: any) => e.domain(_.std_logic) }),
+      (_: any) => _.dialect.standards({ "IEEE Std 1164-1993": (e: any) => e.standard(_.standard) }),
+      (_: any) => _.standard.bodies(["org.ieee"]).number("1164").revision((r: any) => r.year(1993n)),
       (_: any) => _.std_logic.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee1164((v: any) => v.ieee1164(
         (d: any) => d.ordered(false)))))).schema([IEEE1164.std_logic]),
     ])]))]);

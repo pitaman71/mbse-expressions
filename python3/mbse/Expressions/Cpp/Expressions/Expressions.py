@@ -39,9 +39,10 @@ of every union whose positions hold it: `Term` lists `typeid` and `designatedini
 union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`,
 `Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and `AttributeSpecifier`.
 
-Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: C++20's kinds, `co_await`,
-`co_yield`, `requires` and designated initializers, C++20 and C++23; an extension none). `DIALECT` reads them
-(`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
+The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
+(`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
+(`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone, and an extension in none.
+`DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
 expression an `idexpression` (`identifier("x")`, and a callee named by a string):
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
 
@@ -64,7 +65,7 @@ from mbse.Expressions.C.Expressions import Domains
 from mbse.Expressions.C.Expressions import Expressions as C
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 
-__all__ = ["install", "define", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal",
+__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal",
            "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
 
 USERDEFINEDLITERAL, IDEXPRESSION, THISEXPRESSION, LAMBDAEXPRESSION = (
@@ -78,9 +79,6 @@ NEWEXPRESSION, DELETEEXPRESSION, THROWEXPRESSION, YIELDEXPRESSION, PACKEXPANSION
 
 EXTENSIONS = C.EXTENSIONS
 """GNU's extensions, outside every standard, as mbse-programs marks them."""
-
-STANDARDS = ("C++17", "C++20", "C++23")
-"""The standards this dialect covers, ISO/IEC 14882:2017, 2020 and 2024."""
 
 PREFIXES = C.PREFIXES
 """A character's or a string's encoding prefixes."""
@@ -155,7 +153,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(True)
                 .singleton("Expressions.Cpp.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("cpp").schema([_.Dialect])]),
             # its union of its kinds: its own, the framework's it reuses, a type name, an initializer list's
@@ -525,18 +524,34 @@ def define(txn: Any) -> Any:
     as C's (C++'s `<cstdint>` is C's, under C's names); C++23's `std::float16_t`, `std::float32_t`, `std::float64_t`
     and `std::float128_t` (IEEE 754's `binary16` to `binary128`) and `std::bfloat16_t` (IEEE 754's kind with no
     format: 16 bits, radix 2, precision 8, emax 127), each rounding ties to even; and `nullptr_t`, of C++'s own kind.
-    What C++ leaves to the implementation is each ABI dialect's, as C's is. Run after `install`, in a transaction of
-    its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled
-    as its schema's is: `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`."""
-    OWN, Domain = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain
+    What C++ leaves to the implementation is each ABI dialect's, as C's is. And the editions of C++ it covers, by
+    designation (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts, its
+    common name and the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing.
+    Its frame binds the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as
+    `Cpp17`) and each domain by its name, spelled as its schema's is: `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`."""
+    OWN, Domain, Standard = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain, txn.Expressions.Framework.Standard
+    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each kind's schema, by its tag,
+             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # but an extension and invalid syntax
     return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([lambda mu: mu.upsert(
         lambda u: u.exists([lambda p: p
-        .symbols({"dialect": OWN.Dialect,
+        .symbols({"dialect": OWN.Dialect, "Cpp17": Standard, "Cpp20": Standard, "Cpp23": Standard,
                   "bool": Domain, "int8_t": Domain, "int16_t": Domain, "int32_t": Domain, "int64_t": Domain,
                   "uint8_t": Domain, "uint16_t": Domain, "uint32_t": Domain, "uint64_t": Domain,
                   "std_float16_t": Domain, "std_float32_t": Domain, "std_float64_t": Domain, "std_float128_t": Domain,
                   "std_bfloat16_t": Domain, "nullptr_t": Domain})
         .spec([
+            # --- the editions C++ covers, each by its designation, with the kinds it has: every kind but GNU's
+            # extensions and invalid syntax, C++20's own in C++20 and C++23 alone ---
+            lambda _: _.dialect.standards({
+                "ISO/IEC 14882:2017": lambda e: e.standard(_.Cpp17), "ISO/IEC 14882:2020": lambda e: e.standard(_.Cpp20),
+                "ISO/IEC 14882:2024": lambda e: e.standard(_.Cpp23)}),
+            lambda _: _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2017)).names(
+                ["C++17"]).kinds([schema for tag, schema in every.items() if tag not in _SINCE_20]),
+            lambda _: _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2020)).names(
+                ["C++20"]).kinds(list(every.values())),
+            lambda _: _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2024)).names(
+                ["C++23"]).kinds(list(every.values())),
+            # --- its domains ---
             lambda _: _.dialect.domains({
                 "bool": lambda e: e.domain(_.bool),
                 "int8_t": lambda e: e.domain(_.int8_t),
@@ -624,17 +639,15 @@ _TAGS = (C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CONCATENATEDSTRING, IDEXPR
          PACKEXPANSION, C.INITIALIZERLIST, C.DESIGNATEDINITIALIZER, C.STATEMENTEXPRESSION, C.EXTENSIONEXPRESSION,
          C.TYPEID)
 
-_SINCE_20 = ("C++20", "C++23")
-_STANDARDS = {**{tag: STANDARDS for tag in _TAGS}, REQUIRESEXPRESSION: _SINCE_20, AWAITEXPRESSION: _SINCE_20,
-              YIELDEXPRESSION: _SINCE_20, C.DESIGNATEDINITIALIZER: _SINCE_20, C.STATEMENTEXPRESSION: (),
-              C.EXTENSIONEXPRESSION: ()}
+_SINCE_20 = frozenset({REQUIRESEXPRESSION, AWAITEXPRESSION, YIELDEXPRESSION, C.DESIGNATEDINITIALIZER})
+"""The kinds C++20 added: C++17 has every other kind but the extensions."""
 
 _ANY1 = FD.Function((FD.Anything,), FD.Anything)
 
 
 def _application(tag: str, signature: FD.Signature = FD.Opaque(), optional: tuple[str, ...] = (),
                  **options: Any) -> F.Kind:
-    return F.Kind(F.APPLICATION, signature=signature, standards=_STANDARDS[tag], check=_check(tag),
+    return F.Kind(F.APPLICATION, signature=signature, check=_check(tag),
                   scopes=C.scopes(tag), optional=optional + C.OPTIONAL, **options)
 
 
@@ -645,17 +658,17 @@ def _check(tag: str) -> Any:
 
 _OWN = {
     USERDEFINEDLITERAL: _application(USERDEFINEDLITERAL, required=("literal", "suffix")),
-    IDEXPRESSION: F.Kind(F.REFERENCE, required=("name",), standards=STANDARDS, check=_check(IDEXPRESSION),
+    IDEXPRESSION: F.Kind(F.REFERENCE, required=("name",), check=_check(IDEXPRESSION),
                          scopes=C.scopes(IDEXPRESSION), optional=C.OPTIONAL),
-    THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False, standards=STANDARDS),
+    THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False),
     LAMBDAEXPRESSION: _application(LAMBDAEXPRESSION, optional=("template_requires",)),
     FOLDEXPRESSION: F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.FOLD, required=("operator",),
-                           optional=("left", "right"), standards=STANDARDS, check=_check(FOLDEXPRESSION),
+                           optional=("left", "right"), check=_check(FOLDEXPRESSION),
                            scopes=C.scopes(FOLDEXPRESSION)),
     REQUIRESEXPRESSION: _application(REQUIRESEXPRESSION),
     FUNCTIONALCASTEXPRESSION: _application(FUNCTIONALCASTEXPRESSION, required=("type", "initializer")),
     NAMEDCASTEXPRESSION: F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.CASTS,
-                                required=("operator", "type"), optional=C.OPTIONAL, standards=STANDARDS,
+                                required=("operator", "type"), optional=C.OPTIONAL,
                                 check=_check(NAMEDCASTEXPRESSION), scopes=C.scopes(NAMEDCASTEXPRESSION)),
     TYPEIDEXPRESSION: _application(TYPEIDEXPRESSION, FD.Opaque()),
     AWAITEXPRESSION: _application(AWAITEXPRESSION, _ANY1),
@@ -668,7 +681,7 @@ _OWN = {
     PACKEXPANSION: _application(PACKEXPANSION, _ANY1),
 }
 
-_SHARED = C.kinds("C++", _TAGS, _STANDARDS, PREFIXES, SUFFIXES)
+_SHARED = C.kinds("C++", _TAGS, PREFIXES, SUFFIXES)
 
 
 def _native(value: Any) -> Writer | None:

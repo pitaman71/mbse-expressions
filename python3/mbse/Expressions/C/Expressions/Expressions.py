@@ -55,9 +55,10 @@ specifiers), `Declarator` (an identifier, a pointer, an array, a function, paren
 declarations, is not part of the term ("(i)"): `body` says whether it has one. The framework reads a value of a
 sublanguage, as of any helper, as a `Terms.Part`.
 
-Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: `constant` C23's alone, an
-extension none). `DIALECT` reads them (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...)
-write the kinds C evaluated before it was complete through the builders, in a transaction, a cast's type a spec of
+The editions C covers are data, which `define` writes, each owned by its designation and holding the kinds it has
+(`Framework.Standards`): ISO/IEC 9899:2011, 2018 and 2024, C11, C17 and C23 (C17 is C11's corrigenda, with no new
+syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. `DIALECT` reads the
+kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated before it was complete through the builders, in a transaction, a cast's type a spec of
 `Type`, written through the builders too:
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through the builders
 (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an
@@ -93,7 +94,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from . import Domains
 
-__all__ = ["install", "define", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "Writer",
+__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "Writer",
            "Writers", "literal", "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call",
            "type_name", "cast_type", "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds",
            "SPELLING", "OPTIONAL"]
@@ -111,9 +112,6 @@ STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID = "statementexpression", "exten
 
 EXTENSIONS = frozenset({STATEMENTEXPRESSION, EXTENSIONEXPRESSION})
 """GNU's extensions, outside every standard, as mbse-programs marks them."""
-
-STANDARDS = ("C11", "C17", "C23")
-"""The standards this dialect covers, ISO/IEC 9899:2011, 2018 and 2024: C17 is C11's corrigenda, with no new syntax."""
 
 PREFIXES = ("L", "u8", "u", "U")
 """A character's or a string's encoding prefixes."""
@@ -175,7 +173,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.C.Expressions.Dialect").ref(True)
                 .singleton("Expressions.C.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("c").schema([_.Dialect])]),
             # its union of its kinds: its own, the framework's it reuses, a type name, an initializer list's
@@ -423,18 +422,34 @@ def define(txn: Any) -> Any:
     on overflow, as C leaves it undefined) and `uint8_t` to `uint64_t` (11404's `modulo`, wrapping); `_Float16`,
     `_Float32`, `_Float64` and `_Float128` (IEEE 754's `binary16` to `binary128`) and `_Decimal32`, `_Decimal64` and
     `_Decimal128` (its decimal formats), each rounding ties to even; and `nullptr_t`, of C's own kind. What C leaves to
-    the implementation (`int`, `long`, `char`, `long double`, `size_t`, ...) is each ABI dialect's. Run after
-    `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
-    each domain by its name: `store.transaction(C.define)[0]["int32_t"]`."""
-    OWN, Domain = txn.Expressions.C.Expressions, txn.Expressions.Framework.Domain
+    the implementation (`int`, `long`, `char`, `long double`, `size_t`, ...) is each ABI dialect's. And the editions
+    of C it covers, by designation (`standards`, through `Expressions.Framework.Covers`), each with its formal
+    reference's parts, its common name and the kinds it has. Run after `install`, in a transaction of its own; run
+    again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each
+    domain by its name: `store.transaction(C.define)[0]["int32_t"]`."""
+    OWN, Domain, Standard = txn.Expressions.C.Expressions, txn.Expressions.Framework.Domain, txn.Expressions.Framework.Standard
+    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each kind's schema, by its tag,
+             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # but an extension and invalid syntax
     return txn.uid("mbse.Expressions.C.Expressions.define/1").mutations([lambda mu: mu.upsert(
         lambda u: u.exists([lambda p: p
-        .symbols({"dialect": OWN.Dialect,
+        .symbols({"dialect": OWN.Dialect, "C11": Standard, "C17": Standard, "C23": Standard,
                   "bool": Domain, "int8_t": Domain, "int16_t": Domain, "int32_t": Domain, "int64_t": Domain,
                   "uint8_t": Domain, "uint16_t": Domain, "uint32_t": Domain, "uint64_t": Domain,
                   "Float16": Domain, "Float32": Domain, "Float64": Domain, "Float128": Domain,
                   "Decimal32": Domain, "Decimal64": Domain, "Decimal128": Domain, "nullptr_t": Domain})
         .spec([
+            # --- the editions C covers, each by its designation, with the kinds it has: every kind but GNU's
+            # extensions and invalid syntax, `constant` (`nullptr`) C23's alone; C17 is C11's corrigenda ---
+            lambda _: _.dialect.standards({
+                "ISO/IEC 9899:2011": lambda e: e.standard(_.C11), "ISO/IEC 9899:2018": lambda e: e.standard(_.C17),
+                "ISO/IEC 9899:2024": lambda e: e.standard(_.C23)}),
+            lambda _: _.C11.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2011)).names(["C11"]).kinds(
+                [schema for tag, schema in every.items() if tag != CONSTANT]),
+            lambda _: _.C17.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2018)).names(["C17"]).kinds(
+                [schema for tag, schema in every.items() if tag != CONSTANT]),
+            lambda _: _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2024)).names(["C23"]).kinds(
+                list(every.values())),
+            # --- its domains ---
             lambda _: _.dialect.domains({
                 "bool": lambda e: e.domain(_.bool),
                 "int8_t": lambda e: e.domain(_.int8_t),
@@ -717,12 +732,11 @@ SPELLING = {"C": ("text", "problems", "quote", "base", "separators"),
 C's spelling, `'a'` an `int` as `97` is, and not C++'s, where `'a'` is a `char`: there it is what the literal is."""
 
 
-def kinds(language: str, tags: tuple[str, ...], standards: Mapping[str, tuple[str, ...]],
-          prefixes: tuple[str, ...], suffixes: Mapping[type, re.Pattern[str]]) -> dict[str, F.Kind]:
+def kinds(language: str, tags: tuple[str, ...], prefixes: tuple[str, ...],
+          suffixes: Mapping[type, re.Pattern[str]]) -> dict[str, F.Kind]:
     """How the framework reads the kinds of the C family that a dialect has (`tags`, in its `Term`'s order: those it
-    shares with the other language of the family), each with the standards of its language that have it
-    (`standards`), in `language` (`C` or `C++`), whose binary operators, literals' types, prefixes and suffixes
-    differ."""
+    shares with the other language of the family), in `language` (`C` or `C++`), whose binary operators, literals'
+    types, prefixes and suffixes differ."""
 
     def check(tag: str) -> Callable[[Any], list[str]]:
         return lambda record: problems(F.node(tag, record), Domains.Types(record, _path(language)), suffixes, prefixes,
@@ -734,22 +748,21 @@ def kinds(language: str, tags: tuple[str, ...], standards: Mapping[str, tuple[st
 
     def application(tag: str, signature: FD.Signature = FD.Opaque(), optional: tuple[str, ...] = (),
                     **options: Any) -> F.Kind:
-        return F.Kind(F.APPLICATION, signature=signature, standards=standards[tag], check=check(tag),
+        return F.Kind(F.APPLICATION, signature=signature, check=check(tag),
                       scopes=scopes(tag), optional=optional + OPTIONAL, **options)
 
     def operator(tag: str, vocabulary: Mapping[str, FD.Signature], **options: Any) -> F.Kind:
         return F.Kind(F.APPLICATION, operator="operator", vocabulary=vocabulary, required=("operator",),
-                      standards=standards[tag], check=check(tag), scopes=scopes(tag), **options)
+                      check=check(tag), scopes=scopes(tag), **options)
 
     every: dict[str, Callable[[], F.Kind]] = {
         LITERAL: lambda: F.Kind(F.LITERAL, spelling=SPELLING[language], check=check(LITERAL),
                                 typed=lambda record: Domains.literal(F.attributes_of(record), language,
-                                                                     Domains.Types(record, _path(language))),
-                                standards=standards[LITERAL]),
+                                                                     Domains.Types(record, _path(language)))),
         CONSTANT: lambda: F.Kind(F.LITERAL, spelling=("text", "problems"), check=check(CONSTANT),
-                                 typed=lambda record: Domains.NULLPTR, standards=standards[CONSTANT]),
+                                 typed=lambda record: Domains.NULLPTR),
         CONCATENATEDSTRING: lambda: application(CONCATENATEDSTRING, FD.Opaque(Domains.String)),
-        VARIABLE: lambda: F.Kind(F.REFERENCE, required=("name",), check=check(VARIABLE), standards=standards[VARIABLE]),
+        VARIABLE: lambda: F.Kind(F.REFERENCE, required=("name",), check=check(VARIABLE)),
         PARENTHESIZEDEXPRESSION: lambda: application(PARENTHESIZEDEXPRESSION, _ANY1),
         GENERICSELECTION: lambda: application(GENERICSELECTION),
         SUBSCRIPTEXPRESSION: lambda: application(SUBSCRIPTEXPRESSION, Domains.SUBSCRIPT),
@@ -782,10 +795,6 @@ _C_TAGS = (LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE, PARENTHESIZEDEXPRESS
            INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION,
            EXTENSIONEXPRESSION, TYPEID)
 
-_C_STANDARDS = {**{tag: STANDARDS for tag in _C_TAGS}, CONSTANT: ("C23",), STATEMENTEXPRESSION: (),
-                EXTENSIONEXPRESSION: ()}
-
-
 def _native(value: Any) -> Writer | None:
     """The literal of a native value: a number, a bool or a string; a bytes has none."""
     return literal(value) if type(value) in (bool, int, float, str) else None
@@ -797,7 +806,7 @@ def untyped(value: Any) -> FD.Domain:
     return FD.Anything
 
 
-DIALECT = F.Dialect("C.Expressions", kinds("C", _C_TAGS, _C_STANDARDS, PREFIXES, SUFFIXES), domain_of=untyped,
+DIALECT = F.Dialect("C.Expressions", kinds("C", _C_TAGS, PREFIXES, SUFFIXES), domain_of=untyped,
                     literal=_native)
 """The C dialect: its kinds, as the framework reads them."""
 

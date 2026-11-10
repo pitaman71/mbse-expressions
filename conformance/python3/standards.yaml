@@ -1,0 +1,787 @@
+mutations:
+- upsert:
+    exists:
+    - symbols:
+        '0':
+          schema:
+          - $ref:
+              singleton: '.'
+              next:
+                entry:
+                  i: schemas
+                  o: ''
+                  properties:
+                    name: Expressions
+                  next:
+                    entry:
+                      i: schemas
+                      o: ''
+                      properties:
+                        name: Framework
+                      next:
+                        entry:
+                          i: schemas
+                          o: ''
+                          properties:
+                            name: Standard
+                          next:
+                            target: {}
+      spec:
+      - '0':
+        - as_property:
+            name: bodies
+            mutations:
+            - set:
+                value:
+                - org.iso
+                - ch.iec
+        - as_property:
+            name: number
+            mutations:
+            - set:
+                value: '9899'
+        - as_property:
+            name: revision
+            mutations:
+            - set:
+                value:
+                  year: 2024
+        - as_property:
+            name: names
+            mutations:
+            - set:
+                value:
+                - C23
+        - as_adjacency:
+            name: dialect
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: dialect
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                target: {}
+                  - as_property:
+                      name: designation
+                      mutations:
+                      - set:
+                          value: ISO/IEC 9899:2024
+        - as_adjacency:
+            name: kinds
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: Literal
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: Constant
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: ConcatenatedString
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: Framework
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Variable
+                                          next:
+                                            target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: ParenthesizedExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: GenericSelection
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: SubscriptExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: CallExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: MemberExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: PostfixExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: UnaryExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: SizeofExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: AlignofExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: CastExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: BinaryExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: ConditionalExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: AssignmentExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: InitializerList
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: DesignatedInitializer
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: CompoundLiteralExpression
+                                              next:
+                                                target: {}
+                - mutations:
+                  - as_link:
+                      name: kind
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: '.'
+                              next:
+                                entry:
+                                  i: schemas
+                                  o: ''
+                                  properties:
+                                    name: Expressions
+                                  next:
+                                    entry:
+                                      i: schemas
+                                      o: ''
+                                      properties:
+                                        name: C
+                                      next:
+                                        entry:
+                                          i: schemas
+                                          o: ''
+                                          properties:
+                                            name: Expressions
+                                          next:
+                                            entry:
+                                              i: schemas
+                                              o: ''
+                                              properties:
+                                                name: TypeId
+                                              next:
+                                                target: {}

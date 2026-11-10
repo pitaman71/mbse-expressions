@@ -25,11 +25,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** The standard this dialect implements, by its title. */
-export const STANDARDS: readonly string[] = [
-  "System V Application Binary Interface, AMD64 Architecture Processor Supplement",
-];
-
 /** AMD64's dialect's schema, whose singleton is `Expressions.SystemV.AMD64`, and its domains' schemas. Run after
  * `Framework.install` and the standard dialects', in a transaction of its own; run again, it writes nothing. Its
  * domains `define` writes after it. */
@@ -54,6 +49,7 @@ export function install(txn: any): any {
         .adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
       }).adjacencies([(t: any) => t.relation([Framework.HasAbi]).me("abi")]),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("amd64").schema([_.Dialect])]),
@@ -101,10 +97,11 @@ export function install(txn: any): any {
  * `unsigned_long`): `store.transaction(AMD64.define)[0].get("unsigned_long")`. */
 export function define(txn: any): any {
   const ABI = txn.Expressions.SystemV.AMD64, Domain = txn.Expressions.Framework.Domain;
+  const Standard = txn.Expressions.Framework.Standard;
   const uid = "mbse.Expressions.SystemV.AMD64.define/1";
   return txn.uid(uid).mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
-      dialect: ABI.Dialect,
+      dialect: ABI.Dialect, standard: Standard,
       char: Domain, signed_char: Domain, unsigned_char: Domain, short: Domain, unsigned_short: Domain, int: Domain,
       unsigned_int: Domain, long: Domain, unsigned_long: Domain, long_long: Domain, unsigned_long_long: Domain,
       float: Domain, double: Domain, long_double: Domain, wchar_t: Domain, char8_t: Domain, char16_t: Domain,
@@ -147,6 +144,7 @@ export function define(txn: any): any {
         "_Float32x": (e: any) => e.domain(_.Float32x),
         "_Float64x": (e: any) => e.domain(_.Float64x),
       }),
+      (_: any) => _.dialect.standards({ "System V Application Binary Interface, AMD64 Architecture Processor Supplement": (e: any) => e.standard(_.standard) }),
       (_: any) => _.char.kind((k: any) => k.as_value((a: any) => a.as_union(
         (u: any) => u.isoiec11404((v: any) => v.integer(
         (d: any) => d.width(8n).signed(true).overflow("raise")

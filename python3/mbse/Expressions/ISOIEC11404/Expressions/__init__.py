@@ -5,6 +5,6 @@ domains. It has no terms yet: its operations are CAP-180's to model (see mbse-ba
 and [CAP-097: value domains of published standards](mbse:mbse-basis/docs/capabilities/CAP-097.md#value-domains))."""
 
 from . import Expressions
-from .Expressions import STANDARDS, define, install
+from .Expressions import define, install
 
-__all__ = ["Expressions", "STANDARDS", "define", "install"]
+__all__ = ["Expressions", "define", "install"]

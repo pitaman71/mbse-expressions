@@ -46,7 +46,14 @@
  * operations (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module
  * defines, whose pattern's variables are its arguments, in the order they are declared, and whose `result` is its
  * return. A dialect that uses another's kinds or schemas depends on its caller's install order, nothing recording it as
- * data. `Domains` reads stored domains and operations.
+ * data. A dialect owns each edition of a standard it covers by its designation, as its standards body writes it
+ * (`ISO/IEC 9899:2011`), through `Expressions.Framework.Covers(dialect, designation, standard)`: an
+ * `Expressions.Framework.Standard`, a reference object holding its formal reference's parts, its `bodies` by
+ * reverse-domain name, its `number` and its `revision` (a value of `Expressions.Framework.Revision`: a `year`, an
+ * `edition` or a `version`), and its common `names` (`C11`), so that it is found by either; each kind's schema, a
+ * `Schemas.OfObject`, records the editions that have it through the extension adjacency `standards`
+ * (`Expressions.Framework.HasStandard(kind, standard)`, a set). `Domains` reads stored domains and operations,
+ * `Standards` stored standards.
  *
  * Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
  * branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's slots (a term
@@ -123,7 +130,9 @@ export function install(txn: any): any {
       List: S.OfObject, Mapping: S.OfObject, Pair: S.OfObject, Error: S.OfObject, Missing: S.OfObject,
       Expression: S.OfObject, HasRoot: S.OfRelation, HasAbi: S.OfRelation,
       OfExpression: S.OfObject, Domain: S.OfObject, DomainKind: S.OfUnion, HasDomain: S.OfRelation, OfAny: S.OfObject,
-      Dialect: S.OfUnion, Defines: S.OfRelation, Operates: S.OfRelation, // mbse-schemas' own, by name
+      Dialect: S.OfUnion, Defines: S.OfRelation, Operates: S.OfRelation,
+      Standard: S.OfObject, Revision: S.OfUnion, Covers: S.OfRelation, HasStandard: S.OfRelation,
+      OfObject: S.OfObject, // mbse-schemas' own, by name
     })
     .spec([
       // The union of the dialects' `Term`s: each dialect adds its own, `Expressions.<Dialect>.Term`, as the branch named
@@ -193,6 +202,27 @@ export function install(txn: any): any {
       (_: any) => _.Operates.name("Expressions.Framework.Operates").links([
         (t: any) => t.name("dialect").schema([_.Dialect]), (t: any) => t.name("operation").schema([_.OfExpression]),
       ]).properties({ name: S.OfStr }).uniques([["dialect", "name"], ["operation"]]),
+      // A standard: one edition, owned by the dialect that covers it by its designation, as its standards body writes
+      // it; its formal reference's parts and its common names, the tags it is found by besides its designation; and
+      // the kinds it has, each by its schema, which reads them through the extension adjacency `standards` (Domains as
+      // data, Standards' design; the dialects proposal's Decided, Q10).
+      (_: any) => _.Revision.name("Expressions.Framework.Revision").branches([
+        (t: any) => t.name("year").schema([S.OfInt]), (t: any) => t.name("edition").schema([S.OfInt]),
+        (t: any) => t.name("version").schema([S.OfStr])]),
+      (_: any) => _.Standard.name("Expressions.Framework.Standard").ref(true).properties({
+        bodies: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // by reverse-domain name
+        number: S.OfStr, revision: _.Revision,
+        names: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // its common names
+      }).adjacencies({
+        dialect: (a: any) => a.relation([_.Covers]).me("standard").owner(true), // its dialect's, its designation
+        kinds: (a: any) => a.relation([_.HasStandard]).me("standard") }),
+      (_: any) => _.Covers.name("Expressions.Framework.Covers").links([
+        (t: any) => t.name("dialect").schema([_.Dialect]), (t: any) => t.name("standard")]).properties({
+        designation: S.OfStr }).uniques([["dialect", "designation"], ["standard"]]),
+      (_: any) => _.HasStandard.name("Expressions.Framework.HasStandard").links([
+        (t: any) => t.name("kind").schema([_.OfObject]), (t: any) => t.name("standard")]).uniques([]), // a set
+      (_: any) => _.OfObject.name("Schemas.OfObject").adjacencies({
+        standards: (a: any) => a.relation([_.HasStandard]).me("kind") }),
     ])]))]);
 }
 
@@ -828,7 +858,6 @@ export interface KindOptions {
   typed?: ((record: any) => Domains.Domain | null) | null;
   closed?: boolean;
   operations?: ((store: any) => ReadonlyMap<string, any>) | null;
-  standards?: readonly string[];
   optional?: readonly string[];
   scopes?: ((record: any) => ReadonlySet<string>[]) | null;
   operators?: ((attributes: ReadonlyMap<string, any>) => readonly string[]) | null;
@@ -847,8 +876,7 @@ export interface KindOptions {
  * (`required`); for a reference, whether it is `lexical` and the `ambient` names bound without a declaration; for an
  * import, the names it binds, of its attributes (`names(attributes)`); its own problems (`check(record)`); the domain
  * its own attributes give it, where they give one (`typed(record)`: C's type of a constant or a cast; a term carries no
- * domain); and the standards of its dialect's language that have it (`standards`: `C11`, `C++17`), where its dialect
- * covers several, as mbse-programs' standards record when each kind arrived.
+ * domain). The standards that have it are data, its schema's `standards` (`Framework.Standards`).
  * Where its role says too little: the slots that may be empty (`optional`, by path: a slot's name, a pair's member's, or
  * a helper property's name, a dot, and the path within the helper: `generators.target`; or, written `*.size`, a
  * helper's slot of that name at any depth, as a type name's declarators nest); the names each of its
@@ -870,7 +898,6 @@ export class Kind {
   readonly typed: ((record: any) => Domains.Domain | null) | null;
   readonly closed: boolean;
   readonly operations: ((store: any) => ReadonlyMap<string, any>) | null;
-  readonly standards: readonly string[];
   readonly optional: readonly string[];
   readonly scopes: ((record: any) => ReadonlySet<string>[]) | null;
   readonly operators: ((attributes: ReadonlyMap<string, any>) => readonly string[]) | null;
@@ -890,7 +917,6 @@ export class Kind {
     this.typed = options.typed ?? null;
     this.closed = options.closed ?? false;
     this.operations = options.operations ?? null;
-    this.standards = options.standards ?? [];
     this.optional = options.optional ?? [];
     this.scopes = options.scopes ?? null;
     this.operators = options.operators ?? null;

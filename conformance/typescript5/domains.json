@@ -377,6 +377,63 @@
                         }
                       ]
                     }
+                  },
+                  {
+                    "as_adjacency": {
+                      "name": "standards",
+                      "mutations": [
+                        {
+                          "insert": {
+                            "entries": [
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.ISOIEC11404.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "ISO/IEC 11404:2007"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "ISO/IEC 11404:2007"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
                   }
                 ]
               }

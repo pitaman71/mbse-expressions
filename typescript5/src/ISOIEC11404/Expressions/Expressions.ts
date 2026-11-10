@@ -39,9 +39,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** The standards this dialect implements, by designation. */
-export const STANDARDS: readonly string[] = ["ISO/IEC 11404:2007"];
-
 /** ISO/IEC 11404's kinds of domain, its union of them added to the framework's as the branch `isoiec11404`, `Packs`
  * and the domain's extension adjacency `packs`; its domains' schemas; and its dialect's schema, whose singleton is
  * `Expressions.ISOIEC11404.Expressions`. Run after `Framework.install`, in a transaction of its own; run again, it
@@ -62,7 +59,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.ISOIEC11404.Expressions.Dialect").ref(true).singleton(
         "Expressions.ISOIEC11404.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("isoiec11404").schema([_.Dialect])]),
 
@@ -117,10 +115,11 @@ export function install(txn: any): any {
  * each domain by its name, spelled as its schema's is (`modulo(256)` as `modulo_256`):
  * `store.transaction(ISOIEC11404.define)[0].get("octet")`. */
 export function define(txn: any): any {
-  const [ISOIEC11404, Domain] = [txn.Expressions.ISOIEC11404.Expressions, txn.Expressions.Framework.Domain];
+  const [ISOIEC11404, Domain, Standard] = [txn.Expressions.ISOIEC11404.Expressions, txn.Expressions.Framework.Domain,
+    txn.Expressions.Framework.Standard];
   return txn.uid("mbse.Expressions.ISOIEC11404.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
-      dialect: ISOIEC11404.Dialect, boolean: Domain, integer: Domain, octetstring: Domain, octet: Domain, modulo_256: Domain,
+      dialect: ISOIEC11404.Dialect, standard: Standard, boolean: Domain, integer: Domain, octetstring: Domain, octet: Domain, modulo_256: Domain,
     })
     .spec([
       (_: any) => _.dialect.domains({
@@ -128,6 +127,8 @@ export function define(txn: any): any {
         octetstring: (e: any) => e.domain(_.octetstring), octet: (e: any) => e.domain(_.octet),
         "modulo(256)": (e: any) => e.domain(_.modulo_256),
       }),
+      (_: any) => _.dialect.standards({ "ISO/IEC 11404:2007": (e: any) => e.standard(_.standard) }),
+      (_: any) => _.standard.bodies(["org.iso", "ch.iec"]).number("11404").revision((r: any) => r.year(2007n)),
       (_: any) => _.boolean.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.boolean(
         (d: any) => d.ordered(false)))))).schema([ISOIEC11404.boolean]),
       (_: any) => _.integer.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.integer(

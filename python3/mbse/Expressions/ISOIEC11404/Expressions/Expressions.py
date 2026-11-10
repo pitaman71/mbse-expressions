@@ -40,11 +40,7 @@ from __future__ import annotations
 
 from typing import Any
 
-__all__ = ["install", "define", "STANDARDS"]
-
-STANDARDS = ("ISO/IEC 11404:2007",)
-"""The standards this dialect implements, by designation."""
-
+__all__ = ["install", "define"]
 
 def install(txn: Any) -> Any:
     """ISO/IEC 11404's kinds of domain, its union of them added to the framework's as the branch `isoiec11404`, `Packs`
@@ -64,7 +60,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.ISOIEC11404.Expressions.Dialect").ref(True).singleton(
                 "Expressions.ISOIEC11404.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("isoiec11404").schema([_.Dialect])]),
 
@@ -119,9 +116,9 @@ def define(txn: Any) -> Any:
     `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
     each domain by its name, spelled as its schema's is (`modulo(256)` as `modulo_256`):
     `store.transaction(ISOIEC11404.define)[0]["octet"]`."""
-    ISOIEC11404, Domain = txn.Expressions.ISOIEC11404.Expressions, txn.Expressions.Framework.Domain
+    ISOIEC11404, Domain, Standard = txn.Expressions.ISOIEC11404.Expressions, txn.Expressions.Framework.Domain, txn.Expressions.Framework.Standard
     return txn.uid("mbse.Expressions.ISOIEC11404.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": ISOIEC11404.Dialect, "boolean": Domain, "integer": Domain, "octetstring": Domain,
+        .symbols({"dialect": ISOIEC11404.Dialect, "standard": Standard, "boolean": Domain, "integer": Domain, "octetstring": Domain,
                   "octet": Domain, "modulo_256": Domain})
         .spec([
             lambda _: _.dialect.domains({
@@ -129,6 +126,8 @@ def define(txn: Any) -> Any:
                 "octetstring": lambda e: e.domain(_.octetstring), "octet": lambda e: e.domain(_.octet),
                 "modulo(256)": lambda e: e.domain(_.modulo_256),
             }),
+            lambda _: _.dialect.standards({"ISO/IEC 11404:2007": lambda e: e.standard(_.standard)}),
+            lambda _: _.standard.bodies(["org.iso", "ch.iec"]).number("11404").revision(lambda r: r.year(2007)),
             lambda _: _.boolean.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.boolean(
                 lambda d: d.ordered(False)))))).schema([ISOIEC11404.boolean]),
             lambda _: _.integer.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.integer(

@@ -51,8 +51,9 @@ constraint. Names that only declare (a mapped type's `key`, a tuple member's `la
 qualified name's `right`) are `Identifier`s, as mbse-programs has them ("yes, stay `Identifier` terms"). The framework
 reads a value of a sublanguage, as of any helper, as a `Terms.Part`.
 
-Each kind's `Kind` records the TypeScript versions that have it (`standards`, `STANDARDS`, 5.0 to 5.9, every kind
-being older; none for an extension). `DIALECT` reads them (`Terms.Dialect`). There are no writers: a TypeScript5 term
+The versions of TypeScript 5 the dialect covers are data, which `define` writes, each owned by its published name,
+TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each has
+them all, and an extension none. `DIALECT` reads the kinds (`Terms.Dialect`). There are no writers: a TypeScript5 term
 is written through the builders, in a transaction (mbse-basis
 [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its
 helpers nested, as its printer and its checks read it.
@@ -78,7 +79,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from . import Domains
 
-__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "STANDARDS", "QUOTES", "FLAGS", "Node", "tree", "binding_names"]
+__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "QUOTES", "FLAGS", "Node", "tree", "binding_names"]
 
 IDENTIFIER, PRIVATEIDENTIFIER, LITERAL, CONSTANT = "identifier", "privateidentifier", "literal", "constant"
 TEMPLATELITERAL, TAGGEDTEMPLATEEXPRESSION, THISEXPRESSION, SUPER = (
@@ -104,9 +105,6 @@ JSXELEMENT, JSXFRAGMENT, JSXEMPTYEXPRESSION = "jsxelement", "jsxfragment", "jsxe
 
 EXTENSIONS = frozenset({JSXELEMENT, JSXFRAGMENT, JSXEMPTYEXPRESSION})
 """JSX, an extension outside every version of TypeScript, which a `.tsx` file accepts (mbse-programs marks it so)."""
-
-STANDARDS = tuple(f"TypeScript 5.{minor}" for minor in range(10))
-"""The versions of TypeScript 5 the dialect covers, by their published names, 5.0 to 5.9."""
 
 QUOTES = ("'", '"')
 """A string's quotes, as TypeScript writes them."""
@@ -180,7 +178,8 @@ def install(txn: Any) -> Any:
             # its dialect: the singleton `Expressions.TypeScript.TypeScript5`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.TypeScript.TypeScript5.Dialect").ref(True).singleton("Expressions.TypeScript.TypeScript5").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
-                "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
+                "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("typescript5").schema([_.Dialect])]),
             # its union of its kinds: its own, the framework's it reuses, the patterns expressions hold, JSX, and
@@ -584,14 +583,41 @@ def define(txn: Any) -> Any:
     """TypeScript5's domains as data: the singleton `Expressions.TypeScript.TypeScript5` owning its domains by name
     (`domains`, through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each
     but a token's related to its schema (`Expressions.TypeScript.TypeScript5.number`) by
-    `Expressions.Framework.HasDomain`: `boolean`, `number`, `bigint` and `string`, and the token `null`. Run after the
-    installs, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
-    each domain by its name: `store.transaction(TypeScript5.define)[0]["number"]`."""
+    `Expressions.Framework.HasDomain`: `boolean`, `number`, `bigint` and `string`, and the token `null`. And the
+    versions of TypeScript 5 it covers, by their published names (`standards`, through `Expressions.Framework.Covers`),
+    TypeScript 5.0 to 5.9, each with its body, its version and the kinds it has. Run after the installs, in a
+    transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its
+    name spelled as an identifier (`TypeScript_5_0`) and each domain by its name:
+    `store.transaction(TypeScript5.define)[0]["number"]`."""
     TypeScript5, Domain = txn.Expressions.TypeScript.TypeScript5, txn.Expressions.Framework.Domain
+    Standard = txn.Expressions.Framework.Standard
+    every = [branch.schema for branch in TypeScript5.Term.as_schema().branches  # each kind's schema, every version's,
+             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS]  # but an extension and invalid syntax
+    MICROSOFT = ["com.microsoft"]
     return txn.uid("mbse.Expressions.TypeScript.TypeScript5.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": TypeScript5.Dialect, "boolean": Domain, "number": Domain, "bigint": Domain,
+        .symbols({"dialect": TypeScript5.Dialect, **{f"TypeScript_5_{minor}": Standard for minor in range(10)},
+                  "boolean": Domain, "number": Domain, "bigint": Domain,
                   "string": Domain, "null": Domain})
         .spec([
+            # --- the versions of TypeScript 5 it covers, each by its published name, with the kinds it has: all ---
+            lambda _: _.dialect.standards({
+                "TypeScript 5.0": lambda e: e.standard(_.TypeScript_5_0), "TypeScript 5.1": lambda e: e.standard(_.TypeScript_5_1),
+                "TypeScript 5.2": lambda e: e.standard(_.TypeScript_5_2), "TypeScript 5.3": lambda e: e.standard(_.TypeScript_5_3),
+                "TypeScript 5.4": lambda e: e.standard(_.TypeScript_5_4), "TypeScript 5.5": lambda e: e.standard(_.TypeScript_5_5),
+                "TypeScript 5.6": lambda e: e.standard(_.TypeScript_5_6), "TypeScript 5.7": lambda e: e.standard(_.TypeScript_5_7),
+                "TypeScript 5.8": lambda e: e.standard(_.TypeScript_5_8), "TypeScript 5.9": lambda e: e.standard(_.TypeScript_5_9),
+            }),
+            lambda _: _.TypeScript_5_0.bodies(MICROSOFT).revision(lambda r: r.version("5.0")).kinds(every),
+            lambda _: _.TypeScript_5_1.bodies(MICROSOFT).revision(lambda r: r.version("5.1")).kinds(every),
+            lambda _: _.TypeScript_5_2.bodies(MICROSOFT).revision(lambda r: r.version("5.2")).kinds(every),
+            lambda _: _.TypeScript_5_3.bodies(MICROSOFT).revision(lambda r: r.version("5.3")).kinds(every),
+            lambda _: _.TypeScript_5_4.bodies(MICROSOFT).revision(lambda r: r.version("5.4")).kinds(every),
+            lambda _: _.TypeScript_5_5.bodies(MICROSOFT).revision(lambda r: r.version("5.5")).kinds(every),
+            lambda _: _.TypeScript_5_6.bodies(MICROSOFT).revision(lambda r: r.version("5.6")).kinds(every),
+            lambda _: _.TypeScript_5_7.bodies(MICROSOFT).revision(lambda r: r.version("5.7")).kinds(every),
+            lambda _: _.TypeScript_5_8.bodies(MICROSOFT).revision(lambda r: r.version("5.8")).kinds(every),
+            lambda _: _.TypeScript_5_9.bodies(MICROSOFT).revision(lambda r: r.version("5.9")).kinds(every),
+            # --- its domains ---
             lambda _: _.dialect.domains({
                 "boolean": lambda e: e.domain(_.boolean), "number": lambda e: e.domain(_.number),
                 "bigint": lambda e: e.domain(_.bigint), "string": lambda e: e.domain(_.string),
@@ -773,34 +799,29 @@ def _native(value: Any) -> F.Writer | None:
     return F.Writer(lambda u: getattr(u, LITERAL)(lambda r: r.value(lambda p: p.as_scalar(value))), "typescript5")
 
 
-_ALL = STANDARDS
 _ANY = FD.Function((FD.Anything,), FD.Anything)
 _ANY2 = FD.Function((FD.Anything, FD.Anything), FD.Anything)
 
 
-def _application(tag: str, signature: FD.Signature = FD.Opaque(), standards: tuple[str, ...] = _ALL,
-                 **options: Any) -> F.Kind:
-    return F.Kind(F.APPLICATION, signature=signature, standards=standards, check=_check(tag), scopes=_scopes(tag),
-                  **options)
+def _application(tag: str, signature: FD.Signature = FD.Opaque(), **options: Any) -> F.Kind:
+    return F.Kind(F.APPLICATION, signature=signature, check=_check(tag), scopes=_scopes(tag), **options)
 
 
 def _operator(tag: str, vocabulary: dict[str, FD.Signature], required: tuple[str, ...] = ("operator",)) -> F.Kind:
-    return F.Kind(F.APPLICATION, operator="operator", vocabulary=vocabulary, required=required, standards=_ALL,
+    return F.Kind(F.APPLICATION, operator="operator", vocabulary=vocabulary, required=required,
                   check=_check(tag), scopes=_scopes(tag))
 
 
 DIALECT = F.Dialect("TypeScript.TypeScript5", {
-    IDENTIFIER: F.Kind(F.REFERENCE, required=("name",), check=_check(IDENTIFIER), standards=_ALL),
-    PRIVATEIDENTIFIER: F.Kind(F.REFERENCE, required=("name",), lexical=False, check=_check(PRIVATEIDENTIFIER),
-                              standards=_ALL),
-    LITERAL: F.Kind(F.LITERAL, spelling=("text", "problems", "quote", "base", "separators"), check=_check(LITERAL),
-                    standards=_ALL),
+    IDENTIFIER: F.Kind(F.REFERENCE, required=("name",), check=_check(IDENTIFIER)),
+    PRIVATEIDENTIFIER: F.Kind(F.REFERENCE, required=("name",), lexical=False, check=_check(PRIVATEIDENTIFIER)),
+    LITERAL: F.Kind(F.LITERAL, spelling=("text", "problems", "quote", "base", "separators"), check=_check(LITERAL)),
     CONSTANT: F.Kind(F.LITERAL, spelling=("text", "problems"), check=_check(CONSTANT),
-                     typed=lambda record: Domains.constant(F.attributes_of(record)), standards=_ALL),
+                     typed=lambda record: Domains.constant(F.attributes_of(record))),
     TEMPLATELITERAL: _application(TEMPLATELITERAL, FD.Opaque(Domains.String)),
     TAGGEDTEMPLATEEXPRESSION: _application(TAGGEDTEMPLATEEXPRESSION, required=("quasi",)),
-    THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False, standards=_ALL),
-    SUPER: F.Kind(F.REFERENCE, lexical=False, standards=_ALL),
+    THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False),
+    SUPER: F.Kind(F.REFERENCE, lexical=False),
     PARENTHESIZEDEXPRESSION: _application(PARENTHESIZEDEXPRESSION, _ANY),
     ELISION: _application(ELISION),
     SPREADELEMENT: _application(SPREADELEMENT, _ANY),
@@ -835,8 +856,8 @@ DIALECT = F.Dialect("TypeScript.TypeScript5", {
     ARRAYPATTERN: _application(ARRAYPATTERN),
     OBJECTPATTERN: _application(OBJECTPATTERN),
     ASSIGNMENTPATTERN: _application(ASSIGNMENTPATTERN),
-    JSXELEMENT: _application(JSXELEMENT, standards=(), required=("openingElement",)),
-    JSXFRAGMENT: _application(JSXFRAGMENT, standards=()),
-    JSXEMPTYEXPRESSION: _application(JSXEMPTYEXPRESSION, standards=()),
+    JSXELEMENT: _application(JSXELEMENT, required=("openingElement",)),
+    JSXFRAGMENT: _application(JSXFRAGMENT),
+    JSXEMPTYEXPRESSION: _application(JSXEMPTYEXPRESSION),
 }, domain_of=Domains.of, literal=_native)
 """The TypeScript5 dialect: its kinds, as the framework reads them."""

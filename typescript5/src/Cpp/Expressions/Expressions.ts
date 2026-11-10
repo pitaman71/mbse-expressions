@@ -42,9 +42,10 @@
  * `TemplateParameter`, `Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and
  * `AttributeSpecifier`.
  *
- * Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: C++20's kinds, `co_await`,
- * `co_yield`, `requires` and designated initializers, C++20 and C++23; an extension none). `DIALECT` reads them
- * (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
+ * The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
+ * (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
+ * (`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone, and an extension in none.
+ * `DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
  * expression an `idexpression` (`identifier("x")`, and a callee named by a string):
  * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++
  * source.
@@ -77,9 +78,6 @@ export const [NEWEXPRESSION, DELETEEXPRESSION, THROWEXPRESSION, YIELDEXPRESSION,
 
 /** GNU's extensions, outside every standard, as mbse-programs marks them. */
 export const EXTENSIONS: ReadonlySet<string> = C.EXTENSIONS;
-
-/** The standards this dialect covers, ISO/IEC 14882:2017, 2020 and 2024. */
-export const STANDARDS: readonly string[] = ["C++17", "C++20", "C++23"];
 
 /** A character's or a string's encoding prefixes. */
 export const PREFIXES: readonly string[] = C.PREFIXES;
@@ -152,7 +150,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(true)
           .singleton("Expressions.Cpp.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect")}),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("cpp").schema([_.Dialect])]),
       // its union of its kinds: its own, the framework's it reuses, a type name, an initializer list's
@@ -507,22 +506,39 @@ export function install(txn: any): any {
  * C's (C++'s `<cstdint>` is C's, under C's names); C++23's `std::float16_t`, `std::float32_t`, `std::float64_t` and
  * `std::float128_t` (IEEE 754's `binary16` to `binary128`) and `std::bfloat16_t` (IEEE 754's kind with no format: 16
  * bits, radix 2, precision 8, emax 127), each rounding ties to even; and `nullptr_t`, of C++'s own kind. What C++
- * leaves to the implementation is each ABI dialect's, as C's is. Run after `install`, in a transaction of its own; run
- * again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled as its
- * schema's is: `store.transaction(Cpp.define)[0].get("std_bfloat16_t")`. */
+ * leaves to the implementation is each ABI dialect's, as C's is. And the editions of C++ it covers, by designation
+ * (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts, its common name and
+ * the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
+ * dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`) and each domain by
+ * its name, spelled as its schema's is: `store.transaction(Cpp.define)[0].get("std_bfloat16_t")`. */
 export function define(txn: any): any {
   const OWN = txn.Expressions.Cpp.Expressions;
-  const Domain = txn.Expressions.Framework.Domain;
+  const Domain = txn.Expressions.Framework.Domain, Standard = txn.Expressions.Framework.Standard;
+  const every = new Map((OWN.Term.as_schema().branches as { name: string; schema: unknown }[]) // each kind's schema,
+    .filter((b) => !EXTENSIONS.has(b.name) && !F.INVALID_KINDS.has(b.name)) // by its tag, but an extension and
+    .map((b) => [b.name, b.schema])); // invalid syntax
   return txn.uid("mbse.Expressions.Cpp.Expressions.define/1")
       .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
-      dialect: OWN.Dialect,
+      dialect: OWN.Dialect, Cpp17: Standard, Cpp20: Standard, Cpp23: Standard,
       bool: Domain, int8_t: Domain, int16_t: Domain, int32_t: Domain, int64_t: Domain,
       uint8_t: Domain, uint16_t: Domain, uint32_t: Domain, uint64_t: Domain,
       std_float16_t: Domain, std_float32_t: Domain, std_float64_t: Domain, std_float128_t: Domain,
       std_bfloat16_t: Domain, nullptr_t: Domain,
     })
     .spec([
+      // --- the editions C++ covers, each by its designation, with the kinds it has: every kind but GNU's extensions
+      // and invalid syntax, C++20's own in C++20 and C++23 alone ---
+      (_: any) => _.dialect.standards({
+        "ISO/IEC 14882:2017": (e: any) => e.standard(_.Cpp17), "ISO/IEC 14882:2020": (e: any) => e.standard(_.Cpp20),
+        "ISO/IEC 14882:2024": (e: any) => e.standard(_.Cpp23) }),
+      (_: any) => _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2017n)).names(
+        ["C++17"]).kinds([...every].filter(([tag]) => !SINCE_20.has(tag)).map(([, schema]) => schema)),
+      (_: any) => _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2020n)).names(
+        ["C++20"]).kinds([...every.values()]),
+      (_: any) => _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2024n)).names(
+        ["C++23"]).kinds([...every.values()]),
+      // --- its domains ---
       (_: any) => _.dialect.domains({
         "bool": (e: any) => e.domain(_.bool),
         "int8_t": (e: any) => e.domain(_.int8_t),
@@ -610,12 +626,9 @@ const TAGS: readonly string[] = [C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CO
   C.ASSIGNMENTEXPRESSION, THROWEXPRESSION, YIELDEXPRESSION, PACKEXPANSION, C.INITIALIZERLIST, C.DESIGNATEDINITIALIZER,
   C.STATEMENTEXPRESSION, C.EXTENSIONEXPRESSION, C.TYPEID];
 
-const SINCE_20: readonly string[] = ["C++20", "C++23"];
-const STANDARDS_OF: ReadonlyMap<string, readonly string[]> = new Map([
-  ...TAGS.map((tag) => [tag, STANDARDS] as [string, readonly string[]]), [REQUIRESEXPRESSION, SINCE_20],
-  [AWAITEXPRESSION, SINCE_20], [YIELDEXPRESSION, SINCE_20], [C.DESIGNATEDINITIALIZER, SINCE_20], [C.STATEMENTEXPRESSION,
-    []],
-  [C.EXTENSIONEXPRESSION, []]]);
+/** The kinds C++20 added: C++17 has every other kind but the extensions. */
+const SINCE_20: ReadonlySet<string> = new Set([REQUIRESEXPRESSION, AWAITEXPRESSION, YIELDEXPRESSION,
+  C.DESIGNATEDINITIALIZER]);
 
 const ANY1 = new FD.Function([FD.Anything], FD.Anything);
 
@@ -626,25 +639,23 @@ function check(tag: string): (record: any) => string[] {
 }
 
 function application(tag: string, signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}): F.Kind {
-  return new F.Kind(F.APPLICATION, { signature, standards: STANDARDS_OF.get(tag) as readonly string[],
-      check: check(tag),
-    scopes: C.scopes(tag), ...options, optional: [...(options.optional ?? []), ...C.OPTIONAL] });
+  return new F.Kind(F.APPLICATION, { signature, check: check(tag), scopes: C.scopes(tag), ...options, optional: [...(options.optional ?? []), ...C.OPTIONAL] });
 }
 
 const OWN: Record<string, F.Kind> = {
   [USERDEFINEDLITERAL]: application(USERDEFINEDLITERAL, new FD.Opaque(), { required: ["literal", "suffix"] }),
-  [IDEXPRESSION]: new F.Kind(F.REFERENCE, { required: ["name"], standards: STANDARDS, check: check(IDEXPRESSION),
+  [IDEXPRESSION]: new F.Kind(F.REFERENCE, { required: ["name"], check: check(IDEXPRESSION),
     scopes: C.scopes(IDEXPRESSION), optional: C.OPTIONAL }),
-  [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false, standards: STANDARDS }),
+  [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false }),
   [LAMBDAEXPRESSION]: application(LAMBDAEXPRESSION, new FD.Opaque(), { optional: ["template_requires"] }),
   [FOLDEXPRESSION]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.FOLD, required: ["operator"],
-    optional: ["left", "right"], standards: STANDARDS, check: check(FOLDEXPRESSION),
+    optional: ["left", "right"], check: check(FOLDEXPRESSION),
       scopes: C.scopes(FOLDEXPRESSION) }),
   [REQUIRESEXPRESSION]: application(REQUIRESEXPRESSION),
   [FUNCTIONALCASTEXPRESSION]: application(FUNCTIONALCASTEXPRESSION, new FD.Opaque(), { required: ["type",
     "initializer"] }),
   [NAMEDCASTEXPRESSION]: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.CASTS,
-    required: ["operator", "type"], optional: C.OPTIONAL, standards: STANDARDS, check: check(NAMEDCASTEXPRESSION),
+    required: ["operator", "type"], optional: C.OPTIONAL, check: check(NAMEDCASTEXPRESSION),
     scopes: C.scopes(NAMEDCASTEXPRESSION) }),
   [TYPEIDEXPRESSION]: application(TYPEIDEXPRESSION, new FD.Opaque()),
   [AWAITEXPRESSION]: application(AWAITEXPRESSION, ANY1),
@@ -657,7 +668,7 @@ const OWN: Record<string, F.Kind> = {
   [PACKEXPANSION]: application(PACKEXPANSION, ANY1),
 };
 
-const SHARED = C.kinds("C++", TAGS, STANDARDS_OF, PREFIXES, SUFFIXES);
+const SHARED = C.kinds("C++", TAGS, PREFIXES, SUFFIXES);
 
 /** The literal of a native value: a number, a bool or a string; a bytes has none. */
 function native(value: unknown): Writer | null {

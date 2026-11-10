@@ -729,6 +729,151 @@
                         }
                       ]
                     }
+                  },
+                  {
+                    "as_adjacency": {
+                      "name": "standards",
+                      "mutations": [
+                        {
+                          "insert": {
+                            "entries": [
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Cpp.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "ISO/IEC 14882:2017"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "ISO/IEC 14882:2017"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Cpp.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "ISO/IEC 14882:2020"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "ISO/IEC 14882:2020"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.Cpp.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "ISO/IEC 14882:2024"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "ISO/IEC 14882:2024"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
                   }
                 ]
               }

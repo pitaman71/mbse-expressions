@@ -93,7 +93,8 @@ export function install(txn: any): any {
       // its dialect: the singleton `Expressions.SystemVerilog.Expressions`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.SystemVerilog.Expressions.Dialect").ref(true).singleton("Expressions.SystemVerilog.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("systemverilog").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, and invalid syntax

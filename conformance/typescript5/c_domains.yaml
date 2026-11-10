@@ -396,3 +396,71 @@ mutations:
                       mutations:
                       - set:
                           value: uint8_t
+        - as_adjacency:
+            name: standards
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: standard
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: standards
+                                  o: dialect
+                                  properties:
+                                    designation: 'ISO/IEC 9899:2011'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: designation
+                      mutations:
+                      - set:
+                          value: 'ISO/IEC 9899:2011'
+                - mutations:
+                  - as_link:
+                      name: standard
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: standards
+                                  o: dialect
+                                  properties:
+                                    designation: 'ISO/IEC 9899:2018'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: designation
+                      mutations:
+                      - set:
+                          value: 'ISO/IEC 9899:2018'
+                - mutations:
+                  - as_link:
+                      name: standard
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: standards
+                                  o: dialect
+                                  properties:
+                                    designation: 'ISO/IEC 9899:2024'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: designation
+                      mutations:
+                      - set:
+                          value: 'ISO/IEC 9899:2024'

@@ -19,9 +19,6 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-/** The standards this dialect implements, by designation. */
-export const STANDARDS: readonly string[] = ["IEEE Std 754-2019"];
-
 /** IEEE 754's kind of domain, its union of kinds added to the framework's as the branch `ieee754`; its domains'
  * schemas; and its dialect's schema, whose singleton is `Expressions.IEEE754.Expressions`. Run after
  * `Framework.install`, in a transaction of its own; run again, it writes nothing. Its domains `define` writes after
@@ -40,7 +37,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.IEEE754.Expressions.Dialect").ref(true).singleton(
         "Expressions.IEEE754.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
-        operations: (a: any) => a.relation([Framework.Operates]).me("dialect") }),
+        operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("ieee754").schema([_.Dialect])]),
 
@@ -65,13 +63,16 @@ export function install(txn: any): any {
  * `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
  * each domain by its name: `store.transaction(IEEE754.define)[0].get("binary32")`. */
 export function define(txn: any): any {
-  const [IEEE754, Domain] = [txn.Expressions.IEEE754.Expressions, txn.Expressions.Framework.Domain];
+  const [IEEE754, Domain, Standard] = [txn.Expressions.IEEE754.Expressions, txn.Expressions.Framework.Domain,
+    txn.Expressions.Framework.Standard];
   return txn.uid("mbse.Expressions.IEEE754.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: IEEE754.Dialect, binary64: Domain, binary32: Domain })
+    .symbols({ dialect: IEEE754.Dialect, standard: Standard, binary64: Domain, binary32: Domain })
     .spec([
       (_: any) => _.dialect.domains({
         binary64: (e: any) => e.domain(_.binary64), binary32: (e: any) => e.domain(_.binary32),
       }),
+      (_: any) => _.dialect.standards({ "IEEE Std 754-2019": (e: any) => e.standard(_.standard) }),
+      (_: any) => _.standard.bodies(["org.ieee"]).number("754").revision((r: any) => r.year(2019n)),
       (_: any) => _.binary64.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
         (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n).radix(2n).precision(53n).emax(1023n).ordered(
           true)))))).schema([IEEE754.binary64]),
