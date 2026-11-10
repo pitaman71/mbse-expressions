@@ -64,8 +64,22 @@ expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a 
 
 Its kind of domain, the branch of its union `Expressions.C.Expressions.DomainKind`, which `install` adds to the
 framework's `Expressions.Framework.DomainKind` as the branch `c`: the token `nullptr_t` (`OfNullptr`), C23's, with the
-inferred `ordered`; its domain has no schema, its value a `constant`'s, and C++'s is Cpp's own. Its domains are stage
-3's of the domains-as-data proposal.
+inferred `ordered`; its domain has no schema, its value a `constant`'s, and C++'s is Cpp's own. `install` also adds its
+domains' schemas, each an `OfAny` of the scalar it narrows (`Expressions.C.Expressions.int32_t`, of ints;
+`_Float128`'s and the decimal types', of text), named as a dotted identifier spells its type, with no leading `_`,
+which mbse-schemas' frames do not take (`_Float16`'s is `Expressions.C.Expressions.Float16`); `define` writes its
+domains, the types C's standard fixes (`bool`, `int8_t` to `uint64_t`, the `_FloatN` and decimal types, `nullptr_t`),
+owned by name. What C leaves to the implementation (`int`, `long`, `char`, `long double`, `size_t`, ...) is the domains
+of an ABI's dialect (`mbse.Expressions.SystemV.AMD64`, `mbse.Expressions.Arm.AAPCS64`), which a C term's holder names
+through its adjacency `abi`:
+`store.Expressions.C.Expressions.Expression(lambda e: e.root(...).abi([store.Instances.Expressions.SystemV.AMD64]))`.
+
+What reads a named type reads its stored domain, through the store of the term's holder (`Domains.Types`), among C's
+domains, then among its holder's ABI's: validation, a literal's range (`5u`'s `unsigned int`); inference, a literal's
+type, a cast's, a comparison's `bool`, `sizeof`'s `size_t`; and evaluation (see `Evaluators`). A lone term reaches no
+store: reading a type, it is refused (mbse-schemas' TypeError, "the value does not belong to a store"); and a type
+neither dialect defines is refused by name, "'int' is not a type C defines, and its expression names no ABI", which
+validation reports as a problem.
 """
 
 from __future__ import annotations
@@ -78,9 +92,10 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from . import Domains
 
-__all__ = ["install", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "Writer",
+__all__ = ["install", "define", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "Writer",
            "Writers", "literal", "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call",
-           "type_name", "bound_names", "problems", "scopes", "kinds", "SPELLING", "OPTIONAL"]
+           "type_name", "cast_type", "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds",
+           "SPELLING", "OPTIONAL"]
 
 LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE = "literal", "constant", "concatenatedstring", "variable"
 PARENTHESIZEDEXPRESSION, GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION = (
@@ -147,7 +162,11 @@ def install(txn: Any) -> Any:
                   "ParenthesizedDeclarator": S.OfObject, "ParameterDeclaration": S.OfObject,
                   "EllipsisParameter": S.OfObject, "StandardAttributeSpecifier": S.OfObject,
                   "Attribute": S.OfObject, "AlignasSpecifier": S.OfObject, "GnuAttributeSpecifier": S.OfObject,
-                  "DeclspecSpecifier": S.OfObject, "Identifier": S.OfObject})  # FrameworkTerm: the framework's, by name
+                  "DeclspecSpecifier": S.OfObject, "Identifier": S.OfObject,  # FrameworkTerm: the framework's, by name
+                  "bool": S.OfAny, "int8_t": S.OfAny, "int16_t": S.OfAny, "int32_t": S.OfAny, "int64_t": S.OfAny,
+                  "uint8_t": S.OfAny, "uint16_t": S.OfAny, "uint32_t": S.OfAny, "uint64_t": S.OfAny,
+                  "Float16": S.OfAny, "Float32": S.OfAny, "Float64": S.OfAny, "Float128": S.OfAny,
+                  "Decimal32": S.OfAny, "Decimal64": S.OfAny, "Decimal128": S.OfAny})  # its domains' schemas
         .spec([
             # its dialect: the singleton `Expressions.C.Expressions`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.C.Expressions.Dialect").ref(True).singleton("Expressions.C.Expressions").adjacencies({
@@ -361,6 +380,131 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("c").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("c").schema([_.Term])]),
+            # --- its domains' schemas, each an OfAny of the scalar it narrows (a format whose values are text, `str`),
+            # which `define` relates to its domain; `nullptr_t`'s has none ---
+            lambda _: _.bool.name("Expressions.C.Expressions.bool").schemas([S.OfBool]),
+            lambda _: _.int8_t.name("Expressions.C.Expressions.int8_t").schemas([S.OfInt]),
+            lambda _: _.int16_t.name("Expressions.C.Expressions.int16_t").schemas([S.OfInt]),
+            lambda _: _.int32_t.name("Expressions.C.Expressions.int32_t").schemas([S.OfInt]),
+            lambda _: _.int64_t.name("Expressions.C.Expressions.int64_t").schemas([S.OfInt]),
+            lambda _: _.uint8_t.name("Expressions.C.Expressions.uint8_t").schemas([S.OfInt]),
+            lambda _: _.uint16_t.name("Expressions.C.Expressions.uint16_t").schemas([S.OfInt]),
+            lambda _: _.uint32_t.name("Expressions.C.Expressions.uint32_t").schemas([S.OfInt]),
+            lambda _: _.uint64_t.name("Expressions.C.Expressions.uint64_t").schemas([S.OfInt]),
+            lambda _: _.Float16.name("Expressions.C.Expressions.Float16").schemas([S.OfFloat]),
+            lambda _: _.Float32.name("Expressions.C.Expressions.Float32").schemas([S.OfFloat]),
+            lambda _: _.Float64.name("Expressions.C.Expressions.Float64").schemas([S.OfFloat]),
+            lambda _: _.Float128.name("Expressions.C.Expressions.Float128").schemas([S.OfStr]),
+            lambda _: _.Decimal32.name("Expressions.C.Expressions.Decimal32").schemas([S.OfStr]),
+            lambda _: _.Decimal64.name("Expressions.C.Expressions.Decimal64").schemas([S.OfStr]),
+            lambda _: _.Decimal128.name("Expressions.C.Expressions.Decimal128").schemas([S.OfStr]),
+        ])]))])
+
+
+def define(txn: Any) -> Any:
+    """C's dialect as data: the singleton `Expressions.C.Expressions` owning its domains by name (`domains`, through
+    `Expressions.Framework.Defines`), the types C's standard fixes, each with its parameters and its inferred
+    properties, and each but `nullptr_t`'s related to its schema (`Expressions.C.Expressions.int32_t`) by
+    `Expressions.Framework.HasDomain`: `bool` (11404's `boolean`); `int8_t` to `int64_t` (11404's `integer`, raising
+    on overflow, as C leaves it undefined) and `uint8_t` to `uint64_t` (11404's `modulo`, wrapping); `_Float16`,
+    `_Float32`, `_Float64` and `_Float128` (IEEE 754's `binary16` to `binary128`) and `_Decimal32`, `_Decimal64` and
+    `_Decimal128` (its decimal formats), each rounding ties to even; and `nullptr_t`, of C's own kind. What C leaves to
+    the implementation (`int`, `long`, `char`, `long double`, `size_t`, ...) is each ABI dialect's. Run after
+    `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
+    each domain by its name: `store.transaction(C.define)[0]["int32_t"]`."""
+    OWN, Domain = txn.Expressions.C.Expressions, txn.Expressions.Framework.Domain
+    return txn.uid("mbse.Expressions.C.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"dialect": OWN.Dialect,
+                  "bool": Domain, "int8_t": Domain, "int16_t": Domain, "int32_t": Domain, "int64_t": Domain,
+                  "uint8_t": Domain, "uint16_t": Domain, "uint32_t": Domain, "uint64_t": Domain,
+                  "Float16": Domain, "Float32": Domain, "Float64": Domain, "Float128": Domain,
+                  "Decimal32": Domain, "Decimal64": Domain, "Decimal128": Domain, "nullptr_t": Domain})
+        .spec([
+            lambda _: _.dialect.domains({
+                "bool": lambda e: e.domain(_.bool),
+                "int8_t": lambda e: e.domain(_.int8_t),
+                "int16_t": lambda e: e.domain(_.int16_t),
+                "int32_t": lambda e: e.domain(_.int32_t),
+                "int64_t": lambda e: e.domain(_.int64_t),
+                "uint8_t": lambda e: e.domain(_.uint8_t),
+                "uint16_t": lambda e: e.domain(_.uint16_t),
+                "uint32_t": lambda e: e.domain(_.uint32_t),
+                "uint64_t": lambda e: e.domain(_.uint64_t),
+                "_Float16": lambda e: e.domain(_.Float16),
+                "_Float32": lambda e: e.domain(_.Float32),
+                "_Float64": lambda e: e.domain(_.Float64),
+                "_Float128": lambda e: e.domain(_.Float128),
+                "_Decimal32": lambda e: e.domain(_.Decimal32),
+                "_Decimal64": lambda e: e.domain(_.Decimal64),
+                "_Decimal128": lambda e: e.domain(_.Decimal128),
+                "nullptr_t": lambda e: e.domain(_.nullptr_t),
+            }),
+            lambda _: _.bool.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.boolean(
+                lambda d: d.ordered(False)))))).schema([OWN.bool]),
+            lambda _: _.int8_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(8).signed(True).overflow("raise")
+                    .least(-128).greatest(127).ordered(True)))))).schema([OWN.int8_t]),
+            lambda _: _.int16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(16).signed(True).overflow("raise")
+                    .least(-32768).greatest(32767).ordered(True)))))).schema([OWN.int16_t]),
+            lambda _: _.int32_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(32).signed(True).overflow("raise")
+                    .least(-2147483648).greatest(2147483647).ordered(True)))))).schema([OWN.int32_t]),
+            lambda _: _.int64_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(64).signed(True).overflow("raise")
+                    .least(-9223372036854775808).greatest(9223372036854775807).ordered(True)))))).schema([OWN.int64_t]),
+            lambda _: _.uint8_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(256)
+                    .least(0).greatest(255).ordered(True)))))).schema([OWN.uint8_t]),
+            lambda _: _.uint16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(65536)
+                    .least(0).greatest(65535).ordered(True)))))).schema([OWN.uint16_t]),
+            lambda _: _.uint32_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(4294967296)
+                    .least(0).greatest(4294967295).ordered(True)))))).schema([OWN.uint32_t]),
+            lambda _: _.uint64_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(18446744073709551616)
+                    .least(0).greatest(18446744073709551615).ordered(True)))))).schema([OWN.uint64_t]),
+            lambda _: _.Float16.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary16").rounding("roundTiesToEven").width(16)
+                    .radix(2).precision(11).emax(15).ordered(True)))))).schema([OWN.Float16]),
+            lambda _: _.Float32.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary32").rounding("roundTiesToEven").width(32)
+                    .radix(2).precision(24).emax(127).ordered(True)))))).schema([OWN.Float32]),
+            lambda _: _.Float64.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").width(64)
+                    .radix(2).precision(53).emax(1023).ordered(True)))))).schema([OWN.Float64]),
+            lambda _: _.Float128.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary128").rounding("roundTiesToEven").width(128)
+                    .radix(2).precision(113).emax(16383).ordered(True)))))).schema([OWN.Float128]),
+            lambda _: _.Decimal32.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("decimal32").rounding("roundTiesToEven").width(32)
+                    .radix(10).precision(7).emax(96).ordered(True)))))).schema([OWN.Decimal32]),
+            lambda _: _.Decimal64.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("decimal64").rounding("roundTiesToEven").width(64)
+                    .radix(10).precision(16).emax(384).ordered(True)))))).schema([OWN.Decimal64]),
+            lambda _: _.Decimal128.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("decimal128").rounding("roundTiesToEven").width(128)
+                    .radix(10).precision(34).emax(6144).ordered(True)))))).schema([OWN.Decimal128]),
+            lambda _: _.nullptr_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.c(lambda v: v.nullptr_t(
+                lambda d: d.ordered(False)))))),
         ])]))])
 
 
@@ -378,9 +522,9 @@ def _spelling(name: Any) -> str | None:
 
 
 def type_name(part: Any) -> str | None:
-    """The arithmetic type a type name names (a `typeid`'s `Terms.Part`, as a cast's form holds it), by `Domains.TYPES`'
-    name (`unsigned int`, `uint8_t`), or None: a type with a declarator, or of a specifier that is not a keyword or a
-    type's name."""
+    """The name of the arithmetic type a type name names (a `typeid`'s `Terms.Part`, as a cast's form holds it), by
+    `Domains.arithmetic` (`unsigned int`, `uint8_t`), or None: a type with a declarator, or of a specifier that is not
+    a keyword or a type's name. Whether a store defines it is the store's (`Domains.Types`)."""
     if part is None or part.kind != TYPEID or "declarator" in part.attributes:
         return None
     names = []
@@ -391,8 +535,7 @@ def type_name(part: Any) -> str | None:
             names.append(_spelling(specifier.attributes.get("name")))
         else:
             return None
-    found = Domains.arithmetic(names)
-    return None if found is None else found.name()
+    return Domains.arithmetic(names)
 
 
 def _declared(node: Any) -> frozenset[str]:
@@ -455,9 +598,10 @@ def _identifier_problems(value: Any) -> list[str]:
 
 
 def _literal_problems(attributes: Mapping[str, Any], prefixes: tuple[str, ...],
-                      suffixes: Mapping[type, re.Pattern[str]], language: str) -> list[str]:
+                      suffixes: Mapping[type, re.Pattern[str]], language: str, types: Domains.Types) -> list[str]:
     """A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes, and
-    its value, one of its type (`Domains.out_of_range`)."""
+    its value, one of its type (`Domains.out_of_range`), read through `types`; a type neither its dialect nor its
+    holder's ABI defines is reported by name."""
     problems = []
     prefix, quote, base, suffix = (attributes.get(name) for name in ("prefix", "quote", "base", "suffix"))
     if prefix is not None and prefix not in prefixes:
@@ -470,7 +614,10 @@ def _literal_problems(attributes: Mapping[str, Any], prefixes: tuple[str, ...],
         allowed = suffixes.get(type(attributes.get("value")))
         if allowed is None or not allowed.fullmatch(suffix):
             problems.append(f"a literal's suffix cannot be {suffix!r}")
-    out = Domains.out_of_range(attributes, language)
+    try:
+        out = Domains.out_of_range(attributes, language, types)
+    except ValueError as error:  # its type is not defined in its holder's store
+        out = str(error)
     return problems + ([out] if out is not None else [])
 
 
@@ -482,21 +629,21 @@ def _constant_problems(attributes: Mapping[str, Any]) -> list[str]:
     return [] if singleton == "nullptr" else [f"a constant's singleton must be nullptr, got {singleton!r}"]
 
 
-def problems(node: F.Node, suffixes: Mapping[type, re.Pattern[str]] = SUFFIXES,
+def problems(node: F.Node, types: Domains.Types, suffixes: Mapping[type, re.Pattern[str]] = SUFFIXES,
              prefixes: tuple[str, ...] = PREFIXES, language: str = "C") -> list[str]:
     """A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
-    identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), a
-    member's operator, invalid syntax in a sublanguage."""
+    identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), its type
+    read through `types`, a member's operator, invalid syntax in a sublanguage."""
     kind, attributes = node.kind, node.attributes
     found = F.invalid_problems(kind, attributes) if kind in ("error", "missing") else []
     found += _identifier_problems(attributes.get(_NAMES.get(kind, "")))
     if kind == MEMBEREXPRESSION and attributes.get("operator") not in (None, ".", "->"):
         found.append(f"a memberexpression's operator must be '.' or '->', got {attributes['operator']!r}")
     found += _constant_problems(attributes) if kind == CONSTANT else []
-    found += _literal_problems(attributes, prefixes, suffixes, language) if kind == LITERAL else []
+    found += _literal_problems(attributes, prefixes, suffixes, language, types) if kind == LITERAL else []
     for value in node.helpers.values():
         for inner in _nodes(value):
-            found += problems(inner, suffixes, prefixes, language)
+            found += problems(inner, types, suffixes, prefixes, language)
     return found
 
 
@@ -508,10 +655,41 @@ designator's range's last index, a noexcept specifier's condition, a parameter's
 template parameter's requires clause."""
 
 
-def _typed_cast(record: Any) -> FD.Domain | None:
-    """A cast's arithmetic type, which is its domain."""
-    name = type_name(F.attributes_of(record).get("type"))
-    return None if name is None else Domains.TYPES[name]
+_KEYWORD_TYPES = frozenset(Domains.NAMES)
+"""The types C's keywords name, which a store's dialects must define; a type's name may be a program's own."""
+
+
+def cast_type(name: str | None, types: Domains.Types) -> Domains.CType | None:
+    """The arithmetic type a cast names, by its name (`type_name`), read through `types`: one its keywords name must be
+    defined (`int`), one a type's name names may be a program's own, so not arithmetic (`my_t`); None for a type that is
+    not arithmetic."""
+    if name is None:
+        return None
+    return types.named(name) if name in _KEYWORD_TYPES else types.find(name)
+
+
+def _path(language: str) -> str:
+    return "C.Expressions" if language == "C" else "Cpp.Expressions"
+
+
+def truth(language: str) -> Callable[[Any], FD.Domain]:
+    """A kind's domain that is `bool`, read from the store of the term's holder (a comparison's, `!`'s, `noexcept`'s)."""
+    return lambda record: Domains.Types(record, _path(language)).named("bool")
+
+
+def size(language: str) -> Callable[[Any], FD.Domain]:
+    """`sizeof`'s and `alignof`'s domain, `size_t`, read from the store of the term's holder."""
+    return lambda record: Domains.Types(record, _path(language)).named("size_t")
+
+
+_TRUTHS = frozenset({"<", "<=", ">", ">=", "==", "!=", "&&", "||", "!"})
+
+
+def _operator_truth(language: str) -> Callable[[Any], FD.Domain | None]:
+    """An operator's domain where it is `bool` (a comparison, `&&`, `||`, `!`), read from the store of the term's holder;
+    None for any other, whose domain is its signature's."""
+    read = truth(language)
+    return lambda record: read(record) if F.attributes_of(record).get("operator") in _TRUTHS else None
 
 
 SPELLING = {"C": ("text", "problems", "quote", "base", "separators"),
@@ -528,20 +706,26 @@ def kinds(language: str, tags: tuple[str, ...], standards: Mapping[str, tuple[st
     differ."""
 
     def check(tag: str) -> Callable[[Any], list[str]]:
-        return lambda record: problems(F.node(tag, record), suffixes, prefixes, language)
+        return lambda record: problems(F.node(tag, record), Domains.Types(record, _path(language)), suffixes, prefixes,
+                                       language)
+
+    def typed_cast(record: Any) -> FD.Domain | None:
+        """A cast's arithmetic type, which is its domain, read from the store of the term's holder."""
+        return cast_type(type_name(F.attributes_of(record).get("type")), Domains.Types(record, _path(language)))
 
     def application(tag: str, signature: FD.Signature = FD.Opaque(), optional: tuple[str, ...] = (),
                     **options: Any) -> F.Kind:
         return F.Kind(F.APPLICATION, signature=signature, standards=standards[tag], check=check(tag),
                       scopes=scopes(tag), optional=optional + OPTIONAL, **options)
 
-    def operator(tag: str, vocabulary: Mapping[str, FD.Signature]) -> F.Kind:
+    def operator(tag: str, vocabulary: Mapping[str, FD.Signature], **options: Any) -> F.Kind:
         return F.Kind(F.APPLICATION, operator="operator", vocabulary=vocabulary, required=("operator",),
-                      standards=standards[tag], check=check(tag), scopes=scopes(tag))
+                      standards=standards[tag], check=check(tag), scopes=scopes(tag), **options)
 
     every: dict[str, Callable[[], F.Kind]] = {
         LITERAL: lambda: F.Kind(F.LITERAL, spelling=SPELLING[language], check=check(LITERAL),
-                                typed=lambda record: Domains.literal(F.attributes_of(record), language),
+                                typed=lambda record: Domains.literal(F.attributes_of(record), language,
+                                                                     Domains.Types(record, _path(language))),
                                 standards=standards[LITERAL]),
         CONSTANT: lambda: F.Kind(F.LITERAL, spelling=("text", "problems"), check=check(CONSTANT),
                                  typed=lambda record: Domains.NULLPTR, standards=standards[CONSTANT]),
@@ -553,11 +737,13 @@ def kinds(language: str, tags: tuple[str, ...], standards: Mapping[str, tuple[st
         CALLEXPRESSION: lambda: application(CALLEXPRESSION, Domains.CALL),
         MEMBEREXPRESSION: lambda: application(MEMBEREXPRESSION, Domains.MEMBER, required=("operator", "member")),
         POSTFIXEXPRESSION: lambda: operator(POSTFIXEXPRESSION, Domains.POSTFIX),
-        UNARYEXPRESSION: lambda: operator(UNARYEXPRESSION, Domains.UNARY),
-        SIZEOFEXPRESSION: lambda: application(SIZEOFEXPRESSION, Domains.SIZE),
-        ALIGNOFEXPRESSION: lambda: application(ALIGNOFEXPRESSION, Domains.SIZE, required=("keyword",)),
-        CASTEXPRESSION: lambda: application(CASTEXPRESSION, Domains.CAST, required=("type",), typed=_typed_cast),
-        BINARYEXPRESSION: lambda: operator(BINARYEXPRESSION, Domains.BINARY if language == "C" else Domains.BINARY_CPP),
+        UNARYEXPRESSION: lambda: operator(UNARYEXPRESSION, Domains.UNARY, typed=_operator_truth(language)),
+        SIZEOFEXPRESSION: lambda: application(SIZEOFEXPRESSION, Domains.SIZE, typed=size(language)),
+        ALIGNOFEXPRESSION: lambda: application(ALIGNOFEXPRESSION, Domains.SIZE, required=("keyword",),
+                                               typed=size(language)),
+        CASTEXPRESSION: lambda: application(CASTEXPRESSION, Domains.CAST, required=("type",), typed=typed_cast),
+        BINARYEXPRESSION: lambda: operator(BINARYEXPRESSION, Domains.BINARY if language == "C" else Domains.BINARY_CPP,
+                                           typed=_operator_truth(language)),
         CONDITIONALEXPRESSION: lambda: application(CONDITIONALEXPRESSION, Domains.CONDITIONAL, optional=("consequence",)),
         ASSIGNMENTEXPRESSION: lambda: operator(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT),
         INITIALIZERLIST: lambda: application(INITIALIZERLIST),
@@ -585,7 +771,13 @@ def _native(value: Any) -> Writer | None:
     return literal(value) if type(value) in (bool, int, float, str) else None
 
 
-DIALECT = F.Dialect("C.Expressions", kinds("C", _C_TAGS, _C_STANDARDS, PREFIXES, SUFFIXES), domain_of=Domains.of,
+def untyped(value: Any) -> FD.Domain:
+    """The domain of a literal no type holds, an int beyond every type its suffix allows (`Kind.typed` reads the
+    others'): not known."""
+    return FD.Anything
+
+
+DIALECT = F.Dialect("C.Expressions", kinds("C", _C_TAGS, _C_STANDARDS, PREFIXES, SUFFIXES), domain_of=untyped,
                     literal=_native)
 """The C dialect: its kinds, as the framework reads them."""
 

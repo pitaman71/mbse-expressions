@@ -3,14 +3,22 @@ interpreter is `interpreter(Cpp.Expressions.DIALECT)`).
 
 `Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from, an `Expression`) in a
 `Scope(variables, functions)`. Values carry their C type while
-evaluating, and the result is its native: an int, a float (a `long double` as its text, as `Patterns.Ieee754` writes it),
-a bool, a string, or an object. A literal's type is what its text encodes (`Domains.literal`: `5u` an `unsigned int`,
-`1.5f` a `float`, `'a'` C's `int` and C++'s `char`), else its value's; a variable's type is its value's: a bool is a
-`bool`, an int an `int`, `long` or `unsigned long` as the first that holds it, and a float a `double` (a value carries no
-domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). C's rules apply:
+evaluating, and the result is its native: an int, a float (a value of a format whose values are text, `long double`'s
+under most ABIs, as its text, as `Patterns.Ieee754` writes it), a bool, a string, or an object. A literal's type is what
+its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`), else
+its value's; a variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or `unsigned long` as the
+first that holds it, and a float a `double` (a value carries no domain: a variable of another type waits for domain
+inference, the port's stage 3, Decided, 2). Every named type it computes in (a literal's, a variable's, a cast's, the
+promotions' `int`, a comparison's `bool`) is a stored domain, read through the term's holder (`Domains.Types`): among
+its dialect's domains, then its holder's ABI's, so the same term evaluates as each ABI says (`(char)200` is -56 under
+x86-64's System V ABI, where `char` is signed, and 200 under AAPCS64's; `long double` is x87's format under the one and
+`binary128` under the other). A lone term is refused where it reads a type (mbse-schemas' TypeError), and so is a type
+neither dialect defines, by name. C's rules apply:
 
 - The integer promotions and the usual arithmetic conversions decide the type an operator computes in (see `Domains`);
-  unsigned arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754 specifies.
+  unsigned arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754 specifies, in the
+  type's format, decimal ones too; a decimal floating operand with a binary one is refused (`TypeError`), as C's
+  constraint has it.
 - What C leaves undefined raises: a signed result outside its type (`OverflowError`), an integer divided by zero
   (`ZeroDivisionError`), a shift by a negative count or by the width or more, a left shift of a negative value, and a
   cast of a floating value outside the target type (`OverflowError`) or of NaN (`ValueError`).
@@ -28,7 +36,7 @@ Evaluation stays shallow (the dialects proposal, Decided, 8): `EVALUATED` names 
 complete, in their complete shapes; any other kind raises `NotImplementedError` by name ("C sizeofexpression is not
 evaluated"), and so does what an evaluated kind holds beyond its former shape: an operator its vocabulary has but no
 rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not evaluated"), a literal of a type no evaluator has values
-of ("C literal of wchar_t is not evaluated"), a cast to a type that is not arithmetic, a subscript of several indices,
+of ("C literal of _BitInt is not evaluated"), a cast to a type that is not arithmetic, a subscript of several indices,
 a call of a callee that is not a function's name, a member that is not an identifier, C++'s name used as an expression
 that is not an identifier (`std::cout`, "Cpp idexpression of a name that is not an identifier is not evaluated"), and
 GNU's conditional without a consequence. C's name used as an expression is the framework's `variable`, and C++'s an
@@ -66,14 +74,29 @@ def _name(value: _Typed) -> str:
     return value.ctype.name() if value.ctype is not None else type(value.value).__name__
 
 
-def _typed(value: Any) -> _Typed:
-    """A variable's or a member's value, with its type."""
-    ctype = Domains.of(value)
-    if isinstance(ctype, CType):
-        return _Typed(ctype, value)
+def _untyped(value: Any) -> _Typed:
+    """A value no type holds: an int beyond every type is refused, and any other (a string, an object) has none."""
     if type(value) is int:
         raise OverflowError(f"integer {value} is too large for any type")
     return _Typed(None, value)
+
+
+def _typed(value: Any, types: Domains.Types) -> _Typed:
+    """A variable's or a member's value, with its type, read through `types`."""
+    if type(value) not in (bool, int, float):
+        return _Typed(None, value)
+    name = Domains.of(value, types)
+    return _untyped(value) if name is None else _Typed(types.named(name), value)
+
+
+def _types(node: Any, dialect: Any) -> Domains.Types:
+    """The types a term of `dialect` reads, through its holder."""
+    return Domains.Types(node, dialect.path)
+
+
+def _bool(ctype: CType) -> CType:
+    """`bool`, read through the `Types` a type was read through."""
+    return ctype.types.named("bool")  # type: ignore[union-attr]
 
 
 def _refuse(dialect: Any, what: str) -> NotImplementedError:
@@ -88,8 +111,8 @@ def _literal(dialect: Any) -> Any:
             if domain is Domains.String:
                 return _Typed(None, value)
             raise _refuse(dialect, f"literal of {domain.name()}")
-        if domain.kind == "floating":
-            return _convert(_Typed(Domains.Double, value), domain)
+        if domain.kind == "floating":  # a literal's value is a binary64 float, rounded to its type
+            return _Typed(domain, Ieee754.convert("binary64", value, domain.format, _EVEN))
         if not domain.contains(value):
             raise OverflowError(f"integer literal {value} does not fit '{domain.name()}'")
         return _Typed(domain, value)
@@ -137,7 +160,10 @@ def _convert(value: _Typed, target: CType) -> _Typed:
 
 
 def _common(left: _Typed, right: _Typed, operator: str) -> tuple[CType, _Typed, _Typed]:
-    ctype = Domains.common(_arithmetic(left, operator), _arithmetic(right, operator))
+    a, b = _arithmetic(left, operator), _arithmetic(right, operator)
+    ctype = Domains.common(a, b)
+    if ctype is None:  # a decimal floating type and a binary one: a constraint C's usual arithmetic conversions impose
+        raise TypeError(f"invalid operands to binary {operator} ('{a.name()}' and '{b.name()}')")
     return ctype, _convert(left, ctype), _convert(right, ctype)
 
 
@@ -202,16 +228,16 @@ def _comparison(operator: str) -> F.Implementation:
         if ctype.kind == "floating":
             x, y = Ieee754.decode(ctype.format, a.value), Ieee754.decode(ctype.format, b.value)
             if x.special == "nan" or y.special == "nan":
-                return _Typed(Domains.Bool, operator == "!=")
+                return _Typed(_bool(ctype), operator == "!=")
             order = _ieee_order(ctype.format, a.value, b.value)
         else:
             order = (a.value > b.value) - (a.value < b.value)
-        return _Typed(Domains.Bool, tests[operator](order))
+        return _Typed(_bool(ctype), tests[operator](order))
 
     return apply
 
 
-def _ieee_order(format: str, a: Any, b: Any) -> int:
+def _ieee_order(format: Ieee754.Format, a: Any, b: Any) -> int:
     """How two non-NaN floating values compare by value: -0 equals 0."""
     x, y = Ieee754.decode(format, a), Ieee754.decode(format, b)
     if x.special is None and y.special is None and x.coefficient == 0 and y.coefficient == 0:
@@ -219,17 +245,17 @@ def _ieee_order(format: str, a: Any, b: Any) -> int:
     return Ieee754.compare(format, a, b)  # type: ignore[return-value]
 
 
-def _truth(value: _Typed, operator: str) -> bool:
-    _arithmetic(value, operator)
-    return _convert(value, Domains.Bool).value
+def _truth(value: _Typed, operator: str) -> _Typed:
+    """A scalar's truth, a `bool`."""
+    return _convert(value, _bool(_arithmetic(value, operator)))
 
 
 def _logical(operator: str) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
         first = _truth(arguments[0](), operator)
-        if first == (operator == "||"):
-            return _Typed(Domains.Bool, first)
-        return _Typed(Domains.Bool, _truth(arguments[1](), operator))
+        if first.value == (operator == "||"):
+            return first
+        return _truth(arguments[1](), operator)
 
     return apply
 
@@ -238,7 +264,8 @@ def _unary(operator: str) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
         value = arguments[0]()
         if operator == "!":
-            return _Typed(Domains.Bool, not _truth(value, operator))
+            truth = _truth(value, operator)
+            return _Typed(truth.ctype, not truth.value)
         ctype = Domains.promoted(_arithmetic(value, operator))
         promoted = _convert(value, ctype)
         if ctype.kind == "floating":
@@ -255,7 +282,7 @@ def _conditional(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
         if Terms.arguments_of(Terms.kind_of(node)[1])[1] is None:
             raise _refuse(dialect, "conditionalexpression without a consequence")
-        return arguments[1]() if _truth(arguments[0](), "?:") else arguments[2]()
+        return arguments[1]() if _truth(arguments[0](), "?:").value else arguments[2]()
 
     return apply
 
@@ -269,10 +296,10 @@ def _cast(dialect: Any) -> F.Implementation:
         type_ = _attributes(node)["type"]
         if type_.kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, refused as every dialect refuses it
             raise ValueError(f"{dialect.name()} {type_.kind} is not evaluated")
-        name = Expressions.type_name(type_)
-        if name is None:
+        target = Expressions.cast_type(Expressions.type_name(type_), _types(node, dialect))
+        if target is None:
             raise _refuse(dialect, "castexpression to a type that is not arithmetic")
-        return _convert(arguments[0](), Domains.TYPES[name])
+        return _convert(arguments[0](), target)
 
     return apply
 
@@ -292,7 +319,7 @@ def _member(dialect: Any) -> F.Implementation:
             raise TypeError(f"member reference base type '{type(target).__name__}' is not a structure")
         if name not in members:
             raise KeyError(f"no member named '{name}'")
-        return _typed(_array(members[name]))
+        return _typed(_array(members[name]), _types(node, dialect))
 
     return apply
 
@@ -306,12 +333,12 @@ def _subscript(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
         if len(arguments) != 2:
             raise _refuse(dialect, "subscriptexpression of several indices")
-        return _element(arguments[0](), arguments[1]())
+        return _element(arguments[0](), arguments[1](), _types(node, dialect))
 
     return apply
 
 
-def _element(array: _Typed, index: _Typed) -> _Typed:
+def _element(array: _Typed, index: _Typed, types: Domains.Types) -> _Typed:
     if not isinstance(array.value, (list, tuple)):
         raise TypeError(f"subscripted value is not an array: '{_name(array)}'")
     if index.ctype is None or index.ctype.kind == "floating":
@@ -319,7 +346,7 @@ def _element(array: _Typed, index: _Typed) -> _Typed:
     position = int(index.value)
     if not 0 <= position < len(array.value):
         raise ValueError(f"index {position} is out of bounds of an array of {len(array.value)}")
-    return _typed(array.value[position])
+    return _typed(array.value[position], types)
 
 
 def _call(dialect: Any) -> F.Implementation:
@@ -328,7 +355,7 @@ def _call(dialect: Any) -> F.Implementation:
         if dialect.kind(callee)[2].role != Terms.REFERENCE or Terms.name_of(callee) is None:
             raise _refuse(dialect, "callexpression of a callee that is not a function's name")
         function = scope.function(Terms.name_of(callee))
-        return _typed(function(*(_native(argument()) for argument in arguments[1:])))
+        return _typed(function(*(_native(argument()) for argument in arguments[1:])), _types(node, dialect))
 
     return apply
 
@@ -346,11 +373,11 @@ class Scope(S.Variables):
         self.functions = dict(functions or {})
 
     def lookup(self, reference: Any) -> Any:
+        path = Terms.dialect_of(reference)[len("Expressions."):-len(".Term")]
         if Terms.name_of(reference) is None:  # C++'s idexpression of a name that is not an identifier: `std::cout`
-            dialect = Terms.dialect_name(Terms.dialect_of(reference)[len("Expressions."):-len(".Term")])
-            raise NotImplementedError(
-                f"{dialect} {Terms.kind_of(reference)[0]} of a name that is not an identifier is not evaluated")
-        return _typed(super().lookup(reference))
+            raise NotImplementedError(f"{Terms.dialect_name(path)} {Terms.kind_of(reference)[0]} of a name that is not "
+                                      "an identifier is not evaluated")
+        return _typed(super().lookup(reference), Domains.Types(reference, path))
 
     def unbound(self, reference: Any) -> Any:
         raise Errors.NameError(f"use of undeclared identifier '{Terms.name_of(reference)}'")
@@ -381,7 +408,7 @@ def interpreter(dialect: Any, evaluated: frozenset[str] = EVALUATED) -> F.Interp
         Expressions.CONDITIONALEXPRESSION: _conditional(dialect), Expressions.CASTEXPRESSION: _cast(dialect),
         Expressions.MEMBEREXPRESSION: _member(dialect), Expressions.SUBSCRIPTEXPRESSION: _subscript(dialect),
         Expressions.CALLEXPRESSION: _call(dialect),
-    }, literal=_typed, typed=_literal(dialect), scope=Scope, evaluated=evaluated)
+    }, literal=_untyped, typed=_literal(dialect), scope=Scope, evaluated=evaluated)
 
 
 INTERPRETER = interpreter(Expressions.DIALECT)

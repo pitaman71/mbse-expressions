@@ -47,8 +47,12 @@ expression an `idexpression` (`identifier("x")`, and a callee named by a string)
 
 Its kind of domain, the branch of its union `Expressions.Cpp.Expressions.DomainKind`, which `install` adds to the
 framework's `Expressions.Framework.DomainKind` as the branch `cpp`: the token `nullptr_t` (`OfNullptr`), C++'s own, with
-the inferred `ordered`; its domain has no schema, its value a `constant`'s. Its domains are stage 3's of the
-domains-as-data proposal.
+the inferred `ordered`; its domain has no schema, its value a `constant`'s. `install` also adds its domains' schemas
+(`Expressions.Cpp.Expressions.std_float16_t`, a dotted identifier spelling `std::float16_t`), and `define` writes its
+domains, the types C++'s standard fixes (`bool`, `int8_t` to `uint64_t`, `std::float16_t` to `std::float128_t`,
+`std::bfloat16_t`, `nullptr_t`), owned by name. Every other type a C++ term reads (`int`, `char`, `char8_t`, `size_t`,
+`long double`, ...) is its holder's ABI's, as a C term's is, read the same way (see `C.Expressions`): a C++ literal is
+typed by C++'s names, `1.0f16` a `std::float16_t`, `1.0bf16` a `std::bfloat16_t`.
 """
 
 from __future__ import annotations
@@ -60,7 +64,7 @@ from mbse.Expressions.C.Expressions import Domains
 from mbse.Expressions.C.Expressions import Expressions as C
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 
-__all__ = ["install", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal", "identifier",
+__all__ = ["install", "define", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal", "identifier",
            "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
 
 USERDEFINEDLITERAL, IDEXPRESSION, THISEXPRESSION, LAMBDAEXPRESSION = (
@@ -140,7 +144,11 @@ def install(txn: Any) -> Any:
                   "TemplateTemplateParameter": S.OfObject, "NoexceptSpecifier": S.OfObject,
                   "ThrowSpecifier": S.OfObject, "StandardAttributeSpecifier": S.OfObject, "Attribute": S.OfObject,
                   "AlignasSpecifier": S.OfObject, "GnuAttributeSpecifier": S.OfObject,
-                  "DeclspecSpecifier": S.OfObject})  # FrameworkTerm: the framework's, by name
+                  "DeclspecSpecifier": S.OfObject,  # FrameworkTerm: the framework's, by name
+                  "bool": S.OfAny, "int8_t": S.OfAny, "int16_t": S.OfAny, "int32_t": S.OfAny, "int64_t": S.OfAny,
+                  "uint8_t": S.OfAny, "uint16_t": S.OfAny, "uint32_t": S.OfAny, "uint64_t": S.OfAny,
+                  "std_float16_t": S.OfAny, "std_float32_t": S.OfAny, "std_float64_t": S.OfAny,
+                  "std_float128_t": S.OfAny, "std_bfloat16_t": S.OfAny})  # its domains' schemas
         .spec([
             # its dialect: the singleton `Expressions.Cpp.Expressions`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(True).singleton("Expressions.Cpp.Expressions").adjacencies({
@@ -466,6 +474,120 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("cpp").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("cpp").schema([_.Term])]),
+            # --- its domains' schemas, each an OfAny of the scalar it narrows (a format whose values are text, `str`),
+            # named as a dotted identifier spells its type (`std::float16_t` as `std_float16_t`), which `define`
+            # relates to its domain; `nullptr_t`'s has none ---
+            lambda _: _.bool.name("Expressions.Cpp.Expressions.bool").schemas([S.OfBool]),
+            lambda _: _.int8_t.name("Expressions.Cpp.Expressions.int8_t").schemas([S.OfInt]),
+            lambda _: _.int16_t.name("Expressions.Cpp.Expressions.int16_t").schemas([S.OfInt]),
+            lambda _: _.int32_t.name("Expressions.Cpp.Expressions.int32_t").schemas([S.OfInt]),
+            lambda _: _.int64_t.name("Expressions.Cpp.Expressions.int64_t").schemas([S.OfInt]),
+            lambda _: _.uint8_t.name("Expressions.Cpp.Expressions.uint8_t").schemas([S.OfInt]),
+            lambda _: _.uint16_t.name("Expressions.Cpp.Expressions.uint16_t").schemas([S.OfInt]),
+            lambda _: _.uint32_t.name("Expressions.Cpp.Expressions.uint32_t").schemas([S.OfInt]),
+            lambda _: _.uint64_t.name("Expressions.Cpp.Expressions.uint64_t").schemas([S.OfInt]),
+            lambda _: _.std_float16_t.name("Expressions.Cpp.Expressions.std_float16_t").schemas([S.OfFloat]),
+            lambda _: _.std_float32_t.name("Expressions.Cpp.Expressions.std_float32_t").schemas([S.OfFloat]),
+            lambda _: _.std_float64_t.name("Expressions.Cpp.Expressions.std_float64_t").schemas([S.OfFloat]),
+            lambda _: _.std_float128_t.name("Expressions.Cpp.Expressions.std_float128_t").schemas([S.OfStr]),
+            lambda _: _.std_bfloat16_t.name("Expressions.Cpp.Expressions.std_bfloat16_t").schemas([S.OfStr]),
+        ])]))])
+
+
+def define(txn: Any) -> Any:
+    """C++'s dialect as data: the singleton `Expressions.Cpp.Expressions` owning its domains by name (`domains`, through
+    `Expressions.Framework.Defines`), the types C++'s standard fixes, each with its parameters and its inferred
+    properties, and each but `nullptr_t`'s related to its schema (`Expressions.Cpp.Expressions.std_float16_t`) by
+    `Expressions.Framework.HasDomain`: `bool` (11404's `boolean`); `int8_t` to `int64_t` and `uint8_t` to `uint64_t`,
+    as C's (C++'s `<cstdint>` is C's, under C's names); C++23's `std::float16_t`, `std::float32_t`, `std::float64_t`
+    and `std::float128_t` (IEEE 754's `binary16` to `binary128`) and `std::bfloat16_t` (IEEE 754's kind with no
+    format: 16 bits, radix 2, precision 8, emax 127), each rounding ties to even; and `nullptr_t`, of C++'s own kind.
+    What C++ leaves to the implementation is each ABI dialect's, as C's is. Run after `install`, in a transaction of
+    its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled
+    as its schema's is: `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`."""
+    OWN, Domain = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain
+    return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"dialect": OWN.Dialect,
+                  "bool": Domain, "int8_t": Domain, "int16_t": Domain, "int32_t": Domain, "int64_t": Domain,
+                  "uint8_t": Domain, "uint16_t": Domain, "uint32_t": Domain, "uint64_t": Domain,
+                  "std_float16_t": Domain, "std_float32_t": Domain, "std_float64_t": Domain, "std_float128_t": Domain,
+                  "std_bfloat16_t": Domain, "nullptr_t": Domain})
+        .spec([
+            lambda _: _.dialect.domains({
+                "bool": lambda e: e.domain(_.bool),
+                "int8_t": lambda e: e.domain(_.int8_t),
+                "int16_t": lambda e: e.domain(_.int16_t),
+                "int32_t": lambda e: e.domain(_.int32_t),
+                "int64_t": lambda e: e.domain(_.int64_t),
+                "uint8_t": lambda e: e.domain(_.uint8_t),
+                "uint16_t": lambda e: e.domain(_.uint16_t),
+                "uint32_t": lambda e: e.domain(_.uint32_t),
+                "uint64_t": lambda e: e.domain(_.uint64_t),
+                "std::float16_t": lambda e: e.domain(_.std_float16_t),
+                "std::float32_t": lambda e: e.domain(_.std_float32_t),
+                "std::float64_t": lambda e: e.domain(_.std_float64_t),
+                "std::float128_t": lambda e: e.domain(_.std_float128_t),
+                "std::bfloat16_t": lambda e: e.domain(_.std_bfloat16_t),
+                "nullptr_t": lambda e: e.domain(_.nullptr_t),
+            }),
+            lambda _: _.bool.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.boolean(
+                lambda d: d.ordered(False)))))).schema([OWN.bool]),
+            lambda _: _.int8_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(8).signed(True).overflow("raise")
+                    .least(-128).greatest(127).ordered(True)))))).schema([OWN.int8_t]),
+            lambda _: _.int16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(16).signed(True).overflow("raise")
+                    .least(-32768).greatest(32767).ordered(True)))))).schema([OWN.int16_t]),
+            lambda _: _.int32_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(32).signed(True).overflow("raise")
+                    .least(-2147483648).greatest(2147483647).ordered(True)))))).schema([OWN.int32_t]),
+            lambda _: _.int64_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(64).signed(True).overflow("raise")
+                    .least(-9223372036854775808).greatest(9223372036854775807).ordered(True)))))).schema([OWN.int64_t]),
+            lambda _: _.uint8_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(256)
+                    .least(0).greatest(255).ordered(True)))))).schema([OWN.uint8_t]),
+            lambda _: _.uint16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(65536)
+                    .least(0).greatest(65535).ordered(True)))))).schema([OWN.uint16_t]),
+            lambda _: _.uint32_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(4294967296)
+                    .least(0).greatest(4294967295).ordered(True)))))).schema([OWN.uint32_t]),
+            lambda _: _.uint64_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(18446744073709551616)
+                    .least(0).greatest(18446744073709551615).ordered(True)))))).schema([OWN.uint64_t]),
+            lambda _: _.std_float16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary16").rounding("roundTiesToEven").width(16)
+                    .radix(2).precision(11).emax(15).ordered(True)))))).schema([OWN.std_float16_t]),
+            lambda _: _.std_float32_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary32").rounding("roundTiesToEven").width(32)
+                    .radix(2).precision(24).emax(127).ordered(True)))))).schema([OWN.std_float32_t]),
+            lambda _: _.std_float64_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").width(64)
+                    .radix(2).precision(53).emax(1023).ordered(True)))))).schema([OWN.std_float64_t]),
+            lambda _: _.std_float128_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary128").rounding("roundTiesToEven").width(128)
+                    .radix(2).precision(113).emax(16383).ordered(True)))))).schema([OWN.std_float128_t]),
+            lambda _: _.std_bfloat16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.rounding("roundTiesToEven").width(16)
+                    .radix(2).precision(8).emax(127).ordered(True)))))).schema([OWN.std_bfloat16_t]),
+            lambda _: _.nullptr_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.cpp(lambda v: v.nullptr_t(
+                lambda d: d.ordered(False)))))),
         ])]))])
 
 
@@ -493,7 +615,8 @@ def _application(tag: str, signature: FD.Signature = FD.Opaque(), optional: tupl
 
 
 def _check(tag: str) -> Any:
-    return lambda record: C.problems(F.node(tag, record), SUFFIXES, PREFIXES, "C++")
+    return lambda record: C.problems(F.node(tag, record), Domains.Types(record, "Cpp.Expressions"), SUFFIXES, PREFIXES,
+                                     "C++")
 
 
 _OWN = {
@@ -512,8 +635,8 @@ _OWN = {
                                 check=_check(NAMEDCASTEXPRESSION), scopes=C.scopes(NAMEDCASTEXPRESSION)),
     TYPEIDEXPRESSION: _application(TYPEIDEXPRESSION, FD.Opaque()),
     AWAITEXPRESSION: _application(AWAITEXPRESSION, _ANY1),
-    SIZEOFPACKEXPRESSION: _application(SIZEOFPACKEXPRESSION, Domains.SIZE, required=("pack",)),
-    NOEXCEPTEXPRESSION: _application(NOEXCEPTEXPRESSION, FD.Function((FD.Anything,), Domains.Bool)),
+    SIZEOFPACKEXPRESSION: _application(SIZEOFPACKEXPRESSION, Domains.SIZE, required=("pack",), typed=C.size("C++")),
+    NOEXCEPTEXPRESSION: _application(NOEXCEPTEXPRESSION, _ANY1, typed=C.truth("C++")),
     NEWEXPRESSION: _application(NEWEXPRESSION, required=("type",)),
     DELETEEXPRESSION: _application(DELETEEXPRESSION, _ANY1),
     THROWEXPRESSION: _application(THROWEXPRESSION, optional=("operand",)),
@@ -530,7 +653,7 @@ def _native(value: Any) -> Writer | None:
 
 
 DIALECT = F.Dialect("Cpp.Expressions", {tag: _SHARED[tag] if tag in _SHARED else _OWN[tag] for tag in _TAGS},
-                    domain_of=Domains.of, literal=_native)
+                    domain_of=C.untyped, literal=_native)
 """The Cpp dialect: its kinds, as the framework reads them."""
 
 

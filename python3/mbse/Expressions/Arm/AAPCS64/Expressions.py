@@ -1,7 +1,8 @@
-"""The AAPCS64 dialect: the domains of AAPCS64, the Procedure Call Standard for the Arm 64-bit Architecture (AArch64), its
-LP64 data model, the C and C++ types their standards leave to the implementation, as this ABI fixes them ([Domains as
-data](../../../../../docs/proposals/domains/README.md#stage-3s-design), Decided, Q). It has no terms and no kinds of its
-own: its domains are instances of ISO/IEC 11404's and IEEE 754's kinds, and it serves C and C++ alike. See mbse-basis
+"""The AAPCS64 dialect: the domains of AAPCS64, the Procedure Call Standard for the Arm 64-bit Architecture
+(AArch64), its LP64 data model, the C and C++ types their standards leave to the implementation, as this ABI fixes them
+([Domains as data](../../../../../docs/proposals/domains/README.md#stage-3s-design), Decided, Q). It has no terms and no
+kinds of its own: its domains are instances of ISO/IEC 11404's and IEEE 754's kinds, and it serves C and C++ alike. See
+mbse-basis
 [CAP-097: value domains of published standards](mbse:mbse-basis/docs/capabilities/CAP-097.md#value-domains).
 
 Its dialect is the singleton `Expressions.Arm.AAPCS64`, of its schema `Expressions.Arm.AAPCS64.Dialect`, the branch
@@ -44,7 +45,7 @@ def install(txn: Any) -> Any:
                   "intptr_t": S.OfAny, "uintptr_t": S.OfAny, "int_least8_t": S.OfAny, "int_least16_t": S.OfAny,
                   "int_least32_t": S.OfAny, "int_least64_t": S.OfAny, "uint_least8_t": S.OfAny,
                   "uint_least16_t": S.OfAny, "uint_least32_t": S.OfAny, "uint_least64_t": S.OfAny,
-                  "_Float32x": S.OfAny, "_Float64x": S.OfAny})
+                  "Float32x": S.OfAny, "Float64x": S.OfAny})
         .spec([
             # --- Its dialect: the singleton `Expressions.Arm.AAPCS64`, a branch of the framework's kind union; an
             # expression names it as its ABI (anonymous: no member on it) ---
@@ -87,8 +88,8 @@ def install(txn: Any) -> Any:
             lambda _: _.uint_least16_t.name("Expressions.Arm.AAPCS64.uint_least16_t").schemas([S.OfInt]),
             lambda _: _.uint_least32_t.name("Expressions.Arm.AAPCS64.uint_least32_t").schemas([S.OfInt]),
             lambda _: _.uint_least64_t.name("Expressions.Arm.AAPCS64.uint_least64_t").schemas([S.OfInt]),
-            lambda _: _._Float32x.name("Expressions.Arm.AAPCS64._Float32x").schemas([S.OfFloat]),
-            lambda _: _._Float64x.name("Expressions.Arm.AAPCS64._Float64x").schemas([S.OfStr]),
+            lambda _: _.Float32x.name("Expressions.Arm.AAPCS64.Float32x").schemas([S.OfFloat]),
+            lambda _: _.Float64x.name("Expressions.Arm.AAPCS64.Float64x").schemas([S.OfStr]),
         ])]))])
 
 
@@ -99,7 +100,8 @@ def define(txn: Any) -> Any:
     nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled as its schema's is
     (`unsigned long` as `unsigned_long`): `store.transaction(AAPCS64.define)[0]["unsigned_long"]`."""
     ABI, Domain = txn.Expressions.Arm.AAPCS64, txn.Expressions.Framework.Domain
-    return txn.uid("mbse.Expressions.Arm.AAPCS64.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+    uid = "mbse.Expressions.Arm.AAPCS64.define/1"
+    return txn.uid(uid).mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": ABI.Dialect,
                   "char": Domain, "signed_char": Domain, "unsigned_char": Domain, "short": Domain,
                   "unsigned_short": Domain, "int": Domain, "unsigned_int": Domain, "long": Domain,
@@ -108,7 +110,7 @@ def define(txn: Any) -> Any:
                   "char32_t": Domain, "size_t": Domain, "ptrdiff_t": Domain, "intptr_t": Domain, "uintptr_t": Domain,
                   "int_least8_t": Domain, "int_least16_t": Domain, "int_least32_t": Domain, "int_least64_t": Domain,
                   "uint_least8_t": Domain, "uint_least16_t": Domain, "uint_least32_t": Domain,
-                  "uint_least64_t": Domain, "_Float32x": Domain, "_Float64x": Domain})
+                  "uint_least64_t": Domain, "Float32x": Domain, "Float64x": Domain})
         .spec([
             lambda _: _.dialect.domains({
                 "char": lambda e: e.domain(_.char),
@@ -141,8 +143,8 @@ def define(txn: Any) -> Any:
                 "uint_least16_t": lambda e: e.domain(_.uint_least16_t),
                 "uint_least32_t": lambda e: e.domain(_.uint_least32_t),
                 "uint_least64_t": lambda e: e.domain(_.uint_least64_t),
-                "_Float32x": lambda e: e.domain(_._Float32x),
-                "_Float64x": lambda e: e.domain(_._Float64x),
+                "_Float32x": lambda e: e.domain(_.Float32x),
+                "_Float64x": lambda e: e.domain(_.Float64x),
             }),
             lambda _: _.char.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.modulo(
                 lambda d: d.modulus(256).least(0).greatest(255).ordered(True)))))).schema([ABI.char]),
@@ -169,7 +171,8 @@ def define(txn: Any) -> Any:
                     .least(0).greatest(4294967295).ordered(True)))))).schema([ABI.unsigned_int]),
             lambda _: _.long.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.integer(
                 lambda d: d.width(64).signed(True).overflow("raise")
-                    .least(-9223372036854775808).greatest(9223372036854775807).ordered(True)))))).schema([ABI.long]),
+                    .least(-9223372036854775808).greatest(9223372036854775807)
+                    .ordered(True)))))).schema([ABI.long]),
             lambda _: _.unsigned_long.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.isoiec11404(lambda v: v.modulo(
                 lambda d: d.modulus(18446744073709551616)
@@ -177,7 +180,8 @@ def define(txn: Any) -> Any:
             lambda _: _.long_long.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.isoiec11404(lambda v: v.integer(
                 lambda d: d.width(64).signed(True).overflow("raise")
-                    .least(-9223372036854775808).greatest(9223372036854775807).ordered(True)))))).schema([ABI.long_long]),
+                    .least(-9223372036854775808).greatest(9223372036854775807)
+                    .ordered(True)))))).schema([ABI.long_long]),
             lambda _: _.unsigned_long_long.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.isoiec11404(lambda v: v.modulo(
                 lambda d: d.modulus(18446744073709551616)
@@ -211,11 +215,13 @@ def define(txn: Any) -> Any:
             lambda _: _.ptrdiff_t.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.isoiec11404(lambda v: v.integer(
                 lambda d: d.width(64).signed(True).overflow("raise")
-                    .least(-9223372036854775808).greatest(9223372036854775807).ordered(True)))))).schema([ABI.ptrdiff_t]),
+                    .least(-9223372036854775808).greatest(9223372036854775807)
+                    .ordered(True)))))).schema([ABI.ptrdiff_t]),
             lambda _: _.intptr_t.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.isoiec11404(lambda v: v.integer(
                 lambda d: d.width(64).signed(True).overflow("raise")
-                    .least(-9223372036854775808).greatest(9223372036854775807).ordered(True)))))).schema([ABI.intptr_t]),
+                    .least(-9223372036854775808).greatest(9223372036854775807)
+                    .ordered(True)))))).schema([ABI.intptr_t]),
             lambda _: _.uintptr_t.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.isoiec11404(lambda v: v.modulo(
                 lambda d: d.modulus(18446744073709551616)
@@ -235,7 +241,8 @@ def define(txn: Any) -> Any:
             lambda _: _.int_least64_t.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.isoiec11404(lambda v: v.integer(
                 lambda d: d.width(64).signed(True).overflow("raise")
-                    .least(-9223372036854775808).greatest(9223372036854775807).ordered(True)))))).schema([ABI.int_least64_t]),
+                    .least(-9223372036854775808).greatest(9223372036854775807)
+                    .ordered(True)))))).schema([ABI.int_least64_t]),
             lambda _: _.uint_least8_t.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.isoiec11404(lambda v: v.modulo(
                 lambda d: d.modulus(256).least(0).greatest(255).ordered(True)))))).schema([ABI.uint_least8_t]),
@@ -250,12 +257,12 @@ def define(txn: Any) -> Any:
                 lambda u: u.isoiec11404(lambda v: v.modulo(
                 lambda d: d.modulus(18446744073709551616)
                     .least(0).greatest(18446744073709551615).ordered(True)))))).schema([ABI.uint_least64_t]),
-            lambda _: _._Float32x.kind(lambda k: k.as_value(lambda a: a.as_union(
+            lambda _: _.Float32x.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.ieee754(lambda v: v.ieee754(
                 lambda d: d.format("binary64").rounding("roundTiesToEven").width(64)
-                    .radix(2).precision(53).emax(1023).ordered(True)))))).schema([ABI._Float32x]),
-            lambda _: _._Float64x.kind(lambda k: k.as_value(lambda a: a.as_union(
+                    .radix(2).precision(53).emax(1023).ordered(True)))))).schema([ABI.Float32x]),
+            lambda _: _.Float64x.kind(lambda k: k.as_value(lambda a: a.as_union(
                 lambda u: u.ieee754(lambda v: v.ieee754(
                 lambda d: d.format("binary128").rounding("roundTiesToEven").width(128)
-                    .radix(2).precision(113).emax(16383).ordered(True)))))).schema([ABI._Float64x]),
+                    .radix(2).precision(113).emax(16383).ordered(True)))))).schema([ABI.Float64x]),
         ])]))])

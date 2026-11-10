@@ -43,7 +43,7 @@ export function install(txn: any): any {
       char8_t: S.OfAny, char16_t: S.OfAny, char32_t: S.OfAny, size_t: S.OfAny, ptrdiff_t: S.OfAny, intptr_t: S.OfAny,
       uintptr_t: S.OfAny, int_least8_t: S.OfAny, int_least16_t: S.OfAny, int_least32_t: S.OfAny,
       int_least64_t: S.OfAny, uint_least8_t: S.OfAny, uint_least16_t: S.OfAny, uint_least32_t: S.OfAny,
-      uint_least64_t: S.OfAny, _Float32x: S.OfAny, _Float64x: S.OfAny,
+      uint_least64_t: S.OfAny, Float32x: S.OfAny, Float64x: S.OfAny,
     })
     .spec([
       // --- Its dialect: the singleton `Expressions.Arm.AAPCS64`, a branch of the framework's kind union; an expression
@@ -86,8 +86,8 @@ export function install(txn: any): any {
       (_: any) => _.uint_least16_t.name("Expressions.Arm.AAPCS64.uint_least16_t").schemas([S.OfInt]),
       (_: any) => _.uint_least32_t.name("Expressions.Arm.AAPCS64.uint_least32_t").schemas([S.OfInt]),
       (_: any) => _.uint_least64_t.name("Expressions.Arm.AAPCS64.uint_least64_t").schemas([S.OfInt]),
-      (_: any) => _._Float32x.name("Expressions.Arm.AAPCS64._Float32x").schemas([S.OfFloat]),
-      (_: any) => _._Float64x.name("Expressions.Arm.AAPCS64._Float64x").schemas([S.OfStr]),
+      (_: any) => _.Float32x.name("Expressions.Arm.AAPCS64.Float32x").schemas([S.OfFloat]),
+      (_: any) => _.Float64x.name("Expressions.Arm.AAPCS64.Float64x").schemas([S.OfStr]),
     ])]))]);
 }
 
@@ -106,7 +106,7 @@ export function define(txn: any): any {
       float: Domain, double: Domain, long_double: Domain, wchar_t: Domain, char8_t: Domain, char16_t: Domain,
       char32_t: Domain, size_t: Domain, ptrdiff_t: Domain, intptr_t: Domain, uintptr_t: Domain, int_least8_t: Domain,
       int_least16_t: Domain, int_least32_t: Domain, int_least64_t: Domain, uint_least8_t: Domain,
-      uint_least16_t: Domain, uint_least32_t: Domain, uint_least64_t: Domain, _Float32x: Domain, _Float64x: Domain,
+      uint_least16_t: Domain, uint_least32_t: Domain, uint_least64_t: Domain, Float32x: Domain, Float64x: Domain,
     })
     .spec([
       (_: any) => _.dialect.domains({
@@ -140,8 +140,8 @@ export function define(txn: any): any {
         "uint_least16_t": (e: any) => e.domain(_.uint_least16_t),
         "uint_least32_t": (e: any) => e.domain(_.uint_least32_t),
         "uint_least64_t": (e: any) => e.domain(_.uint_least64_t),
-        "_Float32x": (e: any) => e.domain(_._Float32x),
-        "_Float64x": (e: any) => e.domain(_._Float64x),
+        "_Float32x": (e: any) => e.domain(_.Float32x),
+        "_Float64x": (e: any) => e.domain(_.Float64x),
       }),
       (_: any) => _.char.kind((k: any) => k.as_value((a: any) => a.as_union(
         (u: any) => u.isoiec11404((v: any) => v.modulo(
@@ -254,13 +254,13 @@ export function define(txn: any): any {
         (u: any) => u.isoiec11404((v: any) => v.modulo(
         (d: any) => d.modulus(18446744073709551616n)
           .least(0n).greatest(18446744073709551615n).ordered(true)))))).schema([ABI.uint_least64_t]),
-      (_: any) => _._Float32x.kind((k: any) => k.as_value((a: any) => a.as_union(
+      (_: any) => _.Float32x.kind((k: any) => k.as_value((a: any) => a.as_union(
         (u: any) => u.ieee754((v: any) => v.ieee754(
         (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n)
-          .radix(2n).precision(53n).emax(1023n).ordered(true)))))).schema([ABI._Float32x]),
-      (_: any) => _._Float64x.kind((k: any) => k.as_value((a: any) => a.as_union(
+          .radix(2n).precision(53n).emax(1023n).ordered(true)))))).schema([ABI.Float32x]),
+      (_: any) => _.Float64x.kind((k: any) => k.as_value((a: any) => a.as_union(
         (u: any) => u.ieee754((v: any) => v.ieee754(
         (d: any) => d.format("binary128").rounding("roundTiesToEven").width(128n)
-          .radix(2n).precision(113n).emax(16383n).ordered(true)))))).schema([ABI._Float64x]),
+          .radix(2n).precision(113n).emax(16383n).ordered(true)))))).schema([ABI.Float64x]),
     ])]))]);
 }
