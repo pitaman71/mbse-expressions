@@ -41,11 +41,13 @@ def install(txn):
 
 def cold_chain():
     """A store of the cold chain's schemas, which also holds expressions: of the Patterns dialect, and of every dialect the
-    case studies translate into, installed after the standard dialects whose kinds of domain they use."""
+    case studies translate into, installed after the standard dialects whose kinds of domain they use; and Patterns'
+    operations named by its dialect (`Patterns.define`), which validation reads."""
     store = Builders.Store()
     for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
                    SystemVerilog):
         store.transaction(module.install)
+    store.transaction(Patterns.define)
     store.transaction(install)
     return store
 

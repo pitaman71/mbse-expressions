@@ -21,13 +21,13 @@ Everything that uses a domain uses code objects instead:
 | Module (Python; TypeScript has the same) | Lines | What it holds |
 |---|---|---|
 | `Framework/Domains.py` | 268 | `Domain` (a protocol: `contains`, `includes`), `Signature`, `OfTypes`, `OfValues`, `OfUnion`, `Anything`, `Function`, `Same`, `Overloaded`, `Opaque`, `Either` |
-| `Patterns/Expressions/Domains.py` | 739 | 14 dataclasses (`_Integer`, `_Ieee754`, `_Bits`, `_Bytes`, `_Unicode`, `_Enum`, `_Packed`, ...), the defaults, `SIGNATURES`, and `read`, which turns a stored domain into one of these |
+| `Patterns/Expressions/Domains.py` | 739 at 0.8.0; 229 since stage 2 | at 0.8.0, 14 dataclasses (`_Integer`, `_Ieee754`, `_Bits`, `_Bytes`, `_Unicode`, `_Enum`, `_Packed`, ...), the defaults, `SIGNATURES`, and `read`, which turned a stored domain into one of these; since stage 2, inference's code alone (the natives' domains as `OfTypes`, `SIGNATURES` without families) and evaluation's collections |
 | `C/Expressions/Domains.py` | 319 | `CType`, C's integer and floating types as module constants, promotion and the usual arithmetic conversions, operator signatures |
 | `SystemVerilog/Expressions/Domains.py` | 216 | 4-state logic vectors, their widths and signedness |
 | `{Excel,MATLAB,LaTeX}/Expressions/Domains.py`, `Python/Python3/Domains.py`, `TypeScript/TypeScript5/Domains.py` | 48 to 103 each | each dialect's value domains and operator signatures |
 
-So there are two forms of a Patterns domain, the stored one and the dataclass it is read into, and one form, code only,
-of every other dialect's. Operator signatures are code too, though stage 3 modeled every Patterns operation as data, a
+So there were two forms of a Patterns domain, the stored one and the dataclass it was read into, until stage 2 removed
+the dataclass; every other dialect's has one form, code only, until stage 3. Operator signatures are code too, though stage 3 modeled every Patterns operation as data, a
 `Schemas.OfExpression` whose pattern's variables are its arguments and whose `result` is its return
 ([the API](../port/API.md), Settled in stage 3, 20 to 22): the code table `Domains.SIGNATURES` and the stored operations
 describe the same thing twice.
