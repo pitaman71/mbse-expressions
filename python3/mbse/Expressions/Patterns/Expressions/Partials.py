@@ -18,15 +18,16 @@ from collections.abc import Mapping
 from typing import Any
 
 from mbse.Expressions.Framework import Partials as F, Terms
+from mbse.Schemas.Framework import Schemas
 
-from . import Domains, Evaluators, Expressions
+from . import Evaluators, Expressions
 
 __all__ = ["OfAny", "REDUCER"]
 
 
 def _literal(value: Any) -> Any:
     """The literal of a value: a native's; None for anything else."""
-    return Expressions.literal(value) if type(value) in Domains._NATIVES else None
+    return Expressions.literal(value) if type(value) in Schemas.SCALAR_TYPES else None
 
 
 def _simplify(node: Any, results: list[F.Result]) -> F.Result | None:

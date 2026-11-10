@@ -89,7 +89,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Errors, Repr, Schemas } from "@mbse/schemas/Framework";
+import { Errors, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
 
 import * as Domains from "./Domains.js";
 import * as Objects from "./Objects.js";
@@ -807,6 +807,7 @@ export interface KindOptions {
   check?: ((record: any) => string[]) | null;
   typed?: ((record: any) => Domains.Domain | null) | null;
   closed?: boolean;
+  operations?: ((store: any) => ReadonlyMap<string, any>) | null;
   standards?: readonly string[];
   optional?: readonly string[];
   scopes?: ((record: any) => ReadonlySet<string>[]) | null;
@@ -819,7 +820,10 @@ export interface KindOptions {
 /** How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`, or null
  * when its tag names it); for an application or a quantifier, its `vocabulary` (operator names to signatures; null
  * accepts any name, with `signature`), and whether it is `closed`, refusing an operator outside its vocabulary whether
- * or not validation asks for the core (the operations its dialect defines, and no others); the properties it requires
+ * or not validation asks for the core (the operations its dialect defines, and no others); where its operations are
+ * data, those its dialect defines in a store (`operations(store)`, by name, each its `Schemas.OfExpression`), which
+ * validation reads in place of its vocabulary from the store of the term's holder (`Proxies.store_of`: a lone term
+ * belongs to no store), its vocabulary left to `infer`; the properties it requires
  * (`required`); for a reference, whether it is `lexical` and the `ambient` names bound without a declaration; for an
  * import, the names it binds, of its attributes (`names(attributes)`); its own problems (`check(record)`); the domain
  * its own attributes give it, where they give one (`typed(record)`: C's type of a constant or a cast; a term carries no
@@ -845,6 +849,7 @@ export class Kind {
   readonly check: ((record: any) => string[]) | null;
   readonly typed: ((record: any) => Domains.Domain | null) | null;
   readonly closed: boolean;
+  readonly operations: ((store: any) => ReadonlyMap<string, any>) | null;
   readonly standards: readonly string[];
   readonly optional: readonly string[];
   readonly scopes: ((record: any) => ReadonlySet<string>[]) | null;
@@ -864,6 +869,7 @@ export class Kind {
     this.check = options.check ?? null;
     this.typed = options.typed ?? null;
     this.closed = options.closed ?? false;
+    this.operations = options.operations ?? null;
     this.standards = options.standards ?? [];
     this.optional = options.optional ?? [];
     this.scopes = options.scopes ?? null;
@@ -1070,7 +1076,14 @@ export class Dialect {
       const names = kind.names !== null && problems.length === 0 ? kind.names(attributes) : [];
       scopes = args.map(() => new Set([...bound, ...names]));
     }
-    if ((kind.role === APPLICATION || kind.role === QUANTIFIER) && problems.length === 0 && kind.vocabulary !== null) {
+    if (kind.operations !== null && problems.length === 0) { // its operations are data: its holder's store's
+      const defined = new Map([...kind.operations(Proxies.store_of(node))].map(([name, operation]) =>
+        [name, Domains.arity(operation)] as [string, number]));
+      const operator = operatorOf(node, kind);
+      const arity = defined.get(operator);
+      if (arity === undefined) problems.push(`${repr(operator)} is not an operation ${this.own} defines`);
+      else if (arity !== args.length) problems.push(`${operator} takes ${arity} arguments, got ${args.length}`);
+    } else if ((kind.role === APPLICATION || kind.role === QUANTIFIER) && problems.length === 0 && kind.vocabulary !== null) {
       const vocabulary = kind.vocabulary;
       if (kind.operators !== null) { // several, each checked against the vocabulary
         problems.push(...kind.operators(attributes).filter((operator) => core && !vocabulary.has(operator))

@@ -95,7 +95,7 @@ from collections.abc import Callable, Iterable, Iterator, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from mbse.Schemas.Framework import Schemas
+from mbse.Schemas.Framework import Proxies, Schemas
 
 from . import Domains, Objects
 
@@ -742,7 +742,10 @@ class Kind:
     """How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`,
     or None when its tag names it); for an application or a quantifier, its `vocabulary` (operator names to signatures;
     None accepts any name, with `signature`), and whether it is `closed`, refusing an operator outside its vocabulary
-    whether or not validation asks for the core (the operations its dialect defines, and no others); the properties it
+    whether or not validation asks for the core (the operations its dialect defines, and no others); where its
+    operations are data, those its dialect defines in a store (`operations(store)`, by name, each its
+    `Schemas.OfExpression`), which validation reads in place of its vocabulary from the store of the term's holder
+    (`Proxies.store_of`: a lone term belongs to no store), its vocabulary left to `infer`; the properties it
     requires (`required`); for a reference, whether it is `lexical` and the `ambient` names bound without a declaration;
     for an import, the names it binds, of its attributes (`names(attributes)`); its own problems (`check(record)`); the
     domain its own attributes give it, where they give one (`typed(record)`: C's type of a constant or a cast; a
@@ -769,6 +772,7 @@ class Kind:
     check: Callable[[Any], list[str]] | None = None
     typed: Callable[[Any], Domains.Domain | None] | None = None
     closed: bool = False
+    operations: Callable[[Any], Mapping[str, Any]] | None = None
     standards: tuple[str, ...] = ()
     optional: tuple[str, ...] = ()
     scopes: Callable[[Any], list[frozenset[str]]] | None = None
@@ -938,7 +942,15 @@ class Dialect:
         elif kind.role == IMPORT:
             names = kind.names(attributes) if kind.names is not None and not problems else ()
             scopes = [bound | set(names)] * len(arguments)
-        if kind.role in (APPLICATION, QUANTIFIER) and not problems and kind.vocabulary is not None:
+        if kind.operations is not None and not problems:  # its operations are data: its holder's store's
+            defined = {name: Domains.arity(operation)
+                       for name, operation in kind.operations(Proxies.store_of(node)).items()}
+            operator = operator_of(node, kind)
+            if operator not in defined:
+                problems.append(f"{operator!r} is not an operation {self._name} defines")
+            elif defined[operator] != len(arguments):
+                problems.append(f"{operator} takes {defined[operator]} arguments, got {len(arguments)}")
+        elif kind.role in (APPLICATION, QUANTIFIER) and not problems and kind.vocabulary is not None:
             vocabulary = kind.vocabulary
             if kind.operators is not None:  # several, each checked against the vocabulary
                 problems += [f"{operator!r} is not a core operation" for operator in kind.operators(attributes)
