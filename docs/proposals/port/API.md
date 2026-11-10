@@ -1018,7 +1018,7 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      (11404's "`type octet = new integer range (0..255)`", formerly `uint8`, which is C's name, not 11404's);
      `binary64`, `binary32`; `std_logic`; `string`; their uids are `mbse.Expressions.<Family>.Expressions.define/1`
      (an install's uid kept while its content changes is mbse-basis
-     [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/pull/76), as the
+     [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-254.md), as the
      user decided, the domains proposal's Decided, "On stage 1's review").
      Patterns' install keeps its terms, holder, singleton and operations; its `define` writes its operations alone.
 113. **`Expressions.Framework.DomainKind` is a union of the dialects' kind unions**, as `Term` is of their `Term`s:

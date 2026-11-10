@@ -214,8 +214,7 @@ As the user decided (2026-11-04), on the questions below:
     `overflow`, which 11404 does not define, against
     [PRI-012: model published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-012)'s
     "with only the parameters a standard defines": "PRI-012 is overstated, adding extra parameters does not count as a
-    "second order invention" IMO". They stay; PRI-012's wording is corrected in
-    [mbse-basis#77](https://github.com/pitaman71/mbse-basis/pull/77).
+    "second order invention" IMO". They stay; PRI-012's wording is corrected to match.
   - **An enumeration is not an integer**: "models should not conflate integers and enums as C does". So `packed` and
     `Packs` stay, keeping an enumeration apart from the integer that represents it; nothing is removed. For stage 3:
     C's and C++'s enums are to be stored as enumerations packed into their integer types, not as integer domains.
@@ -239,7 +238,7 @@ As the user decided (2026-11-04), on the questions below:
     now" (the dialects proposal's Decided, Namespace, 4).
   - **An install's uid: tech debt**: asked whether an install whose content changed may keep its uid (Patterns' and
     Python3's keep `/1`): "this is an important question, but not priority. find a place to store it as tech debt".
-    It is mbse-basis [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/pull/76),
+    It is mbse-basis [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-254.md),
     proposed in that pull request; the uids' versions are left as they are (`/1`).
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
   release; CAP-232 builds on stored domains.
