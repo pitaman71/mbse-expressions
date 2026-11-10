@@ -329,7 +329,8 @@ singleton by name was the coordinating agent's proposal, built on that direction
     `Expressions.Basic.binary32`, ...), and its domain; `Schemas.OfAny` gains the extension adjacency `domain`. Basic
     defines `bool`, `int`, `float`, `str`, `bytes`, `uint8`, `binary32` and `std_logic`, written in fluent syntax by
     `Basic.define`; `Domains.read(domain)` gives a stored domain's data (`OfX.Data`), whose `contains`, `compare`,
-    `fit` and `validate` stay, unused by evaluation until domain inference.
+    `fit` and `validate` stay, unused by evaluation until domain inference. *(`read` and the data classes superseded by
+    item 124, domains as data's stage 2.)*
 20. **A dialect names its operations: `Expressions.Framework.Operates(dialect, name, operation)`**, unique
     `[dialect, name]` and `[operation]`, owning nothing: an operation is a `Schemas.OfExpression` its module owns
     (`Schemas.Defines`), named `Expressions.Basic.<name>`, as mbse-schemas writes only named schema objects that data
@@ -1053,7 +1054,8 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      `operations` and `arity`; "a domain needs a kind". `kind_of` gives `(dialect, tag, record)`, the dialect's tag
      first (2026-11-09, as the user decided, "yes, dialect too"), so that C's and C++'s `nullptr_t` are told apart
      (DOM-18). The code domains and signatures stay, `Dialect.infer`'s,
-     marked as CAP-232's to replace.
+     marked as CAP-232's to replace. *(The code domains superseded by item 124, domains as data's stage 2; the
+     signatures stay, without families.)*
 118. **Every caller installs the standard dialects first**: tests, tutorials, the toolkit, the corpus and the skill. The
      corpus's `domains` case is ISO/IEC 11404's singleton and its domains, a state domain and a domain packing it into `octet` among them.
      Tests: DOM-17 (the standard dialects and the reading interface) and DOM-18 (each language's kinds) are added,
@@ -1117,7 +1119,8 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      DOM-05, DOM-17, T07.5, tutorial 8's introduction) is `modulo(256)`; C's `uint8_t` and the code domains' `uint8`
      (DOM-01), an unsigned integer of width 8, are not 11404's and stay. The corpus's `domains` case gains
      `modulo(256)`. Tests: DOM-01, DOM-02, DOM-03, DOM-05, DOM-06, DOM-07, DOM-09, DOM-17, EXP-06, EXP-13, FRM-01 and CONF-04,
-     under their IDs.
+     under their IDs. *(The code domains `OfOctet` and `OfModulo`, `Domains.read` and the families superseded by
+     item 124, domains as data's stage 2.)*
 
 ## Settled in domains as data's stage 2, for the user's review
 

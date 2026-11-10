@@ -79,8 +79,8 @@ The roles are:
 - `APPLICATION`: an operator, named by the property `operator` (or, if it is None, by the kind's tag), applied to
   arguments. A kind's `vocabulary` maps operator names to signatures; operators outside it are extensions, unless the
   vocabulary is None, when any name is accepted and `signature` applies to all, or the kind is `closed`, when they
-  are refused: by validation, against the operations its dialect defines as data (`Kind.operations`), and by
-  evaluation. The container constructors are applications named by their tags.
+  are refused by evaluation; where its operations are data (`Kind.operations`), validation refuses any its dialect
+  does not define. The container constructors are applications named by their tags.
 - `BINDING`: binds its name to its first argument within the others.
 - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
   results by its operator, such as `all`. Its signature also gives the domain of a collection's items.

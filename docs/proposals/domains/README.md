@@ -20,7 +20,7 @@ Everything that uses a domain uses code objects instead:
 
 | Module (Python; TypeScript has the same) | Lines | What it holds |
 |---|---|---|
-| `Framework/Domains.py` | 268 | `Domain` (a protocol: `contains`, `includes`), `Signature`, `OfTypes`, `OfValues`, `OfUnion`, `Anything`, `Function`, `Same`, `Overloaded`, `Opaque`, `Either` |
+| `Framework/Domains.py` | 268 at 0.8.0; 333 since stage 2 | since stage 1, the reading interface (`kind_of`, `properties`, `name_of`, `operations`, `arity`); `Domain` (a protocol: `contains`, `includes`), `Signature`, `OfTypes`, `OfValues`, `OfUnion`, `Anything`, `Function`, `Same`, `Overloaded`, `Opaque`, `Either` |
 | `Patterns/Expressions/Domains.py` | 739 at 0.8.0; 229 since stage 2 | at 0.8.0, 14 dataclasses (`_Integer`, `_Ieee754`, `_Bits`, `_Bytes`, `_Unicode`, `_Enum`, `_Packed`, ...), the defaults, `SIGNATURES`, and `read`, which turned a stored domain into one of these; since stage 2, inference's code alone (the natives' domains as `OfTypes`, `SIGNATURES` without families) and evaluation's collections |
 | `C/Expressions/Domains.py` | 319 | `CType`, C's integer and floating types as module constants, promotion and the usual arithmetic conversions, operator signatures |
 | `SystemVerilog/Expressions/Domains.py` | 216 | 4-state logic vectors, their widths and signedness |
@@ -243,7 +243,8 @@ As the user decided (2026-11-04), on the questions below:
       terms, tutorial 8's casts) is C's, and stays; so does `uint8`, the Patterns code domains' name for an unsigned integer of width
       8 (DOM-01), which is not a stored domain. The code domains read the two kinds as `OfOctet` and `OfModulo` until
       stage 2; a packed domain's representation may be an octet; and the signatures' families take a modulo where
-      they take numbers, an octet where they take ordered values (CAP-232's to replace).
+      they take numbers, an octet where they take ordered values (CAP-232's to replace). (Each gone in stage 2, with
+      Patterns' code domains: Stage 2's design.)
     - **`integer` keeps `width`, `signed` and `overflow`**, as decided (The integer kind keeps its parameters, below).
   - **`DomainKind` stays two-level**, as built: the dialect, then its kind, the pattern of `Term`, which the user
     decided ("Framework.Term -> Dialects.C.Term / Framework.Term -> Dialects.Cpp.Term"; [the dialects
@@ -496,7 +497,8 @@ inference's code (Decided, 2; Stage 1's design, The reading interface): `SIGNATU
 `MAPPING`, `List`, `Keyed`, `Records`, `Object`, `items_of`, `of` and `Anything`. Their natives' domains, `Bool`,
 `Int`, `Float`, `Str` and `Bytes`, were instances of the data classes; they become the framework's generic `OfTypes`
 (`Domains.OfTypes("int", int)`), named as before, as Python3's are, each signature keeping its shape (`Same`,
-`Function`, `_Shift`, `_Collective`, ...) without a family. So inference keeps its natives and the collections', and no
+`Function`, `_Collective`, ...) without a family, but the bitwise operations and shifts, which become `(int, int) ->
+int`. So inference keeps its natives and the collections', and no
 longer takes an environment's domain of a width, a format or an enumeration: no code can now build one, and inferring
 in widths is [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)'s,
 over stored domains. Each is marked in a source comment as CAP-232's to replace.

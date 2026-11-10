@@ -16,13 +16,18 @@ rest of your data, sent between programs, and evaluated the same way in Python a
 
 ```python
 from mbse.Expressions import Framework
+from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
+from mbse.Expressions.IEEE754 import Expressions as IEEE754
+from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
 from mbse.Expressions.Patterns import Expressions as Patterns
 from mbse.Expressions.Patterns.Expressions import Evaluators, Expressions
+from mbse.Expressions.Unicode import Expressions as Unicode
 from mbse.Schemas.Framework import Builders
 
 store = Builders.Store()  # expressions are stored in an mbse-schemas store, with the data they constrain
-store.transaction(Framework.install)
-store.transaction(Patterns.install)
+for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns):  # the standard dialects first
+    store.transaction(module.install)
+store.transaction(Patterns.define)  # Patterns' operations, which validation reads
 contact = Expressions.variable("contact")
 with store.transaction():
     senior = store.Expressions.Patterns.Expressions.Expression(lambda e: e.root(
@@ -32,13 +37,17 @@ Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value
 
 ```typescript
 import { Framework } from "@mbse/expressions";
+import * as IEEE1164 from "@mbse/expressions/IEEE1164/Expressions";
+import * as IEEE754 from "@mbse/expressions/IEEE754/Expressions";
+import * as ISOIEC11404 from "@mbse/expressions/ISOIEC11404/Expressions";
 import * as Patterns from "@mbse/expressions/Patterns/Expressions";
 import { Evaluators, Expressions } from "@mbse/expressions/Patterns/Expressions";
+import * as Unicode from "@mbse/expressions/Unicode/Expressions";
 import { Builders } from "@mbse/schemas/Framework";
 
 const store: any = new Builders.Store(); // expressions are stored in an mbse-schemas store, with the data they constrain
-store.transaction(Framework.install);
-store.transaction(Patterns.install);
+for (const module of [Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns]) store.transaction(module.install);
+store.transaction(Patterns.define); // Patterns' operations, which validation reads
 const contact = Expressions.variable("contact");
 const senior = store.transaction(() => store.Expressions.Patterns.Expressions.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
@@ -164,7 +173,10 @@ constructors `list` and `mapping`, literals holding any value with their spellin
 `error` and `missing`; dialects, their operations and their
 domains as data (each dialect a singleton that names its operations, each an expression schema, and may own domains
 by name, as the standard dialects do; the published standards that define kinds of domain, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode,
-dialects of their own since domains as data's stage 1, unreleased until 0.9.0); writers; `validate()`, which refuses a call to an operation the dialect does not define; evaluation with
+dialects of their own since domains as data's stage 1, unreleased until 0.9.0; since its stage 2, Patterns' code
+domains gone, its validation reading the operations its dialect names in the store of the expression that holds a
+term, so that `Patterns.define` runs first and a lone Patterns call is refused); writers; `validate()`, which refuses a
+call to an operation the dialect does not define; evaluation with
 three-valued logic over values by the schemas they are written with, collections and quantifiers. Released in 0.8.0,
 on mbse-schemas 0.26.10: stages 1 to 5 of the complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md))
 and the namespace rename (`Expressions.<Family>.<Dialect>`; the old `Dialects` names are gone, with no alias): stage 2,

@@ -54,6 +54,7 @@ __all__ = [
     "quantifier",
 ]
 
+
 def install(txn: Any) -> Any:
     """Patterns' union of its kinds, added to the framework's terms as the branch `patterns`, and its own kind; its
     dialect's schema, whose singleton is `Expressions.Patterns.Expressions`; and its operations, each an expression schema
