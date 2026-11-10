@@ -891,7 +891,7 @@ cover only eight of Excel's fifteen error values, so no standard's values can ta
 **Which ABI a term is read under** (Decided, P). The holder names it:
 
 - **The relation** *(agent, its names)*: `Expressions.Framework.HasAbi`, linking `expression`, an
-  `Expressions.Framework.Expression`, and `abi`, an `Expressions.Framework.Dialect`, unique `[expression]`; and the
+  `Expressions.Framework.Expression`, and `abi`, an `Expressions.Framework.Dialect`, its `abi` determined by its `expression` (`uniques("abi")`, as built: Found while building); and the
   expression's adjacency `abi`, through it, which every dialect's holder inherits, refining the framework's. It is named
   as the framework's other relations from a holder are, by what the first link has (`HasRoot`, `HasDomain`), its
   acronym spelled as the kinds' schemas spell theirs (`OfIeee754`); its links are the roles they play, as `Defines`'
@@ -998,6 +998,32 @@ onward):
 - **An Excel error's schema narrows `str`**, its value its code, as Excel's evaluator holds one; the kinds MATLAB's
   `string` and Excel's `text` are their dialects' own, UTF-16 code units, MATLAB's install so gaining its union of
   kinds.
+- **Group 1 (C, C++ and the ABI dialects)**, each *(agent)* but the three findings (API, 131 to 140):
+  - A schema's and a symbol's name drop a type's leading `_` (`Expressions.C.Expressions.Float16`, `Decimal32`;
+    AMD64's `Float32x`): mbse-schemas refuses a symbol beginning with `_`, reading it as a private member's; the
+    `Defines` name keeps it (`_Float16`).
+  - C's and C++'s domains are written in the order of the design's tables.
+  - A working `CType` keeps `types`, the holder's lookup, beside its `domain`: a type of C's own (`int8_t`) cannot reach
+    the ABI through its domain, and the promotions need the ABI's `int`.
+  - A lookup's failure is a problem in validation, and raised in inference and evaluation.
+  - A cast to a single identifier neither dialect defines is a program's own type, not arithmetic, once the holder
+    names an ABI; a name C's keywords spell must be defined.
+  - A floating suffix the language does not write gives `Anything` (it gave an `OfTypes` of the suffix);
+    `_Float128x`, which neither ABI provides, is refused by name.
+  - A character literal with an encoding prefix (`L`, `u`, `U`, C++'s `u8`) is typed by the ABI's types, and
+    evaluates; a prefix no language has stays an `OfTypes`.
+  - A decimal literal's value is held as the binary64 float its literal holds (`0.1df` is `0.1000000`).
+  - `NULLPTR` stays a code token: nothing reads `nullptr_t` arithmetically.
+  - The suites' `term` helpers name AMD64 by default, and 07's names it on every holder.
+  - Tutorial 8 names AMD64, and gains a step showing `(char)200` under both ABIs.
+  - **Found: `HasAbi`'s unique clause was inverted.** In mbse-schemas `unique(S)` says S is determined by the other
+    links, so the design's `unique [expression]` let one holder name two ABIs; it is `uniques("abi")`, in both
+    languages, a holder naming one ABI at most (API, 138).
+  - **Found: `std::bfloat16_t` and `std::float16_t` mix by width.** Both are 16 bits, and the usual arithmetic
+    conversions pick a floating type by width, so mixing them takes the first operand's type, where C++ refuses it,
+    their conversion ranks unordered. Left as built: the rules are CAP-232's to replace (Decided, 2).
+  - **Found: validating the AMD64 singleton does not reach its `HasAbi` entries**, its adjacency to `HasAbi` being
+    anonymous: a holder's validation checks its `abi`, the ABI dialect's does not list the holders naming it.
 
 ### Questions for the user (stage 3)
 

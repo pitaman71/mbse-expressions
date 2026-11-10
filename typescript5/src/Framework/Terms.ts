@@ -24,8 +24,8 @@
  * dialect's union holds, `error` (`text`, the source it spans as written; `terms`, the terms recovered within it) and
  * `missing` (`kind`, the kind the parser expected), modeled for parsers that keep invalid syntax and written by none yet;
  * `Expression`; `HasRoot(schema, expression)`, the extension adjacency `expression` it gives `Schemas.OfExpression`; and
- * `HasAbi(expression, abi)`, unique by the expression, through `Expression`'s adjacency `abi`: the dialect of the ABI an
- * expression's terms are read under, which C's and C++'s read the types their standards leave to the implementation from
+ * `HasAbi(expression, abi)`, one ABI per expression at most (`uniques("abi")`), through `Expression`'s adjacency
+ * `abi`: the dialect of the ABI an expression's terms are read under, which C's and C++'s read the types their standards leave to the implementation from
  * ([Domains as data](../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, P). A term carries
  * no domain: whatever owns the root term gives its schema.
  *
