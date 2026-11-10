@@ -555,6 +555,16 @@ over stored domains. Each is marked in a source comment as CAP-232's to replace.
 - **The API**: Settled in domains as data's stage 2, items 124 onward. A breaking change, in 0.9.0, a breaking release
   anyway: the removed exports, `Patterns.define` required to validate, and a lone Patterns call refused.
 
+**Found while building**, each the agent's, for review (API, 129 and 130): `Same`'s `family` (`Framework.Domains`)
+and validation's refusal of an operator outside a closed kind's code vocabulary (`Terms`) were used by Patterns alone,
+so no input reaches them, and they go (mbse-basis
+[PRI-039: 100% coverage of both](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-039));
+`closed` stays, evaluation's. FRM-04 validated a term decoded alone, and now validates it within a holder. Read back
+from a snapshot, a dialect's operations come in their names' order, as mbse-schemas writes a relation's entries sorted
+by its key (mbse-basis [PRI-001: declaration order](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-001)'s
+exception), not in the order `define` wrote them, so `Domains.operations` no longer claims the latter; validation reads
+them by name.
+
 **Not changed here**: where the corpus's and the tests' own domains (`state`, `mode`) are written, which is open with
 the user; C's, C++'s and the other dialects' code domains, stage 3's. Nothing here reads which dialects a dialect uses,
 so nothing gives a reason to reinstate `Uses` (Decided, I).

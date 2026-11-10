@@ -10,7 +10,7 @@
  * - `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by
  *   name; a container as an array of its elements.
  * - `nameOf(domain)`: the name its dialect defines it by (its `Defines` entry's), or null.
- * - `operations(dialect)`: a dialect's operations by name, in the order its singleton names them, each its
+ * - `operations(dialect)`: a dialect's operations by name, in the order the store holds its entries, each its
  *   `Schemas.OfExpression`; `arity(operation)`: the number of its pattern's variables, its arguments.
  *
  * A `Domain` is a set of values: `contains(value)` tests membership at run time, and `includes(other)` tests
@@ -71,8 +71,9 @@ export function nameOf(domain: Readers.OfObject): string | null {
   return entry === undefined ? null : entry.values.get("name") as string;
 }
 
-/** A dialect's operations by name, in the order its singleton names them (`Expressions.Framework.Operates`), each
- * its `Schemas.OfExpression`. */
+/** A dialect's operations by name (`Expressions.Framework.Operates`), each its `Schemas.OfExpression`, in the order the
+ * store holds the entries: as its `define` wrote them, or, read back from a snapshot, by name, as mbse-schemas writes a
+ * relation's entries sorted by its key. */
 export function operations(dialect: Readers.OfObject): Map<string, Readers.OfObject> {
   return new Map(Objects.entries(dialect, "operations").map(
     (entry) => [entry.values.get("name") as string, entry.targets.get("operation") as Readers.OfObject]));

@@ -9,7 +9,7 @@ The reading interface over stored domains and operations, each a `Readers.OfObje
 - `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by name;
   a container as a tuple of its elements.
 - `name_of(domain)`: the name its dialect defines it by (its `Defines` entry's), or None.
-- `operations(dialect)`: a dialect's operations by name, in the order its singleton names them, each its
+- `operations(dialect)`: a dialect's operations by name, in the order the store holds its entries, each its
   `Schemas.OfExpression`; `arity(operation)`: the number of its pattern's variables, its arguments.
 
 A `Domain` is a set of values: `contains(value)` tests membership at run time, and `includes(other)` tests statically
@@ -83,8 +83,9 @@ def name_of(domain: Readers.OfObject) -> str | None:
 
 
 def operations(dialect: Readers.OfObject) -> dict[str, Readers.OfObject]:
-    """A dialect's operations by name, in the order its singleton names them (`Expressions.Framework.Operates`), each
-    its `Schemas.OfExpression`."""
+    """A dialect's operations by name (`Expressions.Framework.Operates`), each its `Schemas.OfExpression`, in the order the
+    store holds the entries: as its `define` wrote them, or, read back from a snapshot, by name, as mbse-schemas writes a
+    relation's entries sorted by its key."""
     return {str(entry.values["name"]): entry.targets["operation"] for entry in Objects.entries(dialect, "operations")}
 
 
