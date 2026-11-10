@@ -1,0 +1,565 @@
+{
+  "mutations": [
+    {
+      "upsert": {
+        "exists": [
+          {
+            "symbols": {
+              "0": {
+                "schema": [
+                  {
+                    "$ref": {
+                      "singleton": ".",
+                      "next": {
+                        "entry": {
+                          "i": "schemas",
+                          "o": "",
+                          "properties": {
+                            "name": "Expressions"
+                          },
+                          "next": {
+                            "entry": {
+                              "i": "schemas",
+                              "o": "",
+                              "properties": {
+                                "name": "SystemVerilog"
+                              },
+                              "next": {
+                                "entry": {
+                                  "i": "schemas",
+                                  "o": "",
+                                  "properties": {
+                                    "name": "Expressions"
+                                  },
+                                  "next": {
+                                    "entry": {
+                                      "i": "schemas",
+                                      "o": "",
+                                      "properties": {
+                                        "name": "Dialect"
+                                      },
+                                      "next": {
+                                        "target": {}
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "spec": [
+              {
+                "0": [
+                  {
+                    "as_adjacency": {
+                      "name": "domains",
+                      "mutations": [
+                        {
+                          "insert": {
+                            "entries": [
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "bit"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "bit"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "byte"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "byte"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "int"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "int"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "integer"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "integer"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "logic"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "logic"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "longint"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "longint"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "real"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "real"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "reg"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "reg"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "shortint"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "shortint"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "shortreal"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "shortreal"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "time"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "time"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

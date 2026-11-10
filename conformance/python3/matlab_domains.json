@@ -1,0 +1,213 @@
+{
+  "mutations": [
+    {
+      "upsert": {
+        "exists": [
+          {
+            "symbols": {
+              "0": {
+                "schema": [
+                  {
+                    "$ref": {
+                      "singleton": ".",
+                      "next": {
+                        "entry": {
+                          "i": "schemas",
+                          "o": "",
+                          "properties": {
+                            "name": "Expressions"
+                          },
+                          "next": {
+                            "entry": {
+                              "i": "schemas",
+                              "o": "",
+                              "properties": {
+                                "name": "MATLAB"
+                              },
+                              "next": {
+                                "entry": {
+                                  "i": "schemas",
+                                  "o": "",
+                                  "properties": {
+                                    "name": "Expressions"
+                                  },
+                                  "next": {
+                                    "entry": {
+                                      "i": "schemas",
+                                      "o": "",
+                                      "properties": {
+                                        "name": "Dialect"
+                                      },
+                                      "next": {
+                                        "target": {}
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ]
+              }
+            },
+            "spec": [
+              {
+                "0": [
+                  {
+                    "as_adjacency": {
+                      "name": "domains",
+                      "mutations": [
+                        {
+                          "insert": {
+                            "entries": [
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.MATLAB.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "double"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "double"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.MATLAB.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "logical"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "logical"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.MATLAB.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "string"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "string"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
