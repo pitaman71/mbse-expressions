@@ -168,7 +168,7 @@ def install(txn: Any) -> Any:
             # their standards leave to the implementation from it (Domains as data, Decided, P).
             lambda _: _.HasAbi.name("Expressions.Framework.HasAbi").links([
                 lambda t: t.name("expression").schema([_.Expression]), lambda t: t.name("abi").schema([_.Dialect])
-            ]).uniques("expression"),
+            ]).uniques("abi"),
             lambda _: _.OfExpression.name("Schemas.OfExpression").adjacencies([  # by extension: no member on it
                 lambda t: t.name("expression").relation([_.HasRoot]).me("schema")]),
             # A dialect: a singleton, its identity its global name (`Expressions.Patterns.Expressions`), the root of its domains'

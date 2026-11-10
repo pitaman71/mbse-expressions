@@ -164,7 +164,7 @@ export function install(txn: any): any {
       // standards leave to the implementation from it (Domains as data, Decided, P).
       (_: any) => _.HasAbi.name("Expressions.Framework.HasAbi").links([
         (t: any) => t.name("expression").schema([_.Expression]), (t: any) => t.name("abi").schema([_.Dialect]),
-      ]).uniques("expression"),
+      ]).uniques("abi"),
       (_: any) => _.OfExpression.name("Schemas.OfExpression").adjacencies([ // by extension: no member on it
         (t: any) => t.name("expression").relation([_.HasRoot]).me("schema")]),
       // A dialect: a singleton, its identity its global name (`Expressions.Patterns.Expressions`), the root of its domains' paths.
