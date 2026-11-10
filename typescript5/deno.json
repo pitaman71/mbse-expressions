@@ -19,6 +19,8 @@
     "@mbse/expressions/C/Expressions": "./src/C/Expressions/index.ts",
     "@mbse/expressions/Cpp/Expressions": "./src/Cpp/Expressions/index.ts",
     "@mbse/expressions/SystemVerilog/Expressions": "./src/SystemVerilog/Expressions/index.ts",
+    "@mbse/expressions/SystemV/AMD64": "./src/SystemV/AMD64/index.ts",
+    "@mbse/expressions/Arm/AAPCS64": "./src/Arm/AAPCS64/index.ts",
     "@mbse/expressions/ISOIEC11404/Expressions": "./src/ISOIEC11404/Expressions/index.ts",
     "@mbse/expressions/IEEE754/Expressions": "./src/IEEE754/Expressions/index.ts",
     "@mbse/expressions/IEEE1164/Expressions": "./src/IEEE1164/Expressions/index.ts",

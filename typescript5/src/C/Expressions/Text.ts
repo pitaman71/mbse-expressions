@@ -9,8 +9,9 @@
  * encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
  * (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal
  * as `INFINITY` or `NAN`. A body of statements or declarations, not part of the term (a lambda's, a statement
- * expression's, a struct's or an enum's), is written `{}`, where mbse-programs writes what it relates. Invalid syntax is
- * written as written (`Terms.invalidText`). Reading C (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6).
+ * expression's, a struct's or an enum's), is written `{}`, where mbse-programs writes what it relates. Invalid syntax
+ * is written as written (`Terms.invalidText`). Reading C (`FromText`) is mbse-programs' (the dialects proposal,
+ * Decided, 6).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -75,7 +76,8 @@ function literalText(attributes: ReadonlyMap<string, any>): string {
     }
     return prefix + quoted(value, '"');
   }
-  if (typeof value === "bigint" && attributes.get("quote") === "'") return prefix + quoted(String.fromCodePoint(Number(value)), "'");
+  if (typeof value === "bigint" && attributes.get("quote") === "'") return prefix
+    + quoted(String.fromCodePoint(Number(value)), "'");
   if (typeof value === "number" && !Number.isFinite(value)) return MACROS[repr(value)] as string;
   return numberText(value, attributes.get("base")) + (attributes.get("suffix") ?? "");
 }
@@ -103,7 +105,8 @@ function abstract(declarator: F.Node | undefined): boolean {
  * reference, bracket or parenthesis. */
 function declaredText(specifiers: string, declarator: string, isAbstract: boolean): string {
   if (specifiers === "" || declarator === "") return specifiers + declarator;
-  if (declarator.startsWith("...")) return specifiers + "..." + (declarator.length > 3 ? " " + declarator.slice(3) : "");
+  if (declarator.startsWith("...")) return specifiers + "..." + (declarator.length > 3 ? " " + declarator.slice(3)
+    : "");
   if (isAbstract && "*&[(".includes(declarator[0] as string)) return specifiers + declarator;
   return `${specifiers} ${declarator}`;
 }
@@ -123,7 +126,8 @@ class Printer {
 
   precedence(node: F.Node, written: string): number {
     if (node.kind === E.BINARYEXPRESSION) return BINARY[node.attributes.get("operator")] as number;
-    if (node.kind === E.LITERAL && written.startsWith("-")) return UNARY; // a negative value's sign binds as a unary operator does
+    // a negative value's sign binds as a unary operator does
+    if (node.kind === E.LITERAL && written.startsWith("-")) return UNARY;
     return PRECEDENCE[node.kind] ?? PRIMARY;
   }
 
@@ -160,7 +164,9 @@ class Printer {
     const operator = node.attributes.get("operator");
     if (node.kind === E.BINARYEXPRESSION && (operator === "&&" || operator === "||")) {
       const level = BINARY[operator] as number;
-      const written = `${this.constraint(node.slots.get("left"), level)} ${operator} ${this.constraint(node.slots.get("right"), level + 1)}`;
+      const [left, right] = [this.constraint(node.slots.get("left"), level),
+        this.constraint(node.slots.get("right"), level + 1)];
+      const written = `${left} ${operator} ${right}`;
       return level < needed ? `(${written})` : written;
     }
     return this.expression(node, PRIMARY);
@@ -172,7 +178,8 @@ class Printer {
       const node = this.node(value);
       if (node.kind === E.TYPEID) return this.text(node);
       const text = this.expression(node, CONDITIONAL);
-      return this.precedence(node, text) <= (BINARY[">"] as number) && text.includes(">") && !text.startsWith("(") ? `(${text})` : text;
+      const holds = this.precedence(node, text) <= (BINARY[">"] as number) && text.includes(">");
+      return holds && !text.startsWith("(") ? `(${text})` : text;
     });
     return "<" + written.join(", ") + ">";
   }
@@ -201,7 +208,8 @@ class Printer {
   }
 
   unary(node: F.Node): string {
-    const [operand, operator] = [this.expression(node.slots.get("operand"), UNARY), node.attributes.get("operator") as string];
+    const [operand, operator] = [this.expression(node.slots.get("operand"), UNARY),
+        node.attributes.get("operator") as string];
     const first = operand.slice(0, 1);
     const space = ["+", "-", "&", "*"].includes(first) && first === operator.slice(-1) ? " " : "";
     return operator + space + operand; // `- -x`, not the decrement `--x`
@@ -210,7 +218,8 @@ class Printer {
   binary(node: F.Node): string {
     const operator = node.attributes.get("operator") as string;
     const level = BINARY[operator] as number;
-    const [left, right] = [this.expression(node.slots.get("left"), level), this.expression(node.slots.get("right"), level + 1)];
+    const [left, right] = [this.expression(node.slots.get("left"), level), this.expression(node.slots.get("right"),
+        level + 1)];
     if (operator === ".*" || operator === "->*") return left + operator + right;
     return operator === "," ? `${left}, ${right}` : `${left} ${operator} ${right}`;
   }
@@ -253,7 +262,8 @@ class Printer {
   }
 
   cast(node: F.Node): string {
-    return `(${this.text(one(node.helpers.get("type")) as F.Node)})${this.expression(node.slots.get("operand"), UNARY)}`;
+    const type = this.text(one(node.helpers.get("type")) as F.Node);
+    return `(${type})${this.expression(node.slots.get("operand"), UNARY)}`;
   }
 
   initializerList(node: F.Node): string {
@@ -275,7 +285,8 @@ class Printer {
 
   generic(node: F.Node): string {
     const associations = nodes(node.helpers.get("associations")).map((a) => (a.helpers.has("type")
-      ? this.text(one(a.helpers.get("type")) as F.Node) : "default") + ": " + this.expression(a.slots.get("value"), ASSIGNMENT));
+      ? this.text(one(a.helpers.get("type")) as F.Node) : "default") + ": " + this.expression(a.slots.get("value"),
+        ASSIGNMENT));
     return `_Generic(${[this.operand(node.slots.get("controlling"), ASSIGNMENT), ...associations].join(", ")})`;
   }
 
@@ -284,11 +295,13 @@ class Printer {
     if (node.many.length > 0) written += "(" + this.list(node.many) + ") ";
     const type = this.text(one(node.helpers.get("type")) as F.Node);
     written += node.attributes.get("parenthesized_type") ? `(${type})` : type;
-    return written + (node.helpers.has("initializer") ? this.initializer(one(node.helpers.get("initializer")) as F.Node) : "");
+    return written + (node.helpers.has("initializer") ? this.initializer(one(node.helpers.get("initializer")) as F.Node)
+      : "");
   }
 
   deleteText(node: F.Node): string {
-    return (node.attributes.get("global_scope") ? "::" : "") + "delete" + (node.attributes.get("array") ? "[]" : "") + " "
+    return (node.attributes.get("global_scope") ? "::" : "") + "delete" + (node.attributes.get("array") ? "[]" : "")
+      + " "
       + this.expression(node.slots.get("operand"), UNARY);
   }
 
@@ -307,7 +320,8 @@ class Printer {
     if (requires !== null) written += " requires " + this.constraint(requires);
     written += this.attributesAfter(node);
     // without a declarator, the lambda has no parameter list: `[] { ... }`
-    if (node.helpers.has("declarator")) written += (requires !== null ? " " : "") + this.text(one(node.helpers.get("declarator")) as F.Node);
+    if (node.helpers.has("declarator")) written += (requires !== null ? " " : "")
+      + this.text(one(node.helpers.get("declarator")) as F.Node);
     return written + " {}"; // its body of statements, not part of the term
   }
 
@@ -316,7 +330,8 @@ class Printer {
     written += nodes(node.helpers.get("specifiers")).map((s) => " " + s.attributes.get("keyword")).join("");
     if (node.helpers.has("exception")) written += " " + this.text(one(node.helpers.get("exception")) as F.Node);
     written += this.attributesAfter(node);
-    if (node.helpers.has("trailing_return")) written += " -> " + this.text(one(node.helpers.get("trailing_return")) as F.Node);
+    if (node.helpers.has("trailing_return")) written += " -> "
+      + this.text(one(node.helpers.get("trailing_return")) as F.Node);
     if (node.slots.get("requires") !== null) written += " requires " + this.constraint(node.slots.get("requires"));
     return written;
   }
@@ -326,7 +341,9 @@ class Printer {
     if (node.kind === "defaultcapture") return attributes.get("mode");
     if (node.kind === "thiscapture") return attributes.get("copy") ? "*this" : "this";
     const reference = attributes.get("by_reference") ? "&" : "";
-    if (node.kind === "simplecapture") return reference + this.name(node, "name") + (attributes.get("pack") ? "..." : "");
+    if (node.kind === "simplecapture") {
+      return reference + this.name(node, "name") + (attributes.get("pack") ? "..." : "");
+    }
     return reference + (attributes.get("pack") ? "..." : "") + this.name(node, "name")
       + this.initializer(one(node.helpers.get("initializer")) as F.Node);
   }
@@ -368,7 +385,8 @@ class Printer {
     if (kind === "literaloperatorname") return `operator""${attributes.get("suffix")}`;
     if (kind === "destructorname") return "~" + this.text(one(node.helpers.get("type")) as F.Node);
     if (kind === "templateid") {
-      return (attributes.get("template_keyword") ? "template " : "") + this.text(one(node.helpers.get("name")) as F.Node)
+      return (attributes.get("template_keyword") ? "template " : "")
+        + this.text(one(node.helpers.get("name")) as F.Node)
         + this.templateArguments(node.many);
     }
     return (attributes.get("global_scope") ? "::" : "")
@@ -384,7 +402,8 @@ class Printer {
     if (kind === "typenamespecifier") return "typename " + this.text(one(node.helpers.get("name")) as F.Node);
     if (kind === "decltypespecifier") return `decltype(${this.expression(node.slots.get("expression"), COMMA)})`;
     if (kind === "placeholdertypespecifier") {
-      const constraint = node.helpers.has("constraint") ? this.text(one(node.helpers.get("constraint")) as F.Node) + " " : "";
+      const constraint = node.helpers.has("constraint") ? this.text(one(node.helpers.get("constraint")) as F.Node) + " "
+        : "";
       return constraint + (node.attributes.get("decltype") ? "decltype(auto)" : "auto");
     }
     if (kind === "typeofspecifier") return this.keywordCall(node.attributes.get("keyword"), node.slots.get("operand"));
@@ -404,10 +423,12 @@ class Printer {
 
   base(node: F.Node): string {
     const attributes = node.attributes;
-    const parts = node.helpers.has("attributes") ? [nodes(node.helpers.get("attributes")).map((a) => this.text(a)).join(" ")] : [];
+    const parts = node.helpers.has("attributes") ? [nodes(node.helpers.get("attributes")).map((a) => this.text(a))
+        .join(" ")] : [];
     if (attributes.get("virtual")) parts.push("virtual");
     if (attributes.has("access")) parts.push(attributes.get("access"));
-    return [...parts, this.text(one(node.helpers.get("type")) as F.Node) + (attributes.get("pack") ? "..." : "")].join(" ");
+    return [...parts,
+        this.text(one(node.helpers.get("type")) as F.Node) + (attributes.get("pack") ? "..." : "")].join(" ");
   }
 
   enumText(node: F.Node): string {
@@ -438,7 +459,8 @@ class Printer {
     }
     if (kind === "parenthesizeddeclarator") return `(${inner})`;
     const held = one(node.helpers.get("declarator"));
-    if (held !== undefined && (held.kind === "pointerdeclarator" || held.kind === "referencedeclarator")) inner = `(${inner})`;
+    if (held !== undefined && (held.kind === "pointerdeclarator"
+      || held.kind === "referencedeclarator")) inner = `(${inner})`;
     if (kind === "arraydeclarator") {
       const inside = [...(attributes.get("static") ? ["static"] : []),
         ...nodes(node.helpers.get("qualifiers")).map((q) => q.attributes.get("keyword"))].join(" ");
@@ -452,7 +474,8 @@ class Printer {
     if (attributes.has("ref_qualifier")) written += " " + attributes.get("ref_qualifier");
     if (node.helpers.has("exception")) written += " " + this.text(one(node.helpers.get("exception")) as F.Node);
     written += this.attributesAfter(node);
-    if (node.helpers.has("trailing_return")) written += " -> " + this.text(one(node.helpers.get("trailing_return")) as F.Node);
+    if (node.helpers.has("trailing_return")) written += " -> "
+      + this.text(one(node.helpers.get("trailing_return")) as F.Node);
     return written;
   }
 
@@ -479,7 +502,8 @@ class Printer {
     const attributes = node.attributes;
     let written: string;
     if (node.kind === "typeparameter") {
-      written = node.helpers.has("constraint") ? this.text(one(node.helpers.get("constraint")) as F.Node) : attributes.get("key") ?? "typename";
+      written = node.helpers.has("constraint") ? this.text(one(node.helpers.get("constraint")) as F.Node)
+        : attributes.get("key") ?? "typename";
     } else {
       written = "template <" + nodes(node.helpers.get("parameters")).map((p) => this.text(p)).join(", ") + ">";
       if (node.slots.get("requires") !== null) written += " requires " + this.constraint(node.slots.get("requires"));
@@ -511,7 +535,8 @@ class Printer {
       const operand = this.keywordCall(attributes.get("keyword"), node.slots.get("operand"));
       return attributes.get("pack") ? operand.slice(0, -1) + "...)" : operand;
     }
-    if (kind === "gnuattributespecifier") return attributes.get("keyword") + "((" + held.map((a) => this.text(a)).join(", ") + "))";
+    if (kind === "gnuattributespecifier") return attributes.get("keyword") + "((" + held.map((a) => this.text(a))
+        .join(", ") + "))";
     return "__declspec(" + held.map((a) => this.text(a)).join(" ") + ")";
   }
 
@@ -524,7 +549,8 @@ class Printer {
 }
 
 const TEXTS: Readonly<Record<string, Text>> = {
-  error: (p, n) => F.invalidText(p.dialect, n.kind, n.attributes), missing: (p, n) => F.invalidText(p.dialect, n.kind, n.attributes),
+  error: (p, n) => F.invalidText(p.dialect, n.kind, n.attributes), missing: (p, n) => F.invalidText(p.dialect, n.kind,
+    n.attributes),
   literal: (p, n) => p.literal(n),
   constant: (p, n) => n.attributes.get("text") ?? "nullptr",
   userdefinedliteral: (p, n) => p.literal(one(n.helpers.get("literal")) as F.Node) + n.attributes.get("suffix"),
@@ -539,8 +565,10 @@ const TEXTS: Readonly<Record<string, Text>> = {
   foldexpression: (p, n) => p.fold(n), requiresexpression: (p, n) => p.requires(n),
   simplerequirement: (p, n) => p.requirement(n), typerequirement: (p, n) => p.requirement(n),
   compoundrequirement: (p, n) => p.requirement(n), nestedrequirement: (p, n) => p.requirement(n),
-  genericselection: (p, n) => p.generic(n), subscriptexpression: (p, n) => p.subscript(n), callexpression: (p, n) => p.call(n),
-  functionalcastexpression: (p, n) => p.text(one(n.helpers.get("type")) as F.Node) + p.initializer(one(n.helpers.get("initializer")) as F.Node),
+  genericselection: (p, n) => p.generic(n), subscriptexpression: (p, n) => p.subscript(n), callexpression: (p,
+    n) => p.call(n),
+  functionalcastexpression: (p, n) => p.text(one(n.helpers.get("type")) as F.Node)
+    + p.initializer(one(n.helpers.get("initializer")) as F.Node),
   memberexpression: (p, n) => p.member(n), postfixexpression: (p, n) => p.postfix(n),
   namedcastexpression: (p, n) => `${n.attributes.get("operator")}<${p.text(one(n.helpers.get("type")) as F.Node)}>`
     + `(${p.expression(n.slots.get("operand"), COMMA)})`,
@@ -551,10 +579,12 @@ const TEXTS: Readonly<Record<string, Text>> = {
   sizeofpackexpression: (p, n) => `sizeof...(${p.name(n, "pack")})`,
   alignofexpression: (p, n) => p.keywordCall(n.attributes.get("keyword"), n.slots.get("operand")),
   noexceptexpression: (p, n) => p.keywordCall("noexcept", n.slots.get("operand")),
-  newexpression: (p, n) => p.newText(n), deleteexpression: (p, n) => p.deleteText(n), castexpression: (p, n) => p.cast(n),
+  newexpression: (p, n) => p.newText(n), deleteexpression: (p, n) => p.deleteText(n), castexpression: (p,
+    n) => p.cast(n),
   binaryexpression: (p, n) => p.binary(n), conditionalexpression: (p, n) => p.conditional(n),
   assignmentexpression: (p, n) => p.assignment(n),
-  throwexpression: (p, n) => "throw" + (n.slots.get("operand") !== null ? " " + p.expression(n.slots.get("operand"), ASSIGNMENT) : ""),
+  throwexpression: (p, n) => "throw" + (n.slots.get("operand") !== null ? " " + p.expression(n.slots.get("operand"),
+    ASSIGNMENT) : ""),
   yieldexpression: (p, n) => "co_yield " + p.expression(n.slots.get("operand"), ASSIGNMENT),
   packexpansion: (p, n) => p.packExpansion(n), initializerlist: (p, n) => p.initializerList(n),
   designatedinitializer: (p, n) => p.designated(n), fielddesignator: (p, n) => p.designator(n),
@@ -565,14 +595,16 @@ const TEXTS: Readonly<Record<string, Text>> = {
   extensionexpression: (p, n) => "__extension__ " + p.expression(n.slots.get("operand"), UNARY),
   typeid: (p, n) => p.typeId(n),
   identifier: (p, n) => p.nameText(n), operatorname: (p, n) => p.nameText(n), conversionname: (p, n) => p.nameText(n),
-  literaloperatorname: (p, n) => p.nameText(n), destructorname: (p, n) => p.nameText(n), templateid: (p, n) => p.nameText(n),
+  literaloperatorname: (p, n) => p.nameText(n), destructorname: (p, n) => p.nameText(n), templateid: (p,
+    n) => p.nameText(n),
   qualifiedname: (p, n) => p.nameText(n),
   declspecifier: (p, n) => n.attributes.get("keyword"), cvqualifier: (p, n) => n.attributes.get("keyword"),
   primitivetypespecifier: (p, n) => n.attributes.get("keyword"),
   namedtypespecifier: (p, n) => p.specifier(n), typenamespecifier: (p, n) => p.specifier(n),
   decltypespecifier: (p, n) => p.specifier(n), placeholdertypespecifier: (p, n) => p.specifier(n),
   typeofspecifier: (p, n) => p.specifier(n), atomictypespecifier: (p, n) => p.specifier(n),
-  bitintspecifier: (p, n) => p.specifier(n), classspecifier: (p, n) => p.classText(n), basespecifier: (p, n) => p.base(n),
+  bitintspecifier: (p, n) => p.specifier(n), classspecifier: (p, n) => p.classText(n), basespecifier: (p,
+    n) => p.base(n),
   enumspecifier: (p, n) => p.enumText(n),
   iddeclarator: (p, n) => p.declarator(n), packdeclarator: (p, n) => p.declarator(n),
   pointerdeclarator: (p, n) => p.declarator(n), referencedeclarator: (p, n) => p.declarator(n),

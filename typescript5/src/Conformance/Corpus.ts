@@ -1,12 +1,13 @@
 /**
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
- * `build()` returns the cases, name -> [root schema, root, store]: each case but `domains` a term value of
+ * `build()` returns the cases, name -> [root schema, root, store]: each case but the data cases a term value of
  * `Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
- * dialect's, written nested. `DIALECTS` names the dialect that reads each case other than Patterns'. The `domains` case
- * is data: ISO/IEC 11404's dialect, the singleton `Expressions.ISOIEC11404.Expressions`
- * (`Expressions.ISOIEC11404.Expressions.Dialect`), owning its domains by name, each kind its dialect's then its own, an
- * enum and a packed one among them, written as one document. The `invalid` case is a
+ * dialect's, and each dialect's `define`, written nested. `DIALECTS` names the dialect that reads each case other than
+ * Patterns'. The `domains` case and the `<dialect>_domains` cases are data (`DOMAINS`): each a dialect's singleton,
+ * owning its domains by name, each kind its dialect's then its own, written as one document; `domains` is ISO/IEC
+ * 11404's dialect, the singleton `Expressions.ISOIEC11404.Expressions` (`Expressions.ISOIEC11404.Expressions.Dialect`),
+ * an enum and a packed one among its domains. The `invalid` case is a
  * Python3 term holding invalid syntax and literals with their spelling; the `typescript5` case a TypeScript5 term of every
  * kind, written through the builders. Each implementation writes its
  * snapshots to `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other
@@ -29,6 +30,8 @@ import * as IEEE1164 from "../IEEE1164/Expressions/index.js";
 import * as IEEE754 from "../IEEE754/Expressions/index.js";
 import * as ISOIEC11404 from "../ISOIEC11404/Expressions/index.js";
 import * as Python3 from "../Python/Python3/index.js";
+import * as AAPCS64 from "../Arm/AAPCS64/index.js";
+import * as AMD64 from "../SystemV/AMD64/index.js";
 import * as Unicode from "../Unicode/Expressions/index.js";
 import * as SystemVerilog from "../SystemVerilog/Expressions/index.js";
 import * as TypeScript5 from "../TypeScript/TypeScript5/index.js";
@@ -41,13 +44,24 @@ const SV = SystemVerilog.Expressions;
 const TS = TypeScript5.Expressions;
 
 export const CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp",
-  "systemverilog", "typescript5", "invalid"] as const;
+  "systemverilog", "typescript5", "invalid", "systemverilog_domains", "python3_domains", "typescript5_domains",
+  "matlab_domains", "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains"] as const;
 
 /** The dialect that reads each case, where it is not Patterns. */
 export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
   ["python3", P.DIALECT], ["matlab", M.DIALECT], ["excel", X.DIALECT], ["latex", L.DIALECT], ["c", CE.DIALECT],
   ["cpp", CPP.DIALECT], ["systemverilog", SV.DIALECT], ["typescript5", TS.DIALECT],
   ["invalid", P.DIALECT],
+]);
+
+/** The cases that are data, not terms: each a dialect's singleton, by its path, written as one document of its schema,
+ * the path's `Dialect`. */
+export const DOMAINS: ReadonlyMap<string, string> = new Map([
+  ["domains", "Expressions.ISOIEC11404.Expressions"], ["systemverilog_domains", "Expressions.SystemVerilog.Expressions"],
+  ["python3_domains", "Expressions.Python.Python3"], ["typescript5_domains", "Expressions.TypeScript.TypeScript5"],
+  ["matlab_domains", "Expressions.MATLAB.Expressions"], ["excel_domains", "Expressions.Excel.Expressions"],
+  ["c_domains", "Expressions.C.Expressions"], ["cpp_domains", "Expressions.Cpp.Expressions"],
+  ["amd64_domains", "Expressions.SystemV.AMD64"], ["aapcs64_domains", "Expressions.Arm.AAPCS64"],
 ]);
 
 /** A case: its root schema, its root term, and the store it is built in. */
@@ -68,9 +82,16 @@ export function build(): Map<string, Case> {
   store.transaction(Latex.install);
   store.transaction(C.install);
   store.transaction(Cpp.install);
+  store.transaction(AMD64.install); // the ABIs a C or C++ term's holder names
+  store.transaction(AAPCS64.install);
   store.transaction(SystemVerilog.install);
   store.transaction(TypeScript5.install);
   const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
+  const stored = new Map<string, any>(([ // each dialect's stored domains
+    ["systemverilog_domains", SystemVerilog], ["python3_domains", Python3], ["typescript5_domains", TypeScript5],
+    ["matlab_domains", Matlab], ["excel_domains", Excel], ["c_domains", C], ["cpp_domains", Cpp],
+    ["amd64_domains", AMD64], ["aapcs64_domains", AAPCS64]] as [string, any][]).map(
+    ([name, module]) => [name, store.transaction(module.define)[0].get("dialect")]));
 
   // --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
   // added ---
@@ -316,6 +337,8 @@ export function build(): Map<string, Case> {
     ["typescript5", TS.DIALECT.spec(typescript5)], ["invalid", invalid],
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   terms.set("domains", defined.get("dialect"));
-  const [Term, Dialect] = [store.registered("Expressions.Framework.Term"), store.registered("Expressions.ISOIEC11404.Expressions.Dialect")];
-  return new Map<string, Case>(CASES.map((name) => [name, [name === "domains" ? Dialect : Term, terms.get(name), store]]));
+  for (const [name, dialect] of stored) terms.set(name, dialect);
+  const Term = store.registered("Expressions.Framework.Term");
+  return new Map<string, Case>(CASES.map((name) => [name, [
+    DOMAINS.has(name) ? store.registered(`${DOMAINS.get(name)}.Dialect`) : Term, terms.get(name), store]]));
 }

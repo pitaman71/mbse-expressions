@@ -7,8 +7,10 @@
  * framework's `Expressions.Framework.DomainKind` as the branch `ieee754`:
  *
  * - `ieee754` (`OfIeee754`): an interchange `format`, with a `rounding`-direction attribute; inferred (populated by hand
- *   until constraint resolution computes them) the format's parameters, its `radix`, `precision` (in digits) and `emax`,
- *   and `ordered`.
+ *   until constraint resolution computes them) the format's `width` in bits and its parameters, its `radix`,
+ *   `precision` (in digits) and `emax`, and `ordered`. A format IEEE 754 does not name (x87's extended format,
+ *   bfloat16) is a domain of the kind with no `format`, given by its `width` and parameters, which `Ieee754` computes
+ *   in.
  *
  * Its dialect is the singleton `Expressions.IEEE754.Expressions`, of its schema `Expressions.IEEE754.Expressions.Dialect`,
  * the branch `ieee754` of `Expressions.Framework.Dialect`. `define` writes its domains, owned by name, each related to its
@@ -45,7 +47,7 @@ export function install(txn: any): any {
       // --- Its kind of domain: the standard's parameters, then what follows from them ---
       (_: any) => _.OfIeee754.name("Expressions.IEEE754.Expressions.OfIeee754").properties({
         format: S.OfStr, rounding: S.OfStr,
-        radix: S.OfInt, precision: S.OfInt, emax: S.OfInt, ordered: S.OfBool }), // inferred
+        width: S.OfInt, radix: S.OfInt, precision: S.OfInt, emax: S.OfInt, ordered: S.OfBool }), // inferred
       (_: any) => _.DomainKind.name("Expressions.IEEE754.Expressions.DomainKind").branches([
         (t: any) => t.name("ieee754").schema([_.OfIeee754])]),
       (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
@@ -71,10 +73,10 @@ export function define(txn: any): any {
         binary64: (e: any) => e.domain(_.binary64), binary32: (e: any) => e.domain(_.binary32),
       }),
       (_: any) => _.binary64.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
-        (d: any) => d.format("binary64").rounding("roundTiesToEven").radix(2n).precision(53n).emax(1023n).ordered(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n).radix(2n).precision(53n).emax(1023n).ordered(
           true)))))).schema([IEEE754.binary64]),
       (_: any) => _.binary32.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
-        (d: any) => d.format("binary32").rounding("roundTiesToEven").radix(2n).precision(24n).emax(127n).ordered(
+        (d: any) => d.format("binary32").rounding("roundTiesToEven").width(32n).radix(2n).precision(24n).emax(127n).ordered(
           true)))))).schema([IEEE754.binary32]),
     ])]))]);
 }

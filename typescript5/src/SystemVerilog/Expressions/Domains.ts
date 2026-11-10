@@ -1,11 +1,15 @@
 /**
- * Domains of the SystemVerilog dialect: its integral types, 4-state or 2-state vectors of a width and a signedness, and
- * `real` and `shortreal`.
+ * Domains of the SystemVerilog dialect: the types its evaluation, inference and validation compute on, each read from
+ * the domains its dialect stores, and the sized vectors computed from a term's own width and signedness.
  *
  * An `SvType` is a type and a domain: `integral` (a vector of `width` bits, `signed` or not, of 4 states (0, 1, x, z) or
- * of 2 (0, 1)) or `real` of IEEE 754's `binary64` or `binary32` (`shortreal`). `TYPES` names the built-in ones: `bit`,
- * `logic`, `reg` (a single bit), `byte` (8), `shortint` (16), `int` (32), `longint` (64), `integer` (32, 4-state),
- * `time` (64, 4-state, unsigned), `real` and `shortreal`.
+ * of 2 (0, 1)) or `real` of an IEEE 754 `format`. It is the working value the arithmetic computes on, not a type table:
+ * a named type is a stored domain of SystemVerilog's dialect, `Expressions.SystemVerilog.Expressions`, which its
+ * `define` writes (`logic`, `reg`, `integer`, `time`, `bit`, `byte`, `shortint`, `int`, `longint`, `real`, `shortreal`),
+ * and `named(store, name)` reads one as an `SvType`, labelled with its `Defines` name: its width and signedness from its
+ * kind's properties (`Framework.Domains.kindOf` and `properties`), its states from its kind (`logic` 4, `bit` 2), and a
+ * real's format and width from IEEE 754's kind. A type no stored domain names is refused
+ * by name. `vector(width, signed, states)` is a sized vector's type, which no domain names (`logic [7:0]`).
  *
  * A value of an integral type is a `Logic`: its type and two patterns of its width, `aval` and `bval`, which encode each
  * bit as VPI does (0 is 0/0, 1 is 1/0, z is 0/1, x is 1/1). `Logic.of(bits, signed)` reads `bits` (MSB first, of
@@ -13,21 +17,27 @@
  * its signedness. `real` values are numbers.
  *
  * Expressions are sized as IEEE 1800 says (11.6, 11.8): `common` gives the type context-determined operands share, and
- * the signatures follow (see `Evaluators`).
+ * the signatures follow (see `Evaluators`). `of(value)` names a constant's type. The rules (`common`, the signatures,
+ * which type a constant has) stay code, and the signatures are `Dialect.infer`'s, to be replaced with stored domains as
+ * domain inference reads them ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
  */
 
-import { Errors } from "@mbse/schemas/Framework";
+import { Errors, Proxies, Repr } from "@mbse/schemas/Framework";
+import type { Readers } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
 
 const { ValueError } = Errors;
+const { repr } = Repr;
 export const Anything = D.Anything;
 
 /** A type: `integral` with its `width`, signedness and number of `states` (4 or 2), or `real` with its IEEE 754
- * `format`. Its `name` is the one it is written with; types compare by the rest. */
+ * `format`. Its `name` is the one it is written with, its `label` where a stored domain names it; its `domain` is that
+ * stored domain, null for a sized vector; types compare by the rest. */
 export class SvType implements D.Domain {
   constructor(readonly kind: string, readonly width: number = 64, readonly signed: boolean = false,
-    readonly states: number = 4, readonly format: string | null = null, readonly label: string = "") {}
+    readonly states: number = 4, readonly format: string | null = null, readonly label: string = "",
+    readonly domain: Readers.OfObject | null = null) {}
 
   name(): string {
     if (this.label) return this.label;
@@ -60,19 +70,21 @@ export function vector(width: number, signed = false, states = 4): SvType {
   return new SvType("integral", width, signed, states);
 }
 
-/** The built-in types, by name. */
-export const TYPES: ReadonlyMap<string, SvType> = new Map<string, SvType>([
-  ["bit", new SvType("integral", 1, false, 2, null, "bit")], ["logic", new SvType("integral", 1, false, 4, null, "logic")],
-  ["reg", new SvType("integral", 1, false, 4, null, "reg")], ["byte", new SvType("integral", 8, true, 2, null, "byte")],
-  ["shortint", new SvType("integral", 16, true, 2, null, "shortint")], ["int", new SvType("integral", 32, true, 2, null, "int")],
-  ["longint", new SvType("integral", 64, true, 2, null, "longint")], ["integer", new SvType("integral", 32, true, 4, null, "integer")],
-  ["time", new SvType("integral", 64, false, 4, null, "time")],
-  ["real", new SvType("real", 64, true, 2, "binary64", "real")], ["shortreal", new SvType("real", 32, true, 2, "binary32", "shortreal")],
-]);
+/** The type SystemVerilog defines in `store` by `name`: the domain its dialect's singleton owns by that name, read as
+ * an `SvType`; throws ValueError where it defines none (its `define` has not run, or no type has the name). */
+export function named(store: any, name: string): SvType {
+  const domain = D.domains(store.Instances.Expressions.SystemVerilog.Expressions).get(name);
+  if (domain === undefined) throw new ValueError(`${repr(name)} is not a type SystemVerilog defines`);
+  const [, kind] = D.kindOf(domain);
+  const properties = D.properties(domain);
+  if (kind === "ieee754") { // IEEE 754's: a real, of its format
+    const format = properties.get("format") as string;
+    return new SvType("real", Number(properties.get("width")), true, 2, format, name, domain);
+  }
+  return new SvType("integral", Number(properties.get("width")), properties.get("signed") as boolean,
+    kind === "logic" ? 4 : 2, null, name, domain);
+}
 
-const type = (name: string) => TYPES.get(name) as SvType;
-export const [Real, Integer, Bit] = [type("real"), type("integer"), type("bit")];
-const Longint = type("longint");
 const STATES: Record<string, string> = { "00": "0", "10": "1", "01": "z", "11": "x" };
 
 /** A value of an integral type: each bit by `aval` and `bval` (0 is 0/0, 1 is 1/0, z is 0/1, x is 1/1). */
@@ -118,22 +130,26 @@ export class Logic {
 }
 
 /** The type context-determined operands share: real if any is (`shortreal` if all are), otherwise the widest width,
- * signed if all are, and 4-state if any is. */
+ * signed if all are, and 4-state if any is. A real is an operand's type, or `real`, read from the store of a real
+ * operand's domain. */
 export function common(types: readonly SvType[]): SvType {
-  if (types.some((t) => t.kind === "real")) { // real, unless every operand is a shortreal
-    return types.every((t) => t.format === "binary32") ? type("shortreal") : Real;
+  const reals = types.filter((t) => t.kind === "real");
+  if (reals.length > 0) { // real, unless every operand is a shortreal
+    if (types.every((t) => t.format === "binary32")) return reals[0] as SvType;
+    const wide = reals.filter((t) => t.format === "binary64");
+    return wide.length > 0 ? wide[0] as SvType : named(Proxies.store_of((reals[0] as SvType).domain), "real");
   }
   return vector(Math.max(...types.map((t) => t.width)), types.every((t) => t.signed), Math.max(...types.map((t) => t.states)));
 }
 
-/** A constant's type: `integer` for an int that fits 32 bits, `longint` for 64; `real` for a number; and `Anything`
- * otherwise. */
-export function of(value: unknown): D.Domain {
+/** The name of a constant's type: `integer` for an int that fits 32 bits, `longint` for 64; `real` for a number; and
+ * null otherwise (a string, or an int no type holds). */
+export function of(value: unknown): string | null {
   if (typeof value === "bigint") {
-    if (-(1n << 31n) <= value && value < 1n << 31n) return Integer;
-    return -(1n << 63n) <= value && value < 1n << 63n ? Longint : Anything;
+    if (-(1n << 31n) <= value && value < 1n << 31n) return "integer";
+    return -(1n << 63n) <= value && value < 1n << 63n ? "longint" : null;
   }
-  return typeof value === "number" ? Real : Anything;
+  return typeof value === "number" ? "real" : null;
 }
 
 /** A signature over SystemVerilog types: `resultType` gives the result type of the argument types, or null when they
@@ -157,7 +173,7 @@ class Sized implements D.Signature {
   }
 }
 
-const ONE = vector(1);
+const [ONE, BIT] = [vector(1), vector(1, false, 2)]; // a 1-bit result; `===`'s is 2-state, which `Expressions` names `bit`
 const integral = (types: SvType[]) => types.every((t) => t.kind === "integral");
 type Entry = [string, D.Signature];
 
@@ -171,7 +187,7 @@ export const BINARY: ReadonlyMap<string, D.Signature> = new Map<string, D.Signat
   ...["<<", ">>", "<<<", ">>>"].map((op): Entry =>
     [op, new Sized(2, (ts) => (integral(ts) ? ts[0] as SvType : null), "(integral, integral) -> the left type")]),
   ...["<", "<=", ">", ">=", "==", "!=", "&&", "||", "->", "<->"].map((op): Entry => [op, new Sized(2, () => ONE, "(T, T) -> logic", ONE)]),
-  ...["===", "!=="].map((op): Entry => [op, new Sized(2, (ts) => (integral(ts) ? Bit : null), "(integral, integral) -> bit", Bit)]),
+  ...["===", "!=="].map((op): Entry => [op, new Sized(2, (ts) => (integral(ts) ? BIT : null), "(integral, integral) -> bit", BIT)]),
   ...["==?", "!=?"].map((op): Entry => [op, new Sized(2, (ts) => (integral(ts) ? ONE : null), "(integral, integral) -> logic", ONE)]),
 ]);
 

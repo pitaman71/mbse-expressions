@@ -62,7 +62,13 @@
  * Its kinds of domain, the branches of its union `Expressions.TypeScript.TypeScript5.DomainKind`, which `install` adds
  * to the framework's `Expressions.Framework.DomainKind` as the branch `typescript5`, each with the inferred `ordered`:
  * `string` (`OfString`), sequences of UTF-16 code units; and the token `null` (`OfNull`), whose domain has no schema: its
- * value is a `constant`'s. Its domains are stage 3's of the domains-as-data proposal.
+ * value is a `constant`'s.
+ *
+ * Its domains, each named by TypeScript's type keyword: `define` writes them, owned by the singleton
+ * `Expressions.TypeScript.TypeScript5` by name, each but a token's related to its schema, an `OfAny` of the scalar it
+ * narrows, which `install` adds (`Expressions.TypeScript.TypeScript5.number`): `boolean` (ISO/IEC 11404's `boolean`),
+ * `number` (IEEE 754's `binary64`, rounding ties to even), `bigint` (11404's `integer`: signed, unbounded, raising on
+ * overflow), `string` (its own `string`), and the token `null` (its own `null`). `RegExp` is not a domain.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -136,6 +142,7 @@ export const FLAGS = "dgimsuvy";
 /** TypeScript5's union of its kinds, added to the framework's terms as the branch `typescript5`, its own kinds, its
  * sublanguages' unions (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
  * `Expressions.TypeScript.TypeScript5`: run after `Framework.install`, in a transaction of its own; run again, it writes nothing.
+ * Its domains' schemas too, each an `OfAny` of the scalar it narrows: its domains `define` writes after it.
  * Its holder, `Expressions.TypeScript.TypeScript5.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
  * its `Term`. */
 export function install(txn: any): any {
@@ -145,6 +152,7 @@ export function install(txn: any): any {
   return txn.uid("mbse.Expressions.TypeScript.TypeScript5/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, // Kinds: the framework's
       OfString: S.OfObject, OfNull: S.OfObject,
+      boolean: S.OfAny, number: S.OfAny, bigint: S.OfAny, string: S.OfAny,
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       Type: S.OfUnion, Pattern: S.OfUnion, TypeElement: S.OfUnion, JSXTagNameExpression: S.OfUnion,
       JSXAttributeName: S.OfUnion, JSXAttributeValue: S.OfUnion, JSXAttributeItem: S.OfUnion,
@@ -584,8 +592,44 @@ export function install(txn: any): any {
       ]),
       (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
         (t: any) => t.name("typescript5").schema([_.DomainKind])]),
+      // --- its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
+      (_: any) => _.boolean.name("Expressions.TypeScript.TypeScript5.boolean").schemas([S.OfBool]),
+      (_: any) => _.number.name("Expressions.TypeScript.TypeScript5.number").schemas([S.OfFloat]),
+      (_: any) => _.bigint.name("Expressions.TypeScript.TypeScript5.bigint").schemas([S.OfInt]),
+      (_: any) => _.string.name("Expressions.TypeScript.TypeScript5.string").schemas([S.OfStr]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([  // a branch added: schema extension
           (t: any) => t.name("typescript5").schema([_.Term])]),
+    ])]))]);
+}
+
+/** TypeScript5's domains as data: the singleton `Expressions.TypeScript.TypeScript5` owning its domains by name
+ * (`domains`, through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each
+ * but a token's related to its schema (`Expressions.TypeScript.TypeScript5.number`) by
+ * `Expressions.Framework.HasDomain`: `boolean`, `number`, `bigint` and `string`, and the token `null`. Run after the
+ * installs, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
+ * each domain by its name: `store.transaction(TypeScript5.define)[0].get("number")`. */
+export function define(txn: any): any {
+  const [TypeScript5, Domain] = [txn.Expressions.TypeScript.TypeScript5, txn.Expressions.Framework.Domain];
+  return txn.uid("mbse.Expressions.TypeScript.TypeScript5.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({ dialect: TypeScript5.Dialect, boolean: Domain, number: Domain, bigint: Domain,
+      string: Domain, null: Domain })
+    .spec([
+      (_: any) => _.dialect.domains({
+        boolean: (e: any) => e.domain(_.boolean), number: (e: any) => e.domain(_.number),
+        bigint: (e: any) => e.domain(_.bigint), string: (e: any) => e.domain(_.string),
+        null: (e: any) => e.domain(_.null),
+      }),
+      (_: any) => _.boolean.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.boolean(
+        (d: any) => d.ordered(false)))))).schema([TypeScript5.boolean]),
+      (_: any) => _.number.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n).radix(2n).precision(53n).emax(1023n).ordered(
+          true)))))).schema([TypeScript5.number]),
+      (_: any) => _.bigint.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.integer(
+        (d: any) => d.signed(true).overflow("raise").ordered(true)))))).schema([TypeScript5.bigint]), // unbounded
+      (_: any) => _.string.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.typescript5((v: any) => v.string(
+        (d: any) => d.ordered(true)))))).schema([TypeScript5.string]),
+      (_: any) => _.null.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.typescript5((v: any) => v.null(
+        (d: any) => d.ordered(false)))))), // a token: no schema
     ])]))]);
 }
 

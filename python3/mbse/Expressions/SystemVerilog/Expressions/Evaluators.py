@@ -4,8 +4,11 @@
 `Scope(variables, functions)` and gives a `Domains.Logic` for an
 integral result or a float for a real one. A variable's type is its value's: a `Logic` its own, a bool a `bit`, an int
 an `integer` (or a `longint` beyond 32 bits), a float a `real`, and a string a vector of its bytes (in UTF-8) (a value
-carries no domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). IEEE 1800's
-rules apply:
+carries no domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). Every named
+type it computes in (a constant's, a cast's, `===`'s `bit`, `size()`'s `int`, `$bits`' `integer`, ...) is the domain
+SystemVerilog defines by that name in the store of the term's holder (`Domains.named`), read once per evaluation when
+it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError), and a store where
+SystemVerilog's `define` has not run defines none. IEEE 1800's rules apply:
 
 - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its
@@ -36,6 +39,7 @@ from typing import Any
 
 from mbse.Expressions.Patterns.Expressions import Ieee754
 from mbse.Expressions.Framework import Errors, Objects, Symbolics as S, Terms as F
+from mbse.Schemas.Framework import Proxies
 
 from . import Domains, Expressions as X
 from .Domains import Logic, SvType
@@ -63,27 +67,40 @@ class Scope(S.Variables):
         return self.functions[name]
 
 
-def typed(value: Any) -> Any:
+class _Types:
+    """The types SystemVerilog defines in the store of an evaluated term's holder, by name, each read once, when first
+    needed: a lone term reaches no store, and is refused only where it needs a type."""
+
+    def __init__(self, term: Any):
+        self._term, self._read = term, {}
+
+    def named(self, name: str) -> SvType:
+        if name not in self._read:
+            self._read[name] = Domains.named(Proxies.store_of(self._term), name)
+        return self._read[name]
+
+
+def typed(value: Any, types: _Types) -> Any:
     """A variable's value as SystemVerilog has it: a `Logic`, a float, or an object."""
     if isinstance(value, (Logic, float)):
         return value
     if type(value) is bool:
-        return Logic(Domains.Bit, int(value))
+        return Logic(types.named("bit"), int(value))
     if type(value) is int:
-        ctype = Domains.of(value)
-        if not isinstance(ctype, SvType):
+        name = Domains.of(value)
+        if name is None:
             raise OverflowError(f"integer {value} is too large for any type")
-        return Logic.number(ctype, value)
+        return Logic.number(types.named(name), value)
     if type(value) is str:  # its bytes, in UTF-8
         data = value.encode()
         return Logic(Domains.vector(8 * max(len(data), 1)), int.from_bytes(data, "big"))
     return value
 
 
-def _type(value: Any) -> SvType | None:
+def _type(value: Any, types: _Types) -> SvType | None:
     if isinstance(value, Logic):
         return value.type
-    return Domains.TYPES["real"] if type(value) is float else None
+    return types.named("real") if type(value) is float else None
 
 
 # --- 4-state bits ---
@@ -198,8 +215,8 @@ class _Node:
 class _Evaluation:
     """One evaluation in a scope: each term's self-determined type, then its value in a context."""
 
-    def __init__(self, scope: Scope):
-        self.scope = scope
+    def __init__(self, scope: Scope, types: _Types):
+        self.scope, self.stored = scope, types
         self._types: dict[int, SvType | None] = {}
         self._values: dict[int, Any] = {}
 
@@ -223,7 +240,7 @@ class _Evaluation:
 
     def _type_of(self, node: Any) -> SvType | None:
         if node.kind in ("literal", "vector", "variable", "member", "select", "call", "method", "iterate"):
-            return _type(self.own(node))
+            return _type(self.own(node), self.stored)
         if node.kind == "unary":
             if node.operator in ("+", "-"):
                 return self.type(node.operand)
@@ -235,7 +252,7 @@ class _Evaluation:
             if op in ("<", "<=", ">", ">=", "==", "!=", "&&", "||", "->", "<->", "==?", "!=?"):
                 return _ONE
             if op in ("===", "!=="):
-                return Domains.Bit
+                return self.stored.named("bit")
             if op in ("<<", ">>", "<<<", ">>>"):
                 return self._integral(node.left, op)
             left, right = self._numeric(node.left, op), self._numeric(node.right, op)
@@ -245,7 +262,7 @@ class _Evaluation:
         if node.kind == "conditional":
             return Domains.common([self._numeric(node.consequent, "?:"), self._numeric(node.alternative, "?:")])
         if node.kind in ("concatenation", "replication", "range"):
-            return _type(self.own(node))
+            return _type(self.own(node), self.stored)
         if node.kind == "inside":
             return _ONE
         cast = node  # a cast
@@ -255,7 +272,7 @@ class _Evaluation:
         if cast.type in ("signed", "unsigned"):
             integral = self._integral(cast.operand, f"{cast.type}'")
             return Domains.vector(integral.width, cast.type == "signed", integral.states)
-        return Domains.TYPES[cast.type]
+        return self.stored.named(cast.type)
 
     def own(self, node: Any) -> Any:
         """A self-determined term's value, of its own type, once."""
@@ -265,11 +282,11 @@ class _Evaluation:
 
     def _own(self, node: Any) -> Any:
         if node.kind == "literal":
-            return typed(node.value)
+            return typed(node.value, self.stored)
         if node.kind == "vector":
             return Logic.of(node.value, bool(node.signed))
         if node.kind == "variable":
-            return typed(self.scope.lookup(node.term))
+            return typed(self.scope.lookup(node.term), self.stored)
         if node.kind == "member":
             return self._member(node)
         if node.kind == "select":
@@ -284,7 +301,8 @@ class _Evaluation:
             return self._method(node)
         if node.kind == "iterate":
             items = self._items(self.value(node.array), f"{node.method}()")
-            return self._reduce(node.method, [_Evaluation(self.scope.bind(node.name, item)).value(node.body) for item in items])
+            return self._reduce(node.method, [_Evaluation(self.scope.bind(node.name, item), self.stored).value(node.body)
+                                              for item in items])
         return self._call(node)
 
     def value(self, node: Any, context: SvType | None = None) -> Any:
@@ -381,7 +399,7 @@ class _Evaluation:
             order = (left > right) - (left < right)
         elif op in ("===", "!=="):
             same = left.aval == right.aval and left.bval == right.bval
-            return Logic(Domains.Bit, int(same == (op == "===")))
+            return Logic(self.stored.named("bit"), int(same == (op == "===")))
         elif op in ("==?", "!=?"):
             care = ~right.bval & _mask(shared.width)  # x and z in the right operand match anything
             if left.bval & care:
@@ -475,7 +493,8 @@ class _Evaluation:
                 items.append((item,))
         types = [self._numeric(node.value, "inside")]
         for item in items:
-            types += [_element_type(item[1])] if item[0] == "element" else [self._numeric(end, "inside") for end in item]
+            types += ([self._element_type(item[1])] if item[0] == "element"
+                      else [self._numeric(end, "inside") for end in item])
         shared = Domains.common(types)
         value = self.value(node.value, shared)
         found: int | None = 0
@@ -501,16 +520,16 @@ class _Evaluation:
         """An array's items, typed."""
         if not isinstance(value, list):
             raise TypeError(f"{what} is a method of arrays, not of {type(value).__name__}")
-        return [typed(item) for item in value]
+        return [typed(item, self.stored) for item in value]
 
     def _method(self, node: Any) -> Any:
         items = self._items(self.value(node.array), f"{node.name}()")
         if node.name == "size":
-            return Logic.number(Domains.TYPES["int"], len(items))
+            return Logic.number(self.stored.named("int"), len(items))
         if node.name in ("min", "max"):
             if not items:
                 return []
-            shared = Domains.common([_element_type(item) for item in items])
+            shared = Domains.common([self._element_type(item) for item in items])
             best = items[0]
             for item in items[1:]:
                 if _truth(self._compare("<" if node.name == "min" else ">", _convert(item, shared), _convert(best, shared),
@@ -528,9 +547,10 @@ class _Evaluation:
     def _reduce(self, method: str, values: list[Any]) -> Any:
         """The values reduced by a reduction method, in their common type."""
         if not values:
-            return {"sum": Logic.number(Domains.Integer, 0), "product": Logic.number(Domains.Integer, 1)}.get(
-                method, _bit(int(method == "and")))
-        ctype = Domains.common([_element_type(value) for value in values])
+            if method in ("sum", "product"):
+                return Logic.number(self.stored.named("integer"), int(method == "product"))
+            return _bit(int(method == "and"))
+        ctype = Domains.common([self._element_type(value) for value in values])
         operator = {"sum": "+", "product": "*", "and": "&", "or": "|", "xor": "^"}[method]
         result = _convert(values[0], ctype)
         for value in values[1:]:
@@ -552,7 +572,7 @@ class _Evaluation:
             raise TypeError(f"a {type(target).__name__} has no members")
         if node.name not in members:
             raise KeyError(f"no member named '{node.name}'")
-        return typed(_array(members[node.name]))
+        return typed(_array(members[node.name]), self.stored)
 
     def _select(self, node: Any) -> Any:
         target, index = self.value(node.value), self.value(node.index)
@@ -562,7 +582,7 @@ class _Evaluation:
             position = _number(index)
             if not 0 <= position < len(target):
                 raise ValueError(f"index {position} is out of bounds of an array of {len(target)}")
-            return typed(target[position])
+            return typed(target[position], self.stored)
         if not isinstance(target, Logic):
             raise TypeError(f"a {type(target).__name__} cannot be selected from")
         states = target.type.states
@@ -607,17 +627,33 @@ class _Evaluation:
             if len(node.arguments) != 1:
                 raise TypeError(f"{name} takes 1 argument, got {len(node.arguments)}")
             if name == "$bits":  # its argument's type's width; the argument is not evaluated
-                return Logic.number(Domains.Integer, self._numeric(node.arguments[0], name).width)
-            return _system(name, self.value(node.arguments[0]))
-        return typed(self.scope.function(name)(*[self.value(argument) for argument in node.arguments]))
+                return Logic.number(self.stored.named("integer"), self._numeric(node.arguments[0], name).width)
+            return self._system(name, self.value(node.arguments[0]))
+        return typed(self.scope.function(name)(*[self.value(argument) for argument in node.arguments]), self.stored)
 
+    def _element_type(self, value: Any) -> SvType:
+        """An array element's type: it must be integral or real."""
+        ctype = _type(value, self.stored)
+        if ctype is None:
+            raise TypeError(f"an array's elements must be numbers, got {type(value).__name__}")
+        return ctype
 
-def _element_type(value: Any) -> SvType:
-    """An array element's type: it must be integral or real."""
-    ctype = _type(value)
-    if ctype is None:
-        raise TypeError(f"an array's elements must be numbers, got {type(value).__name__}")
-    return ctype
+    def _system(self, name: str, value: Any) -> Logic:
+        if not isinstance(value, Logic):
+            raise TypeError(f"{name} expects an integral argument, got real")
+        if name in ("$signed", "$unsigned"):
+            return Logic(Domains.vector(value.type.width, name == "$signed", value.type.states), value.aval, value.bval)
+        if name == "$isunknown":
+            return Logic(self.stored.named("bit"), int(not value.known))
+        ones, _ = _parts(value)
+        count = bin(ones).count("1")
+        if name == "$countones":
+            return Logic.number(self.stored.named("integer"), count)
+        if name in ("$onehot", "$onehot0"):
+            return Logic(self.stored.named("bit"), int(count == 1 or (name == "$onehot0" and count == 0)))
+        if not value.known:  # $clog2
+            return _unknown(self.stored.named("integer"))
+        return Logic.number(self.stored.named("integer"), max(value.aval - 1, 0).bit_length())
 
 
 def _identical(a: Any, b: Any) -> bool:
@@ -644,24 +680,6 @@ def _real_power(base: float, exponent: float, ctype: SvType) -> float:
     return Ieee754.convert("binary64", result, "binary32", _EVEN) if ctype.format == "binary32" else result
 
 
-def _system(name: str, value: Any) -> Logic:
-    if not isinstance(value, Logic):
-        raise TypeError(f"{name} expects an integral argument, got real")
-    if name in ("$signed", "$unsigned"):
-        return Logic(Domains.vector(value.type.width, name == "$signed", value.type.states), value.aval, value.bval)
-    if name == "$isunknown":
-        return Logic(Domains.Bit, int(not value.known))
-    ones, _ = _parts(value)
-    count = bin(ones).count("1")
-    if name == "$countones":
-        return Logic.number(Domains.Integer, count)
-    if name in ("$onehot", "$onehot0"):
-        return Logic(Domains.Bit, int(count == 1 or (name == "$onehot0" and count == 0)))
-    if not value.known:  # $clog2
-        return _unknown(Domains.Integer)
-    return Logic.number(Domains.Integer, max(value.aval - 1, 0).bit_length())
-
-
 def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
     """The value of an expression in `scope`, or with the variables in a mapping bound: a `Logic` or a float."""
     if not isinstance(scope, S.Scope):
@@ -670,4 +688,4 @@ def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> An
     problems = X.DIALECT.validate(term, bound=S.free(term, X.DIALECT))  # its structure: references resolve as they go
     if problems:
         raise ValueError(f"cannot evaluate an invalid expression: {problems[0]}")
-    return _Evaluation(scope).value(_Node(term))
+    return _Evaluation(scope, _Types(term)).value(_Node(term))

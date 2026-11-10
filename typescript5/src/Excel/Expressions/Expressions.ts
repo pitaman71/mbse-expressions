@@ -27,10 +27,16 @@
  * `store.Expressions.Framework.Term(function("AND", infix(">=", name("age"), 18), True))`. `Text.ToText` writes a term
  * as a formula, e.g. `=AND(this.age >= 18, NOT(ISERROR(this.email)))`.
  *
- * Its kind of domain, the branch of its union `Expressions.Excel.Expressions.DomainKind`, which `install` adds to the
- * framework's `Expressions.Framework.DomainKind` as the branch `excel`: `error` (`OfError`), Excel's error values, its
- * `members` their codes (`#DIV/0!`, ...), by index; inferred `ordered`. Its domains are stage 3's of the domains-as-data
- * proposal.
+ * Its kinds of domain, the branches of its union `Expressions.Excel.Expressions.DomainKind`, which `install` adds to the
+ * framework's `Expressions.Framework.DomainKind` as the branch `excel`, each with the inferred `ordered`: `text`
+ * (`OfText`), sequences of UTF-16 code units, and `error` (`OfError`), Excel's error values, its `members` their codes
+ * (`#DIV/0!`, ...), by index.
+ *
+ * Its domains, each named as Excel names its type of value: `define` writes them, owned by the singleton
+ * `Expressions.Excel.Expressions` by name, each related to its schema, an `OfAny` of the scalar it narrows, which
+ * `install` adds (`Expressions.Excel.Expressions.number`): `number` (IEEE 754's `binary64`, rounding ties to even),
+ * `logical` (ISO/IEC 11404's `boolean`), `text` (its own `text`) and `error` (its own `error`, its members Excel's error
+ * codes), whose schema narrows `str`: an error value is its code, as `Domains.Error` holds it. A record is not a domain.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -44,14 +50,16 @@ const { repr } = Repr;
 
 /** Excel's union of its kinds, added to the framework's terms as the branch `excel`, its own kinds, and its
  * dialect's schema, whose singleton is `Expressions.Excel.Expressions`: run after `Framework.install`, in a transaction of its
- * own; run again, it writes nothing.
+ * own; run again, it writes nothing. Its domains' schemas too, each an `OfAny` of the scalar it narrows: its domains
+ * `define` writes after it.
  * Its holder, `Expressions.Excel.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
  * its `Term`. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.Excel.Expressions/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, OfError: S.OfObject, // Kinds: the framework's
+    .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, OfText: S.OfObject, OfError: S.OfObject, // Kinds: the framework's
+      number: S.OfAny, logical: S.OfAny, text: S.OfAny, error: S.OfAny,
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
       Cell: S.OfObject, Map: S.OfObject, Infix: S.OfObject, Prefix: S.OfObject,
       Field: S.OfObject }) // FrameworkTerm: the framework's union, by name
@@ -90,17 +98,55 @@ export function install(txn: any): any {
       // to its `Term`
       (_: any) => _.Expression.name("Expressions.Excel.Expressions.Expression").ref(true).refines([Framework.Expression]).properties({
         root: _.Term }),
-      // --- its kind of domain: its error values, their codes its members, then what follows from them ---
+      // --- its kinds of domain: text, UTF-16 code units; its error values, their codes its members; then what
+      // follows from them ---
+      (_: any) => _.OfText.name("Expressions.Excel.Expressions.OfText").properties({ ordered: S.OfBool }), // inferred
       (_: any) => _.OfError.name("Expressions.Excel.Expressions.OfError").properties({
         members: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // its error codes
         ordered: S.OfBool }), // inferred
       (_: any) => _.DomainKind.name("Expressions.Excel.Expressions.DomainKind").branches([
+        (t: any) => t.name("text").schema([_.OfText]),
         (t: any) => t.name("error").schema([_.OfError]),
       ]),
       (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
         (t: any) => t.name("excel").schema([_.DomainKind])]),
+      // --- its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
+      (_: any) => _.number.name("Expressions.Excel.Expressions.number").schemas([S.OfFloat]),
+      (_: any) => _.logical.name("Expressions.Excel.Expressions.logical").schemas([S.OfBool]),
+      (_: any) => _.text.name("Expressions.Excel.Expressions.text").schemas([S.OfStr]),
+      (_: any) => _.error.name("Expressions.Excel.Expressions.error").schemas([S.OfStr]), // an error value's code
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("excel").schema([_.Term])]),
+    ])]))]);
+}
+
+/** Excel's domains as data: the singleton `Expressions.Excel.Expressions` owning its domains by name (`domains`,
+ * through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its
+ * schema (`Expressions.Excel.Expressions.number`) by `Expressions.Framework.HasDomain`: `number`, `logical`, `text`
+ * and `error`, its `members` Excel's error codes, in the order `ERROR.TYPE` numbers them, then those Excel added
+ * since. Run after the installs, in a transaction of its own; run again, it writes nothing. Its frame binds the
+ * dialect (`dialect`) and each domain by its name: `store.transaction(Excel.define)[0].get("number")`. */
+export function define(txn: any): any {
+  const [Excel, Domain] = [txn.Expressions.Excel.Expressions, txn.Expressions.Framework.Domain];
+  return txn.uid("mbse.Expressions.Excel.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({ dialect: Excel.Dialect, number: Domain, logical: Domain, text: Domain, error: Domain })
+    .spec([
+      (_: any) => _.dialect.domains({
+        number: (e: any) => e.domain(_.number), logical: (e: any) => e.domain(_.logical),
+        text: (e: any) => e.domain(_.text), error: (e: any) => e.domain(_.error),
+      }),
+      (_: any) => _.number.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n).radix(2n).precision(53n).emax(1023n).ordered(
+          true)))))).schema([Excel.number]),
+      (_: any) => _.logical.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.boolean(
+        (d: any) => d.ordered(false)))))).schema([Excel.logical]),
+      (_: any) => _.text.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.excel((v: any) => v.text(
+        (d: any) => d.ordered(true)))))).schema([Excel.text]),
+      (_: any) => _.error.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.excel((v: any) => v.error(
+        (d: any) => d.members([
+          "#NULL!", "#DIV/0!", "#VALUE!", "#REF!", "#NAME?", "#NUM!", "#N/A", "#GETTING_DATA", // ERROR.TYPE's 1-8
+          "#SPILL!", "#CALC!", "#FIELD!", "#BLOCKED!", "#CONNECT!", "#BUSY!", "#UNKNOWN!", // added since
+        ]).ordered(false)))))).schema([Excel.error]),
     ])]))]);
 }
 

@@ -66,8 +66,14 @@
  * Its kinds of domain, the branches of its union `Expressions.Python.Python3.DomainKind`, which `install` adds to the
  * framework's `Expressions.Framework.DomainKind` as the branch `python3`, each with the inferred `ordered`: `str`
  * (`OfStr`), sequences of code points, lone surrogates included; and the tokens `nonetype` (`OfNoneType`), `None`'s type,
- * and `ellipsis` (`OfEllipsis`), `...`'s. A token's domain has no schema: its value is a `constant`'s. Its domains are
- * stage 3's of the domains-as-data proposal.
+ * and `ellipsis` (`OfEllipsis`), `...`'s. A token's domain has no schema: its value is a `constant`'s.
+ *
+ * Its domains, each named as Python names its type: `define` writes them, owned by the singleton `Expressions.Python.Python3`
+ * by name, each but a token's related to its schema, an `OfAny` of the scalar it narrows, which `install` adds
+ * (`Expressions.Python.Python3.int`): `bool` (ISO/IEC 11404's `boolean`), `int` (11404's `integer`: signed, unbounded,
+ * raising on overflow), `float` (IEEE 754's `binary64`, rounding ties to even), `str` (its own `str`), `bytes` (11404's
+ * `octetstring`), and the tokens `NoneType` and `ellipsis` (its own `nonetype` and `ellipsis`, named as
+ * `type(None).__name__` and `type(...).__name__` are). `complex` is not a domain: it is a value schema, `Complex`.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -133,7 +139,8 @@ function since(minor: number): readonly string[] {
 
 /** Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds and the helpers
  * they hold, and its dialect's schema, whose singleton is `Expressions.Python.Python3`: run after `Framework.install` and
- * IEEE 754's (its `Complex` holds `binary64`s), in a transaction of its own; run again, it writes nothing.
+ * IEEE 754's (its `Complex` holds `binary64`s), in a transaction of its own; run again, it writes nothing. Its domains'
+ * schemas too, each an `OfAny` of the scalar it narrows: its domains `define` writes after it.
  * Its holder, `Expressions.Python.Python3.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
  * its `Term`. */
 export function install(txn: any): any {
@@ -144,6 +151,7 @@ export function install(txn: any): any {
   return txn.uid("mbse.Expressions.Python.Python3/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, // Kinds: the framework's
       OfStr: S.OfObject, OfNoneType: S.OfObject, OfEllipsis: S.OfObject,
+      bool: S.OfAny, int: S.OfAny, float: S.OfAny, str: S.OfAny, bytes: S.OfAny,
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Pattern: S.OfUnion,
       Expression: S.OfObject, Literal: S.OfObject, Constant: S.OfObject, Complex: S.OfObject,
       ConcatenatedString: S.OfObject, StringText: S.OfObject, FormatSpec: S.OfObject,
@@ -323,8 +331,50 @@ export function install(txn: any): any {
       ]),
       (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
         (t: any) => t.name("python3").schema([_.DomainKind])]),
+      // --- its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
+      (_: any) => _.bool.name("Expressions.Python.Python3.bool").schemas([S.OfBool]),
+      (_: any) => _.int.name("Expressions.Python.Python3.int").schemas([S.OfInt]),
+      (_: any) => _.float.name("Expressions.Python.Python3.float").schemas([S.OfFloat]),
+      (_: any) => _.str.name("Expressions.Python.Python3.str").schemas([S.OfStr]),
+      (_: any) => _.bytes.name("Expressions.Python.Python3.bytes").schemas([S.OfBytes]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("python3").schema([_.Term])]),
+    ])]))]);
+}
+
+/** Python3's domains as data: the singleton `Expressions.Python.Python3` owning its domains by name (`domains`,
+ * through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each but a
+ * token's related to its schema (`Expressions.Python.Python3.int`) by `Expressions.Framework.HasDomain`: `bool`,
+ * `int`, `float`, `str` and `bytes`, and the tokens `NoneType` and `ellipsis`. Run after the installs, in a
+ * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its
+ * name: `store.transaction(Python3.define)[0].get("int")`. */
+export function define(txn: any): any {
+  const [Python3, Domain] = [txn.Expressions.Python.Python3, txn.Expressions.Framework.Domain];
+  return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({ dialect: Python3.Dialect, bool: Domain, int: Domain, float: Domain, str: Domain,
+      bytes: Domain, NoneType: Domain, ellipsis: Domain })
+    .spec([
+      (_: any) => _.dialect.domains({
+        bool: (e: any) => e.domain(_.bool), int: (e: any) => e.domain(_.int),
+        float: (e: any) => e.domain(_.float), str: (e: any) => e.domain(_.str),
+        bytes: (e: any) => e.domain(_.bytes), NoneType: (e: any) => e.domain(_.NoneType),
+        ellipsis: (e: any) => e.domain(_.ellipsis),
+      }),
+      (_: any) => _.bool.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.boolean(
+        (d: any) => d.ordered(false)))))).schema([Python3.bool]),
+      (_: any) => _.int.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.integer(
+        (d: any) => d.signed(true).overflow("raise").ordered(true)))))).schema([Python3.int]), // unbounded
+      (_: any) => _.float.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n).radix(2n).precision(53n).emax(1023n).ordered(
+          true)))))).schema([Python3.float]),
+      (_: any) => _.str.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.python3((v: any) => v.str(
+        (d: any) => d.ordered(true)))))).schema([Python3.str]),
+      (_: any) => _.bytes.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.octetstring(
+        (d: any) => d.ordered(true)))))).schema([Python3.bytes]),
+      (_: any) => _.NoneType.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.python3((v: any) => v.nonetype(
+        (d: any) => d.ordered(false)))))), // a token: no schema
+      (_: any) => _.ellipsis.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.python3((v: any) => v.ellipsis(
+        (d: any) => d.ordered(false)))))), // a token: no schema
     ])]))]);
 }
 

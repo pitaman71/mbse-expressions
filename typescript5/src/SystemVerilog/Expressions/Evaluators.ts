@@ -5,7 +5,11 @@
  * `new Scope(variables, { functions })` and gives a `Domains.Logic` for an integral result or a number for a real one.
  * A variable's type is its value's: a `Logic` its own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32 bits), a number a `real`, a string a vector
  * of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for domain inference, the port's
- * stage 3, Decided, 2). IEEE 1800's rules apply:
+ * stage 3, Decided, 2). Every named type it computes in (a constant's, a cast's, `===`'s `bit`, `size()`'s `int`,
+ * `$bits`' `integer`, ...) is the domain SystemVerilog defines by that name in the store of the term's holder
+ * (`Domains.named`), read once per evaluation when it is first needed: a lone term is refused where it needs one
+ * (mbse-schemas' TypeError), and a store where SystemVerilog's `define` has not run defines none. IEEE 1800's rules
+ * apply:
  *
  * - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
  *   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its
@@ -30,7 +34,7 @@
  *   items.
  */
 
-import { Errors, Repr } from "@mbse/schemas/Framework";
+import { Errors, Proxies, Repr } from "@mbse/schemas/Framework";
 
 import { NameError, OverflowError } from "../../Framework/Errors.js";
 import * as Objects from "../../Framework/Objects.js";
@@ -74,14 +78,27 @@ function fromBytes(data: Uint8Array): bigint {
   return data.reduce((total, byte) => (total << 8n) | BigInt(byte), 0n);
 }
 
+/** The types SystemVerilog defines in the store of an evaluated term's holder, by name, each read once, when first
+ * needed: a lone term reaches no store, and is refused only where it needs a type. */
+class Types {
+  private readonly read = new Map<string, SvType>();
+
+  constructor(private readonly term: unknown) {}
+
+  named(name: string): SvType {
+    if (!this.read.has(name)) this.read.set(name, Domains.named(Proxies.store_of(this.term), name));
+    return this.read.get(name) as SvType;
+  }
+}
+
 /** A variable's value as SystemVerilog has it: a `Logic`, a number, or an object. */
-function typed(value: unknown): unknown {
+function typed(value: unknown, types: Types): unknown {
   if (value instanceof Logic || typeof value === "number") return value;
-  if (typeof value === "boolean") return new Logic(Domains.Bit, value ? 1n : 0n);
+  if (typeof value === "boolean") return new Logic(types.named("bit"), value ? 1n : 0n);
   if (typeof value === "bigint") {
-    const ctype = Domains.of(value);
-    if (!(ctype instanceof SvType)) throw new OverflowError(`integer ${value} is too large for any type`);
-    return Logic.number(ctype, value);
+    const name = Domains.of(value);
+    if (name === null) throw new OverflowError(`integer ${value} is too large for any type`);
+    return Logic.number(types.named(name), value);
   }
   if (typeof value === "string") { // its bytes, in UTF-8
     const data = new TextEncoder().encode(value);
@@ -90,9 +107,9 @@ function typed(value: unknown): unknown {
   return value;
 }
 
-function typeOfValue(value: unknown): SvType | null {
+function typeOfValue(value: unknown, types: Types): SvType | null {
   if (value instanceof Logic) return value.type;
-  return typeof value === "number" ? Domains.Real : null;
+  return typeof value === "number" ? types.named("real") : null;
 }
 
 /** A value as messages write it: a Logic as SystemVerilog does, anything else by `repr`. */
@@ -226,7 +243,7 @@ class Evaluation {
   private readonly types = new Map<object, SvType | null>();
   private readonly values = new Map<object, unknown>();
 
-  constructor(readonly scope: Scope) {}
+  constructor(readonly scope: Scope, readonly stored: Types) {}
 
   /** The term's self-determined type (null for an object). */
   type(node: any): SvType | null {
@@ -248,7 +265,7 @@ class Evaluation {
 
   private typeOf(node: any): SvType | null {
     const kind = kindOf(node);
-    if (["literal", "vector", "variable", "member", "select", "call", "method", "iterate"].includes(kind)) return typeOfValue(this.own(node));
+    if (["literal", "vector", "variable", "member", "select", "call", "method", "iterate"].includes(kind)) return typeOfValue(this.own(node), this.stored);
     if (kind === "unary") {
       if (node.operator === "+" || node.operator === "-") return this.type(node.operand);
       if (node.operator === "~") return this.integral(node.operand, "~");
@@ -257,14 +274,14 @@ class Evaluation {
     if (kind === "binary") {
       const op = node.operator;
       if (["<", "<=", ">", ">=", "==", "!=", "&&", "||", "->", "<->", "==?", "!=?"].includes(op)) return ONE;
-      if (op === "===" || op === "!==") return Domains.Bit;
+      if (op === "===" || op === "!==") return this.stored.named("bit");
       if (SHIFTS.includes(op)) return this.integral(node.left, op);
       const [left, right] = [this.numeric(node.left, op), this.numeric(node.right, op)];
       if (op === "**" && left.kind !== "real" && right.kind !== "real") return left; // its exponent is self-determined
       return Domains.common([left, right]);
     }
     if (kind === "conditional") return Domains.common([this.numeric(node.consequent, "?:"), this.numeric(node.alternative, "?:")]);
-    if (["concatenation", "replication", "range"].includes(kind)) return typeOfValue(this.own(node));
+    if (["concatenation", "replication", "range"].includes(kind)) return typeOfValue(this.own(node), this.stored);
     if (kind === "inside") return ONE;
     const operand = this.numeric(node.operand, "a cast"); // a cast
     if (node.width !== null) return Domains.vector(Number(node.width), operand.signed, operand.states);
@@ -272,7 +289,7 @@ class Evaluation {
       const integral = this.integral(node.operand, `${node.type}'`);
       return Domains.vector(integral.width, node.type === "signed", integral.states);
     }
-    return Domains.TYPES.get(node.type) as SvType;
+    return this.stored.named(node.type);
   }
 
   /** A self-determined term's value, of its own type, once. */
@@ -283,9 +300,9 @@ class Evaluation {
 
   private ownOf(node: any): unknown {
     switch (kindOf(node)) {
-      case "literal": return typed(node.value);
+      case "literal": return typed(node.value, this.stored);
       case "vector": return Logic.of(node.value, Boolean(node.signed));
-      case "variable": return typed(this.scope.lookup(node.term));
+      case "variable": return typed(this.scope.lookup(node.term), this.stored);
       case "member": return this.member(node);
       case "select": return this.select(node);
       case "range": return this.range(node);
@@ -294,7 +311,8 @@ class Evaluation {
       case "method": return this.method(node);
       case "iterate": {
         const items = this.items(this.value(node.array), `${node.method}()`);
-        return this.reduce(node.method, items.map((item) => new Evaluation(this.scope.bind(node.name, item)).value(node.body)));
+        return this.reduce(node.method, items.map((item) => new Evaluation(this.scope.bind(node.name, item), this.stored)
+          .value(node.body)));
       }
       default: return this.call(node);
     }
@@ -389,7 +407,7 @@ class Evaluation {
       order = BOOLEAN(left > right) - BOOLEAN(left < right);
     } else if (op === "===" || op === "!==") {
       const same = left.aval === right.aval && left.bval === right.bval;
-      return new Logic(Domains.Bit, BigInt(BOOLEAN(same === (op === "==="))));
+      return new Logic(this.stored.named("bit"), BigInt(BOOLEAN(same === (op === "==="))));
     } else if (op === "==?" || op === "!=?") {
       const care = ~(right.bval as bigint) & mask(shared.width); // x and z in the right operand match anything
       if ((left.bval & care) !== 0n) return bit(null);
@@ -479,7 +497,7 @@ class Evaluation {
     }
     const types = [this.numeric(node.value, "inside")];
     for (const item of items) {
-      if (item[0] === "element") types.push(elementType(item[1]));
+      if (item[0] === "element") types.push(this.elementType(item[1]));
       else types.push(...item.map((end) => this.numeric(end, "inside")));
     }
     const shared = Domains.common(types);
@@ -508,15 +526,15 @@ class Evaluation {
   /** An array's items, typed. */
   private items(value: unknown, what: string): unknown[] {
     if (!Array.isArray(value)) throw new TypeError(`${what} is a method of arrays, not of ${typeName(value)}`);
-    return value.map(typed);
+    return value.map((item) => typed(item, this.stored));
   }
 
   private method(node: any): unknown {
     const items = this.items(this.value(node.array), `${node.name}()`);
-    if (node.name === "size") return Logic.number(Domains.TYPES.get("int") as SvType, BigInt(items.length));
+    if (node.name === "size") return Logic.number(this.stored.named("int"), BigInt(items.length));
     if (node.name === "min" || node.name === "max") {
       if (items.length === 0) return [];
-      const shared = Domains.common(items.map(elementType));
+      const shared = Domains.common(items.map((item) => this.elementType(item)));
       let best = items[0];
       for (const item of items.slice(1)) {
         if (truth(this.compare(node.name === "min" ? "<" : ">", convert(item, shared), convert(best, shared), shared)) === 1) best = item;
@@ -534,10 +552,10 @@ class Evaluation {
   /** The values reduced by a reduction method, in their common type. */
   private reduce(method: string, values: unknown[]): unknown {
     if (values.length === 0) {
-      if (method === "sum" || method === "product") return Logic.number(Domains.Integer, method === "sum" ? 0n : 1n);
+      if (method === "sum" || method === "product") return Logic.number(this.stored.named("integer"), method === "sum" ? 0n : 1n);
       return bit(BOOLEAN(method === "and"));
     }
-    const ctype = Domains.common(values.map(elementType));
+    const ctype = Domains.common(values.map((value) => this.elementType(value)));
     const operator = ({ sum: "+", product: "*", and: "&", or: "|", xor: "^" } as Record<string, string>)[method] as string;
     let result = convert(values[0], ctype);
     for (const value of values.slice(1)) result = this.arithmetic(operator, result, convert(value, ctype), ctype);
@@ -551,7 +569,7 @@ class Evaluation {
     else if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
     else throw new TypeError(`a ${typeName(target)} has no members`);
     if (!members.has(node.name)) throw new KeyError(`no member named '${node.name}'`);
-    return typed(array(members.get(node.name)));
+    return typed(array(members.get(node.name)), this.stored);
   }
 
   private select(node: any): unknown {
@@ -562,7 +580,7 @@ class Evaluation {
       if (position < 0n || position >= BigInt(target.length)) {
         throw new ValueError(`index ${position} is out of bounds of an array of ${target.length}`);
       }
-      return typed(target[Number(position)]);
+      return typed(target[Number(position)], this.stored);
     }
     if (!(target instanceof Logic)) throw new TypeError(`a ${typeName(target)} cannot be selected from`);
     const states = target.type.states;
@@ -609,19 +627,35 @@ class Evaluation {
     if (X.SYSTEM.includes(name)) {
       if (node.arguments.length !== 1) throw new TypeError(`${name} takes 1 argument, got ${node.arguments.length}`);
       if (name === "$bits") { // its argument's type's width; the argument is not evaluated
-        return Logic.number(Domains.Integer, BigInt(this.numeric(node.arguments[0], name).width));
+        return Logic.number(this.stored.named("integer"), BigInt(this.numeric(node.arguments[0], name).width));
       }
-      return system(name, this.value(node.arguments[0]));
+      return this.system(name, this.value(node.arguments[0]));
     }
-    return typed(this.scope.function(name)(...node.arguments.map((argument: any) => this.value(argument))));
+    return typed(this.scope.function(name)(...node.arguments.map((argument: any) => this.value(argument))), this.stored);
   }
-}
 
-/** An array element's type: it must be integral or real. */
-function elementType(value: unknown): SvType {
-  const ctype = typeOfValue(value);
-  if (ctype === null) throw new TypeError(`an array's elements must be numbers, got ${typeName(value)}`);
-  return ctype;
+  /** An array element's type: it must be integral or real. */
+  private elementType(value: unknown): SvType {
+    const ctype = typeOfValue(value, this.stored);
+    if (ctype === null) throw new TypeError(`an array's elements must be numbers, got ${typeName(value)}`);
+    return ctype;
+  }
+
+  private system(name: string, value: unknown): Logic {
+    if (!(value instanceof Logic)) throw new TypeError(`${name} expects an integral argument, got real`);
+    if (name === "$signed" || name === "$unsigned") {
+      return new Logic(Domains.vector(value.type.width, name === "$signed", value.type.states), value.aval, value.bval);
+    }
+    if (name === "$isunknown") return new Logic(this.stored.named("bit"), value.known ? 0n : 1n);
+    const count = ones(parts(value)[0]);
+    if (name === "$countones") return Logic.number(this.stored.named("integer"), BigInt(count));
+    if (name === "$onehot" || name === "$onehot0") {
+      return new Logic(this.stored.named("bit"), BigInt(BOOLEAN(count === 1 || (name === "$onehot0" && count === 0))));
+    }
+    if (!value.known) return unknownOf(this.stored.named("integer")); // $clog2
+    const rest = value.aval > 0n ? value.aval - 1n : 0n;
+    return Logic.number(this.stored.named("integer"), BigInt(rest === 0n ? 0 : rest.toString(2).length));
+  }
 }
 
 /** Whether two elements are identical, as `===` compares them: of one value, bit for bit, x and z too. */
@@ -642,24 +676,10 @@ function realPower(base: number, exponent: number, ctype: SvType): number {
   return ctype.format === "binary32" ? Ieee754.convert("binary64", result, "binary32", EVEN) as number : result;
 }
 
-function system(name: string, value: unknown): Logic {
-  if (!(value instanceof Logic)) throw new TypeError(`${name} expects an integral argument, got real`);
-  if (name === "$signed" || name === "$unsigned") {
-    return new Logic(Domains.vector(value.type.width, name === "$signed", value.type.states), value.aval, value.bval);
-  }
-  if (name === "$isunknown") return new Logic(Domains.Bit, value.known ? 0n : 1n);
-  const count = ones(parts(value)[0]);
-  if (name === "$countones") return Logic.number(Domains.Integer, BigInt(count));
-  if (name === "$onehot" || name === "$onehot0") return new Logic(Domains.Bit, BigInt(BOOLEAN(count === 1 || (name === "$onehot0" && count === 0))));
-  if (!value.known) return unknownOf(Domains.Integer); // $clog2
-  const rest = value.aval > 0n ? value.aval - 1n : 0n;
-  return Logic.number(Domains.Integer, BigInt(rest === 0n ? 0 : rest.toString(2).length));
-}
-
 /** The value of an expression in `scope`, or with the variables in an object bound: a `Logic` or a number. */
 export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
   const term = F.term(expression);
   const problems = X.DIALECT.validate(term, S.free(term, X.DIALECT)); // its structure: references resolve as they go
   if (problems.length > 0) throw new ValueError(`cannot evaluate an invalid expression: ${problems[0]}`);
-  return new Evaluation(S.isScope(scope) ? scope as Scope : new Scope(scope as S.Bindings)).value(new Node(term));
+  return new Evaluation(S.isScope(scope) ? scope as Scope : new Scope(scope as S.Bindings), new Types(term)).value(new Node(term));
 }

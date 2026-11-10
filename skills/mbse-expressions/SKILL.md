@@ -22,7 +22,12 @@ and translated between expression languages, called dialects:
 - **LaTeX**, mathematical notation: it renders, validates and translates, but has no evaluator.
 - **C** and **Cpp**, every expression of C (C11 to C23) and of C++ (C++17 to C++23) as mbse-programs has them, with the
   type names they hold: each renders as its source and evaluates, over its arithmetic types, by C's rules (promotions,
-  wrapping unsigned arithmetic, undefined behavior raising), refusing the other kinds by name.
+  wrapping unsigned arithmetic, undefined behavior raising), refusing the other kinds by name. Each holds the types its
+  standard fixes (`bool`, `int32_t`, `_Float16`); the types it leaves to the implementation (`int`, `long`, `char`,
+  `size_t`, `long double`) are the ABI's that the expression holding the term names.
+- **SystemV.AMD64** and **Arm.AAPCS64**, the ABI dialects of x86-64's System V ABI and of AArch64's AAPCS64: each holds
+  only domains, the C and C++ types its ABI fixes (plain `char` signed on one and unsigned on the other, `long double`
+  x87's extended format or `binary128`), and serves C and C++ alike.
 - **SystemVerilog**, hardware expressions and constraints over 4-state vectors and reals: it renders as its source and
   evaluates by IEEE 1800's rules (sizing by context, x and z propagating).
 - **ISOIEC11404**, **IEEE754**, **IEEE1164** and **Unicode**, the standard dialects: each holds a published standard's
@@ -55,8 +60,14 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    *When*: every constraint. *How*: in an mbse-schemas store, run the framework's install, then each dialect's you
    write, each in a transaction of its own, once per store: the framework's, then the standard dialects' whose kinds of
    domain the others use (`ISOIEC11404`, `IEEE754`, `IEEE1164`, `Unicode`), then the rest
-   (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...); then
-   Patterns' `define`, which names the operations validation reads (`store.transaction(Patterns.define)`). The
+   (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...,
+   `C.install`, `Cpp.install`, and the ABI dialects' you need, `AMD64.install`, `AAPCS64.install`); then each one's
+   `define` whose data its validation, inference or evaluation reads, each in a transaction of its own: Patterns',
+   which names the operations validation reads (`store.transaction(Patterns.define)`), and C's, C++'s, the ABI
+   dialects', SystemVerilog's, which write the types they read. A C or C++ expression names the ABI its terms are read
+   under, through its adjacency `abi`, given the ABI dialect's singleton (`store.Instances.Expressions.SystemV.AMD64`),
+   one at most; a term whose holder names none is refused where it reads a type the ABI defines ("'int' is not a type C defines, and
+   its expression names no ABI"). The
    package exports the framework alone (`Framework`); import each
    dialect from its own path, Patterns' writers from `mbse.Expressions.Patterns.Expressions` (TypeScript:
    `@mbse/expressions/Patterns/Expressions`), as `E`. Build a constraint with writers: `E.variable(name)`,
@@ -163,6 +174,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    `Symbolics.imports` the imports it declares. A
    rewriting is a translator from a dialect to itself, a list of rules ([Translating](references/translating.md)).
    [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#the-framework).
+   - Python: [T08.1: C](mbse:mbse-expressions/python3/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.1) · TypeScript: [T08.1: C](mbse:mbse-expressions/typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.1)
    - Python: [T06.1: A constraint is a tree of terms](mbse:mbse-expressions/python3/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.1) · TypeScript: [T06.1: A constraint is a tree of terms](mbse:mbse-expressions/typescript5/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.1)
    - Python: [T06.2: Which constraints read a property](mbse:mbse-expressions/python3/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.2) · TypeScript: [T06.2: Which constraints read a property](mbse:mbse-expressions/typescript5/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.2)
    - Python: [T06.3: Fold, bottom up](mbse:mbse-expressions/python3/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.3) · TypeScript: [T06.3: Fold, bottom up](mbse:mbse-expressions/typescript5/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.3)
@@ -204,14 +216,18 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    without its code, and a domain is named once. *When*: listing a dialect's vocabulary, or reading a domain. *How*:
    a dialect's `define`, run after its install in a transaction of its own, writes its singleton, found by its global
    name (`store.Instances.Expressions.Patterns.Expressions`), which names its operations; a standard dialect's
-   (`store.Instances.Expressions.ISOIEC11404.Expressions`) owns its domains by name. A published standard is a dialect
+   (`store.Instances.Expressions.ISOIEC11404.Expressions`) owns its domains by name, and so do the language dialects'
+   whose `define` writes the types their standards define (C's, C++'s, SystemVerilog's, Python3's, TypeScript5's,
+   MATLAB's, Excel's; LaTeX stores none), and the ABI dialects', the types C's and C++'s standards leave to the
+   implementation. A domain is stored only for a type a language's standard, or a commonly used adjacent standard,
+   defines: a program's own enums and typedefs get none. A published standard is a dialect
    of its own, holding its kinds of domain and its domains (`ISOIEC11404`'s `integer` and `octet`, `IEEE754`'s
    `binary32`, ...; each kind and domain named as its standard names it), installed before the dialects that use its
    kinds or its domains' schemas (Python3's complex number holds IEEE 754's `binary64`s). An
    operation is an expression schema: its pattern's variables are its arguments, in order, and its `result` is its
    return. Read a stored domain with the framework's `Domains.kind_of` (its dialect's tag, then its kind's: C's `nullptr_t` is not C++'s), `Domains.properties` (its parameters and its
-   inferred properties, such as an integer's `least` and `greatest`) and `Domains.name_of`, and a dialect's operations
-   with `Domains.operations` and `Domains.arity`. `DIALECT.infer(expression, domains)` finds a term's domain from its
+   inferred properties, such as an integer's `least` and `greatest`) and `Domains.name_of`, a dialect's domains by
+   name with `Domains.domains`, and its operations with `Domains.operations` and `Domains.arity`. `DIALECT.infer(expression, domains)` finds a term's domain from its
    vocabulary's signatures, in code, and the domains its variables are given; a quantifier's name has its items'
    domain. For Patterns these are its values' natives' domains (`int`, `float`, ...) until domain inference reads the
    stored ones ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
@@ -219,7 +235,10 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [T07.5: A dialect is data](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.5) · TypeScript: [T07.5: A dialect is data](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.5)
    - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
    - Python: [DOM-17: The standard dialects own the kinds and domains, with their inferred properties, read through the framework's interface](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-17) · TypeScript: [DOM-17: The standard dialects own the kinds and domains, with their inferred properties, read through the framework's interface](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-17)
-   - Python: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic, Python3's and TypeScript5's strings, the tokens and Excel's errors](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-18) · TypeScript: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic, Python3's and TypeScript5's strings, the tokens and Excel's errors](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-18)
+   - Python: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic and bit, Python3's, TypeScript5's, MATLAB's and Excel's strings, the tokens and Excel's errors](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-18) · TypeScript: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic and bit, Python3's, TypeScript5's, MATLAB's and Excel's strings, the tokens and Excel's errors](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-18)
+   - Python: [DOM-19: C's, C++'s and the ABI dialects' domains are stored: C's and C++'s defines write the types their standards fix, each ABI dialect's those they leave to the implementation, by name, of ISO/IEC 11404's and IEEE 754's kinds or a token's, with their properties and schemas; a holder names its ABI, and C's and C++'s types are read through it](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-19) · TypeScript: [DOM-19: C's, C++'s and the ABI dialects' domains are stored: C's and C++'s defines write the types their standards fix, each ABI dialect's those they leave to the implementation, by name, of ISO/IEC 11404's and IEEE 754's kinds or a token's, with their properties and schemas; a holder names its ABI, and C's and C++'s types are read through it](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-19)
+   - Python: [DOM-20: SystemVerilog's domains are stored: its define writes IEEE 1800's built-in types, by name, of its kinds logic and bit or IEEE 754's, with their properties and, for the 2-state ones, their schemas](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-20) · TypeScript: [DOM-20: SystemVerilog's domains are stored: its define writes IEEE 1800's built-in types, by name, of its kinds logic and bit or IEEE 754's, with their properties and, for the 2-state ones, their schemas](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-20)
+   - Python: [DOM-21: Python3's, TypeScript5's, MATLAB's and Excel's domains are stored: each define writes its dialect's, by name, with their kinds, properties and schemas](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-21) · TypeScript: [DOM-21: Python3's, TypeScript5's, MATLAB's and Excel's domains are stored: each define writes its dialect's, by name, with their kinds, properties and schemas](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-21)
    - Python: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-03) · TypeScript: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-03)
    - Python: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-07) · TypeScript: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-07)
    - Python: [DOM-09: Signatures take the natives' domains and collections, so inference follows the domains an environment gives](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-09) · TypeScript: [DOM-09: Signatures take the natives' domains and collections, so inference follows the domains an environment gives](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-09)

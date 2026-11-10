@@ -14,9 +14,11 @@ Since stage 3 of the port, a domain can be stored: an `Expressions.Framework.Dom
 `kind`, a value of the union `Expressions.Framework.DomainKind`, owned by its dialect through
 `Expressions.Framework.Defines(dialect, name, domain)` and linked to its scalar schema by `HasDomain`. At 0.8.0 only
 the Patterns dialect (formerly Basic) defined domain kinds and stored domains; since stage 1 (below) the standard
-dialects do, and each language's dialect defines its own kinds.
+dialects do, and each language's dialect defines its own kinds; since stage 3, every dialect but LaTeX stores its
+domains, for C and C++ with the ABI dialects `SystemV.AMD64` and `Arm.AAPCS64`, and C's, C++'s and SystemVerilog's
+code type tables are gone (Stage 3's design). What follows describes the code at 0.8.0, which the stages replace.
 
-Everything that uses a domain uses code objects instead:
+At 0.8.0, everything that used a domain used code objects instead:
 
 | Module (Python; TypeScript has the same) | Lines | What it holds |
 |---|---|---|
@@ -257,8 +259,10 @@ As the user decided (2026-11-04), on the questions below:
     "with only the parameters a standard defines": "PRI-012 is overstated, adding extra parameters does not count as a
     "second order invention" IMO". They stay; PRI-012's wording is corrected to match.
   - **An enumeration is not an integer**: "models should not conflate integers and enums as C does". So `packed` and
-    `Packs` stay, keeping an enumeration apart from the integer that represents it; nothing is removed. For stage 3:
-    C's and C++'s enums are to be stored as enumerations packed into their integer types, not as integer domains.
+    `Packs` stay, keeping an enumeration apart from the integer that represents it; nothing is removed. ~~For stage 3:
+    C's and C++'s enums are to be stored as enumerations packed into their integer types, not as integer domains.~~
+    (*Superseded* 2026-11-10 for stage 3 by the scope of stored domains: an enum a program declares gets no stored
+    domain; Decided, "On stage 3's design". The rule stands: where an enumeration is stored, it is not an integer.)
   - **`kind_of` gives the dialect too**: "yes, dialect too". `Domains.kind_of` (`kindOf`) returns `(dialect, tag,
     record)`, the dialect's tag in `Expressions.Framework.DomainKind` first, so that C's and C++'s `nullptr_t` are
     told apart, in both languages.
@@ -281,6 +285,126 @@ As the user decided (2026-11-04), on the questions below:
     Python3's keep `/1`): "this is an important question, but not priority. find a place to store it as tech debt".
     It is mbse-basis [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-254.md),
     proposed in that pull request; the uids' versions are left as they are (`/1`).
+- **On stage 3's design** (2026-11-10): the user's answers to its questions K to O (Stage 3's design, Questions for
+  the user (stage 3)), each quoted as given:
+  - **K: (b), and N: (a)**: "K,N - agreed".
+    - **K. The code type tables go.** C's, C++'s and SystemVerilog's code type tables (`CType` and its `TYPES` in C's
+      `Domains`, which C++ shares; `SvType` and its `TYPES` in SystemVerilog's) go. Evaluation and inference read every
+      named type they use (a literal's, a cast's target, `int` for the promotions, `size_t` for `sizeof`, `bool` for a
+      comparison, a constant's by its value) from the stored domains, through the term's holder (C, above), its width,
+      signedness and format by `Framework.Domains`; `CType` and `SvType` stay only as the working values the arithmetic
+      computes on, built from a stored domain, and the conversions as code (2, below). A lone term is refused,
+      consistent with C ("there is no valid programming context where a lone term needs a domain or schema"), by
+      mbse-schemas' `TypeError`. A breaking change, in 0.9.0.
+    - **N. LaTeX stores no domains.** Its code domains (`number`, `text`, `truth`) stay inference's, CAP-232's to
+      replace, as the other dialects' `OfTypes` do.
+  - **The scope of stored domains** (on L and O): "we do not need a domain for every type, just those standardized in
+    by the language itself or by commonly used adjacent standards like cstdint. Adjacenct standards may be their own
+    dialect"; then: "by "intrinsic types" for C/C++ this means those that cross the ABI". So:
+    - A domain is stored only for a type the language's standard defines, or that a commonly used adjacent standard
+      defines. For C and C++ those are the types that cross the ABI: the fundamental arithmetic types; `nullptr_t`;
+      and the `<stdint.h>`/`<cstdint>` and `<stddef.h>` typedefs (`int32_t`, `size_t`, ...).
+    - A type a program declares gets no stored domain: a program's own enums and typedefs. So stage 3's C enum (its
+      design's "Enums", and DOM-19's) drops; this supersedes "For stage 3: C's and C++'s enums are to be stored as
+      enumerations packed into their integer types" (An enumeration is not an integer, above).
+    - No synonym machinery: L's options drop, and with them the question. Each standardized name gets its domain as
+      its standard defines it, `int32_t` beside `int`, `reg` beside `logic`.
+  - **The corpus's and the tests' own domains** (2026-11-10, settling what O left open). Told that `state` (an
+    enumeration of `IDLE` and `RUN`) and `mode` (`packed`, packing `state` into an `octet`) are fixtures the
+    conformance corpus and some tests invent to exercise `packed`, that no language or standard defines them, and that
+    the scope rule means a dialect stores only what its standard defines, the user was given this recommendation and
+    answered "agreed":
+    - the corpus case and the tests write them as plain `Expressions.Framework.Domain` objects, owned by no dialect;
+    - there is no `Defines` entry for them in the ISO/IEC 11404 singleton, or any other;
+    - there is no test dialect.
+
+    Not built: mbse-schemas refuses a domain with no owner as the model stands, and question R, how to settle that,
+    is decided (a), below: the fixtures stay in ISO/IEC 11404's singleton, as they are.
+  - **One dialect per ABI, holding only domains** (2026-11-10). Asked whether C and C++ should have a dialect for each
+    ABI, the user was shown about 12 mainstream ABIs (x86-64 System V, Microsoft x64, i386 System V and Windows,
+    AArch64 AAPCS64, Apple and Windows, ARM32 AAPCS, RISC-V LP64D, PowerPC64 ELFv2, s390x, wasm32), across which what
+    differs is the data model (LP64, LLP64 or ILP32), `long double`'s format, plain `char`'s signedness, `wchar_t`'s
+    width, and the `_FloatNx` formats. Then this recommendation, which the user approved with "yes":
+    - C and C++ stay one dialect each, holding the terms and the domains that don't depend on the ABI (`bool`, the
+      `_FloatN` interchange formats, `nullptr_t`, ...).
+    - Each ABI is its own small dialect holding only the ABI-dependent domains: `long`, `long double`, `char`,
+      `wchar_t`, `size_t`, `_FloatNx` and the like. Each psABI is a published standard, so this follows "Adjacenct
+      standards may be their own dialect".
+    - One ABI dialect serves both C and C++.
+    - A store installs the ABI dialects it needs, in install order, as with the standard dialects (I, above).
+    - ABIs are added as they are needed. Stage 3 builds two: x86-64 System V and AArch64 AAPCS64. These two were the
+      coordinating agent's example, which the user did not contradict; recorded as such.
+    - The ABI dialects are named by the namespace rule ("`Expressions.<family>.<dialect>`, a family named as its
+      standard names the language"; the dialects proposal's Decided, Namespace), each spelled as its psABI document
+      names itself. The names chosen are the agent's, for review (Stage 3's design).
+    - **What this replaces**: the single LP64 data model C's evaluation assumed until stage 3 (mbse-basis
+      [CAP-100: six languages' expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-100.md),
+      "C's arithmetic types under LP64 ... `long double` as IEEE 754 `binary128`"), and stage 3's design's `long
+      double` as `binary128`. Under an ABI dialect, `long double` is whatever that ABI says: x87's 80-bit format on
+      x86-64 System V, `binary128` on AAPCS64. Built so in stage 3: C's evaluation reads no data model of its own,
+      only its holder's ABI. CAP-100's record, which still says LP64, is corrected with the records (Stages, 5).
+  - **M** (2026-11-10), the design below approved as a whole with "yes":
+    - Under an ABI, the formats of `_Float32x`, `_Float64x` and `_Float128x` are fixed by that ABI, though C23's
+      Annex H leaves them to the implementation. So each ABI dialect stores them as its ABI fixes them.
+    - `std::bfloat16_t` is defined by C++23 (ISO/IEC 14882:2023, the extended floating-point types, from P1467) in
+      IEEE 754's parameters: radix 2, 16 bits, precision 8, emax 127. So the C++ dialect stores it as a domain of IEEE
+      754's kind with those parameters; parameters a standard does not define are allowed, under
+      [PRI-012: model published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-012)
+      as corrected ("adding extra parameters does not count as a "second order invention"", above).
+    - Asked along the way, the user: "what is the standad that defines bfloat16? _Float32x?". The answer given: C++23
+      defines `std::bfloat16_t`, in those parameters; C23's Annex H defines `_Float32x`, leaving its format to the
+      implementation, which under an ABI that ABI fixes.
+  - **P. The holder names its ABI: (b)** (2026-11-10), on Stage 3's design's question P, which ABI a C or C++ term is
+    read under. The user's rule: "immediate optionality over deferred optionality over sacrificing optionality". (a),
+    one ABI per store, sacrifices optionality; (c), the caller passing the ABI, changes the API against C, above ("there
+    is no valid programming context where a lone term needs a domain or schema"). So (b), as the design proposed:
+    - The `Expression` holding a C or C++ term names the ABI its terms are read under, by a relation between
+      `Expressions.Framework.Expression` and a dialect, unique by the expression, read through the expression's
+      adjacency `abi`. Its name is the agent's, by the record's conventions (Stage 3's design).
+    - One store may hold several ABI dialects, each holder read under its own.
+    - A term that needs an ABI-dependent domain, whose holder names no ABI, is refused with a clear message.
+    - It is not `Uses`: it records which ABI a holder's terms are read under, not a dialect's dependencies. The design
+      flagged it under the standing instruction on `Uses` (I, above), and the user settled it with this answer, so it
+      gives no reason to reinstate `Uses`.
+  - **Q. Every ABI dialect defines what the implementation chooses: (b)** (2026-11-10), on Stage 3's design's question
+    Q, which dialect defines the domains and schemas of `int`, `short`, `long long`, `signed char` and `unsigned char`,
+    `float` and `double`, which the C standard leaves to the implementation though every listed ABI gives them alike.
+    The user: "(b)". So:
+    - Every ABI dialect defines its own domain and schema for each, with its ABI's values.
+    - C's and C++'s own dialects keep only what the language standard itself fixes: `bool`, the `_FloatN` interchange
+      types and the decimal types, `nullptr_t`, and C++'s `std::floatN_t` and `std::bfloat16_t`, each checked against
+      its standard (Stage 3's design).
+    - Everything the implementation chooses goes in each ABI dialect: the types above, `char`, `long`, `long double`,
+      `wchar_t`, `size_t`, `ptrdiff_t`, `intptr_t`, `_Float32x`, `_Float64x`, and the `<stdint.h>` typedefs each ABI
+      fixes, decided by what the C and C++ standards leave to the implementation, the split listed in the design.
+    - This supersedes the design's recommendation (a), that what every ABI shown gives alike stays C's and C++'s.
+  - **R: (a), by the agent's check** (2026-11-10). The user left it to the agent: Excel's error values packed into
+    their `ERROR.TYPE` codes, if Microsoft's documentation of `ERROR.TYPE` gives those codes, `state` and `mode` then
+    going; otherwise (a), the fixtures kept in ISO/IEC 11404's singleton, and noted. *(agent)* The documentation
+    (Microsoft Support, "ERROR.TYPE function", checked 2026-11-10) gives codes for eight error values only, `#NULL!` 1
+    to `#GETTING_DATA` 8, and "Anything else" `#N/A`: none for the seven Excel's `error` domain holds since (`#SPILL!`,
+    `#CALC!`, `#FIELD!`, `#BLOCKED!`, `#CONNECT!`, `#BUSY!`, `#UNKNOWN!`). So no `packed` domain can pack Excel's
+    errors into documented codes, and `state` and `mode` stay in ISO/IEC 11404's singleton, as they are: a fixture
+    no standard defines, owned there because mbse-schemas requires every domain an owner (Stage 3's design,
+    Questions for the user (stage 3), R).
+  - **The links between dialects** (2026-11-10). Told what stage 3 built that links one dialect to another, after
+    saying "I am a little concerned about over-exerting ourselves to try to link between dependent dialects", the
+    user answered each:
+    - The holder-to-ABI relation, `Expressions.Framework.HasAbi` (P): "yes, keep it".
+    - IEEE 754's properties, `width` among them, written on the other dialects' `ieee754` domains: "yes, this is
+      critical for precision". Kept as built.
+    - `Framework.Domains.domains(dialect)` and the lookups that read one dialect's domains from another's terms
+      (C's and C++'s through their holder's ABI, SystemVerilog's own): "this is what I want to review". Kept, and
+      listed in stage 3's pull request for the user's review.
+  - **On process** (2026-11-10), the user: "I am less concerned about the number of lines of code and more concerned
+    about how slugging our progress has become. It seems like we are stopping more often, halting on minutiae that are
+    already answered in docs that mbse-basis/docs/README.md marks as mandatory, and losing sight of what is important
+    for increased effort." So agents decide minutiae themselves (names, placements, message wording, which list a type
+    goes in, test layout) from the mandatory documents and the Decided sections, mark each *(agent)* and list them in
+    the pull request; they pause only on a design fork the record does not settle, where a wrong guess costs real
+    rework, or on a sibling's defect, committing and pushing first. And: "make sure all agents keep the full mandtory
+    reading list refreshed after every compaction": after any compaction an agent re-reads mbse-basis' `AGENTS.md`,
+    the four documents it marks mandatory, this repository's `AGENTS.md` and this Decided section before more work.
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
   release; CAP-232 builds on stored domains.
 - **3. `Anything` and `Opaque`**: "agreed. Schemas.OfAny kind of handles that": no stored "anything" domain; where
@@ -335,11 +459,14 @@ whole-record review before it is brought to the user.
    inference's, its population with it (Decided, 2): stage 1 stores none of it. Its design is below.
 2. Patterns: its code domains gone (its dataclasses and `read`), its validation reading its stored operations through
    the holder (Decided, C) in place of `SIGNATURES`.
-3. C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its domains stored. C's and
-   C++'s enums are stored as enumerations packed into their integer types, not as integer domains (Decided, "On stage
-   1's review"). An enumeration is a `state` domain; 11404's `enumerated`, ordered, is added only when a dialect first
-   needs an order, as SystemVerilog's `.first()`, `.next()` and `.prev()` may (Decided, "On stage 1's review",
-   "`state` is the generic enumeration").
+3. C and Cpp, with the ABI dialects that hold what their standards leave to the implementation, a C or C++ term's
+   holder naming its ABI; then SystemVerilog; then Python3,
+   TypeScript5, MATLAB and Excel: each its domains stored, only for the types its standard, or a commonly used
+   adjacent standard, defines; LaTeX stores none; the code type tables of C, C++ and SystemVerilog go (Decided, "On
+   stage 3's design"). A program's own enums and typedefs get no stored domain. Where an enumeration is stored, it is a
+   `state` domain; 11404's `enumerated`, ordered, is added only when a dialect first needs an order, as
+   SystemVerilog's `.first()`, `.next()` and `.prev()` may (Decided, "On stage 1's review", "`state` is the generic
+   enumeration").
 4. Standards as tagged data (the dialects proposal's Decided, Q10), every dialect's standards.
 5. Records in mbse-basis ([CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md), [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md),
    [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md), [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)), and release as 0.9.0 (Decided, D).
@@ -567,15 +694,367 @@ by its key (mbse-basis [PRI-001: declaration order](https://github.com/pitaman71
 exception), not in the order `define` wrote them, so `Domains.operations` no longer claims the latter; validation reads
 them by name.
 
-**Not changed here**: where the corpus's and the tests' own domains (`state`, `mode`) are written, which is open with
-the user; C's, C++'s and the other dialects' code domains, stage 3's. Nothing here reads which dialects a dialect uses,
+**Not changed here**: where the corpus's and the tests' own domains (`state`, `mode`) are written, then open with
+the user (decided 2026-11-10: owned by no dialect; Decided, "On stage 3's design"); C's, C++'s and the other dialects' code domains, stage 3's. Nothing here reads which dialects a dialect uses,
 so nothing gives a reason to reinstate `Uses` (Decided, I).
+
+## Stage 3's design
+
+As the record has it: "C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its
+domains stored" (Stages, 3), as the user's answers on this design revise it (Decided, "On stage 3's design"): a domain
+only for a type its language's standard, or a commonly used adjacent standard, defines, for C and C++ the types that
+cross the ABI; what their standards leave to the implementation in a dialect of each ABI, x86-64 System V's and
+AAPCS64's (Q), the holder of a C or C++ term naming the ABI it is read under (P); the code type tables of C, C++ and
+SystemVerilog gone, evaluation and inference reading the stored domains through the term's holder; LaTeX
+none; no domain for a program's own enums and typedefs, and no synonyms. Each domain is an instance of a standard
+dialect's kind or of its dialect's own (Decided, A, B and H), named as its language's standard names its type (Decided,
+"On stage 1's review", "Names are the standards' own"), written by its dialect's `define` with its inferred properties
+populated by hand (Proposed, 2); typing a C literal by its suffix is a lookup of a stored domain (Decided, 5); and a
+literal out of range is reported against the domain its dialect stores for it (Proposed, 5). Inference's rules stay
+CAP-232's to replace (Decided, 2). On the code at main (3711f8a), the same in both languages. What the record leaves
+open is the agent's, for review, marked *(agent)*; what neither the record nor the standards settle is a question,
+below, and nothing is built on it until it is answered: P, Q and R are answered (Decided, "On stage 3's design").
+
+**Each dialect's `define`.** C, Cpp, the two ABI dialects, SystemVerilog, Python3, TypeScript5, MATLAB and Excel each
+have a `define`, as the standard dialects do: run after the installs, in a transaction of its own, writing its domains
+owned by name through `Defines`, each with its parameters and its inferred properties, and each but a token's and a
+4-state type's related to its schema by `HasDomain` ([CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#decided),
+Decided, "Every domain a schema"); its frame binds the dialect and each domain by its name, spelled as its schema's is.
+Its uid is `mbse.Expressions.<path>.define/1`. A domain's schema is `Expressions.<path>.<name>`, a `Schemas.OfAny` of
+the scalar it narrows, its name spelled as a dotted identifier where the type's is not one (`unsigned long long` as
+`unsigned_long_long`, as `modulo(256)` is `modulo_256`; `std::float16_t` as `std_float16_t`) *(agent)*. Each install
+adds its domains' schemas, as the standard dialects' do. Every caller's list (the suites, the tutorials' toolkit, the
+corpus, the skill) runs the defines after the installs, as it runs `Patterns.define`. A domain's value is the native
+its evaluation already holds: an int for an integer or a modulo, a float for `binary16` to `binary64`, and canonical
+text for `binary128`, the decimal formats and the formats IEEE 754 does not name (below), as `Ieee754` holds
+`binary128` (so their schemas narrow `str`) *(agent)*.
+
+**What each dialect holds** (Decided, Q): C's and C++'s own dialects hold what their standards fix; each ABI dialect
+holds what the standards leave to the implementation, whether or not the ABIs agree on it. Each type, by what C23
+(ISO/IEC 9899:2024) and C++23 (ISO/IEC 14882:2023) say of it:
+
+| Type | What the standard fixes, and what it leaves | Whose |
+|---|---|---|
+| `bool` | its values, `false` and `true` (C23's `BOOL_WIDTH` is 1; C++'s `bool`) | C's, C++'s |
+| `_Float16`, `_Float32`, `_Float64`, `_Float128` | each is IEC 60559's `binary16` to `binary128` where provided (C23, Annex H) | C's |
+| `_Decimal32`, `_Decimal64`, `_Decimal128` | each is IEC 60559's `decimal32` to `decimal128` (C23, its decimal floating types); only their encoding, which no domain holds, is the implementation's | C's |
+| `nullptr_t` | its one value, `nullptr` (C23; C++'s `std::nullptr_t`) | C's, C++'s, each its own |
+| `std::float16_t`, `std::float32_t`, `std::float64_t`, `std::float128_t`, `std::bfloat16_t` | each is ISO/IEC 60559's `binary16` to `binary128` where provided, and `std::bfloat16_t` radix 2, 16 bits, precision 8, emax 127 (C++23, the extended floating-point types; Decided, M) | C++'s |
+| `int8_t` to `int64_t`, `uint8_t` to `uint64_t` | each exactly its width, with no padding bits, two's complement where signed (C23, `<stdint.h>`, its exact-width integer types; C++'s `<cstdint>` is C's); only whether one is provided, and which basic type it names, is the implementation's, as only whether `_Float16` is provided is | C's, C++'s *(agent)* |
+| `char`, `signed char`, `unsigned char`, `short`, `int`, `long`, `long long` and their unsigned forms | at least their minimum widths, the rest the implementation's; whether plain `char` is signed too | each ABI's |
+| `float`, `double`, `long double` | their formats, IEC 60559's only under Annex F, which an implementation adopts | each ABI's |
+| `wchar_t`, `char8_t`, `char16_t`, `char32_t` | their underlying types (`<uchar.h>`'s `unsigned char`, `uint_least16_t`, `uint_least32_t`; distinct types in C++, of those representations) | each ABI's |
+| `size_t`, `ptrdiff_t`, `intptr_t`, `uintptr_t` | their widths | each ABI's |
+| `int_least8_t` to `int_least64_t`, `uint_least8_t` to `uint_least64_t` | each the smallest type of at least its width, so the implementation's integer types decide it | each ABI's |
+| `_Float32x`, `_Float64x` | their formats (C23, Annex H: at least as wide as `binary32`'s and `binary64`'s) | each ABI's |
+| `_Float128x`, `int_fastN_t`, `uint_fastN_t`, `intmax_t`, `uintmax_t` | not stored: neither ABI provides `_Float128x`, and neither C nor the two psABIs fixes the others' widths, which are the C library's (glibc's `int_fast16_t` is 64 bits on x86-64, musl's 32) *(agent)* | none |
+
+The exact-width typedefs are C's and C++'s *(agent)*, by the rule the user gave, what the standard fixes: they are
+fixed as `_FloatN` is, where provided, and are not among the `<stdint.h>` typedefs an ABI fixes.
+
+**C** (C11 to C23): its own domains, owned by `Expressions.C.Expressions`.
+
+| Domains (C's names) | Kind | Parameters and inferred properties |
+|---|---|---|
+| `bool` | ISO/IEC 11404 `boolean` | `ordered` false, as 11404's `boolean` *(agent)* |
+| `int8_t`, `int16_t`, `int32_t`, `int64_t` | ISO/IEC 11404 `integer` | `width` 8, 16, 32, 64; `signed`; `overflow` `raise`; `least`, `greatest`; `ordered` |
+| `uint8_t`, `uint16_t`, `uint32_t`, `uint64_t` | ISO/IEC 11404 `modulo` | `modulus` 2^8, 2^16, 2^32, 2^64; `least` 0, `greatest` `modulus` - 1; `ordered` |
+| `_Float16`, `_Float32`, `_Float64`, `_Float128`, `_Decimal32`, `_Decimal64`, `_Decimal128` | IEEE 754 `ieee754` | `format` `binary16`, `binary32`, `binary64`, `binary128`, `decimal32`, `decimal64`, `decimal128`; `rounding` `roundTiesToEven`; `width`, `radix`, `precision`, `emax`; `ordered` |
+| `nullptr_t` | C's `nullptr_t` (a token, no schema) | `ordered` false |
+
+- **Unsigned is `modulo`.** C's unsigned arithmetic "can never overflow": a result is "reduced modulo the number that
+  is one greater than the largest value" (C23, Types), which is 11404's `modulo` (§10.1.2), as the user's rule decided
+  of `uint8` ("adopt names the standard uses for datatypes it defines"; Decided, "On stage 1's review", "`uint8` split
+  by 11404's own definitions"). A signed type is 11404's `integer`, its `overflow` `raise`: what C leaves undefined
+  raises, as CAP-100 records and C's evaluator does. So too in the ABI dialects.
+- **`decimal32`.** `Ieee754.FORMATS` gains `decimal32` (radix 10, precision 7, emax 96, IEEE 754-2019's), for
+  `_Decimal32`, as the coordinating agent relays the user's decision (2026-11-09: "IEEE 754's `decimal32`: the format
+  is to be added for C's `_Decimal32`"); DOM-10 to DOM-12 assert it with the other decimal formats.
+- **`width`** *(agent)*: IEEE 754's kind gains `width`, inferred, the format's width in bits (IEEE 754-2019's `k` of
+  an interchange format), as M has `std::bfloat16_t`'s "16 bits": 16, 32, 64 and 128 for the binary formats, 32, 64
+  and 128 for the decimal ones, 16 for `std::bfloat16_t`, 80 for x87's format. IEEE 754's own `binary64` and
+  `binary32` gain it, and so does every `ieee754` domain another dialect writes (SystemVerilog's `real` and
+  `shortreal`, Python3's, TypeScript5's, MATLAB's and Excel's `binary64` ones), which SystemVerilog's types then read
+  in place of `Ieee754.WIDTHS`.
+- **Not domains**: a string literal's type, an array (Decided, H, 4: compound values have schemas); `_BitInt(N)`, a
+  family of types, one per width, as a sized vector is SystemVerilog's; a program's own enums and typedefs (Decided,
+  "On stage 3's design"); and what no standard in scope defines (`__int128`, `__float128`, `__fp16`, compilers'
+  extensions).
+
+**The ABI dialects** (Decided, "One dialect per ABI" and Q). Two, each a family with one dialect, laid out as every
+dialect is (the dialects proposal's Decided, Namespace, 6 and 7), each a singleton of its own schema, a branch of
+`Expressions.Framework.Dialect`, with no terms and no kinds of its own: its domains are instances of ISO/IEC 11404's
+and IEEE 754's kinds. Each serves C and C++ alike. Their names are the agent's, for review, each spelled as its psABI
+document names itself:
+
+| Dialect (path; name; tag) | Its standard (`STANDARDS`) |
+|---|---|
+| `SystemV.AMD64`; `AMD64`; `amd64` | "System V Application Binary Interface, AMD64 Architecture Processor Supplement", its LP64 programming model |
+| `Arm.AAPCS64`; `AAPCS64`; `aapcs64` | "Procedure Call Standard for the Arm 64-bit Architecture (AArch64)", AAPCS64, its LP64 data model |
+
+The family is the ABI as its document names it (`SystemV`, of "System V Application Binary Interface"; `Arm`, as Arm
+spells itself), the dialect the processor supplement or the standard (`AMD64`, the supplement's own name for x86-64;
+`AAPCS64`, the document's abbreviation). Each document also defines an ILP32 model (x32; AAPCS64's ILP32), which would
+be a dialect of its own, added when needed. Python `mbse.Expressions.SystemV.AMD64` and
+`mbse.Expressions.Arm.AAPCS64`; TypeScript `src/SystemV/AMD64/` and `src/Arm/AAPCS64/`, exported as
+`@mbse/expressions/SystemV/AMD64` and `@mbse/expressions/Arm/AAPCS64`.
+
+| Domains (C's names) | `SystemV.AMD64` | `Arm.AAPCS64` |
+|---|---|---|
+| `char` | 11404 `integer`: `width` 8, `signed` | 11404 `modulo`: `modulus` 2^8 |
+| `signed char`, `short`, `int`, `long long` | 11404 `integer`: `width` 8, 16, 32, 64, `signed` | the same |
+| `unsigned char`, `unsigned short`, `unsigned int`, `unsigned long long` | 11404 `modulo`: `modulus` 2^8, 2^16, 2^32, 2^64 | the same |
+| `long`, `ptrdiff_t`, `intptr_t` | 11404 `integer`: `width` 64, `signed` | the same |
+| `unsigned long`, `size_t`, `uintptr_t` | 11404 `modulo`: `modulus` 2^64 | the same |
+| `int_least8_t` to `int_least64_t` | 11404 `integer`: `width` 8, 16, 32, 64, `signed` | the same |
+| `uint_least8_t` to `uint_least64_t` | 11404 `modulo`: `modulus` 2^8, 2^16, 2^32, 2^64 | the same |
+| `wchar_t` | 11404 `integer`: `width` 32, `signed` (`int`) | 11404 `modulo`: `modulus` 2^32 (`unsigned int`) |
+| `char8_t`, `char16_t`, `char32_t` | 11404 `modulo`: `modulus` 2^8, 2^16, 2^32 (`unsigned char`, `uint_least16_t`, `uint_least32_t`) | the same |
+| `float`, `double` | IEEE 754 `binary32`, `binary64` | the same |
+| `long double` | IEEE 754 `ieee754`, x87's extended format: no `format`; `width` 80, `radix` 2, `precision` 64, `emax` 16383 | IEEE 754 `binary128` |
+| `_Float32x` | IEEE 754 `binary64` | IEEE 754 `binary64` |
+| `_Float64x` | x87's extended format, as `long double` | IEEE 754 `binary128` |
+
+Each integer as C's (`overflow` `raise`, `least`, `greatest`, `ordered`); each IEEE 754 domain rounding ties to even,
+with its `width`, `radix`, `precision`, `emax` and `ordered`. The domains are listed in the order C's standard lists the
+types, which is also the order a result's type is named in (What reads the stored domains, below).
+
+- **x87's format is IEEE 754's** *(agent)*: an extended precision format of IEEE 754-2019 (§3.7, binary64's extended
+  format: precision at least 64, emax at least 16383), with no interchange format to name; so it is an `ieee754`
+  domain with its parameters and no `format`, as `std::bfloat16_t` is (Decided, M). This supersedes, for it and for
+  `std::bfloat16_t`, CAP-097's "a format outside it (fp8, `bfloat16`, x87's 80-bit format) would be a domain of its
+  own", to be recorded with the records (Stages, 5).
+- **Arithmetic in a format by its parameters** *(agent)*: `Ieee754`'s operations take a format by its name or, where
+  it has none, by its radix, precision and emax, so that `long double`'s arithmetic follows its ABI's format (x87's
+  rounds to 64 bits of precision; `binary128`'s, as now, to 113); its values are text, as `binary128`'s are.
+  Encodings (`to_bits`, `from_bits`) stay the interchange formats'.
+
+**C++** (C++17 to C++23): its own domains, owned by `Expressions.Cpp.Expressions`, under C++'s names: `bool`; the
+exact-width typedefs, as C's; C++23's `std::float16_t`, `std::float32_t`, `std::float64_t` and `std::float128_t`
+(`binary16` to `binary128`); `std::bfloat16_t`, an `ieee754` domain with no `format`, `width` 16, `radix` 2, `precision`
+8 and `emax` 127 (Decided, M); and `nullptr_t`, of C++'s own `nullptr_t` kind. C++ has no `_FloatN` or decimal types.
+Every other type it reads (`int`, `char`, `char8_t`, `wchar_t`, `size_t`, `long double`, ...) is its holder's ABI's,
+which C++ shares with C.
+
+- **C++'s library typedefs keep C's names** *(agent)*, re-checked against the scope rule and the ABI split: a type
+  C++'s library declares under a name C's library also declares (C++'s `<stdint.h>` and `<stddef.h>`, and `<cstdint>`
+  and `<cstddef>` in `std`) keeps that name, `int32_t`, `size_t`, `nullptr_t`, so that one ABI dialect names each type
+  once for both languages, and C++'s casts already write them so; a type only C++'s library declares is named as C++
+  does, in `std` (`std::float16_t`, `std::bfloat16_t`).
+- **Literals.** A C++ literal is typed by C++'s names: `1.0f16` is a `std::float16_t`, `1.0bf16` a `std::bfloat16_t`,
+  and `1.0df`, which C++ does not write, has no stored type, its type unknown, as an unknown suffix's is today.
+
+**SystemVerilog** (IEEE 1800-2023): the built-in types its `Domains.TYPES` named, one for one (the table gone since), owned by
+`Expressions.SystemVerilog.Expressions`.
+
+| Domains | Kind | Parameters and inferred properties |
+|---|---|---|
+| `logic`, `reg`, `integer`, `time` | SystemVerilog's `logic` (4-state) | `width` 1, 1, 32, 64; `signed` false, false, true, false; `least`, `greatest` of its known values; `ordered` |
+| `bit`, `byte`, `shortint`, `int`, `longint` | SystemVerilog's `bit` (2-state), new | `width` 1, 8, 16, 32, 64; `signed` false, true, true, true, true; `least`, `greatest`; `ordered` |
+| `real`, `shortreal` | IEEE 754 `ieee754` | `binary64`, `binary32`, as C's `double` and `float` |
+
+- **2-state types are SystemVerilog's own, of the kind `bit`** *(agent)*: SystemVerilog's types are its dialect's
+  (Decided, B: "SV specific domains are part of the SV dialect"), and IEEE 1800 names its 2-state integral type `bit`,
+  as it names the 4-state one `logic`, the kind stage 1 added. A 4-state domain has no schema, since no basic scalar
+  holds `x` or `z` (as a token's has none: Stage 1's design, A language's own kinds); a 2-state one narrows `int`.
+- **`reg` beside `logic`**: "logic and reg denote the same type" (IEEE 1800-2023), and each name gets its domain, with
+  the same properties (Decided, "On stage 3's design": no synonym machinery).
+- **A sized vector** (`logic [7:0]`, `8'hFF`'s type) is not a named type, so `define` writes none: its type is computed
+  from the term's own width and signedness, as now, and inferring it is CAP-232's.
+- **`enumerated` is not added**: SystemVerilog names no enumerated type of its own, and a program's enums get no stored
+  domain, so no stored domain needs an order yet.
+
+**Python3**: `bool` (11404 `boolean`), `int` (11404 `integer`: signed, unbounded, `overflow` `raise`, as 11404's own
+`integer`), `float` (IEEE 754 `binary64`), `str` (Python3's `str`), `bytes` (11404 `octetstring`), and the tokens
+`NoneType` and `ellipsis` (Python3's `nonetype` and `ellipsis`), each named as Python names its type
+(`type(None).__name__`, `type(...).__name__`). `complex` is not a domain (Decided, H and J).
+
+**TypeScript5**: `boolean` (11404 `boolean`), `number` (IEEE 754 `binary64`), `bigint` (11404 `integer`, unbounded),
+`string` (TypeScript5's `string`) and the token `null` (TypeScript5's `null`), named by TypeScript's type keywords.
+`RegExp` is not a domain (Decided, H).
+
+**MATLAB**: `double` (IEEE 754 `binary64`), `logical` (11404 `boolean`) and `string`, a new kind of MATLAB's own,
+`string`, its text UTF-16 code units, lone surrogates among them, as TypeScript5's `string` is (Decided, B, "by the
+same rule ... TypeScript's `string` [is its dialect's] own") *(agent)*. A `struct` is not a domain (Decided, H, 4).
+
+**Excel**: `number` (IEEE 754 `binary64`), `logical` (11404 `boolean`), `text`, a new kind of Excel's own, UTF-16 code
+units, for the same reason *(agent)*, and `error` (Excel's `error`), its `members` Excel's error values: `#NULL!`,
+`#DIV/0!`, `#VALUE!`, `#REF!`, `#NAME?`, `#NUM!`, `#N/A` and `#GETTING_DATA`, in the order `ERROR.TYPE` numbers them,
+then `#SPILL!`, `#CALC!`, `#FIELD!`, `#BLOCKED!`, `#CONNECT!`, `#BUSY!` and `#UNKNOWN!`, which Excel added since
+*(agent)*; `ordered` false. A record is not a domain (Decided, H, 4).
+
+**LaTeX** stores none (Decided, N): it gains no `define`.
+
+**The corpus's and the tests' own domains** (Decided, "On stage 3's design", R): `state` and `mode` stay in ISO/IEC
+11404's singleton, as they are, since mbse-schemas refuses a domain with no owner and `ERROR.TYPE`'s documented codes
+cover only eight of Excel's fifteen error values, so no standard's values can take their place *(agent)*.
+
+**Which ABI a term is read under** (Decided, P). The holder names it:
+
+- **The relation** *(agent, its names)*: `Expressions.Framework.HasAbi`, linking `expression`, an
+  `Expressions.Framework.Expression`, and `abi`, an `Expressions.Framework.Dialect`, its `abi` determined by its `expression` (`uniques("abi")`, as built: Found while building); and the
+  expression's adjacency `abi`, through it, which every dialect's holder inherits, refining the framework's. It is named
+  as the framework's other relations from a holder are, by what the first link has (`HasRoot`, `HasDomain`), its
+  acronym spelled as the kinds' schemas spell theirs (`OfIeee754`); its links are the roles they play, as `Defines`'
+  are. The framework's install adds it, beside `HasRoot`: no dialect owns the holder.
+- **Several ABIs in a store**: a store installs and defines the ABI dialects its holders need, each holder read under
+  the one it names.
+- **The lookup**: a C or C++ term's named type is found among its own dialect's domains, then among its holder's ABI's.
+  The holder is found from the term by its owners, the term's record owned by its parent's, up to the reference object
+  that holds the root (`Terms.holder_of`, new *(agent)*), its store as `Proxies.store_of` gives it; a dialect's domains
+  are read by name through `Framework.Domains.domains(dialect)`, new beside `operations`, which SystemVerilog's lookup
+  reads too, in place of its own scan of the entries (the stage's group 2 found it missing).
+- **What is refused**, each by name *(agent)*: a type the dialect does not define, whose holder names no ABI, "'int' is
+  not a type C defines, and its expression names no ABI"; one neither defines, "'int' is not a type C or AMD64
+  defines" (the ABI's `define` has not run). A lone term is refused by mbse-schemas' `TypeError`, as below.
+- **The ABI dialects declare the link** *(agent)*: mbse-schemas refuses a link filled by an object whose schema
+  declares no adjacency to the relation, so each ABI dialect's schema declares an anonymous adjacency to `HasAbi`
+  through `abi`, and a holder naming as its ABI a dialect that is not one (C's, Python3's) is refused by validation.
+- **Not `Uses`**: it records which ABI a holder's terms are read under, not which dialects a dialect uses, as the user
+  settled (Decided, P); so it gives no reason to reinstate `Uses`.
+
+**What reads the stored domains** (Decided, K):
+
+- **The tables go**: C's `TYPES` and its constants (`Bool`, `Int`, `Double`, `UnsignedInt`, `Long`, `UnsignedLong`),
+  and SystemVerilog's `TYPES` and its (`Real`, `Integer`, `Bit`, `Longint`). Every named type evaluation, inference and
+  validation use is a stored domain found by its name, through the term's holder: a C term's among C's domains and its
+  holder's ABI's, a C++ term's among C++'s and its holder's ABI's (above), a SystemVerilog term's among SystemVerilog's.
+  Its width, signedness and format are read by `Framework.Domains.kind_of` and `properties`, and the working value the
+  arithmetic computes on, a `CType` (`SvType`), is built of them, named by the domain's `Defines` name, and keeping the
+  domain it was read from, so that a rule reaches the store for a type no operand carries (C's promotions' `int`,
+  SystemVerilog's `real` for a `shortreal` among integrals) *(agent)*.
+- **Literals.** Typing a C literal by its suffix and base looks the type up among the stored domains, the tables of
+  which names a suffix allows (`_DECIMAL`, `_OTHER`, `_FLOATING`, `_EXTENDED`, `_ENCODINGS`) staying the rule, as C's
+  standard gives it (Decided, 5); its range check reads the stored domain's `least` and `greatest` (Proposed, 5), the
+  messages unchanged. A constant's type by its value (`of`: `int`, `long` or `unsigned long`, `double`, `bool`) is a
+  lookup too, by name, as SystemVerilog's `of` gives a name. Inference types a constant through its kind's `typed`,
+  whose record reaches the store, since `domain_of` takes a value alone (the stage's group 2 found it so) *(agent)*.
+- **Casts and promotions**: a cast's target (`arithmetic(names)`, then the stored domain of that name), `int` for the
+  promotions, `size_t` for `sizeof` and `alignof`, `bool` for a comparison; SystemVerilog's casts (`int'(x)`) and
+  `$bits`. The rules stay code: the promotions and usual arithmetic conversions over the working values (Decided, 2).
+  A result whose type equals several stored domains is named as today, by the first of C's names in the order its
+  standard lists them (`int` before `int32_t`, `long` before `int64_t`), a list of names, not of types *(agent)*.
+- **A lone term is refused**: C's, C++'s and SystemVerilog's evaluation, inference and validation of a term that reads
+  a named type need it held in a store where the dialect's `define` (and its holder's ABI's) has run, as Patterns'
+  validation does since stage 2; a lone term is refused by mbse-schemas' `TypeError`, "the value does not belong to a
+  store". A store where the `define` has not run holds no such domain, and a type it names is refused by name (above;
+  SystemVerilog's "'int' is not a type SystemVerilog defines", as stage 2's "'f' is not an operation Patterns defines")
+  *(agent)*. Only what reads a named type reaches the store: a term that reads none (SystemVerilog's sized vectors) is
+  read alone as before; in C, by Q, nearly every term reads one (`5` is an `int`, the ABI's).
+- The other dialects' code domains (Python3's `Int`, TypeScript5's `Number`, MATLAB's `Double`, ...) are inference's,
+  `OfTypes`, as Patterns' natives became in stage 2, and stay, marked CAP-232's to replace *(agent)*: their evaluators
+  compute on natives, and read no domain.
+
+**Install order and `Uses`.** C, C++, the ABI dialects, SystemVerilog, Python3, TypeScript5, MATLAB and Excel use the
+standard dialects' kinds, so their installs and defines run after the standard dialects', as every caller's list has it
+(Decided, I); a store installs the ABI dialects it needs (Decided, "One dialect per ABI"), and its C and C++ holders
+name the one each is read under (Decided, P), which is not `Uses`.
+
+**Tests and corpus**, under their IDs in both languages: a DOM case per group, DOM-19 (C's, C++'s and the ABI
+dialects' stored domains, their kinds, properties and schemas, and a holder's ABI), DOM-20 (SystemVerilog's) and DOM-21
+(Python3's, TypeScript5's, MATLAB's and Excel's); DOM-17's and DOM-18's lists follow; DOM-03, DOM-05, EXP-06 and the
+corpus's `domains` case keep `state` and `mode` in ISO/IEC 11404's singleton (Decided, R); DIA-11, DIA-12,
+DIA-24 and the SystemVerilog cases where literal typing, ranges, casts and evaluation read the store, through a holder
+naming its ABI; DOM-10 to DOM-12 `decimal32` and a format by its parameters; FRM-01 each dialect's kinds, the new
+dialects and `HasAbi`. The corpus gains a case per dialect's stored domains, its singleton written as one document as
+the `domains` case is (`c_domains`, `cpp_domains`, `amd64_domains`, `aapcs64_domains`, `systemverilog_domains`,
+`python3_domains`, `typescript5_domains`, `matlab_domains`, `excel_domains`) *(agent)*. A dialect's singleton written
+as one document holds its `Defines` entries, each its name and a reference to its domain, not the domains' kinds, so
+the corpus pins each dialect's domains' names and order across the languages, byte for byte, and CONF-04 each one's
+kind as read back; the hand-populated properties are pinned in each language by the DOM cases' tables (DOM-17 to
+DOM-21), the same values under the same IDs in both (mbse-basis
+[PRI-038: the same cases in both languages](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-038))
+*(agent)*. The API's items: Settled in domains as data's stage 3, 131 onward.
+
+**The build, partitioned**, in the order the record gives, each group by an agent owning its dialects' modules in both
+languages, on this branch: (1) C, C++ and the two ABI dialects (`C/`, `Cpp/`, `SystemV/`, `Arm/`, and `Ieee754`'s and
+IEEE 754's `decimal32`, `width` and formats by their parameters, and the framework's `HasAbi`, `holder_of` and
+`domains`), after P and Q; (2) SystemVerilog; (3) Python3, TypeScript5, MATLAB and Excel. The shared files (the corpus,
+the suites' notebooks, API.md, this proposal, the test plans, the skill, the toolkit) are written by the coordinating
+agent, a group's cases handed to it.
+
+**Found while building**, each taken the simplest way consistent with the record, *(agent)*, for review (API, 131
+onward):
+
+- **Inference has no store where a constant is typed**: `Terms.Dialect`'s `domain_of(value)` takes a value alone, so
+  SystemVerilog and C type a constant through their `literal` kind's `typed(record)`, whose record reaches the store,
+  and `domain_of` gives `Anything` for a constant no type holds; no framework change was needed.
+- **A rule needs a type no operand carries**: SystemVerilog's `common` gives `real` for a `shortreal` among integrals,
+  C's promotions `int` of two `char`s. A working type keeps the stored domain it was read from (`SvType.domain`,
+  `CType`'s), compared by nothing, through whose store the rule reads the type it needs.
+- **`===`'s `bit`**: its signature keeps an unnamed 1-bit 2-state vector; the `binary` kind's `typed` names it `bit`
+  from the store, so inference's result is unchanged.
+- **Only what reads a named type reaches the store**: SystemVerilog's validation (a cast naming a type), inference (a
+  constant, a cast, `===`) and evaluation (wherever it computes in a named type) each reach it, and a lone term that
+  reads none (`4'b1010 & 4'b0110`) is read as before; in practice an unsized constant is an `integer`, so evaluation
+  nearly always does.
+- **A cast's refusal** is the lookup's: `'word' is not a type SystemVerilog defines`, for a name no domain has and a
+  store where the define has not run alike, replacing "a cast's type must be a built-in type, signed or unsigned".
+- **`Framework.Domains.domains(dialect)`** was missing, as `operations` is not; it is added, and SystemVerilog's,
+  C's and C++'s lookups read it (Decided, "The links between dialects": for the user's review).
+- **The corpus's `systemverilog` case needs SystemVerilog's `define`**, its `byte'(...)` cast read from the store by
+  CONF-04; the corpus's store runs every dialect's `define`.
+- **The skill's install list** gains each dialect's `define` whose evaluation, inference or validation reads its
+  domains, and the ABI dialects'.
+- **An Excel error's schema narrows `str`**, its value its code, as Excel's evaluator holds one; the kinds MATLAB's
+  `string` and Excel's `text` are their dialects' own, UTF-16 code units, MATLAB's install so gaining its union of
+  kinds.
+- **Group 1 (C, C++ and the ABI dialects)**, each *(agent)* but the three findings (API, 131 to 140):
+  - A schema's and a symbol's name drop a type's leading `_` (`Expressions.C.Expressions.Float16`, `Decimal32`;
+    AMD64's `Float32x`): mbse-schemas refuses a symbol beginning with `_`, reading it as a private member's; the
+    `Defines` name keeps it (`_Float16`).
+  - C's and C++'s domains are written in the order of the design's tables.
+  - A working `CType` keeps `types`, the holder's lookup, beside its `domain`: a type of C's own (`int8_t`) cannot reach
+    the ABI through its domain, and the promotions need the ABI's `int`.
+  - A lookup's failure is a problem in validation, and raised in inference and evaluation.
+  - A cast to a single identifier neither dialect defines is a program's own type, not arithmetic, once the holder
+    names an ABI; a name C's keywords spell must be defined.
+  - A floating suffix the language does not write gives `Anything` (it gave an `OfTypes` of the suffix);
+    `_Float128x`, which neither ABI provides, is refused by name.
+  - A character literal with an encoding prefix (`L`, `u`, `U`, C++'s `u8`) is typed by the ABI's types, and
+    evaluates; a prefix no language has stays an `OfTypes`.
+  - A decimal literal's value is held as the binary64 float its literal holds (`0.1df` is `0.1000000`).
+  - `NULLPTR` stays a code token: nothing reads `nullptr_t` arithmetically.
+  - The suites' `term` helpers name AMD64 by default, and 07's names it on every holder.
+  - Tutorial 8 names AMD64, and gains a step showing `(char)200` under both ABIs.
+  - **Found: `HasAbi`'s unique clause was inverted.** In mbse-schemas `unique(S)` says S is determined by the other
+    links, so the design's `unique [expression]` let one holder name two ABIs; it is `uniques("abi")`, in both
+    languages, a holder naming one ABI at most (API, 138).
+  - **Found: `std::bfloat16_t` and `std::float16_t` mix by width.** Both are 16 bits, and the usual arithmetic
+    conversions pick a floating type by width, so mixing them takes the first operand's type, where C++ refuses it,
+    their conversion ranks unordered. Left as built: the rules are CAP-232's to replace (Decided, 2).
+  - **Found: validating the AMD64 singleton does not reach its `HasAbi` entries**, its adjacency to `HasAbi` being
+    anonymous: a holder's validation checks its `abi`, the ABI dialect's does not list the holders naming it.
+
+### Questions for the user (stage 3)
+
+K to R are decided (Decided, "On stage 3's design"). R, for the record:
+
+- **R. A domain owned by no dialect** (Decided, "On stage 3's design", the corpus's and the tests' own domains). An
+  `Expressions.Framework.Domain` cannot be written without an owner: its adjacency `dialect`, through `Defines`, is its
+  owner, and mbse-schemas 0.26.10 refuses an object of an owned schema that has none ("a 'Expressions.Framework.Domain'
+  needs an owner through 'dialect': give it one, since no singleton can be", checked in Python on this branch). The
+  reading interface would take one (`name_of` gives None where no dialect defines a domain). Nothing is worked around.
+  (a) **Keep them in ISO/IEC 11404's singleton**, as today, the record noting why: no model change.
+  (b) **A domain no dialect defines is a counted object**: `Domain` gains no owner, its `dialect` an adjacency that
+  identifies but does not own; a dialect's domains are then counted objects too, and lose their paths
+  (`dialect.domains({"name": "octet"})` as a path, a document's reference to a domain of another, the corpus's every
+  domain case), which mbse-basis
+  [CAP-133: no durable references to counted objects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-133.md)
+  forbids holding.
+  (c) **mbse-schemas lets an owner adjacency be optional**, an object of the schema owned where it has an owning
+  entry and counted where it has none: a sibling's change, through a workspace, before this stage's corpus.
+  (d) **No invented fixtures**, the user's option: the cases exercise `packed` with what a language defines, Excel's
+  error values packed into their `ERROR.TYPE` codes.
+  Decided (a): (d) was the user's preference where Microsoft's documentation gives the codes, and it gives eight of
+  Excel's fifteen (Decided, "On stage 3's design", R).
 
 ## Risks
 
 - **Cost**: stores hold hundreds more objects (every dialect's types), and installs grow; suites build stores often.
-- **Equivalence**: the hand-populated properties written once, as data each dialect's define writes in both
-  languages, byte-identical on the wire.
+- **Equivalence**: the hand-populated properties are written twice, by each dialect's define in each language, and
+  only the DOM cases' tables, the same in both, pin that they agree; the corpus's data cases pin each dialect's domains'
+  names and order, not their properties (Stage 3's design, Tests and corpus).
 - **Hand-populated properties drift**: what today's dataclasses compute (a domain's bounds, a result's domain) is
   written by hand until constraint resolution; the suites pin each against today's behavior, and a property that
   disagrees with its parameters is a constraint a later resolver reports.

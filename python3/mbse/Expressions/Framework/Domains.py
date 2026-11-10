@@ -9,6 +9,8 @@ The reading interface over stored domains and operations, each a `Readers.OfObje
 - `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by name;
   a container as a tuple of its elements.
 - `name_of(domain)`: the name its dialect defines it by (its `Defines` entry's), or None.
+- `domains(dialect)`: a dialect's domains by name, in the order the store holds its entries, each its
+  `Expressions.Framework.Domain`, as a dialect's lookup of a type by its name reads them.
 - `operations(dialect)`: a dialect's operations by name, in the order the store holds its entries, each its
   `Schemas.OfExpression`; `arity(operation)`: the number of its pattern's variables, its arguments.
 
@@ -33,7 +35,7 @@ from mbse.Schemas.Framework import Readers
 from . import Objects
 
 __all__ = [
-    "kind_of", "properties", "name_of", "operations", "arity",
+    "kind_of", "properties", "name_of", "domains", "operations", "arity",
     "Domain", "Signature", "OfTypes", "OfValues", "OfUnion", "Anything", "Function", "Same", "Overloaded", "Opaque",
     "Either", "overlaps",
 ]
@@ -80,6 +82,12 @@ def name_of(domain: Readers.OfObject) -> str | None:
     """The name a stored domain's dialect defines it by, its `Expressions.Framework.Defines` entry's; None where no
     dialect defines it."""
     return next((str(entry.values["name"]) for entry in Objects.entries(domain, "dialect")), None)
+
+
+def domains(dialect: Readers.OfObject) -> dict[str, Readers.OfObject]:
+    """A dialect's domains by name (`Expressions.Framework.Defines`), each its `Expressions.Framework.Domain`, in the
+    order the store holds the entries: as its `define` wrote them, or, read back from a snapshot, by name."""
+    return {str(entry.values["name"]): entry.targets["domain"] for entry in Objects.entries(dialect, "domains")}
 
 
 def operations(dialect: Readers.OfObject) -> dict[str, Readers.OfObject]:

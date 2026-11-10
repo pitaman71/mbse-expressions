@@ -20,7 +20,7 @@
  * - `concatenation` (`{a, b}`) and `replication` (`{n{a}}`).
  * - `select` (`a[i]`) and `range` (`a[msb:lsb]`), of a vector's bits or an array's elements.
  * - `inside`: `value inside {items}`, whose items are values or `span`s (`[low:high]`).
- * - `cast`: `type'(x)`, to a built-in type, `signed` or `unsigned`, or `width'(x)`.
+ * - `cast`: `type'(x)`, to a type SystemVerilog defines, `signed` or `unsigned`, or `width'(x)`.
  * - `member`: `object.name`.
  * - `call`: a system function (`$signed`, `$unsigned`, `$clog2`, `$bits`, `$countones`, `$onehot`, `$onehot0`,
  *   `$isunknown`) or a function the scope provides, named by its `callable`: the framework's `call`, read as this
@@ -34,25 +34,35 @@
  * `vector`, ...) write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an
  * expression as SystemVerilog source, with its precedence.
  *
- * Its kind of domain, the branch of its union `Expressions.SystemVerilog.Expressions.DomainKind`, which `install` adds
- * to the framework's `Expressions.Framework.DomainKind` as the branch `systemverilog`: `logic`
- * (`Expressions.SystemVerilog.Expressions.OfLogic`), IEEE 1800's 4-state integral, of a `width` in bits, `signed` or
- * not; inferred (populated by hand until constraint resolution computes them) `least` and `greatest`, of its known values,
- * and `ordered`. Its domains are stage 3's of the domains-as-data proposal.
+ * Its kinds of domain, the branches of its union `Expressions.SystemVerilog.Expressions.DomainKind`, which `install`
+ * adds to the framework's `Expressions.Framework.DomainKind` as the branch `systemverilog`: IEEE 1800's integral types,
+ * `logic` (`Expressions.SystemVerilog.Expressions.OfLogic`), 4-state, and `bit` (`OfBit`), 2-state, each of a `width` in
+ * bits, `signed` or not; inferred (populated by hand until constraint resolution computes them) `least` and `greatest`,
+ * of its known values, and `ordered`. `install` also adds its 2-state domains' schemas, each an `OfAny` of the scalar it
+ * narrows (`Expressions.SystemVerilog.Expressions.int`, of ints; `real` and `shortreal`, of floats); a 4-state domain has
+ * none, since no basic scalar holds x or z. `define` writes its domains, IEEE 1800's built-in types, owned by name:
+ * `logic`, `reg`, `integer` and `time` of the kind `logic`; `bit`, `byte`, `shortint`, `int` and `longint` of `bit`;
+ * `real` and `shortreal` of IEEE 754's `ieee754`, `binary64` and `binary32`. Each name is its own domain: `reg` is
+ * `logic`'s equal, not its synonym.
+ *
+ * What reads a named type reads its stored domain, through the store of the term's holder (`Proxies.store_of`), by
+ * `Domains.named`: validation, a cast's type (`int'(x)`), which must be a type SystemVerilog defines in that store;
+ * inference, a constant's type (`integer`, `longint`, `real`), a cast's and `===`'s (`bit`); and evaluation (see
+ * `Evaluators`). A lone term reaches no store: reading a type, it is refused (mbse-schemas' TypeError, "the value does
+ * not belong to a store"), and a term that reads none, a sized vector's, is read as before.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Repr } from "@mbse/schemas/Framework";
+import { Proxies, Repr } from "@mbse/schemas/Framework";
 
-import type * as D from "../../Framework/Domains.js";
+import * as D from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
 
 const { repr, typeName } = Repr;
 
-/** What a cast may name: a built-in type, or a signedness. */
-export const CASTS: readonly string[] = [...Domains.TYPES.keys(), "signed", "unsigned"];
+const SIGNEDNESS = ["signed", "unsigned"]; // what a cast may name besides a type SystemVerilog defines
 /** The system functions. */
 export const SYSTEM: readonly string[] = ["$signed", "$unsigned", "$clog2", "$bits", "$countones", "$onehot", "$onehot0", "$isunknown"];
 /** The array reduction methods, which may have a `with` clause. */
@@ -65,17 +75,20 @@ export const BASES: Record<string, number> = { b: 1, o: 3, h: 4, d: 0 };
  * and its dialect's schema, whose singleton is `Expressions.SystemVerilog.Expressions`: run after `Framework.install`, in a
  * transaction of its own; run again, it writes nothing. Its `literal`, `variable` and `call` are the framework's.
  * Its holder, `Expressions.SystemVerilog.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root`
- * narrowed to its `Term`. */
+ * narrowed to its `Term`. Its kinds of domain, `logic` and `bit`, and its 2-state domains' schemas; its domains `define`
+ * writes after it. Run after IEEE 754's install, whose kind its reals are of. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.SystemVerilog.Expressions/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, OfLogic: S.OfObject, // Kinds: the framework's
+    .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, OfLogic: S.OfObject, OfBit: S.OfObject, // Kinds: the framework's
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
       Vector: S.OfObject, Unary: S.OfObject, Binary: S.OfObject, Conditional: S.OfObject,
       Concatenation: S.OfObject, Replication: S.OfObject, Select: S.OfObject, Range: S.OfObject,
       Inside: S.OfObject, Span: S.OfObject, Cast: S.OfObject, Member: S.OfObject,
-      Method: S.OfObject, Iterate: S.OfObject }) // FrameworkTerm: the framework's union, by name
+      Method: S.OfObject, Iterate: S.OfObject, // FrameworkTerm: the framework's union, by name
+      bit: S.OfAny, byte: S.OfAny, shortint: S.OfAny, int: S.OfAny, longint: S.OfAny,
+      real: S.OfAny, shortreal: S.OfAny })
     .spec([
       // its dialect: the singleton `Expressions.SystemVerilog.Expressions`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.SystemVerilog.Expressions.Dialect").ref(true).singleton("Expressions.SystemVerilog.Expressions").adjacencies({
@@ -138,17 +151,82 @@ export function install(txn: any): any {
       // to its `Term`
       (_: any) => _.Expression.name("Expressions.SystemVerilog.Expressions.Expression").ref(true).refines([Framework.Expression]).properties({
         root: _.Term }),
-      // --- its kind of domain: IEEE 1800's 4-state integral, its parameters, then what follows from them ---
+      // --- its kinds of domain: IEEE 1800's integrals, 4-state and 2-state, their parameters, then what follows ---
       (_: any) => _.OfLogic.name("Expressions.SystemVerilog.Expressions.OfLogic").properties({
         width: S.OfInt, signed: S.OfBool,
         least: S.OfInt, greatest: S.OfInt, ordered: S.OfBool }), // inferred, of its known values
+      (_: any) => _.OfBit.name("Expressions.SystemVerilog.Expressions.OfBit").properties({
+        width: S.OfInt, signed: S.OfBool,
+        least: S.OfInt, greatest: S.OfInt, ordered: S.OfBool }), // inferred
       (_: any) => _.DomainKind.name("Expressions.SystemVerilog.Expressions.DomainKind").branches([
         (t: any) => t.name("logic").schema([_.OfLogic]),
+        (t: any) => t.name("bit").schema([_.OfBit]),
       ]),
       (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
         (t: any) => t.name("systemverilog").schema([_.DomainKind])]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("systemverilog").schema([_.Term])]),
+      // --- its 2-state domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its
+      // domain; a 4-state domain has none: no basic scalar holds x or z ---
+      (_: any) => _.bit.name("Expressions.SystemVerilog.Expressions.bit").schemas([S.OfInt]),
+      (_: any) => _.byte.name("Expressions.SystemVerilog.Expressions.byte").schemas([S.OfInt]),
+      (_: any) => _.shortint.name("Expressions.SystemVerilog.Expressions.shortint").schemas([S.OfInt]),
+      (_: any) => _.int.name("Expressions.SystemVerilog.Expressions.int").schemas([S.OfInt]),
+      (_: any) => _.longint.name("Expressions.SystemVerilog.Expressions.longint").schemas([S.OfInt]),
+      (_: any) => _.real.name("Expressions.SystemVerilog.Expressions.real").schemas([S.OfFloat]),
+      (_: any) => _.shortreal.name("Expressions.SystemVerilog.Expressions.shortreal").schemas([S.OfFloat]),
+    ])]))]);
+}
+
+/** SystemVerilog's dialect as data: the singleton `Expressions.SystemVerilog.Expressions` owning its domains, IEEE
+ * 1800's built-in types, by name (`domains`, through `Expressions.Framework.Defines`), each with its parameters and
+ * its inferred properties, and each 2-state one related to its schema (`Expressions.SystemVerilog.Expressions.int`)
+ * by `Expressions.Framework.HasDomain`. Run after `install`, in a transaction of its own; run again, it writes
+ * nothing. Its frame binds the dialect (`dialect`) and each domain by its name:
+ * `store.transaction(SystemVerilog.define)[0].get("int")`. */
+export function define(txn: any): any {
+  const [SV, Domain] = [txn.Expressions.SystemVerilog.Expressions, txn.Expressions.Framework.Domain];
+  return txn.uid("mbse.Expressions.SystemVerilog.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({ dialect: SV.Dialect, logic: Domain, reg: Domain, integer: Domain, time: Domain,
+      bit: Domain, byte: Domain, shortint: Domain, int: Domain, longint: Domain,
+      real: Domain, shortreal: Domain })
+    .spec([
+      (_: any) => _.dialect.domains({
+        logic: (e: any) => e.domain(_.logic), reg: (e: any) => e.domain(_.reg),
+        integer: (e: any) => e.domain(_.integer), time: (e: any) => e.domain(_.time),
+        bit: (e: any) => e.domain(_.bit), byte: (e: any) => e.domain(_.byte),
+        shortint: (e: any) => e.domain(_.shortint), int: (e: any) => e.domain(_.int),
+        longint: (e: any) => e.domain(_.longint),
+        real: (e: any) => e.domain(_.real), shortreal: (e: any) => e.domain(_.shortreal),
+      }),
+      // 4-state, with no schema: least and greatest of its known values; "logic and reg denote the same type"
+      // (IEEE 1800-2023), each its own domain, of equal properties: no synonyms
+      (_: any) => _.logic.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.systemverilog((v: any) => v.logic(
+        (d: any) => d.width(1n).signed(false).least(0n).greatest(1n).ordered(true)))))),
+      (_: any) => _.reg.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.systemverilog((v: any) => v.logic(
+        (d: any) => d.width(1n).signed(false).least(0n).greatest(1n).ordered(true)))))), // logic's equal
+      (_: any) => _.integer.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.systemverilog((v: any) => v.logic(
+        (d: any) => d.width(32n).signed(true).least(-2147483648n).greatest(2147483647n).ordered(true)))))),
+      (_: any) => _.time.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.systemverilog((v: any) => v.logic(
+        (d: any) => d.width(64n).signed(false).least(0n).greatest(18446744073709551615n).ordered(true)))))),
+      // 2-state
+      (_: any) => _.bit.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.systemverilog((v: any) => v.bit(
+        (d: any) => d.width(1n).signed(false).least(0n).greatest(1n).ordered(true)))))).schema([SV.bit]),
+      (_: any) => _.byte.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.systemverilog((v: any) => v.bit(
+        (d: any) => d.width(8n).signed(true).least(-128n).greatest(127n).ordered(true)))))).schema([SV.byte]),
+      (_: any) => _.shortint.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.systemverilog((v: any) => v.bit(
+        (d: any) => d.width(16n).signed(true).least(-32768n).greatest(32767n).ordered(true)))))).schema([SV.shortint]),
+      (_: any) => _.int.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.systemverilog((v: any) => v.bit(
+        (d: any) => d.width(32n).signed(true).least(-2147483648n).greatest(2147483647n).ordered(true)))))).schema([SV.int]),
+      (_: any) => _.longint.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.systemverilog((v: any) => v.bit(
+        (d: any) => d.width(64n).signed(true).least(-9223372036854775808n).greatest(9223372036854775807n).ordered(true)))))).schema([SV.longint]),
+      // IEEE 754's, as its own binary64 and binary32 are
+      (_: any) => _.real.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n).radix(2n).precision(53n).emax(1023n).ordered(
+          true)))))).schema([SV.real]),
+      (_: any) => _.shortreal.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary32").rounding("roundTiesToEven").width(32n).radix(2n).precision(24n).emax(127n).ordered(
+          true)))))).schema([SV.shortreal]),
     ])]))]);
 }
 
@@ -175,16 +253,45 @@ function vectorTyped(record: any): D.Domain | null {
   return Domains.vector(attributes.get("value").length, Boolean(attributes.get("signed")));
 }
 
+/** A cast names a positive width, a signedness, or a type SystemVerilog defines in the store of the term's holder. */
 function castCheck(record: any): string[] {
   const attributes = F.attributesOf(record);
   const [type, width] = [attributes.get("type") ?? null, attributes.get("width") ?? null];
   if ((type === null) === (width === null)) return ["a cast names a type or a width, not both nor neither"];
   if (width !== null) return width > 0n ? [] : [`a cast's width must be positive, got ${width}`];
-  return CASTS.includes(type) ? [] : [`a cast's type must be a built-in type, signed or unsigned, got ${repr(type)}`];
+  if (!SIGNEDNESS.includes(type)) {
+    const store = Proxies.store_of(record);
+    try {
+      Domains.named(store, type);
+    } catch (error) { // a ValueError: the store defines no such type
+      return [(error as Error).message];
+    }
+  }
+  return [];
 }
 
+/** A cast to a type: that type, read from the store of the term's holder; one to a width or a signedness is sized by
+ * its operand. */
 function castTyped(record: any): D.Domain | null {
-  return Domains.TYPES.get(F.attributesOf(record).get("type")) ?? null;
+  const type = F.attributesOf(record).get("type") ?? null;
+  return type === null || SIGNEDNESS.includes(type) ? null : Domains.named(Proxies.store_of(record), type);
+}
+
+/** A constant's type, read from the store of the term's holder; null where no type holds it (a string). */
+function literalTyped(record: any): D.Domain | null {
+  const name = Domains.of(F.attributesOf(record).get("value"));
+  return name === null ? null : Domains.named(Proxies.store_of(record), name);
+}
+
+/** `===`'s and `!==`'s type, `bit`, read from the store of the term's holder; the others' are their operands'. */
+function binaryTyped(record: any): D.Domain | null {
+  const operator = F.attributesOf(record).get("operator");
+  return operator === "===" || operator === "!==" ? Domains.named(Proxies.store_of(record), "bit") : null;
+}
+
+/** The domain of a constant no type holds: a string, or an int beyond 64 bits (`Kind.typed` reads the others'). */
+function untyped(_value: unknown): D.Domain {
+  return D.Anything;
 }
 
 function methodCheck(record: any): string[] {
@@ -205,11 +312,12 @@ function native(value: unknown): Writer | null {
 
 /** The SystemVerilog dialect: its kinds, as the framework reads them. */
 export const DIALECT = new F.Dialect("SystemVerilog.Expressions", {
-  literal: new F.Kind(F.LITERAL, { check: literalCheck }),
+  literal: new F.Kind(F.LITERAL, { check: literalCheck, typed: literalTyped }),
   vector: new F.Kind(F.LITERAL, { check: vectorCheck, typed: vectorTyped }),
   variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
   unary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.UNARY, required: ["operator"] }),
-  binary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"] }),
+  binary: new F.Kind(F.APPLICATION, { operator: "operator", vocabulary: Domains.BINARY, required: ["operator"],
+    typed: binaryTyped }),
   conditional: new F.Kind(F.APPLICATION, { signature: Domains.CONDITIONAL }),
   concatenation: new F.Kind(F.APPLICATION, { signature: Domains.CONCATENATION }),
   replication: new F.Kind(F.APPLICATION, { signature: Domains.REPLICATION }),
@@ -223,7 +331,7 @@ export const DIALECT = new F.Dialect("SystemVerilog.Expressions", {
   method: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.METHOD, required: ["name"], check: methodCheck }),
   iterate: new F.Kind(F.QUANTIFIER, { operator: "method", signature: Domains.ITERATE, required: ["name", "method"],
     check: iterateCheck }),
-}, { domain_of: Domains.of, literal: native });
+}, { domain_of: untyped, literal: native });
 
 // --- Writers ---
 

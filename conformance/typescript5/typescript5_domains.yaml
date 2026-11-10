@@ -1,0 +1,146 @@
+mutations:
+- upsert:
+    exists:
+    - symbols:
+        '0':
+          schema:
+          - $ref:
+              singleton: '.'
+              next:
+                entry:
+                  i: schemas
+                  o: ''
+                  properties:
+                    name: Expressions
+                  next:
+                    entry:
+                      i: schemas
+                      o: ''
+                      properties:
+                        name: TypeScript
+                      next:
+                        entry:
+                          i: schemas
+                          o: ''
+                          properties:
+                            name: TypeScript5
+                          next:
+                            entry:
+                              i: schemas
+                              o: ''
+                              properties:
+                                name: Dialect
+                              next:
+                                target: {}
+      spec:
+      - '0':
+        - as_adjacency:
+            name: domains
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.TypeScript.TypeScript5
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: bigint
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: bigint
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.TypeScript.TypeScript5
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: boolean
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: boolean
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.TypeScript.TypeScript5
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: 'null'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'null'
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.TypeScript.TypeScript5
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: number
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: number
+                - mutations:
+                  - as_link:
+                      name: domain
+                      mutations:
+                      - set:
+                          ref:
+                            path:
+                              singleton: Expressions.TypeScript.TypeScript5
+                              next:
+                                entry:
+                                  i: domains
+                                  o: dialect
+                                  properties:
+                                    name: string
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: string

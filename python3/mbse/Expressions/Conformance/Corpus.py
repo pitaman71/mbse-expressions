@@ -1,11 +1,12 @@
 """The conformance corpus: the same cases, built statement for statement in every implementation.
 
-`build()` returns `{case: (root schema, root, store)}`: each case but `domains` a term value of
+`build()` returns `{case: (root schema, root, store)}`: each case but the data cases a term value of
 `Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
-dialect's, written nested. `DIALECTS` names the dialect that reads each case other than Patterns'. The `domains` case
-is data: ISO/IEC 11404's dialect, the singleton `Expressions.ISOIEC11404.Expressions`
-(`Expressions.ISOIEC11404.Expressions.Dialect`), owning its domains by name, each kind its dialect's then its own, an
-enum and a packed one among them, written as one document. The `typescript5` case
+dialect's, and each dialect's `define`, written nested. `DIALECTS` names the dialect that reads each case other than
+Patterns'. The `domains` case and the `<dialect>_domains` cases are data (`DOMAINS`): each a dialect's singleton, owning
+its domains by name, each kind its dialect's then its own, written as one document; `domains` is ISO/IEC 11404's
+dialect, the singleton `Expressions.ISOIEC11404.Expressions` (`Expressions.ISOIEC11404.Expressions.Dialect`), an enum
+and a packed one among its domains. The `typescript5` case
 is a TypeScript5 term of every kind, written through the builders. The `invalid` case is a Python3 term holding invalid
 syntax and literals with their spelling. Each implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
@@ -26,6 +27,8 @@ from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
 from mbse.Expressions.IEEE754 import Expressions as IEEE754
 from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
 from mbse.Expressions.Python import Python3
+from mbse.Expressions.Arm import AAPCS64
+from mbse.Expressions.SystemV import AMD64
 from mbse.Expressions.Unicode import Expressions as Unicode
 from mbse.Expressions.SystemVerilog import Expressions as SystemVerilog
 from mbse.Expressions.TypeScript import TypeScript5
@@ -41,11 +44,20 @@ from mbse.Expressions.TypeScript.TypeScript5 import Expressions as TS
 from mbse.Schemas.Framework import Builders
 
 CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp", "systemverilog",
-         "typescript5", "invalid"]
+         "typescript5", "invalid", "systemverilog_domains", "python3_domains", "typescript5_domains", "matlab_domains",
+         "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains"]
 
 DIALECTS = {"python3": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex": L.DIALECT, "c": CE.DIALECT,
             "cpp": CPP.DIALECT, "systemverilog": SV.DIALECT, "typescript5": TS.DIALECT, "invalid": P.DIALECT}
 """The dialect that reads each case, where it is not Patterns."""
+
+DOMAINS = {"domains": "Expressions.ISOIEC11404.Expressions", "systemverilog_domains": "Expressions.SystemVerilog.Expressions",
+           "python3_domains": "Expressions.Python.Python3", "typescript5_domains": "Expressions.TypeScript.TypeScript5",
+           "matlab_domains": "Expressions.MATLAB.Expressions", "excel_domains": "Expressions.Excel.Expressions",
+           "c_domains": "Expressions.C.Expressions", "cpp_domains": "Expressions.Cpp.Expressions",
+           "amd64_domains": "Expressions.SystemV.AMD64", "aapcs64_domains": "Expressions.Arm.AAPCS64"}
+"""The cases that are data, not terms: each a dialect's singleton, by its path, written as one document of its schema,
+the path's `Dialect`."""
 
 def build():
     E = Expressions
@@ -62,9 +74,15 @@ def build():
     store.transaction(Latex.install)
     store.transaction(C.install)
     store.transaction(Cpp.install)
+    store.transaction(AMD64.install)  # the ABIs a C or C++ term's holder names
+    store.transaction(AAPCS64.install)
     store.transaction(SystemVerilog.install)
     store.transaction(TypeScript5.install)
     defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
+    stored = {case: store.transaction(module.define)[0]["dialect"] for case, module in [  # each dialect's stored domains
+        ("systemverilog_domains", SystemVerilog), ("python3_domains", Python3), ("typescript5_domains", TypeScript5),
+        ("matlab_domains", Matlab), ("excel_domains", Excel), ("c_domains", C), ("cpp_domains", Cpp),
+        ("amd64_domains", AMD64), ("aapcs64_domains", AAPCS64)]}
 
     # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
     # added ---
@@ -315,5 +333,7 @@ def build():
             ("collections", collections), ("c", c), ("cpp", cpp), ("systemverilog", systemverilog),
             ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid)]}
     terms["domains"] = defined["dialect"]
-    Term, Dialect = store.registered("Expressions.Framework.Term"), store.registered("Expressions.ISOIEC11404.Expressions.Dialect")
-    return {case: (Dialect if case == "domains" else Term, terms[case], store) for case in CASES}
+    terms.update(stored)
+    Term = store.registered("Expressions.Framework.Term")
+    return {case: (store.registered(f"{DOMAINS[case]}.Dialect") if case in DOMAINS else Term, terms[case], store)
+            for case in CASES}

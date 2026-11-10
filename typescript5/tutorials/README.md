@@ -40,7 +40,7 @@ top to bottom in a fresh kernel. `npm test` also runs every tutorial headless un
 which keeps them in step with the code.
 
 `toolkit.ts` holds the cold chain's schemas (its `install`), `cold_chain()`, a store of them that also holds
-expressions, with the framework's and every dialect's kinds installed, and `show`, which writes an expression as text
+expressions, with the framework's and every dialect's kinds installed, Patterns' operations and C's, C++'s, the ABIs' and SystemVerilog's types defined, and `show`, which writes an expression as text
 (case study 6 explains it).
 
 ## The case studies

@@ -265,7 +265,8 @@ class _Printer:
 
     def generic(self, node: F.Node) -> str:
         associations = [(self.text(a.helpers["type"]) if "type" in a.helpers else "default") + ": "
-                        + self.expression(a.slots["value"], ASSIGNMENT) for a in _nodes(node.helpers.get("associations"))]
+                        + self.expression(a.slots["value"],
+                            ASSIGNMENT) for a in _nodes(node.helpers.get("associations"))]
         return f"_Generic({', '.join([self.operand(node.slots['controlling'], ASSIGNMENT), *associations])})"
 
     def new(self, node: F.Node) -> str:
@@ -447,7 +448,8 @@ class _Printer:
             inside = " ".join(["static"] * bool(attributes.get("static"))
                               + [q.attributes["keyword"] for q in _nodes(node.helpers.get("qualifiers"))])
             size = node.slots["size"]
-            written_size = "*" if attributes.get("star") else self.expression(size, ASSIGNMENT) if size is not None else ""
+            written_size = "*" if attributes.get("star") else self.expression(size,
+                ASSIGNMENT) if size is not None else ""
             inside = inside + " " + written_size if inside and written_size else inside + written_size
             return inner + f"[{inside}]" + self.attributes_after(node)
         written = inner + "(" + ", ".join(self.text(p) for p in _nodes(node.helpers.get("parameters"))) + ")"

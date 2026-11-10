@@ -10,6 +10,8 @@
  * - `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by
  *   name; a container as an array of its elements.
  * - `nameOf(domain)`: the name its dialect defines it by (its `Defines` entry's), or null.
+ * - `domains(dialect)`: a dialect's domains by name, in the order the store holds its entries, each its
+ *   `Expressions.Framework.Domain`, as a dialect's lookup of a type by its name reads them.
  * - `operations(dialect)`: a dialect's operations by name, in the order the store holds its entries, each its
  *   `Schemas.OfExpression`; `arity(operation)`: the number of its pattern's variables, its arguments.
  *
@@ -69,6 +71,13 @@ export function properties(domain: Readers.OfObject): Map<string, unknown> {
 export function nameOf(domain: Readers.OfObject): string | null {
   const [entry] = Objects.entries(domain, "dialect");
   return entry === undefined ? null : entry.values.get("name") as string;
+}
+
+/** A dialect's domains by name (`Expressions.Framework.Defines`), each its `Expressions.Framework.Domain`, in the order
+ * the store holds the entries: as its `define` wrote them, or, read back from a snapshot, by name. */
+export function domains(dialect: Readers.OfObject): Map<string, Readers.OfObject> {
+  return new Map(Objects.entries(dialect, "domains").map(
+    (entry) => [entry.values.get("name") as string, entry.targets.get("domain") as Readers.OfObject]));
 }
 
 /** A dialect's operations by name (`Expressions.Framework.Operates`), each its `Schemas.OfExpression`, in the order the

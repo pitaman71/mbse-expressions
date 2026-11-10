@@ -1,21 +1,21 @@
 """Expressions of the Cpp dialect: every expression of C++, C++17 to C++23, as mbse-programs has them, with the
 sublanguages expressions hold.
 
-The dialect is complete over C++'s expression syntax (mbse-basis
-[CAP-230: the C++ expression dialect](mbse:mbse-basis/docs/capabilities/CAP-230.md), by
-[CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules); C++26's pack indexing,
-reflection, splices, annotations and contracts are outside it. Its terms are values of its `Term`,
-`Expressions.Cpp.Expressions.Term`, the branch `cpp` of `Expressions.Framework.Term`, which `install` defines and adds to
-`Expressions.Framework.Term` by schema extension. Its kinds are mbse-programs' Ccpp expression kinds that C++ has
+The dialect is complete over C++'s expression syntax (mbse-basis [CAP-230: the C++ expression
+dialect](mbse:mbse-basis/docs/capabilities/CAP-230.md), by [CAP-226: complete expression
+dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules); C++26's pack indexing, reflection, splices,
+annotations and contracts are outside it. Its terms are values of its `Term`, `Expressions.Cpp.Expressions.Term`, the
+branch `cpp` of `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema
+extension. Its kinds are mbse-programs' Ccpp expression kinds that C++ has
 (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`), named as `C.Expressions` names them: C++ is not a superset
 of C, so the two are separate dialects, each with a union of its own, and `Cpp` defines its own copy of each kind they
-share (`Expressions.Cpp.Expressions.BinaryExpression`), holding C++'s terms, without what only C has (an array declarator's
-`static`, C's index designators, `_Generic`, compound literals, `typeof`, `_Atomic(type)`, `_BitInt`). Where
-mbse-programs holds a `Name`, Cpp holds its `Name` union (`identifier`, `qualifiedname`, `templateid`,
+share (`Expressions.Cpp.Expressions.BinaryExpression`), holding C++'s terms, without what only C has (an array
+declarator's `static`, C's index designators, `_Generic`, compound literals, `typeof`, `_Atomic(type)`, `_BitInt`).
+Where mbse-programs holds a `Name`, Cpp holds its `Name` union (`identifier`, `qualifiedname`, `templateid`,
 `operatorname`, `conversionname`, `literaloperatorname`, `destructorname`, and, where a name's place holds it, a
 `decltypespecifier`); where it holds an `Identifier` alone, an `Identifier`; where it holds a `str`, a `str`. A term
-carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own literal (`Expressions.Cpp.Expressions.Literal`, also a
-raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
+carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own literal
+(`Expressions.Cpp.Expressions.Literal`, also a raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
 
 - `userdefinedliteral` (`literal`, a `literal`'s value object, and its `suffix`, `10_km`);
 - names: `idexpression`, every name used as an expression, holding its `Name` (`x`, `std::cout`, `f<int>`,
@@ -31,13 +31,13 @@ raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
   `noexceptexpression`, `newexpression`, `deleteexpression`, `throwexpression`, `packexpansion` (`pattern...`).
 
 Its sublanguages are unions of their own: `Expressions.Cpp.Expressions.Type`, a type name (`typeid`), and
-`Expressions.Cpp.Expressions.Pattern`, for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an `identifier`, or
-invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch of every union
-whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does, `Pattern` lists `identifier`,
-`Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a `parameterdeclaration`
-and `Initializer` an `initializerlist`. A type name's and a lambda's parts are helpers, each union named after
-mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`, `Capture`,
-`Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and `AttributeSpecifier`.
+`Expressions.Cpp.Expressions.Pattern`, for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an
+`identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch
+of every union whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does, `Pattern` lists
+`identifier`, `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a
+`parameterdeclaration` and `Initializer` an `initializerlist`. A type name's and a lambda's parts are helpers, each
+union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`,
+`Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and `AttributeSpecifier`.
 
 Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: C++20's kinds, `co_await`,
 `co_yield`, `requires` and designated initializers, C++20 and C++23; an extension none). `DIALECT` reads them
@@ -47,8 +47,12 @@ expression an `idexpression` (`identifier("x")`, and a callee named by a string)
 
 Its kind of domain, the branch of its union `Expressions.Cpp.Expressions.DomainKind`, which `install` adds to the
 framework's `Expressions.Framework.DomainKind` as the branch `cpp`: the token `nullptr_t` (`OfNullptr`), C++'s own, with
-the inferred `ordered`; its domain has no schema, its value a `constant`'s. Its domains are stage 3's of the
-domains-as-data proposal.
+the inferred `ordered`; its domain has no schema, its value a `constant`'s. `install` also adds its domains' schemas
+(`Expressions.Cpp.Expressions.std_float16_t`, a dotted identifier spelling `std::float16_t`), and `define` writes its
+domains, the types C++'s standard fixes (`bool`, `int8_t` to `uint64_t`, `std::float16_t` to `std::float128_t`,
+`std::bfloat16_t`, `nullptr_t`), owned by name. Every other type a C++ term reads (`int`, `char`, `char8_t`, `size_t`,
+`long double`, ...) is its holder's ABI's, as a C term's is, read the same way (see `C.Expressions`): a C++ literal is
+typed by C++'s names, `1.0f16` a `std::float16_t`, `1.0bf16` a `std::bfloat16_t`.
 """
 
 from __future__ import annotations
@@ -60,8 +64,8 @@ from mbse.Expressions.C.Expressions import Domains
 from mbse.Expressions.C.Expressions import Expressions as C
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 
-__all__ = ["install", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal", "identifier",
-           "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
+__all__ = ["install", "define", "DIALECT", "STANDARDS", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal",
+           "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
 
 USERDEFINEDLITERAL, IDEXPRESSION, THISEXPRESSION, LAMBDAEXPRESSION = (
     "userdefinedliteral", "idexpression", "thisexpression", "lambdaexpression")
@@ -92,8 +96,9 @@ case and order) and a floating literal's (`f`, `l`, C++23's extended types' `f16
 def install(txn: Any) -> Any:
     """Cpp's union of its kinds, added to the framework's terms as the branch `cpp`, its own kinds, its sublanguages'
     unions (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
-    `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes nothing.
-    Its holder, `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
+    `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes
+    nothing. Its holder, `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its
+    `root` narrowed to its
     `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
 
@@ -140,10 +145,15 @@ def install(txn: Any) -> Any:
                   "TemplateTemplateParameter": S.OfObject, "NoexceptSpecifier": S.OfObject,
                   "ThrowSpecifier": S.OfObject, "StandardAttributeSpecifier": S.OfObject, "Attribute": S.OfObject,
                   "AlignasSpecifier": S.OfObject, "GnuAttributeSpecifier": S.OfObject,
-                  "DeclspecSpecifier": S.OfObject})  # FrameworkTerm: the framework's, by name
+                  "DeclspecSpecifier": S.OfObject,  # FrameworkTerm: the framework's, by name
+                  "bool": S.OfAny, "int8_t": S.OfAny, "int16_t": S.OfAny, "int32_t": S.OfAny, "int64_t": S.OfAny,
+                  "uint8_t": S.OfAny, "uint16_t": S.OfAny, "uint32_t": S.OfAny, "uint64_t": S.OfAny,
+                  "std_float16_t": S.OfAny, "std_float32_t": S.OfAny, "std_float64_t": S.OfAny,
+                  "std_float128_t": S.OfAny, "std_bfloat16_t": S.OfAny})  # its domains' schemas
         .spec([
-            # its dialect: the singleton `Expressions.Cpp.Expressions`, a branch of the framework's kind union of dialects
-            lambda _: _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(True).singleton("Expressions.Cpp.Expressions").adjacencies({
+            # its dialect: the singleton `Expressions.Cpp.Expressions`, a branch of the framework's union of dialects
+            lambda _: _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(True)
+                .singleton("Expressions.Cpp.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
@@ -320,8 +330,10 @@ def install(txn: Any) -> Any:
                 "left": _.Term, "operator": S.OfStr, "right": _.Term}),
             lambda _: _.RequiresExpression.name("Expressions.Cpp.Expressions.RequiresExpression").properties({
                 "parameters": many(_.Parameter), "requirements": many(_.Requirement)}),
-            lambda _: _.SimpleRequirement.name("Expressions.Cpp.Expressions.SimpleRequirement").properties({"expression": _.Term}),
-            lambda _: _.TypeRequirement.name("Expressions.Cpp.Expressions.TypeRequirement").properties({"name": _.Name}),
+            lambda _: _.SimpleRequirement.name("Expressions.Cpp.Expressions.SimpleRequirement")
+                .properties({"expression": _.Term}),
+            lambda _: _.TypeRequirement.name("Expressions.Cpp.Expressions.TypeRequirement")
+                .properties({"name": _.Name}),
             lambda _: _.CompoundRequirement.name("Expressions.Cpp.Expressions.CompoundRequirement").properties({
                 "expression": _.Term, "noexcept": S.OfBool, "return_type": _.Name}),
             lambda _: _.NestedRequirement.name("Expressions.Cpp.Expressions.NestedRequirement").properties({
@@ -331,7 +343,8 @@ def install(txn: Any) -> Any:
                 "object": _.Term, "indices": many(_.Term)}),
             lambda _: _.CallExpression.name("Expressions.Cpp.Expressions.CallExpression").properties({
                 "function": _.Term, "arguments": many(_.Term)}),
-            lambda _: _.FunctionalCastExpression.name("Expressions.Cpp.Expressions.FunctionalCastExpression").properties({
+            lambda _: _.FunctionalCastExpression.name("Expressions.Cpp.Expressions.FunctionalCastExpression")
+                .properties({
                 "type": _.Specifier, "initializer": _.Initializer}),
             lambda _: _.MemberExpression.name("Expressions.Cpp.Expressions.MemberExpression").properties({
                 "object": _.Term, "operator": S.OfStr, "template_keyword": S.OfBool, "member": _.Name}),
@@ -339,17 +352,21 @@ def install(txn: Any) -> Any:
                 "operand": _.Term, "operator": S.OfStr}),
             lambda _: _.NamedCastExpression.name("Expressions.Cpp.Expressions.NamedCastExpression").properties({
                 "operator": S.OfStr, "type": _.Type, "operand": _.Term}),
-            lambda _: _.TypeidExpression.name("Expressions.Cpp.Expressions.TypeidExpression").properties({"operand": _.Term}),
+            lambda _: _.TypeidExpression.name("Expressions.Cpp.Expressions.TypeidExpression")
+                .properties({"operand": _.Term}),
             # unary expressions
             lambda _: _.UnaryExpression.name("Expressions.Cpp.Expressions.UnaryExpression").properties({
                 "operator": S.OfStr, "operand": _.Term}),
-            lambda _: _.AwaitExpression.name("Expressions.Cpp.Expressions.AwaitExpression").properties({"operand": _.Term}),
-            lambda _: _.SizeofExpression.name("Expressions.Cpp.Expressions.SizeofExpression").properties({"operand": _.Term}),
+            lambda _: _.AwaitExpression.name("Expressions.Cpp.Expressions.AwaitExpression")
+                .properties({"operand": _.Term}),
+            lambda _: _.SizeofExpression.name("Expressions.Cpp.Expressions.SizeofExpression")
+                .properties({"operand": _.Term}),
             lambda _: _.SizeofPackExpression.name("Expressions.Cpp.Expressions.SizeofPackExpression").properties({
                 "pack": _.Identifier}),
             lambda _: _.AlignofExpression.name("Expressions.Cpp.Expressions.AlignofExpression").properties({
                 "keyword": S.OfStr, "operand": _.Term}),
-            lambda _: _.NoexceptExpression.name("Expressions.Cpp.Expressions.NoexceptExpression").properties({"operand": _.Term}),
+            lambda _: _.NoexceptExpression.name("Expressions.Cpp.Expressions.NoexceptExpression")
+                .properties({"operand": _.Term}),
             lambda _: _.NewExpression.name("Expressions.Cpp.Expressions.NewExpression").properties({
                 "global_scope": S.OfBool, "placement": many(_.Term), "parenthesized_type": S.OfBool, "type": _.Type,
                 "initializer": _.Initializer}),
@@ -364,17 +381,22 @@ def install(txn: Any) -> Any:
                 "condition": _.Term, "consequence": _.Term, "alternative": _.Term}),
             lambda _: _.AssignmentExpression.name("Expressions.Cpp.Expressions.AssignmentExpression").properties({
                 "left": _.Term, "operator": S.OfStr, "right": _.Term}),
-            lambda _: _.ThrowExpression.name("Expressions.Cpp.Expressions.ThrowExpression").properties({"operand": _.Term}),
-            lambda _: _.YieldExpression.name("Expressions.Cpp.Expressions.YieldExpression").properties({"operand": _.Term}),
+            lambda _: _.ThrowExpression.name("Expressions.Cpp.Expressions.ThrowExpression")
+                .properties({"operand": _.Term}),
+            lambda _: _.YieldExpression.name("Expressions.Cpp.Expressions.YieldExpression")
+                .properties({"operand": _.Term}),
             lambda _: _.PackExpansion.name("Expressions.Cpp.Expressions.PackExpansion").properties({"pattern": _.Term}),
             # initializers
             lambda _: _.InitializerList.name("Expressions.Cpp.Expressions.InitializerList").properties({
                 "items": many(_.Term), "trailing_comma": S.OfBool}),
             lambda _: _.DesignatedInitializer.name("Expressions.Cpp.Expressions.DesignatedInitializer").properties({
                 "designators": many(_.Designator), "initializer": _.Initializer}),
-            lambda _: _.FieldDesignator.name("Expressions.Cpp.Expressions.FieldDesignator").properties({"name": _.Identifier}),
-            lambda _: _.EqualInitializer.name("Expressions.Cpp.Expressions.EqualInitializer").properties({"value": _.Term}),
-            lambda _: _.ParenthesizedInitializer.name("Expressions.Cpp.Expressions.ParenthesizedInitializer").properties({
+            lambda _: _.FieldDesignator.name("Expressions.Cpp.Expressions.FieldDesignator")
+                .properties({"name": _.Identifier}),
+            lambda _: _.EqualInitializer.name("Expressions.Cpp.Expressions.EqualInitializer")
+                .properties({"value": _.Term}),
+            lambda _: _.ParenthesizedInitializer.name("Expressions.Cpp.Expressions.ParenthesizedInitializer")
+                .properties({
                 "arguments": many(_.Term)}),
             # GNU's extensions: a statement expression's body of statements is not part of the term
             lambda _: _.StatementExpression.name("Expressions.Cpp.Expressions.StatementExpression"),
@@ -394,12 +416,15 @@ def install(txn: Any) -> Any:
             # type names: specifiers and an abstract declarator
             lambda _: _.TypeId.name("Expressions.Cpp.Expressions.TypeId").properties({
                 "specifiers": many(_.Specifier), "declarator": _.Declarator}),
-            lambda _: _.DeclSpecifier.name("Expressions.Cpp.Expressions.DeclSpecifier").properties({"keyword": S.OfStr}),
+            lambda _: _.DeclSpecifier.name("Expressions.Cpp.Expressions.DeclSpecifier")
+                .properties({"keyword": S.OfStr}),
             lambda _: _.CvQualifier.name("Expressions.Cpp.Expressions.CvQualifier").properties({"keyword": S.OfStr}),
             lambda _: _.PrimitiveTypeSpecifier.name("Expressions.Cpp.Expressions.PrimitiveTypeSpecifier").properties({
                 "keyword": S.OfStr}),
-            lambda _: _.NamedTypeSpecifier.name("Expressions.Cpp.Expressions.NamedTypeSpecifier").properties({"name": _.Name}),
-            lambda _: _.TypenameSpecifier.name("Expressions.Cpp.Expressions.TypenameSpecifier").properties({"name": _.Name}),
+            lambda _: _.NamedTypeSpecifier.name("Expressions.Cpp.Expressions.NamedTypeSpecifier")
+                .properties({"name": _.Name}),
+            lambda _: _.TypenameSpecifier.name("Expressions.Cpp.Expressions.TypenameSpecifier")
+                .properties({"name": _.Name}),
             lambda _: _.ClassSpecifier.name("Expressions.Cpp.Expressions.ClassSpecifier").properties({
                 "key": S.OfStr, "attributes": many(_.AttributeSpecifier), "name": _.Name, "final": S.OfBool,
                 "bases": many(_.BaseSpecifier),
@@ -412,11 +437,13 @@ def install(txn: Any) -> Any:
                 "body": S.OfBool}),  # whether it has a body, whose enumerators are not part of the term
             lambda _: _.DecltypeSpecifier.name("Expressions.Cpp.Expressions.DecltypeSpecifier").properties({
                 "expression": _.Term}),
-            lambda _: _.PlaceholderTypeSpecifier.name("Expressions.Cpp.Expressions.PlaceholderTypeSpecifier").properties({
+            lambda _: _.PlaceholderTypeSpecifier.name("Expressions.Cpp.Expressions.PlaceholderTypeSpecifier")
+                .properties({
                 "constraint": _.Name, "decltype": S.OfBool}),
             lambda _: _.IdDeclarator.name("Expressions.Cpp.Expressions.IdDeclarator").properties({
                 "name": _.Name, "attributes": many(_.AttributeSpecifier)}),
-            lambda _: _.PackDeclarator.name("Expressions.Cpp.Expressions.PackDeclarator").properties({"declarator": _.Declarator}),
+            lambda _: _.PackDeclarator.name("Expressions.Cpp.Expressions.PackDeclarator")
+                .properties({"declarator": _.Declarator}),
             lambda _: _.PointerDeclarator.name("Expressions.Cpp.Expressions.PointerDeclarator").properties({
                 "scope": _.Name, "attributes": many(_.AttributeSpecifier), "qualifiers": many(_.CvQualifier),
                 "declarator": _.Declarator}),
@@ -436,14 +463,17 @@ def install(txn: Any) -> Any:
             lambda _: _.EllipsisParameter.name("Expressions.Cpp.Expressions.EllipsisParameter"),
             lambda _: _.TypeParameter.name("Expressions.Cpp.Expressions.TypeParameter").properties({
                 "key": S.OfStr, "constraint": _.Name, "pack": S.OfBool, "name": _.Identifier, "default": _.Type}),
-            lambda _: _.TemplateTemplateParameter.name("Expressions.Cpp.Expressions.TemplateTemplateParameter").properties({
+            lambda _: _.TemplateTemplateParameter.name("Expressions.Cpp.Expressions.TemplateTemplateParameter")
+                .properties({
                 "parameters": many(_.TemplateParameter), "requires": _.Term, "key": S.OfStr, "pack": S.OfBool,
                 "name": _.Identifier, "default": _.Name}),
             lambda _: _.NoexceptSpecifier.name("Expressions.Cpp.Expressions.NoexceptSpecifier").properties({
                 "condition": _.Term}),
-            lambda _: _.ThrowSpecifier.name("Expressions.Cpp.Expressions.ThrowSpecifier").properties({"types": many(_.Term)}),
+            lambda _: _.ThrowSpecifier.name("Expressions.Cpp.Expressions.ThrowSpecifier")
+                .properties({"types": many(_.Term)}),
             # attributes
-            lambda _: _.StandardAttributeSpecifier.name("Expressions.Cpp.Expressions.StandardAttributeSpecifier").properties({
+            lambda _: _.StandardAttributeSpecifier.name("Expressions.Cpp.Expressions.StandardAttributeSpecifier")
+                .properties({
                 "using_namespace": S.OfStr, "attributes": many(_.Attribute)}),
             lambda _: _.Attribute.name("Expressions.Cpp.Expressions.Attribute").properties({
                 "namespace": S.OfStr, "name": S.OfStr, "arguments": many(_.Term), "pack": S.OfBool}),
@@ -455,7 +485,8 @@ def install(txn: Any) -> Any:
                 "attributes": many(_.Attribute)}),
             # its holder, the root of an expression tree: a reference object refining the framework's, its `root`
             # narrowed to its `Term`
-            lambda _: _.Expression.name("Expressions.Cpp.Expressions.Expression").ref(True).refines([Framework.Expression]).properties({
+            lambda _: _.Expression.name("Expressions.Cpp.Expressions.Expression").ref(True)
+                .refines([Framework.Expression]).properties({
                 "root": _.Term}),
             # --- its kind of domain: the token of `nullptr`, its own, not C's; inferred `ordered` ---
             lambda _: _.OfNullptr.name("Expressions.Cpp.Expressions.OfNullptr").properties({"ordered": S.OfBool}),
@@ -466,6 +497,121 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("cpp").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("cpp").schema([_.Term])]),
+            # --- its domains' schemas, each an OfAny of the scalar it narrows (a format whose values are text, `str`),
+            # named as a dotted identifier spells its type (`std::float16_t` as `std_float16_t`), which `define`
+            # relates to its domain; `nullptr_t`'s has none ---
+            lambda _: _.bool.name("Expressions.Cpp.Expressions.bool").schemas([S.OfBool]),
+            lambda _: _.int8_t.name("Expressions.Cpp.Expressions.int8_t").schemas([S.OfInt]),
+            lambda _: _.int16_t.name("Expressions.Cpp.Expressions.int16_t").schemas([S.OfInt]),
+            lambda _: _.int32_t.name("Expressions.Cpp.Expressions.int32_t").schemas([S.OfInt]),
+            lambda _: _.int64_t.name("Expressions.Cpp.Expressions.int64_t").schemas([S.OfInt]),
+            lambda _: _.uint8_t.name("Expressions.Cpp.Expressions.uint8_t").schemas([S.OfInt]),
+            lambda _: _.uint16_t.name("Expressions.Cpp.Expressions.uint16_t").schemas([S.OfInt]),
+            lambda _: _.uint32_t.name("Expressions.Cpp.Expressions.uint32_t").schemas([S.OfInt]),
+            lambda _: _.uint64_t.name("Expressions.Cpp.Expressions.uint64_t").schemas([S.OfInt]),
+            lambda _: _.std_float16_t.name("Expressions.Cpp.Expressions.std_float16_t").schemas([S.OfFloat]),
+            lambda _: _.std_float32_t.name("Expressions.Cpp.Expressions.std_float32_t").schemas([S.OfFloat]),
+            lambda _: _.std_float64_t.name("Expressions.Cpp.Expressions.std_float64_t").schemas([S.OfFloat]),
+            lambda _: _.std_float128_t.name("Expressions.Cpp.Expressions.std_float128_t").schemas([S.OfStr]),
+            lambda _: _.std_bfloat16_t.name("Expressions.Cpp.Expressions.std_bfloat16_t").schemas([S.OfStr]),
+        ])]))])
+
+
+def define(txn: Any) -> Any:
+    """C++'s dialect as data: the singleton `Expressions.Cpp.Expressions` owning its domains by name (`domains`, through
+    `Expressions.Framework.Defines`), the types C++'s standard fixes, each with its parameters and its inferred
+    properties, and each but `nullptr_t`'s related to its schema (`Expressions.Cpp.Expressions.std_float16_t`) by
+    `Expressions.Framework.HasDomain`: `bool` (11404's `boolean`); `int8_t` to `int64_t` and `uint8_t` to `uint64_t`,
+    as C's (C++'s `<cstdint>` is C's, under C's names); C++23's `std::float16_t`, `std::float32_t`, `std::float64_t`
+    and `std::float128_t` (IEEE 754's `binary16` to `binary128`) and `std::bfloat16_t` (IEEE 754's kind with no
+    format: 16 bits, radix 2, precision 8, emax 127), each rounding ties to even; and `nullptr_t`, of C++'s own kind.
+    What C++ leaves to the implementation is each ABI dialect's, as C's is. Run after `install`, in a transaction of
+    its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled
+    as its schema's is: `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`."""
+    OWN, Domain = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain
+    return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([lambda mu: mu.upsert(
+        lambda u: u.exists([lambda p: p
+        .symbols({"dialect": OWN.Dialect,
+                  "bool": Domain, "int8_t": Domain, "int16_t": Domain, "int32_t": Domain, "int64_t": Domain,
+                  "uint8_t": Domain, "uint16_t": Domain, "uint32_t": Domain, "uint64_t": Domain,
+                  "std_float16_t": Domain, "std_float32_t": Domain, "std_float64_t": Domain, "std_float128_t": Domain,
+                  "std_bfloat16_t": Domain, "nullptr_t": Domain})
+        .spec([
+            lambda _: _.dialect.domains({
+                "bool": lambda e: e.domain(_.bool),
+                "int8_t": lambda e: e.domain(_.int8_t),
+                "int16_t": lambda e: e.domain(_.int16_t),
+                "int32_t": lambda e: e.domain(_.int32_t),
+                "int64_t": lambda e: e.domain(_.int64_t),
+                "uint8_t": lambda e: e.domain(_.uint8_t),
+                "uint16_t": lambda e: e.domain(_.uint16_t),
+                "uint32_t": lambda e: e.domain(_.uint32_t),
+                "uint64_t": lambda e: e.domain(_.uint64_t),
+                "std::float16_t": lambda e: e.domain(_.std_float16_t),
+                "std::float32_t": lambda e: e.domain(_.std_float32_t),
+                "std::float64_t": lambda e: e.domain(_.std_float64_t),
+                "std::float128_t": lambda e: e.domain(_.std_float128_t),
+                "std::bfloat16_t": lambda e: e.domain(_.std_bfloat16_t),
+                "nullptr_t": lambda e: e.domain(_.nullptr_t),
+            }),
+            lambda _: _.bool.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.boolean(
+                lambda d: d.ordered(False)))))).schema([OWN.bool]),
+            lambda _: _.int8_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(8).signed(True).overflow("raise")
+                    .least(-128).greatest(127).ordered(True)))))).schema([OWN.int8_t]),
+            lambda _: _.int16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(16).signed(True).overflow("raise")
+                    .least(-32768).greatest(32767).ordered(True)))))).schema([OWN.int16_t]),
+            lambda _: _.int32_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(32).signed(True).overflow("raise")
+                    .least(-2147483648).greatest(2147483647).ordered(True)))))).schema([OWN.int32_t]),
+            lambda _: _.int64_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.width(64).signed(True).overflow("raise")
+                    .least(-9223372036854775808).greatest(9223372036854775807).ordered(True)))))).schema([OWN.int64_t]),
+            lambda _: _.uint8_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(256)
+                    .least(0).greatest(255).ordered(True)))))).schema([OWN.uint8_t]),
+            lambda _: _.uint16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(65536)
+                    .least(0).greatest(65535).ordered(True)))))).schema([OWN.uint16_t]),
+            lambda _: _.uint32_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(4294967296)
+                    .least(0).greatest(4294967295).ordered(True)))))).schema([OWN.uint32_t]),
+            lambda _: _.uint64_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.isoiec11404(lambda v: v.modulo(
+                lambda d: d.modulus(18446744073709551616)
+                    .least(0).greatest(18446744073709551615).ordered(True)))))).schema([OWN.uint64_t]),
+            lambda _: _.std_float16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary16").rounding("roundTiesToEven").width(16)
+                    .radix(2).precision(11).emax(15).ordered(True)))))).schema([OWN.std_float16_t]),
+            lambda _: _.std_float32_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary32").rounding("roundTiesToEven").width(32)
+                    .radix(2).precision(24).emax(127).ordered(True)))))).schema([OWN.std_float32_t]),
+            lambda _: _.std_float64_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").width(64)
+                    .radix(2).precision(53).emax(1023).ordered(True)))))).schema([OWN.std_float64_t]),
+            lambda _: _.std_float128_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary128").rounding("roundTiesToEven").width(128)
+                    .radix(2).precision(113).emax(16383).ordered(True)))))).schema([OWN.std_float128_t]),
+            lambda _: _.std_bfloat16_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.rounding("roundTiesToEven").width(16)
+                    .radix(2).precision(8).emax(127).ordered(True)))))).schema([OWN.std_bfloat16_t]),
+            lambda _: _.nullptr_t.kind(lambda k: k.as_value(lambda a: a.as_union(
+                lambda u: u.cpp(lambda v: v.nullptr_t(
+                lambda d: d.ordered(False)))))),
         ])]))])
 
 
@@ -493,7 +639,8 @@ def _application(tag: str, signature: FD.Signature = FD.Opaque(), optional: tupl
 
 
 def _check(tag: str) -> Any:
-    return lambda record: C.problems(F.node(tag, record), SUFFIXES, PREFIXES, "C++")
+    return lambda record: C.problems(F.node(tag, record), Domains.Types(record, "Cpp.Expressions"), SUFFIXES, PREFIXES,
+                                     "C++")
 
 
 _OWN = {
@@ -512,8 +659,8 @@ _OWN = {
                                 check=_check(NAMEDCASTEXPRESSION), scopes=C.scopes(NAMEDCASTEXPRESSION)),
     TYPEIDEXPRESSION: _application(TYPEIDEXPRESSION, FD.Opaque()),
     AWAITEXPRESSION: _application(AWAITEXPRESSION, _ANY1),
-    SIZEOFPACKEXPRESSION: _application(SIZEOFPACKEXPRESSION, Domains.SIZE, required=("pack",)),
-    NOEXCEPTEXPRESSION: _application(NOEXCEPTEXPRESSION, FD.Function((FD.Anything,), Domains.Bool)),
+    SIZEOFPACKEXPRESSION: _application(SIZEOFPACKEXPRESSION, Domains.SIZE, required=("pack",), typed=C.size("C++")),
+    NOEXCEPTEXPRESSION: _application(NOEXCEPTEXPRESSION, _ANY1, typed=C.truth("C++")),
     NEWEXPRESSION: _application(NEWEXPRESSION, required=("type",)),
     DELETEEXPRESSION: _application(DELETEEXPRESSION, _ANY1),
     THROWEXPRESSION: _application(THROWEXPRESSION, optional=("operand",)),
@@ -530,7 +677,7 @@ def _native(value: Any) -> Writer | None:
 
 
 DIALECT = F.Dialect("Cpp.Expressions", {tag: _SHARED[tag] if tag in _SHARED else _OWN[tag] for tag in _TAGS},
-                    domain_of=Domains.of, literal=_native)
+                    domain_of=C.untyped, literal=_native)
 """The Cpp dialect: its kinds, as the framework reads them."""
 
 
@@ -548,7 +695,8 @@ class _Writers(C.Writers):
 
     def identifier(self, name: str) -> Any:
         """The identifier `name` used as an expression: an `idexpression` holding it."""
-        return self.writer(lambda u: u.idexpression(lambda r: r.name(lambda n: n.identifier(lambda i: i.spelling(name)))))
+        return self.writer(lambda u: u.idexpression(
+            lambda r: r.name(lambda n: n.identifier(lambda i: i.spelling(name)))))
 
 
 _WRITERS = _Writers(DIALECT, Writer)
