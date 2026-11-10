@@ -91,9 +91,11 @@ export function install(txn: any): any {
 
 /** AAPCS64's dialect as data: the singleton `Expressions.Arm.AAPCS64` owning its domains by name (`domains`, through
  * `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its schema by
- * `Expressions.Framework.HasDomain`. Run after `install`, in a transaction of its own; run again, it writes nothing.
- * Its frame binds the dialect (`dialect`) and each domain by its name, spelled as its schema's is (`unsigned long` as
- * `unsigned_long`): `store.transaction(AAPCS64.define)[0].get("unsigned_long")`. */
+ * `Expressions.Framework.HasDomain`. And the edition of the standard it covers, by its designation (`standards`,
+ * through `Expressions.Framework.Covers`), its formal reference's parts held apart. Run after `install`, in a
+ * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), its edition
+ * (`standard`) and each domain by its name, spelled as its schema's is (`unsigned long` as `unsigned_long`):
+ * `store.transaction(AAPCS64.define)[0].get("unsigned_long")`. */
 export function define(txn: any): any {
   const ABI = txn.Expressions.Arm.AAPCS64, Domain = txn.Expressions.Framework.Domain;
   const Standard = txn.Expressions.Framework.Standard;

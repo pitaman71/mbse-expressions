@@ -54,9 +54,11 @@ export function install(txn: any): any {
 
 /** Unicode's dialect as data: the singleton `Expressions.Unicode.Expressions` owning its domain by name (`domains`,
  * through `Expressions.Framework.Defines`), with its inferred properties, and related to its schema
- * (`Expressions.Unicode.Expressions.string`) by `Expressions.Framework.HasDomain`. Run after `install`, in a
- * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and its domain by its
- * name: `store.transaction(Unicode.define)[0].get("string")`. */
+ * (`Expressions.Unicode.Expressions.string`) by `Expressions.Framework.HasDomain`. And the edition of the standard it
+ * covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its formal reference's parts held
+ * apart. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
+ * (`dialect`), its edition (`standard`) and its domain by its name:
+ * `store.transaction(Unicode.define)[0].get("string")`. */
 export function define(txn: any): any {
   const [Unicode, Domain, Standard] = [txn.Expressions.Unicode.Expressions, txn.Expressions.Framework.Domain,
     txn.Expressions.Framework.Standard];

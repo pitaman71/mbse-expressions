@@ -52,11 +52,13 @@ export function install(txn: any): any {
     ])]))]);
 }
 
-/** IEEE 1164's dialect as data: the singleton `Expressions.IEEE1164.Expressions` owning its domain by name
- * (`domains`, through `Expressions.Framework.Defines`), with its inferred properties, and related to its schema
- * (`Expressions.IEEE1164.Expressions.std_logic`) by `Expressions.Framework.HasDomain`. Run after `install`, in a
- * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and its domain by its
- * name: `store.transaction(IEEE1164.define)[0].get("std_logic")`. */
+/** IEEE 1164's dialect as data: the singleton `Expressions.IEEE1164.Expressions` owning its domain by name (`domains`,
+ * through `Expressions.Framework.Defines`), with its inferred properties, and related to its schema
+ * (`Expressions.IEEE1164.Expressions.std_logic`) by `Expressions.Framework.HasDomain`. And the edition of the standard
+ * it covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its formal reference's parts
+ * held apart. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
+ * dialect (`dialect`), its edition (`standard`) and its domain by its name:
+ * `store.transaction(IEEE1164.define)[0].get("std_logic")`. */
 export function define(txn: any): any {
   const [IEEE1164, Domain, Standard] = [txn.Expressions.IEEE1164.Expressions, txn.Expressions.Framework.Domain,
     txn.Expressions.Framework.Standard];

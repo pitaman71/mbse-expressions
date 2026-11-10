@@ -92,10 +92,12 @@ def install(txn: Any) -> Any:
 
 def define(txn: Any) -> Any:
     """AMD64's dialect as data: the singleton `Expressions.SystemV.AMD64` owning its domains by name (`domains`, through
-    `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its schema
-    by `Expressions.Framework.HasDomain`. Run after `install`, in a transaction of its own; run again, it writes
-    nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled as its schema's is
-    (`unsigned long` as `unsigned_long`): `store.transaction(AMD64.define)[0]["unsigned_long"]`."""
+    `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its schema by
+    `Expressions.Framework.HasDomain`. And the edition of the standard it covers, by its designation (`standards`,
+    through `Expressions.Framework.Covers`), its formal reference's parts held apart. Run after `install`, in a
+    transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), its edition
+    (`standard`) and each domain by its name, spelled as its schema's is (`unsigned long` as `unsigned_long`):
+    `store.transaction(AMD64.define)[0]["unsigned_long"]`."""
     ABI, Domain = txn.Expressions.SystemV.AMD64, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     uid = "mbse.Expressions.SystemV.AMD64.define/1"

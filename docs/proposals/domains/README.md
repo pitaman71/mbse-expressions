@@ -496,7 +496,8 @@ ISO/IEC 11404 is spelled as ISO writes it, without the slash a name cannot hold,
 A standard dialect is a singleton of its own schema, a branch of `Expressions.Framework.Dialect`, with no `Term`,
 holder or `Terms.Dialect` until it has terms (Decided, G). Each names its standard in code by designation
 (`STANDARDS = ("IEEE Std 754-2019",)`, `ISO/IEC 11404:2007`, `IEEE Std 1164-1993`, `The Unicode Standard`), until
-standards are tagged data, its own stage (below; Decided, "On stage 1's review"). Patterns' eight domains are these,
+standards are tagged data, its own stage (below; Decided, "On stage 1's review"), built in stage 4 (Standards'
+design), which replaced `STANDARDS` with the edition each define writes. Patterns' eight domains are these,
 each named as its standard names it (Decided, "On stage 1's review", "Names are the standards' own"): `bool`, `int` and
 `bytes` are 11404's `boolean`, `integer` and `octetstring`, and `uint8` is split into 11404's `octet`, for codes, and
 `modulo(256)`, for wrapping arithmetic (Decided, "On stage 1's review", "`uint8` split by 11404's own definitions");
@@ -790,7 +791,7 @@ dialect is (the dialects proposal's Decided, Namespace, 6 and 7), each a singlet
 and IEEE 754's kinds. Each serves C and C++ alike. Their names are the agent's, for review, each spelled as its psABI
 document names itself:
 
-| Dialect (path; name; tag) | Its standard (`STANDARDS`) |
+| Dialect (path; name; tag) | Its standard (`STANDARDS`, an edition its define writes since stage 4) |
 |---|---|
 | `SystemV.AMD64`; `AMD64`; `amd64` | "System V Application Binary Interface, AMD64 Architecture Processor Supplement", its LP64 programming model |
 | `Arm.AAPCS64`; `AAPCS64`; `aapcs64` | "Procedure Call Standard for the Arm 64-bit Architecture (AArch64)", AAPCS64, its LP64 data model |

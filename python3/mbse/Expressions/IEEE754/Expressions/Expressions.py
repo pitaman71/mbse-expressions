@@ -59,9 +59,11 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """IEEE 754's dialect as data: the singleton `Expressions.IEEE754.Expressions` owning its domains by name
     (`domains`, through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and
-    related to its schema (`Expressions.IEEE754.Expressions.binary32`) by `Expressions.Framework.HasDomain`. Run after
-    `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
-    each domain by its name: `store.transaction(IEEE754.define)[0]["binary32"]`."""
+    related to its schema (`Expressions.IEEE754.Expressions.binary32`) by `Expressions.Framework.HasDomain`. And the
+    edition of the standard it covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its
+    formal reference's parts held apart. Run after `install`, in a transaction of its own; run again, it writes nothing.
+    Its frame binds the dialect (`dialect`), its edition (`standard`) and each domain by its name:
+    `store.transaction(IEEE754.define)[0]["binary32"]`."""
     IEEE754, Domain = txn.Expressions.IEEE754.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     return txn.uid("mbse.Expressions.IEEE754.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p

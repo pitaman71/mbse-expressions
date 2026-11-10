@@ -57,11 +57,13 @@ export function install(txn: any): any {
     ])]))]);
 }
 
-/** IEEE 754's dialect as data: the singleton `Expressions.IEEE754.Expressions` owning its domains by name
- * (`domains`, through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and
- * related to its schema (`Expressions.IEEE754.Expressions.binary32`) by `Expressions.Framework.HasDomain`. Run after
- * `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
- * each domain by its name: `store.transaction(IEEE754.define)[0].get("binary32")`. */
+/** IEEE 754's dialect as data: the singleton `Expressions.IEEE754.Expressions` owning its domains by name (`domains`,
+ * through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its
+ * schema (`Expressions.IEEE754.Expressions.binary32`) by `Expressions.Framework.HasDomain`. And the edition of the
+ * standard it covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its formal reference's
+ * parts held apart. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+ * the dialect (`dialect`), its edition (`standard`) and each domain by its name:
+ * `store.transaction(IEEE754.define)[0].get("binary32")`. */
 export function define(txn: any): any {
   const [IEEE754, Domain, Standard] = [txn.Expressions.IEEE754.Expressions, txn.Expressions.Framework.Domain,
     txn.Expressions.Framework.Standard];

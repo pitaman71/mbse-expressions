@@ -112,10 +112,11 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """ISO/IEC 11404's dialect as data: the singleton `Expressions.ISOIEC11404.Expressions` owning its domains by name
     (`domains`, through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and
-    related to its schema (`Expressions.ISOIEC11404.Expressions.octet`) by `Expressions.Framework.HasDomain`. Run after
-    `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
-    each domain by its name, spelled as its schema's is (`modulo(256)` as `modulo_256`):
-    `store.transaction(ISOIEC11404.define)[0]["octet"]`."""
+    related to its schema (`Expressions.ISOIEC11404.Expressions.octet`) by `Expressions.Framework.HasDomain`. And the
+    edition of the standard it covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its
+    formal reference's parts held apart. Run after `install`, in a transaction of its own; run again, it writes nothing.
+    Its frame binds the dialect (`dialect`), its edition (`standard`) and each domain by its name, spelled as its
+    schema's is (`modulo(256)` as `modulo_256`): `store.transaction(ISOIEC11404.define)[0]["octet"]`."""
     ISOIEC11404, Domain = txn.Expressions.ISOIEC11404.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     return txn.uid("mbse.Expressions.ISOIEC11404.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p

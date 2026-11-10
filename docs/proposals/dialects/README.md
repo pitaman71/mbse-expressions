@@ -344,6 +344,8 @@ quoted as given.
   reverse-domain name, one or a joint pair; a number; a revision that is a year, an edition or a version) or common (a
   name such as `C11`), each edition stored with its designation and its common names as tags: "yes". Built with
   domains as data; until then stage 6 records SystemVerilog's editions in code by designation (`IEEE Std 1800-2023`).
+  Built in domains as data's stage 4, before stage 6, which so records SystemVerilog's editions as data
+  ([the domains proposal](../domains/README.md#standards-design), Standards' design).
 - **Q11, evaluation**: by the principle above, and, as the user put the design: "If I'm being honest, providing a full
   function evaluator in mbse-expressions at all was never a primary goal. I tolerated it as a potentially useful
   feature. But the original design was that mbse-expressions would provide a expression simplifier in stages:"
