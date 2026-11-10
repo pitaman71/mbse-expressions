@@ -75,10 +75,8 @@ def _name(value: _Typed) -> str:
 
 
 def _untyped(value: Any) -> _Typed:
-    """A value no type holds: an int beyond every type is refused, and any other (a string, an object) has none."""
-    if type(value) is int:
-        raise OverflowError(f"integer {value} is too large for any type")
-    return _Typed(None, value)
+    """A value no type holds, an int beyond every type: refused."""
+    raise OverflowError(f"integer {value} is too large for any type")
 
 
 def _typed(value: Any, types: Domains.Types) -> _Typed:

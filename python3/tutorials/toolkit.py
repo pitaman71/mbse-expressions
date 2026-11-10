@@ -45,7 +45,8 @@ def cold_chain():
     """A store of the cold chain's schemas, which also holds expressions: of the Patterns dialect, and of every dialect the
     case studies translate into, installed after the standard dialects whose kinds of domain they use, with the two ABI
     dialects C's and C++'s terms are read under (x86-64's System V ABI, `SystemV.AMD64`, and Arm's AAPCS64,
-    `Arm.AAPCS64`); Patterns' operations named by its dialect (`Patterns.define`), which validation reads; and C's, C++'s,
+    `Arm.AAPCS64`); Patterns' operations named by its dialect (`Patterns.define`), which validation reads; and C's,
+    C++'s,
     the ABIs' and SystemVerilog's types, their domains (each dialect's `define`), which their evaluation reads."""
     store = Builders.Store()
     for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,

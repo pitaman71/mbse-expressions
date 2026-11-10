@@ -1,18 +1,18 @@
 """Expressions of the C dialect: every expression of C, C11 to C23, as mbse-programs has them, with the type names
 expressions hold.
 
-The dialect is complete over C's expression syntax (mbse-basis
-[CAP-229: the C expression dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md), by
-[CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules). Its terms are values of
-its `Term`, `Expressions.C.Expressions.Term`, the branch `c` of `Expressions.Framework.Term`, which `install` defines and adds to
+The dialect is complete over C's expression syntax (mbse-basis [CAP-229: the C expression
+dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md), by [CAP-226: complete expression
+dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules). Its terms are values of its `Term`,
+`Expressions.C.Expressions.Term`, the branch `c` of `Expressions.Framework.Term`, which `install` defines and adds to
 `Expressions.Framework.Term` by schema extension. Its kinds are mbse-programs' Ccpp expression kinds that C has
 (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`), with mbse-programs' names, lowercased as branch tags
 (`binaryexpression`), and its properties in source order (`template_keyword`, `trailing_comma`), each a value object
-`Expressions.C.Expressions.<Kind>`; a property only C++ has is not C's (`Cpp` defines its own copy of each kind the two share,
-holding C++'s terms). A name is as the grammar makes it (the dialects proposal, Decided): where mbse-programs holds a
-`Name`, C holds its `Name` union, whose one branch is `identifier` (`Expressions.C.Expressions.Identifier`, its `spelling`), C's one
-name; where it holds an `Identifier`, an `Identifier`; where it holds a `str` (an attribute's name), a `str`. A term
-carries no domain. Its kinds:
+`Expressions.C.Expressions.<Kind>`; a property only C++ has is not C's (`Cpp` defines its own copy of each kind the two
+share, holding C++'s terms). A name is as the grammar makes it (the dialects proposal, Decided): where mbse-programs
+holds a `Name`, C holds its `Name` union, whose one branch is `identifier` (`Expressions.C.Expressions.Identifier`, its
+`spelling`), C's one name; where it holds an `Identifier`, an `Identifier`; where it holds a `str` (an attribute's
+name), a `str`. A term carries no domain. Its kinds:
 
 - Literals: `literal` (`Expressions.C.Expressions.Literal`, refining the framework's `literal`, mbse-basis
   [CAP-233: literals of any value](mbse:mbse-basis/docs/capabilities/CAP-233.md): an integer, a floating, a character or
@@ -41,18 +41,19 @@ carries no domain. Its kinds:
   controlling operand, `offsetof(struct s, m)`'s first argument).
 - The framework's kinds of invalid syntax, `error` and `missing`.
 
-The sublanguages are unions of their own beside `Term` (the dialects proposal, Decided, 5): `Expressions.C.Expressions.Type`, a type
-name (`typeid`: its `specifiers` and its abstract `declarator`), held by a cast, a compound literal, a generic
-association and an enumeration's fixed type, and `Expressions.C.Expressions.Pattern`, for binding targets, which every dialect has
-("(ii)"): C expressions bind no names, so it holds invalid syntax alone and nothing holds it, as the user decided
-(2026-11-04). As the user decided ("(b)"), one schema is a branch of every union whose positions hold it: `Term` lists
-`typeid`, for the positions that hold an expression or a type, and `designatedinitializer`, for an initializer list's
-items. A type name's parts are helpers, each union named after mbse-programs' category: `Specifier` (keywords, a named
-type, a struct, union or enum, C23's `typeof`, `_Atomic(type)`, C23's `_BitInt(width)`, and, as `TypeId` lists them
-among its specifiers, the attribute specifiers), `Declarator` (an identifier, a pointer, an array, a function,
-parentheses), `Parameter`, `AttributeSpecifier`, `Designator` and `Initializer`. A struct's or an enum's body, its
-member or enumerator declarations, is not part of the term ("(i)"): `body` says whether it has one. The framework reads
-a value of a sublanguage, as of any helper, as a `Terms.Part`.
+The sublanguages are unions of their own beside `Term` (the dialects proposal, Decided, 5):
+`Expressions.C.Expressions.Type`, a type name (`typeid`: its `specifiers` and its abstract `declarator`), held by a
+cast, a compound literal, a generic association and an enumeration's fixed type, and
+`Expressions.C.Expressions.Pattern`, for binding targets, which every dialect has ("(ii)"): C expressions bind no names,
+so it holds invalid syntax alone and nothing holds it, as the user decided (2026-11-04). As the user decided ("(b)"),
+one schema is a branch of every union whose positions hold it: `Term` lists `typeid`, for the positions that hold an
+expression or a type, and `designatedinitializer`, for an initializer list's items. A type name's parts are helpers,
+each union named after mbse-programs' category: `Specifier` (keywords, a named type, a struct, union or enum, C23's
+`typeof`, `_Atomic(type)`, C23's `_BitInt(width)`, and, as `TypeId` lists them among its specifiers, the attribute
+specifiers), `Declarator` (an identifier, a pointer, an array, a function, parentheses), `Parameter`,
+`AttributeSpecifier`, `Designator` and `Initializer`. A struct's or an enum's body, its member or enumerator
+declarations, is not part of the term ("(i)"): `body` says whether it has one. The framework reads a value of a
+sublanguage, as of any helper, as a `Terms.Part`.
 
 Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: `constant` C23's alone, an
 extension none). `DIALECT` reads them (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...)
@@ -129,9 +130,10 @@ and order) and a floating literal's (`f`, `l`, C23's decimal and interchange typ
 
 def install(txn: Any) -> Any:
     """C's union of its kinds, added to the framework's terms as the branch `c`, its own kinds, its sublanguages' unions
-    (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is `Expressions.C.Expressions`: run
-    after `Framework.install`, in a transaction of its own; run again, it writes nothing.
-    Its holder, `Expressions.C.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
+    (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
+    `Expressions.C.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes
+    nothing. Its holder, `Expressions.C.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root`
+    narrowed to its
     `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
 

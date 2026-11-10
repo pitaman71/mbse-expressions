@@ -1,21 +1,21 @@
 """Expressions of the Cpp dialect: every expression of C++, C++17 to C++23, as mbse-programs has them, with the
 sublanguages expressions hold.
 
-The dialect is complete over C++'s expression syntax (mbse-basis
-[CAP-230: the C++ expression dialect](mbse:mbse-basis/docs/capabilities/CAP-230.md), by
-[CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules); C++26's pack indexing,
-reflection, splices, annotations and contracts are outside it. Its terms are values of its `Term`,
-`Expressions.Cpp.Expressions.Term`, the branch `cpp` of `Expressions.Framework.Term`, which `install` defines and adds to
-`Expressions.Framework.Term` by schema extension. Its kinds are mbse-programs' Ccpp expression kinds that C++ has
+The dialect is complete over C++'s expression syntax (mbse-basis [CAP-230: the C++ expression
+dialect](mbse:mbse-basis/docs/capabilities/CAP-230.md), by [CAP-226: complete expression
+dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules); C++26's pack indexing, reflection, splices,
+annotations and contracts are outside it. Its terms are values of its `Term`, `Expressions.Cpp.Expressions.Term`, the
+branch `cpp` of `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema
+extension. Its kinds are mbse-programs' Ccpp expression kinds that C++ has
 (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`), named as `C.Expressions` names them: C++ is not a superset
 of C, so the two are separate dialects, each with a union of its own, and `Cpp` defines its own copy of each kind they
-share (`Expressions.Cpp.Expressions.BinaryExpression`), holding C++'s terms, without what only C has (an array declarator's
-`static`, C's index designators, `_Generic`, compound literals, `typeof`, `_Atomic(type)`, `_BitInt`). Where
-mbse-programs holds a `Name`, Cpp holds its `Name` union (`identifier`, `qualifiedname`, `templateid`,
+share (`Expressions.Cpp.Expressions.BinaryExpression`), holding C++'s terms, without what only C has (an array
+declarator's `static`, C's index designators, `_Generic`, compound literals, `typeof`, `_Atomic(type)`, `_BitInt`).
+Where mbse-programs holds a `Name`, Cpp holds its `Name` union (`identifier`, `qualifiedname`, `templateid`,
 `operatorname`, `conversionname`, `literaloperatorname`, `destructorname`, and, where a name's place holds it, a
 `decltypespecifier`); where it holds an `Identifier` alone, an `Identifier`; where it holds a `str`, a `str`. A term
-carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own literal (`Expressions.Cpp.Expressions.Literal`, also a
-raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
+carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own literal
+(`Expressions.Cpp.Expressions.Literal`, also a raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
 
 - `userdefinedliteral` (`literal`, a `literal`'s value object, and its `suffix`, `10_km`);
 - names: `idexpression`, every name used as an expression, holding its `Name` (`x`, `std::cout`, `f<int>`,
@@ -31,13 +31,13 @@ raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
   `noexceptexpression`, `newexpression`, `deleteexpression`, `throwexpression`, `packexpansion` (`pattern...`).
 
 Its sublanguages are unions of their own: `Expressions.Cpp.Expressions.Type`, a type name (`typeid`), and
-`Expressions.Cpp.Expressions.Pattern`, for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an `identifier`, or
-invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch of every union
-whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does, `Pattern` lists `identifier`,
-`Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a `parameterdeclaration`
-and `Initializer` an `initializerlist`. A type name's and a lambda's parts are helpers, each union named after
-mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`, `Capture`,
-`Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and `AttributeSpecifier`.
+`Expressions.Cpp.Expressions.Pattern`, for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an
+`identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch
+of every union whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does, `Pattern` lists
+`identifier`, `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a
+`parameterdeclaration` and `Initializer` an `initializerlist`. A type name's and a lambda's parts are helpers, each
+union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`,
+`Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and `AttributeSpecifier`.
 
 Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: C++20's kinds, `co_await`,
 `co_yield`, `requires` and designated initializers, C++20 and C++23; an extension none). `DIALECT` reads them
@@ -96,8 +96,9 @@ case and order) and a floating literal's (`f`, `l`, C++23's extended types' `f16
 def install(txn: Any) -> Any:
     """Cpp's union of its kinds, added to the framework's terms as the branch `cpp`, its own kinds, its sublanguages'
     unions (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
-    `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes nothing.
-    Its holder, `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
+    `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes
+    nothing. Its holder, `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its
+    `root` narrowed to its
     `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
 

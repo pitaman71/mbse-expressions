@@ -64,10 +64,9 @@ export const Anything = D.Anything;
 
 const NATIVE: readonly string[] = ["binary16", "binary32", "binary64"]; // the formats whose values are numbers; any other's are text
 
-/** Whether two formats are the same: by name, or by their parameters. */
+/** Whether two formats are the same: by name, or by their parameters (each written as its text). */
 function sameFormat(a: Ieee754.Format | null, b: Ieee754.Format | null): boolean {
-  if (typeof a === "string" || typeof b === "string" || a === null || b === null) return a === b;
-  return a.every((parameter, i) => parameter === b[i]);
+  return String(a) === String(b);
 }
 
 /** An arithmetic type: its `kind` ('bool', 'integer' or 'floating'), its `width` in bits, its signedness, and for a

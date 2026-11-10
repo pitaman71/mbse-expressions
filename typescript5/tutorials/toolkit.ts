@@ -1,5 +1,6 @@
 /**
- * What the case studies share: the cold chain's schemas, a store of them, and `show`, which writes an expression as text.
+ * What the case studies share: the cold chain's schemas, a store of them, and `show`, which writes an expression as
+ * text.
  *
  * A shipment of vaccine travels with a data logger that records its temperature. `Shipment` holds what the logger
  * reported: the latest reading, every reading, the hours in transit, and the loggers it carries (`Carries`, an entry
@@ -18,6 +19,8 @@ import * as Excel from "@mbse/expressions/Excel/Expressions";
 import * as Latex from "@mbse/expressions/LaTeX/Expressions";
 import * as Matlab from "@mbse/expressions/MATLAB/Expressions";
 import * as Python3 from "@mbse/expressions/Python/Python3";
+import * as AAPCS64 from "@mbse/expressions/Arm/AAPCS64";
+import * as AMD64 from "@mbse/expressions/SystemV/AMD64";
 import * as SystemVerilog from "@mbse/expressions/SystemVerilog/Expressions";
 import { Terms } from "@mbse/expressions/Framework";
 import { Builders } from "@mbse/schemas/Framework";
@@ -40,17 +43,17 @@ export function install(txn: any): any {
 }
 
 /** A store of the cold chain's schemas, which also holds expressions: of the Patterns dialect, and of every dialect the
- * case studies translate into, installed after the standard dialects whose kinds of domain they use; Patterns'
- * operations named by its dialect (`Patterns.define`), which validation reads; and SystemVerilog's types, its domains
- * (`SystemVerilog.define`), which its evaluation reads. */
+ * case studies translate into, installed after the standard dialects whose kinds of domain they use, with the two ABI
+ * dialects C's and C++'s terms are read under (x86-64's System V ABI, `SystemV/AMD64`, and Arm's AAPCS64,
+ * `Arm/AAPCS64`); Patterns' operations named by its dialect (`Patterns.define`), which validation reads; and C's,
+ * C++'s, the ABIs' and SystemVerilog's types, their domains (each dialect's `define`), which their evaluation reads. */
 export function cold_chain(): any {
   const store: any = new Builders.Store();
   for (const module of [Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
-    SystemVerilog]) {
+    AMD64, AAPCS64, SystemVerilog]) {
     store.transaction(module.install);
   }
-  store.transaction(Patterns.define);
-  store.transaction(SystemVerilog.define);
+  for (const module of [Patterns, C, Cpp, AMD64, AAPCS64, SystemVerilog]) store.transaction(module.define);
   store.transaction(install);
   return store;
 }

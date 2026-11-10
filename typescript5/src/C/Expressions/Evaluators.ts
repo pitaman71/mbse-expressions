@@ -3,16 +3,22 @@
  * interpreter is `interpreter(Cpp.Expressions.DIALECT)`), in TypeScript.
  *
  * `Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from, an `Expression`) in
- * a `new Scope(variables, { functions })`. Values carry their C
- * type while evaluating, and the result is its native: a bigint, a number (a `long double` as its text, as
+ * a `new Scope(variables, { functions })`. Values carry their C type while evaluating, and the result is its native: a
+ * bigint, a number (a value of a format whose values are text, `long double`'s under most ABIs, as its text, as
  * `Patterns.Ieee754` writes it), a boolean, a string, or an object. A variable's type is its value's: a boolean is a
  * `bool`, a bigint an `int`, `long` or `unsigned long` as the first that holds it, and a number a `double` (a value
- * carries no domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). C's rules
- * apply:
+ * carries no domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). Every
+ * named type it computes in (a literal's, a variable's, a cast's, the promotions' `int`, a comparison's `bool`) is a
+ * stored domain, read through the term's holder (`Domains.Types`): among its dialect's domains, then its holder's
+ * ABI's, so the same term evaluates as each ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is
+ * signed, and 200 under AAPCS64's; `long double` is x87's format under the one and `binary128` under the other). A lone
+ * term is refused where it reads a type (mbse-schemas' TypeError), and so is a type neither dialect defines, by name.
+ * C's rules apply:
  *
  * - The integer promotions and the usual arithmetic conversions decide the type an operator computes in (see
  *   `Domains`); unsigned arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754
- *   specifies.
+ *   specifies, in the type's format, decimal ones too; a decimal floating operand with a binary one is refused
+ *   (`TypeError`), as C's constraint has it.
  * - What C leaves undefined throws: a signed result outside its type (`OverflowError`), an integer divided by zero
  *   (`ZeroDivisionError`), a shift by a negative count or by the width or more, a left shift of a negative value, and a
  *   cast of a floating value outside the target type (`OverflowError`) or of NaN (`ValueError`).
@@ -29,15 +35,15 @@
  * A literal's type is what its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's
  * `int` and C++'s `char`), else its value's. Evaluation stays shallow (the dialects proposal, Decided, 8): `EVALUATED`
  * names the kinds C evaluated before it was complete, in their complete shapes; any other kind throws
- * `NotImplementedError` by name ("C sizeofexpression is not evaluated"), and so does what an evaluated kind holds beyond
- * its former shape: an operator its vocabulary has but no rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not
- * evaluated"), a literal of a type no evaluator has values of ("C literal of wchar_t is not evaluated"), a cast to a type
- * that is not arithmetic, a subscript of several indices, a call of a callee that is not a function's name, a member that
- * is not an identifier, C++'s name used as an expression that is not an identifier (`std::cout`, "Cpp idexpression of a
- * name that is not an identifier is not evaluated"), and GNU's conditional without a consequence. C's name used as an
- * expression is the framework's `variable`, and C++'s an `idexpression` holding its identifier (`Cpp/Evaluators`'
- * `EVALUATED`). Invalid syntax throws `ValueError` by name, as every dialect's does ("C error is not evaluated"), where a
- * cast's type stands too.
+ * `NotImplementedError` by name ("C sizeofexpression is not evaluated"), and so does what an evaluated kind holds
+ * beyond its former shape: an operator its vocabulary has but no rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*'
+ * is not evaluated"), a literal of a type no evaluator has values of ("C literal of _BitInt is not evaluated"), a cast
+ * to a type that is not arithmetic, a subscript of several indices, a call of a callee that is not a function's name, a
+ * member that is not an identifier, C++'s name used as an expression that is not an identifier (`std::cout`, "Cpp
+ * idexpression of a name that is not an identifier is not evaluated"), and GNU's conditional without a consequence. C's
+ * name used as an expression is the framework's `variable`, and C++'s an `idexpression` holding its identifier
+ * (`Cpp/Evaluators`' `EVALUATED`). Invalid syntax throws `ValueError` by name, as every dialect's does ("C error is not
+ * evaluated"), where a cast's type stands too.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -68,14 +74,26 @@ function nameOf(value: Typed): string {
   return value.ctype !== null ? value.ctype.name() : typeName(value.value);
 }
 
-const type = (name: string) => Domains.TYPES.get(name) as CType;
+/** A value no type holds, a bigint beyond every type: refused. */
+function untyped(value: unknown): Typed {
+  throw new OverflowError(`integer ${value} is too large for any type`);
+}
 
-/** A variable's or a member's value, with its type. */
-function typed(value: unknown): Typed {
-  const ctype = Domains.of(value);
-  if (ctype instanceof Domains.CType) return new Typed(ctype, value);
-  if (typeof value === "bigint") throw new OverflowError(`integer ${value} is too large for any type`);
-  return new Typed(null, value);
+/** A variable's or a member's value, with its type, read through `types`. */
+function typed(value: unknown, types: Domains.Types): Typed {
+  if (!["boolean", "bigint", "number"].includes(typeof value)) return new Typed(null, value);
+  const name = Domains.of(value, types);
+  return name === null ? untyped(value) : new Typed(types.named(name), value);
+}
+
+/** The types a term of `dialect` reads, through its holder. */
+function typesOf(node: unknown, dialect: Terms.Dialect): Domains.Types {
+  return new Domains.Types(node, dialect.path);
+}
+
+/** `bool`, read through the `Types` a type was read through. */
+function bool(ctype: CType): CType {
+  return (ctype.types as Domains.Types).named("bool");
 }
 
 function refuse(dialect: Terms.Dialect, what: string): Error {
@@ -90,7 +108,9 @@ function literal(dialect: Terms.Dialect): (domain: any, value: unknown) => Typed
       if (domain === Domains.String) return new Typed(null, value);
       throw refuse(dialect, `literal of ${domain.name()}`);
     }
-    if (domain.kind === "floating") return convert(new Typed(Domains.Double, value), domain);
+    if (domain.kind === "floating") { // a literal's value is a binary64 number, rounded to its type
+      return new Typed(domain, Ieee754.convert("binary64", value, domain.format as Ieee754.Format, EVEN));
+    }
     if (!domain.contains(value)) throw new OverflowError(`integer literal ${value} does not fit '${domain.name()}'`);
     return new Typed(domain, value);
   };
@@ -117,7 +137,7 @@ function convert(value: Typed, target: CType): Typed {
   const native = value.value;
   if (target.kind === "bool") {
     if (source.kind === "floating") { // true unless a zero of either sign; NaN is true
-      const datum = Ieee754.decode(source.format as string, native);
+      const datum = Ieee754.decode(source.format as Ieee754.Format, native);
       return new Typed(target, datum.special !== null || datum.coefficient !== 0n);
     }
     return new Typed(target, BigInt(native) !== 0n);
@@ -125,10 +145,10 @@ function convert(value: Typed, target: CType): Typed {
   if (source.kind !== "floating") {
     const number = BigInt(native);
     if (target.kind === "integer") return new Typed(target, wrap(target, number));
-    return new Typed(target, Ieee754.from_integer(number, target.format as string, EVEN));
+    return new Typed(target, Ieee754.from_integer(number, target.format as Ieee754.Format, EVEN));
   }
-  if (target.kind === "floating") return new Typed(target, Ieee754.convert(source.format as string, native, target.format as string, EVEN));
-  const whole = Ieee754.to_integer(source.format as string, native, ZERO);
+  if (target.kind === "floating") return new Typed(target, Ieee754.convert(source.format as Ieee754.Format, native, target.format as Ieee754.Format, EVEN));
+  const whole = Ieee754.to_integer(source.format as Ieee754.Format, native, ZERO);
   if (typeof whole === "number" || !target.contains(whole)) {
     const shown = typeof native === "string" ? native : repr(native);
     throw new OverflowError(`${shown} is out of range of '${target.name()}'`);
@@ -137,7 +157,11 @@ function convert(value: Typed, target: CType): Typed {
 }
 
 function common(left: Typed, right: Typed, operator: string): [CType, Typed, Typed] {
-  const ctype = Domains.common(arithmetic(left, operator), arithmetic(right, operator));
+  const [a, b] = [arithmetic(left, operator), arithmetic(right, operator)];
+  const ctype = Domains.common(a, b);
+  if (ctype === null) { // a decimal floating type and a binary one: a constraint C's usual arithmetic conversions impose
+    throw new TypeError(`invalid operands to binary ${operator} ('${a.name()}' and '${b.name()}')`);
+  }
   return [ctype, convert(left, ctype), convert(right, ctype)];
 }
 
@@ -159,7 +183,7 @@ function binaryArithmetic(operator: string): F.Implementation {
       if (!(operator in FLOATING_OPERATORS)) {
         throw new TypeError(`invalid operands to binary ${operator} ('${ctype.name()}' and '${ctype.name()}')`);
       }
-      return new Typed(ctype, Ieee754.operate(FLOATING_OPERATORS[operator] as string, ctype.format as string, EVEN, [a.value, b.value]));
+      return new Typed(ctype, Ieee754.operate(FLOATING_OPERATORS[operator] as string, ctype.format as Ieee754.Format, EVEN, [a.value, b.value]));
     }
     const [x, y] = [a.value as bigint, b.value as bigint];
     if ((operator === "/" || operator === "%") && y === 0n) throw new ZeroDivisionError("integer division by zero");
@@ -187,7 +211,7 @@ function shift(operator: string): F.Implementation {
 }
 
 /** How two non-NaN floating values compare by value: -0 equals 0. */
-function ieeeOrder(format: string, a: unknown, b: unknown): number {
+function ieeeOrder(format: Ieee754.Format, a: unknown, b: unknown): number {
   const [x, y] = [Ieee754.decode(format, a), Ieee754.decode(format, b)];
   if (x.special === null && y.special === null && x.coefficient === 0n && y.coefficient === 0n) return 0;
   return Ieee754.compare(format, a, b) as number;
@@ -201,39 +225,42 @@ function comparison(operator: string): F.Implementation {
     const [ctype, a, b] = common((args[0] as F.Thunk)(), (args[1] as F.Thunk)(), operator);
     let order: number;
     if (ctype.kind === "floating") {
-      const format = ctype.format as string;
+      const format = ctype.format as Ieee754.Format;
       const [x, y] = [Ieee754.decode(format, a.value), Ieee754.decode(format, b.value)];
-      if (x.special === "nan" || y.special === "nan") return new Typed(Domains.Bool, operator === "!=");
+      if (x.special === "nan" || y.special === "nan") return new Typed(bool(ctype), operator === "!=");
       order = ieeeOrder(format, a.value, b.value);
     } else {
       order = a.value > b.value ? 1 : a.value < b.value ? -1 : 0;
     }
-    return new Typed(Domains.Bool, (tests[operator] as (o: number) => boolean)(order));
+    return new Typed(bool(ctype), (tests[operator] as (o: number) => boolean)(order));
   };
 }
 
-function truth(value: Typed, operator: string): boolean {
-  arithmetic(value, operator);
-  return convert(value, Domains.Bool).value;
+/** A scalar's truth, a `bool`. */
+function truth(value: Typed, operator: string): Typed {
+  return convert(value, bool(arithmetic(value, operator)));
 }
 
 function logical(operator: string): F.Implementation {
   return (args) => {
     const first = truth((args[0] as F.Thunk)(), operator);
-    if (first === (operator === "||")) return new Typed(Domains.Bool, first);
-    return new Typed(Domains.Bool, truth((args[1] as F.Thunk)(), operator));
+    if (first.value === (operator === "||")) return first;
+    return truth((args[1] as F.Thunk)(), operator);
   };
 }
 
 function unary(operator: string): F.Implementation {
   return (args) => {
     const value = (args[0] as F.Thunk)();
-    if (operator === "!") return new Typed(Domains.Bool, !truth(value, operator));
+    if (operator === "!") {
+      const held = truth(value, operator);
+      return new Typed(held.ctype, !held.value);
+    }
     const ctype = Domains.promoted(arithmetic(value, operator));
     const promoted = convert(value, ctype);
     if (ctype.kind === "floating") {
       if (operator === "~") throw new TypeError(`invalid argument type '${ctype.name()}' to unary expression`);
-      return operator === "+" ? promoted : new Typed(ctype, Ieee754.operate("neg", ctype.format as string, EVEN, [promoted.value]));
+      return operator === "+" ? promoted : new Typed(ctype, Ieee754.operate("neg", ctype.format as Ieee754.Format, EVEN, [promoted.value]));
     }
     const number = promoted.value as bigint;
     return integerResult(ctype, operator, operator === "+" ? number : operator === "-" ? -number : ~number);
@@ -243,7 +270,7 @@ function unary(operator: string): F.Implementation {
 function conditional(dialect: Terms.Dialect): F.Implementation {
   return (args, node) => {
     if (Terms.argumentsOf(Terms.kindOf(node)[1])[1] === null) throw refuse(dialect, "conditionalexpression without a consequence");
-    return truth((args[0] as F.Thunk)(), "?:") ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)();
+    return truth((args[0] as F.Thunk)(), "?:").value ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)();
   };
 }
 
@@ -263,9 +290,9 @@ function cast(dialect: Terms.Dialect): F.Implementation {
     if (Terms.INVALID_KINDS.has(type_.kind)) { // invalid syntax where the type stands, refused as every dialect refuses it
       throw new ValueError(`${dialect.name()} ${type_.kind} is not evaluated`);
     }
-    const name = Expressions.typeName(type_);
-    if (name === null) throw refuse(dialect, "castexpression to a type that is not arithmetic");
-    return convert((args[0] as F.Thunk)(), type(name));
+    const target = Expressions.castType(Expressions.typeName(type_), typesOf(node, dialect));
+    if (target === null) throw refuse(dialect, "castexpression to a type that is not arithmetic");
+    return convert((args[0] as F.Thunk)(), target);
   };
 }
 
@@ -285,25 +312,25 @@ function member(dialect: Terms.Dialect): F.Implementation {
     else if (Objects.isObject(target)) members = Objects.properties(target);
     else throw new TypeError(`member reference base type '${typeName(target)}' is not a structure`);
     if (!members.has(name)) throw new KeyError(`no member named '${name}'`);
-    return typed(array(members.get(name)));
+    return typed(array(members.get(name)), typesOf(node, dialect));
   };
 }
 
 function subscript(dialect: Terms.Dialect): F.Implementation {
-  return (args) => {
+  return (args, node) => {
     if (args.length !== 2) throw refuse(dialect, "subscriptexpression of several indices");
-    return element((args[0] as F.Thunk)(), (args[1] as F.Thunk)());
+    return element((args[0] as F.Thunk)(), (args[1] as F.Thunk)(), typesOf(node, dialect));
   };
 }
 
-function element(target: Typed, index: Typed): Typed {
+function element(target: Typed, index: Typed, types: Domains.Types): Typed {
   if (!Array.isArray(target.value)) throw new TypeError(`subscripted value is not an array: '${nameOf(target)}'`);
   if (index.ctype === null || index.ctype.kind === "floating") throw new TypeError(`array subscript is not an integer: '${nameOf(index)}'`);
   const position = BigInt(index.value);
   if (position < 0n || position >= BigInt(target.value.length)) {
     throw new ValueError(`index ${position} is out of bounds of an array of ${target.value.length}`);
   }
-  return typed(target.value[Number(position)]);
+  return typed(target.value[Number(position)], types);
 }
 
 function call(dialect: Terms.Dialect): F.Implementation {
@@ -313,7 +340,7 @@ function call(dialect: Terms.Dialect): F.Implementation {
       throw refuse(dialect, "callexpression of a callee that is not a function's name");
     }
     const fn = (scope as Scope).function(Terms.nameOf(callee));
-    return typed(fn(...args.slice(1).map((argument) => (argument() as Typed).value)));
+    return typed(fn(...args.slice(1).map((argument) => (argument() as Typed).value)), typesOf(node, dialect));
   };
 }
 
@@ -327,12 +354,12 @@ export class Scope extends S.Variables {
   }
 
   override lookup(reference: any): unknown {
+    const path = Terms.dialectOf(reference).slice("Expressions.".length, -".Term".length);
     if (Terms.nameOf(reference) === null) { // C++'s idexpression of a name that is not an identifier: `std::cout`
-      const dialect = Terms.dialectName(Terms.dialectOf(reference).slice("Expressions.".length, -".Term".length));
-      throw new NotImplementedError(
-        `${dialect} ${Terms.kindOf(reference)[0]} of a name that is not an identifier is not evaluated`);
+      throw new NotImplementedError(`${Terms.dialectName(path)} ${Terms.kindOf(reference)[0]} of a name that is not `
+        + "an identifier is not evaluated");
     }
-    return typed(super.lookup(reference));
+    return typed(super.lookup(reference), new Domains.Types(reference, path));
   }
 
   override unbound(reference: any): never {
@@ -365,7 +392,7 @@ export function interpreter(dialect: Terms.Dialect, evaluated: ReadonlySet<strin
     [Expressions.CONDITIONALEXPRESSION, conditional(dialect)], [Expressions.CASTEXPRESSION, cast(dialect)],
     [Expressions.MEMBEREXPRESSION, member(dialect)], [Expressions.SUBSCRIPTEXPRESSION, subscript(dialect)],
     [Expressions.CALLEXPRESSION, call(dialect)],
-  ]), { literal: typed, typed: literal(dialect), scope: (variables) => new Scope(variables), evaluated });
+  ]), { literal: untyped, typed: literal(dialect), scope: (variables) => new Scope(variables), evaluated });
 }
 
 /** The interpreter of the C dialect. */

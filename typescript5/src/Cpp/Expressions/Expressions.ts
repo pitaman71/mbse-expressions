@@ -2,28 +2,29 @@
  * Expressions of the Cpp dialect: every expression of C++, C++17 to C++23, as mbse-programs has them, with the
  * sublanguages expressions hold.
  *
- * The dialect is complete over C++'s expression syntax (mbse-basis
- * [CAP-230: the C++ expression dialect](mbse:mbse-basis/docs/capabilities/CAP-230.md), by
- * [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules); C++26's pack indexing,
- * reflection, splices, annotations and contracts are outside it. Its terms are values of its `Term`,
- * `Expressions.Cpp.Expressions.Term`, the branch `cpp` of `Expressions.Framework.Term`, which `install` defines and adds to
- * `Expressions.Framework.Term` by schema extension. Its kinds are mbse-programs' Ccpp expression kinds that C++ has
- * (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`), named as `C.Expressions` names them: C++ is not a superset
- * of C, so the two are separate dialects, each with a union of its own, and `Cpp` defines its own copy of each kind they
- * share (`Expressions.Cpp.Expressions.BinaryExpression`), holding C++'s terms, without what only C has (an array declarator's
- * `static`, C's index designators, `_Generic`, compound literals, `typeof`, `_Atomic(type)`, `_BitInt`). Where
- * mbse-programs holds a `Name`, Cpp holds its `Name` union (`identifier`, `qualifiedname`, `templateid`,
- * `operatorname`, `conversionname`, `literaloperatorname`, `destructorname`, and, where a name's place holds it, a
- * `decltypespecifier`); where it holds an `Identifier` alone, an `Identifier`; where it holds a `str`, a `str`. A term
- * carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own literal (`Expressions.Cpp.Expressions.Literal`, also a
- * raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
+ * The dialect is complete over C++'s expression syntax (mbse-basis [CAP-230: the C++ expression
+ * dialect](mbse:mbse-basis/docs/capabilities/CAP-230.md), by [CAP-226: complete expression
+ * dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules); C++26's pack indexing, reflection, splices,
+ * annotations and contracts are outside it. Its terms are values of its `Term`, `Expressions.Cpp.Expressions.Term`, the
+ * branch `cpp` of `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by
+ * schema extension. Its kinds are mbse-programs' Ccpp expression kinds that C++ has
+ * (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`), named as `C.Expressions` names them: C++ is not a
+ * superset of C, so the two are separate dialects, each with a union of its own, and `Cpp` defines its own copy of each
+ * kind they share (`Expressions.Cpp.Expressions.BinaryExpression`), holding C++'s terms, without what only C has (an
+ * array declarator's `static`, C's index designators, `_Generic`, compound literals, `typeof`, `_Atomic(type)`,
+ * `_BitInt`). Where mbse-programs holds a `Name`, Cpp holds its `Name` union (`identifier`, `qualifiedname`,
+ * `templateid`, `operatorname`, `conversionname`, `literaloperatorname`, `destructorname`, and, where a name's place
+ * holds it, a `decltypespecifier`); where it holds an `Identifier` alone, an `Identifier`; where it holds a `str`, a
+ * `str`. A term carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own literal
+ * (`Expressions.Cpp.Expressions.Literal`, also a raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
  *
  * - `userdefinedliteral` (`literal`, a `literal`'s value object, and its `suffix`, `10_km`);
  * - names: `idexpression`, every name used as an expression, holding its `Name` (`x`, `std::cout`, `f<int>`,
  *   `operator+`), as C++'s grammar makes it: C++ has no `variable` (the user's decision of 2026-11-04, in the dialects
- *   proposal's Decided), and an `idexpression` of an identifier is a lexical reference to its spelling, which validation
+ * proposal's Decided), and an `idexpression` of an identifier is a lexical reference to its spelling, which validation
  *   requires bound and evaluation resolves; `thisexpression`;
- * - `lambdaexpression` (`captures`, `template_parameters`, `template_requires`, `attributes`, `declarator`), whose body of
+ * - `lambdaexpression` (`captures`, `template_parameters`, `template_requires`, `attributes`, `declarator`), whose body
+ *   of
  *   statements is not part of the term (the dialects proposal, Decided, 5, "(i)"); `foldexpression`;
  *   `requiresexpression` (`parameters`, `requirements`);
  * - casts: `functionalcastexpression` (`T(x)`, `T{x}`), `namedcastexpression` (`static_cast<T>(x)` and its siblings),
@@ -32,24 +33,30 @@
  *   `noexceptexpression`, `newexpression`, `deleteexpression`, `throwexpression`, `packexpansion` (`pattern...`).
  *
  * Its sublanguages are unions of their own: `Expressions.Cpp.Expressions.Type`, a type name (`typeid`), and
- * `Expressions.Cpp.Expressions.Pattern`, for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an `identifier`, or
- * invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch of every union
- * whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does, `Pattern` lists `identifier`,
- * `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a `parameterdeclaration`
- * and `Initializer` an `initializerlist`. A type name's and a lambda's parts are helpers, each union named after
- * mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`, `Capture`,
- * `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and `AttributeSpecifier`.
+ * `Expressions.Cpp.Expressions.Pattern`, for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an
+ * `identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a
+ * branch of every union whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does,
+ * `Pattern` lists `identifier`, `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers,
+ * `TemplateParameter` a `parameterdeclaration` and `Initializer` an `initializerlist`. A type name's and a lambda's
+ * parts are helpers, each union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`,
+ * `TemplateParameter`, `Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and
+ * `AttributeSpecifier`.
  *
  * Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'s names: C++20's kinds, `co_await`,
  * `co_yield`, `requires` and designated initializers, C++20 and C++23; an extension none). `DIALECT` reads them
  * (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
  * expression an `idexpression` (`identifier("x")`, and a callee named by a string):
- * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
+ * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++
+ * source.
  *
  * Its kind of domain, the branch of its union `Expressions.Cpp.Expressions.DomainKind`, which `install` adds to the
- * framework's `Expressions.Framework.DomainKind` as the branch `cpp`: the token `nullptr_t` (`OfNullptr`), C++'s own, with
- * the inferred `ordered`; its domain has no schema, its value a `constant`'s. Its domains are stage 3's of the
- * domains-as-data proposal.
+ * framework's `Expressions.Framework.DomainKind` as the branch `cpp`: the token `nullptr_t` (`OfNullptr`), C++'s own,
+ * with the inferred `ordered`; its domain has no schema, its value a `constant`'s. `install` also adds its domains'
+ * schemas (`Expressions.Cpp.Expressions.std_float16_t`, a dotted identifier spelling `std::float16_t`), and `define`
+ * writes its domains, the types C++'s standard fixes (`bool`, `int8_t` to `uint64_t`, `std::float16_t` to
+ * `std::float128_t`, `std::bfloat16_t`, `nullptr_t`), owned by name. Every other type a C++ term reads (`int`, `char`,
+ * `char8_t`, `size_t`, `long double`, ...) is its holder's ABI's, as a C term's is, read the same way (see
+ * `C/Expressions`): a C++ literal is typed by C++'s names, `1.0f16` a `std::float16_t`, `1.0bf16` a `std::bfloat16_t`.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -86,9 +93,9 @@ export const SUFFIXES: C.Suffixes = {
 
 /** Cpp's union of its kinds, added to the framework's terms as the branch `cpp`, its own kinds, its sublanguages'
  * unions (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
- * `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes nothing.
- * Its holder, `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
- * `Term`. */
+ * `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes
+ * nothing. Its holder, `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root`
+ * narrowed to its `Term`. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
@@ -134,7 +141,11 @@ export function install(txn: any): any {
       TemplateTemplateParameter: S.OfObject, NoexceptSpecifier: S.OfObject,
       ThrowSpecifier: S.OfObject, StandardAttributeSpecifier: S.OfObject, Attribute: S.OfObject,
       AlignasSpecifier: S.OfObject, GnuAttributeSpecifier: S.OfObject,
-      DeclspecSpecifier: S.OfObject }) // FrameworkTerm: the framework's, by name
+      DeclspecSpecifier: S.OfObject, // FrameworkTerm: the framework's, by name
+      bool: S.OfAny, int8_t: S.OfAny, int16_t: S.OfAny, int32_t: S.OfAny, int64_t: S.OfAny, // its domains' schemas
+      uint8_t: S.OfAny, uint16_t: S.OfAny, uint32_t: S.OfAny, uint64_t: S.OfAny,
+      std_float16_t: S.OfAny, std_float32_t: S.OfAny, std_float64_t: S.OfAny, std_float128_t: S.OfAny,
+      std_bfloat16_t: S.OfAny })
     .spec([
       // its dialect: the singleton `Expressions.Cpp.Expressions`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.Cpp.Expressions.Dialect").ref(true).singleton("Expressions.Cpp.Expressions").adjacencies({
@@ -460,7 +471,123 @@ export function install(txn: any): any {
         (t: any) => t.name("cpp").schema([_.DomainKind])]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("cpp").schema([_.Term])]),
+      // --- its domains' schemas, each an OfAny of the scalar it narrows (a format whose values are text, `str`), named
+      // as a dotted identifier spells its type (`std::float16_t` as `std_float16_t`), which `define` relates to its
+      // domain; `nullptr_t`'s has none ---
+      (_: any) => _.bool.name("Expressions.Cpp.Expressions.bool").schemas([S.OfBool]),
+      (_: any) => _.int8_t.name("Expressions.Cpp.Expressions.int8_t").schemas([S.OfInt]),
+      (_: any) => _.int16_t.name("Expressions.Cpp.Expressions.int16_t").schemas([S.OfInt]),
+      (_: any) => _.int32_t.name("Expressions.Cpp.Expressions.int32_t").schemas([S.OfInt]),
+      (_: any) => _.int64_t.name("Expressions.Cpp.Expressions.int64_t").schemas([S.OfInt]),
+      (_: any) => _.uint8_t.name("Expressions.Cpp.Expressions.uint8_t").schemas([S.OfInt]),
+      (_: any) => _.uint16_t.name("Expressions.Cpp.Expressions.uint16_t").schemas([S.OfInt]),
+      (_: any) => _.uint32_t.name("Expressions.Cpp.Expressions.uint32_t").schemas([S.OfInt]),
+      (_: any) => _.uint64_t.name("Expressions.Cpp.Expressions.uint64_t").schemas([S.OfInt]),
+      (_: any) => _.std_float16_t.name("Expressions.Cpp.Expressions.std_float16_t").schemas([S.OfFloat]),
+      (_: any) => _.std_float32_t.name("Expressions.Cpp.Expressions.std_float32_t").schemas([S.OfFloat]),
+      (_: any) => _.std_float64_t.name("Expressions.Cpp.Expressions.std_float64_t").schemas([S.OfFloat]),
+      (_: any) => _.std_float128_t.name("Expressions.Cpp.Expressions.std_float128_t").schemas([S.OfStr]),
+      (_: any) => _.std_bfloat16_t.name("Expressions.Cpp.Expressions.std_bfloat16_t").schemas([S.OfStr]),
+    ])]))]);
+}
 
+/** C++'s dialect as data: the singleton `Expressions.Cpp.Expressions` owning its domains by name (`domains`, through
+ * `Expressions.Framework.Defines`), the types C++'s standard fixes, each with its parameters and its inferred
+ * properties, and each but `nullptr_t`'s related to its schema (`Expressions.Cpp.Expressions.std_float16_t`) by
+ * `Expressions.Framework.HasDomain`: `bool` (11404's `boolean`); `int8_t` to `int64_t` and `uint8_t` to `uint64_t`, as
+ * C's (C++'s `<cstdint>` is C's, under C's names); C++23's `std::float16_t`, `std::float32_t`, `std::float64_t` and
+ * `std::float128_t` (IEEE 754's `binary16` to `binary128`) and `std::bfloat16_t` (IEEE 754's kind with no format: 16
+ * bits, radix 2, precision 8, emax 127), each rounding ties to even; and `nullptr_t`, of C++'s own kind. What C++
+ * leaves to the implementation is each ABI dialect's, as C's is. Run after `install`, in a transaction of its own; run
+ * again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its name, spelled as its
+ * schema's is: `store.transaction(Cpp.define)[0].get("std_bfloat16_t")`. */
+export function define(txn: any): any {
+  const OWN = txn.Expressions.Cpp.Expressions;
+  const Domain = txn.Expressions.Framework.Domain;
+  return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({
+      dialect: OWN.Dialect,
+      bool: Domain, int8_t: Domain, int16_t: Domain, int32_t: Domain, int64_t: Domain,
+      uint8_t: Domain, uint16_t: Domain, uint32_t: Domain, uint64_t: Domain,
+      std_float16_t: Domain, std_float32_t: Domain, std_float64_t: Domain, std_float128_t: Domain,
+      std_bfloat16_t: Domain, nullptr_t: Domain,
+    })
+    .spec([
+      (_: any) => _.dialect.domains({
+        "bool": (e: any) => e.domain(_.bool),
+        "int8_t": (e: any) => e.domain(_.int8_t),
+        "int16_t": (e: any) => e.domain(_.int16_t),
+        "int32_t": (e: any) => e.domain(_.int32_t),
+        "int64_t": (e: any) => e.domain(_.int64_t),
+        "uint8_t": (e: any) => e.domain(_.uint8_t),
+        "uint16_t": (e: any) => e.domain(_.uint16_t),
+        "uint32_t": (e: any) => e.domain(_.uint32_t),
+        "uint64_t": (e: any) => e.domain(_.uint64_t),
+        "std::float16_t": (e: any) => e.domain(_.std_float16_t),
+        "std::float32_t": (e: any) => e.domain(_.std_float32_t),
+        "std::float64_t": (e: any) => e.domain(_.std_float64_t),
+        "std::float128_t": (e: any) => e.domain(_.std_float128_t),
+        "std::bfloat16_t": (e: any) => e.domain(_.std_bfloat16_t),
+        "nullptr_t": (e: any) => e.domain(_.nullptr_t),
+      }),
+      (_: any) => _.bool.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.isoiec11404((v: any) => v.boolean(
+        (d: any) => d.ordered(false)))))).schema([OWN.bool]),
+      (_: any) => _.int8_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.isoiec11404((v: any) => v.integer(
+        (d: any) => d.width(8n).signed(true).overflow("raise")
+          .least(-128n).greatest(127n).ordered(true)))))).schema([OWN.int8_t]),
+      (_: any) => _.int16_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.isoiec11404((v: any) => v.integer(
+        (d: any) => d.width(16n).signed(true).overflow("raise")
+          .least(-32768n).greatest(32767n).ordered(true)))))).schema([OWN.int16_t]),
+      (_: any) => _.int32_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.isoiec11404((v: any) => v.integer(
+        (d: any) => d.width(32n).signed(true).overflow("raise")
+          .least(-2147483648n).greatest(2147483647n).ordered(true)))))).schema([OWN.int32_t]),
+      (_: any) => _.int64_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.isoiec11404((v: any) => v.integer(
+        (d: any) => d.width(64n).signed(true).overflow("raise")
+          .least(-9223372036854775808n).greatest(9223372036854775807n).ordered(true)))))).schema([OWN.int64_t]),
+      (_: any) => _.uint8_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.isoiec11404((v: any) => v.modulo(
+        (d: any) => d.modulus(256n)
+          .least(0n).greatest(255n).ordered(true)))))).schema([OWN.uint8_t]),
+      (_: any) => _.uint16_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.isoiec11404((v: any) => v.modulo(
+        (d: any) => d.modulus(65536n)
+          .least(0n).greatest(65535n).ordered(true)))))).schema([OWN.uint16_t]),
+      (_: any) => _.uint32_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.isoiec11404((v: any) => v.modulo(
+        (d: any) => d.modulus(4294967296n)
+          .least(0n).greatest(4294967295n).ordered(true)))))).schema([OWN.uint32_t]),
+      (_: any) => _.uint64_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.isoiec11404((v: any) => v.modulo(
+        (d: any) => d.modulus(18446744073709551616n)
+          .least(0n).greatest(18446744073709551615n).ordered(true)))))).schema([OWN.uint64_t]),
+      (_: any) => _.std_float16_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary16").rounding("roundTiesToEven").width(16n)
+          .radix(2n).precision(11n).emax(15n).ordered(true)))))).schema([OWN.std_float16_t]),
+      (_: any) => _.std_float32_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary32").rounding("roundTiesToEven").width(32n)
+          .radix(2n).precision(24n).emax(127n).ordered(true)))))).schema([OWN.std_float32_t]),
+      (_: any) => _.std_float64_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").width(64n)
+          .radix(2n).precision(53n).emax(1023n).ordered(true)))))).schema([OWN.std_float64_t]),
+      (_: any) => _.std_float128_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary128").rounding("roundTiesToEven").width(128n)
+          .radix(2n).precision(113n).emax(16383n).ordered(true)))))).schema([OWN.std_float128_t]),
+      (_: any) => _.std_bfloat16_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.rounding("roundTiesToEven").width(16n)
+          .radix(2n).precision(8n).emax(127n).ordered(true)))))).schema([OWN.std_bfloat16_t]),
+      (_: any) => _.nullptr_t.kind((k: any) => k.as_value((a: any) => a.as_union(
+        (u: any) => u.cpp((v: any) => v.nullptr_t(
+        (d: any) => d.ordered(false)))))),
     ])]))]);
 }
 
@@ -481,7 +608,8 @@ const STANDARDS_OF: ReadonlyMap<string, readonly string[]> = new Map([
 const ANY1 = new FD.Function([FD.Anything], FD.Anything);
 
 function check(tag: string): (record: any) => string[] {
-  return (record: any) => C.problems(F.node(tag, record), SUFFIXES, PREFIXES, "C++");
+  return (record: any) => C.problems(F.node(tag, record), new Domains.Types(record, "Cpp.Expressions"), SUFFIXES, PREFIXES,
+    "C++");
 }
 
 function application(tag: string, signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}): F.Kind {
@@ -504,8 +632,8 @@ const OWN: Record<string, F.Kind> = {
     scopes: C.scopes(NAMEDCASTEXPRESSION) }),
   [TYPEIDEXPRESSION]: application(TYPEIDEXPRESSION, new FD.Opaque()),
   [AWAITEXPRESSION]: application(AWAITEXPRESSION, ANY1),
-  [SIZEOFPACKEXPRESSION]: application(SIZEOFPACKEXPRESSION, Domains.SIZE, { required: ["pack"] }),
-  [NOEXCEPTEXPRESSION]: application(NOEXCEPTEXPRESSION, new FD.Function([FD.Anything], Domains.Bool)),
+  [SIZEOFPACKEXPRESSION]: application(SIZEOFPACKEXPRESSION, Domains.SIZE, { required: ["pack"], typed: C.size("C++") }),
+  [NOEXCEPTEXPRESSION]: application(NOEXCEPTEXPRESSION, ANY1, { typed: C.truth("C++") }),
   [NEWEXPRESSION]: application(NEWEXPRESSION, new FD.Opaque(), { required: ["type"] }),
   [DELETEEXPRESSION]: application(DELETEEXPRESSION, ANY1),
   [THROWEXPRESSION]: application(THROWEXPRESSION, new FD.Opaque(), { optional: ["operand"] }),
@@ -522,7 +650,7 @@ function native(value: unknown): Writer | null {
 
 /** The Cpp dialect: its kinds, as the framework reads them. */
 export const DIALECT: F.Dialect = new F.Dialect("Cpp.Expressions", Object.fromEntries(TAGS.map((tag) => [tag, SHARED[tag] ?? OWN[tag] as F.Kind])),
-  { domain_of: Domains.of, literal: native });
+  { domain_of: C.untyped, literal: native });
 
 /** A term of the Cpp dialect, written through the builders where it is given (a spec). */
 export class Writer extends F.Writer {

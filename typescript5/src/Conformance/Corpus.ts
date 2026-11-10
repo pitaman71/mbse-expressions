@@ -30,6 +30,8 @@ import * as IEEE1164 from "../IEEE1164/Expressions/index.js";
 import * as IEEE754 from "../IEEE754/Expressions/index.js";
 import * as ISOIEC11404 from "../ISOIEC11404/Expressions/index.js";
 import * as Python3 from "../Python/Python3/index.js";
+import * as AAPCS64 from "../Arm/AAPCS64/index.js";
+import * as AMD64 from "../SystemV/AMD64/index.js";
 import * as Unicode from "../Unicode/Expressions/index.js";
 import * as SystemVerilog from "../SystemVerilog/Expressions/index.js";
 import * as TypeScript5 from "../TypeScript/TypeScript5/index.js";
@@ -43,7 +45,7 @@ const TS = TypeScript5.Expressions;
 
 export const CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp",
   "systemverilog", "typescript5", "invalid", "systemverilog_domains", "python3_domains", "typescript5_domains",
-  "matlab_domains", "excel_domains"] as const;
+  "matlab_domains", "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains"] as const;
 
 /** The dialect that reads each case, where it is not Patterns. */
 export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
@@ -58,6 +60,8 @@ export const DOMAINS: ReadonlyMap<string, string> = new Map([
   ["domains", "Expressions.ISOIEC11404.Expressions"], ["systemverilog_domains", "Expressions.SystemVerilog.Expressions"],
   ["python3_domains", "Expressions.Python.Python3"], ["typescript5_domains", "Expressions.TypeScript.TypeScript5"],
   ["matlab_domains", "Expressions.MATLAB.Expressions"], ["excel_domains", "Expressions.Excel.Expressions"],
+  ["c_domains", "Expressions.C.Expressions"], ["cpp_domains", "Expressions.Cpp.Expressions"],
+  ["amd64_domains", "Expressions.SystemV.AMD64"], ["aapcs64_domains", "Expressions.Arm.AAPCS64"],
 ]);
 
 /** A case: its root schema, its root term, and the store it is built in. */
@@ -78,12 +82,15 @@ export function build(): Map<string, Case> {
   store.transaction(Latex.install);
   store.transaction(C.install);
   store.transaction(Cpp.install);
+  store.transaction(AMD64.install); // the ABIs a C or C++ term's holder names
+  store.transaction(AAPCS64.install);
   store.transaction(SystemVerilog.install);
   store.transaction(TypeScript5.install);
   const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
   const stored = new Map<string, any>(([ // each dialect's stored domains
     ["systemverilog_domains", SystemVerilog], ["python3_domains", Python3], ["typescript5_domains", TypeScript5],
-    ["matlab_domains", Matlab], ["excel_domains", Excel]] as [string, any][]).map(
+    ["matlab_domains", Matlab], ["excel_domains", Excel], ["c_domains", C], ["cpp_domains", Cpp],
+    ["amd64_domains", AMD64], ["aapcs64_domains", AAPCS64]] as [string, any][]).map(
     ([name, module]) => [name, store.transaction(module.define)[0].get("dialect")]));
 
   // --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet

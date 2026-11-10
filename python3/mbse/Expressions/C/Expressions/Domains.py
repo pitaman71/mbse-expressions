@@ -5,18 +5,19 @@ A `CType` is a type and a domain: `bool`, an integer by its width and signedness
 format, named (`binary64`) or, where IEEE 754 names none, by its parameters (x87's `(2, 64, 16383)`). It is the working
 value the arithmetic computes on, not a type table: a named type is a stored domain, which `Types` reads. A C term's
 types are among C's own domains (`Expressions.C.Expressions`, which its `define` writes: `bool`, the exact-width
-integers, the `_FloatN` and decimal types), then among those of the ABI its holder names (`Expressions.Framework.HasAbi`,
-the holder's adjacency `abi`: `Expressions.SystemV.AMD64` or `Expressions.Arm.AAPCS64`, which hold `int`, `long`,
-`char`, `long double`, `size_t`, ...); a C++ term's among C++'s (`Expressions.Cpp.Expressions`) then its holder's ABI's
-([Domains as data](../../../../../docs/proposals/domains/README.md#stage-3s-design), Decided, P and Q). `Types(term,
-path)` finds the holder from any term or record within it (`Terms.holder_of`: a lone term is refused, mbse-schemas'
-TypeError, "the value does not belong to a store") when it first reads a type, and reads each once: `named(name)` is
-the type, a `CType` labelled with its `Defines` name and keeping the domain it was read from and the `Types` it was read
-through, so that a rule reaches the store for a type no operand carries (the promotions' `int`); its width and
-signedness come from its kind (11404's `integer`; `modulo`, unsigned, of the width its modulus gives; `boolean`), a
-floating type's format and width from IEEE 754's. A type neither dialect defines is refused by name: "'int' is not a
-type C defines, and its expression names no ABI", or "'int' is not a type C or AMD64 defines"; `find(name)` gives None
-instead where the holder names an ABI (a cast to a type a program declares).
+integers, the `_FloatN` and decimal types), then among those of the ABI its holder names
+(`Expressions.Framework.HasAbi`, the holder's adjacency `abi`: `Expressions.SystemV.AMD64` or `Expressions.Arm.AAPCS64`,
+which hold `int`, `long`, `char`, `long double`, `size_t`, ...); a C++ term's among C++'s
+(`Expressions.Cpp.Expressions`) then its holder's ABI's ([Domains as
+data](../../../../../docs/proposals/domains/README.md#stage-3s-design), Decided, P and Q). `Types(term, path)` finds the
+holder from any term or record within it (`Terms.holder_of`: a lone term is refused, mbse-schemas' TypeError, "the value
+does not belong to a store") when it first reads a type, and reads each once: `named(name)` is the type, a `CType`
+labelled with its `Defines` name and keeping the domain it was read from and the `Types` it was read through, so that a
+rule reaches the store for a type no operand carries (the promotions' `int`); its width and signedness come from its
+kind (11404's `integer`; `modulo`, unsigned, of the width its modulus gives; `boolean`), a floating type's format and
+width from IEEE 754's. A type neither dialect defines is refused by name: "'int' is not a type C defines, and its
+expression names no ABI", or "'int' is not a type C or AMD64 defines"; `find(name)` gives None instead where the holder
+names an ABI (a cast to a type a program declares).
 
 `promoted(type)` applies the integer promotions (a narrower integer or a bool becomes `int`) and `common(a, b)` the
 usual arithmetic conversions: the wider floating type if either is floating, otherwise the promoted types, the wider if
@@ -30,17 +31,17 @@ The rules stay code, and the signatures are `Dialect.infer`'s, to be replaced wi
 reads them ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
 
 A literal's type is what its text encodes (`literal(attributes, language, types)`), as C's and C++'s standards give it,
-a stored domain found by name ([Domains as data](../../../../../docs/proposals/domains/README.md#decided-on-this-proposal),
-Decided, 5): an integer's by its suffix and its base, the first of the types they allow that holds its value (an
-`unsigned int` for `5u`; a decimal integer without a suffix is its value's, `of`); a floating literal's by its suffix
-(`float` for `f`, `long double` for `L`, `_Float16` for `f16` in C and `std::float16_t` in C++), else `double`; a
-character literal's (an int, its code) `int` in C and `char` in C++, its encoding prefix's type otherwise (`wchar_t`,
-`char8_t`); a bool's `bool`; a string's `String`. What `_BitInt` or a prefix no language has encodes is a domain named
-by its type, which no evaluator has values of; a suffix the language does not write gives `Anything`, its type unknown.
-`out_of_range(attributes, language, types)` says what is wrong with an integer literal that its type does not hold, one
-that fits none of the types its suffix and base allow, by the stored domain's range (a value out of range, PRI-023).
-`arithmetic(names)` is the name of the arithmetic type a type name's specifiers name (`unsigned int`, `uint8_t`), or
-None.
+a stored domain found by name ([Domains as
+data](../../../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, 5): an integer's by its suffix
+and its base, the first of the types they allow that holds its value (an `unsigned int` for `5u`; a decimal integer
+without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double` for `L`,
+`_Float16` for `f16` in C and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in
+C and `char` in C++, its encoding prefix's type otherwise (`wchar_t`, `char8_t`); a bool's `bool`; a string's `String`.
+What `_BitInt` or a prefix no language has encodes is a domain named by its type, which no evaluator has values of; a
+suffix the language does not write gives `Anything`, its type unknown. `out_of_range(attributes, language, types)` says
+what is wrong with an integer literal that its type does not hold, one that fits none of the types its suffix and base
+allow, by the stored domain's range (a value out of range, PRI-023). `arithmetic(names)` is the name of the arithmetic
+type a type name's specifiers name (`unsigned int`, `uint8_t`), or None.
 
 The other operators, which no evaluator computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`, `->*`,
 its folds and named casts), have signatures that say only how many operands each takes.

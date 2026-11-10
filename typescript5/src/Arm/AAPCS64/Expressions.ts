@@ -30,11 +30,12 @@ export const STANDARDS: readonly string[] = [
 ];
 
 /** AAPCS64's dialect's schema, whose singleton is `Expressions.Arm.AAPCS64`, and its domains' schemas. Run after
- * `Framework.install` and the standard dialects', in a transaction of its own; run again, it writes nothing. Its domains
- * `define` writes after it. */
+ * `Framework.install` and the standard dialects', in a transaction of its own; run again, it writes nothing. Its
+ * domains `define` writes after it. */
 export function install(txn: any): any {
   const S = txn.Schemas, Framework = txn.Expressions.Framework;
-  return txn.uid("mbse.Expressions.Arm.AAPCS64/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+  const uid = "mbse.Expressions.Arm.AAPCS64/1";
+  return txn.uid(uid).mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
       Dialects: S.OfUnion, Dialect: S.OfObject, // the framework's kind union of dialects, and its own
       char: S.OfAny, signed_char: S.OfAny, unsigned_char: S.OfAny, short: S.OfAny, unsigned_short: S.OfAny,
@@ -46,9 +47,10 @@ export function install(txn: any): any {
       uint_least64_t: S.OfAny, Float32x: S.OfAny, Float64x: S.OfAny,
     })
     .spec([
-      // --- Its dialect: the singleton `Expressions.Arm.AAPCS64`, a branch of the framework's kind union; an expression
-      // names it as its ABI (anonymous: no member on it) ---
-      (_: any) => _.Dialect.name("Expressions.Arm.AAPCS64.Dialect").ref(true).singleton("Expressions.Arm.AAPCS64").adjacencies({
+      // --- Its dialect: the singleton `Expressions.Arm.AAPCS64`, a branch of the framework's kind union; an
+      // expression names it as its ABI (anonymous: no member on it) ---
+      (_: any) => _.Dialect.name("Expressions.Arm.AAPCS64.Dialect").ref(true).singleton("Expressions.Arm.AAPCS64")
+        .adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
       }).adjacencies([(t: any) => t.relation([Framework.HasAbi]).me("abi")]),
@@ -98,7 +100,8 @@ export function install(txn: any): any {
  * `unsigned_long`): `store.transaction(AAPCS64.define)[0].get("unsigned_long")`. */
 export function define(txn: any): any {
   const ABI = txn.Expressions.Arm.AAPCS64, Domain = txn.Expressions.Framework.Domain;
-  return txn.uid("mbse.Expressions.Arm.AAPCS64.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+  const uid = "mbse.Expressions.Arm.AAPCS64.define/1";
+  return txn.uid(uid).mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
       dialect: ABI.Dialect,
       char: Domain, signed_char: Domain, unsigned_char: Domain, short: Domain, unsigned_short: Domain, int: Domain,
