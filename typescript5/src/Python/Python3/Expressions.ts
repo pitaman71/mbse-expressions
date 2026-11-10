@@ -236,8 +236,8 @@ export function install(txn: any): any {
         problems: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // what is wrong with it
         separators: S.OfBool, // whether its digits are grouped by `_`
       }),
-      // a complex number, a value of two IEEE 754 binary64 floats, as Python's `complex` is (the domains proposal,
-      // Decided, H and J)
+      // a complex number, a value of two IEEE 754 binary64 floats, as Python's `complex` is (mbse-basis
+      // [CAP-227: the Python3 expression dialect](mbse:mbse-basis/docs/capabilities/CAP-227.md#decided))
       (_: any) => _.Complex.name("Expressions.Python.Python3.Complex").properties({
         real: IEEE754.binary64, imag: IEEE754.binary64 }),
       (_: any) => _.ConcatenatedString.name("Expressions.Python.Python3.ConcatenatedString").properties({ values: terms(_) }),

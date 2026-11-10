@@ -8,8 +8,7 @@ types are among C's own domains (`Expressions.C.Expressions`, which its `define`
 integers, the `_FloatN` and decimal types), then among those of the ABI its holder names
 (`Expressions.Framework.HasAbi`, the holder's adjacency `abi`: `Expressions.SystemV.AMD64` or `Expressions.Arm.AAPCS64`,
 which hold `int`, `long`, `char`, `long double`, `size_t`, ...); a C++ term's among C++'s
-(`Expressions.Cpp.Expressions`) then its holder's ABI's ([Domains as
-data](../../../../../docs/proposals/domains/README.md#stage-3s-design), Decided, P and Q). `Types(term, path)` finds the
+(`Expressions.Cpp.Expressions`) then its holder's ABI's (mbse-basis [CAP-267: C and C++ terms read under the ABI their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md#decided)). `Types(term, path)` finds the
 holder from any term or record within it (`Terms.holder_of`: a lone term is refused, mbse-schemas' TypeError, "the value
 does not belong to a store") when it first reads a type, and reads each once: `named(name)` is the type, a `CType`
 labelled with its `Defines` name and keeping the domain it was read from and the `Types` it was read through, so that a
@@ -31,8 +30,7 @@ The rules stay code, and the signatures are `Dialect.infer`'s, to be replaced wi
 reads them ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
 
 A literal's type is what its text encodes (`literal(attributes, language, types)`), as C's and C++'s standards give it,
-a stored domain found by name ([Domains as
-data](../../../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, 5): an integer's by its suffix
+a stored domain found by name (mbse-basis [CAP-229: the C expression dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md#decided)): an integer's by its suffix
 and its base, the first of the types they allow that holds its value (an `unsigned int` for `5u`; a decimal integer
 without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double` for `L`,
 `_Float16` for `f16` in C and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in

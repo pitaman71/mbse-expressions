@@ -1,7 +1,7 @@
 /**
  * The AMD64 dialect: the domains of the System V ABI's AMD64 Architecture Processor Supplement, x86-64's, its LP64
  * programming model, the C and C++ types their standards leave to the implementation, as this ABI fixes them
- * ([Domains as data](../../../../docs/proposals/domains/README.md#stage-3s-design), Decided, Q). It has no terms and
+ * (mbse-basis [CAP-267: C and C++ terms read under the ABI their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md#decided)). It has no terms and
  * no kinds of its own: its domains are instances of ISO/IEC 11404's and IEEE 754's kinds, and it serves C and C++
  * alike. See mbse-basis [CAP-097: value domains of published
  * standards](mbse:mbse-basis/docs/capabilities/CAP-097.md#value-domains).
