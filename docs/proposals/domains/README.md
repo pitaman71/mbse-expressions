@@ -971,6 +971,33 @@ IEEE 754's `decimal32`, `width` and formats by their parameters, and the framewo
 the suites' notebooks, API.md, this proposal, the test plans, the skill, the toolkit) are written by the coordinating
 agent, a group's cases handed to it.
 
+**Found while building**, each taken the simplest way consistent with the record, *(agent)*, for review (API, 131
+onward):
+
+- **Inference has no store where a constant is typed**: `Terms.Dialect`'s `domain_of(value)` takes a value alone, so
+  SystemVerilog and C type a constant through their `literal` kind's `typed(record)`, whose record reaches the store,
+  and `domain_of` gives `Anything` for a constant no type holds; no framework change was needed.
+- **A rule needs a type no operand carries**: SystemVerilog's `common` gives `real` for a `shortreal` among integrals,
+  C's promotions `int` of two `char`s. A working type keeps the stored domain it was read from (`SvType.domain`,
+  `CType`'s), compared by nothing, through whose store the rule reads the type it needs.
+- **`===`'s `bit`**: its signature keeps an unnamed 1-bit 2-state vector; the `binary` kind's `typed` names it `bit`
+  from the store, so inference's result is unchanged.
+- **Only what reads a named type reaches the store**: SystemVerilog's validation (a cast naming a type), inference (a
+  constant, a cast, `===`) and evaluation (wherever it computes in a named type) each reach it, and a lone term that
+  reads none (`4'b1010 & 4'b0110`) is read as before; in practice an unsized constant is an `integer`, so evaluation
+  nearly always does.
+- **A cast's refusal** is the lookup's: `'word' is not a type SystemVerilog defines`, for a name no domain has and a
+  store where the define has not run alike, replacing "a cast's type must be a built-in type, signed or unsigned".
+- **`Framework.Domains.domains(dialect)`** was missing, as `operations` is not; it is added, and SystemVerilog's,
+  C's and C++'s lookups read it (Decided, "The links between dialects": for the user's review).
+- **The corpus's `systemverilog` case needs SystemVerilog's `define`**, its `byte'(...)` cast read from the store by
+  CONF-04; the corpus's store runs every dialect's `define`.
+- **The skill's install list** gains each dialect's `define` whose evaluation, inference or validation reads its
+  domains, and the ABI dialects'.
+- **An Excel error's schema narrows `str`**, its value its code, as Excel's evaluator holds one; the kinds MATLAB's
+  `string` and Excel's `text` are their dialects' own, UTF-16 code units, MATLAB's install so gaining its union of
+  kinds.
+
 ### Questions for the user (stage 3)
 
 K to R are decided (Decided, "On stage 3's design"). R, for the record:
