@@ -376,9 +376,33 @@ As the user decided (2026-11-04), on the questions below:
       `wchar_t`, `size_t`, `ptrdiff_t`, `intptr_t`, `_Float32x`, `_Float64x`, and the `<stdint.h>` typedefs each ABI
       fixes, decided by what the C and C++ standards leave to the implementation, the split listed in the design.
     - This supersedes the design's recommendation (a), that what every ABI shown gives alike stays C's and C++'s.
-  - **R** is open: the user is weighing (d), Excel's error values packed into their `ERROR.TYPE` codes, against (a),
-    keeping `state` and `mode` in ISO/IEC 11404's singleton. Until it is answered they stay exactly as they are, in
-    ISO/IEC 11404's singleton (Stage 3's design, Questions for the user (stage 3), R).
+  - **R: (a), by the agent's check** (2026-11-10). The user left it to the agent: Excel's error values packed into
+    their `ERROR.TYPE` codes, if Microsoft's documentation of `ERROR.TYPE` gives those codes, `state` and `mode` then
+    going; otherwise (a), the fixtures kept in ISO/IEC 11404's singleton, and noted. *(agent)* The documentation
+    (Microsoft Support, "ERROR.TYPE function", checked 2026-11-10) gives codes for eight error values only, `#NULL!` 1
+    to `#GETTING_DATA` 8, and "Anything else" `#N/A`: none for the seven Excel's `error` domain holds since (`#SPILL!`,
+    `#CALC!`, `#FIELD!`, `#BLOCKED!`, `#CONNECT!`, `#BUSY!`, `#UNKNOWN!`). So no `packed` domain can pack Excel's
+    errors into documented codes, and `state` and `mode` stay in ISO/IEC 11404's singleton, as they are: a fixture
+    no standard defines, owned there because mbse-schemas requires every domain an owner (Stage 3's design,
+    Questions for the user (stage 3), R).
+  - **The links between dialects** (2026-11-10). Told what stage 3 built that links one dialect to another, after
+    saying "I am a little concerned about over-exerting ourselves to try to link between dependent dialects", the
+    user answered each:
+    - The holder-to-ABI relation, `Expressions.Framework.HasAbi` (P): "yes, keep it".
+    - IEEE 754's properties, `width` among them, written on the other dialects' `ieee754` domains: "yes, this is
+      critical for precision". Kept as built.
+    - `Framework.Domains.domains(dialect)` and the lookups that read one dialect's domains from another's terms
+      (C's and C++'s through their holder's ABI, SystemVerilog's own): "this is what I want to review". Kept, and
+      listed in stage 3's pull request for the user's review.
+  - **On process** (2026-11-10), the user: "I am less concerned about the number of lines of code and more concerned
+    about how slugging our progress has become. It seems like we are stopping more often, halting on minutiae that are
+    already answered in docs that mbse-basis/docs/README.md marks as mandatory, and losing sight of what is important
+    for increased effort." So agents decide minutiae themselves (names, placements, message wording, which list a type
+    goes in, test layout) from the mandatory documents and the Decided sections, mark each *(agent)* and list them in
+    the pull request; they pause only on a design fork the record does not settle, where a wrong guess costs real
+    rework, or on a sibling's defect, committing and pushing first. And: "make sure all agents keep the full mandtory
+    reading list refreshed after every compaction": after any compaction an agent re-reads mbse-basis' `AGENTS.md`,
+    the four documents it marks mandatory, this repository's `AGENTS.md` and this Decided section before more work.
 - **1. Before domain inference**: "1,5. yes before per your recommendation": domains as data first, as its own
   release; CAP-232 builds on stored domains.
 - **3. `Anything` and `Opaque`**: "agreed. Schemas.OfAny kind of handles that": no stored "anything" domain; where
@@ -859,10 +883,9 @@ then `#SPILL!`, `#CALC!`, `#FIELD!`, `#BLOCKED!`, `#CONNECT!`, `#BUSY!` and `#UN
 
 **LaTeX** stores none (Decided, N): it gains no `define`.
 
-**The corpus's and the tests' own domains** (Decided, "On stage 3's design"): `state` and `mode` are to be written as
-plain `Expressions.Framework.Domain` objects, owned by no dialect, with no `Defines` entry, and no test dialect. Not
-built: mbse-schemas refuses a domain with no owner, and how to settle that is question R, open. Until it is answered they
-stay exactly as they are, in ISO/IEC 11404's singleton (Decided, "On stage 3's design", R).
+**The corpus's and the tests' own domains** (Decided, "On stage 3's design", R): `state` and `mode` stay in ISO/IEC
+11404's singleton, as they are, since mbse-schemas refuses a domain with no owner and `ERROR.TYPE`'s documented codes
+cover only eight of Excel's fifteen error values, so no standard's values can take their place *(agent)*.
 
 **Which ABI a term is read under** (Decided, P). The holder names it:
 
@@ -882,6 +905,9 @@ stay exactly as they are, in ISO/IEC 11404's singleton (Decided, "On stage 3's d
 - **What is refused**, each by name *(agent)*: a type the dialect does not define, whose holder names no ABI, "'int' is
   not a type C defines, and its expression names no ABI"; one neither defines, "'int' is not a type C or AMD64
   defines" (the ABI's `define` has not run). A lone term is refused by mbse-schemas' `TypeError`, as below.
+- **The ABI dialects declare the link** *(agent)*: mbse-schemas refuses a link filled by an object whose schema
+  declares no adjacency to the relation, so each ABI dialect's schema declares an anonymous adjacency to `HasAbi`
+  through `abi`, and a holder naming as its ABI a dialect that is not one (C's, Python3's) is refused by validation.
 - **Not `Uses`**: it records which ABI a holder's terms are read under, not which dialects a dialect uses, as the user
   settled (Decided, P); so it gives no reason to reinstate `Uses`.
 
@@ -925,14 +951,18 @@ name the one each is read under (Decided, P), which is not `Uses`.
 **Tests and corpus**, under their IDs in both languages: a DOM case per group, DOM-19 (C's, C++'s and the ABI
 dialects' stored domains, their kinds, properties and schemas, and a holder's ABI), DOM-20 (SystemVerilog's) and DOM-21
 (Python3's, TypeScript5's, MATLAB's and Excel's); DOM-17's and DOM-18's lists follow; DOM-03, DOM-05, EXP-06 and the
-corpus's `domains` case keep `state` and `mode` in ISO/IEC 11404's singleton until R is answered; DIA-11, DIA-12,
+corpus's `domains` case keep `state` and `mode` in ISO/IEC 11404's singleton (Decided, R); DIA-11, DIA-12,
 DIA-24 and the SystemVerilog cases where literal typing, ranges, casts and evaluation read the store, through a holder
 naming its ABI; DOM-10 to DOM-12 `decimal32` and a format by its parameters; FRM-01 each dialect's kinds, the new
 dialects and `HasAbi`. The corpus gains a case per dialect's stored domains, its singleton written as one document as
 the `domains` case is (`c_domains`, `cpp_domains`, `amd64_domains`, `aapcs64_domains`, `systemverilog_domains`,
-`python3_domains`, `typescript5_domains`, `matlab_domains`, `excel_domains`) *(agent)*, so that the hand-populated
-properties are byte-identical across the languages (Risks, Equivalence). The API's items: Settled in domains as data's
-stage 3, 131 onward.
+`python3_domains`, `typescript5_domains`, `matlab_domains`, `excel_domains`) *(agent)*. A dialect's singleton written
+as one document holds its `Defines` entries, each its name and a reference to its domain, not the domains' kinds, so
+the corpus pins each dialect's domains' names and order across the languages, byte for byte, and CONF-04 each one's
+kind as read back; the hand-populated properties are pinned in each language by the DOM cases' tables (DOM-17 to
+DOM-21), the same values under the same IDs in both (mbse-basis
+[PRI-038: the same cases in both languages](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-038))
+*(agent)*. The API's items: Settled in domains as data's stage 3, 131 onward.
 
 **The build, partitioned**, in the order the record gives, each group by an agent owning its dialects' modules in both
 languages, on this branch: (1) C, C++ and the two ABI dialects (`C/`, `Cpp/`, `SystemV/`, `Arm/`, and `Ieee754`'s and
@@ -943,8 +973,7 @@ agent, a group's cases handed to it.
 
 ### Questions for the user (stage 3)
 
-K to Q are decided (Decided, "On stage 3's design"). R came of the answers; neither the record nor the standards settle
-it, and nothing is built on it until it is answered.
+K to R are decided (Decided, "On stage 3's design"). R, for the record:
 
 - **R. A domain owned by no dialect** (Decided, "On stage 3's design", the corpus's and the tests' own domains). An
   `Expressions.Framework.Domain` cannot be written without an owner: its adjacency `dialect`, through `Defines`, is its
@@ -962,14 +991,15 @@ it, and nothing is built on it until it is answered.
   entry and counted where it has none: a sibling's change, through a workspace, before this stage's corpus.
   (d) **No invented fixtures**, the user's option: the cases exercise `packed` with what a language defines, Excel's
   error values packed into their `ERROR.TYPE` codes.
-  The user is weighing (d) against (a) (Decided, "On stage 3's design", R). Until it is answered, `state` and `mode`
-  stay exactly as they are.
+  Decided (a): (d) was the user's preference where Microsoft's documentation gives the codes, and it gives eight of
+  Excel's fifteen (Decided, "On stage 3's design", R).
 
 ## Risks
 
 - **Cost**: stores hold hundreds more objects (every dialect's types), and installs grow; suites build stores often.
-- **Equivalence**: the hand-populated properties written once, as data each dialect's define writes in both
-  languages, byte-identical on the wire.
+- **Equivalence**: the hand-populated properties are written twice, by each dialect's define in each language, and
+  only the DOM cases' tables, the same in both, pin that they agree; the corpus's data cases pin each dialect's domains'
+  names and order, not their properties (Stage 3's design, Tests and corpus).
 - **Hand-populated properties drift**: what today's dataclasses compute (a domain's bounds, a result's domain) is
   written by hand until constraint resolution; the suites pin each against today's behavior, and a property that
   disagrees with its parameters is a constraint a later resolver reports.
