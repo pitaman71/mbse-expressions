@@ -26,8 +26,8 @@ and translated between expression languages, called dialects:
 - **SystemVerilog**, hardware expressions and constraints over 4-state vectors and reals: it renders as its source and
   evaluates by IEEE 1800's rules (sizing by context, x and z propagating).
 - **ISOIEC11404**, **IEEE754**, **IEEE1164** and **Unicode**, the standard dialects: each holds a published standard's
-  kinds of domain and its domains, named as the standard names them (ISO/IEC 11404's `integer` and `octet`, IEEE 754's
-  `binary64`), and has no terms yet. The other dialects' values take their domains.
+  kinds of domain and its domains, named as the standard names them (ISO/IEC 11404's `integer`, `octet`, a code, and
+  `modulo(256)`, wrapping arithmetic; IEEE 754's `binary64`), and has no terms yet. The other dialects' values take their domains.
 
 What it can do is mbse-basis' [FEA-024: expressions as data](mbse:mbse-basis/docs/features/FEA-024.md) and its
 capabilities.

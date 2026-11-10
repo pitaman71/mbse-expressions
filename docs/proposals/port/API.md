@@ -973,7 +973,8 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
      So `Expressions.Python3.BinOp` is `Expressions.Python.Python3.BinOp`, the singleton `Expressions.C` is
      `Expressions.C.Expressions` (`store.Instances.Expressions.C.Expressions`), a Patterns domain
-     `Expressions.Framework.Patterns.uint8` (ISO/IEC 11404's `octet` since item 112, `Expressions.ISOIEC11404.Expressions.octet`), and an install's uid `mbse.Expressions.C.Expressions/1`. The package
+     `Expressions.Framework.Patterns.uint8` (since item 123, ISO/IEC 11404's `modulo(256)`, whose schema is
+     `Expressions.ISOIEC11404.Expressions.modulo_256`, where it wraps arithmetic, and `octet` where it holds a code), and an install's uid `mbse.Expressions.C.Expressions/1`. The package
      `mbse.Expressions.Dialects`, the directory `src/Dialects` and the export `@mbse/expressions/Dialects/*` go; the
      package exports and `deno.json` list each dialect by its path. Each family is a package of its own in Python
      (`mbse.Expressions.C`, whose docstring names its standard), holding its dialect; TypeScript's family directory
@@ -1014,9 +1015,9 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      `src/<Family>/Expressions/`, exported as `@mbse/expressions/<Family>/Expressions` and nothing for the family. Each
      dialect is a singleton of its own schema, `Expressions.<Family>.Expressions`, a branch of `Expressions.Framework.Dialect`
      (`isoiec11404`, `ieee754`, `ieee1164`, `unicode`), with its kinds of domain and no terms. Their `define`s write
-     Patterns' former eight domains under their standards' names: `boolean`, `integer`, `octetstring`, `octet`
-     (11404's "`type octet = new integer range (0..255)`", formerly `uint8`, which is C's name, not 11404's);
-     `binary64`, `binary32`; `std_logic`; `string`; their uids are `mbse.Expressions.<Family>.Expressions.define/1`
+     Patterns' former eight domains under their standards' names: `boolean`, `integer`, `octetstring`, and `octet`
+     and `modulo(256)`, which split the former `uint8`, C's name, not 11404's (item 123); `binary64`, `binary32`;
+     `std_logic`; `string`; their uids are `mbse.Expressions.<Family>.Expressions.define/1`
      (an install's uid kept while its content changes is mbse-basis
      [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-254.md), as the
      user decided, the domains proposal's Decided, "On stage 1's review").
@@ -1026,12 +1027,12 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      written its dialect, then its kind (`u.ieee754(lambda v: v.ieee754(...))` within `d.kind(lambda k:
      k.as_value(lambda a: a.as_union(...)))`), and C's and C++'s `nullptr_t` are each their own. Each kind is named by
      its standard, its tag and its schema alike (2026-11-09, as the user decided, "there is no need to preserve the old
-     tags imo"): ISO/IEC 11404's `boolean`, `integer`, `bitstring`, `octetstring`, `state` and `packed`
-     (`Expressions.ISOIEC11404.Expressions.OfBoolean`, ..., `OfState`, `OfPacked`), formerly `bool`, `bits`, `bytes`
-     and `enum`; IEEE 754's `ieee754`, IEEE 1164's `ieee1164` and Unicode's `unicode`, unchanged. Patterns' code
+     tags imo"): ISO/IEC 11404's `boolean`, `integer`, `modulo`, `bitstring`, `octet`, `octetstring`, `state` and
+     `packed` (`Expressions.ISOIEC11404.Expressions.OfBoolean`, ..., `OfState`, `OfPacked`), formerly `bool`, `bits`,
+     `bytes` and `enum`, `modulo` and `octet` new (item 123); IEEE 754's `ieee754`, IEEE 1164's `ieee1164` and Unicode's `unicode`, unchanged. Patterns' code
      domains (`Domains.read`, until stage 2) read each by its dialect's tag and its own.
-114. **Inferred properties, populated by hand**: `ordered` on every kind; an integer's (and SystemVerilog's `logic`'s)
-     `least` and `greatest`; IEEE 754's `radix`, `precision` and `emax`. `Domains.read` (Patterns', until stage 2)
+114. **Inferred properties, populated by hand**: `ordered` on every kind; an integer's, a modulo's (and SystemVerilog's
+     `logic`'s) `least` and `greatest`; IEEE 754's `radix`, `precision` and `emax`. `Domains.read` (Patterns', until stage 2)
      ignores them.
 115. **Each language's own kinds**: SystemVerilog's `logic` (`width`, `signed`), Python3's `str`, `nonetype` and
      `ellipsis`, TypeScript5's `string` and `null`, C's and C++'s `nullptr_t`, Excel's `error` (`members`); their
@@ -1091,6 +1092,27 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      proposal's Decided, Namespace, 1). No alias for the old names. Unchanged: the branch tag `patterns` (item 109,
      "for now"), the translators' modules (`Translators.Patterns_Matlab`, item 111), and the wire, so the corpora are
      unchanged. Tests: every case that names Patterns' path, under its ID.
+
+123. **`uint8` split by ISO/IEC 11404's own definitions** (2026-11-09, as the user decided,
+     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "On stage 1's review": "yes, adopt
+     names the standard uses for datatypes it defines (is this even a question?)"; "didn't you already resolve
+     that?"). The former `uint8`, 8 bits, unsigned and wrapping, was misnamed `octet` (item 112): 11404's `octet`
+     (§10.1.7) is a code, non-numeric, with no arithmetic, and wrapping arithmetic is its `modulo` (§10.1.2). So ISO/IEC
+     11404's install adds two kinds, `octet` (`Expressions.ISOIEC11404.Expressions.OfOctet`: `ordered` alone) and
+     `modulo` (`OfModulo`: `modulus`; inferred `least`, `greatest`, `ordered`), and its `define` writes the domains
+     `octet` (of `octet`, `ordered`) and `modulo(256)` (`modulus` 256, `least` 0, `greatest` 255, `ordered`). The
+     domain is named in 11404's notation; its schema, `Expressions.ISOIEC11404.Expressions.modulo_256`, and the
+     define's symbol for it spell it as a dotted identifier, as mbse-schemas' names must be (*agent*, for review).
+     `integer` keeps `width`, `signed` and `overflow`. Patterns' code domains gain `OfOctet` (a code 0 to 255, ordered,
+     no `fit`) and `OfModulo` (`modulus`; `bounds`, and `fit`, the remainder by the modulus), which `Domains.read` gives
+     for the two kinds until stage 2; a packed domain's representation may be an octet ("a packed domain's
+     representation is an octet, or an integer or bits of a width"); the families of `SIGNATURES` take a modulo among
+     the numbers and the ordered values, an octet among the ordered values only. Each use of `uint8`: a code (a packed
+     domain's representation: the corpus's `domains` case, EXP-06, DOM-03, DOM-05) is `octet`; arithmetic (EXP-13,
+     DOM-05, DOM-17, T07.5, tutorial 8's introduction) is `modulo(256)`; C's `uint8_t` and the code domains' `uint8`
+     (DOM-01), an unsigned integer of width 8, are not 11404's and stay. The corpus's `domains` case gains
+     `modulo(256)`. Tests: DOM-01, DOM-02, DOM-03, DOM-05, DOM-06, DOM-07, DOM-09, DOM-17, EXP-06, EXP-13, FRM-01 and CONF-04,
+     under their IDs.
 
 ## What stage 2b needed (done)
 

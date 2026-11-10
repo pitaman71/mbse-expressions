@@ -8,19 +8,22 @@
  * - `OfBool`: true and false.
  * - `OfInteger`: two's complement integers of a `width` in bits, or unbounded, `signed` or not, whose `overflow`
  *   wraps, saturates or raises.
+ * - `OfModulo`: ISO/IEC 11404's `modulo(modulus)`, the integers 0 to `modulus` - 1, whose arithmetic gives its
+ *   result's remainder by the modulus.
+ * - `OfOctet`: ISO/IEC 11404's `octet`, codes 0 to 255: ordered, but with no arithmetic.
  * - `OfIeee754`: an IEEE 754-2019 interchange `format`, with a `rounding`-direction attribute.
  * - `OfBits` and `OfBytes`: unformatted patterns, of a `width` in bits, or of a `width` in bytes or of any length.
  * - `OfUnicode`: sequences of code points.
  * - `OfIeee1164`: VHDL's nine-valued logic: one state a value (`std_logic`), or, of a `width`, that many states, the
  *   most significant first (`std_logic_vector`).
  * - `OfEnum`: one of its `members`, by name; unordered.
- * - `OfPacked`: an enum (its `domain`) represented in a fixed-width integer or bits (its `representation`), member `i`
- *   by `codes[i]`.
+ * - `OfPacked`: an enum (its `domain`) represented in a code, an octet or a fixed-width integer or bits (its
+ *   `representation`), member `i` by `codes[i]`.
  *
  * Patterns holds no kinds of domain and owns no domains: as data they are the standard dialects'. A domain is an
  * `Expressions.Framework.Domain`, holding its `kind`, a value of `Expressions.Framework.DomainKind`, the union of the
  * dialects' unions of kinds: ISO/IEC 11404's (`Expressions.ISOIEC11404.Expressions.DomainKind`: `boolean`, `integer`,
- * `bitstring`, `octetstring`, `state`, `packed`), IEEE 754's (`ieee754`), IEEE 1164's (`ieee1164`) and Unicode's (`unicode`), each
+ * `modulo`, `bitstring`, `octet`, `octetstring`, `state`, `packed`), IEEE 754's (`ieee754`), IEEE 1164's (`ieee1164`) and Unicode's (`unicode`), each
  * kind with its parameters and the properties inferred from them. It is owned by the dialect that defines it, by name: its
  * path is the dialect's singleton (`Expressions.ISOIEC11404.Expressions`), then its name. A packed domain links its state
  * domain and its representation through `Expressions.ISOIEC11404.Expressions.Packs`. Its schema is a named `Schemas.OfAny`
@@ -32,8 +35,8 @@
  * `update()`; none validate), with `validate()`. A domain is a `Domain`: a value is in it (`contains`) when it has the
  * native type the domain's literals hold (a bigint for an integer, a string for an enum's member, ...) and fits it,
  * and it includes (`includes`) only domains equal to it, since Patterns has no implied promotions. A domain compares two of
- * its values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into itself by its overflow
- * (`fit`). What a domain means is not yet used by evaluation, which deals in values by the schemas they are written
+ * its values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into itself by its overflow,
+ * a modulo domain by its modulus (`fit`). What a domain means is not yet used by evaluation, which deals in values by the schemas they are written
  * with: a term carries no domain, and giving each term one is domain inference's, a later capability (the port's stage 3,
  * Decided, 2).
  *
@@ -43,8 +46,9 @@
  * of a value not known statically, such as a property read with `get`. Unknown (`null`) is not a domain.
  *
  * `SIGNATURES` gives each core operation's signature, for inference, following the evaluator's rules: comparisons take
- * two values of one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes
- * bools; arithmetic takes two numbers of one domain and gives that domain, and the bitwise operations two integers or
+ * two values of one domain, ordered only for integers, modulos, octets, IEEE 754 numbers, bytes, strings and packed
+ * enums; logic takes bools; arithmetic takes two numbers (integers, modulos or IEEE 754 numbers) of one domain and gives
+ * that domain, and the bitwise operations two integers or
  * bits of one domain. `LIST` and `MAPPING` are the container constructors'.
  */
 
@@ -197,6 +201,53 @@ class IntegerDomain extends Domain {
     problems.push(...oneOf("overflow", this.overflow, OVERFLOWS));
     if (this.overflow === "wrap" && this.width === null) problems.push("an integer without a width cannot wrap");
     return problems;
+  }
+}
+
+/** ISO/IEC 11404's `modulo(modulus)`: numeric, its addition and multiplication giving the integer result's remainder
+ * by the modulus. */
+class ModuloDomain extends Domain {
+  static override KIND = "modulo";
+  static override NATIVE = BigInt;
+  static override ORDERED = true;
+  static override FIELDS = ["modulus"];
+
+  constructor(public modulus: bigint | null = null) {
+    super();
+  }
+
+  override name(): string {
+    return `modulo(${repr(this.modulus)})`;
+  }
+
+  /** The least and the greatest value. */
+  bounds(): [bigint, bigint] {
+    return [0n, (this.modulus as bigint) - 1n];
+  }
+
+  protected override fits(value: unknown): boolean {
+    return positive(this.modulus) && 0n <= (value as bigint) && (value as bigint) < (this.modulus as bigint);
+  }
+
+  /** `value`'s remainder by the modulus, whatever `operation` gave it. */
+  fit(_operation: string, value: bigint): bigint {
+    const modulus = this.modulus as bigint;
+    return (value % modulus + modulus) % modulus;
+  }
+
+  override validate(): string[] {
+    return positive(this.modulus) ? [] : [`a modulus must be a positive int, got ${repr(this.modulus)}`];
+  }
+}
+
+/** ISO/IEC 11404's `octet`: codes 0 to 255, ordered and non-numeric, so with no arithmetic and no overflow. */
+class OctetDomain extends Domain {
+  static override KIND = "octet";
+  static override NATIVE = BigInt;
+  static override ORDERED = true;
+
+  protected override fits(value: unknown): boolean {
+    return 0n <= (value as bigint) && (value as bigint) <= 255n;
   }
 }
 
@@ -359,6 +410,7 @@ class PackedDomain extends Domain {
   static override ORDERED = true;
   static override FIELDS = ["domain", "representation", "codes"];
 
+  // its domain an enum; its representation an octet, or a fixed-width integer or bits
   constructor(public domain: unknown = null, public representation: unknown = null, public codes: readonly bigint[] = []) {
     super();
   }
@@ -386,8 +438,9 @@ class PackedDomain extends Domain {
     const domain = this.domain;
     const representation = this.representation;
     if (!(domain instanceof EnumDomain)) return [`a packed domain packs an enum, got ${nameOf(domain)}`];
-    if (!((representation instanceof IntegerDomain || representation instanceof BitsDomain) && positive(representation.width))) {
-      return [`a packed domain's representation is an integer or bits of a width, got ${nameOf(representation)}`];
+    if (!(representation instanceof OctetDomain
+      || (representation instanceof IntegerDomain || representation instanceof BitsDomain) && positive(representation.width))) {
+      return [`a packed domain's representation is an octet, or an integer or bits of a width, got ${nameOf(representation)}`];
     }
     const problems = [...domain.validate().map((problem) => `domain: ${problem}`),
       ...representation.validate().map((problem) => `representation: ${problem}`)];
@@ -403,10 +456,11 @@ class PackedDomain extends Domain {
     return problems;
   }
 
-  /** Whether the representation holds `code`: an integer's value, or bits' pattern read as an unsigned int. */
+  /** Whether the representation holds `code`: an octet's or an integer's value, or bits' pattern read as an unsigned
+   * int. */
   private holds(code: unknown): boolean {
-    const representation = this.representation as IntegerDomain | BitsDomain;
-    if (representation instanceof IntegerDomain) return typeof code === "bigint" && representation.contains(code);
+    const representation = this.representation as OctetDomain | IntegerDomain | BitsDomain;
+    if (representation instanceof OctetDomain || representation instanceof IntegerDomain) return typeof code === "bigint" && representation.contains(code);
     return typeof code === "bigint" && code >= 0n && code < 1n << (representation.width as bigint);
   }
 }
@@ -490,6 +544,18 @@ class IntegerBuilder extends DomainBuilder {
   }
 }
 
+class ModuloBuilder extends DomainBuilder {
+  static override DATA = ModuloDomain as DomainClass;
+
+  modulus(modulus: bigint): this {
+    return this.setField("modulus", modulus);
+  }
+}
+
+class OctetBuilder extends DomainBuilder {
+  static override DATA = OctetDomain as DomainClass;
+}
+
 class Ieee754Builder extends DomainBuilder {
   static override DATA = Ieee754Domain as DomainClass;
 
@@ -567,6 +633,8 @@ export class Kind<Data extends Domain, B> {
 
 export const OfBool = new Kind(BoolDomain, BoolBuilder);
 export const OfInteger = new Kind(IntegerDomain, IntegerBuilder);
+export const OfModulo = new Kind(ModuloDomain, ModuloBuilder);
+export const OfOctet = new Kind(OctetDomain, OctetBuilder);
 export const OfIeee754 = new Kind(Ieee754Domain, Ieee754Builder);
 export const OfBits = new Kind(BitsDomain, BitsBuilder);
 export const OfBytes = new Kind(BytesDomain, BytesBuilder);
@@ -576,8 +644,8 @@ export const OfEnum = new Kind(EnumDomain, EnumBuilder);
 export const OfPacked = new Kind(PackedDomain, PackedBuilder);
 /** By the stored kind, its dialect's tag and its own: each the standard dialect's, named by its standard. */
 const KINDS = new Map<string, DomainClass>([
-  ["isoiec11404 boolean", BoolDomain], ["isoiec11404 integer", IntegerDomain], ["isoiec11404 bitstring", BitsDomain],
-  ["isoiec11404 octetstring", BytesDomain], ["isoiec11404 state", EnumDomain], ["isoiec11404 packed", PackedDomain],
+  ["isoiec11404 boolean", BoolDomain], ["isoiec11404 integer", IntegerDomain], ["isoiec11404 modulo", ModuloDomain],
+  ["isoiec11404 bitstring", BitsDomain], ["isoiec11404 octet", OctetDomain], ["isoiec11404 octetstring", BytesDomain], ["isoiec11404 state", EnumDomain], ["isoiec11404 packed", PackedDomain],
   ["ieee754 ieee754", Ieee754Domain], ["ieee1164 ieee1164", Ieee1164Domain], ["unicode unicode", UnicodeDomain],
 ].map(([key, kind]) => [key as string, kind as DomainClass]));
 
@@ -733,9 +801,9 @@ class Family implements D.Domain {
 }
 
 const VALUES = new Family("value domain", Domain);
-const ORDERED_KINDS = new Family("integer, ieee754, bytes, unicode or packed domain", IntegerDomain, Ieee754Domain,
-  BytesDomain, UnicodeDomain, PackedDomain);
-const NUMERIC = new Family("integer or ieee754 domain", IntegerDomain, Ieee754Domain);
+const ORDERED_KINDS = new Family("integer, modulo, octet, ieee754, bytes, unicode or packed domain", IntegerDomain,
+  ModuloDomain, OctetDomain, Ieee754Domain, BytesDomain, UnicodeDomain, PackedDomain);
+const NUMERIC = new Family("integer, modulo or ieee754 domain", IntegerDomain, ModuloDomain, Ieee754Domain);
 const BITWISE = new Family("integer or bits domain", IntegerDomain, BitsDomain);
 const INTEGERS = new Family("integer domain", IntegerDomain);
 export { RecordData as Record };

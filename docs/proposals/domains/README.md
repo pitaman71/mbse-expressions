@@ -119,7 +119,8 @@ As the user decided (2026-11-04), on the questions below:
     754, IEEE 1164 and Unicode dialects; replacing Patterns entirely, and modeling 11404's operations, stay CAP-180's.
     (Their names, *revised* 2026-11-09: the kinds are named as 11404 declares them, `enumerated` read as 11404's
     unordered `state`, and packing is not an 11404 datatype; Decided, "On stage 1's review", "Names are the standards'
-    own".)
+    own". And two kinds are added, 11404's `octet` and `modulo`; Decided, "On stage 1's review", "`uint8` split by
+    11404's own definitions".)
     And: "I am sensing repeated suggestions to consolidate things under `Patterns` and I don't know where that comes
     from". Where it came from: Patterns was Basic, which held the scalar kinds and domains, never moved out when it
     was renamed for its quantifiers over `OfPattern`; this proposal's question 4 recommended "Patterns' `integer`
@@ -203,14 +204,40 @@ As the user decided (2026-11-04), on the questions below:
     the standard uses for datatypes it defines (is this even a question?)"; and to the kinds keeping their tags: "there
     is no need to preserve the old tags imo". So every domain and kind is named by its standard's own identifier, its
     tag and its schema too, with no alias for the old names. ISO/IEC 11404's are its declarations' lowercase names.
-    `uint8` is not one, as the user had checked: it is C's `uint8_t`. 11404 (§10.1.7) defines "`type octet = new
-    integer range (0..255)`", so the domain `uint8` is `octet`. The kinds `bool`, `bits`, `bytes` and `enum` are
+    `uint8` is not one, as the user had checked: it is C's `uint8_t`; it is split by 11404's own definitions, into
+    `octet` and `modulo(256)` (below). The kinds `bool`, `bits`, `bytes` and `enum` are
     `boolean`, `bitstring`, `octetstring` and `state` (`OfBoolean`, `OfBitstring`, `OfOctetstring`, `OfState`);
     `integer` was already 11404's. IEEE 754's (`binary64`), IEEE 1164's (`std_logic`) and Unicode's names were already
     their standards' own, and stay. Where the standards were silent *(agent)*: `enum` is 11404's `state`, its unordered
     enumeration, since the kind is unordered (`ordered` false, as the code domain's `ORDERED`), 11404's `enumerated`
     being ordered; `packed`, which 11404 does not define, keeps its name; and the kinds `ieee754`, `ieee1164` and
     `unicode` keep theirs, each the standard's own designation, as their families are.
+  - **`uint8` split by 11404's own definitions** (2026-11-09). Stage 1 first renamed the domain `uint8` `octet`, from
+    11404's "`type octet = new integer range (0..255)`" (§10.1.7). But `uint8` was an integer of width 8, unsigned,
+    wrapping on overflow, and that is not 11404's `octet`: "Each value of datatype Octet is a code", its properties
+    "ordered, bounded, exact, non-numeric, finite", its operations only "(Equal, InOrder) from Integer", so it has no
+    arithmetic. It is 11404's `modulo` (§10.1.2): "`type modulo (modulus: integer) = new integer range(0..modulus)
+    excluding(modulus)`", "ordered, exact, numeric", its operations "Equal, InOrder from Integer; Add, Multiply,
+    Negate", Add and Multiply giving the integer result's remainder by the modulus: wrapping arithmetic. The user's
+    rule settles it, "yes, adopt names the standard uses for datatypes it defines (is this even a question?)", as the
+    user confirmed (2026-11-09): "didn't you already resolve that?". So, each as 11404 defines it:
+    - **`octet`** is a kind of its own (`OfOctet`): codes 0 to 255, ordered, with no arithmetic and no `overflow`; its
+      one property is `ordered`. ISO/IEC 11404's `define` writes the domain `octet` of it.
+    - **`modulo`** is a kind (`OfModulo`), with 11404's parameter `modulus` and the inferred `least`, `greatest` and
+      `ordered`; the `define` writes `modulo(256)`, 8-bit wrapping arithmetic, beside `octet`.
+    - *(agent)* **The domain's name, `modulo(256)`**, is 11404's own notation, its type generator applied to its
+      modulus, as a dialect's `Defines` entry can hold it. Its schema's name cannot: mbse-schemas' names are dotted
+      identifiers. So the schema, and the define's symbol for it, spell it `modulo_256`
+      (`Expressions.ISOIEC11404.Expressions.modulo_256`).
+    - **Each use of `uint8`.** Where a value is a code, it is `octet`: the representation a packed domain packs a state
+      into (the corpus's `domains` case, EXP-06, DOM-03 and DOM-05). Where it is arithmetic, it is `modulo(256)`: the
+      wrapping domain EXP-13 reads through its schema, DOM-05's document of it, DOM-17's bounds, tutorial 7's T07.5
+      and tutorial 8's introduction. C's `uint8_t` (the corpus's `c` and `cpp` cases, the framework suite's C and C++
+      terms, tutorial 8's casts) is C's, and stays; so does `uint8`, the Patterns code domains' name for an unsigned integer of width
+      8 (DOM-01), which is not a stored domain. The code domains read the two kinds as `OfOctet` and `OfModulo` until
+      stage 2; a packed domain's representation may be an octet; and the signatures' families take a modulo where
+      they take numbers, an octet where they take ordered values (CAP-232's to replace).
+    - **`integer` keeps `width`, `signed` and `overflow`**, as decided (The integer kind keeps its parameters, below).
   - **`DomainKind` stays two-level**, as built: the dialect, then its kind, the pattern of `Term`, which the user
     decided ("Framework.Term -> Dialects.C.Term / Framework.Term -> Dialects.Cpp.Term"; [the dialects
     proposal](../dialects/README.md#decided), Decided, 1). Its examples are written in builder calls, not wire format
@@ -320,7 +347,7 @@ Decided, Namespace, 6 and 7): its Python package `mbse.Expressions.<Family>.Expr
 
 | Dialect (path; name) | Kinds (tag: schema `Expressions.<Family>.Expressions.<Of...>`) | Domains its `define` writes, and their schemas |
 |---|---|---|
-| `ISOIEC11404.Expressions`; `ISOIEC11404` | `boolean`, `integer`, `bitstring`, `octetstring`, `state`, `packed`, and `Packs` | `boolean`, `integer`, `octetstring`, `octet` |
+| `ISOIEC11404.Expressions`; `ISOIEC11404` | `boolean`, `integer`, `modulo`, `bitstring`, `octet`, `octetstring`, `state`, `packed`, and `Packs` | `boolean`, `integer`, `octetstring`, `octet`, `modulo(256)` (its schema `modulo_256`) |
 | `IEEE754.Expressions`; `IEEE754` | `ieee754` | `binary64`, `binary32` |
 | `IEEE1164.Expressions`; `IEEE1164` | `ieee1164` | `std_logic` |
 | `Unicode.Expressions`; `Unicode` | `unicode` | `string` |
@@ -330,10 +357,12 @@ A standard dialect is a singleton of its own schema, a branch of `Expressions.Fr
 holder or `Terms.Dialect` until it has terms (Decided, G). Each names its standard in code by designation
 (`STANDARDS = ("IEEE Std 754-2019",)`, `ISO/IEC 11404:2007`, `IEEE Std 1164-1993`, `The Unicode Standard`), until
 standards are tagged data, its own stage (below; Decided, "On stage 1's review"). Patterns' eight domains are these,
-each named as its standard names it (Decided, "On stage 1's review", "Names are the standards' own"): `bool`, `int`,
-`bytes` and `uint8` are 11404's `boolean`, `integer`, `octetstring` and `octet`; `float` and `binary32` IEEE 754's
-`binary64` and `binary32`; `std_logic` IEEE 1164's; `str` Unicode's `string`. The kinds are named so too: 11404's
-`boolean`, `integer`, `bitstring`, `octetstring` and `state`, and `packed`, which 11404 does not name.
+each named as its standard names it (Decided, "On stage 1's review", "Names are the standards' own"): `bool`, `int` and
+`bytes` are 11404's `boolean`, `integer` and `octetstring`, and `uint8` is split into 11404's `octet`, for codes, and
+`modulo(256)`, for wrapping arithmetic (Decided, "On stage 1's review", "`uint8` split by 11404's own definitions");
+`float` and `binary32` IEEE 754's `binary64` and `binary32`; `std_logic` IEEE 1164's; `str` Unicode's `string`. The
+kinds are named so too: 11404's `boolean`, `integer`, `modulo`, `bitstring`, `octet`, `octetstring` and `state`, and
+`packed`, which 11404 does not name.
 
 **Where the standard dialects live.** In mbse-expressions, beside the dialects that use them. The repository
 mbse-domains, which [CAP-211: text as words, phrases, paragraphs and documents](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-211.md)
@@ -354,12 +383,14 @@ of the kind (Decided, 2; Proposed, 2):
 | Kind | Parameters (unchanged) | Inferred, new |
 |---|---|---|
 | `integer` | `width`, `signed`, `overflow` | `least`, `greatest` (ints, absent where unbounded), `ordered` |
+| `modulo` | `modulus` (new) | `least`, `greatest`, `ordered` |
 | `ieee754` | `format`, `rounding` | `radix`, `precision`, `emax` (IEEE 754-2019's parameters of each interchange format), `ordered` |
 | every other kind | as now | `ordered` |
 
-`ordered` is true of `integer`, `ieee754`, `octetstring`, `unicode`, `packed`, SystemVerilog's `logic` and the two string
-kinds below, false of the others, as `ORDERED` is today. What a result is fitted into is an integer's own `overflow`,
-and for C a rule over argument domains, which is the relation left to
+`ordered` is true of `integer`, `modulo`, `octet`, `ieee754`, `octetstring`, `unicode`, `packed`, SystemVerilog's
+`logic` and the two string kinds below, false of the others, as `ORDERED` is today. `octet` has no parameter: 11404
+defines it as codes, with no arithmetic. What a result is fitted into is an integer's own `overflow`, a modulo's
+own `modulus`, and for C a rule over argument domains, which is the relation left to
 [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md) (Decided, 2): no kind links another domain. A
 domain's name is its `Defines` entry's.
 

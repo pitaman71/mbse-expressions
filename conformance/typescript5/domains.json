@@ -212,6 +212,50 @@
                                                     "i": "domains",
                                                     "o": "dialect",
                                                     "properties": {
+                                                      "name": "modulo(256)"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "modulo(256)"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "domain",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.ISOIEC11404.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "domains",
+                                                    "o": "dialect",
+                                                    "properties": {
                                                       "name": "octet"
                                                     },
                                                     "next": {

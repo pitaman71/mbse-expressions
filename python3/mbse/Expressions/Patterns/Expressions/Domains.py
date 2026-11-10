@@ -7,19 +7,22 @@ Value domains name the standard they implement, with only its parameters (see mb
 - `OfBool`: true and false.
 - `OfInteger`: two's complement integers of a `width` in bits, or unbounded, `signed` or not, whose `overflow` wraps,
   saturates or raises.
+- `OfModulo`: ISO/IEC 11404's `modulo(modulus)`, the integers 0 to `modulus` - 1, whose arithmetic gives its result's
+  remainder by the modulus.
+- `OfOctet`: ISO/IEC 11404's `octet`, codes 0 to 255: ordered, but with no arithmetic.
 - `OfIeee754`: an IEEE 754-2019 interchange `format`, with a `rounding`-direction attribute.
 - `OfBits` and `OfBytes`: unformatted patterns, of a `width` in bits, or of a `width` in bytes or of any length.
 - `OfUnicode`: sequences of code points.
 - `OfIeee1164`: VHDL's nine-valued logic: one state a value (`std_logic`), or, of a `width`, that many states, the
   most significant first (`std_logic_vector`).
 - `OfEnum`: one of its `members`, by name; unordered.
-- `OfPacked`: an enum (its `domain`) represented in a fixed-width integer or bits (its `representation`), member `i`
-  by `codes[i]`.
+- `OfPacked`: an enum (its `domain`) represented in a code, an octet or a fixed-width integer or bits (its
+  `representation`), member `i` by `codes[i]`.
 
 Patterns holds no kinds of domain and owns no domains: as data they are the standard dialects'. A domain is an
 `Expressions.Framework.Domain`, holding its `kind`, a value of `Expressions.Framework.DomainKind`, the union of the
 dialects' unions of kinds: ISO/IEC 11404's (`Expressions.ISOIEC11404.Expressions.DomainKind`: `boolean`, `integer`,
-`bitstring`, `octetstring`, `state`, `packed`), IEEE 754's (`ieee754`), IEEE 1164's (`ieee1164`) and Unicode's (`unicode`), each
+`modulo`, `bitstring`, `octet`, `octetstring`, `state`, `packed`), IEEE 754's (`ieee754`), IEEE 1164's (`ieee1164`) and Unicode's (`unicode`), each
 kind with its parameters and the properties inferred from them. It is owned by the dialect that defines it, by name: its
 path is the dialect's singleton (`Expressions.ISOIEC11404.Expressions`), then its name. A packed domain links its state
 domain and its representation through `Expressions.ISOIEC11404.Expressions.Packs`. Its schema is a named `Schemas.OfAny`
@@ -31,8 +34,8 @@ Each kind's data, `OfX.Data`, is a dataclass compared by structure, built by `Of
 `update()`; none validate), with `validate()`. A domain is a `Domain`: a value is in it (`contains`) when it has the
 native type the domain's literals hold (an `int` for an integer, a `str` for an enum's member, ...) and fits it, and it
 includes (`includes`) only domains equal to it, since Patterns has no implied promotions. A domain compares two of its
-values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into itself by its overflow
-(`fit`). What a domain means is not yet used by evaluation, which deals in values by the schemas they are written with:
+values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into itself by its overflow, a
+modulo domain by its modulus (`fit`). What a domain means is not yet used by evaluation, which deals in values by the schemas they are written with:
 a term carries no domain, and giving each term one is domain inference's, a later capability (the port's stage 3,
 Decided, 2).
 
@@ -42,8 +45,8 @@ through mbse-schemas' readers (`Framework.Objects`), terms and value objects amo
 of a value not known statically, such as a property read with `get`. Unknown (`None`) is not a domain.
 
 `SIGNATURES` gives each core operation's signature, for inference, following the evaluator's rules: comparisons take
-two values of one domain, ordered only for integers, IEEE 754 numbers, bytes, strings and packed enums; logic takes
-bools; arithmetic takes two numbers of one domain and gives that domain, and the bitwise operations two integers or
+two values of one domain, ordered only for integers, modulos, octets, IEEE 754 numbers, bytes, strings and packed enums; logic takes
+bools; arithmetic takes two numbers (integers, modulos or IEEE 754 numbers) of one domain and gives that domain, and the bitwise operations two integers or
 bits of one domain. `LIST` and `MAPPING` are the container constructors'.
 """
 
@@ -61,7 +64,8 @@ from mbse.Schemas.Framework import Comparison, Schemas
 from . import Ieee754
 
 __all__ = [
-    "OfBool", "OfInteger", "OfIeee754", "OfBits", "OfBytes", "OfUnicode", "OfIeee1164", "OfEnum", "OfPacked",
+    "OfBool", "OfInteger", "OfModulo", "OfOctet", "OfIeee754", "OfBits", "OfBytes", "OfUnicode", "OfIeee1164",
+    "OfEnum", "OfPacked",
     "FORMATS", "ROUNDINGS", "OVERFLOWS", "STATES",
     "Bool", "Int", "Float", "Str", "Bytes", "Object", "Anything", "SIGNATURES", "QUANTIFIERS", "LIST", "MAPPING",
     "of", "Domain", "read",
@@ -177,6 +181,42 @@ class _Integer(_Domain):
         if self.overflow == "wrap" and self.width is None:
             problems.append("an integer without a width cannot wrap")
         return problems
+
+
+@dataclass(eq=True, repr=False)
+class _Modulo(_Domain):
+    """ISO/IEC 11404's `modulo(modulus)`: numeric, its addition and multiplication giving the integer result's remainder
+    by the modulus."""
+
+    KIND, NATIVE, ORDERED = "modulo", int, True
+    modulus: int | None = None
+
+    def name(self) -> str:
+        return f"modulo({self.modulus})"
+
+    def bounds(self) -> tuple[int, int]:
+        """The least and the greatest value."""
+        return 0, self.modulus - 1  # type: ignore[operator]
+
+    def _fits(self, value: int) -> bool:
+        return _positive(self.modulus) and 0 <= value < self.modulus  # type: ignore[operator]
+
+    def fit(self, operation: str, value: int) -> int:
+        """`value`'s remainder by the modulus, whatever `operation` gave it."""
+        return value % self.modulus  # type: ignore[operator]
+
+    def validate(self) -> list[str]:
+        return [] if _positive(self.modulus) else [f"a modulus must be a positive int, got {self.modulus!r}"]
+
+
+@dataclass(eq=True, repr=False)
+class _Octet(_Domain):
+    """ISO/IEC 11404's `octet`: codes 0 to 255, ordered and non-numeric, so with no arithmetic and no overflow."""
+
+    KIND, NATIVE, ORDERED = "octet", int, True
+
+    def _fits(self, value: int) -> bool:
+        return 0 <= value <= 255
 
 
 @dataclass(eq=True, repr=False)
@@ -297,7 +337,7 @@ class _Enum(_Domain):
 class _Packed(_Domain):
     KIND, NATIVE, ORDERED = "packed", str, True
     domain: Any = None  # an enum
-    representation: Any = None  # a fixed-width integer or bits
+    representation: Any = None  # an octet, or a fixed-width integer or bits
     codes: tuple[int, ...] = ()
 
     def name(self) -> str:
@@ -318,8 +358,10 @@ class _Packed(_Domain):
     def validate(self) -> list[str]:
         if not isinstance(self.domain, _Enum):
             return [f"a packed domain packs an enum, got {_name(self.domain)}"]
-        if not (isinstance(self.representation, (_Integer, _Bits)) and _positive(self.representation.width)):
-            return [f"a packed domain's representation is an integer or bits of a width, got {_name(self.representation)}"]
+        if not (isinstance(self.representation, _Octet) or isinstance(self.representation, (_Integer, _Bits))
+                and _positive(self.representation.width)):
+            return [f"a packed domain's representation is an octet, or an integer or bits of a width, got "
+                    f"{_name(self.representation)}"]
         problems = [f"domain: {problem}" for problem in self.domain.validate()]
         problems += [f"representation: {problem}" for problem in self.representation.validate()]
         if len(self.codes) != len(self.domain.members):
@@ -335,8 +377,9 @@ class _Packed(_Domain):
         return problems
 
     def _holds(self, code: Any) -> bool:
-        """Whether the representation holds `code`: an integer's value, or bits' pattern read as an unsigned int."""
-        if isinstance(self.representation, _Integer):
+        """Whether the representation holds `code`: an octet's or an integer's value, or bits' pattern read as an unsigned
+        int."""
+        if isinstance(self.representation, (_Octet, _Integer)):
             return type(code) is int and self.representation.contains(code)
         return type(code) is int and 0 <= code < 1 << self.representation.width
 
@@ -401,6 +444,17 @@ class _IntegerBuilder(_Builder):
 
     def overflow(self, overflow: str) -> _IntegerBuilder:
         return self._set("overflow", overflow)
+
+
+class _ModuloBuilder(_Builder):
+    _data = _Modulo
+
+    def modulus(self, modulus: int) -> _ModuloBuilder:
+        return self._set("modulus", modulus)
+
+
+class _OctetBuilder(_Builder):
+    _data = _Octet
 
 
 class _Ieee754Builder(_Builder):
@@ -473,6 +527,8 @@ class _Kind:
 
 OfBool = _Kind(_Bool, _BoolBuilder)
 OfInteger = _Kind(_Integer, _IntegerBuilder)
+OfModulo = _Kind(_Modulo, _ModuloBuilder)
+OfOctet = _Kind(_Octet, _OctetBuilder)
 OfIeee754 = _Kind(_Ieee754, _Ieee754Builder)
 OfBits = _Kind(_Bits, _BitsBuilder)
 OfBytes = _Kind(_Bytes, _BytesBuilder)
@@ -588,9 +644,9 @@ class _Family:
 
 
 _VALUES = _Family("value domain", _Domain)
-_ORDERED_KINDS = _Family("integer, ieee754, bytes, unicode or packed domain", _Integer, _Ieee754, _Bytes, _Unicode,
-                         _Packed)
-_NUMERIC = _Family("integer or ieee754 domain", _Integer, _Ieee754)
+_ORDERED_KINDS = _Family("integer, modulo, octet, ieee754, bytes, unicode or packed domain", _Integer, _Modulo, _Octet,
+                         _Ieee754, _Bytes, _Unicode, _Packed)
+_NUMERIC = _Family("integer, modulo or ieee754 domain", _Integer, _Modulo, _Ieee754)
 _BITWISE = _Family("integer or bits domain", _Integer, _Bits)
 _INTEGERS = _Family("integer domain", _Integer)
 Records = D.OfValues("record", lambda value: isinstance(value, Record))
@@ -723,8 +779,8 @@ def of(value: Any) -> D.Domain:
 # --- Domains as data ---
 
 _DATA = {  # by the stored kind, its dialect's tag and its own: each the standard dialect's, named by its standard
-    ("isoiec11404", "boolean"): OfBool, ("isoiec11404", "integer"): OfInteger, ("isoiec11404", "bitstring"): OfBits,
-    ("isoiec11404", "octetstring"): OfBytes, ("isoiec11404", "state"): OfEnum, ("isoiec11404", "packed"): OfPacked,
+    ("isoiec11404", "boolean"): OfBool, ("isoiec11404", "integer"): OfInteger, ("isoiec11404", "modulo"): OfModulo,
+    ("isoiec11404", "bitstring"): OfBits, ("isoiec11404", "octet"): OfOctet, ("isoiec11404", "octetstring"): OfBytes, ("isoiec11404", "state"): OfEnum, ("isoiec11404", "packed"): OfPacked,
     ("ieee754", "ieee754"): OfIeee754, ("ieee1164", "ieee1164"): OfIeee1164, ("unicode", "unicode"): OfUnicode}
 
 
