@@ -29,7 +29,7 @@ Everything that uses a domain uses code objects instead:
 So there are two forms of a Patterns domain, the stored one and the dataclass it is read into, and one form, code only,
 of every other dialect's. Operator signatures are code too, though stage 3 modeled every Patterns operation as data, a
 `Schemas.OfExpression` whose pattern's variables are its arguments and whose `result` is its return
-([API.md](../port/API.md), Settled in stage 3, 20 to 22): the code table `Domains.SIGNATURES` and the stored operations
+([the API](../port/API.md), Settled in stage 3, 20 to 22): the code table `Domains.SIGNATURES` and the stored operations
 describe the same thing twice.
 
 Since stage 3 a term carries no domain, so evaluation reads no stored domain at all. The code objects serve the
@@ -208,10 +208,17 @@ As the user decided (2026-11-04), on the questions below:
     `octet` and `modulo(256)` (below). The kinds `bool`, `bits`, `bytes` and `enum` are
     `boolean`, `bitstring`, `octetstring` and `state` (`OfBoolean`, `OfBitstring`, `OfOctetstring`, `OfState`);
     `integer` was already 11404's. IEEE 754's (`binary64`), IEEE 1164's (`std_logic`) and Unicode's names were already
-    their standards' own, and stay. Where the standards were silent *(agent)*: `enum` is 11404's `state`, its unordered
-    enumeration, since the kind is unordered (`ordered` false, as the code domain's `ORDERED`), 11404's `enumerated`
-    being ordered; `packed`, which 11404 does not define, keeps its name; and the kinds `ieee754`, `ieee1164` and
-    `unicode` keep theirs, each the standard's own designation, as their families are.
+    their standards' own, and stay. Where the standards were silent: `enum` is 11404's `state`, and `packed` keeps its
+    name, each decided below ("`state` is the generic enumeration"; "`packed` keeps its name"); and *(agent)* the kinds
+    `ieee754`, `ieee1164` and `unicode` keep theirs, each the standard's own designation, as their families are.
+  - **`state` is the generic enumeration** (2026-11-09). The agent's choice, for review, of 11404's `state` (§8.1.2: "a
+    finite number of distinguished but unordered values", its one operation Equal) for the unordered `enum` kind is
+    accepted. Told that 11404's `enumerated` (§8.1.3) is its ordered counterpart, to be added when a dialect first
+    needs an order (SystemVerilog's `.first()`, `.next()` and `.prev()`), the user said: "yes, well, then that is a
+    generic enough enum, eh?". So `state` is the generic enumeration, and `enumerated` is added only when a dialect
+    needs an order.
+  - **`packed` keeps its name** (2026-11-09), which 11404 does not define: the agent's choice, for review, is decided,
+    as the user put it, "packed and packs does not go" (An enumeration is not an integer, below).
   - **`uint8` split by 11404's own definitions** (2026-11-09). Stage 1 first renamed the domain `uint8` `octet`, from
     11404's "`type octet = new integer range (0..255)`" (§10.1.7). But `uint8` was an integer of width 8, unsigned,
     wrapping on overflow, and that is not 11404's `octet`: "Each value of datatype Octet is a code", its properties
@@ -329,7 +336,9 @@ whole-record review before it is brought to the user.
    the holder (Decided, C) in place of `SIGNATURES`.
 3. C and Cpp; then SystemVerilog; then Python3, TypeScript5, MATLAB, Excel and LaTeX: each its domains stored. C's and
    C++'s enums are stored as enumerations packed into their integer types, not as integer domains (Decided, "On stage
-   1's review").
+   1's review"). An enumeration is a `state` domain; 11404's `enumerated`, ordered, is added only when a dialect first
+   needs an order, as SystemVerilog's `.first()`, `.next()` and `.prev()` may (Decided, "On stage 1's review",
+   "`state` is the generic enumeration").
 4. Standards as tagged data (the dialects proposal's Decided, Q10), every dialect's standards.
 5. Records in mbse-basis ([CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md), [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md),
    [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md), [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)), and release as 0.9.0 (Decided, D).

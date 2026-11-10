@@ -1029,7 +1029,9 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      its standard, its tag and its schema alike (2026-11-09, as the user decided, "there is no need to preserve the old
      tags imo"): ISO/IEC 11404's `boolean`, `integer`, `modulo`, `bitstring`, `octet`, `octetstring`, `state` and
      `packed` (`Expressions.ISOIEC11404.Expressions.OfBoolean`, ..., `OfState`, `OfPacked`), formerly `bool`, `bits`,
-     `bytes` and `enum`, `modulo` and `octet` new (item 123); IEEE 754's `ieee754`, IEEE 1164's `ieee1164` and Unicode's `unicode`, unchanged. Patterns' code
+     `bytes` and `enum`, `modulo` and `octet` new (item 123); `state` is the generic enumeration, 11404's ordered
+     `enumerated` added only when a dialect needs an order ("yes, well, then that is a generic enough enum, eh?"), and
+     `packed` keeps its name ("packed and packs does not go"), both decided 2026-11-09; IEEE 754's `ieee754`, IEEE 1164's `ieee1164` and Unicode's `unicode`, unchanged. Patterns' code
      domains (`Domains.read`, until stage 2) read each by its dialect's tag and its own.
 114. **Inferred properties, populated by hand**: `ordered` on every kind; an integer's, a modulo's (and SystemVerilog's
      `logic`'s) `least` and `greatest`; IEEE 754's `radix`, `precision` and `emax`. `Domains.read` (Patterns', until stage 2)
