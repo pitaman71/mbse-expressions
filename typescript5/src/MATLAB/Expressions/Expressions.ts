@@ -30,6 +30,15 @@
  * let's value for its name. `DIALECT` reads the terms (`Terms.Dialect`), validates and infers; the writers (`constant`,
  * `identifier`, `binary`, ...) write them through the builders, wherever a term is written, in a transaction.
  * `Text.ToText` writes a term as MATLAB source, e.g. `this.age >= 18 && isfield(this, "email")`.
+ *
+ * Its kind of domain, the branch of its union `Expressions.MATLAB.Expressions.DomainKind`, which `install` adds to the
+ * framework's `Expressions.Framework.DomainKind` as the branch `matlab`: `string` (`OfString`), a string's text, sequences
+ * of UTF-16 code units, lone surrogates among them; inferred `ordered`.
+ *
+ * Its domains, each named as MATLAB names its class: `define` writes them, owned by the singleton
+ * `Expressions.MATLAB.Expressions` by name, each related to its schema, an `OfAny` of the scalar it narrows, which
+ * `install` adds (`Expressions.MATLAB.Expressions.double`): `double` (IEEE 754's `binary64`, rounding ties to even),
+ * `logical` (ISO/IEC 11404's `boolean`) and `string` (its own `string`). A `struct` is not a domain.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -43,7 +52,8 @@ const { repr, typeName } = Repr;
 
 /** MATLAB's union of its kinds, added to the framework's terms as the branch `matlab`, its own kinds, and its
  * dialect's schema, whose singleton is `Expressions.MATLAB.Expressions`: run after `Framework.install`, in a transaction of its
- * own; run again, it writes nothing.
+ * own; run again, it writes nothing. Its kind of domain too, its union of kinds added to the framework's as the branch
+ * `matlab`, and its domains' schemas, each an `OfAny` of the scalar it narrows: its domains `define` writes after it.
  * Its holder, `Expressions.MATLAB.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
  * its `Term`. */
 export function install(txn: any): any {
@@ -52,7 +62,9 @@ export function install(txn: any): any {
   return txn.uid("mbse.Expressions.MATLAB.Expressions/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
       Binary: S.OfObject, Unary: S.OfObject, Field: S.OfObject, Index: S.OfObject,
-      Arrayfun: S.OfObject, Import: S.OfObject }) // FrameworkTerm: the framework's union, by name
+      Arrayfun: S.OfObject, Import: S.OfObject, // FrameworkTerm: the framework's union, by name
+      Kinds: S.OfUnion, DomainKind: S.OfUnion, OfString: S.OfObject, // Kinds: the framework's
+      double: S.OfAny, logical: S.OfAny, string: S.OfAny })
     .spec([
       // its dialect: the singleton `Expressions.MATLAB.Expressions`, a branch of the framework's kind union of dialects
       (_: any) => _.Dialect.name("Expressions.MATLAB.Expressions.Dialect").ref(true).singleton("Expressions.MATLAB.Expressions").adjacencies({
@@ -93,8 +105,43 @@ export function install(txn: any): any {
       // to its `Term`
       (_: any) => _.Expression.name("Expressions.MATLAB.Expressions.Expression").ref(true).refines([Framework.Expression]).properties({
         root: _.Term }),
+      // --- its kind of domain: a string's text, UTF-16 code units; inferred `ordered` ---
+      (_: any) => _.OfString.name("Expressions.MATLAB.Expressions.OfString").properties({ ordered: S.OfBool }),
+      (_: any) => _.DomainKind.name("Expressions.MATLAB.Expressions.DomainKind").branches([
+        (t: any) => t.name("string").schema([_.OfString]),
+      ]),
+      (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
+        (t: any) => t.name("matlab").schema([_.DomainKind])]),
+      // --- its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
+      (_: any) => _.double.name("Expressions.MATLAB.Expressions.double").schemas([S.OfFloat]),
+      (_: any) => _.logical.name("Expressions.MATLAB.Expressions.logical").schemas([S.OfBool]),
+      (_: any) => _.string.name("Expressions.MATLAB.Expressions.string").schemas([S.OfStr]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("matlab").schema([_.Term])]),
+    ])]))]);
+}
+
+/** MATLAB's domains as data: the singleton `Expressions.MATLAB.Expressions` owning its domains by name (`domains`,
+ * through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its
+ * schema (`Expressions.MATLAB.Expressions.double`) by `Expressions.Framework.HasDomain`: `double`, `logical` and
+ * `string`. Run after the installs, in a transaction of its own; run again, it writes nothing. Its frame binds the
+ * dialect (`dialect`) and each domain by its name: `store.transaction(Matlab.define)[0].get("double")`. */
+export function define(txn: any): any {
+  const [Matlab, Domain] = [txn.Expressions.MATLAB.Expressions, txn.Expressions.Framework.Domain];
+  return txn.uid("mbse.Expressions.MATLAB.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
+    .symbols({ dialect: Matlab.Dialect, double: Domain, logical: Domain, string: Domain })
+    .spec([
+      (_: any) => _.dialect.domains({
+        double: (e: any) => e.domain(_.double), logical: (e: any) => e.domain(_.logical),
+        string: (e: any) => e.domain(_.string),
+      }),
+      (_: any) => _.double.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.ieee754((v: any) => v.ieee754(
+        (d: any) => d.format("binary64").rounding("roundTiesToEven").radix(2n).precision(53n).emax(1023n).ordered(
+          true)))))).schema([Matlab.double]),
+      (_: any) => _.logical.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.isoiec11404((v: any) => v.boolean(
+        (d: any) => d.ordered(false)))))).schema([Matlab.logical]),
+      (_: any) => _.string.kind((k: any) => k.as_value((a: any) => a.as_union((u: any) => u.matlab((v: any) => v.string(
+        (d: any) => d.ordered(true)))))).schema([Matlab.string]),
     ])]))]);
 }
 

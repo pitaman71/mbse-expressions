@@ -837,8 +837,8 @@ mbse-schemas refuses a domain with no owner (question R).
 - **A lone term is refused**: C's, C++'s and SystemVerilog's evaluation, inference and validation of a term that reads
   a named type need it held in a store where the dialect's `define` (and its ABI's) has run, as Patterns' validation
   does since stage 2; a lone term is refused by mbse-schemas' `TypeError`, "the value does not belong to a store". A
-  store where the `define` has not run holds no such domain, and a type it names is refused by name ("C's 'int' is not
-  defined in this store") *(agent)*. SystemVerilog's evaluator so reads the store, where it read none (Stage 2's design).
+  store where the `define` has not run holds no such domain, and a type it names is refused by name ("'int' is not a type C
+  defines", as stage 2's "'f' is not an operation Patterns defines") *(agent)*. SystemVerilog's evaluator so reads the store, where it read none (Stage 2's design).
 - The other dialects' code domains (Python3's `Int`, TypeScript5's `Number`, MATLAB's `Double`, ...) are inference's,
   `OfTypes`, as Patterns' natives became in stage 2, and stay, marked CAP-232's to replace *(agent)*: their evaluators
   compute on natives, and read no domain.

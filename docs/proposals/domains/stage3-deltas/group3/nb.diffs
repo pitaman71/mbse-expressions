@@ -1,0 +1,123 @@
+### python3/tests/05_Framework.ipynb, cell 3
+```diff
+--- 
++++ 
+@@ -17,6 +17,6 @@
+     "isoiec11404": ["boolean", "integer", "modulo", "bitstring", "octet", "octetstring", "state", "packed"], "ieee754": ["ieee754"],
+-    "ieee1164": ["ieee1164"], "unicode": ["unicode"], "python3": ["str", "nonetype", "ellipsis"], "excel": ["error"],
++    "ieee1164": ["ieee1164"], "unicode": ["unicode"], "python3": ["str", "nonetype", "ellipsis"], "matlab": ["string"], "excel": ["text", "error"],
+     "c": ["nullptr_t"], "cpp": ["nullptr_t"], "systemverilog": ["logic"], "typescript5": ["string", "null"]}
+ assert [b.schema.name for b in DomainKind.branches[4:]] == [  # each dialect's own union of kinds, named by its path
+-    d.union.removesuffix(".Term") + ".DomainKind" for d in DIALECTS if d.name() not in ("Patterns", "MATLAB", "LaTeX")]
++    d.union.removesuffix(".Term") + ".DomainKind" for d in DIALECTS if d.name() not in ("Patterns", "LaTeX")]
+ assert all(list(b.schema.adjacencies) == ["domains", "operations"] for b in Dialects.branches)
+```
+
+### typescript5/tests/05_Framework.ipynb, cell 3
+```diff
+--- 
++++ 
+@@ -19,6 +19,7 @@
+   ["isoiec11404", ["boolean", "integer", "modulo", "bitstring", "octet", "octetstring", "state", "packed"]], ["ieee754", ["ieee754"]],
+-  ["ieee1164", ["ieee1164"]], ["unicode", ["unicode"]], ["python3", ["str", "nonetype", "ellipsis"]], ["excel", ["error"]],
++  ["ieee1164", ["ieee1164"]], ["unicode", ["unicode"]], ["python3", ["str", "nonetype", "ellipsis"]], ["matlab", ["string"]],
++  ["excel", ["text", "error"]],
+   ["c", ["nullptr_t"]], ["cpp", ["nullptr_t"]], ["systemverilog", ["logic"]], ["typescript5", ["string", "null"]]])));
+ assert(same(DomainKind.branches.slice(4).map((b: any) => b.schema.name), DIALECTS // each dialect's own union of kinds, named by its path
+-  .filter((d) => !["Patterns", "MATLAB", "LaTeX"].includes(d.name())).map((d) => d.union.replace(/\.Term$/, "") + ".DomainKind")));
++  .filter((d) => !["Patterns", "LaTeX"].includes(d.name())).map((d) => d.union.replace(/\.Term$/, "") + ".DomainKind")));
+ assert(Dialects.branches.every((b: any) => same([...b.schema.adjacencies.keys()], ["domains", "operations"])));
+```
+
+### python3/tests/04_Conformance.ipynb, cell 1
+```diff
+--- 
++++ 
+@@ -4,3 +4,3 @@
+ 
+-from mbse.Expressions.Conformance.Corpus import CASES, DIALECTS, build
++from mbse.Expressions.Conformance.Corpus import CASES, DIALECTS, DOMAINS, build
+ from mbse.Expressions.Conformance.write import render
+```
+
+### python3/tests/04_Conformance.ipynb, cell 9
+```diff
+--- 
++++ 
+@@ -1 +1,15 @@
++ISO = "isoiec11404"
++STORED = {  # each case that is data: its dialect's domains, in order, by name, each its kind, its dialect's tag then its own
++    "domains": {"boolean": (ISO, "boolean"), "integer": (ISO, "integer"), "octetstring": (ISO, "octetstring"),
++                "octet": (ISO, "octet"), "modulo(256)": (ISO, "modulo"), "state": (ISO, "state"), "mode": (ISO, "packed")},
++    "python3_domains": {"bool": (ISO, "boolean"), "int": (ISO, "integer"), "float": ("ieee754", "ieee754"),
++                        "str": ("python3", "str"), "bytes": (ISO, "octetstring"), "NoneType": ("python3", "nonetype"),
++                        "ellipsis": ("python3", "ellipsis")},
++    "typescript5_domains": {"boolean": (ISO, "boolean"), "number": ("ieee754", "ieee754"), "bigint": (ISO, "integer"),
++                            "string": ("typescript5", "string"), "null": ("typescript5", "null")},
++    "matlab_domains": {"double": ("ieee754", "ieee754"), "logical": (ISO, "boolean"), "string": ("matlab", "string")},
++    "excel_domains": {"number": ("ieee754", "ieee754"), "logical": (ISO, "boolean"), "text": ("excel", "text"),
++                      "error": ("excel", "error")},
++}
++assert list(STORED) == list(DOMAINS)
+ for store in {id(store): store for _, _, store in corpus.values()}.values():
+@@ -8,9 +22,6 @@
+             assert Plain.ToPlain(store)(schema, restored) == snapshots[case], f"{other}/{case}.{suffix}"
+-            if case == "domains":  # ISO/IEC 11404's dialect, a singleton: read back into itself, its domains valid
++            if case in DOMAINS:  # a dialect, a singleton: read back into itself, its domains valid
+                 assert restored is root and Validators.Validate(store)(schema, restored) == []
+-                names = ["boolean", "integer", "octetstring", "octet", "modulo(256)", "state", "mode"]
+-                assert [str(e.name) for e in restored.domains] == names and list(restored.operations) == []
+-                assert [FD.name_of(e.domain) for e in restored.domains] == names and [
+-                    FD.kind_of(e.domain)[:2] for e in restored.domains] == [("isoiec11404", kind) for kind in (
+-                        "boolean", "integer", "octetstring", "octet", "modulo", "state", "packed")]
++                assert [str(e.name) for e in restored.domains] == list(STORED[case]) and list(restored.operations) == []
++                assert [(FD.name_of(e.domain), FD.kind_of(e.domain)[:2]) for e in restored.domains] == list(STORED[case].items())
+                 continue
+```
+
+### typescript5/tests/04_Conformance.ipynb, cell 1
+```diff
+--- 
++++ 
+@@ -3,3 +3,3 @@
+ 
+-import { CASES, DIALECTS, build } from "../src/Conformance/Corpus.js";
++import { CASES, DIALECTS, DOMAINS, build } from "../src/Conformance/Corpus.js";
+ import { render } from "../src/Conformance/write.js";
+```
+
+### typescript5/tests/04_Conformance.ipynb, cell 9
+```diff
+--- 
++++ 
+@@ -1 +1,15 @@
++const ISO = "isoiec11404";
++const STORED = new Map<string, [string, [string, string]][]>([ // each case that is data: its dialect's domains, in order, by name, each its kind, its dialect's tag then its own
++  ["domains", [["boolean", [ISO, "boolean"]], ["integer", [ISO, "integer"]], ["octetstring", [ISO, "octetstring"]],
++    ["octet", [ISO, "octet"]], ["modulo(256)", [ISO, "modulo"]], ["state", [ISO, "state"]], ["mode", [ISO, "packed"]]]],
++  ["python3_domains", [["bool", [ISO, "boolean"]], ["int", [ISO, "integer"]], ["float", ["ieee754", "ieee754"]],
++    ["str", ["python3", "str"]], ["bytes", [ISO, "octetstring"]], ["NoneType", ["python3", "nonetype"]],
++    ["ellipsis", ["python3", "ellipsis"]]]],
++  ["typescript5_domains", [["boolean", [ISO, "boolean"]], ["number", ["ieee754", "ieee754"]], ["bigint", [ISO, "integer"]],
++    ["string", ["typescript5", "string"]], ["null", ["typescript5", "null"]]]],
++  ["matlab_domains", [["double", ["ieee754", "ieee754"]], ["logical", [ISO, "boolean"]], ["string", ["matlab", "string"]]]],
++  ["excel_domains", [["number", ["ieee754", "ieee754"]], ["logical", [ISO, "boolean"]], ["text", ["excel", "text"]],
++    ["error", ["excel", "error"]]]],
++]);
++assert(same([...STORED.keys()], [...DOMAINS.keys()]));
+ for (const store of new Set([...corpus.values()].map(([, , store]) => store))) {
+@@ -9,9 +23,7 @@
+       assert(equal(Plain.ToPlain(store)(schema, restored), snapshots.get(name)), `${other}/${name}.${suffix}`);
+-      if (name === "domains") { // ISO/IEC 11404's dialect, a singleton: read back into itself, its domains valid
++      if (DOMAINS.has(name)) { // a dialect, a singleton: read back into itself, its domains valid
+         assert(restored === root && Validators.Validate(store)(schema, restored).length === 0);
+-        const names = ["boolean", "integer", "octetstring", "octet", "modulo(256)", "state", "mode"];
+-        assert(same([...restored.domains].map((e: any) => `${e.name}`), names) && [...restored.operations].length === 0);
+-        assert(same([...restored.domains].map((e: any) => FD.nameOf(e.domain)), names) && equal(
+-          [...restored.domains].map((e: any) => FD.kindOf(e.domain).slice(0, 2)), [
+-            "boolean", "integer", "octetstring", "octet", "modulo", "state", "packed"].map((kind) => ["isoiec11404", kind])));
++        const kinds = STORED.get(name) as [string, [string, string]][];
++        assert(same([...restored.domains].map((e: any) => `${e.name}`), kinds.map(([domain]) => domain)) && [...restored.operations].length === 0);
++        assert(equal([...restored.domains].map((e: any) => [FD.nameOf(e.domain), FD.kindOf(e.domain).slice(0, 2)]), kinds));
+         continue;
+```

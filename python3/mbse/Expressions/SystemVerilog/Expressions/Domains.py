@@ -1,10 +1,14 @@
-"""Domains of the SystemVerilog dialect: its integral types, 4-state or 2-state vectors of a width and a signedness, and
-`real` and `shortreal`.
+"""Domains of the SystemVerilog dialect: the types its evaluation, inference and validation compute on, each read from
+the domains its dialect stores, and the sized vectors computed from a term's own width and signedness.
 
 An `SvType` is a type and a domain: `integral` (a vector of `width` bits, `signed` or not, of 4 states (0, 1, x, z) or
-of 2 (0, 1)) or `real` of IEEE 754's `binary64` or `binary32` (`shortreal`). `TYPES` names the built-in ones: `bit`,
-`logic`, `reg` (a single bit), `byte` (8), `shortint` (16), `int` (32), `longint` (64), `integer` (32, 4-state),
-`time` (64, 4-state, unsigned), `real` and `shortreal`.
+of 2 (0, 1)) or `real` of an IEEE 754 `format`. It is the working value the arithmetic computes on, not a type table:
+a named type is a stored domain of SystemVerilog's dialect, `Expressions.SystemVerilog.Expressions`, which its
+`define` writes (`logic`, `reg`, `integer`, `time`, `bit`, `byte`, `shortint`, `int`, `longint`, `real`, `shortreal`),
+and `named(store, name)` reads one as an `SvType`, labelled with its `Defines` name: its width and signedness from its
+kind's properties (`Framework.Domains.kind_of` and `properties`), its states from its kind (`logic` 4, `bit` 2), and a
+real's format from IEEE 754's kind, its width that format's interchange width. A type no stored domain names is refused
+by name. `vector(width, signed, states)` is a sized vector's type, which no domain names (`logic [7:0]`).
 
 A value of an integral type is a `Logic`: its type and two patterns of its width, `aval` and `bval`, which encode each
 bit as VPI does (0 is 0/0, 1 is 1/0, z is 0/1, x is 1/1). `Logic.of(bits, signed)` reads `bits` (MSB first, of
@@ -12,7 +16,9 @@ bit as VPI does (0 is 0/0, 1 is 1/0, z is 0/1, x is 1/1). `Logic.of(bits, signed
 its signedness. `real` values are floats.
 
 Expressions are sized as IEEE 1800 says (11.6, 11.8): `common` gives the type context-determined operands share, and
-the signatures follow (see `Evaluators`).
+the signatures follow (see `Evaluators`). `of(value)` names a constant's type. The rules (`common`, the signatures,
+which type a constant has) stay code, and the signatures are `Dialect.infer`'s, to be replaced with stored domains as
+domain inference reads them ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
 """
 
 from __future__ import annotations
@@ -21,18 +27,21 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as D
+from mbse.Expressions.Patterns.Expressions import Ieee754
+from mbse.Expressions.Framework import Domains as D, Objects
 from mbse.Expressions.Framework.Domains import Anything
+from mbse.Schemas.Framework import Proxies
 
-__all__ = ["SvType", "Logic", "TYPES", "Real", "Integer", "Bit", "Anything", "vector", "common", "of", "BINARY", "UNARY",
-           "CONDITIONAL", "CONCATENATION", "REPLICATION", "SELECT", "RANGE", "INSIDE", "SPAN", "CAST", "MEMBER", "CALL",
-           "METHOD", "ITERATE"]
+__all__ = ["SvType", "Logic", "Anything", "named", "vector", "common", "of", "BINARY", "UNARY", "CONDITIONAL",
+           "CONCATENATION", "REPLICATION", "SELECT", "RANGE", "INSIDE", "SPAN", "CAST", "MEMBER", "CALL", "METHOD",
+           "ITERATE"]
 
 
 @dataclass(frozen=True)
 class SvType:
     """A type: `integral` with its `width`, signedness and number of `states` (4 or 2), or `real` with its IEEE 754
-    `format`. Its `name` is the one it is written with; types compare by the rest."""
+    `format`. Its `name` is the one it is written with, its `label` where a stored domain names it; its `domain` is that
+    stored domain, None for a sized vector; types compare by the rest."""
 
     kind: str
     width: int = 64
@@ -40,6 +49,7 @@ class SvType:
     states: int = 4
     format: str | None = None
     label: str = field(default="", compare=False)
+    domain: Any = field(default=None, compare=False, repr=False)
 
     def name(self) -> str:
         if self.label:
@@ -65,18 +75,21 @@ def vector(width: int, signed: bool = False, states: int = 4) -> SvType:
     return SvType("integral", width, signed, states)
 
 
-TYPES: dict[str, SvType] = {
-    "bit": SvType("integral", 1, False, 2, label="bit"), "logic": SvType("integral", 1, False, 4, label="logic"),
-    "reg": SvType("integral", 1, False, 4, label="reg"), "byte": SvType("integral", 8, True, 2, label="byte"),
-    "shortint": SvType("integral", 16, True, 2, label="shortint"), "int": SvType("integral", 32, True, 2, label="int"),
-    "longint": SvType("integral", 64, True, 2, label="longint"), "integer": SvType("integral", 32, True, 4, label="integer"),
-    "time": SvType("integral", 64, False, 4, label="time"),
-    "real": SvType("real", 64, True, 2, "binary64", "real"), "shortreal": SvType("real", 32, True, 2, "binary32", "shortreal"),
-}
-"""The built-in types, by name."""
+def named(store: Any, name: str) -> SvType:
+    """The type SystemVerilog defines in `store` by `name`: the domain its dialect's singleton owns by that name, read as
+    an `SvType`; raises ValueError where it defines none (its `define` has not run, or no type has the name)."""
+    entries = Objects.entries(store.Instances.Expressions.SystemVerilog.Expressions, "domains")
+    domain = next((entry.targets["domain"] for entry in entries if entry.values["name"] == name), None)
+    if domain is None:
+        raise ValueError(f"{name!r} is not a type SystemVerilog defines")
+    _, kind, _ = D.kind_of(domain)
+    properties = D.properties(domain)
+    if kind == "ieee754":  # IEEE 754's: a real, of its format
+        format = properties["format"]
+        return SvType("real", Ieee754.WIDTHS[format], True, 2, format, name, domain)
+    return SvType("integral", properties["width"], properties["signed"], 4 if kind == "logic" else 2, None, name, domain)
 
-Real, Integer, Bit = TYPES["real"], TYPES["integer"], TYPES["bit"]
-Longint = TYPES["longint"]
+
 _STATES = {(0, 0): "0", (1, 0): "1", (0, 1): "z", (1, 1): "x"}
 
 
@@ -126,18 +139,23 @@ class Logic:
 
 def common(types: Sequence[SvType]) -> SvType:
     """The type context-determined operands share: real if any is (`shortreal` if all are), otherwise the widest width,
-    signed if all are, and 4-state if any is."""
-    if any(t.kind == "real" for t in types):  # real, unless every operand is a shortreal
-        return TYPES["shortreal"] if all(t.format == "binary32" for t in types) else Real
+    signed if all are, and 4-state if any is. A real is an operand's type, or `real`, read from the store of a real
+    operand's domain."""
+    reals = [t for t in types if t.kind == "real"]
+    if reals:  # real, unless every operand is a shortreal
+        if all(t.format == "binary32" for t in types):
+            return reals[0]
+        wide = [t for t in reals if t.format == "binary64"]
+        return wide[0] if wide else named(Proxies.store_of(reals[0].domain), "real")
     return vector(max(t.width for t in types), all(t.signed for t in types), max(t.states for t in types))
 
 
-def of(value: Any) -> D.Domain:
-    """A constant's type: `integer` for an int that fits 32 bits, `longint` for 64; `real` for a float; and
-    `Anything` otherwise."""
+def of(value: Any) -> str | None:
+    """The name of a constant's type: `integer` for an int that fits 32 bits, `longint` for 64; `real` for a float; and
+    None otherwise (a string, or an int no type holds)."""
     if type(value) is int:
-        return Integer if -(1 << 31) <= value < 1 << 31 else Longint if -(1 << 63) <= value < 1 << 63 else Anything
-    return Real if type(value) is float else Anything
+        return "integer" if -(1 << 31) <= value < 1 << 31 else "longint" if -(1 << 63) <= value < 1 << 63 else None
+    return "real" if type(value) is float else None
 
 
 class _Sized:
@@ -160,7 +178,7 @@ class _Sized:
         return self._text
 
 
-_ONE = vector(1)
+_ONE, _BIT = vector(1), vector(1, False, 2)  # a 1-bit result; `===`'s is 2-state, which `Expressions` names `bit`
 
 
 def _integral(types: Sequence[SvType]) -> bool:
@@ -177,7 +195,7 @@ BINARY: dict[str, D.Signature] = {
        for op in ("<<", ">>", "<<<", ">>>")},
     **{op: _Sized(2, lambda ts: _ONE, "(T, T) -> logic", _ONE)
        for op in ("<", "<=", ">", ">=", "==", "!=", "&&", "||", "->", "<->")},
-    **{op: _Sized(2, lambda ts: Bit if _integral(ts) else None, "(integral, integral) -> bit", Bit)
+    **{op: _Sized(2, lambda ts: _BIT if _integral(ts) else None, "(integral, integral) -> bit", _BIT)
        for op in ("===", "!==")},
     **{op: _Sized(2, lambda ts: _ONE if _integral(ts) else None, "(integral, integral) -> logic", _ONE)
        for op in ("==?", "!=?")},

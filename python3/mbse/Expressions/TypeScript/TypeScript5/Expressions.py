@@ -60,7 +60,13 @@ helpers nested, as its printer and its checks read it.
 Its kinds of domain, the branches of its union `Expressions.TypeScript.TypeScript5.DomainKind`, which `install` adds
 to the framework's `Expressions.Framework.DomainKind` as the branch `typescript5`, each with the inferred `ordered`:
 `string` (`OfString`), sequences of UTF-16 code units; and the token `null` (`OfNull`), whose domain has no schema: its
-value is a `constant`'s. Its domains are stage 3's of the domains-as-data proposal.
+value is a `constant`'s.
+
+Its domains, each named by TypeScript's type keyword: `define` writes them, owned by the singleton
+`Expressions.TypeScript.TypeScript5` by name, each but a token's related to its schema, an `OfAny` of the scalar it
+narrows, which `install` adds (`Expressions.TypeScript.TypeScript5.number`): `boolean` (ISO/IEC 11404's `boolean`),
+`number` (IEEE 754's `binary64`, rounding ties to even), `bigint` (11404's `integer`: signed, unbounded, raising on
+overflow), `string` (its own `string`), and the token `null` (its own `null`). `RegExp` is not a domain.
 """
 
 from __future__ import annotations
@@ -72,7 +78,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from . import Domains
 
-__all__ = ["install", "DIALECT", "EXTENSIONS", "STANDARDS", "QUOTES", "FLAGS", "Node", "tree", "binding_names"]
+__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "STANDARDS", "QUOTES", "FLAGS", "Node", "tree", "binding_names"]
 
 IDENTIFIER, PRIVATEIDENTIFIER, LITERAL, CONSTANT = "identifier", "privateidentifier", "literal", "constant"
 TEMPLATELITERAL, TAGGEDTEMPLATEEXPRESSION, THISEXPRESSION, SUPER = (
@@ -113,6 +119,7 @@ def install(txn: Any) -> Any:
     """TypeScript5's union of its kinds, added to the framework's terms as the branch `typescript5`, its own kinds, its
     sublanguages' unions (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
     `Expressions.TypeScript.TypeScript5`: run after `Framework.install`, in a transaction of its own; run again, it writes nothing.
+    Its domains' schemas too, each an `OfAny` of the scalar it narrows: its domains `define` writes after it.
     Its holder, `Expressions.TypeScript.TypeScript5.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
     its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
@@ -123,6 +130,7 @@ def install(txn: Any) -> Any:
     return txn.uid("mbse.Expressions.TypeScript.TypeScript5/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion,  # Kinds: the framework's
                   "OfString": S.OfObject, "OfNull": S.OfObject,
+                  "boolean": S.OfAny, "number": S.OfAny, "bigint": S.OfAny, "string": S.OfAny,
                   "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   "Type": S.OfUnion, "Pattern": S.OfUnion, "TypeElement": S.OfUnion, "JSXTagNameExpression": S.OfUnion,
                   "JSXAttributeName": S.OfUnion, "JSXAttributeValue": S.OfUnion, "JSXAttributeItem": S.OfUnion,
@@ -562,8 +570,44 @@ def install(txn: Any) -> Any:
             ]),
             lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
                 lambda t: t.name("typescript5").schema([_.DomainKind])]),
+            # --- its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
+            lambda _: _.boolean.name("Expressions.TypeScript.TypeScript5.boolean").schemas([S.OfBool]),
+            lambda _: _.number.name("Expressions.TypeScript.TypeScript5.number").schemas([S.OfFloat]),
+            lambda _: _.bigint.name("Expressions.TypeScript.TypeScript5.bigint").schemas([S.OfInt]),
+            lambda _: _.string.name("Expressions.TypeScript.TypeScript5.string").schemas([S.OfStr]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("typescript5").schema([_.Term])]),
+        ])]))])
+
+
+def define(txn: Any) -> Any:
+    """TypeScript5's domains as data: the singleton `Expressions.TypeScript.TypeScript5` owning its domains by name
+    (`domains`, through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each
+    but a token's related to its schema (`Expressions.TypeScript.TypeScript5.number`) by
+    `Expressions.Framework.HasDomain`: `boolean`, `number`, `bigint` and `string`, and the token `null`. Run after the
+    installs, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
+    each domain by its name: `store.transaction(TypeScript5.define)[0]["number"]`."""
+    TypeScript5, Domain = txn.Expressions.TypeScript.TypeScript5, txn.Expressions.Framework.Domain
+    return txn.uid("mbse.Expressions.TypeScript.TypeScript5.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"dialect": TypeScript5.Dialect, "boolean": Domain, "number": Domain, "bigint": Domain,
+                  "string": Domain, "null": Domain})
+        .spec([
+            lambda _: _.dialect.domains({
+                "boolean": lambda e: e.domain(_.boolean), "number": lambda e: e.domain(_.number),
+                "bigint": lambda e: e.domain(_.bigint), "string": lambda e: e.domain(_.string),
+                "null": lambda e: e.domain(_.null),
+            }),
+            lambda _: _.boolean.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.boolean(
+                lambda d: d.ordered(False)))))).schema([TypeScript5.boolean]),
+            lambda _: _.number.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").radix(2).precision(53).emax(1023).ordered(
+                    True)))))).schema([TypeScript5.number]),
+            lambda _: _.bigint.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.signed(True).overflow("raise").ordered(True)))))).schema([TypeScript5.bigint]),  # unbounded
+            lambda _: _.string.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.typescript5(lambda v: v.string(
+                lambda d: d.ordered(True)))))).schema([TypeScript5.string]),
+            lambda _: _.null.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.typescript5(lambda v: v.null(
+                lambda d: d.ordered(False)))))),  # a token: no schema
         ])]))])
 
 

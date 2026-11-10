@@ -29,6 +29,15 @@ each union names its own. There is no binding: translators substitute a
 let's value for its name. `DIALECT` reads the terms (`Terms.Dialect`), validates and infers; the writers (`constant`,
 `identifier`, `binary`, ...) write them through the builders, wherever a term is written, in a transaction.
 `Text.ToText` writes a term as MATLAB source, e.g. `this.age >= 18 && isfield(this, "email")`.
+
+Its kind of domain, the branch of its union `Expressions.MATLAB.Expressions.DomainKind`, which `install` adds to the
+framework's `Expressions.Framework.DomainKind` as the branch `matlab`: `string` (`OfString`), a string's text, sequences
+of UTF-16 code units, lone surrogates among them; inferred `ordered`.
+
+Its domains, each named as MATLAB names its class: `define` writes them, owned by the singleton
+`Expressions.MATLAB.Expressions` by name, each related to its schema, an `OfAny` of the scalar it narrows, which
+`install` adds (`Expressions.MATLAB.Expressions.double`): `double` (IEEE 754's `binary64`, rounding ties to even),
+`logical` (ISO/IEC 11404's `boolean`) and `string` (its own `string`). A `struct` is not a domain.
 """
 
 from __future__ import annotations
@@ -40,21 +49,24 @@ from mbse.Expressions.Framework import Terms as F
 
 from . import Domains
 
-__all__ = ["install", "DIALECT", "Writer", "constant", "identifier", "binary", "unary", "call", "field", "index",
+__all__ = ["install", "define", "DIALECT", "Writer", "constant", "identifier", "binary", "unary", "call", "field", "index",
            "arrayfun", "array", "import_"]
 
 
 def install(txn: Any) -> Any:
     """MATLAB's union of its kinds, added to the framework's terms as the branch `matlab`, its own kinds, and its
     dialect's schema, whose singleton is `Expressions.MATLAB.Expressions`: run after `Framework.install`, in a transaction of its
-    own; run again, it writes nothing.
+    own; run again, it writes nothing. Its kind of domain too, its union of kinds added to the framework's as the branch
+    `matlab`, and its domains' schemas, each an `OfAny` of the scalar it narrows: its domains `define` writes after it.
     Its holder, `Expressions.MATLAB.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
     its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.MATLAB.Expressions/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Binary": S.OfObject, "Unary": S.OfObject, "Field": S.OfObject, "Index": S.OfObject,
-                  "Arrayfun": S.OfObject, "Import": S.OfObject})  # FrameworkTerm: the framework's union, by name
+                  "Arrayfun": S.OfObject, "Import": S.OfObject,  # FrameworkTerm: the framework's union, by name
+                  "Kinds": S.OfUnion, "DomainKind": S.OfUnion, "OfString": S.OfObject,  # Kinds: the framework's
+                  "double": S.OfAny, "logical": S.OfAny, "string": S.OfAny})
         .spec([
             # its dialect: the singleton `Expressions.MATLAB.Expressions`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.MATLAB.Expressions.Dialect").ref(True).singleton("Expressions.MATLAB.Expressions").adjacencies({
@@ -95,8 +107,43 @@ def install(txn: Any) -> Any:
             # to its `Term`
             lambda _: _.Expression.name("Expressions.MATLAB.Expressions.Expression").ref(True).refines([Framework.Expression]).properties({
                 "root": _.Term}),
+            # --- its kind of domain: a string's text, UTF-16 code units; inferred `ordered` ---
+            lambda _: _.OfString.name("Expressions.MATLAB.Expressions.OfString").properties({"ordered": S.OfBool}),
+            lambda _: _.DomainKind.name("Expressions.MATLAB.Expressions.DomainKind").branches([
+                lambda t: t.name("string").schema([_.OfString]),
+            ]),
+            lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
+                lambda t: t.name("matlab").schema([_.DomainKind])]),
+            # --- its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
+            lambda _: _.double.name("Expressions.MATLAB.Expressions.double").schemas([S.OfFloat]),
+            lambda _: _.logical.name("Expressions.MATLAB.Expressions.logical").schemas([S.OfBool]),
+            lambda _: _.string.name("Expressions.MATLAB.Expressions.string").schemas([S.OfStr]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("matlab").schema([_.Term])]),
+        ])]))])
+
+
+def define(txn: Any) -> Any:
+    """MATLAB's domains as data: the singleton `Expressions.MATLAB.Expressions` owning its domains by name (`domains`,
+    through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its
+    schema (`Expressions.MATLAB.Expressions.double`) by `Expressions.Framework.HasDomain`: `double`, `logical` and
+    `string`. Run after the installs, in a transaction of its own; run again, it writes nothing. Its frame binds the
+    dialect (`dialect`) and each domain by its name: `store.transaction(Matlab.define)[0]["double"]`."""
+    Matlab, Domain = txn.Expressions.MATLAB.Expressions, txn.Expressions.Framework.Domain
+    return txn.uid("mbse.Expressions.MATLAB.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"dialect": Matlab.Dialect, "double": Domain, "logical": Domain, "string": Domain})
+        .spec([
+            lambda _: _.dialect.domains({
+                "double": lambda e: e.domain(_.double), "logical": lambda e: e.domain(_.logical),
+                "string": lambda e: e.domain(_.string),
+            }),
+            lambda _: _.double.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").radix(2).precision(53).emax(1023).ordered(
+                    True)))))).schema([Matlab.double]),
+            lambda _: _.logical.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.boolean(
+                lambda d: d.ordered(False)))))).schema([Matlab.logical]),
+            lambda _: _.string.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.matlab(lambda v: v.string(
+                lambda d: d.ordered(True)))))).schema([Matlab.string]),
         ])]))])
 
 

@@ -63,8 +63,14 @@ parenthesized only where precedence requires, and `Text.FromText` reads one back
 Its kinds of domain, the branches of its union `Expressions.Python.Python3.DomainKind`, which `install` adds to the
 framework's `Expressions.Framework.DomainKind` as the branch `python3`, each with the inferred `ordered`: `str`
 (`OfStr`), sequences of code points, lone surrogates included; and the tokens `nonetype` (`OfNoneType`), `None`'s type,
-and `ellipsis` (`OfEllipsis`), `...`'s. A token's domain has no schema: its value is a `constant`'s. Its domains are
-stage 3's of the domains-as-data proposal.
+and `ellipsis` (`OfEllipsis`), `...`'s. A token's domain has no schema: its value is a `constant`'s.
+
+Its domains, each named as Python names its type: `define` writes them, owned by the singleton `Expressions.Python.Python3`
+by name, each but a token's related to its schema, an `OfAny` of the scalar it narrows, which `install` adds
+(`Expressions.Python.Python3.int`): `bool` (ISO/IEC 11404's `boolean`), `int` (11404's `integer`: signed, unbounded,
+raising on overflow), `float` (IEEE 754's `binary64`, rounding ties to even), `str` (its own `str`), `bytes` (11404's
+`octetstring`), and the tokens `NoneType` and `ellipsis` (its own `nonetype` and `ellipsis`, named as
+`type(None).__name__` and `type(...).__name__` are). `complex` is not a domain: it is a value schema, `Complex`.
 """
 
 from __future__ import annotations
@@ -78,7 +84,7 @@ from mbse.Schemas.Framework import Schemas
 
 from . import Domains
 
-__all__ = ["install", "DIALECT", "BUILTINS", "EXTENSIONS", "STANDARDS", "Writer", "Helper", "constant", "name",
+__all__ = ["install", "define", "DIALECT", "BUILTINS", "EXTENSIONS", "STANDARDS", "Writer", "Helper", "constant", "name",
            "concatenatedstring", "joinedstr", "templatestr", "stringtext", "formattedvalue", "interpolation",
            "parenthesized", "tuple_", "list_", "set_", "dict_", "listcomp", "setcomp", "dictcomp", "generatorexp",
            "comprehension", "yield_", "yieldfrom", "await_", "attribute", "subscript", "slice_", "call", "keyword",
@@ -112,13 +118,15 @@ def install(txn: Any) -> Any:
     """Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds and the
     helpers they hold, and its dialect's schema, whose singleton is `Expressions.Python.Python3`: run after
     `Framework.install` and IEEE 754's (its `Complex` holds `binary64`s), in a transaction of its own; run again, it
-    writes nothing.
+    writes nothing. Its domains' schemas too, each an `OfAny` of the scalar it narrows: its domains `define` writes after
+    it.
     Its holder, `Expressions.Python.Python3.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
     its `Term`."""
     S, Framework, IEEE754 = txn.Schemas, txn.Expressions.Framework, txn.Expressions.IEEE754.Expressions
     return txn.uid("mbse.Expressions.Python.Python3/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion,  # Kinds: the framework's
                   "OfStr": S.OfObject, "OfNoneType": S.OfObject, "OfEllipsis": S.OfObject,
+                  "bool": S.OfAny, "int": S.OfAny, "float": S.OfAny, "str": S.OfAny, "bytes": S.OfAny,
                   "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   "Pattern": S.OfUnion,
                   "Expression": S.OfObject, "Literal": S.OfObject, "Constant": S.OfObject, "Complex": S.OfObject,
@@ -310,8 +318,50 @@ def install(txn: Any) -> Any:
             ]),
             lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
                 lambda t: t.name("python3").schema([_.DomainKind])]),
+            # --- its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
+            lambda _: _.bool.name("Expressions.Python.Python3.bool").schemas([S.OfBool]),
+            lambda _: _.int.name("Expressions.Python.Python3.int").schemas([S.OfInt]),
+            lambda _: _.float.name("Expressions.Python.Python3.float").schemas([S.OfFloat]),
+            lambda _: _.str.name("Expressions.Python.Python3.str").schemas([S.OfStr]),
+            lambda _: _.bytes.name("Expressions.Python.Python3.bytes").schemas([S.OfBytes]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("python3").schema([_.Term])]),
+        ])]))])
+
+
+def define(txn: Any) -> Any:
+    """Python3's domains as data: the singleton `Expressions.Python.Python3` owning its domains by name (`domains`,
+    through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each but a
+    token's related to its schema (`Expressions.Python.Python3.int`) by `Expressions.Framework.HasDomain`: `bool`,
+    `int`, `float`, `str` and `bytes`, and the tokens `NoneType` and `ellipsis`. Run after the installs, in a
+    transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by its
+    name: `store.transaction(Python3.define)[0]["int"]`."""
+    Python3, Domain = txn.Expressions.Python.Python3, txn.Expressions.Framework.Domain
+    return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"dialect": Python3.Dialect, "bool": Domain, "int": Domain, "float": Domain, "str": Domain,
+                  "bytes": Domain, "NoneType": Domain, "ellipsis": Domain})
+        .spec([
+            lambda _: _.dialect.domains({
+                "bool": lambda e: e.domain(_.bool), "int": lambda e: e.domain(_.int),
+                "float": lambda e: e.domain(_.float), "str": lambda e: e.domain(_.str),
+                "bytes": lambda e: e.domain(_.bytes), "NoneType": lambda e: e.domain(_.NoneType),
+                "ellipsis": lambda e: e.domain(_.ellipsis),
+            }),
+            lambda _: _.bool.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.boolean(
+                lambda d: d.ordered(False)))))).schema([Python3.bool]),
+            lambda _: _.int.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.integer(
+                lambda d: d.signed(True).overflow("raise").ordered(True)))))).schema([Python3.int]),  # unbounded
+            lambda _: _.float.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").radix(2).precision(53).emax(1023).ordered(
+                    True)))))).schema([Python3.float]),
+            lambda _: _.str.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.python3(lambda v: v.str(
+                lambda d: d.ordered(True)))))).schema([Python3.str]),
+            lambda _: _.bytes.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.isoiec11404(lambda v: v.octetstring(
+                lambda d: d.ordered(True)))))).schema([Python3.bytes]),
+            lambda _: _.NoneType.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.python3(lambda v: v.nonetype(
+                lambda d: d.ordered(False)))))),  # a token: no schema
+            lambda _: _.ellipsis.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.python3(lambda v: v.ellipsis(
+                lambda d: d.ordered(False)))))),  # a token: no schema
         ])]))])
 
 

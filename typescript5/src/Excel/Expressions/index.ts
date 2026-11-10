@@ -1,9 +1,9 @@
 /** The Excel dialect: worksheet formulas, evaluated by Excel's rules, errors as values included. `install` adds its
- * kinds to the framework's terms. See mbse-basis
+ * kinds to the framework's terms, its kinds of domain and its domains' schemas; `define` writes its domains. See mbse-basis
  * [CAP-100: six languages' expression dialects](mbse:mbse-basis/docs/capabilities/CAP-100.md). */
 
 export * as Domains from "./Domains.js";
 export * as Evaluators from "./Evaluators.js";
 export * as Expressions from "./Expressions.js";
 export * as Text from "./Text.js";
-export { install } from "./Expressions.js";
+export { define, install } from "./Expressions.js";

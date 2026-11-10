@@ -19,7 +19,7 @@ invalid syntax (`error`, `missing`); a term carries no domain:
 - `concatenation` (`{a, b}`) and `replication` (`{n{a}}`).
 - `select` (`a[i]`) and `range` (`a[msb:lsb]`), of a vector's bits or an array's elements.
 - `inside`: `value inside {items}`, whose items are values or `span`s (`[low:high]`).
-- `cast`: `type'(x)`, to a built-in type, `signed` or `unsigned`, or `width'(x)`.
+- `cast`: `type'(x)`, to a type SystemVerilog defines, `signed` or `unsigned`, or `width'(x)`.
 - `member`: `object.name`.
 - `call`: a system function (`$signed`, `$unsigned`, `$clog2`, `$bits`, `$countones`, `$onehot`, `$onehot0`,
   `$isunknown`) or a function the scope provides, named by its `callable`: the framework's `call`, read as this
@@ -33,11 +33,22 @@ There is no binding: translators substitute a let's value for its name. `DIALECT
 `vector`, ...) write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an
 expression as SystemVerilog source, with its precedence.
 
-Its kind of domain, the branch of its union `Expressions.SystemVerilog.Expressions.DomainKind`, which `install` adds
-to the framework's `Expressions.Framework.DomainKind` as the branch `systemverilog`: `logic`
-(`Expressions.SystemVerilog.Expressions.OfLogic`), IEEE 1800's 4-state integral, of a `width` in bits, `signed` or
-not; inferred (populated by hand until constraint resolution computes them) `least` and `greatest`, of its known values,
-and `ordered`. Its domains are stage 3's of the domains-as-data proposal.
+Its kinds of domain, the branches of its union `Expressions.SystemVerilog.Expressions.DomainKind`, which `install`
+adds to the framework's `Expressions.Framework.DomainKind` as the branch `systemverilog`: IEEE 1800's integral types,
+`logic` (`Expressions.SystemVerilog.Expressions.OfLogic`), 4-state, and `bit` (`OfBit`), 2-state, each of a `width` in
+bits, `signed` or not; inferred (populated by hand until constraint resolution computes them) `least` and `greatest`,
+of its known values, and `ordered`. `install` also adds its 2-state domains' schemas, each an `OfAny` of the scalar it
+narrows (`Expressions.SystemVerilog.Expressions.int`, of ints; `real` and `shortreal`, of floats); a 4-state domain has
+none, since no basic scalar holds x or z. `define` writes its domains, IEEE 1800's built-in types, owned by name:
+`logic`, `reg`, `integer` and `time` of the kind `logic`; `bit`, `byte`, `shortint`, `int` and `longint` of `bit`;
+`real` and `shortreal` of IEEE 754's `ieee754`, `binary64` and `binary32`. Each name is its own domain: `reg` is
+`logic`'s equal, not its synonym.
+
+What reads a named type reads its stored domain, through the store of the term's holder (`Proxies.store_of`), by
+`Domains.named`: validation, a cast's type (`int'(x)`), which must be a type SystemVerilog defines in that store;
+inference, a constant's type (`integer`, `longint`, `real`), a cast's and `===`'s (`bit`); and evaluation (see
+`Evaluators`). A lone term reaches no store: reading a type, it is refused (mbse-schemas' TypeError, "the value does
+not belong to a store"), and a term that reads none, a sized vector's, is read as before.
 """
 
 from __future__ import annotations
@@ -45,15 +56,15 @@ from __future__ import annotations
 from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
+from mbse.Schemas.Framework import Proxies
 
 from . import Domains
 
-__all__ = ["install", "DIALECT", "Writer", "constant", "vector", "identifier", "unary", "binary",
+__all__ = ["install", "define", "DIALECT", "Writer", "constant", "vector", "identifier", "unary", "binary",
            "conditional", "concatenation", "replication", "select", "range_", "inside", "span", "cast", "member", "call",
-           "method", "iterate", "CASTS", "SYSTEM", "METHODS", "REDUCTIONS"]
+           "method", "iterate", "SYSTEM", "METHODS", "REDUCTIONS"]
 
-CASTS = (*Domains.TYPES, "signed", "unsigned")
-"""What a cast may name: a built-in type, or a signedness."""
+_SIGNEDNESS = ("signed", "unsigned")  # what a cast may name besides a type SystemVerilog defines
 SYSTEM = ("$signed", "$unsigned", "$clog2", "$bits", "$countones", "$onehot", "$onehot0", "$isunknown")
 """The system functions."""
 REDUCTIONS = ("sum", "product", "and", "or", "xor")
@@ -68,15 +79,18 @@ def install(txn: Any) -> Any:
     and its dialect's schema, whose singleton is `Expressions.SystemVerilog.Expressions`: run after `Framework.install`, in a
     transaction of its own; run again, it writes nothing. Its `literal`, `variable` and `call` are the framework's.
     Its holder, `Expressions.SystemVerilog.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root`
-    narrowed to its `Term`."""
+    narrowed to its `Term`. Its kinds of domain, `logic` and `bit`, and its 2-state domains' schemas; its domains `define`
+    writes after it. Run after IEEE 754's install, whose kind its reals are of."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
     return txn.uid("mbse.Expressions.SystemVerilog.Expressions/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion, "OfLogic": S.OfObject,  # Kinds: the framework's
+        .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion, "OfLogic": S.OfObject, "OfBit": S.OfObject,  # Kinds: the framework's
                   "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject,
                   "Vector": S.OfObject, "Unary": S.OfObject, "Binary": S.OfObject, "Conditional": S.OfObject,
                   "Concatenation": S.OfObject, "Replication": S.OfObject, "Select": S.OfObject, "Range": S.OfObject,
                   "Inside": S.OfObject, "Span": S.OfObject, "Cast": S.OfObject, "Member": S.OfObject,
-                  "Method": S.OfObject, "Iterate": S.OfObject})  # FrameworkTerm: the framework's union, by name
+                  "Method": S.OfObject, "Iterate": S.OfObject,  # FrameworkTerm: the framework's union, by name
+                  "bit": S.OfAny, "byte": S.OfAny, "shortint": S.OfAny, "int": S.OfAny, "longint": S.OfAny,
+                  "real": S.OfAny, "shortreal": S.OfAny})
         .spec([
             # its dialect: the singleton `Expressions.SystemVerilog.Expressions`, a branch of the framework's kind union of dialects
             lambda _: _.Dialect.name("Expressions.SystemVerilog.Expressions.Dialect").ref(True).singleton("Expressions.SystemVerilog.Expressions").adjacencies({
@@ -139,17 +153,83 @@ def install(txn: Any) -> Any:
             # to its `Term`
             lambda _: _.Expression.name("Expressions.SystemVerilog.Expressions.Expression").ref(True).refines([Framework.Expression]).properties({
                 "root": _.Term}),
-            # --- its kind of domain: IEEE 1800's 4-state integral, its parameters, then what follows from them ---
+            # --- its kinds of domain: IEEE 1800's integrals, 4-state and 2-state, their parameters, then what follows ---
             lambda _: _.OfLogic.name("Expressions.SystemVerilog.Expressions.OfLogic").properties({
                 "width": S.OfInt, "signed": S.OfBool,
                 "least": S.OfInt, "greatest": S.OfInt, "ordered": S.OfBool}),  # inferred, of its known values
+            lambda _: _.OfBit.name("Expressions.SystemVerilog.Expressions.OfBit").properties({
+                "width": S.OfInt, "signed": S.OfBool,
+                "least": S.OfInt, "greatest": S.OfInt, "ordered": S.OfBool}),  # inferred
             lambda _: _.DomainKind.name("Expressions.SystemVerilog.Expressions.DomainKind").branches([
                 lambda t: t.name("logic").schema([_.OfLogic]),
+                lambda t: t.name("bit").schema([_.OfBit]),
             ]),
             lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
                 lambda t: t.name("systemverilog").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("systemverilog").schema([_.Term])]),
+            # --- its 2-state domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its
+            # domain; a 4-state domain has none: no basic scalar holds x or z ---
+            lambda _: _.bit.name("Expressions.SystemVerilog.Expressions.bit").schemas([S.OfInt]),
+            lambda _: _.byte.name("Expressions.SystemVerilog.Expressions.byte").schemas([S.OfInt]),
+            lambda _: _.shortint.name("Expressions.SystemVerilog.Expressions.shortint").schemas([S.OfInt]),
+            lambda _: _.int.name("Expressions.SystemVerilog.Expressions.int").schemas([S.OfInt]),
+            lambda _: _.longint.name("Expressions.SystemVerilog.Expressions.longint").schemas([S.OfInt]),
+            lambda _: _.real.name("Expressions.SystemVerilog.Expressions.real").schemas([S.OfFloat]),
+            lambda _: _.shortreal.name("Expressions.SystemVerilog.Expressions.shortreal").schemas([S.OfFloat]),
+        ])]))])
+
+
+def define(txn: Any) -> Any:
+    """SystemVerilog's dialect as data: the singleton `Expressions.SystemVerilog.Expressions` owning its domains, IEEE
+    1800's built-in types, by name (`domains`, through `Expressions.Framework.Defines`), each with its parameters and
+    its inferred properties, and each 2-state one related to its schema (`Expressions.SystemVerilog.Expressions.int`)
+    by `Expressions.Framework.HasDomain`. Run after `install`, in a transaction of its own; run again, it writes
+    nothing. Its frame binds the dialect (`dialect`) and each domain by its name:
+    `store.transaction(SystemVerilog.define)[0]["int"]`."""
+    SV, Domain = txn.Expressions.SystemVerilog.Expressions, txn.Expressions.Framework.Domain
+    return txn.uid("mbse.Expressions.SystemVerilog.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+        .symbols({"dialect": SV.Dialect, "logic": Domain, "reg": Domain, "integer": Domain, "time": Domain,
+                  "bit": Domain, "byte": Domain, "shortint": Domain, "int": Domain, "longint": Domain,
+                  "real": Domain, "shortreal": Domain})
+        .spec([
+            lambda _: _.dialect.domains({
+                "logic": lambda e: e.domain(_.logic), "reg": lambda e: e.domain(_.reg),
+                "integer": lambda e: e.domain(_.integer), "time": lambda e: e.domain(_.time),
+                "bit": lambda e: e.domain(_.bit), "byte": lambda e: e.domain(_.byte),
+                "shortint": lambda e: e.domain(_.shortint), "int": lambda e: e.domain(_.int),
+                "longint": lambda e: e.domain(_.longint),
+                "real": lambda e: e.domain(_.real), "shortreal": lambda e: e.domain(_.shortreal),
+            }),
+            # 4-state, with no schema: least and greatest of its known values; "logic and reg denote the same type"
+            # (IEEE 1800-2023), each its own domain, of equal properties: no synonyms
+            lambda _: _.logic.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.systemverilog(lambda v: v.logic(
+                lambda d: d.width(1).signed(False).least(0).greatest(1).ordered(True)))))),
+            lambda _: _.reg.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.systemverilog(lambda v: v.logic(
+                lambda d: d.width(1).signed(False).least(0).greatest(1).ordered(True)))))),  # logic's equal
+            lambda _: _.integer.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.systemverilog(lambda v: v.logic(
+                lambda d: d.width(32).signed(True).least(-2147483648).greatest(2147483647).ordered(True)))))),
+            lambda _: _.time.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.systemverilog(lambda v: v.logic(
+                lambda d: d.width(64).signed(False).least(0).greatest(18446744073709551615).ordered(True)))))),
+            # 2-state
+            lambda _: _.bit.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.systemverilog(lambda v: v.bit(
+                lambda d: d.width(1).signed(False).least(0).greatest(1).ordered(True)))))).schema([SV.bit]),
+            lambda _: _.byte.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.systemverilog(lambda v: v.bit(
+                lambda d: d.width(8).signed(True).least(-128).greatest(127).ordered(True)))))).schema([SV.byte]),
+            lambda _: _.shortint.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.systemverilog(lambda v: v.bit(
+                lambda d: d.width(16).signed(True).least(-32768).greatest(32767).ordered(True)))))).schema([SV.shortint]),
+            lambda _: _.int.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.systemverilog(lambda v: v.bit(
+                lambda d: d.width(32).signed(True).least(-2147483648).greatest(2147483647).ordered(True)))))).schema([SV.int]),
+            lambda _: _.longint.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.systemverilog(lambda v: v.bit(
+                lambda d: d.width(64).signed(True).least(-9223372036854775808).greatest(9223372036854775807).ordered(
+                    True)))))).schema([SV.longint]),
+            # IEEE 754's, as its own binary64 and binary32 are
+            lambda _: _.real.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary64").rounding("roundTiesToEven").radix(2).precision(53).emax(1023).ordered(
+                    True)))))).schema([SV.real]),
+            lambda _: _.shortreal.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(
+                lambda d: d.format("binary32").rounding("roundTiesToEven").radix(2).precision(24).emax(127).ordered(
+                    True)))))).schema([SV.shortreal]),
         ])]))])
 
 
@@ -180,17 +260,44 @@ def _vector_typed(record: Any) -> Any:
 
 
 def _cast_check(record: Any) -> list[str]:
+    """A cast names a positive width, a signedness, or a type SystemVerilog defines in the store of the term's holder."""
     attributes = F.attributes_of(record)
     type_, width = attributes.get("type"), attributes.get("width")
     if (type_ is None) == (width is None):
         return ["a cast names a type or a width, not both nor neither"]
     if width is not None:
         return [] if width > 0 else [f"a cast's width must be positive, got {width}"]
-    return [] if type_ in CASTS else [f"a cast's type must be a built-in type, signed or unsigned, got {type_!r}"]
+    if type_ not in _SIGNEDNESS:
+        store = Proxies.store_of(record)
+        try:
+            Domains.named(store, type_)
+        except ValueError as error:  # the store defines no such type
+            return [str(error)]
+    return []
 
 
 def _cast_typed(record: Any) -> Any:
-    return Domains.TYPES.get(F.attributes_of(record).get("type"))
+    """A cast to a type: that type, read from the store of the term's holder; one to a width or a signedness is sized by
+    its operand."""
+    type_ = F.attributes_of(record).get("type")
+    return None if type_ in (None, *_SIGNEDNESS) else Domains.named(Proxies.store_of(record), type_)
+
+
+def _literal_typed(record: Any) -> Any:
+    """A constant's type, read from the store of the term's holder; None where no type holds it (a string)."""
+    name = Domains.of(F.attributes_of(record)["value"])
+    return None if name is None else Domains.named(Proxies.store_of(record), name)
+
+
+def _binary_typed(record: Any) -> Any:
+    """`===`'s and `!==`'s type, `bit`, read from the store of the term's holder; the others' are their operands'."""
+    operator = F.attributes_of(record)["operator"]
+    return Domains.named(Proxies.store_of(record), "bit") if operator in ("===", "!==") else None
+
+
+def _untyped(value: Any) -> Any:
+    """The domain of a constant no type holds: a string, or an int beyond 64 bits (`Kind.typed` reads the others')."""
+    return Domains.Anything
 
 
 def _method_check(record: Any) -> list[str]:
@@ -211,11 +318,12 @@ def _native(value: Any) -> Writer | None:
 
 
 DIALECT = F.Dialect("SystemVerilog.Expressions", {
-    "literal": F.Kind(F.LITERAL, check=_literal_check),
+    "literal": F.Kind(F.LITERAL, check=_literal_check, typed=_literal_typed),
     "vector": F.Kind(F.LITERAL, check=_vector_check, typed=_vector_typed),
     "variable": F.Kind(F.REFERENCE, required=("name",)),
     "unary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.UNARY, required=("operator",)),
-    "binary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.BINARY, required=("operator",)),
+    "binary": F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.BINARY, required=("operator",),
+                     typed=_binary_typed),
     "conditional": F.Kind(F.APPLICATION, signature=Domains.CONDITIONAL),
     "concatenation": F.Kind(F.APPLICATION, signature=Domains.CONCATENATION),
     "replication": F.Kind(F.APPLICATION, signature=Domains.REPLICATION),
@@ -229,7 +337,7 @@ DIALECT = F.Dialect("SystemVerilog.Expressions", {
     "method": F.Kind(F.APPLICATION, operator="name", signature=Domains.METHOD, required=("name",), check=_method_check),
     "iterate": F.Kind(F.QUANTIFIER, operator="method", signature=Domains.ITERATE, required=("name", "method"),
                       check=_iterate_check),
-}, domain_of=Domains.of, literal=_native)
+}, domain_of=_untyped, literal=_native)
 """The SystemVerilog dialect: its kinds, as the framework reads them."""
 
 
