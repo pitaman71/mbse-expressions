@@ -33,6 +33,12 @@
  * There is no binding: translators substitute a let's value for its name. `DIALECT` reads the kinds. The writers (`constant`,
  * `vector`, ...) write terms through the builders, wherever a term is written, in a transaction. `Text.ToText` writes an
  * expression as SystemVerilog source, with its precedence.
+ *
+ * Its kind of domain, the branch of its union `Expressions.SystemVerilog.Expressions.DomainKind`, which `install` adds
+ * to the framework's `Expressions.Framework.DomainKind` as the branch `systemverilog`: `logic`
+ * (`Expressions.SystemVerilog.Expressions.OfLogic`), IEEE 1800's 4-state integral, of a `width` in bits, `signed` or
+ * not; inferred (populated by hand until constraint resolution computes them) `least` and `greatest`, of its known values,
+ * and `ordered`. Its domains are stage 3's of the domains-as-data proposal.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -64,7 +70,8 @@ export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   return txn.uid("mbse.Expressions.SystemVerilog.Expressions/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
+    .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, OfLogic: S.OfObject, // Kinds: the framework's
+      Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Expression: S.OfObject,
       Vector: S.OfObject, Unary: S.OfObject, Binary: S.OfObject, Conditional: S.OfObject,
       Concatenation: S.OfObject, Replication: S.OfObject, Select: S.OfObject, Range: S.OfObject,
       Inside: S.OfObject, Span: S.OfObject, Cast: S.OfObject, Member: S.OfObject,
@@ -131,6 +138,15 @@ export function install(txn: any): any {
       // to its `Term`
       (_: any) => _.Expression.name("Expressions.SystemVerilog.Expressions.Expression").ref(true).refines([Framework.Expression]).properties({
         root: _.Term }),
+      // --- its kind of domain: IEEE 1800's 4-state integral, its parameters, then what follows from them ---
+      (_: any) => _.OfLogic.name("Expressions.SystemVerilog.Expressions.OfLogic").properties({
+        width: S.OfInt, signed: S.OfBool,
+        least: S.OfInt, greatest: S.OfInt, ordered: S.OfBool }), // inferred, of its known values
+      (_: any) => _.DomainKind.name("Expressions.SystemVerilog.Expressions.DomainKind").branches([
+        (t: any) => t.name("logic").schema([_.OfLogic]),
+      ]),
+      (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
+        (t: any) => t.name("systemverilog").schema([_.DomainKind])]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("systemverilog").schema([_.Term])]),
     ])]))]);

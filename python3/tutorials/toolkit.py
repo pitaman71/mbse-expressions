@@ -11,8 +11,12 @@ from mbse.Expressions.Cpp import Expressions as Cpp
 from mbse.Expressions.Excel import Expressions as Excel
 from mbse.Expressions.LaTeX import Expressions as Latex
 from mbse.Expressions.MATLAB import Expressions as Matlab
-from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.Patterns import Expressions as Patterns
+from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
+from mbse.Expressions.IEEE754 import Expressions as IEEE754
+from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
 from mbse.Expressions.Python import Python3
+from mbse.Expressions.Unicode import Expressions as Unicode
 from mbse.Expressions.SystemVerilog import Expressions as SystemVerilog
 from mbse.Expressions.Framework import Terms
 from mbse.Schemas.Framework import Builders
@@ -37,9 +41,10 @@ def install(txn):
 
 def cold_chain():
     """A store of the cold chain's schemas, which also holds expressions: of the Patterns dialect, and of every dialect the
-    case studies translate into."""
+    case studies translate into, installed after the standard dialects whose kinds of domain they use."""
     store = Builders.Store()
-    for module in (Framework, Patterns, Python3, Matlab, Excel, Latex, C, Cpp, SystemVerilog):
+    for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
+                   SystemVerilog):
         store.transaction(module.install)
     store.transaction(install)
     return store

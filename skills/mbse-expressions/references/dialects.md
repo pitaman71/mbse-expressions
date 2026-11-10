@@ -3,7 +3,7 @@
 A dialect is an expression language: its term kinds, its `Term`, the value union of them (`Expressions.<path>.Term`),
 which its `install` adds to the store's `Expressions.Framework.Term` as the branch named after it (`python3`), its
 vocabulary of operators, the domains of its values, its source text (its `Text` module: `ToText`, and in Python, for
-Python, `FromText`), its evaluator, and the scope that resolves its names. Its path, its family's name and its own (`Framework.Patterns`,
+Python, `FromText`), its evaluator, and the scope that resolves its names. Its path, its family's name and its own (`Patterns.Expressions`,
 `Python.Python3`, `C.Expressions`), names its schemas (`Expressions.C.Expressions.Term`), its Python package
 (`mbse.Expressions.C.Expressions`) and its TypeScript module (`@mbse/expressions/C/Expressions`); its name is its own,
 or its family's where its own is `Expressions` (`C`, `MATLAB`, `LaTeX`). Every dialect's terms serialize, validate,
@@ -18,7 +18,7 @@ evaluates, is mbse-basis'
 
 | Use | For |
 |---|---|
-| **Patterns** | the constraint itself: the neutral form to store, share and analyze. Constraints every binding evaluates are Patterns', over the variables they name, using only the core vocabulary |
+| **Patterns** | the constraint itself, to store, share and analyze. Constraints every binding evaluates are Patterns', over the variables they name, using only the core vocabulary |
 | **Python3** | Python source: every expression of Python 3 (3.0 to 3.15) as CPython's `ast` has it, in mbse-programs' names and shapes, to check the constraint in Python or read one from Python code; NumPy style evaluates over columns ([CAP-227: the Python3 expression dialect](mbse:mbse-basis/docs/capabilities/CAP-227.md)) |
 | **TypeScript5** | TypeScript source: every expression of TypeScript 5 (5.0 to 5.9) as typescript-estree has it, in mbse-programs' names and shapes, its types and destructuring patterns each a union of its own (`Expressions.TypeScript.TypeScript5.Type`, `Expressions.TypeScript.TypeScript5.Pattern`), JSX an extension; to model TypeScript code, as mbse-programs does; no translator yet ([CAP-228: the TypeScript5 expression dialect](mbse:mbse-basis/docs/capabilities/CAP-228.md)) |
 | **MATLAB** | MATLAB source, for constraints that live in MATLAB code or Simulink models |
@@ -67,12 +67,14 @@ to analyze it.
 3. **A literal keeps its spelling.** *Why*: a literal read from source must print as it was written, and a broken one
    must be kept to be reported. *How*: a literal keeps its spelling (`text`) and what is wrong with it (`problems`)
    beside its value: printers write the spelling where it has one; a Python literal also keeps what its text encodes
-   (a string's prefix and quotes, an int's base, digit separators), and a TypeScript literal its quote, base and
-   separators, a number a float and a bigint an int, `null` and a regular expression TypeScript5's `constant`; a C or
-   C++ literal its encoding prefix, its quote (a character's value is its code), its base, digit separators and its
-   suffix, which gives its type (`5u`), `nullptr` their `constant`. Every dialect's `Term`, `Type` and `Pattern` hold the
-   framework's kinds of invalid syntax, `error` (what a parser skipped) and `missing` (the kind it expected): validation
-   reports them, printers write them as written, and evaluation refuses them.
+   (a string's prefix and quotes, an int's base, digit separators), `None`, `...` and a complex number being Python3's
+   `constant`, a complex number its `complex`, whose `real` and `imag` are IEEE 754's `binary64`s; a TypeScript
+   literal its quote, base and separators, a number a float and a bigint an int, `null` and a regular expression
+   TypeScript5's `constant`; a C or C++ literal its encoding prefix, its quote (a character's value is its code), its
+   base, digit separators and its suffix, which gives its type (`5u`), `nullptr` their `constant`. Every dialect's
+   `Term`, `Type` and `Pattern` hold the framework's kinds of invalid syntax, `error` (what a parser skipped) and
+   `missing` (the kind it expected): validation reports them, printers write them as written, and evaluation refuses
+   them.
    [CAP-233: literals of any value](mbse:mbse-basis/docs/capabilities/CAP-233.md).
    - Python: [DIA-18: A literal is a domain representation: printers write its spelling where it has one, else a default spelling; its value is what evaluates](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-18) · TypeScript: [DIA-18: A literal is a domain representation: printers write its spelling where it has one, else a default spelling; its value is what evaluates](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-18)
    - Python: [DIA-19: Python3's kinds beyond the narrower ones: literals keeping what their text encodes, f-strings as written, each kind's own checks and what it binds, stored as any term](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-19) · TypeScript: [DIA-19: Python3's kinds beyond the narrower ones: literals keeping what their text encodes, f-strings as written, each kind's own checks and what it binds, stored as any term](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-19)

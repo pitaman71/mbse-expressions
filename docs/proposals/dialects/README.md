@@ -253,7 +253,11 @@ As the user decided (2026-11-02), on the questions below:
   `Expressions.C.Expressions`, `Expressions.SystemVerilog.Expressions` and sublanguages by what they are: "agreed"; "The
   rename is a step of its own, before stage 6's build." Asked eight questions it left open, each with a recommendation,
   the user: "yes, go":
-  1. Patterns, the neutral form and no standard's language, is `Expressions.Framework.Patterns`.
+  1. Patterns, the neutral form and no standard's language, is `Expressions.Framework.Patterns`. *Superseded*
+     (2026-11-09) by the user's "(b)": Patterns is `Expressions.Patterns.Expressions`, a family with one dialect named
+     `Expressions`, as 3 has MATLAB's, Excel's and LaTeX's; and "the neutral form" is retired, describing Patterns
+     nowhere ([the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "On stage 1's review",
+     "Patterns' place").
   2. C++'s family, `C++` being no name, is `Cpp`: `Expressions.Cpp.Expressions`.
   3. The families with one unversioned dialect name it `Expressions`, as C's and SystemVerilog's do:
      `Expressions.MATLAB.Expressions`, `Expressions.Excel.Expressions`, `Expressions.LaTeX.Expressions` (not
@@ -266,14 +270,16 @@ As the user decided (2026-11-02), on the questions below:
 
   Built as [the API, Settled in the namespace rename](../port/API.md#settled-in-the-namespace-rename-for-the-users-review),
   items 108 to 111.
-- **0.8.0 holds stages 1 to 5; stage 6 and the retrofit move to 0.9.0** (2026-11-05). Offered two options, "(a):
+- **0.8.0 holds stages 1 to 5; stage 6 and the retrofit follow, now as 0.10.0** (2026-11-05; the version revised
+  2026-11-06, [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, D: domains as data is 0.9.0). Offered two options, "(a):
   Release 0.8.0 now. It contains stages 1 to 5, the rename and a pin to 0.26.10. Stage 6 and the retrofit of the other
   dialects come in 0.9.0, and INI-040 can start now." and "(b): build stage 6 first", the user answered "(a)". So
   0.8.0 is released after stage 5: stages 1 to 5, the namespace rename (the old `Dialects` names gone, with no alias)
   and mbse-schemas 0.26.10 pinned. `SystemVerilog` is released in 0.8.0 as it stands, not yet complete to IEEE
   1800-2023. Stage 6 (SystemVerilog's expression dialect complete, Verilog its subset, its types, patterns,
   assertions, constraints and preprocessor dialects, and the closing work) and the retrofit of the other dialects (type,
-  pattern, regex and preprocessor dialects, `let` variations) are released as 0.9.0. This supersedes stage 7's release
+  pattern, regex and preprocessor dialects, `let` variations) are released as 0.10.0, after domains as data's 0.9.0
+  (asked to number them so, the user answered "agreed", 2026-11-06). This supersedes stage 7's release
   of 0.8.0 after stage 6 (Stages, below) and the stopping point [the domains proposal](../domains/README.md#a-stopping-point-for-the-overhaul)
   recommended.
 
@@ -537,11 +543,11 @@ change as it lands.
    literal typed by its suffix and base, and refuses every other kind by name; the translators keep what they
    translated, Patterns <-> C and Patterns <-> Cpp one rule set. Every dialect's `Type` and `Pattern` now hold `error`
    and `missing`.
-6. **`SystemVerilog` complete**, Verilog its subset; released as 0.9.0, with the retrofit of the other dialects
+6. **`SystemVerilog` complete**, Verilog its subset; released as 0.10.0, after domains as data (0.9.0), with the retrofit of the other dialects
    (Decided, "0.8.0 holds stages 1 to 5").
 7. **Tutorials, skill, README, EQUIVALENCE; the releases.** The tutorials and the skill followed each stage as it
    landed. **0.8.0 is released after stage 5**, as the user decided (Decided, "0.8.0 holds stages 1 to 5"): stages 1
-   to 5 and the namespace rename, a breaking change, on mbse-schemas 0.26.10. 0.9.0 follows stage 6 and the retrofit.
+   to 5 and the namespace rename, a breaking change, on mbse-schemas 0.26.10. 0.9.0 is domains as data ([the domains proposal](../domains/README.md)); 0.10.0 follows stage 6 and the retrofit.
    Then mbse-programs' stage 2, mbse-patterns and mbse-codegen-python.
 
 ## Risks

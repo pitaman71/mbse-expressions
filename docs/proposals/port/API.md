@@ -6,7 +6,7 @@
 Since the complete dialects' stage 2 ([the dialects proposal](../dialects/README.md#stages-proposed-once-decided)), Basic
 is Patterns, Python is Python3, and Ccpp is C and Cpp; `Expressions.Framework.Term` is the union of the dialects' `Term`s
 (`Expressions.<path>.Term`, each the value union of its kinds). Since the namespace rename, each dialect lives at
-`Expressions.<Family>.<Dialect>`, its path (`Framework.Patterns`, `Python.Python3`, `TypeScript.TypeScript5`,
+`Expressions.<Family>.<Dialect>`, its path (`Patterns.Expressions`, `Python.Python3`, `TypeScript.TypeScript5`,
 `C.Expressions`, `Cpp.Expressions`, `SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions`,
 `LaTeX.Expressions`): its schemas, its Python package (`mbse.Expressions.C.Expressions`) and its TypeScript module
 (`src/C/Expressions`, `@mbse/expressions/C/Expressions`) are named by it, and its name is `Terms.dialect_name(path)`.
@@ -25,30 +25,37 @@ old API had them so: `nameOf`, `formOf`), `store.transaction(() => ...)` for `wi
 ```python
 from mbse.Schemas.Framework import Builders
 from mbse.Expressions import Framework
-from mbse.Expressions.Framework import Patterns
+from mbse.Expressions.Patterns import Expressions as Patterns
 from mbse.Expressions.Python import Python3
 from mbse.Expressions.TypeScript import TypeScript5
+from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
+from mbse.Expressions.IEEE754 import Expressions as IEEE754
+from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
+from mbse.Expressions.Unicode import Expressions as Unicode
 
 store = Builders.Store()
 store.transaction(Framework.install)        # Expressions.Framework: Term (no branch yet), Literal, Call, Variable, Let,
                                             # List, Mapping, Pair, Error, Missing, Expression, HasRoot,
                                             # Schemas.OfExpression's adjacency `expression`; Dialect, Domain, DomainKind,
                                             # Defines, Operates, HasDomain and Schemas.OfAny's adjacency `domain`
-store.transaction(Patterns.install)         # Expressions.Framework.Patterns.Term, its union (the shared kinds, its
+for standard in (ISOIEC11404, IEEE754, IEEE1164, Unicode):  # the standard dialects, before those that use them:
+    store.transaction(standard.install)                      # each its singleton, its kinds of domain, its domains' schemas
+store.transaction(Patterns.install)         # Expressions.Patterns.Expressions.Term, its union (the shared kinds, its
                                             # own Quantifier, error and missing), added to Term as the branch
-                                            # `patterns`; its holder Expressions.Framework.Patterns.Expression,
+                                            # `patterns`; its holder Expressions.Patterns.Expressions.Expression,
                                             # refining Expression; its dialect schema (singleton
-                                            # `Expressions.Framework.Patterns`), its kinds of domain, its domains'
-                                            # schemas and its operations, each an OfExpression
+                                            # `Expressions.Patterns.Expressions`) and its operations, each an
+                                            # OfExpression
 store.transaction(Python3.install)          # Expressions.Python.Python3.Term, the branch `python3`, its holder, ...
 store.transaction(TypeScript5.install)      # Expressions.TypeScript.TypeScript5.Term, Type and Pattern, the branch
                                             # `typescript5`, ...
-store.transaction(Patterns.define)          # optional, data: Patterns' dialect naming its operations, owning its domains
+store.transaction(Patterns.define)          # optional, data: Patterns' dialect naming its operations
 ```
 
-`Patterns.define` writes Patterns' dialect's data: the singleton `Expressions.Framework.Patterns` names each operation
-(`Expressions.Framework.Operates`) and owns each domain by name (`Expressions.Framework.Defines`); its frame binds the
-dialect (`dialect`) and each domain by its name. Validation and evaluation do not need it: they read Patterns'
+`Patterns.define` writes Patterns' dialect's data: the singleton `Expressions.Patterns.Expressions` names each operation
+(`Expressions.Framework.Operates`); its frame binds the dialect (`dialect`). The domains Patterns owned are the standard
+dialects' since domains as data's stage 1 (item 112): each standard dialect's `define` owns its domains by name
+(`Expressions.Framework.Defines`), its frame binding the dialect and each domain by its name. Validation and evaluation do not need it: they read Patterns'
 vocabulary, `Domains.SIGNATURES`, whose names are the operations the install writes. Every other dialect's install adds
 its singleton schema too (`Expressions.Python.Python3.Dialect`, singleton `Expressions.Python.Python3`), with no operations or domains
 yet (below, Settled in stage 3). A store holds any number of dialects, each install adding its own; where it holds a single one, `Framework.Term` is
@@ -56,7 +63,7 @@ a union of one branch, which mbse-schemas allows since 0.26.6 (item 41). Each in
 (P-019), not from tables of their own.
 
 `Framework.install` (in `Framework/Terms.py`, `Framework/Terms.ts`) and `Patterns.install` (in
-`Framework/Patterns/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
+`Patterns/Expressions/Expressions`) are module-scope `install(txn)` functions as drafted, each one transaction (an install
 and what uses it are separate transactions: mbse-schemas, Object identity, Decided, 96 in [CAP-124: writes all-or-nothing in transactions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-124.md#decided)). Run again, each writes
 nothing. Every other dialect has its own install, run after the framework's, which adds its union of its kinds to
 `Expressions.Framework.Term` by schema extension, as Patterns' does; `mbse.Expressions.install(store)` is not given (it
@@ -69,7 +76,7 @@ An expression is an `Expressions.Framework.Expression`, a reference object whose
 the builders. Each dialect has its own expression too, its holder: `Expressions.<path>.Expression` refines
 `Expressions.Framework.Expression` and narrows its `root` to the dialect's `Term`, so its root is a term of that dialect
 alone, and `HasRoot` links it as it links any expression (item 46). A dialect's writers write a holder's root
-directly (`store.Expressions.Framework.Patterns.Expression(lambda e: e.root(person.age.ge(18)))`); spelled out with the builders:
+directly (`store.Expressions.Patterns.Expressions.Expression(lambda e: e.root(person.age.ge(18)))`); spelled out with the builders:
 
 ```python
 with store.transaction():
@@ -101,7 +108,7 @@ spec: a callable that writes a term through the builders. Called with the `Visit
 (`Term(...)`), it selects its kind's branch and writes its members, so it goes wherever a term is written:
 
 ```python
-from mbse.Expressions.Framework.Patterns import Expressions as E
+from mbse.Expressions.Patterns.Expressions import Expressions as E
 
 x = E.variable("x")
 with store.transaction():
@@ -128,7 +135,7 @@ every evaluator, validator and translator shares, over any dialect's kinds:
 |---|---|
 | `Terms.term(x)` | the term value (a `Readers.OfUnion` of `Expressions.Framework.Term`) of an `Expression`, its `root` property's reader, a `Readers.OfAny` holding one, or a term value itself |
 | `Terms.kind_of(term)` | the branch its dialect's `Term` holds, `(tag, record)`: `("call", <Readers.OfObject>)`, through `Term`'s branch where it is a value of `Term` |
-| `Terms.dialect_of(term)` | the name of its dialect's `Term`: `"Expressions.Framework.Patterns.Term"` |
+| `Terms.dialect_of(term)` | the name of its dialect's `Term`: `"Expressions.Patterns.Expressions.Term"` |
 | `Terms.form(term)` | its `Form`: `kind`, `attributes` (its scalar properties set, by name: `{"callable": "add"}`) and `arguments` (its terms, in order: the term properties in declaration order, its slots, then a container of terms' elements) |
 | `Terms.name_of(term)`, `Terms.operator_of(term, kind)` | the name a reference, binding or quantifier binds or refers to; an application's or quantifier's operator, its kind's `operator` property or its tag |
 | `Terms.walk`, `Terms.fold`, `Terms.same` | as before, over term values: a term is a nested value, so there is no sharing and no cycle |
@@ -152,7 +159,7 @@ assert Terms.name_of(Terms.form(form.arguments[0]).arguments[0]) == "x"
 An evaluator takes a term value (or anything `Terms.term` reads one from) and a scope, as before:
 
 ```python
-from mbse.Expressions.Framework.Patterns import Evaluators
+from mbse.Expressions.Patterns.Expressions import Evaluators
 assert Evaluators.OfAny(positive, {"x": 1}) is True       # an Expression, or Terms.term(positive)
 assert Evaluators.OfAny(term, {"x": -1}) is False
 ```
@@ -170,7 +177,7 @@ read. Partial evaluation gives its residual as a `Writer`, written where the cal
 |---|---|---|
 | its install, adding its union of its kinds to `Term` | `Expressions.install(txn)` | `Expressions.install(txn)` |
 | its kinds: how the framework reads each branch it adds (a `Terms.Kind`: its role, the properties naming what it binds and its operator, its vocabulary and whether it is `closed`, its required properties, its own checks) and its `Terms.Dialect` (path, kinds, a native's domain), with `validate` and `infer` | `Expressions.DIALECT` | `Expressions.DIALECT` |
-| its operations and domains as data (Patterns only, so far); their number of arguments | `Expressions.define(txn)`; `Expressions.CORE` | the same |
+| its operations and domains as data (Patterns' operations; the standard dialects' domains, item 112); their number of arguments | `Expressions.define(txn)`; `Expressions.CORE` | the same |
 | its writers, while they stay | `Expressions.Writer`, `variable`, `literal`, ... | the same |
 | its evaluator | `Evaluators.OfAny(term, scope)`, `Evaluators.INTERPRETER` | the same |
 
@@ -406,7 +413,8 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
     `Expressions.C.<Kind>`, by C's install, listed by both unions, its slots holding `Expressions.Framework.Term`.~~ Now
     **C and C++ each define the kinds they share**: `Expressions.C.<Kind>` by C's install, its properties holding
     `Expressions.C.Term`, and `Expressions.Cpp.<Kind>` by Cpp's, holding `Expressions.Cpp.Term`; each install stands
-    alone. The code that reads and writes them is still shared: `C.Expressions.kinds(standards)`,
+    alone (superseded 2026-11-06 where a dialect uses another's kinds of domain: its install then depends on
+    theirs, [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, A). The code that reads and writes them is still shared: `C.Expressions.kinds(standards)`,
     `C.Expressions.Writers(dialect, writer)` (C's and Cpp's writer functions), `C.Evaluators.interpreter(dialect)`,
     `C.Text.text(expression, dialect)`; Cpp's `Domains` is C's. Today C++ has kinds of exactly C's shapes.
 36. **Standards as data: `Terms.Kind.standards`**, the standards of its dialect's language that have the kind, as
@@ -953,7 +961,7 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
      | Old | Path (schemas, singleton) | Python package | TypeScript module, package export |
      |---|---|---|---|
-     | `Patterns` | `Expressions.Framework.Patterns` | `mbse.Expressions.Framework.Patterns` | `src/Framework/Patterns`, `@mbse/expressions/Framework/Patterns` |
+     | `Patterns` (*superseded* 2026-11-09 by item 122: `Expressions.Patterns.Expressions`) | `Expressions.Framework.Patterns` | `mbse.Expressions.Framework.Patterns` | `src/Framework/Patterns`, `@mbse/expressions/Framework/Patterns` |
      | `Python3` | `Expressions.Python.Python3` | `mbse.Expressions.Python.Python3` | `src/Python/Python3`, `@mbse/expressions/Python/Python3` |
      | `TypeScript5` | `Expressions.TypeScript.TypeScript5` | `mbse.Expressions.TypeScript.TypeScript5` | `src/TypeScript/TypeScript5`, `@mbse/expressions/TypeScript/TypeScript5` |
      | `C` | `Expressions.C.Expressions` | `mbse.Expressions.C.Expressions` | `src/C/Expressions`, `@mbse/expressions/C/Expressions` |
@@ -965,7 +973,8 @@ the languages; every other case's wire is unchanged, since branch tags are.
 
      So `Expressions.Python3.BinOp` is `Expressions.Python.Python3.BinOp`, the singleton `Expressions.C` is
      `Expressions.C.Expressions` (`store.Instances.Expressions.C.Expressions`), a Patterns domain
-     `Expressions.Framework.Patterns.uint8`, and an install's uid `mbse.Expressions.C.Expressions/1`. The package
+     `Expressions.Framework.Patterns.uint8` (since item 123, ISO/IEC 11404's `modulo(256)`, whose schema is
+     `Expressions.ISOIEC11404.Expressions.modulo_256`, where it wraps arithmetic, and `octet` where it holds a code), and an install's uid `mbse.Expressions.C.Expressions/1`. The package
      `mbse.Expressions.Dialects`, the directory `src/Dialects` and the export `@mbse/expressions/Dialects/*` go; the
      package exports and `deno.json` list each dialect by its path. Each family is a package of its own in Python
      (`mbse.Expressions.C`, whose docstring names its standard), holding its dialect; TypeScript's family directory
@@ -993,6 +1002,119 @@ the languages; every other case's wire is unchanged, since branch tags are.
      Expressions as Matlab` in the tests and tutorials) are identifiers, not schema or module paths of a dialect, and
      are not renamed; the translators' collection forms are keyed by the dialect's name (`"MATLAB"`), as their
      messages are. Renaming the translators' modules to the families' spellings is left for the user to decide.
+
+## Settled in domains as data's stage 1, for the user's review
+
+Built as [the domains proposal](../domains/README.md#decided-on-this-proposal) decided (its Decided, A to J, the
+package root's exports and stage 1's review) and as its [stage 1's design](../domains/README.md#stage-1s-design) specifies; each choice below is where they were silent.
+
+112. **The standard dialects.** `ISOIEC11404`, `IEEE754`, `IEEE1164` and `Unicode`, each a family holding its one
+     dialect, `Expressions`, laid out as every dialect is (item 108; the dialects proposal's Decided, Namespace, 6 and
+     7): the Python package `mbse.Expressions.<Family>.Expressions`, at `mbse/Expressions/<Family>/Expressions/`, its
+     module `Expressions` holding `install`, `define` and `STANDARDS`, which the package exports; TypeScript's at
+     `src/<Family>/Expressions/`, exported as `@mbse/expressions/<Family>/Expressions` and nothing for the family. Each
+     dialect is a singleton of its own schema, `Expressions.<Family>.Expressions`, a branch of `Expressions.Framework.Dialect`
+     (`isoiec11404`, `ieee754`, `ieee1164`, `unicode`), with its kinds of domain and no terms. Their `define`s write
+     Patterns' former eight domains under their standards' names: `boolean`, `integer`, `octetstring`, and `octet`
+     and `modulo(256)`, which split the former `uint8`, C's name, not 11404's (item 123); `binary64`, `binary32`;
+     `std_logic`; `string`; their uids are `mbse.Expressions.<Family>.Expressions.define/1`
+     (an install's uid kept while its content changes is mbse-basis
+     [CAP-254: an install's uid changed with its content](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-254.md), as the
+     user decided, the domains proposal's Decided, "On stage 1's review").
+     Patterns' install keeps its terms, holder, singleton and operations; its `define` writes its operations alone.
+113. **`Expressions.Framework.DomainKind` is a union of the dialects' kind unions**, as `Term` is of their `Term`s:
+     each dialect with kinds adds `Expressions.<path>.DomainKind`, the branch named by its tag, so a domain's `kind` is
+     written its dialect, then its kind (`u.ieee754(lambda v: v.ieee754(...))` within `d.kind(lambda k:
+     k.as_value(lambda a: a.as_union(...)))`), and C's and C++'s `nullptr_t` are each their own. Each kind is named by
+     its standard, its tag and its schema alike (2026-11-09, as the user decided, "there is no need to preserve the old
+     tags imo"): ISO/IEC 11404's `boolean`, `integer`, `modulo`, `bitstring`, `octet`, `octetstring`, `state` and
+     `packed` (`Expressions.ISOIEC11404.Expressions.OfBoolean`, ..., `OfState`, `OfPacked`), formerly `bool`, `bits`,
+     `bytes` and `enum`, `modulo` and `octet` new (item 123); `state` is the generic enumeration, 11404's ordered
+     `enumerated` added only when a dialect needs an order ("yes, well, then that is a generic enough enum, eh?"), and
+     `packed` keeps its name ("packed and packs does not go"), both decided 2026-11-09; IEEE 754's `ieee754`, IEEE 1164's `ieee1164` and Unicode's `unicode`, unchanged. Patterns' code
+     domains (`Domains.read`, until stage 2) read each by its dialect's tag and its own.
+114. **Inferred properties, populated by hand**: `ordered` on every kind; an integer's, a modulo's (and SystemVerilog's
+     `logic`'s) `least` and `greatest`; IEEE 754's `radix`, `precision` and `emax`. `Domains.read` (Patterns', until stage 2)
+     ignores them.
+115. **Each language's own kinds**: SystemVerilog's `logic` (`width`, `signed`), Python3's `str`, `nonetype` and
+     `ellipsis`, TypeScript5's `string` and `null`, C's and C++'s `nullptr_t`, Excel's `error` (`members`); their
+     domains are stage 3's. DOM-18 writes one of each by hand: a domain needs its dialect as owner.
+116. *(Superseded 2026-11-09, as the user decided, [the domains proposal](../domains/README.md#decided-on-this-proposal),
+     Decided, I: "drop `Uses`".)* ~~`Expressions.Framework.Uses(dialect, used)`, unique `[dialect, used]`, every
+     dialect's adjacency `uses`. No entry is written yet: an install cannot bind its own singleton (the domains
+     proposal's question I).~~ Now **no `Uses`**: the relation and every dialect's adjacency `uses` are removed, in both
+     languages. A dialect's dependencies are its caller's install order (item 118); nothing checks it (the domains
+     proposal, Decided, I). Tests: FRM-01 and DOM-17 assert each dialect's
+     adjacencies, `domains` and `operations`.
+117. **The reading interface**, `Framework.Domains`: `kind_of` (`kindOf`), `properties`, `name_of` (`nameOf`),
+     `operations` and `arity`; "a domain needs a kind". `kind_of` gives `(dialect, tag, record)`, the dialect's tag
+     first (2026-11-09, as the user decided, "yes, dialect too"), so that C's and C++'s `nullptr_t` are told apart
+     (DOM-18). The code domains and signatures stay, `Dialect.infer`'s,
+     marked as CAP-232's to replace.
+118. **Every caller installs the standard dialects first**: tests, tutorials, the toolkit, the corpus and the skill. The
+     corpus's `domains` case is ISO/IEC 11404's singleton and its domains, a state domain and a domain packing it into `octet` among them.
+     Tests: DOM-17 (the standard dialects and the reading interface) and DOM-18 (each language's kinds) are added,
+     DOM-13 to DOM-16 being retired IDs; EXP-05, EXP-06, EXP-13, FRM-01, DOM-03, DOM-05 and CONF-04 adjusted under
+     their IDs; tutorial 7's T07.5 reads ISO/IEC 11404's domains through `Framework.Domains`.
+119. **Not changed, for the user**: the package root's re-export of Patterns' `Domains`, `Evaluators`, `Expressions`
+     and `Partials` (*decided* 2026-11-09: item 121), and Python3's complex number (the domains proposal's question
+     J; *decided* 2026-11-09: item 120).
+120. **Python3's complex number is its `constant`'s `complex`** (2026-11-09, as the user decided,
+     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, J: "This distinction feels
+     academic to me", so (a), the smallest change). `Expressions.Python.Python3.Constant` holds `singleton` (`None` or
+     `...`, unchanged) or `complex`, a value of `Expressions.Python.Python3.Complex`, whose `real` and `imag` are each
+     IEEE 754's `binary64` (`Expressions.IEEE754.Expressions.binary64`); the flat `real` and `imag` floats go. A form
+     reads it as a helper, `Part("complex", {"real": 0.0, "imag": 2.0})`; `P.constant(2j)` (TypeScript
+     `P.constant(new P.Complex(0, 2))`) and `Text.FromText` write it through a spec, with no store. Python3's install
+     so names IEEE 754's schemas and runs after IEEE 754's, as every caller's list has it (item 118); mbse-schemas
+     refuses it otherwise. The corpus's `python3` case pins its bytes. Its checks' messages are unchanged. `1` stays a framework `literal` while `2j`, `None` and `...` are
+     Python3 `constant`s, a split that follows mbse-schemas' basic scalars rather than Python's grammar, kept for now.
+     Tests: DIA-19.
+121. **The package root exports `Framework` alone** (2026-11-09, as the user decided, "approved",
+     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "The package root exports
+     `Framework` alone"). A breaking change, in 0.9.0: `mbse.Expressions` (`__all__ = ["Framework"]`) and
+     `@mbse/expressions` (`export * as Framework`) no longer re-export Patterns' `Domains`, `Evaluators`, `Expressions`
+     and `Partials`, nor call Patterns "the neutral form of every constraint". Patterns is imported from its own path,
+     as every dialect is: `from mbse.Expressions.Patterns.Expressions import Evaluators, Expressions as E`, TypeScript
+     `import { Evaluators, Expressions as E } from "@mbse/expressions/Patterns/Expressions"` (its path since item 122).
+     `mbse.Expressions.Translators` and every dialect's path are unchanged (a subpackage still imports as
+     `from mbse.Expressions import Translators`). The TypeScript tests, the tutorials, the skill and the README import
+     so; FRM-01 asserts the root's exports.
+
+122. **Patterns is `Expressions.Patterns.Expressions`** (2026-11-09, as the user decided, "(b)",
+     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "On stage 1's review"). Patterns
+     is a family with one dialect named `Expressions`, as C's, MATLAB's and Excel's are, not a part of the framework:
+     its schemas and singleton `Expressions.Patterns.Expressions` (`Expressions.Patterns.Expressions.Term`, `.Dialect`,
+     `.Expression`, `.add`, ...; `store.Instances.Expressions.Patterns.Expressions`), its install's and define's uids
+     `mbse.Expressions.Patterns.Expressions/1` and `mbse.Expressions.Patterns.Expressions.define/1`, its Python package
+     `mbse.Expressions.Patterns.Expressions` (at `mbse/Expressions/Patterns/Expressions/`, its family
+     `mbse.Expressions.Patterns` a package whose docstring says what it is), its TypeScript module
+     `src/Patterns/Expressions/`, exported as `@mbse/expressions/Patterns/Expressions`, and its `Terms.Dialect` path
+     `"Patterns.Expressions"`, whose name is still `Patterns`. This supersedes item 108's row for Patterns (the dialects
+     proposal's Decided, Namespace, 1). No alias for the old names. Unchanged: the branch tag `patterns` (item 109,
+     "for now"), the translators' modules (`Translators.Patterns_Matlab`, item 111), and the wire, so the corpora are
+     unchanged. Tests: every case that names Patterns' path, under its ID.
+
+123. **`uint8` split by ISO/IEC 11404's own definitions** (2026-11-09, as the user decided,
+     [the domains proposal](../domains/README.md#decided-on-this-proposal), Decided, "On stage 1's review": "yes, adopt
+     names the standard uses for datatypes it defines (is this even a question?)"; "didn't you already resolve
+     that?"). The former `uint8`, 8 bits, unsigned and wrapping, was misnamed `octet` (item 112): 11404's `octet`
+     (§10.1.7) is a code, non-numeric, with no arithmetic, and wrapping arithmetic is its `modulo` (§10.1.2). So ISO/IEC
+     11404's install adds two kinds, `octet` (`Expressions.ISOIEC11404.Expressions.OfOctet`: `ordered` alone) and
+     `modulo` (`OfModulo`: `modulus`; inferred `least`, `greatest`, `ordered`), and its `define` writes the domains
+     `octet` (of `octet`, `ordered`) and `modulo(256)` (`modulus` 256, `least` 0, `greatest` 255, `ordered`). The
+     domain is named in 11404's notation; its schema, `Expressions.ISOIEC11404.Expressions.modulo_256`, and the
+     define's symbol for it spell it as a dotted identifier, as mbse-schemas' names must be (*agent*, for review).
+     `integer` keeps `width`, `signed` and `overflow`. Patterns' code domains gain `OfOctet` (a code 0 to 255, ordered,
+     no `fit`) and `OfModulo` (`modulus`; `bounds`, and `fit`, the remainder by the modulus), which `Domains.read` gives
+     for the two kinds until stage 2; a packed domain's representation may be an octet ("a packed domain's
+     representation is an octet, or an integer or bits of a width"); the families of `SIGNATURES` take a modulo among
+     the numbers and the ordered values, an octet among the ordered values only. Each use of `uint8`: a code (a packed
+     domain's representation: the corpus's `domains` case, EXP-06, DOM-03, DOM-05) is `octet`; arithmetic (EXP-13,
+     DOM-05, DOM-17, T07.5, tutorial 8's introduction) is `modulo(256)`; C's `uint8_t` and the code domains' `uint8`
+     (DOM-01), an unsigned integer of width 8, are not 11404's and stay. The corpus's `domains` case gains
+     `modulo(256)`. Tests: DOM-01, DOM-02, DOM-03, DOM-05, DOM-06, DOM-07, DOM-09, DOM-17, EXP-06, EXP-13, FRM-01 and CONF-04,
+     under their IDs.
 
 ## What stage 2b needed (done)
 

@@ -67,6 +67,7 @@ def of(value: Any) -> D.Domain:
 
 
 def constant(attributes: Any) -> D.Domain:
-    """The domain of Python3's own constant, by its attributes: `None`'s, `...`'s or a complex number's."""
+    """The domain of Python3's own constant, by its attributes: `None`'s, `...`'s or a complex number's (its
+    `complex`)."""
     singleton = attributes.get("singleton")
     return NoneType if singleton == "None" else Ellipsis if singleton == "..." else Complex

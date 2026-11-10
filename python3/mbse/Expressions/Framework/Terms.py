@@ -2,11 +2,12 @@
 translator shares.
 
 An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
-`Expressions.Framework.Term`, held nested (docs/proposals/port, Decided, 2). Each dialect's install defines its holder,
+`Expressions.Framework.Term`, held nested ([Porting to the stabilized mbse-schemas](../../../../docs/proposals/port/README.md#decided), Decided, 2). Each dialect's install defines its holder,
 `Expressions.<Dialect>.Expression`, a reference object refining it whose `root` is narrowed to the dialect's `Term`
 (mbse-schemas 0.26.7 confirms a member narrowed from a union to one of its branches' schemas), so `HasRoot`, linking
 the framework's `Expression`, links any dialect's holder; `is_expression` tells either. `Term` is the union of the dialects' `Term`s
-(docs/proposals/dialects, Decided, 1, revised 2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
+([Complete expression dialects](../../../../docs/proposals/dialects/README.md#decided), Decided, 1, revised
+2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
 each added by its dialect's install by schema extension, and each branch's schema is that dialect's `Term`, the value
 union of its kinds, `Expressions.<Dialect>.Term`, whose branches are its kinds, named plainly (`binop`). Within a term
 tree every parent-child link is a property: a dialect's own kinds hold its `Term`, so its terms nest its terms; the
@@ -28,15 +29,22 @@ dialect's union holds, `error` (`text`, the source it spans as written; `terms`,
 term carries no domain: whatever owns the root term gives its schema.
 
 Dialects, domains and operations are data too. A dialect is a singleton whose identity is its global name
-(`Expressions.Framework.Patterns`), of its own reference object schema (`Expressions.Framework.Patterns.Dialect`), a branch of the kind
-union `Expressions.Framework.Dialect`, which each dialect extends. It owns its domains by name
-(`Expressions.Framework.Defines(dialect, name, domain)`), so a domain's path is its dialect's and its name; a domain is
+(`Expressions.Patterns.Expressions`), of its own reference object schema (`Expressions.Patterns.Expressions.Dialect`), a branch of the kind
+union `Expressions.Framework.Dialect`, which each dialect extends. A dialect may own domains by name, as a standard
+dialect's does (`Expressions.ISOIEC11404.Expressions`), through `Expressions.Framework.Defines(dialect, name, domain)`, so a domain's path is its dialect's and its name; a domain is
 an `Expressions.Framework.Domain`, a reference object holding its `kind`, a value of `Expressions.Framework.DomainKind`,
-a union each dialect extends with its kinds of domain. A domain's schema is a named `Schemas.OfAny` restricted to the
-scalar it narrows (`Expressions.Framework.Patterns.uint8`), which reads it through the extension adjacency `domain`
-(`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
+the union of the dialects' unions of kinds, as `Term` is of their `Term`s: with no branch until a dialect that has kinds
+adds its own, `Expressions.<Family>.<Dialect>.DomainKind`, as the branch named by its tag (`isoiec11404`), so a kind
+is written its dialect, then its kind
+(`d.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(lambda v: v.ieee754(lambda f: f.format("binary32"))))))`).
+The standard
+dialects, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode (`mbse.Expressions.ISOIEC11404.Expressions` and the
+others), hold the kinds and the domains of their standards. A domain's schema is a named `Schemas.OfAny` restricted
+to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.octet`), which reads it through the extension
+adjacency `domain` (`Expressions.Framework.HasDomain(schema, domain)`, unique both ways). A dialect names its operations
 (`Expressions.Framework.Operates(dialect, name, operation)`), each a `Schemas.OfExpression` its module defines, whose
-pattern's variables are its arguments, in the order they are declared, and whose `result` is its return.
+pattern's variables are its arguments, in the order they are declared, and whose `result` is its return. A dialect
+that uses another's kinds or schemas depends on its caller's install order, nothing recording it as data. `Domains` reads stored domains and operations.
 
 Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
 branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's slots (a term
@@ -106,8 +114,8 @@ QUANTIFIER, INVALID = "quantifier", "invalid"
 
 def install(txn: Any) -> Any:
     """The framework's schemas: terms, expressions and an expression schema's root; domains and the schemas they
-    restrict; dialects and the operations they define. Run again in a store, it finds each by its name and writes
-    nothing."""
+    restrict; dialects and the operations they define. Run first, before the standard dialects' installs and then
+    the others', each in a transaction of its own. Run again in a store, it finds each by its name and writes nothing."""
     S = txn.Schemas
     return txn.uid("mbse.Expressions.Framework/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Term": S.OfUnion, "Literal": S.OfObject, "Call": S.OfObject, "Variable": S.OfObject,
@@ -152,14 +160,16 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("schema"), lambda t: t.name("expression")]).uniques("expression"),
             lambda _: _.OfExpression.name("Schemas.OfExpression").adjacencies([  # by extension: no member on it
                 lambda t: t.name("expression").relation([_.HasRoot]).me("schema")]),
-            # A dialect: a singleton, its identity its global name (`Expressions.Framework.Patterns`), the root of its domains'
+            # A dialect: a singleton, its identity its global name (`Expressions.Patterns.Expressions`), the root of its domains'
             # paths. mbse-schemas gives a schema one singleton, so `Dialect` is a kind union of reference object
             # schemas, to which each dialect adds its own by schema extension, as it adds its kinds to `Term`.
             lambda _: _.Dialect.name("Expressions.Framework.Dialect"),
-            # A domain: a reference object holding its kind, a value of a union that dialects extend, owned by the
-            # dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the scalar it
-            # narrows, reads it through the extension adjacency `domain`.
-            lambda _: _.DomainKind.name("Expressions.Framework.DomainKind"),  # a dialect adds its kinds
+            # No relation records which dialects one uses: its caller's install order is its dependencies
+            # ([Domains as data](../../../../docs/proposals/domains/README.md#decided-on-this-proposal), Decided, I).
+            # A domain: a reference object holding its kind, a value of the union of the dialects' unions of kinds,
+            # owned by the dialect that defines it by name; its schema, a named `Schemas.OfAny` restricted to the
+            # scalar it narrows, reads it through the extension adjacency `domain`.
+            lambda _: _.DomainKind.name("Expressions.Framework.DomainKind"),  # a dialect adds its union of kinds
             lambda _: _.Domain.name("Expressions.Framework.Domain").ref(True).properties({"kind": _.DomainKind}).adjacencies({
                 "dialect": lambda a: a.relation([_.Defines]).me("domain").owner(True),  # its path: its dialect's, its name
                 "schema": lambda a: a.relation([_.HasDomain]).me("domain")}),
@@ -799,7 +809,7 @@ INVALID_KINDS = {"error": Kind(INVALID, check=_invalid_check), "missing": Kind(I
 
 def dialect_name(path: str) -> str:
     """A dialect's name, of its path below `Expressions` (its family's name and its own): its own (`Python.Python3`'s
-    is `Python3`, `Framework.Patterns`' `Patterns`), or its family's where its own says only that it is the family's
+    is `Python3`, `Patterns.Expressions`' `Patterns`), or its family's where its own says only that it is the family's
     expressions (`C.Expressions`' is `C`)."""
     family, _, own = path.rpartition(".")
     return family.rpartition(".")[2] if own == "Expressions" and family else own

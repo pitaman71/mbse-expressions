@@ -1,7 +1,7 @@
 """Expressions of the Patterns dialect (formerly Basic): the core vocabulary, for constraints. `Evaluators` evaluates
 them.
 
-Patterns' terms are values of its `Term`, `Expressions.Framework.Patterns.Term`, the branch `patterns` of
+Patterns' terms are values of its `Term`, `Expressions.Patterns.Expressions.Term`, the branch `patterns` of
 `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
 framework's kinds it reuses (`mbse.Expressions.Framework.Terms`), one of its own, and the framework's kinds of invalid
 syntax:
@@ -20,14 +20,15 @@ syntax:
 - `error` and `missing`: invalid syntax, which no reader of Patterns writes.
 
 A term carries no domain. Patterns' operations are data: `install` defines each as a `Schemas.OfExpression` in its
-module (`Expressions.Framework.Patterns.add`), its pattern's variables its arguments and its `result` its return, as precise as
-the basic scalars and containers allow (`Expressions.Framework.Patterns.Number`, an int or a float; `Expressions.Framework.Patterns.Ordered`;
-`Expressions.Framework.Patterns.Collection`, a list or a mapping; an unrestricted `Schemas.OfAny` where any value goes), each
+module (`Expressions.Patterns.Expressions.add`), its pattern's variables its arguments and its `result` its return, as precise as
+the basic scalars and containers allow (`Expressions.Patterns.Expressions.Number`, an int or a float; `Expressions.Patterns.Expressions.Ordered`;
+`Expressions.Patterns.Expressions.Collection`, a list or a mapping; an unrestricted `Schemas.OfAny` where any value goes), each
 written in the builders' fluent syntax. Validation reads Patterns' vocabulary (`Domains.SIGNATURES`, the same names,
 which a term alone, in no store, can read): a call naming an operation Patterns does not define is refused. `install`
-also adds Patterns' kinds of domain to `Expressions.Framework.DomainKind` (`Domains`) and the schemas of its domains,
-and Patterns' dialect, the singleton `Expressions.Framework.Patterns`; `define` writes the dialect's data: its operations by name
-(`Expressions.Framework.Operates`) and its domains, which it owns by name (`Expressions.Framework.Defines`).
+also adds Patterns' dialect, the singleton `Expressions.Patterns.Expressions`; `define` writes the dialect's data, its
+operations by name (`Expressions.Framework.Operates`). Patterns has no kinds of domain and owns no domains: the kinds
+and the domains its values take are the standard dialects' (ISO/IEC 11404's, IEEE 754's, IEEE 1164's and Unicode's,
+`mbse.Expressions.ISOIEC11404.Expressions` and the others), whose installs run before Patterns'.
 
 `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
 
@@ -57,22 +58,15 @@ CORE: dict[str, int] = {name: signature.arity() for name, signature in Domains.S
 
 def install(txn: Any) -> Any:
     """Patterns' union of its kinds, added to the framework's terms as the branch `patterns`, and its own kind; its
-    dialect's schema, whose singleton is `Expressions.Framework.Patterns`; its kinds of domain, added to the framework's, and its
-    domains' schemas; and its operations, each an expression schema of its module. Run after `Framework.install`, in a
-    transaction of its own; run again, it writes nothing. Its dialect's data, its operations by name and its domains,
-    `define` writes after it.
-    Its holder, `Expressions.Framework.Patterns.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed
+    dialect's schema, whose singleton is `Expressions.Patterns.Expressions`; and its operations, each an expression schema
+    of its module. Run after `Framework.install` and the standard dialects' installs, in a transaction of its own; run
+    again, it writes nothing. Its dialect's data, its operations by name, `define` writes after it.
+    Its holder, `Expressions.Patterns.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed
     to its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
-    return txn.uid("mbse.Expressions.Framework.Patterns/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
+    return txn.uid("mbse.Expressions.Patterns.Expressions/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"FrameworkTerm": S.OfUnion, "Term": S.OfUnion, "Expression": S.OfObject, "Quantifier": S.OfObject,  # FrameworkTerm: the framework's, by name
                   "Dialects": S.OfUnion, "Dialect": S.OfObject,  # the framework's kind union of dialects, and Patterns'
-                  "DomainKind": S.OfUnion, "Domain": S.OfObject, "Packs": S.OfRelation,
-                  "OfBool": S.OfObject, "OfInteger": S.OfObject, "OfIeee754": S.OfObject, "OfBits": S.OfObject,
-                  "OfBytes": S.OfObject, "OfUnicode": S.OfObject, "OfIeee1164": S.OfObject, "OfEnum": S.OfObject,
-                  "OfPacked": S.OfObject,
-                  "bool": S.OfAny, "int": S.OfAny, "float": S.OfAny, "str": S.OfAny, "bytes": S.OfAny, "uint8": S.OfAny,
-                  "binary32": S.OfAny, "std_logic": S.OfAny,
                   "Number": S.OfAny, "Ordered": S.OfAny, "Collection": S.OfAny,
                   "op_get": S.OfExpression, "op_has": S.OfExpression, "op_eq": S.OfExpression, "op_ne": S.OfExpression,
                   "op_lt": S.OfExpression, "op_le": S.OfExpression, "op_gt": S.OfExpression, "op_ge": S.OfExpression,
@@ -85,8 +79,8 @@ def install(txn: Any) -> Any:
                   "op_min": S.OfExpression, "op_max": S.OfExpression, "op_unique": S.OfExpression,
                   "op_entries": S.OfExpression})
         .spec([
-            # --- Patterns' dialect: the singleton `Expressions.Framework.Patterns`, a branch of the framework's kind union ---
-            lambda _: _.Dialect.name("Expressions.Framework.Patterns.Dialect").ref(True).singleton("Expressions.Framework.Patterns").adjacencies({
+            # --- Patterns' dialect: the singleton `Expressions.Patterns.Expressions`, a branch of the framework's kind union ---
+            lambda _: _.Dialect.name("Expressions.Patterns.Expressions.Dialect").ref(True).singleton("Expressions.Patterns.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
@@ -94,7 +88,7 @@ def install(txn: Any) -> Any:
 
             # --- Its union of its kinds: the framework's it reuses, its own, and invalid syntax; the branch `patterns`
             # of the framework's terms ---
-            lambda _: _.Term.name("Expressions.Framework.Patterns.Term").branches([
+            lambda _: _.Term.name("Expressions.Patterns.Expressions.Term").branches([
                 lambda t: t.name("literal").schema([Framework.Literal]),
                 lambda t: t.name("call").schema([Framework.Call]),
                 lambda t: t.name("variable").schema([Framework.Variable]),
@@ -105,7 +99,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
-            lambda _: _.Quantifier.name("Expressions.Framework.Patterns.Quantifier").properties({
+            lambda _: _.Quantifier.name("Expressions.Patterns.Expressions.Quantifier").properties({
                 "name": S.OfStr,  # bound to each item in the body
                 "quantifier": S.OfStr,  # all, any or count
                 "collection": _.Term,
@@ -113,139 +107,98 @@ def install(txn: Any) -> Any:
             }),
             # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
             # to its `Term`
-            lambda _: _.Expression.name("Expressions.Framework.Patterns.Expression").ref(True).refines([Framework.Expression]).properties({
+            lambda _: _.Expression.name("Expressions.Patterns.Expressions.Expression").ref(True).refines([Framework.Expression]).properties({
                 "root": _.Term}),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("patterns").schema([_.Term])]),
 
-            # --- Its kinds of domain, each a standard's parameters; a packed domain's enum and representation are
-            # domains, which a value cannot hold: `Packs` links them ---
-            lambda _: _.OfBool.name("Expressions.Framework.Patterns.OfBool"),
-            lambda _: _.OfInteger.name("Expressions.Framework.Patterns.OfInteger").properties({
-                "width": S.OfInt, "signed": S.OfBool, "overflow": S.OfStr}),
-            lambda _: _.OfIeee754.name("Expressions.Framework.Patterns.OfIeee754").properties({"format": S.OfStr, "rounding": S.OfStr}),
-            lambda _: _.OfBits.name("Expressions.Framework.Patterns.OfBits").properties({"width": S.OfInt}),
-            lambda _: _.OfBytes.name("Expressions.Framework.Patterns.OfBytes").properties({"width": S.OfInt}),
-            lambda _: _.OfUnicode.name("Expressions.Framework.Patterns.OfUnicode"),
-            lambda _: _.OfIeee1164.name("Expressions.Framework.Patterns.OfIeee1164").properties({"width": S.OfInt}),
-            lambda _: _.OfEnum.name("Expressions.Framework.Patterns.OfEnum").properties({
-                "members": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfStr]))}),
-            lambda _: _.OfPacked.name("Expressions.Framework.Patterns.OfPacked").properties({
-                "codes": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfInt]))}),
-            lambda _: _.DomainKind.name("Expressions.Framework.DomainKind").branches([
-                lambda t: t.name("bool").schema([_.OfBool]),
-                lambda t: t.name("integer").schema([_.OfInteger]),
-                lambda t: t.name("ieee754").schema([_.OfIeee754]),
-                lambda t: t.name("bits").schema([_.OfBits]),
-                lambda t: t.name("bytes").schema([_.OfBytes]),
-                lambda t: t.name("unicode").schema([_.OfUnicode]),
-                lambda t: t.name("ieee1164").schema([_.OfIeee1164]),
-                lambda t: t.name("enum").schema([_.OfEnum]),
-                lambda t: t.name("packed").schema([_.OfPacked]),
-            ]),
-            lambda _: _.Packs.name("Expressions.Framework.Patterns.Packs").links([
-                lambda t: t.name("packed"), lambda t: t.name("domain").schema([_.Domain]),
-                lambda t: t.name("representation").schema([_.Domain])]).uniques([["packed"]]),
-            lambda _: _.Domain.name("Expressions.Framework.Domain").adjacencies({
-                "packs": lambda a: a.relation([_.Packs]).me("packed")}),
-
-            # --- Its domains' schemas, each an OfAny of the scalar it narrows, which `define` relates to its domain ---
-            lambda _: _.bool.name("Expressions.Framework.Patterns.bool").schemas([S.OfBool]),
-            lambda _: _.int.name("Expressions.Framework.Patterns.int").schemas([S.OfInt]),
-            lambda _: _.float.name("Expressions.Framework.Patterns.float").schemas([S.OfFloat]),
-            lambda _: _.str.name("Expressions.Framework.Patterns.str").schemas([S.OfStr]),
-            lambda _: _.bytes.name("Expressions.Framework.Patterns.bytes").schemas([S.OfBytes]),
-            lambda _: _.uint8.name("Expressions.Framework.Patterns.uint8").schemas([S.OfInt]),
-            lambda _: _.binary32.name("Expressions.Framework.Patterns.binary32").schemas([S.OfFloat]),
-            lambda _: _.std_logic.name("Expressions.Framework.Patterns.std_logic").schemas([S.OfStr]),
-
             # --- Its operations: the schemas their variables share, and each operation, which its dialect defines:
             # its pattern's variables its arguments, in order, and its result its return ---
-            lambda _: _.Number.name("Expressions.Framework.Patterns.Number").schemas([S.OfInt, S.OfFloat]),
-            lambda _: _.Ordered.name("Expressions.Framework.Patterns.Ordered").schemas([S.OfInt, S.OfFloat, S.OfStr, S.OfBytes]),
-            lambda _: _.Collection.name("Expressions.Framework.Patterns.Collection").schemas([  # a list, or a mapping
+            lambda _: _.Number.name("Expressions.Patterns.Expressions.Number").schemas([S.OfInt, S.OfFloat]),
+            lambda _: _.Ordered.name("Expressions.Patterns.Expressions.Ordered").schemas([S.OfInt, S.OfFloat, S.OfStr, S.OfBytes]),
+            lambda _: _.Collection.name("Expressions.Patterns.Expressions.Collection").schemas([  # a list, or a mapping
                 S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfAny(lambda a: a)])),
                 S.OfContainer(lambda c: c.index([S.OfAny(lambda a: a)]).element([S.OfAny(lambda a: a)]))]),
-            lambda _: _.op_get.name("Expressions.Framework.Patterns.get").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_get.name("Expressions.Patterns.Expressions.get").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("object").schema([S.OfAny(lambda a: a)]),
                 lambda v: v.name("name").schema([S.OfStr])]))]).result([S.OfAny(lambda a: a)]),
-            lambda _: _.op_has.name("Expressions.Framework.Patterns.has").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_has.name("Expressions.Patterns.Expressions.has").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("object").schema([S.OfAny(lambda a: a)]),
                 lambda v: v.name("name").schema([S.OfStr])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_eq.name("Expressions.Framework.Patterns.eq").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_eq.name("Expressions.Patterns.Expressions.eq").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfAny(lambda a: a)]),
                 lambda v: v.name("b").schema([S.OfAny(lambda a: a)])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_ne.name("Expressions.Framework.Patterns.ne").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_ne.name("Expressions.Patterns.Expressions.ne").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfAny(lambda a: a)]),
                 lambda v: v.name("b").schema([S.OfAny(lambda a: a)])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_lt.name("Expressions.Framework.Patterns.lt").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_lt.name("Expressions.Patterns.Expressions.lt").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([_.Ordered]),
                 lambda v: v.name("b").schema([_.Ordered])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_le.name("Expressions.Framework.Patterns.le").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_le.name("Expressions.Patterns.Expressions.le").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([_.Ordered]),
                 lambda v: v.name("b").schema([_.Ordered])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_gt.name("Expressions.Framework.Patterns.gt").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_gt.name("Expressions.Patterns.Expressions.gt").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([_.Ordered]),
                 lambda v: v.name("b").schema([_.Ordered])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_ge.name("Expressions.Framework.Patterns.ge").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_ge.name("Expressions.Patterns.Expressions.ge").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([_.Ordered]),
                 lambda v: v.name("b").schema([_.Ordered])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_and.name("Expressions.Framework.Patterns.and").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_and.name("Expressions.Patterns.Expressions.and").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfBool]),
                 lambda v: v.name("b").schema([S.OfBool])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_or.name("Expressions.Framework.Patterns.or").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_or.name("Expressions.Patterns.Expressions.or").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfBool]),
                 lambda v: v.name("b").schema([S.OfBool])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_not.name("Expressions.Framework.Patterns.not").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_not.name("Expressions.Patterns.Expressions.not").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfBool])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_implies.name("Expressions.Framework.Patterns.implies").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_implies.name("Expressions.Patterns.Expressions.implies").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfBool]),
                 lambda v: v.name("b").schema([S.OfBool])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_add.name("Expressions.Framework.Patterns.add").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_add.name("Expressions.Patterns.Expressions.add").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([_.Number]),
                 lambda v: v.name("b").schema([_.Number])]))]).result([_.Number]),
-            lambda _: _.op_sub.name("Expressions.Framework.Patterns.sub").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_sub.name("Expressions.Patterns.Expressions.sub").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([_.Number]),
                 lambda v: v.name("b").schema([_.Number])]))]).result([_.Number]),
-            lambda _: _.op_mul.name("Expressions.Framework.Patterns.mul").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_mul.name("Expressions.Patterns.Expressions.mul").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([_.Number]),
                 lambda v: v.name("b").schema([_.Number])]))]).result([_.Number]),
-            lambda _: _.op_neg.name("Expressions.Framework.Patterns.neg").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_neg.name("Expressions.Patterns.Expressions.neg").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([_.Number])]))]).result([_.Number]),
-            lambda _: _.op_bitand.name("Expressions.Framework.Patterns.bitand").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_bitand.name("Expressions.Patterns.Expressions.bitand").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfInt]),
                 lambda v: v.name("b").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
-            lambda _: _.op_bitor.name("Expressions.Framework.Patterns.bitor").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_bitor.name("Expressions.Patterns.Expressions.bitor").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfInt]),
                 lambda v: v.name("b").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
-            lambda _: _.op_bitxor.name("Expressions.Framework.Patterns.bitxor").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_bitxor.name("Expressions.Patterns.Expressions.bitxor").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfInt]),
                 lambda v: v.name("b").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
-            lambda _: _.op_bitnot.name("Expressions.Framework.Patterns.bitnot").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_bitnot.name("Expressions.Patterns.Expressions.bitnot").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("a").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
-            lambda _: _.op_shl.name("Expressions.Framework.Patterns.shl").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_shl.name("Expressions.Patterns.Expressions.shl").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("value").schema([S.OfInt]),
                 lambda v: v.name("count").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
-            lambda _: _.op_shr.name("Expressions.Framework.Patterns.shr").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_shr.name("Expressions.Patterns.Expressions.shr").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("value").schema([S.OfInt]),
                 lambda v: v.name("count").schema([S.OfInt])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
-            lambda _: _.op_count.name("Expressions.Framework.Patterns.count").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_count.name("Expressions.Patterns.Expressions.count").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("collection").schema([_.Collection])]))]).result([S.OfAny(lambda a: a.schemas([S.OfInt]))]),
-            lambda _: _.op_item.name("Expressions.Framework.Patterns.item").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_item.name("Expressions.Patterns.Expressions.item").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("collection").schema([_.Collection]),
                 lambda v: v.name("index").schema([S.OfAny(lambda a: a)])]))]).result([S.OfAny(lambda a: a)]),
-            lambda _: _.op_in.name("Expressions.Framework.Patterns.in").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_in.name("Expressions.Patterns.Expressions.in").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("value").schema([S.OfAny(lambda a: a)]),
                 lambda v: v.name("collection").schema([_.Collection])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_sum.name("Expressions.Framework.Patterns.sum").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_sum.name("Expressions.Patterns.Expressions.sum").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("collection").schema([_.Collection])]))]).result([_.Number]),
-            lambda _: _.op_min.name("Expressions.Framework.Patterns.min").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_min.name("Expressions.Patterns.Expressions.min").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("collection").schema([_.Collection])]))]).result([_.Ordered]),
-            lambda _: _.op_max.name("Expressions.Framework.Patterns.max").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_max.name("Expressions.Patterns.Expressions.max").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("collection").schema([_.Collection])]))]).result([_.Ordered]),
-            lambda _: _.op_unique.name("Expressions.Framework.Patterns.unique").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_unique.name("Expressions.Patterns.Expressions.unique").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("collection").schema([_.Collection])]))]).result([S.OfAny(lambda a: a.schemas([S.OfBool]))]),
-            lambda _: _.op_entries.name("Expressions.Framework.Patterns.entries").pattern([S.OfPattern(lambda p: p.variables([
+            lambda _: _.op_entries.name("Expressions.Patterns.Expressions.entries").pattern([S.OfPattern(lambda p: p.variables([
                 lambda v: v.name("object").schema([S.OfAny(lambda a: a)]),
                 lambda v: v.name("adjacency").schema([S.OfStr])]))]).result([S.OfAny(lambda a: a.schemas([  # records
                     S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfAny(lambda e: e)]))]))]),
@@ -253,15 +206,12 @@ def install(txn: Any) -> Any:
 
 
 def define(txn: Any) -> Any:
-    """Patterns' dialect as data: the singleton `Expressions.Framework.Patterns` naming its operations (`operations`, through
-    `Expressions.Framework.Operates`) and owning its domains by name (`domains`, through `Expressions.Framework.Defines`),
-    each related to its schema (`Expressions.Framework.Patterns.uint8`) by `Expressions.Framework.HasDomain`. Run after `install`, in
-    a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each domain by
-    its name: `store.transaction(Patterns.define)[0]["uint8"]`."""
-    Patterns, Domain = txn.Expressions.Framework.Patterns, txn.Expressions.Framework.Domain
+    """Patterns' dialect as data: the singleton `Expressions.Patterns.Expressions` naming its operations (`operations`,
+    through `Expressions.Framework.Operates`); it owns no domains. Run after `install`, in a transaction of its own; run
+    again, it writes nothing. Its frame binds the dialect: `store.transaction(Patterns.define)[0]["dialect"]`."""
+    Patterns = txn.Expressions.Patterns.Expressions
     return txn.uid("mbse.Expressions.Patterns.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": Patterns.Dialect, "bool": Domain, "int": Domain, "float": Domain, "str": Domain,
-                  "bytes": Domain, "uint8": Domain, "binary32": Domain, "std_logic": Domain})
+        .symbols({"dialect": Patterns.Dialect})
         .spec([
             lambda _: _.dialect.operations({
                 "get": lambda e: e.operation(Patterns.get), "has": lambda e: e.operation(Patterns.has),
@@ -279,28 +229,7 @@ def define(txn: Any) -> Any:
                 "in": lambda e: e.operation(getattr(Patterns, "in")), "sum": lambda e: e.operation(Patterns.sum),
                 "min": lambda e: e.operation(Patterns.min), "max": lambda e: e.operation(Patterns.max),
                 "unique": lambda e: e.operation(Patterns.unique), "entries": lambda e: e.operation(Patterns.entries),
-            }).domains({
-                "bool": lambda e: e.domain(_.bool), "int": lambda e: e.domain(_.int),
-                "float": lambda e: e.domain(_.float), "str": lambda e: e.domain(_.str),
-                "bytes": lambda e: e.domain(_.bytes), "uint8": lambda e: e.domain(_.uint8),
-                "binary32": lambda e: e.domain(_.binary32), "std_logic": lambda e: e.domain(_.std_logic),
             }),
-            lambda _: _.bool.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.bool(lambda d: d)))).schema([
-                Patterns.bool]),
-            lambda _: _.int.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.integer(
-                lambda d: d.signed(True).overflow("raise"))))).schema([Patterns.int]),
-            lambda _: _.float.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(
-                lambda d: d.format("binary64").rounding("roundTiesToEven"))))).schema([Patterns.float]),
-            lambda _: _.str.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.unicode(lambda d: d)))).schema([
-                Patterns.str]),
-            lambda _: _.bytes.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.bytes(lambda d: d)))).schema([
-                Patterns.bytes]),
-            lambda _: _.uint8.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.integer(
-                lambda d: d.width(8).signed(False).overflow("wrap"))))).schema([Patterns.uint8]),
-            lambda _: _.binary32.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee754(
-                lambda d: d.format("binary32").rounding("roundTiesToEven"))))).schema([Patterns.binary32]),
-            lambda _: _.std_logic.kind(lambda k: k.as_value(lambda a: a.as_union(lambda u: u.ieee1164(lambda d: d)))).schema([
-                Patterns.std_logic]),
         ])]))])
 
 
@@ -309,7 +238,7 @@ def _native(value: Any) -> Writer | None:
     return literal(value) if type(value) in Schemas.SCALAR_TYPES else None
 
 
-DIALECT = F.Dialect("Framework.Patterns", {
+DIALECT = F.Dialect("Patterns.Expressions", {
     "literal": F.Kind(F.LITERAL),
     "call": F.Kind(F.APPLICATION, operator="callable", vocabulary=Domains.SIGNATURES, required=("callable",), closed=True),
     "variable": F.Kind(F.REFERENCE, required=("name",)),

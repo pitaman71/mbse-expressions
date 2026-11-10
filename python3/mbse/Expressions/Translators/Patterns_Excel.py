@@ -10,7 +10,7 @@ counterpart. A `list` is `VSTACK(a, b)`, a column of its elements; a `mapping` h
 
 from __future__ import annotations
 
-from mbse.Expressions.Framework.Patterns.Expressions import DIALECT as PATTERNS
+from mbse.Expressions.Patterns.Expressions.Expressions import DIALECT as PATTERNS
 from mbse.Expressions.Excel.Expressions.Expressions import DIALECT as EXCEL
 from mbse.Expressions.Framework.Translators import Elementwise, Pairwise, Rule, renames
 

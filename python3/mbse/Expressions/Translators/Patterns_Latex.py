@@ -4,7 +4,7 @@ constructors round-trips: LaTeX has no bytes, and Patterns' `list` and `mapping`
 
 from __future__ import annotations
 
-from mbse.Expressions.Framework.Patterns.Expressions import DIALECT as PATTERNS
+from mbse.Expressions.Patterns.Expressions.Expressions import DIALECT as PATTERNS
 from mbse.Expressions.LaTeX.Expressions.Expressions import DIALECT as LATEX
 from mbse.Expressions.Framework.Translators import Pairwise, Rule, renames
 

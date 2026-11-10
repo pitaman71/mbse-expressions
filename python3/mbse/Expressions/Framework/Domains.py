@@ -1,5 +1,17 @@
 """Domains: the types of the values expressions denote, and the signatures of operators over them.
 
+The reading interface over stored domains and operations, each a `Readers.OfObject` found by its path
+(`dialect.domains({"name": "octet"})`) or a schema's `domain`:
+
+- `kind_of(domain)`: its kind, `(dialect, tag, record)`, read through its dialect's union of kinds (`isoiec11404`,
+  `integer`, and the record of `Expressions.ISOIEC11404.Expressions.OfInteger`), the dialect's tag telling apart kinds
+  two dialects name alike (C's and C++'s `nullptr_t`); "a domain needs a kind" where it holds none.
+- `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by name;
+  a container as a tuple of its elements.
+- `name_of(domain)`: the name its dialect defines it by (its `Defines` entry's), or None.
+- `operations(dialect)`: a dialect's operations by name, in the order its singleton names them, each its
+  `Schemas.OfExpression`; `arity(operation)`: the number of its pattern's variables, its arguments.
+
 A `Domain` is a set of values: `contains(value)` tests membership at run time, and `includes(other)` tests statically
 that every value of `other` is also one of its own. A `Signature` gives an operator's number of arguments and the domain
 of its result for the domains of its arguments, or `None` when it does not apply to them. A dialect's vocabulary maps
@@ -13,13 +25,78 @@ The implementations here are generic; each dialect's `Domains` module defines it
 
 from __future__ import annotations
 
-from collections.abc import Callable, Sequence
-from typing import Any, Protocol, runtime_checkable
+from collections.abc import Callable, Sequence, Sized
+from typing import Any, Protocol, cast, runtime_checkable
+
+from mbse.Schemas.Framework import Readers
+
+from . import Objects
 
 __all__ = [
+    "kind_of", "properties", "name_of", "operations", "arity",
     "Domain", "Signature", "OfTypes", "OfValues", "OfUnion", "Anything", "Function", "Same", "Overloaded", "Opaque",
     "Either", "overlaps",
 ]
+
+
+# --- Reading stored domains and operations ---
+
+
+def _branch(union: Readers.OfUnion) -> tuple[str, Readers.OfUnion] | None:
+    """The tag and the visitor of the branch a union value holds, or None where it holds none."""
+    schema = union.as_schema()
+    if schema is None:  # an absent value holds no branch
+        return None
+    held = [(branch.name, cast(Readers.OfUnion, getattr(union, branch.name))) for branch in schema.branches]
+    return next(((name, visitor) for name, visitor in held if visitor.as_schema() is not None), None)
+
+
+def kind_of(domain: Readers.OfObject) -> tuple[str, str, Readers.OfObject]:
+    """A stored domain's kind, `(dialect, tag, record)`: the branch of `Expressions.Framework.DomainKind` that names its
+    dialect, and the branch of that dialect's union of kinds it holds."""
+    found: list[Readers.OfUnion] = []
+    kind: Readers.OfProperty = domain.kind
+
+    def held(union: Readers.OfUnion) -> Readers.OfUnion:
+        found.append(union)
+        return union
+
+    kind.as_value(lambda a: a.as_union(held))
+    dialect = _branch(found[0])
+    if dialect is None:
+        raise ValueError("a domain needs a kind")
+    tag, record = cast(tuple[str, Readers.OfObject], _branch(dialect[1]))  # exactly one branch
+    return dialect[0], tag, record
+
+
+def properties(domain: Readers.OfObject) -> dict[str, object]:
+    """A stored domain's kind's properties that are set, its parameters and its inferred properties alike, by name, in
+    its kind's schema's order: a scalar as itself, a container as a tuple of its elements."""
+    return {name: tuple(value.values) if isinstance(value, Objects.Listed) else value
+            for name, value in Objects.properties(kind_of(domain)[2]).items()}
+
+
+def name_of(domain: Readers.OfObject) -> str | None:
+    """The name a stored domain's dialect defines it by, its `Expressions.Framework.Defines` entry's; None where no
+    dialect defines it."""
+    return next((str(entry.values["name"]) for entry in Objects.entries(domain, "dialect")), None)
+
+
+def operations(dialect: Readers.OfObject) -> dict[str, Readers.OfObject]:
+    """A dialect's operations by name, in the order its singleton names them (`Expressions.Framework.Operates`), each
+    its `Schemas.OfExpression`."""
+    return {str(entry.values["name"]): entry.targets["operation"] for entry in Objects.entries(dialect, "operations")}
+
+
+def arity(operation: Readers.OfObject) -> int:
+    """An operation's number of arguments: its pattern's variables."""
+    variables: Sized = operation.pattern.variables
+    return len(variables)
+
+
+# --- Domains and signatures in code ---
+# These are `Dialect.infer`'s, to be replaced with stored domains and operations, as domain inference reads them
+# ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
 
 
 @runtime_checkable

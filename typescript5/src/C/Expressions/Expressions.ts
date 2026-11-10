@@ -62,6 +62,11 @@
  * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through the builders
  * (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an
  * expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
+ *
+ * Its kind of domain, the branch of its union `Expressions.C.Expressions.DomainKind`, which `install` adds to the
+ * framework's `Expressions.Framework.DomainKind` as the branch `c`: the token `nullptr_t` (`OfNullptr`), C23's, with the
+ * inferred `ordered`; its domain has no schema, its value a `constant`'s, and C++'s is Cpp's own. Its domains are stage
+ * 3's of the domains-as-data proposal.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -122,6 +127,7 @@ export function install(txn: any): any {
   const many = (element: any): any => S.OfContainer((c: any) => c.index([S.OfInt]).element([element]));
   return txn.uid("mbse.Expressions.C.Expressions/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
+      Kinds: S.OfUnion, DomainKind: S.OfUnion, OfNullptr: S.OfObject, // Kinds: the framework's
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       Type: S.OfUnion, Pattern: S.OfUnion, Name: S.OfUnion, Specifier: S.OfUnion, Declarator: S.OfUnion,
       Parameter: S.OfUnion, AttributeSpecifier: S.OfUnion, Designator: S.OfUnion,
@@ -349,6 +355,13 @@ export function install(txn: any): any {
       // narrowed to its `Term`
       (_: any) => _.Expression.name("Expressions.C.Expressions.Expression").ref(true).refines([Framework.Expression]).properties({
         root: _.Term}),
+      // --- its kind of domain: the token of `nullptr`, its own, not C++'s; inferred `ordered` ---
+      (_: any) => _.OfNullptr.name("Expressions.C.Expressions.OfNullptr").properties({ ordered: S.OfBool }),
+      (_: any) => _.DomainKind.name("Expressions.C.Expressions.DomainKind").branches([
+        (t: any) => t.name("nullptr_t").schema([_.OfNullptr]),
+      ]),
+      (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
+        (t: any) => t.name("c").schema([_.DomainKind])]),
       (_: any) => _.FrameworkTerm.name("Expressions.Framework.Term").branches([ // a branch added: schema extension
         (t: any) => t.name("c").schema([_.Term])]),
 

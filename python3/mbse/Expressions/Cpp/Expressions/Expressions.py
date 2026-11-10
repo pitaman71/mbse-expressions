@@ -44,6 +44,11 @@ Each kind's `Kind` records the standards that have it (`standards`, `STANDARDS`'
 (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
 expression an `idexpression` (`identifier("x")`, and a callee named by a string):
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
+
+Its kind of domain, the branch of its union `Expressions.Cpp.Expressions.DomainKind`, which `install` adds to the
+framework's `Expressions.Framework.DomainKind` as the branch `cpp`: the token `nullptr_t` (`OfNullptr`), C++'s own, with
+the inferred `ordered`; its domain has no schema, its value a `constant`'s. Its domains are stage 3's of the
+domains-as-data proposal.
 """
 
 from __future__ import annotations
@@ -96,7 +101,8 @@ def install(txn: Any) -> Any:
         return S.OfContainer(lambda c: c.index([S.OfInt]).element([element]))
 
     return txn.uid("mbse.Expressions.Cpp.Expressions/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion, "OfNullptr": S.OfObject,  # Kinds: the framework's
+                  "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   "Type": S.OfUnion, "Pattern": S.OfUnion, "Name": S.OfUnion, "Capture": S.OfUnion,
                   "Requirement": S.OfUnion, "Designator": S.OfUnion, "Initializer": S.OfUnion,
                   "Specifier": S.OfUnion, "Declarator": S.OfUnion, "Parameter": S.OfUnion,
@@ -451,6 +457,13 @@ def install(txn: Any) -> Any:
             # narrowed to its `Term`
             lambda _: _.Expression.name("Expressions.Cpp.Expressions.Expression").ref(True).refines([Framework.Expression]).properties({
                 "root": _.Term}),
+            # --- its kind of domain: the token of `nullptr`, its own, not C's; inferred `ordered` ---
+            lambda _: _.OfNullptr.name("Expressions.Cpp.Expressions.OfNullptr").properties({"ordered": S.OfBool}),
+            lambda _: _.DomainKind.name("Expressions.Cpp.Expressions.DomainKind").branches([
+                lambda t: t.name("nullptr_t").schema([_.OfNullptr]),
+            ]),
+            lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
+                lambda t: t.name("cpp").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("cpp").schema([_.Term])]),
         ])]))])

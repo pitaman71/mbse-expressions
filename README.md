@@ -15,8 +15,9 @@ rest of your data, sent between programs, and evaluated the same way in Python a
 [mbse-patterns](https://github.com/pitaman71/mbse-patterns) uses them as constraints on mbse-schemas data, and as queries.
 
 ```python
-from mbse.Expressions import Evaluators, Expressions, Framework
-from mbse.Expressions.Framework import Patterns
+from mbse.Expressions import Framework
+from mbse.Expressions.Patterns import Expressions as Patterns
+from mbse.Expressions.Patterns.Expressions import Evaluators, Expressions
 from mbse.Schemas.Framework import Builders
 
 store = Builders.Store()  # expressions are stored in an mbse-schemas store, with the data they constrain
@@ -24,28 +25,31 @@ store.transaction(Framework.install)
 store.transaction(Patterns.install)
 contact = Expressions.variable("contact")
 with store.transaction():
-    senior = store.Expressions.Framework.Patterns.Expression(lambda e: e.root(
+    senior = store.Expressions.Patterns.Expressions.Expression(lambda e: e.root(
         contact.age.ge(65).and_(contact.has("email"))))
 Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value is unknown
 ```
 
 ```typescript
-import { Evaluators, Expressions, Framework } from "@mbse/expressions";
-import * as Patterns from "@mbse/expressions/Framework/Patterns";
+import { Framework } from "@mbse/expressions";
+import * as Patterns from "@mbse/expressions/Patterns/Expressions";
+import { Evaluators, Expressions } from "@mbse/expressions/Patterns/Expressions";
 import { Builders } from "@mbse/schemas/Framework";
 
 const store: any = new Builders.Store(); // expressions are stored in an mbse-schemas store, with the data they constrain
 store.transaction(Framework.install);
 store.transaction(Patterns.install);
 const contact = Expressions.variable("contact");
-const senior = store.transaction(() => store.Expressions.Framework.Patterns.Expression((e: any) => e.root(
+const senior = store.transaction(() => store.Expressions.Patterns.Expressions.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
 Evaluators.OfAny(senior, { contact: ada });
 ```
 
 Like mbse-schemas, it has two equivalent implementations, in Python and TypeScript, with the same API, the same
 messages and byte-identical JSON. Python imports it from `mbse.Expressions` (next to `mbse.Schemas`, in the shared `mbse`
-namespace package), TypeScript from `@mbse/expressions` (next to `@mbse/schemas`).
+namespace package), TypeScript from `@mbse/expressions` (next to `@mbse/schemas`). The package exports the framework
+alone; each dialect is imported from its own path (`mbse.Expressions.Patterns.Expressions`,
+`@mbse/expressions/Patterns/Expressions`).
 
 ## Getting started
 
@@ -144,9 +148,10 @@ formula = Translators.between(Expressions.DIALECT, Excel.DIALECT).forward(senior
 ExcelText.ToText(formula)   # '=AND(contact.age >= 65, NOT(ISERROR(contact.email)))'
 ```
 
-Each dialect lives under its family, at `Expressions.<Family>.<Dialect>`, the framework being Patterns' family:
-`Framework.Patterns`, `Python.Python3`, `TypeScript.TypeScript5`, and `C.Expressions`, `Cpp.Expressions`,
-`SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions` and `LaTeX.Expressions`. Its schemas
+Each dialect lives under its family, at `Expressions.<Family>.<Dialect>`: `Python.Python3`,
+`TypeScript.TypeScript5`, and `Patterns.Expressions`, `C.Expressions`, `Cpp.Expressions`,
+`SystemVerilog.Expressions`, `MATLAB.Expressions`, `Excel.Expressions` and `LaTeX.Expressions`, and the standard
+dialects `ISOIEC11404.Expressions`, `IEEE754.Expressions`, `IEEE1164.Expressions` and `Unicode.Expressions`. Its schemas
 (`Expressions.C.Expressions.Term`), its Python package (`mbse.Expressions.C.Expressions`) and its TypeScript module
 (`@mbse/expressions/C/Expressions`) are named by that path.
 
@@ -157,8 +162,9 @@ Python3, TypeScript5, MATLAB, Excel, LaTeX, C, Cpp and SystemVerilog dialects, e
 framework's union of the dialects' `Term`s, and translators between them; terms as values in an mbse-schemas store, with the container
 constructors `list` and `mapping`, literals holding any value with their spelling, and the kinds of invalid syntax
 `error` and `missing`; dialects, their operations and their
-domains as data (each dialect a singleton that names its operations, each an expression schema, and owns its domains
-by name); writers; `validate()`, which refuses a call to an operation the dialect does not define; evaluation with
+domains as data (each dialect a singleton that names its operations, each an expression schema, and may own domains
+by name, as the standard dialects do; the published standards that define kinds of domain, ISO/IEC 11404, IEEE 754, IEEE 1164 and Unicode,
+dialects of their own since domains as data's stage 1, unreleased until 0.9.0); writers; `validate()`, which refuses a call to an operation the dialect does not define; evaluation with
 three-valued logic over values by the schemas they are written with, collections and quantifiers. Released in 0.8.0,
 on mbse-schemas 0.26.10: stages 1 to 5 of the complete dialects ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md))
 and the namespace rename (`Expressions.<Family>.<Dialect>`; the old `Dialects` names are gone, with no alias): stage 2,
@@ -172,7 +178,7 @@ checked against typescript-estree's node types; it evaluates its literals alone,
 ([CAP-229: the C expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-229.md),
 [CAP-230: the C++ expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-230.md)), printed in both languages and checked
 against tree-sitter-c's and tree-sitter-cpp's node types; their evaluators keep what C evaluated, over its arithmetic
-types, and every dialect's `Type` and `Pattern` hold invalid syntax. Coming in 0.9.0: stage 6, `SystemVerilog` complete
+types, and every dialect's `Type` and `Pattern` hold invalid syntax. Coming in 0.9.0: domains as data, every dialect's domains stored ([the domains proposal](docs/proposals/domains/README.md)); in 0.10.0: stage 6, `SystemVerilog` complete
 over IEEE 1800-2023, Verilog its subset ([CAP-231: the SystemVerilog expression dialect, complete](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-231.md)),
 with its sublanguages as dialects, and the retrofit of the other dialects (type, pattern, regex and preprocessor
 dialects, binding kinds as variations of `let`); until then `SystemVerilog` is the subset it was. Not built yet: domain

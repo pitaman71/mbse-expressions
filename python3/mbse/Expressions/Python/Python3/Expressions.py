@@ -15,8 +15,9 @@ carries no domain. Its kinds:
   `literal`, mbse-basis [CAP-233: literals of any value](mbse:mbse-basis/docs/capabilities/CAP-233.md), with the
   properties its spelling encodes, mbse-basis
   [PRI-023: domain representations](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-023): `prefix` and `quote` of a string or
-  bytes, `base` of an int, `separators` where digits are grouped by `_`); `constant`, Python3's own, for what no schema
-  holds (`singleton`, `None` or `...`; a complex number's `real` and `imag`), its spelling too; `variable`, the
+  bytes, `base` of an int, `separators` where digits are grouped by `_`); `constant`, Python3's own, for what no basic
+  scalar holds (`singleton`, `None` or `...`; `complex`, a complex number, `Expressions.Python.Python3.Complex`, its
+  `real` and `imag` each IEEE 754's `binary64`), its spelling too; `variable`, the
   framework's, a name (`ast.Name`'s `id` is its `name`), the names of `BUILTINS` always bound; `concatenatedstring`,
   adjacent string literals (`values`); `joinedstr`, an f-string, and `templatestr` (3.14), a t-string: `prefix`,
   `quote` and `values`, each a `stringtext` (`spelling`, as written) or a `formattedvalue` (`interpolation` in a
@@ -58,6 +59,12 @@ calls, not a dialect.
 builders, wherever a term is written, in a transaction; a helper's writer (`keyword`, `comparison`, `comprehension`,
 `arg`, `formattedvalue`, ...) is given where its kind takes one. `Text.ToText` writes an expression as Python source,
 parenthesized only where precedence requires, and `Text.FromText` reads one back: imports, then one expression.
+
+Its kinds of domain, the branches of its union `Expressions.Python.Python3.DomainKind`, which `install` adds to the
+framework's `Expressions.Framework.DomainKind` as the branch `python3`, each with the inferred `ordered`: `str`
+(`OfStr`), sequences of code points, lone surrogates included; and the tokens `nonetype` (`OfNoneType`), `None`'s type,
+and `ellipsis` (`OfEllipsis`), `...`'s. A token's domain has no schema: its value is a `constant`'s. Its domains are
+stage 3's of the domains-as-data proposal.
 """
 
 from __future__ import annotations
@@ -104,14 +111,17 @@ def _since(minor: int) -> tuple[str, ...]:
 def install(txn: Any) -> Any:
     """Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds and the
     helpers they hold, and its dialect's schema, whose singleton is `Expressions.Python.Python3`: run after
-    `Framework.install`, in a transaction of its own; run again, it writes nothing.
+    `Framework.install` and IEEE 754's (its `Complex` holds `binary64`s), in a transaction of its own; run again, it
+    writes nothing.
     Its holder, `Expressions.Python.Python3.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
     its `Term`."""
-    S, Framework = txn.Schemas, txn.Expressions.Framework
+    S, Framework, IEEE754 = txn.Schemas, txn.Expressions.Framework, txn.Expressions.IEEE754.Expressions
     return txn.uid("mbse.Expressions.Python.Python3/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion,  # Kinds: the framework's
+                  "OfStr": S.OfObject, "OfNoneType": S.OfObject, "OfEllipsis": S.OfObject,
+                  "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   "Pattern": S.OfUnion,
-                  "Expression": S.OfObject, "Literal": S.OfObject, "Constant": S.OfObject,
+                  "Expression": S.OfObject, "Literal": S.OfObject, "Constant": S.OfObject, "Complex": S.OfObject,
                   "ConcatenatedString": S.OfObject, "StringText": S.OfObject, "FormatSpec": S.OfObject,
                   "FormattedValue": S.OfObject, "Interpolation": S.OfObject, "JoinedStrValue": S.OfUnion,
                   "TemplateStrValue": S.OfUnion, "JoinedStr": S.OfObject, "TemplateStr": S.OfObject,
@@ -190,11 +200,15 @@ def install(txn: Any) -> Any:
             }),
             lambda _: _.Constant.name("Expressions.Python.Python3.Constant").properties({
                 "singleton": S.OfStr,  # `None` or `...`
-                "real": S.OfFloat, "imag": S.OfFloat,  # a complex number's parts
+                "complex": _.Complex,  # a complex number
                 "text": S.OfStr,  # its spelling, unvalidated
                 "problems": S.OfContainer(lambda c: c.index([S.OfInt]).element([S.OfStr])),  # what is wrong with it
                 "separators": S.OfBool,  # whether its digits are grouped by `_`
             }),
+            # a complex number, a value of two IEEE 754 binary64 floats, as Python's `complex` is (the domains proposal,
+            # Decided, H and J)
+            lambda _: _.Complex.name("Expressions.Python.Python3.Complex").properties({
+                "real": IEEE754.binary64, "imag": IEEE754.binary64}),
             lambda _: _.ConcatenatedString.name("Expressions.Python.Python3.ConcatenatedString").properties({
                 "values": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term]))}),
             lambda _: _.StringText.name("Expressions.Python.Python3.StringText").properties({"spelling": S.OfStr}),
@@ -285,6 +299,17 @@ def install(txn: Any) -> Any:
             # to its `Term`
             lambda _: _.Expression.name("Expressions.Python.Python3.Expression").ref(True).refines([Framework.Expression]).properties({
                 "root": _.Term}),
+            # --- its kinds of domain: `str`, and the tokens of `None` and `...`; each inferred `ordered` ---
+            lambda _: _.OfStr.name("Expressions.Python.Python3.OfStr").properties({"ordered": S.OfBool}),
+            lambda _: _.OfNoneType.name("Expressions.Python.Python3.OfNoneType").properties({"ordered": S.OfBool}),
+            lambda _: _.OfEllipsis.name("Expressions.Python.Python3.OfEllipsis").properties({"ordered": S.OfBool}),
+            lambda _: _.DomainKind.name("Expressions.Python.Python3.DomainKind").branches([
+                lambda t: t.name("str").schema([_.OfStr]),
+                lambda t: t.name("nonetype").schema([_.OfNoneType]),
+                lambda t: t.name("ellipsis").schema([_.OfEllipsis]),
+            ]),
+            lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
+                lambda t: t.name("python3").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("python3").schema([_.Term])]),
         ])]))])
@@ -378,16 +403,16 @@ SINGLETONS = ("None", "...")
 
 
 def _constant_check(record: Any) -> list[str]:
-    """A constant holds a singleton, `None` or `...`, or a complex number, its `imag` at least."""
+    """A constant holds a singleton, `None` or `...`, or a complex number (`complex`), its `imag` at least."""
     attributes = F.attributes_of(record)
-    singleton, complex_ = attributes.get("singleton"), "imag" in attributes or "real" in attributes
-    if singleton is None and not complex_:  # unless its text is invalid, its problems said
+    singleton, complex_ = attributes.get("singleton"), attributes.get("complex")
+    if singleton is None and complex_ is None:  # unless its text is invalid, its problems said
         return [] if "problems" in attributes else ["a constant needs a singleton or a complex number"]
-    if singleton is not None and complex_:
+    if singleton is not None and complex_ is not None:
         return ["a constant holds a singleton or a complex number, not both"]
     if singleton is not None and singleton not in SINGLETONS:
         return [f"a constant's singleton must be None or ..., got {singleton!r}"]
-    if complex_ and "imag" not in attributes:
+    if complex_ is not None and "imag" not in complex_.attributes:
         return ["a complex constant needs an imag"]
     return []
 
@@ -751,10 +776,16 @@ def constant(value: Any, text: str | None = None) -> Writer:
         attributes: dict[str, Any] = {"singleton": "None" if value is None else "...", "text": text}
         return _kind(CONSTANT, attributes, {})
     if type(value) is complex:
-        return _kind(CONSTANT, {"real": value.real, "imag": value.imag, "text": text}, {})
+        return _kind(CONSTANT, {"text": text}, {}, None, {"complex": _complex(value)})
     if text is None:
         return Writer(lambda u: getattr(u, LITERAL)(lambda r: r.value(lambda p: p.as_scalar(value))))
     return Writer(lambda u: getattr(u, LITERAL)(lambda r: r.value(lambda p: p.as_scalar(value)).text(text)))
+
+
+def _complex(value: complex) -> Helper:
+    """A complex number as a constant holds it, `Expressions.Python.Python3.Complex`: its `real` and `imag` parts, each
+    an IEEE 754 `binary64`."""
+    return Helper("complex", lambda r: r.real(value.real).imag(value.imag))
 
 
 def name(name: str) -> Writer:

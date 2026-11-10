@@ -49,7 +49,7 @@ import * as F from "../../Framework/Evaluators.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
-import * as Ieee754 from "../../Framework/Patterns/Ieee754.js";
+import * as Ieee754 from "../../Patterns/Expressions/Ieee754.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 

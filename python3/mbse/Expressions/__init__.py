@@ -6,13 +6,14 @@ each other. See mbse-basis [FEA-024: expressions as data](mbse:mbse-basis/docs/f
 For AI agents: read `skill/SKILL.md` next to this file first. It says when to use this package, the practices that
 prevent most mistakes, and which reference to load for a task.
 
-`Expressions`, `Evaluators`, `Domains` and `Partials` are the Patterns dialect's (formerly Basic), the neutral form of
-every constraint. The framework is `mbse.Expressions.Framework`, each dialect is under its family, at
-`mbse.Expressions.<Family>.<Dialect>` (`mbse.Expressions.Framework.Patterns`, `mbse.Expressions.Python.Python3`,
-`mbse.Expressions.C.Expressions`), and the translators between them under `mbse.Expressions.Translators`. Expressions are stored in an mbse-schemas store, whose schemas
-`Framework.install` and each dialect's `install` define (docs/proposals/port/API.md)."""
+The package exports the framework alone, `mbse.Expressions.Framework`. Each dialect is imported from its own path,
+under its family, at `mbse.Expressions.<Family>.<Dialect>` (`mbse.Expressions.Patterns.Expressions`,
+`mbse.Expressions.Python.Python3`, `mbse.Expressions.C.Expressions`), and the translators between them from
+`mbse.Expressions.Translators`. The kinds of value domain and the domains are the standard dialects'
+(`mbse.Expressions.ISOIEC11404.Expressions`, `IEEE754.Expressions`, `IEEE1164.Expressions` and `Unicode.Expressions`),
+installed after the framework and before the dialects that use them. Expressions are stored in an mbse-schemas store,
+whose schemas `Framework.install` and each dialect's `install` define ([the API](../../../docs/proposals/port/API.md))."""
 
 from . import Framework
-from .Framework.Patterns import Domains, Evaluators, Expressions, Partials
 
-__all__ = ["Framework", "Expressions", "Evaluators", "Domains", "Partials"]
+__all__ = ["Framework"]

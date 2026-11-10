@@ -84,7 +84,8 @@ class _Printer:
                 return _constant(attributes["value"])
             if "singleton" in attributes:
                 return attributes["singleton"], _PRIMARY
-            return _constant(complex(attributes.get("real", 0.0), attributes["imag"]))
+            parts = attributes["complex"].attributes  # a complex number's, `Expressions.Python.Python3.Complex`
+            return _constant(complex(parts.get("real", 0.0), parts["imag"]))
         if tag in ("error", "missing"):
             return F.invalid_text(P.DIALECT, tag, attributes), _PRIMARY
         if tag in _IMPORTS:
@@ -399,9 +400,10 @@ def _number(text: str, value: Any) -> dict[str, Any]:
 def _literal(value: Any, text: str) -> P.Writer:
     """A constant with its spelling: a literal of a basic scalar, with what its text encodes, or Python3's own."""
     if value is None or value is Ellipsis or type(value) is complex:
-        singleton = {"singleton": "None" if value is None else "..."} if type(value) is not complex else {
-            "real": value.real, "imag": value.imag}
-        return P._kind(P.CONSTANT, {**singleton, "text": text, "separators": True if "_" in text else None}, {})
+        spelling = {"text": text, "separators": True if "_" in text else None}
+        if type(value) is complex:
+            return P._kind(P.CONSTANT, spelling, {}, None, {"complex": P._complex(value)})
+        return P._kind(P.CONSTANT, {"singleton": "None" if value is None else "...", **spelling}, {})
     encoded = _quoted(text) if type(value) in (str, bytes) else _number(text, value) if type(value) is not bool else {}
 
     def record(r: Any) -> Any:

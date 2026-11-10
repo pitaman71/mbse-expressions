@@ -56,6 +56,11 @@ being older; none for an extension). `DIALECT` reads them (`Terms.Dialect`). The
 is written through the builders, in a transaction (mbse-basis
 [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its
 helpers nested, as its printer and its checks read it.
+
+Its kinds of domain, the branches of its union `Expressions.TypeScript.TypeScript5.DomainKind`, which `install` adds
+to the framework's `Expressions.Framework.DomainKind` as the branch `typescript5`, each with the inferred `ordered`:
+`string` (`OfString`), sequences of UTF-16 code units; and the token `null` (`OfNull`), whose domain has no schema: its
+value is a `constant`'s. Its domains are stage 3's of the domains-as-data proposal.
 """
 
 from __future__ import annotations
@@ -116,7 +121,9 @@ def install(txn: Any) -> Any:
         return S.OfContainer(lambda c: c.index([S.OfInt]).element([element]))
 
     return txn.uid("mbse.Expressions.TypeScript.TypeScript5/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
+        .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion,  # Kinds: the framework's
+                  "OfString": S.OfObject, "OfNull": S.OfObject,
+                  "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   "Type": S.OfUnion, "Pattern": S.OfUnion, "TypeElement": S.OfUnion, "JSXTagNameExpression": S.OfUnion,
                   "JSXAttributeName": S.OfUnion, "JSXAttributeValue": S.OfUnion, "JSXAttributeItem": S.OfUnion,
                   "JSXChild": S.OfUnion, "Expression": S.OfObject,
@@ -546,6 +553,15 @@ def install(txn: Any) -> Any:
             # narrowed to its `Term`
             lambda _: _.Expression.name("Expressions.TypeScript.TypeScript5.Expression").ref(True).refines([Framework.Expression]).properties({
                 "root": _.Term}),
+            # --- its kinds of domain: `string`, and the token of `null`; each inferred `ordered` ---
+            lambda _: _.OfString.name("Expressions.TypeScript.TypeScript5.OfString").properties({"ordered": S.OfBool}),
+            lambda _: _.OfNull.name("Expressions.TypeScript.TypeScript5.OfNull").properties({"ordered": S.OfBool}),
+            lambda _: _.DomainKind.name("Expressions.TypeScript.TypeScript5.DomainKind").branches([
+                lambda t: t.name("string").schema([_.OfString]),
+                lambda t: t.name("null").schema([_.OfNull]),
+            ]),
+            lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
+                lambda t: t.name("typescript5").schema([_.DomainKind])]),
             lambda _: _.FrameworkTerm.name("Expressions.Framework.Term").branches([  # a branch added: schema extension
                 lambda t: t.name("typescript5").schema([_.Term])]),
         ])]))])

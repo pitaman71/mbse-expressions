@@ -7,7 +7,11 @@
  */
 
 import { Framework } from "@mbse/expressions";
-import * as Patterns from "@mbse/expressions/Framework/Patterns";
+import * as Patterns from "@mbse/expressions/Patterns/Expressions";
+import * as IEEE1164 from "@mbse/expressions/IEEE1164/Expressions";
+import * as IEEE754 from "@mbse/expressions/IEEE754/Expressions";
+import * as ISOIEC11404 from "@mbse/expressions/ISOIEC11404/Expressions";
+import * as Unicode from "@mbse/expressions/Unicode/Expressions";
 import * as C from "@mbse/expressions/C/Expressions";
 import * as Cpp from "@mbse/expressions/Cpp/Expressions";
 import * as Excel from "@mbse/expressions/Excel/Expressions";
@@ -36,10 +40,11 @@ export function install(txn: any): any {
 }
 
 /** A store of the cold chain's schemas, which also holds expressions: of the Patterns dialect, and of every dialect the
- * case studies translate into. */
+ * case studies translate into, installed after the standard dialects whose kinds of domain they use. */
 export function cold_chain(): any {
   const store: any = new Builders.Store();
-  for (const module of [Framework, Patterns, Python3, Matlab, Excel, Latex, C, Cpp, SystemVerilog]) {
+  for (const module of [Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
+    SystemVerilog]) {
     store.transaction(module.install);
   }
   store.transaction(install);

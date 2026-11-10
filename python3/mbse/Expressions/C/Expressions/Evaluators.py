@@ -43,7 +43,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from mbse.Expressions.Framework.Patterns import Ieee754
+from mbse.Expressions.Patterns.Expressions import Ieee754
 from mbse.Expressions.Framework import Errors, Evaluators as F, Objects, Symbolics as S, Terms
 
 from . import Domains, Expressions
