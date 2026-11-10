@@ -24,11 +24,13 @@
  * module (`Expressions.Patterns.Expressions.add`), its pattern's variables its arguments and its `result` its return, as precise as
  * the basic scalars and containers allow (`Expressions.Patterns.Expressions.Number`, an int or a float; `Expressions.Patterns.Expressions.Ordered`;
  * `Expressions.Patterns.Expressions.Collection`, a list or a mapping; an unrestricted `Schemas.OfAny` where any value goes), each
- * written in the builders' fluent syntax. Validation reads Patterns' vocabulary (`Domains.SIGNATURES`, the same names,
- * which a term alone, in no store, can read): a call naming an operation Patterns does not define is refused. `install`
- * also adds Patterns' dialect, the singleton `Expressions.Patterns.Expressions`; `define` writes the dialect's data, its
- * operations by name (`Expressions.Framework.Operates`). Patterns has no kinds of domain and owns no domains: the kinds
- * and the domains its values take are the standard dialects' (ISO/IEC 11404's, IEEE 754's, IEEE 1164's and Unicode's,
+ * written in the builders' fluent syntax. `install` also adds Patterns' dialect, the singleton
+ * `Expressions.Patterns.Expressions`; `define` writes the dialect's data, its operations by name
+ * (`Expressions.Framework.Operates`). Validation reads them, from the store of the term's holder (a term is validated
+ * within its holder, never alone): a call naming an operation the singleton does not name is refused, and one given
+ * another number of arguments than its pattern's variables reported; so `define` runs before Patterns' terms are
+ * validated or inferred. Inference reads `Domains.SIGNATURES`, its code, the same names. Patterns has no kinds of
+ * domain and owns no domains: the kinds and the domains its values take are the standard dialects' (ISO/IEC 11404's, IEEE 754's, IEEE 1164's and Unicode's,
  * `@mbse/expressions/ISOIEC11404/Expressions` and the others), whose installs run before Patterns'.
  *
  * `DIALECT` reads them (`Terms.Dialect`, with each kind's role, vocabulary and checks), validates and infers.
@@ -41,12 +43,9 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "./Domains.js";
-
-/** The operations Patterns defines and their numbers of arguments. */
-export const CORE: ReadonlyMap<string, number> = new Map(
-  [...Domains.SIGNATURES].map(([name, signature]) => [name, signature.arity()]));
 
 /** Patterns' union of its kinds, added to the framework's terms as the branch `patterns`, and its own kind; its
  * dialect's schema, whose singleton is `Expressions.Patterns.Expressions`; and its operations, each an expression schema
@@ -235,7 +234,7 @@ function native(value: unknown): Writer | null {
 export const DIALECT = new F.Dialect("Patterns.Expressions", {
   literal: new F.Kind(F.LITERAL),
   call: new F.Kind(F.APPLICATION, { operator: "callable", vocabulary: Domains.SIGNATURES, required: ["callable"],
-    closed: true }),
+    closed: true, operations: (store: any) => FD.operations(store.Instances.Expressions.Patterns.Expressions) }),
   variable: new F.Kind(F.REFERENCE, { required: ["name"] }),
   let: new F.Kind(F.BINDING, { required: ["name"] }),
   list: new F.Kind(F.APPLICATION, { signature: Domains.LIST }),

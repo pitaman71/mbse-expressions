@@ -10,7 +10,7 @@
  * - `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by
  *   name; a container as an array of its elements.
  * - `nameOf(domain)`: the name its dialect defines it by (its `Defines` entry's), or null.
- * - `operations(dialect)`: a dialect's operations by name, in the order its singleton names them, each its
+ * - `operations(dialect)`: a dialect's operations by name, in the order the store holds its entries, each its
  *   `Schemas.OfExpression`; `arity(operation)`: the number of its pattern's variables, its arguments.
  *
  * A `Domain` is a set of values: `contains(value)` tests membership at run time, and `includes(other)` tests
@@ -71,8 +71,9 @@ export function nameOf(domain: Readers.OfObject): string | null {
   return entry === undefined ? null : entry.values.get("name") as string;
 }
 
-/** A dialect's operations by name, in the order its singleton names them (`Expressions.Framework.Operates`), each
- * its `Schemas.OfExpression`. */
+/** A dialect's operations by name (`Expressions.Framework.Operates`), each its `Schemas.OfExpression`, in the order the
+ * store holds the entries: as its `define` wrote them, or, read back from a snapshot, by name, as mbse-schemas writes a
+ * relation's entries sorted by its key. */
 export function operations(dialect: Readers.OfObject): Map<string, Readers.OfObject> {
   return new Map(Objects.entries(dialect, "operations").map(
     (entry) => [entry.values.get("name") as string, entry.targets.get("operation") as Readers.OfObject]));
@@ -253,40 +254,28 @@ export class Function implements Signature {
 }
 
 /** Takes `arity` arguments of one of the `candidates` domains, all of the same one, and gives `result`, or that
- * domain when `result` is null: `new Same(2, [Int, Float])` is add, `new Same(2, [Int, Float, Str], Bool)` is lt. With
- * a `family`, a domain that includes whole domains (every integer domain, say), each argument's domain in the family
- * is a candidate too. */
+ * domain when `result` is null: `new Same(2, [Int, Float])` is add, `new Same(2, [Int, Float, Str], Bool)` is lt. */
 export class Same implements Signature {
   constructor(private readonly count: number, readonly candidates: readonly Domain[],
-    private readonly resultDomain: Domain | null = null, readonly family: Domain | null = null) {}
+    private readonly resultDomain: Domain | null = null) {}
 
   arity(): number {
     return this.count;
   }
 
-  private candidatesFor(args: readonly Domain[]): Domain[] {
-    const found = [...this.candidates];
-    for (const argument of args) {
-      if (this.family !== null && !(argument instanceof OfUnion) && this.family.includes(argument)
-        && !found.some((c) => c.includes(argument) && argument.includes(c))) found.push(argument);
-    }
-    return found;
-  }
-
   result(args: readonly Domain[]): Domain | null {
     if (args.length !== this.count) return null;
-    const matches = this.candidatesFor(args).filter((c) => args.every((argument) => overlaps(c, argument)));
+    const matches = this.candidates.filter((c) => args.every((argument) => overlaps(c, argument)));
     if (matches.length === 0) return null;
     return join(matches.map((match) => this.resultDomain ?? match));
   }
 
   exact(args: readonly Domain[]): boolean {
-    return args.length === this.count && this.candidatesFor(args).some((c) => args.every((argument) => c.includes(argument)));
+    return args.length === this.count && this.candidates.some((c) => args.every((argument) => c.includes(argument)));
   }
 
   describe(): string {
-    let names = this.candidates.map((c) => c.name()).join(" | ");
-    if (this.family !== null) names += ` or any ${this.family.name()}`;
+    const names = this.candidates.map((c) => c.name()).join(" | ");
     const parameters = Array(this.count).fill("T").join(", ");
     return `(${parameters}) -> ${this.resultDomain ? this.resultDomain.name() : "T"} for T in ${names}`;
   }

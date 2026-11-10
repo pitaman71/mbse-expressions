@@ -21,7 +21,7 @@
  *   `entries` gives an object's entries as one of `Domains.Record`s, which `get` and `has` read. The collection
  *   operations and the quantifiers (`all`, `any`, `count`) follow Kleene's logic over the items; an unknown collection
  *   gives unknown.
- * - Only the operations Patterns defines (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of
+ * - Only the operations Patterns defines (its install's, which `define` names) are evaluated. Unknown operations, wrong numbers of
  *   arguments, unbound variables and wrong operand types raise, as do the problems `validate()` reports.
  * - `get` and `has` read any data object, read through mbse-schemas' readers (`Framework/Objects`): reference
  *   objects, value objects, union and intersection values.
@@ -38,6 +38,7 @@
 import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
+import type * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Evaluators.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
@@ -199,26 +200,25 @@ function order(name: string, values: unknown[]): boolean | null {
   return { lt: o < 0, le: o <= 0, gt: o > 0, ge: o >= 0 }[name as "lt"];
 }
 
-/** A value's domain, by the native type it is written with, or null when it is not a native (an object). */
-function domainOf(value: unknown): Domains.Domain | null {
+/** A value's domain, the native type it is written with (a term carries no domain), or null when it is not a native
+ * (an object). */
+function domainOf(value: unknown): FD.Domain | null {
   return Domains.nativeDomain(value);
 }
 
-type Kind = abstract new (...args: never[]) => Domains.Domain;
-
-/** The one domain of `values`, which must be of `kinds`; throws naming `what` they must be. */
-function operands(name: string, values: unknown[], kinds: readonly Kind[], what: readonly [string, string]): any {
+/** The one domain of `values`, which must be one of `kinds`, natives' domains; throws naming `what` they must be. */
+function operands(name: string, values: unknown[], kinds: readonly FD.Domain[], what: readonly [string, string]): any {
   const domains = values.map(domainOf);
   const first = domains[0];
-  if (!kinds.some((kind) => first instanceof kind) || domains.some((domain) => !(domain as Domains.Domain).equals(first))) {
+  if (!kinds.includes(first as FD.Domain) || domains.some((domain) => domain !== first)) {
     if (values.length === 1) throw new TypeError(`${name} expects ${what[0]}, got ${typeName(values[0])}`);
     throw new TypeError(`${name} expects ${what[1]} of one domain, got ${typeName(values[0])} and ${typeName(values[1])}`);
   }
   return first;
 }
 
-const INTEGER: any = Domains.OfInteger.Data;
-const IEEE754: any = Domains.OfIeee754.Data;
+const INTEGER = Domains.Int; // an unbounded integer, as its schema holds it
+const IEEE754 = Domains.Float; // an IEEE 754 binary64 number
 
 /** `operator` (by default `name`) on numbers of one domain, ints unbounded and floats binary64; errors name `name`. */
 function arithmetic(name: string, values: unknown[], operator: string = name): unknown {
@@ -326,7 +326,7 @@ function extreme(name: string, values: unknown[]): unknown {
   if (collection === null || collection.items.length === 0 || collection.items.some((each) => each === null)) return null;
   const first = collection.items[0];
   for (const each of collection.items) {
-    if (!ordered(each) || !(domainOf(each) as Domains.Domain).equals(domainOf(first))) {
+    if (!ordered(each) || domainOf(each) !== domainOf(first)) {
       throw new TypeError(`${name} expects ordered values of one domain, got ${typeName(first)} and ${typeName(each)}`);
     }
   }

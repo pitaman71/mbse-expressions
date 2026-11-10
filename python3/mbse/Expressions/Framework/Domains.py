@@ -9,7 +9,7 @@ The reading interface over stored domains and operations, each a `Readers.OfObje
 - `properties(domain)`: its kind's properties that are set, its parameters and its inferred properties alike, by name;
   a container as a tuple of its elements.
 - `name_of(domain)`: the name its dialect defines it by (its `Defines` entry's), or None.
-- `operations(dialect)`: a dialect's operations by name, in the order its singleton names them, each its
+- `operations(dialect)`: a dialect's operations by name, in the order the store holds its entries, each its
   `Schemas.OfExpression`; `arity(operation)`: the number of its pattern's variables, its arguments.
 
 A `Domain` is a set of values: `contains(value)` tests membership at run time, and `includes(other)` tests statically
@@ -83,8 +83,9 @@ def name_of(domain: Readers.OfObject) -> str | None:
 
 
 def operations(dialect: Readers.OfObject) -> dict[str, Readers.OfObject]:
-    """A dialect's operations by name, in the order its singleton names them (`Expressions.Framework.Operates`), each
-    its `Schemas.OfExpression`."""
+    """A dialect's operations by name (`Expressions.Framework.Operates`), each its `Schemas.OfExpression`, in the order the
+    store holds the entries: as its `define` wrote them, or, read back from a snapshot, by name, as mbse-schemas writes a
+    relation's entries sorted by its key."""
     return {str(entry.values["name"]): entry.targets["operation"] for entry in Objects.entries(dialect, "operations")}
 
 
@@ -251,41 +252,28 @@ class Function:
 
 class Same:
     """Takes `arity` arguments of one of the `candidates` domains, all of the same one, and gives `result`, or that
-    domain when `result` is None: `Same(2, (Int, Float))` is add, `Same(2, (Int, Float, Str), Bool)` is lt. With a
-    `family`, a domain that includes whole domains (every integer domain, say), each argument's domain in the family is
-    a candidate too."""
+    domain when `result` is None: `Same(2, (Int, Float))` is add, `Same(2, (Int, Float, Str), Bool)` is lt."""
 
-    def __init__(self, arity: int, candidates: Sequence[Domain], result: Domain | None = None,
-                 family: Domain | None = None):
-        self._arity, self.candidates, self._result, self.family = arity, tuple(candidates), result, family
+    def __init__(self, arity: int, candidates: Sequence[Domain], result: Domain | None = None):
+        self._arity, self.candidates, self._result = arity, tuple(candidates), result
 
     def arity(self) -> int:
         return self._arity
 
-    def _candidates(self, arguments: Sequence[Domain]) -> list[Domain]:
-        found = list(self.candidates)
-        for argument in arguments:
-            if (self.family is not None and not isinstance(argument, OfUnion) and self.family.includes(argument)
-                    and not any(c.includes(argument) and argument.includes(c) for c in found)):
-                found.append(argument)
-        return found
-
     def result(self, arguments: Sequence[Domain]) -> Domain | None:
         if len(arguments) != self._arity:
             return None
-        matches = [c for c in self._candidates(arguments) if all(overlaps(c, argument) for argument in arguments)]
+        matches = [c for c in self.candidates if all(overlaps(c, argument) for argument in arguments)]
         if not matches:
             return None
         return _join([self._result or match for match in matches])
 
     def exact(self, arguments: Sequence[Domain]) -> bool:
         return len(arguments) == self._arity and any(
-            all(c.includes(a) for a in arguments) for c in self._candidates(arguments))
+            all(c.includes(a) for a in arguments) for c in self.candidates)
 
     def describe(self) -> str:
         names = " | ".join(c.name() for c in self.candidates)
-        if self.family is not None:
-            names += f" or any {self.family.name()}"
         parameters = ", ".join(["T"] * self._arity)
         return f"({parameters}) -> {self._result.name() if self._result else 'T'} for T in {names}"
 

@@ -55,7 +55,8 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    *When*: every constraint. *How*: in an mbse-schemas store, run the framework's install, then each dialect's you
    write, each in a transaction of its own, once per store: the framework's, then the standard dialects' whose kinds of
    domain the others use (`ISOIEC11404`, `IEEE754`, `IEEE1164`, `Unicode`), then the rest
-   (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...). The
+   (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...); then
+   Patterns' `define`, which names the operations validation reads (`store.transaction(Patterns.define)`). The
    package exports the framework alone (`Framework`); import each
    dialect from its own path, Patterns' writers from `mbse.Expressions.Patterns.Expressions` (TypeScript:
    `@mbse/expressions/Patterns/Expressions`), as `E`. Build a constraint with writers: `E.variable(name)`,
@@ -102,10 +103,11 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [DOM-08: The bitwise operations take ints, as two's complement of infinite width, and shifts an int count](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-08) · TypeScript: [DOM-08: The bitwise operations take ints, as two's complement of infinite width, and shifts an int count](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-08)
 4. **Only the operations a dialect defines are calls of it; validate what arrives as data.** *Why*: the core vocabulary
    is small, pure and total, so every binding evaluates it the same way; a constraint from a file or another program
-   may be broken. *When*: before evaluating a constraint you did not write. *How*: `DIALECT.validate(term, bound)`
-   lists what evaluating it would raise, empty when valid: variables nothing binds, wrong numbers of arguments, and
-   calls of operations the dialect does not define ("'contains' is not an operation Patterns defines"). Evaluating
-   such a constraint raises. A term carries no domain yet: values are taken by the schemas they are written with, ints
+   may be broken. *When*: before evaluating a constraint you did not write. *How*: `DIALECT.validate(expression,
+   bound)`, of the expression that holds the constraint, lists what evaluating it would raise, empty when valid:
+   variables nothing binds, wrong numbers of arguments, and calls of operations the dialect does not define ("'contains'
+   is not an operation Patterns defines"). A term is validated within its holder, never alone: Patterns' operations are
+   read from the holder's store, where `Patterns.define` names them. Evaluating such a constraint raises. A term carries no domain yet: values are taken by the schemas they are written with, ints
    unbounded and floats binary64, until
    [CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md).
    [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md#terms-and-the-core-vocabulary).
@@ -209,8 +211,10 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    operation is an expression schema: its pattern's variables are its arguments, in order, and its `result` is its
    return. Read a stored domain with the framework's `Domains.kind_of` (its dialect's tag, then its kind's: C's `nullptr_t` is not C++'s), `Domains.properties` (its parameters and its
    inferred properties, such as an integer's `least` and `greatest`) and `Domains.name_of`, and a dialect's operations
-   with `Domains.operations` and `Domains.arity`. `DIALECT.infer(term, domains)` finds a term's domain from its vocabulary's signatures
-   and the domains its variables are given; a quantifier's name has its items' domain.
+   with `Domains.operations` and `Domains.arity`. `DIALECT.infer(expression, domains)` finds a term's domain from its
+   vocabulary's signatures, in code, and the domains its variables are given; a quantifier's name has its items'
+   domain. For Patterns these are its values' natives' domains (`int`, `float`, ...) until domain inference reads the
+   stored ones ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
    [CAP-097: value domains of published standards](mbse:mbse-basis/docs/capabilities/CAP-097.md#value-domains).
    - Python: [T07.5: A dialect is data](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.5) · TypeScript: [T07.5: A dialect is data](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.5)
    - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
@@ -218,7 +222,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic, Python3's and TypeScript5's strings, the tokens and Excel's errors](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-18) · TypeScript: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic, Python3's and TypeScript5's strings, the tokens and Excel's errors](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-18)
    - Python: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-03) · TypeScript: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-03)
    - Python: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-07) · TypeScript: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-07)
-   - Python: [DOM-09: Signatures take any domain of a family, so inference follows the domains an environment gives](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-09) · TypeScript: [DOM-09: Signatures take any domain of a family, so inference follows the domains an environment gives](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-09)
+   - Python: [DOM-09: Signatures take the natives' domains and collections, so inference follows the domains an environment gives](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-09) · TypeScript: [DOM-09: Signatures take the natives' domains and collections, so inference follows the domains an environment gives](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-09)
    - Python: [COL-07: Collections have domains for inference: a quantifier's name has the items' domain](mbse:mbse-expressions/python3/tests/10_Collections.ipynb#COL-07) · TypeScript: [COL-07: Collections have domains for inference: a quantifier's name has the items' domain](mbse:mbse-expressions/typescript5/tests/10_Collections.ipynb#COL-07)
 
 ## Load the reference for your task
@@ -265,10 +269,6 @@ each case shows its own:
   - Python: [FRM-02: Forms and `make` are inverses, for every kind of every dialect](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-02) · TypeScript: [FRM-02: Forms and `make` are inverses, for every kind of every dialect](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-02)
   - Python: [T06.5: Rewriting](mbse:mbse-expressions/python3/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.5) · TypeScript: [T06.5: Rewriting](mbse:mbse-expressions/typescript5/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.5)
   - Python: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-01) · TypeScript: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-01)
-- **Domains.** Python compares domains with `==`; TypeScript with `.equals()`, and builds them with `new`, widths as
-  `bigint`s (`new Domains.OfInteger.Builder().width(8n)`).
-  - Python: [DOM-01: Value domains name standards, with only their parameters, are compared by structure and validated](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-01) · TypeScript: [DOM-01: Value domains name standards, with only their parameters, are compared by structure and validated](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-01)
-  - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
 - **Python's expressions.** Python's Python3 dialect evaluates with real modules (numpy among them, with the `numpy`
   extra) and parses source with `Text.FromText`; TypeScript's models Python's rules, its modules are
   `new Python3.Evaluators.Module(name, { members })`, it has no numpy, and it has no `FromText`: build the same

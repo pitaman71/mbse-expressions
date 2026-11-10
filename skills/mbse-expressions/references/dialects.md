@@ -7,7 +7,7 @@ Python, `FromText`), its evaluator, and the scope that resolves its names. Its p
 `Python.Python3`, `C.Expressions`), names its schemas (`Expressions.C.Expressions.Term`), its Python package
 (`mbse.Expressions.C.Expressions`) and its TypeScript module (`@mbse/expressions/C/Expressions`); its name is its own,
 or its family's where its own is `Expressions` (`C`, `MATLAB`, `LaTeX`). Every dialect's terms serialize, validate,
-infer domains and traverse the same way (`DIALECT.validate(term)`, `DIALECT.infer(term)`, `Framework.Terms.walk`), and
+infer domains and traverse the same way (`DIALECT.validate(expression)`, `DIALECT.infer(expression)`, of the expression holding the term, `Framework.Terms.walk`), and
 `Framework.Symbolics.free(term, DIALECT)` tells which names a term needs from its scope. Its constructors are writers:
 write them in a transaction, into a store where its install has run. A dialect reads only its own terms: a term of
 another dialect is refused by name ("a Patterns variable is not a Python3 term"). What a dialect can say, and what each

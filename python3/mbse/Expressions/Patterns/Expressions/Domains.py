@@ -1,541 +1,41 @@
-"""Domains of the Patterns dialect: the code form of the kinds of value domain its values take, and the values its core
-operations take and give.
+"""Domains of the Patterns dialect, in code: the domains `Dialect.infer` gives Patterns' values, and the signatures of
+its operations, for inference; and the values evaluation gives collections and entries.
 
-Value domains name the standard they implement, with only its parameters (see mbse-basis
-[CAP-097: value domains of published standards](mbse:mbse-basis/docs/capabilities/CAP-097.md#value-domains)):
+Patterns holds no kinds of domain and owns no domains: as data they are the standard dialects' (ISO/IEC 11404's,
+IEEE 754's, IEEE 1164's and Unicode's, `mbse.Expressions.ISOIEC11404.Expressions` and the others), read through the
+framework's reading interface (`Framework.Domains.kind_of`, `properties`, `name_of`), and Patterns' operations are
+data, which validation reads from the store of a term's holder. What is here is `Dialect.infer`'s, in code, to be
+replaced with stored domains and operations as domain inference reads them
+([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
 
-- `OfBool`: true and false.
-- `OfInteger`: two's complement integers of a `width` in bits, or unbounded, `signed` or not, whose `overflow` wraps,
-  saturates or raises.
-- `OfModulo`: ISO/IEC 11404's `modulo(modulus)`, the integers 0 to `modulus` - 1, whose arithmetic gives its result's
-  remainder by the modulus.
-- `OfOctet`: ISO/IEC 11404's `octet`, codes 0 to 255: ordered, but with no arithmetic.
-- `OfIeee754`: an IEEE 754-2019 interchange `format`, with a `rounding`-direction attribute.
-- `OfBits` and `OfBytes`: unformatted patterns, of a `width` in bits, or of a `width` in bytes or of any length.
-- `OfUnicode`: sequences of code points.
-- `OfIeee1164`: VHDL's nine-valued logic: one state a value (`std_logic`), or, of a `width`, that many states, the
-  most significant first (`std_logic_vector`).
-- `OfEnum`: one of its `members`, by name; unordered.
-- `OfPacked`: an enum (its `domain`) represented in a code, an octet or a fixed-width integer or bits (its
-  `representation`), member `i` by `codes[i]`.
+The natives' domains are `Bool`, `Int`, `Float`, `Str` and `Bytes`, each the values of exactly that type (the
+framework's `OfTypes`), as a term carries no domain and a value is taken by the schema it is written with: an int is
+an unbounded integer, a float an IEEE 754 binary64 number. `of(value)` gives a native's. `Object` holds data objects
+read through mbse-schemas' readers (`Framework.Objects`), terms and value objects among them, and `Anything` is the
+domain of a value not known statically, such as a property read with `get`. Unknown (`None`) is not a domain.
 
-Patterns holds no kinds of domain and owns no domains: as data they are the standard dialects'. A domain is an
-`Expressions.Framework.Domain`, holding its `kind`, a value of `Expressions.Framework.DomainKind`, the union of the
-dialects' unions of kinds: ISO/IEC 11404's (`Expressions.ISOIEC11404.Expressions.DomainKind`: `boolean`, `integer`,
-`modulo`, `bitstring`, `octet`, `octetstring`, `state`, `packed`), IEEE 754's (`ieee754`), IEEE 1164's (`ieee1164`) and Unicode's (`unicode`), each
-kind with its parameters and the properties inferred from them. It is owned by the dialect that defines it, by name: its
-path is the dialect's singleton (`Expressions.ISOIEC11404.Expressions`), then its name. A packed domain links its state
-domain and its representation through `Expressions.ISOIEC11404.Expressions.Packs`. Its schema is a named `Schemas.OfAny`
-restricted to the scalar it narrows (`Expressions.ISOIEC11404.Expressions.octet`), which reads it through `domain`
-(`Expressions.Framework.HasDomain`). Each standard dialect's `define` writes its domains, and `read(domain)` gives the
-data of a stored one, its parameters (ignoring its inferred properties), so that what they mean can be asked of it.
+`SIGNATURES` gives each operation's signature, for inference, following the evaluator's rules: comparisons take two
+values of one domain, ordered for ints, floats, strs and bytes; logic takes bools; arithmetic takes two numbers of one
+domain and gives that domain, and the bitwise operations and shifts ints. `QUANTIFIERS` are the quantifiers', and
+`LIST` and `MAPPING` the container constructors'; `List` and `Keyed` are the domains of collections, `Records` of an
+adjacency's entries.
 
-Each kind's data, `OfX.Data`, is a dataclass compared by structure, built by `OfX.Builder` (`create()`, `clone()`,
-`update()`; none validate), with `validate()`. A domain is a `Domain`: a value is in it (`contains`) when it has the
-native type the domain's literals hold (an `int` for an integer, a `str` for an enum's member, ...) and fits it, and it
-includes (`includes`) only domains equal to it, since Patterns has no implied promotions. A domain compares two of its
-values (`compare`), ordered or not (`ORDERED`), and an integer domain fits a result into itself by its overflow, a
-modulo domain by its modulus (`fit`). What a domain means is not yet used by evaluation, which deals in values by the schemas they are written with:
-a term carries no domain, and giving each term one is domain inference's, a later capability (the port's stage 3,
-Decided, 2).
-
-The natives' defaults are `Bool`, `Int` (an unbounded signed integer), `Float` (binary64, rounding ties to even),
-`Str` (Unicode) and `Bytes` (bytes of any length): `of(value)` gives a native's. `Object` holds data objects read
-through mbse-schemas' readers (`Framework.Objects`), terms and value objects among them, and `Anything` is the domain
-of a value not known statically, such as a property read with `get`. Unknown (`None`) is not a domain.
-
-`SIGNATURES` gives each core operation's signature, for inference, following the evaluator's rules: comparisons take
-two values of one domain, ordered only for integers, modulos, octets, IEEE 754 numbers, bytes, strings and packed enums; logic takes
-bools; arithmetic takes two numbers (integers, modulos or IEEE 754 numbers) of one domain and gives that domain, and the bitwise operations two integers or
-bits of one domain. `LIST` and `MAPPING` are the container constructors'.
+`Collection` and `Record` are evaluation's values: a collection's items (and a keyed list's keys), and an entry, as
+`entries` gives it.
 """
 
 from __future__ import annotations
 
-import dataclasses
-from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, ClassVar
+from typing import Any
 
 from mbse.Expressions.Framework import Domains as D, Objects
 from mbse.Expressions.Framework.Domains import Anything
-from mbse.Schemas.Framework import Comparison, Schemas
-
-from . import Ieee754
 
 __all__ = [
-    "OfBool", "OfInteger", "OfModulo", "OfOctet", "OfIeee754", "OfBits", "OfBytes", "OfUnicode", "OfIeee1164",
-    "OfEnum", "OfPacked",
-    "FORMATS", "ROUNDINGS", "OVERFLOWS", "STATES",
-    "Bool", "Int", "Float", "Str", "Bytes", "Object", "Anything", "SIGNATURES", "QUANTIFIERS", "LIST", "MAPPING",
-    "of", "Domain", "read",
+    "Bool", "Int", "Float", "Str", "Bytes", "Object", "Anything", "SIGNATURES", "QUANTIFIERS", "LIST", "MAPPING", "of",
     "Collection", "Record", "List", "Keyed", "Records", "items_of",
 ]
-
-FORMATS = ("binary16", "binary32", "binary64", "binary128", "decimal64", "decimal128")
-"""IEEE 754-2019's interchange formats."""
-ROUNDINGS = ("roundTiesToEven", "roundTiesToAway", "roundTowardPositive", "roundTowardNegative", "roundTowardZero")
-"""IEEE 754-2019's rounding-direction attributes."""
-OVERFLOWS = ("wrap", "saturate", "raise")
-"""What an integer of a width does with a result outside it."""
-STATES = ("U", "X", "0", "1", "Z", "W", "L", "H", "-")
-"""IEEE 1164's nine states: uninitialized, unknown, 0, 1, high impedance, weak unknown, weak 0, weak 1, don't care."""
-
-
-def _positive(value: Any) -> bool:
-    return type(value) is int and value > 0
-
-
-def _one_of(name: str, value: Any, allowed: tuple[str, ...]) -> list[str]:
-    return [] if value in allowed else [f"{name} must be one of {', '.join(allowed)}, got {value!r}"]
-
-
-# --- Value domains ---
-
-
-@dataclass
-class _Domain:
-    """Shared by every value domain: the `Domain` protocol, and `validate()`. `isinstance(x, Domains.Domain)` tells a
-    value domain."""
-
-    KIND: ClassVar[str]
-    NATIVE: ClassVar[type]
-    ORDERED: ClassVar[bool] = False
-
-    def name(self) -> str:
-        return self.KIND
-
-    def native(self) -> type:
-        """The native type of the values in this domain."""
-        return self.NATIVE
-
-    def contains(self, value: Any) -> bool:
-        return type(value) is self.native() and self._fits(value)
-
-    def _fits(self, value: Any) -> bool:
-        return True
-
-    def includes(self, other: D.Domain) -> bool:
-        if isinstance(other, D.OfUnion):
-            return all(self.includes(member) for member in other.members)
-        return other == self
-
-    def compare(self, a: Any, b: Any) -> int | None:
-        """How two values of this domain compare: -1, 0 or 1, or None when they are incomparable. An unordered domain's
-        values are equal or incomparable."""
-        schema = Schemas.OfScalar.Data(type(a))
-        return Comparison.OfScalar(schema, a).compare(Comparison.OfScalar(schema, b))
-
-    def validate(self) -> list[str]:
-        return []
-
-    def __repr__(self) -> str:
-        return self.name()
-
-
-@dataclass(eq=True, repr=False)
-class _Bool(_Domain):
-    KIND, NATIVE = "bool", bool
-
-
-@dataclass(eq=True, repr=False)
-class _Integer(_Domain):
-    KIND, NATIVE, ORDERED = "integer", int, True
-    width: int | None = None
-    signed: bool = True
-    overflow: str = "raise"
-
-    def name(self) -> str:
-        return f"{'' if self.signed else 'u'}int{'' if self.width is None else self.width}"
-
-    def bounds(self) -> tuple[int | None, int | None]:
-        """The least and the greatest value, None where there is no bound."""
-        if not _positive(self.width):
-            return (None if self.signed else 0), None
-        if self.signed:
-            return -(1 << (self.width - 1)), (1 << (self.width - 1)) - 1
-        return 0, (1 << self.width) - 1
-
-    def _fits(self, value: int) -> bool:
-        low, high = self.bounds()
-        return (low is None or low <= value) and (high is None or value <= high)
-
-    def fit(self, operation: str, value: int) -> int:
-        """`value` when the domain holds it; otherwise what the domain's overflow makes of it, from `operation`: wrapped
-        into the width, saturated to the nearer bound, or `OverflowError`."""
-        if self._fits(value):
-            return value
-        low, high = self.bounds()
-        if self.overflow == "wrap" and _positive(self.width):
-            return (value - low) % (1 << self.width) + low  # type: ignore[operator]
-        if self.overflow == "saturate":
-            return low if low is not None and value < low else high  # type: ignore[return-value]
-        raise OverflowError(f"{operation} overflows {self.name()}: {value}")
-
-    def validate(self) -> list[str]:
-        problems = [] if self.width is None or _positive(self.width) else [
-            f"a width must be a positive int, got {self.width!r}"]
-        if type(self.signed) is not bool:
-            problems.append(f"signed must be a bool, got {self.signed!r}")
-        problems += _one_of("overflow", self.overflow, OVERFLOWS)
-        if self.overflow == "wrap" and self.width is None:
-            problems.append("an integer without a width cannot wrap")
-        return problems
-
-
-@dataclass(eq=True, repr=False)
-class _Modulo(_Domain):
-    """ISO/IEC 11404's `modulo(modulus)`: numeric, its addition and multiplication giving the integer result's remainder
-    by the modulus."""
-
-    KIND, NATIVE, ORDERED = "modulo", int, True
-    modulus: int | None = None
-
-    def name(self) -> str:
-        return f"modulo({self.modulus})"
-
-    def bounds(self) -> tuple[int, int]:
-        """The least and the greatest value."""
-        return 0, self.modulus - 1  # type: ignore[operator]
-
-    def _fits(self, value: int) -> bool:
-        return _positive(self.modulus) and 0 <= value < self.modulus  # type: ignore[operator]
-
-    def fit(self, operation: str, value: int) -> int:
-        """`value`'s remainder by the modulus, whatever `operation` gave it."""
-        return value % self.modulus  # type: ignore[operator]
-
-    def validate(self) -> list[str]:
-        return [] if _positive(self.modulus) else [f"a modulus must be a positive int, got {self.modulus!r}"]
-
-
-@dataclass(eq=True, repr=False)
-class _Octet(_Domain):
-    """ISO/IEC 11404's `octet`: codes 0 to 255, ordered and non-numeric, so with no arithmetic and no overflow."""
-
-    KIND, NATIVE, ORDERED = "octet", int, True
-
-    def _fits(self, value: int) -> bool:
-        return 0 <= value <= 255
-
-
-@dataclass(eq=True, repr=False)
-class _Ieee754(_Domain):
-    KIND, ORDERED = "ieee754", True
-    format: str = "binary64"
-    rounding: str = "roundTiesToEven"
-
-    def name(self) -> str:
-        if (self.format, self.rounding) == ("binary64", "roundTiesToEven"):
-            return "float"
-        return self.format if self.rounding == "roundTiesToEven" else f"{self.format} {self.rounding}"
-
-    def native(self) -> type:
-        """`binary16`, `binary32` and `binary64` values are floats; `binary128` and decimal values are their text."""
-        return float if self.format in ("binary16", "binary32", "binary64") else str
-
-    def _fits(self, value: Any) -> bool:
-        return self.format in Ieee754.FORMATS and Ieee754.contains(self.format, value)
-
-    def compare(self, a: Any, b: Any) -> int | None:
-        return Ieee754.compare(self.format, a, b)
-
-    def validate(self) -> list[str]:
-        return _one_of("format", self.format, FORMATS) + _one_of("rounding", self.rounding, ROUNDINGS)
-
-
-@dataclass(eq=True, repr=False)
-class _Bits(_Domain):
-    KIND, NATIVE = "bits", bytes
-    width: int | None = None
-
-    def name(self) -> str:
-        return f"bits{self.width}"
-
-    def _fits(self, value: bytes) -> bool:
-        """Big-endian, in the fewest bytes, with the unused leading bits zero."""
-        if not _positive(self.width):
-            return False
-        return len(value) == (self.width + 7) // 8 and value[0] >> (self.width % 8 or 8) == 0
-
-    def validate(self) -> list[str]:
-        if self.width is None:
-            return ["a bits domain needs a width"]
-        return [] if _positive(self.width) else [f"a width must be a positive int, got {self.width!r}"]
-
-
-@dataclass(eq=True, repr=False)
-class _Bytes(_Domain):
-    KIND, NATIVE, ORDERED = "bytes", bytes, True
-    width: int | None = None
-
-    def name(self) -> str:
-        return "bytes" if self.width is None else f"bytes{self.width}"
-
-    def _fits(self, value: bytes) -> bool:
-        return self.width is None or len(value) == self.width
-
-    def validate(self) -> list[str]:
-        return [] if self.width is None or _positive(self.width) else [
-            f"a width must be a positive int, got {self.width!r}"]
-
-
-@dataclass(eq=True, repr=False)
-class _Unicode(_Domain):
-    KIND, NATIVE, ORDERED = "unicode", str, True
-
-    def name(self) -> str:
-        return "str"
-
-    def _fits(self, value: str) -> bool:
-        """A lone surrogate is not a code point of a string."""
-        return not any(0xD800 <= ord(char) <= 0xDFFF for char in value)
-
-
-@dataclass(eq=True, repr=False)
-class _Ieee1164(_Domain):
-    KIND, NATIVE = "ieee1164", str
-    width: int | None = None  # none for one state, a std_logic; a std_logic_vector of `width` states otherwise
-
-    def name(self) -> str:
-        return "std_logic" if self.width is None else f"std_logic_vector{self.width}"
-
-    def _fits(self, value: str) -> bool:
-        if self.width is None:
-            return value in STATES
-        return len(value) == self.width and all(state in STATES for state in value)
-
-    def validate(self) -> list[str]:
-        return [] if self.width is None or _positive(self.width) else [
-            f"a width must be a positive int, got {self.width!r}"]
-
-
-@dataclass(eq=True, repr=False)
-class _Enum(_Domain):
-    KIND, NATIVE = "enum", str
-    members: tuple[str, ...] = ()
-
-    def name(self) -> str:
-        return f"enum({', '.join(map(str, self.members))})"
-
-    def _fits(self, value: str) -> bool:
-        return value in self.members
-
-    def validate(self) -> list[str]:
-        problems = [] if self.members else ["an enum needs a member"]
-        seen: set[Any] = set()
-        for i, member in enumerate(self.members):
-            if type(member) is not str or not member:
-                problems.append(f"member {i} has no name")
-            elif member in seen:
-                problems.append(f"member {member!r} appears twice")
-            seen.add(member)
-        return problems
-
-
-@dataclass(eq=True, repr=False)
-class _Packed(_Domain):
-    KIND, NATIVE, ORDERED = "packed", str, True
-    domain: Any = None  # an enum
-    representation: Any = None  # an octet, or a fixed-width integer or bits
-    codes: tuple[int, ...] = ()
-
-    def name(self) -> str:
-        return f"packed({_name(self.domain)} as {_name(self.representation)})"
-
-    def _fits(self, value: str) -> bool:
-        return isinstance(self.domain, _Enum) and self.domain.contains(value)
-
-    def code(self, member: str) -> int:
-        """The code of a member: its representation."""
-        return self.codes[self.domain.members.index(member)]
-
-    def compare(self, a: Any, b: Any) -> int | None:
-        """By code, as C compares enums by their integers."""
-        x, y = self.code(a), self.code(b)
-        return (x > y) - (x < y)
-
-    def validate(self) -> list[str]:
-        if not isinstance(self.domain, _Enum):
-            return [f"a packed domain packs an enum, got {_name(self.domain)}"]
-        if not (isinstance(self.representation, _Octet) or isinstance(self.representation, (_Integer, _Bits))
-                and _positive(self.representation.width)):
-            return [f"a packed domain's representation is an octet, or an integer or bits of a width, got "
-                    f"{_name(self.representation)}"]
-        problems = [f"domain: {problem}" for problem in self.domain.validate()]
-        problems += [f"representation: {problem}" for problem in self.representation.validate()]
-        if len(self.codes) != len(self.domain.members):
-            problems.append(f"a packed domain needs a code per member: {len(self.domain.members)} members, "
-                            f"{len(self.codes)} codes")
-        seen: set[Any] = set()
-        for i, code in enumerate(self.codes):
-            if not self._holds(code):
-                problems.append(f"code {i} does not fit {self.representation.name()}: {code!r}")
-            elif code in seen:
-                problems.append(f"code {code!r} is used twice")
-            seen.add(code)
-        return problems
-
-    def _holds(self, code: Any) -> bool:
-        """Whether the representation holds `code`: an octet's or an integer's value, or bits' pattern read as an unsigned
-        int."""
-        if isinstance(self.representation, (_Octet, _Integer)):
-            return type(code) is int and self.representation.contains(code)
-        return type(code) is int and 0 <= code < 1 << self.representation.width
-
-
-Domain = _Domain
-
-
-def _name(domain: Any) -> str:
-    return domain.name() if isinstance(domain, _Domain) else repr(domain)
-
-
-# --- Builders ---
-
-
-class _Builder:
-    """Shared by every value domain's builder: `create()` / `clone()` / `update()`, none validating, and fluent setters
-    for the kind's fields."""
-
-    _data: ClassVar[type[_Domain]]
-
-    def __init__(self, instance: _Domain | None = None):
-        if instance is not None and type(instance) is not self._data:
-            raise TypeError(f"expected {self._data.KIND} data to build from, got {_name(instance)}")
-        self._source = instance
-        self._fields: dict[str, Any] = {} if instance is None else {
-            field.name: getattr(instance, field.name) for field in dataclasses.fields(instance)}
-
-    def _set(self, name: str, value: Any) -> Any:
-        self._fields[name] = value
-        return self
-
-    def create(self) -> Any:
-        if self._source is not None:
-            raise ValueError("create() is only valid without a source instance; use clone() or update()")
-        return self._data(**self._fields)
-
-    def clone(self) -> Any:
-        if self._source is None:
-            raise ValueError("clone() is only valid with a source instance")
-        return self._data(**self._fields)
-
-    def update(self) -> Any:
-        if self._source is None:
-            raise ValueError("update() is only valid with a source instance")
-        for name, value in self._fields.items():
-            setattr(self._source, name, value)
-        return self._source
-
-
-class _BoolBuilder(_Builder):
-    _data = _Bool
-
-
-class _IntegerBuilder(_Builder):
-    _data = _Integer
-
-    def width(self, width: int | None) -> _IntegerBuilder:
-        return self._set("width", width)
-
-    def signed(self, signed: bool) -> _IntegerBuilder:
-        return self._set("signed", signed)
-
-    def overflow(self, overflow: str) -> _IntegerBuilder:
-        return self._set("overflow", overflow)
-
-
-class _ModuloBuilder(_Builder):
-    _data = _Modulo
-
-    def modulus(self, modulus: int) -> _ModuloBuilder:
-        return self._set("modulus", modulus)
-
-
-class _OctetBuilder(_Builder):
-    _data = _Octet
-
-
-class _Ieee754Builder(_Builder):
-    _data = _Ieee754
-
-    def format(self, format: str) -> _Ieee754Builder:
-        return self._set("format", format)
-
-    def rounding(self, rounding: str) -> _Ieee754Builder:
-        return self._set("rounding", rounding)
-
-
-class _BitsBuilder(_Builder):
-    _data = _Bits
-
-    def width(self, width: int) -> _BitsBuilder:
-        return self._set("width", width)
-
-
-class _BytesBuilder(_Builder):
-    _data = _Bytes
-
-    def width(self, width: int | None) -> _BytesBuilder:
-        return self._set("width", width)
-
-
-class _UnicodeBuilder(_Builder):
-    _data = _Unicode
-
-
-class _Ieee1164Builder(_Builder):
-    _data = _Ieee1164
-
-    def width(self, width: int | None) -> _Ieee1164Builder:
-        return self._set("width", width)
-
-
-class _EnumBuilder(_Builder):
-    _data = _Enum
-
-    def members(self, *members: str) -> _EnumBuilder:
-        return self._set("members", tuple(members))
-
-
-class _PackedBuilder(_Builder):
-    _data = _Packed
-
-    def domain(self, domain: _Domain) -> _PackedBuilder:
-        return self._set("domain", domain)
-
-    def representation(self, representation: _Domain) -> _PackedBuilder:
-        return self._set("representation", representation)
-
-    def codes(self, *codes: int) -> _PackedBuilder:
-        return self._set("codes", tuple(codes))
-
-
-# --- Kinds ---
-
-
-class _Kind:
-    """A value domain kind: its `Data` and its `Builder`."""
-
-    def __init__(self, data: type[_Domain], builder: type[_Builder]):
-        self.Data, self.Builder = data, builder
-
-    def __repr__(self) -> str:
-        return f"<domain kind {self.Data.KIND}>"
-
-
-OfBool = _Kind(_Bool, _BoolBuilder)
-OfInteger = _Kind(_Integer, _IntegerBuilder)
-OfModulo = _Kind(_Modulo, _ModuloBuilder)
-OfOctet = _Kind(_Octet, _OctetBuilder)
-OfIeee754 = _Kind(_Ieee754, _Ieee754Builder)
-OfBits = _Kind(_Bits, _BitsBuilder)
-OfBytes = _Kind(_Bytes, _BytesBuilder)
-OfUnicode = _Kind(_Unicode, _UnicodeBuilder)
-OfIeee1164 = _Kind(_Ieee1164, _Ieee1164Builder)
-OfEnum = _Kind(_Enum, _EnumBuilder)
-OfPacked = _Kind(_Packed, _PackedBuilder)
 
 
 # --- Collections ---
@@ -614,65 +114,19 @@ def items_of(domain: Any) -> D.Domain:
     return domain.item if isinstance(domain, (List, Keyed)) else Anything
 
 
-# --- The defaults and the core operations' signatures ---
+# --- The natives' domains and the operations' signatures: `Dialect.infer`'s, CAP-232's to replace ---
 
-Bool, Int, Float, Str, Bytes = _Bool(), _Integer(), _Ieee754(), _Unicode(), _Bytes()
+Bool, Int, Float, Str, Bytes = (D.OfTypes(t.__name__, t) for t in (bool, int, float, str, bytes))
 Object = D.OfValues("object", Objects.is_object)
 
-_NATIVES: dict[type, _Domain] = {bool: Bool, int: Int, float: Float, str: Str, bytes: Bytes}
+_NATIVES: dict[type, D.Domain] = {bool: Bool, int: Int, float: Float, str: Str, bytes: Bytes}
 
-
-class _Family:
-    """Every value domain of some kinds, for signatures: it includes each of them."""
-
-    def __init__(self, name: str, *kinds: type[_Domain]):
-        self._name, self.kinds = name, kinds
-
-    def name(self) -> str:
-        return self._name
-
-    def contains(self, value: Any) -> bool:
-        return isinstance(_NATIVES.get(type(value)), self.kinds)
-
-    def includes(self, other: D.Domain) -> bool:
-        if isinstance(other, D.OfUnion):
-            return all(self.includes(member) for member in other.members)
-        return isinstance(other, self.kinds)
-
-    def __repr__(self) -> str:
-        return self._name
-
-
-_VALUES = _Family("value domain", _Domain)
-_ORDERED_KINDS = _Family("integer, modulo, octet, ieee754, bytes, unicode or packed domain", _Integer, _Modulo, _Octet,
-                         _Ieee754, _Bytes, _Unicode, _Packed)
-_NUMERIC = _Family("integer, modulo or ieee754 domain", _Integer, _Modulo, _Ieee754)
-_BITWISE = _Family("integer or bits domain", _Integer, _Bits)
-_INTEGERS = _Family("integer domain", _Integer)
 Records = D.OfValues("record", lambda value: isinstance(value, Record))
 _COLLECTIONS = D.OfValues("collection", lambda value: isinstance(value, (Collection, list, tuple)))
 _COMPARABLE = (Bool, Int, Float, Str, Bytes, Object)
 _ORDERED = (Int, Float, Str, Bytes)
 _NUMBERS = (Int, Float)
 _LOGIC = D.Function((Bool, Bool), Bool)
-
-
-class _Shift:
-    """`shl` and `shr`: an integer or bits value and a count of any integer domain, giving the value's domain."""
-
-    def __init__(self) -> None:
-        self._value = D.Same(1, (Int,), None, _BITWISE)
-
-    def arity(self) -> int:
-        return 2
-
-    def result(self, arguments: Any) -> D.Domain | None:
-        if len(arguments) != 2 or not D.overlaps(_INTEGERS, arguments[1]):
-            return None
-        return self._value.result(arguments[:1])
-
-    def describe(self) -> str:
-        return f"(T, any {_INTEGERS.name()}) -> T for T in int or any {_BITWISE.name()}"
 
 
 class _Collective:
@@ -726,21 +180,20 @@ QUANTIFIERS: dict[str, D.Signature] = {"all": _Quantified(Bool), "any": _Quantif
 
 SIGNATURES: dict[str, D.Signature] = {
     "get": D.Function((D.OfUnion(Object, Records), Str), Anything), "has": D.Function((D.OfUnion(Object, Records), Str), Bool),
-    **{name: D.Same(2, _COMPARABLE, Bool, _VALUES) for name in ("eq", "ne")},
-    **{name: D.Same(2, _ORDERED, Bool, _ORDERED_KINDS) for name in ("lt", "le", "gt", "ge")},
+    **{name: D.Same(2, _COMPARABLE, Bool) for name in ("eq", "ne")},
+    **{name: D.Same(2, _ORDERED, Bool) for name in ("lt", "le", "gt", "ge")},
     "and": _LOGIC, "or": _LOGIC, "not": D.Function((Bool,), Bool), "implies": _LOGIC,
-    **{name: D.Same(2, _NUMBERS, None, _NUMERIC) for name in ("add", "sub", "mul")},
-    "neg": D.Same(1, _NUMBERS, None, _NUMERIC),
-    **{name: D.Same(2, (Int,), None, _BITWISE) for name in ("bitand", "bitor", "bitxor")},
-    "bitnot": D.Same(1, (Int,), None, _BITWISE), "shl": _Shift(), "shr": _Shift(),
+    **{name: D.Same(2, _NUMBERS) for name in ("add", "sub", "mul")},
+    "neg": D.Same(1, _NUMBERS),
+    **{name: D.Function((Int, Int), Int) for name in ("bitand", "bitor", "bitxor")},
+    "bitnot": D.Function((Int,), Int), "shl": D.Function((Int, Int), Int), "shr": D.Function((Int, Int), Int),
     "count": _Collective(0, 0, Int), "item": _Collective(0, 1, None), "in": _Collective(1, 0, Bool),
-    "sum": _Collective(0, 0, None, _NUMERIC, "number"), "min": _Collective(0, 0, None, _ORDERED_KINDS, "ordered value"),
-    "max": _Collective(0, 0, None, _ORDERED_KINDS, "ordered value"), "unique": _Collective(0, 0, Bool),
+    "sum": _Collective(0, 0, None, D.OfUnion(*_NUMBERS), "number"),
+    "min": _Collective(0, 0, None, D.OfUnion(*_ORDERED), "ordered value"),
+    "max": _Collective(0, 0, None, D.OfUnion(*_ORDERED), "ordered value"), "unique": _Collective(0, 0, Bool),
     "entries": D.Function((Object, Str), List(Records)),
 }
-"""The core operations' signatures."""
-
-
+"""The operations' signatures, for inference: their names are the operations Patterns' install writes as data."""
 
 
 class _Constructor:
@@ -768,31 +221,9 @@ LIST, MAPPING = _Constructor(False), _Constructor(True)
 
 
 def of(value: Any) -> D.Domain:
-    """The domain of a value: its native type's default, or `Object`."""
+    """The domain of a value: its native type's, or `Object`."""
     if type(value) in _NATIVES:
         return _NATIVES[type(value)]
     if Object.contains(value):
         return Object
     raise TypeError(f"a {type(value).__name__} is not a value of the Patterns dialect")
-
-
-# --- Domains as data ---
-
-_DATA = {  # by the stored kind, its dialect's tag and its own: each the standard dialect's, named by its standard
-    ("isoiec11404", "boolean"): OfBool, ("isoiec11404", "integer"): OfInteger, ("isoiec11404", "modulo"): OfModulo,
-    ("isoiec11404", "bitstring"): OfBits, ("isoiec11404", "octet"): OfOctet, ("isoiec11404", "octetstring"): OfBytes, ("isoiec11404", "state"): OfEnum, ("isoiec11404", "packed"): OfPacked,
-    ("ieee754", "ieee754"): OfIeee754, ("ieee1164", "ieee1164"): OfIeee1164, ("unicode", "unicode"): OfUnicode}
-
-
-def read(domain: Any) -> _Domain:
-    """The data of a stored domain, an `Expressions.Framework.Domain`: its kind's, read through its dialect's union of
-    kinds (`Framework.Domains.kind_of`), with the parameters it holds (a packed domain's state domain and representation,
-    through `packs`, read in turn) and not its inferred properties, so that it can be validated and asked what it holds."""
-    dialect, tag, _ = D.kind_of(domain)
-    data = _DATA[dialect, tag].Data
-    fields = {field.name for field in dataclasses.fields(data)}
-    parameters = {name: value for name, value in D.properties(domain).items() if name in fields}
-    if tag == "packed":
-        for entry in domain.packs:
-            parameters.update(domain=read(entry.domain), representation=read(entry.representation))
-    return data(**parameters)

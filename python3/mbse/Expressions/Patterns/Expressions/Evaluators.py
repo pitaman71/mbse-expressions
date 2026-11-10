@@ -18,7 +18,7 @@ unknown.
   constructors, `list` (positional) and `mapping` (keyed: a key unknown makes it unknown, and two equal keys raise), and
   `entries` gives an object's entries as one of `Domains.Record`s, which `get` and `has` read. The collection operations
   and the quantifiers (`all`, `any`, `count`) follow Kleene's logic over the items; an unknown collection gives unknown.
-- Only the operations Patterns defines (`Expressions.CORE`) are evaluated. Unknown operations, wrong numbers of
+- Only the operations Patterns defines (its install's, which `define` names) are evaluated. Unknown operations, wrong numbers of
   arguments, unbound variables and wrong operand types raise, as do the problems `validate()` reports.
 - `get` and `has` read any data object, read through mbse-schemas' readers (`Framework.Objects`): reference objects,
   value objects, union and intersection values.
@@ -209,21 +209,22 @@ def _order(name: str, values: list[Any]) -> bool | None:
 
 
 def _domain(value: Any) -> Any:
-    """A value's domain, by the native type it is written with, or None when it is not a native (an object)."""
-    return Domains._NATIVES.get(type(value))
+    """A value's domain, the native type it is written with (a term carries no domain), or None when it is not a native
+    (an object)."""
+    return type(value) if _is_native(value) else None
 
 
 def _operands(name: str, values: list[Any], kinds: tuple[type, ...], what: str) -> Any:
-    """The one domain of `values`, which must be of `kinds`; raises naming `what` they must be."""
+    """The one domain of `values`, which must be of `kinds`, native types; raises naming `what` they must be."""
     domains = [_domain(value) for value in values]
-    if not isinstance(domains[0], kinds) or any(domain != domains[0] for domain in domains):
+    if domains[0] not in kinds or any(domain != domains[0] for domain in domains):
         if len(values) == 1:
             raise TypeError(f"{name} expects {what[0]}, got {_type_name(values[0])}")
         raise TypeError(f"{name} expects {what[1]} of one domain, got {_type_name(values[0])} and {_type_name(values[1])}")
     return domains[0]
 
 
-_INTEGER, _IEEE754 = Domains.OfInteger.Data, Domains.OfIeee754.Data
+_INTEGER, _IEEE754 = int, float  # an unbounded integer and an IEEE 754 binary64 number, as their schemas hold them
 
 
 def _arithmetic(name: str, values: list[Any], operator: str | None = None) -> Any:

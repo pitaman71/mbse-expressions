@@ -49,14 +49,16 @@ store.transaction(Patterns.install)         # Expressions.Patterns.Expressions.T
 store.transaction(Python3.install)          # Expressions.Python.Python3.Term, the branch `python3`, its holder, ...
 store.transaction(TypeScript5.install)      # Expressions.TypeScript.TypeScript5.Term, Type and Pattern, the branch
                                             # `typescript5`, ...
-store.transaction(Patterns.define)          # optional, data: Patterns' dialect naming its operations
+store.transaction(Patterns.define)          # data: Patterns' dialect naming its operations, which validation reads
 ```
 
 `Patterns.define` writes Patterns' dialect's data: the singleton `Expressions.Patterns.Expressions` names each operation
 (`Expressions.Framework.Operates`); its frame binds the dialect (`dialect`). The domains Patterns owned are the standard
 dialects' since domains as data's stage 1 (item 112): each standard dialect's `define` owns its domains by name
-(`Expressions.Framework.Defines`), its frame binding the dialect and each domain by its name. Validation and evaluation do not need it: they read Patterns'
-vocabulary, `Domains.SIGNATURES`, whose names are the operations the install writes. Every other dialect's install adds
+(`Expressions.Framework.Defines`), its frame binding the dialect and each domain by its name. Validation reads
+Patterns' operations so named, from the store of the term's holder, since domains as data's stage 2 (item 125), so
+`Patterns.define` runs before a Patterns term is validated or inferred; evaluation does not need it, and inference reads
+its code signatures, `Domains.SIGNATURES`, the same names. Every other dialect's install adds
 its singleton schema too (`Expressions.Python.Python3.Dialect`, singleton `Expressions.Python.Python3`), with no operations or domains
 yet (below, Settled in stage 3). A store holds any number of dialects, each install adding its own; where it holds a single one, `Framework.Term` is
 a union of one branch, which mbse-schemas allows since 0.26.6 (item 41). Each install and `define` write their schemas and data in the builders' fluent syntax
@@ -167,7 +169,8 @@ assert Evaluators.OfAny(term, {"x": -1}) is False
 Values are taken by the schemas they are written with (stage 3): ints unbounded, floats binary64, `list` and `mapping`
 giving `Domains.Collection`s. `Evaluators.OfLiteral`, `OfCall`, `OfVariable`, `OfLet` and `OfQuantifier` evaluate one kind, raising `TypeError` for a
 term of another. `E.DIALECT.validate(term, bound, core)` and `E.DIALECT.infer(term, environment)` take a term as an
-evaluator does; `Symbolics.free(term, dialect)` and `Symbolics.imports(term, dialect)` take the dialect whose kinds they
+evaluator does, held by an expression: a Patterns call is checked against the operations of its holder's store (item
+125); `Symbolics.free(term, dialect)` and `Symbolics.imports(term, dialect)` take the dialect whose kinds they
 read. Partial evaluation gives its residual as a `Writer`, written where the caller wants it:
 `e.root(Partials.OfAny(term, {"x": 1}))`; a subterm it keeps is the term value read, copied when written.
 
@@ -177,7 +180,7 @@ read. Partial evaluation gives its residual as a `Writer`, written where the cal
 |---|---|---|
 | its install, adding its union of its kinds to `Term` | `Expressions.install(txn)` | `Expressions.install(txn)` |
 | its kinds: how the framework reads each branch it adds (a `Terms.Kind`: its role, the properties naming what it binds and its operator, its vocabulary and whether it is `closed`, its required properties, its own checks) and its `Terms.Dialect` (path, kinds, a native's domain), with `validate` and `infer` | `Expressions.DIALECT` | `Expressions.DIALECT` |
-| its operations and domains as data (Patterns' operations; the standard dialects' domains, item 112); their number of arguments | `Expressions.define(txn)`; `Expressions.CORE` | the same |
+| its operations and domains as data (Patterns' operations; the standard dialects' domains, item 112) | `Expressions.define(txn)` | the same |
 | its writers, while they stay | `Expressions.Writer`, `variable`, `literal`, ... | the same |
 | its evaluator | `Evaluators.OfAny(term, scope)`, `Evaluators.INTERPRETER` | the same |
 
@@ -326,7 +329,8 @@ singleton by name was the coordinating agent's proposal, built on that direction
     `Expressions.Basic.binary32`, ...), and its domain; `Schemas.OfAny` gains the extension adjacency `domain`. Basic
     defines `bool`, `int`, `float`, `str`, `bytes`, `uint8`, `binary32` and `std_logic`, written in fluent syntax by
     `Basic.define`; `Domains.read(domain)` gives a stored domain's data (`OfX.Data`), whose `contains`, `compare`,
-    `fit` and `validate` stay, unused by evaluation until domain inference.
+    `fit` and `validate` stay, unused by evaluation until domain inference. *(`read` and the data classes superseded by
+    item 124, domains as data's stage 2.)*
 20. **A dialect names its operations: `Expressions.Framework.Operates(dialect, name, operation)`**, unique
     `[dialect, name]` and `[operation]`, owning nothing: an operation is a `Schemas.OfExpression` its module owns
     (`Schemas.Defines`), named `Expressions.Basic.<name>`, as mbse-schemas writes only named schema objects that data
@@ -1050,7 +1054,8 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      `operations` and `arity`; "a domain needs a kind". `kind_of` gives `(dialect, tag, record)`, the dialect's tag
      first (2026-11-09, as the user decided, "yes, dialect too"), so that C's and C++'s `nullptr_t` are told apart
      (DOM-18). The code domains and signatures stay, `Dialect.infer`'s,
-     marked as CAP-232's to replace.
+     marked as CAP-232's to replace. *(The code domains superseded by item 124, domains as data's stage 2; the
+     signatures stay, without families.)*
 118. **Every caller installs the standard dialects first**: tests, tutorials, the toolkit, the corpus and the skill. The
      corpus's `domains` case is ISO/IEC 11404's singleton and its domains, a state domain and a domain packing it into `octet` among them.
      Tests: DOM-17 (the standard dialects and the reading interface) and DOM-18 (each language's kinds) are added,
@@ -1114,7 +1119,56 @@ package root's exports and stage 1's review) and as its [stage 1's design](../do
      DOM-05, DOM-17, T07.5, tutorial 8's introduction) is `modulo(256)`; C's `uint8_t` and the code domains' `uint8`
      (DOM-01), an unsigned integer of width 8, are not 11404's and stay. The corpus's `domains` case gains
      `modulo(256)`. Tests: DOM-01, DOM-02, DOM-03, DOM-05, DOM-06, DOM-07, DOM-09, DOM-17, EXP-06, EXP-13, FRM-01 and CONF-04,
-     under their IDs.
+     under their IDs. *(The code domains `OfOctet` and `OfModulo`, `Domains.read` and the families superseded by
+     item 124, domains as data's stage 2.)*
+
+## Settled in domains as data's stage 2, for the user's review
+
+Built as [the domains proposal's stage 2's design](../domains/README.md#stage-2s-design) specifies, from its Decided
+(C, 2) and stage 1's design; each choice where they were silent is marked *(agent)*.
+
+124. **Patterns' code domains go**, in both languages: the kinds `OfBool`, `OfInteger`, `OfModulo`, `OfOctet`,
+     `OfIeee754`, `OfBits`, `OfBytes`, `OfUnicode`, `OfIeee1164`, `OfEnum` and `OfPacked` (their data classes, builders
+     and `Kind`s), their base `Domain` (with TypeScript's `equals`), `read`, `FORMATS`, `ROUNDINGS`, `OVERFLOWS` and
+     `STATES`, the signatures' families, and `Expressions.CORE`. What stays in Patterns' `Domains` is inference's code,
+     marked CAP-232's to replace: `Bool`, `Int`, `Float`, `Str` and `Bytes`, now the framework's `OfTypes` (TypeScript
+     `new OfTypes("int", BigInt)`, ...), named as before; `Object`, `Anything`, `Records`, `List`, `Keyed`, `items_of`,
+     `of`, TypeScript's `nativeDomain`, `SIGNATURES` (without families: `add` is `(T, T) -> T for T in int | float`,
+     the bitwise operations and shifts `(int, int) -> int`), `QUANTIFIERS`, `LIST` and `MAPPING`; and evaluation's
+     `Collection` and `Record`. `Ieee754` is unchanged. Inference no longer takes an environment's domain of a width,
+     a format or an enumeration, which no code can now build.
+125. **Validation reads stored operations through the holder.** `Terms.Kind` gains `operations(store)` *(agent)*: for
+     a kind whose operations are data, those its dialect names in a store, by name, each its `Schemas.OfExpression`.
+     Patterns' `call` gives `Domains.operations(store.Instances.Expressions.Patterns.Expressions)`, and validation
+     reads it from `Proxies.store_of(term)` in place of its vocabulary: an operation the singleton does not name is
+     refused ("'f' is not an operation Patterns defines"), and one given another number of arguments than its
+     pattern's variables reported ("add takes 2 arguments, got 1"), the messages as before. A term held in an
+     `Expression`, however deep, reaches its store; a lone term does not, and mbse-schemas' `TypeError`, "the value
+     does not belong to a store", stands *(agent)*. A store where `Patterns.define` has not run names no operation, so
+     every call is refused *(agent)*. Only such a kind reaches the store: every other dialect validates a lone term as
+     before, and SystemVerilog's evaluator is unchanged *(agent)*. Evaluation is unchanged.
+126. **Patterns' evaluator checks native types**: an operand's domain is the native type it is written with (an int, a
+     float; TypeScript's `bigint`, `number`), in place of the data classes; its messages are unchanged. Its residuals'
+     literals are written for any basic scalar (`Partials`), as before.
+127. **Every caller runs `Patterns.define`** after the installs: the suites' setups, the tutorials' toolkit
+     (`cold_chain`), CONF-04 on the corpus's store, and the skill. The corpus itself is unchanged.
+128. **The suites' `term(spec)` helper writes a holder**, `store.Expressions.Framework.Expression(lambda e:
+     e.root(dialect.spec(spec)))`, and gives its root (`Terms.term(holder)`): item 8's helper, now within a holder
+     (Decided, C). A case that validates a term decoded or built alone writes it into a holder first.
+129. **Tests**, under their IDs in both languages: DOM-01 rewritten as inference's natives' domains (`OfTypes`, `of`,
+     `Object`); DOM-02 retired; DOM-03, DOM-05 and DOM-17 read stored domains through `kind_of`, `properties` and
+     `name_of`; DOM-06 and DOM-07 keep evaluation's comparisons and arithmetic; DOM-09 signatures over natives and
+     collections; DOM-10 to DOM-12 `Ieee754` directly; EXP-06 and EXP-13 (the stored operations are what validation
+     reads, `SIGNATURES` the same names in order, a lone Patterns call refused, a store without `Patterns.define`
+     refusing every call); CONF-04 (each case validated within a holder); FRM-04 (a decoded term validated within a
+     holder); COL-07; and every suite's `term` helper and setup. SKL-03's count of links follows the skill. The skill,
+     EQUIVALENCE and the test plans follow; the deliberate difference in comparing domains (`==`, `.equals()`) goes
+     with the data classes.
+130. **What only Patterns' code used goes**: `Same`'s `family` (`Framework.Domains`), and validation's refusal of an
+     operator outside a closed kind's code vocabulary (`Terms`), a closed kind's operations now read as data; code no
+     input reaches is removed (mbse-basis
+     [PRI-039: 100% coverage of both](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-039)).
+     `closed` stays, evaluation's.
 
 ## What stage 2b needed (done)
 
