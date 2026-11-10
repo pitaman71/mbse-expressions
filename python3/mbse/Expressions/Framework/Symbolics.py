@@ -1,8 +1,8 @@
 """Symbolics: names, the scopes that resolve them, and the dependencies an expression declares.
 
-An expression refers to names: its references. A binding (a let) binds a name within its body, an import binds the
-names it declares (its kind's `names`) within its body, a kind with `scopes` binds the names it gives each argument (a
-comprehension's targets, a lambda's parameters), and some names are ambient, bound without a declaration (Python's
+An expression refers to names: its references. A binding (a let, or any binder: `Terms.is_binder`) binds a name
+within its body, an import binds the names it declares (its kind's `names`) within its body, a kind with `scopes` binds
+the names it gives each argument (a binder's, a comprehension's targets, a lambda's parameters), and some names are ambient, bound without a declaration (Python's
 builtins). `free(term, dialect)` is the set of names an expression needs from outside: its lexical references that
 nothing within it binds. `imports(term, dialect)` lists the imports it declares: what it needs its scope to provide.
 
@@ -87,7 +87,7 @@ def free(term: Any, dialect: Terms.Dialect) -> set[str]:
         scopes = [bound] * len(arguments)
         if kind.scopes is not None:  # the names each argument has bound: a comprehension's targets, say
             scopes = [bound | names for names in kind.scopes(record)]
-        elif kind.role in (Terms.BINDING, Terms.QUANTIFIER):
+        elif kind.role == Terms.QUANTIFIER or Terms.is_binder(record.as_schema()):  # its name, after its first argument
             scopes = [bound, *[bound | {name}] * (len(arguments) - 1)]
         elif kind.role == Terms.IMPORT:
             scopes = [bound | set(kind.names(Terms.attributes_of(record)) if kind.names is not None else ())] * len(arguments)

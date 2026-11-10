@@ -70,7 +70,9 @@ kind is read, is a `Kind`: its role, and which properties name what it binds and
 - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
   `holder_of(term)`: the reference object holding it, its `Expression`, found by its owners.
 - `kind_of(term)`: its kind's branch, `(tag, record)`; `dialect_of(term)`: the name of its dialect's `Term`;
-  `dialect_name(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`).
+  `dialect_name(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`, a sublanguage's
+  its family's and its own: `SystemVerilog.Types`' is `SystemVerilog Types`); `dialect_tag(name)`, its tag
+  (`systemverilog_types`). `is_binder(schema)`: whether a kind binds names, its schema `Let` or a refinement of it.
   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers nested,
   as a dialect whose kinds hold sublanguages reads them to print and check them.
 - `name_of(term)`, `reference_name(name)`, `operator_of(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
@@ -92,7 +94,9 @@ The roles are:
   vocabulary is None, when any name is accepted and `signature` applies to all, or the kind is `closed`, when they
   are refused by evaluation; where its operations are data (`Kind.operations`), validation refuses any its dialect
   does not define. The container constructors are applications named by their tags.
-- `BINDING`: binds its name to its first argument within the others.
+- `BINDING`: binds its name to its first argument within the others: a let, whose schema is
+  `Expressions.Framework.Let`; a kind refining `Let` (a binder, `is_binder`) binds what its `scopes` say, where it has
+  them.
 - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
   results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
 - `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(attributes)` gives the names
@@ -114,8 +118,8 @@ from . import Domains, Objects
 __all__ = [
     "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
     "INVALID", "INVALID_KINDS", "invalid_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
-    "spec", "term", "is_term", "is_expression", "holder_of", "kind_of", "dialect_of", "dialect_name", "form", "node",
-    "name_of", "reference_name", "operator_of", "walk", "fold", "same",
+    "spec", "term", "is_term", "is_expression", "is_binder", "holder_of", "kind_of", "dialect_of", "dialect_name",
+    "dialect_tag", "SUBLANGUAGES", "form", "node", "name_of", "reference_name", "operator_of", "walk", "fold", "same",
 ]
 
 TERM = "Expressions.Framework.Term"
@@ -343,6 +347,18 @@ def is_expression(schema: Any) -> bool:
     (`Expressions.Python.Python3.Expression`): an expression, whose `root` holds its root term."""
     while isinstance(schema, Schemas.OfObject.Data):
         if _named(schema, EXPRESSION):
+            return True
+        schema = schema.refines
+    return False
+
+
+def is_binder(schema: Any) -> bool:
+    """Whether `schema` is `Expressions.Framework.Let` or refines it: a binder, every kind that binds names being a
+    variation of `let` (the dialects proposal, Decided for stage 6, Q8, "(a)"), so that validation, inference and
+    `Symbolics.free` read the names it binds by its kind's `scopes` (SystemVerilog's array method with a `with` clause,
+    its `foreach` constraint)."""
+    while isinstance(schema, Schemas.OfObject.Data):
+        if _named(schema, "Expressions.Framework.Let"):
             return True
         schema = schema.refines
     return False
@@ -862,27 +878,58 @@ INVALID_KINDS = {"error": Kind(INVALID, check=_invalid_check), "missing": Kind(I
 """The framework's kinds of invalid syntax, which every dialect's `Term` holds and every dialect reads."""
 
 
+SUBLANGUAGES = ("Types", "Patterns", "Assertions", "Constraints", "Preprocessor", "RegExp")
+"""The sublanguages a family's dialects may be, by their own names (the namespace decision): a dialect whose own name is
+one of them is named by its family too (`SystemVerilog Types`), so that no two families' sublanguages share a name."""
+
+
 def dialect_name(path: str) -> str:
     """A dialect's name, of its path below `Expressions` (its family's name and its own): its own (`Python.Python3`'s
     is `Python3`, `Patterns.Expressions`' `Patterns`), or its family's where its own says only that it is the family's
-    expressions (`C.Expressions`' is `C`)."""
+    expressions (`C.Expressions`' is `C`), or its family's and its own where its own is a sublanguage's
+    (`SUBLANGUAGES`: `SystemVerilog.Types`' is `SystemVerilog Types`)."""
     family, _, own = path.rpartition(".")
-    return family.rpartition(".")[2] if own == "Expressions" and family else own
+    if own == "Expressions" and family:
+        return family.rpartition(".")[2]
+    if own in SUBLANGUAGES and family:
+        return f"{family.rpartition('.')[2]} {own}"
+    return own
+
+
+def dialect_tag(name: str) -> str:
+    """A dialect's tag, its branch of `Expressions.Framework.Term` and of `Expressions.Framework.Dialect`: its name in
+    lowercase, a space an underscore (`systemverilog_types`)."""
+    return name.lower().replace(" ", "_")
+
+
+def is_binder(schema: Any) -> bool:
+    """Whether a kind's schema binds names: `Expressions.Framework.Let`, or a schema refining it, as every kind that binds
+    symbols does (the dialects proposal, Decided for stage 6, Q8, "(a)"). A binder binds by its kind's `scopes` where it
+    has them, else its `name` within its arguments after the first."""
+    while isinstance(schema, Schemas.OfObject.Data):
+        if _named(schema, "Expressions.Framework.Let"):
+            return True
+        schema = schema.refines
+    return False
 
 
 class Dialect:
     """An expression language: the kinds it reads, by tag, its `path`, its family's and its own name
-    (`Python.Python3`, `C.Expressions`), its `name` (`dialect_name(path)`: `Python3`, `C`), and `domain_of(value)`,
-    the domain of a literal's value by the scalar it is written with (for `infer`; a term carries no domain). Its terms
-    are values of its `Term`, `Expressions.<path>.Term` (`union`), the branch `tag` (its name in lowercase) of
-    `Expressions.Framework.Term`;
+    (`Python.Python3`, `C.Expressions`), its `name` (`dialect_name(path)`: `Python3`, `C`, `SystemVerilog Types`), and
+    `domain_of(value)`, the domain of a literal's value by the scalar it is written with (for `infer`; a term carries no
+    domain). Its terms are values of its `Term`, `Expressions.<path>.Term` (`union`), the branch `tag`
+    (`dialect_tag(name)`: `python3`, `systemverilog_types`) of `Expressions.Framework.Term`;
     besides its own kinds it reads the framework's kinds of invalid syntax (`INVALID_KINDS`). A dialect may extend
     another (`extends`): its kinds are the base's and its own, whose tags must differ from the base's, added to the
-    base's union, whose terms it reads. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its
-    kinds."""
+    base's union, whose terms it reads. A dialect may read the terms of other dialects (`reads`, a callable giving
+    them, called once when first needed, so that dialects that read each other are built without a cycle): a term of
+    their `Term`s, by their kinds, and a term of its own `Term` of a kind they declare and its `Term` lists (one schema
+    a branch of every union whose positions hold it); any other dialect's term it refuses. It validates (`validate`),
+    infers (`infer`) and writes (`make`) terms of its kinds."""
 
     def __init__(self, path: str, kinds: Mapping[str, Kind], *, domain_of: Callable[[Any], Domains.Domain],
-                 literal: Callable[[Any], Writer | None] | None = None, extends: Dialect | None = None):
+                 literal: Callable[[Any], Writer | None] | None = None, extends: Dialect | None = None,
+                 reads: Callable[[], Iterable[Dialect]] | None = None):
         name = dialect_name(path)
         inherited = INVALID_KINDS if extends is None else extends.kinds()
         clashes = sorted(tag for tag in kinds if tag in inherited)
@@ -892,37 +939,60 @@ class Dialect:
         ordered = {**kinds, **inherited} if extends is None else {**inherited, **kinds}  # the base's first
         self._name, self._kinds, self._domain_of, self.base = name, ordered, domain_of, extends
         self._literal = literal if literal is not None or extends is None else extends._literal
-        self.tag = name.lower() if extends is None else extends.tag
+        self.tag = dialect_tag(name) if extends is None else extends.tag
         self.path = path
         self.union = f"Expressions.{path}.Term" if extends is None else extends.union
+        self._reads, self._read = reads, None
 
     def name(self) -> str:
         return self._name
 
     def kinds(self) -> dict[str, Kind]:
+        """Its own kinds, by tag (an extension's, its base's too)."""
         return dict(self._kinds)
+
+    def reads(self) -> tuple[Dialect, ...]:
+        """The other dialects whose terms it reads, in the order its `reads` gives them."""
+        if self._read is None:
+            self._read = tuple(self._reads()) if self._reads is not None else ()
+        return self._read
+
+    def kind_named(self, tag: str) -> Kind:
+        """The `Kind` of a tag, as this dialect reads it: its own, else the first that a dialect it reads declares;
+        raises `ValueError` for a tag none of them has."""
+        if tag in self._kinds:
+            return self._kinds[tag]
+        for other in self.reads():
+            if tag in other._kinds:
+                return other._kinds[tag]
+        raise ValueError(f"{self._name} has no kind {tag!r}")
 
     def __repr__(self) -> str:
         return f"<dialect {self._name}>"
 
-    def _foreign(self, term_: Any) -> str | None:
-        """Why a term value is not of this dialect, where it is another dialect's."""
+    def _reader(self, term_: Any) -> Dialect | None:
+        """The dialect that reads a term value: this one, for a term of its `Term`; one it reads, for a term of that
+        one's; or None, for a term of any other dialect."""
         union = dialect_of(term_)
         if union == self.union:
-            return None
-        other = dialect_name(union[len("Expressions."):-len(".Term")])
+            return self
+        return next((other for other in self.reads() if other.union == union), None)
+
+    def _foreign(self, term_: Any) -> str:
+        """Why a term value of another dialect, which it does not read, is not of this dialect."""
+        other = dialect_name(dialect_of(term_)[len("Expressions."):-len(".Term")])
         return f"{_article(other)} {kind_of(term_)[0]} is not {_article(self._name)} term"
 
     def kind(self, term_: Any) -> tuple[str, Any, Kind]:
-        """A term's tag, record and `Kind`; raises `ValueError` for a term of another dialect, or of a kind the dialect
-        does not read."""
-        foreign = self._foreign(term_)
-        if foreign is not None:
-            raise ValueError(foreign)
+        """A term's tag, record and `Kind`, as this dialect reads it (a term of a dialect it reads, as that one does);
+        raises `ValueError` for a term of another dialect, or of a kind the dialect does not read."""
+        reader = self._reader(term_)
+        if reader is None:
+            raise ValueError(self._foreign(term_))
+        if reader is not self:
+            return reader.kind(term_)
         tag, record = kind_of(term_)
-        if tag not in self._kinds:
-            raise ValueError(f"{self._name} has no kind {tag!r}")
-        return tag, record, self._kinds[tag]
+        return tag, record, self.kind_named(tag)
 
     def spec(self, value: Any) -> Writer:
         """The writer of a term of this dialect: see `spec`, a native value as this dialect's literal, and a callable
@@ -932,9 +1002,9 @@ class Dialect:
     def make(self, form_: Form) -> Writer:
         """The writer of a term with this form: its attributes written as scalars (a container of scalars as a
         container, a helper's `Part` as the helper), its arguments (specs: terms, writers, native values) to its slots
-        in order, then to its variadic property, then to its helpers, each its part's size."""
-        if form_.kind not in self._kinds:
-            raise ValueError(f"{self._name} has no kind {form_.kind!r}")
+        in order, then to its variadic property, then to its helpers, each its part's size. Its kind is one this
+        dialect reads (`kind_named`), written where a union holds it."""
+        self.kind_named(form_.kind)
         arguments = [None if a is None else self.spec(a) for a in form_.arguments]
 
         def write(union: Any) -> Any:
@@ -950,13 +1020,16 @@ class Dialect:
         return self._problems(term(term_), frozenset(bound), core)
 
     def _problems(self, node: Any, bound: frozenset[str], core: bool) -> list[str]:
-        foreign = self._foreign(node)
-        if foreign is not None:
-            return [foreign]
+        reader = self._reader(node)
+        if reader is None:
+            return [self._foreign(node)]
+        if reader is not self:  # a term of a dialect it reads, as that one reads it
+            return reader._problems(node, bound, core)
         tag, record = kind_of(node)
-        if tag not in self._kinds:
-            return [f"{self._name} has no kind {tag!r}"]
-        kind = self._kinds[tag]
+        try:
+            kind = self.kind_named(tag)
+        except ValueError as error:
+            return [str(error)]
         what = _article(tag)
         attributes = attributes_of(record)
         declared = record.as_schema().properties
@@ -985,9 +1058,9 @@ class Dialect:
         labelled = _labelled(record)
         arguments = [argument for _, _, argument in labelled]
         scopes = [bound] * len(arguments)
-        if kind.scopes is not None:
+        if kind.scopes is not None:  # what each argument has bound: a binder's, or a comprehension's targets
             scopes = [bound | names for names in kind.scopes(record)]
-        elif kind.role in (BINDING, QUANTIFIER):
+        elif kind.role == QUANTIFIER or is_binder(record.as_schema()):  # its name, within its arguments after the first
             inner = bound | {name} if not problems else bound
             scopes = [bound, *[inner] * (len(arguments) - 1)]
         elif kind.role == IMPORT:
@@ -1031,6 +1104,9 @@ class Dialect:
         return self._infer(node, environment)
 
     def _infer(self, node: Any, environment: dict[str, Domains.Domain]) -> Domains.Domain:
+        reader = self._reader(node)
+        if reader is not self and reader is not None:  # a term of a dialect it reads, as that one infers it
+            return reader._infer(node, environment)
         tag, record, kind = self.kind(node)
         if kind.role == LITERAL:
             typed = kind.typed(record) if kind.typed is not None else None
@@ -1042,7 +1118,11 @@ class Dialect:
         if kind.role == IMPORT:
             names = kind.names(attributes_of(record)) if kind.names is not None else ()
             return self._infer(arguments[-1], {**environment, **{name: Domains.Anything for name in names}})
-        if kind.role == BINDING:
+        if kind.scopes is not None:  # what each argument has bound, of a domain not known statically
+            environments = [{**environment, **dict.fromkeys(names, Domains.Anything)} for names in kind.scopes(record)]
+        else:
+            environments = [environment] * len(arguments)
+        if is_binder(record.as_schema()) and kind.scopes is None:  # a let: its name, of its value's domain, in its body
             value = self._infer(arguments[0], environment)
             return self._infer(arguments[-1], {**environment, name_of(node): value})
         operator = operator_of(node, kind)
@@ -1053,8 +1133,8 @@ class Dialect:
             inner = {**environment, name_of(node): item}
             domains = [collection, *(self._infer(argument, inner) for argument in arguments[1:])]
         else:  # an empty slot, where it may be empty, is not known
-            domains = [Domains.Anything if argument is None else self._infer(argument, environment)
-                       for argument in arguments]
+            domains = [Domains.Anything if argument is None else self._infer(argument, scope)
+                       for argument, scope in zip(arguments, environments)]
         if kind.result is not None:  # several operators, which the kind applies itself
             return kind.result(attributes_of(record), domains)
         if signature is None:

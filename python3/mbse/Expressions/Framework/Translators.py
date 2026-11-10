@@ -228,7 +228,7 @@ def _form(node: Any) -> Terms.Form:
 def _kind(dialect: Terms.Dialect, node: Any) -> tuple[str, Any, Terms.Kind]:
     """A term's tag, record and kind, or an unfolded form's, which has no record."""
     if isinstance(node, Terms.Form):
-        return node.kind, None, dialect.kinds()[node.kind]
+        return node.kind, None, dialect.kind_named(node.kind)
     return dialect.kind(node)
 
 
@@ -278,7 +278,7 @@ class _Direction:
     def __call__(self, expression: Any, trace: list[tuple[Any, Any]] | None) -> Terms.Writer:
         result = _Run(self, trace).translate(Terms.term(expression), {})
         for pattern in reversed(self.preludes):
-            kind = self.target.kinds()[pattern.kind]
+            kind = self.target.kind_named(pattern.kind)
             names = kind.names(pattern.attributes) if kind.names is not None else ()
             if set(names) & result.free:
                 result = self.build(Terms.Form(pattern.kind, dict(pattern.attributes), (result,)))
@@ -287,7 +287,7 @@ class _Direction:
     def build(self, form: Terms.Form) -> _Built:
         """The target term of a form whose arguments are translated terms, and the names it needs, as
         `Symbolics.free` reads them."""
-        kind = self.target.kinds()[form.kind]
+        kind = self.target.kind_named(form.kind)
         name = Terms.reference_name(form.attributes.get("name"))
         frees = [argument.free for argument in form.arguments]
         if kind.role == Terms.REFERENCE:  # its name, and a name node's terms' names (a template's arguments)
