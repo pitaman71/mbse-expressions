@@ -96,7 +96,7 @@ from . import Domains
 __all__ = ["install", "define", "DIALECT", "EDITIONS", "SINCE", "editions", "Writer", "literal", "vector", "identifier",
            "unary", "binary", "conditional", "concatenation", "replication", "select", "range_", "inside", "span",
            "cast", "member", "call", "method", "iterate", "type_name", "problems", "SYSTEM", "METHODS", "REDUCTIONS",
-           "BASES", "UNITS", "SPELLING", "TAGS"]
+           "BASES", "UNITS", "SPELLING", "TAGS", "HELPERS"]
 
 LITERAL, CONSTANT, NAMEEXPRESSION, MEMBEREXPRESSION, INDEXEXPRESSION, RANGESELECT = (
     "literal", "constant", "nameexpression", "memberexpression", "indexexpression", "rangeselect")
@@ -123,6 +123,11 @@ TAGS = (LITERAL, CONSTANT, NAMEEXPRESSION, MEMBEREXPRESSION, INDEXEXPRESSION, RA
         PREDICATEEXPRESSION, STREAMINGCONCATENATION, MINTYPMAXEXPRESSION, ROOTEXPRESSION, EMPTYQUEUE, NAMEDCONNECTION,
         EMPTYARGUMENT)
 """Its own kinds, in its `Term`'s order: the Preprocessor's `macrousage` and invalid syntax are its `Term`'s too."""
+
+HELPERS = ("AttributeInstance", "AttributeSpec", "Identifier", "ScopedName", "LocalName", "ParameterizedName",
+           "InterfaceTypeName", "InterfaceMethodName", "UnitName", "StreamItem")
+"""Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
+completeness data (`grammars/systemverilog-slang.json`) names them."""
 
 SYSTEM = ("$signed", "$unsigned", "$clog2", "$bits", "$countones", "$onehot", "$onehot0", "$isunknown")
 """The system functions its evaluator computes."""

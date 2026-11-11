@@ -145,6 +145,11 @@ export const TAGS: readonly string[] = [LITERAL, CONSTANT, NAMEEXPRESSION, MEMBE
   CASTEXPRESSION, PARENTHESIZEDEXPRESSION, DOLLAREXPRESSION, TAGGEDEXPRESSION, MATCHESEXPRESSION, PREDICATEEXPRESSION,
   STREAMINGCONCATENATION, MINTYPMAXEXPRESSION, ROOTEXPRESSION, EMPTYQUEUE, NAMEDCONNECTION, EMPTYARGUMENT];
 
+/** Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
+ * completeness data (`grammars/systemverilog-slang.json`) names them. */
+export const HELPERS: readonly string[] = ["AttributeInstance", "AttributeSpec", "Identifier", "ScopedName", "LocalName", "ParameterizedName",
+  "InterfaceTypeName", "InterfaceMethodName", "UnitName", "StreamItem"];
+
 /** The system functions its evaluator computes. */
 export const SYSTEM: readonly string[] = ["$signed", "$unsigned", "$clog2", "$bits", "$countones", "$onehot", "$onehot0",
   "$isunknown"];

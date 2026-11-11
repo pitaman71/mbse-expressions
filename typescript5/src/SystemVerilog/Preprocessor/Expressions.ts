@@ -38,6 +38,10 @@ export const MACROUSAGE = "macrousage";
 /** Its own kinds, in its `Term`'s order. */
 export const TAGS: readonly string[] = [MACROUSAGE];
 
+/** Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
+ * completeness data (`grammars/systemverilog-slang.json`) names them. */
+export const HELPERS: readonly string[] = [];
+
 /** The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`; a kind
  * not listed is in every edition. */
 export const SINCE: ReadonlyMap<string, number> = new Map();

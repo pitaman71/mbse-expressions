@@ -22,10 +22,14 @@ from mbse.Expressions.Framework import Terms as F
 
 from ..Expressions import Expressions as X
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS"]
+__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS"]
 
 TAGS: tuple[str, ...] = ()
 """Its own kinds, in its `Term`'s order after `Expressions`' branches."""
+
+HELPERS: tuple[str, ...] = ()
+"""Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
+completeness data (`grammars/systemverilog-slang.json`) names them."""
 
 SINCE: dict[str, int] = {}
 """The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`; a kind

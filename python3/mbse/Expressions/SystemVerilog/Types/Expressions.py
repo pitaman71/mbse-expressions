@@ -39,7 +39,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from ..Expressions import Expressions as X
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "problems"]
+__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "problems"]
 
 INTEGERVECTORTYPE, INTEGERATOMTYPE, NONINTEGERTYPE, KEYWORDTYPE, NAMEDTYPE = (
     "integervectortype", "integeratomtype", "nonintegertype", "keywordtype", "namedtype")
@@ -49,6 +49,11 @@ VIRTUALINTERFACETYPE, IMPLICITTYPE, STRUCTTYPE, ENUMTYPE, TYPEREFERENCE = (
 TAGS = (INTEGERVECTORTYPE, INTEGERATOMTYPE, NONINTEGERTYPE, KEYWORDTYPE, NAMEDTYPE, VIRTUALINTERFACETYPE,
         IMPLICITTYPE, STRUCTTYPE, ENUMTYPE, TYPEREFERENCE)
 """Its own kinds, in its `Term`'s order after `Expressions`' branches."""
+
+HELPERS = ("StructMember", "EnumMember", "VariableDeclarator", "RangeDimension", "SizeDimension", "UnsizedDimension",
+           "AssociativeDimension", "QueueDimension")
+"""Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
+completeness data (`grammars/systemverilog-slang.json`) names them."""
 
 SINCE = {NAMEDTYPE: 3, VIRTUALINTERFACETYPE: 3, STRUCTTYPE: 3, ENUMTYPE: 3, TYPEREFERENCE: 3}
 """The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`

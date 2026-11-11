@@ -28,6 +28,10 @@ import * as Types from "../Types/Expressions.js";
 /** Its own kinds, in its `Term`'s order after `Expressions`' branches. */
 export const TAGS: readonly string[] = [];
 
+/** Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
+ * completeness data (`grammars/systemverilog-slang.json`) names them. */
+export const HELPERS: readonly string[] = [];
+
 /** The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`; a kind
  * not listed is in every edition of IEEE 1800 (its first, 3). */
 export const SINCE: ReadonlyMap<string, number> = new Map();
