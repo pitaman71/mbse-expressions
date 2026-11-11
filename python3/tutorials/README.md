@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Why the mbse repositories exist](../../MBSE.md) · [Home](../../README.md) · [9 · Constraints as data →](09_Constraints_As_Data.ipynb)
+[← Why the mbse repositories exist](../../MBSE.md) · [Home](../../README.md) · [1 · Values and their domains →](01_Values_And_Their_Domains.ipynb)
 
 # Tutorial: expressions as models, then constraints as data
 
@@ -35,16 +35,16 @@ starts from; and `show`, which writes a Patterns expression as text (case study 
 
 Each step pairs a language's own text with the model its dialect holds, written in the builders' fluent calls, and
 checks that the dialect's `Text.ToText` gives that text back; Python3's text is also read, with `Text.FromText`. Part I
-tells no story, and its notebooks are being written.
+tells no story. Tutorials 7 and 8 come after the dialects' retrofit.
 
 | # | Notebook | What you learn |
 |---|---|---|
-| 1 | Values and their domains | A domain is data: the standard dialects' domains, kinds, parameters, inferred properties, schemas and editions |
-| 2 | One value, a domain in each language | `42` as Python's `int`, TypeScript's `number`, C's `int` under each ABI, SystemVerilog's `integer` and `int` |
-| 3 | The smallest expression, a literal | A term in its holder; a literal in each language, printed, read, inferred, evaluated; what no scalar holds |
-| 4 | Names | A variable in each language; free names; names kept as written |
-| 5 | Operators | `a + b * c` as a tree; parentheses and precedence across languages; operations as data; each language's arithmetic |
-| 6 | Calls, members and subscripts | Properties, items and calls in each language, and what has no counterpart |
+| 1 | [Values and their domains](01_Values_And_Their_Domains.ipynb) | A domain is data: the standard dialects' domains, kinds, parameters, inferred properties, schemas and editions |
+| 2 | [One value, a domain in each language](02_One_Value_A_Domain_In_Each_Language.ipynb) | `42` as Python's `int`, TypeScript's `number`, C's `int` under each ABI, SystemVerilog's `integer` and `int` |
+| 3 | [The smallest expression, a literal](03_The_Smallest_Expression_A_Literal.ipynb) | A term in its holder; a literal in each language, printed, read, inferred, evaluated; what no scalar holds |
+| 4 | [Names](04_Names.ipynb) | A variable in each language; free names; names kept as written |
+| 5 | [Operators](05_Operators.ipynb) | `a + b * c` as a tree; parentheses and precedence across languages; operations as data; each language's arithmetic |
+| 6 | [Calls, members and subscripts](06_Calls_Members_And_Subscripts.ipynb) | Properties, items and calls in each language, and what has no counterpart |
 | 7 | Bindings | `let`, lambdas, quantifiers and comprehensions, each a variation of `let` (after the dialects' retrofit) |
 | 8 | Sublanguages | Types, patterns, assertions and constraints as dialects of their own (after the dialects' retrofit) |
 
@@ -74,4 +74,4 @@ schema is a named `Schemas.OfAny` of the scalar it narrows.
 ---
 
 <!-- nav -->
-[← Why the mbse repositories exist](../../MBSE.md) · [Home](../../README.md) · [9 · Constraints as data →](09_Constraints_As_Data.ipynb)
+[← Why the mbse repositories exist](../../MBSE.md) · [Home](../../README.md) · [1 · Values and their domains →](01_Values_And_Their_Domains.ipynb)
