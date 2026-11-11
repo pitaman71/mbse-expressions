@@ -202,9 +202,13 @@ read under the ABI their expression names, `SystemV.AMD64` or `Arm.AAPCS64`
 1800-2023, Verilog its subset ([CAP-231: the SystemVerilog expression dialect, complete](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-231.md)),
 six dialects of one family, its expressions and its types, patterns, assertions, constraints and preprocessor, each
 reading the others' terms, printed in both languages, recording the IEEE editions that have its kinds, and checked
-against slang's syntax kinds; a kind may hold several lists of terms; its evaluator keeps what it evaluated. Coming in
-0.10.0 too: the retrofit of the other dialects (type, pattern, regex and preprocessor dialects, binding kinds as
-variations of `let`). Not built yet: domain
+against slang's syntax kinds; a kind may hold several lists of terms; its evaluator keeps what it evaluated. Built for
+0.10.0 too, the retrofit of the other dialects: each family's sublanguages dialects of their own, Python's type
+expressions and `match` patterns ([CAP-276: Python's types and match patterns as expressions of their own](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-276.md)),
+TypeScript's types and destructuring patterns ([CAP-277: TypeScript's types and destructuring patterns as expressions of their own](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-277.md)),
+and C's and C++'s type names and preprocessor directives ([CAP-278: C's and C++'s type names and preprocessor directives as expressions of their own](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-278.md)),
+and every kind that binds names a variation of `let` ([CAP-279: names an expression binds found alike in every language](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-279.md));
+the regular expression dialects and JSX wait on the user's decision. Not built yet: domain
 inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
 interface through which mbse-schemas will choose union branches and check constraints.
 

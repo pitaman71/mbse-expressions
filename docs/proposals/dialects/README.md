@@ -1134,6 +1134,38 @@ change as it lands.
      ([CAP-093: every construct of C's and C++'s standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-093.md),
      [CAP-068: C and C++ read by Clang](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-068.md)).
 
+   *As built* (branch `retrofit`: the core, then `retrofit-python`, `retrofit-typescript` and `retrofit-c` merged into
+   it; every choice made where the design and the decisions were silent is in
+   [the API, Settled in the retrofit](../port/API.md#settled-in-the-retrofit-for-the-users-review), items 217 to
+   268). Every binder refines `Let`, as the table has it, and the seven dialects groups P, T and C owned are built as
+   designed, in both languages, each with its install, `define` (its editions), holder, `Terms.Dialect` reading its
+   family's others, printer merged into its family's, and suite: `16_Python_Types` (PYT), `17_Python_Patterns` (PYP),
+   `19_TypeScript_Types` (TST), `20_TypeScript_Patterns` (TSP), `22_C_Types` (CTY), `23_Cpp_Types` (XTY) and
+   `24_C_Preprocessor` (CPD); the grammar files map each new dialect's nodes, DIA-20, DIA-23 and DIA-26 checking them;
+   the corpus has a case of each. Two choices differ from the design, for review: an enumerator is a kind of each
+   `Types` dialect, not a helper union (API 247), and a type's position is a term slot (API 249). Not built, waiting on
+   the user: `Python RegExp` and `TypeScript RegExp` (Open, 1, groups PR and TR) and JSX (Open, 2).
+   Recorded in mbse-basis as [CAP-276: Python's types and match patterns as expressions of their own](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-276.md),
+   [CAP-277: TypeScript's types and destructuring patterns as expressions of their own](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-277.md),
+   [CAP-278: C's and C++'s type names and preprocessor directives as expressions of their own](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-278.md) and
+   [CAP-279: names an expression binds found alike in every language](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-279.md).
+
+   *Found while building*:
+   - **A value object of terms held alone was read as a slot** (`TSTypeAnnotation`): `Terms._parts` read such a pair
+     as a helper only within a container; it now reads one held alone so too (API 238).
+   - **The C family's TypeScript modules imported each other at load**: C++'s module body reads C's constants, so a
+     static import from C Preprocessor to C++ made a cycle (`ReferenceError`); the family's shared reading moved to an
+     internal module, `C.Expressions.Kinds`, which none of its dialect modules imports beside (API 246).
+   - **The framework reads a helper union one level deep**, so the design's `EnumeratorItem` union and the
+     preprocessor's union of unions (`Item`) could not hold the directives among an enumeration's items: an enumerator
+     is a kind instead, an enumeration's items its Types' `Term`, and a directive's `Expressions.Framework.Term`
+     (API 247).
+   - **The groups named a refused kind differently**, P and T by the dialect owning it, C by the dialect evaluating
+     it; the coordinator decided for the owner, everywhere, through the framework's `Dialect.owner` (API 261, 262).
+   - **Invalid syntax within a helper holds no term**, so no owner can be read from it: a printer names it by the
+     dialect printing it (API 261).
+   - **A constant is described as `None` in refusal messages** (API 216): still open with the user, left as it is.
+
 7. **Tutorials, skill, README, EQUIVALENCE; the releases.** The tutorials and the skill followed each stage as it
    landed. **0.8.0 is released after stage 5**, as the user decided (Decided, "0.8.0 holds stages 1 to 5"): stages 1
    to 5 and the namespace rename, a breaking change, on mbse-schemas 0.26.10. 0.9.0 is domains as data ([the domains proposal](../domains/README.md)); 0.10.0 follows stage 6 and the retrofit.
