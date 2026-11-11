@@ -581,9 +581,9 @@ def _vector_problems(attributes: Mapping[str, Any]) -> list[str]:
     return found
 
 
-def _base_problems(attributes: Mapping[str, Any]) -> list[str]:
+def _base_problems(attributes: Mapping[str, Any], what: str) -> list[str]:
     base = attributes.get("base")
-    return [] if base in (None, *BASES) else [f"a literal's base must be b, o, d or h, got {base!r}"]
+    return [] if base in (None, *BASES) else [f"{what}'s base must be b, o, d or h, got {base!r}"]
 
 
 def _literal_problems(attributes: Mapping[str, Any]) -> list[str]:
@@ -592,7 +592,7 @@ def _literal_problems(attributes: Mapping[str, Any]) -> list[str]:
     value = attributes["value"]
     if type(value) not in (int, float, str):
         return [f"a SystemVerilog literal cannot hold a {type(value).__name__}"]
-    found = _base_problems(attributes)
+    found = _base_problems(attributes, "a literal")
     unit = attributes.get("unit")
     if unit is not None and (unit not in UNITS or type(value) is not float):
         found.append(f"a time literal's unit must be s, ms, us, ns, ps or fs, its value a float, got {unit!r}")
@@ -615,7 +615,7 @@ def problems(node: F.Node) -> list[str]:
         if value is not None and value not in choices:
             found.append(f"{name}.{attribute} cannot be {value!r}")
     if kind == CONSTANT:
-        found += _vector_problems(attributes) + _base_problems(attributes)
+        found += _vector_problems(attributes) + _base_problems(attributes, "a constant")
     if kind == ASSIGNMENTPATTERN and node.slots.get("count") is not None and any(
             F.kind_of(item)[0] == PATTERNITEM for item in node.many):
         found.append("a repeated AssignmentPattern has positional items only")
@@ -709,9 +709,14 @@ def type_name(value: Any) -> str | None:
 
 def _cast_check(record: Any) -> list[str]:
     """A cast to a type SystemVerilog defines by name must be defined in the store of the term's holder (`Domains.NAMES`;
-    another keyword's, such as `realtime`, is not read), and its checks."""
-    name = type_name(F.node(CASTEXPRESSION, record).slots["type"])
-    found = problems(F.node(CASTEXPRESSION, record))
+    another keyword's, such as `realtime`, is not read), one to a width written as a literal is to a positive one, and
+    its checks."""
+    node = F.node(CASTEXPRESSION, record)
+    target, found = node.slots["type"], problems(node)
+    name, (tag, held) = type_name(target), F.kind_of(target) if target is not None else (None, None)
+    width = F.attributes_of(held).get("value") if tag == LITERAL else None
+    if type(width) is int and width < 1:  # a width, written as a literal
+        found.append(f"a cast's width must be positive, got {width}")
     if name in Domains.NAMES:
         try:
             Domains.named(Proxies.store_of(record), name)

@@ -549,10 +549,10 @@ class _Evaluation:
     def _conditional(self, node: Any, target: SvType) -> Any:
         truth = _truth(self.value(node.condition))
         if truth == 1:
-            return self.value(node.consequent, target)
+            return self.value(node.consequence, target)
         if truth == 0:
             return self.value(node.alternative, target)
-        a, b = self.value(node.consequent, target), self.value(node.alternative, target)
+        a, b = self.value(node.consequence, target), self.value(node.alternative, target)
         if target.kind == "real":
             return a if a == b else 0.0
         (a1, a0), (b1, b0) = _parts(a), _parts(b)

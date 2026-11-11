@@ -128,16 +128,17 @@ class Printer:
         self.texts, self._precedence, self._inline = texts, precedence, inline
 
     def node(self, value: Any) -> F.Node:
-        """A term's `Node`, read through the family's dialects (which refuse another dialect's term), or a `Node` as it
-        is."""
-        if isinstance(value, F.Node):
-            return value
+        """A term's `Node`, read through the family's dialects, which refuse another dialect's term."""
         tag, record, _ = E.DIALECT.kind(value)
         return F.node(tag, record)
 
     def text(self, value: Any) -> str:
-        """A term's or a helper's source, as its kind writes it."""
+        """A term's source, as its kind writes it; invalid syntax as written, by the dialect whose union holds it."""
         node = self.node(value)
+        if node.kind in ("error", "missing"):
+            union = F.dialect_of(value)
+            return F.invalid_text(next(d for d in (E.DIALECT, *E.DIALECT.reads()) if d.union == union), node.kind,
+                                  node.attributes)
         return self.texts[node.kind](self, node)
 
     def precedence(self, node: F.Node, written: str) -> int:
@@ -147,8 +148,7 @@ class Printer:
 
     def operand(self, value: Any, level: int) -> str:
         """A term where one of at least `level` precedence is needed, parenthesized if it binds less."""
-        node = self.node(value)
-        written = self.text(node)
+        node, written = self.node(value), self.text(value)
         return f"({written})" if self.precedence(node, written) < level else written
 
     def spelling(self, node: Any) -> str:
@@ -187,25 +187,19 @@ class Printer:
         return node.kind in Types.TAGS
 
     def inline(self, items: Any) -> str:
-        """`{ constraints }` on one line, as `randomize() with` writes them: each constraint as its kind writes it on one
-        line, an expression held as one ended by `;`; a kind with `INLINE` (a line comment, a directive) as it says."""
+        """`{ constraints }` on one line, as `randomize() with` writes them: each item as its kind writes it on one line, or
+        as its kind's `INLINE` says (an expression held as a constraint ended by `;`; a line comment, a directive, its
+        line)."""
         parts: list[str] = []
         for item in items:
-            node = self.node(item)
-            written = self.text(node)
-            if node.kind in self._inline:
-                parts.append(self._inline[node.kind](self, node, written))
-            else:
-                parts.append(written + ";" if node.kind in E.TAGS else written)
+            node, written = self.node(item), self.text(item)
+            parts.append(self._inline[node.kind](self, node, written) if node.kind in self._inline else written)
         text = "{"
         for part in [*parts, "}"]:  # a space between parts, but not at a line's end or start
             text += part if text.endswith("\n") or part.startswith("\n") else " " + part
         return text if parts else "{}"
 
     # Expressions
-
-    def invalid(self, node: F.Node) -> str:
-        return F.invalid_text(E.DIALECT, node.kind, node.attributes)
 
     def literal(self, node: F.Node) -> str:
         if "text" in node.attributes:
@@ -217,15 +211,14 @@ class Printer:
     def constant(self, node: F.Node) -> str:
         if "text" in node.attributes:
             return node.attributes["text"]
-        if E._vector_problems(node.attributes):
+        if E._vector_problems(node.attributes) or not {"singleton", "fill", "bits"} & node.attributes.keys():
             raise ValueError("SystemVerilog constant has no value to print")
         return _constant(node.attributes)
 
     def unary(self, node: F.Node) -> str:
         operand = self.operand(node.slots["operand"], UNARY + 1)
-        inner = self.node(node.slots["operand"])
-        if inner.kind in (E.UNARYEXPRESSION, E.INCREMENTEXPRESSION):
-            operand = f"({self.text(inner)})"
+        if self.node(node.slots["operand"]).kind in (E.UNARYEXPRESSION, E.INCREMENTEXPRESSION):
+            operand = f"({self.text(node.slots['operand'])})"
         attributes = _nodes(node.helpers.get("attributes"))
         if attributes:  # `- (* a *) x`: apart, so that `(*` starts the attributes
             return f"{node.attributes['operator']} {self.attribute_text(attributes)} {operand}"
@@ -255,8 +248,8 @@ class Printer:
     def conditional(self, node: F.Node) -> str:
         attributes = _nodes(node.helpers.get("attributes"))
         written = f"{self.attribute_text(attributes)} " if attributes else ""
-        condition = self.node(node.slots["condition"])
-        matching = condition.kind in (E.MATCHESEXPRESSION, E.PREDICATEEXPRESSION)  # never parenthesized
+        condition = node.slots["condition"]
+        matching = self.node(condition).kind in (E.MATCHESEXPRESSION, E.PREDICATEEXPRESSION)  # never parenthesized
         test = self.text(condition) if matching else self.operand(condition, CONDITIONAL + 1)
         return (f"{test} ? {written}{self.operand(node.slots['consequence'], CONDITIONAL + 1)} : "
                 f"{self.operand(node.slots['alternative'], CONDITIONAL)}")
@@ -265,8 +258,8 @@ class Printer:
         member = self.spelling(node.helpers["member"])
         if node.slots["value"] is None:
             return f"tagged {member}"
-        value = self.node(node.slots["value"])
-        nested = value.kind == E.TAGGEDEXPRESSION  # `tagged a tagged b 1` needs no parentheses
+        value = node.slots["value"]
+        nested = self.node(value).kind == E.TAGGEDEXPRESSION  # `tagged a tagged b 1` needs no parentheses
         return f"tagged {member} {self.text(value) if nested else self.operand(value, UNARY)}"
 
     def inside(self, node: F.Node) -> str:
@@ -306,8 +299,8 @@ class Printer:
         return f"{name}({arguments})" if node.many else name
 
     def cast(self, node: F.Node) -> str:
-        target = self.node(node.slots["type"])
-        written = self.text(target) if self.is_type(target) else self.operand(target, PRIMARY)
+        target = node.slots["type"]
+        written = self.text(target) if self.is_type(self.node(target)) else self.operand(target, PRIMARY)
         return f"{written}'({self.text(node.slots['value'])})"
 
     def streaming(self, node: F.Node) -> str:
@@ -350,7 +343,6 @@ class Printer:
 
 
 TEXTS: dict[str, Callable[[Printer, F.Node], str]] = {
-    "error": Printer.invalid, "missing": Printer.invalid,
     E.LITERAL: Printer.literal, E.CONSTANT: Printer.constant,
     E.NAMEEXPRESSION: lambda p, n: p.name(n.helpers["name"]),
     E.MEMBEREXPRESSION: lambda p, n: f"{p.operand(n.slots['value'], PRIMARY)}.{p.spelling(n.helpers['member'])}",
@@ -394,8 +386,9 @@ PRECEDENCE: dict[str, Any] = {
 }
 """Each of its kinds' precedence, where it is not a primary's."""
 
-INLINE: dict[str, Callable[[Printer, F.Node, str], str]] = {}
-"""How `randomize() with` writes its kinds among its constraints, where not as written: none of its own."""
+INLINE: dict[str, Callable[[Printer, F.Node, str], str]] = {tag: lambda p, n, written: written + ";" for tag in E.TAGS}
+"""How `randomize() with` writes its kinds among its constraints, where not as written: an expression held as a
+constraint, ended by `;`."""
 
 _PRINTER: list[Printer] = []
 

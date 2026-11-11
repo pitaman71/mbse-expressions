@@ -19,7 +19,8 @@ from mbse.Expressions.Python import Python3
 from mbse.Expressions.Arm import AAPCS64
 from mbse.Expressions.SystemV import AMD64
 from mbse.Expressions.Unicode import Expressions as Unicode
-from mbse.Expressions.SystemVerilog import Expressions as SystemVerilog
+from mbse.Expressions.SystemVerilog import Assertions as SVAssertions, Constraints as SVConstraints, \
+    Expressions as SystemVerilog, Patterns as SVPatterns, Preprocessor as SVPreprocessor, Types as SVTypes
 from mbse.Expressions.Framework import Terms
 from mbse.Schemas.Framework import Builders
 
@@ -46,12 +47,15 @@ def cold_chain():
     case studies translate into, installed after the standard dialects whose kinds of domain they use, with the two ABI
     dialects C's and C++'s terms are read under (x86-64's System V ABI, `SystemV.AMD64`, and Arm's AAPCS64,
     `Arm.AAPCS64`); Patterns' operations named by its dialect (`Patterns.define`), which validation reads; and C's,
-    C++'s, the ABIs' and SystemVerilog's types, their domains (each dialect's `define`), which their evaluation reads."""
+    C++'s, the ABIs' and SystemVerilog's types, their domains (each dialect's `define`), which their evaluation reads,
+    with SystemVerilog's sublanguages' dialects (`Types`, `Patterns`, `Assertions`, `Constraints`, `Preprocessor`),
+    whose terms its terms hold, and the editions each covers."""
     store = Builders.Store()
     for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
-                   AMD64, AAPCS64, SystemVerilog):
+                   AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):
         store.transaction(module.install)
-    for module in (Patterns, C, Cpp, AMD64, AAPCS64, SystemVerilog):
+    for module in (Patterns, C, Cpp, AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints,
+                   SVPreprocessor):
         store.transaction(module.define)
     store.transaction(install)
     return store

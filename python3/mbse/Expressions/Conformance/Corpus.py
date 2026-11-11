@@ -31,7 +31,8 @@ from mbse.Expressions.Python import Python3
 from mbse.Expressions.Arm import AAPCS64
 from mbse.Expressions.SystemV import AMD64
 from mbse.Expressions.Unicode import Expressions as Unicode
-from mbse.Expressions.SystemVerilog import Expressions as SystemVerilog
+from mbse.Expressions.SystemVerilog import Assertions as SVAssertions, Constraints as SVConstraints, \
+    Expressions as SystemVerilog, Patterns as SVPatterns, Preprocessor as SVPreprocessor, Types as SVTypes
 from mbse.Expressions.TypeScript import TypeScript5
 from mbse.Expressions.C.Expressions import Expressions as CE
 from mbse.Expressions.Cpp.Expressions import Expressions as CPP
@@ -81,13 +82,16 @@ def build():
     store.transaction(Cpp.install)
     store.transaction(AMD64.install)  # the ABIs a C or C++ term's holder names
     store.transaction(AAPCS64.install)
-    store.transaction(SystemVerilog.install)
+    for module in (SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # its family
+        store.transaction(module.install)
     store.transaction(TypeScript5.install)
     defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
     stored = {case: store.transaction(module.define)[0]["dialect"] for case, module in [  # each dialect's stored domains
         ("systemverilog_domains", SystemVerilog), ("python3_domains", Python3), ("typescript5_domains", TypeScript5),
         ("matlab_domains", Matlab), ("excel_domains", Excel), ("c_domains", C), ("cpp_domains", Cpp),
         ("amd64_domains", AMD64), ("aapcs64_domains", AAPCS64)]}
+    for module in (SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # the editions they cover
+        store.transaction(module.define)
 
     # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
     # added ---
@@ -232,14 +236,84 @@ def build():
         lambda i: i.extensionexpression(lambda e: e.operand(cpp_me)),
     ])))
 
-    # --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
-    # record.a inside {1, [2:5]} -> !record[0] ? {{6{2'b10}}, record.b[7:4]} : byte'($clog2(record.unique().sum(q) with (q))) + 4'(8'shff)
+    # --- systemverilog: every kind of SystemVerilog's and of its Types, their helpers, the Preprocessor's macro usage,
+    # literals with their spelling, and a shared identifier --- the text ToText writes:
+    # record.a inside {1, [2:5]} -> (record matches 3 ? (* keep, depth = 2 *) 'h1f : 4'sb10x1) + {record[0], record.b[7:4],
+    # -record, record++, (record += 1), {2{record}}, logic signed [7:0][4]'{record: 1, default: 0}, '{2{record, 1}}, this,
+    # super, pkg::c #(8)::new(1, .n(record), ), super.new(default), new record, new[4](record), record.randomize() with
+    # (a) { record < 5; }, record.sum(q) with (q > 0), record (* pure *) (record, .n(record), ), $bits(int, real, string,
+    # pkg::word_t [3:0], virtual interface bus #(8).mp, signed, struct packed signed { rand bit [1:0] a[], b = 1; },
+    # enum int {A, B[2] = 1, C[0:1]}, type(record), logic [int][*][$][$:8]), $clog2(record), signed'(record), 8'(record),
+    # byte'(record), $, $root, {}, 1:2:3, tagged Valid record, record matches 1 &&& record, {<< byte {record with
+    # [0 +: 2]}}, local::y, $unit::z, bus.t, port.m, `WIDTH, `MAX(a, b), '1, null, 'hx, 1.5, """s""", 10ns, 1_000, "a\"b"}
     sv, that = SV, SV.identifier("record")
-    systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1, sv.span(2, 5)), sv.conditional(
-        sv.unary("!", sv.select(that, 0)),
-        sv.concatenation(sv.replication(6, sv.vector("10")), sv.range_(sv.member(that, "b"), 7, 4)),
-        sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
-                  sv.cast(4, sv.vector("11111111", True, "h")))))
+    identifier = lambda spelling: lambda i: i.spelling(spelling)  # noqa: E731: an identifier, of its spelling
+    atom = lambda keyword: lambda t: t.integeratomtype(lambda a: a.keyword(keyword))  # noqa: E731: `int`, a Types term
+    keep = [lambda a: a.specs([lambda s: s.name(identifier("keep")), lambda s: s.name(identifier("depth")).value(sv.literal(2))])]
+    systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1, sv.span(2, 5)), sv.binary("+", lambda u: u.parenthesizedexpression(
+        lambda p: p.expression(lambda e: e.conditionalexpression(lambda c: c.condition(
+            lambda m: m.matchesexpression(lambda x: x.value(that).pattern(sv.literal(3)))).attributes(keep).consequence(
+            lambda q: q.literal(lambda r: r.value(lambda v: v.as_scalar(31)).base("h"))).alternative(sv.vector("10x1", True))))),
+        sv.concatenation(
+            sv.select(that, 0), sv.range_(sv.member(that, "b"), 7, 4), sv.unary("-", that),
+            lambda u: u.incrementexpression(lambda i: i.operator("++").postfix(True).operand(that)),
+            lambda u: u.parenthesizedexpression(lambda p: p.expression(
+                lambda e: e.assignmentexpression(lambda a: a.target(that).operator("+=").value(sv.literal(1))))),
+            sv.replication(2, that),
+            lambda u: u.assignmentpattern(lambda a: a.type(lambda t: t.integervectortype(lambda v: v.keyword("logic").signing("signed").dimensions([
+                lambda d: d.rangedimension(lambda r: r.left(sv.literal(7)).right(sv.literal(0))),
+                lambda d: d.sizedimension(lambda z: z.size(sv.literal(4)))]))).items([
+                lambda i: i.patternitem(lambda p: p.key(that).value(sv.literal(1))),
+                lambda i: i.patternitem(lambda p: p.value(sv.literal(0)))])),
+            lambda u: u.assignmentpattern(lambda a: a.count(sv.literal(2)).items([that, sv.literal(1)])),
+            lambda u: u.thisexpression(lambda t: t), lambda u: u.superexpression(lambda t: t),
+            lambda u: u.newexpression(lambda n: n.scope(lambda s: s.scopedname(lambda c: c.scope(lambda x: x.identifier(identifier("pkg"))).name(
+                lambda x: x.parameterizedname(lambda q: q.name(identifier("c")).parameters([sv.literal(8)]))))).arguments([
+                sv.literal(1), lambda a: a.namedconnection(lambda c: c.name(identifier("n")).value(that)),
+                lambda a: a.emptyargument(lambda e: e)])),
+            lambda u: u.newexpression(lambda n: n.scope(lambda s: s.superexpression(lambda x: x)).defaulted(True)),
+            lambda u: u.newcopyexpression(lambda n: n.value(that)),
+            lambda u: u.newarrayexpression(lambda n: n.size(sv.literal(4)).value(that)),
+            lambda u: u.randomizewithexpression(lambda r: r.call(sv.method(that, "randomize")).restricted(True).variables(
+                [identifier("a")]).items([sv.binary("<", that, 5)])),
+            sv.iterate(that, "sum", "q", sv.binary(">", sv.identifier("q"), 0)),
+            lambda u: u.callexpression(lambda c: c.callee(that).attributes([lambda a: a.specs([lambda s: s.name(identifier("pure"))])]).arguments([
+                that, lambda a: a.namedconnection(lambda n: n.name(identifier("n")).value(that)), lambda a: a.emptyargument(lambda e: e)])),
+            lambda u: u.systemcall(lambda c: c.name("$bits").arguments([
+                atom("int"), lambda t: t.nonintegertype(lambda n: n.keyword("real")), lambda t: t.keywordtype(lambda k: k.keyword("string")),
+                lambda t: t.namedtype(lambda n: n.name(lambda x: x.scopedname(lambda c: c.scope(lambda y: y.identifier(identifier("pkg"))).name(
+                    lambda y: y.identifier(identifier("word_t"))))).dimensions([lambda d: d.rangedimension(lambda r: r.left(sv.literal(3)).right(sv.literal(0)))])),
+                lambda t: t.virtualinterfacetype(lambda v: v.interface_keyword(True).interface(identifier("bus")).parameters([sv.literal(8)]).modport(identifier("mp"))),
+                lambda t: t.implicittype(lambda i: i.signing("signed")),
+                lambda t: t.structtype(lambda s: s.keyword("struct").packed(True).signing("signed").members([lambda m: m.random("rand").type(
+                    lambda t: t.integervectortype(lambda v: v.keyword("bit").dimensions([lambda d: d.rangedimension(lambda r: r.left(sv.literal(1)).right(sv.literal(0)))]))).declarators([
+                    lambda d: d.name(identifier("a")).dimensions([lambda x: x.unsizeddimension(lambda y: y)]), lambda d: d.name(identifier("b")).value(sv.literal(1))])])),
+                lambda t: t.enumtype(lambda e: e.base(atom("int")).members([lambda m: m.name(identifier("A")), lambda m: m.name(identifier("B")).left(sv.literal(2)).value(sv.literal(1)),
+                                                                            lambda m: m.name(identifier("C")).left(sv.literal(0)).right(sv.literal(1))])),
+                lambda t: t.typereference(lambda r: r.operand(that)),
+                lambda t: t.integervectortype(lambda v: v.keyword("logic").dimensions([lambda d: d.associativedimension(lambda a: a.type(atom("int"))),
+                    lambda d: d.associativedimension(lambda a: a), lambda d: d.queuedimension(lambda q: q), lambda d: d.queuedimension(lambda q: q.bound(sv.literal(8)))]))])),
+            sv.call("$clog2", that),
+            sv.cast(lambda t: t.implicittype(lambda i: i.signing("signed")), that), sv.cast(8, that), sv.cast(atom("byte"), that),
+            lambda u: u.dollarexpression(lambda d: d), lambda u: u.rootexpression(lambda r: r), lambda u: u.emptyqueue(lambda e: e),
+            lambda u: u.mintypmaxexpression(lambda m: m.min(sv.literal(1)).typ(sv.literal(2)).max(sv.literal(3))),
+            lambda u: u.taggedexpression(lambda t: t.member(identifier("Valid")).value(that)),
+            lambda u: u.predicateexpression(lambda p: p.conditions([lambda c: c.matchesexpression(lambda m: m.value(that).pattern(sv.literal(1))), that])),
+            lambda u: u.streamingconcatenation(lambda s: s.operator("<<").slice(atom("byte")).items([
+                lambda i: i.expression(that).left(sv.literal(0)).operator("+:").right(sv.literal(2))])),
+            lambda u: u.nameexpression(lambda n: n.name(lambda x: x.localname(lambda l: l.name(identifier("y"))))),
+            lambda u: u.nameexpression(lambda n: n.name(lambda x: x.scopedname(lambda c: c.scope(lambda y: y.unitname(lambda z: z)).name(
+                lambda y: y.identifier(identifier("z")))))),
+            lambda u: u.nameexpression(lambda n: n.name(lambda x: x.interfacetypename(lambda i: i.interface(identifier("bus")).name(identifier("t"))))),
+            lambda u: u.nameexpression(lambda n: n.name(lambda x: x.interfacemethodname(lambda i: i.port(identifier("port")).name(identifier("m"))))),
+            lambda u: u.macrousage(lambda m: m.name(identifier("WIDTH"))),
+            lambda u: u.macrousage(lambda m: m.name(identifier("MAX")).arguments("a, b")),
+            lambda u: u.constant(lambda c: c.fill("1")), lambda u: u.constant(lambda c: c.singleton("null")),
+            lambda u: u.constant(lambda c: c.bits("xxxx").base("h")),
+            sv.literal(1.5), lambda u: u.literal(lambda r: r.value(lambda v: v.as_scalar("s")).triple(True)),
+            lambda u: u.literal(lambda r: r.value(lambda v: v.as_scalar(10.0)).unit("ns")),
+            lambda u: u.literal(lambda r: r.value(lambda v: v.as_scalar(1000)).text("1_000").separators(True)),
+            sv.literal('a"b'))))
 
     # --- typescript5: every kind, its types, patterns and JSX, written through the builders (TypeScript5 has no writers), a
     # literal with its spelling and a shared identifier --- the text ToText writes:
