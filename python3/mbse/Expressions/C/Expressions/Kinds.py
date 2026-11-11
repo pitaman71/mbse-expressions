@@ -18,7 +18,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 from . import Domains
 
 __all__ = ["EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "CPP_SUFFIXES", "OPTIONAL", "SPELLING", "Writers", "type_name", "cast_type",
-           "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds"]
+           "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds", "identifier_problems"]
 
 LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE = "literal", "constant", "concatenatedstring", "variable"
 PARENTHESIZEDEXPRESSION, GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION = (
@@ -72,10 +72,8 @@ def _spelling(name: Any) -> str | None:
 
 def type_name(term: Any) -> str | None:
     """The name of the arithmetic type a type name names (a `typeid`, the term a cast's type holds), by
-    `Domains.arithmetic` (`unsigned int`, `uint8_t`), or None: no type, a type with a declarator, or of a specifier
-    that is not a keyword or a type's name. Whether a store defines it is the store's (`Domains.Types`)."""
-    if term is None:
-        return None
+    `Domains.arithmetic` (`unsigned int`, `uint8_t`), or None: a type with a declarator, or of a specifier that is not a
+    keyword or a type's name. Whether a store defines it is the store's (`Domains.Types`)."""
     node = F.node(*F.kind_of(term))
     if node.kind != TYPEID or "declarator" in node.helpers:
         return None
@@ -142,7 +140,7 @@ _NAMES = {"variable": "name", "identifier": "spelling"}
 wherever a name is held."""
 
 
-def _identifier_problems(value: Any) -> list[str]:
+def identifier_problems(value: Any) -> list[str]:
     """An identifier, as mbse-programs checks it: letters, digits, `_` and `$`, not starting with a digit; characters
     beyond ASCII are taken to be letters."""
     if type(value) is not str or not value:
@@ -187,13 +185,16 @@ def problems(node: F.Node, types: Domains.Types, suffixes: Mapping[type, re.Patt
              prefixes: tuple[str, ...] = PREFIXES, language: str = "C") -> list[str]:
     """A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
     identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), its type
-    read through `types`, a member's operator, invalid syntax in a sublanguage."""
+    read through `types`, a member's operator, invalid syntax in a sublanguage, an enumeration's enumerators within its
+    body."""
     kind, attributes = node.kind, node.attributes
     found = F.invalid_problems(kind, attributes) if kind in ("error", "missing") else []
-    found += _identifier_problems(attributes.get(_NAMES.get(kind, "")))
+    found += identifier_problems(attributes.get(_NAMES.get(kind, "")))
     if kind == MEMBEREXPRESSION and attributes.get("operator") not in (None, ".", "->"):
         found.append(f"a memberexpression's operator must be '.' or '->', got {attributes['operator']!r}")
     found += _constant_problems(attributes) if kind == CONSTANT else []
+    if kind == "enumspecifier" and not attributes.get("body") and (node.many or attributes.get("trailing_comma")):
+        found.append("an EnumSpecifier with enumerators has a body")
     found += _literal_problems(attributes, prefixes, suffixes, language, types) if kind == LITERAL else []
     for value in node.helpers.values():
         for inner in _nodes(value):
@@ -363,8 +364,9 @@ class Writers:
             lambda r: r.condition(condition).consequence(consequence).alternative(alternative)))
 
     def cast(self, type: Any, operand: Any) -> Any:
-        """`(type) operand`, `type` a spec of the dialect's `Type`, written through the builders (`lambda t: t.typeid(
-        lambda i: i.specifiers([lambda s: s.primitivetypespecifier(lambda p: p.keyword("int"))]))`)."""
+        """`(type) operand`, `type` a spec of its family's Types' `Term` (C Types', Cpp Types'), written through the
+        builders (`lambda t: t.typeid(lambda i: i.specifiers([lambda s: s.primitivetypespecifier(lambda p: p.keyword(
+        "int"))]))`)."""
         operand = self.dialect.spec(operand)
         return self.writer(lambda u: u.castexpression(lambda r: r.type(type).operand(operand)))
 

@@ -31,14 +31,20 @@ carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own litera
 - `awaitexpression` (`co_await`), `yieldexpression` (`co_yield`), `sizeofpackexpression` (`sizeof...(pack)`),
   `noexceptexpression`, `newexpression`, `deleteexpression`, `throwexpression`, `packexpansion` (`pattern...`).
 
-Its sublanguages are unions of their own: `Expressions.Cpp.Expressions.Type`, a type name (`typeid`), and
-`Expressions.Cpp.Expressions.Pattern`, for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an
-`identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch
-of every union whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does, `Pattern` lists
+Its sublanguages are dialects of their own, which it reads (`reads`; the dialects proposal, Retrofit's design): `Cpp
+Types`, C++'s type-ids (`Expressions.Cpp.Types.Term`), which every position of a type holds (a cast's, a named cast's,
+`new`'s, a conversion function's name's, a trailing return type, an enumeration's fixed type, a type parameter's
+default), and C's `C Preprocessor`, the directives C and C++ share; `Term` lists their `typeid` and `definedexpression`
+("(b)"). `Expressions.Cpp.Expressions.Pattern` is its union for binding targets ("(ii)"): an init capture's name (`[n =
+1]`), an `identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a
+branch of every union whose positions hold it: `Term` lists `designatedinitializer`, as C's does, `Pattern` lists
 `identifier`, `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a
-`parameterdeclaration` and `Initializer` an `initializerlist`. A type name's and a lambda's parts are helpers, each
-union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`,
-`Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and `AttributeSpecifier`.
+`parameterdeclaration` and `Initializer` an `initializerlist`. A type-id's and a lambda's parts are its helpers, as a
+lambda's declarator holds parameters with their specifiers and declarators (so they stay this dialect's, read by `Cpp
+Types` through its `reads`), each union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`,
+`Parameter`, `TemplateParameter`, `Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and
+`AttributeSpecifier`. An enumeration's body is data, Cpp Types' terms: its `EnumSpecifier` holds its `enumerators` and
+`trailing_comma`.
 
 The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
 (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
@@ -89,11 +95,12 @@ case and order) and a floating literal's (`f`, `l`, C++23's extended types' `f16
 
 
 def install(txn: Any) -> Any:
-    """Cpp's union of its kinds, added to the framework's terms as the branch `cpp`, its own kinds, its sublanguages'
-    unions (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
-    `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes
-    nothing. Its holder, `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its
-    `root` narrowed to its
+    """Cpp's union of its kinds, added to the framework's terms as the branch `cpp`, its own kinds, its union of binding
+    targets (`Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
+    `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own, before or after its
+    family's other installs; run again, it writes nothing. Cpp Types' `Term` and its `typeid`, which its positions hold,
+    are named by name, each created where Cpp Types' install has not run. Its holder,
+    `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
     `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
 

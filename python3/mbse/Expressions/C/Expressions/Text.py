@@ -2,14 +2,19 @@
 mbse-programs' printer writes it (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/_Printer.py`): every kind of the C
 family, its type names and the other helpers it holds, parentheses written in the term printed, and those C's
 precedence needs added (and around a template argument that holds `>`). `text(expression, dialect)` writes a term of
-either dialect of the C family, `Cpp`'s too, with the same precedence, C++'s being C's and its own.
+any dialect of the C family, `Cpp`'s, `C Types`', `Cpp Types`' and `C Preprocessor`'s too, with the same precedence,
+C++'s being C's and its own: the family's one printer, which its dialects' `Text` modules write through.
 
 A literal is written in its spelling where it has one (`text`), else in its value's default spelling, with what it
 encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
 (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal as
 `INFINITY` or `NAN`. A body of statements or declarations, not part of the term (a lambda's, a statement expression's,
-a struct's or an enum's), is written `{}`, where mbse-programs writes what it relates. Invalid syntax is written as
-written (`Terms.invalid_text`). Reading C (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6)."""
+a struct's), is written `{}`, where mbse-programs writes what it relates. An enumeration's body, its data, is written as
+mbse-programs writes it, its enumerators, directives and comments each on lines of its own, one level deeper, an
+enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment ending the line
+before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`, `#elif`, `#elifdef`,
+`#else`) on a line of its own, its items on the lines between, and `#endif`. Invalid syntax is written as written
+(`Terms.invalid_text`). Reading C (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6)."""
 
 from __future__ import annotations
 
@@ -448,8 +453,8 @@ class _Printer:
     def item(self, node: F.Node, depth: int, enumerators: bool) -> str:
         """An item, starting with its indentation (a directive, at its line's start); among `enumerators`, an enumerator
         ends with a comma."""
-        if node.kind == "comment":
-            return _INDENT * depth + self.comment(node)
+        if node.kind in ("comment", *F.INVALID_KINDS):  # a comment, or invalid syntax as written
+            return _INDENT * depth + self.text(node)
         if node.kind != "enumerator":
             return self.directive(node, depth, enumerators)
         outer, self.depth = self.depth, depth

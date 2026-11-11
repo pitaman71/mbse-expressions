@@ -37,29 +37,28 @@ name), a `str`. A term carries no domain. Its kinds:
 - GNU extensions, outside every standard as mbse-programs marks them (`EXTENSIONS`): `statementexpression` (`({ ...
   })`, whose body of statements is not part of the term: the dialects proposal, Decided, 5, "(i)") and
   `extensionexpression` (`__extension__ operand`).
-- `typeid`, a type name where a position holds an expression or a type alike (`sizeof(int)`, `_Generic`'s
-  controlling operand, `offsetof(struct s, m)`'s first argument).
+- C Types' `typeid`, a type name, where a position holds an expression or a type alike (`sizeof(int)`, `_Generic`'s
+  controlling operand, `offsetof(struct s, m)`'s first argument), and C Preprocessor's `definedexpression`,
+  `defined(name)`, a preprocessing condition's term, which its install adds: kinds of the dialects C reads, which this
+  dialect's `Term` lists ("(b)").
 - The framework's kinds of invalid syntax, `error` and `missing`.
 
-The sublanguages are unions of their own beside `Term` (the dialects proposal, Decided, 5):
-`Expressions.C.Expressions.Type`, a type name (`typeid`: its `specifiers` and its abstract `declarator`), held by a
-cast, a compound literal, a generic association and an enumeration's fixed type, and
-`Expressions.C.Expressions.Pattern`, for binding targets, which every dialect has ("(ii)"): C expressions bind no names,
-so it holds invalid syntax alone and nothing holds it, as the user decided (2026-11-04). As the user decided ("(b)"),
-one schema is a branch of every union whose positions hold it: `Term` lists `typeid`, for the positions that hold an
-expression or a type, and `designatedinitializer`, for an initializer list's items. A type name's parts are helpers,
-each union named after mbse-programs' category: `Specifier` (keywords, a named type, a struct, union or enum, C23's
-`typeof`, `_Atomic(type)`, C23's `_BitInt(width)`, and, as `TypeId` lists them among its specifiers, the attribute
-specifiers), `Declarator` (an identifier, a pointer, an array, a function, parentheses), `Parameter`,
-`AttributeSpecifier`, `Designator` and `Initializer`. A struct's or an enum's body, its member or enumerator
-declarations, is not part of the term ("(i)"): `body` says whether it has one. The framework reads a value of a
-sublanguage, as of any helper, as a `Terms.Part`.
+Its sublanguages are dialects of their own, which it reads (`reads`; the dialects proposal, Retrofit's design): `C
+Types`, C's type names (`Expressions.C.Types.Term`), which a cast's, a compound literal's and a generic association's
+`type` hold, a type name's specifiers, declarators, parameters and attribute specifiers its helpers, as no expression
+holds them; and `C Preprocessor`, the directives C and C++ share. `Expressions.C.Expressions.Pattern` is its union for
+binding targets, which every dialect has ("(ii)"): C expressions bind no names, so it holds invalid syntax alone and
+nothing holds it, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch of every union
+whose positions hold it: `Term` lists `designatedinitializer`, for an initializer list's items. Its own helpers, each
+union named after mbse-programs' category: `Name`, `Designator`, `Initializer`, and a generic association (`type` and
+`value`, a pair of terms).
 
 The editions C covers are data, which `define` writes, each owned by its designation and holding the kinds it has
 (`Framework.Standards`): ISO/IEC 9899:2011, 2018 and 2024, C11, C17 and C23 (C17 is C11's corrigenda, with no new
 syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. `DIALECT` reads the kinds
 (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated before it
-was complete through the builders, in a transaction, a cast's type a spec of `Type`, written through the builders too:
+was complete through the builders, in a transaction, a cast's type a spec of C Types' `Term`, written through the
+builders too:
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through the builders
 (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an
 expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
@@ -105,12 +104,12 @@ __all__ = ["install", "define", "DIALECT", "EXTENSIONS", "PREFIXES", "QUOTES", "
 
 
 def install(txn: Any) -> Any:
-    """C's union of its kinds, added to the framework's terms as the branch `c`, its own kinds, its sublanguages' unions
-    (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
-    `Expressions.C.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes
-    nothing. Its holder, `Expressions.C.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root`
-    narrowed to its
-    `Term`."""
+    """C's union of its kinds, added to the framework's terms as the branch `c`, its own kinds, its union of binding
+    targets (`Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
+    `Expressions.C.Expressions`: run after `Framework.install`, in a transaction of its own, before or after its
+    family's other installs; run again, it writes nothing. C Types' `Term` and its `typeid`, which its positions hold,
+    are named by name, each created where C Types' install has not run. Its holder, `Expressions.C.Expressions.Expression`,
+    refines `Expressions.Framework.Expression`, its `root` narrowed to its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
 
     def many(element: Any) -> Any:

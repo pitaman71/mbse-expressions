@@ -31,7 +31,8 @@ an enumeration's body, whose items are C Types' or Cpp Types' terms (their enume
 and comments, which its install adds to both `Term`s); elsewhere mbse-programs relates its items. Which language a
 condition or an item is of is the reading dialect's: from an enumeration, its own (a C++ term in a C enumeration is
 refused), from this dialect's holder, either. A condition's macros' names, C's variables and C++'s identifiers, are
-bound within it (`Kind.scopes`), as each names a macro, defined or not, never a value: nothing refines `Let`.
+bound within it (`Kind.scopes`), as each names a macro, defined or not, never a value, and so are an include's macro's:
+nothing refines `Let`.
 
 The editions it covers are data, which `define` writes: C's and C++'s (C11, C17, C23, C++17, C++20 and C++23), each
 with its own kinds it has, every kind in every edition but `elifdefdirective`, C23's and C++23's (`SINCE`: mbse-
@@ -248,7 +249,7 @@ def problems(node: F.Node) -> list[str]:
         if any(F.kind_of(item)[0] not in _ITEMS for item in node.many):
             found.append(f"an {_label(kind)}'s items are enumerators, directives and comments")
     if kind == "identifier":
-        found += K._identifier_problems(attributes.get("spelling"))
+        found += K.identifier_problems(attributes.get("spelling"))
     for value in node.helpers.values():
         for inner in _nodes(value):
             found += problems(inner)
@@ -282,6 +283,11 @@ def _condition_scopes(tag: str) -> Callable[[Any], list[frozenset[str]]]:
     return scopes
 
 
+def _include_scopes(record: Any) -> list[frozenset[str]]:
+    """What an include's macro has bound: its macros' names, as a condition's."""
+    return [macros(F.node(INCLUDEDIRECTIVE, record).slots["macro"])]
+
+
 def _kinds() -> dict[str, F.Kind]:
     """How the framework reads its own kinds."""
 
@@ -289,7 +295,7 @@ def _kinds() -> dict[str, F.Kind]:
         return F.Kind(F.APPLICATION, signature=FD.Opaque(), check=_check(tag), **options)
 
     return {
-        INCLUDEDIRECTIVE: application(INCLUDEDIRECTIVE, optional=("macro",)),
+        INCLUDEDIRECTIVE: application(INCLUDEDIRECTIVE, optional=("macro",), scopes=_include_scopes),
         DEFINEDIRECTIVE: application(DEFINEDIRECTIVE, required=("name",)),
         IFDIRECTIVE: application(IFDIRECTIVE, optional=("alternative",), scopes=_condition_scopes(IFDIRECTIVE)),
         IFDEFDIRECTIVE: application(IFDEFDIRECTIVE, required=("name",), optional=("alternative",)),
