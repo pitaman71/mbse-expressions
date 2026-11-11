@@ -1654,8 +1654,9 @@ install lists.
      list TypeScript5's kinds only, no longer the types' and patterns'.
 244. **Exports and printing** *(agent)*: `@mbse/expressions/TypeScript/Types` and `.../Patterns` (and Python's
      packages), each exporting `Expressions`, `Text`, `define` and `install`; TypeScript5's printer merges the two
-     dialects' `TEXTS`. `grammars/typescript5-estree.json` is unchanged: its entries name kinds by tag, which did not
-     change.
+     dialects' `TEXTS`. `grammars/typescript5-estree.json` keeps its entries, which name kinds by tag, unchanged; its
+     `concrete` entries name the two unions by their names before the move, `Type` and `Pattern`, as its description now
+     says *(agent)*.
 245. **Tests and the corpus**: suites TST (19, five cases) and TSP (20, four cases); DIA-21 to DIA-23, FRM-01, FRM-02,
      FRM-04, FRM-11 and FRM-13 under their IDs; the corpus's `typescript_types` and `typescript_patterns`.
 
