@@ -36,6 +36,10 @@ from mbse.Expressions.Unicode import Expressions as Unicode
 from mbse.Expressions.SystemVerilog import Assertions as SVAssertions, Constraints as SVConstraints, \
     Expressions as SystemVerilog, Patterns as SVPatterns, Preprocessor as SVPreprocessor, Types as SVTypes
 from mbse.Expressions.TypeScript import TypeScript5
+from mbse.Expressions.C import Preprocessor as CPreprocessor, Types as CTypes  # the retrofit's new dialects, skeletons yet
+from mbse.Expressions.Cpp import Types as CppTypes
+from mbse.Expressions.Python import Patterns as PythonPatterns, Types as PythonTypes
+from mbse.Expressions.TypeScript import Patterns as TypeScriptPatterns, Types as TypeScriptTypes
 from mbse.Expressions.C.Expressions import Expressions as CE
 from mbse.Expressions.Cpp.Expressions import Expressions as CPP
 from mbse.Expressions.Excel.Expressions import Expressions as X
@@ -91,6 +95,8 @@ def build():
     for module in (SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # its family
         store.transaction(module.install)
     store.transaction(TypeScript5.install)
+    for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor):
+        store.transaction(module.install)  # the retrofit's new dialects, each after its family's
     defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
     stored = {case: store.transaction(module.define)[0]["dialect"] for case, module in [  # each dialect's stored domains
         ("systemverilog_domains", SystemVerilog), ("python3_domains", Python3), ("typescript5_domains", TypeScript5),
@@ -98,6 +104,8 @@ def build():
         ("amd64_domains", AMD64), ("aapcs64_domains", AAPCS64)]}
     for module in (SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # the editions they cover
         store.transaction(module.define)
+    for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor):
+        store.transaction(module.define)  # their data, none yet
 
     # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
     # added ---

@@ -79,6 +79,8 @@ import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
+import * as TypeScriptPatterns from "../Patterns/Expressions.js";
+import * as TypeScriptTypes from "../Types/Expressions.js";
 import * as Domains from "./Domains.js";
 
 const { repr } = Repr;
@@ -840,7 +842,13 @@ function operatorKind(tag: string, vocabulary: ReadonlyMap<string, FD.Signature>
     check: check(tag), scopes: scopes(tag) });
 }
 
-/** The TypeScript5 dialect: its kinds, as the framework reads them. */
+/** The dialects of its family whose terms its positions are to hold, read when first needed (the dialects proposal,
+ * Retrofit's design): `TypeScript Types` and `TypeScript Patterns`. */
+function reads(): readonly F.Dialect[] {
+  return [TypeScriptTypes.DIALECT, TypeScriptPatterns.DIALECT];
+}
+
+/** The TypeScript5 dialect: its kinds, as the framework reads them, and its family's other dialects' terms. */
 export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
   [IDENTIFIER]: new F.Kind(F.REFERENCE, { required: ["name"], check: check(IDENTIFIER) }),
   [PRIVATEIDENTIFIER]: new F.Kind(F.REFERENCE, { required: ["name"], lexical: false, check: check(PRIVATEIDENTIFIER) }),
@@ -889,4 +897,4 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
   [JSXELEMENT]: application(JSXELEMENT, new FD.Opaque(), { required: ["openingElement"] }),
   [JSXFRAGMENT]: application(JSXFRAGMENT, new FD.Opaque()),
   [JSXEMPTYEXPRESSION]: application(JSXEMPTYEXPRESSION, new FD.Opaque()),
-}, { domain_of: Domains.of, literal: native });
+}, { domain_of: Domains.of, literal: native, reads });

@@ -1,0 +1,7 @@
+/** The C Preprocessor dialect, `Expressions.C.Preprocessor`, of the C family: the preprocessing directives C and C++
+ * share, each standard defining its own (ISO/IEC 9899, 6.10; ISO/IEC 14882, [cpp]), the C family's dialect that both
+ * read. `install` adds its union of its kinds to the framework's terms; `define` writes its dialect's data. A skeleton,
+ * its kinds to come (the dialects proposal, Retrofit's design). */
+
+export * as Expressions from "./Expressions.js";
+export { define, install } from "./Expressions.js";

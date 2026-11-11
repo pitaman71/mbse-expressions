@@ -97,7 +97,7 @@
                                 "excel": {
                                   "map": {
                                     "name": "q",
-                                    "array": {
+                                    "value": {
                                       "field": {
                                         "name": "ports",
                                         "value": {

@@ -808,9 +808,17 @@ def untyped(value: Any) -> FD.Domain:
     return FD.Anything
 
 
+def _reads() -> tuple[F.Dialect, ...]:
+    """The dialects of its family whose terms its positions are to hold, imported when first needed (the dialects
+    proposal, Retrofit's design): `C Types` and `C Preprocessor`."""
+    from ..Preprocessor import Expressions as CPreprocessor
+    from ..Types import Expressions as CTypes
+    return CTypes.DIALECT, CPreprocessor.DIALECT
+
+
 DIALECT = F.Dialect("C.Expressions", kinds("C", _C_TAGS, PREFIXES, SUFFIXES), domain_of=untyped,
-                    literal=_native)
-"""The C dialect: its kinds, as the framework reads them."""
+                    literal=_native, reads=_reads)
+"""The C dialect: its kinds, as the framework reads them, and its family's other dialects' terms."""
 
 
 # --- Writers ---

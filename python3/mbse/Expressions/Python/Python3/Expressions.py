@@ -747,6 +747,14 @@ def _operator_kind(vocabulary: dict[str, FD.Signature], **options: Any) -> F.Kin
     return F.Kind(F.APPLICATION, operator="op", vocabulary=vocabulary, required=("op",), **options)
 
 
+def _reads() -> tuple[F.Dialect, ...]:
+    """The dialects of its family whose terms its positions are to hold, imported when first needed (the dialects
+    proposal, Retrofit's design): `Python Types` and `Python Patterns`."""
+    from ..Patterns import Expressions as PythonPatterns
+    from ..Types import Expressions as PythonTypes
+    return PythonTypes.DIALECT, PythonPatterns.DIALECT
+
+
 DIALECT = F.Dialect("Python.Python3", {
     LITERAL: F.Kind(F.LITERAL, spelling=("text", "problems", "prefix", "quote", "base", "separators"),
                     check=_literal_check),
@@ -788,8 +796,8 @@ DIALECT = F.Dialect("Python.Python3", {
     IMPORT: F.Kind(F.IMPORT, required=("module",), names=_import_names, check=_import_check, optional=("value",)),
     IMPORTFROM: F.Kind(F.IMPORT, required=("module", "name"), names=_importfrom_names, check=_importfrom_check,
                        optional=("value",)),
-}, domain_of=Domains.of, literal=_native)
-"""The Python3 dialect: its kinds, as the framework reads them."""
+}, domain_of=Domains.of, literal=_native, reads=_reads)
+"""The Python3 dialect: its kinds, as the framework reads them, and its family's other dialects' terms."""
 
 
 # --- Writers ---

@@ -696,9 +696,17 @@ def _native(value: Any) -> Writer | None:
     return literal(value) if type(value) in (bool, int, float, str) else None
 
 
+def _reads() -> tuple[F.Dialect, ...]:
+    """The dialects whose terms its positions are to hold, imported when first needed (the dialects proposal,
+    Retrofit's design): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects."""
+    from ...C.Preprocessor import Expressions as CPreprocessor
+    from ..Types import Expressions as CppTypes
+    return CppTypes.DIALECT, CPreprocessor.DIALECT
+
+
 DIALECT = F.Dialect("Cpp.Expressions", {tag: _SHARED[tag] if tag in _SHARED else _OWN[tag] for tag in _TAGS},
-                    domain_of=C.untyped, literal=_native)
-"""The Cpp dialect: its kinds, as the framework reads them."""
+                    domain_of=C.untyped, literal=_native, reads=_reads)
+"""The Cpp dialect: its kinds, as the framework reads them, and the terms of the dialects it reads."""
 
 
 class Writer(F.Writer):

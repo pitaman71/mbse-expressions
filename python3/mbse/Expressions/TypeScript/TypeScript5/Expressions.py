@@ -823,6 +823,14 @@ def _operator(tag: str, vocabulary: dict[str, FD.Signature], required: tuple[str
                   check=_check(tag), scopes=_scopes(tag))
 
 
+def _reads() -> tuple[F.Dialect, ...]:
+    """The dialects of its family whose terms its positions are to hold, imported when first needed (the dialects
+    proposal, Retrofit's design): `TypeScript Types` and `TypeScript Patterns`."""
+    from ..Patterns import Expressions as TypeScriptPatterns
+    from ..Types import Expressions as TypeScriptTypes
+    return TypeScriptTypes.DIALECT, TypeScriptPatterns.DIALECT
+
+
 DIALECT = F.Dialect("TypeScript.TypeScript5", {
     IDENTIFIER: F.Kind(F.REFERENCE, required=("name",), check=_check(IDENTIFIER)),
     PRIVATEIDENTIFIER: F.Kind(F.REFERENCE, required=("name",), lexical=False, check=_check(PRIVATEIDENTIFIER)),
@@ -870,5 +878,5 @@ DIALECT = F.Dialect("TypeScript.TypeScript5", {
     JSXELEMENT: _application(JSXELEMENT, required=("openingElement",)),
     JSXFRAGMENT: _application(JSXFRAGMENT),
     JSXEMPTYEXPRESSION: _application(JSXEMPTYEXPRESSION),
-}, domain_of=Domains.of, literal=_native)
-"""The TypeScript5 dialect: its kinds, as the framework reads them."""
+}, domain_of=Domains.of, literal=_native, reads=_reads)
+"""The TypeScript5 dialect: its kinds, as the framework reads them, and its family's other dialects' terms."""

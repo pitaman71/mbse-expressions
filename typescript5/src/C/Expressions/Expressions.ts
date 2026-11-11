@@ -92,6 +92,8 @@ import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
+import * as CPreprocessor from "../Preprocessor/Expressions.js";
+import * as CTypes from "../Types/Expressions.js";
 import * as Domains from "./Domains.js";
 
 const { ValueError } = Errors;
@@ -806,9 +808,15 @@ export function untyped(value?: unknown): FD.Domain { // eslint-disable-line @ty
   return FD.Anything;
 }
 
-/** The C dialect: its kinds, as the framework reads them. */
+/** The dialects of its family whose terms its positions are to hold, read when first needed (the dialects proposal,
+ * Retrofit's design): `C Types` and `C Preprocessor`. */
+function reads(): readonly F.Dialect[] {
+  return [CTypes.DIALECT, CPreprocessor.DIALECT];
+}
+
+/** The C dialect: its kinds, as the framework reads them, and its family's other dialects' terms. */
 export const DIALECT: F.Dialect = new F.Dialect("C.Expressions", kinds("C", C_TAGS, PREFIXES, SUFFIXES),
-  { domain_of: untyped, literal: native });
+  { domain_of: untyped, literal: native, reads });
 
 // --- Writers ---
 

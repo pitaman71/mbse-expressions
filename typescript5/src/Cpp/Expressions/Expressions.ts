@@ -67,6 +67,8 @@ import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "../../C/Expressions/Domains.js";
 import * as C from "../../C/Expressions/Expressions.js";
+import * as CPreprocessor from "../../C/Preprocessor/Expressions.js";
+import * as CppTypes from "../Types/Expressions.js";
 
 export const [USERDEFINEDLITERAL, IDEXPRESSION, THISEXPRESSION, LAMBDAEXPRESSION] = [
   "userdefinedliteral", "idexpression", "thisexpression", "lambdaexpression"] as const;
@@ -679,10 +681,16 @@ function native(value: unknown): Writer | null {
   return ["bigint", "number", "boolean", "string"].includes(typeof value) ? literal(value) : null;
 }
 
-/** The Cpp dialect: its kinds, as the framework reads them. */
+/** The dialects whose terms its positions are to hold, read when first needed (the dialects proposal, Retrofit's
+ * design): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects. */
+function reads(): readonly F.Dialect[] {
+  return [CppTypes.DIALECT, CPreprocessor.DIALECT];
+}
+
+/** The Cpp dialect: its kinds, as the framework reads them, and the terms of the dialects it reads. */
 export const DIALECT: F.Dialect = new F.Dialect("Cpp.Expressions", Object.fromEntries(TAGS.map((tag) => [tag,
     SHARED[tag] ?? OWN[tag] as F.Kind])),
-  { domain_of: C.untyped, literal: native });
+  { domain_of: C.untyped, literal: native, reads });
 
 /** A term of the Cpp dialect, written through the builders where it is given (a spec). */
 export class Writer extends F.Writer {

@@ -21,8 +21,7 @@ patterns:
           - patterns:
               quantifier:
                 name: p
-                quantifier: all
-                collection:
+                value:
                   variable:
                     name: ports
                 body:
@@ -43,6 +42,7 @@ patterns:
                     - patterns:
                         variable:
                           name: pins
+                quantifier: all
           - patterns:
               call:
                 callable: le

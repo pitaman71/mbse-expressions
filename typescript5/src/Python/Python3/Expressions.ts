@@ -88,6 +88,8 @@ import { Repr, Schemas } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
+import * as PythonPatterns from "../Patterns/Expressions.js";
+import * as PythonTypes from "../Types/Expressions.js";
 import * as Domains from "./Domains.js";
 
 /** A complex number, which JavaScript has none of: what a `constant` holds of one (in Python, a `complex`). */
@@ -747,7 +749,13 @@ function operatorKind(vocabulary: ReadonlyMap<string, FD.Signature>, options: F.
   return new F.Kind(F.APPLICATION, { operator: "op", vocabulary, required: ["op"], ...options });
 }
 
-/** The Python3 dialect: its kinds, as the framework reads them. */
+/** The dialects of its family whose terms its positions are to hold, read when first needed (the dialects proposal,
+ * Retrofit's design): `Python Types` and `Python Patterns`. */
+function reads(): readonly F.Dialect[] {
+  return [PythonTypes.DIALECT, PythonPatterns.DIALECT];
+}
+
+/** The Python3 dialect: its kinds, as the framework reads them, and its family's other dialects' terms. */
 export const DIALECT = new F.Dialect("Python.Python3", {
   [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "prefix", "quote", "base", "separators"],
     check: literalCheck }),
@@ -792,7 +800,7 @@ export const DIALECT = new F.Dialect("Python.Python3", {
   [IMPORT]: new F.Kind(F.IMPORT, { required: ["module"], names: importNames, check: importCheck, optional: ["value"] }),
   [IMPORTFROM]: new F.Kind(F.IMPORT, { required: ["module", "name"], names: importfromNames, check: importfromCheck,
     optional: ["value"] }),
-}, { domain_of: Domains.of, literal: native });
+}, { domain_of: Domains.of, literal: native, reads });
 
 // --- Writers ---
 
