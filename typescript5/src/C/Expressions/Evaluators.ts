@@ -300,7 +300,7 @@ function cast(dialect: Terms.Dialect): F.Implementation {
     const type_ = Terms.argumentsOf(Terms.kindOf(node)[1])[0]; // a C Types term, which the cast reads, not evaluates
     const [kind] = Terms.kindOf(type_);
     // invalid syntax where the type stands, refused as every dialect refuses it
-    if (Terms.INVALID_KINDS.has(kind)) throw new ValueError(`${dialect.name()} ${kind} is not evaluated`);
+    if (Terms.INVALID_KINDS.has(kind)) throw new ValueError(`${dialect.owner(type_).name()} ${kind} is not evaluated`);
     const target = Expressions.castType(Expressions.typeName(type_), typesOf(node, dialect));
     if (target === null) throw refuse(dialect, "castexpression to a type that is not arithmetic");
     return convert((args[1] as F.Thunk)(), target);

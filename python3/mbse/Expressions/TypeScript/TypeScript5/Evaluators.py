@@ -4,16 +4,15 @@ The dialects proposal decided a shallow evaluator (its Decided, 8): a new kind i
 framework's interpreter evaluates a literal by its role, its `value` (a boolean, a number, a bigint or a string), and
 `EVALUATED` names that kind alone: every other kind, `constant` among them, raises `NotImplementedError`, "TypeScript5
 binaryexpression is not evaluated", and invalid syntax `ValueError`, as in every dialect. A term of a dialect of its
-family it reads, `TypeScript Types`' or `TypeScript Patterns`', none of whose kinds is evaluated, is refused by that
-dialect's name: "TypeScript Types tsuniontype is not evaluated" (the dialects proposal, Retrofit's design: "Evaluation
-keeps what it does").
+family it reads, `TypeScript Types`' or `TypeScript Patterns`', none of whose kinds is evaluated, is refused by the
+name of the dialect that owns it, as the framework's interpreter refuses it: "TypeScript Types tsuniontype is not
+evaluated" (the dialects proposal, Retrofit's design: "Evaluation keeps what it does"); a literal a type holds is
+TypeScript5's, and evaluates as one.
 """
 
 from __future__ import annotations
 
-from typing import Any
-
-from mbse.Expressions.Framework import Evaluators as F, Terms
+from mbse.Expressions.Framework import Evaluators as F
 
 from . import Expressions
 
@@ -23,17 +22,6 @@ EVALUATED = frozenset({Expressions.LITERAL})
 """The kinds evaluated: a literal, by its value."""
 
 
-class _Interpreter(F.Interpreter):
-    """TypeScript5's interpreter, which refuses a term of a dialect of its family by that dialect's name."""
-
-    def evaluate(self, node: Any, scope: Any) -> Any:
-        union = Terms.dialect_of(node)
-        reader = next((dialect for dialect in self.dialect.reads() if dialect.union == union), None)
-        if reader is not None:  # none of its kinds is evaluated
-            return F.Interpreter(reader, {}, evaluated=frozenset()).evaluate(node, scope)
-        return super().evaluate(node, scope)
-
-
-INTERPRETER = _Interpreter(Expressions.DIALECT, {}, evaluated=EVALUATED)
+INTERPRETER = F.Interpreter(Expressions.DIALECT, {}, evaluated=EVALUATED)
 OfAny: F.Evaluator = INTERPRETER
 """The value of a TypeScript5 term: a literal's value; any other kind is refused by name."""

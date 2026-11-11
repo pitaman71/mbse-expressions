@@ -103,19 +103,15 @@ export type Text = (p: Printer, node: T.Node) => string;
  * a `TypeScript Types`' or a `TypeScript Patterns`' kind or helper as its dialect's `Text.TEXTS` writes it. */
 export class Printer {
   readonly texts: ReadonlyMap<string, Text> = new Map([...TypesText.TEXTS, ...PatternsText.TEXTS]);
-  readonly family: readonly F.Dialect[] = [T.DIALECT, ...T.DIALECT.reads()];
   /** Each node of invalid syntax read, and the dialect holding it. */
   readonly invalid = new Map<T.Node, F.Dialect>();
 
-  /** A term's `Node`, or a `Node` as it is; a node of invalid syntax remembers the dialect whose `Term` holds it, whose
-   * name its refusal gives. */
+  /** A term's `Node`, or a `Node` as it is; a node of invalid syntax remembers the dialect that owns it, whose name its
+   * refusal gives. */
   node(value: any): T.Node {
     if (value instanceof T.Node) return value;
     const node = T.tree(value);
-    if (F.INVALID_KINDS.has(node.kind)) {
-      const union = F.dialectOf(value);
-      this.invalid.set(node, this.family.find((dialect) => dialect.union === union)!);
-    }
+    if (F.INVALID_KINDS.has(node.kind)) this.invalid.set(node, T.DIALECT.owner(value)); // its owner (`Terms.Dialect.owner`)
     return node;
   }
 

@@ -14,7 +14,7 @@ mbse-programs writes it, its enumerators, directives and comments each on lines 
 enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment ending the line
 before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`, `#elif`, `#elifdef`,
 `#else`) on a line of its own, its items on the lines between, and `#endif`. Invalid syntax is written as written
-(`Terms.invalid_text`). Reading C (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6)."""
+(`Terms.invalid_text`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`). Reading C (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6)."""
 
 from __future__ import annotations
 
@@ -120,13 +120,17 @@ class _Printer:
 
     def __init__(self, dialect: F.Dialect):
         self.dialect, self.depth = dialect, 0  # the depth of the enumeration being written
+        self.owners: dict[int, tuple[F.Node, F.Dialect]] = {}  # each node of invalid syntax read, and the dialect that owns it
 
     def node(self, value: Any) -> F.Node:
         """A term's `Node`, read through the dialect (which refuses another dialect's term), or a `Node` as it is."""
         if isinstance(value, F.Node):
             return value
         tag, record, _ = self.dialect.kind(value)
-        return F.node(tag, record)
+        node = F.node(tag, record)
+        if tag in F.INVALID_KINDS:  # its owner, whose name its refusal gives (`Terms.Dialect.owner`)
+            self.owners[id(node)] = (node, self.dialect.owner(value))
+        return node
 
     def precedence(self, node: F.Node, written: str) -> int:
         if node.kind == E.BINARYEXPRESSION:
@@ -203,7 +207,8 @@ class _Printer:
     # Expressions
 
     def invalid(self, node: F.Node) -> str:
-        return F.invalid_text(self.dialect, node.kind, node.attributes)
+        # by the dialect that owns it; within a helper, which holds no term, by the dialect printing it
+        return F.invalid_text(self.owners.get(id(node), (node, self.dialect))[1], node.kind, node.attributes)
 
     def literal(self, node: F.Node) -> str:
         if "text" in node.attributes:

@@ -97,10 +97,8 @@ export class Printer {
       const text = complexText((parts.get("real") as number | undefined) ?? 0, parts.get("imag") as number);
       return [text, text.startsWith("-") ? UNARY : PRIMARY];
     }
-    if (tag === "error" || tag === "missing") { // as written, by the dialect of its family whose union holds it
-      const union = F.dialectOf(node);
-      const owner = [P.DIALECT, ...P.DIALECT.reads()].find((dialect) => dialect.union === union) as F.Dialect;
-      return [F.invalidText(owner, tag, attributes), PRIMARY];
+    if (tag === "error" || tag === "missing") { // as written, by the dialect of its family that owns it
+      return [F.invalidTermText(P.DIALECT, node), PRIMARY];
     }
     if (IMPORTS.includes(tag)) throw new Errors.ValueError("an import can only enclose the whole expression");
     const family = texts().get(tag);

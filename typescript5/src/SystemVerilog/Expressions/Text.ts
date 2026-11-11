@@ -130,14 +130,10 @@ export class Printer {
     return F.node(tag, record);
   }
 
-  /** A term's source, as its kind writes it; invalid syntax as written, by the dialect whose union holds it. */
+  /** A term's source, as its kind writes it; invalid syntax as written, by the dialect that owns it. */
   text(value: any): string {
     const node = this.node(value);
-    if (node.kind === "error" || node.kind === "missing") {
-      const union = F.dialectOf(value);
-      return F.invalidText([E.DIALECT, ...E.DIALECT.reads()].find((d) => d.union === union) as F.Dialect, node.kind,
-        node.attributes);
-    }
+    if (node.kind === "error" || node.kind === "missing") return F.invalidTermText(E.DIALECT, value);
     return (this.texts.get(node.kind) as Text)(this, node);
   }
 

@@ -296,8 +296,8 @@ def _cast(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
         type_ = Terms.arguments_of(Terms.kind_of(node)[1])[0]  # a C Types term, which the cast reads, not evaluates
         kind = Terms.kind_of(type_)[0]
-        if kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, refused as every dialect does
-            raise ValueError(f"{dialect.name()} {kind} is not evaluated")
+        if kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, refused by its owner, as every dialect does
+            raise ValueError(f"{dialect.owner(type_).name()} {kind} is not evaluated")
         target = Expressions.cast_type(Expressions.type_name(type_), _types(node, dialect))
         if target is None:
             raise _refuse(dialect, "castexpression to a type that is not arithmetic")

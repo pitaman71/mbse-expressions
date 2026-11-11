@@ -15,8 +15,8 @@
  * level deeper, an enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment
  * ending the line before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`,
  * `#elif`, `#elifdef`, `#else`) on a line of its own, its items on the lines between, and `#endif`. Invalid syntax is
- * written as written (`Terms.invalidText`). Reading C (`FromText`) is mbse-programs' (the dialects proposal, Decided,
- * 6).
+ * written as written (`Terms.invalidText`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`).
+ * Reading C (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -124,6 +124,7 @@ type Text = (printer: Printer, node: F.Node) => string;
 /** Writes a term's source from its `Node`: its kind as C and C++ write it, its type names and other helpers nested. */
 class Printer {
   depth = 0; // the depth of the enumeration being written
+  readonly owners = new Map<F.Node, F.Dialect>(); // each node of invalid syntax read, and the dialect that owns it
 
   constructor(readonly dialect: F.Dialect) {}
 
@@ -131,7 +132,16 @@ class Printer {
   node(value: any): F.Node {
     if (value instanceof F.Node) return value;
     const [tag, record] = this.dialect.kind(value);
-    return F.node(tag, record);
+    const node = F.node(tag, record);
+    // its owner, whose name its refusal gives (`Terms.Dialect.owner`)
+    if (F.INVALID_KINDS.has(tag)) this.owners.set(node, this.dialect.owner(value));
+    return node;
+  }
+
+  /** Invalid syntax, as written, by the dialect that owns it; within a helper, which holds no term, by the dialect
+   * printing it. */
+  invalid(node: F.Node): string {
+    return F.invalidText(this.owners.get(node) ?? this.dialect, node.kind, node.attributes);
   }
 
   precedence(node: F.Node, written: string): number {
@@ -668,8 +678,7 @@ class Printer {
 }
 
 const TEXTS: Readonly<Record<string, Text>> = {
-  error: (p, n) => F.invalidText(p.dialect, n.kind, n.attributes), missing: (p, n) => F.invalidText(p.dialect, n.kind,
-    n.attributes),
+  error: (p, n) => p.invalid(n), missing: (p, n) => p.invalid(n),
   literal: (p, n) => p.literal(n),
   constant: (p, n) => n.attributes.get("text") ?? "nullptr",
   userdefinedliteral: (p, n) => p.literal(one(n.helpers.get("literal")) as F.Node) + n.attributes.get("suffix"),

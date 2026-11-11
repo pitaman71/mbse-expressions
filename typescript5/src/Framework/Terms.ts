@@ -981,11 +981,19 @@ function invalidCheck(record: any): string[] {
 }
 
 /** How a printer writes invalid syntax: an error as the source it spans, as written, and a missing term as nothing; an
- * error with no text has nothing to print, and is refused by name. */
+ * error with no text has nothing to print, and is refused by the name of `dialect`, the term's owner (`Dialect.owner`),
+ * which `invalidTermText` finds. */
 export function invalidText(dialect: Dialect, tag: string, attributes: ReadonlyMap<string, any>): string {
   if (tag === "missing") return "";
   if (!attributes.has("text")) throw new ValueError(`${dialect.name()} error has no text to print`);
   return attributes.get("text");
+}
+
+/** How a printer of `dialect` writes a term of invalid syntax: `invalidText`, by the term's owner, the dialect whose
+ * `Term` holds it (`Dialect.owner`), so that every family's printer names it alike. */
+export function invalidTermText(dialect: Dialect, term_: any): string {
+  const [tag, record] = kindOf(term_);
+  return invalidText(dialect.owner(term_), tag, attributesOf(record));
 }
 
 /** The framework's kinds of invalid syntax, which every dialect's `Term` holds and every dialect reads. */
@@ -1129,6 +1137,19 @@ export class Dialect {
 
   toString(): string {
     return `<dialect ${this.own}>`;
+  }
+
+  /** The dialect that owns a term's kind, whose name its refusals and its printing of invalid syntax give: the dialect
+   * whose `Term` holds it, this one or one it reads, or, for a kind that `Term` lists and a dialect it reads declares,
+   * that dialect ("Python Types typevar is not evaluated", "C Types error has no text to print"); a term of any other
+   * dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as the dialects proposal's
+   * Retrofit's design has it ("Python Patterns matchas is not evaluated"). */
+  owner(term_: any): Dialect {
+    const reader = this.reader(term_);
+    const tag = kindOf(term_)[0];
+    if (reader === null) return this; // another dialect's term
+    if (reader.byTag.has(tag)) return reader;
+    return reader.reads().find((other) => other.byTag.has(tag)) as Dialect; // `kind` refuses a tag none declares
   }
 
   [Repr.REPR](): string {

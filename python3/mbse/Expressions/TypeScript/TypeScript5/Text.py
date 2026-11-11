@@ -121,18 +121,16 @@ class Printer:
         from ..Types import Text as Types
         self.texts = {**Types.TEXTS, **Patterns.TEXTS}
         self.types = Types
-        self.family = (T.DIALECT, *T.DIALECT.reads())
         self.invalid: dict[int, tuple[T.Node, Any]] = {}  # each node of invalid syntax read, and the dialect holding it
 
     def node(self, value: Any) -> T.Node:
-        """A term's `Node`, or a `Node` as it is; a node of invalid syntax remembers the dialect whose `Term` holds it,
-        whose name its refusal gives."""
+        """A term's `Node`, or a `Node` as it is; a node of invalid syntax remembers the dialect that owns it, whose
+        name its refusal gives."""
         if isinstance(value, T.Node):
             return value
         node = T.tree(value)
         if node.kind in F.INVALID_KINDS:
-            union = F.dialect_of(value)
-            self.invalid[id(node)] = (node, next(d for d in self.family if d.union == union))
+            self.invalid[id(node)] = (node, T.DIALECT.owner(value))  # its owner (`Terms.Dialect.owner`)
         return node
 
     def precedence(self, node: T.Node) -> int:

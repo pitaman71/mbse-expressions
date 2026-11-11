@@ -125,7 +125,7 @@ from . import Domains, Objects
 
 __all__ = [
     "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
-    "INVALID", "INVALID_KINDS", "invalid_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
+    "INVALID", "INVALID_KINDS", "invalid_text", "invalid_term_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
     "spec", "term", "is_term", "is_expression", "is_binder", "holder_of", "kind_of", "dialect_of", "dialect_name",
     "dialect_tag", "SUBLANGUAGES", "form", "node", "name_of", "reference_name", "operator_of", "walk", "fold", "same",
 ]
@@ -892,12 +892,20 @@ def _invalid_check(record: Any) -> list[str]:
 
 def invalid_text(dialect: Dialect, tag: str, attributes: Mapping[str, Any]) -> str:
     """How a printer writes invalid syntax: an error as the source it spans, as written, and a missing term as nothing;
-    an error with no text has nothing to print, and is refused by name."""
+    an error with no text has nothing to print, and is refused by the name of `dialect`, the term's owner
+    (`Dialect.owner`), which `invalid_term_text` finds."""
     if tag == "missing":
         return ""
     if "text" not in attributes:
         raise ValueError(f"{dialect.name()} error has no text to print")
     return attributes["text"]
+
+
+def invalid_term_text(dialect: Dialect, term_: Any) -> str:
+    """How a printer of `dialect` writes a term of invalid syntax: `invalid_text`, by the term's owner, the dialect whose
+    `Term` holds it (`Dialect.owner`), so that every family's printer names it alike."""
+    tag, record = kind_of(term_)
+    return invalid_text(dialect.owner(term_), tag, attributes_of(record))
 
 
 INVALID_KINDS = {"error": Kind(INVALID, check=_invalid_check), "missing": Kind(INVALID, check=_invalid_check)}
@@ -1003,6 +1011,18 @@ class Dialect:
 
     def __repr__(self) -> str:
         return f"<dialect {self._name}>"
+
+    def owner(self, term_: Any) -> Dialect:
+        """The dialect that owns a term's kind, whose name its refusals and its printing of invalid syntax give: the
+        dialect whose `Term` holds it, this one or one it reads, or, for a kind that `Term` lists and a dialect it reads
+        declares, that dialect ("Python Types typevar is not evaluated", "C Types error has no text to print"); a term
+        of any other dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as the
+        dialects proposal's Retrofit's design has it ("Python Patterns matchas is not evaluated")."""
+        reader = self._reader(term_)
+        tag = kind_of(term_)[0]
+        if reader is None or tag in reader._kinds:  # another dialect's term, or its reader's own kind
+            return reader or self
+        return next(other for other in reader.reads() if tag in other._kinds)  # `kind` refuses a tag none declares
 
     def _reader(self, term_: Any) -> Dialect | None:
         """The dialect that reads a term value: this one, for a term of its `Term`; one it reads, for a term of that
