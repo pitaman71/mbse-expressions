@@ -1,15 +1,18 @@
-"""Text of the TypeScript5 dialect: `ToText(expression)` is a term of TypeScript5 (or anything `Terms.term` reads one
-from) as TypeScript source, as mbse-programs' printer writes it (`mbse:mbse-programs/python3/mbse/Programs/TypeScript/_Printer.py`):
-its types, patterns and JSX within it, parentheses written in the term printed, and those its precedence needs added
-(for an expression, also where `??` meets `||` or `&&`, where an arrow's body is an object, around a `new`'s callee
-that calls, and around a number's member access; for a type, where a function, conditional or union type is an
-operand). It is written as an expression statement holds it: parenthesized where it would start with `{`,
-`function`, `class` or `let [`. A literal is written in its spelling where it has one (`text`), else in its value's
-default spelling: a number as JavaScript's `String(number)` writes it, a bigint with its `n`, a string in its quote (a
-double quote by default) with its escapes. Invalid syntax is written as written (`Terms.invalid_text`). A body of
-statements, not part of the term, is written `{}`, where mbse-programs writes the statements it relates. An arrow's
-lone type parameter without a constraint is written `<T,>`, so that the text reads alike in a `.ts` and a `.tsx`
-file. Reading TypeScript (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6)."""
+"""Text of the TypeScript family: `ToText(expression)` is a term of TypeScript5, `TypeScript Types` or `TypeScript
+Patterns` (or anything `Terms.term` reads one from) as TypeScript source, as mbse-programs' printer writes it
+(`mbse:mbse-programs/python3/mbse/Programs/TypeScript/_Printer.py`): its types, patterns and JSX within it, parentheses
+written in the term printed, and those its precedence needs added (for an expression, also where `??` meets `||` or
+`&&`, where an arrow's body is an object, around a `new`'s callee that calls, and around a number's member access; for a
+type, where a function, conditional or union type is an operand). It is written as an expression statement holds it:
+parenthesized where it would start with `{`, `function`, `class` or `let [`. A literal is written in its spelling where it
+has one (`text`), else in its value's default spelling: a number as JavaScript's `String(number)` writes it, a bigint
+with its `n`, a string in its quote (a double quote by default) with its escapes. Invalid syntax is written as written
+(`Terms.invalid_text`), refused by the name of the dialect whose `Term` holds it. A body of statements, not part of the
+term, is written `{}`, where mbse-programs writes the statements it relates. An arrow's lone type parameter without a
+constraint is written `<T,>`, so that the text reads alike in a `.ts` and a `.tsx` file. Its `Printer` writes
+TypeScript5's kinds and helpers itself, and dispatches the types' and the patterns' to their dialects' `Text.TEXTS`, as
+SystemVerilog's family printer does. Reading TypeScript (`FromText`) is mbse-programs' (the dialects proposal, Decided,
+6)."""
 
 from __future__ import annotations
 
@@ -21,7 +24,7 @@ from mbse.Expressions.Framework import Terms as F
 
 from . import Expressions as T
 
-__all__ = ["ToText"]
+__all__ = ["ToText", "Printer"]
 
 (SEQUENCE, ASSIGN, CONDITIONAL, COALESCE, OR, AND, BOR, BXOR, BAND, EQUALITY, RELATIONAL, SHIFT, ADD, MULTIPLY, POWER,
  UNARY, POSTFIX, NEW, MEMBER, PRIMARY) = range(20)
@@ -41,22 +44,8 @@ _PRECEDENCE = {
     T.TAGGEDTEMPLATEEXPRESSION: MEMBER, T.TSINSTANTIATIONEXPRESSION: MEMBER, T.IMPORTEXPRESSION: MEMBER,
 }
 
-T_FUNCTION, T_CONDITIONAL, T_UNION, T_INTERSECTION, T_OPERATOR, T_POSTFIX, T_PRIMARY = range(7)
-"""Types' precedence, loosest first."""
-
-_TYPE_PRECEDENCE = {
-    "tsfunctiontype": T_FUNCTION, "tsconstructortype": T_FUNCTION, "tsconditionaltype": T_CONDITIONAL,
-    "tsuniontype": T_UNION, "tsintersectiontype": T_INTERSECTION, "tstypeoperator": T_OPERATOR,
-    "tsinfertype": T_OPERATOR, "tsarraytype": T_POSTFIX, "tsindexedaccesstype": T_POSTFIX,
-    "tstypepredicate": T_FUNCTION,
-}
-
 _KEYWORDS = {
-    "tsanykeyword": "any", "tsunknownkeyword": "unknown", "tsnumberkeyword": "number", "tsbigintkeyword": "bigint",
-    "tsbooleankeyword": "boolean", "tsstringkeyword": "string", "tssymbolkeyword": "symbol",
-    "tsobjectkeyword": "object", "tsneverkeyword": "never", "tsvoidkeyword": "void",
-    "tsundefinedkeyword": "undefined", "tsnullkeyword": "null", "tsintrinsickeyword": "intrinsic",
-    "tsthistype": "this", T.THISEXPRESSION: "this", T.SUPER: "super", T.ELISION: "", T.JSXEMPTYEXPRESSION: "",
+    T.THISEXPRESSION: "this", T.SUPER: "super", T.ELISION: "", T.JSXEMPTYEXPRESSION: "",
 }
 """The kinds written as one word, or as nothing."""
 
@@ -123,13 +112,28 @@ def _nodes(value: Any) -> tuple[T.Node, ...]:
     return () if value is None else value
 
 
-class _Printer:
-    """Writes a term's source: its kind as TypeScript writes it, its helpers (its types, patterns and JSX among them)
-    from its `Node`."""
+class Printer:
+    """Writes a term's source, of any dialect of the family: its kind as TypeScript writes it, its helpers from its
+    `Node`; a `TypeScript Types`' or a `TypeScript Patterns`' kind or helper as its dialect's `Text.TEXTS` writes it."""
+
+    def __init__(self) -> None:
+        from ..Patterns import Text as Patterns
+        from ..Types import Text as Types
+        self.texts = {**Types.TEXTS, **Patterns.TEXTS}
+        self.types = Types
+        self.family = (T.DIALECT, *T.DIALECT.reads())
+        self.invalid: dict[int, tuple[T.Node, Any]] = {}  # each node of invalid syntax read, and the dialect holding it
 
     def node(self, value: Any) -> T.Node:
-        """A term's `Node`, or a `Node` as it is."""
-        return value if isinstance(value, T.Node) else T.tree(value)
+        """A term's `Node`, or a `Node` as it is; a node of invalid syntax remembers the dialect whose `Term` holds it,
+        whose name its refusal gives."""
+        if isinstance(value, T.Node):
+            return value
+        node = T.tree(value)
+        if node.kind in F.INVALID_KINDS:
+            union = F.dialect_of(value)
+            self.invalid[id(node)] = (node, next(d for d in self.family if d.union == union))
+        return node
 
     def precedence(self, node: T.Node) -> int:
         kind, attributes = node.kind, node.attributes
@@ -150,10 +154,11 @@ class _Printer:
         text = self.text(node)
         return f"({text})" if self.precedence(node) < needed else text
 
-    def t(self, value: T.Node, needed: int) -> str:
-        """A type's text, parenthesized if it binds less than its place needs."""
-        text = self.text(value)
-        return f"({text})" if _TYPE_PRECEDENCE.get(value.kind, T_PRIMARY) < needed else text
+    def t(self, value: Any, needed: int) -> str:
+        """A type's text, parenthesized if it binds less than its place needs (`TypeScript Types`' `Text.PRECEDENCE`)."""
+        node = self.node(value)
+        text = self.text(node)
+        return f"({text})" if self.types.PRECEDENCE.get(node.kind, self.types.PRIMARY) < needed else text
 
     def text(self, value: Any) -> str:
         node = self.node(value)
@@ -161,17 +166,19 @@ class _Printer:
         if kind in _KEYWORDS:
             return _KEYWORDS[kind]
         if kind in ("error", "missing"):
-            return F.invalid_text(T.DIALECT, kind, node.attributes)
+            return F.invalid_text(self.invalid[id(node)][1], kind, node.attributes)
+        if kind in self.texts:
+            return self.texts[kind](self, node)
         return getattr(self, f"_{kind}")(node)
 
     # Names and literals
 
     def decorators(self, node: T.Node) -> str:
-        return "".join(f"@{self.e(expression, MEMBER)} " for expression in node.many)
+        return "".join(f"@{self.e(expression, MEMBER)} " for expression in node.lists.get("decorators", ()))
 
     def annotation(self, node: T.Node) -> str:
         held = node.helpers.get("typeAnnotation")
-        return "" if held is None else ": " + self.t(held.helpers["typeAnnotation"], T_FUNCTION)
+        return "" if held is None else ": " + self.t(held.slots["typeAnnotation"], self.types.FUNCTION)
 
     def _identifier(self, node: T.Node) -> str:
         optional = "?" if node.attributes.get("optional") else ""
@@ -233,7 +240,7 @@ class _Printer:
         value = self.node(node.slots["value"])
         if attributes.get("shorthand"):
             if value.kind == T.ASSIGNMENTPATTERN:
-                return f"{self.text(value.helpers['left'])} = {self.e(value.slots['right'], ASSIGN)}"
+                return f"{self.text(value.slots['left'])} = {self.e(value.slots['right'], ASSIGN)}"
             return key
         accessor = attributes.get("propertyKind") in ("get", "set")
         if accessor or attributes.get("method"):
@@ -254,9 +261,10 @@ class _Printer:
     def signature(self, node: T.Node, arrow: bool = False) -> str:
         """`<typeParameters>(params): returnType`, or with `arrow` `... => returnType` for a function type."""
         parameters = self.type_arguments(node, "typeParameters")
-        params = ", ".join(self.text(parameter) for parameter in _nodes(node.helpers.get("params")))
+        params = ", ".join(self.text(parameter) for parameter in node.lists.get("params", ()))
         returned = node.helpers.get("returnType")
-        returns = "" if returned is None else (" => " if arrow else ": ") + self.t(returned.helpers["typeAnnotation"], T_FUNCTION)
+        returns = "" if returned is None else (" => " if arrow else ": ") + self.t(
+            returned.slots["typeAnnotation"], self.types.FUNCTION)
         return f"{parameters}({params}){returns}"
 
     def _functionexpression(self, node: T.Node) -> str:
@@ -274,7 +282,7 @@ class _Printer:
         parameters = node.helpers.get("typeParameters")
         if parameters is not None:
             params = _nodes(parameters.helpers.get("params"))
-            if len(params) == 1 and "constraint" not in params[0].helpers:  # `<T>(` would open an element in a .tsx file
+            if len(params) == 1 and params[0].slots["constraint"] is None:  # `<T>(` would open an element in a .tsx file
                 written = self.text(parameters)
                 head = head.replace(written, written[:-1] + ",>", 1)
         body = node.slots["body"]
@@ -386,7 +394,7 @@ class _Printer:
                 f"{self.e(slots['alternate'], ASSIGN)}")
 
     def _assignmentexpression(self, node: T.Node) -> str:
-        target = node.helpers["left"]
+        target = self.node(node.slots["left"])
         left = self.text(target) if target.kind in (T.OBJECTPATTERN, T.ARRAYPATTERN) else self.e(target, MEMBER)
         return f"{left} {node.attributes['operator']} {self.e(node.slots['right'], ASSIGN)}"
 
@@ -399,13 +407,13 @@ class _Printer:
             "" if argument is None else " " + self.e(argument, ASSIGN))
 
     def _tsasexpression(self, node: T.Node) -> str:
-        return f"{self.e(node.slots['expression'], RELATIONAL)} as {self.t(node.helpers['typeAnnotation'], 0)}"
+        return f"{self.e(node.slots['expression'], RELATIONAL)} as {self.t(node.slots['typeAnnotation'], 0)}"
 
     def _tssatisfiesexpression(self, node: T.Node) -> str:
-        return f"{self.e(node.slots['expression'], RELATIONAL)} satisfies {self.t(node.helpers['typeAnnotation'], 0)}"
+        return f"{self.e(node.slots['expression'], RELATIONAL)} satisfies {self.t(node.slots['typeAnnotation'], 0)}"
 
     def _tstypeassertion(self, node: T.Node) -> str:
-        return f"<{self.t(node.helpers['typeAnnotation'], 0)}>{self.e(node.slots['expression'], UNARY)}"
+        return f"<{self.t(node.slots['typeAnnotation'], 0)}>{self.e(node.slots['expression'], UNARY)}"
 
     def _tsnonnullexpression(self, node: T.Node) -> str:
         return self.e(node.slots["expression"], MEMBER) + "!"
@@ -421,7 +429,7 @@ class _Printer:
             if kind in (T.BINARYEXPRESSION, T.LOGICALEXPRESSION):
                 node = self.node(slots["left"])
             elif kind == T.ASSIGNMENTEXPRESSION:
-                node = node.helpers["left"]
+                node = self.node(slots["left"])
             elif kind == T.MEMBEREXPRESSION:
                 node = self.node(slots["object"])
             elif kind in (T.CALLEXPRESSION, T.TAGGEDTEMPLATEEXPRESSION):
@@ -438,24 +446,7 @@ class _Printer:
             else:
                 return node
 
-    # Patterns and parameters
-
-    def pattern(self, node: T.Node, inner: str) -> str:
-        return self.decorators(node) + inner + ("?" if node.attributes.get("optional") else "") + self.annotation(node)
-
-    def _arraypattern(self, node: T.Node) -> str:
-        return self.pattern(node, self.elements(_nodes(node.helpers.get("elements"))))
-
-    def _objectpattern(self, node: T.Node) -> str:
-        properties = _nodes(node.helpers.get("properties"))
-        inner = "{}" if not properties else "{ " + ", ".join(self.text(p) for p in properties) + " }"
-        return self.pattern(node, inner)
-
-    def _assignmentpattern(self, node: T.Node) -> str:
-        return self.pattern(node, f"{self.text(node.helpers['left'])} = {self.e(node.slots['right'], ASSIGN)}")
-
-    def _restelement(self, node: T.Node) -> str:
-        return self.pattern(node, "..." + self.text(node.helpers["argument"]))
+    # Modifiers, type parameters and type arguments, which expressions and types hold alike
 
     def modifiers(self, node: T.Node) -> str:
         """A parameter property's or a signature's modifiers, in the order TypeScript requires."""
@@ -464,165 +455,22 @@ class _Printer:
         words += [word for word in ("static", "override", "readonly") if attributes.get(word)]
         return "".join(word + " " for word in words)
 
-    def _tsparameterproperty(self, node: T.Node) -> str:
-        return self.decorators(node) + self.modifiers(node) + self.text(node.helpers["parameter"])
-
-    # Types
-
     def _tstypeparameter(self, node: T.Node) -> str:
         attributes, helpers = node.attributes, node.helpers
         text = "".join(word + " " for word, flag in (("const", "const"), ("in", "isIn"), ("out", "isOut"))
                        if attributes.get(flag))
         text += self.text(helpers["name"])
-        if "constraint" in helpers:
-            text += f" extends {self.t(helpers['constraint'], T_FUNCTION)}"
-        if "default" in helpers:
-            text += f" = {self.t(helpers['default'], T_FUNCTION)}"
+        if node.slots["constraint"] is not None:
+            text += f" extends {self.t(node.slots['constraint'], self.types.FUNCTION)}"
+        if node.slots["default"] is not None:
+            text += f" = {self.t(node.slots['default'], self.types.FUNCTION)}"
         return text
 
     def _tstypeparameterdeclaration(self, node: T.Node) -> str:
         return "<" + ", ".join(self.text(p) for p in _nodes(node.helpers.get("params"))) + ">"
 
     def _tstypeparameterinstantiation(self, node: T.Node) -> str:
-        return "<" + ", ".join(self.t(p, T_FUNCTION) for p in _nodes(node.helpers.get("params"))) + ">"
-
-    def _tsqualifiedname(self, node: T.Node) -> str:
-        return f"{self.text(node.helpers['left'])}.{self.text(node.helpers['right'])}"
-
-    def _tstypereference(self, node: T.Node) -> str:
-        return self.text(node.helpers["typeName"]) + self.type_arguments(node)
-
-    def _tsparenthesizedtype(self, node: T.Node) -> str:
-        return f"({self.t(node.helpers['typeAnnotation'], T_FUNCTION)})"
-
-    def _tsliteraltype(self, node: T.Node) -> str:
-        return self.text(node.helpers["literal"])
-
-    def _tstemplateliteraltype(self, node: T.Node) -> str:
-        quasis, types = _nodes(node.helpers.get("quasis")), _nodes(node.helpers.get("types"))
-        written = [quasis[0].attributes.get("raw", "")] if quasis else []
-        for held, quasi in zip(types, quasis[1:]):
-            written.append("${" + self.t(held, T_FUNCTION) + "}" + quasi.attributes.get("raw", ""))
-        return "`" + "".join(written) + "`"
-
-    def _tsarraytype(self, node: T.Node) -> str:
-        return self.t(node.helpers["elementType"], T_POSTFIX) + "[]"
-
-    def _tstupletype(self, node: T.Node) -> str:
-        return "[" + ", ".join(self.t(held, T_FUNCTION) for held in _nodes(node.helpers.get("elementTypes"))) + "]"
-
-    def _tsnamedtuplemember(self, node: T.Node) -> str:
-        optional = "?" if node.attributes.get("optional") else ""
-        return f"{self.text(node.helpers['label'])}{optional}: {self.t(node.helpers['elementType'], T_FUNCTION)}"
-
-    def _tsoptionaltype(self, node: T.Node) -> str:
-        return self.t(node.helpers["typeAnnotation"], T_POSTFIX) + "?"
-
-    def _tsresttype(self, node: T.Node) -> str:
-        return "..." + self.t(node.helpers["typeAnnotation"], T_FUNCTION)
-
-    def _tsuniontype(self, node: T.Node) -> str:
-        operator, level = (" | ", T_INTERSECTION) if node.kind == "tsuniontype" else (" & ", T_OPERATOR)
-        return operator.join(self.t(held, level) for held in _nodes(node.helpers.get("types")))
-
-    _tsintersectiontype = _tsuniontype
-
-    def _tsfunctiontype(self, node: T.Node) -> str:
-        return self.signature(node, arrow=True)
-
-    def _tsconstructortype(self, node: T.Node) -> str:
-        return ("abstract " if node.attributes.get("abstract") else "") + "new " + self.signature(node, arrow=True)
-
-    def member(self, node: T.Node) -> str:
-        """An object type's member on its line: a signature with its `;`, a comment as written."""
-        if node.kind == "comment":
-            return f"/*{node.attributes.get('text', '')}*/" if node.attributes.get("block") else f"//{node.attributes.get('text', '')}"
-        return self.text(node) + ";"
-
-    def _tstypeliteral(self, node: T.Node) -> str:
-        """`{ a: A; b(): B }` on one line, or with comments its members' lines, a trailing comment on its member's."""
-        members = _nodes(node.helpers.get("members"))
-        if not members:
-            return "{}"
-        if all(member.kind != "comment" for member in members):
-            return "{ " + " ".join(self.member(member) for member in members) + " }"
-        lines: list[str] = []
-        for member in members:
-            if member.kind == "comment" and member.attributes.get("trailing") and lines:
-                lines[-1] += " " + self.member(member)
-            else:
-                lines.append("    " + self.member(member))
-        return "{\n" + "\n".join(lines) + "\n}"
-
-    def _tspropertysignature(self, node: T.Node) -> str:
-        attributes = node.attributes
-        text = ("readonly " if attributes.get("readonly") else "") + self.key(node.slots["key"], attributes.get("computed", False))
-        return text + ("?" if attributes.get("optional") else "") + self.annotation(node)
-
-    def _tsmethodsignature(self, node: T.Node) -> str:
-        attributes = node.attributes
-        prefix = (attributes["methodKind"] + " ") if attributes.get("methodKind") in ("get", "set") else ""
-        key = self.key(node.slots["key"], attributes.get("computed", False))
-        return f"{prefix}{key}{'?' if attributes.get('optional') else ''}{self.signature(node)}"
-
-    def _tscallsignaturedeclaration(self, node: T.Node) -> str:
-        return self.signature(node)
-
-    def _tsconstructsignaturedeclaration(self, node: T.Node) -> str:
-        return "new " + self.signature(node)
-
-    def _tsindexsignature(self, node: T.Node) -> str:
-        parameters = ", ".join(self.text(p) for p in _nodes(node.helpers.get("parameters")))
-        return f"{self.modifiers(node)}[{parameters}]{self.annotation(node)}"
-
-    def _tsmappedtype(self, node: T.Node) -> str:
-        attributes, helpers = node.attributes, node.helpers
-        readonly = attributes["readonly"] + " " if "readonly" in attributes else ""
-        name = f" as {self.t(helpers['nameType'], T_FUNCTION)}" if "nameType" in helpers else ""
-        value = f": {self.t(helpers['typeAnnotation'], T_FUNCTION)}" if "typeAnnotation" in helpers else ""
-        constraint = self.t(helpers["constraint"], T_FUNCTION)
-        return f"{{ {readonly}[{self.text(helpers['key'])} in {constraint}{name}]{attributes.get('optional', '')}{value} }}"
-
-    def _tsindexedaccesstype(self, node: T.Node) -> str:
-        return f"{self.t(node.helpers['objectType'], T_POSTFIX)}[{self.t(node.helpers['indexType'], T_FUNCTION)}]"
-
-    def _tstypeoperator(self, node: T.Node) -> str:
-        operator = node.attributes["operator"]
-        if "typeAnnotation" not in node.helpers:
-            return operator
-        return f"{operator} {self.t(node.helpers['typeAnnotation'], T_OPERATOR)}"
-
-    def _tstypequery(self, node: T.Node) -> str:
-        return "typeof " + self.text(node.helpers["exprName"]) + self.type_arguments(node)
-
-    def _tsimporttype(self, node: T.Node) -> str:
-        helpers = node.helpers
-        options = ", " + self.text(helpers["options"]) if "options" in helpers else ""
-        text = f"import({self.text(helpers['source'])}{options})"
-        if "qualifier" in helpers:
-            text += "." + self.text(helpers["qualifier"])
-        return text + self.type_arguments(node)
-
-    def _tsconditionaltype(self, node: T.Node) -> str:
-        helpers = node.helpers
-        extends = helpers["extendsType"]  # a function type needs no parentheses, unless it returns a conditional type
-        returned = extends.helpers.get("returnType") if extends.kind in ("tsfunctiontype", "tsconstructortype") else None
-        if extends.kind == "tsconditionaltype" or (
-                returned is not None and returned.helpers["typeAnnotation"].kind == "tsconditionaltype"):
-            extended = f"({self.text(extends)})"
-        else:
-            extended = self.t(extends, T_FUNCTION)
-        return (f"{self.t(helpers['checkType'], T_UNION)} extends {extended} ? "
-                f"{self.t(helpers['trueType'], T_FUNCTION)} : {self.t(helpers['falseType'], T_FUNCTION)}")
-
-    def _tsinfertype(self, node: T.Node) -> str:
-        return "infer " + self.text(node.helpers["typeParameter"])
-
-    def _tstypepredicate(self, node: T.Node) -> str:
-        text = ("asserts " if node.attributes.get("asserts") else "") + self.text(node.helpers["parameterName"])
-        if "typeAnnotation" in node.helpers:
-            text += f" is {self.t(node.helpers['typeAnnotation'].helpers['typeAnnotation'], T_FUNCTION)}"
-        return text
+        return "<" + ", ".join(self.t(p, self.types.FUNCTION) for p in node.many) + ">"
 
     # JSX
 
@@ -670,7 +518,7 @@ class _Printer:
 
 def ToText(expression: Any) -> str:
     """The expression as TypeScript source, as an expression statement holds it."""
-    printer = _Printer()
+    printer = Printer()
     node = printer.node(F.term(expression))
     text = printer.e(node, SEQUENCE)
     start = printer.leftmost(node)
