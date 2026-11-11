@@ -194,10 +194,7 @@ class Printer:
         for item in items:
             node, written = self.node(item), self.text(item)
             parts.append(self._inline[node.kind](self, node, written) if node.kind in self._inline else written)
-        text = "{"
-        for part in [*parts, "}"]:  # a space between parts, but not at a line's end or start
-            text += part if text.endswith("\n") or part.startswith("\n") else " " + part
-        return text if parts else "{}"
+        return "{ " + " ".join(parts) + " }" if parts else "{}"
 
     # Expressions
 

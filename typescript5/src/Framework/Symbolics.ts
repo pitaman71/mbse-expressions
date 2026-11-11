@@ -1,9 +1,10 @@
 /**
  * Symbolics: names, the scopes that resolve them, and the dependencies an expression declares.
  *
- * An expression refers to names: its references. A binding (a let) binds a name within its body, an import binds the
- * names it declares (its kind's `names`) within its body, and some names are ambient, bound without a declaration
- * (Python's builtins). `free(term, dialect)` is the set of names an expression needs from outside: its lexical
+ * An expression refers to names: its references. A binding (a let, or any binder: `Terms.isBinder`) binds a name within
+ * its body, an import binds the names it declares (its kind's `names`) within its body, a kind with `scopes` binds the
+ * names it gives each argument (a binder's, a comprehension's targets, a lambda's parameters), and some names are
+ * ambient, bound without a declaration (Python's builtins). `free(term, dialect)` is the set of names an expression needs from outside: its lexical
  * references that nothing within it binds. `imports(term, dialect)` lists the imports it declares: what it needs its
  * scope to provide.
  *
@@ -98,7 +99,7 @@ export function free(term: unknown, dialect: Terms.Dialect): Set<string> {
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
     if (kind.scopes !== null) { // the names each argument has bound: a comprehension's targets, say
       scopes = kind.scopes(record).map((names) => new Set([...bound, ...names]));
-    } else if (kind.role === Terms.BINDING || kind.role === Terms.QUANTIFIER) {
+    } else if (kind.role === Terms.QUANTIFIER || Terms.isBinder(record.as_schema())) { // its name, after its first argument
       scopes = args.map((_, i) => (i === 0 ? bound : new Set([...bound, name])));
     } else if (kind.role === Terms.IMPORT) {
       const names = new Set([...bound, ...(kind.names !== null ? kind.names(Terms.attributesOf(record)) : [])]);

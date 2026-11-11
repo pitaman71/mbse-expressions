@@ -231,7 +231,7 @@ function formOf(node: unknown): Terms.Form {
 
 /** A term's tag, record and kind, or an unfolded form's, which has no record. */
 function kindOf(dialect: Terms.Dialect, node: unknown): [string, any, Terms.Kind] {
-  if (node instanceof Terms.Form) return [node.kind, null, dialect.kinds().get(node.kind) as Terms.Kind];
+  if (node instanceof Terms.Form) return [node.kind, null, dialect.kindNamed(node.kind)];
   return dialect.kind(node);
 }
 
@@ -291,7 +291,7 @@ class Direction {
   run(expression: unknown, trace: Trace | null): Terms.Writer {
     let result = new Run(this, trace).translate(Terms.term(expression), new Map());
     for (const pattern of [...this.preludes].reverse()) {
-      const kind = this.target.kinds().get(pattern.kind) as Terms.Kind;
+      const kind = this.target.kindNamed(pattern.kind);
       const names = kind.names !== null ? kind.names(pattern.attributes) : [];
       if (names.some((name) => result.free.has(name))) result = this.build(new Terms.Form(pattern.kind, pattern.attributes, [result]));
     }
@@ -301,7 +301,7 @@ class Direction {
   /** The target term of a form whose arguments are translated terms, and the names it needs, as `Symbolics.free`
    * reads them. */
   build(form: Terms.Form): Built {
-    const kind = this.target.kinds().get(form.kind) as Terms.Kind;
+    const kind = this.target.kindNamed(form.kind);
     const name = Terms.referenceName(form.attributes.get("name")) as string;
     const frees = (form.arguments as Built[]).map((argument) => argument.free);
     let free: Set<string>;

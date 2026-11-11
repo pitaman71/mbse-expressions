@@ -22,6 +22,11 @@ import * as Python3 from "@mbse/expressions/Python/Python3";
 import * as AAPCS64 from "@mbse/expressions/Arm/AAPCS64";
 import * as AMD64 from "@mbse/expressions/SystemV/AMD64";
 import * as SystemVerilog from "@mbse/expressions/SystemVerilog/Expressions";
+import * as SVAssertions from "@mbse/expressions/SystemVerilog/Assertions";
+import * as SVConstraints from "@mbse/expressions/SystemVerilog/Constraints";
+import * as SVPatterns from "@mbse/expressions/SystemVerilog/Patterns";
+import * as SVPreprocessor from "@mbse/expressions/SystemVerilog/Preprocessor";
+import * as SVTypes from "@mbse/expressions/SystemVerilog/Types";
 import { Terms } from "@mbse/expressions/Framework";
 import { Builders } from "@mbse/schemas/Framework";
 
@@ -46,14 +51,19 @@ export function install(txn: any): any {
  * case studies translate into, installed after the standard dialects whose kinds of domain they use, with the two ABI
  * dialects C's and C++'s terms are read under (x86-64's System V ABI, `SystemV/AMD64`, and Arm's AAPCS64,
  * `Arm/AAPCS64`); Patterns' operations named by its dialect (`Patterns.define`), which validation reads; and C's,
- * C++'s, the ABIs' and SystemVerilog's types, their domains (each dialect's `define`), which their evaluation reads. */
+ * C++'s, the ABIs' and SystemVerilog's types, their domains (each dialect's `define`), which their evaluation reads,
+ * with SystemVerilog's sublanguages' dialects (`Types`, `Patterns`, `Assertions`, `Constraints`, `Preprocessor`), whose
+ * terms its terms hold, and the editions each covers. */
 export function cold_chain(): any {
   const store: any = new Builders.Store();
   for (const module of [Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
-    AMD64, AAPCS64, SystemVerilog]) {
+    AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor]) {
     store.transaction(module.install);
   }
-  for (const module of [Patterns, C, Cpp, AMD64, AAPCS64, SystemVerilog]) store.transaction(module.define);
+  for (const module of [Patterns, C, Cpp, AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints,
+    SVPreprocessor]) {
+    store.transaction(module.define);
+  }
   store.transaction(install);
   return store;
 }

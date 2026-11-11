@@ -36,6 +36,11 @@ import * as AAPCS64 from "../Arm/AAPCS64/index.js";
 import * as AMD64 from "../SystemV/AMD64/index.js";
 import * as Unicode from "../Unicode/Expressions/index.js";
 import * as SystemVerilog from "../SystemVerilog/Expressions/index.js";
+import * as SVAssertions from "../SystemVerilog/Assertions/index.js";
+import * as SVConstraints from "../SystemVerilog/Constraints/index.js";
+import * as SVPatterns from "../SystemVerilog/Patterns/index.js";
+import * as SVPreprocessor from "../SystemVerilog/Preprocessor/index.js";
+import * as SVTypes from "../SystemVerilog/Types/index.js";
 import * as TypeScript5 from "../TypeScript/TypeScript5/index.js";
 import * as Framework from "../Framework/index.js";
 import type * as Terms from "../Framework/Terms.js";
@@ -93,7 +98,9 @@ export function build(): Map<string, Case> {
   store.transaction(Cpp.install);
   store.transaction(AMD64.install); // the ABIs a C or C++ term's holder names
   store.transaction(AAPCS64.install);
-  store.transaction(SystemVerilog.install);
+  for (const module of [SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor]) { // its family
+    store.transaction(module.install);
+  }
   store.transaction(TypeScript5.install);
   const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
   const stored = new Map<string, any>(([ // each dialect's stored domains
@@ -101,6 +108,9 @@ export function build(): Map<string, Case> {
     ["matlab_domains", Matlab], ["excel_domains", Excel], ["c_domains", C], ["cpp_domains", Cpp],
     ["amd64_domains", AMD64], ["aapcs64_domains", AAPCS64]] as [string, any][]).map(
     ([name, module]) => [name, store.transaction(module.define)[0].get("dialect")]));
+  for (const module of [SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor]) { // the editions they cover
+    store.transaction(module.define);
+  }
 
   // --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
   // added ---
@@ -246,14 +256,84 @@ export function build(): Map<string, Case> {
     (i: any) => i.extensionexpression((e: any) => e.operand(meCpp)),
   ])));
 
-  // --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
-  // record.a inside {1, [2:5]} -> !record[0] ? {{6{2'b10}}, record.b[7:4]} : byte'($clog2(record.unique().sum(q) with (q))) + 4'(8'shff)
+  // --- systemverilog: every kind of SystemVerilog's and of its Types, their helpers, the Preprocessor's macro usage,
+  // literals with their spelling, and a shared identifier --- the text ToText writes:
+  // record.a inside {1, [2:5]} -> (record matches 3 ? (* keep, depth = 2 *) 'h1f : 4'sb10x1) + {record[0], record.b[7:4],
+  // -record, record++, (record += 1), {2{record}}, logic signed [7:0][4]'{record: 1, default: 0}, '{2{record, 1}}, this,
+  // super, pkg::c #(8)::new(1, .n(record), ), super.new(default), new record, new[4](record), record.randomize() with
+  // (a) { record < 5; }, record.sum(q) with (q > 0), record (* pure *) (record, .n(record), ), $bits(int, real, string,
+  // pkg::word_t [3:0], virtual interface bus #(8).mp, signed, struct packed signed { rand bit [1:0] a[], b = 1; },
+  // enum int {A, B[2] = 1, C[0:1]}, type(record), logic [int][*][$][$:8]), $clog2(record), signed'(record), 8'(record),
+  // byte'(record), $, $root, {}, 1:2:3, tagged Valid record, record matches 1 &&& record, {<< byte {record with
+  // [0 +: 2]}}, local::y, $unit::z, bus.t, port.m, `WIDTH, `MAX(a, b), '1, null, 'hx, 1.5, """s""", 10ns, 1_000, "a\"b"}
   const [sv, that] = [SV, SV.identifier("record")];
-  const systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1n, sv.span(2n, 5n)), sv.conditional(
-    sv.unary("!", sv.select(that, 0n)),
-    sv.concatenation(sv.replication(6n, sv.vector("10")), sv.range_(sv.member(that, "b"), 7n, 4n)),
-    sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
-      sv.cast(4n, sv.vector("11111111", true, "h")))));
+  const identifier = (spelling: string) => (i: any) => i.spelling(spelling); // an identifier, of its spelling
+  const atom = (keyword: string) => (t: any) => t.integeratomtype((a: any) => a.keyword(keyword)); // `int`, a Types term
+  const keep = [(a: any) => a.specs([(s: any) => s.name(identifier("keep")), (s: any) => s.name(identifier("depth")).value(sv.literal(2n))])]
+  const systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1n, sv.span(2n, 5n)), sv.binary("+", (u: any) => u.parenthesizedexpression(
+      (p: any) => p.expression((e: any) => e.conditionalexpression((c: any) => c.condition(
+          (m: any) => m.matchesexpression((x: any) => x.value(that).pattern(sv.literal(3n)))).attributes(keep).consequence(
+          (q: any) => q.literal((r: any) => r.value((v: any) => v.as_scalar(31n)).base("h"))).alternative(sv.vector("10x1", true))))),
+      sv.concatenation(
+          sv.select(that, 0n), sv.range_(sv.member(that, "b"), 7n, 4n), sv.unary("-", that),
+          (u: any) => u.incrementexpression((i: any) => i.operator("++").postfix(true).operand(that)),
+          (u: any) => u.parenthesizedexpression((p: any) => p.expression(
+              (e: any) => e.assignmentexpression((a: any) => a.target(that).operator("+=").value(sv.literal(1n))))),
+          sv.replication(2n, that),
+          (u: any) => u.assignmentpattern((a: any) => a.type((t: any) => t.integervectortype((v: any) => v.keyword("logic").signing("signed").dimensions([
+              (d: any) => d.rangedimension((r: any) => r.left(sv.literal(7n)).right(sv.literal(0n))),
+              (d: any) => d.sizedimension((z: any) => z.size(sv.literal(4n)))]))).items([
+              (i: any) => i.patternitem((p: any) => p.key(that).value(sv.literal(1n))),
+              (i: any) => i.patternitem((p: any) => p.value(sv.literal(0n)))])),
+          (u: any) => u.assignmentpattern((a: any) => a.count(sv.literal(2n)).items([that, sv.literal(1n)])),
+          (u: any) => u.thisexpression((t: any) => t), (u: any) => u.superexpression((t: any) => t),
+          (u: any) => u.newexpression((n: any) => n.scope((s: any) => s.scopedname((c: any) => c.scope((x: any) => x.identifier(identifier("pkg"))).name(
+              (x: any) => x.parameterizedname((q: any) => q.name(identifier("c")).parameters([sv.literal(8n)]))))).arguments([
+              sv.literal(1n), (a: any) => a.namedconnection((c: any) => c.name(identifier("n")).value(that)),
+              (a: any) => a.emptyargument((e: any) => e)])),
+          (u: any) => u.newexpression((n: any) => n.scope((s: any) => s.superexpression((x: any) => x)).defaulted(true)),
+          (u: any) => u.newcopyexpression((n: any) => n.value(that)),
+          (u: any) => u.newarrayexpression((n: any) => n.size(sv.literal(4n)).value(that)),
+          (u: any) => u.randomizewithexpression((r: any) => r.call(sv.method(that, "randomize")).restricted(true).variables(
+              [identifier("a")]).items([sv.binary("<", that, 5n)])),
+          sv.iterate(that, "sum", "q", sv.binary(">", sv.identifier("q"), 0n)),
+          (u: any) => u.callexpression((c: any) => c.callee(that).attributes([(a: any) => a.specs([(s: any) => s.name(identifier("pure"))])]).arguments([
+              that, (a: any) => a.namedconnection((n: any) => n.name(identifier("n")).value(that)), (a: any) => a.emptyargument((e: any) => e)])),
+          (u: any) => u.systemcall((c: any) => c.name("$bits").arguments([
+              atom("int"), (t: any) => t.nonintegertype((n: any) => n.keyword("real")), (t: any) => t.keywordtype((k: any) => k.keyword("string")),
+              (t: any) => t.namedtype((n: any) => n.name((x: any) => x.scopedname((c: any) => c.scope((y: any) => y.identifier(identifier("pkg"))).name(
+                  (y: any) => y.identifier(identifier("word_t"))))).dimensions([(d: any) => d.rangedimension((r: any) => r.left(sv.literal(3n)).right(sv.literal(0n)))])),
+              (t: any) => t.virtualinterfacetype((v: any) => v.interface_keyword(true).interface(identifier("bus")).parameters([sv.literal(8n)]).modport(identifier("mp"))),
+              (t: any) => t.implicittype((i: any) => i.signing("signed")),
+              (t: any) => t.structtype((s: any) => s.keyword("struct").packed(true).signing("signed").members([(m: any) => m.random("rand").type(
+                  (t: any) => t.integervectortype((v: any) => v.keyword("bit").dimensions([(d: any) => d.rangedimension((r: any) => r.left(sv.literal(1n)).right(sv.literal(0n)))]))).declarators([
+                  (d: any) => d.name(identifier("a")).dimensions([(x: any) => x.unsizeddimension((y: any) => y)]), (d: any) => d.name(identifier("b")).value(sv.literal(1n))])])),
+              (t: any) => t.enumtype((e: any) => e.base(atom("int")).members([(m: any) => m.name(identifier("A")), (m: any) => m.name(identifier("B")).left(sv.literal(2n)).value(sv.literal(1n)),
+                                                                          (m: any) => m.name(identifier("C")).left(sv.literal(0n)).right(sv.literal(1n))])),
+              (t: any) => t.typereference((r: any) => r.operand(that)),
+              (t: any) => t.integervectortype((v: any) => v.keyword("logic").dimensions([(d: any) => d.associativedimension((a: any) => a.type(atom("int"))),
+                  (d: any) => d.associativedimension((a: any) => a), (d: any) => d.queuedimension((q: any) => q), (d: any) => d.queuedimension((q: any) => q.bound(sv.literal(8n)))]))])),
+          sv.call("$clog2", that),
+          sv.cast((t: any) => t.implicittype((i: any) => i.signing("signed")), that), sv.cast(8n, that), sv.cast(atom("byte"), that),
+          (u: any) => u.dollarexpression((d: any) => d), (u: any) => u.rootexpression((r: any) => r), (u: any) => u.emptyqueue((e: any) => e),
+          (u: any) => u.mintypmaxexpression((m: any) => m.min(sv.literal(1n)).typ(sv.literal(2n)).max(sv.literal(3n))),
+          (u: any) => u.taggedexpression((t: any) => t.member(identifier("Valid")).value(that)),
+          (u: any) => u.predicateexpression((p: any) => p.conditions([(c: any) => c.matchesexpression((m: any) => m.value(that).pattern(sv.literal(1n))), that])),
+          (u: any) => u.streamingconcatenation((s: any) => s.operator("<<").slice(atom("byte")).items([
+              (i: any) => i.expression(that).left(sv.literal(0n)).operator("+:").right(sv.literal(2n))])),
+          (u: any) => u.nameexpression((n: any) => n.name((x: any) => x.localname((l: any) => l.name(identifier("y"))))),
+          (u: any) => u.nameexpression((n: any) => n.name((x: any) => x.scopedname((c: any) => c.scope((y: any) => y.unitname((z: any) => z)).name(
+              (y: any) => y.identifier(identifier("z")))))),
+          (u: any) => u.nameexpression((n: any) => n.name((x: any) => x.interfacetypename((i: any) => i.interface(identifier("bus")).name(identifier("t"))))),
+          (u: any) => u.nameexpression((n: any) => n.name((x: any) => x.interfacemethodname((i: any) => i.port(identifier("port")).name(identifier("m"))))),
+          (u: any) => u.macrousage((m: any) => m.name(identifier("WIDTH"))),
+          (u: any) => u.macrousage((m: any) => m.name(identifier("MAX")).arguments("a, b")),
+          (u: any) => u.constant((c: any) => c.fill("1")), (u: any) => u.constant((c: any) => c.singleton("null")),
+          (u: any) => u.constant((c: any) => c.bits("xxxx").base("h")),
+          sv.literal(1.5), (u: any) => u.literal((r: any) => r.value((v: any) => v.as_scalar("s")).triple(true)),
+          (u: any) => u.literal((r: any) => r.value((v: any) => v.as_scalar(10.0)).unit("ns")),
+          (u: any) => u.literal((r: any) => r.value((v: any) => v.as_scalar(1000n)).text("1_000").separators(true)),
+          sv.literal('a"b'))));
 
   // --- typescript5: every kind, its types, patterns and JSX, written through the builders (TypeScript5 has no writers), a
   // literal with its spelling and a shared identifier ---

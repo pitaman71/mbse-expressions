@@ -69,7 +69,9 @@
  * - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
  * - `holderOf(term)`: the reference object holding it, its `Expression`, found by its owners.
  * - `kindOf(term)`: its kind's branch, `(tag, record)`; `dialectOf(term)`: the name of its dialect's `Term`;
- *   `dialectName(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`).
+ *   `dialectName(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`, a sublanguage's
+ *   its family's and its own: `SystemVerilog.Types`' is `SystemVerilog Types`); `dialectTag(name)`, its tag
+ *   (`systemverilog_types`). `isBinder(schema)`: whether a kind binds names, its schema `Let` or a refinement of it.
  *   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers
  *   nested, as a dialect whose kinds hold sublanguages reads them to print and check them.
  * - `nameOf(term)`, `referenceName(name)`, `operatorOf(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
@@ -91,7 +93,9 @@
  *   vocabulary is None, when any name is accepted and `signature` applies to all, or the kind is `closed`, when they
  *   are refused by evaluation; where its operations are data (`Kind.operations`), validation refuses any its dialect
  *   does not define. The container constructors are applications named by their tags.
- * - `BINDING`: binds its name to its first argument within the others.
+ * - `BINDING`: binds its name to its first argument within the others: a let, whose schema is
+ *   `Expressions.Framework.Let`; a kind refining `Let` (a binder, `isBinder`) binds what its `scopes` say, where it has
+ *   them.
  * - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
  *   results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
  * - `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(attributes)` gives the names
@@ -966,26 +970,58 @@ export interface DialectOptions {
   literal?: ((value: unknown) => Writer | null) | null;
   /** The dialect this one extends: its kinds are the base's and its own. */
   extends?: Dialect | null;
+  /** The other dialects whose terms it reads, given when first needed, so that dialects that read each other are built
+   * without a cycle. */
+  reads?: (() => readonly Dialect[]) | null;
 }
 
 type Environment = Record<string, Domains.Domain>;
 
+/** The sublanguages a family's dialects may be, by their own names (the namespace decision): a dialect whose own name is
+ * one of them is named by its family too (`SystemVerilog Types`), so that no two families' sublanguages share a name. */
+export const SUBLANGUAGES: readonly string[] = ["Types", "Patterns", "Assertions", "Constraints", "Preprocessor", "RegExp"];
+
 /** A dialect's name, of its path below `Expressions` (its family's name and its own): its own (`Python.Python3`'s is
  * `Python3`, `Patterns.Expressions`' `Patterns`), or its family's where its own says only that it is the family's
- * expressions (`C.Expressions`' is `C`). */
+ * expressions (`C.Expressions`' is `C`), or its family's and its own where its own is a sublanguage's (`SUBLANGUAGES`:
+ * `SystemVerilog.Types`' is `SystemVerilog Types`). */
 export function dialectName(path: string): string {
   const parts = path.split(".");
   const own = parts[parts.length - 1] as string;
-  return own === "Expressions" && parts.length > 1 ? parts[parts.length - 2] as string : own;
+  if (own === "Expressions" && parts.length > 1) return parts[parts.length - 2] as string;
+  if (SUBLANGUAGES.includes(own) && parts.length > 1) return `${parts[parts.length - 2] as string} ${own}`;
+  return own;
+}
+
+/** A dialect's tag, its branch of `Expressions.Framework.Term` and of `Expressions.Framework.Dialect`: its name in
+ * lowercase, a space an underscore (`systemverilog_types`). */
+export function dialectTag(name: string): string {
+  return name.toLowerCase().replaceAll(" ", "_");
+}
+
+/** Whether a kind's schema binds names: `Expressions.Framework.Let`, or a schema refining it, as every kind that binds
+ * symbols does (the dialects proposal, Decided for stage 6, Q8, "(a)"). A binder binds by its kind's `scopes` where it
+ * has them, else its `name` within its arguments after the first. */
+export function isBinder(schema: unknown): boolean {
+  let current: any = schema;
+  while (current instanceof Schemas.OfObject.Data) {
+    if (named(current, "Expressions.Framework.Let")) return true;
+    current = (current as any).refines;
+  }
+  return false;
 }
 
 /** An expression language: the kinds it reads, by tag, its `path`, its family's and its own name (`Python.Python3`,
- * `C.Expressions`), its `name` (`dialectName(path)`: `Python3`, `C`), and `domain_of(value)`, the domain of a literal's
- * value by the scalar it is written with (for `infer`; a term carries no domain). Its terms are values of its `Term`,
- * `Expressions.<path>.Term` (`union`), the branch `tag` (its name in lowercase) of `Expressions.Framework.Term`;
- * besides its own kinds it reads the framework's kinds of invalid syntax (`INVALID_KINDS`). A dialect may extend another
- * (`extends`): its kinds are the base's and its own, whose tags must differ from the base's, added to the base's union,
- * whose terms it reads. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its kinds. */
+ * `C.Expressions`), its `name` (`dialectName(path)`: `Python3`, `C`, `SystemVerilog Types`), and `domain_of(value)`,
+ * the domain of a literal's value by the scalar it is written with (for `infer`; a term carries no domain). Its terms are
+ * values of its `Term`, `Expressions.<path>.Term` (`union`), the branch `tag` (`dialectTag(name)`: `python3`,
+ * `systemverilog_types`) of `Expressions.Framework.Term`; besides its own kinds it reads the framework's kinds of
+ * invalid syntax (`INVALID_KINDS`). A dialect may extend another (`extends`): its kinds are the base's and its own, whose
+ * tags must differ from the base's, added to the base's union, whose terms it reads. A dialect may read the terms of
+ * other dialects (`reads`, a function giving them, called once when first needed, so that dialects that read each
+ * other are built without a cycle): a term of their `Term`s, by their kinds, and a term of its own `Term` of a kind they
+ * declare and its `Term` lists (one schema a branch of every union whose positions hold it); any other dialect's term it
+ * refuses. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its kinds. */
 export class Dialect {
   readonly base: Dialect | null;
   readonly tag: string;
@@ -996,6 +1032,8 @@ export class Dialect {
   readonly _literal: ((value: unknown) => Writer | null) | null;
 
   private readonly own: string;
+  private readonly readsOf: (() => readonly Dialect[]) | null;
+  private read: readonly Dialect[] | null = null;
 
   constructor(path: string, kinds: Record<string, Kind>, options: DialectOptions) {
     const own = dialectName(path);
@@ -1008,7 +1046,7 @@ export class Dialect {
       throw new ValueError(`${own} would declare ${clashes.map((tag) => repr(tag)).join(", ")}, which ${what} has`);
     }
     this.byTag = base === null ? new Map([...declared, ...inherited]) : new Map([...inherited, ...declared]); // the base's first
-    this.tag = base === null ? own.toLowerCase() : base.tag;
+    this.tag = base === null ? dialectTag(own) : base.tag;
     this.own = own;
     this.path = path;
     this.union = base === null ? `Expressions.${path}.Term` : base.union;
@@ -1016,14 +1054,34 @@ export class Dialect {
     this.base = base;
     this._literal = options.literal !== undefined && options.literal !== null || base === null
       ? options.literal ?? null : base._literal;
+    this.readsOf = options.reads ?? null;
   }
 
   name(): string {
     return this.own;
   }
 
+  /** Its own kinds, by tag (an extension's, its base's too). */
   kinds(): Map<string, Kind> {
     return new Map(this.byTag);
+  }
+
+  /** The other dialects whose terms it reads, in the order its `reads` gives them. */
+  reads(): readonly Dialect[] {
+    if (this.read === null) this.read = this.readsOf !== null ? [...this.readsOf()] : [];
+    return this.read;
+  }
+
+  /** The `Kind` of a tag, as this dialect reads it: its own, else the first that a dialect it reads declares; throws
+   * `ValueError` for a tag none of them has. */
+  kindNamed(tag: string): Kind {
+    const own = this.byTag.get(tag);
+    if (own !== undefined) return own;
+    for (const other of this.reads()) {
+      const theirs = other.byTag.get(tag);
+      if (theirs !== undefined) return theirs;
+    }
+    throw new ValueError(`${this.own} has no kind ${repr(tag)}`);
   }
 
   toString(): string {
@@ -1034,23 +1092,28 @@ export class Dialect {
     return this.toString();
   }
 
-  /** Why a term value is not of this dialect, where it is another dialect's. */
-  private foreign(term_: any): string | null {
+  /** The dialect that reads a term value: this one, for a term of its `Term`; one it reads, for a term of that one's;
+   * or null, for a term of any other dialect. */
+  private reader(term_: any): Dialect | null {
     const union = dialectOf(term_);
-    if (union === this.union) return null;
-    const other = dialectName(union.slice("Expressions.".length, -".Term".length));
+    if (union === this.union) return this;
+    return this.reads().find((other) => other.union === union) ?? null;
+  }
+
+  /** Why a term value of another dialect, which it does not read, is not of this dialect. */
+  private foreign(term_: any): string {
+    const other = dialectName(dialectOf(term_).slice("Expressions.".length, -".Term".length));
     return `${article(other)} ${kindOf(term_)[0]} is not ${article(this.own)} term`;
   }
 
-  /** A term's tag, record and `Kind`; throws `ValueError` for a term of another dialect, or of a kind the dialect does
-   * not read. */
+  /** A term's tag, record and `Kind`, as this dialect reads it (a term of a dialect it reads, as that one does); throws
+   * `ValueError` for a term of another dialect, or of a kind the dialect does not read. */
   kind(term_: any): [string, any, Kind] {
-    const foreign = this.foreign(term_);
-    if (foreign !== null) throw new ValueError(foreign);
+    const reader = this.reader(term_);
+    if (reader === null) throw new ValueError(this.foreign(term_));
+    if (reader !== this) return reader.kind(term_);
     const [tag, record] = kindOf(term_);
-    const kind = this.byTag.get(tag);
-    if (kind === undefined) throw new ValueError(`${this.own} has no kind ${repr(tag)}`);
-    return [tag, record, kind];
+    return [tag, record, this.kindNamed(tag)];
   }
 
   /** The writer of a term of this dialect: see `spec`, a native value as this dialect's literal, and a callable given
@@ -1061,9 +1124,10 @@ export class Dialect {
 
   /** The writer of a term with this form: its attributes written as scalars (a container of scalars as a container, a
    * helper's `Part` as the helper), its arguments (specs: terms, writers, native values) to its slots in order, then to
-   * its variadic property, then to its helpers, each its part's size. */
+   * its variadic property, then to its helpers, each its part's size. Its kind is one this dialect reads (`kindNamed`),
+   * written where a union holds it. */
   make(form_: Form): Writer {
-    if (!this.byTag.has(form_.kind)) throw new ValueError(`${this.own} has no kind ${repr(form_.kind)}`);
+    this.kindNamed(form_.kind);
     const args = form_.arguments.map((a) => (a === null ? null : this.spec(a)));
     return new Writer((union: any) => union[form_.kind]((r: any) => fill(r, form_.kind, form_.attributes, args)), this.tag);
   }
@@ -1077,11 +1141,16 @@ export class Dialect {
   }
 
   private problems(node: any, bound: ReadonlySet<string>, core: boolean): string[] {
-    const foreign = this.foreign(node);
-    if (foreign !== null) return [foreign];
+    const reader = this.reader(node);
+    if (reader === null) return [this.foreign(node)];
+    if (reader !== this) return reader.problems(node, bound, core); // a term of a dialect it reads, as that one reads it
     const [tag, record] = kindOf(node);
-    const kind = this.byTag.get(tag);
-    if (kind === undefined) return [`${this.own} has no kind ${repr(tag)}`];
+    let kind: Kind;
+    try {
+      kind = this.kindNamed(tag);
+    } catch (error) {
+      return [(error as Error).message];
+    }
     const what = article(tag);
     const attributes = attributesOf(record);
     const declared = record.as_schema().properties as Map<string, Schemas.OfProperty.Data>;
@@ -1114,9 +1183,9 @@ export class Dialect {
     const labelled = _labelled(record);
     const args = labelled.map(([, , argument]) => argument);
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
-    if (kind.scopes !== null) {
+    if (kind.scopes !== null) { // what each argument has bound: a binder's, or a comprehension's targets
       scopes = kind.scopes(record).map((names) => new Set([...bound, ...names]));
-    } else if (kind.role === BINDING || kind.role === QUANTIFIER) {
+    } else if (kind.role === QUANTIFIER || isBinder(record.as_schema())) { // its name, within its arguments after the first
       const inner = problems.length === 0 ? new Set([...bound, name]) : bound;
       scopes = args.map((_, i) => (i === 0 ? bound : inner));
     } else if (kind.role === IMPORT) {
@@ -1165,6 +1234,8 @@ export class Dialect {
   }
 
   private inferIn(node: any, environment: Environment): Domains.Domain {
+    const reader = this.reader(node);
+    if (reader !== this && reader !== null) return reader.inferIn(node, environment); // as the dialect it reads infers it
     const [, record, kind] = this.kind(node);
     if (kind.role === LITERAL) {
       const typed = kind.typed !== null ? kind.typed(record) : null;
@@ -1180,7 +1251,10 @@ export class Dialect {
       for (const name of kind.names !== null ? kind.names(attributesOf(record)) : []) inner[name] = Domains.Anything;
       return this.inferIn(args[args.length - 1], inner);
     }
-    if (kind.role === BINDING) {
+    const environments: Environment[] = kind.scopes !== null // what each argument has bound, of a domain not known
+      ? kind.scopes(record).map((names) => ({ ...environment, ...Object.fromEntries([...names].map((n) => [n, Domains.Anything])) }))
+      : args.map(() => environment);
+    if (isBinder(record.as_schema()) && kind.scopes === null) { // a let: its name, of its value's domain, in its body
       const value = this.inferIn(args[0], environment);
       return this.inferIn(args[args.length - 1], { ...environment, [nameOf(node)]: value });
     }
@@ -1193,14 +1267,16 @@ export class Dialect {
       const inner = { ...environment, [nameOf(node)]: item };
       domains = [collection, ...args.slice(1).map((argument) => this.inferIn(argument, inner))];
     } else { // an empty slot, where it may be empty, is not known
-      domains = args.map((argument) => (argument === null ? Domains.Anything : this.inferIn(argument, environment)));
+      domains = args.map((argument, i) => (argument === null ? Domains.Anything
+        : this.inferIn(argument, environments[i] as Environment)));
     }
-    if (kind.result !== null) return kind.result(attributesOf(record), domains); // several operators, which it applies
-    if (signature === null) return Domains.Anything; // an extension: nothing is known about it
-    const result = signature.result(domains);
+    let result: Domains.Domain | null;
+    if (kind.result !== null) result = kind.result(attributesOf(record), domains); // several operators, which it applies
+    else if (signature === null) return Domains.Anything; // an extension: nothing is known about it
+    else result = signature.result(domains);
     if (result === null) {
       const names = domains.map((domain) => domain.name()).join(", ");
-      throw new TypeError(`${operator} cannot take (${names}); it takes ${signature.describe()}`);
+      throw new TypeError(`${operator} cannot take (${names}); it takes ${(signature as Domains.Signature).describe()}`);
     }
     const typed = kind.typed !== null ? kind.typed(record) : null;
     return typed === null ? result : typed; // an application of a domain of its own gives it

@@ -601,10 +601,10 @@ def _literal_problems(attributes: Mapping[str, Any]) -> list[str]:
 
 def problems(node: F.Node) -> list[str]:
     """A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
-    identifier's spelling, a system call's name, a choice among a few, a constant's bits, mbse-programs' checks, and
-    invalid syntax in a sublanguage."""
+    identifier's spelling, a system call's name, a choice among a few, a constant's bits and mbse-programs' checks.
+    Invalid syntax stands only where a term does, which the framework's validation reads."""
     kind, attributes = node.kind, node.attributes
-    found = F.invalid_problems(kind, attributes) if kind in ("error", "missing") else []
+    found: list[str] = []
     if kind == "identifier":
         found += _identifier_problems(attributes.get("spelling"))
     if kind == SYSTEMCALL:
