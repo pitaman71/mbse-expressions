@@ -227,10 +227,8 @@ export function define(txn: any): any {
     ])]))]);
 }
 
-type Held = F.Node | readonly F.Node[] | undefined;
-
-function nodes(value: Held): readonly F.Node[] {
-  if (value === undefined) return [];
+/** A helper property's nodes: one, or each of many. */
+function nodes(value: F.Node | readonly F.Node[]): readonly F.Node[] {
   return value instanceof F.Node ? [value] : value;
 }
 

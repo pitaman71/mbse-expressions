@@ -221,7 +221,8 @@ def define(txn: Any) -> Any:
 
 
 def _nodes(value: Any) -> tuple[F.Node, ...]:
-    return () if value is None else value if isinstance(value, tuple) else (value,)
+    """A helper property's nodes: one, or each of many."""
+    return value if isinstance(value, tuple) else (value,)
 
 
 def _label(kind: str) -> str:
