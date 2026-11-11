@@ -82,6 +82,8 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    program becomes a literal, so the constraint never refers back to it.
    [FEA-024: expressions as data](mbse:mbse-basis/docs/features/FEA-024.md),
    [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md).
+   - Python: [T01.1: A store that holds domains](mbse:mbse-expressions/python3/tutorials/01_Values_And_Their_Domains.ipynb#T01.1) · TypeScript: [T01.1: A store that holds domains](mbse:mbse-expressions/typescript5/tutorials/01_Values_And_Their_Domains.ipynb#T01.1)
+   - Python: [T03.1: A term, held by an expression](mbse:mbse-expressions/python3/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.1) · TypeScript: [T03.1: A term, held by an expression](mbse:mbse-expressions/typescript5/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.1)
    - Python: [T09.1: Writing a constraint](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.1) · TypeScript: [T09.1: Writing a constraint](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.1)
    - Python: [T09.3: What a constraint can say](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.3) · TypeScript: [T09.3: What a constraint can say](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.3)
    - Python: [T11.1: A list is a collection](mbse:mbse-expressions/python3/tutorials/11_Constraints_Over_Collections.ipynb#T11.1) · TypeScript: [T11.1: A list is a collection](mbse:mbse-expressions/typescript5/tutorials/11_Constraints_Over_Collections.ipynb#T11.1)
@@ -112,6 +114,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    kinds of value, as in mbse-schemas: `1 == 1.0` is unknown, and adding an int to a float raises. Write each literal
    of the kind the data's schema has. The bitwise operations take ints, as two's complement of infinite width, and a
    shift an int count: a term carries no width (practice 4).
+   - Python: [T02.2: 42 in Python and TypeScript](mbse:mbse-expressions/python3/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.2) · TypeScript: [T02.2: 42 in Python and TypeScript](mbse:mbse-expressions/typescript5/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.2)
    - Python: [T10.4: No coercion](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.4) · TypeScript: [T10.4: No coercion](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.4)
    - Python: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-02) · TypeScript: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-02)
    - Python: [DOM-08: The bitwise operations take ints, as two's complement of infinite width, and shifts an int count](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-08) · TypeScript: [DOM-08: The bitwise operations take ints, as two's complement of infinite width, and shifts an int count](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-08)
@@ -125,6 +128,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    unbounded and floats binary64, until
    [CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md).
    [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md#terms-and-the-core-vocabulary).
+   - Python: [T04.1: A variable](mbse:mbse-expressions/python3/tutorials/04_Names.ipynb#T04.1) · TypeScript: [T04.1: A variable](mbse:mbse-expressions/typescript5/tutorials/04_Names.ipynb#T04.1)
    - Python: [T09.4: Validating a constraint before it is evaluated](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.4) · TypeScript: [T09.4: Validating a constraint before it is evaluated](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.4)
    - Python: [T10.5: What raises](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5) · TypeScript: [T10.5: What raises](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5)
    - Python: [EVL-04: Checking: `validate()` finds what evaluation would raise](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-04) · TypeScript: [EVL-04: Checking: `validate()` finds what evaluation would raise](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-04)
@@ -137,6 +141,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    `E.list_(...)`, and `E.mapping(...)` of keys to values. All of nothing is true, any of nothing false, and the
    maximum of nothing unknown.
    [CAP-096: collections in expressions](mbse:mbse-basis/docs/capabilities/CAP-096.md#collections).
+   - Python: [T06.2: An item](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.2) · TypeScript: [T06.2: An item](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.2)
    - Python: [T11.1: A list is a collection](mbse:mbse-expressions/python3/tutorials/11_Constraints_Over_Collections.ipynb#T11.1) · TypeScript: [T11.1: A list is a collection](mbse:mbse-expressions/typescript5/tutorials/11_Constraints_Over_Collections.ipynb#T11.1)
    - Python: [T11.2: Quantifiers](mbse:mbse-expressions/python3/tutorials/11_Constraints_Over_Collections.ipynb#T11.2) · TypeScript: [T11.2: Quantifiers](mbse:mbse-expressions/typescript5/tutorials/11_Constraints_Over_Collections.ipynb#T11.2)
    - Python: [T11.3: Empty collections](mbse:mbse-expressions/python3/tutorials/11_Constraints_Over_Collections.ipynb#T11.3) · TypeScript: [T11.3: Empty collections](mbse:mbse-expressions/typescript5/tutorials/11_Constraints_Over_Collections.ipynb#T11.3)
@@ -177,6 +182,10 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    `Symbolics.imports` the imports it declares. A
    rewriting is a translator from a dialect to itself, a list of rules ([Translating](references/translating.md)).
    [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#the-framework).
+   - Python: [T04.3: Free names](mbse:mbse-expressions/python3/tutorials/04_Names.ipynb#T04.3) · TypeScript: [T04.3: Free names](mbse:mbse-expressions/typescript5/tutorials/04_Names.ipynb#T04.3)
+   - Python: [T05.1: a + b * c is a tree](mbse:mbse-expressions/python3/tutorials/05_Operators.ipynb#T05.1) · TypeScript: [T05.1: a + b * c is a tree](mbse:mbse-expressions/typescript5/tutorials/05_Operators.ipynb#T05.1)
+   - Python: [T06.4: A chain](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.4) · TypeScript: [T06.4: A chain](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.4)
+   - Python: [T06.5: Helpers are parts, not terms](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.5) · TypeScript: [T06.5: Helpers are parts, not terms](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.5)
    - Python: [T15.1: C](mbse:mbse-expressions/python3/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.1) · TypeScript: [T15.1: C](mbse:mbse-expressions/typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.1)
    - Python: [T13.1: A constraint is a tree of terms](mbse:mbse-expressions/python3/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.1) · TypeScript: [T13.1: A constraint is a tree of terms](mbse:mbse-expressions/typescript5/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.1)
    - Python: [T13.2: Which constraints read a property](mbse:mbse-expressions/python3/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.2) · TypeScript: [T13.2: Which constraints read a property](mbse:mbse-expressions/typescript5/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.2)
@@ -194,6 +203,11 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    [Translating](references/translating.md).
    [CAP-100: six languages' expression dialects](mbse:mbse-basis/docs/capabilities/CAP-100.md#dialects),
    [CAP-101: translation between dialects](mbse:mbse-basis/docs/capabilities/CAP-101.md#translators).
+   - Python: [T03.2: Read and printed](mbse:mbse-expressions/python3/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.2) · TypeScript: [T03.2: Read and printed](mbse:mbse-expressions/typescript5/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.2)
+   - Python: [T05.2: The same tree in each language](mbse:mbse-expressions/python3/tutorials/05_Operators.ipynb#T05.2) · TypeScript: [T05.2: The same tree in each language](mbse:mbse-expressions/typescript5/tutorials/05_Operators.ipynb#T05.2)
+   - Python: [T05.4: Precedence differs](mbse:mbse-expressions/python3/tutorials/05_Operators.ipynb#T05.4) · TypeScript: [T05.4: Precedence differs](mbse:mbse-expressions/typescript5/tutorials/05_Operators.ipynb#T05.4)
+   - Python: [T06.1: A property](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.1) · TypeScript: [T06.1: A property](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.1)
+   - Python: [T06.3: A call](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.3) · TypeScript: [T06.3: A call](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.3)
    - Python: [T14.1: Translating](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1) · TypeScript: [T14.1: Translating](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1)
    - Python: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2) · TypeScript: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2)
    - Python: [T14.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3) · TypeScript: [T14.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3)
@@ -212,6 +226,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    *When*: mixing dialects in one store or one expression. *How*: each dialect's `Term` is the union of its kinds, a
    branch of `Expressions.Framework.Term` named after it; a term holds its dialect, and a dialect refuses another's by
    name ("a Patterns variable is not a Python3 term"). Write a dialect's terms with its own writers, or translate them.
+   - Python: [T03.3: The same literal in each language](mbse:mbse-expressions/python3/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.3) · TypeScript: [T03.3: The same literal in each language](mbse:mbse-expressions/typescript5/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.3)
    - Python: [FRM-04: Every dialect's install adds its union of its kinds to `Term`, and its terms round-trip](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-04) · TypeScript: [FRM-04: Every dialect's install adds its union of its kinds to `Term`, and its terms round-trip](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-04)
    - Python: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-12) · TypeScript: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-12)
    - Python: [EVL-05: The union of terms names each branch by its dialect, and a dialect's `Term` each by its kind's tag](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-05) · TypeScript: [EVL-05: The union of terms names each branch by its dialect, and a dialect's `Term` each by its kind's tag](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-05)
@@ -239,6 +254,16 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    domain. For Patterns these are its values' natives' domains (`int`, `float`, ...) until domain inference reads the
    stored ones ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
    [CAP-097: value domains of published standards](mbse:mbse-basis/docs/capabilities/CAP-097.md#value-domains).
+   - Python: [T01.2: A domain is data](mbse:mbse-expressions/python3/tutorials/01_Values_And_Their_Domains.ipynb#T01.2) · TypeScript: [T01.2: A domain is data](mbse:mbse-expressions/typescript5/tutorials/01_Values_And_Their_Domains.ipynb#T01.2)
+   - Python: [T01.3: Its kind](mbse:mbse-expressions/python3/tutorials/01_Values_And_Their_Domains.ipynb#T01.3) · TypeScript: [T01.3: Its kind](mbse:mbse-expressions/typescript5/tutorials/01_Values_And_Their_Domains.ipynb#T01.3)
+   - Python: [T01.4: Its parameters, and what follows from them](mbse:mbse-expressions/python3/tutorials/01_Values_And_Their_Domains.ipynb#T01.4) · TypeScript: [T01.4: Its parameters, and what follows from them](mbse:mbse-expressions/typescript5/tutorials/01_Values_And_Their_Domains.ipynb#T01.4)
+   - Python: [T01.7: Standards are data](mbse:mbse-expressions/python3/tutorials/01_Values_And_Their_Domains.ipynb#T01.7) · TypeScript: [T01.7: Standards are data](mbse:mbse-expressions/typescript5/tutorials/01_Values_And_Their_Domains.ipynb#T01.7)
+   - Python: [T02.1: Each language's own domains](mbse:mbse-expressions/python3/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.1) · TypeScript: [T02.1: Each language's own domains](mbse:mbse-expressions/typescript5/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.1)
+   - Python: [T02.2: 42 in Python and TypeScript](mbse:mbse-expressions/python3/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.2) · TypeScript: [T02.2: 42 in Python and TypeScript](mbse:mbse-expressions/typescript5/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.2)
+   - Python: [T02.3: 42 in C, under an ABI](mbse:mbse-expressions/python3/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.3) · TypeScript: [T02.3: 42 in C, under an ABI](mbse:mbse-expressions/typescript5/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.3)
+   - Python: [T02.4: 42 in SystemVerilog](mbse:mbse-expressions/python3/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.4) · TypeScript: [T02.4: 42 in SystemVerilog](mbse:mbse-expressions/typescript5/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.4)
+   - Python: [T03.4: Its domain, inferred](mbse:mbse-expressions/python3/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.4) · TypeScript: [T03.4: Its domain, inferred](mbse:mbse-expressions/typescript5/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.4)
+   - Python: [T05.6: The operations a dialect defines are data](mbse:mbse-expressions/python3/tutorials/05_Operators.ipynb#T05.6) · TypeScript: [T05.6: The operations a dialect defines are data](mbse:mbse-expressions/typescript5/tutorials/05_Operators.ipynb#T05.6)
    - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
    - Python: [DOM-17: The standard dialects own the kinds and domains, with their inferred properties, read through the framework's interface](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-17) · TypeScript: [DOM-17: The standard dialects own the kinds and domains, with their inferred properties, read through the framework's interface](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-17)
    - Python: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic and bit, Python3's, TypeScript5's, MATLAB's and Excel's strings, the tokens and Excel's errors](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-18) · TypeScript: [DOM-18: A language's own kinds are its dialect's: SystemVerilog's logic and bit, Python3's, TypeScript5's, MATLAB's and Excel's strings, the tokens and Excel's errors](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-18)
@@ -286,12 +311,14 @@ each case shows its own:
   - Python: [T11.5: Building a list or a mapping](mbse:mbse-expressions/python3/tutorials/11_Constraints_Over_Collections.ipynb#T11.5) · TypeScript: [T11.5: Building a list or a mapping](mbse:mbse-expressions/typescript5/tutorials/11_Constraints_Over_Collections.ipynb#T11.5)
   - Python: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/python3/tests/10_Collections.ipynb#COL-08) · TypeScript: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/typescript5/tests/10_Collections.ipynb#COL-08)
   - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
-- **Names.** The API is the same name for name, snake_case included (`Domains.items_of`), except the framework's reads
-  of terms, camelCase in TypeScript: `Terms.name_of`, `kind_of`, `dialect_of` and `attributes_of` are `Terms.nameOf`,
-  `kindOf`, `dialectOf` and `attributesOf` (a `Map`). A translator's pattern takes its attributes by keyword in Python
+- **Names.** The API is the same name for name, snake_case included (`Domains.items_of`), except the framework's
+  reads, camelCase in TypeScript: of terms, `Terms.name_of`, `kind_of`, `dialect_of` and `attributes_of` are
+  `Terms.nameOf`, `kindOf`, `dialectOf` and `attributesOf` (a `Map`); of domains, `Domains.kind_of` and `name_of` are
+  `Domains.kindOf` and `nameOf`; of standards, `Standards.designation_of` is `Standards.designationOf`. A translator's pattern takes its attributes by keyword in Python
   (`Pattern("call", A, B, callable="eq")`), first in TypeScript (`new Pattern("call", { callable: "eq" }, A, B)`).
   TypeScript makes an object of a class with `new` (`new Hole("A")`, `new Pairwise(...)`, `new Scope(...)`), where
   Python calls the class.
+  - Python: [T01.3: Its kind](mbse:mbse-expressions/python3/tutorials/01_Values_And_Their_Domains.ipynb#T01.3) · TypeScript: [T01.3: Its kind](mbse:mbse-expressions/typescript5/tutorials/01_Values_And_Their_Domains.ipynb#T01.3)
   - Python: [FRM-02: Forms and `make` are inverses, for every kind of every dialect](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-02) · TypeScript: [FRM-02: Forms and `make` are inverses, for every kind of every dialect](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-02)
   - Python: [T13.5: Rewriting](mbse:mbse-expressions/python3/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.5) · TypeScript: [T13.5: Rewriting](mbse:mbse-expressions/typescript5/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.5)
   - Python: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-01) · TypeScript: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-01)
@@ -301,6 +328,7 @@ each case shows its own:
   expression with the dialect's constructors. JavaScript has no `Ellipsis` or complex numbers: `P.constant(P.ELLIPSIS)`
   and `new P.Complex(0, 2)` stand for them, and keyword-only arguments are an options object
   (`P.lambda_(body, ["a"], { kwarg: "k" })`).
+  - Python: [T03.2: Read and printed](mbse:mbse-expressions/python3/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.2) · TypeScript: [T03.2: Read and printed](mbse:mbse-expressions/typescript5/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.2)
   - Python: [T14.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3) · TypeScript: [T14.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3)
   - Python: [T14.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4) · TypeScript: [T14.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4)
   - Python: [DIA-01: Python: expressions as `ast` has them, with their imports; rendered and parsed as source](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-01) · TypeScript: [DIA-01: Python: expressions as `ast` has them, with their imports; rendered and parsed as source](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-01)
@@ -323,7 +351,7 @@ each case shows its own:
 <!-- no case: points to the tutorials and the test plan as a whole -->
 
 The tutorials teach it in two parts, each notebook committed with its outputs and run as a test: Part I, how values,
-their domains and each language's expressions are modeled, from one literal up (tutorials 1 to 8, being written), and
-Part II, seven case studies on constraints (9 to 15), from a first constraint to C and SystemVerilog: [Python](mbse:mbse-expressions/python3/tutorials/README.md)
-and [TypeScript](mbse:mbse-expressions/typescript5/tutorials/README.md). The test plan,
+their domains and each language's expressions are modeled, from one literal up (tutorials 1 to 6; 7 and 8 after the
+dialects' retrofit), and Part II, seven case studies on constraints (9 to 15), from a first constraint to C and
+SystemVerilog: [Python](mbse:mbse-expressions/python3/tutorials/README.md) and [TypeScript](mbse:mbse-expressions/typescript5/tutorials/README.md). The test plan,
 [Test plan — python3](mbse:mbse-expressions/python3/tests/TestPlan.md), lists every case.
