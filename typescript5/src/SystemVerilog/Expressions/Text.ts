@@ -187,7 +187,8 @@ export class Printer {
   }
 
   /** `{ constraints }` on one line, as `randomize() with` writes them: each item as its kind writes it on one line, or as
-   * its kind's `INLINE` says (an expression held as a constraint ended by `;`; a line comment, a directive, its line). */
+   * its kind's `INLINE` says (an expression held as a constraint ended by `;`; a line comment, a directive, its line), a
+   * space between them but not at a line's end or start, as mbse-programs writes them. */
   inline(items: readonly any[]): string {
     const parts: string[] = [];
     for (const item of items) {
@@ -195,7 +196,9 @@ export class Printer {
       const inline = this.inlines.get(node.kind);
       parts.push(inline !== undefined ? inline(this, node, written) : written);
     }
-    return parts.length > 0 ? `{ ${parts.join(" ")} }` : "{}";
+    let text = "{";
+    for (const part of [...parts, "}"]) text += text.endsWith("\n") || part.startsWith("\n") ? part : " " + part;
+    return parts.length > 0 ? text : "{}";
   }
 
   // Expressions
