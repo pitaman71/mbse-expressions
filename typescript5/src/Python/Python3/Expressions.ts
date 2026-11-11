@@ -55,17 +55,21 @@
  * a schema of a term too, and invalid syntax (the framework's `error` and `missing`), as every dialect's `Type` and
  * `Pattern` hold it: every dialect has a `Pattern` union for its binding targets, as the dialects proposal decided
  * ("(ii)"). The framework reads a target, as any helper, as a `Terms.Part`, its terms after the clause's own; a
- * lambda's parameters are `arg`s, not patterns.
+ * lambda's parameters are `arg`s, not patterns. A parameter's `annotation` holds `Expressions.Python.Types.Term`, the
+ * `Term` of its family's dialect of type expressions, which lists every branch of Python3's `Term` (this install adds
+ * them) beside its own kinds; a lambda's parameters have none, but mbse-programs' function definitions share the helper.
  *
  * The versions of Python 3 the dialect covers are data, which `define` writes, each owned by its published name, Python
  * 3.0 to 3.15, and holding the kinds it has, from the version each arrived in (`Framework.Standards`); an extension is
  * in none. A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
  * calls, not a dialect.
  *
- * `DIALECT` reads them (`Terms.Dialect`). The writers (`constant`, `name`, `attribute`, ...) write them through the
- * builders, wherever a term is written, in a transaction; a helper's writer (`keyword`, `comparison`, `comprehension`,
- * `arg`, `formattedvalue`, ...) is given where its kind takes one. JavaScript has no complex numbers and no `Ellipsis`:
- * `Complex` and `ELLIPSIS` stand for them where a constant is written. `Text.ToText` writes an expression as Python
+ * `DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types` and `Python
+ * Patterns` (`reads`), so that a tree mixing them is validated, inferred and printed from any of their holders. The
+ * writers (`constant`, `name`, `attribute`, ...) write them through the builders, wherever a term is written, in a
+ * transaction; a helper's writer (`keyword`, `comparison`, `comprehension`, `arg`, `formattedvalue`, ...) is given where
+ * its kind takes one. JavaScript has no complex numbers and no `Ellipsis`: `Complex` and `ELLIPSIS` stand for them where
+ * a constant is written. `Text.ToText` writes an expression as Python
  * source, parenthesized only where precedence requires. Reading Python source (`Text.FromText`) needs Python's own
  * parser, so it is in the Python implementation only.
  *
@@ -147,17 +151,58 @@ const SINCE: ReadonlyMap<string, number> = new Map([[YIELDFROM, 3], [AWAIT, 5], 
  * IEEE 754's (its `Complex` holds `binary64`s), in a transaction of its own; run again, it writes nothing. Its domains'
  * schemas too, each an `OfAny` of the scalar it narrows: its domains `define` writes after it.
  * Its holder, `Expressions.Python.Python3.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
- * its `Term`. */
+ * its `Term`. Its branches are added to `Python Types`' `Term` too, created where that install has not run: a parameter's
+ * annotation holds that `Term`, a type expression or any expression. */
 export function install(txn: any): any {
   const S = txn.Schemas;
   const Framework = txn.Expressions.Framework;
   const IEEE754 = txn.Expressions.IEEE754.Expressions;
   const terms = (_: any): any => S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Term]));
+  /** Its union's branches: the framework's kinds it reuses, its own, its extensions, and invalid syntax. */
+  const own = (_: any): any[] => [
+    (t: any) => t.name("literal").schema([_.Literal]),
+    (t: any) => t.name("constant").schema([_.Constant]),
+    (t: any) => t.name("variable").schema([Framework.Variable]),
+    (t: any) => t.name("concatenatedstring").schema([_.ConcatenatedString]),
+    (t: any) => t.name("joinedstr").schema([_.JoinedStr]),
+    (t: any) => t.name("templatestr").schema([_.TemplateStr]),
+    (t: any) => t.name("parenthesized").schema([_.Parenthesized]),
+    (t: any) => t.name("tuple").schema([_.Tuple]),
+    (t: any) => t.name("list").schema([Framework.List]),
+    (t: any) => t.name("set").schema([_.Set]),
+    (t: any) => t.name("dict").schema([_.Dict]),
+    (t: any) => t.name("listcomp").schema([_.ListComp]),
+    (t: any) => t.name("setcomp").schema([_.SetComp]),
+    (t: any) => t.name("dictcomp").schema([_.DictComp]),
+    (t: any) => t.name("generatorexp").schema([_.GeneratorExp]),
+    (t: any) => t.name("yield").schema([_.Yield]),
+    (t: any) => t.name("yieldfrom").schema([_.YieldFrom]),
+    (t: any) => t.name("attribute").schema([_.Attribute]),
+    (t: any) => t.name("subscript").schema([_.Subscript]),
+    (t: any) => t.name("slice").schema([_.Slice]),
+    (t: any) => t.name("call").schema([_.Call]),
+    (t: any) => t.name("starred").schema([_.Starred]),
+    (t: any) => t.name("await").schema([_.Await]),
+    (t: any) => t.name("unaryop").schema([_.UnaryOp]),
+    (t: any) => t.name("binop").schema([_.BinOp]),
+    (t: any) => t.name("compare").schema([_.Compare]),
+    (t: any) => t.name("boolop").schema([_.BoolOp]),
+    (t: any) => t.name("namedexpr").schema([_.NamedExpr]),
+    (t: any) => t.name("ifexp").schema([_.IfExp]),
+    (t: any) => t.name("lambda").schema([_.Lambda]),
+    (t: any) => t.name("let").schema([Framework.Let]),
+    (t: any) => t.name("import").schema([_.Import]),
+    (t: any) => t.name("importfrom").schema([_.ImportFrom]),
+    (t: any) => t.name("error").schema([Framework.Error]),
+    (t: any) => t.name("missing").schema([Framework.Missing]),
+  ];
   return txn.uid("mbse.Expressions.Python.Python3/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ Kinds: S.OfUnion, DomainKind: S.OfUnion, // Kinds: the framework's
       OfStr: S.OfObject, OfNoneType: S.OfObject, OfEllipsis: S.OfObject,
       bool: S.OfAny, int: S.OfAny, float: S.OfAny, str: S.OfAny, bytes: S.OfAny,
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion, Pattern: S.OfUnion,
+      // Python Types' union, by name: its install's, created here where it has not run
+      TypesTerm: S.OfUnion,
       Expression: S.OfObject, Literal: S.OfObject, Constant: S.OfObject, Complex: S.OfObject,
       ConcatenatedString: S.OfObject, StringText: S.OfObject, FormatSpec: S.OfObject,
       FormattedValue: S.OfObject, Interpolation: S.OfObject, JoinedStrValue: S.OfUnion,
@@ -179,43 +224,9 @@ export function install(txn: any): any {
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("python3").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, its extensions, and invalid syntax
-      (_: any) => _.Term.name("Expressions.Python.Python3.Term").branches([
-        (t: any) => t.name("literal").schema([_.Literal]),
-        (t: any) => t.name("constant").schema([_.Constant]),
-        (t: any) => t.name("variable").schema([Framework.Variable]),
-        (t: any) => t.name("concatenatedstring").schema([_.ConcatenatedString]),
-        (t: any) => t.name("joinedstr").schema([_.JoinedStr]),
-        (t: any) => t.name("templatestr").schema([_.TemplateStr]),
-        (t: any) => t.name("parenthesized").schema([_.Parenthesized]),
-        (t: any) => t.name("tuple").schema([_.Tuple]),
-        (t: any) => t.name("list").schema([Framework.List]),
-        (t: any) => t.name("set").schema([_.Set]),
-        (t: any) => t.name("dict").schema([_.Dict]),
-        (t: any) => t.name("listcomp").schema([_.ListComp]),
-        (t: any) => t.name("setcomp").schema([_.SetComp]),
-        (t: any) => t.name("dictcomp").schema([_.DictComp]),
-        (t: any) => t.name("generatorexp").schema([_.GeneratorExp]),
-        (t: any) => t.name("yield").schema([_.Yield]),
-        (t: any) => t.name("yieldfrom").schema([_.YieldFrom]),
-        (t: any) => t.name("attribute").schema([_.Attribute]),
-        (t: any) => t.name("subscript").schema([_.Subscript]),
-        (t: any) => t.name("slice").schema([_.Slice]),
-        (t: any) => t.name("call").schema([_.Call]),
-        (t: any) => t.name("starred").schema([_.Starred]),
-        (t: any) => t.name("await").schema([_.Await]),
-        (t: any) => t.name("unaryop").schema([_.UnaryOp]),
-        (t: any) => t.name("binop").schema([_.BinOp]),
-        (t: any) => t.name("compare").schema([_.Compare]),
-        (t: any) => t.name("boolop").schema([_.BoolOp]),
-        (t: any) => t.name("namedexpr").schema([_.NamedExpr]),
-        (t: any) => t.name("ifexp").schema([_.IfExp]),
-        (t: any) => t.name("lambda").schema([_.Lambda]),
-        (t: any) => t.name("let").schema([Framework.Let]),
-        (t: any) => t.name("import").schema([_.Import]),
-        (t: any) => t.name("importfrom").schema([_.ImportFrom]),
-        (t: any) => t.name("error").schema([Framework.Error]),
-        (t: any) => t.name("missing").schema([Framework.Missing]),
-      ]),
+      (_: any) => _.Term.name("Expressions.Python.Python3.Term").branches(own(_)),
+      // Python Types' union lists its branches: an annotation, a bound or a default may be any expression ("(b)")
+      (_: any) => _.TypesTerm.name("Expressions.Python.Types.Term").branches(own(_)),
       // its patterns: what a binding target may be (Python's language reference, 7.2), each a schema of a term too, as
       // the dialects proposal decided for every dialect ("(ii)")
       (_: any) => _.Pattern.name("Expressions.Python.Python3.Pattern").branches([
@@ -311,7 +322,7 @@ export function install(txn: any): any {
         value: _.Term, target: _.Pattern }), // a binder: its value Let's
       (_: any) => _.IfExp.name("Expressions.Python.Python3.IfExp").properties({ body: _.Term, test: _.Term, orelse: _.Term }),
       (_: any) => _.Arg.name("Expressions.Python.Python3.Arg").properties({
-        arg: S.OfStr, annotation: _.Term, default_value: _.Term }),
+        arg: S.OfStr, annotation: _.TypesTerm, default_value: _.Term }), // a type expression: Python Types'
       (_: any) => _.Arguments.name("Expressions.Python.Python3.Arguments").properties({
         posonlyargs: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Arg])),
         args: S.OfContainer((c: any) => c.index([S.OfInt]).element([_.Arg])),
@@ -441,7 +452,8 @@ function dotted(name: string): boolean {
   return name.split(".").every(isIdentifier);
 }
 
-function identifierProblems(what: string, value: unknown): string[] {
+/** The problem with a name, if a non-empty string, that is not an identifier: `<what> must be an identifier, got 'x'`. */
+export function identifierProblems(what: string, value: unknown): string[] {
   if (typeof value === "string" && value !== "" && !isIdentifier(value)) {
     return [`${what} must be an identifier, got ${repr(value)}`];
   }
@@ -449,7 +461,7 @@ function identifierProblems(what: string, value: unknown): string[] {
 }
 
 /** The check that a record's property, if a non-empty str, is an identifier. */
-function identifier(property: string, what: string): (record: any) => string[] {
+export function identifier(property: string, what: string): (record: any) => string[] {
   return (record) => identifierProblems(what, F.attributesOf(record).get(property));
 }
 
@@ -732,7 +744,7 @@ function namedexprCheck(record: any): string[] {
 }
 
 /** The literal of a native value: a basic scalar, the only native value `spec` gives it. */
-function native(value: unknown): Writer {
+export function native(value: unknown): Writer {
   return constant(value);
 }
 
@@ -749,8 +761,8 @@ function operatorKind(vocabulary: ReadonlyMap<string, FD.Signature>, options: F.
   return new F.Kind(F.APPLICATION, { operator: "op", vocabulary, required: ["op"], ...options });
 }
 
-/** The dialects of its family whose terms its positions are to hold, read when first needed (the dialects proposal,
- * Retrofit's design): `Python Types` and `Python Patterns`. */
+/** The dialects of its family whose terms it reads, read when first needed (the dialects proposal, Retrofit's design):
+ * `Python Types`, whose `Term` a parameter's annotation holds, and `Python Patterns`. */
 function reads(): readonly F.Dialect[] {
   return [PythonTypes.DIALECT, PythonPatterns.DIALECT];
 }

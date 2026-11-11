@@ -17,15 +17,14 @@ from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
 
-from ..Python3 import Text as X
 from ..Python3.Text import ToText
 from . import Expressions as P
 
 __all__ = ["ToText", "TEXTS", "OPEN", "AS", "OR", "CLOSED"]
 
-OPEN, AS, OR, CLOSED = X._LAMBDA, X._IF, X._OR, X._PRIMARY
-"""A pattern's precedence, loosest first, on the family's scale: an open sequence, an `as` pattern, an `or` pattern,
-and a closed pattern, whose level is a primary's."""
+OPEN, AS, OR, CLOSED = 2, 3, 4, 17
+"""A pattern's precedence, loosest first, on the family's scale (`Python3.Text`'s levels of a lambda, a conditional
+expression, an `or` and a primary): an open sequence, an `as` pattern, an `or` pattern, and a closed pattern."""
 
 
 def _items(p: Any, patterns: tuple[Any, ...]) -> list[str]:
@@ -58,7 +57,7 @@ def _class(p: Any, node: F.Node) -> tuple[str, int]:
     attrs = node.attributes["kwd_attrs"].values if "kwd_attrs" in node.attributes else ()
     arguments = _items(p, node.lists["patterns"])
     arguments += [f"{attr}={pattern}" for attr, pattern in zip(attrs, _items(p, node.lists["kwd_patterns"]))]
-    return f"{p.write(node.slots['cls'], X._PRIMARY)}({', '.join(arguments)})", CLOSED
+    return f"{p.write(node.slots['cls'], CLOSED)}({', '.join(arguments)})", CLOSED
 
 
 def _as(p: Any, node: F.Node) -> tuple[str, int]:

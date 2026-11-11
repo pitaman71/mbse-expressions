@@ -1,13 +1,20 @@
-/** Text of the Python3 dialect: `ToText(expression)` is a term (or anything `Terms.term` reads one from) as Python
- * source, parenthesized only where precedence requires, with its imports as the lines before it, a literal in its
- * spelling where it has one and invalid syntax as written (`Terms.invalidText`). Reading Python source (`FromText`)
- * needs Python's own parser, so it is in the Python implementation only. */
+/** Text of the Python3 dialect: `ToText(expression)` is a term of the Python family (or anything `Terms.term` reads one
+ * from) as Python source, parenthesized only where precedence requires, with its imports as the lines before it, a
+ * literal in its spelling where it has one and invalid syntax as written (`Terms.invalidText`). Reading Python source
+ * (`FromText`) needs Python's own parser, so it is in the Python implementation only.
+ *
+ * The family's printer prints a tree that mixes its dialects' terms from any of their holders: each sublanguage's kinds
+ * are written by its own package's `Text` module, which the printer dispatches to by tag (`Types.Text`, `Patterns.Text`),
+ * each with its `TEXTS` (a kind's tag to the function that writes it, given the printer and its `Terms.Node`, giving its
+ * text and its precedence, on this module's scale). */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
+import * as PatternsText from "../Patterns/Text.js";
+import * as TypesText from "../Types/Text.js";
 import * as P from "./Expressions.js";
 
 const { repr, pyFloat } = Repr;
@@ -16,14 +23,17 @@ const { repr, pyFloat } = Repr;
 
 // Python's precedence, loosest first (its language reference, 6.17).
 const YIELD = 0, NAMED = 1, LAMBDA = 2, IF = 3, OR = 4, AND = 5, NOT = 6, COMPARE = 7, BITOR = 8, BITXOR = 9,
-  BITAND = 10, SHIFT = 11, SUM = 12, PRODUCT = 13, UNARY = 14, POWER = 15, AWAIT = 16, PRIMARY = 17;
+  BITAND = 10, SHIFT = 11, SUM = 12, PRODUCT = 13, UNARY = 14, POWER = 15, AWAIT = 16;
+/** A primary's precedence, the tightest: its family's sublanguages' kinds give it. */
+export const PRIMARY = 17;
 const BINOP_LEVELS: Record<string, number> = {
   "+": SUM, "-": SUM, "*": PRODUCT, "@": PRODUCT, "/": PRODUCT, "//": PRODUCT, "%": PRODUCT, "**": POWER,
   "|": BITOR, "^": BITXOR, "&": BITAND, "<<": SHIFT, ">>": SHIFT,
 };
 const IMPORTS = [P.IMPORT, P.IMPORTFROM];
 
-type Written = [string, number];
+/** A term's source and its precedence. */
+export type Written = [string, number];
 type Attributes = Map<string, any>;
 
 function constantText(value: unknown): Written {
@@ -60,7 +70,7 @@ function parts(held: unknown): F.Part[] {
 
 /** Writes a term's source: each kind as Python writes it, its helpers read from its attributes and its terms from its
  * arguments, in order. */
-class Printer {
+export class Printer {
   /** `node`'s source, parenthesized where its precedence is looser than `level`. */
   write(node: any, level: number): string {
     const [text, precedence] = this.text(node);
@@ -87,8 +97,14 @@ class Printer {
       const text = complexText((parts.get("real") as number | undefined) ?? 0, parts.get("imag") as number);
       return [text, text.startsWith("-") ? UNARY : PRIMARY];
     }
-    if (tag === "error" || tag === "missing") return [F.invalidText(P.DIALECT, tag, attributes), PRIMARY];
+    if (tag === "error" || tag === "missing") { // as written, by the dialect of its family whose union holds it
+      const union = F.dialectOf(node);
+      const owner = [P.DIALECT, ...P.DIALECT.reads()].find((dialect) => dialect.union === union) as F.Dialect;
+      return [F.invalidText(owner, tag, attributes), PRIMARY];
+    }
     if (IMPORTS.includes(tag)) throw new Errors.ValueError("an import can only enclose the whole expression");
+    const family = texts().get(tag);
+    if (family !== undefined) return family(this, F.node(tag, record)); // a kind of a sublanguage of its family
     return (this as any)[`_${tag}`](attributes, args);
   }
 
@@ -347,7 +363,17 @@ class Printer {
   }
 }
 
-/** The expression as Python source: one line per import around it, then the expression. */
+let TEXTS: ReadonlyMap<string, (p: Printer, n: F.Node) => Written> | null = null;
+
+/** How the kinds of its family's sublanguages are written: each dialect's `Text` module's `TEXTS`, merged, read when
+ * first needed. */
+function texts(): ReadonlyMap<string, (p: Printer, n: F.Node) => Written> {
+  TEXTS ??= new Map([...TypesText.TEXTS, ...PatternsText.TEXTS]);
+  return TEXTS;
+}
+
+/** The expression, a term of any dialect of the Python family, as Python source: one line per import around it, then
+ * the expression; a pattern as a `case` writes it, an open sequence bare. */
 export function ToText(expression: unknown): string {
   const lines: string[] = [];
   let node = F.term(expression);
