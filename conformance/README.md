@@ -18,9 +18,13 @@ written nested, indent 2) and `<case>.yaml`.
 | `collections` | a Patterns quantifier over an object's entries, the collection operations and a mapping |
 | `c` | a C term: every kind (the framework's `variable` and `call`, and its own `conditional`, `binary`, `unary`, `member`, `subscript`, `cast`, `constant`), typed constants and a shared identifier |
 | `cpp` | the same expression as a C++ term: C++'s own kinds, of C's shapes, each property holding a C++ term |
-| `systemverilog` | a SystemVerilog term: every kind (its own and the framework's `literal`, `variable` and `call`), sized vectors in a base, casts to a type and a width, a shared identifier |
+| `systemverilog` | a SystemVerilog term of every kind of IEEE 1800-2023's expressions and of its Types, their helpers, the Preprocessor's macro usage, literals and constants with their spelling, and a shared identifier |
 | `typescript5` | a TypeScript5 term of every kind of TypeScript 5's expressions, written through the builders: its types, destructuring patterns and JSX within it, a literal with its spelling, `null` and a regular expression (its `constant`), and a shared identifier |
 | `invalid` | a Python3 term holding invalid syntax, the framework's `error` (the source it spans and the term recovered within it) and `missing` (the kind expected), and literals with their spelling (`text`), one holding no value but its problem (`problems`) |
+| `systemverilog_patterns` | a term of SystemVerilog's Patterns, every kind of IEEE 1800's patterns (12.6): a structure pattern of members holding a variable, a tagged pattern of a parenthesized wildcard, and an expression |
+| `systemverilog_assertions` | a term of SystemVerilog's Assertions, every kind of IEEE 1800's sequences and properties (clause 16) and their helpers, held by a property spec with its clock and `disable iff` |
+| `systemverilog_constraints` | a term of SystemVerilog's Constraints, every kind of IEEE 1800's constraints (18.5) in a block: a distribution, an implication, a conditional, a `foreach`, `solve ... before`, `disable soft` and `unique` |
+| `systemverilog_preprocessor` | a term of SystemVerilog's Preprocessor, every kind of its compiler directives (clause 22), a macro usage and comments, as a conditional directive's items, an `elsif` and an `else` |
 
 Each case is a term value in one store holding the framework's install and every dialect's, and validates in its own
 dialect (`DIALECTS` in the corpus; Patterns' by default); `invalid`'s problems are reported.

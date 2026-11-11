@@ -10,7 +10,9 @@ written as one document; `domains` is ISO/IEC 11404's dialect, the singleton `Ex
 data too (`STANDARD`): an edition, C23's, ISO/IEC 9899:2024, written as one document of
 `Expressions.Framework.Standard`, its formal reference's parts, its common name and the kinds it has. The `typescript5`
 case is a TypeScript5 term of every kind, written through the builders. The `invalid` case is a Python3 term holding
-invalid syntax and literals with their spelling. Each implementation writes its snapshots to
+invalid syntax and literals with their spelling. The `systemverilog_patterns`, `systemverilog_assertions`,
+`systemverilog_constraints` and `systemverilog_preprocessor` cases are each a term of SystemVerilog's sublanguage of every
+kind, written through the builders. Each implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
 the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values,
 same order of statements. """
@@ -46,11 +48,15 @@ from mbse.Expressions.TypeScript.TypeScript5 import Expressions as TS
 from mbse.Schemas.Framework import Builders
 
 CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp", "systemverilog",
-         "typescript5", "invalid", "systemverilog_domains", "python3_domains", "typescript5_domains", "matlab_domains",
+         "typescript5", "invalid", "systemverilog_patterns", "systemverilog_assertions", "systemverilog_constraints",
+         "systemverilog_preprocessor", "systemverilog_domains", "python3_domains", "typescript5_domains", "matlab_domains",
          "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains", "standards"]
 
 DIALECTS = {"python3": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex": L.DIALECT, "c": CE.DIALECT,
-            "cpp": CPP.DIALECT, "systemverilog": SV.DIALECT, "typescript5": TS.DIALECT, "invalid": P.DIALECT}
+            "cpp": CPP.DIALECT, "systemverilog": SV.DIALECT, "typescript5": TS.DIALECT, "invalid": P.DIALECT,
+            "systemverilog_patterns": SVPatterns.Expressions.DIALECT, "systemverilog_assertions": SVAssertions.Expressions.DIALECT,
+            "systemverilog_constraints": SVConstraints.Expressions.DIALECT,
+            "systemverilog_preprocessor": SVPreprocessor.Expressions.DIALECT}
 """The dialect that reads each case, where it is not Patterns."""
 
 DOMAINS = {"domains": "Expressions.ISOIEC11404.Expressions", "systemverilog_domains": "Expressions.SystemVerilog.Expressions",
@@ -397,6 +403,82 @@ def build():
         lambda e: e.importexpression(lambda r: r.source(ts_record)),  # import(ts_record)
     ]))
 
+    # --- systemverilog_patterns: every kind of SystemVerilog's Patterns, held by Expressions' `matches` --- the text:
+    # '{a: .x, b: tagged Valid (.*), c: record.a}
+    patterns = SVPatterns.Expressions.DIALECT.spec(lambda u: u.structurepattern(lambda s: s.items([
+        lambda i: i.patternmember(lambda m: m.name(identifier("a")).pattern(lambda p: p.variablepattern(lambda v: v.name(identifier("x"))))),
+        lambda i: i.patternmember(lambda m: m.name(identifier("b")).pattern(lambda p: p.taggedpattern(lambda t: t.member(identifier("Valid")).pattern(
+            lambda q: q.parenthesizedpattern(lambda r: r.pattern(lambda w: w.wildcardpattern(lambda x: x))))))),
+        lambda i: i.patternmember(lambda m: m.name(identifier("c")).pattern(sv.member(that, "a")))])))
+
+    # --- systemverilog_assertions: every kind of SystemVerilog's Assertions and their helpers --- the text:
+    # @(posedge clk iff en or negedge rst) disable iff (rst) (a[*1:$], x += 1) ##[1:3] first_match(b intersect c) |=>
+    # @(*) d ##1 e[->2] ##n f[=1] and if (en) weak(a or b) else reject_on (rst) case (n) 1, 2: a until b; default:
+    # not a; endcase or (@(negedge clk) a throughout b iff nexttime [2] c #-# d)
+    a_, b_, c_, d_ = (sv.identifier(t) for t in "abcd")
+    assertions = SVAssertions.Expressions.DIALECT.spec(lambda u: u.propertyspec(lambda s: s.clock(lambda k: k.events([
+        lambda e: e.edge("posedge").expression(sv.identifier("clk")).condition(sv.identifier("en")),
+        lambda e: e.edge("negedge").expression(sv.identifier("rst"))])).disable(sv.identifier("rst")).property(lambda p: p.binaryproperty(lambda o: o.left(
+        lambda l: l.binaryproperty(lambda q: q.left(
+            lambda i: i.implicationproperty(lambda m: m.antecedent(lambda s1: s1.delaysequence(lambda ds: ds.first(
+                lambda ps: ps.parenthesizedsequence(lambda pp: pp.sequence(lambda r: r.repetitionsequence(lambda rr: rr.sequence(a_).operator("*").count(
+                    lambda cr: cr.cyclerange(lambda c: c.low(sv.literal(1)).high(lambda dd: dd.dollarexpression(lambda z: z)))))).items([
+                    lambda it: it.assignmentexpression(lambda ae: ae.target(sv.identifier("x")).operator("+=").value(sv.literal(1)))]))).steps([
+                lambda st: st.delay(lambda cr: cr.cyclerange(lambda c: c.low(sv.literal(1)).high(sv.literal(3)))).sequence(
+                    lambda fm: fm.firstmatchsequence(lambda f: f.sequence(lambda bs: bs.binarysequence(lambda b2: b2.left(b_).operator("intersect").right(c_)))))]))).operator("|=>").consequent(
+                lambda cs: cs.clockedsequence(lambda k: k.clock(lambda e: e).sequence(lambda ds: ds.delaysequence(lambda q2: q2.first(d_).steps([
+                    lambda st: st.delay(sv.literal(1)).sequence(lambda r: r.repetitionsequence(lambda rr: rr.sequence(sv.identifier("e")).operator("->").count(sv.literal(2)))),
+                    lambda st: st.delay(sv.identifier("n")).sequence(lambda r: r.repetitionsequence(lambda rr: rr.sequence(sv.identifier("f")).operator("=").count(sv.literal(1))))]))))))).operator("and").right(
+            lambda cp: cp.conditionalproperty(lambda c: c.condition(sv.identifier("en")).consequence(
+                lambda sp: sp.strengthproperty(lambda w: w.keyword("weak").sequence(lambda bs: bs.binarysequence(lambda b2: b2.left(a_).operator("or").right(b_))))).alternative(
+                lambda ab: ab.abortproperty(lambda r: r.keyword("reject_on").condition(sv.identifier("rst")).operand(lambda cp2: cp2.caseproperty(lambda cc: cc.expression(sv.identifier("n")).items([
+                    lambda it: it.expressions([sv.literal(1), sv.literal(2)]).body(lambda bp: bp.binaryproperty(lambda u2: u2.left(a_).operator("until").right(b_))),
+                    lambda it: it.body(lambda up: up.unaryproperty(lambda u3: u3.operator("not").operand(a_)))]))))))))).operator("or").right(
+        lambda pp: pp.parenthesizedproperty(lambda q: q.property(lambda cl: cl.clockedproperty(lambda k: k.clock(lambda e: e.events([
+            lambda ev: ev.edge("negedge").expression(sv.identifier("clk"))])).property(lambda bp: bp.binaryproperty(lambda o2: o2.left(
+                lambda bs: bs.binarysequence(lambda t: t.left(a_).operator("throughout").right(b_))).operator("iff").right(
+                lambda ip: ip.implicationproperty(lambda im: im.antecedent(lambda up: up.unaryproperty(lambda u4: u4.operator("nexttime").range(sv.literal(2)).operand(c_))).operator("#-#").consequent(d_)))))))))))))
+
+    # --- systemverilog_constraints: every kind of SystemVerilog's Constraints and its helpers --- the text:
+    # { soft record dist {0 := 40, [1:3] :/ 60, default :/ 1}; record > 0 -> record.a; if (record) record.a; else {}
+    # foreach (record[k, ]) k < record.a; solve record before record.a; disable soft record; unique {record, [1:2]}; }
+    holds = lambda e: lambda u: u.expressionconstraint(lambda c: c.expression(e))  # noqa: E731: a constraint of an expression
+    constraints = SVConstraints.Expressions.DIALECT.spec(lambda u: u.constraintblock(lambda b: b.items([
+        lambda i: i.expressionconstraint(lambda c: c.soft(True).expression(lambda d: d.distexpression(lambda e: e.value(that).items([
+            lambda t: t.value(sv.literal(0)).operator(":=").weight(sv.literal(40)),
+            lambda t: t.value(sv.span(1, 3)).operator(":/").weight(sv.literal(60)),
+            lambda t: t.operator(":/").weight(sv.literal(1))])))),
+        lambda i: i.implicationconstraint(lambda c: c.condition(sv.binary(">", that, 0)).body(holds(sv.member(that, "a")))),
+        lambda i: i.conditionalconstraint(lambda c: c.condition(that).consequence(holds(sv.member(that, "a"))).alternative(
+            lambda e: e.constraintblock(lambda b: b.items([])))),
+        lambda i: i.foreachconstraint(lambda f: f.value(that).variables([lambda v: v.identifier(identifier("k")),
+                                                                         lambda v: v.emptyargument(lambda e: e)])
+            .body(holds(sv.binary("<", sv.identifier("k"), sv.member(that, "a"))))),
+        lambda i: i.solvebeforeconstraint(lambda s: s.solve([that]).before([sv.member(that, "a")])),
+        lambda i: i.disablesoftconstraint(lambda d: d.target(that)),
+        lambda i: i.uniqueconstraint(lambda q: q.set([that, sv.span(1, 2)])),
+    ])))
+
+    # --- systemverilog_preprocessor: every kind of SystemVerilog's Preprocessor and its helper, in a conditional
+    # directive, its items, an `elsif` and an `else` --- the text: `ifdef (A && !B), its items each on its line,
+    # `elsif C, `resetall, `else, skipped;, `endif
+    preprocessor = SVPreprocessor.Expressions.DIALECT.spec(lambda u: u.ifdefdirective(lambda d: d
+        .condition(lambda c: c.parenthesizedexpression(lambda p: p.expression(sv.binary("&&", sv.identifier("A"), sv.unary("!", sv.identifier("B"))))))
+        .items([
+            lambda i: i.includedirective(lambda r: r.path("defs.svh")),
+            lambda i: i.includedirective(lambda r: r.path("uvm.svh").system(True)),
+            lambda i: i.definedirective(lambda r: r.name(identifier("MAX")).function_like(True).parameters(
+                [identifier("a"), identifier("b")]).body("((a) > (b) ? (a) : (b))")),
+            lambda i: i.undefdirective(lambda r: r.name(identifier("W"))),
+            lambda i: i.timescaledirective(lambda r: r.unit("1ns").precision("1ps")),
+            lambda i: i.defaultnettypedirective(lambda r: r.net_type("none")),
+            lambda i: i.comment(lambda r: r.text(" low")),
+            lambda i: i.comment(lambda r: r.text(" block ").block(True)),
+            lambda i: i.macrousage(lambda r: r.name(identifier("MAX")).arguments("1, 2")),
+        ])
+        .branches([lambda b: b.name(identifier("C")).items([lambda i: i.otherdirective(lambda r: r.text("`resetall"))])])
+        .alternative([lambda i: i.disabledtext(lambda r: r.text("skipped;"))]).has_else(True)))
+
     # --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
     # their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
     # (a binop's operands are Python3's terms, written in its union)
@@ -410,7 +492,9 @@ def build():
         terms = {case: store.Expressions.Framework.Term(writer) for case, writer in [
             ("expression", expression), ("python3", python3), ("matlab", matlab), ("excel", excel), ("latex", latex),
             ("collections", collections), ("c", c), ("cpp", cpp), ("systemverilog", systemverilog),
-            ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid)]}
+            ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid), ("systemverilog_patterns", patterns),
+            ("systemverilog_assertions", assertions), ("systemverilog_constraints", constraints),
+            ("systemverilog_preprocessor", preprocessor)]}
     terms["domains"] = defined["dialect"]
     terms.update(stored)
     terms.update({case: store.singleton(path).standards({"designation": designation})  # an edition, by its path

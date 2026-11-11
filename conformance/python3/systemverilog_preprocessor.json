@@ -1,0 +1,127 @@
+{
+  "systemverilog_preprocessor": {
+    "ifdefdirective": {
+      "condition": {
+        "parenthesizedexpression": {
+          "expression": {
+            "binaryexpression": {
+              "left": {
+                "nameexpression": {
+                  "name": {
+                    "identifier": {
+                      "spelling": "A"
+                    }
+                  }
+                }
+              },
+              "operator": "&&",
+              "right": {
+                "unaryexpression": {
+                  "operator": "!",
+                  "operand": {
+                    "nameexpression": {
+                      "name": {
+                        "identifier": {
+                          "spelling": "B"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "items": [
+        {
+          "includedirective": {
+            "path": "defs.svh"
+          }
+        },
+        {
+          "includedirective": {
+            "path": "uvm.svh",
+            "system": true
+          }
+        },
+        {
+          "definedirective": {
+            "name": {
+              "spelling": "MAX"
+            },
+            "function_like": true,
+            "parameters": [
+              {
+                "spelling": "a"
+              },
+              {
+                "spelling": "b"
+              }
+            ],
+            "body": "((a) > (b) ? (a) : (b))"
+          }
+        },
+        {
+          "undefdirective": {
+            "name": {
+              "spelling": "W"
+            }
+          }
+        },
+        {
+          "timescaledirective": {
+            "unit": "1ns",
+            "precision": "1ps"
+          }
+        },
+        {
+          "defaultnettypedirective": {
+            "net_type": "none"
+          }
+        },
+        {
+          "comment": {
+            "text": " low"
+          }
+        },
+        {
+          "comment": {
+            "block": true,
+            "text": " block "
+          }
+        },
+        {
+          "macrousage": {
+            "name": {
+              "spelling": "MAX"
+            },
+            "arguments": "1, 2"
+          }
+        }
+      ],
+      "branches": [
+        {
+          "name": {
+            "spelling": "C"
+          },
+          "items": [
+            {
+              "otherdirective": {
+                "text": "`resetall"
+              }
+            }
+          ]
+        }
+      ],
+      "alternative": [
+        {
+          "disabledtext": {
+            "text": "skipped;"
+          }
+        }
+      ],
+      "has_else": true
+    }
+  }
+}

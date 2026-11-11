@@ -1,0 +1,471 @@
+{
+  "systemverilog_assertions": {
+    "propertyspec": {
+      "clock": {
+        "events": [
+          {
+            "edge": "posedge",
+            "expression": {
+              "nameexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "clk"
+                  }
+                }
+              }
+            },
+            "condition": {
+              "nameexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "en"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "edge": "negedge",
+            "expression": {
+              "nameexpression": {
+                "name": {
+                  "identifier": {
+                    "spelling": "rst"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "disable": {
+        "nameexpression": {
+          "name": {
+            "identifier": {
+              "spelling": "rst"
+            }
+          }
+        }
+      },
+      "property": {
+        "binaryproperty": {
+          "left": {
+            "binaryproperty": {
+              "left": {
+                "implicationproperty": {
+                  "antecedent": {
+                    "delaysequence": {
+                      "first": {
+                        "parenthesizedsequence": {
+                          "sequence": {
+                            "repetitionsequence": {
+                              "sequence": {
+                                "nameexpression": {
+                                  "name": {
+                                    "identifier": {
+                                      "spelling": "a"
+                                    }
+                                  }
+                                }
+                              },
+                              "operator": "*",
+                              "count": {
+                                "cyclerange": {
+                                  "low": {
+                                    "literal": {
+                                      "value": {
+                                        "int": 1
+                                      }
+                                    }
+                                  },
+                                  "high": {
+                                    "dollarexpression": {}
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "items": [
+                            {
+                              "assignmentexpression": {
+                                "target": {
+                                  "nameexpression": {
+                                    "name": {
+                                      "identifier": {
+                                        "spelling": "x"
+                                      }
+                                    }
+                                  }
+                                },
+                                "operator": "+=",
+                                "value": {
+                                  "literal": {
+                                    "value": {
+                                      "int": 1
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      },
+                      "steps": [
+                        {
+                          "delay": {
+                            "cyclerange": {
+                              "low": {
+                                "literal": {
+                                  "value": {
+                                    "int": 1
+                                  }
+                                }
+                              },
+                              "high": {
+                                "literal": {
+                                  "value": {
+                                    "int": 3
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "sequence": {
+                            "firstmatchsequence": {
+                              "sequence": {
+                                "binarysequence": {
+                                  "left": {
+                                    "nameexpression": {
+                                      "name": {
+                                        "identifier": {
+                                          "spelling": "b"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "operator": "intersect",
+                                  "right": {
+                                    "nameexpression": {
+                                      "name": {
+                                        "identifier": {
+                                          "spelling": "c"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "operator": "|=>",
+                  "consequent": {
+                    "clockedsequence": {
+                      "clock": {},
+                      "sequence": {
+                        "delaysequence": {
+                          "first": {
+                            "nameexpression": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "d"
+                                }
+                              }
+                            }
+                          },
+                          "steps": [
+                            {
+                              "delay": {
+                                "literal": {
+                                  "value": {
+                                    "int": 1
+                                  }
+                                }
+                              },
+                              "sequence": {
+                                "repetitionsequence": {
+                                  "sequence": {
+                                    "nameexpression": {
+                                      "name": {
+                                        "identifier": {
+                                          "spelling": "e"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "operator": "->",
+                                  "count": {
+                                    "literal": {
+                                      "value": {
+                                        "int": 2
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "delay": {
+                                "nameexpression": {
+                                  "name": {
+                                    "identifier": {
+                                      "spelling": "n"
+                                    }
+                                  }
+                                }
+                              },
+                              "sequence": {
+                                "repetitionsequence": {
+                                  "sequence": {
+                                    "nameexpression": {
+                                      "name": {
+                                        "identifier": {
+                                          "spelling": "f"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "operator": "=",
+                                  "count": {
+                                    "literal": {
+                                      "value": {
+                                        "int": 1
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "operator": "and",
+              "right": {
+                "conditionalproperty": {
+                  "condition": {
+                    "nameexpression": {
+                      "name": {
+                        "identifier": {
+                          "spelling": "en"
+                        }
+                      }
+                    }
+                  },
+                  "consequence": {
+                    "strengthproperty": {
+                      "keyword": "weak",
+                      "sequence": {
+                        "binarysequence": {
+                          "left": {
+                            "nameexpression": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "a"
+                                }
+                              }
+                            }
+                          },
+                          "operator": "or",
+                          "right": {
+                            "nameexpression": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "b"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "alternative": {
+                    "abortproperty": {
+                      "keyword": "reject_on",
+                      "condition": {
+                        "nameexpression": {
+                          "name": {
+                            "identifier": {
+                              "spelling": "rst"
+                            }
+                          }
+                        }
+                      },
+                      "operand": {
+                        "caseproperty": {
+                          "expression": {
+                            "nameexpression": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "n"
+                                }
+                              }
+                            }
+                          },
+                          "items": [
+                            {
+                              "expressions": [
+                                {
+                                  "literal": {
+                                    "value": {
+                                      "int": 1
+                                    }
+                                  }
+                                },
+                                {
+                                  "literal": {
+                                    "value": {
+                                      "int": 2
+                                    }
+                                  }
+                                }
+                              ],
+                              "body": {
+                                "binaryproperty": {
+                                  "left": {
+                                    "nameexpression": {
+                                      "name": {
+                                        "identifier": {
+                                          "spelling": "a"
+                                        }
+                                      }
+                                    }
+                                  },
+                                  "operator": "until",
+                                  "right": {
+                                    "nameexpression": {
+                                      "name": {
+                                        "identifier": {
+                                          "spelling": "b"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            },
+                            {
+                              "body": {
+                                "unaryproperty": {
+                                  "operator": "not",
+                                  "operand": {
+                                    "nameexpression": {
+                                      "name": {
+                                        "identifier": {
+                                          "spelling": "a"
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "operator": "or",
+          "right": {
+            "parenthesizedproperty": {
+              "property": {
+                "clockedproperty": {
+                  "clock": {
+                    "events": [
+                      {
+                        "edge": "negedge",
+                        "expression": {
+                          "nameexpression": {
+                            "name": {
+                              "identifier": {
+                                "spelling": "clk"
+                              }
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  "property": {
+                    "binaryproperty": {
+                      "left": {
+                        "binarysequence": {
+                          "left": {
+                            "nameexpression": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "a"
+                                }
+                              }
+                            }
+                          },
+                          "operator": "throughout",
+                          "right": {
+                            "nameexpression": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "b"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "operator": "iff",
+                      "right": {
+                        "implicationproperty": {
+                          "antecedent": {
+                            "unaryproperty": {
+                              "operator": "nexttime",
+                              "range": {
+                                "literal": {
+                                  "value": {
+                                    "int": 2
+                                  }
+                                }
+                              },
+                              "operand": {
+                                "nameexpression": {
+                                  "name": {
+                                    "identifier": {
+                                      "spelling": "c"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          },
+                          "operator": "#-#",
+                          "consequent": {
+                            "nameexpression": {
+                              "name": {
+                                "identifier": {
+                                  "spelling": "d"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

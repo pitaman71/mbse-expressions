@@ -1,0 +1,66 @@
+{
+  "systemverilog_patterns": {
+    "structurepattern": {
+      "items": [
+        {
+          "patternmember": {
+            "name": {
+              "spelling": "a"
+            },
+            "pattern": {
+              "variablepattern": {
+                "name": {
+                  "spelling": "x"
+                }
+              }
+            }
+          }
+        },
+        {
+          "patternmember": {
+            "name": {
+              "spelling": "b"
+            },
+            "pattern": {
+              "taggedpattern": {
+                "member": {
+                  "spelling": "Valid"
+                },
+                "pattern": {
+                  "parenthesizedpattern": {
+                    "pattern": {
+                      "wildcardpattern": {}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "patternmember": {
+            "name": {
+              "spelling": "c"
+            },
+            "pattern": {
+              "memberexpression": {
+                "value": {
+                  "nameexpression": {
+                    "name": {
+                      "identifier": {
+                        "spelling": "record"
+                      }
+                    }
+                  }
+                },
+                "member": {
+                  "spelling": "a"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -11,7 +11,9 @@
  * its domains. The `standards` case is data too (`STANDARD`): an edition, C23's, ISO/IEC 9899:2024, written as one
  * document of `Expressions.Framework.Standard`, its formal reference's parts, its common name and the kinds it has. The
  * `invalid` case is a Python3 term holding invalid syntax and literals with their spelling; the `typescript5` case a
- * TypeScript5 term of every kind, written through the builders. Each implementation writes its snapshots to
+ * TypeScript5 term of every kind, written through the builders; the `systemverilog_patterns`, `systemverilog_assertions`,
+ * `systemverilog_constraints` and `systemverilog_preprocessor` cases each a term of SystemVerilog's sublanguage of every
+ * kind, written through the builders. Each implementation writes its snapshots to
  * `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files
  * (see the CONF test suite). Keep record module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
  * cases, same values, same order of statements.
@@ -51,7 +53,8 @@ const SV = SystemVerilog.Expressions;
 const TS = TypeScript5.Expressions;
 
 export const CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp",
-  "systemverilog", "typescript5", "invalid", "systemverilog_domains", "python3_domains", "typescript5_domains",
+  "systemverilog", "typescript5", "invalid", "systemverilog_patterns", "systemverilog_assertions",
+  "systemverilog_constraints", "systemverilog_preprocessor", "systemverilog_domains", "python3_domains", "typescript5_domains",
   "matlab_domains", "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains",
   "standards"] as const;
 
@@ -59,7 +62,9 @@ export const CASES = ["expression", "python3", "matlab", "excel", "latex", "doma
 export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
   ["python3", P.DIALECT], ["matlab", M.DIALECT], ["excel", X.DIALECT], ["latex", L.DIALECT], ["c", CE.DIALECT],
   ["cpp", CPP.DIALECT], ["systemverilog", SV.DIALECT], ["typescript5", TS.DIALECT],
-  ["invalid", P.DIALECT],
+  ["invalid", P.DIALECT], ["systemverilog_patterns", SVPatterns.Expressions.DIALECT],
+  ["systemverilog_assertions", SVAssertions.Expressions.DIALECT], ["systemverilog_constraints", SVConstraints.Expressions.DIALECT],
+  ["systemverilog_preprocessor", SVPreprocessor.Expressions.DIALECT],
 ]);
 
 /** The cases that are data, not terms: each a dialect's singleton, by its path, written as one document of its schema,
@@ -411,6 +416,82 @@ export function build(): Map<string, Case> {
       (e: any) => e.importexpression((r: any) => r.source(tsRecord)),  // import(tsRecord)
   ]));
 
+  // --- systemverilog_patterns: every kind of SystemVerilog's Patterns, held by Expressions' `matches` --- the text:
+  // '{a: .x, b: tagged Valid (.*), c: record.a}
+  const patterns = SVPatterns.Expressions.DIALECT.spec((u: any) => u.structurepattern((s: any) => s.items([
+        (i: any) => i.patternmember((m: any) => m.name(identifier("a")).pattern((p: any) => p.variablepattern((v: any) => v.name(identifier("x"))))),
+        (i: any) => i.patternmember((m: any) => m.name(identifier("b")).pattern((p: any) => p.taggedpattern((t: any) => t.member(identifier("Valid")).pattern(
+            (q: any) => q.parenthesizedpattern((r: any) => r.pattern((w: any) => w.wildcardpattern((x: any) => x))))))),
+        (i: any) => i.patternmember((m: any) => m.name(identifier("c")).pattern(sv.member(that, "a")))])));
+
+  // --- systemverilog_assertions: every kind of SystemVerilog's Assertions and their helpers --- the text:
+  // @(posedge clk iff en or negedge rst) disable iff (rst) (a[*1:$], x += 1) ##[1:3] first_match(b intersect c) |=>
+  // @(*) d ##1 e[->2] ##n f[=1] and if (en) weak(a or b) else reject_on (rst) case (n) 1, 2: a until b; default:
+  // not a; endcase or (@(negedge clk) a throughout b iff nexttime [2] c #-# d)
+  const [a_, b_, c_, d_] = ["a", "b", "c", "d"].map((t) => sv.identifier(t));
+  const assertions = SVAssertions.Expressions.DIALECT.spec((u: any) => u.propertyspec((s: any) => s.clock((k: any) => k.events([
+        (e: any) => e.edge("posedge").expression(sv.identifier("clk")).condition(sv.identifier("en")),
+        (e: any) => e.edge("negedge").expression(sv.identifier("rst"))])).disable(sv.identifier("rst")).property((p: any) => p.binaryproperty((o: any) => o.left(
+        (l: any) => l.binaryproperty((q: any) => q.left(
+            (i: any) => i.implicationproperty((m: any) => m.antecedent((s1: any) => s1.delaysequence((ds: any) => ds.first(
+                (ps: any) => ps.parenthesizedsequence((pp: any) => pp.sequence((r: any) => r.repetitionsequence((rr: any) => rr.sequence(a_).operator("*").count(
+                    (cr: any) => cr.cyclerange((c: any) => c.low(sv.literal(1n)).high((dd: any) => dd.dollarexpression((z: any) => z)))))).items([
+                    (it: any) => it.assignmentexpression((ae: any) => ae.target(sv.identifier("x")).operator("+=").value(sv.literal(1n)))]))).steps([
+                (st: any) => st.delay((cr: any) => cr.cyclerange((c: any) => c.low(sv.literal(1n)).high(sv.literal(3n)))).sequence(
+                    (fm: any) => fm.firstmatchsequence((f: any) => f.sequence((bs: any) => bs.binarysequence((b2: any) => b2.left(b_).operator("intersect").right(c_)))))]))).operator("|=>").consequent(
+                (cs: any) => cs.clockedsequence((k: any) => k.clock((e: any) => e).sequence((ds: any) => ds.delaysequence((q2: any) => q2.first(d_).steps([
+                    (st: any) => st.delay(sv.literal(1n)).sequence((r: any) => r.repetitionsequence((rr: any) => rr.sequence(sv.identifier("e")).operator("->").count(sv.literal(2n)))),
+                    (st: any) => st.delay(sv.identifier("n")).sequence((r: any) => r.repetitionsequence((rr: any) => rr.sequence(sv.identifier("f")).operator("=").count(sv.literal(1n))))]))))))).operator("and").right(
+            (cp: any) => cp.conditionalproperty((c: any) => c.condition(sv.identifier("en")).consequence(
+                (sp: any) => sp.strengthproperty((w: any) => w.keyword("weak").sequence((bs: any) => bs.binarysequence((b2: any) => b2.left(a_).operator("or").right(b_))))).alternative(
+                (ab: any) => ab.abortproperty((r: any) => r.keyword("reject_on").condition(sv.identifier("rst")).operand((cp2: any) => cp2.caseproperty((cc: any) => cc.expression(sv.identifier("n")).items([
+                    (it: any) => it.expressions([sv.literal(1n), sv.literal(2n)]).body((bp: any) => bp.binaryproperty((u2: any) => u2.left(a_).operator("until").right(b_))),
+                    (it: any) => it.body((up: any) => up.unaryproperty((u3: any) => u3.operator("not").operand(a_)))]))))))))).operator("or").right(
+        (pp: any) => pp.parenthesizedproperty((q: any) => q.property((cl: any) => cl.clockedproperty((k: any) => k.clock((e: any) => e.events([
+            (ev: any) => ev.edge("negedge").expression(sv.identifier("clk"))])).property((bp: any) => bp.binaryproperty((o2: any) => o2.left(
+                (bs: any) => bs.binarysequence((t: any) => t.left(a_).operator("throughout").right(b_))).operator("iff").right(
+                (ip: any) => ip.implicationproperty((im: any) => im.antecedent((up: any) => up.unaryproperty((u4: any) => u4.operator("nexttime").range(sv.literal(2n)).operand(c_))).operator("#-#").consequent(d_)))))))))))));
+
+  // --- systemverilog_constraints: every kind of SystemVerilog's Constraints and its helpers --- the text:
+  // { soft record dist {0 := 40, [1:3] :/ 60, default :/ 1}; record > 0 -> record.a; if (record) record.a; else {}
+  // foreach (record[k, ]) k < record.a; solve record before record.a; disable soft record; unique {record, [1:2]}; }
+  const holds = (e: any) => (u: any) => u.expressionconstraint((c: any) => c.expression(e)); // a constraint of an expression
+  const constraints = SVConstraints.Expressions.DIALECT.spec((u: any) => u.constraintblock((b: any) => b.items([
+        (i: any) => i.expressionconstraint((c: any) => c.soft(true).expression((d: any) => d.distexpression((e: any) => e.value(that).items([
+            (t: any) => t.value(sv.literal(0n)).operator(":=").weight(sv.literal(40n)),
+            (t: any) => t.value(sv.span(1n, 3n)).operator(":/").weight(sv.literal(60n)),
+            (t: any) => t.operator(":/").weight(sv.literal(1n))])))),
+        (i: any) => i.implicationconstraint((c: any) => c.condition(sv.binary(">", that, 0n)).body(holds(sv.member(that, "a")))),
+        (i: any) => i.conditionalconstraint((c: any) => c.condition(that).consequence(holds(sv.member(that, "a"))).alternative(
+            (e: any) => e.constraintblock((b: any) => b.items([])))),
+        (i: any) => i.foreachconstraint((f: any) => f.value(that).variables([(v: any) => v.identifier(identifier("k")),
+                                                                         (v: any) => v.emptyargument((e: any) => e)])
+            .body(holds(sv.binary("<", sv.identifier("k"), sv.member(that, "a"))))),
+        (i: any) => i.solvebeforeconstraint((s: any) => s.solve([that]).before([sv.member(that, "a")])),
+        (i: any) => i.disablesoftconstraint((d: any) => d.target(that)),
+        (i: any) => i.uniqueconstraint((q: any) => q.set([that, sv.span(1n, 2n)])),
+    ])));
+
+  // --- systemverilog_preprocessor: every kind of SystemVerilog's Preprocessor and its helper, in a conditional
+  // directive, its items, an `elsif` and an `else` --- the text: `ifdef (A && !B), its items each on its line,
+  // `elsif C, `resetall, `else, skipped;, `endif
+  const preprocessor = SVPreprocessor.Expressions.DIALECT.spec((u: any) => u.ifdefdirective((d: any) => d
+        .condition((c: any) => c.parenthesizedexpression((p: any) => p.expression(sv.binary("&&", sv.identifier("A"), sv.unary("!", sv.identifier("B"))))))
+        .items([
+            (i: any) => i.includedirective((r: any) => r.path("defs.svh")),
+            (i: any) => i.includedirective((r: any) => r.path("uvm.svh").system(true)),
+            (i: any) => i.definedirective((r: any) => r.name(identifier("MAX")).function_like(true).parameters(
+                [identifier("a"), identifier("b")]).body("((a) > (b) ? (a) : (b))")),
+            (i: any) => i.undefdirective((r: any) => r.name(identifier("W"))),
+            (i: any) => i.timescaledirective((r: any) => r.unit("1ns").precision("1ps")),
+            (i: any) => i.defaultnettypedirective((r: any) => r.net_type("none")),
+            (i: any) => i.comment((r: any) => r.text(" low")),
+            (i: any) => i.comment((r: any) => r.text(" block ").block(true)),
+            (i: any) => i.macrousage((r: any) => r.name(identifier("MAX")).arguments("1, 2")),
+        ])
+        .branches([(b: any) => b.name(identifier("C")).items([(i: any) => i.otherdirective((r: any) => r.text("`resetall"))])])
+        .alternative([(i: any) => i.disabledtext((r: any) => r.text("skipped;"))]).has_else(true)));
+
   // --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
   // their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
   // (a binop's operands are Python3's terms, written in its union)
@@ -423,7 +504,9 @@ export function build(): Map<string, Case> {
   const terms = store.transaction(() => new Map<string, any>(([
     ["expression", expression], ["python3", python3], ["matlab", matlab], ["excel", excel], ["latex", latex],
     ["collections", collections], ["c", c], ["cpp", cpp], ["systemverilog", systemverilog],
-    ["typescript5", TS.DIALECT.spec(typescript5)], ["invalid", invalid],
+    ["typescript5", TS.DIALECT.spec(typescript5)], ["invalid", invalid], ["systemverilog_patterns", patterns],
+    ["systemverilog_assertions", assertions], ["systemverilog_constraints", constraints],
+    ["systemverilog_preprocessor", preprocessor],
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   terms.set("domains", defined.get("dialect"));
   for (const [name, dialect] of stored) terms.set(name, dialect);
