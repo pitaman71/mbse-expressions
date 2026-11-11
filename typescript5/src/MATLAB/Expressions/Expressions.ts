@@ -19,11 +19,12 @@
  * - `field` (`Expressions.MATLAB.Expressions.Field`): `value.name`, a field of a struct.
  * - `index` (`Expressions.MATLAB.Expressions.Index`): `value(index)`, an element of an array, from 1.
  * - `arrayfun` (`Expressions.MATLAB.Expressions.Arrayfun`): `arrayfun(@(name) body, array)`, the body's values for each
- *   element of the array, bound to `name`.
+ *   element of the array, Let's `value`, bound to `name`: a binder refining the framework's `Let`.
  * - `import` (`Expressions.MATLAB.Expressions.Import`): `import pkg.fn` or `import pkg.*` (its `name`), which make a
  *   package's functions callable by their short names within its body, the rest of the expression; `Text.ToText` writes
- *   it as a line before it. Functions are also found on the path and by their qualified names (`pkg.fn(x)`); which exist
- *   is up to the scope that evaluates them (see `Evaluators`).
+ *   it as a line before it. A binder refining `Let`, its `name` what it imports, its `value` unset. Functions are also
+ *   found on the path and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that evaluates them
+ *   (see `Evaluators`).
  *
  * Its kinds are named plainly in its union, though other dialects have kinds of the same names (`binary`, `import`, ...):
  * each union names its own. There is no binding: translators substitute a
@@ -96,11 +97,11 @@ export function install(txn: any): any {
         name: S.OfStr, value: _.Term }),
       (_: any) => _.Index.name("Expressions.MATLAB.Expressions.Index").properties({
         value: _.Term, index: _.Term }),
-      (_: any) => _.Arrayfun.name("Expressions.MATLAB.Expressions.Arrayfun").properties({
-        name: S.OfStr, // bound to each element in the body
-        array: _.Term, body: _.Term }),
-      (_: any) => _.Import.name("Expressions.MATLAB.Expressions.Import").properties({
-        name: S.OfStr, // pkg.fn or pkg.*
+      // binders: `Let`, Let's properties first; an arrayfun's `name` bound to each element of its array, Let's
+      // `value`, in its `body`; an import's `name` what it imports (pkg.fn or pkg.*), its `value` unset
+      (_: any) => _.Arrayfun.name("Expressions.MATLAB.Expressions.Arrayfun").refines([Framework.Let]).properties({
+        value: _.Term, body: _.Term }),
+      (_: any) => _.Import.name("Expressions.MATLAB.Expressions.Import").refines([Framework.Let]).properties({
         body: _.Term }),
       // its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
       // to its `Term`
@@ -198,7 +199,7 @@ export const DIALECT = new F.Dialect("MATLAB.Expressions", {
   field: new F.Kind(F.APPLICATION, { operator: "name", signature: Domains.FIELD, required: ["name"] }),
   index: new F.Kind(F.APPLICATION, { signature: Domains.INDEX }),
   arrayfun: new F.Kind(F.QUANTIFIER, { signature: Domains.ARRAYFUN, required: ["name"], check: arrayfunCheck }),
-  import: new F.Kind(F.IMPORT, { required: ["name"], check: importCheck }),
+  import: new F.Kind(F.IMPORT, { required: ["name"], check: importCheck, optional: ["value"] }),
   list: new F.Kind(F.APPLICATION, { signature: Domains.CONCATENATION }),
 }, { domain_of: Domains.of, literal: native });
 
@@ -264,7 +265,7 @@ export function index(value: unknown, index: unknown): Writer {
 
 /** `arrayfun(@(name) body, array)`. */
 export function arrayfun(name: string, array: unknown, body: unknown): Writer {
-  return record("arrayfun", { name }, { array, body });
+  return record("arrayfun", { name }, { value: array, body });
 }
 
 /** `[elements, ...]`, their concatenation into a row array. */

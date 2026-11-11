@@ -66,9 +66,10 @@ class Python3:
     implies = P("ifexp", B, A, P("literal", value=True))  # b if a else True
     ifexp = P("ifexp", B, A, C)  # b if a else c
     shr = P("binop", A, B, op=">>")
-    all_ = _call("all", P("generatorexp", B, A, generators=_for(0)))  # all(b for n in a)
-    any_ = _call("any", P("generatorexp", B, A, generators=_for(0)))
-    count_where = _call("sum", P("generatorexp", P("literal", value=1), A, B, generators=_for(1)))  # sum(1 for n in a if b)
+    # a generator expression refines `Let`: its `value` empty (None), its element its `body`, then its clause's terms
+    all_ = _call("all", P("generatorexp", None, B, A, generators=_for(0)))  # all(b for n in a)
+    any_ = _call("any", P("generatorexp", None, B, A, generators=_for(0)))
+    count_where = _call("sum", P("generatorexp", None, P("literal", value=1), A, B, generators=_for(1)))  # sum(1 for n in a if b)
     builtin = staticmethod(lambda function: _call(function, A))  # len, sum, min, max
     index = P("subscript", A, B)
     in_ = P("compare", A, B, comparisons=comparison("in"))
@@ -90,7 +91,7 @@ class Numpy:
     get = P("subscript", X, P("literal", value=K))
     has = P("call", _numpy("logical_not"), P("call", _numpy("ma.getmaskarray"), P("subscript", X, P("literal", value=K))))
     implies = P("call", _numpy("where"), A, B, P("literal", value=True))
-    prelude = P("import", Hole("B"), module="numpy", alias="np")
+    prelude = P("import", None, Hole("B"), module="numpy", alias="np")  # Let's empty value, then its body
 
     @staticmethod
     def renames(kind: str, attribute: str, names: dict[str, str], arity: int) -> list[Rule]:

@@ -88,11 +88,13 @@ export function holes(...names: string[]): Hole[] {
 }
 
 /** A form with holes: `kind`, `attributes` (natives or holes) and `args` (patterns or holes). */
+/** A form with holes: `kind`, `args` (patterns, holes, or null for an empty slot: a binder's `value` it leaves unset)
+ * and `attributes` (natives or holes). */
 export class Pattern {
-  readonly args: readonly (Pattern | Hole)[];
+  readonly args: readonly (Pattern | Hole | null)[];
   readonly attributes: ReadonlyMap<string, unknown>;
 
-  constructor(readonly kind: string, attributes: Record<string, unknown> = {}, ...args: (Pattern | Hole)[]) {
+  constructor(readonly kind: string, attributes: Record<string, unknown> = {}, ...args: (Pattern | Hole | null)[]) {
     this.attributes = new Map(Object.entries(attributes));
     this.args = args;
   }
@@ -109,13 +111,13 @@ export class Pattern {
     for (const value of this.attributes.values()) for (const hole of attributeHoles(value)) found.set(hole.name, "attribute");
     for (const argument of this.args) {
       if (argument instanceof Pattern) for (const [name, role] of argument.holes()) found.set(name, role);
-      else found.set(argument.name, "argument");
+      else if (argument !== null) found.set(argument.name, "argument");
     }
     return found;
   }
 
   toString(): string {
-    const parts = [...this.args.map(String),
+    const parts = [...this.args.map((a) => (a === null ? "None" : String(a))), // an empty slot, as Python writes it
       ...[...this.attributes].map(([k, v]) => `${k}=${v instanceof Hole ? v.name : repr(v)}`)];
     return `${this.kind}(${parts.join(", ")})`;
   }
@@ -204,13 +206,15 @@ export class Elementwise {
   }
 }
 
-/** Wraps translations to `side` ('left' or 'right') in the import `pattern` when they refer to a name it binds. */
+/** Wraps translations to `side` ('left' or 'right') in the import `pattern` when they refer to a name it binds: its
+ * last argument, its body, a hole, and its others empty (an import refining `Let` leaves Let's `value` empty). */
 export class Prelude {
   constructor(readonly pattern: Pattern, readonly side: string) {
     checkSide(side);
-    if (pattern.args.length !== 1 || !(pattern.args[0] instanceof Hole)
+    if (pattern.args.length === 0 || !(pattern.args[pattern.args.length - 1] instanceof Hole)
+      || pattern.args.slice(0, -1).some((argument) => argument !== null)
       || [...pattern.attributes.values()].some((value) => value instanceof Hole)) {
-      throw new ValueError(`a prelude is an import whose one argument is a hole, got ${pattern}`);
+      throw new ValueError(`a prelude is an import whose body, its last argument, is a hole, and its others empty, got ${pattern}`);
     }
   }
 }
@@ -293,7 +297,9 @@ class Direction {
     for (const pattern of [...this.preludes].reverse()) {
       const kind = this.target.kindNamed(pattern.kind);
       const names = kind.names !== null ? kind.names(pattern.attributes) : [];
-      if (names.some((name) => result.free.has(name))) result = this.build(new Terms.Form(pattern.kind, pattern.attributes, [result]));
+      if (names.some((name) => result.free.has(name))) {
+        result = this.build(new Terms.Form(pattern.kind, pattern.attributes, [...pattern.args.slice(0, -1), result]));
+      }
     }
     return result.writer;
   }
@@ -303,7 +309,7 @@ class Direction {
   build(form: Terms.Form): Built {
     const kind = this.target.kindNamed(form.kind);
     const name = Terms.referenceName(form.attributes.get("name")) as string;
-    const frees = (form.arguments as Built[]).map((argument) => argument.free);
+    const frees = (form.arguments as (Built | null)[]).map((argument) => (argument === null ? new Set<string>() : argument.free));
     let free: Set<string>;
     if (kind.role === Terms.REFERENCE) { // its name, and a name node's terms' names (a template's arguments)
       free = new Set([...(kind.lexical && !kind.ambient.has(name) ? [name] : []), ...frees.flatMap((f) => [...f])]);
@@ -316,7 +322,7 @@ class Direction {
       free = new Set(frees.flatMap((f) => [...f]).filter((n) => !names.includes(n)));
     }
     const writer = this.target.make(new Terms.Form(form.kind, form.attributes,
-      (form.arguments as Built[]).map((argument) => argument.writer)));
+      (form.arguments as (Built | null)[]).map((argument) => (argument === null ? null : argument.writer))));
     return new Built(writer, free);
   }
 }
@@ -389,8 +395,9 @@ class Run {
     throw new ValueError(`${described} has no ${this.direction.target.name()} counterpart`);
   }
 
-  /** Co-traverses `pattern` and `node`, binding the pattern's holes. */
-  private match(pattern: Pattern | Hole, node: unknown, bindings: Map<string, unknown>): boolean {
+  /** Co-traverses `pattern` and `node`, binding the pattern's holes; null matches an empty slot. */
+  private match(pattern: Pattern | Hole | null, node: unknown, bindings: Map<string, unknown>): boolean {
+    if (pattern === null) return node === null;
     if (pattern instanceof Hole) {
       if (node === null) return false;
       if (bindings.has(pattern.name)) return Terms.same(bindings.get(pattern.name), node);
@@ -434,7 +441,8 @@ class Run {
     return Terms.sameNative(expected, value);
   }
 
-  private instantiate(pattern: Pattern | Hole, bindings: Map<string, unknown>, environment: Environment): Built {
+  private instantiate(pattern: Pattern | Hole | null, bindings: Map<string, unknown>, environment: Environment): Built | null {
+    if (pattern === null) return null; // an empty slot
     if (pattern instanceof Hole) return this.translate(bindings.get(pattern.name), environment);
     const attributes = new Map([...pattern.attributes].map(([name, value]) => [name, filled(value, bindings)] as [string, unknown]));
     const args = pattern.args.map((argument) => this.instantiate(argument, bindings, environment));

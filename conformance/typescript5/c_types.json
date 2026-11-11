@@ -1,0 +1,60 @@
+{
+  "c_types": {
+    "typeid": {
+      "specifiers": [
+        {
+          "enumspecifier": {
+            "key": "enum",
+            "name": {
+              "identifier": {
+                "spelling": "E"
+              }
+            },
+            "body": true,
+            "enumerators": [
+              {
+                "enumerator": {
+                  "name": {
+                    "spelling": "A"
+                  },
+                  "value": {
+                    "literal": {
+                      "value": {
+                        "int": 1
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "ifdefdirective": {
+                  "name": {
+                    "spelling": "B_"
+                  },
+                  "items": [
+                    {
+                      "c_types": {
+                        "enumerator": {
+                          "name": {
+                            "spelling": "B"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "comment": {
+                  "text": "last",
+                  "trailing": true
+                }
+              }
+            ],
+            "trailing_comma": true
+          }
+        }
+      ]
+    }
+  }
+}

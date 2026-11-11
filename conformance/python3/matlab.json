@@ -91,7 +91,7 @@
                   "value": {
                     "arrayfun": {
                       "name": "k",
-                      "array": {
+                      "value": {
                         "field": {
                           "name": "ports",
                           "value": {

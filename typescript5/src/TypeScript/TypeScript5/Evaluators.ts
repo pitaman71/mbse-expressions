@@ -4,8 +4,14 @@
  * The dialects proposal decided a shallow evaluator (its Decided, 8): a new kind is refused by evaluation by name. The
  * framework's interpreter evaluates a literal by its role, its `value` (a boolean, a number, a bigint or a string), and
  * `EVALUATED` names that kind alone: every other kind, `constant` among them, raises `NotImplementedError`,
- * "TypeScript5 binaryexpression is not evaluated", and invalid syntax `ValueError`, as in every dialect.
+ * "TypeScript5 binaryexpression is not evaluated", and invalid syntax `ValueError`, as in every dialect. A term of a
+ * dialect of its family it reads, `TypeScript Types`' or `TypeScript Patterns`', none of whose kinds is evaluated, is
+ * refused by the name of the dialect that owns it, as the framework's interpreter refuses it: "TypeScript Types
+ * tsuniontype is not evaluated" (the dialects proposal, Retrofit's design: "Evaluation keeps what it does"); a literal
+ * a type holds is TypeScript5's, and evaluates as one.
  */
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as F from "../../Framework/Evaluators.js";
 import type { Bindings, Scope } from "../../Framework/Symbolics.js";

@@ -50,7 +50,9 @@ class Interpreter:
     into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal whose kind gives it a
     domain of its own (`Kind.typed`; without it, evaluating one raises `NotImplementedError`); `scope` makes the dialect's scope from a mapping
     of variables, and `extension(operator, arguments, node, scope)` evaluates operators outside a kind's vocabulary.
-    `evaluated`, where given, names the kinds it evaluates: any other is refused by name, `NotImplementedError`."""
+    `evaluated`, where given, names the kinds it evaluates: any other is refused by name, `NotImplementedError`, as is a
+    kind of a dialect it reads, and invalid syntax `ValueError`, each by the name of the dialect that owns it
+    (`Terms.Dialect.owner`: "Python Types typevar is not evaluated")."""
 
     def __init__(self, dialect: Terms.Dialect, operations: Mapping[str, Any], *,
                  literal: Callable[[Any], Any] = lambda value: value,
@@ -69,10 +71,11 @@ class Interpreter:
 
     def evaluate(self, node: Any, scope: Any) -> Any:
         tag, record, kind = self.dialect.kind(node)
+        owner = self.dialect.owner(node)  # whose name a refusal gives
         if kind.role == Terms.INVALID:
-            raise ValueError(f"{self.dialect.name()} {tag} is not evaluated")
-        if self._evaluated is not None and tag not in self._evaluated:
-            raise NotImplementedError(f"{self.dialect.name()} {tag} is not evaluated")
+            raise ValueError(f"{owner.name()} {tag} is not evaluated")
+        if owner is not self.dialect or self._evaluated is not None and tag not in self._evaluated:
+            raise NotImplementedError(f"{owner.name()} {tag} is not evaluated")
         if kind.role == Terms.LITERAL:
             value = Terms.attributes_of(record).get("value")
             if value is None:
@@ -89,12 +92,12 @@ class Interpreter:
         if kind.role in (Terms.BINDING, Terms.IMPORT, Terms.QUANTIFIER):
             slots, _, _ = Terms._parts(record.as_schema())
             for slot, argument in zip(slots, arguments):
-                if argument is None:
+                if argument is None and slot not in kind.optional:  # an import's `value`, which it leaves unset
                     raise ValueError(f"{Terms._article(tag)} needs {Terms._article(slot)}")
             if kind.role == Terms.QUANTIFIER:
                 return self._apply(node, tag, kind, arguments, scope)
-            if kind.role == Terms.IMPORT:
-                return self.evaluate(arguments[0], scope.enter(node))
+            if kind.role == Terms.IMPORT:  # its body, its last argument
+                return self.evaluate(arguments[-1], scope.enter(node))
             bound = self.evaluate(arguments[0], scope)
             return self.evaluate(arguments[1], scope.bind(Terms.name_of(node), bound))
         return self._apply(node, tag, kind, arguments, scope)
@@ -111,7 +114,7 @@ class Interpreter:
         if kind.vocabulary is None or kind.operators is not None:  # one implementation for every operator
             return implementations(thunks, node, scope)
         if operator not in implementations and operator in kind.vocabulary and not kind.closed and self._extension is None:
-            raise NotImplementedError(f"{self.dialect.name()} {tag} {operator!r} is not evaluated")
+            raise NotImplementedError(f"{self.dialect.owner(node).name()} {tag} {operator!r} is not evaluated")
         if operator not in implementations:
             if self._extension is not None:
                 return self._extension(operator, thunks, node, scope)

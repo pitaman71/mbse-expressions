@@ -101,9 +101,14 @@ The roles are:
   `Expressions.Framework.Let`; a kind refining `Let` (a binder, `is_binder`) binds what its `scopes` say, where it has
   them.
 - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
-  results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
-- `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(attributes)` gives the names
-  it binds for lexical references.
+  results by its operator, such as `all`. Its signature also gives the domain of a collection's items. A quantifier
+  refining `Let` holds its collection as Let's `value` and binds by its role, not as a let.
+- `IMPORT`: makes what it declares available within its body, its last argument; `Kind.names(attributes)` gives the
+  names it binds for lexical references. An import refining `Let` leaves Let's `value` empty and binds by its role.
+
+Every kind that binds names refines `Let` (a binder), listing Let's `name`, `value` and `body` first, any it has no
+name or term for left unset (the dialects proposal, Retrofit's design, the binders); a kind keeps its role, which
+evaluation and inference read.
 - `INVALID`: invalid syntax, `error` and `missing`: validation reports it, and evaluation refuses it by name.
 """
 
@@ -120,7 +125,7 @@ from . import Domains, Objects
 
 __all__ = [
     "install", "TERM", "EXPRESSION", "LITERAL", "REFERENCE", "APPLICATION", "BINDING", "IMPORT", "QUANTIFIER",
-    "INVALID", "INVALID_KINDS", "invalid_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
+    "INVALID", "INVALID_KINDS", "invalid_text", "invalid_term_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
     "spec", "term", "is_term", "is_expression", "is_binder", "holder_of", "kind_of", "dialect_of", "dialect_name",
     "dialect_tag", "SUBLANGUAGES", "form", "node", "name_of", "reference_name", "operator_of", "walk", "fold", "same",
 ]
@@ -318,7 +323,7 @@ def _parts(schema: Any) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ..
             variadic.append(name)
         else:
             attributes.append(name)
-            if _is_helper(prop.schema) or (
+            if _is_helper(prop.schema) or _is_pair(prop.schema) or (  # a value object of terms held alone: a helper
                     isinstance(prop.schema, Schemas.OfContainer.Data) and _is_helper(prop.schema.element)):
                 helpers.append(name)
     parts = (tuple(slots), tuple(variadic), tuple(attributes))
@@ -887,12 +892,20 @@ def _invalid_check(record: Any) -> list[str]:
 
 def invalid_text(dialect: Dialect, tag: str, attributes: Mapping[str, Any]) -> str:
     """How a printer writes invalid syntax: an error as the source it spans, as written, and a missing term as nothing;
-    an error with no text has nothing to print, and is refused by name."""
+    an error with no text has nothing to print, and is refused by the name of `dialect`, the term's owner
+    (`Dialect.owner`), which `invalid_term_text` finds."""
     if tag == "missing":
         return ""
     if "text" not in attributes:
         raise ValueError(f"{dialect.name()} error has no text to print")
     return attributes["text"]
+
+
+def invalid_term_text(dialect: Dialect, term_: Any) -> str:
+    """How a printer of `dialect` writes a term of invalid syntax: `invalid_text`, by the term's owner, the dialect whose
+    `Term` holds it (`Dialect.owner`), so that every family's printer names it alike."""
+    tag, record = kind_of(term_)
+    return invalid_text(dialect.owner(term_), tag, attributes_of(record))
 
 
 INVALID_KINDS = {"error": Kind(INVALID, check=_invalid_check), "missing": Kind(INVALID, check=_invalid_check)}
@@ -926,12 +939,20 @@ def dialect_tag(name: str) -> str:
 def is_binder(schema: Any) -> bool:
     """Whether a kind's schema binds names: `Expressions.Framework.Let`, or a schema refining it, as every kind that binds
     symbols does (the dialects proposal, Decided for stage 6, Q8, "(a)"). A binder binds by its kind's `scopes` where it
-    has them, else its `name` within its arguments after the first."""
+    has them, else by its role: a quantifier its `name` to each item of its first argument, an import what it declares
+    (`Kind.names`), and any other its `name` within its arguments after the first, as a let does."""
     while isinstance(schema, Schemas.OfObject.Data):
         if _named(schema, "Expressions.Framework.Let"):
             return True
         schema = schema.refines
     return False
+
+
+def _lets(kind: Kind, record: Any) -> bool:
+    """Whether a term binds as a let does, its name within its arguments after the first: a binder (`is_binder`) whose
+    role is `BINDING` and whose kind has no `scopes`. A binder whose role is `QUANTIFIER` or `IMPORT` binds by its role,
+    and one with `scopes` by them (the dialects proposal, Retrofit's design, the binders)."""
+    return kind.role == BINDING and kind.scopes is None and is_binder(record.as_schema())
 
 
 class Dialect:
@@ -990,6 +1011,18 @@ class Dialect:
 
     def __repr__(self) -> str:
         return f"<dialect {self._name}>"
+
+    def owner(self, term_: Any) -> Dialect:
+        """The dialect that owns a term's kind, whose name its refusals and its printing of invalid syntax give: the
+        dialect whose `Term` holds it, this one or one it reads, or, for a kind that `Term` lists and a dialect it reads
+        declares, that dialect ("Python Types typevar is not evaluated", "C Types error has no text to print"); a term
+        of any other dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as the
+        dialects proposal's Retrofit's design has it ("Python Patterns matchas is not evaluated")."""
+        reader = self._reader(term_)
+        tag = kind_of(term_)[0]
+        if reader is None or tag in reader._kinds:  # another dialect's term, or its reader's own kind
+            return reader or self
+        return next(other for other in reader.reads() if tag in other._kinds)  # `kind` refuses a tag none declares
 
     def _reader(self, term_: Any) -> Dialect | None:
         """The dialect that reads a term value: this one, for a term of its `Term`; one it reads, for a term of that
@@ -1082,10 +1115,10 @@ class Dialect:
         scopes = [bound] * len(arguments)
         if kind.scopes is not None:  # what each argument has bound: a binder's, or a comprehension's targets
             scopes = [bound | names for names in kind.scopes(record)]
-        elif kind.role == QUANTIFIER or is_binder(record.as_schema()):  # its name, within its arguments after the first
+        elif kind.role == QUANTIFIER or _lets(kind, record):  # its name, within its arguments after the first
             inner = bound | {name} if not problems else bound
             scopes = [bound, *[inner] * (len(arguments) - 1)]
-        elif kind.role == IMPORT:
+        elif kind.role == IMPORT:  # a binder by its role, as a quantifier is
             names = kind.names(attributes) if kind.names is not None and not problems else ()
             scopes = [bound | set(names)] * len(arguments)
         if kind.operations is not None and not problems:  # its operations are data: its holder's store's
@@ -1144,7 +1177,7 @@ class Dialect:
             environments = [{**environment, **dict.fromkeys(names, Domains.Anything)} for names in kind.scopes(record)]
         else:
             environments = [environment] * len(arguments)
-        if is_binder(record.as_schema()) and kind.scopes is None:  # a let: its name, of its value's domain, in its body
+        if _lets(kind, record):  # a let: its name, of its value's domain, in its body
             value = self._infer(arguments[0], environment)
             return self._infer(arguments[-1], {**environment, name_of(node): value})
         operator = operator_of(node, kind)

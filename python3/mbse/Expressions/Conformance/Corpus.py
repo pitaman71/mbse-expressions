@@ -12,7 +12,9 @@ data too (`STANDARD`): an edition, C23's, ISO/IEC 9899:2024, written as one docu
 case is a TypeScript5 term of every kind, written through the builders. The `invalid` case is a Python3 term holding
 invalid syntax and literals with their spelling. The `systemverilog_patterns`, `systemverilog_assertions`,
 `systemverilog_constraints` and `systemverilog_preprocessor` cases are each a term of SystemVerilog's sublanguage of every
-kind, written through the builders. Each implementation writes its snapshots to
+kind, written through the builders, the `python_types` and `python_patterns` cases a term of Python's, the
+`typescript_types` and `typescript_patterns` cases each a term of TypeScript's, and the `c_types`, `cpp_types` and
+`c_preprocessor` cases each a term of the C family's new dialects of every kind. Each implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
 the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values,
 same order of statements. """
@@ -36,6 +38,10 @@ from mbse.Expressions.Unicode import Expressions as Unicode
 from mbse.Expressions.SystemVerilog import Assertions as SVAssertions, Constraints as SVConstraints, \
     Expressions as SystemVerilog, Patterns as SVPatterns, Preprocessor as SVPreprocessor, Types as SVTypes
 from mbse.Expressions.TypeScript import TypeScript5
+from mbse.Expressions.C import Preprocessor as CPreprocessor, Types as CTypes  # the retrofit's new dialects
+from mbse.Expressions.Cpp import Types as CppTypes
+from mbse.Expressions.Python import Patterns as PythonPatterns, Types as PythonTypes  # the retrofit's, built
+from mbse.Expressions.TypeScript import Patterns as TypeScriptPatterns, Types as TypeScriptTypes
 from mbse.Expressions.C.Expressions import Expressions as CE
 from mbse.Expressions.Cpp.Expressions import Expressions as CPP
 from mbse.Expressions.Excel.Expressions import Expressions as X
@@ -49,14 +55,19 @@ from mbse.Schemas.Framework import Builders
 
 CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp", "systemverilog",
          "typescript5", "invalid", "systemverilog_patterns", "systemverilog_assertions", "systemverilog_constraints",
-         "systemverilog_preprocessor", "systemverilog_domains", "python3_domains", "typescript5_domains", "matlab_domains",
+         "systemverilog_preprocessor", "python_types", "python_patterns", "typescript_types", "typescript_patterns",
+         "c_types", "cpp_types", "c_preprocessor", "systemverilog_domains", "python3_domains", "typescript5_domains", "matlab_domains",
          "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains", "standards"]
 
 DIALECTS = {"python3": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex": L.DIALECT, "c": CE.DIALECT,
             "cpp": CPP.DIALECT, "systemverilog": SV.DIALECT, "typescript5": TS.DIALECT, "invalid": P.DIALECT,
             "systemverilog_patterns": SVPatterns.Expressions.DIALECT, "systemverilog_assertions": SVAssertions.Expressions.DIALECT,
             "systemverilog_constraints": SVConstraints.Expressions.DIALECT,
-            "systemverilog_preprocessor": SVPreprocessor.Expressions.DIALECT}
+            "systemverilog_preprocessor": SVPreprocessor.Expressions.DIALECT,
+            "python_types": PythonTypes.Expressions.DIALECT, "python_patterns": PythonPatterns.Expressions.DIALECT,
+            "typescript_types": TypeScriptTypes.Expressions.DIALECT,
+            "typescript_patterns": TypeScriptPatterns.Expressions.DIALECT, "c_types": CTypes.Expressions.DIALECT,
+            "cpp_types": CppTypes.Expressions.DIALECT, "c_preprocessor": CPreprocessor.Expressions.DIALECT}
 """The dialect that reads each case, where it is not Patterns."""
 
 DOMAINS = {"domains": "Expressions.ISOIEC11404.Expressions", "systemverilog_domains": "Expressions.SystemVerilog.Expressions",
@@ -91,6 +102,8 @@ def build():
     for module in (SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # its family
         store.transaction(module.install)
     store.transaction(TypeScript5.install)
+    for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor):
+        store.transaction(module.install)  # the retrofit's new dialects, each after its family's
     defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
     stored = {case: store.transaction(module.define)[0]["dialect"] for case, module in [  # each dialect's stored domains
         ("systemverilog_domains", SystemVerilog), ("python3_domains", Python3), ("typescript5_domains", TypeScript5),
@@ -98,6 +111,8 @@ def build():
         ("amd64_domains", AMD64), ("aapcs64_domains", AAPCS64)]}
     for module in (SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # the editions they cover
         store.transaction(module.define)
+    for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor):
+        store.transaction(module.define)  # their data: the editions each covers
 
     # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
     # added ---
@@ -403,6 +418,64 @@ def build():
         lambda e: e.importexpression(lambda r: r.source(ts_record)),  # import(ts_record)
     ]))
 
+    # --- typescript_types: every kind of TypeScript's Types, the terms a type holds among them --- the text:
+    # any | ... | this | A.B<T> | (T) | "s" | `a${T}b` | T[] | [a: T, T?, ...T[]] | (T & U) | (<T>(x: T) => x is T) |
+    # (abstract new () => T) | { a: T; m(x): T; (): T; new (): T; [k: T]: T; // c } | { [K in T as U]: K } | T[keyof T] |
+    # typeof this | import("m").A | (T extends (infer V)[] ? V : never)
+    ts_t = lambda t: t.tstypereference(lambda r: r.typeName(lambda n: n.identifier(lambda i: i.name("T"))))  # noqa: E731: `T`
+    ts_annotated = lambda name: lambda p: p.identifier(lambda i: i.name(name).typeAnnotation(lambda a: a.typeAnnotation(ts_t)))  # noqa: E731
+    typescript_types = lambda u: u.tsuniontype(lambda n: n.types([  # noqa: E731: written through the builders
+        *[lambda k, keyword=keyword: getattr(k, keyword)(lambda h: h) for keyword in TypeScriptTypes.Expressions.KEYWORDS],
+        lambda k: k.tstypereference(lambda r: r.typeName(lambda m: m.tsqualifiedname(lambda q: q.left(lambda l: l.identifier(
+            lambda i: i.name("A"))).right(lambda i: i.name("B")))).typeArguments(lambda a: a.params([ts_t]))),
+        lambda k: k.tsparenthesizedtype(lambda p: p.typeAnnotation(ts_t)),
+        lambda k: k.tsliteraltype(lambda p: p.literal(lambda li: li.literal(lambda v: v.value(lambda x: x.as_scalar("s"))))),
+        lambda k: k.tstemplateliteraltype(lambda p: p.quasis([lambda q: q.raw("a"), lambda q: q.raw("b").tail(True)]).types([ts_t])),
+        lambda k: k.tsarraytype(lambda a: a.elementType(ts_t)),
+        lambda k: k.tstupletype(lambda p: p.elementTypes([
+            lambda e: e.tsnamedtuplemember(lambda m: m.label(lambda i: i.name("a")).elementType(ts_t)),
+            lambda e: e.tsoptionaltype(lambda o: o.typeAnnotation(ts_t)),
+            lambda e: e.tsresttype(lambda o: o.typeAnnotation(lambda a: a.tsarraytype(lambda b: b.elementType(ts_t))))])),
+        lambda k: k.tsintersectiontype(lambda p: p.types([ts_t, lambda t: t.tstypereference(lambda r: r.typeName(
+            lambda m: m.identifier(lambda i: i.name("U"))))])),
+        lambda k: k.tsfunctiontype(lambda f: f.typeParameters(lambda d: d.params([lambda p: p.name(lambda i: i.name("T"))])).params([
+            ts_annotated("x")]).returnType(lambda a: a.typeAnnotation(lambda p: p.tstypepredicate(lambda q: q.parameterName(
+                lambda m: m.identifier(lambda i: i.name("x"))).typeAnnotation(lambda b: b.typeAnnotation(ts_t)))))),
+        lambda k: k.tsconstructortype(lambda f: f.abstract(True).returnType(lambda a: a.typeAnnotation(ts_t))),
+        lambda k: k.tstypeliteral(lambda q: q.members([
+            lambda m: m.tspropertysignature(lambda s: s.key(lambda y: y.identifier(lambda i: i.name("a"))).typeAnnotation(lambda a: a.typeAnnotation(ts_t))),
+            lambda m: m.tsmethodsignature(lambda s: s.key(lambda y: y.identifier(lambda i: i.name("m"))).params([
+                lambda p: p.identifier(lambda i: i.name("x"))]).returnType(lambda a: a.typeAnnotation(ts_t))),
+            lambda m: m.tscallsignaturedeclaration(lambda s: s.returnType(lambda a: a.typeAnnotation(ts_t))),
+            lambda m: m.tsconstructsignaturedeclaration(lambda s: s.returnType(lambda a: a.typeAnnotation(ts_t))),
+            lambda m: m.tsindexsignature(lambda s: s.parameters([ts_annotated("k")]).typeAnnotation(lambda a: a.typeAnnotation(ts_t))),
+            lambda m: m.comment(lambda c: c.text(" c"))])),
+        lambda k: k.tsmappedtype(lambda m: m.key(lambda i: i.name("K")).value(ts_t).nameType(lambda t: t.tstypereference(
+            lambda r: r.typeName(lambda n: n.identifier(lambda i: i.name("U"))))).body(lambda t: t.tstypereference(
+                lambda r: r.typeName(lambda n: n.identifier(lambda i: i.name("K")))))),
+        lambda k: k.tsindexedaccesstype(lambda a: a.objectType(ts_t).indexType(lambda i: i.tstypeoperator(
+            lambda o: o.operator("keyof").typeAnnotation(ts_t)))),
+        lambda k: k.tstypequery(lambda q: q.exprName(lambda e: e.thisexpression(lambda h: h))),
+        lambda k: k.tsimporttype(lambda i: i.source(lambda s: s.literal(lambda li: li.value(lambda x: x.as_scalar("m")))).qualifier(
+            lambda q: q.identifier(lambda j: j.name("A")))),
+        lambda k: k.tsconditionaltype(lambda c: c.checkType(ts_t).extendsType(lambda e: e.tsarraytype(lambda a: a.elementType(
+            lambda i: i.tsinfertype(lambda f: f.typeParameter(lambda p: p.name(lambda n: n.name("V"))))))).trueType(
+            lambda t: t.tstypereference(lambda r: r.typeName(lambda n: n.identifier(lambda i: i.name("V"))))).falseType(
+            lambda t: t.tsneverkeyword(lambda h: h))),
+    ]))
+
+    # --- typescript_patterns: every kind of TypeScript's Patterns, the terms a target may be among them --- the text:
+    # [{ a: record = 1, ...record }, , record.x, private record]
+    typescript_patterns = lambda u: u.arraypattern(lambda a: a.elements([  # noqa: E731: written through the builders
+        lambda e: e.objectpattern(lambda o: o.properties([
+            lambda p: p.property(lambda q: q.propertyKind("init").key(lambda k: k.identifier(lambda i: i.name("a"))).value(
+                lambda v: v.assignmentpattern(lambda s: s.left(ts_record).right(lambda r: r.literal(lambda li: li.value(
+                    lambda x: x.as_scalar(1.0))))))),
+            lambda p: p.restelement(lambda r: r.argument(ts_record))])),
+        lambda e: e.elision(lambda h: h),
+        lambda e: e.memberexpression(lambda m: m.object(ts_record).property(lambda y: y.identifier(lambda i: i.name("x")))),
+        lambda e: e.tsparameterproperty(lambda t: t.accessibility("private").parameter(ts_record))]))
+
     # --- systemverilog_patterns: every kind of SystemVerilog's Patterns, held by Expressions' `matches` --- the text:
     # '{a: .x, b: tagged Valid (.*), c: record.a}
     patterns = SVPatterns.Expressions.DIALECT.spec(lambda u: u.structurepattern(lambda s: s.items([
@@ -479,6 +552,54 @@ def build():
         .branches([lambda b: b.name(identifier("C")).items([lambda i: i.otherdirective(lambda r: r.text("`resetall"))])])
         .alternative([lambda i: i.disabledtext(lambda r: r.text("skipped;"))]).has_else(True)))
 
+    # --- python_types: every kind of Python's Types, nested where a type expression stands, and a type expression of
+    # Python3's kinds --- the text: T: list[int] | None = **P = *Ts = *tuple[int, ...]
+    python_types = PythonTypes.Expressions.DIALECT.spec(lambda u: u.typevar(lambda t: t.name("T").bound(
+        P.binop("|", P.subscript(P.name("list"), P.name("int")), P.constant(None))).default_value(
+        lambda d: d.paramspec(lambda s: s.name("P").default_value(lambda e: e.typevartuple(lambda v: v.name("Ts").default_value(
+            P.starred(P.subscript(P.name("tuple"), P.tuple_(P.name("int"), P.constant(...)))))))))))
+
+    # --- python_patterns: every kind of Python's Patterns, Python3's terms in their slots --- the text:
+    # record.Point(0, y=[a, *rest]) | {'k': None, **kw} | (record.RED as c)
+    python_patterns = PythonPatterns.Expressions.DIALECT.spec(lambda u: u.matchor(lambda o: o.patterns([
+        lambda p: p.matchclass(lambda c: c.cls(P.attribute(P.name("record"), "Point")).patterns([
+            lambda v: v.matchvalue(lambda m: m.value(P.constant(0)))]).kwd_attrs(["y"]).kwd_patterns([
+            lambda s: s.matchsequence(lambda q: q.delimiters("[]").patterns([lambda a: a.matchas(lambda m: m.name("a")),
+                                                                          lambda r: r.matchstar(lambda m: m.name("rest"))]))])),
+        lambda p: p.matchmapping(lambda m: m.keys([P.constant("k")]).patterns([
+            lambda s: s.matchsingleton(lambda v: v.value("None"))]).rest("kw")),
+        lambda p: p.matchas(lambda m: m.pattern(lambda v: v.matchvalue(lambda w: w.value(P.attribute(P.name("record"), "RED")))).name("c"))])))
+
+    # --- c_types and cpp_types: every kind of each Types dialect, an enumeration's type name, its body's enumerators, and a
+    # directive and a comment among them, C Preprocessor's --- the text: enum E {, its items each on its line, A = 1, #ifdef
+    # B_, B, #endif, its trailing comment after it, and }
+    CT, XT, CPRE = CTypes.Expressions.DIALECT, CppTypes.Expressions.DIALECT, CPreprocessor.Expressions.DIALECT
+    identified = lambda spelling: lambda i: i.spelling(spelling)  # noqa: E731: an identifier
+
+    def enumeration(types, family):
+        return types.spec(lambda t: t.typeid(lambda i: i.specifiers([lambda s: s.enumspecifier(lambda e: e.key("enum").name(
+            name("E")).body(True).enumerators([
+                lambda n: n.enumerator(lambda r: r.name(identified("A")).value(family.literal(1))),
+                lambda n: n.ifdefdirective(lambda d: d.name(identified("B_")).items([types.spec(lambda m: m.enumerator(
+                    lambda r: r.name(identified("B"))))])),
+                lambda n: n.comment(lambda c: c.text("last").trailing(True))]).trailing_comma(True))])))
+
+    # --- c_preprocessor: every kind, a conditional's branches nested, its conditions a C and a C++ term, its items C
+    # Types' and its own --- #if defined(X) && X > 1, A, #include <a.h>, /* one */, #elif Y == 2, #elifndef Z, #else,
+    # #define F(a, ...) a + 1, #pragma once, #ifdef W, #endif, #endif
+    c_preprocessor = CPRE.spec(lambda u: u.ifdirective(lambda d: d.condition(CE.binary("&&", CE.DIALECT.spec(
+        lambda v: v.definedexpression(lambda x: x.name(identified("X")))), CE.binary(">", CE.identifier("X"), 1))).items([
+            CT.spec(lambda m: m.enumerator(lambda r: r.name(identified("A")))),
+            CPRE.spec(lambda m: m.includedirective(lambda i: i.path("a.h").system(True))),
+            CPRE.spec(lambda m: m.comment(lambda c: c.block(True).text(" one ")))]).alternative(
+        lambda a: a.elifdirective(lambda e: e.condition(CPP.binary("==", CPP.identifier("Y"), 2)).alternative(
+            lambda b: b.elifdefdirective(lambda f: f.negated(True).name(identified("Z")).alternative(
+                lambda c: c.elsedirective(lambda g: g.items([
+                    CPRE.spec(lambda m: m.definedirective(lambda h: h.name(identified("F")).function_like(True).parameters([
+                        identified("a")]).variadic(True).replacement("a + 1"))),
+                    CPRE.spec(lambda m: m.otherdirective(lambda o: o.directive("pragma").text("once"))),
+                    CPRE.spec(lambda m: m.ifdefdirective(lambda o: o.name(identified("W"))))])))))))))
+
     # --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
     # their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
     # (a binop's operands are Python3's terms, written in its union)
@@ -494,7 +615,10 @@ def build():
             ("collections", collections), ("c", c), ("cpp", cpp), ("systemverilog", systemverilog),
             ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid), ("systemverilog_patterns", patterns),
             ("systemverilog_assertions", assertions), ("systemverilog_constraints", constraints),
-            ("systemverilog_preprocessor", preprocessor)]}
+            ("systemverilog_preprocessor", preprocessor), ("python_types", python_types), ("python_patterns", python_patterns),
+            ("typescript_types", TypeScriptTypes.Expressions.DIALECT.spec(typescript_types)),
+            ("typescript_patterns", TypeScriptPatterns.Expressions.DIALECT.spec(typescript_patterns)),
+            ("c_types", enumeration(CT, CE)), ("cpp_types", enumeration(XT, CPP)), ("c_preprocessor", c_preprocessor)]}
     terms["domains"] = defined["dialect"]
     terms.update(stored)
     terms.update({case: store.singleton(path).standards({"designation": designation})  # an edition, by its path

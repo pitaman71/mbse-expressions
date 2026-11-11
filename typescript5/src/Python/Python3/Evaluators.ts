@@ -23,8 +23,10 @@
  * The evaluator is shallow (the dialects proposal, Decided, 8): it evaluates the kinds Python's constraints were written
  * with before the dialect was complete (`EVALUATED`), in their complete shapes: a comparison chain, `and` and `or` of
  * any number of values, a call of positional arguments, a subscript, a generator expression of any number of `for`
- * clauses over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), and
- * so are what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target
+ * clauses over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), a
+ * kind of its family's other dialects, and invalid syntax, by the name of the dialect that owns it, as the framework's
+ * interpreter refuses them ("Python Types typevar is not evaluated"; a type expression of Python3's kinds evaluates as
+ * Python3's), and so are what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target
  * that is not a name, and the operators `is`, `is not` and `@`.
  */
 
@@ -581,7 +583,7 @@ function call(args: F.Thunk[], node: unknown, scope: Scope): unknown {
 function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
   const terms = Terms.argumentsOf(Terms.kindOf(node)[1]);
   const clauses: [string, any, any[]][] = [];
-  let i = 1;
+  let i = 2; // after Let's empty value and its body, the element
   for (const part of (attributesOf(node).get("generators") ?? []) as Terms.Part[]) {
     if (part.attributes.get("is_async")) throw refuse("async comprehension");
     const target = part.attributes.get("target") as Terms.Part | undefined; // a pattern, its terms the clause's last
@@ -598,11 +600,11 @@ function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
     for (const item of items) {
       const bound = inner.bind(name, item);
       if (!conditions.every((condition) => truthy(INTERPRETER.evaluate(condition, bound)))) continue;
-      if (k + 1 === clauses.length) yield INTERPRETER.evaluate(terms[0], bound);
+      if (k + 1 === clauses.length) yield INTERPRETER.evaluate(terms[1], bound);
       else yield* generate(k + 1, bound, iterate(INTERPRETER.evaluate((clauses[k + 1] as [string, any, any[]])[1], bound)));
     }
   }
-  return new PyGenerator(generate(0, scope, iterate((args[1] as F.Thunk)()))); // the first iterable, after the element
+  return new PyGenerator(generate(0, scope, iterate((args[2] as F.Thunk)()))); // the first iterable, after the element
 }
 
 /** A comparison chain, as Python evaluates one: each operand once, left to right, stopping at the first link that is

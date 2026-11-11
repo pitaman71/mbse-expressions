@@ -99,9 +99,9 @@ export function free(term: unknown, dialect: Terms.Dialect): Set<string> {
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
     if (kind.scopes !== null) { // the names each argument has bound: a comprehension's targets, say
       scopes = kind.scopes(record).map((names) => new Set([...bound, ...names]));
-    } else if (kind.role === Terms.QUANTIFIER || Terms.isBinder(record.as_schema())) { // its name, after its first argument
+    } else if (kind.role === Terms.QUANTIFIER || Terms._lets(kind, record)) { // its name, after its first argument
       scopes = args.map((_, i) => (i === 0 ? bound : new Set([...bound, name])));
-    } else if (kind.role === Terms.IMPORT) {
+    } else if (kind.role === Terms.IMPORT) { // a binder by its role, as a quantifier is
       const names = new Set([...bound, ...(kind.names !== null ? kind.names(Terms.attributesOf(record)) : [])]);
       scopes = args.map(() => names);
     }

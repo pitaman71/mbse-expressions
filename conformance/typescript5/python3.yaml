@@ -1,10 +1,7 @@
 python3:
   import:
-    module: numpy
-    alias: np
     body:
       importfrom:
-        module: math
         name: floor
         body:
           let:
@@ -85,12 +82,12 @@ python3:
                               name: np
                           attr: pi
                       - namedexpr:
-                          target:
-                            variable:
-                              name: 'n'
                           value:
                             constant:
                               singleton: None
+                          target:
+                            variable:
+                              name: 'n'
                   orelse:
                     call:
                       func:
@@ -101,7 +98,7 @@ python3:
                           attr: stack
                       args:
                       - generatorexp:
-                          elt:
+                          body:
                             subscript:
                               value:
                                 variable:
@@ -124,7 +121,7 @@ python3:
                             - variable:
                                 name: p
                       - listcomp:
-                          elt:
+                          body:
                             variable:
                               name: p
                           generators:
@@ -143,7 +140,7 @@ python3:
                                 name: a
                             ifs: []
                       - setcomp:
-                          elt:
+                          body:
                             variable:
                               name: p
                           generators:
@@ -155,14 +152,14 @@ python3:
                                 name: a
                             ifs: []
                       - dictcomp:
-                          key:
-                            variable:
-                              name: p
-                          value:
+                          body:
                             constant:
                               complex:
                                 real: 0.0
                                 imag: 2.0
+                          key:
+                            variable:
+                              name: p
                           generators:
                           - target:
                               variable:
@@ -187,11 +184,6 @@ python3:
                                   variable:
                                     name: a
                       - lambda:
-                          args:
-                            args:
-                            - arg: b
-                            kwarg:
-                              arg: c
                           body:
                             binop:
                               left:
@@ -201,6 +193,11 @@ python3:
                               right:
                                 variable:
                                   name: a
+                          args:
+                            args:
+                            - arg: b
+                            kwarg:
+                              arg: c
                       - subscript:
                           value:
                             variable:
@@ -266,3 +263,6 @@ python3:
                           value:
                             variable:
                               name: a
+        module: math
+    module: numpy
+    alias: np

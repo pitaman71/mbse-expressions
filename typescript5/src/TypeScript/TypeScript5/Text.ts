@@ -1,28 +1,34 @@
-/** Text of the TypeScript5 dialect: `ToText(expression)` is a term of TypeScript5 (or anything `Terms.term` reads one
- * from) as TypeScript source, as mbse-programs' printer writes it (`mbse:mbse-programs/typescript5/src/TypeScript/_Printer.ts`):
- * its types, patterns and JSX within it, parentheses written in the term printed, and those its precedence needs added
- * (for an expression, also where `??` meets `||` or `&&`, where an arrow's body is an object, around a `new`'s callee
- * that calls, and around a number's member access; for a type, where a function, conditional or union type is an
- * operand). It is written as an expression statement holds it: parenthesized where it would start with `{`,
- * `function`, `class` or `let [`. A literal is written in its spelling where it has one (`text`), else in its value's
- * default spelling: a number as JavaScript's `String(number)` writes it, a bigint with its `n`, a string in its quote (a
- * double quote by default) with its escapes. Invalid syntax is written as written (`Terms.invalidText`). A body of
- * statements, not part of the term, is written `{}`, where mbse-programs writes the statements it relates. An arrow's
- * lone type parameter without a constraint is written `<T,>`, so that the text reads alike in a `.ts` and a `.tsx`
- * file. Reading TypeScript (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6). */
+/** Text of the TypeScript family: `ToText(expression)` is a term of TypeScript5, `TypeScript Types` or `TypeScript
+ * Patterns` (or anything `Terms.term` reads one from) as TypeScript source, as mbse-programs' printer writes it
+ * (`mbse:mbse-programs/typescript5/src/TypeScript/_Printer.ts`): its types, patterns and JSX within it, parentheses
+ * written in the term printed, and those its precedence needs added (for an expression, also where `??` meets `||` or
+ * `&&`, where an arrow's body is an object, around a `new`'s callee that calls, and around a number's member access; for
+ * a type, where a function, conditional or union type is an operand). It is written as an expression statement holds
+ * it: parenthesized where it would start with `{`, `function`, `class` or `let [`. A literal is written in its spelling
+ * where it has one (`text`), else in its value's default spelling: a number as JavaScript's `String(number)` writes it,
+ * a bigint with its `n`, a string in its quote (a double quote by default) with its escapes. Invalid syntax is written
+ * as written (`Terms.invalidText`), refused by the name of the dialect whose `Term` holds it. A body of statements, not
+ * part of the term, is written `{}`, where mbse-programs writes the statements it relates. An arrow's lone type
+ * parameter without a constraint is written `<T,>`, so that the text reads alike in a `.ts` and a `.tsx` file. Its
+ * `Printer` writes TypeScript5's kinds and helpers itself, and dispatches the types' and the patterns' to their
+ * dialects' `Text.TEXTS`, as SystemVerilog's family printer does. Reading TypeScript (`FromText`) is mbse-programs' (the
+ * dialects proposal, Decided, 6). */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
+import * as PatternsText from "../Patterns/Text.js";
+import * as TypesText from "../Types/Text.js";
 import * as T from "./Expressions.js";
 
 const { ValueError } = Errors;
 
 // Expressions' precedence, loosest first: an operand is parenthesized when its precedence is below what its place
 // needs. `new` is written with its arguments, so it binds as a member does.
-const SEQUENCE = 0, ASSIGN = 1, CONDITIONAL = 2, COALESCE = 3, OR = 4, AND = 5, BOR = 6, BXOR = 7, BAND = 8,
+export const SEQUENCE = 0, ASSIGN = 1;
+const CONDITIONAL = 2, COALESCE = 3, OR = 4, AND = 5, BOR = 6, BXOR = 7, BAND = 8,
   EQUALITY = 9, RELATIONAL = 10, SHIFT = 11, ADD = 12, MULTIPLY = 13, POWER = 14, UNARY = 15, POSTFIX = 16, NEW = 17,
   MEMBER = 18, PRIMARY = 19;
 const BINARY: Record<string, number> = {
@@ -40,21 +46,9 @@ const PRECEDENCE: Record<string, number> = {
   [T.TAGGEDTEMPLATEEXPRESSION]: MEMBER, [T.TSINSTANTIATIONEXPRESSION]: MEMBER, [T.IMPORTEXPRESSION]: MEMBER,
 };
 
-// Types' precedence, loosest first.
-const T_FUNCTION = 0, T_CONDITIONAL = 1, T_UNION = 2, T_INTERSECTION = 3, T_OPERATOR = 4, T_POSTFIX = 5, T_PRIMARY = 6;
-const TYPE_PRECEDENCE: Record<string, number> = {
-  tsfunctiontype: T_FUNCTION, tsconstructortype: T_FUNCTION, tsconditionaltype: T_CONDITIONAL, tsuniontype: T_UNION,
-  tsintersectiontype: T_INTERSECTION, tstypeoperator: T_OPERATOR, tsinfertype: T_OPERATOR, tsarraytype: T_POSTFIX,
-  tsindexedaccesstype: T_POSTFIX, tstypepredicate: T_FUNCTION,
-};
-
 /** The kinds written as one word, or as nothing. */
 const KEYWORDS: Record<string, string> = {
-  tsanykeyword: "any", tsunknownkeyword: "unknown", tsnumberkeyword: "number", tsbigintkeyword: "bigint",
-  tsbooleankeyword: "boolean", tsstringkeyword: "string", tssymbolkeyword: "symbol", tsobjectkeyword: "object",
-  tsneverkeyword: "never", tsvoidkeyword: "void", tsundefinedkeyword: "undefined", tsnullkeyword: "null",
-  tsintrinsickeyword: "intrinsic", tsthistype: "this", [T.THISEXPRESSION]: "this", [T.SUPER]: "super", [T.ELISION]: "",
-  [T.JSXEMPTYEXPRESSION]: "",
+  [T.THISEXPRESSION]: "this", [T.SUPER]: "super", [T.ELISION]: "", [T.JSXEMPTYEXPRESSION]: "",
 };
 
 const ESCAPES: Record<string, string> = {
@@ -102,12 +96,23 @@ function one(node: T.Node, name: string): T.Node {
   return node.helpers.get(name) as T.Node;
 }
 
-/** Writes a term's source: its kind as TypeScript writes it, its helpers (its types, patterns and JSX among them) from
- * its `Node`. */
-class Printer {
-  /** A term's `Node`, or a `Node` as it is. */
+/** How a kind or a helper of a dialect of the family is written, given the printer and its `Node`. */
+export type Text = (p: Printer, node: T.Node) => string;
+
+/** Writes a term's source, of any dialect of the family: its kind as TypeScript writes it, its helpers from its `Node`;
+ * a `TypeScript Types`' or a `TypeScript Patterns`' kind or helper as its dialect's `Text.TEXTS` writes it. */
+export class Printer {
+  readonly texts: ReadonlyMap<string, Text> = new Map([...TypesText.TEXTS, ...PatternsText.TEXTS]);
+  /** Each node of invalid syntax read, and the dialect holding it. */
+  readonly invalid = new Map<T.Node, F.Dialect>();
+
+  /** A term's `Node`, or a `Node` as it is; a node of invalid syntax remembers the dialect that owns it, whose name its
+   * refusal gives. */
   node(value: any): T.Node {
-    return value instanceof T.Node ? value : T.tree(value);
+    if (value instanceof T.Node) return value;
+    const node = T.tree(value);
+    if (F.INVALID_KINDS.has(node.kind)) this.invalid.set(node, T.DIALECT.owner(value)); // its owner (`Terms.Dialect.owner`)
+    return node;
   }
 
   precedence(node: T.Node): number {
@@ -131,29 +136,32 @@ class Printer {
     return this.precedence(node) < needed ? `(${text})` : text;
   }
 
-  /** A type's text, parenthesized if it binds less than its place needs. */
-  t(value: T.Node, needed: number): string {
-    const text = this.text(value);
-    return (TYPE_PRECEDENCE[value.kind] ?? T_PRIMARY) < needed ? `(${text})` : text;
+  /** A type's text, parenthesized if it binds less than its place needs (`TypeScript Types`' `Text.PRECEDENCE`). */
+  t(value: any, needed: number): string {
+    const node = this.node(value);
+    const text = this.text(node);
+    return (TypesText.PRECEDENCE.get(node.kind) ?? TypesText.PRIMARY) < needed ? `(${text})` : text;
   }
 
   text(value: any): string {
     const node = this.node(value);
     const kind = node.kind;
     if (Object.hasOwn(KEYWORDS, kind)) return KEYWORDS[kind]!;
-    if (kind === "error" || kind === "missing") return F.invalidText(T.DIALECT, kind, node.attributes);
+    if (kind === "error" || kind === "missing") return F.invalidText(this.invalid.get(node)!, kind, node.attributes);
+    const text = this.texts.get(kind);
+    if (text !== undefined) return text(this, node);
     return (this as any)[`_${kind}`](node);
   }
 
   // Names and literals
 
   decorators(node: T.Node): string {
-    return node.many.map((expression) => `@${this.e(expression, MEMBER)} `).join("");
+    return node.lists.get("decorators")!.map((expression) => `@${this.e(expression, MEMBER)} `).join("");
   }
 
   annotation(node: T.Node): string {
     const held = node.helpers.get("typeAnnotation") as T.Node | undefined;
-    return held === undefined ? "" : ": " + this.t(one(held, "typeAnnotation"), T_FUNCTION);
+    return held === undefined ? "" : ": " + this.t(held.slots.get("typeAnnotation"), TypesText.FUNCTION);
   }
 
   _identifier(node: T.Node): string {
@@ -226,7 +234,7 @@ class Printer {
     const value = this.node(node.slots.get("value"));
     if (attributes.get("shorthand")) {
       if (value.kind === T.ASSIGNMENTPATTERN) {
-        return `${this.text(one(value, "left"))} = ${this.e(value.slots.get("right"), ASSIGN)}`;
+        return `${this.text(value.slots.get("left"))} = ${this.e(value.slots.get("right"), ASSIGN)}`;
       }
       return key;
     }
@@ -250,9 +258,10 @@ class Printer {
   /** `<typeParameters>(params): returnType`, or with `arrow` `... => returnType` for a function type. */
   signature(node: T.Node, arrow = false): string {
     const parameters = this.typeArguments(node, "typeParameters");
-    const params = nodes(node.helpers.get("params")).map((parameter) => this.text(parameter)).join(", ");
+    const params = node.lists.get("params")!.map((parameter) => this.text(parameter)).join(", ");
     const returned = node.helpers.get("returnType") as T.Node | undefined;
-    const returns = returned === undefined ? "" : (arrow ? " => " : ": ") + this.t(one(returned, "typeAnnotation"), T_FUNCTION);
+    const returns = returned === undefined ? ""
+      : (arrow ? " => " : ": ") + this.t(returned.slots.get("typeAnnotation"), TypesText.FUNCTION);
     return `${parameters}(${params})${returns}`;
   }
 
@@ -273,7 +282,7 @@ class Printer {
     const parameters = node.helpers.get("typeParameters") as T.Node | undefined;
     if (parameters !== undefined) {
       const params = nodes(parameters.helpers.get("params"));
-      if (params.length === 1 && !params[0]!.helpers.has("constraint")) { // `<T>(` would open an element in a .tsx file
+      if (params.length === 1 && params[0]!.slots.get("constraint") === null) { // `<T>(` would open an element in a .tsx file
         const written = this.text(parameters);
         head = head.replace(written, written.slice(0, -1) + ",>");
       }
@@ -410,7 +419,7 @@ class Printer {
   }
 
   _assignmentexpression(node: T.Node): string {
-    const target = one(node, "left");
+    const target = this.node(node.slots.get("left"));
     const left = [T.OBJECTPATTERN, T.ARRAYPATTERN].includes(target.kind) ? this.text(target) : this.e(target, MEMBER);
     return `${left} ${node.attributes.get("operator")} ${this.e(node.slots.get("right"), ASSIGN)}`;
   }
@@ -425,15 +434,15 @@ class Printer {
   }
 
   _tsasexpression(node: T.Node): string {
-    return `${this.e(node.slots.get("expression"), RELATIONAL)} as ${this.t(one(node, "typeAnnotation"), 0)}`;
+    return `${this.e(node.slots.get("expression"), RELATIONAL)} as ${this.t(node.slots.get("typeAnnotation"), 0)}`;
   }
 
   _tssatisfiesexpression(node: T.Node): string {
-    return `${this.e(node.slots.get("expression"), RELATIONAL)} satisfies ${this.t(one(node, "typeAnnotation"), 0)}`;
+    return `${this.e(node.slots.get("expression"), RELATIONAL)} satisfies ${this.t(node.slots.get("typeAnnotation"), 0)}`;
   }
 
   _tstypeassertion(node: T.Node): string {
-    return `<${this.t(one(node, "typeAnnotation"), 0)}>${this.e(node.slots.get("expression"), UNARY)}`;
+    return `<${this.t(node.slots.get("typeAnnotation"), 0)}>${this.e(node.slots.get("expression"), UNARY)}`;
   }
 
   _tsnonnullexpression(node: T.Node): string {
@@ -450,7 +459,7 @@ class Printer {
     for (;;) {
       const { kind, slots } = node;
       if (kind === T.BINARYEXPRESSION || kind === T.LOGICALEXPRESSION) node = this.node(slots.get("left"));
-      else if (kind === T.ASSIGNMENTEXPRESSION) node = one(node, "left");
+      else if (kind === T.ASSIGNMENTEXPRESSION) node = this.node(slots.get("left"));
       else if (kind === T.MEMBEREXPRESSION) node = this.node(slots.get("object"));
       else if (kind === T.CALLEXPRESSION || kind === T.TAGGEDTEMPLATEEXPRESSION) {
         node = this.node(slots.get(kind === T.CALLEXPRESSION ? "callee" : "tag"));
@@ -463,29 +472,7 @@ class Printer {
     }
   }
 
-  // Patterns and parameters
-
-  pattern(node: T.Node, inner: string): string {
-    return this.decorators(node) + inner + (node.attributes.get("optional") ? "?" : "") + this.annotation(node);
-  }
-
-  _arraypattern(node: T.Node): string {
-    return this.pattern(node, this.elements(nodes(node.helpers.get("elements"))));
-  }
-
-  _objectpattern(node: T.Node): string {
-    const properties = nodes(node.helpers.get("properties"));
-    const inner = properties.length === 0 ? "{}" : "{ " + properties.map((p) => this.text(p)).join(", ") + " }";
-    return this.pattern(node, inner);
-  }
-
-  _assignmentpattern(node: T.Node): string {
-    return this.pattern(node, `${this.text(one(node, "left"))} = ${this.e(node.slots.get("right"), ASSIGN)}`);
-  }
-
-  _restelement(node: T.Node): string {
-    return this.pattern(node, "..." + this.text(one(node, "argument")));
-  }
+  // Modifiers, type parameters and type arguments, which expressions and types hold alike
 
   /** A parameter property's or a signature's modifiers, in the order TypeScript requires. */
   modifiers(node: T.Node): string {
@@ -495,19 +482,13 @@ class Printer {
     return words.map((word) => word + " ").join("");
   }
 
-  _tsparameterproperty(node: T.Node): string {
-    return this.decorators(node) + this.modifiers(node) + this.text(one(node, "parameter"));
-  }
-
-  // Types
-
   _tstypeparameter(node: T.Node): string {
-    const { attributes, helpers } = node;
+    const { attributes, slots } = node;
     let text = [["const", "const"], ["in", "isIn"], ["out", "isOut"]].filter(([, flag]) => attributes.get(flag!))
       .map(([word]) => word + " ").join("");
     text += this.text(one(node, "name"));
-    if (helpers.has("constraint")) text += ` extends ${this.t(one(node, "constraint"), T_FUNCTION)}`;
-    if (helpers.has("default")) text += ` = ${this.t(one(node, "default"), T_FUNCTION)}`;
+    if (slots.get("constraint") !== null) text += ` extends ${this.t(slots.get("constraint"), TypesText.FUNCTION)}`;
+    if (slots.get("default") !== null) text += ` = ${this.t(slots.get("default"), TypesText.FUNCTION)}`;
     return text;
   }
 
@@ -516,178 +497,7 @@ class Printer {
   }
 
   _tstypeparameterinstantiation(node: T.Node): string {
-    return "<" + nodes(node.helpers.get("params")).map((p) => this.t(p, T_FUNCTION)).join(", ") + ">";
-  }
-
-  _tsqualifiedname(node: T.Node): string {
-    return `${this.text(one(node, "left"))}.${this.text(one(node, "right"))}`;
-  }
-
-  _tstypereference(node: T.Node): string {
-    return this.text(one(node, "typeName")) + this.typeArguments(node);
-  }
-
-  _tsparenthesizedtype(node: T.Node): string {
-    return `(${this.t(one(node, "typeAnnotation"), T_FUNCTION)})`;
-  }
-
-  _tsliteraltype(node: T.Node): string {
-    return this.text(one(node, "literal"));
-  }
-
-  _tstemplateliteraltype(node: T.Node): string {
-    const quasis = nodes(node.helpers.get("quasis"));
-    const types = nodes(node.helpers.get("types"));
-    const written = quasis.length > 0 ? [quasis[0]!.attributes.get("raw") ?? ""] : [];
-    types.slice(0, Math.max(quasis.length - 1, 0)).forEach((held, i) => {
-      written.push("${" + this.t(held, T_FUNCTION) + "}" + (quasis[i + 1]!.attributes.get("raw") ?? ""));
-    });
-    return "`" + written.join("") + "`";
-  }
-
-  _tsarraytype(node: T.Node): string {
-    return this.t(one(node, "elementType"), T_POSTFIX) + "[]";
-  }
-
-  _tstupletype(node: T.Node): string {
-    return "[" + nodes(node.helpers.get("elementTypes")).map((held) => this.t(held, T_FUNCTION)).join(", ") + "]";
-  }
-
-  _tsnamedtuplemember(node: T.Node): string {
-    const optional = node.attributes.get("optional") ? "?" : "";
-    return `${this.text(one(node, "label"))}${optional}: ${this.t(one(node, "elementType"), T_FUNCTION)}`;
-  }
-
-  _tsoptionaltype(node: T.Node): string {
-    return this.t(one(node, "typeAnnotation"), T_POSTFIX) + "?";
-  }
-
-  _tsresttype(node: T.Node): string {
-    return "..." + this.t(one(node, "typeAnnotation"), T_FUNCTION);
-  }
-
-  _tsuniontype(node: T.Node): string {
-    const [operator, level] = node.kind === "tsuniontype" ? [" | ", T_INTERSECTION] : [" & ", T_OPERATOR];
-    return nodes(node.helpers.get("types")).map((held) => this.t(held, level)).join(operator);
-  }
-
-  _tsintersectiontype(node: T.Node): string {
-    return this._tsuniontype(node);
-  }
-
-  _tsfunctiontype(node: T.Node): string {
-    return this.signature(node, true);
-  }
-
-  _tsconstructortype(node: T.Node): string {
-    return (node.attributes.get("abstract") ? "abstract " : "") + "new " + this.signature(node, true);
-  }
-
-  /** An object type's member on its line: a signature with its `;`, a comment as written. */
-  member(node: T.Node): string {
-    if (node.kind === "comment") {
-      const text = node.attributes.get("text") ?? "";
-      return node.attributes.get("block") ? `/*${text}*/` : `//${text}`;
-    }
-    return this.text(node) + ";";
-  }
-
-  /** `{ a: A; b(): B }` on one line, or with comments its members' lines, a trailing comment on its member's. */
-  _tstypeliteral(node: T.Node): string {
-    const members = nodes(node.helpers.get("members"));
-    if (members.length === 0) return "{}";
-    if (members.every((member) => member.kind !== "comment")) {
-      return "{ " + members.map((member) => this.member(member)).join(" ") + " }";
-    }
-    const lines: string[] = [];
-    for (const member of members) {
-      if (member.kind === "comment" && member.attributes.get("trailing") && lines.length > 0) {
-        lines[lines.length - 1] += " " + this.member(member);
-      } else {
-        lines.push("    " + this.member(member));
-      }
-    }
-    return "{\n" + lines.join("\n") + "\n}";
-  }
-
-  _tspropertysignature(node: T.Node): string {
-    const { attributes } = node;
-    const text = (attributes.get("readonly") ? "readonly " : "") + this.key(node.slots.get("key"), attributes.get("computed") ?? false);
-    return text + (attributes.get("optional") ? "?" : "") + this.annotation(node);
-  }
-
-  _tsmethodsignature(node: T.Node): string {
-    const { attributes } = node;
-    const prefix = ["get", "set"].includes(attributes.get("methodKind")) ? attributes.get("methodKind") + " " : "";
-    const key = this.key(node.slots.get("key"), attributes.get("computed") ?? false);
-    return `${prefix}${key}${attributes.get("optional") ? "?" : ""}${this.signature(node)}`;
-  }
-
-  _tscallsignaturedeclaration(node: T.Node): string {
-    return this.signature(node);
-  }
-
-  _tsconstructsignaturedeclaration(node: T.Node): string {
-    return "new " + this.signature(node);
-  }
-
-  _tsindexsignature(node: T.Node): string {
-    const parameters = nodes(node.helpers.get("parameters")).map((p) => this.text(p)).join(", ");
-    return `${this.modifiers(node)}[${parameters}]${this.annotation(node)}`;
-  }
-
-  _tsmappedtype(node: T.Node): string {
-    const { attributes, helpers } = node;
-    const readonly = attributes.has("readonly") ? attributes.get("readonly") + " " : "";
-    const name = helpers.has("nameType") ? ` as ${this.t(one(node, "nameType"), T_FUNCTION)}` : "";
-    const value = helpers.has("typeAnnotation") ? `: ${this.t(one(node, "typeAnnotation"), T_FUNCTION)}` : "";
-    const constraint = this.t(one(node, "constraint"), T_FUNCTION);
-    return `{ ${readonly}[${this.text(one(node, "key"))} in ${constraint}${name}]${attributes.get("optional") ?? ""}${value} }`;
-  }
-
-  _tsindexedaccesstype(node: T.Node): string {
-    return `${this.t(one(node, "objectType"), T_POSTFIX)}[${this.t(one(node, "indexType"), T_FUNCTION)}]`;
-  }
-
-  _tstypeoperator(node: T.Node): string {
-    const operator = node.attributes.get("operator");
-    if (!node.helpers.has("typeAnnotation")) return operator;
-    return `${operator} ${this.t(one(node, "typeAnnotation"), T_OPERATOR)}`;
-  }
-
-  _tstypequery(node: T.Node): string {
-    return "typeof " + this.text(one(node, "exprName")) + this.typeArguments(node);
-  }
-
-  _tsimporttype(node: T.Node): string {
-    const { helpers } = node;
-    const options = helpers.has("options") ? ", " + this.text(one(node, "options")) : "";
-    let text = `import(${this.text(one(node, "source"))}${options})`;
-    if (helpers.has("qualifier")) text += "." + this.text(one(node, "qualifier"));
-    return text + this.typeArguments(node);
-  }
-
-  _tsconditionaltype(node: T.Node): string {
-    const extendsType = one(node, "extendsType"); // a function type needs no parentheses, unless it returns a conditional type
-    const returned = ["tsfunctiontype", "tsconstructortype"].includes(extendsType.kind)
-      ? extendsType.helpers.get("returnType") as T.Node | undefined : undefined;
-    const extended = extendsType.kind === "tsconditionaltype"
-      || (returned !== undefined && one(returned, "typeAnnotation").kind === "tsconditionaltype")
-      ? `(${this.text(extendsType)})` : this.t(extendsType, T_FUNCTION);
-    return `${this.t(one(node, "checkType"), T_UNION)} extends ${extended} ? `
-      + `${this.t(one(node, "trueType"), T_FUNCTION)} : ${this.t(one(node, "falseType"), T_FUNCTION)}`;
-  }
-
-  _tsinfertype(node: T.Node): string {
-    return "infer " + this.text(one(node, "typeParameter"));
-  }
-
-  _tstypepredicate(node: T.Node): string {
-    let text = (node.attributes.get("asserts") ? "asserts " : "") + this.text(one(node, "parameterName"));
-    if (node.helpers.has("typeAnnotation")) {
-      text += ` is ${this.t(one(one(node, "typeAnnotation"), "typeAnnotation"), T_FUNCTION)}`;
-    }
-    return text;
+    return "<" + node.many.map((p) => this.t(p, TypesText.FUNCTION)).join(", ") + ">";
   }
 
   // JSX

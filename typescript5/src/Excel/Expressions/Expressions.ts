@@ -17,7 +17,8 @@
  *   functions, which the workbook provides.
  * - `cell`: a cell reference (`address`): `A1` on the current sheet, `Sheet1!A1` (`sheet`), or
  *   `[Book.xlsx]Sheet1!A1` (`book`) in another workbook. A workbook (see `Evaluators`) resolves it; it need not be bound.
- * - `map`: `MAP(array, LAMBDA(name, body))`, the body's values for each element of the `array`, bound to `name`.
+ * - `map`: `MAP(array, LAMBDA(name, body))`, the body's values for each element of the array, Let's `value`, bound to
+ *   `name`: a binder refining the framework's `Let`.
  * - `infix`: `left <operator> right`, for `=`, `<>`, `<`, `<=`, `>`, `>=`, `+`, `-` and `*`.
  * - `prefix`: `-operand`.
  * - `field`: `value.name`, a field of a record (Excel's data types).
@@ -87,8 +88,9 @@ export function install(txn: any): any {
       ]),
       (_: any) => _.Cell.name("Expressions.Excel.Expressions.Cell").properties({
         address: S.OfStr, sheet: S.OfStr, book: S.OfStr }),
-      (_: any) => _.Map.name("Expressions.Excel.Expressions.Map").properties({
-        name: S.OfStr, array: _.Term, body: _.Term }), // the LAMBDA's name and body
+      // a binder: `Let`, the LAMBDA's name and body, its array Let's `value`; Let's properties first
+      (_: any) => _.Map.name("Expressions.Excel.Expressions.Map").refines([Framework.Let]).properties({
+        value: _.Term, body: _.Term }),
       (_: any) => _.Infix.name("Expressions.Excel.Expressions.Infix").properties({
         operator: S.OfStr, left: _.Term, right: _.Term }),
       (_: any) => _.Prefix.name("Expressions.Excel.Expressions.Prefix").properties({
@@ -279,6 +281,6 @@ export function field(value: unknown, name: string): Writer {
 
 /** `MAP(array, LAMBDA(name, body))`. */
 export function map_(name: string, array: unknown, body: unknown): Writer {
-  const slots = { array: specOf(array), body: specOf(body) };
+  const slots = { value: specOf(array), body: specOf(body) };
   return new Writer((u: any) => u.map((r: any) => setSlots(r.name(name), slots)));
 }

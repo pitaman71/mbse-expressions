@@ -54,7 +54,7 @@ from typing import Any
 from mbse.Expressions.Patterns.Expressions import Ieee754
 from mbse.Expressions.Framework import Errors, Evaluators as F, Objects, Symbolics as S, Terms
 
-from . import Domains, Expressions
+from . import Domains, Expressions, Kinds
 from .Domains import CType
 
 __all__ = ["OfAny", "Scope", "INTERPRETER", "EVALUATED", "interpreter"]
@@ -294,13 +294,14 @@ def _attributes(node: Any) -> dict[str, Any]:
 
 def _cast(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
-        type_ = _attributes(node)["type"]
-        if type_.kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, refused as every dialect does
-            raise ValueError(f"{dialect.name()} {type_.kind} is not evaluated")
+        type_ = Terms.arguments_of(Terms.kind_of(node)[1])[0]  # a C Types term, which the cast reads, not evaluates
+        kind = Terms.kind_of(type_)[0]
+        if kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, refused by its owner, as every dialect does
+            raise ValueError(f"{dialect.owner(type_).name()} {kind} is not evaluated")
         target = Expressions.cast_type(Expressions.type_name(type_), _types(node, dialect))
         if target is None:
             raise _refuse(dialect, "castexpression to a type that is not arithmetic")
-        return _convert(arguments[0](), target)
+        return _convert(arguments[1](), target)
 
     return apply
 
@@ -308,7 +309,7 @@ def _cast(dialect: Any) -> F.Implementation:
 def _member(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
         attributes = _attributes(node)
-        name = Expressions._spelling(attributes["member"])
+        name = Kinds._spelling(attributes["member"])
         if name is None or attributes.get("template_keyword"):
             raise _refuse(dialect, "memberexpression of a member that is not an identifier")
         target = arguments[0]().value

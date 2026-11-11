@@ -1,2 +1,4 @@
-"""The TypeScript family: the language Microsoft's TypeScript compiler defines. Its dialect `TypeScript5` holds every
-expression of TypeScript 5; import its modules from it, e.g. `from mbse.Expressions.TypeScript.TypeScript5 import Text`."""
+"""The TypeScript family: the language Microsoft's TypeScript compiler defines. Its dialects: `TypeScript5`, every
+expression of TypeScript 5, and the sublanguages they hold, `Types`, its types, and `Patterns`, ECMAScript's
+destructuring patterns; each imports its modules from its own path, e.g.
+`from mbse.Expressions.TypeScript.TypeScript5 import Text`."""

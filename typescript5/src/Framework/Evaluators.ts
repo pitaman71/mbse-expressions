@@ -43,7 +43,9 @@ export type Evaluator = (expression: any, scope?: Scope | Bindings) => any;
  * into the dialect's domain of values, and `typed(domain, value)` gives the value of a literal whose kind gives it a
  * domain of its own (`Kind.typed`; without it, evaluating one throws `NotImplementedError`); `scope` makes the dialect's scope from an object
  * of variables, and `extension(operator, args, node, scope)` evaluates operators outside a kind's vocabulary.
- * `evaluated`, where given, names the kinds it evaluates: any other is refused by name, `NotImplementedError`. */
+ * `evaluated`, where given, names the kinds it evaluates: any other is refused by name, `NotImplementedError`, as is a
+ * kind of a dialect it reads, and invalid syntax `ValueError`, each by the name of the dialect that owns it
+ * (`Terms.Dialect.owner`: "Python Types typevar is not evaluated"). */
 export class Interpreter {
   private readonly literal: (value: unknown) => unknown;
   private readonly typed: ((domain: any, value: unknown) => unknown) | null;
@@ -75,9 +77,10 @@ export class Interpreter {
 
   evaluate(node: any, scope: Scope): any {
     const [tag, record, kind] = this.dialect.kind(node);
-    if (kind.role === Terms.INVALID) throw new ValueError(`${this.dialect.name()} ${tag} is not evaluated`);
-    if (this.evaluated !== null && !this.evaluated.has(tag)) {
-      throw new NotImplementedError(`${this.dialect.name()} ${tag} is not evaluated`);
+    const owner = this.dialect.owner(node); // whose name a refusal gives
+    if (kind.role === Terms.INVALID) throw new ValueError(`${owner.name()} ${tag} is not evaluated`);
+    if (owner !== this.dialect || (this.evaluated !== null && !this.evaluated.has(tag))) {
+      throw new NotImplementedError(`${owner.name()} ${tag} is not evaluated`);
     }
     if (kind.role === Terms.LITERAL) {
       const value = Terms.attributesOf(record).get("value") ?? null;
@@ -92,10 +95,11 @@ export class Interpreter {
     if (kind.role === Terms.BINDING || kind.role === Terms.IMPORT || kind.role === Terms.QUANTIFIER) {
       const [slots] = Terms._parts(record.as_schema());
       slots.forEach((slot, i) => {
-        if (i < args.length && args[i] === null) throw new ValueError(`${Terms.article(tag)} needs ${Terms.article(slot)}`);
+        // an import's `value`, which it leaves unset
+        if (i < args.length && args[i] === null && !kind.optional.includes(slot)) throw new ValueError(`${Terms.article(tag)} needs ${Terms.article(slot)}`);
       });
       if (kind.role === Terms.QUANTIFIER) return this.apply(node, tag, kind, args, scope);
-      if (kind.role === Terms.IMPORT) return this.evaluate(args[0], scope.enter(node));
+      if (kind.role === Terms.IMPORT) return this.evaluate(args[args.length - 1], scope.enter(node)); // its body, its last argument
       const bound = this.evaluate(args[0], scope);
       return this.evaluate(args[1], scope.bind(Terms.nameOf(node) as string, bound));
     }
@@ -115,7 +119,7 @@ export class Interpreter {
     }
     const implementation = (implementations as ReadonlyMap<string, Implementation>).get(operator);
     if (implementation === undefined && kind.vocabulary.has(operator) && !kind.closed && this.extension === null) {
-      throw new NotImplementedError(`${this.dialect.name()} ${tag} ${repr(operator)} is not evaluated`);
+      throw new NotImplementedError(`${this.dialect.owner(node).name()} ${tag} ${repr(operator)} is not evaluated`);
     }
     if (implementation === undefined) {
       if (this.extension !== null) return this.extension(operator, thunks, node, scope);

@@ -7,8 +7,8 @@ per logger, with the slot it rides in). Case study 13 explains how `show` works.
 """
 
 from mbse.Expressions import Framework
-from mbse.Expressions.C import Expressions as C
-from mbse.Expressions.Cpp import Expressions as Cpp
+from mbse.Expressions.C import Expressions as C, Preprocessor as CPreprocessor, Types as CTypes
+from mbse.Expressions.Cpp import Expressions as Cpp, Types as CppTypes
 from mbse.Expressions.Excel import Expressions as Excel
 from mbse.Expressions.LaTeX import Expressions as Latex
 from mbse.Expressions.MATLAB import Expressions as Matlab
@@ -16,8 +16,8 @@ from mbse.Expressions.Patterns import Expressions as Patterns
 from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
 from mbse.Expressions.IEEE754 import Expressions as IEEE754
 from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
-from mbse.Expressions.Python import Python3
-from mbse.Expressions.TypeScript import TypeScript5
+from mbse.Expressions.Python import Patterns as PythonPatterns, Python3, Types as PythonTypes
+from mbse.Expressions.TypeScript import Patterns as TypeScriptPatterns, TypeScript5, Types as TypeScriptTypes
 from mbse.Expressions.Arm import AAPCS64
 from mbse.Expressions.SystemV import AMD64
 from mbse.Expressions.Unicode import Expressions as Unicode
@@ -31,16 +31,20 @@ def dialects():
     """A store that holds expressions of every dialect, and no schemas of its own: the framework's install, then the
     standard dialects' (ISO/IEC 11404, IEEE 754, IEEE 1164, Unicode), whose kinds of domain the others use, then every
     language's dialect, TypeScript5's among them, the two ABI dialects (`SystemV.AMD64`, `Arm.AAPCS64`) and
-    SystemVerilog's six, each in a transaction of its own; then each one's `define`, the standard dialects' first, each
-    in a transaction of its own, writing its singleton, its operations, its domains and the editions it covers. LaTeX
+    SystemVerilog's six, then the sublanguages' dialects of Python, TypeScript, C and C++ (`Python Types`, `Python
+    Patterns`, `TypeScript Types`, `TypeScript Patterns`, `C Types`, `Cpp Types`, `C Preprocessor`), each after its
+    family's, each in a transaction of its own; then each one's `define`, the standard dialects' first, each in a
+    transaction of its own, writing its singleton, its operations, its domains and the editions it covers. LaTeX
     defines nothing. Part I starts from it; tutorial 1 builds such a store by hand."""
     store = Builders.Store()
     for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, TypeScript5, Matlab, Excel,
                    Latex, C, Cpp, AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints,
-                   SVPreprocessor):
+                   SVPreprocessor, PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes,
+                   CPreprocessor):
         store.transaction(module.install)
     for module in (ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, TypeScript5, Matlab, Excel, C, Cpp,
-                   AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):
+                   AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor,
+                   PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor):
         store.transaction(module.define)
     return store
 
@@ -69,13 +73,15 @@ def cold_chain():
     `Arm.AAPCS64`); Patterns' operations named by its dialect (`Patterns.define`), which validation reads; and C's,
     C++'s, the ABIs' and SystemVerilog's types, their domains (each dialect's `define`), which their evaluation reads,
     with SystemVerilog's sublanguages' dialects (`Types`, `Patterns`, `Assertions`, `Constraints`, `Preprocessor`),
-    whose terms its terms hold, and the editions each covers."""
+    whose terms its terms hold, and the editions each covers; and Python's, C's and C++'s new dialects (`Python Types`,
+    `Python Patterns`, `C Types`, `Cpp Types`, `C Preprocessor`), each after its family's."""
     store = Builders.Store()
     for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
-                   AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):
+                   AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor,
+                   PythonTypes, PythonPatterns, CTypes, CppTypes, CPreprocessor):
         store.transaction(module.install)
     for module in (Patterns, C, Cpp, AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints,
-                   SVPreprocessor):
+                   SVPreprocessor, CTypes, CppTypes, CPreprocessor):
         store.transaction(module.define)
     store.transaction(install)
     return store

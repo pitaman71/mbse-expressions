@@ -36,8 +36,7 @@
                 "patterns": {
                   "quantifier": {
                     "name": "p",
-                    "quantifier": "all",
-                    "collection": {
+                    "value": {
                       "variable": {
                         "name": "ports"
                       }
@@ -80,7 +79,8 @@
                           }
                         ]
                       }
-                    }
+                    },
+                    "quantifier": "all"
                   }
                 }
               },

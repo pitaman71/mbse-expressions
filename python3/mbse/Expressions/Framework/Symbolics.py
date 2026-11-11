@@ -87,9 +87,9 @@ def free(term: Any, dialect: Terms.Dialect) -> set[str]:
         scopes = [bound] * len(arguments)
         if kind.scopes is not None:  # the names each argument has bound: a comprehension's targets, say
             scopes = [bound | names for names in kind.scopes(record)]
-        elif kind.role == Terms.QUANTIFIER or Terms.is_binder(record.as_schema()):  # its name, after its first argument
+        elif kind.role == Terms.QUANTIFIER or Terms._lets(kind, record):  # its name, after its first argument
             scopes = [bound, *[bound | {name}] * (len(arguments) - 1)]
-        elif kind.role == Terms.IMPORT:
+        elif kind.role == Terms.IMPORT:  # a binder by its role, as a quantifier is
             scopes = [bound | set(kind.names(Terms.attributes_of(record)) if kind.names is not None else ())] * len(arguments)
         for argument, scope in zip(arguments, scopes):
             if argument is not None:

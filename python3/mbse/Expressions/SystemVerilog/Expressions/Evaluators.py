@@ -215,9 +215,10 @@ _EVALUATED = frozenset({
 """The kinds it evaluates: those that replaced the kinds it evaluated before the dialect was complete."""
 
 
-def _owner(tag: str) -> str:
-    """The name of the dialect of the family whose kind a tag is: SystemVerilog's own, or a sublanguage's."""
-    return next(dialect.name() for dialect in (X.DIALECT, *X.DIALECT.reads()) if tag in dialect.kinds())
+def _owner(node: Any) -> str:
+    """The name of the dialect of the family that owns a node's kind (`Terms.Dialect.owner`): SystemVerilog's own, or a
+    sublanguage's."""
+    return X.DIALECT.owner(node.term).name()
 
 
 def _refused(what: str) -> NotImplementedError:
@@ -258,7 +259,7 @@ class _Evaluation:
     def type(self, node: Any) -> SvType | None:
         """The term's self-determined type (None for an object); a kind it does not evaluate is refused by name."""
         if node.kind not in _EVALUATED:
-            raise _refused(f"{_owner(node.kind)} {node.kind}")
+            raise _refused(f"{_owner(node)} {node.kind}")
         if id(node) not in self._types:
             self._types[id(node)] = self._type_of(node)
         return self._types[id(node)]
@@ -325,7 +326,7 @@ class _Evaluation:
             if width < 1:
                 raise ValueError(f"a cast's width must be positive, got {width}")
             return Domains.vector(width, operand.signed, operand.states)
-        raise _refused(f"{_owner(target.kind)} {target.kind}")
+        raise _refused(f"{_owner(target)} {target.kind}")
 
     def own(self, node: Any) -> Any:
         """A self-determined term's value, of its own type, once."""
