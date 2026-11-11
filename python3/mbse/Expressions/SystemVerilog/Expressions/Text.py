@@ -189,12 +189,15 @@ class Printer:
     def inline(self, items: Any) -> str:
         """`{ constraints }` on one line, as `randomize() with` writes them: each item as its kind writes it on one line, or
         as its kind's `INLINE` says (an expression held as a constraint ended by `;`; a line comment, a directive, its
-        line)."""
+        line), a space between them but not at a line's end or start, as mbse-programs writes them."""
         parts: list[str] = []
         for item in items:
             node, written = self.node(item), self.text(item)
             parts.append(self._inline[node.kind](self, node, written) if node.kind in self._inline else written)
-        return "{ " + " ".join(parts) + " }" if parts else "{}"
+        text = "{"
+        for part in [*parts, "}"]:
+            text += part if text.endswith("\n") or part.startswith("\n") else " " + part
+        return text if parts else "{}"
 
     # Expressions
 
