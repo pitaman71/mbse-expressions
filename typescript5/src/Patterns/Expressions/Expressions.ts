@@ -16,8 +16,9 @@
  * - `let`: binds a `name` to the value of one term (`value`) within another (`body`).
  * - `list` and `mapping`: the container constructors, a list of its `elements`' values and a mapping of its `entries`'
  *   keys to their values.
- * - `quantifier`, its own: binds a `name` to each item of a `collection` within a `body`, and gives whether it holds for
- *   `all` or `any` of them, or for how many (`count`): its `quantifier`. Its slots hold Patterns' terms.
+ * - `quantifier`, its own, a binder refining the framework's `Let`: binds a `name` to each item of a collection (Let's
+ *   `value`) within a `body`, and gives whether it holds for `all` or `any` of them, or for how many (`count`): its
+ *   `quantifier`. Its slots hold Patterns' terms.
  * - `error` and `missing`: invalid syntax, which no reader of Patterns writes.
  *
  * A term carries no domain. Patterns' operations are data: `install` defines each as a `Schemas.OfExpression` in its
@@ -92,11 +93,12 @@ export function install(txn: any): any {
         (t: any) => t.name("error").schema([Framework.Error]),
         (t: any) => t.name("missing").schema([Framework.Missing]),
       ]),
-      (_: any) => _.Quantifier.name("Expressions.Patterns.Expressions.Quantifier").properties({
-        name: S.OfStr, // bound to each item in the body
-        quantifier: S.OfStr, // all, any or count
-        collection: _.Term,
+      // a binder: `Let`, its `name` bound to each item of its collection, Let's `value`, within its `body`, each
+      // Patterns' term; Let's properties first
+      (_: any) => _.Quantifier.name("Expressions.Patterns.Expressions.Quantifier").refines([Framework.Let]).properties({
+        value: _.Term, // the collection
         body: _.Term,
+        quantifier: S.OfStr, // all, any or count
       }),
       // its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
       // to its `Term`
@@ -439,7 +441,7 @@ export function quantifier(quantifier: string, name: string, collection: unknown
   const [collectionSpec, bodySpec] = [specOf(collection), specOf(body)];
   return new Writer((u: any) => u.quantifier((r: any) => {
     r.name(name).quantifier(quantifier);
-    if (collectionSpec !== null) r.collection(collectionSpec);
+    if (collectionSpec !== null) r.value(collectionSpec);
     return bodySpec === null ? r : r.body(bodySpec);
   }));
 }

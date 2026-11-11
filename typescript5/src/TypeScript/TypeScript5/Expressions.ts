@@ -27,7 +27,8 @@
  * - Functions and classes: `functionexpression`, `arrowfunctionexpression`, `classexpression`,
  *   `tsemptybodyfunctionexpression`; a body of statements is not part of the term (the dialects proposal, Decided, 5,
  *   "(i)"): it is absent, and mbse-programs relates its statements to what holds the expression. An arrow whose body is
- *   an expression holds it as its `body`, a term; one whose `body` is absent has a block of statements.
+ *   an expression holds it as its `body`, a term; one whose `body` is absent has a block of statements. Each is a
+ *   binder, refining the framework's `Let`, Let's `name` and `value` unset: what it binds, its scopes say.
  * - Operators and access: `metaproperty`, `memberexpression`, `callexpression`, `chainexpression`, `newexpression`,
  *   `importexpression`, `updateexpression`, `unaryexpression`, `awaitexpression`, `binaryexpression`,
  *   `logicalexpression`, `conditionalexpression`, `assignmentexpression`, `sequenceexpression`, `yieldexpression`.
@@ -365,18 +366,22 @@ export function install(txn: any): any {
       (_: any) => _.ObjectExpression.name("Expressions.TypeScript.TypeScript5.ObjectExpression").properties({
           properties: many(_.Term)}),
       // functions and classes: a body of statements is not part of the term
-      (_: any) => _.FunctionExpression.name("Expressions.TypeScript.TypeScript5.FunctionExpression").properties({
+      // binders: `Let`, Let's properties first, `name` and `value` unset (a name is an `Identifier`), an arrow's
+      // expression body its `body`, a function's and a class's unset (a body of statements is not part of the term);
+      // their scopes say what each binds
+      (_: any) => _.FunctionExpression.name("Expressions.TypeScript.TypeScript5.FunctionExpression").refines([Framework.Let]).properties({
           isAsync: S.OfBool, generator: S.OfBool, id: _.Identifier,
           typeParameters: _.TSTypeParameterDeclaration, params: many(_.Pattern),
           returnType: _.TSTypeAnnotation}),
-      (_: any) => _.ArrowFunctionExpression.name("Expressions.TypeScript.TypeScript5.ArrowFunctionExpression").properties({
+      (_: any) => _.ArrowFunctionExpression.name("Expressions.TypeScript.TypeScript5.ArrowFunctionExpression").refines([Framework.Let]).properties({
+          body: _.Term, // absent: a body of statements
           isAsync: S.OfBool, typeParameters: _.TSTypeParameterDeclaration, params: many(_.Pattern),
-          returnType: _.TSTypeAnnotation, body: _.Term}),  // absent: a body of statements
-      (_: any) => _.ClassExpression.name("Expressions.TypeScript.TypeScript5.ClassExpression").properties({
+          returnType: _.TSTypeAnnotation}),
+      (_: any) => _.ClassExpression.name("Expressions.TypeScript.TypeScript5.ClassExpression").refines([Framework.Let]).properties({
           decorators: many(_.Decorator), id: _.Identifier, typeParameters: _.TSTypeParameterDeclaration,
           superClass: _.Term, superTypeArguments: _.TSTypeParameterInstantiation,
           implements: many(_.TSClassImplements)}),
-      (_: any) => _.TSEmptyBodyFunctionExpression.name("Expressions.TypeScript.TypeScript5.TSEmptyBodyFunctionExpression").properties({
+      (_: any) => _.TSEmptyBodyFunctionExpression.name("Expressions.TypeScript.TypeScript5.TSEmptyBodyFunctionExpression").refines([Framework.Let]).properties({
           isAsync: S.OfBool, generator: S.OfBool, typeParameters: _.TSTypeParameterDeclaration,
           params: many(_.Pattern), returnType: _.TSTypeAnnotation}),
       (_: any) => _.MetaProperty.name("Expressions.TypeScript.TypeScript5.MetaProperty").properties({
@@ -853,10 +858,10 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
   [ARRAYEXPRESSION]: application(ARRAYEXPRESSION),
   [PROPERTY]: application(PROPERTY),
   [OBJECTEXPRESSION]: application(OBJECTEXPRESSION),
-  [FUNCTIONEXPRESSION]: application(FUNCTIONEXPRESSION),
-  [ARROWFUNCTIONEXPRESSION]: application(ARROWFUNCTIONEXPRESSION, new FD.Opaque(), { optional: ["body"] }),
-  [CLASSEXPRESSION]: application(CLASSEXPRESSION, new FD.Opaque(), { optional: ["superClass"] }),
-  [TSEMPTYBODYFUNCTIONEXPRESSION]: application(TSEMPTYBODYFUNCTIONEXPRESSION),
+  [FUNCTIONEXPRESSION]: application(FUNCTIONEXPRESSION, new FD.Opaque(), { optional: ["value", "body"] }),
+  [ARROWFUNCTIONEXPRESSION]: application(ARROWFUNCTIONEXPRESSION, new FD.Opaque(), { optional: ["value", "body"] }),
+  [CLASSEXPRESSION]: application(CLASSEXPRESSION, new FD.Opaque(), { optional: ["value", "body", "superClass"] }),
+  [TSEMPTYBODYFUNCTIONEXPRESSION]: application(TSEMPTYBODYFUNCTIONEXPRESSION, new FD.Opaque(), { optional: ["value", "body"] }),
   [METAPROPERTY]: application(METAPROPERTY, new FD.Opaque(), { required: ["meta", "property"] }),
   [MEMBEREXPRESSION]: application(MEMBEREXPRESSION, ANY2),
   [CALLEXPRESSION]: application(CALLEXPRESSION),

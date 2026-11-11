@@ -142,7 +142,7 @@ def _generatorexp(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     """A generator, as Python makes one: its first iterable evaluated now, the rest as it is consumed, each `for`
     clause binding its name within the clauses after it and the element."""
     record = Terms.kind_of(node)[1]
-    terms, clauses, i = Terms.arguments_of(record), [], 1
+    terms, clauses, i = Terms.arguments_of(record), [], 2  # after Let's empty value and its body, the element
     for part in _attributes(node).get("generators", ()):
         if part.attributes.get("is_async"):
             raise _refuse("async comprehension")
@@ -162,11 +162,11 @@ def _generatorexp(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
             bound = inner.bind(name, item)
             if all(INTERPRETER.evaluate(condition, bound) for condition in conditions):
                 if k + 1 == len(clauses):
-                    yield INTERPRETER.evaluate(terms[0], bound)
+                    yield INTERPRETER.evaluate(terms[1], bound)
                 else:
                     yield from generate(k + 1, bound, INTERPRETER.evaluate(clauses[k + 1][1], bound))
 
-    return generate(0, scope, iter(arguments[1]()))  # the first iterable, after the element
+    return generate(0, scope, iter(arguments[2]()))  # the first iterable, after the element
 
 
 def _boolop(name: str) -> F.Implementation:

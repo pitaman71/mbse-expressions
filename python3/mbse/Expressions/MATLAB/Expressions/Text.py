@@ -36,7 +36,7 @@ def ToText(expression: Any) -> str:
     while DIALECT.kind(node)[0] == "import":
         form = F.form(node)
         lines.append(f"import {form.attributes['name']}")
-        node = form.arguments[0]
+        node = form.arguments[-1]  # its body
 
     def write(node: Any, arguments: list[tuple[str, int]]) -> tuple[str, int]:
         def operand(index: int, level: int) -> str:

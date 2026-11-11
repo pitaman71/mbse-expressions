@@ -581,7 +581,7 @@ function call(args: F.Thunk[], node: unknown, scope: Scope): unknown {
 function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
   const terms = Terms.argumentsOf(Terms.kindOf(node)[1]);
   const clauses: [string, any, any[]][] = [];
-  let i = 1;
+  let i = 2; // after Let's empty value and its body, the element
   for (const part of (attributesOf(node).get("generators") ?? []) as Terms.Part[]) {
     if (part.attributes.get("is_async")) throw refuse("async comprehension");
     const target = part.attributes.get("target") as Terms.Part | undefined; // a pattern, its terms the clause's last
@@ -598,11 +598,11 @@ function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
     for (const item of items) {
       const bound = inner.bind(name, item);
       if (!conditions.every((condition) => truthy(INTERPRETER.evaluate(condition, bound)))) continue;
-      if (k + 1 === clauses.length) yield INTERPRETER.evaluate(terms[0], bound);
+      if (k + 1 === clauses.length) yield INTERPRETER.evaluate(terms[1], bound);
       else yield* generate(k + 1, bound, iterate(INTERPRETER.evaluate((clauses[k + 1] as [string, any, any[]])[1], bound)));
     }
   }
-  return new PyGenerator(generate(0, scope, iterate((args[1] as F.Thunk)()))); // the first iterable, after the element
+  return new PyGenerator(generate(0, scope, iterate((args[2] as F.Thunk)()))); // the first iterable, after the element
 }
 
 /** A comparison chain, as Python evaluates one: each operand once, left to right, stopping at the first link that is

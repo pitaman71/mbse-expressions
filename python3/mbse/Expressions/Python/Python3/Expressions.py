@@ -25,8 +25,8 @@ carries no domain. Its kinds:
   parentheses written in the source (`value`).
 - Displays: `tuple`, `list` (the framework's container constructor, its `elements` `ast`'s `elts`), `set` and `dict`
   (`items`, each a `dictitem`, `key` and `value`, without a key for `**value`); the comprehensions `listcomp`,
-  `setcomp`, `generatorexp` (`elt`) and `dictcomp` (`key`, `value`), each of `generators`, `comprehension`s
-  (`is_async`, `target`, `iter`, `ifs`). As a call's only argument a generator expression is written without its own
+  `setcomp`, `generatorexp` (`body`, `ast`'s `elt`) and `dictcomp` (`body`, `ast`'s `value`, and `key`), each of
+  `generators`, `comprehension`s (`is_async`, `target`, `iter`, `ifs`). As a call's only argument a generator expression is written without its own
   parentheses: `all(p.pin > 0 for p in ports)`.
 - `yield` (`value`, optional), `yieldfrom` and `await` (`value`).
 - Primaries: `attribute` (`value.attr`); `subscript` (`value[slice]`), whose index is any term, a `slice` (`lower`,
@@ -43,6 +43,11 @@ carries no domain. Its kinds:
   `Text.ToText` writes them as the lines before it. What they may import is up to the scope that evaluates them (see
   `Evaluators`).
 - The framework's kinds of invalid syntax, `error` and `missing`.
+
+Every kind that binds names is a binder, refining the framework's `Let` (`Terms.is_binder`), Let's `name`, `value` and
+`body` first, those it has no name or term for left unset and optional: a comprehension, its element (or a
+`dictcomp`'s value) its `body`; a `lambda`, its `body`; a `namedexpr`, its `value`; an `import` and an `importfrom`,
+their `body`, an `importfrom`'s `name` what it imports. Each keeps its role and its `scopes`, which say what it binds.
 
 A binding target, a comprehension's `target` and a named expression's, holds `Expressions.Python.Python3.Pattern`, the union of
 the terms a target may be (`variable`, `tuple`, `list`, `starred`, `attribute`, `subscript`, `parenthesized`), each a
@@ -250,15 +255,16 @@ def install(txn: Any) -> Any:
             lambda _: _.Comprehension.name("Expressions.Python.Python3.Comprehension").properties({
                 "is_async": S.OfBool, "target": _.Pattern, "iter": _.Term,
                 "ifs": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term]))}),
-            lambda _: _.ListComp.name("Expressions.Python.Python3.ListComp").properties({
-                "elt": _.Term, "generators": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comprehension]))}),
-            lambda _: _.SetComp.name("Expressions.Python.Python3.SetComp").properties({
-                "elt": _.Term, "generators": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comprehension]))}),
-            lambda _: _.DictComp.name("Expressions.Python.Python3.DictComp").properties({
-                "key": _.Term, "value": _.Term,
+            # binders: `Let`, Let's properties first, a comprehension's element (a dictcomp's value) its `body`
+            lambda _: _.ListComp.name("Expressions.Python.Python3.ListComp").refines([Framework.Let]).properties({
+                "body": _.Term, "generators": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comprehension]))}),
+            lambda _: _.SetComp.name("Expressions.Python.Python3.SetComp").refines([Framework.Let]).properties({
+                "body": _.Term, "generators": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comprehension]))}),
+            lambda _: _.DictComp.name("Expressions.Python.Python3.DictComp").refines([Framework.Let]).properties({
+                "body": _.Term, "key": _.Term,
                 "generators": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comprehension]))}),
-            lambda _: _.GeneratorExp.name("Expressions.Python.Python3.GeneratorExp").properties({
-                "elt": _.Term, "generators": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comprehension]))}),
+            lambda _: _.GeneratorExp.name("Expressions.Python.Python3.GeneratorExp").refines([Framework.Let]).properties({
+                "body": _.Term, "generators": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comprehension]))}),
             lambda _: _.Yield.name("Expressions.Python.Python3.Yield").properties({"value": _.Term}),
             lambda _: _.YieldFrom.name("Expressions.Python.Python3.YieldFrom").properties({"value": _.Term}),
             # primaries (6.3)
@@ -284,7 +290,8 @@ def install(txn: Any) -> Any:
                 "left": _.Term, "comparisons": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Comparison]))}),
             lambda _: _.BoolOp.name("Expressions.Python.Python3.BoolOp").properties({
                 "op": S.OfStr, "values": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Term]))}),
-            lambda _: _.NamedExpr.name("Expressions.Python.Python3.NamedExpr").properties({"target": _.Pattern, "value": _.Term}),
+            lambda _: _.NamedExpr.name("Expressions.Python.Python3.NamedExpr").refines([Framework.Let]).properties({
+                "value": _.Term, "target": _.Pattern}),  # a binder: its value Let's
             lambda _: _.IfExp.name("Expressions.Python.Python3.IfExp").properties({
                 "body": _.Term, "test": _.Term, "orelse": _.Term}),
             lambda _: _.Arg.name("Expressions.Python.Python3.Arg").properties({
@@ -295,12 +302,14 @@ def install(txn: Any) -> Any:
                 "vararg": _.Arg,
                 "kwonlyargs": S.OfContainer(lambda c: c.index([S.OfInt]).element([_.Arg])),
                 "kwarg": _.Arg}),
-            lambda _: _.Lambda.name("Expressions.Python.Python3.Lambda").properties({"args": _.Arguments, "body": _.Term}),
-            # extensions: imports within an expression
-            lambda _: _.Import.name("Expressions.Python.Python3.Import").properties({
-                "module": S.OfStr, "alias": S.OfStr, "body": _.Term}),
-            lambda _: _.ImportFrom.name("Expressions.Python.Python3.ImportFrom").properties({
-                "module": S.OfStr, "name": S.OfStr, "alias": S.OfStr, "body": _.Term}),
+            lambda _: _.Lambda.name("Expressions.Python.Python3.Lambda").refines([Framework.Let]).properties({
+                "body": _.Term, "args": _.Arguments}),  # a binder: its body Let's
+            # extensions: imports within an expression, binders, their body Let's; an importfrom's `name`, Let's, what
+            # it imports
+            lambda _: _.Import.name("Expressions.Python.Python3.Import").refines([Framework.Let]).properties({
+                "body": _.Term, "module": S.OfStr, "alias": S.OfStr}),
+            lambda _: _.ImportFrom.name("Expressions.Python.Python3.ImportFrom").refines([Framework.Let]).properties({
+                "body": _.Term, "module": S.OfStr, "alias": S.OfStr}),
             # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
             # to its `Term`
             lambda _: _.Expression.name("Expressions.Python.Python3.Expression").ref(True).refines([Framework.Expression]).properties({
@@ -659,7 +668,7 @@ def _parameters(record: Any) -> list[F.Part]:
 def _lambda_scopes(record: Any) -> list[frozenset[str]]:
     """A lambda's body has its parameters bound; their defaults and annotations, the scope's alone."""
     names = frozenset(part.attributes["arg"] for part in _parameters(record) if type(part.attributes.get("arg")) is str)
-    return [names] + [frozenset()] * (len(F.arguments_of(record)) - 1)
+    return [frozenset(), names] + [frozenset()] * (len(F.arguments_of(record)) - 2)  # Let's empty value, then its body
 
 
 def _lambda_check(record: Any) -> list[str]:
@@ -752,12 +761,12 @@ DIALECT = F.Dialect("Python.Python3", {
     LIST: _application(),
     SET: _application(check=_needs(SET, "elts", "an element")),
     DICT: _application(optional=("key",)),
-    LISTCOMP: _application(scopes=_comprehension_scopes, check=_comprehension_check(LISTCOMP)),
-    SETCOMP: _application(scopes=_comprehension_scopes, check=_comprehension_check(SETCOMP)),
-    DICTCOMP: _application(scopes=_comprehension_scopes, optional=("value",),
+    LISTCOMP: _application(scopes=_comprehension_scopes, check=_comprehension_check(LISTCOMP), optional=("value",)),
+    SETCOMP: _application(scopes=_comprehension_scopes, check=_comprehension_check(SETCOMP), optional=("value",)),
+    DICTCOMP: _application(scopes=_comprehension_scopes, optional=("value", "body"),
                            check=_comprehension_check(DICTCOMP)),
     GENERATOREXP: _application(Domains.GENERATOR, scopes=_comprehension_scopes,
-                               check=_comprehension_check(GENERATOREXP)),
+                               check=_comprehension_check(GENERATOREXP), optional=("value",)),
     YIELD: _application(optional=("value",)),
     YIELDFROM: _application(_ANY),
     ATTRIBUTE: F.Kind(F.APPLICATION, operator="attr", signature=_ANY, required=("attr",),
@@ -772,12 +781,13 @@ DIALECT = F.Dialect("Python.Python3", {
     COMPARE: F.Kind(F.APPLICATION, vocabulary=Domains.COMPARE, operators=_compare_operators, result=_compare_result,
                     check=_compare_check, unfold=_compare_unfold),
     BOOLOP: _operator_kind(Domains.BOOLOP, check=_needs(BOOLOP, "values", "two values", 2), unfold=_boolop_unfold),
-    NAMEDEXPR: _application(FD.Opaque(), scopes=_namedexpr_scopes, check=_namedexpr_check),
+    NAMEDEXPR: _application(FD.Opaque(), scopes=_namedexpr_scopes, check=_namedexpr_check, optional=("body",)),
     IFEXP: _application(FD.Function((FD.Anything, FD.Anything, FD.Anything), FD.Anything)),
-    LAMBDA: _application(scopes=_lambda_scopes, check=_lambda_check, optional=_ARGUMENT_SLOTS),
+    LAMBDA: _application(scopes=_lambda_scopes, check=_lambda_check, optional=("value", *_ARGUMENT_SLOTS)),
     LET: F.Kind(F.BINDING, required=("name",), check=_identifier("name", "a let's name")),
-    IMPORT: F.Kind(F.IMPORT, required=("module",), names=_import_names, check=_import_check),
-    IMPORTFROM: F.Kind(F.IMPORT, required=("module", "name"), names=_importfrom_names, check=_importfrom_check),
+    IMPORT: F.Kind(F.IMPORT, required=("module",), names=_import_names, check=_import_check, optional=("value",)),
+    IMPORTFROM: F.Kind(F.IMPORT, required=("module", "name"), names=_importfrom_names, check=_importfrom_check,
+                       optional=("value",)),
 }, domain_of=Domains.of, literal=_native)
 """The Python3 dialect: its kinds, as the framework reads them."""
 
@@ -963,22 +973,22 @@ def comprehension(target: Any, iter: Any, ifs: Sequence[Any] = (), is_async: boo
 
 def listcomp(elt: Any, *generators: Helper) -> Writer:
     """`[elt for ...]`."""
-    return _kind(LISTCOMP, {}, {"elt": elt}, None, {"generators": list(generators)})
+    return _kind(LISTCOMP, {}, {"body": elt}, None, {"generators": list(generators)})
 
 
 def setcomp(elt: Any, *generators: Helper) -> Writer:
     """`{elt for ...}`."""
-    return _kind(SETCOMP, {}, {"elt": elt}, None, {"generators": list(generators)})
+    return _kind(SETCOMP, {}, {"body": elt}, None, {"generators": list(generators)})
 
 
 def dictcomp(key: Any, value: Any, *generators: Helper) -> Writer:
     """`{key: value for ...}`; a value of None is `{**key for ...}` (Python 3.15)."""
-    return _kind(DICTCOMP, {}, {"key": key, "value": value}, None, {"generators": list(generators)})
+    return _kind(DICTCOMP, {}, {"body": value, "key": key}, None, {"generators": list(generators)})
 
 
 def generatorexp(elt: Any, *generators: Helper) -> Writer:
     """`(elt for ...)`."""
-    return _kind(GENERATOREXP, {}, {"elt": elt}, None, {"generators": list(generators)})
+    return _kind(GENERATOREXP, {}, {"body": elt}, None, {"generators": list(generators)})
 
 
 def yield_(value: Any = None) -> Writer:

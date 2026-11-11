@@ -89,12 +89,12 @@ class Interpreter:
         if kind.role in (Terms.BINDING, Terms.IMPORT, Terms.QUANTIFIER):
             slots, _, _ = Terms._parts(record.as_schema())
             for slot, argument in zip(slots, arguments):
-                if argument is None:
+                if argument is None and slot not in kind.optional:  # an import's `value`, which it leaves unset
                     raise ValueError(f"{Terms._article(tag)} needs {Terms._article(slot)}")
             if kind.role == Terms.QUANTIFIER:
                 return self._apply(node, tag, kind, arguments, scope)
-            if kind.role == Terms.IMPORT:
-                return self.evaluate(arguments[0], scope.enter(node))
+            if kind.role == Terms.IMPORT:  # its body, its last argument
+                return self.evaluate(arguments[-1], scope.enter(node))
             bound = self.evaluate(arguments[0], scope)
             return self.evaluate(arguments[1], scope.bind(Terms.name_of(node), bound))
         return self._apply(node, tag, kind, arguments, scope)

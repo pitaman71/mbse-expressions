@@ -15,8 +15,9 @@ syntax:
 - `let`: binds a `name` to the value of one term (`value`) within another (`body`).
 - `list` and `mapping`: the container constructors, a list of its `elements`' values and a mapping of its `entries`'
   keys to their values.
-- `quantifier`, its own: binds a `name` to each item of a `collection` within a `body`, and gives whether it holds for
-  `all` or `any` of them, or for how many (`count`): its `quantifier`. Its slots hold Patterns' terms.
+- `quantifier`, its own, a binder refining the framework's `Let`: binds a `name` to each item of a collection (Let's
+  `value`) within a `body`, and gives whether it holds for `all` or `any` of them, or for how many (`count`): its
+  `quantifier`. Its slots hold Patterns' terms.
 - `error` and `missing`: invalid syntax, which no reader of Patterns writes.
 
 A term carries no domain. Patterns' operations are data: `install` defines each as a `Schemas.OfExpression` in its
@@ -99,11 +100,12 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
-            lambda _: _.Quantifier.name("Expressions.Patterns.Expressions.Quantifier").properties({
-                "name": S.OfStr,  # bound to each item in the body
-                "quantifier": S.OfStr,  # all, any or count
-                "collection": _.Term,
+            # a binder: `Let`, its `name` bound to each item of its collection, Let's `value`, within its `body`, each
+            # Patterns' term; Let's properties first
+            lambda _: _.Quantifier.name("Expressions.Patterns.Expressions.Quantifier").refines([Framework.Let]).properties({
+                "value": _.Term,  # the collection
                 "body": _.Term,
+                "quantifier": S.OfStr,  # all, any or count
             }),
             # its holder, the root of an expression tree: a reference object refining the framework's, its `root` narrowed
             # to its `Term`
@@ -420,7 +422,7 @@ def quantifier(quantifier: str, name: str, collection: Any, body: Any) -> Writer
         def record(r: Any) -> Any:
             r.name(name).quantifier(quantifier)
             if collection is not None:
-                r.collection(collection)
+                r.value(collection)
             return r if body is None else r.body(body)
 
         return u.quantifier(record)

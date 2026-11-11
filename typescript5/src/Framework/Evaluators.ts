@@ -92,10 +92,11 @@ export class Interpreter {
     if (kind.role === Terms.BINDING || kind.role === Terms.IMPORT || kind.role === Terms.QUANTIFIER) {
       const [slots] = Terms._parts(record.as_schema());
       slots.forEach((slot, i) => {
-        if (i < args.length && args[i] === null) throw new ValueError(`${Terms.article(tag)} needs ${Terms.article(slot)}`);
+        // an import's `value`, which it leaves unset
+        if (i < args.length && args[i] === null && !kind.optional.includes(slot)) throw new ValueError(`${Terms.article(tag)} needs ${Terms.article(slot)}`);
       });
       if (kind.role === Terms.QUANTIFIER) return this.apply(node, tag, kind, args, scope);
-      if (kind.role === Terms.IMPORT) return this.evaluate(args[0], scope.enter(node));
+      if (kind.role === Terms.IMPORT) return this.evaluate(args[args.length - 1], scope.enter(node)); // its body, its last argument
       const bound = this.evaluate(args[0], scope);
       return this.evaluate(args[1], scope.bind(Terms.nameOf(node) as string, bound));
     }

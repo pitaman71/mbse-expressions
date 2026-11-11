@@ -97,10 +97,15 @@
  *   `Expressions.Framework.Let`; a kind refining `Let` (a binder, `isBinder`) binds what its `scopes` say, where it has
  *   them.
  * - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
- *   results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
- * - `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(attributes)` gives the names
- *   it binds for lexical references.
+ *   results by its operator, such as `all`. Its signature also gives the domain of a collection's items. A quantifier
+ *   refining `Let` holds its collection as Let's `value` and binds by its role, not as a let.
+ * - `IMPORT`: makes what it declares available within its body, its last argument; `Kind.names(attributes)` gives the
+ *   names it binds for lexical references. An import refining `Let` leaves Let's `value` empty and binds by its role.
  * - `INVALID`: invalid syntax, `error` and `missing`: validation reports it, and evaluation refuses it by name.
+ *
+ * Every kind that binds names refines `Let` (a binder), listing Let's `name`, `value` and `body` first, any it has no
+ * name or term for left unset (the dialects proposal, Retrofit's design, the binders); a kind keeps its role, which
+ * evaluation and inference read.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -1030,7 +1035,8 @@ export function dialectTag(name: string): string {
 
 /** Whether a kind's schema binds names: `Expressions.Framework.Let`, or a schema refining it, as every kind that binds
  * symbols does (the dialects proposal, Decided for stage 6, Q8, "(a)"). A binder binds by its kind's `scopes` where it
- * has them, else its `name` within its arguments after the first. */
+ * has them, else by its role: a quantifier its `name` to each item of its first argument, an import what it declares
+ * (`Kind.names`), and any other its `name` within its arguments after the first, as a let does. */
 export function isBinder(schema: unknown): boolean {
   let current: any = schema;
   while (current instanceof Schemas.OfObject.Data) {
@@ -1038,6 +1044,13 @@ export function isBinder(schema: unknown): boolean {
     current = (current as any).refines;
   }
   return false;
+}
+
+/** Whether a term binds as a let does, its name within its arguments after the first: a binder (`isBinder`) whose role
+ * is `BINDING` and whose kind has no `scopes`. A binder whose role is `QUANTIFIER` or `IMPORT` binds by its role, and
+ * one with `scopes` by them (the dialects proposal, Retrofit's design, the binders). */
+export function _lets(kind: Kind, record: any): boolean {
+  return kind.role === BINDING && kind.scopes === null && isBinder(record.as_schema());
 }
 
 /** An expression language: the kinds it reads, by tag, its `path`, its family's and its own name (`Python.Python3`,
@@ -1214,10 +1227,10 @@ export class Dialect {
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
     if (kind.scopes !== null) { // what each argument has bound: a binder's, or a comprehension's targets
       scopes = kind.scopes(record).map((names) => new Set([...bound, ...names]));
-    } else if (kind.role === QUANTIFIER || isBinder(record.as_schema())) { // its name, within its arguments after the first
+    } else if (kind.role === QUANTIFIER || _lets(kind, record)) { // its name, within its arguments after the first
       const inner = problems.length === 0 ? new Set([...bound, name]) : bound;
       scopes = args.map((_, i) => (i === 0 ? bound : inner));
-    } else if (kind.role === IMPORT) {
+    } else if (kind.role === IMPORT) { // a binder by its role, as a quantifier is
       const names = kind.names !== null && problems.length === 0 ? kind.names(attributes) : [];
       scopes = args.map(() => new Set([...bound, ...names]));
     }
@@ -1283,7 +1296,7 @@ export class Dialect {
     const environments: Environment[] = kind.scopes !== null // what each argument has bound, of a domain not known
       ? kind.scopes(record).map((names) => ({ ...environment, ...Object.fromEntries([...names].map((n) => [n, Domains.Anything])) }))
       : args.map(() => environment);
-    if (isBinder(record.as_schema()) && kind.scopes === null) { // a let: its name, of its value's domain, in its body
+    if (_lets(kind, record)) { // a let: its name, of its value's domain, in its body
       const value = this.inferIn(args[0], environment);
       return this.inferIn(args[args.length - 1], { ...environment, [nameOf(node)]: value });
     }

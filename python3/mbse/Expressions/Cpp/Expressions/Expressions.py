@@ -24,7 +24,8 @@ carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own litera
   requires bound and evaluation resolves; `thisexpression`;
 - `lambdaexpression` (`captures`, `template_parameters`, `template_requires`, `attributes`, `declarator`), whose body of
   statements is not part of the term (the dialects proposal, Decided, 5, "(i)"); `foldexpression`;
-  `requiresexpression` (`parameters`, `requirements`);
+  `requiresexpression` (`parameters`, `requirements`). A lambda and a requires expression are binders, refining the
+  framework's `Let`, Let's `name`, `value` and `body` unset: what each binds, its scopes say;
 - casts: `functionalcastexpression` (`T(x)`, `T{x}`), `namedcastexpression` (`static_cast<T>(x)` and its siblings),
   `typeidexpression`;
 - `awaitexpression` (`co_await`), `yieldexpression` (`co_yield`), `sizeofpackexpression` (`sizeof...(pack)`),
@@ -311,7 +312,9 @@ def install(txn: Any) -> Any:
             lambda _: _.ThisExpression.name("Expressions.Cpp.Expressions.ThisExpression"),
             lambda _: _.ParenthesizedExpression.name("Expressions.Cpp.Expressions.ParenthesizedExpression").properties({
                 "expression": _.Term}),
-            lambda _: _.LambdaExpression.name("Expressions.Cpp.Expressions.LambdaExpression").properties({
+            # binders: `Let`, Let's `name`, `value` and `body` unset (a body of statements is not part of the term), its
+            # scopes saying what it binds
+            lambda _: _.LambdaExpression.name("Expressions.Cpp.Expressions.LambdaExpression").refines([Framework.Let]).properties({
                 "captures": many(_.Capture), "template_parameters": many(_.TemplateParameter),
                 "template_requires": _.Term, "attributes": many(_.AttributeSpecifier),
                 "declarator": _.LambdaDeclarator}),  # its body of statements is not part of the term
@@ -327,7 +330,7 @@ def install(txn: Any) -> Any:
                 "by_reference": S.OfBool, "pack": S.OfBool, "name": _.Pattern, "initializer": _.Initializer}),
             lambda _: _.FoldExpression.name("Expressions.Cpp.Expressions.FoldExpression").properties({
                 "left": _.Term, "operator": S.OfStr, "right": _.Term}),
-            lambda _: _.RequiresExpression.name("Expressions.Cpp.Expressions.RequiresExpression").properties({
+            lambda _: _.RequiresExpression.name("Expressions.Cpp.Expressions.RequiresExpression").refines([Framework.Let]).properties({
                 "parameters": many(_.Parameter), "requirements": many(_.Requirement)}),
             lambda _: _.SimpleRequirement.name("Expressions.Cpp.Expressions.SimpleRequirement")
                 .properties({"expression": _.Term}),
@@ -665,11 +668,11 @@ _OWN = {
     IDEXPRESSION: F.Kind(F.REFERENCE, required=("name",), check=_check(IDEXPRESSION),
                          scopes=C.scopes(IDEXPRESSION), optional=C.OPTIONAL),
     THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False),
-    LAMBDAEXPRESSION: _application(LAMBDAEXPRESSION, optional=("template_requires",)),
+    LAMBDAEXPRESSION: _application(LAMBDAEXPRESSION, optional=("value", "body", "template_requires")),
     FOLDEXPRESSION: F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.FOLD, required=("operator",),
                            optional=("left", "right"), check=_check(FOLDEXPRESSION),
                            scopes=C.scopes(FOLDEXPRESSION)),
-    REQUIRESEXPRESSION: _application(REQUIRESEXPRESSION),
+    REQUIRESEXPRESSION: _application(REQUIRESEXPRESSION, optional=("value", "body")),
     FUNCTIONALCASTEXPRESSION: _application(FUNCTIONALCASTEXPRESSION, required=("type", "initializer")),
     NAMEDCASTEXPRESSION: F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.CASTS,
                                 required=("operator", "type"), optional=C.OPTIONAL,

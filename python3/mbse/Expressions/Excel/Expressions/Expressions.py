@@ -16,7 +16,8 @@ syntax (`error`, `missing`); a term carries no domain:
   functions, which the workbook provides.
 - `cell`: a cell reference (`address`): `A1` on the current sheet, `Sheet1!A1` (`sheet`), or
   `[Book.xlsx]Sheet1!A1` (`book`) in another workbook. A workbook (see `Evaluators`) resolves it; it need not be bound.
-- `map`: `MAP(array, LAMBDA(name, body))`, the body's values for each element of the `array`, bound to `name`.
+- `map`: `MAP(array, LAMBDA(name, body))`, the body's values for each element of the array, Let's `value`, bound to
+  `name`: a binder refining the framework's `Let`.
 - `infix`: `left <operator> right`, for `=`, `<>`, `<`, `<=`, `>`, `>=`, `+`, `-` and `*`.
 - `prefix`: `-operand`.
 - `field`: `value.name`, a field of a record (Excel's data types).
@@ -89,8 +90,9 @@ def install(txn: Any) -> Any:
             ]),
             lambda _: _.Cell.name("Expressions.Excel.Expressions.Cell").properties({
                 "address": S.OfStr, "sheet": S.OfStr, "book": S.OfStr}),
-            lambda _: _.Map.name("Expressions.Excel.Expressions.Map").properties({
-                "name": S.OfStr, "array": _.Term, "body": _.Term}),  # the LAMBDA's name and body
+            # a binder: `Let`, the LAMBDA's name and body, its array Let's `value`; Let's properties first
+            lambda _: _.Map.name("Expressions.Excel.Expressions.Map").refines([Framework.Let]).properties({
+                "value": _.Term, "body": _.Term}),
             lambda _: _.Infix.name("Expressions.Excel.Expressions.Infix").properties({
                 "operator": S.OfStr, "left": _.Term, "right": _.Term}),
             lambda _: _.Prefix.name("Expressions.Excel.Expressions.Prefix").properties({
@@ -291,4 +293,4 @@ def field(value: Any, name: str) -> Writer:
 def map_(name: str, array: Any, body: Any) -> Writer:
     """`MAP(array, LAMBDA(name, body))`."""
     array, body = _spec(array), _spec(body)
-    return Writer(lambda u: u.map(lambda r: _set(r.name(name), array=array, body=body)))
+    return Writer(lambda u: u.map(lambda r: _set(r.name(name), value=array, body=body)))

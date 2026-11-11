@@ -169,25 +169,25 @@ class _Printer:
 
     def _comprehension(self, attributes: dict[str, Any], arguments: tuple[Any, ...], lead: int, opening: str,
                        closing: str) -> tuple[str, int]:
-        element = arguments[0]
-        if lead == 2:
-            head = f"**{self.write(element, _BITOR)}" if arguments[1] is None else \
-                f"{self.element(element)}: {self.element(arguments[1])}"
+        element = arguments[1]  # its body, after Let's empty value
+        if lead == 3:  # a dictcomp: its value, its body, then its key
+            head = f"**{self.write(arguments[2], _BITOR)}" if element is None else \
+                f"{self.element(arguments[2])}: {self.element(element)}"
         else:
             head = self.element(element)
         return f"{opening}{head}{self.clauses(attributes, arguments[lead:])}{closing}", _PRIMARY
 
     def _listcomp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
-        return self._comprehension(attributes, arguments, 1, "[", "]")
+        return self._comprehension(attributes, arguments, 2, "[", "]")
 
     def _setcomp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
-        return self._comprehension(attributes, arguments, 1, "{", "}")
-
-    def _dictcomp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         return self._comprehension(attributes, arguments, 2, "{", "}")
 
+    def _dictcomp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
+        return self._comprehension(attributes, arguments, 3, "{", "}")
+
     def _generatorexp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
-        return self._comprehension(attributes, arguments, 1, "(", ")")
+        return self._comprehension(attributes, arguments, 2, "(", ")")
 
     def _yield(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         return ("yield" if arguments[0] is None else f"yield {self.element(arguments[0])}"), _YIELD
@@ -271,7 +271,7 @@ class _Printer:
 
     def _namedexpr(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         target = attributes.get("target")
-        return f"{self.target(target, arguments[1:])} := {self.element(arguments[0])}", _NAMED
+        return f"{self.target(target, arguments[2:])} := {self.element(arguments[0])}", _NAMED  # its value, Let's empty body
 
     def _ifexp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         body, test, orelse = arguments
@@ -303,8 +303,8 @@ class _Printer:
         return " " + ", ".join(written)
 
     def _lambda(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
-        parameters = self.parameters(attributes, list(arguments[1:]))
-        return f"lambda{parameters}: {self.write(arguments[0], _LAMBDA)}", _LAMBDA
+        parameters = self.parameters(attributes, list(arguments[2:]))  # Let's empty value, its body, then its defaults
+        return f"lambda{parameters}: {self.write(arguments[1], _LAMBDA)}", _LAMBDA
 
     def _let(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         return f"(lambda {attributes['name']}: {self.write(arguments[1], _LAMBDA)})({self.element(arguments[0])})", _PRIMARY
@@ -317,7 +317,7 @@ def ToText(expression: Any) -> str:
     tag, record, _ = P.DIALECT.kind(node)
     while tag in _IMPORTS:
         lines.append(_import_line(tag, F.attributes_of(record)))
-        node = F.arguments_of(record)[0]
+        node = F.arguments_of(record)[-1]  # its body
         tag, record, _ = P.DIALECT.kind(node)
     return "\n".join([*lines, _Printer().write(node, _LAMBDA)])  # a named expression or a yield in parentheses
 

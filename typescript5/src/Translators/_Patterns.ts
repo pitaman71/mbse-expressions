@@ -66,11 +66,12 @@ export const Python3 = {
   /** b if a else c. */
   ifexp: new P("ifexp", {}, B, A, C),
   shr: new P("binop", { op: ">>" }, A, B),
+  // a generator expression refines `Let`: its `value` empty (null), its element its `body`, then its clause's terms
   /** all(b for n in a). */
-  all_: call("all", new P("generatorexp", { generators: forClause(0) }, B, A)),
-  any_: call("any", new P("generatorexp", { generators: forClause(0) }, B, A)),
+  all_: call("all", new P("generatorexp", { generators: forClause(0) }, null, B, A)),
+  any_: call("any", new P("generatorexp", { generators: forClause(0) }, null, B, A)),
   /** sum(1 for n in a if b). */
-  count_where: call("sum", new P("generatorexp", { generators: forClause(1) }, new P("literal", { value: 1n }), A, B)),
+  count_where: call("sum", new P("generatorexp", { generators: forClause(1) }, null, new P("literal", { value: 1n }), A, B)),
   /** len, sum, min, max. */
   builtin: (fn: string) => call(fn, A),
   index: new P("subscript", {}, A, B),
@@ -92,7 +93,7 @@ export const Numpy = {
   has: new P("call", {}, numpy("logical_not"), new P("call", {}, numpy("ma.getmaskarray"),
     new P("subscript", {}, X, new P("literal", { value: K })))),
   implies: new P("call", {}, numpy("where"), A, B, new P("literal", { value: true })),
-  prelude: new P("import", { module: "numpy", alias: "np" }, new Hole("B")),
+  prelude: new P("import", { module: "numpy", alias: "np" }, null, new Hole("B")), // Let's empty value, then its body
   /** Rules for operators that are numpy functions of the same arguments. */
   renames(kind: string, attribute: string, names: Record<string, string>, arity: number): Rule[] {
     const args = holes(...Array.from({ length: arity }, (_, i) => `A${i}`));

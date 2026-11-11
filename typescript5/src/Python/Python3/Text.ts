@@ -188,10 +188,10 @@ class Printer {
   }
 
   comprehension(attributes: Attributes, args: any[], lead: number, opening: string, closing: string): Written {
-    const element = args[0];
+    const element = args[1]; // its body, after Let's empty value
     let head: string;
-    if (lead === 2) {
-      head = args[1] === null ? `**${this.write(element, BITOR)}` : `${this.element(element)}: ${this.element(args[1])}`;
+    if (lead === 3) { // a dictcomp: its value, its body, then its key
+      head = element === null ? `**${this.write(args[2], BITOR)}` : `${this.element(args[2])}: ${this.element(element)}`;
     } else {
       head = this.element(element);
     }
@@ -199,19 +199,19 @@ class Printer {
   }
 
   _listcomp(attributes: Attributes, args: any[]): Written {
-    return this.comprehension(attributes, args, 1, "[", "]");
+    return this.comprehension(attributes, args, 2, "[", "]");
   }
 
   _setcomp(attributes: Attributes, args: any[]): Written {
-    return this.comprehension(attributes, args, 1, "{", "}");
-  }
-
-  _dictcomp(attributes: Attributes, args: any[]): Written {
     return this.comprehension(attributes, args, 2, "{", "}");
   }
 
+  _dictcomp(attributes: Attributes, args: any[]): Written {
+    return this.comprehension(attributes, args, 3, "{", "}");
+  }
+
   _generatorexp(attributes: Attributes, args: any[]): Written {
-    return this.comprehension(attributes, args, 1, "(", ")");
+    return this.comprehension(attributes, args, 2, "(", ")");
   }
 
   _yield(_: Attributes, args: any[]): Written {
@@ -308,7 +308,8 @@ class Printer {
   }
 
   _namedexpr(attributes: Attributes, args: any[]): Written {
-    return [`${this.target(attributes.get("target") as F.Part | undefined, args.slice(1))} := ${this.element(args[0])}`, NAMED];
+    // its value, Let's empty body, then its target's terms
+    return [`${this.target(attributes.get("target") as F.Part | undefined, args.slice(2))} := ${this.element(args[0])}`, NAMED];
   }
 
   _ifexp(_: Attributes, args: any[]): Written {
@@ -337,8 +338,8 @@ class Printer {
   }
 
   _lambda(attributes: Attributes, args: any[]): Written {
-    const parameters = this.parameters(attributes, args.slice(1));
-    return [`lambda${parameters}: ${this.write(args[0], LAMBDA)}`, LAMBDA];
+    const parameters = this.parameters(attributes, args.slice(2)); // Let's empty value, its body, then its defaults
+    return [`lambda${parameters}: ${this.write(args[1], LAMBDA)}`, LAMBDA];
   }
 
   _let(attributes: Attributes, args: any[]): Written {
@@ -353,7 +354,8 @@ export function ToText(expression: unknown): string {
   let [tag, record] = P.DIALECT.kind(node);
   while (IMPORTS.includes(tag)) {
     lines.push(importLine(tag, F.attributesOf(record)));
-    node = F.argumentsOf(record)[0];
+    const args = F.argumentsOf(record);
+    node = args[args.length - 1]; // its body
     [tag, record] = P.DIALECT.kind(node);
   }
   return [...lines, new Printer().write(node, LAMBDA)].join("\n"); // a named expression or a yield in parentheses

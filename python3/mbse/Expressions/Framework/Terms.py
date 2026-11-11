@@ -101,9 +101,14 @@ The roles are:
   `Expressions.Framework.Let`; a kind refining `Let` (a binder, `is_binder`) binds what its `scopes` say, where it has
   them.
 - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
-  results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
-- `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(attributes)` gives the names
-  it binds for lexical references.
+  results by its operator, such as `all`. Its signature also gives the domain of a collection's items. A quantifier
+  refining `Let` holds its collection as Let's `value` and binds by its role, not as a let.
+- `IMPORT`: makes what it declares available within its body, its last argument; `Kind.names(attributes)` gives the
+  names it binds for lexical references. An import refining `Let` leaves Let's `value` empty and binds by its role.
+
+Every kind that binds names refines `Let` (a binder), listing Let's `name`, `value` and `body` first, any it has no
+name or term for left unset (the dialects proposal, Retrofit's design, the binders); a kind keeps its role, which
+evaluation and inference read.
 - `INVALID`: invalid syntax, `error` and `missing`: validation reports it, and evaluation refuses it by name.
 """
 
@@ -926,12 +931,20 @@ def dialect_tag(name: str) -> str:
 def is_binder(schema: Any) -> bool:
     """Whether a kind's schema binds names: `Expressions.Framework.Let`, or a schema refining it, as every kind that binds
     symbols does (the dialects proposal, Decided for stage 6, Q8, "(a)"). A binder binds by its kind's `scopes` where it
-    has them, else its `name` within its arguments after the first."""
+    has them, else by its role: a quantifier its `name` to each item of its first argument, an import what it declares
+    (`Kind.names`), and any other its `name` within its arguments after the first, as a let does."""
     while isinstance(schema, Schemas.OfObject.Data):
         if _named(schema, "Expressions.Framework.Let"):
             return True
         schema = schema.refines
     return False
+
+
+def _lets(kind: Kind, record: Any) -> bool:
+    """Whether a term binds as a let does, its name within its arguments after the first: a binder (`is_binder`) whose
+    role is `BINDING` and whose kind has no `scopes`. A binder whose role is `QUANTIFIER` or `IMPORT` binds by its role,
+    and one with `scopes` by them (the dialects proposal, Retrofit's design, the binders)."""
+    return kind.role == BINDING and kind.scopes is None and is_binder(record.as_schema())
 
 
 class Dialect:
@@ -1082,10 +1095,10 @@ class Dialect:
         scopes = [bound] * len(arguments)
         if kind.scopes is not None:  # what each argument has bound: a binder's, or a comprehension's targets
             scopes = [bound | names for names in kind.scopes(record)]
-        elif kind.role == QUANTIFIER or is_binder(record.as_schema()):  # its name, within its arguments after the first
+        elif kind.role == QUANTIFIER or _lets(kind, record):  # its name, within its arguments after the first
             inner = bound | {name} if not problems else bound
             scopes = [bound, *[inner] * (len(arguments) - 1)]
-        elif kind.role == IMPORT:
+        elif kind.role == IMPORT:  # a binder by its role, as a quantifier is
             names = kind.names(attributes) if kind.names is not None and not problems else ()
             scopes = [bound | set(names)] * len(arguments)
         if kind.operations is not None and not problems:  # its operations are data: its holder's store's
@@ -1144,7 +1157,7 @@ class Dialect:
             environments = [{**environment, **dict.fromkeys(names, Domains.Anything)} for names in kind.scopes(record)]
         else:
             environments = [environment] * len(arguments)
-        if is_binder(record.as_schema()) and kind.scopes is None:  # a let: its name, of its value's domain, in its body
+        if _lets(kind, record):  # a let: its name, of its value's domain, in its body
             value = self._infer(arguments[0], environment)
             return self._infer(arguments[-1], {**environment, name_of(node): value})
         operator = operator_of(node, kind)
