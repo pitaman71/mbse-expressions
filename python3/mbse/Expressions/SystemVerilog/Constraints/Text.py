@@ -64,7 +64,7 @@ TEXTS: dict[str, Callable[[X.Printer, F.Node], str]] = {
 }
 """How each of its kinds is written."""
 
-PRECEDENCE: dict[str, Any] = {C.DISTEXPRESSION: RELATIONAL}
+PRECEDENCE: dict[str, Any] = {C.DISTEXPRESSION: lambda node, written: RELATIONAL}
 """Each of its kinds' precedence, where it is not a primary's: a distribution's, as `inside`'s, a relational
 operator's."""
 
