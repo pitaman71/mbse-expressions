@@ -19,8 +19,9 @@ may come from data:
 The evaluator is shallow (the dialects proposal, Decided, 8): it evaluates the kinds Python's constraints were written
 with before the dialect was complete (`EVALUATED`), in their complete shapes: a comparison chain, `and` and `or` of any
 number of values, a call of positional arguments, a subscript, a generator expression of any number of `for` clauses
-over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), and so are
-what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target that is
+over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), a kind of its
+family's other dialects by that dialect's name ("Python Types typevar is not evaluated"; a type expression of Python3's
+kinds evaluates as Python3's), and so are what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target that is
 not a name, and the operators `is`, `is not` and `@`.
 """
 
@@ -235,7 +236,19 @@ EVALUATED = frozenset({_P.LITERAL, _P.NAME, _P.LET, _P.LIST, _P.DICT, _P.ATTRIBU
                        _P.BOOLOP, _P.BINOP, _P.UNARYOP, _P.IFEXP, _P.GENERATOREXP, _P.IMPORT, _P.IMPORTFROM})
 """The kinds the evaluator evaluates; any other is refused by name."""
 
-INTERPRETER = F.Interpreter(_P.DIALECT, {
+class _Interpreter(F.Interpreter):
+    """The interpreter of the Python3 dialect, which refuses a kind of its family's other dialects by that dialect's
+    name, as SystemVerilog's evaluator refuses its sublanguages' kinds (the API, item 175)."""
+
+    def evaluate(self, node: Any, scope: Any) -> Any:
+        tag = self.dialect.kind(node)[0]
+        if tag not in self.dialect.kinds():
+            owner = next(dialect for dialect in self.dialect.reads() if tag in dialect.kinds())
+            raise NotImplementedError(f"{owner.name()} {tag} is not evaluated")
+        return super().evaluate(node, scope)
+
+
+INTERPRETER = _Interpreter(_P.DIALECT, {
     _P.ATTRIBUTE: lambda arguments, node, scope: attribute(arguments[0](), _attributes(node)["attr"]),
     _P.SUBSCRIPT: lambda arguments, node, scope: arguments[0]()[arguments[1]()],
     _P.GENERATOREXP: _generatorexp,
