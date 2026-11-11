@@ -329,7 +329,8 @@ export function _parts(schema: any): Parts {
       || isPair(prop.schema.element))) variadic.push(name);
     else {
       attributes.push(name);
-      if (isHelper(prop.schema) || (prop.schema instanceof Schemas.OfContainer.Data && isHelper(prop.schema.element))) {
+      if (isHelper(prop.schema) || isPair(prop.schema) // a value object of terms held alone: a helper
+        || (prop.schema instanceof Schemas.OfContainer.Data && isHelper(prop.schema.element))) {
         helpers.push(name);
       }
     }

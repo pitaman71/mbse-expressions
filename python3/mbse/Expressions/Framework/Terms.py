@@ -323,7 +323,7 @@ def _parts(schema: Any) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ..
             variadic.append(name)
         else:
             attributes.append(name)
-            if _is_helper(prop.schema) or (
+            if _is_helper(prop.schema) or _is_pair(prop.schema) or (  # a value object of terms held alone: a helper
                     isinstance(prop.schema, Schemas.OfContainer.Data) and _is_helper(prop.schema.element)):
                 helpers.append(name)
     parts = (tuple(slots), tuple(variadic), tuple(attributes))
