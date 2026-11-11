@@ -5,9 +5,9 @@
 
 This proposes how this repository's tutorials are rebuilt: a new first part, eight notebooks that teach how values,
 their domains and each language's expressions are modeled, from a single literal up; then today's seven case studies
-on constraints, renumbered after it, trimmed of what the first part now teaches, with no gap in their numbering. It
-asks what only the user can decide. No notebook or code changes until it is decided, and the build waits for stage 6
-(SystemVerilog complete) to merge.
+on constraints, renumbered after it, trimmed of what the first part now teaches, with no gap in their numbering. The
+user has decided its questions ([Decided](#decided)), and stage 6 (SystemVerilog complete) has merged; it is being
+built on the branch `tutorials`, as [The build plan](#the-build-plan) says.
 
 ## Why
 
@@ -407,8 +407,8 @@ What they change here, as the dialects proposal records them
 - **The retrofit**: every binding kind refines the framework's `Let` ("Q8") and the other dialects' types, patterns,
   regular expressions and preprocessors become dialects: tutorials 7 and 8.
 
-So nothing is built until stage 6 merges: tutorials 1 to 6 and Part II then; 7 and 8 after the retrofit, if the user
-agrees (Question 3). Part II's 15 is re-executed after stage 6 either way, since its SystemVerilog outputs change.
+So nothing is built until stage 6 merges: tutorials 1 to 6 and Part II then; 7 and 8 after the retrofit, as the user
+decided (Question 3). Part II's 15 is re-executed after stage 6 either way, since its SystemVerilog outputs change.
 
 ## The build plan
 
@@ -458,6 +458,23 @@ relating to [FEA-024: expressions as data](https://github.com/pitaman71/mbse-bas
 values, their domains and each language's expressions are modeled, from one literal up, before constraints, each step a
 case run in both languages. Its ID is assigned when it is added. This proposal is drained into it once built.
 
+## Decided
+
+The user merged this proposal on 2026-11-11 (mbse-expressions#33), which the coordinating session takes as accepting
+its three recommendations: the acceptance is inferred from the merge, not stated by the user. The request it answers,
+the user's, 2026-11-10: "Before moving to `mbse-programs`, `mbse-expressions/<language>/tutorials` needs an overhaul.
+The content seems to focus entirely on constraints, which should be preceded by Jupyter notebooks that serve as both
+tutorial and test, building up knowledge of how domains are represented, how native expressions correspond to modeled
+expressions starting with trivial expressions and building up complexity."
+
+1. **Builder calls in Part I** (Question 1, option a): every model in Part I is written in the builders' fluent calls,
+   and each dialect's writers are shown once, in 03.1, as the shorthand Part II uses, asserting `Terms.same`.
+2. **Native text printed, and read where it can be** (Question 2, option a): each model is built, then checked that
+   its dialect's `Text.ToText` gives the native text; Python's notebooks also read Python3 with `Text.FromText`, the
+   listed deliberate difference, under the same case ID.
+3. **Tutorials 1 to 6 and Part II now, 7 and 8 after the retrofit** (Question 3, option a): built now that stage 6 has
+   merged; tutorials 7 and 8 once the retrofit lands.
+
 ## Decided by an agent, for review
 
 Minutiae this proposal settles, each the simplest default consistent with the records:
@@ -479,6 +496,8 @@ Minutiae this proposal settles, each the simplest default consistent with the re
   Python's `FromText` dropping parentheses, is `ast`'s, and stays as built: 05.3 says so.
 
 ## Questions for the user
+
+Answered: each as recommended ([Decided](#decided)).
 
 1. **Writers or builder calls in Part I.** [PRI-019: fluent builder syntax](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-019)
    prefers the builders' own calls and calls helpers that wrap them "another DSL"; this repository's writers
