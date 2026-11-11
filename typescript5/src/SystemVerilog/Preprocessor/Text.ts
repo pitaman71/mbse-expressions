@@ -45,8 +45,8 @@ function branch(p: Printer, items: readonly any[]): string[] {
   return lines;
 }
 
-const nodes = (value: unknown): readonly F.Node[] =>
-  value === undefined ? [] : Array.isArray(value) ? value : [value as F.Node];
+/** A helper container's nodes: none where it is absent. */
+const nodes = (value: unknown): readonly F.Node[] => (value as readonly F.Node[] | undefined) ?? [];
 
 /** `` `ifdef name ``, or `` `ifndef ``, its items, each `` `elsif `` and its items, `` `else `` and its items, and
  * `` `endif ``, each on its own line. */
@@ -81,8 +81,10 @@ export const TEXTS: ReadonlyMap<string, (p: Printer, n: F.Node) => string> = new
   [P.IFDEFDIRECTIVE, ifdef],
   [P.DISABLEDTEXT, (p, n) => n.attributes.get("text")],
   [P.OTHERDIRECTIVE, (p, n) => n.attributes.get("text")],
-  [P.COMMENT, (p, n) => n.attributes.get("block") ? `/*${n.attributes.get("text") ?? ""}*/`
-    : `//${n.attributes.get("text") ?? ""}`],
+  [P.COMMENT, (p, n) => {
+    const words = n.attributes.get("text") ?? "";
+    return n.attributes.get("block") ? `/*${words}*/` : `//${words}`;
+  }],
 ]);
 
 /** Each of its kinds' precedence, where it is not a primary's: none. */

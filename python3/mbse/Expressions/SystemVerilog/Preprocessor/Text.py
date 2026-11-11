@@ -79,8 +79,7 @@ TEXTS: dict[str, Callable[[X.Printer, F.Node], str]] = {
     P.IFDEFDIRECTIVE: _ifdef,
     P.DISABLEDTEXT: lambda p, n: n.attributes["text"],
     P.OTHERDIRECTIVE: lambda p, n: n.attributes["text"],
-    P.COMMENT: lambda p, n: (f"/*{n.attributes.get('text', '')}*/" if n.attributes.get("block")
-                             else f"//{n.attributes.get('text', '')}"),
+    P.COMMENT: lambda p, n: ("/*{}*/" if n.attributes.get("block") else "//{}").format(n.attributes.get("text", "")),
 }
 """How each of its kinds is written."""
 
