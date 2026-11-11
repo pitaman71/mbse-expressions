@@ -91,8 +91,10 @@ class _Printer:
                 return attributes["singleton"], _PRIMARY
             parts = attributes["complex"].attributes  # a complex number's, `Expressions.Python.Python3.Complex`
             return _constant(complex(parts.get("real", 0.0), parts["imag"]))
-        if tag in ("error", "missing"):
-            return F.invalid_text(P.DIALECT, tag, attributes), _PRIMARY
+        if tag in ("error", "missing"):  # as written, by the dialect of its family whose union holds it
+            union = F.dialect_of(node)
+            owner = next(dialect for dialect in (P.DIALECT, *P.DIALECT.reads()) if dialect.union == union)
+            return F.invalid_text(owner, tag, attributes), _PRIMARY
         if tag in _IMPORTS:
             raise ValueError("an import can only enclose the whole expression")
         family = _texts()

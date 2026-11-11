@@ -22,7 +22,8 @@ with mbse-programs' names, lowercased as branch tags, and its properties in sour
 - `matchclass` (`cls(pattern, kwd_attr=kwd_pattern)`: `cls`, a `Python3` term, its positional `patterns`, and its
   `kwd_attrs`, names, and `kwd_patterns`, which pair up);
 - `matchstar` (`*name` in a sequence pattern, `*_` without a name);
-- `matchas` (`pattern as name`; a capture `name` without a pattern; the wildcard `_` without either);
+- `matchas` (`pattern as name`; a capture `name` without a pattern; the wildcard `_` without either, never a pattern
+  without a name, as `ast` has it);
 - `matchor` (`pattern | pattern`, two at least);
 
 then the framework's kinds of invalid syntax, `error` and `missing`. `matchmapping` and `matchclass` each hold two
@@ -187,7 +188,8 @@ def _capture(what: str, value: Any) -> list[str]:
 
 def problems(node: F.Node) -> list[str]:
     """A node's checks: mbse-programs' (a choice among a few, a mapping's pattern for each key, a class's pattern for
-    each keyword, an `or` of two patterns), and its names' (an identifier, a capture name not `_`)."""
+    each keyword, an `or` of two patterns), `ast`'s (an `as` pattern with a pattern has a name, the wildcard being one
+    with neither), and its names' (an identifier, a capture name not `_`)."""
     found: list[str] = []
     attributes, lists = node.attributes, node.lists
     if node.kind == MATCHSINGLETON and "value" in attributes and attributes["value"] not in SINGLETONS:
@@ -205,6 +207,8 @@ def problems(node: F.Node) -> list[str]:
         for attr in attrs:
             found += P._identifier_problems("a matchclass's kwd_attr", attr)
     elif node.kind in (MATCHSTAR, MATCHAS):
+        if node.kind == MATCHAS and node.slots["pattern"] is not None and "name" not in attributes:
+            found.append("a matchas with a pattern needs a name")  # as `ast` has it: a wildcard has no pattern
         found += _capture(f"{F._article(node.kind)}'s name", attributes.get("name"))
     elif node.kind == MATCHOR and len(node.many) < 2:
         found.append("a MatchOr needs two patterns")

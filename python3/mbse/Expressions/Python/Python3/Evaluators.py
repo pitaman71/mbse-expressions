@@ -237,12 +237,17 @@ EVALUATED = frozenset({_P.LITERAL, _P.NAME, _P.LET, _P.LIST, _P.DICT, _P.ATTRIBU
 """The kinds the evaluator evaluates; any other is refused by name."""
 
 class _Interpreter(F.Interpreter):
-    """The interpreter of the Python3 dialect, which refuses a kind of its family's other dialects by that dialect's
-    name, as SystemVerilog's evaluator refuses its sublanguages' kinds (the API, item 175)."""
+    """The interpreter of the Python3 dialect, which refuses a kind of its family's other dialects, and invalid syntax,
+    by the name of the dialect that has it, as SystemVerilog's evaluator refuses its sublanguages' kinds (the API, item
+    175)."""
 
     def evaluate(self, node: Any, scope: Any) -> Any:
-        tag = self.dialect.kind(node)[0]
-        if tag not in self.dialect.kinds():
+        tag, _, kind = self.dialect.kind(node)
+        if kind.role == Terms.INVALID:  # invalid syntax, by the dialect whose union holds it
+            union = Terms.dialect_of(node)
+            owner = next(dialect for dialect in (self.dialect, *self.dialect.reads()) if dialect.union == union)
+            raise ValueError(f"{owner.name()} {tag} is not evaluated")
+        if tag not in self.dialect.kinds():  # a kind of a sublanguage of its family, by its dialect
             owner = next(dialect for dialect in self.dialect.reads() if tag in dialect.kinds())
             raise NotImplementedError(f"{owner.name()} {tag} is not evaluated")
         return super().evaluate(node, scope)
