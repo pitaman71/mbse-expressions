@@ -1338,7 +1338,8 @@ breaking release anyway.
      C++'s, Python3's and TypeScript5's tables of standards by kind (`_C_STANDARDS`, `_STANDARDS` and `_SINCE_20`'s
      names, `_since`, `_ALL`), each now the define's table. `EXTENSIONS` stays.
 159. **SystemVerilog, Patterns, MATLAB, Excel and LaTeX cover none** *(agent)*: their code names no standard.
-     SystemVerilog's editions are stage 6's, which records them in this model (the dialects proposal's Decided, Q10).
+     SystemVerilog's editions are stage 6's, which records them in this model (the dialects proposal's Decided, Q10):
+     *superseded* for SystemVerilog by item 177, its six dialects covering IEEE 1364's and IEEE 1800's editions.
 160. **The corpus** *(agent)*: each data case that writes a dialect's singleton as one document now holds its `Covers`
      entries; a new data case, `standards` (`STANDARD`), writes C23's edition, ISO/IEC 9899:2024, as one document of
      `Expressions.Framework.Standard`, pinning an edition's properties and its kinds byte for byte; CONF-04 reads both
