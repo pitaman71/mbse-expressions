@@ -30,8 +30,8 @@ evaluates, is mbse-basis'
 Write a constraint in Patterns, and translate it where it must be checked; read one written elsewhere back into Patterns
 to analyze it.
 
-- Python: [T07.1: Translating](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1) · TypeScript: [T07.1: Translating](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1)
-- Python: [T07.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.3) · TypeScript: [T07.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.3)
+- Python: [T14.1: Translating](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1) · TypeScript: [T14.1: Translating](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1)
+- Python: [T14.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3) · TypeScript: [T14.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3)
 
 ## Constructors and source text
 
@@ -56,13 +56,13 @@ to analyze it.
    - Python: [DIA-13: SystemVerilog: expressions over 4-state vectors and reals, with IEEE 1800's precedence, sized literals and casts](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-13) · TypeScript: [DIA-13: SystemVerilog: expressions over 4-state vectors and reals, with IEEE 1800's precedence, sized literals and casts](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-13)
    - Python: [DIA-22: TypeScript5 printed as TypeScript writes it: every kind, its types, patterns and JSX, by precedence, as an expression statement holds it, a literal in its spelling or its value's](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-22) · TypeScript: [DIA-22: TypeScript5 printed as TypeScript writes it: every kind, its types, patterns and JSX, by precedence, as an expression statement holds it, a literal in its spelling or its value's](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-22)
    - Python: [DIA-25: C and C++ printed as they write them: every kind, its names, type names, lambdas and attributes, by precedence, a literal's default spelling with what it encodes](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-25) · TypeScript: [DIA-25: C and C++ printed as they write them: every kind, its names, type names, lambdas and attributes, by precedence, a literal's default spelling with what it encodes](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-25)
-   - Python: [T08.1: C](mbse:mbse-expressions/python3/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.1) · TypeScript: [T08.1: C](mbse:mbse-expressions/typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.1)
-   - Python: [T08.3: SystemVerilog](mbse:mbse-expressions/python3/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.3) · TypeScript: [T08.3: SystemVerilog](mbse:mbse-expressions/typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.3)
+   - Python: [T15.1: C](mbse:mbse-expressions/python3/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.1) · TypeScript: [T15.1: C](mbse:mbse-expressions/typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.1)
+   - Python: [T15.3: SystemVerilog](mbse:mbse-expressions/python3/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.3) · TypeScript: [T15.3: SystemVerilog](mbse:mbse-expressions/typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.3)
 2. **Read source back.** *Why*: a constraint written in another language can be analyzed or stored once it is in
    Patterns. *When*: a constraint exists only as Python source. *How*: Python3's `Text.FromText` parses source into a
    writer of its term, in Python only ([In each language](../SKILL.md#in-each-language)); translate the term into
    Patterns.
-   - Python: [T07.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.3) · TypeScript: [T07.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.3)
+   - Python: [T14.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3) · TypeScript: [T14.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3)
    - Python: [DIA-01: Python: expressions as `ast` has them, with their imports; rendered and parsed as source](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-01) · TypeScript: [DIA-01: Python: expressions as `ast` has them, with their imports; rendered and parsed as source](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-01)
 3. **A literal keeps its spelling.** *Why*: a literal read from source must print as it was written, and a broken one
    must be kept to be reported. *How*: a literal keeps its spelling (`text`) and what is wrong with it (`problems`)
@@ -128,9 +128,9 @@ to analyze it.
 
 Test a translated constraint with its own dialect's evaluator, which models those rules:
 
-- Python: [T07.2: Each language evaluates by its own rules](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.2) · TypeScript: [T07.2: Each language evaluates by its own rules](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.2)
-- Python: [T08.2: Where C differs](mbse:mbse-expressions/python3/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.2) · TypeScript: [T08.2: Where C differs](mbse:mbse-expressions/typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.2)
-- Python: [T08.4: `x` and `z`](mbse:mbse-expressions/python3/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.4) · TypeScript: [T08.4: `x` and `z`](mbse:mbse-expressions/typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.4)
+- Python: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2) · TypeScript: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2)
+- Python: [T15.2: Where C differs](mbse:mbse-expressions/python3/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.2) · TypeScript: [T15.2: Where C differs](mbse:mbse-expressions/typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.2)
+- Python: [T15.4: `x` and `z`](mbse:mbse-expressions/python3/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.4) · TypeScript: [T15.4: `x` and `z`](mbse:mbse-expressions/typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.4)
 - Python: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-02) · TypeScript: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-02)
 - Python: [DIA-04: MATLAB evaluates two-valued, converts numbers and logicals, and has no unknown](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-04) · TypeScript: [DIA-04: MATLAB evaluates two-valued, converts numbers and logicals, and has no unknown](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-04)
 - Python: [DIA-07: Excel coerces, orders values of every type, and computes with errors](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-07) · TypeScript: [DIA-07: Excel coerces, orders values of every type, and computes with errors](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-07)
@@ -160,7 +160,7 @@ mapping of variables, or its dialect's scope, which resolves names the dialect's
   else `#NAME?`; a cell as its value, 0 when empty, `#REF!` when its sheet or book does not exist; a function as a
   built-in, then an add-in.
 
-- Python: [T07.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.4) · TypeScript: [T07.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.4)
+- Python: [T14.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4) · TypeScript: [T14.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4)
 - Python: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-02) · TypeScript: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-02)
 - Python: [DIA-05: MATLAB resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-05) · TypeScript: [DIA-05: MATLAB resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-05)
 - Python: [DIA-08: Excel reads cells from workbooks, and add-in functions from the workbook's add-ins](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-08) · TypeScript: [DIA-08: Excel reads cells from workbooks, and add-in functions from the workbook's add-ins](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-08)
