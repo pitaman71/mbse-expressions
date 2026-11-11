@@ -245,19 +245,19 @@ function refused(what: string): Error {
 
 /** A term read once for one evaluation: its `tag` (as `Expressions.DIALECT` reads it, a term of any of its family's
  * dialects), and its members by name, its attributes (null where not set), its helpers (`Terms.Node`s), its slots (a
- * `Node`, null where empty) and its variadic arguments (an array of `Node`s). `term` is the term value read. */
+ * `Node`, null where empty) and its variadic arguments (each container's, an array of `Node`s). `term` is the term value read. */
 class Node {
   [member: string]: any;
 
   constructor(readonly term: any) {
     const [tag, record] = X.DIALECT.kind(term);
     const node = F.node(tag, record);
-    const [, variadic, names] = F._parts(record.as_schema());
+    const [, , names] = F._parts(record.as_schema());
     for (const name of names) this[name] = null;
     for (const [name, value] of node.attributes) this[name] = value;
     for (const [name, value] of node.helpers) this[name] = value;
     for (const [name, value] of node.slots) this[name] = value === null ? null : new Node(value);
-    if (variadic !== null) this[variadic] = node.many.map((a) => new Node(a));
+    for (const [name, terms] of node.lists) this[name] = terms.map((a) => new Node(a));
     this.tag = tag;
   }
 }
@@ -315,7 +315,8 @@ class Evaluation {
       if (op === "**" && left.kind !== "real" && right.kind !== "real") return left; // its exponent is self-determined
       return Domains.common([left, right]);
     }
-    if (kind === X.CONDITIONALEXPRESSION) {
+    if (kind === X.CONDITIONALEXPRESSION) { // its condition first: one it does not evaluate (a `matches`) is refused by
+      this.type(node.condition); // name before the branches, which may name what its pattern binds, are sized
       return Domains.common([this.numeric(node.consequence, "?:"), this.numeric(node.alternative, "?:")]);
     }
     if (kind === X.INSIDEEXPRESSION) return ONE;

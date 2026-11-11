@@ -48,15 +48,15 @@ function branch(p: Printer, items: readonly any[]): string[] {
 /** A helper container's nodes: none where it is absent. */
 const nodes = (value: unknown): readonly F.Node[] => (value as readonly F.Node[] | undefined) ?? [];
 
-/** `` `ifdef name ``, or `` `ifndef ``, its items, each `` `elsif `` and its items, `` `else `` and its items, and
- * `` `endif ``, each on its own line. */
+/** `` `ifdef name ``, or `` `ifndef ``, its items, each `` `elsif `` and its items, `` `else `` and its items where it
+ * has one (`has_else`), and `` `endif ``, each on its own line. */
 function ifdef(p: Printer, n: F.Node): string {
   const lines = [`\`${n.attributes.get("negated") ? "ifndef" : "ifdef"} ${condition(p, n, P.IFDEFDIRECTIVE)}`,
-    ...branch(p, n.many)];
+    ...branch(p, n.lists.get("items") as readonly any[])];
   for (const elsif of nodes(n.helpers.get("branches"))) {
     lines.push(`\`elsif ${condition(p, elsif, "elsifdirective")}`, ...branch(p, elsif.many));
   }
-  if (n.helpers.has("alternative")) lines.push("`else", ...branch(p, (n.helpers.get("alternative") as F.Node).many));
+  if (n.attributes.get("has_else")) lines.push("`else", ...branch(p, n.lists.get("alternative") as readonly any[]));
   return [...lines, "`endif"].join("\n");
 }
 

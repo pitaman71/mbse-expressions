@@ -16,17 +16,15 @@
  * - The directives (22): `includedirective` (`` `include "path" ``, or `<path>` where `system`), `definedirective`
  *   (`` `define name(parameters) body ``, its body as written), `undefdirective`, `timescaledirective` (`` `timescale 1ns
  *   / 1ps ``), `defaultnettypedirective` (`` `default_nettype none ``), `ifdefdirective` (`` `ifdef ``, or `` `ifndef ``
- *   where `negated`, of a macro's name or a `condition` of macros' names, IEEE 1800-2023's, with its `elsif` branches
- *   and its `else`), `disabledtext` (a branch's text the preprocessor skipped, as written) and `otherdirective` (any
+ *   where `negated`, of a macro's name or a `condition` of macros' names, IEEE 1800-2023's, with its `items`, its
+ *   `elsif` branches, and its `else`'s items, `alternative`, where `has_else`), `disabledtext` (a branch's text the preprocessor skipped, as written) and `otherdirective` (any
  *   other, as written: `` `resetall ``).
  * - `comment` (5.4): `// text`, or with `block` `/* text *\/`, kept where mbse-programs keeps it, among constraints and
  *   directives.
  *
- * Its helpers: `elsifdirective` (`ElsifDirective`, an `` `elsif `` branch) and `elsedirective` (`ElseDirective`, the
- * `` `else `` branch, slang's `ElseDirective`): where mbse-programs holds an `else`'s items in the `IfdefDirective`
- * itself (`alternative`, with `has_else`), its `alternative` holds the helper, present where the directive has an `else`,
- * since the framework reads one variadic container of terms per kind (`Terms._parts`). A name is `Expressions`'
- * `Identifier`, one schema in each dialect that holds it.
+ * Its helper: `elsifdirective` (`ElsifDirective`, an `` `elsif `` branch). An `` `else ``'s items are the
+ * `IfdefDirective`'s own, as mbse-programs holds them (`alternative`, beside `items`, and `has_else`), a kind holding
+ * two containers of terms. A name is `Expressions`' `Identifier`, one schema in each dialect that holds it.
  *
  * The directives and `comment` are a constraint block's items too (Q6: "directives are the preprocessor dialect's terms,
  * comments helpers"): its install adds them to `Constraints`' `Term`, created where that install has not run, and a
@@ -77,7 +75,7 @@ export const TAGS: readonly string[] = [MACROUSAGE, ...DIRECTIVES, COMMENT];
 
 /** Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
  * completeness data (`grammars/systemverilog-slang.json`) names them. */
-export const HELPERS: readonly string[] = ["ElsifDirective", "ElseDirective"];
+export const HELPERS: readonly string[] = ["ElsifDirective"];
 
 /** The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`: none
  * of its kinds has one, so each is in every edition. */
@@ -116,8 +114,7 @@ export function install(txn: any): any {
                 Expression: S.OfObject, MacroUsage: S.OfObject, IncludeDirective: S.OfObject,
                 DefineDirective: S.OfObject, UndefDirective: S.OfObject, TimescaleDirective: S.OfObject,
                 DefaultNettypeDirective: S.OfObject, IfdefDirective: S.OfObject, ElsifDirective: S.OfObject,
-                ElseDirective: S.OfObject, DisabledText: S.OfObject, OtherDirective: S.OfObject,
-                Comment: S.OfObject,
+                DisabledText: S.OfObject, OtherDirective: S.OfObject, Comment: S.OfObject,
                 // `Expressions`' union and helper, and the `Term`s that list its branches, by name
                 ExpressionsTerm: S.OfUnion, TypesTerm: S.OfUnion, PatternsTerm: S.OfUnion,
                 AssertionsTerm: S.OfUnion, ConstraintsTerm: S.OfUnion, Identifier: S.OfObject})
@@ -169,11 +166,9 @@ export function install(txn: any): any {
           (_: any) => _.IfdefDirective.name("Expressions.SystemVerilog.Preprocessor.IfdefDirective").properties({
               negated: S.OfBool, name: _.Identifier, condition: _.ExpressionsTerm,
               items: many(_.ConstraintsTerm), branches: many(_.ElsifDirective),
-              alternative: _.ElseDirective}),  // alternative: absent without an `else
+              alternative: many(_.ConstraintsTerm), has_else: S.OfBool}),  // alternative: an `else's items
           (_: any) => _.ElsifDirective.name("Expressions.SystemVerilog.Preprocessor.ElsifDirective").properties({
               name: _.Identifier, condition: _.ExpressionsTerm, items: many(_.ConstraintsTerm)}),
-          (_: any) => _.ElseDirective.name("Expressions.SystemVerilog.Preprocessor.ElseDirective").properties({
-              items: many(_.ConstraintsTerm)}),
           (_: any) => _.DisabledText.name("Expressions.SystemVerilog.Preprocessor.DisabledText").properties({
               text: S.OfStr}),
           (_: any) => _.OtherDirective.name("Expressions.SystemVerilog.Preprocessor.OtherDirective").properties({
@@ -303,7 +298,7 @@ function macros(condition: any): ReadonlySet<string> {
 }
 
 /** What each of a conditional directive's arguments has bound: each condition, its macros' names; its branches' items,
- * nothing. */
+ * and its `else`'s, nothing. */
 function ifdefScopes(record: any): ReadonlySet<string>[] {
   const node = F.node(IFDEFDIRECTIVE, record);
   const none = (count: number): ReadonlySet<string>[] => Array.from({ length: count }, () => new Set<string>());
@@ -311,7 +306,6 @@ function ifdefScopes(record: any): ReadonlySet<string>[] {
   for (const branch of nodes(node.helpers.get("branches"))) {
     found.push(macros(branch.slots.get("condition") ?? null), ...none(branch.many.length));
   }
-  for (const alternative of nodes(node.helpers.get("alternative"))) found.push(...none(alternative.many.length));
   return found;
 }
 

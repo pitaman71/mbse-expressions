@@ -810,9 +810,7 @@
   },
   {
    "node": "ElseDirective",
-   "helpers": [
-    "Preprocessor.ElseDirective"
-   ]
+   "not": "an `else of conditional compilation, which IfdefDirective holds as its `has_else` and `alternative`"
   },
   {
    "node": "ElsePropertyClause",

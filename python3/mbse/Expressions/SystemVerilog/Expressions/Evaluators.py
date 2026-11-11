@@ -227,19 +227,18 @@ def _refused(what: str) -> NotImplementedError:
 class _Node:
     """A term read once for one evaluation: its `kind` (as `Expressions.DIALECT` reads it, a term of any of its family's
     dialects), and its members as attributes, its attributes (None where not set), its helpers (`Terms.Node`s), its
-    slots (a `_Node`, None where empty) and its variadic arguments (a tuple of `_Node`s). `term` is the term value
+    slots (a `_Node`, None where empty) and its variadic arguments (each container's, a tuple of `_Node`s). `term` is the term value
     read."""
 
     def __init__(self, term: Any):
         tag, record, _ = X.DIALECT.kind(term)
         node = F.node(tag, record)
-        _, variadic, names = F._parts(record.as_schema())
+        _, _, names = F._parts(record.as_schema())
         members: dict[str, Any] = dict.fromkeys(names)
         members.update(node.attributes)
         members.update(node.helpers)
         members.update({name: None if a is None else _Node(a) for name, a in node.slots.items()})
-        if variadic is not None:
-            members[variadic] = tuple(_Node(a) for a in node.many)
+        members.update({name: tuple(_Node(a) for a in terms) for name, terms in node.lists.items()})
         self.__dict__.update(members)
         self.term, self.kind = term, tag
 
@@ -303,7 +302,8 @@ class _Evaluation:
             if op == "**" and "real" not in (left.kind, right.kind):
                 return left  # its exponent is self-determined
             return Domains.common([left, right])
-        if node.kind == X.CONDITIONALEXPRESSION:
+        if node.kind == X.CONDITIONALEXPRESSION:  # its condition first: one it does not evaluate (a `matches`) is refused
+            self.type(node.condition)  # by name before the branches, which may name what its pattern binds, are sized
             return Domains.common([self._numeric(node.consequence, "?:"), self._numeric(node.alternative, "?:")])
         if node.kind == X.INSIDEEXPRESSION:
             return _ONE

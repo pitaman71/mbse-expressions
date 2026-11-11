@@ -47,14 +47,14 @@ def _branch(p: X.Printer, items: tuple[Any, ...]) -> list[str]:
 
 
 def _ifdef(p: X.Printer, n: F.Node) -> str:
-    """`` `ifdef name ``, or `` `ifndef ``, its items, each `` `elsif `` and its items, `` `else `` and its items, and
-    `` `endif ``, each on its own line."""
+    """`` `ifdef name ``, or `` `ifndef ``, its items, each `` `elsif `` and its items, `` `else `` and its items where
+    it has one (`has_else`), and `` `endif ``, each on its own line."""
     lines = [f"`{'ifndef' if n.attributes.get('negated') else 'ifdef'} {_condition(p, n, P.IFDEFDIRECTIVE)}",
-             *_branch(p, n.many)]
+             *_branch(p, n.lists["items"])]
     for branch in n.helpers.get("branches", ()):
         lines += [f"`elsif {_condition(p, branch, 'elsifdirective')}", *_branch(p, branch.many)]
-    if "alternative" in n.helpers:
-        lines += ["`else", *_branch(p, n.helpers["alternative"].many)]
+    if n.attributes.get("has_else"):
+        lines += ["`else", *_branch(p, n.lists["alternative"])]
     return "\n".join([*lines, "`endif"])
 
 

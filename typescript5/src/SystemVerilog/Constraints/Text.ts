@@ -53,6 +53,8 @@ export const TEXTS: ReadonlyMap<string, (p: Printer, n: F.Node) => string> = new
   [C.IMPLICATIONCONSTRAINT, (p, n) => `${p.operand(n.slots.get("condition"), XT.IMPLY + 1)} -> ${p.text(n.slots.get("body"))}`],
   [C.CONDITIONALCONSTRAINT, conditional],
   [C.FOREACHCONSTRAINT, foreach],
+  [C.SOLVEBEFORECONSTRAINT, (p, n) => `solve ${(n.lists.get("solve") as any[]).map((e) => p.text(e)).join(", ")} before ${
+    (n.lists.get("before") as any[]).map((e) => p.text(e)).join(", ")};`],
   [C.DISABLESOFTCONSTRAINT, (p, n) => `disable soft ${p.text(n.slots.get("target"))};`],
   [C.UNIQUECONSTRAINT, (p, n) => `unique {${n.many.map((r) => p.text(r)).join(", ")}};`],
   [C.DISTEXPRESSION, dist],

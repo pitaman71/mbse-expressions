@@ -58,6 +58,8 @@ TEXTS: dict[str, Callable[[X.Printer, F.Node], str]] = {
     C.IMPLICATIONCONSTRAINT: lambda p, n: f"{p.operand(n.slots['condition'], IMPLY + 1)} -> {p.text(n.slots['body'])}",
     C.CONDITIONALCONSTRAINT: _conditional,
     C.FOREACHCONSTRAINT: _foreach,
+    C.SOLVEBEFORECONSTRAINT: lambda p, n: (f"solve {', '.join(p.text(e) for e in n.lists['solve'])} before "
+                                           f"{', '.join(p.text(e) for e in n.lists['before'])};"),
     C.DISABLESOFTCONSTRAINT: lambda p, n: f"disable soft {p.text(n.slots['target'])};",
     C.UNIQUECONSTRAINT: lambda p, n: f"unique {{{', '.join(p.text(r) for r in n.many)}}};",
     C.DISTEXPRESSION: _dist,

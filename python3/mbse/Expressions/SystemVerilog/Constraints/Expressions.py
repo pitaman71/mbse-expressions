@@ -15,10 +15,9 @@ mbse-programs' names, lowercased as branch tags, and its properties in source or
 - `constraintblock` (`{ items }`), `expressionconstraint` (`soft expression;`, its expression this dialect's term, a
   distribution or an expression), `implicationconstraint` (`condition -> body`), `conditionalconstraint`
   (`if (condition) consequence else alternative`), `foreachconstraint` (`foreach (array[variables]) body`),
+  `solvebeforeconstraint` (`solve a, b before c;`, 18.5.10, two containers of terms, `solve` and `before`),
   `disablesoftconstraint` (`disable soft x;`) and `uniqueconstraint` (`unique { set }`), each a constraint's
-  condition, array, target or set `Expressions`' terms, its body this dialect's. mbse-programs' `SolveBeforeConstraint`
-  (`solve a, b before c;`), which holds two lists of terms, waits on the framework, whose forms read one container of
-  terms per kind (`Terms._parts`);
+  condition, array, variables, target or set `Expressions`' terms, its body this dialect's;
 - `distexpression` (`value dist { items }`, 18.5.4), a distribution of a random variable's values, whose items are
   `distitem`s (`value := weight`, `value :/ weight`, or `default :/ weight` with no value), each value an `Expressions`
   term, a range among them (`valuerange`). `install` adds it to `Expressions.SystemVerilog.Assertions.Term` too, as
@@ -56,11 +55,11 @@ __all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "OPERATOR
 
 CONSTRAINTBLOCK, EXPRESSIONCONSTRAINT, IMPLICATIONCONSTRAINT, CONDITIONALCONSTRAINT = (
     "constraintblock", "expressionconstraint", "implicationconstraint", "conditionalconstraint")
-FOREACHCONSTRAINT, DISABLESOFTCONSTRAINT, UNIQUECONSTRAINT, DISTEXPRESSION = (
-    "foreachconstraint", "disablesoftconstraint", "uniqueconstraint", "distexpression")
+FOREACHCONSTRAINT, SOLVEBEFORECONSTRAINT, DISABLESOFTCONSTRAINT, UNIQUECONSTRAINT, DISTEXPRESSION = (
+    "foreachconstraint", "solvebeforeconstraint", "disablesoftconstraint", "uniqueconstraint", "distexpression")
 
 TAGS = (CONSTRAINTBLOCK, EXPRESSIONCONSTRAINT, IMPLICATIONCONSTRAINT, CONDITIONALCONSTRAINT, FOREACHCONSTRAINT,
-        DISABLESOFTCONSTRAINT, UNIQUECONSTRAINT, DISTEXPRESSION)
+        SOLVEBEFORECONSTRAINT, DISABLESOFTCONSTRAINT, UNIQUECONSTRAINT, DISTEXPRESSION)
 """Its own kinds, in its `Term`'s order after `Expressions`' branches."""
 
 HELPERS = ("DistItem",)
@@ -98,7 +97,7 @@ def install(txn: Any) -> Any:
                   "EmptyArgument": S.OfObject,
                   "ConstraintBlock": S.OfObject, "ExpressionConstraint": S.OfObject,
                   "ImplicationConstraint": S.OfObject, "ConditionalConstraint": S.OfObject,
-                  "ForeachConstraint": S.OfObject,
+                  "ForeachConstraint": S.OfObject, "SolveBeforeConstraint": S.OfObject,
                   "DisableSoftConstraint": S.OfObject, "UniqueConstraint": S.OfObject, "DistExpression": S.OfObject,
                   "DistItem": S.OfObject})
         .spec([
@@ -117,6 +116,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("implicationconstraint").schema([_.ImplicationConstraint]),
                 lambda t: t.name("conditionalconstraint").schema([_.ConditionalConstraint]),
                 lambda t: t.name("foreachconstraint").schema([_.ForeachConstraint]),
+                lambda t: t.name("solvebeforeconstraint").schema([_.SolveBeforeConstraint]),
                 lambda t: t.name("disablesoftconstraint").schema([_.DisableSoftConstraint]),
                 lambda t: t.name("uniqueconstraint").schema([_.UniqueConstraint]),
                 lambda t: t.name("distexpression").schema([_.DistExpression]),
@@ -144,6 +144,9 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("identifier").schema([_.Identifier]),
                 lambda t: t.name("emptyargument").schema([_.EmptyArgument]),  # a dimension it skips
             ]),
+            # an order in which variables are chosen (18.5.10): two containers of terms
+            lambda _: _.SolveBeforeConstraint.name("Expressions.SystemVerilog.Constraints.SolveBeforeConstraint").properties({
+                "solve": many(_.ExpressionsTerm), "before": many(_.ExpressionsTerm)}),
             lambda _: _.DisableSoftConstraint.name("Expressions.SystemVerilog.Constraints.DisableSoftConstraint").properties({
                 "target": _.ExpressionsTerm}),
             lambda _: _.UniqueConstraint.name("Expressions.SystemVerilog.Constraints.UniqueConstraint").properties({
@@ -249,6 +252,7 @@ def _kinds() -> dict[str, F.Kind]:
         CONDITIONALCONSTRAINT: application(CONDITIONALCONSTRAINT, ("alternative",)),
         FOREACHCONSTRAINT: F.Kind(F.BINDING, signature=FD.Opaque(), scopes=_foreach_scopes,
                                   check=_check(FOREACHCONSTRAINT)),
+        SOLVEBEFORECONSTRAINT: application(SOLVEBEFORECONSTRAINT),
         DISABLESOFTCONSTRAINT: application(DISABLESOFTCONSTRAINT),
         UNIQUECONSTRAINT: application(UNIQUECONSTRAINT),
         DISTEXPRESSION: application(DISTEXPRESSION, ("items.value", "items.weight")),

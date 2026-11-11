@@ -16,10 +16,9 @@
  * - `constraintblock` (`{ items }`), `expressionconstraint` (`soft expression;`, its expression this dialect's term, a
  *   distribution or an expression), `implicationconstraint` (`condition -> body`), `conditionalconstraint`
  *   (`if (condition) consequence else alternative`), `foreachconstraint` (`foreach (array[variables]) body`),
+ *   `solvebeforeconstraint` (`solve a, b before c;`, 18.5.10, two containers of terms, `solve` and `before`),
  *   `disablesoftconstraint` (`disable soft x;`) and `uniqueconstraint` (`unique { set }`), each a constraint's
- *   condition, array, target or set `Expressions`' terms, its body this dialect's. mbse-programs' `SolveBeforeConstraint`
- *   (`solve a, b before c;`), which holds two lists of terms, waits on the framework, whose forms read one container of
- *   terms per kind (`Terms._parts`);
+ *   condition, array, variables, target or set `Expressions`' terms, its body this dialect's;
  * - `distexpression` (`value dist { items }`, 18.5.4), a distribution of a random variable's values, whose items are
  *   `distitem`s (`value := weight`, `value :/ weight`, or `default :/ weight` with no value), each value an `Expressions`
  *   term, a range among them (`valuerange`). `install` adds it to `Expressions.SystemVerilog.Assertions.Term` too, as
@@ -64,13 +63,14 @@ export const EXPRESSIONCONSTRAINT = "expressionconstraint";
 export const IMPLICATIONCONSTRAINT = "implicationconstraint";
 export const CONDITIONALCONSTRAINT = "conditionalconstraint";
 export const FOREACHCONSTRAINT = "foreachconstraint";
+export const SOLVEBEFORECONSTRAINT = "solvebeforeconstraint";
 export const DISABLESOFTCONSTRAINT = "disablesoftconstraint";
 export const UNIQUECONSTRAINT = "uniqueconstraint";
 export const DISTEXPRESSION = "distexpression";
 
 /** Its own kinds, in its `Term`'s order after `Expressions`' branches. */
 export const TAGS: readonly string[] = [CONSTRAINTBLOCK, EXPRESSIONCONSTRAINT, IMPLICATIONCONSTRAINT, CONDITIONALCONSTRAINT,
-  FOREACHCONSTRAINT, DISABLESOFTCONSTRAINT, UNIQUECONSTRAINT, DISTEXPRESSION];
+  FOREACHCONSTRAINT, SOLVEBEFORECONSTRAINT, DISABLESOFTCONSTRAINT, UNIQUECONSTRAINT, DISTEXPRESSION];
 
 /** Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
  * completeness data (`grammars/systemverilog-slang.json`) names them. */
@@ -102,7 +102,8 @@ export function install(txn: any): any {
       // have not run
       ExpressionsTerm: S.OfUnion, AssertionsTerm: S.OfUnion, Identifier: S.OfObject, EmptyArgument: S.OfObject,
       ConstraintBlock: S.OfObject, ExpressionConstraint: S.OfObject, ImplicationConstraint: S.OfObject,
-      ConditionalConstraint: S.OfObject, ForeachConstraint: S.OfObject, DisableSoftConstraint: S.OfObject,
+      ConditionalConstraint: S.OfObject, ForeachConstraint: S.OfObject, SolveBeforeConstraint: S.OfObject,
+      DisableSoftConstraint: S.OfObject,
       UniqueConstraint: S.OfObject, DistExpression: S.OfObject, DistItem: S.OfObject })
     .spec([
       // its dialect: the singleton `Expressions.SystemVerilog.Constraints`, a branch of the framework's kind union of dialects
@@ -119,6 +120,7 @@ export function install(txn: any): any {
         (t: any) => t.name("implicationconstraint").schema([_.ImplicationConstraint]),
         (t: any) => t.name("conditionalconstraint").schema([_.ConditionalConstraint]),
         (t: any) => t.name("foreachconstraint").schema([_.ForeachConstraint]),
+        (t: any) => t.name("solvebeforeconstraint").schema([_.SolveBeforeConstraint]),
         (t: any) => t.name("disablesoftconstraint").schema([_.DisableSoftConstraint]),
         (t: any) => t.name("uniqueconstraint").schema([_.UniqueConstraint]),
         (t: any) => t.name("distexpression").schema([_.DistExpression]),
@@ -145,6 +147,9 @@ export function install(txn: any): any {
         (t: any) => t.name("identifier").schema([_.Identifier]),
         (t: any) => t.name("emptyargument").schema([_.EmptyArgument]), // a dimension it skips
       ]),
+      // an order in which variables are chosen (18.5.10): two containers of terms
+      (_: any) => _.SolveBeforeConstraint.name("Expressions.SystemVerilog.Constraints.SolveBeforeConstraint").properties({
+        solve: many(_.ExpressionsTerm), before: many(_.ExpressionsTerm)}),
       (_: any) => _.DisableSoftConstraint.name("Expressions.SystemVerilog.Constraints.DisableSoftConstraint").properties({
         target: _.ExpressionsTerm }),
       (_: any) => _.UniqueConstraint.name("Expressions.SystemVerilog.Constraints.UniqueConstraint").properties({
@@ -248,6 +253,7 @@ function kinds(): Record<string, F.Kind> {
     [CONDITIONALCONSTRAINT]: application(CONDITIONALCONSTRAINT, ["alternative"]),
     [FOREACHCONSTRAINT]: new F.Kind(F.BINDING, { signature: new FD.Opaque(), scopes: foreachScopes,
       check: check(FOREACHCONSTRAINT) }),
+    [SOLVEBEFORECONSTRAINT]: application(SOLVEBEFORECONSTRAINT),
     [DISABLESOFTCONSTRAINT]: application(DISABLESOFTCONSTRAINT),
     [UNIQUECONSTRAINT]: application(UNIQUECONSTRAINT),
     [DISTEXPRESSION]: application(DISTEXPRESSION, ["items.value", "items.weight"]),
