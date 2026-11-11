@@ -544,7 +544,7 @@ change as it lands.
    literal typed by its suffix and base, and refuses every other kind by name; the translators keep what they
    translated, Patterns <-> C and Patterns <-> Cpp one rule set. Every dialect's `Type` and `Pattern` now hold `error`
    and `missing`.
-6. **`SystemVerilog` complete**, Verilog its subset; released as 0.10.0, after domains as data (0.9.0), with the retrofit of the other dialects
+6. **`SystemVerilog` complete**, Verilog its subset (built); released as 0.10.0, after domains as data (0.9.0), with the retrofit of the other dialects
    (Decided, "0.8.0 holds stages 1 to 5").
 
    *Design* (written from the code at main, cad59c4, v0.9.0, and mbse-programs' main, 3deb80e; by Decided for stage 6,
@@ -680,6 +680,37 @@ change as it lands.
      `06_Dialects`. Then `Patterns`, `Assertions`, `Constraints`
      and `Preprocessor` in parallel, each in its own files and test suite (`12_SystemVerilogPatterns` to
      `15_SystemVerilogPreprocessor`). Then the corpus, the tutorials, the skill, the records.
+   *As built* (branch `stage6-systemverilog`, its core and slang data, then `stage6-patterns`, `stage6-assertions`,
+   `stage6-constraints` and `stage6-preprocessor` merged into it; every choice made where the decisions were silent is
+   in [the API, Settled in stage 6 (SystemVerilog)](../port/API.md#settled-in-stage-6-systemverilog-for-the-users-review),
+   items 162 to 216). The six dialects are built as the *Design* above has them, in both languages, each with its
+   install, `define`, holder, `Terms.Dialect` reading the other five, printer and suite (`12_SystemVerilog_Patterns` to
+   `15_SystemVerilog_Preprocessor`: SVP, SVA, SVC and SVD); DIA-27 to DIA-29 check `Expressions` and `Types`, their
+   printing, and all six complete against slang's 533 syntax kinds; the corpus has a case of every kind of each
+   sublanguage. Two kinds the *Design* named wait on nothing now: `solvebeforeconstraint` and `IfdefDirective`'s `else`,
+   each holding two lists of terms (Found while building, below).
+
+   *Found while building*:
+   - **A kind held one container of terms** (`Terms._parts`), so mbse-programs' `SolveBeforeConstraint` (`solve` and
+     `before`) and `IfdefDirective` (`items` and `alternative`) could not be modeled in its shape; the Preprocessor
+     first held its `else` in a helper of its own. Decided by the coordinator (API 210 to 212): a kind may hold
+     several, read in declaration order, its form's attributes giving each one's size; both are now in mbse-programs'
+     shape.
+   - **A conditional whose condition is a `matches` sized its consequence first**, so a pattern variable raised
+     `NameError` before the `matches` was refused by name; the condition is now sized first (API 213).
+   - **A constant is described as `None` in refusal messages** ("SystemVerilog constant None of logic [7:0] ..."): open
+     with the user, left as it is (API 216).
+   - **mbse-programs' gaps**, for its port, recorded in mbse-basis where it keeps such gaps
+     ([CAP-094: every construct of Verilog's and SystemVerilog's standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-094.md),
+     [CAP-086: programs printed](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-086.md)): `AnonymousProgram` raises `KeyError`, not
+     `ParseError`; a pattern's parentheses are dropped; nested event parentheses are flattened (`@((a) or b)` printed
+     `@(a or b)`); `randomize(null)` and arguments that are not identifiers are refused; a `ParenthesizedPropertyExpr`
+     with a match list is refused; and mbse-programs does not import against today's mbse-schemas (`Visitors.Native`).
+   - **Printing an operator no precedence table has** raises `KeyError` in Python and reads `undefined` in TypeScript;
+     only a term validation refuses reaches it, and no case asserts it ([Equivalence](../../EQUIVALENCE.md#deliberate-differences)).
+   - **Slang's mappings left uncertain** (API 186): `BadExpression` as `error`, `ConditionalPattern` as
+     `matchesexpression`, and `VoidCastedCallStatement`, `Delay3` and `OneStepDelay` listed as not expressions.
+
 7. **Tutorials, skill, README, EQUIVALENCE; the releases.** The tutorials and the skill followed each stage as it
    landed. **0.8.0 is released after stage 5**, as the user decided (Decided, "0.8.0 holds stages 1 to 5"): stages 1
    to 5 and the namespace rename, a breaking change, on mbse-schemas 0.26.10. 0.9.0 is domains as data ([the domains proposal](../domains/README.md)); 0.10.0 follows stage 6 and the retrofit.
