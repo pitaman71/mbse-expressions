@@ -1,0 +1,76 @@
+{
+  "typescript_patterns": {
+    "arraypattern": {
+      "elements": [
+        {
+          "objectpattern": {
+            "properties": [
+              {
+                "property": {
+                  "propertyKind": "init",
+                  "key": {
+                    "identifier": {
+                      "name": "a"
+                    }
+                  },
+                  "value": {
+                    "assignmentpattern": {
+                      "left": {
+                        "identifier": {
+                          "name": "record"
+                        }
+                      },
+                      "right": {
+                        "literal": {
+                          "value": {
+                            "float": 1.0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "restelement": {
+                  "argument": {
+                    "identifier": {
+                      "name": "record"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "elision": {}
+        },
+        {
+          "memberexpression": {
+            "object": {
+              "identifier": {
+                "name": "record"
+              }
+            },
+            "property": {
+              "identifier": {
+                "name": "x"
+              }
+            }
+          }
+        },
+        {
+          "tsparameterproperty": {
+            "accessibility": "private",
+            "parameter": {
+              "identifier": {
+                "name": "record"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

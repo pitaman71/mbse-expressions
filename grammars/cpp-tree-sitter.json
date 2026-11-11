@@ -1,5 +1,5 @@
 {
- "grammar": "tree-sitter-cpp's named node types: every node an expression, a type or a literal is, or holds, mapped to Cpp's kinds (`kinds`), the branches of its `Type` union (`types`) or its helpers' schemas (`helpers`), each with the supertypes the grammar puts it in (`supertypes`); every other node listed as not an expression, with its reason",
+ "grammar": "tree-sitter-cpp's named node types: every node an expression, a type name or a literal is, or holds, or a preprocessing directive is, mapped to the kinds of the Cpp family's dialects that read tree-sitter-cpp (`kinds`, each `<Dialect>.<tag>`, a branch of `Expressions.Cpp.<Dialect>.Term`, or of `Expressions.C.Preprocessor.Term`, the C family's preprocessor, which C++ reads) or their helpers (`helpers`, each `<Dialect>.<schema>`, the value object schema of that dialect), each with the supertypes the grammar puts it in (`supertypes`); every other node listed as not an expression, with its reason",
  "checked": "tree-sitter-cpp 0.23.4, as mbse-programs installs it: its 206 named node types",
  "nodes": [
   {
@@ -8,7 +8,7 @@
     "_abstract_declarator"
    ],
    "helpers": [
-    "ArrayDeclarator"
+    "Expressions.ArrayDeclarator"
    ]
   },
   {
@@ -17,7 +17,7 @@
     "_abstract_declarator"
    ],
    "helpers": [
-    "FunctionDeclarator"
+    "Expressions.FunctionDeclarator"
    ]
   },
   {
@@ -26,7 +26,7 @@
     "_abstract_declarator"
    ],
    "helpers": [
-    "ParenthesizedDeclarator"
+    "Expressions.ParenthesizedDeclarator"
    ]
   },
   {
@@ -35,7 +35,7 @@
     "_abstract_declarator"
    ],
    "helpers": [
-    "PointerDeclarator"
+    "Expressions.PointerDeclarator"
    ]
   },
   {
@@ -44,7 +44,7 @@
     "_abstract_declarator"
    ],
    "helpers": [
-    "ReferenceDeclarator"
+    "Expressions.ReferenceDeclarator"
    ]
   },
   {
@@ -58,7 +58,7 @@
   {
    "node": "alignas_qualifier",
    "helpers": [
-    "AlignasSpecifier"
+    "Expressions.AlignasSpecifier"
    ]
   },
   {
@@ -67,7 +67,7 @@
     "expression"
    ],
    "kinds": [
-    "alignofexpression"
+    "Expressions.alignofexpression"
    ]
   },
   {
@@ -82,7 +82,7 @@
     "_type_declarator"
    ],
    "helpers": [
-    "ArrayDeclarator"
+    "Expressions.ArrayDeclarator"
    ]
   },
   {
@@ -91,25 +91,25 @@
     "expression"
    ],
    "kinds": [
-    "assignmentexpression"
+    "Expressions.assignmentexpression"
    ]
   },
   {
    "node": "attribute",
    "helpers": [
-    "Attribute"
+    "Expressions.Attribute"
    ]
   },
   {
    "node": "attribute_declaration",
    "helpers": [
-    "StandardAttributeSpecifier"
+    "Expressions.StandardAttributeSpecifier"
    ]
   },
   {
    "node": "attribute_specifier",
    "helpers": [
-    "GnuAttributeSpecifier"
+    "Expressions.GnuAttributeSpecifier"
    ]
   },
   {
@@ -131,7 +131,7 @@
   {
    "node": "base_class_clause",
    "helpers": [
-    "BaseSpecifier"
+    "Expressions.BaseSpecifier"
    ]
   },
   {
@@ -140,7 +140,7 @@
     "expression"
    ],
    "kinds": [
-    "binaryexpression"
+    "Expressions.binaryexpression"
    ]
   },
   {
@@ -160,11 +160,11 @@
     "expression"
    ],
    "kinds": [
-    "callexpression",
-    "functionalcastexpression",
-    "namedcastexpression",
-    "typeidexpression",
-    "noexceptexpression"
+    "Expressions.callexpression",
+    "Expressions.functionalcastexpression",
+    "Expressions.namedcastexpression",
+    "Expressions.typeidexpression",
+    "Expressions.noexceptexpression"
    ]
   },
   {
@@ -180,7 +180,7 @@
     "expression"
    ],
    "kinds": [
-    "castexpression"
+    "Expressions.castexpression"
    ]
   },
   {
@@ -193,7 +193,7 @@
     "expression"
    ],
    "kinds": [
-    "literal"
+    "Expressions.literal"
    ]
   },
   {
@@ -202,7 +202,7 @@
     "type_specifier"
    ],
    "helpers": [
-    "ClassSpecifier"
+    "Expressions.ClassSpecifier"
    ]
   },
   {
@@ -211,7 +211,7 @@
     "expression"
    ],
    "kinds": [
-    "awaitexpression"
+    "Expressions.awaitexpression"
    ]
   },
   {
@@ -227,13 +227,13 @@
     "statement"
    ],
    "kinds": [
-    "yieldexpression"
+    "Expressions.yieldexpression"
    ]
   },
   {
    "node": "comma_expression",
    "kinds": [
-    "binaryexpression"
+    "Expressions.binaryexpression"
    ]
   },
   {
@@ -242,13 +242,13 @@
     "expression"
    ],
    "kinds": [
-    "functionalcastexpression"
+    "Expressions.functionalcastexpression"
    ]
   },
   {
    "node": "compound_requirement",
    "helpers": [
-    "CompoundRequirement"
+    "Expressions.CompoundRequirement"
    ]
   },
   {
@@ -264,7 +264,7 @@
     "expression"
    ],
    "kinds": [
-    "concatenatedstring"
+    "Expressions.concatenatedstring"
    ]
   },
   {
@@ -281,19 +281,19 @@
     "expression"
    ],
    "kinds": [
-    "conditionalexpression"
+    "Expressions.conditionalexpression"
    ]
   },
   {
    "node": "constraint_conjunction",
    "kinds": [
-    "binaryexpression"
+    "Expressions.binaryexpression"
    ]
   },
   {
    "node": "constraint_disjunction",
    "kinds": [
-    "binaryexpression"
+    "Expressions.binaryexpression"
    ]
   },
   {
@@ -317,7 +317,7 @@
     "type_specifier"
    ],
    "helpers": [
-    "DecltypeSpecifier"
+    "Expressions.DecltypeSpecifier"
    ]
   },
   {
@@ -330,7 +330,7 @@
     "expression"
    ],
    "kinds": [
-    "deleteexpression"
+    "Expressions.deleteexpression"
    ]
   },
   {
@@ -340,7 +340,7 @@
   {
    "node": "dependent_name",
    "helpers": [
-    "TemplateId"
+    "Expressions.TemplateId"
    ]
   },
   {
@@ -349,7 +349,7 @@
     "type_specifier"
    ],
    "helpers": [
-    "TypenameSpecifier"
+    "Expressions.TypenameSpecifier"
    ]
   },
   {
@@ -358,7 +358,7 @@
     "_declarator"
    ],
    "helpers": [
-    "DestructorName"
+    "Expressions.DestructorName"
    ]
   },
   {
@@ -378,16 +378,18 @@
     "type_specifier"
    ],
    "helpers": [
-    "EnumSpecifier"
+    "Expressions.EnumSpecifier"
    ]
   },
   {
    "node": "enumerator",
-   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+   "kinds": [
+    "Types.enumerator"
+   ]
   },
   {
    "node": "enumerator_list",
-   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+   "not": "an enumeration's body, which its EnumSpecifier holds as its `enumerators` and `trailing_comma`"
   },
   {
    "node": "explicit_function_specifier",
@@ -406,7 +408,7 @@
     "expression"
    ],
    "kinds": [
-    "extensionexpression"
+    "Expressions.extensionexpression"
    ]
   },
   {
@@ -420,7 +422,7 @@
   {
    "node": "field_designator",
    "helpers": [
-    "FieldDesignator"
+    "Expressions.FieldDesignator"
    ]
   },
   {
@@ -429,7 +431,7 @@
     "expression"
    ],
    "kinds": [
-    "memberexpression"
+    "Expressions.memberexpression"
    ]
   },
   {
@@ -446,7 +448,7 @@
     "expression"
    ],
    "kinds": [
-    "foldexpression"
+    "Expressions.foldexpression"
    ]
   },
   {
@@ -475,7 +477,7 @@
     "_type_declarator"
    ],
    "helpers": [
-    "FunctionDeclarator"
+    "Expressions.FunctionDeclarator"
    ]
   },
   {
@@ -549,13 +551,13 @@
   {
    "node": "initializer_list",
    "kinds": [
-    "initializerlist"
+    "Expressions.initializerlist"
    ]
   },
   {
    "node": "initializer_pair",
    "kinds": [
-    "designatedinitializer"
+    "Expressions.designatedinitializer"
    ]
   },
   {
@@ -568,7 +570,7 @@
   {
    "node": "lambda_capture_initializer",
    "helpers": [
-    "InitCapture"
+    "Expressions.InitCapture"
    ]
   },
   {
@@ -578,7 +580,7 @@
   {
    "node": "lambda_default_capture",
    "helpers": [
-    "DefaultCapture"
+    "Expressions.DefaultCapture"
    ]
   },
   {
@@ -587,10 +589,10 @@
     "expression"
    ],
    "kinds": [
-    "lambdaexpression"
+    "Expressions.lambdaexpression"
    ],
    "helpers": [
-    "LambdaDeclarator"
+    "Expressions.LambdaDeclarator"
    ]
   },
   {
@@ -608,7 +610,7 @@
   {
    "node": "ms_declspec_modifier",
    "helpers": [
-    "DeclspecSpecifier"
+    "Expressions.DeclspecSpecifier"
    ]
   },
   {
@@ -634,7 +636,7 @@
   {
    "node": "new_declarator",
    "helpers": [
-    "ArrayDeclarator"
+    "Expressions.ArrayDeclarator"
    ]
   },
   {
@@ -643,13 +645,13 @@
     "expression"
    ],
    "kinds": [
-    "newexpression"
+    "Expressions.newexpression"
    ]
   },
   {
    "node": "noexcept",
    "helpers": [
-    "NoexceptSpecifier"
+    "Expressions.NoexceptSpecifier"
    ]
   },
   {
@@ -658,8 +660,8 @@
     "expression"
    ],
    "kinds": [
-    "constant",
-    "idexpression"
+    "Expressions.constant",
+    "Expressions.idexpression"
    ]
   },
   {
@@ -668,14 +670,14 @@
     "expression"
    ],
    "kinds": [
-    "callexpression",
-    "typeid"
+    "Expressions.callexpression",
+    "Types.typeid"
    ]
   },
   {
    "node": "operator_cast",
    "helpers": [
-    "ConversionName"
+    "Expressions.ConversionName"
    ]
   },
   {
@@ -685,25 +687,25 @@
     "_field_declarator"
    ],
    "helpers": [
-    "OperatorName"
+    "Expressions.OperatorName"
    ]
   },
   {
    "node": "optional_parameter_declaration",
    "helpers": [
-    "ParameterDeclaration"
+    "Expressions.ParameterDeclaration"
    ]
   },
   {
    "node": "optional_type_parameter_declaration",
    "helpers": [
-    "TypeParameter"
+    "Expressions.TypeParameter"
    ]
   },
   {
    "node": "parameter_declaration",
    "helpers": [
-    "ParameterDeclaration"
+    "Expressions.ParameterDeclaration"
    ]
   },
   {
@@ -716,7 +718,7 @@
     "expression"
    ],
    "kinds": [
-    "packexpansion"
+    "Expressions.packexpansion"
    ]
   },
   {
@@ -727,7 +729,7 @@
     "_type_declarator"
    ],
    "helpers": [
-    "ParenthesizedDeclarator"
+    "Expressions.ParenthesizedDeclarator"
    ]
   },
   {
@@ -736,8 +738,8 @@
     "expression"
    ],
    "kinds": [
-    "parenthesizedexpression",
-    "statementexpression"
+    "Expressions.parenthesizedexpression",
+    "Expressions.statementexpression"
    ]
   },
   {
@@ -746,7 +748,7 @@
     "type_specifier"
    ],
    "helpers": [
-    "PlaceholderTypeSpecifier"
+    "Expressions.PlaceholderTypeSpecifier"
    ]
   },
   {
@@ -757,7 +759,7 @@
     "_type_declarator"
    ],
    "helpers": [
-    "PointerDeclarator"
+    "Expressions.PointerDeclarator"
    ]
   },
   {
@@ -766,7 +768,7 @@
     "expression"
    ],
    "kinds": [
-    "unaryexpression"
+    "Expressions.unaryexpression"
    ]
   },
   {
@@ -775,47 +777,67 @@
   },
   {
    "node": "preproc_call",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
   },
   {
    "node": "preproc_def",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "kinds": [
+    "Preprocessor.definedirective"
+   ]
   },
   {
    "node": "preproc_defined",
-   "not": "`defined(name)`, a preprocessing condition's, which mbse-programs reads as a DefinedExpression, a preprocessor kind"
+   "kinds": [
+    "Preprocessor.definedexpression"
+   ]
   },
   {
    "node": "preproc_elif",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "kinds": [
+    "Preprocessor.elifdirective"
+   ]
   },
   {
    "node": "preproc_elifdef",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "kinds": [
+    "Preprocessor.elifdefdirective"
+   ]
   },
   {
    "node": "preproc_else",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "kinds": [
+    "Preprocessor.elsedirective"
+   ]
   },
   {
    "node": "preproc_function_def",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "kinds": [
+    "Preprocessor.definedirective"
+   ]
   },
   {
    "node": "preproc_if",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "kinds": [
+    "Preprocessor.ifdirective"
+   ]
   },
   {
    "node": "preproc_ifdef",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "kinds": [
+    "Preprocessor.ifdefdirective"
+   ]
   },
   {
    "node": "preproc_include",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "kinds": [
+    "Preprocessor.includedirective"
+   ]
   },
   {
    "node": "preproc_params",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "not": "a function-like macro's parameter list, its DefineDirective's `parameters` and `variadic`"
   },
   {
    "node": "pure_virtual_clause",
@@ -829,10 +851,10 @@
     "type_specifier"
    ],
    "kinds": [
-    "idexpression"
+    "Expressions.idexpression"
    ],
    "helpers": [
-    "QualifiedName"
+    "Expressions.QualifiedName"
    ]
   },
   {
@@ -841,7 +863,7 @@
     "expression"
    ],
    "kinds": [
-    "literal"
+    "Expressions.literal"
    ]
   },
   {
@@ -856,7 +878,7 @@
     "_type_declarator"
    ],
    "helpers": [
-    "ReferenceDeclarator"
+    "Expressions.ReferenceDeclarator"
    ]
   },
   {
@@ -876,7 +898,7 @@
     "expression"
    ],
    "kinds": [
-    "requiresexpression"
+    "Expressions.requiresexpression"
    ]
   },
   {
@@ -911,7 +933,7 @@
   {
    "node": "simple_requirement",
    "helpers": [
-    "SimpleRequirement"
+    "Expressions.SimpleRequirement"
    ]
   },
   {
@@ -920,7 +942,7 @@
     "type_specifier"
    ],
    "helpers": [
-    "PrimitiveTypeSpecifier"
+    "Expressions.PrimitiveTypeSpecifier"
    ]
   },
   {
@@ -929,8 +951,8 @@
     "expression"
    ],
    "kinds": [
-    "sizeofexpression",
-    "sizeofpackexpression"
+    "Expressions.sizeofexpression",
+    "Expressions.sizeofpackexpression"
    ]
   },
   {
@@ -940,7 +962,7 @@
   {
    "node": "storage_class_specifier",
    "helpers": [
-    "DeclSpecifier"
+    "Expressions.DeclSpecifier"
    ]
   },
   {
@@ -949,7 +971,7 @@
     "expression"
    ],
    "kinds": [
-    "literal"
+    "Expressions.literal"
    ]
   },
   {
@@ -958,7 +980,7 @@
     "type_specifier"
    ],
    "helpers": [
-    "ClassSpecifier"
+    "Expressions.ClassSpecifier"
    ]
   },
   {
@@ -982,7 +1004,7 @@
     "expression"
    ],
    "kinds": [
-    "subscriptexpression"
+    "Expressions.subscriptexpression"
    ]
   },
   {
@@ -1011,10 +1033,10 @@
     "expression"
    ],
    "kinds": [
-    "idexpression"
+    "Expressions.idexpression"
    ],
    "helpers": [
-    "TemplateId"
+    "Expressions.TemplateId"
    ]
   },
   {
@@ -1027,7 +1049,7 @@
     "_field_declarator"
    ],
    "helpers": [
-    "TemplateId"
+    "Expressions.TemplateId"
    ]
   },
   {
@@ -1037,7 +1059,7 @@
   {
    "node": "template_template_parameter_declaration",
    "helpers": [
-    "TemplateTemplateParameter"
+    "Expressions.TemplateTemplateParameter"
    ]
   },
   {
@@ -1046,14 +1068,14 @@
     "type_specifier"
    ],
    "helpers": [
-    "TemplateId",
-    "NamedTypeSpecifier"
+    "Expressions.TemplateId",
+    "Expressions.NamedTypeSpecifier"
    ]
   },
   {
    "node": "throw_specifier",
    "helpers": [
-    "ThrowSpecifier"
+    "Expressions.ThrowSpecifier"
    ]
   },
   {
@@ -1062,7 +1084,7 @@
     "statement"
    ],
    "kinds": [
-    "throwexpression"
+    "Expressions.throwexpression"
    ]
   },
   {
@@ -1087,28 +1109,25 @@
   {
    "node": "type_descriptor",
    "kinds": [
-    "typeid"
-   ],
-   "types": [
-    "typeid"
+    "Types.typeid"
    ]
   },
   {
    "node": "type_parameter_declaration",
    "helpers": [
-    "TypeParameter"
+    "Expressions.TypeParameter"
    ]
   },
   {
    "node": "type_qualifier",
    "helpers": [
-    "CvQualifier"
+    "Expressions.CvQualifier"
    ]
   },
   {
    "node": "type_requirement",
    "helpers": [
-    "TypeRequirement"
+    "Expressions.TypeRequirement"
    ]
   },
   {
@@ -1117,7 +1136,7 @@
     "expression"
    ],
    "kinds": [
-    "unaryexpression"
+    "Expressions.unaryexpression"
    ]
   },
   {
@@ -1126,7 +1145,7 @@
     "type_specifier"
    ],
    "helpers": [
-    "ClassSpecifier"
+    "Expressions.ClassSpecifier"
    ]
   },
   {
@@ -1135,8 +1154,8 @@
     "expression"
    ],
    "kinds": [
-    "unaryexpression",
-    "postfixexpression"
+    "Expressions.unaryexpression",
+    "Expressions.postfixexpression"
    ]
   },
   {
@@ -1145,7 +1164,7 @@
     "expression"
    ],
    "kinds": [
-    "userdefinedliteral"
+    "Expressions.userdefinedliteral"
    ]
   },
   {
@@ -1155,19 +1174,19 @@
   {
    "node": "variadic_declarator",
    "helpers": [
-    "PackDeclarator"
+    "Expressions.PackDeclarator"
    ]
   },
   {
    "node": "variadic_parameter_declaration",
    "helpers": [
-    "ParameterDeclaration"
+    "Expressions.ParameterDeclaration"
    ]
   },
   {
    "node": "variadic_type_parameter_declaration",
    "helpers": [
-    "TypeParameter"
+    "Expressions.TypeParameter"
    ]
   },
   {
@@ -1184,7 +1203,7 @@
   {
    "node": "auto",
    "helpers": [
-    "PlaceholderTypeSpecifier"
+    "Expressions.PlaceholderTypeSpecifier"
    ]
   },
   {
@@ -1193,7 +1212,9 @@
   },
   {
    "node": "comment",
-   "not": "a comment, between tokens, which is not a term's (mbse-programs keeps those among declarations and statements)"
+   "kinds": [
+    "Preprocessor.comment"
+   ]
   },
   {
    "node": "escape_sequence",
@@ -1205,7 +1226,7 @@
     "expression"
    ],
    "kinds": [
-    "literal"
+    "Expressions.literal"
    ]
   },
   {
@@ -1214,7 +1235,7 @@
     "_field_declarator"
    ],
    "helpers": [
-    "Identifier"
+    "Expressions.Identifier"
    ]
   },
   {
@@ -1224,11 +1245,11 @@
     "expression"
    ],
    "kinds": [
-    "idexpression"
+    "Expressions.idexpression"
    ],
    "helpers": [
-    "Identifier",
-    "IdDeclarator"
+    "Expressions.Identifier",
+    "Expressions.IdDeclarator"
    ]
   },
   {
@@ -1250,7 +1271,7 @@
   {
    "node": "namespace_identifier",
    "helpers": [
-    "Identifier"
+    "Expressions.Identifier"
    ]
   },
   {
@@ -1259,16 +1280,16 @@
     "expression"
    ],
    "kinds": [
-    "literal"
+    "Expressions.literal"
    ]
   },
   {
    "node": "preproc_arg",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "not": "a macro's replacement, the text of its tokens, its DefineDirective's `replacement`, or another directive's text, its OtherDirective's `text`"
   },
   {
    "node": "preproc_directive",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "not": "a directive's name, its OtherDirective's `directive`"
   },
   {
    "node": "primitive_type",
@@ -1277,7 +1298,7 @@
     "type_specifier"
    ],
    "helpers": [
-    "PrimitiveTypeSpecifier"
+    "Expressions.PrimitiveTypeSpecifier"
    ]
   },
   {
@@ -1298,7 +1319,7 @@
   },
   {
    "node": "system_lib_string",
-   "not": "a preprocessing directive or its part, which mbse-programs holds where declarations and statements are listed, not a term"
+   "not": "`<path>`, an IncludeDirective's `path` where `system`"
   },
   {
    "node": "this",
@@ -1306,7 +1327,7 @@
     "expression"
    ],
    "kinds": [
-    "thisexpression"
+    "Expressions.thisexpression"
    ]
   },
   {
@@ -1315,7 +1336,7 @@
     "expression"
    ],
    "kinds": [
-    "literal"
+    "Expressions.literal"
    ]
   },
   {
@@ -1325,7 +1346,7 @@
     "type_specifier"
    ],
    "helpers": [
-    "NamedTypeSpecifier"
+    "Expressions.NamedTypeSpecifier"
    ]
   }
  ]

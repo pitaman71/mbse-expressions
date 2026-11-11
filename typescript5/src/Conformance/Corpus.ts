@@ -13,7 +13,9 @@
  * `invalid` case is a Python3 term holding invalid syntax and literals with their spelling; the `typescript5` case a
  * TypeScript5 term of every kind, written through the builders; the `systemverilog_patterns`, `systemverilog_assertions`,
  * `systemverilog_constraints` and `systemverilog_preprocessor` cases each a term of SystemVerilog's sublanguage of every
- * kind, written through the builders. Each implementation writes its snapshots to
+ * kind, written through the builders, the `python_types` and `python_patterns` cases a term of Python's, the
+ * `typescript_types` and `typescript_patterns` cases each a term of TypeScript's, and the `c_types`, `cpp_types` and
+ * `c_preprocessor` cases each a term of the C family's new dialects of every kind. Each implementation writes its snapshots to
  * `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files
  * (see the CONF test suite). Keep record module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
  * cases, same values, same order of statements.
@@ -44,7 +46,7 @@ import * as SVPatterns from "../SystemVerilog/Patterns/index.js";
 import * as SVPreprocessor from "../SystemVerilog/Preprocessor/index.js";
 import * as SVTypes from "../SystemVerilog/Types/index.js";
 import * as TypeScript5 from "../TypeScript/TypeScript5/index.js";
-import * as CPreprocessor from "../C/Preprocessor/index.js"; // the retrofit's new dialects, skeletons yet
+import * as CPreprocessor from "../C/Preprocessor/index.js"; // the retrofit's new dialects
 import * as CTypes from "../C/Types/index.js";
 import * as CppTypes from "../Cpp/Types/index.js";
 import * as PythonPatterns from "../Python/Patterns/index.js";
@@ -61,7 +63,8 @@ const TS = TypeScript5.Expressions;
 
 export const CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp",
   "systemverilog", "typescript5", "invalid", "systemverilog_patterns", "systemverilog_assertions",
-  "systemverilog_constraints", "systemverilog_preprocessor", "systemverilog_domains", "python3_domains", "typescript5_domains",
+  "systemverilog_constraints", "systemverilog_preprocessor", "python_types", "python_patterns", "typescript_types",
+  "typescript_patterns", "c_types", "cpp_types", "c_preprocessor", "systemverilog_domains", "python3_domains", "typescript5_domains",
   "matlab_domains", "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains",
   "standards"] as const;
 
@@ -72,6 +75,9 @@ export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
   ["invalid", P.DIALECT], ["systemverilog_patterns", SVPatterns.Expressions.DIALECT],
   ["systemverilog_assertions", SVAssertions.Expressions.DIALECT], ["systemverilog_constraints", SVConstraints.Expressions.DIALECT],
   ["systemverilog_preprocessor", SVPreprocessor.Expressions.DIALECT],
+  ["python_types", PythonTypes.Expressions.DIALECT], ["python_patterns", PythonPatterns.Expressions.DIALECT],
+  ["typescript_types", TypeScriptTypes.Expressions.DIALECT], ["typescript_patterns", TypeScriptPatterns.Expressions.DIALECT],
+  ["c_types", CTypes.Expressions.DIALECT], ["cpp_types", CppTypes.Expressions.DIALECT], ["c_preprocessor", CPreprocessor.Expressions.DIALECT],
 ]);
 
 /** The cases that are data, not terms: each a dialect's singleton, by its path, written as one document of its schema,
@@ -114,8 +120,8 @@ export function build(): Map<string, Case> {
     store.transaction(module.install);
   }
   store.transaction(TypeScript5.install);
-  const skeletons = [PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor];
-  for (const module of skeletons) store.transaction(module.install); // the retrofit's new dialects, each after its family's
+  const retrofit = [PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor];
+  for (const module of retrofit) store.transaction(module.install); // the retrofit's new dialects, each after its family's
   const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
   const stored = new Map<string, any>(([ // each dialect's stored domains
     ["systemverilog_domains", SystemVerilog], ["python3_domains", Python3], ["typescript5_domains", TypeScript5],
@@ -125,7 +131,7 @@ export function build(): Map<string, Case> {
   for (const module of [SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor]) { // the editions they cover
     store.transaction(module.define);
   }
-  for (const module of skeletons) store.transaction(module.define); // their data, none yet
+  for (const module of retrofit) store.transaction(module.define); // their data: the editions each covers
 
   // --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
   // added ---
@@ -426,6 +432,64 @@ export function build(): Map<string, Case> {
       (e: any) => e.importexpression((r: any) => r.source(tsRecord)),  // import(tsRecord)
   ]));
 
+  // --- typescript_types: every kind of TypeScript's Types, the terms a type holds among them --- the text:
+  // any | ... | this | A.B<T> | (T) | "s" | `a${T}b` | T[] | [a: T, T?, ...T[]] | (T & U) | (<T>(x: T) => x is T) |
+  // (abstract new () => T) | { a: T; m(x): T; (): T; new (): T; [k: T]: T; // c } | { [K in T as U]: K } | T[keyof T] |
+  // typeof this | import("m").A | (T extends (infer V)[] ? V : never)
+  const tsT = (t: any) => t.tstypereference((r: any) => r.typeName((n: any) => n.identifier((i: any) => i.name("T")))); // `T`
+  const tsAnnotated = (name: string) => (p: any) => p.identifier((i: any) => i.name(name).typeAnnotation((a: any) => a.typeAnnotation(tsT)));
+  const typescriptTypes = (u: any) => u.tsuniontype((n: any) => n.types([ // written through the builders
+    ...TypeScriptTypes.Expressions.KEYWORDS.map((keyword) => (k: any) => k[keyword]((h: any) => h)),
+    (k: any) => k.tstypereference((r: any) => r.typeName((m: any) => m.tsqualifiedname((q: any) => q.left((l: any) => l.identifier(
+      (i: any) => i.name("A"))).right((i: any) => i.name("B")))).typeArguments((a: any) => a.params([tsT]))),
+    (k: any) => k.tsparenthesizedtype((p: any) => p.typeAnnotation(tsT)),
+    (k: any) => k.tsliteraltype((p: any) => p.literal((li: any) => li.literal((v: any) => v.value((x: any) => x.as_scalar("s"))))),
+    (k: any) => k.tstemplateliteraltype((p: any) => p.quasis([(q: any) => q.raw("a"), (q: any) => q.raw("b").tail(true)]).types([tsT])),
+    (k: any) => k.tsarraytype((a: any) => a.elementType(tsT)),
+    (k: any) => k.tstupletype((p: any) => p.elementTypes([
+      (e: any) => e.tsnamedtuplemember((m: any) => m.label((i: any) => i.name("a")).elementType(tsT)),
+      (e: any) => e.tsoptionaltype((o: any) => o.typeAnnotation(tsT)),
+      (e: any) => e.tsresttype((o: any) => o.typeAnnotation((a: any) => a.tsarraytype((b: any) => b.elementType(tsT))))])),
+    (k: any) => k.tsintersectiontype((p: any) => p.types([tsT, (t: any) => t.tstypereference((r: any) => r.typeName(
+      (m: any) => m.identifier((i: any) => i.name("U"))))])),
+    (k: any) => k.tsfunctiontype((f: any) => f.typeParameters((d: any) => d.params([(p: any) => p.name((i: any) => i.name("T"))])).params([
+      tsAnnotated("x")]).returnType((a: any) => a.typeAnnotation((p: any) => p.tstypepredicate((q: any) => q.parameterName(
+      (m: any) => m.identifier((i: any) => i.name("x"))).typeAnnotation((b: any) => b.typeAnnotation(tsT)))))),
+    (k: any) => k.tsconstructortype((f: any) => f.abstract(true).returnType((a: any) => a.typeAnnotation(tsT))),
+    (k: any) => k.tstypeliteral((q: any) => q.members([
+      (m: any) => m.tspropertysignature((s: any) => s.key((y: any) => y.identifier((i: any) => i.name("a"))).typeAnnotation((a: any) => a.typeAnnotation(tsT))),
+      (m: any) => m.tsmethodsignature((s: any) => s.key((y: any) => y.identifier((i: any) => i.name("m"))).params([
+        (p: any) => p.identifier((i: any) => i.name("x"))]).returnType((a: any) => a.typeAnnotation(tsT))),
+      (m: any) => m.tscallsignaturedeclaration((s: any) => s.returnType((a: any) => a.typeAnnotation(tsT))),
+      (m: any) => m.tsconstructsignaturedeclaration((s: any) => s.returnType((a: any) => a.typeAnnotation(tsT))),
+      (m: any) => m.tsindexsignature((s: any) => s.parameters([tsAnnotated("k")]).typeAnnotation((a: any) => a.typeAnnotation(tsT))),
+      (m: any) => m.comment((c: any) => c.text(" c"))])),
+    (k: any) => k.tsmappedtype((m: any) => m.key((i: any) => i.name("K")).value(tsT).nameType((t: any) => t.tstypereference(
+      (r: any) => r.typeName((n: any) => n.identifier((i: any) => i.name("U"))))).body((t: any) => t.tstypereference(
+      (r: any) => r.typeName((n: any) => n.identifier((i: any) => i.name("K")))))),
+    (k: any) => k.tsindexedaccesstype((a: any) => a.objectType(tsT).indexType((i: any) => i.tstypeoperator(
+      (o: any) => o.operator("keyof").typeAnnotation(tsT)))),
+    (k: any) => k.tstypequery((q: any) => q.exprName((e: any) => e.thisexpression((h: any) => h))),
+    (k: any) => k.tsimporttype((i: any) => i.source((s: any) => s.literal((li: any) => li.value((x: any) => x.as_scalar("m")))).qualifier(
+      (q: any) => q.identifier((j: any) => j.name("A")))),
+    (k: any) => k.tsconditionaltype((c: any) => c.checkType(tsT).extendsType((e: any) => e.tsarraytype((a: any) => a.elementType(
+      (i: any) => i.tsinfertype((f: any) => f.typeParameter((p: any) => p.name((n: any) => n.name("V"))))))).trueType(
+      (t: any) => t.tstypereference((r: any) => r.typeName((n: any) => n.identifier((i: any) => i.name("V"))))).falseType(
+      (t: any) => t.tsneverkeyword((h: any) => h))),
+  ]));
+
+  // --- typescript_patterns: every kind of TypeScript's Patterns, the terms a target may be among them --- the text:
+  // [{ a: record = 1, ...record }, , record.x, private record]
+  const typescriptPatterns = (u: any) => u.arraypattern((a: any) => a.elements([ // written through the builders
+    (e: any) => e.objectpattern((o: any) => o.properties([
+      (p: any) => p.property((q: any) => q.propertyKind("init").key((k: any) => k.identifier((i: any) => i.name("a"))).value(
+        (v: any) => v.assignmentpattern((s: any) => s.left(tsRecord).right((r: any) => r.literal((li: any) => li.value(
+          (x: any) => x.as_scalar(1.0))))))),
+      (p: any) => p.restelement((r: any) => r.argument(tsRecord))])),
+    (e: any) => e.elision((h: any) => h),
+    (e: any) => e.memberexpression((m: any) => m.object(tsRecord).property((y: any) => y.identifier((i: any) => i.name("x")))),
+    (e: any) => e.tsparameterproperty((t: any) => t.accessibility("private").parameter(tsRecord))]));
+
   // --- systemverilog_patterns: every kind of SystemVerilog's Patterns, held by Expressions' `matches` --- the text:
   // '{a: .x, b: tagged Valid (.*), c: record.a}
   const patterns = SVPatterns.Expressions.DIALECT.spec((u: any) => u.structurepattern((s: any) => s.items([
@@ -502,6 +566,52 @@ export function build(): Map<string, Case> {
         .branches([(b: any) => b.name(identifier("C")).items([(i: any) => i.otherdirective((r: any) => r.text("`resetall"))])])
         .alternative([(i: any) => i.disabledtext((r: any) => r.text("skipped;"))]).has_else(true)));
 
+  // --- python_types: every kind of Python's Types, nested where a type expression stands, and a type expression of
+  // Python3's kinds --- the text: T: list[int] | None = **P = *Ts = *tuple[int, ...]
+  const pythonTypes = PythonTypes.Expressions.DIALECT.spec((u: any) => u.typevar((t: any) => t.name("T").bound(
+    P.binop("|", P.subscript(P.name("list"), P.name("int")), P.constant(null))).default_value(
+    (d: any) => d.paramspec((s: any) => s.name("P").default_value((e: any) => e.typevartuple((v: any) => v.name("Ts").default_value(
+      P.starred(P.subscript(P.name("tuple"), P.tuple_(P.name("int"), P.constant(P.ELLIPSIS)))))))))));
+
+  // --- python_patterns: every kind of Python's Patterns, Python3's terms in their slots --- the text:
+  // record.Point(0, y=[a, *rest]) | {'k': None, **kw} | (record.RED as c)
+  const pythonPatterns = PythonPatterns.Expressions.DIALECT.spec((u: any) => u.matchor((o: any) => o.patterns([
+    (p: any) => p.matchclass((c: any) => c.cls(P.attribute(P.name("record"), "Point")).patterns([
+      (v: any) => v.matchvalue((m: any) => m.value(P.constant(0n)))]).kwd_attrs(["y"]).kwd_patterns([
+      (s: any) => s.matchsequence((q: any) => q.delimiters("[]").patterns([(a: any) => a.matchas((m: any) => m.name("a")),
+        (r: any) => r.matchstar((m: any) => m.name("rest"))]))])),
+    (p: any) => p.matchmapping((m: any) => m.keys([P.constant("k")]).patterns([
+      (s: any) => s.matchsingleton((v: any) => v.value("None"))]).rest("kw")),
+    (p: any) => p.matchas((m: any) => m.pattern((v: any) => v.matchvalue((w: any) => w.value(P.attribute(P.name("record"), "RED")))).name("c"))])));
+
+  // --- c_types and cpp_types: every kind of each Types dialect, an enumeration's type name, its body's enumerators, and a
+  // directive and a comment among them, C Preprocessor's --- the text: enum E {, its items each on its line, A = 1,
+  // #ifdef B_, B, #endif, its trailing comment after it, and }
+  const [CT, XT, CPRE] = [CTypes.Expressions.DIALECT, CppTypes.Expressions.DIALECT, CPreprocessor.Expressions.DIALECT];
+  const identified = (spelling: string) => (i: any) => i.spelling(spelling); // an identifier
+  const enumeration = (types: Terms.Dialect, family: any) => types.spec((t: any) => t.typeid((i: any) => i.specifiers([
+    (s: any) => s.enumspecifier((e: any) => e.key("enum").name(name("E")).body(true).enumerators([
+      (n: any) => n.enumerator((r: any) => r.name(identified("A")).value(family.literal(1n))),
+      (n: any) => n.ifdefdirective((d: any) => d.name(identified("B_")).items([types.spec((m: any) => m.enumerator(
+        (r: any) => r.name(identified("B"))))])),
+      (n: any) => n.comment((c: any) => c.text("last").trailing(true))]).trailing_comma(true))])));
+
+  // --- c_preprocessor: every kind, a conditional's branches nested, its conditions a C and a C++ term, its items C
+  // Types' and its own --- #if defined(X) && X > 1, A, #include <a.h>, /* one */, #elif Y == 2, #elifndef Z, #else,
+  // #define F(a, ...) a + 1, #pragma once, #ifdef W, #endif, #endif
+  const cPreprocessor = CPRE.spec((u: any) => u.ifdirective((d: any) => d.condition(CE.binary("&&", CE.DIALECT.spec(
+    (v: any) => v.definedexpression((x: any) => x.name(identified("X")))), CE.binary(">", CE.identifier("X"), 1n))).items([
+    CT.spec((m: any) => m.enumerator((r: any) => r.name(identified("A")))),
+    CPRE.spec((m: any) => m.includedirective((i: any) => i.path("a.h").system(true))),
+    CPRE.spec((m: any) => m.comment((c: any) => c.block(true).text(" one ")))]).alternative(
+    (a: any) => a.elifdirective((e: any) => e.condition(CPP.binary("==", CPP.identifier("Y"), 2n)).alternative(
+      (b: any) => b.elifdefdirective((f: any) => f.negated(true).name(identified("Z")).alternative(
+        (c: any) => c.elsedirective((g: any) => g.items([
+          CPRE.spec((m: any) => m.definedirective((h: any) => h.name(identified("F")).function_like(true).parameters([
+            identified("a")]).variadic(true).replacement("a + 1"))),
+          CPRE.spec((m: any) => m.otherdirective((o: any) => o.directive("pragma").text("once"))),
+          CPRE.spec((m: any) => m.ifdefdirective((o: any) => o.name(identified("W"))))])))))))));
+
   // --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
   // their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
   // (a binop's operands are Python3's terms, written in its union)
@@ -516,7 +626,10 @@ export function build(): Map<string, Case> {
     ["collections", collections], ["c", c], ["cpp", cpp], ["systemverilog", systemverilog],
     ["typescript5", TS.DIALECT.spec(typescript5)], ["invalid", invalid], ["systemverilog_patterns", patterns],
     ["systemverilog_assertions", assertions], ["systemverilog_constraints", constraints],
-    ["systemverilog_preprocessor", preprocessor],
+    ["systemverilog_preprocessor", preprocessor], ["python_types", pythonTypes], ["python_patterns", pythonPatterns],
+    ["typescript_types", TypeScriptTypes.Expressions.DIALECT.spec(typescriptTypes)],
+    ["typescript_patterns", TypeScriptPatterns.Expressions.DIALECT.spec(typescriptPatterns)],
+    ["c_types", enumeration(CT, CE)], ["cpp_types", enumeration(XT, CPP)], ["c_preprocessor", cPreprocessor],
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   terms.set("domains", defined.get("dialect"));
   for (const [name, dialect] of stored) terms.set(name, dialect);

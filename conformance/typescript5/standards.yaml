@@ -751,37 +751,3 @@ mutations:
                                                 name: CompoundLiteralExpression
                                               next:
                                                 target: {}
-                - mutations:
-                  - as_link:
-                      name: kind
-                      mutations:
-                      - set:
-                          ref:
-                            path:
-                              singleton: '.'
-                              next:
-                                entry:
-                                  i: schemas
-                                  o: ''
-                                  properties:
-                                    name: Expressions
-                                  next:
-                                    entry:
-                                      i: schemas
-                                      o: ''
-                                      properties:
-                                        name: C
-                                      next:
-                                        entry:
-                                          i: schemas
-                                          o: ''
-                                          properties:
-                                            name: Expressions
-                                          next:
-                                            entry:
-                                              i: schemas
-                                              o: ''
-                                              properties:
-                                                name: TypeId
-                                              next:
-                                                target: {}

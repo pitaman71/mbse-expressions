@@ -1,0 +1,528 @@
+{
+  "typescript_types": {
+    "tsuniontype": {
+      "types": [
+        {
+          "tsanykeyword": {}
+        },
+        {
+          "tsunknownkeyword": {}
+        },
+        {
+          "tsnumberkeyword": {}
+        },
+        {
+          "tsbigintkeyword": {}
+        },
+        {
+          "tsbooleankeyword": {}
+        },
+        {
+          "tsstringkeyword": {}
+        },
+        {
+          "tssymbolkeyword": {}
+        },
+        {
+          "tsobjectkeyword": {}
+        },
+        {
+          "tsneverkeyword": {}
+        },
+        {
+          "tsvoidkeyword": {}
+        },
+        {
+          "tsundefinedkeyword": {}
+        },
+        {
+          "tsnullkeyword": {}
+        },
+        {
+          "tsintrinsickeyword": {}
+        },
+        {
+          "tsthistype": {}
+        },
+        {
+          "tstypereference": {
+            "typeName": {
+              "tsqualifiedname": {
+                "left": {
+                  "identifier": {
+                    "name": "A"
+                  }
+                },
+                "right": {
+                  "name": "B"
+                }
+              }
+            },
+            "typeArguments": {
+              "params": [
+                {
+                  "tstypereference": {
+                    "typeName": {
+                      "identifier": {
+                        "name": "T"
+                      }
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "tsparenthesizedtype": {
+            "typeAnnotation": {
+              "tstypereference": {
+                "typeName": {
+                  "identifier": {
+                    "name": "T"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "tsliteraltype": {
+            "literal": {
+              "literal": {
+                "value": {
+                  "str": "s"
+                }
+              }
+            }
+          }
+        },
+        {
+          "tstemplateliteraltype": {
+            "quasis": [
+              {
+                "raw": "a"
+              },
+              {
+                "raw": "b",
+                "tail": true
+              }
+            ],
+            "types": [
+              {
+                "tstypereference": {
+                  "typeName": {
+                    "identifier": {
+                      "name": "T"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tsarraytype": {
+            "elementType": {
+              "tstypereference": {
+                "typeName": {
+                  "identifier": {
+                    "name": "T"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "tstupletype": {
+            "elementTypes": [
+              {
+                "tsnamedtuplemember": {
+                  "label": {
+                    "name": "a"
+                  },
+                  "elementType": {
+                    "tstypereference": {
+                      "typeName": {
+                        "identifier": {
+                          "name": "T"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "tsoptionaltype": {
+                  "typeAnnotation": {
+                    "tstypereference": {
+                      "typeName": {
+                        "identifier": {
+                          "name": "T"
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "tsresttype": {
+                  "typeAnnotation": {
+                    "tsarraytype": {
+                      "elementType": {
+                        "tstypereference": {
+                          "typeName": {
+                            "identifier": {
+                              "name": "T"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tsintersectiontype": {
+            "types": [
+              {
+                "tstypereference": {
+                  "typeName": {
+                    "identifier": {
+                      "name": "T"
+                    }
+                  }
+                }
+              },
+              {
+                "tstypereference": {
+                  "typeName": {
+                    "identifier": {
+                      "name": "U"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tsfunctiontype": {
+            "typeParameters": {
+              "params": [
+                {
+                  "name": {
+                    "name": "T"
+                  }
+                }
+              ]
+            },
+            "params": [
+              {
+                "identifier": {
+                  "name": "x",
+                  "typeAnnotation": {
+                    "typeAnnotation": {
+                      "tstypereference": {
+                        "typeName": {
+                          "identifier": {
+                            "name": "T"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "returnType": {
+              "typeAnnotation": {
+                "tstypepredicate": {
+                  "parameterName": {
+                    "identifier": {
+                      "name": "x"
+                    }
+                  },
+                  "typeAnnotation": {
+                    "typeAnnotation": {
+                      "tstypereference": {
+                        "typeName": {
+                          "identifier": {
+                            "name": "T"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "tsconstructortype": {
+            "abstract": true,
+            "returnType": {
+              "typeAnnotation": {
+                "tstypereference": {
+                  "typeName": {
+                    "identifier": {
+                      "name": "T"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "tstypeliteral": {
+            "members": [
+              {
+                "tspropertysignature": {
+                  "key": {
+                    "identifier": {
+                      "name": "a"
+                    }
+                  },
+                  "typeAnnotation": {
+                    "typeAnnotation": {
+                      "tstypereference": {
+                        "typeName": {
+                          "identifier": {
+                            "name": "T"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "tsmethodsignature": {
+                  "key": {
+                    "identifier": {
+                      "name": "m"
+                    }
+                  },
+                  "params": [
+                    {
+                      "identifier": {
+                        "name": "x"
+                      }
+                    }
+                  ],
+                  "returnType": {
+                    "typeAnnotation": {
+                      "tstypereference": {
+                        "typeName": {
+                          "identifier": {
+                            "name": "T"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "tscallsignaturedeclaration": {
+                  "returnType": {
+                    "typeAnnotation": {
+                      "tstypereference": {
+                        "typeName": {
+                          "identifier": {
+                            "name": "T"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "tsconstructsignaturedeclaration": {
+                  "returnType": {
+                    "typeAnnotation": {
+                      "tstypereference": {
+                        "typeName": {
+                          "identifier": {
+                            "name": "T"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "tsindexsignature": {
+                  "parameters": [
+                    {
+                      "identifier": {
+                        "name": "k",
+                        "typeAnnotation": {
+                          "typeAnnotation": {
+                            "tstypereference": {
+                              "typeName": {
+                                "identifier": {
+                                  "name": "T"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ],
+                  "typeAnnotation": {
+                    "typeAnnotation": {
+                      "tstypereference": {
+                        "typeName": {
+                          "identifier": {
+                            "name": "T"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "comment": {
+                  "text": " c"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "tsmappedtype": {
+            "value": {
+              "tstypereference": {
+                "typeName": {
+                  "identifier": {
+                    "name": "T"
+                  }
+                }
+              }
+            },
+            "body": {
+              "tstypereference": {
+                "typeName": {
+                  "identifier": {
+                    "name": "K"
+                  }
+                }
+              }
+            },
+            "key": {
+              "name": "K"
+            },
+            "nameType": {
+              "tstypereference": {
+                "typeName": {
+                  "identifier": {
+                    "name": "U"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "tsindexedaccesstype": {
+            "objectType": {
+              "tstypereference": {
+                "typeName": {
+                  "identifier": {
+                    "name": "T"
+                  }
+                }
+              }
+            },
+            "indexType": {
+              "tstypeoperator": {
+                "operator": "keyof",
+                "typeAnnotation": {
+                  "tstypereference": {
+                    "typeName": {
+                      "identifier": {
+                        "name": "T"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "tstypequery": {
+            "exprName": {
+              "thisexpression": {}
+            }
+          }
+        },
+        {
+          "tsimporttype": {
+            "source": {
+              "literal": {
+                "value": {
+                  "str": "m"
+                }
+              }
+            },
+            "qualifier": {
+              "identifier": {
+                "name": "A"
+              }
+            }
+          }
+        },
+        {
+          "tsconditionaltype": {
+            "checkType": {
+              "tstypereference": {
+                "typeName": {
+                  "identifier": {
+                    "name": "T"
+                  }
+                }
+              }
+            },
+            "extendsType": {
+              "tsarraytype": {
+                "elementType": {
+                  "tsinfertype": {
+                    "typeParameter": {
+                      "name": {
+                        "name": "V"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "trueType": {
+              "tstypereference": {
+                "typeName": {
+                  "identifier": {
+                    "name": "V"
+                  }
+                }
+              }
+            },
+            "falseType": {
+              "tsneverkeyword": {}
+            }
+          }
+        }
+      ]
+    }
+  }
+}

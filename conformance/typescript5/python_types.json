@@ -1,0 +1,70 @@
+{
+  "python_types": {
+    "typevar": {
+      "name": "T",
+      "bound": {
+        "binop": {
+          "left": {
+            "subscript": {
+              "value": {
+                "variable": {
+                  "name": "list"
+                }
+              },
+              "slice": {
+                "variable": {
+                  "name": "int"
+                }
+              }
+            }
+          },
+          "op": "|",
+          "right": {
+            "constant": {
+              "singleton": "None"
+            }
+          }
+        }
+      },
+      "default_value": {
+        "paramspec": {
+          "name": "P",
+          "default_value": {
+            "typevartuple": {
+              "name": "Ts",
+              "default_value": {
+                "starred": {
+                  "value": {
+                    "subscript": {
+                      "value": {
+                        "variable": {
+                          "name": "tuple"
+                        }
+                      },
+                      "slice": {
+                        "tuple": {
+                          "elts": [
+                            {
+                              "variable": {
+                                "name": "int"
+                              }
+                            },
+                            {
+                              "constant": {
+                                "singleton": "..."
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
