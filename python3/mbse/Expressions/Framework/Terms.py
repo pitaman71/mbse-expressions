@@ -352,18 +352,6 @@ def is_expression(schema: Any) -> bool:
     return False
 
 
-def is_binder(schema: Any) -> bool:
-    """Whether `schema` is `Expressions.Framework.Let` or refines it: a binder, every kind that binds names being a
-    variation of `let` (the dialects proposal, Decided for stage 6, Q8, "(a)"), so that validation, inference and
-    `Symbolics.free` read the names it binds by its kind's `scopes` (SystemVerilog's array method with a `with` clause,
-    its `foreach` constraint)."""
-    while isinstance(schema, Schemas.OfObject.Data):
-        if _named(schema, "Expressions.Framework.Let"):
-            return True
-        schema = schema.refines
-    return False
-
-
 def holder_of(value: Any) -> Any:
     """The reference object that holds a term, or anything a term holds (its record, a helper): the owner of its owner,
     in turn, up to the `Expression` whose `root` holds the tree. A term held by no store, a lone one, is refused as
@@ -1136,10 +1124,11 @@ class Dialect:
             domains = [Domains.Anything if argument is None else self._infer(argument, scope)
                        for argument, scope in zip(arguments, environments)]
         if kind.result is not None:  # several operators, which the kind applies itself
-            return kind.result(attributes_of(record), domains)
-        if signature is None:
+            result = kind.result(attributes_of(record), domains)
+        elif signature is None:
             return Domains.Anything  # an extension: nothing is known about it
-        result = signature.result(domains)
+        else:
+            result = signature.result(domains)
         if result is None:
             names = ", ".join(domain.name() for domain in domains)
             raise TypeError(f"{operator} cannot take ({names}); it takes {signature.describe()}")
