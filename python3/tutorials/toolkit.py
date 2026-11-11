@@ -1,8 +1,9 @@
-"""What the case studies share: the cold chain's schemas, a store of them, and `show`, which writes an expression as text.
+"""What the tutorials share: `dialects()`, the store Part I starts from; the cold chain's schemas and `cold_chain()`, a
+store of them, which Part II starts from; and `show`, which writes an expression as text.
 
 A shipment of vaccine travels with a data logger that records its temperature. `Shipment` holds what the logger
 reported: the latest reading, every reading, the hours in transit, and the loggers it carries (`Carries`, an entry
-per logger, with the slot it rides in). Case study 6 explains how `show` works.
+per logger, with the slot it rides in). Case study 13 explains how `show` works.
 """
 
 from mbse.Expressions import Framework
@@ -16,6 +17,7 @@ from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
 from mbse.Expressions.IEEE754 import Expressions as IEEE754
 from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
 from mbse.Expressions.Python import Python3
+from mbse.Expressions.TypeScript import TypeScript5
 from mbse.Expressions.Arm import AAPCS64
 from mbse.Expressions.SystemV import AMD64
 from mbse.Expressions.Unicode import Expressions as Unicode
@@ -23,6 +25,24 @@ from mbse.Expressions.SystemVerilog import Assertions as SVAssertions, Constrain
     Expressions as SystemVerilog, Patterns as SVPatterns, Preprocessor as SVPreprocessor, Types as SVTypes
 from mbse.Expressions.Framework import Terms
 from mbse.Schemas.Framework import Builders
+
+
+def dialects():
+    """A store that holds expressions of every dialect, and no schemas of its own: the framework's install, then the
+    standard dialects' (ISO/IEC 11404, IEEE 754, IEEE 1164, Unicode), whose kinds of domain the others use, then every
+    language's dialect, TypeScript5's among them, the two ABI dialects (`SystemV.AMD64`, `Arm.AAPCS64`) and
+    SystemVerilog's six, each in a transaction of its own; then each one's `define`, the standard dialects' first, each
+    in a transaction of its own, writing its singleton, its operations, its domains and the editions it covers. LaTeX
+    defines nothing. Part I starts from it; tutorial 1 builds such a store by hand."""
+    store = Builders.Store()
+    for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, TypeScript5, Matlab, Excel,
+                   Latex, C, Cpp, AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints,
+                   SVPreprocessor):
+        store.transaction(module.install)
+    for module in (ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, TypeScript5, Matlab, Excel, C, Cpp,
+                   AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):
+        store.transaction(module.define)
+    return store
 
 
 def install(txn):

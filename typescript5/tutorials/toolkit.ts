@@ -1,10 +1,10 @@
 /**
- * What the case studies share: the cold chain's schemas, a store of them, and `show`, which writes an expression as
- * text.
+ * What the tutorials share: `dialects()`, the store Part I starts from; the cold chain's schemas and `cold_chain()`, a
+ * store of them, which Part II starts from; and `show`, which writes an expression as text.
  *
  * A shipment of vaccine travels with a data logger that records its temperature. `Shipment` holds what the logger
  * reported: the latest reading, every reading, the hours in transit, and the loggers it carries (`Carries`, an entry
- * per logger, with the slot it rides in). Case study 6 explains how `show` works.
+ * per logger, with the slot it rides in). Case study 13 explains how `show` works.
  */
 
 import { Framework } from "@mbse/expressions";
@@ -19,6 +19,7 @@ import * as Excel from "@mbse/expressions/Excel/Expressions";
 import * as Latex from "@mbse/expressions/LaTeX/Expressions";
 import * as Matlab from "@mbse/expressions/MATLAB/Expressions";
 import * as Python3 from "@mbse/expressions/Python/Python3";
+import * as TypeScript5 from "@mbse/expressions/TypeScript/TypeScript5";
 import * as AAPCS64 from "@mbse/expressions/Arm/AAPCS64";
 import * as AMD64 from "@mbse/expressions/SystemV/AMD64";
 import * as SystemVerilog from "@mbse/expressions/SystemVerilog/Expressions";
@@ -29,6 +30,25 @@ import * as SVPreprocessor from "@mbse/expressions/SystemVerilog/Preprocessor";
 import * as SVTypes from "@mbse/expressions/SystemVerilog/Types";
 import { Terms } from "@mbse/expressions/Framework";
 import { Builders } from "@mbse/schemas/Framework";
+
+/** A store that holds expressions of every dialect, and no schemas of its own: the framework's install, then the
+ * standard dialects' (ISO/IEC 11404, IEEE 754, IEEE 1164, Unicode), whose kinds of domain the others use, then every
+ * language's dialect, TypeScript5's among them, the two ABI dialects (`SystemV/AMD64`, `Arm/AAPCS64`) and
+ * SystemVerilog's six, each in a transaction of its own; then each one's `define`, the standard dialects' first, each
+ * in a transaction of its own, writing its singleton, its operations, its domains and the editions it covers. LaTeX
+ * defines nothing. Part I starts from it; tutorial 1 builds such a store by hand. */
+export function dialects(): any {
+  const store: any = new Builders.Store();
+  for (const module of [Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, TypeScript5, Matlab, Excel,
+    Latex, C, Cpp, AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor]) {
+    store.transaction(module.install);
+  }
+  for (const module of [ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, TypeScript5, Matlab, Excel, C, Cpp,
+    AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor]) {
+    store.transaction(module.define);
+  }
+  return store;
+}
 
 /** The cold chain's schemas: `Shipment`, `Logger`, and `Carries`, which relates a shipment to its loggers. */
 export function install(txn: any): any {
