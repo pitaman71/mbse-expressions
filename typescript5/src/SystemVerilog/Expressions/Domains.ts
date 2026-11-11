@@ -31,6 +31,11 @@ const { ValueError } = Errors;
 const { repr } = Repr;
 export const Anything = D.Anything;
 
+/** The types SystemVerilog's keywords name that its dialect stores as domains, in its `define`'s order: a cast to one
+ * reads it from the store; a cast to another (`realtime`, a type a program declares) is not read. */
+export const NAMES: readonly string[] = ["logic", "reg", "integer", "time", "bit", "byte", "shortint", "int", "longint",
+  "real", "shortreal"];
+
 /** A type: `integral` with its `width`, signedness and number of `states` (4 or 2), or `real` with its IEEE 754
  * `format`. Its `name` is the one it is written with, its `label` where a stored domain names it; its `domain` is that
  * stored domain, null for a sized vector; types compare by the rest. */
@@ -68,6 +73,12 @@ export class SvType implements D.Domain {
 /** An integral type of a width: a packed `logic` or `bit` vector. */
 export function vector(width: number, signed = false, states = 4): SvType {
   return new SvType("integral", width, signed, states);
+}
+
+/** An unsized based integer's type (`'hFF`): a 4-state vector of 32 bits, or as many as its value needs, unsigned unless
+ * written signed (5.7.1). */
+export function unsized(value: bigint, signed = false): SvType {
+  return new SvType("integral", Math.max(32, value.toString(2).replace("-", "").length), signed, 4); // its magnitude's bits
 }
 
 /** The type SystemVerilog defines in `store` by `name`: the domain its dialect's singleton owns by that name, read as
@@ -199,23 +210,20 @@ export const UNARY: ReadonlyMap<string, D.Signature> = new Map<string, D.Signatu
   ...["&", "~&", "|", "~|", "^", "~^", "^~"].map((op): Entry => [op, new Sized(1, (ts) => (integral(ts) ? ONE : null), "(integral) -> logic", ONE)]),
 ]);
 
-export const CONDITIONAL = new D.Function([Anything, Anything, Anything], Anything);
-export const CONCATENATION = new D.Opaque();
-export const REPLICATION = new D.Function([Anything, Anything], Anything);
+/** The increments, prefix or postfix. */
+export const INCREMENT: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>(
+  ["++", "--"].map((op): Entry => [op, new Sized(1, (ts) => (integral(ts) ? ts[0] as SvType : null), "(integral) -> its type")]));
+
+/** The assignment operators: an assignment's value is its target's type. */
+export const ASSIGNMENT: ReadonlyMap<string, D.Signature> = new Map<string, D.Signature>(
+  ["=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=", "<<<=", ">>>="].map(
+    (op): Entry => [op, new Sized(2, (ts) => ts[0] as SvType, "(T, U) -> T")]));
+
+export const CONDITIONAL = new D.Opaque();
 export const SELECT = new D.Function([Anything, Anything], Anything);
 export const RANGE = new D.Function([Anything, Anything, Anything], Anything);
 export const INSIDE = new D.Opaque(ONE);
 export const SPAN = new D.Function([Anything, Anything], Anything);
-export const CAST = new D.Function([Anything], Anything);
+export const CAST = new D.Function([Anything, Anything], Anything);
 export const MEMBER = new D.Function([Anything], Anything);
-export const CALL = new D.Opaque();
-
-/** An array method's `with` clause: the domain of an array's items is not known statically. */
-class Iterated extends D.Opaque {
-  items(_domain: D.Domain): D.Domain {
-    return Anything;
-  }
-}
-
-export const METHOD = new D.Function([Anything], Anything);
-export const ITERATE = new Iterated();
+export const PARENTHESIZED = new Sized(1, (ts) => ts[0] as SvType, "(T) -> T", Anything);

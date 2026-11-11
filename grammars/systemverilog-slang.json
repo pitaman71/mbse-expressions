@@ -1,0 +1,2621 @@
+{
+ "grammar": "slang's syntax kinds (`SyntaxKind`), in slang's order: every kind an expression, a data type, a pattern, a sequence or a property, a constraint, or a compiler directive is, or holds, mapped to the kinds of SystemVerilog's six dialects (`kinds`, each `<Dialect>.<tag>`, a branch of `Expressions.SystemVerilog.<Dialect>.Term`) or their helpers (`helpers`, each `<Dialect>.<schema>`, the value object schema `Expressions.SystemVerilog.<Dialect>.<schema>`), both where slang's one kind is read as either, as mbse-programs' reader (`Verilog/_Reader.py`) reads it; every other kind listed as not an expression, with its reason. Every kind mbse-programs' reader reads into one of the dialects' kinds or helpers maps to it, and every kind and helper of the six dialects is mapped from some slang kind but three: `missing`, which slang writes as a missing token, not a node, and the Preprocessor's `disabledtext` and `comment`, which slang keeps as trivia (`DisabledText`, `LineComment`, `BlockComment`), not as syntax kinds. `error` is slang's `BadExpression`",
+ "checked": "pyslang 12.0.0 (slang 12), as mbse-programs pins it (`pyslang==12.0.0`): its 533 syntax kinds",
+ "nodes": [
+  {
+   "node": "Unknown",
+   "not": "slang's kind for no syntax node, which no source text has"
+  },
+  {
+   "node": "AcceptOnPropertyExpr",
+   "kinds": [
+    "Assertions.abortproperty"
+   ]
+  },
+  {
+   "node": "ActionBlock",
+   "not": "an assertion's actions, what passes and what fails, statements which mbse-programs holds with the assertion, not a term"
+  },
+  {
+   "node": "AddAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "AddExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "AlwaysBlock",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "AlwaysCombBlock",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "AlwaysFFBlock",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "AlwaysLatchBlock",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "AndAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "AndPropertyExpr",
+   "kinds": [
+    "Assertions.binaryproperty"
+   ]
+  },
+  {
+   "node": "AndSequenceExpr",
+   "kinds": [
+    "Assertions.binarysequence"
+   ]
+  },
+  {
+   "node": "AnonymousProgram",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "AnsiPortList",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "AnsiUdpPortList",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ArgumentList",
+   "not": "the parentheses around a call's arguments, its `arguments`"
+  },
+  {
+   "node": "ArithmeticLeftShiftAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "ArithmeticRightShiftAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "ArithmeticShiftLeftExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "ArithmeticShiftRightExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "ArrayAndMethod",
+   "helpers": [
+    "Expressions.Identifier"
+   ]
+  },
+  {
+   "node": "ArrayOrMethod",
+   "helpers": [
+    "Expressions.Identifier"
+   ]
+  },
+  {
+   "node": "ArrayOrRandomizeMethodExpression",
+   "kinds": [
+    "Expressions.randomizewithexpression",
+    "Expressions.arraymethodwithexpression"
+   ]
+  },
+  {
+   "node": "ArrayUniqueMethod",
+   "helpers": [
+    "Expressions.Identifier"
+   ]
+  },
+  {
+   "node": "ArrayXorMethod",
+   "helpers": [
+    "Expressions.Identifier"
+   ]
+  },
+  {
+   "node": "AscendingRangeSelect",
+   "not": "a select's inside, `[i]`, `[l +: w]` or `[l -: w]`, which its ElementSelect's kind (`indexexpression`, `rangeselect`) holds as its `index`, or its `left`, `operator` and `right`; or a dimension's, or a count of ticks or repetitions, held as the expression it is"
+  },
+  {
+   "node": "AssertPropertyStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "AssertionItemPort",
+   "not": "a port, a default or a local variable of a property, a sequence, a `let` or a checker, part of its declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "AssertionItemPortList",
+   "not": "a port, a default or a local variable of a property, a sequence, a `let` or a checker, part of its declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "AssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "AssignmentPatternExpression",
+   "kinds": [
+    "Expressions.assignmentpattern"
+   ]
+  },
+  {
+   "node": "AssignmentPatternItem",
+   "kinds": [
+    "Expressions.patternitem"
+   ]
+  },
+  {
+   "node": "AssumePropertyStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "AttributeInstance",
+   "helpers": [
+    "Expressions.AttributeInstance"
+   ]
+  },
+  {
+   "node": "AttributeSpec",
+   "helpers": [
+    "Expressions.AttributeSpec"
+   ]
+  },
+  {
+   "node": "BadExpression",
+   "kinds": [
+    "Expressions.error"
+   ]
+  },
+  {
+   "node": "BeginKeywordsDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "BinSelectWithFilterExpr",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "BinaryAndExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "BinaryBinsSelectExpr",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "BinaryBlockEventExpression",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "BinaryConditionalDirectiveExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "BinaryEventExpression",
+   "not": "the `or` or `,` between events, which an EventControl flattens into its list of `events`"
+  },
+  {
+   "node": "BinaryOrExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "BinaryXnorExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "BinaryXorExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "BindDirective",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "BindTargetList",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "BinsSelectConditionExpr",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "BinsSelection",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "BitSelect",
+   "not": "a select's inside, `[i]`, `[l +: w]` or `[l -: w]`, which its ElementSelect's kind (`indexexpression`, `rangeselect`) holds as its `index`, or its `left`, `operator` and `right`; or a dimension's, or a count of ticks or repetitions, held as the expression it is"
+  },
+  {
+   "node": "BitType",
+   "kinds": [
+    "Types.integervectortype"
+   ]
+  },
+  {
+   "node": "BlockCoverageEvent",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "BlockingEventTriggerStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ByteType",
+   "kinds": [
+    "Types.integeratomtype"
+   ]
+  },
+  {
+   "node": "CHandleType",
+   "kinds": [
+    "Types.keywordtype"
+   ]
+  },
+  {
+   "node": "CaseEqualityExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "CaseGenerate",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "CaseInequalityExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "CasePropertyExpr",
+   "kinds": [
+    "Assertions.caseproperty"
+   ]
+  },
+  {
+   "node": "CaseStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "CastExpression",
+   "kinds": [
+    "Expressions.castexpression"
+   ]
+  },
+  {
+   "node": "CellConfigRule",
+   "not": "part of a configuration (IEEE 1800 33.4), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "CellDefineDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "ChargeStrength",
+   "not": "a net's or a gate's strength, part of its declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "CheckerDataDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "CheckerDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "CheckerInstanceStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "CheckerInstantiation",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ClassDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ClassMethodDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ClassMethodPrototype",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ClassName",
+   "helpers": [
+    "Expressions.ParameterizedName"
+   ]
+  },
+  {
+   "node": "ClassPropertyDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ClassSpecifier",
+   "not": "part of a class's declaration (its `extends`, `implements` and method specifiers), which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ClockingDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ClockingDirection",
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "ClockingItem",
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "ClockingPropertyExpr",
+   "kinds": [
+    "Assertions.clockedproperty"
+   ]
+  },
+  {
+   "node": "ClockingSequenceExpr",
+   "kinds": [
+    "Assertions.clockedsequence"
+   ]
+  },
+  {
+   "node": "ClockingSkew",
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "ColonExpressionClause",
+   "not": "a queue dimension's bound, `: max`, which QueueDimension holds as its `bound`"
+  },
+  {
+   "node": "CompilationUnit",
+   "not": "a source file, which mbse-programs holds as an owned reference object (SourceText)"
+  },
+  {
+   "node": "ConcatenationExpression",
+   "kinds": [
+    "Expressions.concatenation"
+   ]
+  },
+  {
+   "node": "ConcurrentAssertionMember",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ConditionalConstraint",
+   "kinds": [
+    "Constraints.conditionalconstraint"
+   ]
+  },
+  {
+   "node": "ConditionalExpression",
+   "kinds": [
+    "Expressions.conditionalexpression"
+   ]
+  },
+  {
+   "node": "ConditionalPathDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ConditionalPattern",
+   "kinds": [
+    "Expressions.matchesexpression"
+   ]
+  },
+  {
+   "node": "ConditionalPredicate",
+   "kinds": [
+    "Expressions.predicateexpression"
+   ]
+  },
+  {
+   "node": "ConditionalPropertyExpr",
+   "kinds": [
+    "Assertions.conditionalproperty"
+   ]
+  },
+  {
+   "node": "ConditionalStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ConfigCellIdentifier",
+   "not": "part of a configuration (IEEE 1800 33.4), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ConfigDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ConfigInstanceIdentifier",
+   "not": "part of a configuration (IEEE 1800 33.4), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ConfigLiblist",
+   "not": "part of a configuration (IEEE 1800 33.4), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ConfigUseClause",
+   "not": "part of a configuration (IEEE 1800 33.4), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ConstraintBlock",
+   "kinds": [
+    "Constraints.constraintblock"
+   ]
+  },
+  {
+   "node": "ConstraintDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ConstraintPrototype",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ConstructorName",
+   "helpers": [
+    "Expressions.Identifier"
+   ]
+  },
+  {
+   "node": "ContinuousAssign",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "CopyClassExpression",
+   "kinds": [
+    "Expressions.newcopyexpression"
+   ]
+  },
+  {
+   "node": "CoverCross",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "CoverPropertyStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "CoverSequenceStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "CoverageBins",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "CoverageBinsArraySize",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "CoverageIffClause",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "CoverageOption",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "CovergroupDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "Coverpoint",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "CycleDelay",
+   "not": "a statement's or a declaration's timing control (a delay, a cycle delay, a repeated event control), which mbse-programs holds with it, not a term"
+  },
+  {
+   "node": "DPIExport",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "DPIImport",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "DataDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "Declarator",
+   "helpers": [
+    "Types.VariableDeclarator",
+    "Types.EnumMember"
+   ]
+  },
+  {
+   "node": "DefParam",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "DefParamAssignment",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "DefaultCaseItem",
+   "not": "part of a statement (its case item, its `else`, its loop's declaration, its deferral), which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "DefaultClockingReference",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "DefaultConfigRule",
+   "not": "part of a configuration (IEEE 1800 33.4), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "DefaultCoverageBinInitializer",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "DefaultDecayTimeDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "DefaultDisableDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "DefaultDistItem",
+   "helpers": [
+    "Constraints.DistItem"
+   ]
+  },
+  {
+   "node": "DefaultExtendsClauseArg",
+   "not": "part of a class's declaration (its `extends`, `implements` and method specifiers), which mbse-programs holds, not a term"
+  },
+  {
+   "node": "DefaultFunctionPort",
+   "not": "part of a function's or a task's declaration (its prototype, its ports), which mbse-programs holds, not a term"
+  },
+  {
+   "node": "DefaultNetTypeDirective",
+   "kinds": [
+    "Preprocessor.defaultnettypedirective"
+   ]
+  },
+  {
+   "node": "DefaultPatternKeyExpression",
+   "not": "`default`, a structured assignment pattern's key, which PatternItem holds as its absent `key`"
+  },
+  {
+   "node": "DefaultPropertyCaseItem",
+   "helpers": [
+    "Assertions.PropertyCaseItem"
+   ]
+  },
+  {
+   "node": "DefaultRsCaseItem",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "DefaultSkewItem",
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "DefaultTriregStrengthDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "DeferredAssertion",
+   "not": "part of a statement (its case item, its `else`, its loop's declaration, its deferral), which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "DefineDirective",
+   "kinds": [
+    "Preprocessor.definedirective"
+   ]
+  },
+  {
+   "node": "Delay3",
+   "not": "a statement's or a declaration's timing control (a delay, a cycle delay, a repeated event control), which mbse-programs holds with it, not a term"
+  },
+  {
+   "node": "DelayControl",
+   "not": "a statement's or a declaration's timing control (a delay, a cycle delay, a repeated event control), which mbse-programs holds with it, not a term"
+  },
+  {
+   "node": "DelayModeDistributedDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "DelayModePathDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "DelayModeUnitDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "DelayModeZeroDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "DelayedSequenceElement",
+   "helpers": [
+    "Assertions.DelayStep"
+   ]
+  },
+  {
+   "node": "DelayedSequenceExpr",
+   "kinds": [
+    "Assertions.delaysequence"
+   ]
+  },
+  {
+   "node": "DescendingRangeSelect",
+   "not": "a select's inside, `[i]`, `[l +: w]` or `[l -: w]`, which its ElementSelect's kind (`indexexpression`, `rangeselect`) holds as its `index`, or its `left`, `operator` and `right`; or a dimension's, or a count of ticks or repetitions, held as the expression it is"
+  },
+  {
+   "node": "DisableConstraint",
+   "kinds": [
+    "Constraints.disablesoftconstraint"
+   ]
+  },
+  {
+   "node": "DisableForkStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "DisableIff",
+   "not": "`disable iff (condition)`, which PropertySpec holds as its `disable`"
+  },
+  {
+   "node": "DisableStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "DistConstraintList",
+   "not": "the braces of `dist { ... }`, around a distribution's items, which DistExpression holds as its `items`"
+  },
+  {
+   "node": "DistItem",
+   "helpers": [
+    "Constraints.DistItem"
+   ]
+  },
+  {
+   "node": "DistWeight",
+   "not": "a distribution item's weight, `:= w` or `:/ w`, which DistItem holds as its `operator` and `weight`"
+  },
+  {
+   "node": "DivideAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "DivideExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "DividerClause",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "DoWhileStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "DotMemberClause",
+   "not": "a modport named after `.`, which an interface port or a VirtualInterfaceType holds as its `modport`"
+  },
+  {
+   "node": "DriveStrength",
+   "not": "a net's or a gate's strength, part of its declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "EdgeControlSpecifier",
+   "not": "part of a specify block (its paths, its timing checks and their arguments), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "EdgeDescriptor",
+   "not": "part of a specify block (its paths, its timing checks and their arguments), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "EdgeSensitivePathSuffix",
+   "not": "part of a specify block (its paths, its timing checks and their arguments), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ElabSystemTask",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ElementSelect",
+   "kinds": [
+    "Expressions.indexexpression",
+    "Expressions.rangeselect"
+   ]
+  },
+  {
+   "node": "ElementSelectExpression",
+   "kinds": [
+    "Expressions.indexexpression",
+    "Expressions.rangeselect"
+   ]
+  },
+  {
+   "node": "ElsIfDirective",
+   "helpers": [
+    "Preprocessor.ElsifDirective"
+   ]
+  },
+  {
+   "node": "ElseClause",
+   "not": "part of a statement (its case item, its `else`, its loop's declaration, its deferral), which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "ElseConstraintClause",
+   "not": "a conditional constraint's `else`, which ConditionalConstraint holds as its `alternative`"
+  },
+  {
+   "node": "ElseDirective",
+   "not": "an `else of conditional compilation, which IfdefDirective holds as its `has_else` and `alternative`"
+  },
+  {
+   "node": "ElsePropertyClause",
+   "not": "a conditional property's `else`, which ConditionalProperty holds as its `alternative`"
+  },
+  {
+   "node": "EmptyArgument",
+   "kinds": [
+    "Expressions.emptyargument"
+   ]
+  },
+  {
+   "node": "EmptyIdentifierName",
+   "kinds": [
+    "Expressions.emptyargument"
+   ]
+  },
+  {
+   "node": "EmptyMember",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "EmptyNonAnsiPort",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "EmptyPortConnection",
+   "kinds": [
+    "Expressions.emptyargument"
+   ]
+  },
+  {
+   "node": "EmptyQueueExpression",
+   "kinds": [
+    "Expressions.emptyqueue"
+   ]
+  },
+  {
+   "node": "EmptyStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "EmptyTimingCheckArg",
+   "kinds": [
+    "Expressions.emptyargument"
+   ]
+  },
+  {
+   "node": "EndCellDefineDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "EndIfDirective",
+   "not": "the `endif closing conditional compilation, the end of its IfdefDirective"
+  },
+  {
+   "node": "EndKeywordsDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "EndProtectDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "EndProtectedDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "EnumType",
+   "kinds": [
+    "Types.enumtype"
+   ]
+  },
+  {
+   "node": "EqualityExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "EqualsAssertionArgClause",
+   "not": "a port, a default or a local variable of a property, a sequence, a `let` or a checker, part of its declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "EqualsTypeClause",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "EqualsValueClause",
+   "not": "an initializer, `= value`, which its declarator, its enum member or its attribute holds as its `value`"
+  },
+  {
+   "node": "EventControl",
+   "helpers": [
+    "Assertions.EventControl",
+    "Assertions.EventExpression"
+   ]
+  },
+  {
+   "node": "EventControlWithExpression",
+   "helpers": [
+    "Assertions.EventControl"
+   ]
+  },
+  {
+   "node": "EventType",
+   "kinds": [
+    "Types.keywordtype"
+   ]
+  },
+  {
+   "node": "ExpectPropertyStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ExplicitAnsiPort",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ExplicitNonAnsiPort",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ExpressionConstraint",
+   "kinds": [
+    "Constraints.expressionconstraint"
+   ]
+  },
+  {
+   "node": "ExpressionCoverageBinInitializer",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "ExpressionOrDist",
+   "kinds": [
+    "Constraints.distexpression"
+   ]
+  },
+  {
+   "node": "ExpressionPattern",
+   "not": "an expression where a pattern is, held as that expression, since `Patterns.Term` lists `Expressions.Term`'s branches"
+  },
+  {
+   "node": "ExpressionStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ExpressionTimingCheckArg",
+   "not": "part of a specify block (its paths, its timing checks and their arguments), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ExtendsClause",
+   "not": "part of a class's declaration (its `extends`, `implements` and method specifiers), which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ExternInterfaceMethod",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ExternModuleDecl",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ExternUdpDecl",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "FilePathSpec",
+   "not": "part of a library map (IEEE 1800 33.3), read from a library map file, not from source text: not a term, and not read by mbse-programs"
+  },
+  {
+   "node": "FinalBlock",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "FirstMatchSequenceExpr",
+   "kinds": [
+    "Assertions.firstmatchsequence"
+   ]
+  },
+  {
+   "node": "FollowedByPropertyExpr",
+   "kinds": [
+    "Assertions.implicationproperty"
+   ]
+  },
+  {
+   "node": "ForLoopStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ForVariableDeclaration",
+   "not": "part of a statement (its case item, its `else`, its loop's declaration, its deferral), which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "ForeachLoopList",
+   "not": "a foreach's array and its loop variables, which ForeachConstraint (or a foreach statement) holds as its `array` and `variables`"
+  },
+  {
+   "node": "ForeachLoopStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ForeverStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ForwardTypeRestriction",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "ForwardTypedefDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "FunctionDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "FunctionPort",
+   "not": "part of a function's or a task's declaration (its prototype, its ports), which mbse-programs holds, not a term"
+  },
+  {
+   "node": "FunctionPortList",
+   "not": "part of a function's or a task's declaration (its prototype, its ports), which mbse-programs holds, not a term"
+  },
+  {
+   "node": "FunctionPrototype",
+   "not": "part of a function's or a task's declaration (its prototype, its ports), which mbse-programs holds, not a term"
+  },
+  {
+   "node": "GenerateBlock",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "GenerateRegion",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "GenvarDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "GreaterThanEqualExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "GreaterThanExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "HierarchicalInstance",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "HierarchyInstantiation",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "IdWithExprCoverageBinInitializer",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "IdentifierName",
+   "kinds": [
+    "Expressions.nameexpression"
+   ],
+   "helpers": [
+    "Expressions.Identifier"
+   ]
+  },
+  {
+   "node": "IdentifierSelectName",
+   "kinds": [
+    "Expressions.nameexpression",
+    "Expressions.indexexpression",
+    "Expressions.rangeselect"
+   ]
+  },
+  {
+   "node": "IfDefDirective",
+   "kinds": [
+    "Preprocessor.ifdefdirective"
+   ]
+  },
+  {
+   "node": "IfGenerate",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "IfNDefDirective",
+   "kinds": [
+    "Preprocessor.ifdefdirective"
+   ]
+  },
+  {
+   "node": "IfNonePathDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "IffEventClause",
+   "not": "an event's `iff` condition, which EventExpression holds as its `condition`"
+  },
+  {
+   "node": "IffPropertyExpr",
+   "kinds": [
+    "Assertions.binaryproperty"
+   ]
+  },
+  {
+   "node": "ImmediateAssertStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ImmediateAssertionMember",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ImmediateAssumeStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ImmediateCoverStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ImplementsClause",
+   "not": "part of a class's declaration (its `extends`, `implements` and method specifiers), which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ImplicationConstraint",
+   "kinds": [
+    "Constraints.implicationconstraint"
+   ]
+  },
+  {
+   "node": "ImplicationPropertyExpr",
+   "kinds": [
+    "Assertions.implicationproperty"
+   ]
+  },
+  {
+   "node": "ImplicitAnsiPort",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ImplicitEventControl",
+   "helpers": [
+    "Assertions.EventControl"
+   ]
+  },
+  {
+   "node": "ImplicitNonAnsiPort",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ImplicitType",
+   "kinds": [
+    "Types.implicittype"
+   ]
+  },
+  {
+   "node": "ImpliesPropertyExpr",
+   "kinds": [
+    "Assertions.binaryproperty"
+   ]
+  },
+  {
+   "node": "IncludeDirective",
+   "kinds": [
+    "Preprocessor.includedirective"
+   ]
+  },
+  {
+   "node": "InequalityExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "InitialBlock",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "InsideExpression",
+   "kinds": [
+    "Expressions.insideexpression"
+   ]
+  },
+  {
+   "node": "InstanceConfigRule",
+   "not": "part of a configuration (IEEE 1800 33.4), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "InstanceName",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "IntType",
+   "kinds": [
+    "Types.integeratomtype"
+   ]
+  },
+  {
+   "node": "IntegerLiteralExpression",
+   "kinds": [
+    "Expressions.literal"
+   ]
+  },
+  {
+   "node": "IntegerType",
+   "kinds": [
+    "Types.integeratomtype"
+   ]
+  },
+  {
+   "node": "IntegerVectorExpression",
+   "kinds": [
+    "Expressions.literal",
+    "Expressions.constant"
+   ]
+  },
+  {
+   "node": "InterfaceDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "InterfaceHeader",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "InterfacePortHeader",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "IntersectClause",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "IntersectSequenceExpr",
+   "kinds": [
+    "Assertions.binarysequence"
+   ]
+  },
+  {
+   "node": "InvocationExpression",
+   "kinds": [
+    "Expressions.callexpression",
+    "Expressions.systemcall"
+   ]
+  },
+  {
+   "node": "JumpStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "LessThanEqualExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "LessThanExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "LetDeclaration",
+   "not": "a property's, a sequence's or a `let`'s declaration, which mbse-programs holds as an owned reference object, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "LibraryDeclaration",
+   "not": "part of a library map (IEEE 1800 33.3), read from a library map file, not from source text: not a term, and not read by mbse-programs"
+  },
+  {
+   "node": "LibraryIncDirClause",
+   "not": "part of a library map (IEEE 1800 33.3), read from a library map file, not from source text: not a term, and not read by mbse-programs"
+  },
+  {
+   "node": "LibraryIncludeStatement",
+   "not": "part of a library map (IEEE 1800 33.3), read from a library map file, not from source text: not a term, and not read by mbse-programs"
+  },
+  {
+   "node": "LibraryMap",
+   "not": "part of a library map (IEEE 1800 33.3), read from a library map file, not from source text: not a term, and not read by mbse-programs"
+  },
+  {
+   "node": "LineDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "LocalScope",
+   "not": "`local::`, the scope of a name, which LocalName holds"
+  },
+  {
+   "node": "LocalVariableDeclaration",
+   "not": "a port, a default or a local variable of a property, a sequence, a `let` or a checker, part of its declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "LogicType",
+   "kinds": [
+    "Types.integervectortype"
+   ]
+  },
+  {
+   "node": "LogicalAndExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "LogicalEquivalenceExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "LogicalImplicationExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "LogicalLeftShiftAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "LogicalOrExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "LogicalRightShiftAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "LogicalShiftLeftExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "LogicalShiftRightExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "LongIntType",
+   "kinds": [
+    "Types.integeratomtype"
+   ]
+  },
+  {
+   "node": "LoopConstraint",
+   "kinds": [
+    "Constraints.foreachconstraint"
+   ]
+  },
+  {
+   "node": "LoopGenerate",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "LoopStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "MacroActualArgument",
+   "not": "a macro use's arguments, which MacroUsage holds as written, in its `arguments`"
+  },
+  {
+   "node": "MacroActualArgumentList",
+   "not": "a macro use's arguments, which MacroUsage holds as written, in its `arguments`"
+  },
+  {
+   "node": "MacroArgumentDefault",
+   "not": "a macro definition's parameters, which DefineDirective holds as its `parameters`"
+  },
+  {
+   "node": "MacroFormalArgument",
+   "not": "a macro definition's parameters, which DefineDirective holds as its `parameters`"
+  },
+  {
+   "node": "MacroFormalArgumentList",
+   "not": "a macro definition's parameters, which DefineDirective holds as its `parameters`"
+  },
+  {
+   "node": "MacroUsage",
+   "kinds": [
+    "Preprocessor.macrousage"
+   ]
+  },
+  {
+   "node": "MatchesClause",
+   "not": "`matches pattern`, which MatchesExpression holds as its `pattern`"
+  },
+  {
+   "node": "MemberAccessExpression",
+   "kinds": [
+    "Expressions.memberexpression"
+   ]
+  },
+  {
+   "node": "MinTypMaxExpression",
+   "kinds": [
+    "Expressions.mintypmaxexpression"
+   ]
+  },
+  {
+   "node": "ModAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "ModExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "ModportClockingPort",
+   "not": "part of a modport declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ModportDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ModportExplicitPort",
+   "not": "part of a modport declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ModportItem",
+   "not": "part of a modport declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ModportNamedPort",
+   "not": "part of a modport declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ModportSimplePortList",
+   "not": "part of a modport declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ModportSubroutinePort",
+   "not": "part of a modport declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ModportSubroutinePortList",
+   "not": "part of a modport declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "ModuleDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ModuleHeader",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "MultipleConcatenationExpression",
+   "kinds": [
+    "Expressions.replication"
+   ]
+  },
+  {
+   "node": "MultiplyAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "MultiplyExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "NameValuePragmaExpression",
+   "not": "a `pragma directive's argument, which OtherDirective holds as written, in its `text`"
+  },
+  {
+   "node": "NamedArgument",
+   "kinds": [
+    "Expressions.namedconnection"
+   ]
+  },
+  {
+   "node": "NamedBlockClause",
+   "not": "a block's or a declaration's name after `begin :`, `end :` or `endmodule :`, which mbse-programs holds with it, not a term"
+  },
+  {
+   "node": "NamedConditionalDirectiveExpression",
+   "kinds": [
+    "Expressions.nameexpression"
+   ]
+  },
+  {
+   "node": "NamedLabel",
+   "not": "a statement's or an assertion item's label, `name:`, which mbse-programs holds with it, not a term"
+  },
+  {
+   "node": "NamedParamAssignment",
+   "kinds": [
+    "Expressions.namedconnection"
+   ]
+  },
+  {
+   "node": "NamedPortConnection",
+   "kinds": [
+    "Expressions.namedconnection"
+   ]
+  },
+  {
+   "node": "NamedStructurePatternMember",
+   "kinds": [
+    "Patterns.patternmember"
+   ]
+  },
+  {
+   "node": "NamedType",
+   "kinds": [
+    "Types.namedtype"
+   ]
+  },
+  {
+   "node": "NetAlias",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "NetDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "NetPortHeader",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "NetTypeDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "NewArrayExpression",
+   "kinds": [
+    "Expressions.newarrayexpression"
+   ]
+  },
+  {
+   "node": "NewClassExpression",
+   "kinds": [
+    "Expressions.newexpression"
+   ]
+  },
+  {
+   "node": "NoUnconnectedDriveDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "NonAnsiPortList",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "NonAnsiUdpPortList",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "NonblockingAssignmentExpression",
+   "not": "a nonblocking assignment, `<=`, which slang reads only as a statement: mbse-programs' AssignmentStatement, not a term"
+  },
+  {
+   "node": "NonblockingEventTriggerStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "NullLiteralExpression",
+   "kinds": [
+    "Expressions.constant"
+   ]
+  },
+  {
+   "node": "NumberPragmaExpression",
+   "not": "a `pragma directive's argument, which OtherDirective holds as written, in its `text`"
+  },
+  {
+   "node": "OneStepDelay",
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "OrAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "OrPropertyExpr",
+   "kinds": [
+    "Assertions.binaryproperty"
+   ]
+  },
+  {
+   "node": "OrSequenceExpr",
+   "kinds": [
+    "Assertions.binarysequence"
+   ]
+  },
+  {
+   "node": "OrderedArgument",
+   "not": "an ordered argument, held as the expression, the type, the sequence or the property it is, one of its call's `arguments`"
+  },
+  {
+   "node": "OrderedParamAssignment",
+   "not": "an ordered parameter value, held as the expression or the type it is, one of `parameters`"
+  },
+  {
+   "node": "OrderedPortConnection",
+   "not": "an ordered port connection, held as the expression it is, one of an instance's `connections`, mbse-programs'"
+  },
+  {
+   "node": "OrderedStructurePatternMember",
+   "not": "an ordered member of a structure pattern, held as the pattern it is, one of StructurePattern's `items`"
+  },
+  {
+   "node": "PackageDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "PackageExportAllDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "PackageExportDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "PackageHeader",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "PackageImportDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "PackageImportItem",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "ParallelBlockStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ParameterDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ParameterDeclarationStatement",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ParameterPortList",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "ParameterValueAssignment",
+   "not": "`#(...)`, around a parameterized name's or an instance's parameter values, which it holds as its `parameters`"
+  },
+  {
+   "node": "ParenExpressionList",
+   "not": "the parentheses after `with`, around a randomize's variables or an array method's expression, which RandomizeWithExpression holds as its `variables` and ArrayMethodWithExpression as its `expression`"
+  },
+  {
+   "node": "ParenPragmaExpression",
+   "not": "a `pragma directive's argument, which OtherDirective holds as written, in its `text`"
+  },
+  {
+   "node": "ParenthesizedBinsSelectExpr",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "ParenthesizedConditionalDirectiveExpression",
+   "kinds": [
+    "Expressions.parenthesizedexpression"
+   ]
+  },
+  {
+   "node": "ParenthesizedEventExpression",
+   "not": "parentheses around events, the `@(...)`'s own or nested ones, which an EventControl flattens into its list of `events`"
+  },
+  {
+   "node": "ParenthesizedExpression",
+   "kinds": [
+    "Expressions.parenthesizedexpression"
+   ]
+  },
+  {
+   "node": "ParenthesizedPattern",
+   "kinds": [
+    "Patterns.parenthesizedpattern"
+   ]
+  },
+  {
+   "node": "ParenthesizedPropertyExpr",
+   "kinds": [
+    "Assertions.parenthesizedproperty"
+   ]
+  },
+  {
+   "node": "ParenthesizedSequenceExpr",
+   "kinds": [
+    "Assertions.parenthesizedsequence",
+    "Assertions.repetitionsequence"
+   ]
+  },
+  {
+   "node": "PathDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "PathDescription",
+   "not": "part of a specify block (its paths, its timing checks and their arguments), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "PatternCaseItem",
+   "not": "part of a statement (its case item, its `else`, its loop's declaration, its deferral), which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "PortConcatenation",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "PortDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "PortReference",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "PostdecrementExpression",
+   "kinds": [
+    "Expressions.incrementexpression"
+   ]
+  },
+  {
+   "node": "PostincrementExpression",
+   "kinds": [
+    "Expressions.incrementexpression"
+   ]
+  },
+  {
+   "node": "PowerExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "PragmaDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "PrimaryBlockEventExpression",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "PrimitiveInstantiation",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ProceduralAssignStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ProceduralDeassignStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ProceduralForceStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ProceduralReleaseStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "Production",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "ProgramDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ProgramHeader",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "PropertyDeclaration",
+   "not": "a property's, a sequence's or a `let`'s declaration, which mbse-programs holds as an owned reference object, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "PropertySpec",
+   "kinds": [
+    "Assertions.propertyspec"
+   ]
+  },
+  {
+   "node": "PropertyType",
+   "kinds": [
+    "Types.keywordtype"
+   ]
+  },
+  {
+   "node": "ProtectDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "ProtectedDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "PullStrength",
+   "not": "a net's or a gate's strength, part of its declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "PulseStyleDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "QueueDimensionSpecifier",
+   "not": "the inside of a dimension's brackets, which its dimension (`RangeDimension`, `SizeDimension`, `AssociativeDimension`, `QueueDimension`) holds"
+  },
+  {
+   "node": "RandCaseItem",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "RandCaseStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "RandJoinClause",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "RandSequenceStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "RangeCoverageBinInitializer",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "RangeDimensionSpecifier",
+   "not": "the inside of a dimension's brackets, which its dimension (`RangeDimension`, `SizeDimension`, `AssociativeDimension`, `QueueDimension`) holds"
+  },
+  {
+   "node": "RangeList",
+   "not": "the braces around a set of values, which InsideExpression and UniqueConstraint hold as their `set`"
+  },
+  {
+   "node": "RealLiteralExpression",
+   "kinds": [
+    "Expressions.literal"
+   ]
+  },
+  {
+   "node": "RealTimeType",
+   "kinds": [
+    "Types.nonintegertype"
+   ]
+  },
+  {
+   "node": "RealType",
+   "kinds": [
+    "Types.nonintegertype"
+   ]
+  },
+  {
+   "node": "RegType",
+   "kinds": [
+    "Types.integervectortype"
+   ]
+  },
+  {
+   "node": "RepeatedEventControl",
+   "not": "a statement's or a declaration's timing control (a delay, a cycle delay, a repeated event control), which mbse-programs holds with it, not a term"
+  },
+  {
+   "node": "ReplicatedAssignmentPattern",
+   "not": "the `'{...}` of an assignment pattern, which AssignmentPattern holds as its `items` (and, replicated, its `count`)"
+  },
+  {
+   "node": "ResetAllDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "RestrictPropertyStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ReturnStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "RootScope",
+   "kinds": [
+    "Expressions.rootexpression"
+   ]
+  },
+  {
+   "node": "RsCase",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "RsCodeBlock",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "RsElseClause",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "RsIfElse",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "RsProdItem",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "RsRepeat",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "RsRule",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "RsWeightClause",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "SUntilPropertyExpr",
+   "kinds": [
+    "Assertions.binaryproperty"
+   ]
+  },
+  {
+   "node": "SUntilWithPropertyExpr",
+   "kinds": [
+    "Assertions.binaryproperty"
+   ]
+  },
+  {
+   "node": "ScopedName",
+   "kinds": [
+    "Expressions.nameexpression",
+    "Expressions.memberexpression"
+   ],
+   "helpers": [
+    "Expressions.ScopedName",
+    "Expressions.LocalName",
+    "Expressions.InterfaceTypeName",
+    "Expressions.InterfaceMethodName"
+   ]
+  },
+  {
+   "node": "SequenceDeclaration",
+   "not": "a property's, a sequence's or a `let`'s declaration, which mbse-programs holds as an owned reference object, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "SequenceMatchList",
+   "not": "a sequence's match items, `, v = e`, which ParenthesizedSequence and FirstMatchSequence hold as their `items`"
+  },
+  {
+   "node": "SequenceRepetition",
+   "not": "a repetition, `[*n]`, `[->n]`, `[=n]`, `[*]` or `[+]`, which the RepetitionSequence made of the sequence it follows holds as its `operator` and `count`"
+  },
+  {
+   "node": "SequenceType",
+   "kinds": [
+    "Types.keywordtype"
+   ]
+  },
+  {
+   "node": "SequentialBlockStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ShortIntType",
+   "kinds": [
+    "Types.integeratomtype"
+   ]
+  },
+  {
+   "node": "ShortRealType",
+   "kinds": [
+    "Types.nonintegertype"
+   ]
+  },
+  {
+   "node": "SignalEventExpression",
+   "helpers": [
+    "Assertions.EventExpression"
+   ]
+  },
+  {
+   "node": "SignedCastExpression",
+   "kinds": [
+    "Expressions.castexpression",
+    "Types.implicittype"
+   ]
+  },
+  {
+   "node": "SimpleAssignmentPattern",
+   "not": "the `'{...}` of an assignment pattern, which AssignmentPattern holds as its `items` (and, replicated, its `count`)"
+  },
+  {
+   "node": "SimpleBinsSelectExpr",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "SimplePathSuffix",
+   "not": "part of a specify block (its paths, its timing checks and their arguments), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "SimplePragmaExpression",
+   "not": "a `pragma directive's argument, which OtherDirective holds as written, in its `text`"
+  },
+  {
+   "node": "SimplePropertyExpr",
+   "not": "a sequence or an expression where a property is, held as what it is, since `Assertions.Term` lists `Expressions.Term`'s branches"
+  },
+  {
+   "node": "SimpleRangeSelect",
+   "kinds": [
+    "Assertions.cyclerange"
+   ]
+  },
+  {
+   "node": "SimpleSequenceExpr",
+   "kinds": [
+    "Assertions.repetitionsequence"
+   ]
+  },
+  {
+   "node": "SolveBeforeConstraint",
+   "kinds": [
+    "Constraints.solvebeforeconstraint"
+   ]
+  },
+  {
+   "node": "SpecifyBlock",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "SpecparamDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "SpecparamDeclarator",
+   "not": "part of a specify block (its paths, its timing checks and their arguments), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "StandardCaseItem",
+   "not": "part of a statement (its case item, its `else`, its loop's declaration, its deferral), which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "StandardPropertyCaseItem",
+   "helpers": [
+    "Assertions.PropertyCaseItem"
+   ]
+  },
+  {
+   "node": "StandardRsCaseItem",
+   "not": "part of a randsequence or a randcase statement, which mbse-programs holds with the statement, not a term"
+  },
+  {
+   "node": "StreamExpression",
+   "helpers": [
+    "Expressions.StreamItem"
+   ]
+  },
+  {
+   "node": "StreamExpressionWithRange",
+   "not": "a stream item's `with [range]`, which StreamItem holds as its `left`, `operator` and `right`"
+  },
+  {
+   "node": "StreamingConcatenationExpression",
+   "kinds": [
+    "Expressions.streamingconcatenation"
+   ]
+  },
+  {
+   "node": "StringLiteralExpression",
+   "kinds": [
+    "Expressions.literal"
+   ]
+  },
+  {
+   "node": "StringType",
+   "kinds": [
+    "Types.keywordtype"
+   ]
+  },
+  {
+   "node": "StrongWeakPropertyExpr",
+   "kinds": [
+    "Assertions.strengthproperty"
+   ]
+  },
+  {
+   "node": "StructType",
+   "kinds": [
+    "Types.structtype"
+   ]
+  },
+  {
+   "node": "StructUnionMember",
+   "helpers": [
+    "Types.StructMember"
+   ]
+  },
+  {
+   "node": "StructurePattern",
+   "kinds": [
+    "Patterns.structurepattern"
+   ]
+  },
+  {
+   "node": "StructuredAssignmentPattern",
+   "not": "the `'{...}` of an assignment pattern, which AssignmentPattern holds as its `items` (and, replicated, its `count`)"
+  },
+  {
+   "node": "SubtractAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  },
+  {
+   "node": "SubtractExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "SuperHandle",
+   "kinds": [
+    "Expressions.superexpression"
+   ]
+  },
+  {
+   "node": "SuperNewDefaultedArgsExpression",
+   "kinds": [
+    "Expressions.newexpression"
+   ]
+  },
+  {
+   "node": "SystemName",
+   "kinds": [
+    "Expressions.systemcall"
+   ]
+  },
+  {
+   "node": "SystemTimingCheck",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TaggedPattern",
+   "kinds": [
+    "Patterns.taggedpattern"
+   ]
+  },
+  {
+   "node": "TaggedUnionExpression",
+   "kinds": [
+    "Expressions.taggedexpression"
+   ]
+  },
+  {
+   "node": "TaskDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ThisHandle",
+   "kinds": [
+    "Expressions.thisexpression"
+   ]
+  },
+  {
+   "node": "ThroughoutSequenceExpr",
+   "kinds": [
+    "Assertions.binarysequence"
+   ]
+  },
+  {
+   "node": "TimeLiteralExpression",
+   "kinds": [
+    "Expressions.literal"
+   ]
+  },
+  {
+   "node": "TimeScaleDirective",
+   "kinds": [
+    "Preprocessor.timescaledirective"
+   ]
+  },
+  {
+   "node": "TimeType",
+   "kinds": [
+    "Types.integeratomtype"
+   ]
+  },
+  {
+   "node": "TimeUnitsDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TimingCheckEventArg",
+   "not": "part of a specify block (its paths, its timing checks and their arguments), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "TimingCheckEventCondition",
+   "not": "part of a specify block (its paths, its timing checks and their arguments), an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "TimingControlExpression",
+   "not": "an intra-assignment timing control, `= #d value`, which slang reads only in an assignment statement: mbse-programs' AssignmentStatement's `timing`, not a term"
+  },
+  {
+   "node": "TimingControlStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TransListCoverageBinInitializer",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "TransRange",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "TransRepeatRange",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "TransSet",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "TypeAssignment",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "TypeParameterDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "TypeReference",
+   "kinds": [
+    "Types.typereference"
+   ]
+  },
+  {
+   "node": "TypedefDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "UdpBody",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "UdpDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "UdpEdgeField",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "UdpEntry",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "UdpInitialStmt",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "UdpInputPortDecl",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "UdpOutputPortDecl",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "UdpSimpleField",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "UnaryBinsSelectExpr",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "UnaryBitwiseAndExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryBitwiseNandExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryBitwiseNorExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryBitwiseNotExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryBitwiseOrExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryBitwiseXnorExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryBitwiseXorExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryConditionalDirectiveExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryLogicalNotExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryMinusExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryPlusExpression",
+   "kinds": [
+    "Expressions.unaryexpression"
+   ]
+  },
+  {
+   "node": "UnaryPredecrementExpression",
+   "kinds": [
+    "Expressions.incrementexpression"
+   ]
+  },
+  {
+   "node": "UnaryPreincrementExpression",
+   "kinds": [
+    "Expressions.incrementexpression"
+   ]
+  },
+  {
+   "node": "UnaryPropertyExpr",
+   "kinds": [
+    "Assertions.unaryproperty"
+   ]
+  },
+  {
+   "node": "UnarySelectPropertyExpr",
+   "kinds": [
+    "Assertions.unaryproperty"
+   ]
+  },
+  {
+   "node": "UnbasedUnsizedLiteralExpression",
+   "kinds": [
+    "Expressions.constant"
+   ]
+  },
+  {
+   "node": "UnconnectedDriveDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "UndefDirective",
+   "kinds": [
+    "Preprocessor.undefdirective"
+   ]
+  },
+  {
+   "node": "UndefineAllDirective",
+   "kinds": [
+    "Preprocessor.otherdirective"
+   ]
+  },
+  {
+   "node": "UnionType",
+   "kinds": [
+    "Types.structtype"
+   ]
+  },
+  {
+   "node": "UniquenessConstraint",
+   "kinds": [
+    "Constraints.uniqueconstraint"
+   ]
+  },
+  {
+   "node": "UnitScope",
+   "helpers": [
+    "Expressions.UnitName"
+   ]
+  },
+  {
+   "node": "UntilPropertyExpr",
+   "kinds": [
+    "Assertions.binaryproperty"
+   ]
+  },
+  {
+   "node": "UntilWithPropertyExpr",
+   "kinds": [
+    "Assertions.binaryproperty"
+   ]
+  },
+  {
+   "node": "Untyped",
+   "kinds": [
+    "Types.keywordtype"
+   ]
+  },
+  {
+   "node": "UserDefinedNetDeclaration",
+   "not": "an item (a declaration, a design unit or a construct in one), which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "ValueRangeExpression",
+   "kinds": [
+    "Expressions.valuerange"
+   ]
+  },
+  {
+   "node": "VariableDimension",
+   "helpers": [
+    "Types.RangeDimension",
+    "Types.SizeDimension",
+    "Types.UnsizedDimension",
+    "Types.AssociativeDimension",
+    "Types.QueueDimension"
+   ]
+  },
+  {
+   "node": "VariablePattern",
+   "kinds": [
+    "Patterns.variablepattern"
+   ]
+  },
+  {
+   "node": "VariablePortHeader",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "VirtualInterfaceType",
+   "kinds": [
+    "Types.virtualinterfacetype"
+   ]
+  },
+  {
+   "node": "VoidCastedCallStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "VoidType",
+   "kinds": [
+    "Types.keywordtype"
+   ]
+  },
+  {
+   "node": "WaitForkStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "WaitOrderStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "WaitStatement",
+   "not": "a statement, which mbse-programs holds as an owned reference object, not a term"
+  },
+  {
+   "node": "WildcardDimensionSpecifier",
+   "not": "the inside of a dimension's brackets, which its dimension (`RangeDimension`, `SizeDimension`, `AssociativeDimension`, `QueueDimension`) holds"
+  },
+  {
+   "node": "WildcardEqualityExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "WildcardInequalityExpression",
+   "kinds": [
+    "Expressions.binaryexpression"
+   ]
+  },
+  {
+   "node": "WildcardLiteralExpression",
+   "kinds": [
+    "Expressions.dollarexpression"
+   ]
+  },
+  {
+   "node": "WildcardPattern",
+   "kinds": [
+    "Patterns.wildcardpattern"
+   ]
+  },
+  {
+   "node": "WildcardPortConnection",
+   "not": "`.*`, an instance's wildcard connection, which mbse-programs holds with the instance, not a term"
+  },
+  {
+   "node": "WildcardPortList",
+   "not": "a port or a list of ports, part of a design unit's declaration, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "WildcardUdpPortList",
+   "not": "part of a user-defined primitive's declaration, an item's, which mbse-programs holds, not a term"
+  },
+  {
+   "node": "WithClause",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "WithFunctionClause",
+   "not": "part of an item's declaration (its header, its parameters, its instances, its clauses), which mbse-programs holds with the item, not a term"
+  },
+  {
+   "node": "WithFunctionSample",
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+  },
+  {
+   "node": "WithinSequenceExpr",
+   "kinds": [
+    "Assertions.binarysequence"
+   ]
+  },
+  {
+   "node": "XorAssignmentExpression",
+   "kinds": [
+    "Expressions.assignmentexpression"
+   ]
+  }
+ ]
+}

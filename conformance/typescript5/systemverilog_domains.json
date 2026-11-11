@@ -553,6 +553,371 @@
                         }
                       ]
                     }
+                  },
+                  {
+                    "as_adjacency": {
+                      "name": "standards",
+                      "mutations": [
+                        {
+                          "insert": {
+                            "entries": [
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "IEEE Std 1364-1995"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "IEEE Std 1364-1995"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "IEEE Std 1364-2001"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "IEEE Std 1364-2001"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "IEEE Std 1364-2005"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "IEEE Std 1364-2005"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "IEEE Std 1800-2005"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "IEEE Std 1800-2005"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "IEEE Std 1800-2009"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "IEEE Std 1800-2009"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "IEEE Std 1800-2012"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "IEEE Std 1800-2012"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "IEEE Std 1800-2017"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "IEEE Std 1800-2017"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "standard",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "ref": {
+                                              "path": {
+                                                "singleton": "Expressions.SystemVerilog.Expressions",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "standards",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "designation": "IEEE Std 1800-2023"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "designation",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "IEEE Std 1800-2023"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
                   }
                 ]
               }

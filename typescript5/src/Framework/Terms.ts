@@ -57,7 +57,7 @@
  *
  * Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
  * branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's slots (a term
- * each: a property whose schema is `Expressions.Framework.Term` or a dialect's `Term`), its variadic arguments (a container of terms, or of
+ * each: a property whose schema is `Expressions.Framework.Term` or a dialect's `Term`), its variadic arguments (each container of terms, or of
  * value objects of terms, a mapping's pairs, read as their terms in turn), its helpers (a value object that is not a
  * term and not a pair, or a container of them, or of a union of them: a Python call's keywords, a comparison's links, a
  * comprehension's `for` clauses) or its attributes (anything else) is read from the kind's schema. A helper is read as a
@@ -69,7 +69,9 @@
  * - `term(x)`: the term value of an expression, a term property's reader, a `Readers.OfAny` holding one, or a term.
  * - `holderOf(term)`: the reference object holding it, its `Expression`, found by its owners.
  * - `kindOf(term)`: its kind's branch, `(tag, record)`; `dialectOf(term)`: the name of its dialect's `Term`;
- *   `dialectName(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`).
+ *   `dialectName(path)`: a dialect's name, of its path below `Expressions` (`C.Expressions`' is `C`, a sublanguage's
+ *   its family's and its own: `SystemVerilog.Types`' is `SystemVerilog Types`); `dialectTag(name)`, its tag
+ *   (`systemverilog_types`). `isBinder(schema)`: whether a kind binds names, its schema `Let` or a refinement of it.
  *   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers
  *   nested, as a dialect whose kinds hold sublanguages reads them to print and check them.
  * - `nameOf(term)`, `referenceName(name)`, `operatorOf(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
@@ -91,7 +93,9 @@
  *   vocabulary is None, when any name is accepted and `signature` applies to all, or the kind is `closed`, when they
  *   are refused by evaluation; where its operations are data (`Kind.operations`), validation refuses any its dialect
  *   does not define. The container constructors are applications named by their tags.
- * - `BINDING`: binds its name to its first argument within the others.
+ * - `BINDING`: binds its name to its first argument within the others: a let, whose schema is
+ *   `Expressions.Framework.Let`; a kind refining `Let` (a binder, `isBinder`) binds what its `scopes` say, where it has
+ *   them.
  * - `QUANTIFIER`: binds its name to each item of its first argument, a collection, within the others, and combines the
  *   results by its operator, such as `all`. Its signature also gives the domain of a collection's items.
  * - `IMPORT`: makes what it declares available within its one argument, its body; `Kind.names(attributes)` gives the names
@@ -235,7 +239,8 @@ export function article(noun: string): string {
 // --- Reading terms ---
 
 /** A term's structure: its `kind` (its branch's tag), its `attributes` (its properties that are not terms, those set,
- * by name) and its ordered `arguments` (its slots, null where empty, then its variadic arguments). */
+ * by name, and, where it holds several containers of terms, each one's size, a `Part`) and its ordered `arguments` (its
+ * slots, null where empty, then its variadic arguments, each container's in declaration order). */
 export class Form {
   readonly attributes: ReadonlyMap<string, unknown>;
   readonly arguments: readonly unknown[];
@@ -254,7 +259,9 @@ export class Form {
 /** A helper a term holds, as its form's attributes read it: its `kind` (its branch's tag, where a union of helpers holds
  * it, else its schema's name's last part, lowercased: `keyword`), its `attributes`, read as a term's are, and its `size`,
  * how many of the term's arguments are its terms (its slots, null where empty, its variadic arguments and its own
- * helpers' terms). Two parts are the same where their kinds, attributes and sizes are. */
+ * helpers' terms). Where a kind holds several containers of terms, a part also gives each one's size: its kind the
+ * container's name, no attributes, its size how many terms it holds. Two parts are the same where their kinds,
+ * attributes and sizes are. */
 export class Part {
   readonly attributes: ReadonlyMap<string, unknown>;
 
@@ -280,7 +287,7 @@ function holdsTerms(schema: unknown): boolean {
     && name.startsWith("Expressions.") && name.endsWith(".Term");
 }
 
-type Parts = readonly [readonly string[], string | null, readonly string[]];
+type Parts = readonly [readonly string[], readonly string[], readonly string[]];
 const PARTS = new WeakMap<object, readonly [Parts, readonly string[]]>();
 
 /** Whether a schema is a value object whose properties are all terms, such as a mapping's pair. */
@@ -301,8 +308,8 @@ function isHelper(schema: any): boolean {
   return schema instanceof Schemas.OfObject.Data && !schema.ref && !isPair(schema);
 }
 
-/** A kind's schema's slots (properties holding a term), its variadic property (a container of terms, or of value
- * objects of terms such as a mapping's pairs) or null, and its attributes (the rest, its helpers among them), each in
+/** A kind's schema's slots (properties holding a term), its variadic properties (each a container of terms, or of value
+ * objects of terms such as a mapping's pairs), and its attributes (the rest, its helpers among them), each in
  * declaration order. */
 export function _parts(schema: any): Parts {
   const cached = PARTS.get(schema);
@@ -310,11 +317,11 @@ export function _parts(schema: any): Parts {
   const slots: string[] = [];
   const attributes: string[] = [];
   const helpers: string[] = [];
-  let variadic: string | null = null;
+  const variadic: string[] = [];
   for (const [name, prop] of schema.properties as Map<string, Schemas.OfProperty.Data>) {
     if (holdsTerms(prop.schema)) slots.push(name);
     else if (prop.schema instanceof Schemas.OfContainer.Data && (holdsTerms(prop.schema.element)
-      || isPair(prop.schema.element))) variadic = name;
+      || isPair(prop.schema.element))) variadic.push(name);
     else {
       attributes.push(name);
       if (isHelper(prop.schema) || (prop.schema instanceof Schemas.OfContainer.Data && isHelper(prop.schema.element))) {
@@ -333,11 +340,10 @@ export function _helpers(schema: any): readonly string[] {
   return (PARTS.get(schema) as readonly [Parts, readonly string[]])[1];
 }
 
-/** The term properties of the value objects a kind's variadic property holds, in declaration order (a mapping's `key`
- * and `value`); none where it holds terms, or the kind has no variadic property. */
-export function _members(schema: any): readonly string[] {
-  const [, variadic] = _parts(schema);
-  const element = variadic !== null ? (schema.properties.get(variadic) as any).schema.element : null;
+/** The term properties of the value objects a kind's variadic property `name` holds, in declaration order (a mapping's
+ * `key` and `value`); none where it holds terms. */
+export function _members(schema: any, name: string): readonly string[] {
+  const element = (schema.properties.get(name) as any).schema.element;
   return isPair(element) ? [...element.properties.keys()] : [];
 }
 
@@ -460,7 +466,7 @@ function variadicOf(record: any, name: string): any[] {
   record[name].as_value((a: any) => a.as_container((c: any) => c.as_entries((it: Iterator<[unknown, any]>) => {
     for (let next = it.next(); !next.done; next = it.next()) pairs.push(next.value);
   })));
-  const members = _members(record.as_schema());
+  const members = _members(record.as_schema(), name);
   const found: any[] = [];
   for (const [, element] of pairs) {
     if (members.length > 0) {
@@ -510,10 +516,11 @@ function partOf(kind: string, record: any): Part {
 }
 
 /** A record's attributes that are set, by name, in declaration order: a helper as its `Part`, a container of helpers as
- * an array of them. */
+ * an array of them; and, where it holds several containers of terms, each one's size, a `Part` named by the container,
+ * after them. */
 export function attributesOf(record: any): Map<string, any> {
   const schema = record.as_schema();
-  const [, , names] = _parts(schema);
+  const [, variadic, names] = _parts(schema);
   const helpers = _helpers(schema);
   const found = new Map<string, any>();
   for (const name of names) {
@@ -526,14 +533,14 @@ export function attributesOf(record: any): Map<string, any> {
     const value = scalar(record, name);
     if (value !== null) found.set(name, value);
   }
+  if (variadic.length > 1) for (const name of variadic) found.set(name, new Part(name, new Map(), variadicOf(record, name).length));
   return found;
 }
 
-/** A record's own arguments: its slots, null where empty, then its variadic arguments. */
+/** A record's own arguments: its slots, null where empty, then its variadic arguments, each container's in turn. */
 function ownArguments(record: any): any[] {
   const [slots, variadic] = _parts(record.as_schema());
-  const fixed = slots.map((name) => slot(record, name));
-  return variadic !== null ? [...fixed, ...variadicOf(record, variadic)] : fixed;
+  return [...slots.map((name) => slot(record, name)), ...variadic.flatMap((name) => variadicOf(record, name))];
 }
 
 /** A record's arguments: its slots, null where empty, then its variadic arguments, then its helpers' arguments, in
@@ -554,16 +561,38 @@ export function form(term_: any): Form {
 
 /** A term or a helper, its helpers nested: its `kind` (its tag, or its helper's), its `attributes` (scalars, and
  * containers of scalars, by name), its `slots` (its terms by property, null where empty), its `many` (its variadic
- * arguments: terms, or a pair's members in turn) and its `helpers` (by property: a `Node`, or an array of them). */
+ * arguments: terms, or a pair's members in turn, each container's in declaration order), its `helpers` (by property: a
+ * `Node`, or an array of them) and its `lists` (its variadic arguments by container: a `solve ... before ...`
+ * constraint's `solve` and `before`). */
 export class Node {
   constructor(readonly kind: string, readonly attributes: ReadonlyMap<string, any> = new Map(),
     readonly slots: ReadonlyMap<string, any> = new Map(), readonly many: readonly any[] = [],
-    readonly helpers: ReadonlyMap<string, Node | readonly Node[]> = new Map()) {}
+    readonly helpers: ReadonlyMap<string, Node | readonly Node[]> = new Map(),
+    readonly lists: ReadonlyMap<string, readonly any[]> = new Map()) {}
+}
+
+/** A kind's variadic arguments by container: one container holds them all; several, each the size its `Part` in the
+ * attributes gives, one with none given holding none, but the last, which holds the rest. */
+function split(variadic: readonly string[], attributes: ReadonlyMap<string, unknown>, terms: readonly any[],
+  kind: string): Map<string, any[]> {
+  if (variadic.length === 1) return new Map([[variadic[0] as string, [...terms]]]);
+  const found = new Map<string, any[]>();
+  let start = 0;
+  variadic.forEach((name, i) => {
+    const part = attributes.get(name);
+    const size = part instanceof Part ? part.size : i === variadic.length - 1 ? terms.length - start : 0;
+    found.set(name, terms.slice(start, start + size));
+    start += size;
+  });
+  if (start !== terms.length) {
+    throw new ValueError(`${article(kind)}'s ${variadic.join(", ")} hold ${start} arguments, got ${terms.length}`);
+  }
+  return found;
 }
 
 /** A record's `Node`, from its schema, its form's attributes and its arguments, as `form` reads them. */
 function nest(schema: any, kind: string, attributes: ReadonlyMap<string, any>, args: readonly any[]): Node {
-  const [slotNames] = _parts(schema);
+  const [slotNames, variadic] = _parts(schema);
   const held = new Map<string, any>();
   for (const name of _helpers(schema)) if (attributes.has(name)) held.set(name, attributes.get(name));
   let size = 0;
@@ -583,9 +612,11 @@ function nest(schema: any, kind: string, attributes: ReadonlyMap<string, any>, a
     }
     helpers.set(name, Array.isArray(value) ? found : found[0] as Node);
   }
-  const plain = new Map([...attributes].filter(([name]) => !held.has(name)));
+  const sizes = variadic.length > 1 ? variadic : []; // the containers' sizes, which the lists give
+  const plain = new Map([...attributes].filter(([name]) => !held.has(name) && !sizes.includes(name)));
   const slots = new Map(slotNames.map((name, j) => [name, args[j]] as [string, any]));
-  return new Node(kind, plain, slots, args.slice(slotNames.length, args.length - size), helpers);
+  const many = args.slice(slotNames.length, args.length - size);
+  return new Node(kind, plain, slots, many, helpers, variadic.length > 0 ? split(variadic, attributes, many, kind) : new Map());
 }
 
 /** A record's `Node`, a term's (its tag and record, as `kindOf` gives them) or a helper's, its helpers nested. */
@@ -766,12 +797,12 @@ export function _labelled(record: any): [string, string, any][] {
   const [slots, variadic] = _parts(schema);
   const own = ownArguments(record);
   const found: [string, string, any][] = slots.map((name, i) => [name, name, own[i]]);
-  if (variadic !== null) {
-    const members = _members(schema);
-    own.slice(slots.length).forEach((argument, j) => {
+  for (const name of variadic) { // one container's are `argument j`; each of several's, by its name: `solve j`
+    const [members, word] = [_members(schema, name), variadic.length > 1 ? name : "argument"];
+    variadicOf(record, name).forEach((argument, j) => {
       const member = members.length > 0 ? members[j % members.length] as string : null;
-      const label = member !== null ? `${member} ${Math.floor(j / members.length)}` : `argument ${j}`;
-      found.push([label, member ?? "argument", argument]);
+      const label = member !== null ? `${member} ${Math.floor(j / members.length)}` : `${word} ${j}`;
+      found.push([label, member ?? word, argument]);
     });
   }
   for (const name of _helpers(schema)) {
@@ -792,6 +823,7 @@ function fill(r: any, kind: string, attributes: ReadonlyMap<string, unknown>, ar
   const helpers = _helpers(schema);
   const parts: [string, Part][] = [];
   for (const [name, value] of attributes) {
+    if (variadic.length > 1 && variadic.includes(name) && value instanceof Part) continue; // a container's size
     if (!names.includes(name)) throw new ValueError(`${article(kind)} has no attribute ${repr(name)}`);
     if (helpers.includes(name)) {
       for (const part of Array.isArray(value) ? value as Part[] : [value as Part]) parts.push([name, part]);
@@ -799,21 +831,22 @@ function fill(r: any, kind: string, attributes: ReadonlyMap<string, unknown>, ar
     else r[name]((p: any) => p.as_scalar(value));
   }
   const held = parts.reduce((total, [, part]) => total + part.size, 0);
-  if (args.length < slots.length + held || (variadic === null && args.length !== slots.length + held)) {
-    const least = variadic === null ? "" : "at least ";
+  if (args.length < slots.length + held || (variadic.length === 0 && args.length !== slots.length + held)) {
+    const least = variadic.length === 0 ? "" : "at least ";
     throw new ValueError(`${article(kind)} takes ${least}${slots.length + held} arguments, got ${args.length}`);
   }
   slots.forEach((name, i) => {
     if (args[i] !== null) r[name](args[i]);
   });
-  if (variadic !== null) {
-    const rest = args.slice(slots.length, args.length - held);
-    const members = _members(schema);
-    if (members.length > 0 && rest.length % members.length !== 0) {
-      throw new ValueError(`${article(kind)} takes its arguments in ${members.length}s (${members.join(", ")}), got ${rest.length}`);
+  if (variadic.length > 0) {
+    for (const [name, rest] of split(variadic, attributes, args.slice(slots.length, args.length - held), kind)) {
+      const members = _members(schema, name);
+      if (members.length > 0 && rest.length % members.length !== 0) {
+        throw new ValueError(`${article(kind)} takes its arguments in ${members.length}s (${members.join(", ")}), got ${rest.length}`);
+      }
+      r[name](members.length === 0 ? rest : Array.from({ length: rest.length / members.length },
+        (_, i) => pair(members, rest.slice(i * members.length, (i + 1) * members.length))));
     }
-    r[variadic](members.length === 0 ? rest : Array.from({ length: rest.length / members.length },
-      (_, i) => pair(members, rest.slice(i * members.length, (i + 1) * members.length))));
   }
   let offset = args.length - held;
   for (const name of helpers) {
@@ -966,26 +999,58 @@ export interface DialectOptions {
   literal?: ((value: unknown) => Writer | null) | null;
   /** The dialect this one extends: its kinds are the base's and its own. */
   extends?: Dialect | null;
+  /** The other dialects whose terms it reads, given when first needed, so that dialects that read each other are built
+   * without a cycle. */
+  reads?: (() => readonly Dialect[]) | null;
 }
 
 type Environment = Record<string, Domains.Domain>;
 
+/** The sublanguages a family's dialects may be, by their own names (the namespace decision): a dialect whose own name is
+ * one of them is named by its family too (`SystemVerilog Types`), so that no two families' sublanguages share a name. */
+export const SUBLANGUAGES: readonly string[] = ["Types", "Patterns", "Assertions", "Constraints", "Preprocessor", "RegExp"];
+
 /** A dialect's name, of its path below `Expressions` (its family's name and its own): its own (`Python.Python3`'s is
  * `Python3`, `Patterns.Expressions`' `Patterns`), or its family's where its own says only that it is the family's
- * expressions (`C.Expressions`' is `C`). */
+ * expressions (`C.Expressions`' is `C`), or its family's and its own where its own is a sublanguage's (`SUBLANGUAGES`:
+ * `SystemVerilog.Types`' is `SystemVerilog Types`). */
 export function dialectName(path: string): string {
   const parts = path.split(".");
   const own = parts[parts.length - 1] as string;
-  return own === "Expressions" && parts.length > 1 ? parts[parts.length - 2] as string : own;
+  if (own === "Expressions" && parts.length > 1) return parts[parts.length - 2] as string;
+  if (SUBLANGUAGES.includes(own) && parts.length > 1) return `${parts[parts.length - 2] as string} ${own}`;
+  return own;
+}
+
+/** A dialect's tag, its branch of `Expressions.Framework.Term` and of `Expressions.Framework.Dialect`: its name in
+ * lowercase, a space an underscore (`systemverilog_types`). */
+export function dialectTag(name: string): string {
+  return name.toLowerCase().replaceAll(" ", "_");
+}
+
+/** Whether a kind's schema binds names: `Expressions.Framework.Let`, or a schema refining it, as every kind that binds
+ * symbols does (the dialects proposal, Decided for stage 6, Q8, "(a)"). A binder binds by its kind's `scopes` where it
+ * has them, else its `name` within its arguments after the first. */
+export function isBinder(schema: unknown): boolean {
+  let current: any = schema;
+  while (current instanceof Schemas.OfObject.Data) {
+    if (named(current, "Expressions.Framework.Let")) return true;
+    current = (current as any).refines;
+  }
+  return false;
 }
 
 /** An expression language: the kinds it reads, by tag, its `path`, its family's and its own name (`Python.Python3`,
- * `C.Expressions`), its `name` (`dialectName(path)`: `Python3`, `C`), and `domain_of(value)`, the domain of a literal's
- * value by the scalar it is written with (for `infer`; a term carries no domain). Its terms are values of its `Term`,
- * `Expressions.<path>.Term` (`union`), the branch `tag` (its name in lowercase) of `Expressions.Framework.Term`;
- * besides its own kinds it reads the framework's kinds of invalid syntax (`INVALID_KINDS`). A dialect may extend another
- * (`extends`): its kinds are the base's and its own, whose tags must differ from the base's, added to the base's union,
- * whose terms it reads. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its kinds. */
+ * `C.Expressions`), its `name` (`dialectName(path)`: `Python3`, `C`, `SystemVerilog Types`), and `domain_of(value)`,
+ * the domain of a literal's value by the scalar it is written with (for `infer`; a term carries no domain). Its terms are
+ * values of its `Term`, `Expressions.<path>.Term` (`union`), the branch `tag` (`dialectTag(name)`: `python3`,
+ * `systemverilog_types`) of `Expressions.Framework.Term`; besides its own kinds it reads the framework's kinds of
+ * invalid syntax (`INVALID_KINDS`). A dialect may extend another (`extends`): its kinds are the base's and its own, whose
+ * tags must differ from the base's, added to the base's union, whose terms it reads. A dialect may read the terms of
+ * other dialects (`reads`, a function giving them, called once when first needed, so that dialects that read each
+ * other are built without a cycle): a term of their `Term`s, by their kinds, and a term of its own `Term` of a kind they
+ * declare and its `Term` lists (one schema a branch of every union whose positions hold it); any other dialect's term it
+ * refuses. It validates (`validate`), infers (`infer`) and writes (`make`) terms of its kinds. */
 export class Dialect {
   readonly base: Dialect | null;
   readonly tag: string;
@@ -996,6 +1061,8 @@ export class Dialect {
   readonly _literal: ((value: unknown) => Writer | null) | null;
 
   private readonly own: string;
+  private readonly readsOf: (() => readonly Dialect[]) | null;
+  private read: readonly Dialect[] | null = null;
 
   constructor(path: string, kinds: Record<string, Kind>, options: DialectOptions) {
     const own = dialectName(path);
@@ -1008,7 +1075,7 @@ export class Dialect {
       throw new ValueError(`${own} would declare ${clashes.map((tag) => repr(tag)).join(", ")}, which ${what} has`);
     }
     this.byTag = base === null ? new Map([...declared, ...inherited]) : new Map([...inherited, ...declared]); // the base's first
-    this.tag = base === null ? own.toLowerCase() : base.tag;
+    this.tag = base === null ? dialectTag(own) : base.tag;
     this.own = own;
     this.path = path;
     this.union = base === null ? `Expressions.${path}.Term` : base.union;
@@ -1016,14 +1083,34 @@ export class Dialect {
     this.base = base;
     this._literal = options.literal !== undefined && options.literal !== null || base === null
       ? options.literal ?? null : base._literal;
+    this.readsOf = options.reads ?? null;
   }
 
   name(): string {
     return this.own;
   }
 
+  /** Its own kinds, by tag (an extension's, its base's too). */
   kinds(): Map<string, Kind> {
     return new Map(this.byTag);
+  }
+
+  /** The other dialects whose terms it reads, in the order its `reads` gives them. */
+  reads(): readonly Dialect[] {
+    if (this.read === null) this.read = this.readsOf !== null ? [...this.readsOf()] : [];
+    return this.read;
+  }
+
+  /** The `Kind` of a tag, as this dialect reads it: its own, else the first that a dialect it reads declares; throws
+   * `ValueError` for a tag none of them has. */
+  kindNamed(tag: string): Kind {
+    const own = this.byTag.get(tag);
+    if (own !== undefined) return own;
+    for (const other of this.reads()) {
+      const theirs = other.byTag.get(tag);
+      if (theirs !== undefined) return theirs;
+    }
+    throw new ValueError(`${this.own} has no kind ${repr(tag)}`);
   }
 
   toString(): string {
@@ -1034,23 +1121,28 @@ export class Dialect {
     return this.toString();
   }
 
-  /** Why a term value is not of this dialect, where it is another dialect's. */
-  private foreign(term_: any): string | null {
+  /** The dialect that reads a term value: this one, for a term of its `Term`; one it reads, for a term of that one's;
+   * or null, for a term of any other dialect. */
+  private reader(term_: any): Dialect | null {
     const union = dialectOf(term_);
-    if (union === this.union) return null;
-    const other = dialectName(union.slice("Expressions.".length, -".Term".length));
+    if (union === this.union) return this;
+    return this.reads().find((other) => other.union === union) ?? null;
+  }
+
+  /** Why a term value of another dialect, which it does not read, is not of this dialect. */
+  private foreign(term_: any): string {
+    const other = dialectName(dialectOf(term_).slice("Expressions.".length, -".Term".length));
     return `${article(other)} ${kindOf(term_)[0]} is not ${article(this.own)} term`;
   }
 
-  /** A term's tag, record and `Kind`; throws `ValueError` for a term of another dialect, or of a kind the dialect does
-   * not read. */
+  /** A term's tag, record and `Kind`, as this dialect reads it (a term of a dialect it reads, as that one does); throws
+   * `ValueError` for a term of another dialect, or of a kind the dialect does not read. */
   kind(term_: any): [string, any, Kind] {
-    const foreign = this.foreign(term_);
-    if (foreign !== null) throw new ValueError(foreign);
+    const reader = this.reader(term_);
+    if (reader === null) throw new ValueError(this.foreign(term_));
+    if (reader !== this) return reader.kind(term_);
     const [tag, record] = kindOf(term_);
-    const kind = this.byTag.get(tag);
-    if (kind === undefined) throw new ValueError(`${this.own} has no kind ${repr(tag)}`);
-    return [tag, record, kind];
+    return [tag, record, this.kindNamed(tag)];
   }
 
   /** The writer of a term of this dialect: see `spec`, a native value as this dialect's literal, and a callable given
@@ -1061,9 +1153,10 @@ export class Dialect {
 
   /** The writer of a term with this form: its attributes written as scalars (a container of scalars as a container, a
    * helper's `Part` as the helper), its arguments (specs: terms, writers, native values) to its slots in order, then to
-   * its variadic property, then to its helpers, each its part's size. */
+   * its variadic properties, each the size its part gives where it has several, then to its helpers, each its part's size. Its kind is one this dialect reads (`kindNamed`),
+   * written where a union holds it. */
   make(form_: Form): Writer {
-    if (!this.byTag.has(form_.kind)) throw new ValueError(`${this.own} has no kind ${repr(form_.kind)}`);
+    this.kindNamed(form_.kind);
     const args = form_.arguments.map((a) => (a === null ? null : this.spec(a)));
     return new Writer((union: any) => union[form_.kind]((r: any) => fill(r, form_.kind, form_.attributes, args)), this.tag);
   }
@@ -1077,11 +1170,16 @@ export class Dialect {
   }
 
   private problems(node: any, bound: ReadonlySet<string>, core: boolean): string[] {
-    const foreign = this.foreign(node);
-    if (foreign !== null) return [foreign];
+    const reader = this.reader(node);
+    if (reader === null) return [this.foreign(node)];
+    if (reader !== this) return reader.problems(node, bound, core); // a term of a dialect it reads, as that one reads it
     const [tag, record] = kindOf(node);
-    const kind = this.byTag.get(tag);
-    if (kind === undefined) return [`${this.own} has no kind ${repr(tag)}`];
+    let kind: Kind;
+    try {
+      kind = this.kindNamed(tag);
+    } catch (error) {
+      return [(error as Error).message];
+    }
     const what = article(tag);
     const attributes = attributesOf(record);
     const declared = record.as_schema().properties as Map<string, Schemas.OfProperty.Data>;
@@ -1114,9 +1212,9 @@ export class Dialect {
     const labelled = _labelled(record);
     const args = labelled.map(([, , argument]) => argument);
     let scopes: ReadonlySet<string>[] = args.map(() => bound);
-    if (kind.scopes !== null) {
+    if (kind.scopes !== null) { // what each argument has bound: a binder's, or a comprehension's targets
       scopes = kind.scopes(record).map((names) => new Set([...bound, ...names]));
-    } else if (kind.role === BINDING || kind.role === QUANTIFIER) {
+    } else if (kind.role === QUANTIFIER || isBinder(record.as_schema())) { // its name, within its arguments after the first
       const inner = problems.length === 0 ? new Set([...bound, name]) : bound;
       scopes = args.map((_, i) => (i === 0 ? bound : inner));
     } else if (kind.role === IMPORT) {
@@ -1165,6 +1263,8 @@ export class Dialect {
   }
 
   private inferIn(node: any, environment: Environment): Domains.Domain {
+    const reader = this.reader(node);
+    if (reader !== this && reader !== null) return reader.inferIn(node, environment); // as the dialect it reads infers it
     const [, record, kind] = this.kind(node);
     if (kind.role === LITERAL) {
       const typed = kind.typed !== null ? kind.typed(record) : null;
@@ -1180,7 +1280,10 @@ export class Dialect {
       for (const name of kind.names !== null ? kind.names(attributesOf(record)) : []) inner[name] = Domains.Anything;
       return this.inferIn(args[args.length - 1], inner);
     }
-    if (kind.role === BINDING) {
+    const environments: Environment[] = kind.scopes !== null // what each argument has bound, of a domain not known
+      ? kind.scopes(record).map((names) => ({ ...environment, ...Object.fromEntries([...names].map((n) => [n, Domains.Anything])) }))
+      : args.map(() => environment);
+    if (isBinder(record.as_schema()) && kind.scopes === null) { // a let: its name, of its value's domain, in its body
       const value = this.inferIn(args[0], environment);
       return this.inferIn(args[args.length - 1], { ...environment, [nameOf(node)]: value });
     }
@@ -1193,14 +1296,16 @@ export class Dialect {
       const inner = { ...environment, [nameOf(node)]: item };
       domains = [collection, ...args.slice(1).map((argument) => this.inferIn(argument, inner))];
     } else { // an empty slot, where it may be empty, is not known
-      domains = args.map((argument) => (argument === null ? Domains.Anything : this.inferIn(argument, environment)));
+      domains = args.map((argument, i) => (argument === null ? Domains.Anything
+        : this.inferIn(argument, environments[i] as Environment)));
     }
-    if (kind.result !== null) return kind.result(attributesOf(record), domains); // several operators, which it applies
-    if (signature === null) return Domains.Anything; // an extension: nothing is known about it
-    const result = signature.result(domains);
+    let result: Domains.Domain | null;
+    if (kind.result !== null) result = kind.result(attributesOf(record), domains); // several operators, which it applies
+    else if (signature === null) return Domains.Anything; // an extension: nothing is known about it
+    else result = signature.result(domains);
     if (result === null) {
       const names = domains.map((domain) => domain.name()).join(", ");
-      throw new TypeError(`${operator} cannot take (${names}); it takes ${signature.describe()}`);
+      throw new TypeError(`${operator} cannot take (${names}); it takes ${(signature as Domains.Signature).describe()}`);
     }
     const typed = kind.typed !== null ? kind.typed(record) : null;
     return typed === null ? result : typed; // an application of a domain of its own gives it

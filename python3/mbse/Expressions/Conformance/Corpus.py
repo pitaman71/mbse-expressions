@@ -10,7 +10,9 @@ written as one document; `domains` is ISO/IEC 11404's dialect, the singleton `Ex
 data too (`STANDARD`): an edition, C23's, ISO/IEC 9899:2024, written as one document of
 `Expressions.Framework.Standard`, its formal reference's parts, its common name and the kinds it has. The `typescript5`
 case is a TypeScript5 term of every kind, written through the builders. The `invalid` case is a Python3 term holding
-invalid syntax and literals with their spelling. Each implementation writes its snapshots to
+invalid syntax and literals with their spelling. The `systemverilog_patterns`, `systemverilog_assertions`,
+`systemverilog_constraints` and `systemverilog_preprocessor` cases are each a term of SystemVerilog's sublanguage of every
+kind, written through the builders. Each implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
 the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values,
 same order of statements. """
@@ -31,7 +33,8 @@ from mbse.Expressions.Python import Python3
 from mbse.Expressions.Arm import AAPCS64
 from mbse.Expressions.SystemV import AMD64
 from mbse.Expressions.Unicode import Expressions as Unicode
-from mbse.Expressions.SystemVerilog import Expressions as SystemVerilog
+from mbse.Expressions.SystemVerilog import Assertions as SVAssertions, Constraints as SVConstraints, \
+    Expressions as SystemVerilog, Patterns as SVPatterns, Preprocessor as SVPreprocessor, Types as SVTypes
 from mbse.Expressions.TypeScript import TypeScript5
 from mbse.Expressions.C.Expressions import Expressions as CE
 from mbse.Expressions.Cpp.Expressions import Expressions as CPP
@@ -45,11 +48,15 @@ from mbse.Expressions.TypeScript.TypeScript5 import Expressions as TS
 from mbse.Schemas.Framework import Builders
 
 CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp", "systemverilog",
-         "typescript5", "invalid", "systemverilog_domains", "python3_domains", "typescript5_domains", "matlab_domains",
+         "typescript5", "invalid", "systemverilog_patterns", "systemverilog_assertions", "systemverilog_constraints",
+         "systemverilog_preprocessor", "systemverilog_domains", "python3_domains", "typescript5_domains", "matlab_domains",
          "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains", "standards"]
 
 DIALECTS = {"python3": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex": L.DIALECT, "c": CE.DIALECT,
-            "cpp": CPP.DIALECT, "systemverilog": SV.DIALECT, "typescript5": TS.DIALECT, "invalid": P.DIALECT}
+            "cpp": CPP.DIALECT, "systemverilog": SV.DIALECT, "typescript5": TS.DIALECT, "invalid": P.DIALECT,
+            "systemverilog_patterns": SVPatterns.Expressions.DIALECT, "systemverilog_assertions": SVAssertions.Expressions.DIALECT,
+            "systemverilog_constraints": SVConstraints.Expressions.DIALECT,
+            "systemverilog_preprocessor": SVPreprocessor.Expressions.DIALECT}
 """The dialect that reads each case, where it is not Patterns."""
 
 DOMAINS = {"domains": "Expressions.ISOIEC11404.Expressions", "systemverilog_domains": "Expressions.SystemVerilog.Expressions",
@@ -81,13 +88,16 @@ def build():
     store.transaction(Cpp.install)
     store.transaction(AMD64.install)  # the ABIs a C or C++ term's holder names
     store.transaction(AAPCS64.install)
-    store.transaction(SystemVerilog.install)
+    for module in (SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # its family
+        store.transaction(module.install)
     store.transaction(TypeScript5.install)
     defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
     stored = {case: store.transaction(module.define)[0]["dialect"] for case, module in [  # each dialect's stored domains
         ("systemverilog_domains", SystemVerilog), ("python3_domains", Python3), ("typescript5_domains", TypeScript5),
         ("matlab_domains", Matlab), ("excel_domains", Excel), ("c_domains", C), ("cpp_domains", Cpp),
         ("amd64_domains", AMD64), ("aapcs64_domains", AAPCS64)]}
+    for module in (SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # the editions they cover
+        store.transaction(module.define)
 
     # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
     # added ---
@@ -232,14 +242,84 @@ def build():
         lambda i: i.extensionexpression(lambda e: e.operand(cpp_me)),
     ])))
 
-    # --- systemverilog: every kind, sized vectors and casts, and a shared identifier ---
-    # record.a inside {1, [2:5]} -> !record[0] ? {{6{2'b10}}, record.b[7:4]} : byte'($clog2(record.unique().sum(q) with (q))) + 4'(8'shff)
+    # --- systemverilog: every kind of SystemVerilog's and of its Types, their helpers, the Preprocessor's macro usage,
+    # literals with their spelling, and a shared identifier --- the text ToText writes:
+    # record.a inside {1, [2:5]} -> (record matches 3 ? (* keep, depth = 2 *) 'h1f : 4'sb10x1) + {record[0], record.b[7:4],
+    # -record, record++, (record += 1), {2{record}}, logic signed [7:0][4]'{record: 1, default: 0}, '{2{record, 1}}, this,
+    # super, pkg::c #(8)::new(1, .n(record), ), super.new(default), new record, new[4](record), record.randomize() with
+    # (a) { record < 5; }, record.sum(q) with (q > 0), record (* pure *) (record, .n(record), ), $bits(int, real, string,
+    # pkg::word_t [3:0], virtual interface bus #(8).mp, signed, struct packed signed { rand bit [1:0] a[], b = 1; },
+    # enum int {A, B[2] = 1, C[0:1]}, type(record), logic [int][*][$][$:8]), $clog2(record), signed'(record), 8'(record),
+    # byte'(record), $, $root, {}, 1:2:3, tagged Valid record, record matches 1 &&& record, {<< byte {record with
+    # [0 +: 2]}}, local::y, $unit::z, bus.t, port.m, `WIDTH, `MAX(a, b), '1, null, 'hx, 1.5, """s""", 10ns, 1_000, "a\"b"}
     sv, that = SV, SV.identifier("record")
-    systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1, sv.span(2, 5)), sv.conditional(
-        sv.unary("!", sv.select(that, 0)),
-        sv.concatenation(sv.replication(6, sv.vector("10")), sv.range_(sv.member(that, "b"), 7, 4)),
-        sv.binary("+", sv.cast("byte", sv.call("$clog2", sv.iterate(sv.method(that, "unique"), "sum", "q", sv.identifier("q")))),
-                  sv.cast(4, sv.vector("11111111", True, "h")))))
+    identifier = lambda spelling: lambda i: i.spelling(spelling)  # noqa: E731: an identifier, of its spelling
+    atom = lambda keyword: lambda t: t.integeratomtype(lambda a: a.keyword(keyword))  # noqa: E731: `int`, a Types term
+    keep = [lambda a: a.specs([lambda s: s.name(identifier("keep")), lambda s: s.name(identifier("depth")).value(sv.literal(2))])]
+    systemverilog = sv.binary("->", sv.inside(sv.member(that, "a"), 1, sv.span(2, 5)), sv.binary("+", lambda u: u.parenthesizedexpression(
+        lambda p: p.expression(lambda e: e.conditionalexpression(lambda c: c.condition(
+            lambda m: m.matchesexpression(lambda x: x.value(that).pattern(sv.literal(3)))).attributes(keep).consequence(
+            lambda q: q.literal(lambda r: r.value(lambda v: v.as_scalar(31)).base("h"))).alternative(sv.vector("10x1", True))))),
+        sv.concatenation(
+            sv.select(that, 0), sv.range_(sv.member(that, "b"), 7, 4), sv.unary("-", that),
+            lambda u: u.incrementexpression(lambda i: i.operator("++").postfix(True).operand(that)),
+            lambda u: u.parenthesizedexpression(lambda p: p.expression(
+                lambda e: e.assignmentexpression(lambda a: a.target(that).operator("+=").value(sv.literal(1))))),
+            sv.replication(2, that),
+            lambda u: u.assignmentpattern(lambda a: a.type(lambda t: t.integervectortype(lambda v: v.keyword("logic").signing("signed").dimensions([
+                lambda d: d.rangedimension(lambda r: r.left(sv.literal(7)).right(sv.literal(0))),
+                lambda d: d.sizedimension(lambda z: z.size(sv.literal(4)))]))).items([
+                lambda i: i.patternitem(lambda p: p.key(that).value(sv.literal(1))),
+                lambda i: i.patternitem(lambda p: p.value(sv.literal(0)))])),
+            lambda u: u.assignmentpattern(lambda a: a.count(sv.literal(2)).items([that, sv.literal(1)])),
+            lambda u: u.thisexpression(lambda t: t), lambda u: u.superexpression(lambda t: t),
+            lambda u: u.newexpression(lambda n: n.scope(lambda s: s.scopedname(lambda c: c.scope(lambda x: x.identifier(identifier("pkg"))).name(
+                lambda x: x.parameterizedname(lambda q: q.name(identifier("c")).parameters([sv.literal(8)]))))).arguments([
+                sv.literal(1), lambda a: a.namedconnection(lambda c: c.name(identifier("n")).value(that)),
+                lambda a: a.emptyargument(lambda e: e)])),
+            lambda u: u.newexpression(lambda n: n.scope(lambda s: s.superexpression(lambda x: x)).defaulted(True)),
+            lambda u: u.newcopyexpression(lambda n: n.value(that)),
+            lambda u: u.newarrayexpression(lambda n: n.size(sv.literal(4)).value(that)),
+            lambda u: u.randomizewithexpression(lambda r: r.call(sv.method(that, "randomize")).restricted(True).variables(
+                [identifier("a")]).items([sv.binary("<", that, 5)])),
+            sv.iterate(that, "sum", "q", sv.binary(">", sv.identifier("q"), 0)),
+            lambda u: u.callexpression(lambda c: c.callee(that).attributes([lambda a: a.specs([lambda s: s.name(identifier("pure"))])]).arguments([
+                that, lambda a: a.namedconnection(lambda n: n.name(identifier("n")).value(that)), lambda a: a.emptyargument(lambda e: e)])),
+            lambda u: u.systemcall(lambda c: c.name("$bits").arguments([
+                atom("int"), lambda t: t.nonintegertype(lambda n: n.keyword("real")), lambda t: t.keywordtype(lambda k: k.keyword("string")),
+                lambda t: t.namedtype(lambda n: n.name(lambda x: x.scopedname(lambda c: c.scope(lambda y: y.identifier(identifier("pkg"))).name(
+                    lambda y: y.identifier(identifier("word_t"))))).dimensions([lambda d: d.rangedimension(lambda r: r.left(sv.literal(3)).right(sv.literal(0)))])),
+                lambda t: t.virtualinterfacetype(lambda v: v.interface_keyword(True).interface(identifier("bus")).parameters([sv.literal(8)]).modport(identifier("mp"))),
+                lambda t: t.implicittype(lambda i: i.signing("signed")),
+                lambda t: t.structtype(lambda s: s.keyword("struct").packed(True).signing("signed").members([lambda m: m.random("rand").type(
+                    lambda t: t.integervectortype(lambda v: v.keyword("bit").dimensions([lambda d: d.rangedimension(lambda r: r.left(sv.literal(1)).right(sv.literal(0)))]))).declarators([
+                    lambda d: d.name(identifier("a")).dimensions([lambda x: x.unsizeddimension(lambda y: y)]), lambda d: d.name(identifier("b")).value(sv.literal(1))])])),
+                lambda t: t.enumtype(lambda e: e.base(atom("int")).members([lambda m: m.name(identifier("A")), lambda m: m.name(identifier("B")).left(sv.literal(2)).value(sv.literal(1)),
+                                                                            lambda m: m.name(identifier("C")).left(sv.literal(0)).right(sv.literal(1))])),
+                lambda t: t.typereference(lambda r: r.operand(that)),
+                lambda t: t.integervectortype(lambda v: v.keyword("logic").dimensions([lambda d: d.associativedimension(lambda a: a.type(atom("int"))),
+                    lambda d: d.associativedimension(lambda a: a), lambda d: d.queuedimension(lambda q: q), lambda d: d.queuedimension(lambda q: q.bound(sv.literal(8)))]))])),
+            sv.call("$clog2", that),
+            sv.cast(lambda t: t.implicittype(lambda i: i.signing("signed")), that), sv.cast(8, that), sv.cast(atom("byte"), that),
+            lambda u: u.dollarexpression(lambda d: d), lambda u: u.rootexpression(lambda r: r), lambda u: u.emptyqueue(lambda e: e),
+            lambda u: u.mintypmaxexpression(lambda m: m.min(sv.literal(1)).typ(sv.literal(2)).max(sv.literal(3))),
+            lambda u: u.taggedexpression(lambda t: t.member(identifier("Valid")).value(that)),
+            lambda u: u.predicateexpression(lambda p: p.conditions([lambda c: c.matchesexpression(lambda m: m.value(that).pattern(sv.literal(1))), that])),
+            lambda u: u.streamingconcatenation(lambda s: s.operator("<<").slice(atom("byte")).items([
+                lambda i: i.expression(that).left(sv.literal(0)).operator("+:").right(sv.literal(2))])),
+            lambda u: u.nameexpression(lambda n: n.name(lambda x: x.localname(lambda l: l.name(identifier("y"))))),
+            lambda u: u.nameexpression(lambda n: n.name(lambda x: x.scopedname(lambda c: c.scope(lambda y: y.unitname(lambda z: z)).name(
+                lambda y: y.identifier(identifier("z")))))),
+            lambda u: u.nameexpression(lambda n: n.name(lambda x: x.interfacetypename(lambda i: i.interface(identifier("bus")).name(identifier("t"))))),
+            lambda u: u.nameexpression(lambda n: n.name(lambda x: x.interfacemethodname(lambda i: i.port(identifier("port")).name(identifier("m"))))),
+            lambda u: u.macrousage(lambda m: m.name(identifier("WIDTH"))),
+            lambda u: u.macrousage(lambda m: m.name(identifier("MAX")).arguments("a, b")),
+            lambda u: u.constant(lambda c: c.fill("1")), lambda u: u.constant(lambda c: c.singleton("null")),
+            lambda u: u.constant(lambda c: c.bits("xxxx").base("h")),
+            sv.literal(1.5), lambda u: u.literal(lambda r: r.value(lambda v: v.as_scalar("s")).triple(True)),
+            lambda u: u.literal(lambda r: r.value(lambda v: v.as_scalar(10.0)).unit("ns")),
+            lambda u: u.literal(lambda r: r.value(lambda v: v.as_scalar(1000)).text("1_000").separators(True)),
+            sv.literal('a"b'))))
 
     # --- typescript5: every kind, its types, patterns and JSX, written through the builders (TypeScript5 has no writers), a
     # literal with its spelling and a shared identifier --- the text ToText writes:
@@ -323,6 +403,82 @@ def build():
         lambda e: e.importexpression(lambda r: r.source(ts_record)),  # import(ts_record)
     ]))
 
+    # --- systemverilog_patterns: every kind of SystemVerilog's Patterns, held by Expressions' `matches` --- the text:
+    # '{a: .x, b: tagged Valid (.*), c: record.a}
+    patterns = SVPatterns.Expressions.DIALECT.spec(lambda u: u.structurepattern(lambda s: s.items([
+        lambda i: i.patternmember(lambda m: m.name(identifier("a")).pattern(lambda p: p.variablepattern(lambda v: v.name(identifier("x"))))),
+        lambda i: i.patternmember(lambda m: m.name(identifier("b")).pattern(lambda p: p.taggedpattern(lambda t: t.member(identifier("Valid")).pattern(
+            lambda q: q.parenthesizedpattern(lambda r: r.pattern(lambda w: w.wildcardpattern(lambda x: x))))))),
+        lambda i: i.patternmember(lambda m: m.name(identifier("c")).pattern(sv.member(that, "a")))])))
+
+    # --- systemverilog_assertions: every kind of SystemVerilog's Assertions and their helpers --- the text:
+    # @(posedge clk iff en or negedge rst) disable iff (rst) (a[*1:$], x += 1) ##[1:3] first_match(b intersect c) |=>
+    # @(*) d ##1 e[->2] ##n f[=1] and if (en) weak(a or b) else reject_on (rst) case (n) 1, 2: a until b; default:
+    # not a; endcase or (@(negedge clk) a throughout b iff nexttime [2] c #-# d)
+    a_, b_, c_, d_ = (sv.identifier(t) for t in "abcd")
+    assertions = SVAssertions.Expressions.DIALECT.spec(lambda u: u.propertyspec(lambda s: s.clock(lambda k: k.events([
+        lambda e: e.edge("posedge").expression(sv.identifier("clk")).condition(sv.identifier("en")),
+        lambda e: e.edge("negedge").expression(sv.identifier("rst"))])).disable(sv.identifier("rst")).property(lambda p: p.binaryproperty(lambda o: o.left(
+        lambda l: l.binaryproperty(lambda q: q.left(
+            lambda i: i.implicationproperty(lambda m: m.antecedent(lambda s1: s1.delaysequence(lambda ds: ds.first(
+                lambda ps: ps.parenthesizedsequence(lambda pp: pp.sequence(lambda r: r.repetitionsequence(lambda rr: rr.sequence(a_).operator("*").count(
+                    lambda cr: cr.cyclerange(lambda c: c.low(sv.literal(1)).high(lambda dd: dd.dollarexpression(lambda z: z)))))).items([
+                    lambda it: it.assignmentexpression(lambda ae: ae.target(sv.identifier("x")).operator("+=").value(sv.literal(1)))]))).steps([
+                lambda st: st.delay(lambda cr: cr.cyclerange(lambda c: c.low(sv.literal(1)).high(sv.literal(3)))).sequence(
+                    lambda fm: fm.firstmatchsequence(lambda f: f.sequence(lambda bs: bs.binarysequence(lambda b2: b2.left(b_).operator("intersect").right(c_)))))]))).operator("|=>").consequent(
+                lambda cs: cs.clockedsequence(lambda k: k.clock(lambda e: e).sequence(lambda ds: ds.delaysequence(lambda q2: q2.first(d_).steps([
+                    lambda st: st.delay(sv.literal(1)).sequence(lambda r: r.repetitionsequence(lambda rr: rr.sequence(sv.identifier("e")).operator("->").count(sv.literal(2)))),
+                    lambda st: st.delay(sv.identifier("n")).sequence(lambda r: r.repetitionsequence(lambda rr: rr.sequence(sv.identifier("f")).operator("=").count(sv.literal(1))))]))))))).operator("and").right(
+            lambda cp: cp.conditionalproperty(lambda c: c.condition(sv.identifier("en")).consequence(
+                lambda sp: sp.strengthproperty(lambda w: w.keyword("weak").sequence(lambda bs: bs.binarysequence(lambda b2: b2.left(a_).operator("or").right(b_))))).alternative(
+                lambda ab: ab.abortproperty(lambda r: r.keyword("reject_on").condition(sv.identifier("rst")).operand(lambda cp2: cp2.caseproperty(lambda cc: cc.expression(sv.identifier("n")).items([
+                    lambda it: it.expressions([sv.literal(1), sv.literal(2)]).body(lambda bp: bp.binaryproperty(lambda u2: u2.left(a_).operator("until").right(b_))),
+                    lambda it: it.body(lambda up: up.unaryproperty(lambda u3: u3.operator("not").operand(a_)))]))))))))).operator("or").right(
+        lambda pp: pp.parenthesizedproperty(lambda q: q.property(lambda cl: cl.clockedproperty(lambda k: k.clock(lambda e: e.events([
+            lambda ev: ev.edge("negedge").expression(sv.identifier("clk"))])).property(lambda bp: bp.binaryproperty(lambda o2: o2.left(
+                lambda bs: bs.binarysequence(lambda t: t.left(a_).operator("throughout").right(b_))).operator("iff").right(
+                lambda ip: ip.implicationproperty(lambda im: im.antecedent(lambda up: up.unaryproperty(lambda u4: u4.operator("nexttime").range(sv.literal(2)).operand(c_))).operator("#-#").consequent(d_)))))))))))))
+
+    # --- systemverilog_constraints: every kind of SystemVerilog's Constraints and its helpers --- the text:
+    # { soft record dist {0 := 40, [1:3] :/ 60, default :/ 1}; record > 0 -> record.a; if (record) record.a; else {}
+    # foreach (record[k, ]) k < record.a; solve record before record.a; disable soft record; unique {record, [1:2]}; }
+    holds = lambda e: lambda u: u.expressionconstraint(lambda c: c.expression(e))  # noqa: E731: a constraint of an expression
+    constraints = SVConstraints.Expressions.DIALECT.spec(lambda u: u.constraintblock(lambda b: b.items([
+        lambda i: i.expressionconstraint(lambda c: c.soft(True).expression(lambda d: d.distexpression(lambda e: e.value(that).items([
+            lambda t: t.value(sv.literal(0)).operator(":=").weight(sv.literal(40)),
+            lambda t: t.value(sv.span(1, 3)).operator(":/").weight(sv.literal(60)),
+            lambda t: t.operator(":/").weight(sv.literal(1))])))),
+        lambda i: i.implicationconstraint(lambda c: c.condition(sv.binary(">", that, 0)).body(holds(sv.member(that, "a")))),
+        lambda i: i.conditionalconstraint(lambda c: c.condition(that).consequence(holds(sv.member(that, "a"))).alternative(
+            lambda e: e.constraintblock(lambda b: b.items([])))),
+        lambda i: i.foreachconstraint(lambda f: f.value(that).variables([lambda v: v.identifier(identifier("k")),
+                                                                         lambda v: v.emptyargument(lambda e: e)])
+            .body(holds(sv.binary("<", sv.identifier("k"), sv.member(that, "a"))))),
+        lambda i: i.solvebeforeconstraint(lambda s: s.solve([that]).before([sv.member(that, "a")])),
+        lambda i: i.disablesoftconstraint(lambda d: d.target(that)),
+        lambda i: i.uniqueconstraint(lambda q: q.set([that, sv.span(1, 2)])),
+    ])))
+
+    # --- systemverilog_preprocessor: every kind of SystemVerilog's Preprocessor and its helper, in a conditional
+    # directive, its items, an `elsif` and an `else` --- the text: `ifdef (A && !B), its items each on its line,
+    # `elsif C, `resetall, `else, skipped;, `endif
+    preprocessor = SVPreprocessor.Expressions.DIALECT.spec(lambda u: u.ifdefdirective(lambda d: d
+        .condition(lambda c: c.parenthesizedexpression(lambda p: p.expression(sv.binary("&&", sv.identifier("A"), sv.unary("!", sv.identifier("B"))))))
+        .items([
+            lambda i: i.includedirective(lambda r: r.path("defs.svh")),
+            lambda i: i.includedirective(lambda r: r.path("uvm.svh").system(True)),
+            lambda i: i.definedirective(lambda r: r.name(identifier("MAX")).function_like(True).parameters(
+                [identifier("a"), identifier("b")]).body("((a) > (b) ? (a) : (b))")),
+            lambda i: i.undefdirective(lambda r: r.name(identifier("W"))),
+            lambda i: i.timescaledirective(lambda r: r.unit("1ns").precision("1ps")),
+            lambda i: i.defaultnettypedirective(lambda r: r.net_type("none")),
+            lambda i: i.comment(lambda r: r.text(" low")),
+            lambda i: i.comment(lambda r: r.text(" block ").block(True)),
+            lambda i: i.macrousage(lambda r: r.name(identifier("MAX")).arguments("1, 2")),
+        ])
+        .branches([lambda b: b.name(identifier("C")).items([lambda i: i.otherdirective(lambda r: r.text("`resetall"))])])
+        .alternative([lambda i: i.disabledtext(lambda r: r.text("skipped;"))]).has_else(True)))
+
     # --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
     # their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
     # (a binop's operands are Python3's terms, written in its union)
@@ -336,7 +492,9 @@ def build():
         terms = {case: store.Expressions.Framework.Term(writer) for case, writer in [
             ("expression", expression), ("python3", python3), ("matlab", matlab), ("excel", excel), ("latex", latex),
             ("collections", collections), ("c", c), ("cpp", cpp), ("systemverilog", systemverilog),
-            ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid)]}
+            ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid), ("systemverilog_patterns", patterns),
+            ("systemverilog_assertions", assertions), ("systemverilog_constraints", constraints),
+            ("systemverilog_preprocessor", preprocessor)]}
     terms["domains"] = defined["dialect"]
     terms.update(stored)
     terms.update({case: store.singleton(path).standards({"designation": designation})  # an edition, by its path

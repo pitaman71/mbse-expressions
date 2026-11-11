@@ -129,24 +129,32 @@ export const CFamily = {
   implies: new P("binaryexpression", { operator: "||" }, new P("unaryexpression", { operator: "!" }, A), B),
 };
 
-const method = (name: string, array: P | Hole) => new P("method", { name }, array);
+/** SystemVerilog's identifier, a name's or a member's, of a spelling or a hole. */
+const svIdentifier = (spelling: unknown) => new Part("identifier", { spelling }, 0);
 
+/** A call of an array's method: `array.name(args)`. */
+const svMethod = (array: P | Hole, name: string, ...args: (P | Hole)[]) =>
+  new P("callexpression", {}, new P("memberexpression", { member: svIdentifier(name) }, array), ...args);
+
+/** SystemVerilog's kinds, complete: a name used as a value is a `nameexpression` of its identifier, a member's name an
+ * identifier, and an array's method a call of its member. */
 export const SystemVerilog = {
-  constant: (V: Hole) => new P("literal", { value: V }),
-  identifier: new P("variable", { name: N }),
-  get: new P("member", { name: K }, X),
-  implies: new P("binary", { operator: "->" }, A, B),
+  literal: (V: Hole) => new P("literal", { value: V }),
+  identifier: new P("nameexpression", { name: svIdentifier(N) }),
+  get: new P("memberexpression", { member: svIdentifier(K) }, X),
+  implies: new P("binaryexpression", { operator: "->" }, A, B),
   /** a.method(n) with (b). */
-  iterate: (name: string) => new P("iterate", { method: name, name: N }, A, B),
+  iterate: (name: string) => new P("arraymethodwithexpression", {}, svMethod(A, name, new P("nameexpression", { name: svIdentifier(N) })), B),
   /** a.sum(n) with (int'(b)). */
-  count_where: new P("iterate", { method: "sum", name: N }, A, new P("cast", { type: "int" }, B)),
+  count_where: new P("arraymethodwithexpression", {}, svMethod(A, "sum", new P("nameexpression", { name: svIdentifier(N) })),
+    new P("castexpression", {}, new P("integeratomtype", { keyword: "int" }), B)),
   /** size, sum. */
-  method: (name: string) => method(name, A),
+  method: (name: string) => svMethod(A, name),
   /** a.min()[0]. */
-  locate: (name: string) => new P("select", {}, method(name, A), new P("literal", { value: 0n })),
-  select: new P("select", {}, A, B),
-  inside: new P("inside", {}, A, B),
-  unique: new P("binary", { operator: "==" }, method("size", method("unique", A)), method("size", A)),
+  locate: (name: string) => new P("indexexpression", {}, svMethod(A, name), new P("literal", { value: 0n })),
+  select: new P("indexexpression", {}, A, B),
+  inside: new P("insideexpression", {}, A, B),
+  unique: new P("binaryexpression", { operator: "==" }, svMethod(svMethod(A, "unique"), "size"), svMethod(A, "size")),
 };
 
 export const Excel = {

@@ -1,0 +1,151 @@
+systemverilog_constraints:
+  constraintblock:
+    items:
+    - expressionconstraint:
+        soft: true
+        expression:
+          distexpression:
+            value:
+              nameexpression:
+                name:
+                  identifier:
+                    spelling: record
+            items:
+            - value:
+                literal:
+                  value:
+                    int: 0
+              operator: :=
+              weight:
+                literal:
+                  value:
+                    int: 40
+            - value:
+                valuerange:
+                  left:
+                    literal:
+                      value:
+                        int: 1
+                  right:
+                    literal:
+                      value:
+                        int: 3
+              operator: :/
+              weight:
+                literal:
+                  value:
+                    int: 60
+            - operator: :/
+              weight:
+                literal:
+                  value:
+                    int: 1
+    - implicationconstraint:
+        condition:
+          binaryexpression:
+            left:
+              nameexpression:
+                name:
+                  identifier:
+                    spelling: record
+            operator: '>'
+            right:
+              literal:
+                value:
+                  int: 0
+        body:
+          expressionconstraint:
+            expression:
+              memberexpression:
+                value:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+                member:
+                  spelling: a
+    - conditionalconstraint:
+        condition:
+          nameexpression:
+            name:
+              identifier:
+                spelling: record
+        consequence:
+          expressionconstraint:
+            expression:
+              memberexpression:
+                value:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+                member:
+                  spelling: a
+        alternative:
+          constraintblock:
+            items: []
+    - foreachconstraint:
+        value:
+          nameexpression:
+            name:
+              identifier:
+                spelling: record
+        body:
+          expressionconstraint:
+            expression:
+              binaryexpression:
+                left:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: k
+                operator: <
+                right:
+                  memberexpression:
+                    value:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                    member:
+                      spelling: a
+        variables:
+        - identifier:
+            spelling: k
+        - emptyargument: {}
+    - solvebeforeconstraint:
+        solve:
+        - nameexpression:
+            name:
+              identifier:
+                spelling: record
+        before:
+        - memberexpression:
+            value:
+              nameexpression:
+                name:
+                  identifier:
+                    spelling: record
+            member:
+              spelling: a
+    - disablesoftconstraint:
+        target:
+          nameexpression:
+            name:
+              identifier:
+                spelling: record
+    - uniqueconstraint:
+        set:
+        - nameexpression:
+            name:
+              identifier:
+                spelling: record
+        - valuerange:
+            left:
+              literal:
+                value:
+                  int: 1
+            right:
+              literal:
+                value:
+                  int: 2

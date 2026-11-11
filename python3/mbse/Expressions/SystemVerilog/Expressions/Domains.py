@@ -31,9 +31,13 @@ from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 from mbse.Schemas.Framework import Proxies
 
-__all__ = ["SvType", "Logic", "Anything", "named", "vector", "common", "of", "BINARY", "UNARY", "CONDITIONAL",
-           "CONCATENATION", "REPLICATION", "SELECT", "RANGE", "INSIDE", "SPAN", "CAST", "MEMBER", "CALL", "METHOD",
-           "ITERATE"]
+__all__ = ["SvType", "Logic", "Anything", "NAMES", "named", "vector", "unsized", "common", "of", "BINARY", "UNARY",
+           "INCREMENT", "ASSIGNMENT", "CONDITIONAL", "SELECT", "RANGE", "INSIDE", "SPAN", "CAST", "MEMBER",
+           "PARENTHESIZED"]
+
+NAMES = ("logic", "reg", "integer", "time", "bit", "byte", "shortint", "int", "longint", "real", "shortreal")
+"""The types SystemVerilog's keywords name that its dialect stores as domains, in its `define`'s order: a cast to one
+reads it from the store; a cast to another (`realtime`, a type a program declares) is not read."""
 
 
 @dataclass(frozen=True)
@@ -72,6 +76,12 @@ class SvType:
 def vector(width: int, signed: bool = False, states: int = 4) -> SvType:
     """An integral type of a width: a packed `logic` or `bit` vector."""
     return SvType("integral", width, signed, states)
+
+
+def unsized(value: int, signed: bool = False) -> SvType:
+    """An unsized based integer's type (`'hFF`): a 4-state vector of 32 bits, or as many as its value needs, unsigned
+    unless written signed (5.7.1)."""
+    return SvType("integral", max(32, value.bit_length()), signed, 4)
 
 
 def named(store: Any, name: str) -> SvType:
@@ -209,24 +219,20 @@ UNARY: dict[str, D.Signature] = {
 }
 """The unary operators, the reductions among them."""
 
-CONDITIONAL = D.Function((Anything, Anything, Anything), Anything)
-CONCATENATION = D.Opaque()
-REPLICATION = D.Function((Anything, Anything), Anything)
+INCREMENT: dict[str, D.Signature] = {op: _Sized(1, lambda ts: ts[0] if _integral(ts) else None, "(integral) -> its type")
+                                     for op in ("++", "--")}
+"""The increments, prefix or postfix."""
+
+ASSIGNMENT: dict[str, D.Signature] = {op: _Sized(2, lambda ts: ts[0], "(T, U) -> T")
+                                      for op in ("=", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "<<=", ">>=",
+                                                 "<<<=", ">>>=")}
+"""The assignment operators: an assignment's value is its target's type."""
+
+CONDITIONAL = D.Opaque()
 SELECT = D.Function((Anything, Anything), Anything)
 RANGE = D.Function((Anything, Anything, Anything), Anything)
 INSIDE = D.Opaque(_ONE)
 SPAN = D.Function((Anything, Anything), Anything)
-CAST = D.Function((Anything,), Anything)
+CAST = D.Function((Anything, Anything), Anything)
 MEMBER = D.Function((Anything,), Anything)
-CALL = D.Opaque()
-
-
-class _Iterated(D.Opaque):
-    """An array method's `with` clause: the domain of an array's items is not known statically."""
-
-    def items(self, domain: D.Domain) -> D.Domain:
-        return Anything
-
-
-METHOD = D.Function((Anything,), Anything)
-ITERATE = _Iterated()
+PARENTHESIZED = _Sized(1, lambda ts: ts[0], "(T) -> T", Anything)

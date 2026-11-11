@@ -2,36 +2,49 @@
  * Evaluators of the SystemVerilog dialect: compute an expression by IEEE 1800's rules, in TypeScript.
  *
  * `Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
- * `new Scope(variables, { functions })` and gives a `Domains.Logic` for an integral result or a number for a real one.
- * A variable's type is its value's: a `Logic` its own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32 bits), a number a `real`, a string a vector
- * of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for domain inference, the port's
- * stage 3, Decided, 2). Every named type it computes in (a constant's, a cast's, `===`'s `bit`, `size()`'s `int`,
- * `$bits`' `integer`, ...) is the domain SystemVerilog defines by that name in the store of the term's holder
- * (`Domains.named`), read once per evaluation when it is first needed: a lone term is refused where it needs one
- * (mbse-schemas' TypeError), and a store where SystemVerilog's `define` has not run defines none. IEEE 1800's rules
- * apply:
+ * `new Scope(variables, { functions })` and gives a `Domains.Logic` for an integral result or a number for a real one. A
+ * variable's type is its value's: a `Logic` its own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32
+ * bits), a number a `real`, and a string a vector of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for
+ * domain inference). Every named type it computes in (a literal's, a cast's, `===`'s `bit`, `size()`'s `int`, `$bits`'
+ * `integer`, ...) is the domain SystemVerilog defines by that name in the store of the term's holder (`Domains.named`),
+ * read once per evaluation when it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError),
+ * and a store where SystemVerilog's `define` has not run defines none.
+ *
+ * It keeps what it evaluated before the dialect was complete, over the kinds that replaced its own (the dialects
+ * proposal, Decided for stage 6, Q11: "stage 6 extends no evaluator"): a `literal` (an unsized integer, decimal or based,
+ * a real, a string) and a `constant` (a vector, sized or not, and a fill in its context's width); a `nameexpression` of an
+ * identifier; `memberexpression`, `indexexpression`, `rangeselect` (`[msb:lsb]`), `unaryexpression`,
+ * `binaryexpression`, `conditionalexpression`, `parenthesizedexpression`, `insideexpression` with `valuerange`s,
+ * `concatenation`, `replication`, `castexpression` (to a type SystemVerilog defines by its keyword, a signing, or a
+ * width), `systemcall` (the system functions `SYSTEM`), `callexpression` (of a function the scope provides, or of an
+ * array's method of no arguments, `a.size()`) and `arraymethodwithexpression` (a reduction with a `with` clause). Every
+ * other kind, the other dialects' of its family among them, is refused by name, `NotImplementedError` ("SystemVerilog
+ * incrementexpression is not evaluated", "SystemVerilog Types structtype is not evaluated"), and so is what an evaluated
+ * kind holds beyond what it evaluated before (a scoped name, an indexed part select, a time literal, `null`). IEEE
+ * 1800's rules apply:
  *
  * - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
  *   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its
- *   context-determined operands are), and zero-extended otherwise. A real operand makes the expression real.
- * - 4-state logic: an arithmetic operator or a comparison with an x or z bit in an operand gives x (all bits); the
- *   bitwise operators and the reductions follow their truth tables; `===` and `!==` compare bits exactly, and `==?` and
- *   `!=?` treat x and z in the right operand as wildcards. Division by zero gives x.
+ *   context-determined operands are), and zero-extended otherwise. A real operand makes the expression real. An unsized
+ *   based integer is unsigned, unless written signed, of 32 bits; an unsized vector is extended to 32 bits by its leftmost
+ *   bit where it is x or z, else by 0; a fill (`'1`) fills its context's width.
+ * - 4-state logic: an arithmetic operator or a comparison with an x or z bit in an operand gives x (all bits); the bitwise
+ *   operators and the reductions follow their truth tables; `===` and `!==` compare bits exactly, and `==?` and `!=?`
+ *   treat x and z in the right operand as wildcards. Division by zero gives x.
  * - `&&`, `||`, `!`, `->` and `<->` give 1, 0 or x by the truth of their operands (any 1 bit is true, all 0 false,
  *   otherwise x); a conditional with an x condition merges its operands bit by bit.
- * - `inside` holds when the value equals (`==?`) an item, an element of an array among the items, or lies in a span;
+ * - `inside` holds when the value equals (`==?`) an item, an element of an array among the items, or lies in a range;
  *   otherwise it is x when a comparison is.
- * - A cast converts as an assignment would: integral values are extended by their own signedness or truncated, a
- *   2-state type maps x and z to 0, a real rounds to the nearest integer (ties away from zero), and an integer becomes
- *   a real.
- * - `select` gives a bit (x out of range, or for an x index) or an array's element; `range` bits `[msb:lsb]`.
- * - System functions: `$signed`, `$unsigned`, `$clog2`, `$bits`, `$countones`, `$onehot`, `$onehot0`, `$isunknown`;
- *   other functions are the scope's, and nothing else.
+ * - A cast converts as an assignment would: integral values are extended by their own signedness or truncated, a 2-state
+ *   type maps x and z to 0, a real rounds to the nearest integer (ties away from zero), and an integer becomes a real.
+ * - An index gives a bit (x out of range, or for an x index) or an array's element; a range select bits `[msb:lsb]`.
+ * - System functions: `$signed`, `$unsigned`, `$clog2`, `$bits` (of a value's type, or of a type SystemVerilog defines),
+ *   `$countones`, `$onehot`, `$onehot0`, `$isunknown`; other functions are the scope's, and nothing else.
  * - Array methods: `size()` is an `int`; `sum()`, `product()`, `and()`, `or()` and `xor()` reduce the items, or the
- *   values of a `with` clause, in their common type by `+`, `*`, `&`, `|` and `^` (x and z as those operators take
- *   them); of no items they give 0, 1, `1'b1`, `1'b0` and `1'b0`. `min()` and `max()` give a queue of the least or
- *   greatest item (none when there are none), and `unique()` a queue of the first of each set of identical (`===`)
- *   items.
+ *   values of a `with` clause, its iterator its call's argument (`item` by default), in their common type by `+`, `*`,
+ *   `&`, `|` and `^` (x and z as those operators take them); of no items they give 0, 1, `1'b1`, `1'b0` and `1'b0`.
+ *   `min()` and `max()` give a queue of the least or greatest item (none when there are none), and `unique()` a queue of
+ *   the first of each set of identical (`===`) items.
  */
 
 import { Errors, Proxies, Repr } from "@mbse/schemas/Framework";
@@ -46,7 +59,7 @@ import * as Domains from "./Domains.js";
 import * as X from "./Expressions.js";
 import { Logic, SvType } from "./Domains.js";
 
-const { KeyError, ValueError } = Errors;
+const { KeyError, NotImplementedError, ValueError } = Errors;
 const { repr, typeName } = Repr;
 type Fn = (...args: any[]) => unknown;
 
@@ -215,26 +228,42 @@ function power(base: bigint, exponent: bigint, modulus: bigint): bigint {
 
 // --- The evaluation ---
 
-/** A term read once for one evaluation: its `tag` (as `Expressions.DIALECT` reads it), and its members by name, its attributes (null where not set), its
- * slots (a `Node`) and its variadic arguments (an array of `Node`s). `term` is the term value read. */
+/** The kinds it evaluates: those that replaced the kinds it evaluated before the dialect was complete. */
+const EVALUATED: ReadonlySet<string> = new Set([X.LITERAL, X.CONSTANT, X.NAMEEXPRESSION, X.MEMBEREXPRESSION,
+  X.INDEXEXPRESSION, X.RANGESELECT, X.UNARYEXPRESSION, X.BINARYEXPRESSION, X.CONDITIONALEXPRESSION,
+  X.PARENTHESIZEDEXPRESSION, X.INSIDEEXPRESSION, X.CONCATENATION, X.REPLICATION, X.CASTEXPRESSION, X.SYSTEMCALL,
+  X.CALLEXPRESSION, X.ARRAYMETHODWITHEXPRESSION]);
+
+/** The name of the dialect of the family whose kind a tag is: SystemVerilog's own, or a sublanguage's. */
+function owner(tag: string): string {
+  return ([X.DIALECT, ...X.DIALECT.reads()].find((dialect) => dialect.kinds().has(tag)) as F.Dialect).name();
+}
+
+function refused(what: string): Error {
+  return new NotImplementedError(`${what} is not evaluated`);
+}
+
+/** A term read once for one evaluation: its `tag` (as `Expressions.DIALECT` reads it, a term of any of its family's
+ * dialects), and its members by name, its attributes (null where not set), its helpers (`Terms.Node`s), its slots (a
+ * `Node`, null where empty) and its variadic arguments (each container's, an array of `Node`s). `term` is the term value read. */
 class Node {
   [member: string]: any;
 
   constructor(readonly term: any) {
     const [tag, record] = X.DIALECT.kind(term);
-    const [slots, variadic, names] = F._parts(record.as_schema());
-    const args = F.argumentsOf(record);
+    const node = F.node(tag, record);
+    const [, , names] = F._parts(record.as_schema());
     for (const name of names) this[name] = null;
-    for (const [name, value] of F.attributesOf(record)) this[name] = value;
-    slots.forEach((name, i) => {
-      this[name] = new Node(args[i]); // a valid term fills every slot
-    });
-    if (variadic !== null) this[variadic] = args.slice(slots.length).map((a) => new Node(a));
+    for (const [name, value] of node.attributes) this[name] = value;
+    for (const [name, value] of node.helpers) this[name] = value;
+    for (const [name, value] of node.slots) this[name] = value === null ? null : new Node(value);
+    for (const [name, terms] of node.lists) this[name] = terms.map((a) => new Node(a));
     this.tag = tag;
   }
 }
 
 const kindOf = (node: Node): string => node.tag;
+const spelling = (name: any): string => name.attributes.get("spelling");
 const COMPARISONS = ["<", "<=", ">", ">=", "==", "!=", "===", "!==", "==?", "!=?"];
 const SHIFTS = ["<<", ">>", "<<<", ">>>"];
 
@@ -245,8 +274,9 @@ class Evaluation {
 
   constructor(readonly scope: Scope, readonly stored: Types) {}
 
-  /** The term's self-determined type (null for an object). */
+  /** The term's self-determined type (null for an object); a kind it does not evaluate is refused by name. */
   type(node: any): SvType | null {
+    if (!EVALUATED.has(kindOf(node))) throw refused(`${owner(kindOf(node))} ${kindOf(node)}`);
     if (!this.types.has(node)) this.types.set(node, this.typeOf(node));
     return this.types.get(node) as SvType | null;
   }
@@ -265,13 +295,18 @@ class Evaluation {
 
   private typeOf(node: any): SvType | null {
     const kind = kindOf(node);
-    if (["literal", "vector", "variable", "member", "select", "call", "method", "iterate"].includes(kind)) return typeOfValue(this.own(node), this.stored);
-    if (kind === "unary") {
+    if (kind === X.CONSTANT && node.fill !== null) return ONE; // self-determined, a fill is a bit
+    if ([X.LITERAL, X.CONSTANT, X.NAMEEXPRESSION, X.MEMBEREXPRESSION, X.INDEXEXPRESSION, X.CALLEXPRESSION,
+      X.ARRAYMETHODWITHEXPRESSION, X.CONCATENATION, X.REPLICATION, X.RANGESELECT, X.SYSTEMCALL].includes(kind)) {
+      return typeOfValue(this.own(node), this.stored);
+    }
+    if (kind === X.PARENTHESIZEDEXPRESSION) return this.type(node.expression);
+    if (kind === X.UNARYEXPRESSION) {
       if (node.operator === "+" || node.operator === "-") return this.type(node.operand);
       if (node.operator === "~") return this.integral(node.operand, "~");
       return ONE;
     }
-    if (kind === "binary") {
+    if (kind === X.BINARYEXPRESSION) {
       const op = node.operator;
       if (["<", "<=", ">", ">=", "==", "!=", "&&", "||", "->", "<->", "==?", "!=?"].includes(op)) return ONE;
       if (op === "===" || op === "!==") return this.stored.named("bit");
@@ -280,16 +315,31 @@ class Evaluation {
       if (op === "**" && left.kind !== "real" && right.kind !== "real") return left; // its exponent is self-determined
       return Domains.common([left, right]);
     }
-    if (kind === "conditional") return Domains.common([this.numeric(node.consequent, "?:"), this.numeric(node.alternative, "?:")]);
-    if (["concatenation", "replication", "range"].includes(kind)) return typeOfValue(this.own(node), this.stored);
-    if (kind === "inside") return ONE;
-    const operand = this.numeric(node.operand, "a cast"); // a cast
-    if (node.width !== null) return Domains.vector(Number(node.width), operand.signed, operand.states);
-    if (node.type === "signed" || node.type === "unsigned") {
-      const integral = this.integral(node.operand, `${node.type}'`);
-      return Domains.vector(integral.width, node.type === "signed", integral.states);
+    if (kind === X.CONDITIONALEXPRESSION) { // its condition first: one it does not evaluate (a `matches`) is refused by
+      this.type(node.condition); // name before the branches, which may name what its pattern binds, are sized
+      return Domains.common([this.numeric(node.consequence, "?:"), this.numeric(node.alternative, "?:")]);
     }
-    return this.stored.named(node.type);
+    if (kind === X.INSIDEEXPRESSION) return ONE;
+    return this.castType(node); // a cast
+  }
+
+  /** A cast's type: a width's, sized by its operand; a signing's, of its operand's width; or the type SystemVerilog
+   * defines by the keyword its type names. */
+  private castType(cast: any): SvType {
+    const target = cast.type;
+    const operand = this.numeric(cast.value, "a cast");
+    if (kindOf(target) === "implicittype" && target.signing !== null && target.dimensions === null) {
+      const integral = this.integral(cast.value, `${target.signing}'`);
+      return Domains.vector(integral.width, target.signing === "signed", integral.states);
+    }
+    const name = X.typeName(target.term);
+    if (name !== null && Domains.NAMES.includes(name)) return this.stored.named(name);
+    if (EVALUATED.has(kindOf(target))) { // a width: a known positive integer
+      const width = this.constant(target, "a cast's width");
+      if (width < 1n) throw new ValueError(`a cast's width must be positive, got ${width}`);
+      return Domains.vector(Number(width), operand.signed, operand.states);
+    }
+    throw refused(`${owner(kindOf(target))} ${kindOf(target)}`);
   }
 
   /** A self-determined term's value, of its own type, once. */
@@ -300,22 +350,36 @@ class Evaluation {
 
   private ownOf(node: any): unknown {
     switch (kindOf(node)) {
-      case "literal": return typed(node.value, this.stored);
-      case "vector": return Logic.of(node.value, Boolean(node.signed));
-      case "variable": return typed(this.scope.lookup(node.term), this.stored);
-      case "member": return this.member(node);
-      case "select": return this.select(node);
-      case "range": return this.range(node);
-      case "concatenation": return this.concatenation(node.parts.map((part: any) => this.value(part)));
-      case "replication": return this.replication(node);
-      case "method": return this.method(node);
-      case "iterate": {
-        const items = this.items(this.value(node.array), `${node.method}()`);
-        return this.reduce(node.method, items.map((item) => new Evaluation(this.scope.bind(node.name, item), this.stored)
-          .value(node.body)));
-      }
+      case X.LITERAL: return this.literal(node);
+      case X.CONSTANT: return this.vector(node);
+      case X.NAMEEXPRESSION:
+        if (F.nameOf(node.term) === null) throw refused("SystemVerilog nameexpression of a name that is not an identifier");
+        return typed(this.scope.lookup(node.term), this.stored);
+      case X.MEMBEREXPRESSION: return this.member(node);
+      case X.INDEXEXPRESSION: return this.select(node);
+      case X.RANGESELECT: return this.range(node);
+      case X.CONCATENATION: return this.concatenation(node.items.map((item: any) => this.value(item)));
+      case X.REPLICATION: return this.replication(node);
+      case X.ARRAYMETHODWITHEXPRESSION: return this.withClause(node);
+      case X.SYSTEMCALL: return this.systemCall(node);
       default: return this.call(node);
     }
+  }
+
+  /** A literal's value: an unsized based integer of its own type, a decimal one an `integer` or a `longint`, a real, or
+   * a string's bytes. */
+  private literal(node: any): unknown {
+    if (node.unit !== null) throw refused("SystemVerilog time literal");
+    if (node.base !== null) return Logic.number(Domains.unsized(node.value, Boolean(node.signed)), node.value);
+    return typed(node.value, this.stored);
+  }
+
+  /** A constant's vector: of its size, or, unsized, extended to 32 bits by its leftmost bit where x or z. */
+  private vector(node: any): Logic {
+    if (node.bits === null) throw refused(`SystemVerilog constant ${node.singleton}`);
+    let bits: string = node.bits;
+    if (node.size === null && bits.length < 32) bits = ("xz".includes(bits[0] as string) ? bits[0] as string : "0").repeat(32 - bits.length) + bits;
+    return Logic.of(bits, Boolean(node.signed));
   }
 
   /** The term's value in a context: its own type's, unless the context gives another. */
@@ -323,9 +387,14 @@ class Evaluation {
     const ctype = this.type(node);
     const target = (context ?? ctype) as SvType;
     const kind = kindOf(node);
-    if (kind === "unary" && ["+", "-", "~"].includes(node.operator)) return this.unary(node.operator, this.value(node.operand, target), target);
-    if (kind === "binary") return this.binary(node, target);
-    if (kind === "conditional") return this.conditional(node, target);
+    if (kind === X.PARENTHESIZEDEXPRESSION) return this.value(node.expression, context);
+    if (kind === X.CONSTANT && node.fill !== null) { // every bit of its context's width
+      const filled = Logic.of((node.fill as string).repeat(target.kind === "integral" ? target.width : 1));
+      return convert(filled, target, false);
+    }
+    if (kind === X.UNARYEXPRESSION && ["+", "-", "~"].includes(node.operator)) return this.unary(node.operator, this.value(node.operand, target), target);
+    if (kind === X.BINARYEXPRESSION) return this.binary(node, target);
+    if (kind === X.CONDITIONALEXPRESSION) return this.conditional(node, target);
     const result = this.selfDetermined(node);
     if (ctype === null) return result; // an object, an array
     return convert(result, target, ctype.signed && target.signed); // sign-extended only in a signed context
@@ -333,9 +402,9 @@ class Evaluation {
 
   private selfDetermined(node: any): unknown {
     const kind = kindOf(node);
-    if (kind === "unary") return this.reduction(node.operator, this.value(node.operand));
-    if (kind === "inside") return this.inside(node);
-    if (kind === "cast") return convert(this.value(node.operand), this.type(node) as SvType);
+    if (kind === X.UNARYEXPRESSION) return this.reduction(node.operator, this.value(node.operand));
+    if (kind === X.INSIDEEXPRESSION) return this.inside(node);
+    if (kind === X.CASTEXPRESSION) return convert(this.value(node.value), this.type(node) as SvType);
     return this.own(node);
   }
 
@@ -479,19 +548,21 @@ class Evaluation {
 
   private conditional(node: any, target: SvType): unknown {
     const t = truth(this.value(node.condition));
-    if (t === 1) return this.value(node.consequent, target);
+    if (t === 1) return this.value(node.consequence, target);
     if (t === 0) return this.value(node.alternative, target);
-    const [a, b] = [this.value(node.consequent, target), this.value(node.alternative, target)];
+    const [a, b] = [this.value(node.consequence, target), this.value(node.alternative, target)];
     if (target.kind === "real") return a === b ? a : 0.0;
     const [[a1, a0], [b1, b0]] = [parts(a as Logic), parts(b as Logic)];
     return make(target, a1 & b1, a0 & b0); // bits that agree keep their value; the others are x
   }
 
   private inside(node: any): Logic {
-    const items: any[][] = []; // a term, a span's ends, or an array's element
-    for (const item of node.items) {
-      if (kindOf(item) === "span") items.push([item.low, item.high]);
-      else if (this.type(item) === null && Array.isArray(this.own(item))) { // an array: each of its elements
+    const items: any[][] = []; // a term, a range's ends, or an array's element
+    for (const item of node.set) {
+      if (kindOf(item) === X.VALUERANGE) {
+        if (item.operator !== null) throw refused(`SystemVerilog valuerange ${repr(item.operator)}`);
+        items.push([item.left, item.right]);
+      } else if (this.type(item) === null && Array.isArray(this.own(item))) { // an array: each of its elements
         for (const element of this.items(this.own(item), "inside")) items.push(["element", element]);
       } else items.push([item]);
     }
@@ -529,27 +600,42 @@ class Evaluation {
     return value.map((item) => typed(item, this.stored));
   }
 
-  private method(node: any): unknown {
-    const items = this.items(this.value(node.array), `${node.name}()`);
-    if (node.name === "size") return Logic.number(this.stored.named("int"), BigInt(items.length));
-    if (node.name === "min" || node.name === "max") {
+  /** An array's method of no arguments: its size, a reduction, or a locator. */
+  private method(array: any, name: string): unknown {
+    const items = this.items(this.value(array), `${name}()`);
+    if (name === "size") return Logic.number(this.stored.named("int"), BigInt(items.length));
+    if (name === "min" || name === "max") {
       if (items.length === 0) return [];
       const shared = Domains.common(items.map((item) => this.elementType(item)));
       let best = items[0];
       for (const item of items.slice(1)) {
-        if (truth(this.compare(node.name === "min" ? "<" : ">", convert(item, shared), convert(best, shared), shared)) === 1) best = item;
+        if (truth(this.compare(name === "min" ? "<" : ">", convert(item, shared), convert(best, shared), shared)) === 1) best = item;
       }
       return [best];
     }
-    if (node.name === "unique") {
+    if (name === "unique") {
       const distinct: unknown[] = [];
       for (const item of items) if (!distinct.some((other) => identical(item, other))) distinct.push(item);
       return distinct;
     }
-    return this.reduce(node.name, items);
+    return this.reduce(name, items);
   }
 
   /** The values reduced by a reduction method, in their common type. */
+  /** A reduction with a `with` clause: its call's array's items, each bound to its iterator, reduced by its method over
+   * its `with` expression's values. */
+  private withClause(node: any): unknown {
+    const call = node.value;
+    const callee = kindOf(call) === X.CALLEXPRESSION ? call.callee : null;
+    if (callee === null || kindOf(callee) !== X.MEMBEREXPRESSION || !X.REDUCTIONS.includes(spelling(callee.member))) {
+      throw refused("SystemVerilog arraymethodwithexpression of a call that is not a reduction's");
+    }
+    const method = spelling(callee.member);
+    const iterator = [...(X.arrayMethodScopes(F.kindOf(node.term)[1])[1] as ReadonlySet<string>)][0] as string;
+    const items = this.items(this.value(callee.value), `${method}()`);
+    return this.reduce(method, items.map((item) => new Evaluation(this.scope.bind(iterator, item), this.stored).value(node.body)));
+  }
+
   private reduce(method: string, values: unknown[]): unknown {
     if (values.length === 0) {
       if (method === "sum" || method === "product") return Logic.number(this.stored.named("integer"), method === "sum" ? 0n : 1n);
@@ -563,13 +649,13 @@ class Evaluation {
   }
 
   private member(node: any): unknown {
-    const target: any = this.value(node.object);
+    const [target, name]: [any, string] = [this.value(node.value), spelling(node.member)];
     let members: ReadonlyMap<string, unknown>;
     if (Objects.isObject(target)) members = Objects.properties(target);
     else if (isMapping(target)) members = target instanceof Map ? target : new Map(Object.entries(target));
     else throw new TypeError(`a ${typeName(target)} has no members`);
-    if (!members.has(node.name)) throw new KeyError(`no member named '${node.name}'`);
-    return typed(array(members.get(node.name)), this.stored);
+    if (!members.has(name)) throw new KeyError(`no member named '${name}'`);
+    return typed(array(members.get(name)), this.stored);
   }
 
   private select(node: any): unknown {
@@ -598,9 +684,10 @@ class Evaluation {
   }
 
   private range(node: any): Logic {
+    if (node.operator !== ":") throw refused(`SystemVerilog rangeselect ${repr(node.operator)}`);
     const target = this.value(node.value);
     if (!(target instanceof Logic)) throw new TypeError(`a ${typeName(target)} cannot be selected from`);
-    const [msb, lsb] = [this.constant(node.msb, "a range's msb"), this.constant(node.lsb, "a range's lsb")];
+    const [msb, lsb] = [this.constant(node.left, "a range's msb"), this.constant(node.right, "a range's lsb")];
     if (msb < lsb) throw new ValueError(`a range's msb must be at least its lsb, got [${msb}:${lsb}]`);
     const [width, bits] = [target.type.width, target.bits];
     let selected = "";
@@ -619,19 +706,36 @@ class Evaluation {
   private replication(node: any): Logic {
     const count = this.constant(node.count, "a replication's count");
     if (count < 1n) throw new ValueError(`a replication's count must be positive, got ${count}`);
-    return this.concatenation(Array(Number(count)).fill(this.value(node.value)));
+    const values = node.items.map((item: any) => this.value(item));
+    return this.concatenation(Array.from({ length: Number(count) }, () => values).flat());
   }
 
-  private call(node: any): unknown {
-    const name = node.callable;
-    if (X.SYSTEM.includes(name)) {
-      if (node.arguments.length !== 1) throw new TypeError(`${name} takes 1 argument, got ${node.arguments.length}`);
-      if (name === "$bits") { // its argument's type's width; the argument is not evaluated
-        return Logic.number(this.stored.named("integer"), BigInt(this.numeric(node.arguments[0], name).width));
-      }
-      return this.system(name, this.value(node.arguments[0]));
+  /** A system function's call: one of `SYSTEM`, of one argument. */
+  private systemCall(node: any): unknown {
+    const name = node.name;
+    if (!X.SYSTEM.includes(name)) throw refused(`SystemVerilog systemcall ${repr(name)}`);
+    if (node.arguments.length !== 1) throw new TypeError(`${name} takes 1 argument, got ${node.arguments.length}`);
+    const argument = node.arguments[0];
+    if (name === "$bits") { // its argument's type's width, or a type's; the argument is not evaluated
+      const typedName = X.typeName(argument.term);
+      const width = (typedName !== null && Domains.NAMES.includes(typedName) ? this.stored.named(typedName)
+        : this.numeric(argument, name)).width;
+      return Logic.number(this.stored.named("integer"), BigInt(width));
     }
-    return typed(this.scope.function(name)(...node.arguments.map((argument: any) => this.value(argument))), this.stored);
+    return this.system(name, this.value(argument));
+  }
+
+  /** A call: of a function the scope provides, by its name, or of an array's method of no arguments. */
+  private call(node: any): unknown {
+    const callee = node.callee;
+    if (kindOf(callee) === X.NAMEEXPRESSION && F.nameOf(callee.term) !== null) {
+      const name = F.nameOf(callee.term) as string;
+      return typed(this.scope.function(name)(...node.arguments.map((argument: any) => this.value(argument))), this.stored);
+    }
+    if (kindOf(callee) === X.MEMBEREXPRESSION && X.METHODS.includes(spelling(callee.member)) && node.arguments.length === 0) {
+      return this.method(callee.value, spelling(callee.member));
+    }
+    throw refused(`SystemVerilog callexpression of a ${kindOf(callee)}`);
   }
 
   /** An array element's type: it must be integral or real. */

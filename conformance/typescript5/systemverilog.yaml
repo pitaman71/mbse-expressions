@@ -1,95 +1,586 @@
 systemverilog:
-  binary:
-    operator: '->'
+  binaryexpression:
     left:
-      inside:
+      insideexpression:
         value:
-          member:
-            name: a
-            object:
-              variable:
-                name: record
-        items:
+          memberexpression:
+            value:
+              nameexpression:
+                name:
+                  identifier:
+                    spelling: record
+            member:
+              spelling: a
+        set:
         - literal:
             value:
               int: 1
-        - span:
-            low:
+        - valuerange:
+            left:
               literal:
                 value:
                   int: 2
-            high:
+            right:
               literal:
                 value:
                   int: 5
+    operator: '->'
     right:
-      conditional:
-        condition:
-          unary:
-            operator: '!'
-            operand:
-              select:
+      binaryexpression:
+        left:
+          parenthesizedexpression:
+            expression:
+              conditionalexpression:
+                condition:
+                  matchesexpression:
+                    value:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                    pattern:
+                      literal:
+                        value:
+                          int: 3
+                attributes:
+                - specs:
+                  - name:
+                      spelling: keep
+                  - name:
+                      spelling: depth
+                    value:
+                      literal:
+                        value:
+                          int: 2
+                consequence:
+                  literal:
+                    value:
+                      int: 31
+                    base: h
+                alternative:
+                  constant:
+                    bits: '10x1'
+                    size: 4
+                    signed: true
+        operator: '+'
+        right:
+          concatenation:
+            items:
+            - indexexpression:
                 value:
-                  variable:
-                    name: record
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
                 index:
                   literal:
                     value:
                       int: 0
-        consequent:
-          concatenation:
-            parts:
+            - rangeselect:
+                value:
+                  memberexpression:
+                    value:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                    member:
+                      spelling: b
+                left:
+                  literal:
+                    value:
+                      int: 7
+                operator: ':'
+                right:
+                  literal:
+                    value:
+                      int: 4
+            - unaryexpression:
+                operator: '-'
+                operand:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - incrementexpression:
+                operator: '++'
+                postfix: true
+                operand:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - parenthesizedexpression:
+                expression:
+                  assignmentexpression:
+                    target:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                    operator: '+='
+                    value:
+                      literal:
+                        value:
+                          int: 1
             - replication:
                 count:
                   literal:
                     value:
-                      int: 6
-                value:
-                  vector:
-                    value: '10'
-            - range:
-                value:
-                  member:
-                    name: b
-                    object:
-                      variable:
-                        name: record
-                msb:
+                      int: 2
+                items:
+                - nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - assignmentpattern:
+                type:
+                  integervectortype:
+                    keyword: logic
+                    signing: signed
+                    dimensions:
+                    - rangedimension:
+                        left:
+                          literal:
+                            value:
+                              int: 7
+                        right:
+                          literal:
+                            value:
+                              int: 0
+                    - sizedimension:
+                        size:
+                          literal:
+                            value:
+                              int: 4
+                items:
+                - patternitem:
+                    key:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                    value:
+                      literal:
+                        value:
+                          int: 1
+                - patternitem:
+                    value:
+                      literal:
+                        value:
+                          int: 0
+            - assignmentpattern:
+                count:
                   literal:
                     value:
-                      int: 7
-                lsb:
+                      int: 2
+                items:
+                - nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+                - literal:
+                    value:
+                      int: 1
+            - thisexpression: {}
+            - superexpression: {}
+            - newexpression:
+                scope:
+                  scopedname:
+                    scope:
+                      identifier:
+                        spelling: pkg
+                    name:
+                      parameterizedname:
+                        name:
+                          spelling: c
+                        parameters:
+                        - literal:
+                            value:
+                              int: 8
+                arguments:
+                - literal:
+                    value:
+                      int: 1
+                - namedconnection:
+                    name:
+                      spelling: 'n'
+                    value:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                - emptyargument: {}
+            - newexpression:
+                scope:
+                  superexpression: {}
+                defaulted: true
+            - newcopyexpression:
+                value:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - newarrayexpression:
+                size:
                   literal:
                     value:
                       int: 4
-        alternative:
-          binary:
-            operator: '+'
-            left:
-              cast:
-                type: byte
-                operand:
-                  call:
-                    callable: $clog2
+                value:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - randomizewithexpression:
+                call:
+                  callexpression:
+                    callee:
+                      memberexpression:
+                        value:
+                          nameexpression:
+                            name:
+                              identifier:
+                                spelling: record
+                        member:
+                          spelling: randomize
+                    arguments: []
+                restricted: true
+                variables:
+                - spelling: a
+                items:
+                - binaryexpression:
+                    left:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                    operator: '<'
+                    right:
+                      literal:
+                        value:
+                          int: 5
+            - arraymethodwithexpression:
+                value:
+                  callexpression:
+                    callee:
+                      memberexpression:
+                        value:
+                          nameexpression:
+                            name:
+                              identifier:
+                                spelling: record
+                        member:
+                          spelling: sum
                     arguments:
-                    - systemverilog:
-                        iterate:
-                          name: q
-                          method: sum
-                          array:
-                            method:
-                              name: unique
-                              array:
-                                variable:
-                                  name: record
-                          body:
-                            variable:
-                              name: q
-            right:
-              cast:
-                width: 4
-                operand:
-                  vector:
-                    value: '11111111'
-                    signed: true
-                    base: h
+                    - nameexpression:
+                        name:
+                          identifier:
+                            spelling: q
+                body:
+                  binaryexpression:
+                    left:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: q
+                    operator: '>'
+                    right:
+                      literal:
+                        value:
+                          int: 0
+            - callexpression:
+                callee:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+                attributes:
+                - specs:
+                  - name:
+                      spelling: pure
+                arguments:
+                - nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+                - namedconnection:
+                    name:
+                      spelling: 'n'
+                    value:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                - emptyargument: {}
+            - systemcall:
+                name: $bits
+                arguments:
+                - integeratomtype:
+                    keyword: int
+                - nonintegertype:
+                    keyword: real
+                - keywordtype:
+                    keyword: string
+                - namedtype:
+                    name:
+                      scopedname:
+                        scope:
+                          identifier:
+                            spelling: pkg
+                        name:
+                          identifier:
+                            spelling: word_t
+                    dimensions:
+                    - rangedimension:
+                        left:
+                          literal:
+                            value:
+                              int: 3
+                        right:
+                          literal:
+                            value:
+                              int: 0
+                - virtualinterfacetype:
+                    interface_keyword: true
+                    interface:
+                      spelling: bus
+                    parameters:
+                    - literal:
+                        value:
+                          int: 8
+                    modport:
+                      spelling: mp
+                - implicittype:
+                    signing: signed
+                - structtype:
+                    keyword: struct
+                    packed: true
+                    signing: signed
+                    members:
+                    - random: rand
+                      type:
+                        integervectortype:
+                          keyword: bit
+                          dimensions:
+                          - rangedimension:
+                              left:
+                                literal:
+                                  value:
+                                    int: 1
+                              right:
+                                literal:
+                                  value:
+                                    int: 0
+                      declarators:
+                      - name:
+                          spelling: a
+                        dimensions:
+                        - unsizeddimension: {}
+                      - name:
+                          spelling: b
+                        value:
+                          literal:
+                            value:
+                              int: 1
+                - enumtype:
+                    base:
+                      integeratomtype:
+                        keyword: int
+                    members:
+                    - name:
+                        spelling: A
+                    - name:
+                        spelling: B
+                      left:
+                        literal:
+                          value:
+                            int: 2
+                      value:
+                        literal:
+                          value:
+                            int: 1
+                    - name:
+                        spelling: C
+                      left:
+                        literal:
+                          value:
+                            int: 0
+                      right:
+                        literal:
+                          value:
+                            int: 1
+                - typereference:
+                    operand:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                - integervectortype:
+                    keyword: logic
+                    dimensions:
+                    - associativedimension:
+                        type:
+                          integeratomtype:
+                            keyword: int
+                    - associativedimension: {}
+                    - queuedimension: {}
+                    - queuedimension:
+                        bound:
+                          literal:
+                            value:
+                              int: 8
+            - systemcall:
+                name: $clog2
+                arguments:
+                - nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - castexpression:
+                type:
+                  implicittype:
+                    signing: signed
+                value:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - castexpression:
+                type:
+                  literal:
+                    value:
+                      int: 8
+                value:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - castexpression:
+                type:
+                  integeratomtype:
+                    keyword: byte
+                value:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - dollarexpression: {}
+            - rootexpression: {}
+            - emptyqueue: {}
+            - mintypmaxexpression:
+                min:
+                  literal:
+                    value:
+                      int: 1
+                typ:
+                  literal:
+                    value:
+                      int: 2
+                max:
+                  literal:
+                    value:
+                      int: 3
+            - taggedexpression:
+                member:
+                  spelling: Valid
+                value:
+                  nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - predicateexpression:
+                conditions:
+                - matchesexpression:
+                    value:
+                      nameexpression:
+                        name:
+                          identifier:
+                            spelling: record
+                    pattern:
+                      literal:
+                        value:
+                          int: 1
+                - nameexpression:
+                    name:
+                      identifier:
+                        spelling: record
+            - streamingconcatenation:
+                operator: '<<'
+                slice:
+                  integeratomtype:
+                    keyword: byte
+                items:
+                - expression:
+                    nameexpression:
+                      name:
+                        identifier:
+                          spelling: record
+                  left:
+                    literal:
+                      value:
+                        int: 0
+                  operator: '+:'
+                  right:
+                    literal:
+                      value:
+                        int: 2
+            - nameexpression:
+                name:
+                  localname:
+                    name:
+                      spelling: 'y'
+            - nameexpression:
+                name:
+                  scopedname:
+                    scope:
+                      unitname: {}
+                    name:
+                      identifier:
+                        spelling: z
+            - nameexpression:
+                name:
+                  interfacetypename:
+                    interface:
+                      spelling: bus
+                    name:
+                      spelling: t
+            - nameexpression:
+                name:
+                  interfacemethodname:
+                    port:
+                      spelling: port
+                    name:
+                      spelling: m
+            - macrousage:
+                name:
+                  spelling: WIDTH
+            - macrousage:
+                name:
+                  spelling: MAX
+                arguments: 'a, b'
+            - constant:
+                fill: '1'
+            - constant:
+                singleton: 'null'
+            - constant:
+                bits: xxxx
+                base: h
+            - literal:
+                value:
+                  float: 1.5
+            - literal:
+                value:
+                  str: s
+                triple: true
+            - literal:
+                value:
+                  float: 10.0
+                unit: ns
+            - literal:
+                value:
+                  int: 1000
+                text: '1_000'
+                separators: true
+            - literal:
+                value:
+                  str: 'a"b'

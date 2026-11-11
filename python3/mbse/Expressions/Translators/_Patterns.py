@@ -125,18 +125,33 @@ class CFamily:
     implies = P("binaryexpression", P("unaryexpression", A, operator="!"), B, operator="||")
 
 
+def _sv_identifier(spelling: Any) -> Part:
+    """SystemVerilog's identifier, a name's or a member's, of a spelling or a hole."""
+    return Part("identifier", {"spelling": spelling}, 0)
+
+
+def _sv_method(array: P | Hole, name: str, *arguments: P | Hole) -> P:
+    """A call of an array's method: `array.name(arguments)`."""
+    return P("callexpression", P("memberexpression", array, member=_sv_identifier(name)), *arguments)
+
+
 class SystemVerilog:
-    constant = staticmethod(lambda V: P("literal", value=V))
-    identifier = P("variable", name=N)
-    get = P("member", X, name=K)
-    implies = P("binary", A, B, operator="->")
-    iterate = staticmethod(lambda method: P("iterate", A, B, method=method, name=N))  # a.method(n) with (b)
-    count_where = P("iterate", A, P("cast", B, type="int"), method="sum", name=N)  # a.sum(n) with (int'(b))
-    method = staticmethod(lambda name: P("method", A, name=name))  # size, sum
-    locate = staticmethod(lambda name: P("select", P("method", A, name=name), P("literal", value=0)))  # a.min()[0]
-    select = P("select", A, B)
-    inside = P("inside", A, B)
-    unique = P("binary", P("method", P("method", A, name="unique"), name="size"), P("method", A, name="size"), operator="==")
+    """SystemVerilog's kinds, complete: a name used as a value is a `nameexpression` of its identifier, a member's name
+    an identifier, and an array's method a call of its member."""
+
+    literal = staticmethod(lambda V: P("literal", value=V))
+    identifier = P("nameexpression", name=_sv_identifier(N))
+    get = P("memberexpression", X, member=_sv_identifier(K))
+    implies = P("binaryexpression", A, B, operator="->")
+    iterate = staticmethod(lambda method: P("arraymethodwithexpression", _sv_method(  # a.method(n) with (b)
+        A, method, P("nameexpression", name=_sv_identifier(N))), B))
+    count_where = P("arraymethodwithexpression", _sv_method(A, "sum", P("nameexpression", name=_sv_identifier(N))),
+                    P("castexpression", P("integeratomtype", keyword="int"), B))  # a.sum(n) with (int'(b))
+    method = staticmethod(lambda name: _sv_method(A, name))  # size, sum
+    locate = staticmethod(lambda name: P("indexexpression", _sv_method(A, name), P("literal", value=0)))  # a.min()[0]
+    select = P("indexexpression", A, B)
+    inside = P("insideexpression", A, B)
+    unique = P("binaryexpression", _sv_method(_sv_method(A, "unique"), "size"), _sv_method(A, "size"), operator="==")
 
 
 class Excel:

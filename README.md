@@ -169,7 +169,7 @@ implementation, read under the ABI the expression holding a C or C++ term names.
 ## Status
 
 Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Patterns,
-Python3, TypeScript5, MATLAB, Excel, LaTeX, C, Cpp and SystemVerilog dialects, each with its `Term`, the union of its kinds, in the
+Python3, TypeScript5, MATLAB, Excel, LaTeX, C and Cpp dialects and SystemVerilog's six, each with its `Term`, the union of its kinds, in the
 framework's union of the dialects' `Term`s, and translators between them; terms as values in an mbse-schemas store, with the container
 constructors `list` and `mapping`, literals holding any value with their spelling, and the kinds of invalid syntax
 `error` and `missing`; dialects, their operations and their
@@ -198,10 +198,13 @@ gone; a term that reads stored data read within the expression that holds it, so
 read under the ABI their expression names, `SystemV.AMD64` or `Arm.AAPCS64`
 ([CAP-267: C and C++ terms read under the ABI their holder names](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-267.md)); and standards as tagged data
 ([CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md)). The package root exports `Framework` alone, and Patterns is
-`Expressions.Patterns.Expressions`. Coming in 0.10.0: stage 6, `SystemVerilog` complete
-over IEEE 1800-2023, Verilog its subset ([CAP-231: the SystemVerilog expression dialect, complete](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-231.md)),
-with its sublanguages as dialects, and the retrofit of the other dialects (type, pattern, regex and preprocessor
-dialects, binding kinds as variations of `let`); until then `SystemVerilog` is the subset it was. Not built yet: domain
+`Expressions.Patterns.Expressions`. Built for 0.10.0, not yet released: stage 6, `SystemVerilog` complete over IEEE
+1800-2023, Verilog its subset ([CAP-231: the SystemVerilog expression dialect, complete](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-231.md)),
+six dialects of one family, its expressions and its types, patterns, assertions, constraints and preprocessor, each
+reading the others' terms, printed in both languages, recording the IEEE editions that have its kinds, and checked
+against slang's syntax kinds; a kind may hold several lists of terms; its evaluator keeps what it evaluated. Coming in
+0.10.0 too: the retrofit of the other dialects (type, pattern, regex and preprocessor dialects, binding kinds as
+variations of `let`). Not built yet: domain
 inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
 interface through which mbse-schemas will choose union branches and check constraints.
 

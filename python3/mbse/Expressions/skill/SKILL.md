@@ -28,8 +28,10 @@ and translated between expression languages, called dialects:
 - **SystemV.AMD64** and **Arm.AAPCS64**, the ABI dialects of x86-64's System V ABI and of AArch64's AAPCS64: each holds
   only domains, the C and C++ types its ABI fixes (plain `char` signed on one and unsigned on the other, `long double`
   x87's extended format or `binary128`), and serves C and C++ alike.
-- **SystemVerilog**, hardware expressions and constraints over 4-state vectors and reals: it renders as its source and
-  evaluates by IEEE 1800's rules (sizing by context, x and z propagating).
+- **SystemVerilog**, every expression of IEEE 1800-2023, Verilog its subset, over 4-state vectors and reals, in six
+  dialects of one family: its expressions, and its types, patterns, assertions (sequences and properties), constraints
+  and preprocessor, each a dialect reading the others' terms. It renders as its source and evaluates its constraint
+  kinds by IEEE 1800's rules (sizing by context, x and z propagating), refusing the others by name.
 - **ISOIEC11404**, **IEEE754**, **IEEE1164** and **Unicode**, the standard dialects: each holds a published standard's
   kinds of domain and its domains, named as the standard names them (ISO/IEC 11404's `integer`, `octet`, a code, and
   `modulo(256)`, wrapping arithmetic; IEEE 754's `binary64`), and has no terms yet. The other dialects' values take their domains.
@@ -61,7 +63,8 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    write, each in a transaction of its own, once per store: the framework's, then the standard dialects' whose kinds of
    domain the others use (`ISOIEC11404`, `IEEE754`, `IEEE1164`, `Unicode`), then the rest
    (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...,
-   `C.install`, `Cpp.install`, and the ABI dialects' you need, `AMD64.install`, `AAPCS64.install`); then each one's
+   `C.install`, `Cpp.install`, and the ABI dialects' you need, `AMD64.install`, `AAPCS64.install`; SystemVerilog's six
+   together, in any order, as each reads the others' terms); then each one's
    `define` whose data its validation, inference or evaluation reads, each in a transaction of its own: Patterns',
    which names the operations validation reads (`store.transaction(Patterns.define)`), and C's, C++'s, the ABI
    dialects', SystemVerilog's, which write the types they read. A C or C++ expression names the ABI its terms are read
