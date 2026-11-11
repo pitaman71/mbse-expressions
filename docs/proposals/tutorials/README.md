@@ -258,15 +258,15 @@ Python  a + b * c    C  (a + b) * c    SystemVerilog  a + b * c    Excel  =a + b
 ```
 
 ```python
-var = lambda n: lambda d: d.variable(lambda v: v.name(n))
+variable = lambda name: lambda d: d.variable(lambda v: v.name(name))
 with store.transaction():
     patterns = S.Patterns.Expressions.Expression(lambda e: e.root(lambda u: u.call(lambda c: c.callable("add").arguments([
-        lambda t: t.patterns(var("a")),
+        lambda t: t.patterns(variable("a")),
         lambda t: t.patterns(lambda d: d.call(lambda m: m.callable("mul").arguments([
-            lambda t: t.patterns(var("b")), lambda t: t.patterns(var("c"))])))]))))
+            lambda t: t.patterns(variable("b")), lambda t: t.patterns(variable("c"))])))]))))
     c = S.C.Expressions.Expression(lambda e: e.root(lambda u: u.binaryexpression(lambda b: b
-        .left(lambda l: l.binaryexpression(lambda s: s.left(var("a")).operator("+").right(var("b"))))
-        .operator("*").right(var("c")))).abi([amd64]))
+        .left(lambda l: l.binaryexpression(lambda s: s.left(variable("a")).operator("+").right(variable("b"))))
+        .operator("*").right(variable("c")))).abi([amd64]))
 C.Text.ToText(c)    # '(a + b) * c'
 ```
 
@@ -291,9 +291,9 @@ Python  x.readings[0]    Excel  =INDEX(x.readings, 0 + 1)    MATLAB  x.readings(
 ```
 
 ```python
-with store.transaction():  # var, as in 5's example
+with store.transaction():  # variable, as in 5's example
     call = S.Python.Python3.Expression(lambda e: e.root(lambda u: u.call(lambda c: c
-        .func(var("f")).args([var("x")])
+        .func(variable("f")).args([variable("x")])
         .keywords([lambda k: k.arg("y").value(lambda t: t.literal(lambda r: r.value(lambda v: v.as_scalar(1))))]))))
 ```
 
@@ -491,6 +491,12 @@ Minutiae this proposal settles, each the simplest default consistent with the re
 - **Deferred steps join where they belong without renumbering**: *Values with widths*, when domain inference lands,
   as further steps of 2, 3 and 15.
 - **SKL-05, new, in both suites**, checks that every tutorial has the same steps in both languages.
+- **One name helper, `variable`** *(agent)*: tutorials 5 and 6 write a name through one line,
+  `variable = lambda name: lambda d: d.variable(lambda v: v.name(name))`, the same in both notebooks and both
+  languages. It follows this proposal's plan, whose examples (5 and 6) wrote it; it is a spec, the callable a builder
+  takes and returns ([PRI-004: one visitor protocol per kind](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-004)),
+  not a function that builds a model; and it is named after the kind it writes, not `var`, as the plan had it, since
+  `var` is a reserved word in TypeScript.
 - **The findings fixed in the build**: the skill's "Names" section corrected for `Domains` and `Standards`
   (finding 5), and the keyword-tagged kinds' `getattr` listed in `docs/EQUIVALENCE.md` (finding 6). Finding 4,
   Python's `FromText` dropping parentheses, is `ast`'s, and stays as built: 05.3 says so.
