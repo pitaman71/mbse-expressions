@@ -44,6 +44,13 @@ import * as SVPatterns from "../SystemVerilog/Patterns/index.js";
 import * as SVPreprocessor from "../SystemVerilog/Preprocessor/index.js";
 import * as SVTypes from "../SystemVerilog/Types/index.js";
 import * as TypeScript5 from "../TypeScript/TypeScript5/index.js";
+import * as CPreprocessor from "../C/Preprocessor/index.js"; // the retrofit's new dialects, skeletons yet
+import * as CTypes from "../C/Types/index.js";
+import * as CppTypes from "../Cpp/Types/index.js";
+import * as PythonPatterns from "../Python/Patterns/index.js";
+import * as PythonTypes from "../Python/Types/index.js";
+import * as TypeScriptPatterns from "../TypeScript/Patterns/index.js";
+import * as TypeScriptTypes from "../TypeScript/Types/index.js";
 import * as Framework from "../Framework/index.js";
 import type * as Terms from "../Framework/Terms.js";
 
@@ -107,6 +114,8 @@ export function build(): Map<string, Case> {
     store.transaction(module.install);
   }
   store.transaction(TypeScript5.install);
+  const skeletons = [PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor];
+  for (const module of skeletons) store.transaction(module.install); // the retrofit's new dialects, each after its family's
   const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
   const stored = new Map<string, any>(([ // each dialect's stored domains
     ["systemverilog_domains", SystemVerilog], ["python3_domains", Python3], ["typescript5_domains", TypeScript5],
@@ -116,6 +125,7 @@ export function build(): Map<string, Case> {
   for (const module of [SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor]) { // the editions they cover
     store.transaction(module.define);
   }
+  for (const module of skeletons) store.transaction(module.define); // their data, none yet
 
   // --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
   // added ---

@@ -19,6 +19,11 @@ import * as Excel from "@mbse/expressions/Excel/Expressions";
 import * as Latex from "@mbse/expressions/LaTeX/Expressions";
 import * as Matlab from "@mbse/expressions/MATLAB/Expressions";
 import * as Python3 from "@mbse/expressions/Python/Python3";
+import * as CPreprocessor from "@mbse/expressions/C/Preprocessor";
+import * as CTypes from "@mbse/expressions/C/Types";
+import * as CppTypes from "@mbse/expressions/Cpp/Types";
+import * as PythonPatterns from "@mbse/expressions/Python/Patterns";
+import * as PythonTypes from "@mbse/expressions/Python/Types";
 import * as AAPCS64 from "@mbse/expressions/Arm/AAPCS64";
 import * as AMD64 from "@mbse/expressions/SystemV/AMD64";
 import * as SystemVerilog from "@mbse/expressions/SystemVerilog/Expressions";
@@ -53,15 +58,17 @@ export function install(txn: any): any {
  * `Arm/AAPCS64`); Patterns' operations named by its dialect (`Patterns.define`), which validation reads; and C's,
  * C++'s, the ABIs' and SystemVerilog's types, their domains (each dialect's `define`), which their evaluation reads,
  * with SystemVerilog's sublanguages' dialects (`Types`, `Patterns`, `Assertions`, `Constraints`, `Preprocessor`), whose
- * terms its terms hold, and the editions each covers. */
+ * terms its terms hold, and the editions each covers; and Python's, C's and C++'s new dialects (`Python Types`, `Python
+ * Patterns`, `C Types`, `Cpp Types`, `C Preprocessor`), each after its family's. */
 export function cold_chain(): any {
   const store: any = new Builders.Store();
   for (const module of [Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, Matlab, Excel, Latex, C, Cpp,
-    AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor]) {
+    AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor, PythonTypes,
+    PythonPatterns, CTypes, CppTypes, CPreprocessor] as any[]) {
     store.transaction(module.install);
   }
   for (const module of [Patterns, C, Cpp, AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints,
-    SVPreprocessor]) {
+    SVPreprocessor, CTypes, CppTypes, CPreprocessor] as any[]) {
     store.transaction(module.define);
   }
   store.transaction(install);
