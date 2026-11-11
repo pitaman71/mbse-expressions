@@ -1,6 +1,6 @@
 {
- "grammar": "CPython's ast, Python 3.0 to 3.15: every node an expression is (class `expr`, and `slice` before 3.9) or holds (its helpers, operators and contexts)",
- "checked": "Python 3.14.7 and 3.15.0rc2 have the same `expr` classes",
+ "grammar": "CPython's ast, Python 3.0 to 3.15: every node an expression is (class `expr`, and `slice` before 3.9) or holds (its helpers, operators and contexts), and the nodes of its sublanguages, type parameters (class `type_param`, the Python Types dialect's) and patterns (class `pattern`, the Python Patterns dialect's)",
+ "checked": "Python 3.14.7 and 3.15.0rc2 have the same `expr`, `type_param` and `pattern` classes",
  "nodes": [
   {
    "node": "BoolOp",
@@ -342,6 +342,100 @@
    "class": "helper",
    "since": "3.0",
    "not": "a name an import statement declares; the import and importfrom extensions hold theirs as str attributes"
+  },
+  {
+   "node": "match_case",
+   "class": "helper",
+   "since": "3.10",
+   "not": "a case of a match statement, a statement's part: mbse-programs' MatchCase holds its pattern through the Python Patterns dialect's holder, its guard through Python3's, and relates its body"
+  },
+  {
+   "node": "TypeVar",
+   "class": "type_param",
+   "since": "3.12",
+   "kinds": [
+    "typevar"
+   ]
+  },
+  {
+   "node": "ParamSpec",
+   "class": "type_param",
+   "since": "3.12",
+   "kinds": [
+    "paramspec"
+   ]
+  },
+  {
+   "node": "TypeVarTuple",
+   "class": "type_param",
+   "since": "3.12",
+   "kinds": [
+    "typevartuple"
+   ]
+  },
+  {
+   "node": "MatchValue",
+   "class": "pattern",
+   "since": "3.10",
+   "kinds": [
+    "matchvalue"
+   ]
+  },
+  {
+   "node": "MatchSingleton",
+   "class": "pattern",
+   "since": "3.10",
+   "kinds": [
+    "matchsingleton"
+   ]
+  },
+  {
+   "node": "MatchSequence",
+   "class": "pattern",
+   "since": "3.10",
+   "kinds": [
+    "matchsequence"
+   ]
+  },
+  {
+   "node": "MatchMapping",
+   "class": "pattern",
+   "since": "3.10",
+   "kinds": [
+    "matchmapping"
+   ]
+  },
+  {
+   "node": "MatchClass",
+   "class": "pattern",
+   "since": "3.10",
+   "kinds": [
+    "matchclass"
+   ]
+  },
+  {
+   "node": "MatchStar",
+   "class": "pattern",
+   "since": "3.10",
+   "kinds": [
+    "matchstar"
+   ]
+  },
+  {
+   "node": "MatchAs",
+   "class": "pattern",
+   "since": "3.10",
+   "kinds": [
+    "matchas"
+   ]
+  },
+  {
+   "node": "MatchOr",
+   "class": "pattern",
+   "since": "3.10",
+   "kinds": [
+    "matchor"
+   ]
   },
   {
    "node": "And",

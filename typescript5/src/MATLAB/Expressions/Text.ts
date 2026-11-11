@@ -33,7 +33,7 @@ export function ToText(expression: unknown): string {
   while (DIALECT.kind(node)[0] === "import") {
     const form = F.form(node);
     lines.push(`import ${form.attributes.get("name")}`);
-    node = form.arguments[0];
+    node = form.arguments[form.arguments.length - 1]; // its body
   }
   const write = (term: any, args: [string, number][]): [string, number] => {
     const operand = (index: number, level: number): string => {

@@ -1,6 +1,6 @@
 """Text of the Python3 dialect, its source text in both directions, as every mbse framework names it:
-`ToText(expression)` is a term of Python3 (or anything `Terms.term` reads one from) as Python source, parenthesized
-only where precedence requires, with its imports as the lines before it, a literal in its spelling where it has one and
+`ToText(expression)` is a term of the Python family (or anything `Terms.term` reads one from) as Python source,
+parenthesized only where precedence requires, with its imports as the lines before it, a literal in its spelling where it has one and
 invalid syntax as written (`Terms.invalid_text`); and `FromText(source)` is the `Writer` of the term Python source
 writes, imports then one expression, read by CPython's `ast`, every expression kind of it, each literal with its
 spelling: its text as written and what the text encodes (a string's prefix and quotes, an int's base, digit
@@ -9,6 +9,11 @@ separators), adjacent strings as a `concatenatedstring`, and an f-string's or a 
 `(lambda name: body)(value)`, one name bound to one value, as a `let`, the idiom the extension writes, and any other
 lambda as a `lambda`. A writer is written where a caller writes a term, within a transaction:
 `store.Expressions.Framework.Term(FromText("a + 1"))`.
+
+The family's printer prints a tree that mixes its dialects' terms from any of their holders: each sublanguage's kinds
+are written by its own package's `Text` module, which the printer dispatches to by tag (`Types.Text`, `Patterns.Text`),
+each with its `TEXTS` (a kind's tag to the function that writes it, given the printer and its `Terms.Node`, giving its
+text and its precedence, on this module's scale).
 
 `FromText` is the Python implementation's alone (mbse-expressions' EQUIVALENCE.md): Python's own parser reads the text,
 until mbse-programs reads `Python3` (the dialects proposal, Decided, 6). An f-string's parts are located as Python 3.12
@@ -86,10 +91,13 @@ class _Printer:
                 return attributes["singleton"], _PRIMARY
             parts = attributes["complex"].attributes  # a complex number's, `Expressions.Python.Python3.Complex`
             return _constant(complex(parts.get("real", 0.0), parts["imag"]))
-        if tag in ("error", "missing"):
-            return F.invalid_text(P.DIALECT, tag, attributes), _PRIMARY
+        if tag in ("error", "missing"):  # as written, by the dialect of its family that owns it
+            return F.invalid_term_text(P.DIALECT, node), _PRIMARY
         if tag in _IMPORTS:
             raise ValueError("an import can only enclose the whole expression")
+        family = _texts()
+        if tag in family:  # a kind of a sublanguage of its family, as its dialect's `Text` writes it
+            return family[tag](self, F.node(tag, record))
         return getattr(self, f"_{tag}")(attributes, arguments)
 
     def _variable(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
@@ -169,25 +177,25 @@ class _Printer:
 
     def _comprehension(self, attributes: dict[str, Any], arguments: tuple[Any, ...], lead: int, opening: str,
                        closing: str) -> tuple[str, int]:
-        element = arguments[0]
-        if lead == 2:
-            head = f"**{self.write(element, _BITOR)}" if arguments[1] is None else \
-                f"{self.element(element)}: {self.element(arguments[1])}"
+        element = arguments[1]  # its body, after Let's empty value
+        if lead == 3:  # a dictcomp: its value, its body, then its key
+            head = f"**{self.write(arguments[2], _BITOR)}" if element is None else \
+                f"{self.element(arguments[2])}: {self.element(element)}"
         else:
             head = self.element(element)
         return f"{opening}{head}{self.clauses(attributes, arguments[lead:])}{closing}", _PRIMARY
 
     def _listcomp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
-        return self._comprehension(attributes, arguments, 1, "[", "]")
+        return self._comprehension(attributes, arguments, 2, "[", "]")
 
     def _setcomp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
-        return self._comprehension(attributes, arguments, 1, "{", "}")
-
-    def _dictcomp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         return self._comprehension(attributes, arguments, 2, "{", "}")
 
+    def _dictcomp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
+        return self._comprehension(attributes, arguments, 3, "{", "}")
+
     def _generatorexp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
-        return self._comprehension(attributes, arguments, 1, "(", ")")
+        return self._comprehension(attributes, arguments, 2, "(", ")")
 
     def _yield(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         return ("yield" if arguments[0] is None else f"yield {self.element(arguments[0])}"), _YIELD
@@ -271,7 +279,7 @@ class _Printer:
 
     def _namedexpr(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         target = attributes.get("target")
-        return f"{self.target(target, arguments[1:])} := {self.element(arguments[0])}", _NAMED
+        return f"{self.target(target, arguments[2:])} := {self.element(arguments[0])}", _NAMED  # its value, Let's empty body
 
     def _ifexp(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         body, test, orelse = arguments
@@ -303,21 +311,35 @@ class _Printer:
         return " " + ", ".join(written)
 
     def _lambda(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
-        parameters = self.parameters(attributes, list(arguments[1:]))
-        return f"lambda{parameters}: {self.write(arguments[0], _LAMBDA)}", _LAMBDA
+        parameters = self.parameters(attributes, list(arguments[2:]))  # Let's empty value, its body, then its defaults
+        return f"lambda{parameters}: {self.write(arguments[1], _LAMBDA)}", _LAMBDA
 
     def _let(self, attributes: dict[str, Any], arguments: tuple[Any, ...]) -> tuple[str, int]:
         return f"(lambda {attributes['name']}: {self.write(arguments[1], _LAMBDA)})({self.element(arguments[0])})", _PRIMARY
 
 
+_TEXTS: list[dict[str, Any]] = []
+
+
+def _texts() -> dict[str, Any]:
+    """How the kinds of its family's sublanguages are written: each dialect's `Text` module's `TEXTS`, merged, read when
+    first needed."""
+    if not _TEXTS:
+        from ..Patterns import Text as Patterns
+        from ..Types import Text as Types
+        _TEXTS.append({**Types.TEXTS, **Patterns.TEXTS})
+    return _TEXTS[0]
+
+
 def ToText(expression: Any) -> str:
-    """The expression as Python source: one line per import around it, then the expression."""
+    """The expression, a term of any dialect of the Python family, as Python source: one line per import around it,
+    then the expression; a pattern as a `case` writes it, an open sequence bare."""
     lines = []
     node = F.term(expression)
     tag, record, _ = P.DIALECT.kind(node)
     while tag in _IMPORTS:
         lines.append(_import_line(tag, F.attributes_of(record)))
-        node = F.arguments_of(record)[0]
+        node = F.arguments_of(record)[-1]  # its body
         tag, record, _ = P.DIALECT.kind(node)
     return "\n".join([*lines, _Printer().write(node, _LAMBDA)])  # a named expression or a yield in parentheses
 

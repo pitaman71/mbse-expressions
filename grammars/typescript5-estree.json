@@ -1,5 +1,5 @@
 {
- "grammar": "typescript-estree's node types (AST_NODE_TYPES), TypeScript 5.0 to 5.9: every node an expression, a type or a pattern is, or holds, mapped to TypeScript5's kinds (`kinds`), the branches of its `Type` (`types`) and `Pattern` (`patterns`) unions, or a helper; every other node listed as not an expression, with its reason",
+ "grammar": "typescript-estree's node types (AST_NODE_TYPES), TypeScript 5.0 to 5.9: every node an expression, a type or a pattern is, or holds, mapped to TypeScript5's kinds (`kinds`), the branches of TypeScript Types' and TypeScript Patterns' `Term`s (`types`, `patterns`; `Type` and `Pattern` in `concrete`, the unions' names before the retrofit moved them), or a helper; every other node listed as not an expression, with its reason",
  "checked": "@typescript-eslint/types 8.71.0 (TypeScript 5.9.3), as mbse-programs installs it: its 168 node types, those its `Expression` union holds (`class` Expression, a literal's as `LiteralExpression`), and those its `TypeNode` holds",
  "nodes": [
   {

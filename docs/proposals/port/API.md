@@ -1557,6 +1557,192 @@ mapped where mbse-programs' `_Reader.py` builds the node: 229 mapped, 304 not.
 216. **Open, with the user**: a constant is described as `None` in refusal messages ("SystemVerilog constant None of
      logic [7:0] ..."), left as it is.
 
+## Settled in the retrofit, for the user's review
+
+Built as [the dialects proposal](../dialects/README.md#stages-proposed-once-decided) designs it (stage 6's *Retrofit's
+design*), applying Decided for stage 6 to the other dialects; each choice where the design and the decisions were
+silent is marked *(agent)*. The core (217 to 224) was built first, alone; then three groups in parallel, Python (225
+to 235), TypeScript (236 to 245) and C and C++ (246 to 260); then the coordinator's merge and decisions (261 to 268).
+The regular expression dialects (`Python RegExp`, `TypeScript RegExp`) and JSX wait on the user (the design's Open, 1
+and 2). A breaking change, in 0.10.0: the moved schemas' names, the binders' renamed properties, and the callers'
+install lists.
+
+### The core
+
+217. **A binder binds by its role** *(agent)*: `Terms._lets(kind, record)` reads a term as a let only where its kind's
+     role is `BINDING` and it has no `scopes`; a quantifier and an import refining `Let` bind by their roles, in
+     validation, inference and `Symbolics.free`, and validation checks an import before the let reading.
+218. **Every existing binder refines `Let`** (the design's table) *(agent, each mapping)*: Patterns' `quantifier`
+     (`collection` → `value`), MATLAB's `arrayfun` (`array` → `value`) and `import`, Excel's `map` (`array` →
+     `value`), Python3's `lambda`, comprehensions (`elt` → `body`), `dictcomp` (`value` → `body`), `namedexpr`,
+     `import` and `importfrom`, TypeScript5's functions, arrows and classes, and C++'s `lambdaexpression` and
+     `requiresexpression`; a refinement lists Let's properties first, and the writers keep their names and argument
+     order.
+219. **Let's empty slots in a form** *(agent)*: every refined binder's form starts with Let's slots, None where unset:
+     `(None, body, ...)` for a comprehension or a lambda, `(value, None, ...)` for a named expression, `(None, None, ...)`
+     for C++'s and TypeScript5's functions and classes; a translator's pattern may hold None for an empty slot.
+220. **Let's unset properties are optional** *(agent)*: a binder lists the Let properties it leaves unset in its
+     kind's `optional`, which evaluation does not refuse when empty.
+221. **An import's body is its last argument** *(agent)*: evaluation and the MATLAB and Python3 printers read it so; a
+     prelude is an import whose body, its last argument, is a hole and its others empty.
+222. **A refinement redeclares only the Let terms it holds** *(agent)*, each to its own dialect's `Term`; one it leaves
+     unset stays `Expressions.Framework.Term`.
+223. **Seven new dialects' installs, after their families'** *(agent)*: `Python Types`, `Python Patterns`, `TypeScript
+     Types`, `TypeScript Patterns`, `C Types`, `Cpp Types` and `C Preprocessor`, each with its package, export,
+     singleton, holder and `Terms.Dialect`; every caller installs and defines each after its family's dialect (FRM
+     places them at the end). Python3 reads Python Types and Python Patterns; TypeScript5 reads TypeScript Types and
+     TypeScript Patterns; C reads C Types and C Preprocessor; C++ reads Cpp Types and C Preprocessor; each new dialect
+     reads its family's others; C Preprocessor reads C, C Types, C++ and Cpp Types (group C's, below). The two regular
+     expression dialects are not built (the design's Open, 1).
+224. **Tests**: DIA-30, new, a binder of every dialect refining `Let`, its properties and scopes; FRM-01, FRM-02, DIA-19,
+     DIA-21, DIA-24, EVL, COL, PAR and TRN under their IDs where they write or read a renamed property; the corpus
+     regenerated.
+
+### Python (group P)
+
+225. **Python Types' `Term` lists Python3's branches** (the design, API 169): every branch of
+     `Expressions.Python.Python3.Term`, which Python3's install adds, then `typevar`, `paramspec`, `typevartuple` and
+     invalid syntax; its own kinds in mbse-programs' shapes, a name a `str`.
+226. **Python Patterns' kinds** (the design): mbse-programs' eight, `matchmapping` and `matchclass` each holding two
+     containers (API 210), checked with mbse-programs' messages ("a MatchMapping needs a pattern for each key", "a
+     MatchClass needs a pattern for each keyword", "a MatchOr needs two patterns"), and `ast`'s: an as pattern with a
+     pattern needs a name *(agent)*.
+227. **What a pattern binds** *(agent)*: `Patterns.bound_names` (`boundNames`), exported, its capture names wherever
+     they nest, read by the `case` that holds it; none of its kinds refines `Let`.
+228. **Editions** *(agent)*: Python Types covers Python 3.0 to 3.15, as Python3's, its kinds from 3.12; Python Patterns
+     Python 3.10 to 3.15, every kind from 3.10; each lists its own kinds only.
+229. **Printing** *(agent)*: each dialect's `Text` gives `TEXTS`, which Python3's printer dispatches to (the family's
+     one printer, as SystemVerilog's); a pattern's precedence levels are numbers on the family's scale, the same in
+     both languages; a type parameter with no name is refused ("PYT-07").
+230. **No writers** *(agent)*: their terms are written through the builders; a type expression of Python3's kinds
+     through Python3's writers.
+231. **Evaluation** (Q11): each kind refused by its dialect's name ("Python Types typevar is not evaluated"); a type
+     expression of Python3's kinds evaluates as Python3's.
+232. **Exports** *(agent)*: each package exports `Expressions`, `Text`, `define` and `install`, and TypeScript's
+     `@mbse/expressions/Python/Types` and `@mbse/expressions/Python/Patterns`.
+233. **Completeness**: `grammars/python3-ast.json` gains `ast`'s `type_param` and `pattern` nodes, each mapped to a
+     kind of its dialect, and `match_case` listed as a statement's part; DIA-20 checks both dialects exactly.
+234. **The corpus**: `python_types` and `python_patterns`, each a term of every kind, written through the builders.
+235. **Tests**: suites PYT (16, nine cases) and PYP (17, nine cases); FRM-01, FRM-02 (a sample of every kind of each),
+     FRM-13 (their editions), DIA-20.
+
+### TypeScript (group T)
+
+236. **The moved schemas renamed** (the design, "Moving a union out of a dialect moves its schemas"):
+     `Expressions.TypeScript.TypeScript5.Type` is `Expressions.TypeScript.Types.Term` and `...Pattern`
+     `Expressions.TypeScript.Patterns.Term`, their kinds' schemas under `Expressions.TypeScript.Types` and
+     `Expressions.TypeScript.Patterns`; a term's data, written by branch tags, is unchanged.
+237. **A type's and a pattern's terms are terms, not helpers** *(agent)*: a position that holds the new dialects'
+     `Term` holds terms the framework reads as a kind's arguments (a container of terms, labelled by its property),
+     where TypeScript5 had read some as helpers; so containers, labels and messages within types and patterns change
+     ("typeAnnotation: ...").
+238. **A value object of terms held alone is a helper** *(agent, a framework fix)*: `Terms._parts` (`parts`) reads a
+     property whose schema is a pair of terms, held alone, as a helper (`TSTypeAnnotation`), as it read one held in a
+     container; without it, TypeScript Types' annotations were read as slots.
+239. **An identifier in a type is never unbound** *(agent)*: `TypeScript Types` declares its own `identifier` kind, a
+     type's name, which validation does not report as an unbound reference; the identifier check also validates a
+     helper's types.
+240. **An assignment's target is a reference** *(agent)*: a pattern's names in an assignment (`a.b = 1`) are references
+     the scope binds, not names it binds; FRM-02's TypeScript sample names `person` accordingly, and FRM-11's text
+     follows.
+241. **Type parameters are optional** *(agent)*: a function type's, a constructor type's and a mapped type's type
+     parameters may be empty, listed in their kinds' `optional`.
+242. **Binders** (the design's table): `tsmappedtype` refines `Let` (`constraint` → `value`, `typeAnnotation` → `body`,
+     its key bound in its name type and its type), `tsfunctiontype` and `tsconstructortype` (their type parameters and
+     parameters within them); `tsconditionaltype` binds its `infer` declarations by its scopes.
+243. **Editions** *(agent)*: TypeScript 5.0 to 5.9 for each, each listing its own kinds only; TypeScript5's editions
+     list TypeScript5's kinds only, no longer the types' and patterns'.
+244. **Exports and printing** *(agent)*: `@mbse/expressions/TypeScript/Types` and `.../Patterns` (and Python's
+     packages), each exporting `Expressions`, `Text`, `define` and `install`; TypeScript5's printer merges the two
+     dialects' `TEXTS`. `grammars/typescript5-estree.json` keeps its entries, which name kinds by tag, unchanged; its
+     `concrete` entries name the two unions by their names before the move, `Type` and `Pattern`, as its description now
+     says *(agent)*.
+245. **Tests and the corpus**: suites TST (19, five cases) and TSP (20, four cases); DIA-21 to DIA-23, FRM-01, FRM-02,
+     FRM-04, FRM-11 and FRM-13 under their IDs; the corpus's `typescript_types` and `typescript_patterns`.
+
+### C and C++ (group C)
+
+246. **The family's kinds read through one internal module** *(agent)*: `C.Expressions.Kinds` (both languages), which
+     no dialect module of the family imports beside, holds what the family's dialects share (its identifier checks,
+     `identifier_problems`, C++'s suffixes); `C.Expressions` re-exports it. It breaks the TypeScript import cycle the
+     core found (C++'s module body reading C's constants at load), so that C Preprocessor imports C++'s modules.
+247. **`enumerator` is a kind** *(agent, a deviation from the design, for review)*: the design made an enumeration's
+     items a helper union (`EnumeratorItem`) and a directive's items a union of unions (`Item`), but the framework
+     reads a helper union one level deep; so `enumerator` is a kind of C Types and of Cpp Types, an enumeration's
+     `enumerators` hold its Types' `Term` (which lists the preprocessor's directives and `comment`), and a directive's
+     `items` hold `Expressions.Framework.Term`.
+248. **`EnumSpecifier`** (the design): keeps `body`, gains `enumerators` and `trailing_comma`; "an EnumSpecifier with
+     enumerators has a body".
+249. **Type positions are term slots** *(agent, for review)*: a cast's, a compound literal's and a generic
+     association's type, and C++'s, hold their Types' `Term` as a slot (a cast's form's argument 0; a generic association
+     a pair), so its problems are labelled ("type: invalid syntax 'int int'"); the required slots drop `type`, and
+     `base` and `trailing_return` join the optional ones; a generic selection's `type` is optional.
+250. **C's type-name helpers move to C Types; C++'s stay** (the design's rule): 22 schemas move in C, as no C
+     expression holds them; a C++ lambda's declarator holds parameters, so C++'s stay `Cpp Expressions`' and Cpp Types'
+     `HELPERS` is empty.
+251. **Editions** *(agent)*: C's and C++'s editions list their dialect's own kinds only (C23 lists 20).
+252. **The preprocessor's shape** *(agent)*: an `alternative` is its `Term`'s slot, checked to be a branch after another;
+     its items are checked; an include holds a path or a macro, its directive among `INCLUDES`.
+253. **What the preprocessor binds** *(agent)*: a conditional directive's macros' names within its condition alone,
+     and an include's macro's; `defined`'s name is a macro's, not a reference; `macros` exported; nothing refines
+     `Let`.
+254. **The preprocessor's editions** *(agent)*: six, C11, C17, C23, C++17, C++20 and C++23 (`EDITIONS`); `SINCE` gives
+     `elifdefdirective` C23 and C++23.
+255. **One printer for the family** *(agent)*: `C.Expressions.Text`; `C.Types.Text`, `Cpp.Types.Text` and
+     `C.Preprocessor.Text` give `ToText` through it; an enumeration printed as mbse-programs prints it.
+256. **A cast reads its type** *(agent)*: C's evaluator reads a cast's argument 0, a Types term, and evaluates its
+     argument 1; invalid syntax where the type stands is refused by its owner's name.
+257. **Completeness** *(agent)*: `grammars/c-tree-sitter.json` and `grammars/cpp-tree-sitter.json` are rewritten in
+     DIA-29's form, each entry's kinds qualified by its dialect's tag; DIA-26 is rewritten in DIA-29's style, checking
+     each dialect's kinds exactly (its helpers not).
+258. **Positions** *(agent)*: C Preprocessor's install adds `definedexpression` to C's and C++'s `Term`, and its
+     directives and `comment` to C Types' and Cpp Types' `Term`s; C's and C++'s `Term`s list `typeid` (their Types')
+     and `definedexpression` (the preprocessor's) beside their own kinds.
+259. **The corpus**: `c_types`, `cpp_types` and `c_preprocessor`, each of every kind; `standards` regenerated (C23 lists
+     20 kinds).
+260. **Tests**: suites CTY (22), XTY (23) and CPD (24), nine cases each; FRM-01, FRM-02, FRM-11, FRM-13, DIA-24 (its
+     title), DIA-26 (rewritten), CONF-04 under their IDs.
+
+### The merge, and the coordinator's decisions
+
+261. **Refusals and invalid syntax name the kind's owning dialect, everywhere** *(agent, the coordinator's decision)*:
+     the groups differed, P and T naming the dialect that owns a kind ("Python Types typevar is not evaluated", as the
+     design's example has it), C the dialect evaluating it ("C typeid is not evaluated"). `Terms.Dialect.owner(term)`
+     (`owner`) gives the owner once, in the framework: the dialect whose `Term` holds the term, this one or one it reads,
+     or, for a kind that `Term` lists and a dialect it reads declares, that dialect; a term of any other dialect, the
+     dialect itself. The framework's `Interpreter` refuses invalid syntax (`ValueError`), a kind outside `evaluated`
+     and a kind of a dialect it reads (`NotImplementedError`) by the owner's name, so Python3's and TypeScript5's
+     interpreter subclasses go; `Terms.invalid_term_text(dialect, term)` (`invalidTermText`) prints invalid syntax by
+     its owner, which the Python3, TypeScript5, SystemVerilog and C family printers use; C's cast and SystemVerilog's
+     evaluator name the owner too. Invalid syntax within a helper, which holds no term, is named by the printing
+     dialect *(agent)*.
+262. **What changes with it** *(agent)*: "C Types typeid is not evaluated", "C Types error is not evaluated", "Cpp Types
+     typeid is not evaluated", "C Preprocessor definedexpression is not evaluated" (from C's and C++'s evaluators
+     alike), where C named itself; an identifier in a TypeScript pattern, TypeScript5's kind, is refused as
+     "TypeScript5 identifier is not evaluated", where T named TypeScript Patterns, the union holding it; and a literal
+     a TypeScript type holds, TypeScript5's kind, evaluates as TypeScript5's, as Python3's kinds in a Python type
+     do, where T's subclass refused every term of TypeScript Types' and Patterns' unions. CTY-06, CTY-08, XTY-09,
+     CPD-09, DIA-24 and TSP-02 assert the new messages, FRM-01 `owner` itself.
+263. **Every new dialect is checked alike** *(agent)*: no skeleton remains, so FRM-01 checks each of the seven the same
+     way: its package with its printer (`Expressions`, `Text`, `define`, `install`), its own kinds (`TAGS`, with
+     TypeScript Types' own `identifier`, then invalid syntax), its holder naming its ABI, and its `reads`, each
+     family reading the others, C Preprocessor reading C's and C++'s expressions and types.
+264. **A dialect that reads others is checked against what it reads** *(agent)*: FRM-01 and FRM-02 read a sample's
+     terms through the dialect whose `Term` holds each, and a dialect whose `reads` is not empty (SystemVerilog's six,
+     Python's three, TypeScript's three, C, C++ and the C family's new three) has every kind of its own in its sample,
+     where the groups had each written its own family's rule.
+265. **The corpus's order** *(agent)*: the seven new cases after `systemverilog_preprocessor`, in the groups' order:
+     `python_types`, `python_patterns`, `typescript_types`, `typescript_patterns`, `c_types`, `cpp_types` and
+     `c_preprocessor`; JSON byte-identical in both languages.
+266. **The skill** *(agent)*: its install list names every new dialect, each after its family's; the dialects reference
+     gains the families' sublanguages as dialects and the binders as variations of `let`, linking the cases the groups
+     proposed and TST-01, TST-03, TST-05, TSP-01, TSP-02 and DIA-30 (SKL-03: 518 links).
+267. **Tests**: 203 cases in each language, with the same IDs in the same order: PYT, PYP, TST, TSP, CTY, XTY and CPD
+     new, 54 cases; FRM-01, FRM-02, FRM-04, FRM-11, FRM-13, DIA-20 to DIA-26, DIA-30, CONF-04 and SKL-03 under their
+     IDs.
+268. **Open, with the user**: the regular expression dialects (the design's Open, 1), JSX (Open, 2), and a constant
+     described as `None` in refusal messages (item 216), each left as it is.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,

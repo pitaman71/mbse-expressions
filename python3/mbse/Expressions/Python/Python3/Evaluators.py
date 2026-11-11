@@ -19,8 +19,9 @@ may come from data:
 The evaluator is shallow (the dialects proposal, Decided, 8): it evaluates the kinds Python's constraints were written
 with before the dialect was complete (`EVALUATED`), in their complete shapes: a comparison chain, `and` and `or` of any
 number of values, a call of positional arguments, a subscript, a generator expression of any number of `for` clauses
-over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), and so are
-what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target that is
+over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), a kind of its
+family's other dialects, and invalid syntax, by the name of the dialect that owns it, as the framework's interpreter
+refuses them ("Python Types typevar is not evaluated"; a type expression of Python3's kinds evaluates as Python3's), and so are what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target that is
 not a name, and the operators `is`, `is not` and `@`.
 """
 
@@ -142,7 +143,7 @@ def _generatorexp(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     """A generator, as Python makes one: its first iterable evaluated now, the rest as it is consumed, each `for`
     clause binding its name within the clauses after it and the element."""
     record = Terms.kind_of(node)[1]
-    terms, clauses, i = Terms.arguments_of(record), [], 1
+    terms, clauses, i = Terms.arguments_of(record), [], 2  # after Let's empty value and its body, the element
     for part in _attributes(node).get("generators", ()):
         if part.attributes.get("is_async"):
             raise _refuse("async comprehension")
@@ -162,11 +163,11 @@ def _generatorexp(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
             bound = inner.bind(name, item)
             if all(INTERPRETER.evaluate(condition, bound) for condition in conditions):
                 if k + 1 == len(clauses):
-                    yield INTERPRETER.evaluate(terms[0], bound)
+                    yield INTERPRETER.evaluate(terms[1], bound)
                 else:
                     yield from generate(k + 1, bound, INTERPRETER.evaluate(clauses[k + 1][1], bound))
 
-    return generate(0, scope, iter(arguments[1]()))  # the first iterable, after the element
+    return generate(0, scope, iter(arguments[2]()))  # the first iterable, after the element
 
 
 def _boolop(name: str) -> F.Implementation:

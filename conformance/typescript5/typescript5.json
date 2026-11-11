@@ -168,6 +168,40 @@
         },
         {
           "arrowfunctionexpression": {
+            "body": {
+              "awaitexpression": {
+                "argument": {
+                  "callexpression": {
+                    "callee": {
+                      "memberexpression": {
+                        "object": {
+                          "metaproperty": {
+                            "meta": {
+                              "name": "import"
+                            },
+                            "property": {
+                              "name": "meta"
+                            }
+                          }
+                        },
+                        "property": {
+                          "identifier": {
+                            "name": "resolve"
+                          }
+                        }
+                      }
+                    },
+                    "arguments": [
+                      {
+                        "identifier": {
+                          "name": "p"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            },
             "isAsync": true,
             "typeParameters": {
               "params": [
@@ -219,41 +253,7 @@
                   }
                 }
               }
-            ],
-            "body": {
-              "awaitexpression": {
-                "argument": {
-                  "callexpression": {
-                    "callee": {
-                      "memberexpression": {
-                        "object": {
-                          "metaproperty": {
-                            "meta": {
-                              "name": "import"
-                            },
-                            "property": {
-                              "name": "meta"
-                            }
-                          }
-                        },
-                        "property": {
-                          "identifier": {
-                            "name": "resolve"
-                          }
-                        }
-                      }
-                    },
-                    "arguments": [
-                      {
-                        "identifier": {
-                          "name": "p"
-                        }
-                      }
-                    ]
-                  }
-                }
-              }
-            }
+            ]
           }
         },
         {

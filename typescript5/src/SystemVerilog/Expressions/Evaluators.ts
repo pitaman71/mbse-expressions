@@ -234,9 +234,10 @@ const EVALUATED: ReadonlySet<string> = new Set([X.LITERAL, X.CONSTANT, X.NAMEEXP
   X.PARENTHESIZEDEXPRESSION, X.INSIDEEXPRESSION, X.CONCATENATION, X.REPLICATION, X.CASTEXPRESSION, X.SYSTEMCALL,
   X.CALLEXPRESSION, X.ARRAYMETHODWITHEXPRESSION]);
 
-/** The name of the dialect of the family whose kind a tag is: SystemVerilog's own, or a sublanguage's. */
-function owner(tag: string): string {
-  return ([X.DIALECT, ...X.DIALECT.reads()].find((dialect) => dialect.kinds().has(tag)) as F.Dialect).name();
+/** The name of the dialect of the family that owns a node's kind (`Terms.Dialect.owner`): SystemVerilog's own, or a
+ * sublanguage's. */
+function owner(node: Node): string {
+  return X.DIALECT.owner(node.term).name();
 }
 
 function refused(what: string): Error {
@@ -276,7 +277,7 @@ class Evaluation {
 
   /** The term's self-determined type (null for an object); a kind it does not evaluate is refused by name. */
   type(node: any): SvType | null {
-    if (!EVALUATED.has(kindOf(node))) throw refused(`${owner(kindOf(node))} ${kindOf(node)}`);
+    if (!EVALUATED.has(kindOf(node))) throw refused(`${owner(node)} ${kindOf(node)}`);
     if (!this.types.has(node)) this.types.set(node, this.typeOf(node));
     return this.types.get(node) as SvType | null;
   }
@@ -339,7 +340,7 @@ class Evaluation {
       if (width < 1n) throw new ValueError(`a cast's width must be positive, got ${width}`);
       return Domains.vector(Number(width), operand.signed, operand.states);
     }
-    throw refused(`${owner(kindOf(target))} ${kindOf(target)}`);
+    throw refused(`${owner(target)} ${kindOf(target)}`);
   }
 
   /** A self-determined term's value, of its own type, once. */

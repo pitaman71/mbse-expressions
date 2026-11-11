@@ -86,6 +86,24 @@ typescript5:
                   identifier:
                     name: 'y'
     - arrowfunctionexpression:
+        body:
+          awaitexpression:
+            argument:
+              callexpression:
+                callee:
+                  memberexpression:
+                    object:
+                      metaproperty:
+                        meta:
+                          name: import
+                        property:
+                          name: meta
+                    property:
+                      identifier:
+                        name: resolve
+                arguments:
+                - identifier:
+                    name: p
         isAsync: true
         typeParameters:
           params:
@@ -112,24 +130,6 @@ typescript5:
                       typeName:
                         identifier:
                           name: U
-        body:
-          awaitexpression:
-            argument:
-              callexpression:
-                callee:
-                  memberexpression:
-                    object:
-                      metaproperty:
-                        meta:
-                          name: import
-                        property:
-                          name: meta
-                    property:
-                      identifier:
-                        name: resolve
-                arguments:
-                - identifier:
-                    name: p
     - classexpression:
         decorators:
         - expression:

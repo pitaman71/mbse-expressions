@@ -1,0 +1,139 @@
+{
+  "c_preprocessor": {
+    "ifdirective": {
+      "condition": {
+        "c": {
+          "binaryexpression": {
+            "left": {
+              "definedexpression": {
+                "name": {
+                  "spelling": "X"
+                }
+              }
+            },
+            "operator": "&&",
+            "right": {
+              "binaryexpression": {
+                "left": {
+                  "variable": {
+                    "name": "X"
+                  }
+                },
+                "operator": ">",
+                "right": {
+                  "literal": {
+                    "value": {
+                      "int": 1
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "items": [
+        {
+          "c_types": {
+            "enumerator": {
+              "name": {
+                "spelling": "A"
+              }
+            }
+          }
+        },
+        {
+          "c_preprocessor": {
+            "includedirective": {
+              "path": "a.h",
+              "system": true
+            }
+          }
+        },
+        {
+          "c_preprocessor": {
+            "comment": {
+              "block": true,
+              "text": " one "
+            }
+          }
+        }
+      ],
+      "alternative": {
+        "elifdirective": {
+          "condition": {
+            "cpp": {
+              "binaryexpression": {
+                "left": {
+                  "idexpression": {
+                    "name": {
+                      "identifier": {
+                        "spelling": "Y"
+                      }
+                    }
+                  }
+                },
+                "operator": "==",
+                "right": {
+                  "literal": {
+                    "value": {
+                      "int": 2
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "alternative": {
+            "elifdefdirective": {
+              "negated": true,
+              "name": {
+                "spelling": "Z"
+              },
+              "alternative": {
+                "elsedirective": {
+                  "items": [
+                    {
+                      "c_preprocessor": {
+                        "definedirective": {
+                          "name": {
+                            "spelling": "F"
+                          },
+                          "function_like": true,
+                          "parameters": [
+                            {
+                              "spelling": "a"
+                            }
+                          ],
+                          "variadic": true,
+                          "replacement": "a + 1"
+                        }
+                      }
+                    },
+                    {
+                      "c_preprocessor": {
+                        "otherdirective": {
+                          "directive": "pragma",
+                          "text": "once"
+                        }
+                      }
+                    },
+                    {
+                      "c_preprocessor": {
+                        "ifdefdirective": {
+                          "name": {
+                            "spelling": "W"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

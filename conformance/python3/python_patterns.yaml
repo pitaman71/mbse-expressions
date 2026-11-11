@@ -1,0 +1,45 @@
+python_patterns:
+  matchor:
+    patterns:
+    - matchclass:
+        cls:
+          attribute:
+            value:
+              variable:
+                name: record
+            attr: Point
+        patterns:
+        - matchvalue:
+            value:
+              literal:
+                value:
+                  int: 0
+        kwd_attrs:
+        - 'y'
+        kwd_patterns:
+        - matchsequence:
+            delimiters: '[]'
+            patterns:
+            - matchas:
+                name: a
+            - matchstar:
+                name: rest
+    - matchmapping:
+        keys:
+        - literal:
+            value:
+              str: k
+        patterns:
+        - matchsingleton:
+            value: None
+        rest: kw
+    - matchas:
+        pattern:
+          matchvalue:
+            value:
+              attribute:
+                value:
+                  variable:
+                    name: record
+                attr: RED
+        name: c

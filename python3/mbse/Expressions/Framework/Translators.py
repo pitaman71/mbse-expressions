@@ -95,9 +95,10 @@ def holes(*names: str) -> tuple[Hole, ...]:
 
 
 class Pattern:
-    """A form with holes: `kind`, `arguments` (patterns or holes) and `attributes` (natives or holes)."""
+    """A form with holes: `kind`, `arguments` (patterns, holes, or None for an empty slot: a binder's `value` it leaves
+    unset) and `attributes` (natives or holes)."""
 
-    def __init__(self, kind: str, *arguments: Pattern | Hole, **attributes: Any):
+    def __init__(self, kind: str, *arguments: Pattern | Hole | None, **attributes: Any):
         self.kind, self.arguments, self.attributes = kind, arguments, attributes
 
     def size(self) -> int:
@@ -109,7 +110,8 @@ class Pattern:
         """The holes in the pattern, by name: 'argument' or 'attribute' (a helper's among them)."""
         found = {hole.name: "attribute" for value in self.attributes.values() for hole in _attribute_holes(value)}
         for argument in self.arguments:
-            found.update(argument.holes() if isinstance(argument, Pattern) else {argument.name: "argument"})
+            if argument is not None:
+                found.update(argument.holes() if isinstance(argument, Pattern) else {argument.name: "argument"})
         return found
 
     def __repr__(self) -> str:
@@ -196,14 +198,17 @@ class Elementwise:
 
 
 class Prelude:
-    """Wraps translations to `side` ('left' or 'right') in the import `pattern` when they refer to a name it binds."""
+    """Wraps translations to `side` ('left' or 'right') in the import `pattern` when they refer to a name it binds: its
+    last argument, its body, a hole, and its others empty (an import refining `Let` leaves Let's `value` empty)."""
 
     def __init__(self, pattern: Pattern, side: str):
         if side not in ("left", "right"):
             raise ValueError(f"side must be 'left' or 'right', got {side!r}")
-        if len(pattern.arguments) != 1 or not isinstance(pattern.arguments[0], Hole) or any(
+        if not pattern.arguments or not isinstance(pattern.arguments[-1], Hole) or any(
+                argument is not None for argument in pattern.arguments[:-1]) or any(
                 isinstance(value, Hole) for value in pattern.attributes.values()):
-            raise ValueError(f"a prelude is an import whose one argument is a hole, got {pattern!r}")
+            raise ValueError(f"a prelude is an import whose body, its last argument, is a hole, and its others empty, "
+                             f"got {pattern!r}")
         self.pattern, self.side = pattern, side
 
 
@@ -281,7 +286,7 @@ class _Direction:
             kind = self.target.kind_named(pattern.kind)
             names = kind.names(pattern.attributes) if kind.names is not None else ()
             if set(names) & result.free:
-                result = self.build(Terms.Form(pattern.kind, dict(pattern.attributes), (result,)))
+                result = self.build(Terms.Form(pattern.kind, dict(pattern.attributes), (*pattern.arguments[:-1], result)))
         return result.writer
 
     def build(self, form: Terms.Form) -> _Built:
@@ -289,7 +294,7 @@ class _Direction:
         `Symbolics.free` reads them."""
         kind = self.target.kind_named(form.kind)
         name = Terms.reference_name(form.attributes.get("name"))
-        frees = [argument.free for argument in form.arguments]
+        frees = [frozenset() if argument is None else argument.free for argument in form.arguments]
         if kind.role == Terms.REFERENCE:  # its name, and a name node's terms' names (a template's arguments)
             free = frozenset({name} if kind.lexical and name not in kind.ambient else ()).union(*frees)
         elif kind.scopes is not None:  # what its arguments bind is read from a record, which a writer is not yet:
@@ -299,7 +304,8 @@ class _Direction:
         else:
             names = kind.names(form.attributes) if kind.role == Terms.IMPORT and kind.names is not None else ()
             free = frozenset().union(*frees) - set(names)
-        writer = self.target.make(Terms.Form(form.kind, form.attributes, tuple(a.writer for a in form.arguments)))
+        writer = self.target.make(Terms.Form(form.kind, form.attributes,
+                                             tuple(None if a is None else a.writer for a in form.arguments)))
         return _Built(writer, free)
 
 
@@ -366,8 +372,10 @@ class _Run:
             f"{self.direction.source.name()} {node.kind}"
         raise ValueError(f"{described} has no {self.direction.target.name()} counterpart")
 
-    def _match(self, pattern: Pattern | Hole, node: Any, bindings: dict[str, Any]) -> bool:
-        """Co-traverses `pattern` and `node`, binding the pattern's holes."""
+    def _match(self, pattern: Pattern | Hole | None, node: Any, bindings: dict[str, Any]) -> bool:
+        """Co-traverses `pattern` and `node`, binding the pattern's holes; None matches an empty slot."""
+        if pattern is None:
+            return node is None
         if isinstance(pattern, Hole):
             if node is None:
                 return False
@@ -408,7 +416,10 @@ class _Run:
                 self._attribute(e, v, bindings) for e, v in zip(expected, value))
         return _same_native(expected, value)
 
-    def _instantiate(self, pattern: Pattern | Hole, bindings: dict[str, Any], environment: dict[str, _Built]) -> _Built:
+    def _instantiate(self, pattern: Pattern | Hole | None, bindings: dict[str, Any],
+                     environment: dict[str, _Built]) -> _Built | None:
+        if pattern is None:  # an empty slot
+            return None
         if isinstance(pattern, Hole):
             return self.translate(bindings[pattern.name], environment)
         attributes = {name: _filled(value, bindings) for name, value in pattern.attributes.items()}

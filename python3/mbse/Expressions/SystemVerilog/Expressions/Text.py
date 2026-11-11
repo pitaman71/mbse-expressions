@@ -133,12 +133,10 @@ class Printer:
         return F.node(tag, record)
 
     def text(self, value: Any) -> str:
-        """A term's source, as its kind writes it; invalid syntax as written, by the dialect whose union holds it."""
+        """A term's source, as its kind writes it; invalid syntax as written, by the dialect that owns it."""
         node = self.node(value)
         if node.kind in ("error", "missing"):
-            union = F.dialect_of(value)
-            return F.invalid_text(next(d for d in (E.DIALECT, *E.DIALECT.reads()) if d.union == union), node.kind,
-                                  node.attributes)
+            return F.invalid_term_text(E.DIALECT, value)
         return self.texts[node.kind](self, node)
 
     def precedence(self, node: F.Node, written: str) -> int:
