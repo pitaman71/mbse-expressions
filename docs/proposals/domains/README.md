@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Complete expression dialects](../dialects/README.md) · [Home](../../../README.md)
+[← Complete expression dialects](../dialects/README.md) · [Home](../../../README.md) · [Tutorials, from domains and trivial expressions up →](../tutorials/README.md)
 
 # Domains as data
 
@@ -51,4 +51,4 @@ The tech debt it incurred is mbse-basis [CAP-254: an install's uid changed with 
 ---
 
 <!-- nav -->
-[← Complete expression dialects](../dialects/README.md) · [Home](../../../README.md)
+[← Complete expression dialects](../dialects/README.md) · [Home](../../../README.md) · [Tutorials, from domains and trivial expressions up →](../tutorials/README.md)
