@@ -1349,6 +1349,213 @@ breaking release anyway.
      and DOM-19 (each standard and ABI dialect's edition read from the store); CONF-04 (each data case's editions, and
      the `standards` case); SKL-03's count of links follows the skill.
 
+## Settled in stage 6 (SystemVerilog), for the user's review
+
+Built as [the dialects proposal](../dialects/README.md#decided-for-stage-6-systemverilog-and-after-2026-11-05) decided
+(Decided for stage 6, its principles, Q1 to Q12 and the namespace) and as stage 6's *Design* planned it; each choice
+where they were silent is marked *(agent)*. The core (162 to 179) was built first, then the slang data (180 to 186),
+then the four sublanguages in parallel (Patterns 187 to 191, Assertions 192 to 197, Constraints 198 to 203,
+Preprocessor 204 to 209), then the coordinator's decisions (210 to 213). A breaking change, in 0.10.0: SystemVerilog's
+17 constraint kinds are replaced by IEEE 1800-2023's.
+
+### The core
+
+162. **A sublanguage's dialect is named by its family too** *(agent)*: `Terms.SUBLANGUAGES` (`Types`, `Patterns`,
+     `Assertions`, `Constraints`, `Preprocessor`, `RegExp`) and `Terms.dialect_name` (`dialectName`): a path whose own
+     name is one of them is named with its family (`SystemVerilog Types`).
+163. **`Terms.dialect_tag(name)`** (`dialectTag`) *(agent)*: the name lowercased, a space an underscore
+     (`systemverilog_types`); `Dialect.tag` uses it, and no existing tag changes.
+164. **`Terms.Dialect(..., reads=callable)`** *(agent)*: a callable of no arguments, called once on first use, giving
+     the dialects whose terms this one reads, so that the six packages import each other without a cycle;
+     `Dialect.reads()` returns a tuple. It is code that reads terms, not data naming what a dialect uses: not a reason
+     to reinstate `Uses` (mbse-basis [CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md#decided), "No `Uses`").
+165. **`Dialect.kind_named(tag)`** (`kindNamed`) *(agent)*: its own kind, else the first a read dialect declares; else
+     "<Dialect> has no kind 'x'".
+166. **Reading another dialect's terms** *(agent)*: `kind`, `validate`, `infer` and `make` delegate a term of a read
+     dialect's `Term` to that dialect; a tag a read dialect declares inside this dialect's own union is read by that
+     kind; any other dialect's term is refused with the message it had ("a Patterns call is not a SystemVerilog term").
+167. **`Terms.is_binder(schema)`** (`isBinder`) *(agent, for review)*: `Framework.Let` or a refinement of it;
+     validation, inference and `Symbolics.free` read a binder's bound names from its kind's `scopes`, and `Let`'s
+     `name` is unset on SystemVerilog's binders, which bind names they do not write themselves.
+168. **Installs in any order** *(agent)*: each of the six names the others' `Term`s and helpers by name, creating any
+     that is not yet installed; an empty union fails mbse-schemas' validation ("a union needs at least one branch"),
+     and none is empty after the six installs. Documented in the `Expressions` module's docstring.
+169. **The `Term`s, as the installs leave them** *(agent)*: `Expressions.Term` has 41 branches (its 38 kinds, `error`,
+     `missing`, then the Preprocessor's `macrousage`); `Types.Term`, `Patterns.Term`, `Assertions.Term` and
+     `Constraints.Term` each `Expressions`' branches, their own kinds, then `macrousage`, Assertions' with Constraints'
+     `distexpression` before it, Constraints' with the Preprocessor's directives and `comment` after it;
+     `Preprocessor.Term` its own kinds, `error` and `missing`, and none of `Expressions`' (DIA-27).
+170. **Literals** *(agent)*: `literal` refines the framework's, adding `base`, `signed`, `separators`, `unit` and
+     `triple`; `constant` holds exactly one of `singleton`, `fill` and `bits` (with `size`, `signed`, `base`, `text`,
+     `problems`); `SPELLING` is `text`, `problems`, `separators` and `triple`; an unsized based literal is unsigned, an
+     unsized vector 32 bits.
+171. **Names** (Q4): `nameexpression`, and no `variable`, as for C++; the `Name` union is `identifier`, `scopedname`,
+     `localname`, `parameterizedname`, `interfacetypename`, `interfacemethodname`, `unitname` and `superexpression`;
+     identifiers are checked as mbse-programs checks them ("'2x' is not an identifier", escaped identifiers accepted),
+     a system call's name too ("'$' is not a system task or function name"); a choice among a few gives mbse-programs'
+     message ("RangeSelect.operator cannot be '::'").
+172. **Binders** *(agent)*: `arraymethodwithexpression` refines `Let` (its `value` the call, its `body` the `with`
+     expression); its iterator is the call's one `nameexpression` argument, else `item`, bound in both; a `matches`
+     binds through `Patterns.bound_names` (`boundNames`), which `conditionalexpression`'s and
+     `predicateexpression`'s scopes read.
+173. **Where a sublanguage stands**: `Types.Term` at a cast's type, a system call's arguments, a parameterized name's
+     parameters, an assignment pattern's type and a pattern item's key; `Assertions.Term` at a call's arguments;
+     `Patterns.Term` at a `matches`' pattern; `Constraints.Term` at `randomize() with`'s items.
+174. **Writers**: `literal` (a native; a bool refused), `vector(bits, size, signed, base)`, `identifier`, `unary`,
+     `binary`, `conditional`, `concatenation`, `replication(count, *items)`, `select` (`indexexpression`), `range_`
+     (`rangeselect` `:`), `inside`, `span` (`valuerange`), `cast(type spec | width)`, `member`, `call` (a `$` name a
+     `systemcall`), `method(array, name, *args)` and `iterate`.
+175. **Evaluation keeps what it evaluated before** (Q11) *(agent)*: every other kind is refused by its owner's name,
+     `NotImplementedError` ("SystemVerilog Types structtype is not evaluated"); a cast's width under 1, "a cast's width
+     must be positive, got 0".
+176. **Printing** *(agent)*: `Expressions.Text.Printer` ports mbse-programs' `_Printer`; the family's printer merges
+     each sub-module's `TEXTS`, `PRECEDENCE` and `INLINE`; invalid syntax is printed as written, an error with no text
+     refused, "<dialect> error has no text to print"; a literal or a constant with no value, "... has no value to
+     print". `Printer.inline` puts a space between parts, none at a line's start or end, as mbse-programs does (the
+     Preprocessor's change).
+177. **Editions** *(agent)*: `Expressions.EDITIONS`, 8 of them (IEEE Std 1364-1995, 2001 and 2005, IEEE Std 1800-2005,
+     2009, 2012, 2017 and 2023), body `org.ieee`, revision the year, common names `Verilog-1995` ...
+     `SystemVerilog-2023`, frame symbols `Verilog_1995` ...; `SINCE` maps a kind to its edition's index (3 is IEEE
+     1800-2005); `editions(every, since, first)`. `Expressions`, `Types` and `Preprocessor` cover all eight; `Patterns`,
+     `Assertions` and `Constraints` the five of IEEE 1800; each lists only its own kinds.
+178. **`HELPERS`** in each dialect's module *(agent)*: its own helper schemas' names, as the slang data names them.
+179. **Completeness** *(agent)*: DIA-29 checks each of the six exactly: the kinds and helpers slang's syntax kinds map
+     to are each dialect's own, but `missing` (Expressions') and `disabledtext` and `comment` (the Preprocessor's), which
+     no syntax kind has.
+
+### The slang data
+
+`grammars/systemverilog-slang.json` lists slang's 533 syntax kinds (pyslang 12.0.0, as mbse-programs pins it), each
+mapped where mbse-programs' `_Reader.py` builds the node: 229 mapped, 304 not.
+
+180. **An entry may hold kinds and helpers together** *(agent)*, as the C files do: `IdentifierName` (`nameexpression`
+     and `Identifier`) and `ScopedName` (`nameexpression`, `memberexpression` and `ScopedName`, `LocalName`,
+     `InterfaceTypeName`, `InterfaceMethodName`); an entry is `not` alone, or kinds and helpers.
+181. **A kind several dialects use is written under the dialect that defines it** *(agent)*:
+     `Constraints.distexpression`, `Preprocessor.macrousage`, `Expressions.error`.
+182. **Literals** *(agent)*: `IntegerLiteralExpression`, `RealLiteralExpression`, `TimeLiteralExpression` and
+     `StringLiteralExpression` are `literal`; `IntegerVectorExpression` `literal` and `constant`;
+     `UnbasedUnsizedLiteralExpression` and `NullLiteralExpression` `constant`; `$` `dollarexpression`.
+183. **Types' helpers** *(agent)*: `VariableDimension` maps to the five `Dimension` helpers (a dimension's specifiers
+     not); `Declarator` to `VariableDeclarator` and `EnumMember`.
+184. **Arguments and names** *(agent)*: `EmptyIdentifierName`, `EmptyPortConnection` and `EmptyTimingCheckArg` are
+     `emptyargument`; `NamedPortConnection` and `NamedParamAssignment` `namedconnection`; `ConstructorName` and the four
+     array methods' names `Identifier`; `ClassName` `ParameterizedName`; `UnitScope` `UnitName`; `LocalScope` not.
+185. **Clocks** *(agent)*: `EventControlWithExpression` and `ImplicitEventControl` are `EventControl`,
+     `SignalEventExpression` `EventExpression`; a statement's timing control not.
+186. **Wrappers are not expressions** *(agent)*, each reason naming what holds its content, in the C files' style;
+     `NonblockingAssignmentExpression` and `TimingControlExpression` are statements' parts. Uncertain, for review:
+     `BadExpression` as `error`; `ConditionalPattern` as `matchesexpression`; `VoidCastedCallStatement`, `Delay3` and
+     `OneStepDelay` listed not, though mbse-programs' reader builds a term at them.
+
+### Patterns (12.6)
+
+187. **Its kinds** (stage 6's *Design*): `variablepattern`, `wildcardpattern`, `taggedpattern`, `structurepattern`,
+     `patternmember` and `parenthesizedpattern`; `patternmember` is a kind in its `Term` *(agent)*, so `HELPERS` is
+     empty, a member's name `Expressions`' `Identifier`; `parenthesizedpattern` holds `pattern` (Q5).
+188. **Every kind from IEEE 1800-2005** *(agent)*: `SINCE` gives each 3.
+189. **What a pattern binds** *(agent)*: no pattern kind refines `Let`; the `matches` that holds it binds through
+     `bound_names`, its variables' names (read through `Terms.name_of`), and binds nothing from invalid syntax.
+190. **Printing** *(agent)*: no precedence entries; a constant pattern is printed unparenthesized.
+191. **Tests**: suite SVP (12, nine cases), and FRM-02's sample of every kind.
+
+### Assertions (clause 16)
+
+192. **Its `Term`** *(agent)*: `Expressions`' branches, its 17 kinds (`SEQUENCES`, `PROPERTIES`, `propertyspec`,
+     `cyclerange`), Constraints' `distexpression` and `macrousage`; `HELPERS` `DelayStep`, `PropertyCaseItem`,
+     `EventControl` and `EventExpression`.
+193. **Positions** *(agent)*: what IEEE 1800 calls `expression_or_dist` holds `Assertions.Term` (an `if`'s and a
+     `case`'s expressions and its items', an abort's condition, `disable iff`); a match item, a cycle range's bounds and
+     an event's expression and condition `Expressions.Term`.
+194. **A delay sequence's steps are pairs** *(agent)*: each `DelayStep` a delay and a sequence ("a delaysequence needs a
+     sequence 0"); operators, keywords and edges are checked with mbse-programs' messages; every kind is an
+     application, opaque, and none binds.
+195. **Editions** *(agent)*: `SINCE` gives `strengthproperty`, `abortproperty` and `caseproperty` IEEE 1800-2009 (4):
+     14 kinds in IEEE 1800-2005, 17 after; Constraints' `distexpression` in its `Term` is in none of its editions.
+196. **Printing** *(agent)* ports mbse-programs' `property_text`: precedence `REPEAT` to `TEMPORAL` (-1 to -14),
+     exported from `Assertions.Text`, `throughout`, `iff`, `until` and the implications right-associative; a delay is
+     printed bare after `##` for an integer literal, a vector constant, a name, a parenthesized expression or a macro
+     usage, else parenthesized; a lone cycle range `low:high`; `@(*)` with no events. An operator outside the table
+     raises as the core's `BINARY` does (a `KeyError` in Python, `undefined` in TypeScript).
+197. **Tests**: suite SVA (13, eight cases), and FRM-02's sample of every kind.
+
+### Constraints (18.5)
+
+198. **Its `Term`** *(agent)*: `Expressions`' branches, `constraintblock`, `expressionconstraint`,
+     `implicationconstraint`, `conditionalconstraint`, `foreachconstraint`, `solvebeforeconstraint` (item 211),
+     `disablesoftconstraint`, `uniqueconstraint` and `distexpression`, then `macrousage` and the Preprocessor's
+     directives and `comment`; its install adds `distexpression` to `Assertions.Term`. `HELPERS` is `DistItem`;
+     `OPERATORS` `:=` and `:/`; it exports `problems` and `loop_variables` (`loopVariables`).
+199. **`foreachconstraint` refines `Let`** (Q8) *(agent)*: its array is `Let`'s `value`, an `Expressions` term, its body
+     `body`, a Constraints term, its properties in the order `name`, `value`, `body`, `variables`, `name` unset; it binds
+     its identifier variables in its body alone (scopes: none, then its variables); a loop variable is the new helper
+     union `LoopVariable`, an identifier or an `emptyargument` for a dimension it skips.
+200. **A distribution's items** *(agent)*: a `DistItem` with no value is `default`, with neither operator nor weight
+     weighs 1; "DistItem.operator cannot be 'x'", "a DistItem has both an operator and a weight, or neither", "a default
+     DistItem weighs its values with :/"; ranges are `Expressions`' `valuerange`.
+201. **Editions** *(agent)*: `SINCE` gives `disablesoftconstraint` and `uniqueconstraint` IEEE 1800-2012 (5); a feature
+     within a kind (`soft`, 2012; a default distribution item, 2023) is not recorded.
+202. **Printing** *(agent)*: each on one line, as `randomize() with` writes it, a block through `inline`;
+     `distexpression`'s precedence is a relational operator's, its value printed at it, and `INLINE` ends it with `;`. A
+     `missing` item prints as an empty part (`{ x;  }`), as SVC-08 asserts.
+203. **Tests**: suite SVC (14, eleven cases), and FRM-02's sample of every kind.
+
+### Preprocessor (clause 22)
+
+204. **Its `Term`** *(agent)*: `macrousage`, `includedirective`, `definedirective`, `undefdirective`,
+     `timescaledirective`, `defaultnettypedirective`, `ifdefdirective`, `disabledtext`, `otherdirective` and `comment`
+     (`TAGS`), then `error` and `missing`; it exports `DIRECTIVES`, `NET_TYPES` and `problems`; `HELPERS` is
+     `ElsifDirective`. Its install adds the directives and `comment` to `Constraints.Term`; a directive's branches hold
+     `Constraints.Term`, its condition `Expressions.Term`.
+205. **What it binds** *(agent)*: a condition's macros' names, within that condition alone (`Kind.scopes`); nothing
+     refines `Let`.
+206. **Checks** *(agent)*: a macro usage, a define and an undef need a name, an include a path, a timescale its unit and
+     precision, a default net type a net type, disabled text and any other directive a text;
+     "DefaultNettypeDirective.net_type cannot be 'x'", "an IfdefDirective has a name or a condition", "an
+     IfdefDirective's condition is in parentheses", "an IfdefDirective's condition has macros' names, !, &&, ||, -> and
+     <-> only", and the same of an `ElsifDirective`. A comment's text may be empty or absent, printed `//`.
+207. **Editions** *(agent)*: all eight, every kind in each (`SINCE` empty); features not recorded.
+208. **Printing** *(agent)* follows mbse-programs' directives, comments and `inline`: items as written, an expression
+     held as a constraint ended by `;`; `INLINE` writes a directive on lines of its own and a line comment ending its
+     line; a macro usage among constraints gets no `;`; "SystemVerilog Preprocessor ifdefdirective has no name or
+     condition to print".
+209. **Tests**: suite SVD (15, nine cases), and FRM-02's sample of every kind.
+
+### The coordinator's decisions, and the merge
+
+210. **A kind may hold several containers of terms** *(agent, the coordinator's decision 1)*: `Terms._parts` gives a
+     kind's variadic properties as a tuple (each container of terms, or of pairs), read in declaration order; a term's
+     arguments are its slots, then each container's terms in turn, then its helpers'. Where a kind holds several, its
+     form's attributes hold each container's size as a `Part` named by the container (`Part("solve", {}, 2)`), so that
+     `make` puts each term back; a container given no size holds none, but the last, which holds the rest, and sizes
+     that do not add up are refused ("an ifdefdirective's items, alternative hold 5 arguments, got 2"). `Node.lists`
+     gives the terms by container (`Node.many` stays all of them); `_members(schema, name)` takes the container. A
+     several-container kind's arguments are labelled by their container (`before 0`, `items 2`), one container's as
+     before (`argument 0`). Every reader follows: validation, inference, `Symbolics`, printing and SystemVerilog's
+     evaluator (its nodes read each container by name).
+211. **Constraints' `solvebeforeconstraint`** (decision 1): `SolveBeforeConstraint{solve, before}`, each a container of
+     `Expressions` terms, after `foreachconstraint`, in every edition of IEEE 1800 (no `SINCE` entry, as mbse-programs'
+     `sv()`), checked as an application, printed `solve a, b before c;`.
+212. **The Preprocessor's `IfdefDirective` in mbse-programs' shape** (decision 1): `negated`, `name`, `condition`,
+     `items`, `branches`, `alternative` (the `else`'s items, a second container of terms) and `has_else`; the
+     `ElseDirective` helper is gone, and slang's `ElseDirective` is listed as not an expression again, what
+     `IfdefDirective` holds as its `has_else` and `alternative`. An `else` is printed where `has_else` is set, its items
+     or none.
+213. **A `matches` is refused before a conditional's branches are sized** *(agent, the coordinator's decision 2)*:
+     SystemVerilog's evaluator sizes a conditional's condition first, so a `matches` there is refused by name ("SystemVerilog
+     matchesexpression is not evaluated") rather than its consequence, which names what the pattern binds, raising
+     `NameError`. SVP-08 asserts it.
+214. **The corpus** *(agent)*: four cases, `systemverilog_patterns`, `systemverilog_assertions`,
+     `systemverilog_constraints` and `systemverilog_preprocessor`, each a term of its dialect of every kind, written
+     through the builders, its JSON byte-identical in both languages; `DIALECTS` names each one's dialect.
+215. **Tests**, under their IDs in both languages: DIA-13 and DIA-14 rewritten; DIA-15 and DIA-19 adjusted; DIA-27 to
+     DIA-29 new (DIA-29 checking all six dialects complete); FRM-01, FRM-02 (a sample of every kind of each of the six),
+     FRM-04 (`_parts`' and `_members`' new shapes), FRM-11, FRM-12 (its title), FRM-13 (each dialect's `SINCE`);
+     TRN-09, TRN-11; CONF-04 (`systemverilog_domains` lists 8 editions, and the four new cases); and the suites SVP,
+     SVA, SVC and SVD.
+216. **Open, with the user**: a constant is described as `None` in refusal messages ("SystemVerilog constant None of
+     logic [7:0] ..."), left as it is.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,

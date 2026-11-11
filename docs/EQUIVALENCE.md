@@ -6,7 +6,7 @@
 `python3/` and `typescript5/` implement the same package, and follow mbse-schemas' rules for equivalence
 ([mbse-schemas' equivalence](https://github.com/pitaman71/mbse-schemas/blob/main/docs/EQUIVALENCE.md)): the same API and messages, byte-identical JSON,
 interchangeable data, the same test cases under the same IDs, and full coverage in both. This document covers what is
-specific to this package: the framework, the Patterns, Python3, TypeScript5, MATLAB, Excel, LaTeX, C, Cpp and SystemVerilog dialects, and
+specific to this package: the framework, the Patterns, Python3, TypeScript5, MATLAB, Excel, LaTeX, C and Cpp dialects, SystemVerilog's six (Expressions, Types, Patterns, Assertions, Constraints, Preprocessor), and
 the translators between them.
 
 ## How it is checked
@@ -65,6 +65,7 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | Partial evaluation | `Partials.REDUCER(term, variables)`, a callable; variables a mapping | `Partials.REDUCER.run(term, variables)`; variables an object | no callable instances, as for `Interpreter` | PAR-01..04 |
 | A writer as a spec | a `Terms.Writer` is a callable object, called by mbse-schemas with the visitor it writes through | a `Writer` is a function whose prototype is the writer's class, so that mbse-schemas calls it as a callback and its methods work | mbse-schemas takes a function as a callback | EXP-04, EXP-09, VIS-02 |
 | SystemVerilog's values | `Domains.Logic`, a frozen dataclass compared with `==` and written by `repr` (`4'b10x1`); its `aval` and `bval`, and integers, are `int`s; types compare with `==`; a real power is `math.pow`'s | `Domains.Logic`, a class written by `toString()`; its `aval` and `bval`, and integers, are `bigint`s, and widths `number`s; types compare with `equals()`; a real power is `Math.pow`'s, corrected to C's `pow` where JavaScript's differs (1 to any power, -1 to an infinite one) | JavaScript has no value equality and no `repr`; each host's `pow` may round its last bit apart | DIA-13, DIA-14 |
+| SystemVerilog's printing of an operator no precedence table has | `Expressions.Text`'s `BINARY` and `Assertions.Text`'s sequence and property tables raise `KeyError` for an operator they lack, one validation refuses | the same tables read `undefined`, and the term prints with no precedence | each language's lookup of a missing key; only a term validation refuses reaches it | none yet: no case prints such a term |
 | Mappings | a `Mapping` (a dict) is a Python dict, a MATLAB struct, an Excel record and a SystemVerilog struct | a `Map` or a plain object | both are JavaScript's mappings | DIA-02, DIA-04, DIA-07, DIA-14 |
 | Names on a `Writer` that are not properties | names starting with `_` (Python's own probes) | names starting with `_`, `then`, `toJSON`, `inspect`, symbols and the names every object has (`toString`, `valueOf`, `constructor`, ...): read those with `.get(name)` | each language probes objects with its own names | EXP-11 |
 | A writer of a write callback | `Expressions.Writer(write)`, a callable instance; `Terms.Writer(write, dialect)` | `new Expressions.Writer(write)`, a function, wrapped in a `Proxy` so that `.name` reads a property; `new Terms.Writer(write, dialect)` | a writer is a function and a `Proxy` in TypeScript | FRM-10, VIS-02 |
