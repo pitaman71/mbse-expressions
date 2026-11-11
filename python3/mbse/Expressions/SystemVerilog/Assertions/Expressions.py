@@ -237,8 +237,8 @@ def define(txn: Any) -> Any:
 
 
 def _nodes(value: Any) -> tuple[F.Node, ...]:
-    """A helper property's nodes: none where it is absent, one, or each of many."""
-    return () if value is None else value if isinstance(value, tuple) else (value,)
+    """A helper property's nodes: one, or each of many."""
+    return value if isinstance(value, tuple) else (value,)
 
 
 def problems(node: F.Node) -> list[str]:

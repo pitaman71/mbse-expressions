@@ -249,8 +249,9 @@ export function define(txn: any): any {
     ])]))]);
 }
 
+/** A helper property's nodes: one, or each of many. */
 function nodes(value: unknown): readonly F.Node[] {
-  return value === undefined ? [] : Array.isArray(value) ? value : [value as F.Node];
+  return Array.isArray(value) ? value : [value as F.Node];
 }
 
 /** A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
