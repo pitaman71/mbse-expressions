@@ -545,7 +545,7 @@ change as it lands.
    translated, Patterns <-> C and Patterns <-> Cpp one rule set. Every dialect's `Type` and `Pattern` now hold `error`
    and `missing`.
 6. **`SystemVerilog` complete**, Verilog its subset (built); released as 0.10.0, after domains as data (0.9.0), with the retrofit of the other dialects
-   (Decided, "0.8.0 holds stages 1 to 5").
+   (Decided, "0.8.0 holds stages 1 to 5"), designed below (*Retrofit's design*).
 
    *Design* (written from the code at main, cad59c4, v0.9.0, and mbse-programs' main, 3deb80e; by Decided for stage 6,
    above, its principles and Q1 to Q12; each choice where they are silent is marked *(agent)*, for review, and recorded
@@ -710,6 +710,429 @@ change as it lands.
      only a term validation refuses reaches it, and no case asserts it ([Equivalence](../../EQUIVALENCE.md#deliberate-differences)).
    - **Slang's mappings left uncertain** (API 186): `BadExpression` as `error`, `ConditionalPattern` as
      `matchesexpression`, and `VoidCastedCallStatement`, `Delay3` and `OneStepDelay` listed as not expressions.
+
+   *Retrofit's design* (written from the code at main, 225122d, stage 6 merged, and mbse-programs' main, 3deb80e). The
+   retrofit applies stage 6's decisions to the other dialects, "the retrofit of the other dialects (type, pattern,
+   regex and preprocessor dialects, `let` variations)" (Decided, "0.8.0 holds stages 1 to 5"), and is released with
+   stage 6 as 0.10.0. The decisions it applies are those of Decided for stage 6: sublanguages are dialects, referenced
+   through unions ("(b)"); "most languages will have a dialect for type expressions"; "any expression kind that binds
+   symbol(s) should be modeled as variations of `let`" (Q8, "(a)"); a holder per sublanguage (Q2); the namespace; and
+   "not supporting the full standard is prohibited" (Q11). Its pattern is stage 6's as built: a family of dialects,
+   each reading the others' terms (`reads`), binders refining `Let`, several containers of terms per kind (API 210),
+   `HELPERS`, editions as data, and completeness checked against a grammar kept as data. Each choice where the
+   decisions are silent is marked *(agent)*, for review, and is to be recorded in mbse-basis with the build.
+
+   - **The rules every family follows.**
+     - *A sublanguage is a dialect where its language's standard defines it as a grammar of its own* (Decided for
+       stage 6: "if the standard says it's a sublanguage then it's definitely at least a separate dialect"; and
+       "constraints, regexes and patterns are expression dialects"). Each new dialect is built as stage 6's
+       sublanguages are: a singleton at `Expressions.<Family>.<Sublanguage>`, named `<Family> <Sublanguage>` and
+       tagged by that name lowercased (`python_types`, `c_preprocessor`; API 162, 163); its `Term`; its holder,
+       `Expressions.<Family>.<Sublanguage>.Expression`, refining `Expressions.Framework.Expression`, its `root`
+       narrowed to its `Term` (Q2), which inherits the framework's adjacency `abi`, so that a C or C++ sublanguage's
+       holder names its ABI as C's does (mbse-basis [CAP-267: C and C++ terms read under the ABI their holder
+       names](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-267.md)); its install, its
+       `define` (its editions) and its `Terms.Dialect`, reading its family's other dialects (`reads`, API 164 to
+       166); `TAGS`, `HELPERS` and `SINCE` (API 177, 178); its printer, merged into its family's; its Python package
+       and TypeScript module, exported (`mbse.Expressions.Python.Types`, `@mbse/expressions/Python/Types`); and a
+       suite of its own. Its kinds are mbse-programs', in its names and shapes, its tags their names lowercased, as in
+       stages 3 to 6; where mbse-programs has none (the regular expressions), they are the reference parser's.
+     - *Moving a union out of a dialect moves its schemas, not its memberships* *(agent)*. Each union a dialect
+       holds today for a sublanguage (`TypeScript5`'s `Type` and `Pattern`, C's and C++'s `Type`) becomes the new
+       dialect's `Term` with the same branches, and every other union keeps the branches it lists ("(b)": `Term`
+       still lists `typeid` in C and C++, and `arraypattern`, `objectpattern` and `assignmentpattern` in
+       TypeScript5). Only the schemas' names change (`Expressions.TypeScript.TypeScript5.TSArrayType` is
+       `Expressions.TypeScript.Types.TSArrayType`), so a term's data, written by branch tags, is unchanged. Stage
+       6's rule that a sublanguage's `Term` lists every branch of its family's expressions (API 169) was for
+       sublanguages built new, and applies to those the retrofit builds new where their positions hold any
+       expression (Python's types, below).
+     - *A helper moves with the kinds that hold it* *(agent)*: a helper every holder of which is the new dialect's
+       (C's type-name specifiers and declarators, a TypeScript type literal's signatures) moves to it; one an
+       expression's kind also holds, directly or through its helpers (a name, an identifier, a TypeScript type
+       annotation, a C++ lambda's parameters), stays its family's expressions' helper, read through `reads`, as
+       `SystemVerilog Types` reads `Expressions`' `Name`.
+     - *Every dialect keeps a `Pattern` union for its binding targets* (Decided, "Every dialect has a `Pattern`
+       union", "(ii)") *(agent, how it meets stage 6)*: a `Pattern` union with kinds of its own, a grammar its
+       standard defines (TypeScript5's destructuring patterns, ECMA-262's binding and assignment patterns), becomes
+       its family's `Patterns` dialect, whose `Term` it is; one that lists only terms and invalid syntax (Python3's,
+       C's and C++'s) stays its dialect's union, as the user decided it ("3 = (a) is fine"). Python's `Patterns`
+       dialect is its `match` statement's patterns, a grammar of their own (below), not its binding targets.
+     - *Bodies* (Decided, 5, "(i)", and Q7, "C's `body` flag (API 93) revisited the same way") *(agent)*: Q7 made a
+       SystemVerilog struct's members data because mbse-programs models them as nodes (`StructMember`), and the same
+       test decides C's and C++'s. mbse-programs models an enumeration's body as nodes (`EnumeratorList` of
+       `Enumerator`s, directives and comments), so in C and C++ an enumeration's enumerators are data of its family's
+       `Types`: the specifier keeps `body`, whether it has one (`enum E` against `enum E {}`), and gains
+       `enumerators`. It models a struct's, a union's and a class's members as declarations (`MemberList` of
+       `Declaration`s, functions with their statements among them in C++), its owned reference objects, so they
+       stay mbse-programs' behind the `body` flag, as Decided, 5, "(i)" has a body of declarations. C++ defines no
+       class or enumeration in a type name an expression holds (ISO/IEC 14882, [dcl.type.general]: "A
+       type-specifier-seq shall not define a class or enumeration unless it appears in the type-id of an
+       alias-declaration"), so an enumeration's data in C++ is held only through a holder, by mbse-programs' alias
+       declarations.
+     - *Binders refine `Let`* (Q8, "(a)"), as stage 6's do (API 167, 172, 199): every kind that binds names, in
+       every dialect, refines `Expressions.Framework.Let`, so that `Terms.is_binder` knows it. Its own property is
+       Let's `value` where it is the one term the kind binds from, and Let's `body` where it is the one term it binds
+       within, renamed to Let's name where the grammar names it otherwise, as stage 6 renamed mbse-programs' `call`,
+       `array` and `expression`; Let's `name` is the one name it binds where it writes it as a string; any of the
+       three the kind has no such term or name for stays unset, and its kind's `scopes` say what it binds (API 167).
+       A refinement lists Let's properties first, as `foreachconstraint`'s does. A kind keeps its role (`BINDING`,
+       `QUANTIFIER`, `IMPORT` or `APPLICATION`), which its evaluation and inference read *(agent)*. A helper that
+       binds (a comprehension's `for` clause, a TypeScript signature) binds through the kind that holds it, and a
+       pattern binds through what holds it (API 189): neither refines `Let`, as only a term is a kind. The binders,
+       dialect by dialect, are in the table below.
+     - *Evaluation keeps what it does* (Q11): no new kind is evaluated; each is refused by name ("Python Patterns
+       matchas is not evaluated"), and what a renamed binder evaluated it still evaluates.
+     - *Editions as data* (Q10, mbse-basis [CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md)):
+       each new dialect's `define` covers its standard's editions by their designations, each with the dialect's
+       own kinds it has (`SINCE`); a feature within a kind is not recorded, as for C's.
+     - *Completeness as data* (Q9): each new dialect is checked, exactly, against its reference grammar's node list,
+       kept as data in `grammars/`, every node mapped to a kind or a helper or listed as not an expression with its
+       reason (DIA-20, DIA-23, DIA-26 and DIA-29's shape); no test depends on the parser.
+     - *Installs in any order within a family* (API 168): each install names the others' `Term`s and helpers by
+       name, creating any not yet installed, and every caller's list gains the new installs and defines after its
+       family's dialect. A dialect's `reads` is code, not data naming the dialects it uses: none of this is a reason
+       to reinstate `Uses` (mbse-basis [CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md#decided),
+       "No `Uses`"), and none was found in designing the retrofit.
+
+   - **Python** (`Expressions.Python`): three new dialects beside `Python3`.
+     - *Its sublanguages.* Python's standard is the Python Software Foundation's documentation, whose Language
+       Reference defines a `match` statement's patterns as a grammar of their own (8.6.4, "Patterns", as
+       mbse-programs cites it: its category `Pattern`) and type parameter lists (8.11: its category
+       `TypeParameter`), and whose typing specification (typing.python.org, "Type annotations") defines type
+       expressions, a grammar whose terms are Python expressions; its Library Reference defines `re`'s regular
+       expression syntax ("Regular Expression Syntax"), which the record names among the regular expressions that
+       are dialects (Decided for stage 6: "regular expressions (ECMA-262's, Python's `re`)"). So `Python Types`,
+       `Python Patterns` and `Python RegExp`. Python3's binding targets stay its `Pattern` union (the rule above).
+     - *`Python Types`* (`Expressions.Python.Types`; tag `python_types`). Its `Term`: every branch of
+       `Expressions.Python.Python3.Term`, as an annotation, a bound or a default may be any expression in Python's
+       grammar (which ones the typing specification allows is a constraint, decision 4), then its own kinds and
+       invalid syntax, as API 169 has stage 6's. Its own kinds, mbse-programs' `TypeParameter`s, each a name (a
+       `str`, as Python3 keeps `ast`'s) and its type expressions *(agent: a type parameter is neither a statement
+       nor an expression in mbse-programs, a category of its own, so it is this dialect's, held by the statements
+       that list it through its holder)*: `typevar` (`name`, `bound`, `default_value`), `paramspec` (`name`,
+       `default_value`) and `typevartuple` (`name`, `default_value`). No helpers. Positions: Python3's `arg`'s
+       `annotation` (a lambda's parameters, the helper mbse-programs' function definitions share), and its kinds'
+       `bound` and `default_value`; mbse-programs' annotations, return types, type aliases' values and type
+       parameter lists hold it through its holder. A type parameter declares a name that the statement listing it
+       binds, so none refines `Let`. Editions: Python 3.0 to 3.15, as `Python3`'s, its kinds from 3.12 (`SINCE`; a
+       default, 3.13, a feature not recorded). Completeness: `grammars/python3-ast.json` gains `ast`'s `type_param`
+       nodes, mapped to its kinds. Printed `T: int = str`, `**P`, `*Ts`.
+     - *`Python Patterns`* (`Expressions.Python.Patterns`; tag `python_patterns`). Its `Term`: mbse-programs' eight
+       pattern kinds, `matchvalue` (`value`), `matchsingleton` (`value`: `None`, `True` or `False`),
+       `matchsequence` (`delimiters`, `patterns`), `matchmapping` (`keys`, `patterns`, `rest`), `matchclass`
+       (`cls`, `patterns`, `kwd_attrs`, `kwd_patterns`), `matchstar` (`name`), `matchas` (`pattern`, `name`) and
+       `matchor` (`patterns`), then invalid syntax; a name a `str`. It lists none of `Python3`'s branches *(agent)*:
+       an expression in a pattern stands in a kind's own slot (`matchvalue`'s `value`, `matchclass`'s `cls`,
+       `matchmapping`'s `keys`), which holds `Expressions.Python.Python3.Term`. `matchmapping` and `matchclass` each
+       hold several containers (API 210), checked as mbse-programs checks them ("a MatchMapping needs a pattern for
+       each key", "a MatchClass needs a pattern for each keyword", "a MatchOr needs two patterns"). No helpers.
+       Positions: none in `Python3`, a `match` being a statement; mbse-programs' `case` holds its pattern through
+       this dialect's holder. A pattern binds its capture names through what holds it (API 189): it exports
+       `bound_names` (`boundNames`), and none refines `Let`. Editions: Python 3.10 to 3.15, every kind from 3.10.
+       Completeness: `grammars/python3-ast.json` gains `ast`'s `pattern` nodes, mapped to its kinds, and
+       `match_case`, listed as a statement's part.
+     - *`Python RegExp`* (`Expressions.Python.RegExp`; tag `python_regexp`). mbse-programs has no kinds for it, so
+       its kinds are the constructs `re`'s syntax lists, named as `TypeScript RegExp`'s where the construct is
+       ECMAScript's too, each family defining its own copy, as C and C++ do *(agent)*: `pattern` (its
+       `alternatives`), `alternative`, `group`, `capturinggroup` (`name`, optional), `quantifier` (`min`, `max`,
+       `greedy`, `possessive`), `characterclass`, `characterclassrange`, `characterset` (a category: `.`, `\d`,
+       `\w`, `\s` and their negations), `character` (a code point, with its spelling), `assertion` (`^`, `$`, `\A`,
+       `\Z`, `\b`, `\B`, and lookaheads and lookbehinds), `backreference` (a number or a name), and Python's own
+       `conditional` (`(?(id)yes|no)`), `atomicgroup` (3.11) and `flags` (an inline `(?aiLmsux)`, or scoped
+       `(?a-i:...)`), then invalid syntax. Positions: none in `Python3`: a pattern is a string literal there, and
+       that a string is a regular expression is the program's to say, never guessed (mbse-basis
+       [PRI-025: never guess the schema](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-025));
+       mbse-programs, or a constraint's author, holds one through its holder. A named group's name is a label within
+       its pattern, which a backreference resolves, not a name the expression binds: none refines `Let` *(agent)*.
+       Editions: Python 3.0 to 3.15, `atomicgroup` from 3.11 (a possessive quantifier, 3.11, a feature not
+       recorded). Completeness: `grammars/python3-re.json`, new, lists the opcodes `re`'s parser writes
+       (`re._constants`, `sre_constants` before 3.11; the operation, position and category codes) with `since` and
+       `until`, each mapped to a kind, a helper or an attribute, or listed as not an expression (the compiler's own,
+       `INFO`, `MARK`, `FAILURE`) with its reason; checked in both languages, and in Python against the running
+       interpreter's `re._constants`, as DIA-20 is against `ast`.
+     - *`Python3`* itself: `arg`'s `annotation` holds `Expressions.Python.Types.Term`; its `Term` and its `Pattern`
+       keep their branches; its binders refine `Let` (the table below); its `DIALECT` reads `Python Types`, `Python
+       Patterns` and `Python RegExp`, as each of them reads the other three. Its `Text.FromText` stays as built
+       (Decided, 6): it reads expressions, not patterns or annotations.
+
+   - **TypeScript** (`Expressions.TypeScript`): three new dialects beside `TypeScript5`.
+     - *Its sublanguages.* TypeScript's types, mbse-programs' category `TypeNode` and typescript-estree's, are
+       today's `Type` union ("most languages will have a dialect for type expressions"); its destructuring patterns,
+       mbse-programs' category `Pattern`, are ECMA-262's binding and assignment patterns, grammars of their own
+       (14.3.3, "Destructuring Binding Patterns"; 13.15.5, "Destructuring Assignment"), today's `Pattern` union; and
+       a regular expression literal (12.9.5) holds ECMA-262's pattern grammar (22.2.1, "Patterns"), which
+       typescript-estree keeps as text. So `TypeScript Types`, `TypeScript Patterns` and `TypeScript RegExp`. JSX
+       stays `TypeScript5`'s, an extension of its primary expressions as mbse-programs marks it (for the user,
+       Open, below).
+     - *`TypeScript Types`* (`Expressions.TypeScript.Types`; tag `typescript_types`). Its `Term` is today's
+       `Expressions.TypeScript.TypeScript5.Type`, its 45 branches unchanged: mbse-programs' 37 type nodes, whose
+       schemas move to it (`Expressions.TypeScript.Types.TSUnionType`), the six terms a type holds (`identifier`,
+       `thisexpression`, `literal`, `unaryexpression`, `templateliteral`, `objectexpression`), which stay
+       `TypeScript5`'s, as the user decided their listing (mbse-basis [CAP-228: the TypeScript5 expression
+       dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-228.md#decided), "(b) as you
+       recommended"), and invalid syntax. Its helpers, by the rule above: those only types hold (the `TypeElement`
+       union and its signatures); `TSTypeAnnotation`,
+       `TSTypeParameterDeclaration`, `TSTypeParameter` and `TSTypeParameterInstantiation` stay `TypeScript5`'s, as
+       expressions hold them too. Positions: as today's `Type`'s, `as`, `satisfies`, `<T>x`, annotations, type
+       arguments, and type parameters' constraints and defaults. Binders: `tsmappedtype`, `tsfunctiontype` and
+       `tsconstructortype` refine `Let` (the table below); a `tsconditionaltype` binds its `infer` declarations
+       within its `trueType` by its scopes and does not refine `Let`, as a SystemVerilog conditional binds a
+       `matches`' variables (API 172) *(agent)*. Editions: TypeScript 5.0 to 5.9, every kind in each. Completeness:
+       `grammars/typescript5-estree.json`'s `types` entries are this dialect's.
+     - *`TypeScript Patterns`* (`Expressions.TypeScript.Patterns`; tag `typescript_patterns`). Its `Term` is today's
+       `Expressions.TypeScript.TypeScript5.Pattern`, its 16 branches unchanged: its kinds `arraypattern`,
+       `objectpattern`, `assignmentpattern` and `restelement`, and `tsparameterproperty`, which only a parameter
+       holds, whose schemas move to it; the terms a target may be and `property` and `elision`, which stay
+       `TypeScript5`'s; and invalid syntax. `TypeScript5`'s `Term` keeps listing the first three (API 71).
+       Positions: as today's, a function's, an arrow's, a signature's, a function type's and an index signature's
+       parameters, and an assignment's `left`. A pattern binds through what holds it (API 78, 189): none refines
+       `Let`. Editions: TypeScript 5.0 to 5.9. Completeness: the estree file's `patterns` entries.
+     - *`TypeScript RegExp`* (`Expressions.TypeScript.RegExp`; tag `typescript_regexp`). mbse-programs has no kinds
+       for a regular expression's body (API 74), so its kinds are those of @eslint-community/regexpp, the parser
+       ESLint and typescript-eslint read a regular expression's body with, as typescript-estree's are
+       TypeScript's *(agent)*: each of regexpp's node types a kind, lowercased (`regexpliteral`, `pattern`,
+       `alternative`, `group`, `capturinggroup`, `quantifier`, `characterclass`, `characterclassrange`,
+       `classintersection`, `classsubtraction`, `classstringdisjunction`, `stringalternative`,
+       `expressioncharacterclass`, `characterset`, `character`, `assertion`, `backreference`, `modifiers`), but
+       `Flags` and `ModifierFlags`, helpers; then invalid syntax. Positions: `TypeScript5`'s `constant` holding a
+       regular expression keeps its `pattern` and `flags` as written and gains `regexp`, the `regexpliteral` they
+       encode, absent where they do not parse: its encoded value beside its spelling (mbse-basis
+       [PRI-023: domain representations](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-023)) *(agent)*;
+       nothing else holds it (a string given to `new RegExp` is a string, PRI-025). A named group's name is a label,
+       as Python's: none refines `Let`. Editions: ECMA-262's, from the 5.1 Edition to the 16th (ECMAScript 2025),
+       each by Ecma International's designation (`ECMA-262 6th Edition`), body `org.ecma-international`, number
+       `262`, revision its edition, common names as Ecma writes them (`ECMAScript 2015`, `ES2015`) *(agent)*; its
+       kinds' `SINCE` from the edition each arrived in (the `v` flag's five, ES2024; `modifiers`, ES2025), a
+       feature within a kind (a named group, a lookbehind, ES2018) not recorded. Completeness:
+       `grammars/ecmascript-regexpp.json`, new, regexpp's node types at the version pinned when it is written.
+     - *`TypeScript5`* itself: its `Type` and `Pattern` unions become the two dialects' `Term`s (named
+       `Expressions.TypeScript.Types.Term` and `Expressions.TypeScript.Patterns.Term`), every position that held
+       them holding those; its `constant` gains `regexp`; its binders refine `Let`; its `DIALECT` reads the three,
+       as each reads the others. Its printer moves the types' and the patterns' printing to their dialects, the
+       family's printer merging them, as SystemVerilog's does (API 176).
+
+   - **C and C++** (`Expressions.C`, `Expressions.Cpp`): a `Types` dialect each, and one preprocessor, C's, which
+     both read.
+     - *Their sublanguages.* ISO/IEC 9899 defines type names as a grammar of their own (6.7.7 in C11, "Type names",
+       over 6.7's specifiers and declarators) and the preprocessing directives (6.10); ISO/IEC 14882 defines type-ids
+       ([dcl.name], over [dcl.spec] and [dcl.decl]) and its preprocessing directives ([cpp]), which are C's but for
+       what each standard adds. So `C Types` and `Cpp Types`, today's `Type` unions, and `C Preprocessor`: "the
+       preprocessor is a dialect per family (C's, shared by C and C++ as each standard defines it ...)" (Decided
+       for stage 6, Macros), as mbse-programs has one set of directives for both (`Ccpp/Syntax.py`, "Preprocessing
+       directives [cpp]"), each recording the editions of both languages that have it. C's and C++'s `Pattern`
+       unions stay, as the user decided them (the rule above). C++'s `std::regex` grammar is Open, below.
+     - *`C Types`* (`Expressions.C.Types`; tag `c_types`) and *`Cpp Types`* (`Expressions.Cpp.Types`; tag `cpp_types`).
+       Each `Term` is today's `Type`, its branches unchanged: `typeid` (its `specifiers` and abstract `declarator`),
+       whose schema moves to it, and invalid syntax; each family's `Expressions` `Term` keeps listing `typeid` for the
+       positions that hold an expression or a type alike (`sizeof(int)`, `_Generic`'s controlling operand, `offsetof`'s
+       first argument, a template's arguments). Helpers, by the rule above: in C a type name's specifiers, declarators,
+       parameters and attribute specifiers move, as no expression holds them; in C++ a lambda's declarator holds
+       parameters, with their specifiers and declarators, so those stay `Cpp Expressions`' and are read through `reads`.
+       An enumeration's body is data (the rule above): `EnumSpecifier` keeps `body` and gains `enumerators`, a container
+       of the union `Expressions.C.Types.EnumeratorItem` (and C++'s own), whose branches are `enumerator`
+       (`Expressions.C.Types.Enumerator`: `name`, an identifier, `attributes`, `value`, its family's term) and what the
+       preprocessor's install adds, its directives and `comment`, as mbse-programs' `EnumeratorList` holds them, with
+       its `trailing_comma`. A struct's, a union's and a class's members stay behind `body`. Positions: as today's
+       `Type`'s, a cast's type, a compound literal's, a generic association's, an enumeration's fixed type, and C++'s
+       named casts, `new`, `typeid` and functional casts. No kind binds. Each holder names its ABI through the adjacency
+       every holder inherits, and its type names are read through it as C's are (`Domains.Types`). Editions: C's three
+       for `C Types`, C++'s three for `Cpp Types`, `typeid` in each. Completeness: the C and C++ grammar files' `types`
+       entries, and `enumerator` and `enumerator_list`, listed today as a body's, mapped to the new helpers.
+     - *`C Preprocessor`* (`Expressions.C.Preprocessor`; tag `c_preprocessor`). Its `Term`: mbse-programs'
+       directives, `includedirective` (`directive`, `path`, `system`, `macro`), `definedirective` (`name`,
+       `function_like`, `parameters`, `variadic`, `replacement`, its tokens' text, "not a tree until the macro is
+       used"), `ifdirective` (`condition`, `items`, `alternative`), `ifdefdirective` (`negated`, `name`, `items`,
+       `alternative`), `elifdirective`, `elifdefdirective`, `elsedirective` (`items`) and `otherdirective`
+       (`directive`, `text`: `#undef`, `#pragma`, `#error`, `#warning`, `#line`, `#embed`); its `definedexpression`
+       (`defined(name)`, mbse-programs' expression kind of a condition); `comment`, as `SystemVerilog Preprocessor`
+       has it (API 204) *(agent)*; then invalid syntax. A name is C's `Identifier`, a preprocessing token the same in
+       both standards *(agent)*. A condition and an include's `macro` hold `Expressions.Framework.Term`, a C or a
+       C++ term, as the framework's shared kinds hold any dialect's (Decided, 4), each standard defining its own
+       condition's grammar; which language's is a constraint *(agent)*. An `alternative` holds the next `elif`,
+       `elifdef` or `else`, as mbse-programs nests them. A directive's `items`, where a value holds the directive (an
+       enumeration's body), hold `Expressions.C.Preprocessor.Item`, a union whose branches are named by dialect,
+       `c` and `cpp`, each that dialect's `Types`' `EnumeratorItem` union, written with its dialect, then its kind, as
+       `Expressions.Framework.Term` is (Decided, 1) *(agent: one schema serves both languages' enumerations,
+       whose enumerators hold their own language's terms)*; elsewhere mbse-programs relates its items. It reads C's
+       and C++'s `Expressions` and `Types`, whose terms its conditions and items hold. Positions:
+       its install adds `definedexpression` to C's and C++'s `Term` and its directives and `comment` to both
+       `EnumeratorItem` unions, as SystemVerilog's Preprocessor adds its own to Constraints' `Term` (API 204); every
+       other directive is mbse-programs', among its declarations and statements, held through this dialect's
+       holder. No macro usage kind: neither mbse-programs nor tree-sitter tells a macro's use from a call or a name
+       without the definitions (reported, below). What it binds: a function-like macro's parameters bind within its
+       replacement, which is text, and `defined`'s name is a macro's, not a reference: none refines `Let`, as
+       SystemVerilog's do not (API 205). Editions: C11, C17, C23, C++17, C++20 and C++23, by their designations,
+       `elifdefdirective` C23's and C++23's (mbse-programs' `both(2023, 2023)`); a directive's name within
+       `otherdirective` (`#warning`, `#embed`) a feature not recorded. Completeness: the C and C++ grammar files'
+       `preproc_*` entries, `comment` and `preproc_defined`, listed today as not expressions, mapped to its kinds.
+     - *`C` and `Cpp`* themselves: their `Type` unions become the two `Types`' `Term`s, each position that held one
+       holding it; their `Term`s list `definedexpression`; C++'s binders refine `Let` (C has none: C expressions
+       bind no names); each `DIALECT` reads its own `Types` and `C Preprocessor`, and C++'s reads none of C's other
+       dialects; the writers' `cast(type, operand)` takes a spec of `Types`' `Term`; evaluation reads a
+       cast's type from `Types`, as it reads it today from `Type`.
+
+   - **MATLAB, Excel and LaTeX**: no new dialect *(agent)*. None has a standard the record names (whether Excel's
+     formulas are ISO/IEC 29500-1's is open, mbse-basis [CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md#open-questions)),
+     their kinds stay as they are (Decided, 9), and none has a sublanguage among them: MATLAB's `regexp` and Excel's
+     `REGEX` functions take their patterns as strings, as Python's `re` does, and neither dialect holds them. Their
+     binders refine `Let` (the table below).
+   - **Patterns**: no new dialect; its `quantifier` refines `Let` (the table below), until a quantifier takes a
+     `Schemas.OfPattern` as decided (Decided, "Basic is renamed Patterns; a quantifier takes a pattern"), which
+     replaces its `name` and its `value` with the pattern's symbols and `spec`.
+   - **The binders**, every kind that binds names refining `Expressions.Framework.Let` (Q8, "(a)"), by the rule
+     above; "→" renames a property to Let's, "—" leaves Let's property unset, its kind's scopes saying what it binds
+     *(agent, each mapping)*:
+
+     | Dialect | Kind | `name` | `value` | `body` | Its own | What its scopes bind |
+     |---|---|---|---|---|---|---|
+     | Patterns | `quantifier` | `name` | `collection` → `value` | `body` | `quantifier` | `name` in `body` |
+     | MATLAB | `arrayfun` | `name` | `array` → `value` | `body` | | `name` in `body` |
+     | MATLAB | `import` | `name` (what it imports) | — | `body` | | the names its kind's `names` gives, in `body` |
+     | Excel | `let` | the framework's `Let` itself | | | | |
+     | Excel | `map` | `name` | `array` → `value` | `body` | | `name` in `body` |
+     | LaTeX | `let` | the framework's `Let` itself | | | | |
+     | Python3 | `let` | the framework's `Let` itself | | | | |
+     | Python3 | `lambda` | — | — | `body` | `args` | the parameters in `body`; defaults in the outer scope (API 60) |
+     | Python3 | `listcomp`, `setcomp`, `generatorexp` | — | — | `elt` → `body` | `generators` | each clause's targets in the later clauses and `body`; the first iterable in the outer scope (API 60) |
+     | Python3 | `dictcomp` | — | — | `value` → `body` | `key`, `generators` | as a comprehension's, in `key` and `body` |
+     | Python3 | `namedexpr` | — | `value` | — | `target` | nothing within it: it binds in the enclosing scope, which a term does not model (API 60) |
+     | Python3 | `import` | — | — | `body` | `module`, `alias` | its alias, or its module's first name, in `body` |
+     | Python3 | `importfrom` | `name` (what it imports) | — | `body` | `module`, `alias` | its alias, or its name, in `body` |
+     | TypeScript5 | `arrowfunctionexpression` | — | — | `body` | `isAsync`, `typeParameters`, `params`, `returnType` | its type parameters and parameters within it (API 78) |
+     | TypeScript5 | `functionexpression`, `tsemptybodyfunctionexpression` | — | — | — | as today | its name, type parameters and parameters within it (API 78) |
+     | TypeScript5 | `classexpression` | — | — | — | as today | its name and type parameters within it |
+     | TypeScript Types | `tsmappedtype` | — | `constraint` → `value` | `typeAnnotation` → `body` | `readonly`, `key`, `nameType`, `optional` | `key` in `nameType` and `body` |
+     | TypeScript Types | `tsfunctiontype`, `tsconstructortype` | — | — | — | as today | its type parameters and parameters within it |
+     | Cpp | `lambdaexpression` | — | — | — | as today | its template parameters, parameters and init captures within it (API 91) |
+     | Cpp | `requiresexpression` | — | — | — | as today | its parameters within its requirements (API 91) |
+     | SystemVerilog | `arraymethodwithexpression`, Constraints' `foreachconstraint` | as built in stage 6 (API 172, 199) | | | | |
+
+     A quantifier's `name`, an `arrayfun`'s and a `map`'s are each the one name it binds, which it writes; an
+     import's `name` is what it imports, the name it binds being its kind's `names` (API 11), a mismatch with Let's
+     `name` kept so that the wire of an import does not change *(agent, for review)*. The renames follow
+     `foreachconstraint`'s `array` → `value`. `dictcomp`'s `value` is renamed so that Let's `value` never names
+     what a binder binds within. Not binders: a pattern of any family (its holder binds, API 189); a
+     `tsconditionaltype`, which binds its `infer` declarations by its scopes, as SystemVerilog's conditional binds a
+     `matches`' variables (API 172); a helper that binds (a comprehension's clause, a TypeScript signature), through
+     its kind; a regular expression's named group; and a macro definition, a type parameter and C's expressions,
+     which bind nothing a term scopes. The framework changes with them: a binder whose role is `QUANTIFIER` or
+     `IMPORT` binds by its role, in validation, inference and `Symbolics.free`, so that `Terms.is_binder`'s let
+     reading applies only to the `BINDING` role without `scopes` *(agent)*: today inference reads any binder
+     without scopes as a let, which a quantifier refining `Let` would break.
+
+   - **What moves out of today's dialects, and what breaks** (a breaking change, in 0.10.0, a breaking release
+     anyway):
+     - *Moves*: `TypeScript5`'s `Type` union, its 37 type kinds and the helpers only types hold, to `TypeScript
+       Types`; its `Pattern` union, its four pattern kinds and `tsparameterproperty`, to `TypeScript Patterns`;
+       their printing to those dialects' `Text`. C's and C++'s `Type` unions and `typeid`, to `C Types` and `Cpp
+       Types`, with C's type-name helpers. Nothing moves out of `Python3`, whose types, patterns and regular
+       expressions are new dialects.
+     - *Breaks*: every moved schema's name (`Expressions.TypeScript.TypeScript5.TSUnionType` is
+       `Expressions.TypeScript.Types.TSUnionType`; `Expressions.C.Expressions.Type` is `Expressions.C.Types.Term`),
+       with no alias (Decided, Namespace, 8); a term's data is unchanged, its branch tags being the same, but a
+       snapshot of a store's schemas, and code naming a schema, changes. The binders' renamed properties, so their
+       data: Patterns' `quantifier`'s `collection`, MATLAB's `arrayfun`'s and Excel's `map`'s `array` (each now
+       `value`), Python3's comprehensions' `elt` and `dictcomp`'s `value` (each now `body`), `tsmappedtype`'s
+       `constraint` and `typeAnnotation`; the writers keep their names and argument order. The binders' property
+       order, Let's first. C's and C++'s enumerations gain `enumerators`; TypeScript5's `constant` gains `regexp`;
+       Python3's `arg`'s `annotation` holds `Python Types`' `Term`. Every caller's install list gains nine installs
+       and defines (`Python Types`, `Python Patterns`, `Python RegExp`, `TypeScript Types`, `TypeScript Patterns`,
+       `TypeScript RegExp`, `C Types`, `Cpp Types`, `C Preprocessor`), and `Expressions.Framework.Term` and
+       `Expressions.Framework.Dialect` nine branches each. The corpus's JSON changes where a renamed property or a
+       moved schema's name appears; each new dialect adds a case.
+     - *Dependents*: mbse-programs' bridges are its stage 2's, which ports once onto 0.10.0 (Stages, 7);
+       mbse-patterns and mbse-codegen-python pin mbse-expressions 0.5.4, and port after mbse-programs (Stages, 7),
+       so nothing of theirs breaks now.
+
+   - **The work, partitioned** *(agent)*, as stage 6's was: a core first, alone, then groups in parallel, each on a
+     branch of its own from the core's merge, owning disjoint files in both languages, then the coordinator's
+     closing work. Every group passes both gates at 100% in both languages (TypeScript on Node 22, 24 and 26) on its
+     branch, records each choice where this design is silent as an API item draft, numbered by the coordinator from
+     217, and reports any sibling's gap and any reason for `Uses`. The shared files are the coordinator's, who
+     serializes them: the corpus (`Conformance/Corpus.py`, `src/Conformance/Corpus.ts` and the written corpora),
+     [the API](../port/API.md), both test plans, the suites 05 (FRM) and 06 (DIA), the skill and its packaged
+     copies, and the grammar files in `grammars/`. A group touches a shared file only at the touch points listed
+     for it, on its branch, so that the coordinator merges the groups one at a time.
+     - *Core* (one agent, alone; the coordinator merges it before any group starts). The framework's binder change
+       (`Framework/Terms`, `Symbolics`); every binder in today's dialects refining `Let`, with the renames, in
+       Patterns, MATLAB, Excel, Python3, TypeScript5 (its `Term`'s kinds) and Cpp, their evaluators, printers,
+       writers, partial evaluation and every translator (`Translators/`); and each of the nine new dialects'
+       skeleton, so that the groups start with their imports resolving: its package and module, its export
+       (`python3/mbse/Expressions/<Family>/__init__.py`, `typescript5/package.json`, `deno.json`), its install (its
+       singleton, its holder, its `Term` of invalid syntax alone, a branch of `Expressions.Framework.Term` and of
+       `Expressions.Framework.Dialect`), an empty `define`, and its `Terms.Dialect` with `reads`, each family's
+       dialects reading one another; and every caller's install list (the suites' setups, `support.py`,
+       `support.ts`, the tutorials' toolkit, the corpus's store), and the tutorials whose outputs its renames change,
+       re-executed. Its tests: DIA-30, new, a binder of every dialect refining `Let`, its properties and scopes;
+       FRM-01, under its ID, the nine dialects and their exports; every case that writes or reads a renamed property,
+       under its ID (FRM-02's samples, DIA-19, DIA-21, DIA-24, EVL, COL, PAR, TRN); and the corpus regenerated. The shared files it
+       changes are those, as it runs alone.
+     - *Python* (group P): `Python Types` and `Python Patterns`, and `Python3`'s changes. Owns
+       `python3/mbse/Expressions/Python/{Python3,Types,Patterns}/` and `typescript5/src/Python/{Python3,Types,Patterns}/`,
+       and its suites `16_Python_Types` (PYT) and `17_Python_Patterns` (PYP). Touch points: `python3-ast.json`'s
+       `type_param` and `pattern` entries, DIA-20, FRM-02's samples and FRM-13's editions of its two dialects, and
+       their corpus cases (`python_types`, `python_patterns`).
+     - *Python's regular expressions* (group PR): `Python RegExp`. Owns `Python/RegExp/` in both languages, the new
+       `grammars/python3-re.json`, and its suite `18_Python_RegExp` (PYR), which checks that file. Touch points:
+       FRM-02, FRM-13 and its corpus case (`python_regexp`).
+     - *TypeScript* (group T): `TypeScript Types` and `TypeScript Patterns`, the moves out of `TypeScript5`, its
+       `constant`'s `regexp` (holding `Expressions.TypeScript.RegExp.Term` by name), and the binders of `TypeScript
+       Types`. Owns `TypeScript/{TypeScript5,Types,Patterns}/` in both languages, and its suites `19_TypeScript_Types`
+       (TST) and `20_TypeScript_Patterns` (TSP). Touch points: `typescript5-estree.json`'s `types` and `patterns`
+       entries, DIA-21 to DIA-23, FRM-02, FRM-13 and the corpus's `typescript5` case and its new cases
+       (`typescript_types`, `typescript_patterns`).
+     - *TypeScript's regular expressions* (group TR): `TypeScript RegExp`. Owns `TypeScript/RegExp/` in both
+       languages, the new `grammars/ecmascript-regexpp.json`, and its suite `21_TypeScript_RegExp` (TSR). Touch
+       points: FRM-02, FRM-13 and its corpus case (`typescript_regexp`). A `constant` holding a parsed expression
+       is asserted after group T merges, by the coordinator, in TSR.
+     - *C and C++ types* (group C): `C Types` and `Cpp Types`, the moves out of C and C++, the enumerations' data, and
+       C and C++'s `Domains`, `Evaluators`, `Text` and writers following, with `Translators/Patterns_C` and
+       `Patterns_Cpp` (and their TypeScript twins). Owns `C/{Expressions,Types}/` and `Cpp/{Expressions,Types}/` in
+       both languages, those translators, and its suites `22_C_Types` (CTY) and `23_Cpp_Types` (XTY). Touch points:
+       the C and C++ grammar files' `types`, `enumerator` and `enumerator_list` entries, DIA-11, DIA-12, DIA-24 to
+       DIA-26, FRM-02, FRM-13, tutorial 8's cast, and the `c` and `cpp` corpus cases and its new ones (`c_types`,
+       `cpp_types`).
+     - *The C preprocessor* (group CP): `C Preprocessor`, its install adding `definedexpression` to C's and C++'s
+       `Term` and its directives and `comment` to both `EnumeratorItem` unions by name, created where group C's install
+       has not run. Owns `C/Preprocessor/` in both languages and its suite `24_C_Preprocessor` (CPD). Touch points:
+       the C and C++ grammar files' `preproc_*`, `preproc_defined` and `comment` entries, FRM-02, FRM-13 and its
+       corpus case (`c_preprocessor`). A directive within an enumeration is asserted after group C merges, by the
+       coordinator, in CPD.
+     - *Closing* (the coordinator, after the groups merge): the grammar files and DIA completeness cases merged and
+       each new dialect checked exactly, as DIA-29 checks SystemVerilog's; the corpus regenerated, byte-identical
+       in both languages; the test plans; [Equivalence](../../EQUIVALENCE.md) where a difference is found; the
+       tutorials that name a moved schema or a renamed property; the skill; the API items; and the records: in
+       mbse-basis, a capability for each family's sublanguage dialects and one for the binders as `Let`'s
+       variations, each implementing [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md)
+       (and [FEA-008: expressive program models](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-008.md) for the dialects),
+       since a capability met in 0.8.0 does not grow ([the basis](https://github.com/pitaman71/mbse-basis/blob/main/docs/README.md#the-design-spec)),
+       and [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)'s
+       stage 6 marked built; then the release, 0.10.0.
+
+   - **Open, for the user** (each checked against the Decided sections, which do not settle it; the build proceeds
+     on the recommendation, each answer changing one group at most):
+     1. *Which regular expressions are dialects.* The record names "ECMA-262's, Python's `re`", by the rule "if the
+        standard says it's a sublanguage". Python's is its Library Reference's, a pattern held by no grammar
+        position, only by a string; and ISO/IEC 14882 itself defines `std::regex`'s grammars ([re.grammar]:
+        ECMAScript's, modified, and POSIX's basic, extended, awk, grep and egrep), which the record does not name.
+        (a) Only a regular expression a language's grammar holds (ECMAScript's literal): `Python RegExp` dropped,
+        against the record's naming of it. (b) Each a language's standard defines, its library's included:
+        ECMA-262's, Python's `re` and C++'s [re.grammar], as `Cpp RegExp`, a further group designed once answered;
+        not MATLAB's or Excel's, which have no standard recorded. (c) (b), and MATLAB's `regexp` and Excel's
+        `REGEX` functions too. *Recommended: (b)*, the record's rule read as written; group PR proceeds under (b)
+        or (c).
+     2. *JSX.* Decided, 5 named JSX among the sublanguages an expression holds, and stage 6 makes a sublanguage a
+        dialect; but the retrofit as recorded ("type, pattern, regex and preprocessor dialects") does not name it,
+        and JSX's own specification calls it a syntax extension of ECMAScript, which mbse-programs marks as an
+        extension. (a) JSX stays `TypeScript5`'s extension kinds. (b) `TypeScript JSX`, a dialect of its own, its
+        kinds and helpers moved as the types' are, in group T. *Recommended: (a)*: no standard defines it as a
+        sublanguage, and it can move later as the types do now, with nothing built on it to rework.
+   - **Reported, for mbse-programs' port** (mbse-basis [PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)):
+     it has no kinds for a regular expression's body, in TypeScript or in Python, so its reader leaves
+     `TypeScript RegExp` unwritten until it parses one (as regexpp does); and it cannot tell a C or C++ macro's use
+     from a call or a name without the definitions, so no macro usage kind is modeled here
+     ([CAP-093: every construct of C's and C++'s standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-093.md),
+     [CAP-068: C and C++ read by Clang](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-068.md)).
 
 7. **Tutorials, skill, README, EQUIVALENCE; the releases.** The tutorials and the skill followed each stage as it
    landed. **0.8.0 is released after stage 5**, as the user decided (Decided, "0.8.0 holds stages 1 to 5"): stages 1
