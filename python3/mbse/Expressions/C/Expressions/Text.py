@@ -47,6 +47,9 @@ _MACROS = {"nan": "NAN", "inf": "INFINITY", "-inf": "-INFINITY"}
 
 _PREFIXES = {16: "0x", 8: "0", 2: "0b"}
 
+_INDENT = "    "
+"""A level of indentation, as mbse-programs writes an enumeration's items."""
+
 
 def _quoted(value: str, quote: str) -> str:
     """Characters between quotes, with C's escapes: a backslash, the quote, a newline, a tab, a carriage return, a
@@ -111,7 +114,7 @@ class _Printer:
     nested."""
 
     def __init__(self, dialect: F.Dialect):
-        self.dialect = dialect
+        self.dialect, self.depth = dialect, 0  # the depth of the enumeration being written
 
     def node(self, value: Any) -> F.Node:
         """A term's `Node`, read through the dialect (which refuses another dialect's term), or a `Node` as it is."""
@@ -141,6 +144,10 @@ class _Printer:
 
     def text(self, node: F.Node) -> str:
         return self.TEXTS[node.kind](self, node)
+
+    def term(self, value: Any) -> str:
+        """A term a slot holds, as written: a type name where a position holds a type."""
+        return self.text(self.node(value))
 
     def name(self, node: F.Node, property: str) -> str:
         """A node's name, by its property: a `Name`, or an identifier, a helper."""
@@ -246,7 +253,7 @@ class _Printer:
         return "sizeof" + ("" if written.startswith("(") else " ") + written
 
     def cast(self, node: F.Node) -> str:
-        return f"({self.text(node.helpers['type'])}){self.expression(node.slots['operand'], UNARY)}"
+        return f"({self.term(node.slots['type'])}){self.expression(node.slots['operand'], UNARY)}"
 
     def initializer_list(self, node: F.Node) -> str:
         items = ", ".join(self.expression(item, ASSIGNMENT) for item in node.many)
@@ -264,16 +271,16 @@ class _Printer:
         return f"[{self.expression(node.slots['index'], CONDITIONAL)}{range_}]"
 
     def generic(self, node: F.Node) -> str:
-        associations = [(self.text(a.helpers["type"]) if "type" in a.helpers else "default") + ": "
-                        + self.expression(a.slots["value"],
-                            ASSIGNMENT) for a in _nodes(node.helpers.get("associations"))]
+        pairs = zip(node.many[0::2], node.many[1::2])  # each association's type, absent for `default`, and value
+        associations = [(self.term(type_) if type_ is not None else "default") + ": "
+                        + self.expression(value, ASSIGNMENT) for type_, value in pairs]
         return f"_Generic({', '.join([self.operand(node.slots['controlling'], ASSIGNMENT), *associations])})"
 
     def new(self, node: F.Node) -> str:
         written = ("::" if node.attributes.get("global_scope") else "") + "new "
         if node.many:
             written += "(" + self.list(node.many) + ") "
-        type_ = self.text(node.helpers["type"])
+        type_ = self.term(node.slots["type"])
         written += f"({type_})" if node.attributes.get("parenthesized_type") else type_
         return written + (self.initializer(node.helpers["initializer"]) if "initializer" in node.helpers else "")
 
@@ -306,8 +313,8 @@ class _Printer:
         if "exception" in node.helpers:
             written += " " + self.text(node.helpers["exception"])
         written += self.attributes_after(node)
-        if "trailing_return" in node.helpers:
-            written += " -> " + self.text(node.helpers["trailing_return"])
+        if node.slots["trailing_return"] is not None:
+            written += " -> " + self.term(node.slots["trailing_return"])
         if node.slots["requires"] is not None:
             written += " requires " + self.constraint(node.slots["requires"])
         return written
@@ -362,7 +369,7 @@ class _Printer:
             operator = attributes["operator"]
             return "operator" + (" " if operator[0].isalpha() else "") + operator
         if kind == "conversionname":
-            return "operator " + self.text(node.helpers["type"])
+            return "operator " + self.term(node.slots["type"])
         if kind == "literaloperatorname":
             return f'operator""{attributes["suffix"]}'
         if kind == "destructorname":
@@ -390,7 +397,7 @@ class _Printer:
         if kind == "typeofspecifier":
             return self.keyword_call(node.attributes["keyword"], node.slots["operand"])
         if kind == "atomictypespecifier":
-            return f"_Atomic({self.text(node.helpers['type'])})"
+            return f"_Atomic({self.term(node.slots['type'])})"
         return f"_BitInt({self.expression(node.slots['width'], ASSIGNMENT)})"
 
     def class_(self, node: F.Node) -> str:
@@ -416,9 +423,98 @@ class _Printer:
         written = node.attributes["key"] + self.attributes_after(node)
         if "name" in node.helpers:
             written += " " + self.name(node, "name")
-        if "base" in node.helpers:
-            written += " : " + self.text(node.helpers["base"])
-        return written + (" {}" if node.attributes.get("body") else "")  # its enumerators, not part of the term
+        if node.slots["base"] is not None:
+            written += " : " + self.term(node.slots["base"])
+        return written + (" " + self.enumerators(node) if node.attributes.get("body") else "")
+
+    def enumerators(self, node: F.Node) -> str:
+        """An enumeration's body, `{ enumerators }`, as mbse-programs writes it: each enumerator, directive or comment on
+        lines of its own, one level deeper, each enumerator but its last followed by a comma, and its last too where it
+        has a trailing comma (`trailing_comma`)."""
+        items = [self.node(item) for item in node.many]
+        if not items:
+            return "{}"
+        last = max((i for i, item in enumerate(items) if item.kind == "enumerator"), default=-1)
+        depth = self.depth + 1
+
+        def render(i: int, item: F.Node) -> str:
+            written = self.item(item, depth, True)
+            return written[:-1] if i == last and not node.attributes.get("trailing_comma") else written
+
+        return "{\n" + "\n".join(self.lines(items, render)) + "\n" + _INDENT * self.depth + "}"
+
+    # Items: an enumeration's enumerators, and the directives and comments among them, each on lines of its own
+
+    def item(self, node: F.Node, depth: int, enumerators: bool) -> str:
+        """An item, starting with its indentation (a directive, at its line's start); among `enumerators`, an enumerator
+        ends with a comma."""
+        if node.kind == "comment":
+            return _INDENT * depth + self.comment(node)
+        if node.kind != "enumerator":
+            return self.directive(node, depth, enumerators)
+        outer, self.depth = self.depth, depth
+        try:
+            return _INDENT * depth + self.enumerator(node) + ("," if enumerators else "")
+        finally:
+            self.depth = outer
+
+    def lines(self, items: list[F.Node], render: Any) -> list[str]:
+        """Each item rendered on lines of its own, but a trailing comment, which ends the line before it."""
+        out: list[str] = []
+        for i, item in enumerate(items):
+            if item.kind == "comment" and item.attributes.get("trailing") and out:
+                out[-1] += " " + self.comment(item)
+            else:
+                out.append(render(i, item))
+        return out
+
+    def enumerator(self, node: F.Node) -> str:
+        written = self.name(node, "name") + self.attributes_after(node)
+        value = node.slots["value"]
+        return written + (f" = {self.expression(value, CONDITIONAL)}" if value is not None else "")
+
+    def comment(self, node: F.Node) -> str:
+        text = node.attributes.get("text", "")
+        return f"/*{text}*/" if node.attributes.get("block") else f"//{text}"
+
+    # Directives, as mbse-programs writes them: each starting its line, a conditional one's items on the lines between
+
+    def directive(self, node: F.Node, depth: int, enumerators: bool) -> str:
+        kind, attributes = node.kind, node.attributes
+        if kind == "includedirective":
+            macro = node.slots["macro"]
+            if macro is not None:
+                target = self.expression(macro, COMMA)
+            elif "path" not in attributes:
+                raise ValueError(f"{self.dialect.name()} includedirective has no path or macro to print")
+            else:
+                target = f"<{attributes['path']}>" if attributes.get("system") else f'"{attributes["path"]}"'
+            return f"#{attributes.get('directive', 'include')} {target}"
+        if kind == "definedirective":
+            head = "#define " + self.name(node, "name")
+            if attributes.get("function_like"):
+                names = [self.text(p) for p in node.helpers.get("parameters", ())]
+                head += "(" + ", ".join(names + ["..."] * bool(attributes.get("variadic"))) + ")"
+            return head + (f" {attributes['replacement']}" if "replacement" in attributes else "")
+        if kind == "otherdirective":
+            return "#" + attributes.get("directive", "") + (f" {attributes['text']}" if "text" in attributes else "")
+        return self.branch(node, depth, enumerators) + "\n#endif"
+
+    def branch(self, node: F.Node, depth: int, enumerators: bool) -> str:
+        """A conditional directive's branch, its items, and the branches after it (`alternative`)."""
+        kind = node.kind
+        if kind in ("ifdirective", "elifdirective"):
+            head = f"#{'if' if kind == 'ifdirective' else 'elif'} {self.expression(node.slots['condition'], COMMA)}"
+        elif kind in ("ifdefdirective", "elifdefdirective"):
+            keyword = "if" if kind == "ifdefdirective" else "elif"
+            head = f"#{keyword}{'ndef' if node.attributes.get('negated') else 'def'} {self.name(node, 'name')}"
+        else:
+            head = "#else"
+        items = [self.node(item) for item in node.many]
+        body = "".join("\n" + line for line in self.lines(items, lambda i, item: self.item(item, depth, enumerators)))
+        alternative = node.slots.get("alternative")
+        tail = "" if alternative is None else "\n" + self.branch(self.node(alternative), depth, enumerators)
+        return head + body + tail
 
     # Declarators
 
@@ -459,8 +555,8 @@ class _Printer:
         if "exception" in node.helpers:
             written += " " + self.text(node.helpers["exception"])
         written += self.attributes_after(node)
-        if "trailing_return" in node.helpers:
-            written += " -> " + self.text(node.helpers["trailing_return"])
+        if node.slots.get("trailing_return") is not None:  # C++'s
+            written += " -> " + self.term(node.slots["trailing_return"])
         return written
 
     def specifiers(self, node: F.Node) -> str:
@@ -493,6 +589,8 @@ class _Printer:
         written += "..." if attributes.get("pack") else ""
         if "name" in node.helpers:
             written += " " + self.name(node, "name")
+        if node.kind == "typeparameter":  # a type, or a template template parameter's name
+            return written + (" = " + self.term(node.slots["default"]) if node.slots["default"] is not None else "")
         return written + (" = " + self.text(node.helpers["default"]) if "default" in node.helpers else "")
 
     def exception(self, node: F.Node) -> str:
@@ -541,7 +639,7 @@ class _Printer:
         "functionalcastexpression": lambda self, node: (self.text(node.helpers["type"])
                                                         + self.initializer(node.helpers["initializer"])),
         "memberexpression": member, "postfixexpression": postfix,
-        "namedcastexpression": lambda self, node: (f"{node.attributes['operator']}<{self.text(node.helpers['type'])}>"
+        "namedcastexpression": lambda self, node: (f"{node.attributes['operator']}<{self.term(node.slots['type'])}>"
                                                    f"({self.expression(node.slots['operand'], COMMA)})"),
         "typeidexpression": lambda self, node: self.keyword_call("typeid", node.slots["operand"]),
         "unaryexpression": unary,
@@ -557,7 +655,7 @@ class _Printer:
         "yieldexpression": lambda self, node: "co_yield " + self.expression(node.slots["operand"], ASSIGNMENT),
         "packexpansion": pack_expansion, "initializerlist": initializer_list, "designatedinitializer": designated,
         "fielddesignator": designator, "indexdesignator": designator,
-        "compoundliteralexpression": lambda self, node: (f"({self.text(node.helpers['type'])})"
+        "compoundliteralexpression": lambda self, node: (f"({self.term(node.slots['type'])})"
                                                          + self.initializer_list(node.helpers["initializer"])),
         "statementexpression": lambda self, node: "({})",  # its body of statements, not part of the term
         "extensionexpression": lambda self, node: "__extension__ " + self.expression(node.slots["operand"], UNARY),
@@ -580,6 +678,11 @@ class _Printer:
         "standardattributespecifier": attribute_specifier, "alignasspecifier": attribute_specifier,
         "gnuattributespecifier": attribute_specifier, "declspecspecifier": attribute_specifier,
         "attribute": attribute,
+        "enumerator": enumerator, "comment": comment, "definedexpression": lambda self, node: (
+            f"defined({self.name(node, 'name')})"),
+        **{kind: lambda self, node: self.directive(node, 0, False) for kind in (
+            "includedirective", "definedirective", "ifdirective", "ifdefdirective", "elifdirective", "elifdefdirective",
+            "elsedirective", "otherdirective")},
         "equalinitializer": initializer, "parenthesizedinitializer": initializer,
     }
 

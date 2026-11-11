@@ -86,45 +86,23 @@ validation reports as a problem.
 
 from __future__ import annotations
 
-import re
-from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Terms as F
 
-from . import Domains
+from .Kinds import (  # the family's shared reading of its kinds, re-exported
+    ALIGNOFEXPRESSION, ASSIGNMENTEXPRESSION, BINARYEXPRESSION, CALLEXPRESSION, CASTEXPRESSION,
+    COMPOUNDLITERALEXPRESSION, CONCATENATEDSTRING, CONDITIONALEXPRESSION, CONSTANT, DESIGNATEDINITIALIZER, EXTENSIONS,
+    EXTENSIONEXPRESSION, GENERICSELECTION, INITIALIZERLIST, LITERAL, MEMBEREXPRESSION, OPTIONAL, PARENTHESIZEDEXPRESSION,
+    POSTFIXEXPRESSION, PREFIXES, QUOTES, SIZEOFEXPRESSION, SPELLING, STATEMENTEXPRESSION, SUBSCRIPTEXPRESSION, SUFFIXES,
+    TYPEID, UNARYEXPRESSION, VARIABLE, Writers, bound_names, cast_type, kinds, problems, scopes, size, truth, type_name,
+    untyped)
 
 __all__ = ["install", "define", "DIALECT", "EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "Writer",
            "Writers", "literal", "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call",
            "type_name", "cast_type", "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds",
            "SPELLING", "OPTIONAL"]
 
-LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE = "literal", "constant", "concatenatedstring", "variable"
-PARENTHESIZEDEXPRESSION, GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION = (
-    "parenthesizedexpression", "genericselection", "subscriptexpression", "callexpression")
-MEMBEREXPRESSION, POSTFIXEXPRESSION, UNARYEXPRESSION, SIZEOFEXPRESSION = (
-    "memberexpression", "postfixexpression", "unaryexpression", "sizeofexpression")
-ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION = (
-    "alignofexpression", "castexpression", "binaryexpression", "conditionalexpression")
-ASSIGNMENTEXPRESSION, INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION = (
-    "assignmentexpression", "initializerlist", "designatedinitializer", "compoundliteralexpression")
-STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID = "statementexpression", "extensionexpression", "typeid"
-
-EXTENSIONS = frozenset({STATEMENTEXPRESSION, EXTENSIONEXPRESSION})
-"""GNU's extensions, outside every standard, as mbse-programs marks them."""
-
-PREFIXES = ("L", "u8", "u", "U")
-"""A character's or a string's encoding prefixes."""
-
-QUOTES = ("'", '"')
-"""A character literal's quote, and a string's."""
-
-SUFFIXES = {
-    int: re.compile(r"(?i:u?(?:l|ll|wb)?|(?:l|ll|wb)u)"),
-    float: re.compile(r"[fFlL]|df|dd|dl|DF|DD|DL|[fF](?:16|32|64|128|32x|64x|128x)"),
-}
-"""The suffixes C writes, by the type of the literal's value: an integer's (`u`, `l`, `ll`, C23's `wb`, in either case
-and order) and a floating literal's (`f`, `l`, C23's decimal and interchange types' `df`, `f32`)."""
 
 def install(txn: Any) -> Any:
     """C's union of its kinds, added to the framework's terms as the branch `c`, its own kinds, its sublanguages' unions
@@ -141,10 +119,8 @@ def install(txn: Any) -> Any:
     return txn.uid("mbse.Expressions.C.Expressions/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion, "OfNullptr": S.OfObject,  # Kinds: the framework's
                   "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
-                  "Type": S.OfUnion, "Pattern": S.OfUnion, "Name": S.OfUnion, "Specifier": S.OfUnion,
-                  "Declarator": S.OfUnion,
-                  "Parameter": S.OfUnion, "AttributeSpecifier": S.OfUnion, "Designator": S.OfUnion,
-                  "Initializer": S.OfUnion, "Expression": S.OfObject,
+                  "Pattern": S.OfUnion, "Name": S.OfUnion, "Designator": S.OfUnion, "Initializer": S.OfUnion,
+                  "Expression": S.OfObject,
                   "Literal": S.OfObject, "Constant": S.OfObject, "ConcatenatedString": S.OfObject,
                   "ParenthesizedExpression": S.OfObject, "GenericSelection": S.OfObject,
                   "GenericAssociation": S.OfObject, "SubscriptExpression": S.OfObject, "CallExpression": S.OfObject,
@@ -154,16 +130,9 @@ def install(txn: Any) -> Any:
                   "AssignmentExpression": S.OfObject, "InitializerList": S.OfObject,
                   "DesignatedInitializer": S.OfObject, "FieldDesignator": S.OfObject, "IndexDesignator": S.OfObject,
                   "EqualInitializer": S.OfObject, "CompoundLiteralExpression": S.OfObject,
-                  "StatementExpression": S.OfObject, "ExtensionExpression": S.OfObject, "TypeId": S.OfObject,
-                  "DeclSpecifier": S.OfObject, "CvQualifier": S.OfObject, "PrimitiveTypeSpecifier": S.OfObject,
-                  "NamedTypeSpecifier": S.OfObject, "ClassSpecifier": S.OfObject, "EnumSpecifier": S.OfObject,
-                  "PlaceholderTypeSpecifier": S.OfObject, "TypeofSpecifier": S.OfObject,
-                  "AtomicTypeSpecifier": S.OfObject, "BitIntSpecifier": S.OfObject, "IdDeclarator": S.OfObject,
-                  "PointerDeclarator": S.OfObject, "ArrayDeclarator": S.OfObject, "FunctionDeclarator": S.OfObject,
-                  "ParenthesizedDeclarator": S.OfObject, "ParameterDeclaration": S.OfObject,
-                  "EllipsisParameter": S.OfObject, "StandardAttributeSpecifier": S.OfObject,
-                  "Attribute": S.OfObject, "AlignasSpecifier": S.OfObject, "GnuAttributeSpecifier": S.OfObject,
-                  "DeclspecSpecifier": S.OfObject, "Identifier": S.OfObject,  # FrameworkTerm: the framework's, by name
+                  "StatementExpression": S.OfObject, "ExtensionExpression": S.OfObject, "Identifier": S.OfObject,
+                  # C Types' `Term` and its `typeid`, by name; FrameworkTerm: the framework's, by name
+                  "TypesTerm": S.OfUnion, "TypeId": S.OfObject,
                   "bool": S.OfAny, "int8_t": S.OfAny, "int16_t": S.OfAny, "int32_t": S.OfAny, "int64_t": S.OfAny,
                   "uint8_t": S.OfAny, "uint16_t": S.OfAny, "uint32_t": S.OfAny, "uint64_t": S.OfAny,
                   "Float16": S.OfAny, "Float32": S.OfAny, "Float64": S.OfAny, "Float128": S.OfAny,
@@ -206,12 +175,6 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
-            # its type names, and invalid syntax
-            lambda _: _.Type.name("Expressions.C.Expressions.Type").branches([
-                lambda t: t.name("typeid").schema([_.TypeId]),
-                lambda t: t.name("error").schema([Framework.Error]),
-                lambda t: t.name("missing").schema([Framework.Missing]),
-            ]),
             # its binding targets: C expressions bind no names, so invalid syntax alone, held by nothing ("(ii)")
             lambda _: _.Pattern.name("Expressions.C.Expressions.Pattern").branches([
                 lambda t: t.name("error").schema([Framework.Error]),
@@ -220,40 +183,6 @@ def install(txn: Any) -> Any:
             # its names: an identifier, C's one name (mbse-programs' `Name`)
             lambda _: _.Name.name("Expressions.C.Expressions.Name").branches([
                 lambda t: t.name("identifier").schema([_.Identifier]),
-            ]),
-            # a type name's specifiers, the attribute specifiers among them (mbse-programs' `Specifier`)
-            lambda _: _.Specifier.name("Expressions.C.Expressions.Specifier").branches([
-                lambda t: t.name("declspecifier").schema([_.DeclSpecifier]),
-                lambda t: t.name("cvqualifier").schema([_.CvQualifier]),
-                lambda t: t.name("primitivetypespecifier").schema([_.PrimitiveTypeSpecifier]),
-                lambda t: t.name("namedtypespecifier").schema([_.NamedTypeSpecifier]),
-                lambda t: t.name("classspecifier").schema([_.ClassSpecifier]),
-                lambda t: t.name("enumspecifier").schema([_.EnumSpecifier]),
-                lambda t: t.name("placeholdertypespecifier").schema([_.PlaceholderTypeSpecifier]),
-                lambda t: t.name("typeofspecifier").schema([_.TypeofSpecifier]),
-                lambda t: t.name("atomictypespecifier").schema([_.AtomicTypeSpecifier]),
-                lambda t: t.name("bitintspecifier").schema([_.BitIntSpecifier]),
-                lambda t: t.name("standardattributespecifier").schema([_.StandardAttributeSpecifier]),
-                lambda t: t.name("alignasspecifier").schema([_.AlignasSpecifier]),
-                lambda t: t.name("gnuattributespecifier").schema([_.GnuAttributeSpecifier]),
-                lambda t: t.name("declspecspecifier").schema([_.DeclspecSpecifier]),
-            ]),
-            lambda _: _.Declarator.name("Expressions.C.Expressions.Declarator").branches([
-                lambda t: t.name("iddeclarator").schema([_.IdDeclarator]),
-                lambda t: t.name("pointerdeclarator").schema([_.PointerDeclarator]),
-                lambda t: t.name("arraydeclarator").schema([_.ArrayDeclarator]),
-                lambda t: t.name("functiondeclarator").schema([_.FunctionDeclarator]),
-                lambda t: t.name("parenthesizeddeclarator").schema([_.ParenthesizedDeclarator]),
-            ]),
-            lambda _: _.Parameter.name("Expressions.C.Expressions.Parameter").branches([
-                lambda t: t.name("parameterdeclaration").schema([_.ParameterDeclaration]),
-                lambda t: t.name("ellipsisparameter").schema([_.EllipsisParameter]),
-            ]),
-            lambda _: _.AttributeSpecifier.name("Expressions.C.Expressions.AttributeSpecifier").branches([
-                lambda t: t.name("standardattributespecifier").schema([_.StandardAttributeSpecifier]),
-                lambda t: t.name("alignasspecifier").schema([_.AlignasSpecifier]),
-                lambda t: t.name("gnuattributespecifier").schema([_.GnuAttributeSpecifier]),
-                lambda t: t.name("declspecspecifier").schema([_.DeclspecSpecifier]),
             ]),
             lambda _: _.Designator.name("Expressions.C.Expressions.Designator").branches([
                 lambda t: t.name("fielddesignator").schema([_.FieldDesignator]),
@@ -284,7 +213,7 @@ def install(txn: Any) -> Any:
             lambda _: _.GenericSelection.name("Expressions.C.Expressions.GenericSelection").properties({
                 "controlling": _.Term, "associations": many(_.GenericAssociation)}),
             lambda _: _.GenericAssociation.name("Expressions.C.Expressions.GenericAssociation").properties({
-                "type": _.Type,  # absent: `default`
+                "type": _.TypesTerm,  # absent: `default`
                 "value": _.Term}),
             lambda _: _.SubscriptExpression.name("Expressions.C.Expressions.SubscriptExpression").properties({
                 "object": _.Term, "indices": many(_.Term)}),
@@ -296,7 +225,7 @@ def install(txn: Any) -> Any:
                 "operand": _.Term, "operator": S.OfStr}),
             lambda _: _.CompoundLiteralExpression.name("Expressions.C.Expressions.CompoundLiteralExpression")
                 .properties({
-                "type": _.Type, "initializer": _.InitializerList}),
+                "type": _.TypesTerm, "initializer": _.InitializerList}),
             # unary and other operators
             lambda _: _.UnaryExpression.name("Expressions.C.Expressions.UnaryExpression").properties({
                 "operator": S.OfStr, "operand": _.Term}),
@@ -305,7 +234,7 @@ def install(txn: Any) -> Any:
             lambda _: _.AlignofExpression.name("Expressions.C.Expressions.AlignofExpression").properties({
                 "keyword": S.OfStr, "operand": _.Term}),
             lambda _: _.CastExpression.name("Expressions.C.Expressions.CastExpression").properties({
-                "type": _.Type, "operand": _.Term}),
+                "type": _.TypesTerm, "operand": _.Term}),
             lambda _: _.BinaryExpression.name("Expressions.C.Expressions.BinaryExpression").properties({
                 "left": _.Term, "operator": S.OfStr, "right": _.Term}),
             lambda _: _.ConditionalExpression.name("Expressions.C.Expressions.ConditionalExpression").properties({
@@ -327,58 +256,13 @@ def install(txn: Any) -> Any:
             lambda _: _.StatementExpression.name("Expressions.C.Expressions.StatementExpression"),
             lambda _: _.ExtensionExpression.name("Expressions.C.Expressions.ExtensionExpression")
                 .properties({"operand": _.Term}),
-            # type names: specifiers and an abstract declarator
-            lambda _: _.TypeId.name("Expressions.C.Expressions.TypeId").properties({
-                "specifiers": many(_.Specifier), "declarator": _.Declarator}),
-            lambda _: _.DeclSpecifier.name("Expressions.C.Expressions.DeclSpecifier").properties({"keyword": S.OfStr}),
-            lambda _: _.CvQualifier.name("Expressions.C.Expressions.CvQualifier").properties({"keyword": S.OfStr}),
-            lambda _: _.PrimitiveTypeSpecifier.name("Expressions.C.Expressions.PrimitiveTypeSpecifier").properties({
-                "keyword": S.OfStr}),
-            lambda _: _.NamedTypeSpecifier.name("Expressions.C.Expressions.NamedTypeSpecifier")
-                .properties({"name": _.Name}),
-            lambda _: _.ClassSpecifier.name("Expressions.C.Expressions.ClassSpecifier").properties({
-                "key": S.OfStr, "attributes": many(_.AttributeSpecifier), "name": _.Name,
-                "body": S.OfBool}),  # whether it has a body, whose member declarations are not part of the term
-            lambda _: _.EnumSpecifier.name("Expressions.C.Expressions.EnumSpecifier").properties({
-                "key": S.OfStr, "attributes": many(_.AttributeSpecifier), "name": _.Name, "base": _.Type,
-                "body": S.OfBool}),  # whether it has a body, whose enumerators are not part of the term
-            lambda _: _.PlaceholderTypeSpecifier.name("Expressions.C.Expressions.PlaceholderTypeSpecifier"),
-            lambda _: _.TypeofSpecifier.name("Expressions.C.Expressions.TypeofSpecifier").properties({
-                "keyword": S.OfStr, "operand": _.Term}),
-            lambda _: _.AtomicTypeSpecifier.name("Expressions.C.Expressions.AtomicTypeSpecifier")
-                .properties({"type": _.Type}),
-            lambda _: _.BitIntSpecifier.name("Expressions.C.Expressions.BitIntSpecifier").properties({"width": _.Term}),
-            lambda _: _.IdDeclarator.name("Expressions.C.Expressions.IdDeclarator").properties({
-                "name": _.Name, "attributes": many(_.AttributeSpecifier)}),
-            lambda _: _.PointerDeclarator.name("Expressions.C.Expressions.PointerDeclarator").properties({
-                "attributes": many(_.AttributeSpecifier), "qualifiers": many(_.CvQualifier),
-                "declarator": _.Declarator}),
-            lambda _: _.ArrayDeclarator.name("Expressions.C.Expressions.ArrayDeclarator").properties({
-                "declarator": _.Declarator, "static": S.OfBool, "qualifiers": many(_.CvQualifier), "size": _.Term,
-                "star": S.OfBool, "attributes": many(_.AttributeSpecifier)}),
-            lambda _: _.FunctionDeclarator.name("Expressions.C.Expressions.FunctionDeclarator").properties({
-                "declarator": _.Declarator, "parameters": many(_.Parameter),
-                "attributes": many(_.AttributeSpecifier)}),
-            lambda _: _.ParenthesizedDeclarator.name("Expressions.C.Expressions.ParenthesizedDeclarator").properties({
-                "declarator": _.Declarator}),
-            lambda _: _.ParameterDeclaration.name("Expressions.C.Expressions.ParameterDeclaration").properties({
-                "attributes": many(_.AttributeSpecifier), "specifiers": many(_.Specifier),
-                "declarator": _.Declarator}),
-            lambda _: _.EllipsisParameter.name("Expressions.C.Expressions.EllipsisParameter"),
             # names
             lambda _: _.Identifier.name("Expressions.C.Expressions.Identifier").properties({"spelling": S.OfStr}),
-            # attributes
-            lambda _: _.StandardAttributeSpecifier.name("Expressions.C.Expressions.StandardAttributeSpecifier")
-                .properties({
-                "attributes": many(_.Attribute)}),
-            lambda _: _.Attribute.name("Expressions.C.Expressions.Attribute").properties({
-                "namespace": S.OfStr, "name": S.OfStr, "arguments": many(_.Term)}),
-            lambda _: _.AlignasSpecifier.name("Expressions.C.Expressions.AlignasSpecifier").properties({
-                "keyword": S.OfStr, "operand": _.Term}),
-            lambda _: _.GnuAttributeSpecifier.name("Expressions.C.Expressions.GnuAttributeSpecifier").properties({
-                "keyword": S.OfStr, "attributes": many(_.Attribute)}),
-            lambda _: _.DeclspecSpecifier.name("Expressions.C.Expressions.DeclspecSpecifier").properties({
-                "attributes": many(_.Attribute)}),
+            # a type name, C Types' kind, which `Term` lists for the positions that hold an expression or a type alike,
+            # and C Types' `Term`, which a cast's, a compound literal's and a generic association's type holds: each by
+            # name, created where C Types' install has not run
+            lambda _: _.TypeId.name("Expressions.C.Types.TypeId"),
+            lambda _: _.TypesTerm.name("Expressions.C.Types.Term"),
             # its holder, the root of an expression tree: a reference object refining the framework's, its `root`
             # narrowed to its `Term`
             lambda _: _.Expression.name("Expressions.C.Expressions.Expression").ref(True)
@@ -429,9 +313,8 @@ def define(txn: Any) -> Any:
     domain by its name: `store.transaction(C.define)[0]["int32_t"]`."""
     OWN, Domain = txn.Expressions.C.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
-    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each kind's schema, by its
-             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # tag, but an extension and
-    # invalid syntax
+    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each of its own kinds' schema,
+             if branch.name in _C_TAGS and branch.name not in EXTENSIONS}  # by its tag, but an extension
     return txn.uid("mbse.Expressions.C.Expressions.define/1").mutations([lambda mu: mu.upsert(
         lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "C11": Standard, "C17": Standard, "C23": Standard,
@@ -540,272 +423,20 @@ def define(txn: Any) -> Any:
         ])]))])
 
 
-# --- Reading a term's type name, and what its helpers bind and check ---
-
-
-def _nodes(value: Any) -> tuple[F.Node, ...]:
-    """A helper property's nodes: none where it is absent, one, or each of many."""
-    return () if value is None else value if isinstance(value, tuple) else (value,)
-
-
-def _spelling(name: Any) -> str | None:
-    """A name's spelling: an identifier's `spelling` (a `Terms.Part` or a `Node`), or None for any other name, or
-    none."""
-    return name.attributes.get("spelling") if name is not None and name.kind == "identifier" else None
-
-
-def type_name(part: Any) -> str | None:
-    """The name of the arithmetic type a type name names (a `typeid`'s `Terms.Part`, as a cast's form holds it), by
-    `Domains.arithmetic` (`unsigned int`, `uint8_t`), or None: a type with a declarator, or of a specifier that is not
-    a keyword or a type's name. Whether a store defines it is the store's (`Domains.Types`)."""
-    if part is None or part.kind != TYPEID or "declarator" in part.attributes:
-        return None
-    names = []
-    for specifier in part.attributes.get("specifiers", ()):
-        if specifier.kind in ("primitivetypespecifier", "cvqualifier"):
-            names.append(specifier.attributes.get("keyword"))
-        elif specifier.kind == "namedtypespecifier":
-            names.append(_spelling(specifier.attributes.get("name")))
-        else:
-            return None
-    return Domains.arithmetic(names)
-
-
-def _declared(node: Any) -> frozenset[str]:
-    """The name a declarator declares, within its parentheses, pointers, arrays and functions: none, if abstract."""
-    while node is not None and node.kind != "iddeclarator":
-        node = node.helpers.get("declarator")
-    if node is None:
-        return frozenset()
-    return frozenset({_spelling(node.helpers.get("name"))}) - {None}
-
-
-def bound_names(node: F.Node) -> frozenset[str]:
-    """The names a function declarator's parameters, a lambda's parameters and init captures, or a requires
-    expression's parameters bind within it: each parameter declaration's declarator's name, each init capture's."""
-    held = [*_nodes(node.helpers.get("parameters")), *_nodes(node.helpers.get("captures"))]
-    declarator = node.helpers.get("declarator")  # a lambda's, its parameters
-    if declarator is not None and node.kind == "lambdaexpression":
-        held += _nodes(declarator.helpers.get("parameters"))
-    declared = (_declared(p.helpers.get("declarator")) for p in held if p.kind == "parameterdeclaration")
-    found = frozenset[str]().union(*declared)
-    return found | ({_spelling(p.helpers.get("name")) for p in held if p.kind == "initcapture"} - {None})
-
-
-_BINDERS = frozenset({"functiondeclarator", "lambdaexpression", "requiresexpression"})
-
-
-def _bound(node: F.Node, inner: frozenset[str]) -> list[frozenset[str]]:
-    """The names each of a node's arguments has bound, in order: within a function declarator, a lambda or a requires
-    expression, its parameters' (and init captures') names; its slots, its variadic arguments, then its helpers'."""
-    if node.kind in _BINDERS:
-        inner = inner | bound_names(node)
-    found = [inner] * (len(node.slots) + len(node.many))
-    for value in node.helpers.values():
-        for helper in _nodes(value):
-            found += _bound(helper, inner)
-    return found
-
-
-def scopes(tag: str) -> Callable[[Any], list[frozenset[str]]]:
-    """What each argument of a kind has bound, besides its scope's: the parameters a function declarator, a lambda or
-    a requires expression declares, within it (`bound_names`)."""
-    def scopes(record: Any) -> list[frozenset[str]]:
-        return _bound(F.node(tag, record), frozenset())
-
-    return scopes
-
-
-_IDENTIFIER = re.compile(r"[A-Za-z_$][A-Za-z0-9_$]*")
-
-_NAMES = {"variable": "name", "identifier": "spelling"}
-"""The kinds and helpers that hold an identifier's spelling, and where: the framework's variable, and an identifier,
-wherever a name is held."""
-
-
-def _identifier_problems(value: Any) -> list[str]:
-    """An identifier, as mbse-programs checks it: letters, digits, `_` and `$`, not starting with a digit; characters
-    beyond ASCII are taken to be letters."""
-    if type(value) is not str or not value:
-        return []
-    ascii_ = "".join(c if c.isascii() else "a" for c in value)
-    return [] if _IDENTIFIER.fullmatch(ascii_) else [f"{value!r} is not an identifier"]
-
-
-def _literal_problems(attributes: Mapping[str, Any], prefixes: tuple[str, ...],
-                      suffixes: Mapping[type, re.Pattern[str]], language: str, types: Domains.Types) -> list[str]:
-    """A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes, and
-    its value, one of its type (`Domains.out_of_range`), read through `types`; a type neither its dialect nor its
-    holder's ABI defines is reported by name."""
-    problems = []
-    prefix, quote, base, suffix = (attributes.get(name) for name in ("prefix", "quote", "base", "suffix"))
-    if prefix is not None and prefix not in prefixes:
-        problems.append(f"a literal's prefix cannot be {prefix!r}")
-    if quote is not None and quote not in QUOTES:
-        problems.append(f"a literal's quote cannot be {quote!r}")
-    if base is not None and base not in (2, 8, 10, 16):
-        problems.append(f"a literal's base cannot be {base!r}")
-    if suffix is not None:
-        allowed = suffixes.get(type(attributes.get("value")))
-        if allowed is None or not allowed.fullmatch(suffix):
-            problems.append(f"a literal's suffix cannot be {suffix!r}")
-    try:
-        out = Domains.out_of_range(attributes, language, types)
-    except ValueError as error:  # its type is not defined in its holder's store
-        out = str(error)
-    return problems + ([out] if out is not None else [])
-
-
-def _constant_problems(attributes: Mapping[str, Any]) -> list[str]:
-    """A constant holds `nullptr`, unless its text is invalid, its problems said."""
-    singleton = attributes.get("singleton")
-    if singleton is None:
-        return [] if "problems" in attributes else ["a constant needs a singleton"]
-    return [] if singleton == "nullptr" else [f"a constant's singleton must be nullptr, got {singleton!r}"]
-
-
-def problems(node: F.Node, types: Domains.Types, suffixes: Mapping[type, re.Pattern[str]] = SUFFIXES,
-             prefixes: tuple[str, ...] = PREFIXES, language: str = "C") -> list[str]:
-    """A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
-    identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), its type
-    read through `types`, a member's operator, invalid syntax in a sublanguage."""
-    kind, attributes = node.kind, node.attributes
-    found = F.invalid_problems(kind, attributes) if kind in ("error", "missing") else []
-    found += _identifier_problems(attributes.get(_NAMES.get(kind, "")))
-    if kind == MEMBEREXPRESSION and attributes.get("operator") not in (None, ".", "->"):
-        found.append(f"a memberexpression's operator must be '.' or '->', got {attributes['operator']!r}")
-    found += _constant_problems(attributes) if kind == CONSTANT else []
-    found += _literal_problems(attributes, prefixes, suffixes, language, types) if kind == LITERAL else []
-    for value in node.helpers.values():
-        for inner in _nodes(value):
-            found += problems(inner, types, suffixes, prefixes, language)
-    return found
-
-
-_ANY1 = FD.Function((FD.Anything,), FD.Anything)
-
-OPTIONAL = ("*.size", "*.last", "*.condition", "*.default", "*.requires")
-"""The slots of a kind's helpers that may be empty, wherever its type names nest them: an array declarator's size, a
-designator's range's last index, a noexcept specifier's condition, a parameter's default argument, a lambda's or a
-template parameter's requires clause."""
-
-
-_KEYWORD_TYPES = frozenset(Domains.NAMES)
-"""The types C's keywords name, which a store's dialects must define; a type's name may be a program's own."""
-
-
-def cast_type(name: str | None, types: Domains.Types) -> Domains.CType | None:
-    """The arithmetic type a cast names, by its name (`type_name`), read through `types`: one its keywords name must be
-    defined (`int`), one a type's name names may be a program's own, so not arithmetic (`my_t`); None for a type that is
-    not arithmetic."""
-    if name is None:
-        return None
-    return types.named(name) if name in _KEYWORD_TYPES else types.find(name)
-
-
-def _path(language: str) -> str:
-    return "C.Expressions" if language == "C" else "Cpp.Expressions"
-
-
-def truth(language: str) -> Callable[[Any], FD.Domain]:
-    """A kind's domain that is `bool`, read from the store of the term's holder (a comparison's, `!`'s,
-    `noexcept`'s)."""
-    return lambda record: Domains.Types(record, _path(language)).named("bool")
-
-
-def size(language: str) -> Callable[[Any], FD.Domain]:
-    """`sizeof`'s and `alignof`'s domain, `size_t`, read from the store of the term's holder."""
-    return lambda record: Domains.Types(record, _path(language)).named("size_t")
-
-
-_TRUTHS = frozenset({"<", "<=", ">", ">=", "==", "!=", "&&", "||", "!"})
-
-
-def _operator_truth(language: str) -> Callable[[Any], FD.Domain | None]:
-    """An operator's domain where it is `bool` (a comparison, `&&`, `||`, `!`), read from the store of the term's
-    holder; None for any other, whose domain is its signature's."""
-    read = truth(language)
-    return lambda record: read(record) if F.attributes_of(record).get("operator") in _TRUTHS else None
-
-
-SPELLING = {"C": ("text", "problems", "quote", "base", "separators"),
-            "C++": ("text", "problems", "base", "separators", "raw", "delimiter")}
-"""A literal's spelling, in each language: what its text writes beside its value, not what it is. A character's quote is
-C's spelling, `'a'` an `int` as `97` is, and not C++'s, where `'a'` is a `char`: there it is what the literal is."""
-
-
-def kinds(language: str, tags: tuple[str, ...], prefixes: tuple[str, ...],
-          suffixes: Mapping[type, re.Pattern[str]]) -> dict[str, F.Kind]:
-    """How the framework reads the kinds of the C family that a dialect has (`tags`, in its `Term`'s order: those it
-    shares with the other language of the family), in `language` (`C` or `C++`), whose binary operators, literals'
-    types, prefixes and suffixes differ."""
-
-    def check(tag: str) -> Callable[[Any], list[str]]:
-        return lambda record: problems(F.node(tag, record), Domains.Types(record, _path(language)), suffixes, prefixes,
-                                       language)
-
-    def typed_cast(record: Any) -> FD.Domain | None:
-        """A cast's arithmetic type, which is its domain, read from the store of the term's holder."""
-        return cast_type(type_name(F.attributes_of(record).get("type")), Domains.Types(record, _path(language)))
-
-    def application(tag: str, signature: FD.Signature = FD.Opaque(), optional: tuple[str, ...] = (),
-                    **options: Any) -> F.Kind:
-        return F.Kind(F.APPLICATION, signature=signature, check=check(tag),
-                      scopes=scopes(tag), optional=optional + OPTIONAL, **options)
-
-    def operator(tag: str, vocabulary: Mapping[str, FD.Signature], **options: Any) -> F.Kind:
-        return F.Kind(F.APPLICATION, operator="operator", vocabulary=vocabulary, required=("operator",),
-                      check=check(tag), scopes=scopes(tag), **options)
-
-    every: dict[str, Callable[[], F.Kind]] = {
-        LITERAL: lambda: F.Kind(F.LITERAL, spelling=SPELLING[language], check=check(LITERAL),
-                                typed=lambda record: Domains.literal(F.attributes_of(record), language,
-                                                                     Domains.Types(record, _path(language)))),
-        CONSTANT: lambda: F.Kind(F.LITERAL, spelling=("text", "problems"), check=check(CONSTANT),
-                                 typed=lambda record: Domains.NULLPTR),
-        CONCATENATEDSTRING: lambda: application(CONCATENATEDSTRING, FD.Opaque(Domains.String)),
-        VARIABLE: lambda: F.Kind(F.REFERENCE, required=("name",), check=check(VARIABLE)),
-        PARENTHESIZEDEXPRESSION: lambda: application(PARENTHESIZEDEXPRESSION, _ANY1),
-        GENERICSELECTION: lambda: application(GENERICSELECTION),
-        SUBSCRIPTEXPRESSION: lambda: application(SUBSCRIPTEXPRESSION, Domains.SUBSCRIPT),
-        CALLEXPRESSION: lambda: application(CALLEXPRESSION, Domains.CALL),
-        MEMBEREXPRESSION: lambda: application(MEMBEREXPRESSION, Domains.MEMBER, required=("operator", "member")),
-        POSTFIXEXPRESSION: lambda: operator(POSTFIXEXPRESSION, Domains.POSTFIX),
-        UNARYEXPRESSION: lambda: operator(UNARYEXPRESSION, Domains.UNARY, typed=_operator_truth(language)),
-        SIZEOFEXPRESSION: lambda: application(SIZEOFEXPRESSION, Domains.SIZE, typed=size(language)),
-        ALIGNOFEXPRESSION: lambda: application(ALIGNOFEXPRESSION, Domains.SIZE, required=("keyword",),
-                                               typed=size(language)),
-        CASTEXPRESSION: lambda: application(CASTEXPRESSION, Domains.CAST, required=("type",), typed=typed_cast),
-        BINARYEXPRESSION: lambda: operator(BINARYEXPRESSION, Domains.BINARY if language == "C" else Domains.BINARY_CPP,
-                                           typed=_operator_truth(language)),
-        CONDITIONALEXPRESSION: lambda: application(CONDITIONALEXPRESSION, Domains.CONDITIONAL,
-                                                   optional=("consequence",)),
-        ASSIGNMENTEXPRESSION: lambda: operator(ASSIGNMENTEXPRESSION, Domains.ASSIGNMENT),
-        INITIALIZERLIST: lambda: application(INITIALIZERLIST),
-        DESIGNATEDINITIALIZER: lambda: application(DESIGNATEDINITIALIZER, required=("initializer",)),
-        COMPOUNDLITERALEXPRESSION: lambda: application(COMPOUNDLITERALEXPRESSION, required=("type", "initializer")),
-        STATEMENTEXPRESSION: lambda: application(STATEMENTEXPRESSION),
-        EXTENSIONEXPRESSION: lambda: application(EXTENSIONEXPRESSION, _ANY1),
-        TYPEID: lambda: application(TYPEID),
-    }
-    return {tag: every[tag]() for tag in tags if tag in every}
-
 
 _C_TAGS = (LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE, PARENTHESIZEDEXPRESSION, GENERICSELECTION,
            SUBSCRIPTEXPRESSION, CALLEXPRESSION, MEMBEREXPRESSION, POSTFIXEXPRESSION, UNARYEXPRESSION, SIZEOFEXPRESSION,
            ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION, ASSIGNMENTEXPRESSION,
            INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION,
-           EXTENSIONEXPRESSION, TYPEID)
+           EXTENSIONEXPRESSION)
+"""Its own kinds, in its `Term`'s order: its `Term` lists C Types' `typeid` after them, and C Preprocessor's
+`definedexpression` after invalid syntax, each read as the dialect that declares it reads it."""
 
 def _native(value: Any) -> Writer | None:
     """The literal of a native value: a number, a bool or a string; a bytes has none."""
     return literal(value) if type(value) in (bool, int, float, str) else None
 
 
-def untyped(value: Any) -> FD.Domain:
-    """The domain of a literal no type holds, an int beyond every type its suffix allows (`Kind.typed` reads the
-    others'): not known."""
-    return FD.Anything
 
 
 def _reads() -> tuple[F.Dialect, ...]:
@@ -833,75 +464,10 @@ class Writer(F.Writer):
         super().__init__(write, DIALECT.tag)
 
 
-def _identifier_name(spelling: str) -> Any:
-    """A name that is an identifier: its spelling, written in a `Name`."""
-    return lambda n: n.identifier(lambda i: i.spelling(spelling))
-
-
-class Writers:
-    """The writers of the kinds the C family evaluates, for one dialect: its `Terms.Dialect`, whose `spec` writes a
-    native value as its literal, and its `Writer`. C's are this module's functions; `Cpp`'s, its own."""
-
-    def __init__(self, dialect: F.Dialect, writer: type[F.Writer]):
-        self.dialect, self.writer = dialect, writer
-
-    def literal(self, value: Any, suffix: str | None = None) -> Any:
-        """The literal `value` (a bool, an int, a float or a str), with `suffix` as written (`u`, `ull`, `f`, `L`),
-        which gives its type."""
-
-        def record(r: Any) -> Any:
-            if value is not None:
-                r.value(lambda p: p.as_scalar(value))
-            return r if suffix is None else r.suffix(suffix)
-
-        return self.writer(lambda u: u.literal(record))
-
-    def identifier(self, name: str) -> Any:
-        """The variable `name`: an identifier used as an expression."""
-        return self.writer(lambda u: u.variable(lambda r: r.name(name)))
-
-    def unary(self, operator: str, operand: Any) -> Any:
-        """`<operator> operand`; the operand is a spec (a native value is a literal)."""
-        operand = self.dialect.spec(operand)
-        return self.writer(lambda u: u.unaryexpression(lambda r: r.operator(operator).operand(operand)))
-
-    def binary(self, operator: str, left: Any, right: Any) -> Any:
-        """`left <operator> right`; each operand is a spec."""
-        left, right = self.dialect.spec(left), self.dialect.spec(right)
-        return self.writer(lambda u: u.binaryexpression(lambda r: r.left(left).operator(operator).right(right)))
-
-    def conditional(self, condition: Any, consequence: Any, alternative: Any) -> Any:
-        """`condition ? consequence : alternative`."""
-        condition, consequence = self.dialect.spec(condition), self.dialect.spec(consequence)
-        alternative = self.dialect.spec(alternative)
-        return self.writer(lambda u: u.conditionalexpression(
-            lambda r: r.condition(condition).consequence(consequence).alternative(alternative)))
-
-    def cast(self, type: Any, operand: Any) -> Any:
-        """`(type) operand`, `type` a spec of the dialect's `Type`, written through the builders (`lambda t: t.typeid(
-        lambda i: i.specifiers([lambda s: s.primitivetypespecifier(lambda p: p.keyword("int"))]))`)."""
-        operand = self.dialect.spec(operand)
-        return self.writer(lambda u: u.castexpression(lambda r: r.type(type).operand(operand)))
-
-    def member(self, object: Any, name: str, operator: str = ".") -> Any:
-        """`object.name`, or `object->name` with the operator '->'."""
-        object = self.dialect.spec(object)
-        return self.writer(lambda u: u.memberexpression(
-            lambda r: r.object(object).operator(operator).member(_identifier_name(name))))
-
-    def subscript(self, object: Any, *indices: Any) -> Any:
-        """`object[index]` (C++23's `object[i, j]` with several)."""
-        object, specs = self.dialect.spec(object), [self.dialect.spec(index) for index in indices]
-        return self.writer(lambda u: u.subscriptexpression(lambda r: r.object(object).indices(specs)))
-
-    def call(self, function: Any, *arguments: Any) -> Any:
-        """`function(arguments...)`: a function by its name (a `str`, the variable that names it), or any term."""
-        function = self.identifier(function) if type(function) is str else self.dialect.spec(function)
-        specs = [self.dialect.spec(argument) for argument in arguments]
-        return self.writer(lambda u: u.callexpression(lambda r: r.function(function).arguments(specs)))
 
 
 _WRITERS = Writers(DIALECT, Writer)
 literal, identifier, unary, binary = _WRITERS.literal, _WRITERS.identifier, _WRITERS.unary, _WRITERS.binary
 conditional, cast, member, subscript, call = (
     _WRITERS.conditional, _WRITERS.cast, _WRITERS.member, _WRITERS.subscript, _WRITERS.call)
+
