@@ -202,8 +202,9 @@ export function define(txn: any): any {
     ])]))]);
 }
 
+/** A helper container's nodes, none where it is absent: every helper it holds is a container's. */
 function nodes(value: unknown): readonly F.Node[] {
-  return value === undefined || value === null ? [] : Array.isArray(value) ? value : [value as F.Node];
+  return (value ?? []) as readonly F.Node[];
 }
 
 /** A node's checks, and its helpers' in turn: a distribution item's operator, one of `OPERATORS`, and mbse-programs'

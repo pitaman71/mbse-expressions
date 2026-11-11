@@ -22,7 +22,8 @@ __all__ = ["ToText", "TEXTS", "PRECEDENCE", "INLINE"]
 
 
 def _nodes(value: Any) -> tuple[F.Node, ...]:
-    return () if value is None else value if isinstance(value, tuple) else (value,)
+    """A helper container's nodes, none where it is absent: every helper it holds is a container's."""
+    return () if value is None else value
 
 
 def _conditional(p: X.Printer, node: F.Node) -> str:

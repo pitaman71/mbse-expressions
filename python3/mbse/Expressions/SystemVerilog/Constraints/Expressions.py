@@ -199,7 +199,8 @@ def define(txn: Any) -> Any:
 
 
 def _nodes(value: Any) -> tuple[F.Node, ...]:
-    return () if value is None else value if isinstance(value, tuple) else (value,)
+    """A helper container's nodes, none where it is absent: every helper it holds is a container's."""
+    return () if value is None else value
 
 
 def problems(node: F.Node) -> list[str]:
