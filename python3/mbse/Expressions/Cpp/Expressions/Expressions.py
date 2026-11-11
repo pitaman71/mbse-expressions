@@ -31,14 +31,20 @@ carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own litera
 - `awaitexpression` (`co_await`), `yieldexpression` (`co_yield`), `sizeofpackexpression` (`sizeof...(pack)`),
   `noexceptexpression`, `newexpression`, `deleteexpression`, `throwexpression`, `packexpansion` (`pattern...`).
 
-Its sublanguages are unions of their own: `Expressions.Cpp.Expressions.Type`, a type name (`typeid`), and
-`Expressions.Cpp.Expressions.Pattern`, for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an
-`identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch
-of every union whose positions hold it: `Term` lists `typeid` and `designatedinitializer`, as C's does, `Pattern` lists
+Its sublanguages are dialects of their own, which it reads (`reads`; the dialects proposal, Retrofit's design): `Cpp
+Types`, C++'s type-ids (`Expressions.Cpp.Types.Term`), which every position of a type holds (a cast's, a named cast's,
+`new`'s, a conversion function's name's, a trailing return type, an enumeration's fixed type, a type parameter's
+default), and C's `C Preprocessor`, the directives C and C++ share; `Term` lists their `typeid` and `definedexpression`
+("(b)"). `Expressions.Cpp.Expressions.Pattern` is its union for binding targets ("(ii)"): an init capture's name (`[n =
+1]`), an `identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a
+branch of every union whose positions hold it: `Term` lists `designatedinitializer`, as C's does, `Pattern` lists
 `identifier`, `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a
-`parameterdeclaration` and `Initializer` an `initializerlist`. A type name's and a lambda's parts are helpers, each
-union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`, `Parameter`, `TemplateParameter`,
-`Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and `AttributeSpecifier`.
+`parameterdeclaration` and `Initializer` an `initializerlist`. A type-id's and a lambda's parts are its helpers, as a
+lambda's declarator holds parameters with their specifiers and declarators (so they stay this dialect's, read by `Cpp
+Types` through its `reads`), each union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`,
+`Parameter`, `TemplateParameter`, `Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and
+`AttributeSpecifier`. An enumeration's body is data, Cpp Types' terms: its `EnumSpecifier` holds its `enumerators` and
+`trailing_comma`.
 
 The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
 (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
@@ -59,11 +65,10 @@ typed by C++'s names, `1.0f16` a `std::float16_t`, `1.0bf16` a `std::bfloat16_t`
 
 from __future__ import annotations
 
-import re
 from typing import Any
 
 from mbse.Expressions.C.Expressions import Domains
-from mbse.Expressions.C.Expressions import Expressions as C
+from mbse.Expressions.C.Expressions import Kinds as C
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 __all__ = ["install", "define", "DIALECT", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal",
@@ -84,20 +89,18 @@ EXTENSIONS = C.EXTENSIONS
 PREFIXES = C.PREFIXES
 """A character's or a string's encoding prefixes."""
 
-SUFFIXES = {
-    int: re.compile(r"(?i:u?(?:l|ll|z)?|(?:l|ll|z)u)"),
-    float: re.compile(r"[fFlL]|[fF](?:16|32|64|128)|bf16|BF16"),
-}
+SUFFIXES = C.CPP_SUFFIXES
 """The suffixes C++ writes, by the type of the literal's value: an integer's (`u`, `l`, `ll`, C++23's `z`, in either
 case and order) and a floating literal's (`f`, `l`, C++23's extended types' `f16` to `f128` and `bf16`)."""
 
 
 def install(txn: Any) -> Any:
-    """Cpp's union of its kinds, added to the framework's terms as the branch `cpp`, its own kinds, its sublanguages'
-    unions (`Type`, `Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
-    `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own; run again, it writes
-    nothing. Its holder, `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its
-    `root` narrowed to its
+    """Cpp's union of its kinds, added to the framework's terms as the branch `cpp`, its own kinds, its union of binding
+    targets (`Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
+    `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own, before or after its
+    family's other installs; run again, it writes nothing. Cpp Types' `Term` and its `typeid`, which its positions hold,
+    are named by name, each created where Cpp Types' install has not run. Its holder,
+    `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
     `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
 
@@ -107,7 +110,7 @@ def install(txn: Any) -> Any:
     return txn.uid("mbse.Expressions.Cpp.Expressions/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"Kinds": S.OfUnion, "DomainKind": S.OfUnion, "OfNullptr": S.OfObject,  # Kinds: the framework's
                   "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
-                  "Type": S.OfUnion, "Pattern": S.OfUnion, "Name": S.OfUnion, "Capture": S.OfUnion,
+                  "Pattern": S.OfUnion, "Name": S.OfUnion, "Capture": S.OfUnion,
                   "Requirement": S.OfUnion, "Designator": S.OfUnion, "Initializer": S.OfUnion,
                   "Specifier": S.OfUnion, "Declarator": S.OfUnion, "Parameter": S.OfUnion,
                   "TemplateParameter": S.OfUnion, "ExceptionSpecification": S.OfUnion,
@@ -133,7 +136,7 @@ def install(txn: Any) -> Any:
                   "StatementExpression": S.OfObject, "ExtensionExpression": S.OfObject, "Identifier": S.OfObject,
                   "OperatorName": S.OfObject, "ConversionName": S.OfObject, "LiteralOperatorName": S.OfObject,
                   "DestructorName": S.OfObject, "TemplateId": S.OfObject, "QualifiedName": S.OfObject,
-                  "TypeId": S.OfObject, "DeclSpecifier": S.OfObject, "CvQualifier": S.OfObject,
+                  "DeclSpecifier": S.OfObject, "CvQualifier": S.OfObject,
                   "PrimitiveTypeSpecifier": S.OfObject, "NamedTypeSpecifier": S.OfObject,
                   "TypenameSpecifier": S.OfObject, "ClassSpecifier": S.OfObject, "BaseSpecifier": S.OfObject,
                   "EnumSpecifier": S.OfObject, "DecltypeSpecifier": S.OfObject,
@@ -144,7 +147,9 @@ def install(txn: Any) -> Any:
                   "TemplateTemplateParameter": S.OfObject, "NoexceptSpecifier": S.OfObject,
                   "ThrowSpecifier": S.OfObject, "StandardAttributeSpecifier": S.OfObject, "Attribute": S.OfObject,
                   "AlignasSpecifier": S.OfObject, "GnuAttributeSpecifier": S.OfObject,
-                  "DeclspecSpecifier": S.OfObject,  # FrameworkTerm: the framework's, by name
+                  "DeclspecSpecifier": S.OfObject,
+                  # Cpp Types' `Term` and its `typeid`, by name; FrameworkTerm: the framework's, by name
+                  "TypesTerm": S.OfUnion, "TypeId": S.OfObject,
                   "bool": S.OfAny, "int8_t": S.OfAny, "int16_t": S.OfAny, "int32_t": S.OfAny, "int64_t": S.OfAny,
                   "uint8_t": S.OfAny, "uint16_t": S.OfAny, "uint32_t": S.OfAny, "uint64_t": S.OfAny,
                   "std_float16_t": S.OfAny, "std_float32_t": S.OfAny, "std_float64_t": S.OfAny,
@@ -197,12 +202,6 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("designatedinitializer").schema([_.DesignatedInitializer]),
                 lambda t: t.name("statementexpression").schema([_.StatementExpression]),
                 lambda t: t.name("extensionexpression").schema([_.ExtensionExpression]),
-                lambda t: t.name("typeid").schema([_.TypeId]),
-                lambda t: t.name("error").schema([Framework.Error]),
-                lambda t: t.name("missing").schema([Framework.Missing]),
-            ]),
-            # its type names, and invalid syntax
-            lambda _: _.Type.name("Expressions.Cpp.Expressions.Type").branches([
                 lambda t: t.name("typeid").schema([_.TypeId]),
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
@@ -321,7 +320,7 @@ def install(txn: Any) -> Any:
             lambda _: _.LambdaDeclarator.name("Expressions.Cpp.Expressions.LambdaDeclarator").properties({
                 "parameters": many(_.Parameter), "specifiers": many(_.Specifier),
                 "exception": _.ExceptionSpecification, "attributes": many(_.AttributeSpecifier),
-                "trailing_return": _.Type, "requires": _.Term}),
+                "trailing_return": _.TypesTerm, "requires": _.Term}),
             lambda _: _.DefaultCapture.name("Expressions.Cpp.Expressions.DefaultCapture").properties({"mode": S.OfStr}),
             lambda _: _.SimpleCapture.name("Expressions.Cpp.Expressions.SimpleCapture").properties({
                 "by_reference": S.OfBool, "name": _.Identifier, "pack": S.OfBool}),
@@ -353,7 +352,7 @@ def install(txn: Any) -> Any:
             lambda _: _.PostfixExpression.name("Expressions.Cpp.Expressions.PostfixExpression").properties({
                 "operand": _.Term, "operator": S.OfStr}),
             lambda _: _.NamedCastExpression.name("Expressions.Cpp.Expressions.NamedCastExpression").properties({
-                "operator": S.OfStr, "type": _.Type, "operand": _.Term}),
+                "operator": S.OfStr, "type": _.TypesTerm, "operand": _.Term}),
             lambda _: _.TypeidExpression.name("Expressions.Cpp.Expressions.TypeidExpression")
                 .properties({"operand": _.Term}),
             # unary expressions
@@ -370,13 +369,13 @@ def install(txn: Any) -> Any:
             lambda _: _.NoexceptExpression.name("Expressions.Cpp.Expressions.NoexceptExpression")
                 .properties({"operand": _.Term}),
             lambda _: _.NewExpression.name("Expressions.Cpp.Expressions.NewExpression").properties({
-                "global_scope": S.OfBool, "placement": many(_.Term), "parenthesized_type": S.OfBool, "type": _.Type,
+                "global_scope": S.OfBool, "placement": many(_.Term), "parenthesized_type": S.OfBool, "type": _.TypesTerm,
                 "initializer": _.Initializer}),
             lambda _: _.DeleteExpression.name("Expressions.Cpp.Expressions.DeleteExpression").properties({
                 "global_scope": S.OfBool, "array": S.OfBool, "operand": _.Term}),
             # other expressions
             lambda _: _.CastExpression.name("Expressions.Cpp.Expressions.CastExpression").properties({
-                "type": _.Type, "operand": _.Term}),
+                "type": _.TypesTerm, "operand": _.Term}),
             lambda _: _.BinaryExpression.name("Expressions.Cpp.Expressions.BinaryExpression").properties({
                 "left": _.Term, "operator": S.OfStr, "right": _.Term}),
             lambda _: _.ConditionalExpression.name("Expressions.Cpp.Expressions.ConditionalExpression").properties({
@@ -407,7 +406,7 @@ def install(txn: Any) -> Any:
             # names
             lambda _: _.Identifier.name("Expressions.Cpp.Expressions.Identifier").properties({"spelling": S.OfStr}),
             lambda _: _.OperatorName.name("Expressions.Cpp.Expressions.OperatorName").properties({"operator": S.OfStr}),
-            lambda _: _.ConversionName.name("Expressions.Cpp.Expressions.ConversionName").properties({"type": _.Type}),
+            lambda _: _.ConversionName.name("Expressions.Cpp.Expressions.ConversionName").properties({"type": _.TypesTerm}),
             lambda _: _.LiteralOperatorName.name("Expressions.Cpp.Expressions.LiteralOperatorName").properties({
                 "suffix": S.OfStr}),
             lambda _: _.DestructorName.name("Expressions.Cpp.Expressions.DestructorName").properties({"type": _.Name}),
@@ -415,9 +414,6 @@ def install(txn: Any) -> Any:
                 "template_keyword": S.OfBool, "name": _.Name, "arguments": many(_.Term)}),
             lambda _: _.QualifiedName.name("Expressions.Cpp.Expressions.QualifiedName").properties({
                 "global_scope": S.OfBool, "qualifiers": many(_.Name), "name": _.Name}),
-            # type names: specifiers and an abstract declarator
-            lambda _: _.TypeId.name("Expressions.Cpp.Expressions.TypeId").properties({
-                "specifiers": many(_.Specifier), "declarator": _.Declarator}),
             lambda _: _.DeclSpecifier.name("Expressions.Cpp.Expressions.DeclSpecifier")
                 .properties({"keyword": S.OfStr}),
             lambda _: _.CvQualifier.name("Expressions.Cpp.Expressions.CvQualifier").properties({"keyword": S.OfStr}),
@@ -435,8 +431,9 @@ def install(txn: Any) -> Any:
                 "attributes": many(_.AttributeSpecifier), "virtual": S.OfBool, "access": S.OfStr, "type": _.Name,
                 "pack": S.OfBool}),
             lambda _: _.EnumSpecifier.name("Expressions.Cpp.Expressions.EnumSpecifier").properties({
-                "key": S.OfStr, "attributes": many(_.AttributeSpecifier), "name": _.Name, "base": _.Type,
-                "body": S.OfBool}),  # whether it has a body, whose enumerators are not part of the term
+                "key": S.OfStr, "attributes": many(_.AttributeSpecifier), "name": _.Name, "base": _.TypesTerm,
+                "body": S.OfBool,  # whether it has a body, `{ enumerators }`
+                "enumerators": many(_.TypesTerm), "trailing_comma": S.OfBool}),  # its body's items, and `{ ..., }`
             lambda _: _.DecltypeSpecifier.name("Expressions.Cpp.Expressions.DecltypeSpecifier").properties({
                 "expression": _.Term}),
             lambda _: _.PlaceholderTypeSpecifier.name("Expressions.Cpp.Expressions.PlaceholderTypeSpecifier")
@@ -456,7 +453,7 @@ def install(txn: Any) -> Any:
             lambda _: _.FunctionDeclarator.name("Expressions.Cpp.Expressions.FunctionDeclarator").properties({
                 "declarator": _.Declarator, "parameters": many(_.Parameter), "qualifiers": many(_.CvQualifier),
                 "ref_qualifier": S.OfStr, "exception": _.ExceptionSpecification,
-                "attributes": many(_.AttributeSpecifier), "trailing_return": _.Type}),
+                "attributes": many(_.AttributeSpecifier), "trailing_return": _.TypesTerm}),
             lambda _: _.ParenthesizedDeclarator.name("Expressions.Cpp.Expressions.ParenthesizedDeclarator").properties({
                 "declarator": _.Declarator}),
             lambda _: _.ParameterDeclaration.name("Expressions.Cpp.Expressions.ParameterDeclaration").properties({
@@ -464,7 +461,7 @@ def install(txn: Any) -> Any:
                 "declarator": _.Declarator, "default": _.Term}),
             lambda _: _.EllipsisParameter.name("Expressions.Cpp.Expressions.EllipsisParameter"),
             lambda _: _.TypeParameter.name("Expressions.Cpp.Expressions.TypeParameter").properties({
-                "key": S.OfStr, "constraint": _.Name, "pack": S.OfBool, "name": _.Identifier, "default": _.Type}),
+                "key": S.OfStr, "constraint": _.Name, "pack": S.OfBool, "name": _.Identifier, "default": _.TypesTerm}),
             lambda _: _.TemplateTemplateParameter.name("Expressions.Cpp.Expressions.TemplateTemplateParameter")
                 .properties({
                 "parameters": many(_.TemplateParameter), "requires": _.Term, "key": S.OfStr, "pack": S.OfBool,
@@ -485,6 +482,11 @@ def install(txn: Any) -> Any:
                 "keyword": S.OfStr, "attributes": many(_.Attribute)}),
             lambda _: _.DeclspecSpecifier.name("Expressions.Cpp.Expressions.DeclspecSpecifier").properties({
                 "attributes": many(_.Attribute)}),
+            # a type name, Cpp Types' kind, which `Term` lists for the positions that hold an expression or a type
+            # alike, and Cpp Types' `Term`, which every position of a type holds: each by name, created where Cpp
+            # Types' install has not run
+            lambda _: _.TypeId.name("Expressions.Cpp.Types.TypeId"),
+            lambda _: _.TypesTerm.name("Expressions.Cpp.Types.Term"),
             # its holder, the root of an expression tree: a reference object refining the framework's, its `root`
             # narrowed to its `Term`
             lambda _: _.Expression.name("Expressions.Cpp.Expressions.Expression").ref(True)
@@ -535,9 +537,8 @@ def define(txn: Any) -> Any:
     `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`."""
     OWN, Domain = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
-    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each kind's schema, by its
-             if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # tag, but an extension and
-    # invalid syntax
+    every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each of its own kinds' schema,
+             if branch.name in _TAGS and branch.name not in EXTENSIONS}  # by its tag, but an extension
     return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([lambda mu: mu.upsert(
         lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "Cpp17": Standard, "Cpp20": Standard, "Cpp23": Standard,
@@ -643,8 +644,9 @@ _TAGS = (C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CONCATENATEDSTRING, IDEXPR
          TYPEIDEXPRESSION, C.UNARYEXPRESSION, AWAITEXPRESSION, C.SIZEOFEXPRESSION, SIZEOFPACKEXPRESSION,
          C.ALIGNOFEXPRESSION, NOEXCEPTEXPRESSION, NEWEXPRESSION, DELETEEXPRESSION, C.CASTEXPRESSION,
          C.BINARYEXPRESSION, C.CONDITIONALEXPRESSION, C.ASSIGNMENTEXPRESSION, THROWEXPRESSION, YIELDEXPRESSION,
-         PACKEXPANSION, C.INITIALIZERLIST, C.DESIGNATEDINITIALIZER, C.STATEMENTEXPRESSION, C.EXTENSIONEXPRESSION,
-         C.TYPEID)
+         PACKEXPANSION, C.INITIALIZERLIST, C.DESIGNATEDINITIALIZER, C.STATEMENTEXPRESSION, C.EXTENSIONEXPRESSION)
+"""Its own kinds, in its `Term`'s order: its `Term` lists Cpp Types' `typeid` after them, and C Preprocessor's
+`definedexpression` after invalid syntax, each read as the dialect that declares it reads it."""
 
 _SINCE_20 = frozenset({REQUIRESEXPRESSION, AWAITEXPRESSION, YIELDEXPRESSION, C.DESIGNATEDINITIALIZER})
 """The kinds C++20 added: C++17 has every other kind but the extensions."""
@@ -675,13 +677,13 @@ _OWN = {
     REQUIRESEXPRESSION: _application(REQUIRESEXPRESSION, optional=("value", "body")),
     FUNCTIONALCASTEXPRESSION: _application(FUNCTIONALCASTEXPRESSION, required=("type", "initializer")),
     NAMEDCASTEXPRESSION: F.Kind(F.APPLICATION, operator="operator", vocabulary=Domains.CASTS,
-                                required=("operator", "type"), optional=C.OPTIONAL,
+                                required=("operator",), optional=C.OPTIONAL,
                                 check=_check(NAMEDCASTEXPRESSION), scopes=C.scopes(NAMEDCASTEXPRESSION)),
     TYPEIDEXPRESSION: _application(TYPEIDEXPRESSION, FD.Opaque()),
     AWAITEXPRESSION: _application(AWAITEXPRESSION, _ANY1),
     SIZEOFPACKEXPRESSION: _application(SIZEOFPACKEXPRESSION, Domains.SIZE, required=("pack",), typed=C.size("C++")),
     NOEXCEPTEXPRESSION: _application(NOEXCEPTEXPRESSION, _ANY1, typed=C.truth("C++")),
-    NEWEXPRESSION: _application(NEWEXPRESSION, required=("type",)),
+    NEWEXPRESSION: _application(NEWEXPRESSION),
     DELETEEXPRESSION: _application(DELETEEXPRESSION, _ANY1),
     THROWEXPRESSION: _application(THROWEXPRESSION, optional=("operand",)),
     YIELDEXPRESSION: _application(YIELDEXPRESSION, _ANY1),
