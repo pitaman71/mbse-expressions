@@ -23,8 +23,9 @@
  * The evaluator is shallow (the dialects proposal, Decided, 8): it evaluates the kinds Python's constraints were written
  * with before the dialect was complete (`EVALUATED`), in their complete shapes: a comparison chain, `and` and `or` of
  * any number of values, a call of positional arguments, a subscript, a generator expression of any number of `for`
- * clauses over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), and
- * so are what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target
+ * clauses over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), a
+ * kind of its family's other dialects by that dialect's name ("Python Types typevar is not evaluated"; a type expression
+ * of Python3's kinds evaluates as Python3's), and so are what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target
  * that is not a name, and the operators `is`, `is not` and `@`.
  */
 
@@ -663,7 +664,26 @@ function dict(args: F.Thunk[], node: any): Map<unknown, unknown> {
 export const EVALUATED: ReadonlySet<string> = new Set([P.LITERAL, P.NAME, P.LET, P.LIST, P.DICT, P.ATTRIBUTE, P.SUBSCRIPT,
   P.CALL, P.COMPARE, P.BOOLOP, P.BINOP, P.UNARYOP, P.IFEXP, P.GENERATOREXP, P.IMPORT, P.IMPORTFROM]);
 
-export const INTERPRETER: F.Interpreter = new F.Interpreter(P.DIALECT, new Map<string, any>([
+/** The interpreter of the Python3 dialect, which refuses a kind of its family's other dialects, and invalid syntax, by
+ * the name of the dialect that has it, as SystemVerilog's evaluator refuses its sublanguages' kinds (the API, item
+ * 175). */
+class Interpreter extends F.Interpreter {
+  override evaluate(node: any, scope: S.Scope): any {
+    const [tag, , kind] = this.dialect.kind(node);
+    if (kind.role === Terms.INVALID) { // invalid syntax, by the dialect whose union holds it
+      const union = Terms.dialectOf(node);
+      const owner = [this.dialect, ...this.dialect.reads()].find((dialect) => dialect.union === union) as Terms.Dialect;
+      throw new ValueError(`${owner.name()} ${tag} is not evaluated`);
+    }
+    if (!this.dialect.kinds().has(tag)) { // a kind of a sublanguage of its family, by its dialect
+      const owner = this.dialect.reads().find((dialect) => dialect.kinds().has(tag)) as Terms.Dialect;
+      throw new NotImplementedError(`${owner.name()} ${tag} is not evaluated`);
+    }
+    return super.evaluate(node, scope);
+  }
+}
+
+export const INTERPRETER: F.Interpreter = new Interpreter(P.DIALECT, new Map<string, any>([
   [P.ATTRIBUTE, (args: F.Thunk[], node: any) => attribute((args[0] as F.Thunk)(), attributesOf(node).get("attr"))],
   [P.SUBSCRIPT, strict((value, key) => index(value, key))],
   [P.GENERATOREXP, generatorexp],
