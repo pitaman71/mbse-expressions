@@ -3,15 +3,20 @@
  * mbse-programs' printer writes it (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/_Printer.py`): every kind of the C
  * family, its type names and the other helpers it holds, parentheses written in the term printed, and those C's
  * precedence needs added (and around a template argument that holds `>`). `text(expression, dialect)` writes a term of
- * either dialect of the C family, `Cpp`'s too, with the same precedence, C++'s being C's and its own.
+ * any dialect of the C family, `Cpp`'s, `C Types`', `Cpp Types`' and `C Preprocessor`'s too, with the same precedence,
+ * C++'s being C's and its own: the family's one printer, which its dialects' `Text` modules write through.
  *
  * A literal is written in its spelling where it has one (`text`), else in its value's default spelling, with what it
  * encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
  * (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal
  * as `INFINITY` or `NAN`. A body of statements or declarations, not part of the term (a lambda's, a statement
- * expression's, a struct's or an enum's), is written `{}`, where mbse-programs writes what it relates. Invalid syntax
- * is written as written (`Terms.invalidText`). Reading C (`FromText`) is mbse-programs' (the dialects proposal,
- * Decided, 6).
+ * expression's, a struct's), is written `{}`, where mbse-programs writes what it relates. An enumeration's body, its
+ * data, is written as mbse-programs writes it, its enumerators, directives and comments each on lines of its own, one
+ * level deeper, an enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment
+ * ending the line before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`,
+ * `#elif`, `#elifdef`, `#else`) on a line of its own, its items on the lines between, and `#endif`. Invalid syntax is
+ * written as written (`Terms.invalidText`). Reading C (`FromText`) is mbse-programs' (the dialects proposal, Decided,
+ * 6).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -48,6 +53,9 @@ const ESCAPES: Readonly<Record<string, string>> = { "\\": "\\\\", "\n": "\\n", "
 const MACROS: Readonly<Record<string, string>> = { nan: "NAN", inf: "INFINITY", "-inf": "-INFINITY" };
 
 const PREFIXES: ReadonlyMap<bigint, [string, number]> = new Map([[16n, ["0x", 16]], [8n, ["0", 8]], [2n, ["0b", 2]]]);
+
+/** A level of indentation, as mbse-programs writes an enumeration's items. */
+const INDENT = "    ";
 
 /** Characters between quotes, with C's escapes: a backslash, the quote, a newline, a tab, a carriage return, a null. */
 function quoted(value: string, quote: string): string {
@@ -115,6 +123,8 @@ type Text = (printer: Printer, node: F.Node) => string;
 
 /** Writes a term's source from its `Node`: its kind as C and C++ write it, its type names and other helpers nested. */
 class Printer {
+  depth = 0; // the depth of the enumeration being written
+
   constructor(readonly dialect: F.Dialect) {}
 
   /** A term's `Node`, read through the dialect (which refuses another dialect's term), or a `Node` as it is. */
@@ -146,6 +156,11 @@ class Printer {
 
   text(node: F.Node): string {
     return (TEXTS[node.kind] as Text)(this, node);
+  }
+
+  /** A term a slot holds, as written: a type name where a position holds a type. */
+  term(value: any): string {
+    return this.text(this.node(value));
   }
 
   /** A node's name, by its property: a `Name`, or an identifier, a helper. */
@@ -262,8 +277,7 @@ class Printer {
   }
 
   cast(node: F.Node): string {
-    const type = this.text(one(node.helpers.get("type")) as F.Node);
-    return `(${type})${this.expression(node.slots.get("operand"), UNARY)}`;
+    return `(${this.term(node.slots.get("type"))})${this.expression(node.slots.get("operand"), UNARY)}`;
   }
 
   initializerList(node: F.Node): string {
@@ -284,16 +298,19 @@ class Printer {
   }
 
   generic(node: F.Node): string {
-    const associations = nodes(node.helpers.get("associations")).map((a) => (a.helpers.has("type")
-      ? this.text(one(a.helpers.get("type")) as F.Node) : "default") + ": " + this.expression(a.slots.get("value"),
+    const associations: string[] = []; // each association's type, absent for `default`, and value, a pair of terms
+    for (let i = 0; i < node.many.length; i += 2) {
+      const type = node.many[i];
+      associations.push((type !== null ? this.term(type) : "default") + ": " + this.expression(node.many[i + 1],
         ASSIGNMENT));
+    }
     return `_Generic(${[this.operand(node.slots.get("controlling"), ASSIGNMENT), ...associations].join(", ")})`;
   }
 
   newText(node: F.Node): string {
     let written = (node.attributes.get("global_scope") ? "::" : "") + "new ";
     if (node.many.length > 0) written += "(" + this.list(node.many) + ") ";
-    const type = this.text(one(node.helpers.get("type")) as F.Node);
+    const type = this.term(node.slots.get("type"));
     written += node.attributes.get("parenthesized_type") ? `(${type})` : type;
     return written + (node.helpers.has("initializer") ? this.initializer(one(node.helpers.get("initializer")) as F.Node)
       : "");
@@ -330,8 +347,7 @@ class Printer {
     written += nodes(node.helpers.get("specifiers")).map((s) => " " + s.attributes.get("keyword")).join("");
     if (node.helpers.has("exception")) written += " " + this.text(one(node.helpers.get("exception")) as F.Node);
     written += this.attributesAfter(node);
-    if (node.helpers.has("trailing_return")) written += " -> "
-      + this.text(one(node.helpers.get("trailing_return")) as F.Node);
+    if (node.slots.get("trailing_return") !== null) written += " -> " + this.term(node.slots.get("trailing_return"));
     if (node.slots.get("requires") !== null) written += " requires " + this.constraint(node.slots.get("requires"));
     return written;
   }
@@ -381,7 +397,7 @@ class Printer {
       const operator = attributes.get("operator") as string;
       return "operator" + (/[A-Za-z]/.test(operator[0] as string) ? " " : "") + operator;
     }
-    if (kind === "conversionname") return "operator " + this.text(one(node.helpers.get("type")) as F.Node);
+    if (kind === "conversionname") return "operator " + this.term(node.slots.get("type"));
     if (kind === "literaloperatorname") return `operator""${attributes.get("suffix")}`;
     if (kind === "destructorname") return "~" + this.text(one(node.helpers.get("type")) as F.Node);
     if (kind === "templateid") {
@@ -407,7 +423,7 @@ class Printer {
       return constraint + (node.attributes.get("decltype") ? "decltype(auto)" : "auto");
     }
     if (kind === "typeofspecifier") return this.keywordCall(node.attributes.get("keyword"), node.slots.get("operand"));
-    if (kind === "atomictypespecifier") return `_Atomic(${this.text(one(node.helpers.get("type")) as F.Node)})`;
+    if (kind === "atomictypespecifier") return `_Atomic(${this.term(node.slots.get("type"))})`;
     return `_BitInt(${this.expression(node.slots.get("width"), ASSIGNMENT)})`;
   }
 
@@ -434,8 +450,108 @@ class Printer {
   enumText(node: F.Node): string {
     let written = node.attributes.get("key") + this.attributesAfter(node);
     if (node.helpers.has("name")) written += " " + this.name(node, "name");
-    if (node.helpers.has("base")) written += " : " + this.text(one(node.helpers.get("base")) as F.Node);
-    return written + (node.attributes.get("body") ? " {}" : ""); // its enumerators, not part of the term
+    if (node.slots.get("base") !== null) written += " : " + this.term(node.slots.get("base"));
+    return written + (node.attributes.get("body") ? " " + this.enumerators(node) : "");
+  }
+
+  /** An enumeration's body, `{ enumerators }`, as mbse-programs writes it: each enumerator, directive or comment on lines
+   * of its own, one level deeper, each enumerator but its last followed by a comma, and its last too where it has a
+   * trailing comma (`trailing_comma`). */
+  enumerators(node: F.Node): string {
+    const items = node.many.map((item) => this.node(item));
+    if (items.length === 0) return "{}";
+    let last = -1;
+    items.forEach((item, i) => { if (item.kind === "enumerator") last = i; });
+    const depth = this.depth + 1;
+    const render = (i: number, item: F.Node): string => {
+      const written = this.item(item, depth, true);
+      return i === last && !node.attributes.get("trailing_comma") ? written.slice(0, -1) : written;
+    };
+    return "{\n" + this.lines(items, render).join("\n") + "\n" + INDENT.repeat(this.depth) + "}";
+  }
+
+  // Items: an enumeration's enumerators, and the directives and comments among them, each on lines of its own
+
+  /** An item, starting with its indentation (a directive, at its line's start); among `enumerators`, an enumerator ends
+   * with a comma. */
+  item(node: F.Node, depth: number, enumerators: boolean): string {
+    if (node.kind === "comment" || F.INVALID_KINDS.has(node.kind)) { // a comment, or invalid syntax as written
+      return INDENT.repeat(depth) + this.text(node);
+    }
+    if (node.kind !== "enumerator") return this.directive(node, depth, enumerators);
+    const outer = this.depth;
+    this.depth = depth;
+    try {
+      return INDENT.repeat(depth) + this.enumerator(node) + (enumerators ? "," : "");
+    } finally {
+      this.depth = outer;
+    }
+  }
+
+  /** Each item rendered on lines of its own, but a trailing comment, which ends the line before it. */
+  lines(items: readonly F.Node[], render: (i: number, item: F.Node) => string): string[] {
+    const out: string[] = [];
+    items.forEach((item, i) => {
+      if (item.kind === "comment" && item.attributes.get("trailing") && out.length > 0) {
+        out[out.length - 1] += " " + this.comment(item);
+      } else out.push(render(i, item));
+    });
+    return out;
+  }
+
+  enumerator(node: F.Node): string {
+    const written = this.name(node, "name") + this.attributesAfter(node);
+    const value = node.slots.get("value");
+    return written + (value !== null ? ` = ${this.expression(value, CONDITIONAL)}` : "");
+  }
+
+  comment(node: F.Node): string {
+    const text = node.attributes.get("text") ?? "";
+    return node.attributes.get("block") ? `/*${text}*/` : `//${text}`;
+  }
+
+  // Directives, as mbse-programs writes them: each starting its line, a conditional one's items on the lines between
+
+  directive(node: F.Node, depth: number, enumerators: boolean): string {
+    const { kind, attributes } = node;
+    if (kind === "includedirective") {
+      const macro = node.slots.get("macro");
+      let target: string;
+      if (macro !== null) target = this.expression(macro, COMMA);
+      else if (!attributes.has("path")) {
+        throw new ValueError(`${this.dialect.name()} includedirective has no path or macro to print`);
+      } else target = attributes.get("system") ? `<${attributes.get("path")}>` : `"${attributes.get("path")}"`;
+      return `#${attributes.get("directive") ?? "include"} ${target}`;
+    }
+    if (kind === "definedirective") {
+      let head = "#define " + this.name(node, "name");
+      if (attributes.get("function_like")) {
+        const names = nodes(node.helpers.get("parameters")).map((p) => this.text(p));
+        head += "(" + [...names, ...(attributes.get("variadic") ? ["..."] : [])].join(", ") + ")";
+      }
+      return head + (attributes.has("replacement") ? ` ${attributes.get("replacement")}` : "");
+    }
+    if (kind === "otherdirective") {
+      return "#" + (attributes.get("directive") ?? "") + (attributes.has("text") ? ` ${attributes.get("text")}` : "");
+    }
+    return this.branch(node, depth, enumerators) + "\n#endif";
+  }
+
+  /** A conditional directive's branch, its items, and the branches after it (`alternative`). */
+  branch(node: F.Node, depth: number, enumerators: boolean): string {
+    const kind = node.kind;
+    let head: string;
+    if (kind === "ifdirective" || kind === "elifdirective") {
+      head = `#${kind === "ifdirective" ? "if" : "elif"} ${this.expression(node.slots.get("condition"), COMMA)}`;
+    } else if (kind === "ifdefdirective" || kind === "elifdefdirective") {
+      const keyword = kind === "ifdefdirective" ? "if" : "elif";
+      head = `#${keyword}${node.attributes.get("negated") ? "ndef" : "def"} ${this.name(node, "name")}`;
+    } else head = "#else";
+    const items = node.many.map((item) => this.node(item));
+    const body = this.lines(items, (i, item) => this.item(item, depth, enumerators)).map((line) => "\n" + line).join("");
+    const alternative = node.slots.get("alternative") ?? null;
+    const tail = alternative === null ? "" : "\n" + this.branch(this.node(alternative), depth, enumerators);
+    return head + body + tail;
   }
 
   // Declarators
@@ -474,8 +590,8 @@ class Printer {
     if (attributes.has("ref_qualifier")) written += " " + attributes.get("ref_qualifier");
     if (node.helpers.has("exception")) written += " " + this.text(one(node.helpers.get("exception")) as F.Node);
     written += this.attributesAfter(node);
-    if (node.helpers.has("trailing_return")) written += " -> "
-      + this.text(one(node.helpers.get("trailing_return")) as F.Node);
+    const trailing = node.slots.get("trailing_return") ?? null; // C++'s
+    if (trailing !== null) written += " -> " + this.term(trailing);
     return written;
   }
 
@@ -511,6 +627,9 @@ class Printer {
     }
     written += attributes.get("pack") ? "..." : "";
     if (node.helpers.has("name")) written += " " + this.name(node, "name");
+    if (node.kind === "typeparameter") { // a type, or a template template parameter's name
+      return written + (node.slots.get("default") !== null ? " = " + this.term(node.slots.get("default")) : "");
+    }
     return written + (node.helpers.has("default") ? " = " + this.text(one(node.helpers.get("default")) as F.Node) : "");
   }
 
@@ -570,7 +689,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   functionalcastexpression: (p, n) => p.text(one(n.helpers.get("type")) as F.Node)
     + p.initializer(one(n.helpers.get("initializer")) as F.Node),
   memberexpression: (p, n) => p.member(n), postfixexpression: (p, n) => p.postfix(n),
-  namedcastexpression: (p, n) => `${n.attributes.get("operator")}<${p.text(one(n.helpers.get("type")) as F.Node)}>`
+  namedcastexpression: (p, n) => `${n.attributes.get("operator")}<${p.term(n.slots.get("type"))}>`
     + `(${p.expression(n.slots.get("operand"), COMMA)})`,
   typeidexpression: (p, n) => p.keywordCall("typeid", n.slots.get("operand")),
   unaryexpression: (p, n) => p.unary(n),
@@ -589,7 +708,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   packexpansion: (p, n) => p.packExpansion(n), initializerlist: (p, n) => p.initializerList(n),
   designatedinitializer: (p, n) => p.designated(n), fielddesignator: (p, n) => p.designator(n),
   indexdesignator: (p, n) => p.designator(n),
-  compoundliteralexpression: (p, n) => `(${p.text(one(n.helpers.get("type")) as F.Node)})`
+  compoundliteralexpression: (p, n) => `(${p.term(n.slots.get("type"))})`
     + p.initializerList(one(n.helpers.get("initializer")) as F.Node),
   statementexpression: () => "({})", // its body of statements, not part of the term
   extensionexpression: (p, n) => "__extension__ " + p.expression(n.slots.get("operand"), UNARY),
@@ -616,6 +735,11 @@ const TEXTS: Readonly<Record<string, Text>> = {
   standardattributespecifier: (p, n) => p.attributeSpecifier(n), alignasspecifier: (p, n) => p.attributeSpecifier(n),
   gnuattributespecifier: (p, n) => p.attributeSpecifier(n), declspecspecifier: (p, n) => p.attributeSpecifier(n),
   attribute: (p, n) => p.attribute(n),
+  enumerator: (p, n) => p.enumerator(n), comment: (p, n) => p.comment(n),
+  definedexpression: (p, n) => `defined(${p.name(n, "name")})`,
+  ...Object.fromEntries(["includedirective", "definedirective", "ifdirective", "ifdefdirective", "elifdirective",
+    "elifdefdirective", "elsedirective", "otherdirective"].map((kind) => [kind, (p: Printer, n: F.Node) => p.directive(n,
+    0, false)])),
   equalinitializer: (p, n) => p.initializer(n), parenthesizedinitializer: (p, n) => p.initializer(n),
 };
 
