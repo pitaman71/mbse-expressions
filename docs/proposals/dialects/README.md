@@ -1145,9 +1145,9 @@ change as it lands.
    the corpus has a case of each. Two choices differ from the design, for review: an enumerator is a kind of each
    `Types` dialect, not a helper union (API 247), and a type's position is a term slot (API 249). Not built, waiting on
    the user: `Python RegExp` and `TypeScript RegExp` (Open, 1, groups PR and TR) and JSX (Open, 2).
-   Recorded in mbse-basis as [CAP-276: Python's types and match patterns as expressions of their own](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-276.md),
-   [CAP-277: TypeScript's types and destructuring patterns as expressions of their own](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-277.md),
-   [CAP-278: C's and C++'s type names and preprocessor directives as expressions of their own](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-278.md) and
+   Recorded in mbse-basis as [CAP-276: Python's type expressions and match patterns as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-276.md),
+   [CAP-277: TypeScript's types and destructuring patterns as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-277.md),
+   [CAP-278: C's and C++'s type names and preprocessor directives as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-278.md) and
    [CAP-279: names an expression binds found alike in every language](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-279.md).
 
    *Found while building*:
