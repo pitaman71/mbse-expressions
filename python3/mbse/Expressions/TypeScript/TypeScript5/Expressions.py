@@ -506,7 +506,7 @@ def _constant_problems(record: Any) -> list[str]:
     node = F.node(CONSTANT, record)
     regexp = node.slots["regexp"]
     held = [] if regexp is None else [f"regexp: {problem}" for problem in DIALECT.validate(regexp)]
-    return Nodes.check(CONSTANT)(record) + _constant(node.attributes, regexp is not None) + held
+    return Nodes.check(CONSTANT, lambda attributes: _constant(attributes, regexp is not None))(record) + held
 
 
 def _constant(attributes: Mapping[str, Any], regexp: bool) -> list[str]:

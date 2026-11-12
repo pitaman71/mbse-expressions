@@ -525,7 +525,7 @@ function constantProblems(record: any): string[] {
   const node = F.node(CONSTANT, record);
   const regexp = node.slots.get("regexp");
   const held = regexp === null ? [] : DIALECT.validate(regexp).map((problem) => `regexp: ${problem}`);
-  return [...Nodes.check(CONSTANT)(record), ...constant(node.attributes, regexp !== null), ...held];
+  return [...Nodes.check(CONSTANT, (attributes) => constant(attributes, regexp !== null))(record), ...held];
 }
 
 function constant(attributes: ReadonlyMap<string, any>, regexp: boolean): string[] {
