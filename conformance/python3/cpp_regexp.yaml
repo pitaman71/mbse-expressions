@@ -4,70 +4,71 @@ cpp_regexp:
     - ECMAScript
     - icase
     pattern:
-      pattern:
-        alternatives:
-        - alternative:
-            elements:
-            - assertion:
-                assertionKind: start
-            - capturinggroup:
-                alternatives:
-                - alternative:
-                    elements:
-                    - character:
-                        value: 97
-                - alternative:
-                    elements:
-                    - character:
-                        value: 46
-            - quantifier:
-                min: 1
-                max: 3
-                element:
-                  characterclass:
-                    negate: true
-                    elements:
-                    - characterclassrange:
-                        min:
-                          character:
-                            value: 97
-                        max:
-                          collatingelement:
-                            name: ch
-                    - exclass:
-                        name: alpha
-                    - equivalence:
-                        name: e
-                    - characterset:
-                        setKind: digit
-            - characterset:
-                setKind: any
-            - assertion:
-                assertionKind: end
-        - alternative:
-            elements:
-            - group:
-                alternatives:
-                - alternative:
-                    elements:
-                    - character:
-                        value: 98
-            - assertion:
-                assertionKind: lookahead
-                negate: true
-                alternatives:
-                - alternative:
-                    elements:
-                    - character:
-                        value: 99
-            - quantifier:
-                raw: '*?'
-                min: 0
-                greedy: false
-                element:
-                  character:
-                    value: 120
-            - backreference:
-                ref: 1
-            - assertion:
-                assertionKind: word
+      cpp_regexp:
+        pattern:
+          alternatives:
+          - alternative:
+              elements:
+              - assertion:
+                  assertionKind: start
+              - capturinggroup:
+                  alternatives:
+                  - alternative:
+                      elements:
+                      - character:
+                          value: 97
+                  - alternative:
+                      elements:
+                      - character:
+                          value: 46
+              - quantifier:
+                  min: 1
+                  max: 3
+                  element:
+                    characterclass:
+                      negate: true
+                      elements:
+                      - characterclassrange:
+                          min:
+                            character:
+                              value: 97
+                          max:
+                            collatingelement:
+                              name: ch
+                      - exclass:
+                          name: alpha
+                      - equivalence:
+                          name: e
+                      - characterset:
+                          setKind: digit
+              - characterset:
+                  setKind: any
+              - assertion:
+                  assertionKind: end
+          - alternative:
+              elements:
+              - group:
+                  alternatives:
+                  - alternative:
+                      elements:
+                      - character:
+                          value: 98
+              - assertion:
+                  assertionKind: lookahead
+                  negate: true
+                  alternatives:
+                  - alternative:
+                      elements:
+                      - character:
+                          value: 99
+              - quantifier:
+                  raw: '*?'
+                  min: 0
+                  greedy: false
+                  element:
+                    character:
+                      value: 120
+              - backreference:
+                  ref: 1
+              - assertion:
+                  assertionKind: word
