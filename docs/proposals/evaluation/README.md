@@ -144,3 +144,54 @@ stops, and what the caller sees there.
   ([PRI-002: preserve, don't lose](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-002)): a
   term no dialect can read. This is the user's staged simplifier (Q11), substitution first, operations applied by
   plugins to a value or to unknown, with the standard dialects' operations the plugins this repository ships.
+
+## 5. Questions for the user
+
+1. **What evaluation is for.** Is evaluation here scoped to what its consumers need (a constraint's truth, a binding's
+   value, a residual), not to each language's own semantics? *Recommended: yes*: the inventory's build partition, an
+   evaluator grown per family, is not built; today's evaluators keep what they do.
+2. **The hole** (section 2): (a) the constraint as decided, (b) dialects closed by refinement with explicit mixing,
+   (c) copies per dialect, or (d) parametric kinds, later. *Recommended: (b)*, after checking that mbse-schemas narrows
+   a container's element by refinement *(agent)*.
+3. **Which dialect evaluates** (section 3): (a) each its own, (b) the standard dialects, every other by its lowering,
+   (c) each language's runtime, or (d) none. *Recommended: (b)*, (c) kept open as CAP-203's optional check.
+4. **Where ISO/IEC 11404 is silent.** Patterns' bitwise operations and shifts have no characterizing operation: (a)
+   taken from IEEE 1164's logical operators and IEEE 1076's `numeric_std` shifts, each a standard dialect's
+   *(agent)*; or (b) left to the language dialects, so that a constraint using them is written in one.
+   *Recommended: (a).*
+5. **Patterns' place.** Patterns keeps only mbse-schemas' access (`get`, `has`, `entries`) and its quantifiers over a
+   pattern, extending 11404's dialect, its comparisons, logic and arithmetic becoming 11404's operations, as CAP-180
+   says. *Recommended: yes*, which makes [CAP-260: dialects extending Patterns checked by their own operations](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-260.md)
+   a prerequisite.
+6. **A residual in place of a refusal** (section 4). *Recommended: yes*, in evaluation and partial evaluation alike,
+   every residual subterm named with its class.
+7. **Where the lowerings live.** The user decided that "translation across languages belongs to transforms"
+   ([FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md#decided));
+   but CAP-142's evaluator must not depend on mbse-transforms. *Recommended: here*, as declared rules, by
+   [PRI-011: the lowest repository that can own it](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-011);
+   translation between two languages stays mbse-transforms'.
+8. **The inventory's own questions** (writes, SystemVerilog's sequences and properties, JSX). Under (b) each is
+   whether a lowering exists, and none does: a write, a trace and a JSX factory have no 11404 form. *Recommended: as
+   the inventory recommends*, (d), (d) and (b), each left in the residual.
+
+## 6. What it would add or supersede
+
+Named in prose; the user adds the items. It would add capabilities implementing
+[FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md): ISO/IEC
+11404's characterizing operations as terms of its dialect, evaluated by intrinsics in both languages, with IEEE 754's,
+IEEE 1164's and Unicode's operations beside them, which completes CAP-180's "modeled, not coded"; each language
+dialect lowered into the standard dialects for evaluation, one per dialect, by declared rules; dialects closed by
+schema, mixing only where a union lists another's kinds or through a boundary kind; and evaluation that leaves a
+residual where it cannot go, naming why. It would supersede, in part,
+[CAP-095: Basic terms as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-095.md)'s core
+vocabulary, which becomes 11404's operations and Patterns' access; and the capabilities the inventory's partition would
+add, one evaluator's growth per family, are not added. [CAP-099: partial evaluation](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-099.md)
+and [CAP-106: expressions evaluated three-valued](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-106.md)
+stand, applied to the standard dialects' evaluator; [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)
+infers over the lowered form; and [CAP-142: expressions evaluated in queries](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-142.md)
+is unblocked once Patterns' lowering and 11404's evaluator are built.
+
+---
+
+<!-- nav -->
+[← Tutorials, from domains and trivial expressions up](../tutorials/README.md) · [Home](../../../README.md)
