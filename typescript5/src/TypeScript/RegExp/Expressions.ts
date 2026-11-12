@@ -34,7 +34,7 @@
  * backreference resolves, so none of its kinds refines `Let`, as the dialects proposal's Retrofit's design has it. It
  * holds no other dialect's terms, and none of its kinds is evaluated (Q11): each is refused by name ("TypeScript RegExp
  * character is not evaluated"). Which kinds a mode allows (the `v` flag's classes in a literal without it), like which
- * terms a position allows, is a constraint (the dialects proposal, Decided, 4), not its checks'.
+ * terms a subterm may be, is a constraint (the dialects proposal, Decided, 4), not its checks'.
  *
  * Where it is held: `TypeScript5`'s `constant`, a regular expression literal, keeps its `pattern` and `flags` as written
  * and holds its `regexp`, the `regexpliteral` they encode, absent where they do not parse (PRI-023); nothing else holds
@@ -286,7 +286,7 @@ function quantifier(node: F.Node): string[] {
 }
 
 function range(node: F.Node): string[] {
-  const ends = new Map([...node.slots].filter(([, term]) => term !== null).map(([name, term]) => [name, F.node(...F.kindOf(term))]));
+  const ends = new Map([...node.subterms].filter(([, term]) => term !== null).map(([name, term]) => [name, F.node(...F.kindOf(term))]));
   const problems = [...ends].filter(([, end]) => ![CHARACTER, "error", "missing"].includes(end.kind))
     .map(([name, end]) => `a characterclassrange's ${name} must be a character, got ${end.kind}`);
   const low = codePoint(ends.get("min"));
@@ -298,7 +298,7 @@ function range(node: F.Node): string[] {
 }
 
 function expressionClass(node: F.Node): string[] {
-  const expression = node.slots.get("expression");
+  const expression = node.subterms.get("expression");
   const kind = expression === null ? null : F.kindOf(expression)[0];
   if (kind === null || [CLASSINTERSECTION, CLASSSUBTRACTION, "error", "missing"].includes(kind)) return [];
   return [`an expressioncharacterclass's expression must be a classintersection or a classsubtraction, got ${kind}`];

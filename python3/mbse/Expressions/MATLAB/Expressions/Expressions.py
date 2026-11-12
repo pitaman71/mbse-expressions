@@ -2,7 +2,7 @@
 
 MATLAB's terms are values of its `Term`, `Expressions.MATLAB.Expressions.Term`, the branch `matlab` of
 `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are four of
-the framework's kinds (`mbse.Expressions.Framework.Terms`), six of its own, whose slots hold MATLAB's terms, and the
+the framework's kinds (`mbse.Expressions.Framework.Terms`), six of its own, whose subterms are MATLAB's terms, and the
 framework's kinds of invalid syntax (`error`, `missing`); a term carries no domain:
 
 - `literal` (the framework's): a constant, a number (`int` or `float`, both doubles), a logical (`bool`) or a string
@@ -214,9 +214,9 @@ def _spec(value: Any) -> Any:
     return None if value is None else DIALECT.spec(value)
 
 
-def _record(tag: str, attributes: dict[str, Any], slots: dict[str, Any]) -> Writer:
-    """The writer of a term of kind `tag`, with its attributes and its slots (specs; None leaves a slot empty)."""
-    specs = {name: _spec(value) for name, value in slots.items()}
+def _record(tag: str, attributes: dict[str, Any], subterms: dict[str, Any]) -> Writer:
+    """The writer of a term of kind `tag`, with its attributes and its subterms (specs; None leaves a subterm empty)."""
+    specs = {name: _spec(value) for name, value in subterms.items()}
 
     def write(u: Any) -> Any:
         def record(r: Any) -> Any:

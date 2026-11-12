@@ -55,10 +55,10 @@ def bound_names(node: Any) -> frozenset[str]:
     if node.kind == IDENTIFIER:
         return frozenset({node.attributes["name"]}) if "name" in node.attributes else frozenset()
     if node.kind == PROPERTY:
-        return bound_names(node.slots.get("value"))
+        return bound_names(node.subterms.get("value"))
     found: frozenset[str] = frozenset()
     for inner in (*node.lists.get("elements", ()), *node.lists.get("properties", ()),
-                  *(node.slots.get(name) for name in ("left", "argument", "parameter"))):
+                  *(node.subterms.get(name) for name in ("left", "argument", "parameter"))):
         found |= bound_names(inner)
     return found
 
@@ -92,7 +92,7 @@ def _infers(value: Any) -> frozenset[str]:
         name = node.helpers["typeParameter"].helpers.get("name") if "typeParameter" in node.helpers else None
         return frozenset({name.attributes["name"]}) if name is not None and "name" in name.attributes else frozenset()
     found: frozenset[str] = frozenset()
-    for inner in (*node.slots.values(), *node.many):
+    for inner in (*node.subterms.values(), *node.many):
         found |= _infers(inner)
     return found
 
@@ -149,7 +149,7 @@ def _problems(node: Node, deep: bool) -> list[str]:
         for inner in nodes(value):
             problems += _problems(inner, deep)
             if deep:
-                for held in (*inner.slots.values(), *inner.many):
+                for held in (*inner.subterms.values(), *inner.many):
                     problems += [] if held is None else _problems(node_of(held), deep)
     return problems
 
@@ -172,7 +172,7 @@ def bound(node: Node, inner: frozenset[str]) -> list[frozenset[str]]:
     own name, since it names what it reads rather than refers to a binding; then its helpers' arguments in turn, a
     signature's parameters bound within it."""
     found = []
-    for name, argument in node.slots.items():
+    for name, argument in node.subterms.items():
         named = (name == "property" and node.kind == MEMBEREXPRESSION) or (
             name == "key" and node.kind in (PROPERTY, "tspropertysignature", "tsmethodsignature"))
         if named and not node.attributes.get("computed") and argument is not None and F.kind_of(argument)[0] == IDENTIFIER:
@@ -204,9 +204,9 @@ def scopes(tag: str) -> Callable[[Any], list[frozenset[str]]]:
             key = frozenset({node.helpers["key"].attributes["name"]})
             names = {"body": key, "nameType": key}
         elif tag == "tsconditionaltype":
-            names = {"trueType": _infers(node.slots.get("extendsType"))}
-        for i, slot in enumerate(node.slots):
-            found[i] |= names.get(slot, frozenset())
+            names = {"trueType": _infers(node.subterms.get("extendsType"))}
+        for i, subterm in enumerate(node.subterms):
+            found[i] |= names.get(subterm, frozenset())
         return found
 
     return kind_scopes

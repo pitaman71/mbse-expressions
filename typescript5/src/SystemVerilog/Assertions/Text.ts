@@ -62,7 +62,7 @@ export function cycles(p: Printer, value: unknown): string {
 }
 
 function cycleRange(p: Printer, node: F.Node): string {
-  return `${p.text(node.slots.get("low"))}:${p.text(node.slots.get("high"))}`;
+  return `${p.text(node.subterms.get("low"))}:${p.text(node.subterms.get("high"))}`;
 }
 
 /** Whether a delay is written without parentheses: a name, a parenthesized expression, a macro usage, or an integer
@@ -93,20 +93,20 @@ export function clock(p: Printer, node: F.Node): string {
 
 function event(p: Printer, node: F.Node): string {
   const edge = node.attributes.get("edge");
-  const condition = node.slots.get("condition") ?? null;
-  return (edge ? `${edge} ` : "") + p.text(node.slots.get("expression"))
+  const condition = node.subterms.get("condition") ?? null;
+  return (edge ? `${edge} ` : "") + p.text(node.subterms.get("expression"))
     + (condition !== null ? ` iff ${p.text(condition)}` : "");
 }
 
 function binary(p: Printer, node: F.Node, last: boolean): string {
   const at = level(p, node);
   const [left, right] = RIGHT.has(at) ? [at + 1, at] : [at, at + 1];
-  return `${part(p, node.slots.get("left"), left, false)} ${node.attributes.get("operator")} `
-    + part(p, node.slots.get("right"), right, last);
+  return `${part(p, node.subterms.get("left"), left, false)} ${node.attributes.get("operator")} `
+    + part(p, node.subterms.get("right"), right, last);
 }
 
 function delay(p: Printer, node: F.Node, last: boolean): string {
-  const first = node.slots.get("first") ?? null;
+  const first = node.subterms.get("first") ?? null;
   const written = first !== null ? `${part(p, first, DELAY, false)} ` : "";
   const steps = pairs(node.many);
   const final = steps.length - 1;
@@ -122,52 +122,52 @@ function pairs(many: readonly any[]): F.Node[] {
 
 /** A sequence with its match items, in parentheses, or in `first_match`'s. */
 function matched(p: Printer, node: F.Node, head: string): string {
-  return `${head}(${[p.text(node.slots.get("sequence")), ...node.many.map((i) => p.text(i))].join(", ")})`;
+  return `${head}(${[p.text(node.subterms.get("sequence")), ...node.many.map((i) => p.text(i))].join(", ")})`;
 }
 
 function conditional(p: Printer, node: F.Node, last: boolean): string {
-  const condition = p.text(node.slots.get("condition"));
-  const alternative = node.slots.get("alternative") ?? null;
-  if (alternative === null) return `if (${condition}) ${part(p, node.slots.get("consequence"), TEMPORAL, last)}`;
-  return `if (${condition}) ${part(p, node.slots.get("consequence"), TEMPORAL + 1, false)} `
+  const condition = p.text(node.subterms.get("condition"));
+  const alternative = node.subterms.get("alternative") ?? null;
+  if (alternative === null) return `if (${condition}) ${part(p, node.subterms.get("consequence"), TEMPORAL, last)}`;
+  return `if (${condition}) ${part(p, node.subterms.get("consequence"), TEMPORAL + 1, false)} `
     + `else ${part(p, alternative, TEMPORAL, last)}`;
 }
 
 function caseText(p: Printer, node: F.Node): string {
   const items = nodes(node.helpers.get("items")).map((i) => (i.many.length > 0 ? i.many.map((e) => p.text(e)).join(", ")
-    : "default") + `: ${p.text(i.slots.get("body"))};`).join(" ");
-  return `case (${p.text(node.slots.get("expression"))}) ${items} endcase`;
+    : "default") + `: ${p.text(i.subterms.get("body"))};`).join(" ");
+  return `case (${p.text(node.subterms.get("expression"))}) ${items} endcase`;
 }
 
 function unary(p: Printer, node: F.Node, last: boolean): string {
-  const range = node.slots.get("range") ?? null;
+  const range = node.subterms.get("range") ?? null;
   const written = range !== null ? ` [${cycles(p, range)}]` : "";
-  return `${node.attributes.get("operator")}${written} ${part(p, node.slots.get("operand"), level(p, node), last)}`;
+  return `${node.attributes.get("operator")}${written} ${part(p, node.subterms.get("operand"), level(p, node), last)}`;
 }
 
 /** How each sequence and property is written, given whether nothing follows it. */
 const PROPERTIES: ReadonlyMap<string, (p: Printer, n: F.Node, last: boolean) => string> = new Map<string,
   (p: Printer, n: F.Node, last: boolean) => string>([
   [A.DELAYSEQUENCE, delay],
-  [A.REPETITIONSEQUENCE, (p, n) => `${part(p, n.slots.get("sequence"), REPEAT, false)}`
-    + `[${n.attributes.get("operator")}${cycles(p, n.slots.get("count"))}]`],
+  [A.REPETITIONSEQUENCE, (p, n) => `${part(p, n.subterms.get("sequence"), REPEAT, false)}`
+    + `[${n.attributes.get("operator")}${cycles(p, n.subterms.get("count"))}]`],
   [A.BINARYSEQUENCE, binary],
   [A.PARENTHESIZEDSEQUENCE, (p, n) => matched(p, n, "")],
   [A.FIRSTMATCHSEQUENCE, (p, n) => matched(p, n, "first_match")],
   [A.CLOCKEDSEQUENCE, (p, n, last) => `${clock(p, n.helpers.get("clock") as F.Node)} `
-    + part(p, n.slots.get("sequence"), TEMPORAL, last)],
-  [A.IMPLICATIONPROPERTY, (p, n, last) => `${part(p, n.slots.get("antecedent"), IMPLICATION + 1, false)} `
-    + `${n.attributes.get("operator")} ${part(p, n.slots.get("consequent"), IMPLICATION, last)}`],
+    + part(p, n.subterms.get("sequence"), TEMPORAL, last)],
+  [A.IMPLICATIONPROPERTY, (p, n, last) => `${part(p, n.subterms.get("antecedent"), IMPLICATION + 1, false)} `
+    + `${n.attributes.get("operator")} ${part(p, n.subterms.get("consequent"), IMPLICATION, last)}`],
   [A.BINARYPROPERTY, binary],
   [A.UNARYPROPERTY, unary],
-  [A.STRENGTHPROPERTY, (p, n) => `${n.attributes.get("keyword")}(${p.text(n.slots.get("sequence"))})`],
-  [A.ABORTPROPERTY, (p, n, last) => `${n.attributes.get("keyword")} (${p.text(n.slots.get("condition"))}) `
-    + part(p, n.slots.get("operand"), TEMPORAL, last)],
+  [A.STRENGTHPROPERTY, (p, n) => `${n.attributes.get("keyword")}(${p.text(n.subterms.get("sequence"))})`],
+  [A.ABORTPROPERTY, (p, n, last) => `${n.attributes.get("keyword")} (${p.text(n.subterms.get("condition"))}) `
+    + part(p, n.subterms.get("operand"), TEMPORAL, last)],
   [A.CONDITIONALPROPERTY, conditional],
   [A.CASEPROPERTY, (p, n) => caseText(p, n)],
-  [A.PARENTHESIZEDPROPERTY, (p, n) => `(${p.text(n.slots.get("property"))})`],
+  [A.PARENTHESIZEDPROPERTY, (p, n) => `(${p.text(n.subterms.get("property"))})`],
   [A.CLOCKEDPROPERTY, (p, n, last) => `${clock(p, n.helpers.get("clock") as F.Node)} `
-    + part(p, n.slots.get("property"), TEMPORAL, last)],
+    + part(p, n.subterms.get("property"), TEMPORAL, last)],
 ]);
 
 function property(p: Printer, node: F.Node, last: boolean): string {
@@ -176,10 +176,10 @@ function property(p: Printer, node: F.Node, last: boolean): string {
 
 /** `@(clock) disable iff (disable) property`. */
 function spec(p: Printer, node: F.Node): string {
-  const disable = node.slots.get("disable") ?? null;
+  const disable = node.subterms.get("disable") ?? null;
   return [node.helpers.has("clock") ? clock(p, node.helpers.get("clock") as F.Node) : null,
     disable !== null ? `disable iff (${p.text(disable)})` : null,
-    p.text(node.slots.get("property"))].filter((written) => written).join(" ");
+    p.text(node.subterms.get("property"))].filter((written) => written).join(" ");
 }
 
 /** How each of its kinds is written. */

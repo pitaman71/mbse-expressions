@@ -155,7 +155,7 @@ class _Printer:
         return self.TEXTS[node.kind](self, node)
 
     def term(self, value: Any) -> str:
-        """A term a slot holds, as written: a type name where a position holds a type."""
+        """A subterm, as written: a type name where the subterm is a type."""
         return self.text(self.node(value))
 
     def name(self, node: F.Node, property: str) -> str:
@@ -171,8 +171,8 @@ class _Printer:
         node = self.node(value)
         if node.kind == E.BINARYEXPRESSION and node.attributes["operator"] in ("&&", "||"):
             level = _BINARY[node.attributes["operator"]]
-            written = (f"{self.constraint(node.slots['left'], level)} {node.attributes['operator']} "
-                       f"{self.constraint(node.slots['right'], level + 1)}")
+            written = (f"{self.constraint(node.subterms['left'], level)} {node.attributes['operator']} "
+                       f"{self.constraint(node.subterms['right'], level + 1)}")
             return f"({written})" if level < needed else written
         return self.expression(node, PRIMARY)
 
@@ -199,7 +199,7 @@ class _Printer:
 
     def initializer(self, node: F.Node) -> str:
         if node.kind == "equalinitializer":
-            return " = " + self.expression(node.slots["value"], ASSIGNMENT)
+            return " = " + self.expression(node.subterms["value"], ASSIGNMENT)
         if node.kind == "parenthesizedinitializer":
             return "(" + self.list(node.many) + ")"
         return self.text(node)
@@ -218,52 +218,52 @@ class _Printer:
         return _literal(node.attributes)
 
     def unary(self, node: F.Node) -> str:
-        operand, operator = self.expression(node.slots["operand"], UNARY), node.attributes["operator"]
+        operand, operator = self.expression(node.subterms["operand"], UNARY), node.attributes["operator"]
         space = " " if operand[:1] in ("+", "-", "&", "*") and operand[:1] == operator[-1:] else ""
         return operator + space + operand  # `- -x`, not the decrement `--x`
 
     def binary(self, node: F.Node) -> str:
         operator = node.attributes["operator"]
         level = _BINARY[operator]
-        left, right = self.expression(node.slots["left"], level), self.expression(node.slots["right"], level + 1)
+        left, right = self.expression(node.subterms["left"], level), self.expression(node.subterms["right"], level + 1)
         if operator in (".*", "->*"):
             return left + operator + right
         return f"{left}, {right}" if operator == "," else f"{left} {operator} {right}"
 
     def assignment(self, node: F.Node) -> str:
-        return (f"{self.expression(node.slots['left'], _BINARY['||'])} {node.attributes['operator']} "
-                f"{self.expression(node.slots['right'], ASSIGNMENT)}")
+        return (f"{self.expression(node.subterms['left'], _BINARY['||'])} {node.attributes['operator']} "
+                f"{self.expression(node.subterms['right'], ASSIGNMENT)}")
 
     def conditional(self, node: F.Node) -> str:
-        condition = self.expression(node.slots["condition"], _BINARY["||"])
-        alternative = self.expression(node.slots["alternative"], ASSIGNMENT)
-        if node.slots["consequence"] is None:  # GNU's
+        condition = self.expression(node.subterms["condition"], _BINARY["||"])
+        alternative = self.expression(node.subterms["alternative"], ASSIGNMENT)
+        if node.subterms["consequence"] is None:  # GNU's
             return f"{condition} ?: {alternative}"
-        return f"{condition} ? {self.expression(node.slots['consequence'], COMMA)} : {alternative}"
+        return f"{condition} ? {self.expression(node.subterms['consequence'], COMMA)} : {alternative}"
 
     def call(self, node: F.Node) -> str:
-        return self.expression(node.slots["function"], POSTFIX) + "(" + self.list(node.many) + ")"
+        return self.expression(node.subterms["function"], POSTFIX) + "(" + self.list(node.many) + ")"
 
     def subscript(self, node: F.Node) -> str:
         indices = ", ".join(self.expression(index, ASSIGNMENT) for index in node.many)
-        return f"{self.expression(node.slots['object'], POSTFIX)}[{indices}]"
+        return f"{self.expression(node.subterms['object'], POSTFIX)}[{indices}]"
 
     def member(self, node: F.Node) -> str:
-        return (self.expression(node.slots["object"], POSTFIX) + node.attributes["operator"]
+        return (self.expression(node.subterms["object"], POSTFIX) + node.attributes["operator"]
                 + ("template " if node.attributes.get("template_keyword") else "") + self.name(node, "member"))
 
     def postfix(self, node: F.Node) -> str:
-        return self.expression(node.slots["operand"], POSTFIX) + node.attributes["operator"]
+        return self.expression(node.subterms["operand"], POSTFIX) + node.attributes["operator"]
 
     def sizeof(self, node: F.Node) -> str:
-        operand = self.node(node.slots["operand"])
+        operand = self.node(node.subterms["operand"])
         if operand.kind == E.TYPEID:
             return f"sizeof({self.text(operand)})"
         written = self.expression(operand, UNARY)
         return "sizeof" + ("" if written.startswith("(") else " ") + written
 
     def cast(self, node: F.Node) -> str:
-        return f"({self.term(node.slots['type'])}){self.expression(node.slots['operand'], UNARY)}"
+        return f"({self.term(node.subterms['type'])}){self.expression(node.subterms['operand'], UNARY)}"
 
     def initializer_list(self, node: F.Node) -> str:
         items = ", ".join(self.expression(item, ASSIGNMENT) for item in node.many)
@@ -276,30 +276,30 @@ class _Printer:
     def designator(self, node: F.Node) -> str:
         if node.kind == "fielddesignator":
             return "." + self.name(node, "name")
-        last = node.slots["last"]
+        last = node.subterms["last"]
         range_ = f" ... {self.expression(last, CONDITIONAL)}" if last is not None else ""
-        return f"[{self.expression(node.slots['index'], CONDITIONAL)}{range_}]"
+        return f"[{self.expression(node.subterms['index'], CONDITIONAL)}{range_}]"
 
     def generic(self, node: F.Node) -> str:
         pairs = zip(node.many[0::2], node.many[1::2])  # each association's type, absent for `default`, and value
         associations = [(self.term(type_) if type_ is not None else "default") + ": "
                         + self.expression(value, ASSIGNMENT) for type_, value in pairs]
-        return f"_Generic({', '.join([self.operand(node.slots['controlling'], ASSIGNMENT), *associations])})"
+        return f"_Generic({', '.join([self.operand(node.subterms['controlling'], ASSIGNMENT), *associations])})"
 
     def new(self, node: F.Node) -> str:
         written = ("::" if node.attributes.get("global_scope") else "") + "new "
         if node.many:
             written += "(" + self.list(node.many) + ") "
-        type_ = self.term(node.slots["type"])
+        type_ = self.term(node.subterms["type"])
         written += f"({type_})" if node.attributes.get("parenthesized_type") else type_
         return written + (self.initializer(node.helpers["initializer"]) if "initializer" in node.helpers else "")
 
     def delete(self, node: F.Node) -> str:
         return (("::" if node.attributes.get("global_scope") else "") + "delete"
-                + ("[]" if node.attributes.get("array") else "") + " " + self.expression(node.slots["operand"], UNARY))
+                + ("[]" if node.attributes.get("array") else "") + " " + self.expression(node.subterms["operand"], UNARY))
 
     def fold(self, node: F.Node) -> str:
-        operator, left, right = node.attributes["operator"], node.slots["left"], node.slots["right"]
+        operator, left, right = node.attributes["operator"], node.subterms["left"], node.subterms["right"]
         written_left = self.expression(left, UNARY) + f" {operator} " if left is not None else ""
         written_right = f" {operator} " + self.expression(right, UNARY) if right is not None else ""
         return f"({written_left}...{written_right})"
@@ -309,7 +309,7 @@ class _Printer:
         parameters = _nodes(node.helpers.get("template_parameters"))
         if parameters:
             written += "<" + ", ".join(self.text(p) for p in parameters) + ">"
-        requires = node.slots["template_requires"]
+        requires = node.subterms["template_requires"]
         if requires is not None:
             written += " requires " + self.constraint(requires)
         written += self.attributes_after(node)
@@ -323,10 +323,10 @@ class _Printer:
         if "exception" in node.helpers:
             written += " " + self.text(node.helpers["exception"])
         written += self.attributes_after(node)
-        if node.slots["trailing_return"] is not None:
-            written += " -> " + self.term(node.slots["trailing_return"])
-        if node.slots["requires"] is not None:
-            written += " requires " + self.constraint(node.slots["requires"])
+        if node.subterms["trailing_return"] is not None:
+            written += " -> " + self.term(node.subterms["trailing_return"])
+        if node.subterms["requires"] is not None:
+            written += " requires " + self.constraint(node.subterms["requires"])
         return written
 
     def capture(self, node: F.Node) -> str:
@@ -353,12 +353,12 @@ class _Printer:
 
     def requirement(self, node: F.Node) -> str:
         if node.kind == "simplerequirement":
-            return self.expression(node.slots["expression"], COMMA) + ";"
+            return self.expression(node.subterms["expression"], COMMA) + ";"
         if node.kind == "typerequirement":
             return f"typename {self.text(node.helpers['name'])};"
         if node.kind == "nestedrequirement":
-            return f"requires {self.constraint(node.slots['constraint'])};"
-        written = "{ " + self.expression(node.slots["expression"], COMMA) + " }"
+            return f"requires {self.constraint(node.subterms['constraint'])};"
+        written = "{ " + self.expression(node.subterms["expression"], COMMA) + " }"
         if node.attributes.get("noexcept"):
             written += " noexcept"
         if "return_type" in node.helpers:
@@ -366,7 +366,7 @@ class _Printer:
         return written + ";"
 
     def pack_expansion(self, node: F.Node) -> str:
-        pattern = self.node(node.slots["pattern"])
+        pattern = self.node(node.subterms["pattern"])
         return (self.text(pattern) if pattern.kind == E.TYPEID else self.expression(pattern, POSTFIX)) + "..."
 
     # Names
@@ -379,7 +379,7 @@ class _Printer:
             operator = attributes["operator"]
             return "operator" + (" " if operator[0].isalpha() else "") + operator
         if kind == "conversionname":
-            return "operator " + self.term(node.slots["type"])
+            return "operator " + self.term(node.subterms["type"])
         if kind == "literaloperatorname":
             return f'operator""{attributes["suffix"]}'
         if kind == "destructorname":
@@ -400,15 +400,15 @@ class _Printer:
         if kind == "typenamespecifier":
             return "typename " + self.text(node.helpers["name"])
         if kind == "decltypespecifier":
-            return f"decltype({self.expression(node.slots['expression'], COMMA)})"
+            return f"decltype({self.expression(node.subterms['expression'], COMMA)})"
         if kind == "placeholdertypespecifier":
             constraint = self.text(node.helpers["constraint"]) + " " if "constraint" in node.helpers else ""
             return constraint + ("decltype(auto)" if node.attributes.get("decltype") else "auto")
         if kind == "typeofspecifier":
-            return self.keyword_call(node.attributes["keyword"], node.slots["operand"])
+            return self.keyword_call(node.attributes["keyword"], node.subterms["operand"])
         if kind == "atomictypespecifier":
-            return f"_Atomic({self.term(node.slots['type'])})"
-        return f"_BitInt({self.expression(node.slots['width'], ASSIGNMENT)})"
+            return f"_Atomic({self.term(node.subterms['type'])})"
+        return f"_BitInt({self.expression(node.subterms['width'], ASSIGNMENT)})"
 
     def class_(self, node: F.Node) -> str:
         attributes = node.attributes
@@ -433,8 +433,8 @@ class _Printer:
         written = node.attributes["key"] + self.attributes_after(node)
         if "name" in node.helpers:
             written += " " + self.name(node, "name")
-        if node.slots["base"] is not None:
-            written += " : " + self.term(node.slots["base"])
+        if node.subterms["base"] is not None:
+            written += " : " + self.term(node.subterms["base"])
         return written + (" " + self.enumerators(node) if node.attributes.get("body") else "")
 
     def enumerators(self, node: F.Node) -> str:
@@ -480,7 +480,7 @@ class _Printer:
 
     def enumerator(self, node: F.Node) -> str:
         written = self.name(node, "name") + self.attributes_after(node)
-        value = node.slots["value"]
+        value = node.subterms["value"]
         return written + (f" = {self.expression(value, CONDITIONAL)}" if value is not None else "")
 
     def comment(self, node: F.Node) -> str:
@@ -492,7 +492,7 @@ class _Printer:
     def directive(self, node: F.Node, depth: int, enumerators: bool) -> str:
         kind, attributes = node.kind, node.attributes
         if kind == "includedirective":
-            macro = node.slots["macro"]
+            macro = node.subterms["macro"]
             if macro is not None:
                 target = self.expression(macro, COMMA)
             elif "path" not in attributes:
@@ -514,7 +514,7 @@ class _Printer:
         """A conditional directive's branch, its items, and the branches after it (`alternative`)."""
         kind = node.kind
         if kind in ("ifdirective", "elifdirective"):
-            head = f"#{'if' if kind == 'ifdirective' else 'elif'} {self.expression(node.slots['condition'], COMMA)}"
+            head = f"#{'if' if kind == 'ifdirective' else 'elif'} {self.expression(node.subterms['condition'], COMMA)}"
         elif kind in ("ifdefdirective", "elifdefdirective"):
             keyword = "if" if kind == "ifdefdirective" else "elif"
             head = f"#{keyword}{'ndef' if node.attributes.get('negated') else 'def'} {self.name(node, 'name')}"
@@ -522,7 +522,7 @@ class _Printer:
             head = "#else"
         items = [self.node(item) for item in node.many]
         body = "".join("\n" + line for line in self.lines(items, lambda i, item: self.item(item, depth, enumerators)))
-        alternative = node.slots.get("alternative")
+        alternative = node.subterms.get("alternative")
         tail = "" if alternative is None else "\n" + self.branch(self.node(alternative), depth, enumerators)
         return head + body + tail
 
@@ -553,7 +553,7 @@ class _Printer:
         if kind == "arraydeclarator":
             inside = " ".join(["static"] * bool(attributes.get("static"))
                               + [q.attributes["keyword"] for q in _nodes(node.helpers.get("qualifiers"))])
-            size = node.slots["size"]
+            size = node.subterms["size"]
             written_size = "*" if attributes.get("star") else self.expression(size,
                 ASSIGNMENT) if size is not None else ""
             inside = inside + " " + written_size if inside and written_size else inside + written_size
@@ -565,8 +565,8 @@ class _Printer:
         if "exception" in node.helpers:
             written += " " + self.text(node.helpers["exception"])
         written += self.attributes_after(node)
-        if node.slots.get("trailing_return") is not None:  # C++'s
-            written += " -> " + self.term(node.slots["trailing_return"])
+        if node.subterms.get("trailing_return") is not None:  # C++'s
+            written += " -> " + self.term(node.subterms["trailing_return"])
         return written
 
     def specifiers(self, node: F.Node) -> str:
@@ -583,7 +583,7 @@ class _Printer:
             "this " if node.attributes.get("this_keyword") else "")
         declarator = node.helpers.get("declarator")
         written += _declared(self.specifiers(node), self.declarator(declarator), _abstract(declarator))
-        default = node.slots.get("default")
+        default = node.subterms.get("default")
         return written + (f" = {self.expression(default, ASSIGNMENT)}" if default is not None else "")
 
     def template_parameter(self, node: F.Node) -> str:
@@ -593,19 +593,19 @@ class _Printer:
                 "key", "typename")
         else:
             written = "template <" + ", ".join(self.text(p) for p in _nodes(node.helpers.get("parameters"))) + ">"
-            if node.slots["requires"] is not None:
-                written += " requires " + self.constraint(node.slots["requires"])
+            if node.subterms["requires"] is not None:
+                written += " requires " + self.constraint(node.subterms["requires"])
             written += " " + attributes["key"]
         written += "..." if attributes.get("pack") else ""
         if "name" in node.helpers:
             written += " " + self.name(node, "name")
         if node.kind == "typeparameter":  # a type, or a template template parameter's name
-            return written + (" = " + self.term(node.slots["default"]) if node.slots["default"] is not None else "")
+            return written + (" = " + self.term(node.subterms["default"]) if node.subterms["default"] is not None else "")
         return written + (" = " + self.text(node.helpers["default"]) if "default" in node.helpers else "")
 
     def exception(self, node: F.Node) -> str:
         if node.kind == "noexceptspecifier":
-            condition = node.slots["condition"]
+            condition = node.subterms["condition"]
             return "noexcept" + (f"({self.expression(condition, COMMA)})" if condition is not None else "")
         return "throw(" + self.list(node.many) + ")"
 
@@ -618,7 +618,7 @@ class _Printer:
             using = f"using {attributes['using_namespace']}: " if "using_namespace" in attributes else ""
             return "[[" + using + ", ".join(self.text(a) for a in held) + "]]"
         if kind == "alignasspecifier":
-            operand = self.keyword_call(attributes["keyword"], node.slots["operand"])
+            operand = self.keyword_call(attributes["keyword"], node.subterms["operand"])
             return operand[:-1] + "...)" if attributes.get("pack") else operand
         if kind == "gnuattributespecifier":
             return attributes["keyword"] + "((" + ", ".join(self.text(a) for a in held) + "))"
@@ -639,7 +639,7 @@ class _Printer:
         "variable": lambda self, node: node.attributes["name"],
         "idexpression": lambda self, node: self.text(node.helpers["name"]),
         "thisexpression": lambda self, node: "this",
-        "parenthesizedexpression": lambda self, node: f"({self.expression(node.slots['expression'], COMMA)})",
+        "parenthesizedexpression": lambda self, node: f"({self.expression(node.subterms['expression'], COMMA)})",
         "lambdaexpression": lambda_, "lambdadeclarator": lambda_declarator,
         "defaultcapture": capture, "simplecapture": capture, "thiscapture": capture, "initcapture": capture,
         "foldexpression": fold, "requiresexpression": requires,
@@ -649,26 +649,26 @@ class _Printer:
         "functionalcastexpression": lambda self, node: (self.text(node.helpers["type"])
                                                         + self.initializer(node.helpers["initializer"])),
         "memberexpression": member, "postfixexpression": postfix,
-        "namedcastexpression": lambda self, node: (f"{node.attributes['operator']}<{self.term(node.slots['type'])}>"
-                                                   f"({self.expression(node.slots['operand'], COMMA)})"),
-        "typeidexpression": lambda self, node: self.keyword_call("typeid", node.slots["operand"]),
+        "namedcastexpression": lambda self, node: (f"{node.attributes['operator']}<{self.term(node.subterms['type'])}>"
+                                                   f"({self.expression(node.subterms['operand'], COMMA)})"),
+        "typeidexpression": lambda self, node: self.keyword_call("typeid", node.subterms["operand"]),
         "unaryexpression": unary,
-        "awaitexpression": lambda self, node: "co_await " + self.expression(node.slots["operand"], UNARY),
+        "awaitexpression": lambda self, node: "co_await " + self.expression(node.subterms["operand"], UNARY),
         "sizeofexpression": sizeof,
         "sizeofpackexpression": lambda self, node: f"sizeof...({self.name(node, 'pack')})",
-        "alignofexpression": lambda self, node: self.keyword_call(node.attributes["keyword"], node.slots["operand"]),
-        "noexceptexpression": lambda self, node: self.keyword_call("noexcept", node.slots["operand"]),
+        "alignofexpression": lambda self, node: self.keyword_call(node.attributes["keyword"], node.subterms["operand"]),
+        "noexceptexpression": lambda self, node: self.keyword_call("noexcept", node.subterms["operand"]),
         "newexpression": new, "deleteexpression": delete, "castexpression": cast, "binaryexpression": binary,
         "conditionalexpression": conditional, "assignmentexpression": assignment,
         "throwexpression": lambda self, node: "throw" + (
-            " " + self.expression(node.slots["operand"], ASSIGNMENT) if node.slots["operand"] is not None else ""),
-        "yieldexpression": lambda self, node: "co_yield " + self.expression(node.slots["operand"], ASSIGNMENT),
+            " " + self.expression(node.subterms["operand"], ASSIGNMENT) if node.subterms["operand"] is not None else ""),
+        "yieldexpression": lambda self, node: "co_yield " + self.expression(node.subterms["operand"], ASSIGNMENT),
         "packexpansion": pack_expansion, "initializerlist": initializer_list, "designatedinitializer": designated,
         "fielddesignator": designator, "indexdesignator": designator,
-        "compoundliteralexpression": lambda self, node: (f"({self.term(node.slots['type'])})"
+        "compoundliteralexpression": lambda self, node: (f"({self.term(node.subterms['type'])})"
                                                          + self.initializer_list(node.helpers["initializer"])),
         "statementexpression": lambda self, node: "({})",  # its body of statements, not part of the term
-        "extensionexpression": lambda self, node: "__extension__ " + self.expression(node.slots["operand"], UNARY),
+        "extensionexpression": lambda self, node: "__extension__ " + self.expression(node.subterms["operand"], UNARY),
         "typeid": type_id,
         "identifier": name_text, "operatorname": name_text, "conversionname": name_text,
         "literaloperatorname": name_text, "destructorname": name_text, "templateid": name_text,

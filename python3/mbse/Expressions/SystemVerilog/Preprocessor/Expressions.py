@@ -11,7 +11,7 @@ order, each a value object `Expressions.SystemVerilog.Preprocessor.<Kind>`:
 
 - `macrousage`: `` `name `` or `` `name(arguments) ``, a text macro used as a value (22.5.1), `arguments` the text
   between its parentheses. Its install adds it to the `Term`s that list `Expressions`' branches too, an expression
-  position holding it: `Expressions`', `Types`', `Patterns`', `Assertions`' and `Constraints`'.
+  subterm being one: `Expressions`', `Types`', `Patterns`', `Assertions`' and `Constraints`'.
 - The directives (22): `includedirective` (`` `include "path" ``, or `<path>` where `system`), `definedirective`
   (`` `define name(parameters) body ``, its body as written), `undefdirective`, `timescaledirective` (`` `timescale 1ns
   / 1ps ``), `defaultnettypedirective` (`` `default_nettype none ``), `ifdefdirective` (`` `ifdef ``, or `` `ifndef ``
@@ -129,7 +129,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             lambda _: _.Identifier.name("Expressions.SystemVerilog.Expressions.Identifier"),
-            # a macro usage (22.5.1), in an expression position: in `Expressions`' `Term`, and in those that list its
+            # a macro usage (22.5.1), as an expression subterm: in `Expressions`' `Term`, and in those that list its
             # branches
             lambda _: _.MacroUsage.name("Expressions.SystemVerilog.Preprocessor.MacroUsage").properties({
                 "name": _.Identifier, "arguments": S.OfStr}),  # arguments: the text between its parentheses
@@ -229,7 +229,7 @@ def _condition_problems(node: F.Node) -> list[str]:
     """A conditional directive has a name or a condition, and a condition is parenthesized and holds only macros' names,
     `!`, `&&`, `||`, `->` and `<->`, as mbse-programs checks it."""
     kind = "IfdefDirective" if node.kind == IFDEFDIRECTIVE else "ElsifDirective"
-    condition = node.slots.get("condition")
+    condition = node.subterms.get("condition")
     if ("name" in node.helpers) == (condition is not None):
         return [f"an {kind} has a name or a condition"]
     if condition is None:
@@ -240,12 +240,12 @@ def _condition_problems(node: F.Node) -> list[str]:
     while terms:
         inner = F.node(*F.kind_of(terms.pop()))
         if inner.kind == X.PARENTHESIZEDEXPRESSION:
-            terms.append(inner.slots["expression"])
+            terms.append(inner.subterms["expression"])
         elif inner.kind == X.UNARYEXPRESSION and inner.attributes.get("operator") == "!" and not inner.helpers:
-            terms.append(inner.slots["operand"])
+            terms.append(inner.subterms["operand"])
         elif inner.kind == X.BINARYEXPRESSION and inner.attributes.get("operator") in ("&&", "||", "->", "<->") \
                 and not inner.helpers:
-            terms.extend([inner.slots["left"], inner.slots["right"]])
+            terms.extend([inner.subterms["left"], inner.subterms["right"]])
         elif not (inner.kind == X.NAMEEXPRESSION and inner.helpers["name"].kind == "identifier"):
             return [f"an {kind}'s condition has macros' names, !, &&, ||, -> and <-> only"]
     return []
@@ -297,9 +297,9 @@ def _ifdef_scopes(record: Any) -> list[frozenset[str]]:
     """What each of a conditional directive's arguments has bound: each condition, its macros' names; its branches'
     items, and its `else`'s, nothing."""
     node = F.node(IFDEFDIRECTIVE, record)
-    found = [_macros(node.slots["condition"]), *[frozenset()] * len(node.many)]
+    found = [_macros(node.subterms["condition"]), *[frozenset()] * len(node.many)]
     for branch in _nodes(node.helpers.get("branches")):
-        found += [_macros(branch.slots["condition"]), *[frozenset()] * len(branch.many)]
+        found += [_macros(branch.subterms["condition"]), *[frozenset()] * len(branch.many)]
     return found
 
 
@@ -325,7 +325,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions hold, imported when first needed."""
+    """The dialects of its family whose terms are its subterms, imported when first needed."""
     from ..Assertions import Expressions as Assertions
     from ..Constraints import Expressions as Constraints
     from ..Patterns import Expressions as Patterns

@@ -39,19 +39,19 @@ function one(node: F.Node, name: string): F.Node {
 }
 
 function qualifiedName(p: Printer, node: F.Node): string {
-  return `${p.text(node.slots.get("left"))}.${p.text(one(node, "right"))}`;
+  return `${p.text(node.subterms.get("left"))}.${p.text(one(node, "right"))}`;
 }
 
 function typeReference(p: Printer, node: F.Node): string {
-  return p.text(node.slots.get("typeName")) + p.typeArguments(node);
+  return p.text(node.subterms.get("typeName")) + p.typeArguments(node);
 }
 
 function parenthesizedType(p: Printer, node: F.Node): string {
-  return `(${p.t(node.slots.get("typeAnnotation"), FUNCTION)})`;
+  return `(${p.t(node.subterms.get("typeAnnotation"), FUNCTION)})`;
 }
 
 function literalType(p: Printer, node: F.Node): string {
-  return p.text(node.slots.get("literal"));
+  return p.text(node.subterms.get("literal"));
 }
 
 function templateLiteralType(p: Printer, node: F.Node): string {
@@ -64,7 +64,7 @@ function templateLiteralType(p: Printer, node: F.Node): string {
 }
 
 function arrayType(p: Printer, node: F.Node): string {
-  return p.t(node.slots.get("elementType"), POSTFIX) + "[]";
+  return p.t(node.subterms.get("elementType"), POSTFIX) + "[]";
 }
 
 function tupleType(p: Printer, node: F.Node): string {
@@ -73,15 +73,15 @@ function tupleType(p: Printer, node: F.Node): string {
 
 function namedTupleMember(p: Printer, node: F.Node): string {
   const optional = node.attributes.get("optional") ? "?" : "";
-  return `${p.text(one(node, "label"))}${optional}: ${p.t(node.slots.get("elementType"), FUNCTION)}`;
+  return `${p.text(one(node, "label"))}${optional}: ${p.t(node.subterms.get("elementType"), FUNCTION)}`;
 }
 
 function optionalType(p: Printer, node: F.Node): string {
-  return p.t(node.slots.get("typeAnnotation"), POSTFIX) + "?";
+  return p.t(node.subterms.get("typeAnnotation"), POSTFIX) + "?";
 }
 
 function restType(p: Printer, node: F.Node): string {
-  return "..." + p.t(node.slots.get("typeAnnotation"), FUNCTION);
+  return "..." + p.t(node.subterms.get("typeAnnotation"), FUNCTION);
 }
 
 function unionType(p: Printer, node: F.Node): string {
@@ -124,14 +124,14 @@ function typeLiteral(p: Printer, node: F.Node): string {
 
 function propertySignature(p: Printer, node: F.Node): string {
   const { attributes } = node;
-  const text = (attributes.get("readonly") ? "readonly " : "") + p.key(node.slots.get("key"), attributes.get("computed") ?? false);
+  const text = (attributes.get("readonly") ? "readonly " : "") + p.key(node.subterms.get("key"), attributes.get("computed") ?? false);
   return text + (attributes.get("optional") ? "?" : "") + p.annotation(node);
 }
 
 function methodSignature(p: Printer, node: F.Node): string {
   const { attributes } = node;
   const prefix = ["get", "set"].includes(attributes.get("methodKind")) ? attributes.get("methodKind") + " " : "";
-  const key = p.key(node.slots.get("key"), attributes.get("computed") ?? false);
+  const key = p.key(node.subterms.get("key"), attributes.get("computed") ?? false);
   return `${prefix}${key}${attributes.get("optional") ? "?" : ""}${p.signature(node)}`;
 }
 
@@ -141,47 +141,47 @@ function indexSignature(p: Printer, node: F.Node): string {
 }
 
 function mappedType(p: Printer, node: F.Node): string {
-  const { attributes, slots } = node;
+  const { attributes, subterms } = node;
   const readonly = attributes.has("readonly") ? attributes.get("readonly") + " " : "";
-  const name = slots.get("nameType") !== null ? ` as ${p.t(slots.get("nameType"), FUNCTION)}` : "";
-  const value = slots.get("body") !== null ? `: ${p.t(slots.get("body"), FUNCTION)}` : "";
-  const constraint = p.t(slots.get("value"), FUNCTION);
+  const name = subterms.get("nameType") !== null ? ` as ${p.t(subterms.get("nameType"), FUNCTION)}` : "";
+  const value = subterms.get("body") !== null ? `: ${p.t(subterms.get("body"), FUNCTION)}` : "";
+  const constraint = p.t(subterms.get("value"), FUNCTION);
   return `{ ${readonly}[${p.text(one(node, "key"))} in ${constraint}${name}]${attributes.get("optional") ?? ""}${value} }`;
 }
 
 function indexedAccessType(p: Printer, node: F.Node): string {
-  return `${p.t(node.slots.get("objectType"), POSTFIX)}[${p.t(node.slots.get("indexType"), FUNCTION)}]`;
+  return `${p.t(node.subterms.get("objectType"), POSTFIX)}[${p.t(node.subterms.get("indexType"), FUNCTION)}]`;
 }
 
 function typeOperator(p: Printer, node: F.Node): string {
   const operator = node.attributes.get("operator");
-  if (node.slots.get("typeAnnotation") === null) return operator;
-  return `${operator} ${p.t(node.slots.get("typeAnnotation"), OPERATOR)}`;
+  if (node.subterms.get("typeAnnotation") === null) return operator;
+  return `${operator} ${p.t(node.subterms.get("typeAnnotation"), OPERATOR)}`;
 }
 
 function typeQuery(p: Printer, node: F.Node): string {
-  return "typeof " + p.text(node.slots.get("exprName")) + p.typeArguments(node);
+  return "typeof " + p.text(node.subterms.get("exprName")) + p.typeArguments(node);
 }
 
 function importType(p: Printer, node: F.Node): string {
-  const { slots } = node;
-  const options = slots.get("options") !== null ? ", " + p.text(slots.get("options")) : "";
-  let text = `import(${p.text(slots.get("source"))}${options})`;
-  if (slots.get("qualifier") !== null) text += "." + p.text(slots.get("qualifier"));
+  const { subterms } = node;
+  const options = subterms.get("options") !== null ? ", " + p.text(subterms.get("options")) : "";
+  let text = `import(${p.text(subterms.get("source"))}${options})`;
+  if (subterms.get("qualifier") !== null) text += "." + p.text(subterms.get("qualifier"));
   return text + p.typeArguments(node);
 }
 
 function conditionalType(p: Printer, node: F.Node): string {
-  const { slots } = node;
-  const extendsType = p.node(slots.get("extendsType")); // a function type needs no parentheses, unless it returns a
+  const { subterms } = node;
+  const extendsType = p.node(subterms.get("extendsType")); // a function type needs no parentheses, unless it returns a
   // conditional type
   const returned = ["tsfunctiontype", "tsconstructortype"].includes(extendsType.kind)
     ? extendsType.helpers.get("returnType") as F.Node | undefined : undefined;
   const extended = extendsType.kind === "tsconditionaltype"
-    || (returned !== undefined && p.node(returned.slots.get("typeAnnotation")).kind === "tsconditionaltype")
+    || (returned !== undefined && p.node(returned.subterms.get("typeAnnotation")).kind === "tsconditionaltype")
     ? `(${p.text(extendsType)})` : p.t(extendsType, FUNCTION);
-  return `${p.t(slots.get("checkType"), UNION)} extends ${extended} ? `
-    + `${p.t(slots.get("trueType"), FUNCTION)} : ${p.t(slots.get("falseType"), FUNCTION)}`;
+  return `${p.t(subterms.get("checkType"), UNION)} extends ${extended} ? `
+    + `${p.t(subterms.get("trueType"), FUNCTION)} : ${p.t(subterms.get("falseType"), FUNCTION)}`;
 }
 
 function inferType(p: Printer, node: F.Node): string {
@@ -189,9 +189,9 @@ function inferType(p: Printer, node: F.Node): string {
 }
 
 function typePredicate(p: Printer, node: F.Node): string {
-  let text = (node.attributes.get("asserts") ? "asserts " : "") + p.text(node.slots.get("parameterName"));
+  let text = (node.attributes.get("asserts") ? "asserts " : "") + p.text(node.subterms.get("parameterName"));
   const annotation = node.helpers.get("typeAnnotation") as F.Node | undefined;
-  if (annotation !== undefined) text += ` is ${p.t(annotation.slots.get("typeAnnotation"), FUNCTION)}`;
+  if (annotation !== undefined) text += ` is ${p.t(annotation.subterms.get("typeAnnotation"), FUNCTION)}`;
   return text;
 }
 

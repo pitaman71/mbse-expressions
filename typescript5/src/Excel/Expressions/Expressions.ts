@@ -4,8 +4,8 @@
  * Excel's terms are values of its `Term`, `Expressions.Excel.Expressions.Term`, the branch `excel` of
  * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
  * framework's kinds (`Framework/Terms`) where a formula's construct has their shape, five of its own,
- * each a value object `Expressions.Excel.Expressions.<Kind>` whose slots hold Excel's terms, and the framework's kinds of invalid
- * syntax (`error`, `missing`); a term carries no domain:
+ * each a value object `Expressions.Excel.Expressions.<Kind>` whose subterms are Excel's terms, and the framework's
+ * kinds of invalid syntax (`error`, `missing`); a term carries no domain:
  *
  * - `literal` (the framework's): a constant, a number (`int` or `float`), text (`str`) or a logical (`bool`), with its
  *   spelling (`text`) where it has one.
@@ -222,8 +222,8 @@ function specOf(value: unknown): F.Writer | null {
   return value === null || value === undefined ? null : DIALECT.spec(value);
 }
 
-function setSlots(record: any, slots: Record<string, F.Writer | null>): any {
-  for (const [slot, value] of Object.entries(slots)) if (value !== null) record[slot](value);
+function setSubterms(record: any, subterms: Record<string, F.Writer | null>): any {
+  for (const [subterm, value] of Object.entries(subterms)) if (value !== null) record[subterm](value);
   return record;
 }
 
@@ -250,8 +250,8 @@ export function cell(address: string, sheet: string | null = null, book: string 
 
 /** `LET(name, value, body)`; the value and body are specs (a native value is a constant). */
 export function let_(name: string, value: unknown, body: unknown): Writer {
-  const slots = { value: specOf(value), body: specOf(body) };
-  return new Writer((u: any) => u.let((r: any) => setSlots(r.name(name), slots)));
+  const subterms = { value: specOf(value), body: specOf(body) };
+  return new Writer((u: any) => u.let((r: any) => setSubterms(r.name(name), subterms)));
 }
 
 /** The worksheet function `name` applied to `args`. */
@@ -263,24 +263,24 @@ export { function_ as function };
 
 /** `left <operator> right`. */
 export function infix(operator: string, left: unknown, right: unknown): Writer {
-  const slots = { left: specOf(left), right: specOf(right) };
-  return new Writer((u: any) => u.infix((r: any) => setSlots(r.operator(operator), slots)));
+  const subterms = { left: specOf(left), right: specOf(right) };
+  return new Writer((u: any) => u.infix((r: any) => setSubterms(r.operator(operator), subterms)));
 }
 
 /** `<operator>operand`. */
 export function prefix(operator: string, operand: unknown): Writer {
-  const slots = { operand: specOf(operand) };
-  return new Writer((u: any) => u.prefix((r: any) => setSlots(r.operator(operator), slots)));
+  const subterms = { operand: specOf(operand) };
+  return new Writer((u: any) => u.prefix((r: any) => setSubterms(r.operator(operator), subterms)));
 }
 
 /** `value.name`. */
 export function field(value: unknown, name: string): Writer {
-  const slots = { value: specOf(value) };
-  return new Writer((u: any) => u.field((r: any) => setSlots(r.name(name), slots)));
+  const subterms = { value: specOf(value) };
+  return new Writer((u: any) => u.field((r: any) => setSubterms(r.name(name), subterms)));
 }
 
 /** `MAP(array, LAMBDA(name, body))`. */
 export function map_(name: string, array: unknown, body: unknown): Writer {
-  const slots = { value: specOf(array), body: specOf(body) };
-  return new Writer((u: any) => u.map((r: any) => setSlots(r.name(name), slots)));
+  const subterms = { value: specOf(array), body: specOf(body) };
+  return new Writer((u: any) => u.map((r: any) => setSubterms(r.name(name), subterms)));
 }

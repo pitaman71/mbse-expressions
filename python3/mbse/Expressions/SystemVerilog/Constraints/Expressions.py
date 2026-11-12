@@ -213,12 +213,12 @@ def problems(node: F.Node) -> list[str]:
         operator = attributes.get("operator")
         if operator is not None and operator not in OPERATORS:
             found.append(f"DistItem.operator cannot be {operator!r}")
-        if (operator is None) != (node.slots["weight"] is None):
+        if (operator is None) != (node.subterms["weight"] is None):
             found.append("a DistItem has both an operator and a weight, or neither")
-        elif node.slots["value"] is None and operator != ":/":
+        elif node.subterms["value"] is None and operator != ":/":
             found.append("a default DistItem weighs its values with :/")
     else:
-        found += X.problems(F.Node(kind, attributes, node.slots, node.many, {}))
+        found += X.problems(F.Node(kind, attributes, node.subterms, node.many, {}))
     for value in node.helpers.values():
         for inner in _nodes(value):
             found += problems(inner)
@@ -261,7 +261,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions hold, imported when first needed."""
+    """The dialects of its family whose terms are its subterms, imported when first needed."""
     from ..Assertions import Expressions as Assertions
     from ..Patterns import Expressions as Patterns
     from ..Preprocessor import Expressions as Preprocessor

@@ -39,7 +39,7 @@
  * - GNU extensions, outside every standard as mbse-programs marks them (`EXTENSIONS`): `statementexpression` (`({ ...
  *   })`, whose body of statements is not part of the term: the dialects proposal, Decided, 5, "(i)") and
  *   `extensionexpression` (`__extension__ operand`).
- * - C Types' `typeid`, a type name, where a position holds an expression or a type alike (`sizeof(int)`, `_Generic`'s
+ * - C Types' `typeid`, a type name, where a subterm may be an expression or a type alike (`sizeof(int)`, `_Generic`'s
  *   controlling operand, `offsetof(struct s, m)`'s first argument), and C Preprocessor's `definedexpression`,
  *   `defined(name)`, a preprocessing condition's term, which its install adds: kinds of the dialects C reads, which this
  *   dialect's `Term` lists ("(b)").
@@ -50,10 +50,10 @@
  * `type` hold, a type name's specifiers, declarators, parameters and attribute specifiers its helpers, as no expression
  * holds them; and `C Preprocessor`, the directives C and C++ share. `Expressions.C.Expressions.Pattern` is its union for
  * binding targets, which every dialect has ("(ii)"): C expressions bind no names, so it holds invalid syntax alone and
- * nothing holds it, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch of every union
- * whose positions hold it: `Term` lists `designatedinitializer`, for an initializer list's items. Its own helpers, each
- * union named after mbse-programs' category: `Name`, `Designator`, `Initializer`, and a generic association (`type` and
- * `value`, a pair of terms).
+ * nothing holds it, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch of the union
+ * of every subterm it may be: `Term` lists `designatedinitializer`, for an initializer list's items. Its own helpers,
+ * each union named after mbse-programs' category: `Name`, `Designator`, `Initializer`, and a generic association
+ * (`type` and `value`, a pair of terms).
  *
  * The editions C covers are data, which `define` writes, each owned by its designation and holding the kinds it has
  * (`Framework.Standards`): ISO/IEC 9899:2011, 2018 and 2024, C11, C17 and C23 (C17 is C11's corrigenda, with no new
@@ -110,8 +110,8 @@ export type { Suffixes } from "./Kinds.js";
 /** C's union of its kinds, added to the framework's terms as the branch `c`, its own kinds, its union of binding
  * targets (`Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
  * `Expressions.C.Expressions`: run after `Framework.install`, in a transaction of its own, before or after its family's
- * other installs; run again, it writes nothing. C Types' `Term` and its `typeid`, which its positions hold, are named by
- * name, each created where C Types' install has not run. Its holder, `Expressions.C.Expressions.Expression`, refines
+ * other installs; run again, it writes nothing. C Types' `Term` and its `typeid`, which its subterms may be, are named
+ * by name, each created where C Types' install has not run. Its holder, `Expressions.C.Expressions.Expression`, refines
  * `Expressions.Framework.Expression`, its `root` narrowed to its `Term`. */
 export function install(txn: any): any {
   const S = txn.Schemas;
@@ -256,9 +256,9 @@ export function install(txn: any): any {
           .properties({operand: _.Term}),
       // names
       (_: any) => _.Identifier.name("Expressions.C.Expressions.Identifier").properties({spelling: S.OfStr}),
-      // a type name, C Types' kind, which `Term` lists for the positions that hold an expression or a type alike, and C
-      // Types' `Term`, which a cast's, a compound literal's and a generic association's type holds: each by name, created
-      // where C Types' install has not run
+      // a type name, C Types' kind, which `Term` lists for the subterms that may be an expression or a type alike, and
+      // C Types' `Term`, which a cast's, a compound literal's and a generic association's type holds: each by name,
+      // created where C Types' install has not run
       (_: any) => _.TypeId.name("Expressions.C.Types.TypeId"),
       (_: any) => _.TypesTerm.name("Expressions.C.Types.Term"),
       // its holder, the root of an expression tree: a reference object refining the framework's, its `root`
@@ -440,7 +440,7 @@ function native(value: unknown): Writer | null {
 }
 
 
-/** The dialects of its family whose terms its positions are to hold, read when first needed (the dialects proposal,
+/** The dialects of its family whose terms are to be its subterms, read when first needed (the dialects proposal,
  * Retrofit's design): `C Types` and `C Preprocessor`. */
 function reads(): readonly F.Dialect[] {
   return [CTypes.DIALECT, CPreprocessor.DIALECT];

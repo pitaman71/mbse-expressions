@@ -92,10 +92,10 @@ with store.transaction():
         ])))))))
 ```
 
-The shared kinds' slots (a call's `arguments`, a let's `value`) hold `Term`, so each term in them names its dialect; a
-dialect's own kinds' slots (a quantifier's `body`, a Python3 `binop`'s `left`) hold its union, so each names its kind
-alone. A literal holds any value (`value`, an unrestricted `Schemas.OfAny`), its spelling (`text`) and what is wrong with
-it (`problems`), where a parser read it.
+The shared kinds' subterms (a call's `arguments`, a let's `value`) hold `Term`, so each term in them names its dialect;
+a dialect's own kinds' subterms (a quantifier's `body`, a Python3 `binop`'s `left`) hold its union, so each names its
+kind alone. A literal holds any value (`value`, an unrestricted `Schemas.OfAny`), its spelling (`text`) and what is
+wrong with it (`problems`), where a parser read it.
 
 A term value may also be built alone, a value with no identity, `store.Expressions.Framework.Term(spec)`, within a
 transaction: what tests and evaluators that need no expression object use. A transaction's expression (an upsert, as
@@ -138,13 +138,13 @@ every evaluator, validator and translator shares, over any dialect's kinds:
 | `Terms.term(x)` | the term value (a `Readers.OfUnion` of `Expressions.Framework.Term`) of an `Expression`, its `root` property's reader, a `Readers.OfAny` holding one, or a term value itself |
 | `Terms.kind_of(term)` | the branch its dialect's `Term` holds, `(tag, record)`: `("call", <Readers.OfObject>)`, through `Term`'s branch where it is a value of `Term` |
 | `Terms.dialect_of(term)` | the name of its dialect's `Term`: `"Expressions.Patterns.Expressions.Term"` |
-| `Terms.form(term)` | its `Form`: `kind`, `attributes` (its scalar properties set, by name: `{"callable": "add"}`) and `arguments` (its terms, in order: the term properties in declaration order, its slots, then a container of terms' elements) |
+| `Terms.form(term)` | its `Form`: `kind`, `attributes` (its scalar properties set, by name: `{"callable": "add"}`) and `arguments` (its terms, in order: the term properties in declaration order, its subterms, then a container of terms' elements) |
 | `Terms.name_of(term)`, `Terms.operator_of(term, kind)` | the name a reference, binding or quantifier binds or refers to; an application's or quantifier's operator, its kind's `operator` property or its tag |
 | `Terms.walk`, `Terms.fold`, `Terms.same` | as before, over term values: a term is a nested value, so there is no sharing and no cycle |
 
-Which properties are slots, variadic arguments or attributes is read from the schema: a property whose schema is
-`Expressions.Framework.Term` or a dialect's `Term` (`Expressions.<path>.Term`) is a slot, one holding a container of terms the variadic arguments, any other an attribute.
-`x + 1 > 0` reads:
+Which properties are subterms, variadic arguments or attributes is read from the schema: a property whose schema is
+`Expressions.Framework.Term` or a dialect's `Term` (`Expressions.<path>.Term`) is a subterm, one holding a container of
+terms the variadic arguments, any other an attribute. `x + 1 > 0` reads:
 
 ```python
 from mbse.Expressions.Framework import Terms
@@ -225,16 +225,16 @@ Basic's `operation` is the framework's `call`: its property `name` is `callable`
    is not registered is a validation problem, and partial evaluation keeps a subterm whose value is of an unregistered
    domain, as it keeps one with no literal.
 3. **What reads each kind is a `Terms.Kind`** (role, the names of the properties that bind and that name the operator,
-   vocabulary, required properties, checks), as the old kinds' class variables were; a kind's slots, variadic arguments
-   and attributes are read from its schema, not declared. A Kind is not a model class: it says how evaluators read a
-   kind, until vocabularies are data (question 11).
+   vocabulary, required properties, checks), as the old kinds' class variables were; a kind's subterms, variadic
+   arguments and attributes are read from its schema, not declared. A Kind is not a model class: it says how evaluators
+   read a kind, until vocabularies are data (question 11).
 4. **Writers are specs** (above), and a term value given where a term is written is copied: so a residual, a
    translation and a writer can hold a term read from a store.
 5. **`Framework.Objects`** reads the data objects evaluators read (`get`, `has`, `entries`, equality), ported from the
    `overhauls/meta-schemas` branch: a reference object is one whose schema is a reference object schema (`ref`), with
    no `as_identity`; its identity, for equality, is the object itself.
 6. **Cycles and sharing go**: a term is a nested value, so `walk`, `fold`, validation and evaluation no longer look for
-   them, and the cases about them assert that a term written into another is copied. A kind's slot that referred to a
+   them, and the cases about them assert that a term written into another is copied. A kind's subterm that referred to a
    definition (`REFERS`, mbse-patterns' predicates) is a by-name attribute when that dialect is ported.
 7. **The builders write any scalar into a basic scalar's property**, so validation still reports a wrong one ("a call's
    callable must be a str, got int"). A literal's value is not such a property: its schema, an `OfAny` of the basic
@@ -281,7 +281,7 @@ Settled in stage 2b:
       a bytes"), `variable`, `call`, and Excel's `let`.
     - Python: `python_constant` → `literal` (the same five scalars, no check), `python_name` → `variable` (its
       builtins the `Kind`'s ambient names, "a name must be an identifier" its check), `let` as before. `python_call`
-      stays: its callee is a slot, a term (`np.add` is an attribute of a name), where `call`'s `callable` is a name.
+      stays: its callee is a subterm, a term (`np.add` is an attribute of a name), where `call`'s `callable` is a name.
     - Latex: `latex_constant` → `literal` (no bytes, a new check, "a Latex literal cannot hold a bytes": the old
       schema took bytes without a word), `latex_symbol` → `variable`, `latex_function` → `call` (its `name` is now
       `callable`), `latex_where` → `let` (`name`, `value`, `body`, as a let's). Its `member`, `binary`, `unary` and
@@ -388,7 +388,7 @@ singleton by name was the coordinating agent's proposal, built on that direction
 Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 1, 3, 4, 7 and 9, the literal's
 two decisions, and the rename of Basic) and as the brief for stage 2 asked; each choice below is where they were silent.
 
-30. **A dialect's `Term` is recognized by its name.** A slot is a property whose schema is a union named
+30. **A dialect's `Term` is recognized by its name.** A subterm is a property whose schema is a union named
     `Expressions.<Dialect>.Term`, `Expressions.Framework.Term` among them; so is a container's element (variadic
     arguments) and a pair's member. `Terms.is_term` and `Terms.term` accept a value of either. (Revised 2026-11-03, as
     the proposal's Decided, 1, was revised: a dialect's value union of its kinds is its `Term`, first built as
@@ -414,7 +414,7 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
     Patterns' call in a Python3 or Excel expression is refused.
 35. *(Superseded 2026-11-03, as the user decided, the proposal's Decided, 1, revised: "Framework.Term ->
     Dialects.C.Term / Framework.Term -> Dialects.Cpp.Term".)* ~~C's and C++'s shared kinds: each kind defined once,
-    `Expressions.C.<Kind>`, by C's install, listed by both unions, its slots holding `Expressions.Framework.Term`.~~ Now
+    `Expressions.C.<Kind>`, by C's install, listed by both unions, its subterms of `Expressions.Framework.Term`.~~ Now
     **C and C++ each define the kinds they share**: `Expressions.C.<Kind>` by C's install, its properties holding
     `Expressions.C.Term`, and `Expressions.Cpp.<Kind>` by Cpp's, holding `Expressions.Cpp.Term`; each install stands
     alone (superseded 2026-11-06 where a dialect uses another's kinds of domain: its install then depends on
@@ -536,9 +536,9 @@ and the literal's decisions) and as the brief for stage 3 asked; each choice bel
     `P.ELLIPSIS` and `new P.Complex(real, imag)` (a deliberate difference). What a text also spells (an exponent, `0X`
     against `0x`, `J` against `j`) is in `text` alone. A literal's attributes that spell it are its `Kind.spelling`,
     which translation drops (item 38).
-54. **A lambda's body is a term.** It is an expression in Python, so `lambda` holds it as a slot; the decision that "a
-    body is not part of the term" (the proposal's Decided, 5) is read as concerning statement bodies (a function's, a
-    class's), which are mbse-programs' owned reference objects. For the user's review.
+54. **A lambda's body is a term.** It is an expression in Python, so `lambda` holds it as a subterm; the decision
+    that "a body is not part of the term" (the proposal's Decided, 5) is read as concerning statement bodies (a
+    function's, a class's), which are mbse-programs' owned reference objects. For the user's review.
 55. **Concrete syntax kept**: `parenthesized` (`value`), which writers write and printers print as written, and which
     `FromText` writes none of, since `ast` keeps no parentheses (printing parenthesizes by precedence); and
     `concatenatedstring` (`values`, at least two), which `FromText` writes for adjacent string literals, found by
@@ -557,13 +557,13 @@ and the literal's decisions) and as the brief for stage 3 asked; each choice bel
     `interpolation` and `formatspec`), or a container of them, or of a union of them, is a helper. `Terms.form` reads
     each as a `Terms.Part` among the attributes (`kind`, its own `attributes`, `size`, how many of the term's arguments
     are its terms), a container of them as a tuple (an array in TypeScript), and its terms among the arguments, after
-    the kind's slots and variadic arguments; `Dialect.make` writes them back, so translation patterns match a helper's
+    the kind's subterms and variadic arguments; `Dialect.make` writes them back, so translation patterns match a helper's
     structure as attributes (`comparisons=(Part("comparison", {"op": "in"}, 1),)`). `Terms._parts` keeps its shape, a
     helper property among the attributes, and `Terms._helpers(schema)` names them. A `dictitem` holds only terms, so it
     is read as a mapping's pair is. The unions of f-string parts are ours, `Expressions.Python3.JoinedStrValue`
     (`stringtext` or `formattedvalue`) and `Expressions.Python3.TemplateStrValue` (`stringtext` or `interpolation`); a
     format spec's values are `JoinedStrValue`, as `ast` writes `FormattedValue` in a t-string's format spec too.
-59. **What a kind's role does not say, its `Kind` declares**: `optional`, the slots that may be empty, by path (`lower`,
+59. **What a kind's role does not say, its `Kind` declares**: `optional`, the subterms that may be empty, by path (`lower`,
     `key`, `generators.target`, `args.args.default_value`), where validation would report "needs"; `scopes(record)`,
     the names each argument has bound; `operators(attributes)` and `result(attributes, domains)` for a chain, whose
     operators are each checked against the vocabulary when the core is asked for and whose domain is its links'
@@ -645,7 +645,7 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
     expression's place holds beside expressions (`spreadelement`, `elision`, `property`, `jsxemptyexpression`,
     `tsemptybodyfunctionexpression`: item 72), the patterns an expression's place holds (`arraypattern`,
     `objectpattern`, `assignmentpattern`: item 71), and the framework's `error` and `missing`.
-71. **Sublanguages, each a union of its own, a schema a branch of every union whose positions hold it** (as the user
+71. **Sublanguages, each a union of its own, a schema a branch of the union of every subterm it may be** (as the user
     decided, (b)). `Expressions.TypeScript5.Pattern` (14 branches): the four patterns (`arraypattern`,
     `objectpattern`, `assignmentpattern`, `restelement`), the terms a target may be (`identifier`,
     `memberexpression`, `parenthesizedexpression`, `tsasexpression`, `tssatisfiesexpression`, `tstypeassertion`,
@@ -685,7 +685,7 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
     (validation); a regular expression is not a kind of its own, as mbse-programs has none. `undefined` is an
     `identifier`, as in TypeScript.
 75. **A body of statements is absent** (the proposal's Decided, 5, "(i)"): `functionexpression`,
-    `classexpression` and `tsemptybodyfunctionexpression` have no body property, and an arrow's `body` slot, optional,
+    `classexpression` and `tsemptybodyfunctionexpression` have no body property, and an arrow's `body` subterm, optional,
     holds an expression body as a term, as Python3's lambda's (item 54), and is absent for a block. A printer writes an
     absent body `{}`, where mbse-programs writes the statements it relates; a class's members are its body's.
 76. **Concrete syntax kept**: `parenthesizedexpression` and `tsparenthesizedtype`, written and printed as written; an
@@ -707,7 +707,7 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
 79. **Checks within helpers**: mbse-programs' checks (a name an identifier, one more quasi than expressions or types,
     a union or an intersection of two types, a type parameter declaration of one, a sequence of two) apply to a kind's
     helpers too, its types and patterns among them, which the framework's validation does not read within a helper.
-    `TypeScript5.Expressions.tree(term)` reads a term with its helpers nested (`Node`: `kind`, `attributes`, `slots`,
+    `TypeScript5.Expressions.tree(term)` reads a term with its helpers nested (`Node`: `kind`, `attributes`, `subterms`,
     `many`, `helpers`), as the printer and the checks read it, and `binding_names` (`bindingNames`) gives the names a
     pattern binds.
 80. **Standards as data**: `STANDARDS` names TypeScript 5.0 to 5.9; every kind is older than 5.0, so each kind's
@@ -797,9 +797,9 @@ generation"), and item 107 added.
     attribute's `name` and `namespace`, a `using_namespace`. An identifier is checked as mbse-programs checks it
     (letters, digits, `_` and `$`, not starting with a digit) wherever one is held: the framework's variable's `name`,
     and every `identifier`'s `spelling`.
-89. **Sublanguages and helpers, each a union of its own, a schema a branch of every union whose positions hold it**
+89. **Sublanguages and helpers, each a union of its own, a schema a branch of the union of every subterm it may be**
     ("(b)"). `Type` is a type name, `typeid` (its `specifiers` and abstract `declarator`), and invalid syntax; `Term`
-    lists `typeid` too, for the positions that hold an expression or a type alike (`sizeof(int)`, `_Generic`'s
+    lists `typeid` too, for the subterms that may be an expression or a type alike (`sizeof(int)`, `_Generic`'s
     controlling operand, `offsetof`'s first argument), and `designatedinitializer`, an initializer list's item.
     `Pattern` is each dialect's binding targets ("(ii)"): C's holds invalid syntax alone and nothing holds it, as C
     expressions bind no names; C++'s lists `identifier` (`Expressions.Cpp.Identifier`, one schema in `Name` and `Pattern`, "(b)")
@@ -838,7 +838,7 @@ generation"), and item 107 added.
     capture's `Pattern`, where it is an identifier; invalid syntax binds none), and a requires expression's parameters,
     within it (`scopes(tag)`, `bound_names`). A callee is a term (`callexpression`'s
     `function`), whose names must be bound, as every reference's.
-92. **Slots that may be empty**: `optional` paths written `"*.slot"` match that slot at any helper depth
+92. **Subterms that may be empty**: `optional` paths written `"*.subterm"` match that subterm at any helper depth
     (`Terms.Kind`'s, new): an array declarator's `size`, a designator's range's `last`, a noexcept specifier's
     `condition`, a parameter's `default` argument, and a lambda's or a template parameter's `requires` clause, wherever
     a type name or a lambda nests them (`OPTIONAL`). A kind's own: GNU's `a ?: b`'s `consequence`, a fold's `left` or
@@ -1465,7 +1465,7 @@ mapped where mbse-programs' `_Reader.py` builds the node: 229 mapped, 304 not.
 192. **Its `Term`** *(agent)*: `Expressions`' branches, its 17 kinds (`SEQUENCES`, `PROPERTIES`, `propertyspec`,
      `cyclerange`), Constraints' `distexpression` and `macrousage`; `HELPERS` `DelayStep`, `PropertyCaseItem`,
      `EventControl` and `EventExpression`.
-193. **Positions** *(agent)*: what IEEE 1800 calls `expression_or_dist` holds `Assertions.Term` (an `if`'s and a
+193. **Where its terms are subterms** *(agent)*: what IEEE 1800 calls `expression_or_dist` holds `Assertions.Term` (an `if`'s and a
      `case`'s expressions and its items', an abort's condition, `disable iff`); a match item, a cycle range's bounds and
      an event's expression and condition `Expressions.Term`.
 194. **A delay sequence's steps are pairs** *(agent)*: each `DelayStep` a delay and a sequence ("a delaysequence needs a
@@ -1526,7 +1526,7 @@ mapped where mbse-programs' `_Reader.py` builds the node: 229 mapped, 304 not.
 
 210. **A kind may hold several containers of terms** *(agent, the coordinator's decision 1)*: `Terms._parts` gives a
      kind's variadic properties as a tuple (each container of terms, or of pairs), read in declaration order; a term's
-     arguments are its slots, then each container's terms in turn, then its helpers'. Where a kind holds several, its
+     arguments are its subterms, then each container's terms in turn, then its helpers'. Where a kind holds several, its
      form's attributes hold each container's size as a `Part` named by the container (`Part("solve", {}, 2)`), so that
      `make` puts each term back; a container given no size holds none, but the last, which holds the rest, and sizes
      that do not add up are refused ("an ifdefdirective's items, alternative hold 5 arguments, got 2"). `Node.lists`
@@ -1578,9 +1578,9 @@ install lists.
      `import` and `importfrom`, TypeScript5's functions, arrows and classes, and C++'s `lambdaexpression` and
      `requiresexpression`; a refinement lists Let's properties first, and the writers keep their names and argument
      order.
-219. **Let's empty slots in a form** *(agent)*: every refined binder's form starts with Let's slots, None where unset:
-     `(None, body, ...)` for a comprehension or a lambda, `(value, None, ...)` for a named expression, `(None, None, ...)`
-     for C++'s and TypeScript5's functions and classes; a translator's pattern may hold None for an empty slot.
+219. **Let's empty subterms in a form** *(agent)*: every refined binder's form starts with Let's subterms, None where unset:
+     `(None, body, ...)` for a comprehension or a lambda, `(value, None, ...)` for a named expression, `(None, None,
+     ...)` for C++'s and TypeScript5's functions and classes; a translator's pattern may hold None for an empty subterm.
 220. **Let's unset properties are optional** *(agent)*: a binder lists the Let properties it leaves unset in its
      kind's `optional`, which evaluation does not refuse when empty.
 221. **An import's body is its last argument** *(agent)*: evaluation and the MATLAB and Python3 printers read it so; a
@@ -1632,13 +1632,13 @@ install lists.
      `Expressions.TypeScript.TypeScript5.Type` is `Expressions.TypeScript.Types.Term` and `...Pattern`
      `Expressions.TypeScript.Patterns.Term`, their kinds' schemas under `Expressions.TypeScript.Types` and
      `Expressions.TypeScript.Patterns`; a term's data, written by branch tags, is unchanged.
-237. **A type's and a pattern's terms are terms, not helpers** *(agent)*: a position that holds the new dialects'
-     `Term` holds terms the framework reads as a kind's arguments (a container of terms, labelled by its property),
+237. **A type's and a pattern's terms are terms, not helpers** *(agent)*: a property that holds the new dialects'
+     `Term` holds subterms the framework reads as a kind's arguments (a container of terms, labelled by its property),
      where TypeScript5 had read some as helpers; so containers, labels and messages within types and patterns change
      ("typeAnnotation: ...").
 238. **A value object of terms held alone is a helper** *(agent, a framework fix)*: `Terms._parts` (`parts`) reads a
      property whose schema is a pair of terms, held alone, as a helper (`TSTypeAnnotation`), as it read one held in a
-     container; without it, TypeScript Types' annotations were read as slots.
+     container; without it, TypeScript Types' annotations were read as subterms.
 239. **An identifier in a type is never unbound** *(agent)*: `TypeScript Types` declares its own `identifier` kind, a
      type's name, which validation does not report as an unbound reference; the identifier check also validates a
      helper's types.
@@ -1673,15 +1673,15 @@ install lists.
      `items` hold `Expressions.Framework.Term`.
 248. **`EnumSpecifier`** (the design): keeps `body`, gains `enumerators` and `trailing_comma`; "an EnumSpecifier with
      enumerators has a body".
-249. **Type positions are term slots** *(agent, for review)*: a cast's, a compound literal's and a generic
-     association's type, and C++'s, hold their Types' `Term` as a slot (a cast's form's argument 0; a generic association
-     a pair), so its problems are labelled ("type: invalid syntax 'int int'"); the required slots drop `type`, and
-     `base` and `trailing_return` join the optional ones; a generic selection's `type` is optional.
+249. **A type is a subterm** *(agent, for review)*: a cast's, a compound literal's and a generic
+     association's type, and C++'s, hold their Types' `Term` as a subterm (a cast's form's argument 0; a generic
+     association a pair), so its problems are labelled ("type: invalid syntax 'int int'"); the required subterms drop
+     `type`, and `base` and `trailing_return` join the optional ones; a generic selection's `type` is optional.
 250. **C's type-name helpers move to C Types; C++'s stay** (the design's rule): 22 schemas move in C, as no C
      expression holds them; a C++ lambda's declarator holds parameters, so C++'s stay `Cpp Expressions`' and Cpp Types'
      `HELPERS` is empty.
 251. **Editions** *(agent)*: C's and C++'s editions list their dialect's own kinds only (C23 lists 20).
-252. **The preprocessor's shape** *(agent)*: an `alternative` is its `Term`'s slot, checked to be a branch after another;
+252. **The preprocessor's shape** *(agent)*: an `alternative` is its `Term`'s subterm, checked to be a branch after another;
      its items are checked; an include holds a path or a macro, its directive among `INCLUDES`.
 253. **What the preprocessor binds** *(agent)*: a conditional directive's macros' names within its condition alone,
      and an include's macro's; `defined`'s name is a macro's, not a reference; `macros` exported; nothing refines
@@ -1695,7 +1695,7 @@ install lists.
 257. **Completeness** *(agent)*: `grammars/c-tree-sitter.json` and `grammars/cpp-tree-sitter.json` are rewritten in
      DIA-29's form, each entry's kinds qualified by its dialect's tag; DIA-26 is rewritten in DIA-29's style, checking
      each dialect's kinds exactly (its helpers not).
-258. **Positions** *(agent)*: C Preprocessor's install adds `definedexpression` to C's and C++'s `Term`, and its
+258. **Where its terms are subterms** *(agent)*: C Preprocessor's install adds `definedexpression` to C's and C++'s `Term`, and its
      directives and `comment` to C Types' and Cpp Types' `Term`s; C's and C++'s `Term`s list `typeid` (their Types')
      and `definedexpression` (the preprocessor's) beside their own kinds.
 259. **The corpus**: `c_types`, `cpp_types` and `c_preprocessor`, each of every kind; `standards` regenerated (C23 lists
@@ -1849,7 +1849,7 @@ coordinator's merge and decisions (302 to 310). Each choice where the design and
 287. **Checks** *(agent)*: what ECMA-262's early errors its data can show (a quantifier's bounds, a range's order, a
      literal's flags each once, never both `u` and `v`, a modifiers adding or removing a flag, never both), and what
      each kind may hold (a range's ends characters, an expression class's expression an intersection or a subtraction);
-     which kinds a mode allows (the `v` flag's classes in a literal without it), like which terms a position allows, is
+     which kinds a mode allows (the `v` flag's classes in a literal without it), like which terms a subterm may be, is
      a constraint (the dialects proposal, Decided, 4).
 288. **Editions** *(agent)*: ECMA-262's, the 5.1 Edition to the 16th as built, the 17th added by item 303, each by Ecma
      International's designation (`ECMA-262 6th Edition`), body `org.ecma-international`, number `262`, revision its
@@ -1899,7 +1899,7 @@ coordinator's merge and decisions (302 to 310). Each choice where the design and
      grammar names a group; a class atom's `name`.
 297. **Editions** *(agent)*: C++'s three, C++17, C++20 and C++23, every kind in each: [re.grammar] is the same in the
      three.
-298. **Its printer is its own** *(agent)*: its terms hold no other dialect's, and no position of another dialect holds
+298. **Its printer is its own** *(agent)*: its terms hold no other dialect's, and no subterm of another dialect is
      one, so it shares nothing with the C family's printer but its reading of invalid syntax; the grammar, which a term
      alone does not say, is the context it writes in (a BRE's `\(...\)` and `\{m,n\}`, awk's escapes, ECMAScript's).
 299. **Nothing bound** *(agent)*: a capturing group is numbered, not named, in every grammar (ECMA-262's third edition
@@ -1928,7 +1928,7 @@ coordinator's merge and decisions (302 to 310). Each choice where the design and
      `RegExp.escape` a function). So `TypeScript RegExp`'s editions run to the 17th, which has the 16th's kinds, no new
      kind *(agent)*; TSR-05 and FRM-13 assert it; TypeScript5's flags are ECMAScript 2026's.
 304. **Cpp and Cpp Types read Cpp RegExp** (the coordinator's decision), as each family's dialects read one another and
-     Python's do, though no position of theirs holds one; Cpp RegExp reads Cpp, Cpp Types and C Preprocessor; C
+     Python's do, though no subterm of theirs is one; Cpp RegExp reads Cpp, Cpp Types and C Preprocessor; C
      Preprocessor does not read Cpp RegExp, its conditions and items holding no regular expression *(agent)*. FRM-01's
      `READS` asserts it.
 305. **The installs** *(agent)*: wherever every new dialect is installed (FRM's `RETROFIT`, DIA's, TRN's, DOM's, the
@@ -1953,7 +1953,7 @@ coordinator's merge and decisions (302 to 310). Each choice where the design and
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,
-  each with `domain`; a slot a property of `_.Term`, variadic arguments a container of `_.Term` by an int index), its
+  each with `domain`; a subterm a property of `_.Term`, variadic arguments a container of `_.Term` by an int index), its
   `Terms.Dialect` of `Terms.Kind`s (an import's `names(attributes)`, a reference's `lexical` and `ambient`, a kind's
   `check(record)` with its old messages), writers deriving `Terms.Writer` (or `E.Writer` for Basic's methods), and its
   evaluator on `Framework.Evaluators.Interpreter` (implementations take `(thunks, term, scope)`; a term's attributes

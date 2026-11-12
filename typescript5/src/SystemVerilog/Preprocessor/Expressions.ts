@@ -12,7 +12,7 @@
  *
  * - `macrousage`: `` `name `` or `` `name(arguments) ``, a text macro used as a value (22.5.1), `arguments` the text
  *   between its parentheses. Its install adds it to the `Term`s that list `Expressions`' branches too, an expression
- *   position holding it: `Expressions`', `Types`', `Patterns`', `Assertions`' and `Constraints`'.
+ *   subterm being one: `Expressions`', `Types`', `Patterns`', `Assertions`' and `Constraints`'.
  * - The directives (22): `includedirective` (`` `include "path" ``, or `<path>` where `system`), `definedirective`
  *   (`` `define name(parameters) body ``, its body as written), `undefdirective`, `timescaledirective` (`` `timescale 1ns
  *   / 1ps ``), `defaultnettypedirective` (`` `default_nettype none ``), `ifdefdirective` (`` `ifdef ``, or `` `ifndef ``
@@ -135,7 +135,7 @@ export function install(txn: any): any {
               (t: any) => t.name("missing").schema([Framework.Missing]),
           ]),
           (_: any) => _.Identifier.name("Expressions.SystemVerilog.Expressions.Identifier"),
-          // a macro usage (22.5.1), in an expression position: in `Expressions`' `Term`, and in those that list its
+          // a macro usage (22.5.1), as an expression subterm: in `Expressions`' `Term`, and in those that list its
           // branches
           (_: any) => _.MacroUsage.name("Expressions.SystemVerilog.Preprocessor.MacroUsage").properties({
               name: _.Identifier, arguments: S.OfStr}),  // arguments: the text between its parentheses
@@ -236,7 +236,7 @@ function nodes(value: unknown): readonly F.Node[] {
  * `!`, `&&`, `||`, `->` and `<->`, as mbse-programs checks it. */
 function conditionProblems(node: F.Node): string[] {
   const kind = node.kind === IFDEFDIRECTIVE ? "IfdefDirective" : "ElsifDirective";
-  const condition = node.slots.get("condition") ?? null;
+  const condition = node.subterms.get("condition") ?? null;
   if (node.helpers.has("name") === (condition !== null)) return [`an ${kind} has a name or a condition`];
   if (condition === null) return [];
   if (F.kindOf(condition)[0] !== X.PARENTHESIZEDEXPRESSION) return [`an ${kind}'s condition is in parentheses`];
@@ -244,12 +244,12 @@ function conditionProblems(node: F.Node): string[] {
   while (terms.length > 0) {
     const inner = F.node(...F.kindOf(terms.pop()));
     if (inner.kind === X.PARENTHESIZEDEXPRESSION) {
-      terms.push(inner.slots.get("expression"));
+      terms.push(inner.subterms.get("expression"));
     } else if (inner.kind === X.UNARYEXPRESSION && inner.attributes.get("operator") === "!" && inner.helpers.size === 0) {
-      terms.push(inner.slots.get("operand"));
+      terms.push(inner.subterms.get("operand"));
     } else if (inner.kind === X.BINARYEXPRESSION && ["&&", "||", "->", "<->"].includes(inner.attributes.get("operator"))
         && inner.helpers.size === 0) {
-      terms.push(inner.slots.get("left"), inner.slots.get("right"));
+      terms.push(inner.subterms.get("left"), inner.subterms.get("right"));
     } else if (!(inner.kind === X.NAMEEXPRESSION && (inner.helpers.get("name") as F.Node).kind === "identifier")) {
       return [`an ${kind}'s condition has macros' names, !, &&, ||, -> and <-> only`];
     }
@@ -302,9 +302,9 @@ function macros(condition: any): ReadonlySet<string> {
 function ifdefScopes(record: any): ReadonlySet<string>[] {
   const node = F.node(IFDEFDIRECTIVE, record);
   const none = (count: number): ReadonlySet<string>[] => Array.from({ length: count }, () => new Set<string>());
-  const found = [macros(node.slots.get("condition") ?? null), ...none(node.many.length)];
+  const found = [macros(node.subterms.get("condition") ?? null), ...none(node.many.length)];
   for (const branch of nodes(node.helpers.get("branches"))) {
-    found.push(macros(branch.slots.get("condition") ?? null), ...none(branch.many.length));
+    found.push(macros(branch.subterms.get("condition") ?? null), ...none(branch.many.length));
   }
   return found;
 }
@@ -327,7 +327,7 @@ function kinds(): Record<string, F.Kind> {
   };
 }
 
-/** The dialects of its family whose terms its positions hold, read when first needed. */
+/** The dialects of its family whose terms are its subterms, read when first needed. */
 function reads(): readonly F.Dialect[] {
   return [X.DIALECT, Types.DIALECT, Patterns.DIALECT, Assertions.DIALECT, Constraints.DIALECT];
 }

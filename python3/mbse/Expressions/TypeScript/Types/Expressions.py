@@ -255,7 +255,7 @@ def define(txn: Any) -> Any:
 
 
 _OPTIONAL = ("*.constraint", "*.default")
-"""A type parameter's slots, which may be empty at any depth: its constraint and its default."""
+"""A type parameter's subterms, which may be empty at any depth: its constraint and its default."""
 
 
 def _application(tag: str, optional: tuple[str, ...] = ()) -> F.Kind:
@@ -276,7 +276,7 @@ _KINDS.update({
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects whose terms its positions hold, imported when first needed: `TypeScript5`, whose terms a type holds,
+    """The dialects whose terms are its subterms, imported when first needed: `TypeScript5`, whose terms a type holds,
     and `TypeScript Patterns`, a function type's and a signature's parameters; and `TypeScript RegExp`, as its family's
     dialects read one another, though no type holds a regular expression."""
     from ..Patterns import Expressions as TypeScriptPatterns

@@ -24,7 +24,7 @@ def _parameter(star: str) -> Callable[[Any, F.Node], tuple[str, int]]:
     """A type parameter's writer: its stars, its name, its bound, where it has one, and its default, where it has one."""
 
     def write(p: Any, node: F.Node) -> tuple[str, int]:
-        bound, default = node.slots.get("bound"), node.slots["default_value"]
+        bound, default = node.subterms.get("bound"), node.subterms["default_value"]
         text = star + node.attributes.get("name", "")
         text += "" if bound is None else f": {p.element(bound)}"
         return text + ("" if default is None else f" = {p.element(default)}"), X._PRIMARY

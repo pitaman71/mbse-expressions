@@ -37,7 +37,7 @@ name), a `str`. A term carries no domain. Its kinds:
 - GNU extensions, outside every standard as mbse-programs marks them (`EXTENSIONS`): `statementexpression` (`({ ...
   })`, whose body of statements is not part of the term: the dialects proposal, Decided, 5, "(i)") and
   `extensionexpression` (`__extension__ operand`).
-- C Types' `typeid`, a type name, where a position holds an expression or a type alike (`sizeof(int)`, `_Generic`'s
+- C Types' `typeid`, a type name, where a subterm may be an expression or a type alike (`sizeof(int)`, `_Generic`'s
   controlling operand, `offsetof(struct s, m)`'s first argument), and C Preprocessor's `definedexpression`,
   `defined(name)`, a preprocessing condition's term, which its install adds: kinds of the dialects C reads, which this
   dialect's `Term` lists ("(b)").
@@ -48,8 +48,8 @@ Types`, C's type names (`Expressions.C.Types.Term`), which a cast's, a compound 
 `type` hold, a type name's specifiers, declarators, parameters and attribute specifiers its helpers, as no expression
 holds them; and `C Preprocessor`, the directives C and C++ share. `Expressions.C.Expressions.Pattern` is its union for
 binding targets, which every dialect has ("(ii)"): C expressions bind no names, so it holds invalid syntax alone and
-nothing holds it, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch of every union
-whose positions hold it: `Term` lists `designatedinitializer`, for an initializer list's items. Its own helpers, each
+nothing holds it, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch of the union
+of every subterm it may be: `Term` lists `designatedinitializer`, for an initializer list's items. Its own helpers, each
 union named after mbse-programs' category: `Name`, `Designator`, `Initializer`, and a generic association (`type` and
 `value`, a pair of terms).
 
@@ -107,7 +107,7 @@ def install(txn: Any) -> Any:
     """C's union of its kinds, added to the framework's terms as the branch `c`, its own kinds, its union of binding
     targets (`Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
     `Expressions.C.Expressions`: run after `Framework.install`, in a transaction of its own, before or after its
-    family's other installs; run again, it writes nothing. C Types' `Term` and its `typeid`, which its positions hold,
+    family's other installs; run again, it writes nothing. C Types' `Term` and its `typeid`, which its subterms may be,
     are named by name, each created where C Types' install has not run. Its holder, `Expressions.C.Expressions.Expression`,
     refines `Expressions.Framework.Expression`, its `root` narrowed to its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
@@ -257,7 +257,7 @@ def install(txn: Any) -> Any:
                 .properties({"operand": _.Term}),
             # names
             lambda _: _.Identifier.name("Expressions.C.Expressions.Identifier").properties({"spelling": S.OfStr}),
-            # a type name, C Types' kind, which `Term` lists for the positions that hold an expression or a type alike,
+            # a type name, C Types' kind, which `Term` lists for the subterms that may be an expression or a type alike,
             # and C Types' `Term`, which a cast's, a compound literal's and a generic association's type holds: each by
             # name, created where C Types' install has not run
             lambda _: _.TypeId.name("Expressions.C.Types.TypeId"),
@@ -439,7 +439,7 @@ def _native(value: Any) -> Writer | None:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions are to hold, imported when first needed (the dialects
+    """The dialects of its family whose terms are to be its subterms, imported when first needed (the dialects
     proposal, Retrofit's design): `C Types` and `C Preprocessor`."""
     from ..Preprocessor import Expressions as CPreprocessor
     from ..Types import Expressions as CTypes

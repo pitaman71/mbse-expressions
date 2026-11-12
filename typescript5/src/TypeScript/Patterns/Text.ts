@@ -25,15 +25,15 @@ function objectPattern(p: Printer, node: F.Node): string {
 }
 
 function assignmentPattern(p: Printer, node: F.Node): string {
-  return pattern(p, node, `${p.text(node.slots.get("left"))} = ${p.e(node.slots.get("right"), X.ASSIGN)}`);
+  return pattern(p, node, `${p.text(node.subterms.get("left"))} = ${p.e(node.subterms.get("right"), X.ASSIGN)}`);
 }
 
 function restElement(p: Printer, node: F.Node): string {
-  return pattern(p, node, "..." + p.text(node.slots.get("argument")));
+  return pattern(p, node, "..." + p.text(node.subterms.get("argument")));
 }
 
 function parameterProperty(p: Printer, node: F.Node): string {
-  return p.decorators(node) + p.modifiers(node) + p.text(node.slots.get("parameter"));
+  return p.decorators(node) + p.modifiers(node) + p.text(node.subterms.get("parameter"));
 }
 
 /** How each of its kinds is written, by its tag. */

@@ -46,13 +46,13 @@ its Retrofit's design), whose `Term`s were its `Type` and `Pattern` unions, thei
 `TypeScript Types` (`Expressions.TypeScript.Types.Term`), TypeScript's type nodes, held by what holds a type (`x as T`,
 `x satisfies T`, `<T>x`, an annotation, a type argument, a type parameter's constraint and default); and
 `TypeScript Patterns` (`Expressions.TypeScript.Patterns.Term`), destructuring patterns, held by a function's
-parameters and an assignment's target. As the user decided ("(b) as you recommended"), one schema is a branch of every
-union whose positions hold it: a pattern's `Term` lists the terms a target may be, and a type's the terms a type holds.
-Which terms are allowed where, beyond that, is a constraint. Names that only declare (a type parameter's `name`, a
-function's `id`) are `Identifier`s, as mbse-programs has them ("yes, stay `Identifier` terms"). The helpers expressions
-and types hold alike stay its own: an annotation (`TSTypeAnnotation`), a type parameter, and the declaration and
-instantiation of type parameters. `DIALECT` reads its family's other dialects' terms (`reads`), as each of them reads
-its own; the framework reads a value of a helper as a `Terms.Part`, and its family's terms, the types and patterns
+parameters and an assignment's target. As the user decided ("(b) as you recommended"), one schema is a branch of the
+union of every subterm it may be: a pattern's `Term` lists the terms a target may be, and a type's the terms a type
+holds. Which terms are allowed where, beyond that, is a constraint. Names that only declare (a type parameter's `name`,
+a function's `id`) are `Identifier`s, as mbse-programs has them ("yes, stay `Identifier` terms"). The helpers
+expressions and types hold alike stay its own: an annotation (`TSTypeAnnotation`), a type parameter, and the declaration
+and instantiation of type parameters. `DIALECT` reads its family's other dialects' terms (`reads`), as each of them
+reads its own; the framework reads a value of a helper as a `Terms.Part`, and its family's terms, the types and patterns
 within it, as its arguments. `Nodes` holds what the three dialects read alike: a node's checks, the names a pattern
 binds (`bound_names`) and the names each argument has bound.
 
@@ -519,7 +519,7 @@ def _constant_problems(record: Any) -> list[str]:
     each once; its `regexp`'s problems, as `TypeScript RegExp` validates it, too. That its `regexp` is what its `pattern`
     and `flags` spell is not checked, as a literal's `value` is not against its `text`."""
     node = F.node(CONSTANT, record)
-    regexp = node.slots["regexp"]
+    regexp = node.subterms["regexp"]
     held = [] if regexp is None else [f"regexp: {problem}" for problem in DIALECT.validate(regexp)]
     return Nodes.check(CONSTANT, lambda attributes: _constant(attributes, regexp is not None))(record) + held
 
@@ -552,7 +552,7 @@ _ANY = FD.Function((FD.Anything,), FD.Anything)
 _ANY2 = FD.Function((FD.Anything, FD.Anything), FD.Anything)
 
 TYPE_PARAMETERS = ("*.constraint", "*.default")
-"""A type parameter's slots, which may be empty at any depth (`Kind.optional`): its constraint and its default."""
+"""A type parameter's subterms, which may be empty at any depth (`Kind.optional`): its constraint and its default."""
 
 
 def _application(tag: str, signature: FD.Signature = FD.Opaque(), optional: tuple[str, ...] = (), **options: Any) -> F.Kind:
@@ -566,7 +566,7 @@ def _operator(tag: str, vocabulary: dict[str, FD.Signature]) -> F.Kind:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions hold, imported when first needed (the dialects proposal,
+    """The dialects of its family whose terms are its subterms, imported when first needed (the dialects proposal,
     Retrofit's design): `TypeScript Types`, `TypeScript Patterns` and `TypeScript RegExp`, a constant's `regexp`."""
     from ..Patterns import Expressions as TypeScriptPatterns
     from ..RegExp import Expressions as TypeScriptRegExp

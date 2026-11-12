@@ -566,7 +566,7 @@ def build():
         lambda d: d.paramspec(lambda s: s.name("P").default_value(lambda e: e.typevartuple(lambda v: v.name("Ts").default_value(
             P.starred(P.subscript(P.name("tuple"), P.tuple_(P.name("int"), P.constant(...)))))))))))
 
-    # --- python_patterns: every kind of Python's Patterns, Python3's terms in their slots --- the text:
+    # --- python_patterns: every kind of Python's Patterns, Python3's terms in their subterms --- the text:
     # record.Point(0, y=[a, *rest]) | {'k': None, **kw} | (record.RED as c)
     python_patterns = PythonPatterns.Expressions.DIALECT.spec(lambda u: u.matchor(lambda o: o.patterns([
         lambda p: p.matchclass(lambda c: c.cls(P.attribute(P.name("record"), "Point")).patterns([

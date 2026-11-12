@@ -30,7 +30,7 @@ const HELD: readonly string[] = [...E.TAGS, "distexpression"];
 /** A conditional directive's macro's name, or its condition. */
 function condition(p: Printer, node: F.Node, kind: string): string {
   if (node.helpers.has("name")) return p.spelling(node.helpers.get("name"));
-  const written = node.slots.get("condition") ?? null;
+  const written = node.subterms.get("condition") ?? null;
   if (written === null) throw new ValueError(`SystemVerilog Preprocessor ${kind} has no name or condition to print`);
   return p.text(written);
 }

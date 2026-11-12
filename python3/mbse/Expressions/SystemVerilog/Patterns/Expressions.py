@@ -164,7 +164,7 @@ def bound_names(pattern: Any) -> frozenset[str]:
         spelling = name.attributes.get("spelling") if name is not None else None
         return frozenset() if spelling is None else frozenset({spelling})
     if tag in (TAGGEDPATTERN, PATTERNMEMBER, PARENTHESIZEDPATTERN):
-        inner = node.slots["pattern"]
+        inner = node.subterms["pattern"]
         return frozenset() if inner is None else bound_names(inner)
     if tag == STRUCTUREPATTERN:
         return frozenset().union(*(bound_names(item) for item in node.many))
@@ -203,7 +203,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions hold, imported when first needed."""
+    """The dialects of its family whose terms are its subterms, imported when first needed."""
     from ..Assertions import Expressions as Assertions
     from ..Constraints import Expressions as Constraints
     from ..Preprocessor import Expressions as Preprocessor

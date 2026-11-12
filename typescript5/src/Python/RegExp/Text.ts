@@ -44,7 +44,7 @@ function member(p: Printer, item: any): string {
   if (tag === R.CHARACTER) return character(F.node(tag, record), true);
   if (tag === R.CHARACTERCLASSRANGE) {
     const node = F.node(tag, record);
-    return `${member(p, node.slots.get("min"))}-${member(p, node.slots.get("max"))}`;
+    return `${member(p, node.subterms.get("min"))}-${member(p, node.subterms.get("max"))}`;
   }
   return p.text(item)[0];
 }
@@ -67,7 +67,7 @@ function quantifier(p: Printer, node: F.Node): Written {
   const bounds = most === undefined ? (least === 0n ? "*" : least === 1n ? "+" : `{${least},}`)
     : least === 0n && most === 1n ? "?" : most === least ? `{${least}}` : `{${least},${most}}`;
   const lazy = node.attributes.get("greedy") === false ? "?" : node.attributes.get("possessive") === true ? "+" : "";
-  return [p.text(node.slots.get("element"))[0] + bounds + lazy, CLOSED];
+  return [p.text(node.subterms.get("element"))[0] + bounds + lazy, CLOSED];
 }
 
 /** `[...]`, `[^...]`. */
@@ -103,8 +103,8 @@ function backreference(_: Printer, node: F.Node): Written {
 
 /** `(?(1)yes|no)`, `(?(name)yes)`. */
 function conditional(p: Printer, node: F.Node): Written {
-  const no = node.slots.get("no") ?? null;
-  const written = p.text(node.slots.get("yes"))[0] + (no === null ? "" : "|" + p.text(no)[0]);
+  const no = node.subterms.get("no") ?? null;
+  const written = p.text(node.subterms.get("yes"))[0] + (no === null ? "" : "|" + p.text(no)[0]);
   return [`(?(${reference(node)})${written})`, CLOSED];
 }
 
@@ -129,7 +129,7 @@ export const TEXTS: ReadonlyMap<string, (p: Printer, n: F.Node) => Written> = ne
   [R.CAPTURINGGROUP, capturing],
   [R.QUANTIFIER, quantifier],
   [R.CHARACTERCLASS, class_],
-  [R.CHARACTERCLASSRANGE, (p, n) => [`${member(p, n.slots.get("min"))}-${member(p, n.slots.get("max"))}`, CLOSED]],
+  [R.CHARACTERCLASSRANGE, (p, n) => [`${member(p, n.subterms.get("min"))}-${member(p, n.subterms.get("max"))}`, CLOSED]],
   [R.CHARACTERSET, set],
   [R.CHARACTER, (_, n) => [character(n, false), CLOSED]],
   [R.ASSERTION, assertion],

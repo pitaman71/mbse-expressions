@@ -3,7 +3,7 @@
  *
  * MATLAB's terms are values of its `Term`, `Expressions.MATLAB.Expressions.Term`, the branch `matlab` of
  * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are four of
- * the framework's kinds (`Framework/Terms`), six of its own, whose slots hold MATLAB's terms, and the
+ * the framework's kinds (`Framework/Terms`), six of its own, whose subterms are MATLAB's terms, and the
  * framework's kinds of invalid syntax (`error`, `missing`); a term carries no domain:
  *
  * - `literal` (the framework's): a constant, a number (`int` or `float`, both doubles), a logical (`bool`) or a string
@@ -216,9 +216,9 @@ function specOf(value: unknown): F.Writer | null {
   return value === null || value === undefined ? null : DIALECT.spec(value);
 }
 
-/** The writer of a term of kind `tag`, with its attributes and its slots (specs; null leaves a slot empty). */
-function record(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown>): Writer {
-  const specs = Object.entries(slots).map(([name, value]) => [name, specOf(value)] as [string, F.Writer | null]);
+/** The writer of a term of kind `tag`, with its attributes and its subterms (specs; null leaves a subterm empty). */
+function record(tag: string, attributes: Record<string, unknown>, subterms: Record<string, unknown>): Writer {
+  const specs = Object.entries(subterms).map(([name, value]) => [name, specOf(value)] as [string, F.Writer | null]);
   return new Writer((u: any) => u[tag]((r: any) => {
     for (const [name, value] of Object.entries(attributes)) r[name](value);
     for (const [name, value] of specs) if (value !== null) r[name](value);

@@ -6,10 +6,10 @@
  * sublanguage then it's definitely at least a separate dialect"; Retrofit's design, Python), named `Python Patterns`
  * (`Terms.dialectName`), its tag `python_patterns`. Its terms are values of its `Term`,
  * `Expressions.Python.Patterns.Term`, the branch `python_patterns` of `Expressions.Framework.Term`. A `match` is a
- * statement, so no position of `Python3` holds a pattern: mbse-programs' `case` holds one through this dialect's
+ * statement, so no subterm of `Python3` is a pattern: mbse-programs' `case` holds one through this dialect's
  * holder, `Expressions.Python.Patterns.Expression`, which refines `Expressions.Framework.Expression`, its `root`
- * narrowed to its `Term`. Its `Term` lists none of `Python3`'s branches: an expression in a pattern stands in a kind's
- * own slot, which holds `Expressions.Python.Python3.Term`.
+ * narrowed to its `Term`. Its `Term` lists none of `Python3`'s branches: an expression in a pattern is a kind's
+ * own subterm, of `Expressions.Python.Python3.Term`.
  *
  * Its kinds are mbse-programs' patterns (`mbse:mbse-programs/python3/mbse/Programs/Python/Syntax.py`), as `ast` has
  * them, with mbse-programs' names, lowercased as branch tags, and its properties in source order, each a value object
@@ -89,7 +89,7 @@ export const DELIMITERS: readonly string[] = ["[]", "()"];
  * Python Patterns' union of its kinds, added to the framework's terms as the branch `python_patterns`, its own kinds, and
  * its dialect's schema, whose singleton is `Expressions.Python.Patterns`: run after `Framework.install`, in a transaction
  * of its own, before or after its family's other installs; run again, it writes nothing. `Python3`'s `Term`, which its
- * slots for expressions hold, is named, created where that install has not run. Its holder,
+ * subterms for expressions hold, is named, created where that install has not run. Its holder,
  * `Expressions.Python.Patterns.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its `Term`.
  */
 export function install(txn: any): any {
@@ -180,7 +180,7 @@ export function boundNames(pattern: any): ReadonlySet<string> {
     const inner = node.many.slice((node.lists.get("keys") ?? []).length); // its patterns, after a mapping's keys
     return new Set([...names, ...inner.flatMap((item) => [...boundNames(item)])]);
   }
-  const pattern_ = node.slots.get("pattern") ?? null;
+  const pattern_ = node.subterms.get("pattern") ?? null;
   if (tag === MATCHAS && pattern_ !== null) return new Set([...names, ...boundNames(pattern_)]);
   return new Set(names);
 }
@@ -213,7 +213,7 @@ export function problems(node: F.Node): string[] {
     }
     for (const attr of attrs) found.push(...P.identifierProblems("a matchclass's kwd_attr", attr));
   } else if (node.kind === MATCHSTAR || node.kind === MATCHAS) {
-    if (node.kind === MATCHAS && (node.slots.get("pattern") ?? null) !== null && !attributes.has("name")) {
+    if (node.kind === MATCHAS && (node.subterms.get("pattern") ?? null) !== null && !attributes.has("name")) {
       found.push("a matchas with a pattern needs a name"); // as `ast` has it: a wildcard has no pattern
     }
     found.push(...capture(`${F.article(node.kind)}'s name`, attributes.get("name")));
@@ -243,7 +243,7 @@ function kinds(): Record<string, F.Kind> {
   };
 }
 
-/** The dialects of its family whose terms its positions hold, read when first needed. */
+/** The dialects of its family whose terms are its subterms, read when first needed. */
 function reads(): readonly F.Dialect[] {
   return [P.DIALECT, PythonTypes.DIALECT, PythonRegExp.DIALECT];
 }

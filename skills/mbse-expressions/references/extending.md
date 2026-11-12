@@ -13,7 +13,7 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
    `install(txn)` defines its `Term`, the value union of
    its kinds (`Expressions.LaTeX.Expressions.Term`), and adds it to `Expressions.Framework.Term` by schema extension, as the branch
    named after it (`latex`): a value object schema per kind of its own (a term carries no domain), named plainly in its
-   `Term` (`frac`), a slot a property holding its `Term`, variadic arguments a container of it by an int index,
+   `Term` (`frac`), a subterm a property holding its `Term`, variadic arguments a container of it by an int index,
    attributes any other scalar property. It also defines its dialect, the singleton `Expressions.LaTeX.Expressions` of its own
    reference object schema `Expressions.LaTeX.Expressions.Dialect`, a branch (`latex`) of the kind union
    `Expressions.Framework.Dialect`, which names its operations (`Expressions.Framework.Operates`) and owns its domains
@@ -26,11 +26,11 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
 2. **Reuse the framework's kinds wherever the shape is the same.** *Why*: a kind shared is read, translated and
    evaluated alike in every dialect that has it. *How*: its `Term` lists the framework's kinds it reuses, `literal`,
    `variable`, `let` and `call` (`callable` by name, positional `arguments`), and the container constructors `list`
-   and `mapping`, wherever its kind has that shape exactly, whose slots hold any dialect's term, and the framework's
-   `error` and `missing`. It keeps a kind of its own only where the shape differs (Python3's call has a term for its
-   callee; C's literal adds what its text encodes); a restriction of its own on a reused kind ("no bytes") is its `Kind`'s
-   check.
-   - Python: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-12) · TypeScript: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-12)
+   and `mapping`, wherever its kind has that shape exactly, whose subterms may be any dialect's terms, and the
+   framework's `error` and `missing`. It keeps a kind of its own only where the shape differs (Python3's call has a term
+   for its callee; C's literal adds what its text encodes); a restriction of its own on a reused kind ("no bytes") is
+   its `Kind`'s check.
+   - Python: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's subterm may be any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-12) · TypeScript: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's subterm may be any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-12)
    - Python: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-11) · TypeScript: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-11)
 3. **Declare how each kind is read.** *Why*: validation, inference, evaluation and translation read every dialect
    through these declarations, never through its code. *How*: its `Terms.Dialect`, made with its path
@@ -42,13 +42,13 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
 | `LITERAL` | a value, its `value` (and its spelling, `text`, and `problems`) | `typed(record)`, the domain its own attributes give it (C's `type`) |
 | `REFERENCE` | what the scope resolves, by its `name` | `lexical=False` for references that need no binding (Excel cells), `ambient` for names always bound (Python's builtins) |
 | `APPLICATION` | an operator applied to arguments | `operator` (the property naming it, or none when the tag does), `vocabulary` (names to signatures) or `signature` for an open vocabulary; `closed=True` makes evaluation refuse names outside the vocabulary; `operations(store)`, the operations the dialect defines as data (Patterns'), makes validation refuse any other, read from the store of the term's holder |
-| `BINDING` | a let: binds its `name` | its slots, value then body |
+| `BINDING` | a let: binds its `name` | its subterms, value then body |
 | `QUANTIFIER` | binds its `name` to each item of a collection | `operator`, `vocabulary`, as an application |
 | `IMPORT` | makes something available within its body | `names(attributes)`, the names it binds; the scope resolves it with `enter` |
 | `INVALID` | invalid syntax, the framework's `error` and `missing`, which every dialect reads | nothing: validation reports it, evaluation refuses it |
 
-   A kind whose role says too little declares more (Python3's do): `optional`, the slots that may be empty (`lower` of
-   a slice, `generators.target` within a helper); `scopes(record)`, the names each argument has bound (a
+   A kind whose role says too little declares more (Python3's do): `optional`, the subterms that may be empty (`lower`
+   of a slice, `generators.target` within a helper); `scopes(record)`, the names each argument has bound (a
    comprehension's targets, a lambda's parameters); `operators(attributes)` and `result(attributes, domains)`, where it
    applies several operators (a comparison chain); `unfold(form)`, an equivalent form of simpler terms that translation
    reads where no rule reads the term; and `spelling`, a literal's attributes that spell it rather than give its value.

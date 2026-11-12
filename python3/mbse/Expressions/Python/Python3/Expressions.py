@@ -530,7 +530,7 @@ def _constant_check(record: Any) -> list[str]:
 
 
 def _needs(what: str, prop: str, needed: str, least: int = 1) -> Any:
-    """The check that a record's helpers `prop`, or its arguments, where it has no slots, number at least `least`."""
+    """The check that a record's helpers `prop`, or its arguments, where it has no subterms, number at least `least`."""
     def check(record: Any) -> list[str]:
         held = F.attributes_of(record).get(prop, ()) if prop in F._helpers(record.as_schema()) else F.arguments_of(record)
         return [] if len(held) >= least else [f"{F._article(what)} needs {needed}"]
@@ -749,8 +749,8 @@ def _native(value: Any) -> Writer:
 
 _ANY = FD.Function((FD.Anything,), FD.Anything)
 _ANY2 = FD.Function((FD.Anything, FD.Anything), FD.Anything)
-_ARGUMENT_SLOTS = tuple(f"args.{group}.{slot}" for group in ("posonlyargs", "args", "vararg", "kwonlyargs", "kwarg")
-                        for slot in ("annotation", "default_value"))
+_ARGUMENT_SUBTERMS = tuple(f"args.{group}.{subterm}" for group in ("posonlyargs", "args", "vararg", "kwonlyargs", "kwarg")
+                        for subterm in ("annotation", "default_value"))
 
 
 def _application(signature: FD.Signature = FD.Opaque(), **options: Any) -> F.Kind:
@@ -818,7 +818,7 @@ DIALECT = F.Dialect("Python.Python3", {
     BOOLOP: _operator_kind(Domains.BOOLOP, check=_needs(BOOLOP, "values", "two values", 2), unfold=_boolop_unfold),
     NAMEDEXPR: _application(FD.Opaque(), scopes=_namedexpr_scopes, check=_namedexpr_check, optional=("body",)),
     IFEXP: _application(FD.Function((FD.Anything, FD.Anything, FD.Anything), FD.Anything)),
-    LAMBDA: _application(scopes=_lambda_scopes, check=_lambda_check, optional=("value", *_ARGUMENT_SLOTS)),
+    LAMBDA: _application(scopes=_lambda_scopes, check=_lambda_check, optional=("value", *_ARGUMENT_SUBTERMS)),
     LET: F.Kind(F.BINDING, required=("name",), check=_identifier("name", "a let's name")),
     IMPORT: F.Kind(F.IMPORT, required=("module",), names=_import_names, check=_import_check, optional=("value",)),
     IMPORTFROM: F.Kind(F.IMPORT, required=("module", "name"), names=_importfrom_names, check=_importfrom_check,
@@ -862,19 +862,19 @@ def _spec(value: Any) -> F.Writer:
     return DIALECT.spec(value)
 
 
-def _fields_writer(attributes: Mapping[str, Any], slots: Mapping[str, Any], variadic: tuple[str, list[Any]] | None,
+def _fields_writer(attributes: Mapping[str, Any], subterms: Mapping[str, Any], variadic: tuple[str, list[Any]] | None,
                    helpers: Mapping[str, Any]) -> Any:
-    """The writer of a record: its attributes, its slots (specs) and its variadic arguments (specs) that are not None,
-    and its helpers (a `Helper`, or a list of them)."""
-    specs = {slot: _spec(value) for slot, value in slots.items() if value is not None}
+    """The writer of a record: its attributes, its subterms (specs) and its variadic arguments (specs) that are not
+    None, and its helpers (a `Helper`, or a list of them)."""
+    specs = {subterm: _spec(value) for subterm, value in subterms.items() if value is not None}
     many = None if variadic is None else (variadic[0], [_spec(value) for value in variadic[1]])
 
     def record(r: Any) -> Any:
         for attribute_name, value in attributes.items():
             if value is not None:
                 getattr(r, attribute_name)(value)
-        for slot, value in specs.items():
-            getattr(r, slot)(value)
+        for subterm, value in specs.items():
+            getattr(r, subterm)(value)
         if many is not None:
             getattr(r, many[0])(many[1])
         for helper_name, helper in helpers.items():
@@ -885,16 +885,16 @@ def _fields_writer(attributes: Mapping[str, Any], slots: Mapping[str, Any], vari
     return record
 
 
-def _kind(tag: str, attributes: Mapping[str, Any], slots: Mapping[str, Any],
+def _kind(tag: str, attributes: Mapping[str, Any], subterms: Mapping[str, Any],
           variadic: tuple[str, list[Any]] | None = None, helpers: Mapping[str, Any] | None = None) -> Writer:
     """The writer of a term of kind `tag`."""
-    record = _fields_writer(attributes, slots, variadic, helpers or {})
+    record = _fields_writer(attributes, subterms, variadic, helpers or {})
     return Writer(lambda union: getattr(union, tag)(record))
 
 
-def _helper(kind: str, attributes: Mapping[str, Any], slots: Mapping[str, Any],
+def _helper(kind: str, attributes: Mapping[str, Any], subterms: Mapping[str, Any],
             variadic: tuple[str, list[Any]] | None = None, helpers: Mapping[str, Any] | None = None) -> Helper:
-    return Helper(kind, _fields_writer(attributes, slots, variadic, helpers or {}))
+    return Helper(kind, _fields_writer(attributes, subterms, variadic, helpers or {}))
 
 
 def _name_or(value: Any) -> Any:

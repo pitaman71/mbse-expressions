@@ -173,7 +173,7 @@ function application(tag: string): F.Kind {
     optional: ["*.constraint", "*.default"] });
 }
 
-/** The dialects whose terms its positions hold, read when first needed: `TypeScript5`, whose terms a target may be and a
+/** The dialects whose terms are its subterms, read when first needed: `TypeScript5`, whose terms a target may be and a
  * default is, and `TypeScript Types`, a pattern's annotation; and `TypeScript RegExp`, as its family's dialects read one
  * another, though no pattern holds a regular expression. */
 function reads(): readonly F.Dialect[] {

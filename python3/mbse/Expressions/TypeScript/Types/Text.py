@@ -45,19 +45,19 @@ def _nodes(value: Any) -> tuple[F.Node, ...]:
 
 
 def _qualifiedname(p: X.Printer, node: F.Node) -> str:
-    return f"{p.text(node.slots['left'])}.{p.text(node.helpers['right'])}"
+    return f"{p.text(node.subterms['left'])}.{p.text(node.helpers['right'])}"
 
 
 def _typereference(p: X.Printer, node: F.Node) -> str:
-    return p.text(node.slots["typeName"]) + p.type_arguments(node)
+    return p.text(node.subterms["typeName"]) + p.type_arguments(node)
 
 
 def _parenthesizedtype(p: X.Printer, node: F.Node) -> str:
-    return f"({p.t(node.slots['typeAnnotation'], FUNCTION)})"
+    return f"({p.t(node.subterms['typeAnnotation'], FUNCTION)})"
 
 
 def _literaltype(p: X.Printer, node: F.Node) -> str:
-    return p.text(node.slots["literal"])
+    return p.text(node.subterms["literal"])
 
 
 def _templateliteraltype(p: X.Printer, node: F.Node) -> str:
@@ -69,7 +69,7 @@ def _templateliteraltype(p: X.Printer, node: F.Node) -> str:
 
 
 def _arraytype(p: X.Printer, node: F.Node) -> str:
-    return p.t(node.slots["elementType"], POSTFIX) + "[]"
+    return p.t(node.subterms["elementType"], POSTFIX) + "[]"
 
 
 def _tupletype(p: X.Printer, node: F.Node) -> str:
@@ -78,15 +78,15 @@ def _tupletype(p: X.Printer, node: F.Node) -> str:
 
 def _namedtuplemember(p: X.Printer, node: F.Node) -> str:
     optional = "?" if node.attributes.get("optional") else ""
-    return f"{p.text(node.helpers['label'])}{optional}: {p.t(node.slots['elementType'], FUNCTION)}"
+    return f"{p.text(node.helpers['label'])}{optional}: {p.t(node.subterms['elementType'], FUNCTION)}"
 
 
 def _optionaltype(p: X.Printer, node: F.Node) -> str:
-    return p.t(node.slots["typeAnnotation"], POSTFIX) + "?"
+    return p.t(node.subterms["typeAnnotation"], POSTFIX) + "?"
 
 
 def _resttype(p: X.Printer, node: F.Node) -> str:
-    return "..." + p.t(node.slots["typeAnnotation"], FUNCTION)
+    return "..." + p.t(node.subterms["typeAnnotation"], FUNCTION)
 
 
 def _uniontype(p: X.Printer, node: F.Node) -> str:
@@ -127,14 +127,14 @@ def _typeliteral(p: X.Printer, node: F.Node) -> str:
 
 def _propertysignature(p: X.Printer, node: F.Node) -> str:
     attributes = node.attributes
-    text = ("readonly " if attributes.get("readonly") else "") + p.key(node.slots["key"], attributes.get("computed", False))
+    text = ("readonly " if attributes.get("readonly") else "") + p.key(node.subterms["key"], attributes.get("computed", False))
     return text + ("?" if attributes.get("optional") else "") + p.annotation(node)
 
 
 def _methodsignature(p: X.Printer, node: F.Node) -> str:
     attributes = node.attributes
     prefix = (attributes["methodKind"] + " ") if attributes.get("methodKind") in ("get", "set") else ""
-    key = p.key(node.slots["key"], attributes.get("computed", False))
+    key = p.key(node.subterms["key"], attributes.get("computed", False))
     return f"{prefix}{key}{'?' if attributes.get('optional') else ''}{p.signature(node)}"
 
 
@@ -144,49 +144,49 @@ def _indexsignature(p: X.Printer, node: F.Node) -> str:
 
 
 def _mappedtype(p: X.Printer, node: F.Node) -> str:
-    attributes, slots = node.attributes, node.slots
+    attributes, subterms = node.attributes, node.subterms
     readonly = attributes["readonly"] + " " if "readonly" in attributes else ""
-    name = f" as {p.t(slots['nameType'], FUNCTION)}" if slots["nameType"] is not None else ""
-    value = f": {p.t(slots['body'], FUNCTION)}" if slots["body"] is not None else ""
-    constraint = p.t(slots["value"], FUNCTION)
+    name = f" as {p.t(subterms['nameType'], FUNCTION)}" if subterms["nameType"] is not None else ""
+    value = f": {p.t(subterms['body'], FUNCTION)}" if subterms["body"] is not None else ""
+    constraint = p.t(subterms["value"], FUNCTION)
     return f"{{ {readonly}[{p.text(node.helpers['key'])} in {constraint}{name}]{attributes.get('optional', '')}{value} }}"
 
 
 def _indexedaccesstype(p: X.Printer, node: F.Node) -> str:
-    return f"{p.t(node.slots['objectType'], POSTFIX)}[{p.t(node.slots['indexType'], FUNCTION)}]"
+    return f"{p.t(node.subterms['objectType'], POSTFIX)}[{p.t(node.subterms['indexType'], FUNCTION)}]"
 
 
 def _typeoperator(p: X.Printer, node: F.Node) -> str:
     operator = node.attributes["operator"]
-    if node.slots["typeAnnotation"] is None:
+    if node.subterms["typeAnnotation"] is None:
         return operator
-    return f"{operator} {p.t(node.slots['typeAnnotation'], OPERATOR)}"
+    return f"{operator} {p.t(node.subterms['typeAnnotation'], OPERATOR)}"
 
 
 def _typequery(p: X.Printer, node: F.Node) -> str:
-    return "typeof " + p.text(node.slots["exprName"]) + p.type_arguments(node)
+    return "typeof " + p.text(node.subterms["exprName"]) + p.type_arguments(node)
 
 
 def _importtype(p: X.Printer, node: F.Node) -> str:
-    slots = node.slots
-    options = ", " + p.text(slots["options"]) if slots["options"] is not None else ""
-    text = f"import({p.text(slots['source'])}{options})"
-    if slots["qualifier"] is not None:
-        text += "." + p.text(slots["qualifier"])
+    subterms = node.subterms
+    options = ", " + p.text(subterms["options"]) if subterms["options"] is not None else ""
+    text = f"import({p.text(subterms['source'])}{options})"
+    if subterms["qualifier"] is not None:
+        text += "." + p.text(subterms["qualifier"])
     return text + p.type_arguments(node)
 
 
 def _conditionaltype(p: X.Printer, node: F.Node) -> str:
-    slots = node.slots
-    extends = p.node(slots["extendsType"])  # a function type needs no parentheses, unless it returns a conditional type
+    subterms = node.subterms
+    extends = p.node(subterms["extendsType"])  # a function type needs no parentheses, unless it returns a conditional type
     returned = extends.helpers.get("returnType") if extends.kind in ("tsfunctiontype", "tsconstructortype") else None
     if extends.kind == "tsconditionaltype" or (
-            returned is not None and p.node(returned.slots["typeAnnotation"]).kind == "tsconditionaltype"):
+            returned is not None and p.node(returned.subterms["typeAnnotation"]).kind == "tsconditionaltype"):
         extended = f"({p.text(extends)})"
     else:
         extended = p.t(extends, FUNCTION)
-    return (f"{p.t(slots['checkType'], UNION)} extends {extended} ? "
-            f"{p.t(slots['trueType'], FUNCTION)} : {p.t(slots['falseType'], FUNCTION)}")
+    return (f"{p.t(subterms['checkType'], UNION)} extends {extended} ? "
+            f"{p.t(subterms['trueType'], FUNCTION)} : {p.t(subterms['falseType'], FUNCTION)}")
 
 
 def _infertype(p: X.Printer, node: F.Node) -> str:
@@ -194,9 +194,9 @@ def _infertype(p: X.Printer, node: F.Node) -> str:
 
 
 def _typepredicate(p: X.Printer, node: F.Node) -> str:
-    text = ("asserts " if node.attributes.get("asserts") else "") + p.text(node.slots["parameterName"])
+    text = ("asserts " if node.attributes.get("asserts") else "") + p.text(node.subterms["parameterName"])
     if "typeAnnotation" in node.helpers:
-        text += f" is {p.t(node.helpers['typeAnnotation'].slots['typeAnnotation'], FUNCTION)}"
+        text += f" is {p.t(node.helpers['typeAnnotation'].subterms['typeAnnotation'], FUNCTION)}"
     return text
 
 

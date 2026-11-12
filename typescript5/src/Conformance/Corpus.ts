@@ -582,7 +582,7 @@ export function build(): Map<string, Case> {
     (d: any) => d.paramspec((s: any) => s.name("P").default_value((e: any) => e.typevartuple((v: any) => v.name("Ts").default_value(
       P.starred(P.subscript(P.name("tuple"), P.tuple_(P.name("int"), P.constant(P.ELLIPSIS)))))))))));
 
-  // --- python_patterns: every kind of Python's Patterns, Python3's terms in their slots --- the text:
+  // --- python_patterns: every kind of Python's Patterns, Python3's terms in their subterms --- the text:
   // record.Point(0, y=[a, *rest]) | {'k': None, **kw} | (record.RED as c)
   const pythonPatterns = PythonPatterns.Expressions.DIALECT.spec((u: any) => u.matchor((o: any) => o.patterns([
     (p: any) => p.matchclass((c: any) => c.cls(P.attribute(P.name("record"), "Point")).patterns([

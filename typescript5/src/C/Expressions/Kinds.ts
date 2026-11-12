@@ -131,10 +131,10 @@ export function boundNames(node: F.Node): ReadonlySet<string> {
 const BINDERS: ReadonlySet<string> = new Set(["functiondeclarator", "lambdaexpression", "requiresexpression"]);
 
 /** The names each of a node's arguments has bound, in order: within a function declarator, a lambda or a requires
- * expression, its parameters' (and init captures') names; its slots, its variadic arguments, then its helpers'. */
+ * expression, its parameters' (and init captures') names; its subterms, its variadic arguments, then its helpers'. */
 function bound(node: F.Node, inner: ReadonlySet<string>): ReadonlySet<string>[] {
   if (BINDERS.has(node.kind)) inner = new Set([...inner, ...boundNames(node)]);
-  const found: ReadonlySet<string>[] = Array.from({ length: node.slots.size + node.many.length }, () => inner);
+  const found: ReadonlySet<string>[] = Array.from({ length: node.subterms.size + node.many.length }, () => inner);
   for (const value of node.helpers.values()) for (const helper of nodes(value)) found.push(...bound(helper, inner));
   return found;
 }
@@ -226,7 +226,7 @@ export function problems(node: F.Node, types: Domains.Types, suffixes: Suffixes 
 
 const ANY1 = new FD.Function([FD.Anything], FD.Anything);
 
-/** The slots of a kind's helpers that may be empty, wherever its type names nest them: an array declarator's size, a
+/** The subterms of a kind's helpers that may be empty, wherever its type names nest them: an array declarator's size, a
  * designator's range's last index, a noexcept specifier's condition, a parameter's default argument or a type
  * parameter's default type, a lambda's or a template parameter's requires clause, an enumeration's fixed type, and a
  * function's or a lambda's trailing return type. */
@@ -283,7 +283,7 @@ export function kinds(language: string, tags: readonly string[], prefixes: reado
     suffixes, prefixes, language);
   /** A cast's arithmetic type, which is its domain, read from the store of the term's holder. */
   const typedCast = (record: any): FD.Domain | null =>
-    castType(typeName(F.node(CASTEXPRESSION, record).slots.get("type")), new Domains.Types(record, pathOf(language)));
+    castType(typeName(F.node(CASTEXPRESSION, record).subterms.get("type")), new Domains.Types(record, pathOf(language)));
   const application = (tag: string, signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}) =>
     new F.Kind(F.APPLICATION, { signature, check: check(tag), scopes: scopes(tag), ...options,
       optional: [...(options.optional ?? []), ...OPTIONAL] });

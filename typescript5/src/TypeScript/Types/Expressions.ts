@@ -255,7 +255,7 @@ export function define(txn: any): any {
 
 // --- Its kinds, as the framework reads them ---
 
-/** A type parameter's slots, which may be empty at any depth: its constraint and its default. */
+/** A type parameter's subterms, which may be empty at any depth: its constraint and its default. */
 const OPTIONAL: readonly string[] = ["*.constraint", "*.default"];
 
 function application(tag: string, optional: readonly string[] = []): F.Kind {
@@ -274,7 +274,7 @@ Object.assign(KINDS, {
   identifier: new F.Kind(F.REFERENCE, { required: ["name"], lexical: false, check: Nodes.check("identifier") }),
 });
 
-/** The dialects whose terms its positions hold, read when first needed: `TypeScript5`, whose terms a type holds, and
+/** The dialects whose terms are its subterms, read when first needed: `TypeScript5`, whose terms a type holds, and
  * `TypeScript Patterns`, a function type's and a signature's parameters; and `TypeScript RegExp`, as its family's
  * dialects read one another, though no type holds a regular expression. */
 function reads(): readonly F.Dialect[] {

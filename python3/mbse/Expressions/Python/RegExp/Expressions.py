@@ -5,8 +5,8 @@ It is a dialect of the Python family (the dialects proposal, Decided for stage 6
 sublanguage then it's definitely at least a separate dialect", and "regular expressions (ECMA-262's, Python's `re`)";
 its Retrofit's design, Python; the user's "(b)" to its Open, 1: every regular expression a language's standard defines,
 its library's included), named `Python RegExp` (`Terms.dialect_name`), its tag `python_regexp`. Its terms are values of
-its `Term`, `Expressions.Python.RegExp.Term`, the branch `python_regexp` of `Expressions.Framework.Term`. No position of
-`Python3` holds one: a pattern is a string there, and that a string is a regular expression is the program's to say,
+its `Term`, `Expressions.Python.RegExp.Term`, the branch `python_regexp` of `Expressions.Framework.Term`. No subterm of
+`Python3` is one: a pattern is a string there, and that a string is a regular expression is the program's to say,
 never guessed (mbse-basis [PRI-025: never guess the schema](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-025)); mbse-programs,
 or a constraint's author, holds one through this dialect's holder, `Expressions.Python.RegExp.Expression`, which refines
 `Expressions.Framework.Expression`, its `root` narrowed to its `Term`.
@@ -383,7 +383,7 @@ def problems(node: F.Node) -> list[str]:
         if not node.many:
             found.append("a characterclass needs an element")
     elif kind == CHARACTERCLASSRANGE:
-        ends = {end: node.slots[end] for end in ("min", "max") if node.slots[end] is not None}
+        ends = {end: node.subterms[end] for end in ("min", "max") if node.subterms[end] is not None}
         for end, term in ends.items():
             if _tag(term) not in (CHARACTER, *_INVALID):
                 found.append(f"a characterclassrange's {end} must be a character, got {F._article(_tag(term))}")
@@ -420,12 +420,12 @@ def problems(node: F.Node) -> list[str]:
             found.append("min repeat greater than max repeat")
         if attributes.get("greedy") is False and attributes.get("possessive") is True:
             found.append("a quantifier is lazy or possessive, not both")
-        if node.slots["element"] is not None:
-            found += _repeatable(node.slots["element"])
+        if node.subterms["element"] is not None:
+            found += _repeatable(node.subterms["element"])
     elif kind in (BACKREFERENCE, CONDITIONAL):
         found += _reference(what, attributes)
         for end in ("yes", "no") if kind == CONDITIONAL else ():
-            term = node.slots[end]
+            term = node.subterms[end]
             if term is not None and _tag(term) not in (ALTERNATIVE, *_INVALID):
                 found.append(f"a conditional's {end} must be an alternative, got {F._article(_tag(term))}")
     elif kind == CAPTURINGGROUP:
