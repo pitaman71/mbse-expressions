@@ -1,0 +1,510 @@
+{
+ "grammar": "The grammars ISO/IEC 14882 defines for `std::basic_regex` ([re.grammar], [re.synopt]), production by production: ECMAScript's (ECMA-262, third edition, 15.10.1, the edition [intro.refs] cites, as [re.grammar] modifies it: ClassAtom and IdentityEscape modified, ClassAtomExClass, ClassAtomCollatingElement, ClassAtomEquivalence, ClassName and ClassNameCharacter added), POSIX's basic and extended regular expressions (XBD 9.5.2, with the bracket expression grammar both share, and 9.5.3), and what [re.synopt]'s awk, grep and egrep add to them (awk's escape sequences; grep's list of patterns). Each production or token is mapped to the kinds of Cpp RegExp it is read into (`kinds`, each `RegExp.<tag>`, a branch of `Expressions.Cpp.RegExp.Term`), with a `note` where it is read so in some of its alternatives alone, or is listed as not a kind (`not`), with its reason: a kind's property, a container of its terms, or a union of productions mapped each on its own. Every kind of the dialect is mapped from some production; its invalid syntax, `error` and `missing`, is the framework's, which no grammar has. Which grammar has each construct is checked by validation (`Expressions.Cpp.RegExp.FEATURES`).",
+ "checked": "ISO/IEC 14882:2017, 2020 and 2024 (N4659, N4861 and N4950), whose [re.grammar] is the same in each; ECMA-262 3rd edition (1999); ISO/IEC/IEEE 9945:2009 (POSIX.1-2008), XBD 9.5, XCU awk and grep: 78 productions and tokens, written from the standards themselves, no parser being the reference for [re.grammar]",
+ "nodes": [
+  {
+   "node": "basic_regex",
+   "source": "ISO/IEC 14882",
+   "kinds": [
+    "RegExp.regex"
+   ],
+   "note": "[re.regex]: a regular expression, of its pattern and the syntax_option_type its flags() give, which selects its grammar ([re.synopt])"
+  },
+  {
+   "node": "syntax_option_type",
+   "source": "ISO/IEC 14882",
+   "not": "a regex's `flags`, the elements it is constructed with, as written: `icase`, `nosubs`, `optimize`, `collate`, `multiline` and at most one grammar element"
+  },
+  {
+   "node": "Pattern",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.pattern"
+   ]
+  },
+  {
+   "node": "Disjunction",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "not": "the alternatives a pattern, a group, a capturing group or a lookahead holds, its `alternatives`"
+  },
+  {
+   "node": "Alternative",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.alternative"
+   ]
+  },
+  {
+   "node": "Term",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "not": "an alternative's element: an assertion, an atom, or an atom and its quantifier, a `quantifier` holding it"
+  },
+  {
+   "node": "Assertion",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.assertion"
+   ]
+  },
+  {
+   "node": "Quantifier",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.quantifier"
+   ]
+  },
+  {
+   "node": "QuantifierPrefix",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "not": "a quantifier's `min` and `max`, and its `text` as written"
+  },
+  {
+   "node": "Atom",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.characterset",
+    "RegExp.capturinggroup",
+    "RegExp.group",
+    "RegExp.assertion"
+   ],
+   "note": "`.`, `( Disjunction )`, `(?: Disjunction )`, and the third edition's lookaheads, atoms there, `(?= Disjunction )` and `(?! Disjunction )`; its other alternatives each a production of its own"
+  },
+  {
+   "node": "PatternCharacter",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.character"
+   ]
+  },
+  {
+   "node": "AtomEscape",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "not": "a backslash and what it escapes, each a production of its own: a DecimalEscape, a CharacterEscape or a CharacterClassEscape"
+  },
+  {
+   "node": "CharacterEscape",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.character"
+   ]
+  },
+  {
+   "node": "ControlEscape",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.character"
+   ]
+  },
+  {
+   "node": "ControlLetter",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "not": "the letter of a control escape (`\\cJ`), within a character's `text`"
+  },
+  {
+   "node": "IdentityEscape",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.character"
+   ],
+   "note": "as [re.grammar] modifies it: SourceCharacter but not c"
+  },
+  {
+   "node": "DecimalEscape",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.backreference",
+    "RegExp.character"
+   ],
+   "note": "`\\1` a backreference, `\\0` the character NUL"
+  },
+  {
+   "node": "CharacterClassEscape",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.characterset"
+   ]
+  },
+  {
+   "node": "CharacterClass",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.characterclass"
+   ]
+  },
+  {
+   "node": "ClassRanges",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "not": "a character class's `elements`"
+  },
+  {
+   "node": "NonemptyClassRanges",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.characterclassrange"
+   ],
+   "note": "`ClassAtom - ClassAtom` a range; its other alternatives a class's elements"
+  },
+  {
+   "node": "NonemptyClassRangesNoDash",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.characterclassrange"
+   ],
+   "note": "`ClassAtomNoDash - ClassAtom` a range; its other alternatives a class's elements"
+  },
+  {
+   "node": "ClassAtom",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "not": "a class's element, each of its alternatives a production of its own: `-`, a character, or [re.grammar]'s ClassAtomExClass, ClassAtomCollatingElement and ClassAtomEquivalence"
+  },
+  {
+   "node": "ClassAtomNoDash",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.character"
+   ]
+  },
+  {
+   "node": "ClassEscape",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.character",
+    "RegExp.characterset"
+   ],
+   "note": "`\\b` the character backspace, `\\0` NUL, a CharacterEscape a character, a CharacterClassEscape a characterset"
+  },
+  {
+   "node": "HexEscapeSequence",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.character"
+   ]
+  },
+  {
+   "node": "UnicodeEscapeSequence",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.character"
+   ]
+  },
+  {
+   "node": "ClassAtomExClass",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.exclass"
+   ],
+   "note": "[re.grammar]'s: `[: ClassName :]`"
+  },
+  {
+   "node": "ClassAtomCollatingElement",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.collatingelement"
+   ],
+   "note": "[re.grammar]'s: `[. ClassName .]`"
+  },
+  {
+   "node": "ClassAtomEquivalence",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "kinds": [
+    "RegExp.equivalence"
+   ],
+   "note": "[re.grammar]'s: `[= ClassName =]`"
+  },
+  {
+   "node": "ClassName",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "not": "an exclass's, a collating element's or an equivalence's `name`"
+  },
+  {
+   "node": "ClassNameCharacter",
+   "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
+   "not": "a character of a class atom's `name`, which holds none of `.`, `=` and `:`"
+  },
+  {
+   "node": "ORD_CHAR",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.character"
+   ]
+  },
+  {
+   "node": "QUOTED_CHAR",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.character"
+   ],
+   "note": "a special character escaped, its `text`"
+  },
+  {
+   "node": "DUP_COUNT",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a quantifier's `min` or `max`"
+  },
+  {
+   "node": "BACKREF",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.backreference"
+   ]
+  },
+  {
+   "node": "L_ANCHOR",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.assertion"
+   ]
+  },
+  {
+   "node": "R_ANCHOR",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.assertion"
+   ]
+  },
+  {
+   "node": "Back_open_paren",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a BRE's capturing group's `\\(`, which its grammar writes"
+  },
+  {
+   "node": "Back_close_paren",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a BRE's capturing group's `\\)`, which its grammar writes"
+  },
+  {
+   "node": "Back_open_brace",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a BRE's quantifier's `\\{`, which its grammar writes"
+  },
+  {
+   "node": "Back_close_brace",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a BRE's quantifier's `\\}`, which its grammar writes"
+  },
+  {
+   "node": "COLL_ELEM_SINGLE",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.character"
+   ]
+  },
+  {
+   "node": "COLL_ELEM_MULTI",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a multi-character collating element, a collating element's or an equivalence's `name`"
+  },
+  {
+   "node": "META_CHAR",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a bracket expression's special character within a collating symbol, its `name`"
+  },
+  {
+   "node": "Open_equal",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "an equivalence's `[=`, which its kind writes"
+  },
+  {
+   "node": "Equal_close",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "an equivalence's `=]`, which its kind writes"
+  },
+  {
+   "node": "Open_dot",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a collating element's `[.`, which its kind writes"
+  },
+  {
+   "node": "Dot_close",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a collating element's `.]`, which its kind writes"
+  },
+  {
+   "node": "Open_colon",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "an exclass's `[:`, which its kind writes"
+  },
+  {
+   "node": "Colon_close",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "an exclass's `:]`, which its kind writes"
+  },
+  {
+   "node": "class_name",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "an exclass's `name`"
+  },
+  {
+   "node": "basic_reg_exp",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.pattern"
+   ],
+   "note": "of one alternative, a BRE having no alternation"
+  },
+  {
+   "node": "RE_expression",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.alternative"
+   ]
+  },
+  {
+   "node": "simple_RE",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.quantifier"
+   ],
+   "note": "`nondupl_RE RE_dupl_symbol` a quantifier; a nondupl_RE alone its element"
+  },
+  {
+   "node": "nondupl_RE",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.capturinggroup"
+   ],
+   "note": "`Back_open_paren RE_expression Back_close_paren`; its other alternatives a production of their own"
+  },
+  {
+   "node": "one_char_or_coll_elem_RE",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.characterset"
+   ],
+   "note": "`.`; its other alternatives a production of their own"
+  },
+  {
+   "node": "RE_dupl_symbol",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a quantifier's `min` and `max`, and its `text` as written"
+  },
+  {
+   "node": "bracket_expression",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.characterclass"
+   ]
+  },
+  {
+   "node": "matching_list",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a characterclass's `elements`"
+  },
+  {
+   "node": "nonmatching_list",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a characterclass that is `negate`d, its `elements`"
+  },
+  {
+   "node": "bracket_list",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a characterclass's `elements`, a trailing `-` a character"
+  },
+  {
+   "node": "follow_list",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a characterclass's `elements`"
+  },
+  {
+   "node": "expression_term",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a characterclass's element, each of its alternatives a production of its own"
+  },
+  {
+   "node": "single_expression",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a characterclass's element, each of its alternatives a production of its own"
+  },
+  {
+   "node": "range_expression",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.characterclassrange"
+   ]
+  },
+  {
+   "node": "start_range",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a range's `min`, an end_range"
+  },
+  {
+   "node": "end_range",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a range's `min` or `max`, a character or a collating element"
+  },
+  {
+   "node": "collating_symbol",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.collatingelement"
+   ]
+  },
+  {
+   "node": "equivalence_class",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.equivalence"
+   ]
+  },
+  {
+   "node": "character_class",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.exclass"
+   ]
+  },
+  {
+   "node": "extended_reg_exp",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.pattern"
+   ]
+  },
+  {
+   "node": "ERE_branch",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.alternative"
+   ]
+  },
+  {
+   "node": "ERE_expression",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.assertion",
+    "RegExp.capturinggroup",
+    "RegExp.quantifier"
+   ],
+   "note": "`^` and `$`, `( extended_reg_exp )`, and `ERE_expression ERE_dupl_symbol`; its other alternative a production of its own"
+  },
+  {
+   "node": "one_char_or_coll_elem_ERE",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "kinds": [
+    "RegExp.characterset"
+   ],
+   "note": "`.`; its other alternatives a production of their own"
+  },
+  {
+   "node": "ERE_dupl_symbol",
+   "source": "ISO/IEC/IEEE 9945, XBD 9.5",
+   "not": "a quantifier's `min` and `max`, and its `text` as written"
+  },
+  {
+   "node": "escape sequence",
+   "source": "ISO/IEC/IEEE 9945, XCU awk, Regular Expressions",
+   "kinds": [
+    "RegExp.character"
+   ],
+   "note": "awk's escapes in an ERE (`\\\"`, `\\/`, `\\ddd`, `\\a`, `\\b`, `\\f`, `\\n`, `\\r`, `\\t`, `\\v`), a character's `text`"
+  },
+  {
+   "node": "pattern_list",
+   "source": "ISO/IEC/IEEE 9945, XCU grep",
+   "kinds": [
+    "RegExp.patternlist"
+   ],
+   "note": "grep's and egrep's (`grep -E`) newline-separated patterns, each a BRE or an ERE"
+  }
+ ]
+}
