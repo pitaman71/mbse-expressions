@@ -41,11 +41,6 @@ export const HOLDS: ReadonlyMap<string, ReadonlyMap<string, readonly string[]>> 
 
 export const EDITIONS = K.EDITIONS;
 
-/** A node's checks: what its terms may be (`HOLDS`), and its attributes' values. */
-export function problems(node: F.Node): string[] {
-  return K.problems(K.ERE, node);
-}
-
 /** POSIX ERE's union of its kinds, added to the framework's terms as the branch `posix_ere`, its own kinds, and its
  * dialect's schema, whose singleton is `Expressions.POSIX.ERE`: run after `Framework.install`, in a transaction of its
  * own, before or after its family's other install; run again, it writes nothing. */

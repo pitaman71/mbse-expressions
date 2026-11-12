@@ -25,7 +25,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from .. import Kinds as K
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "HOLDS", "EDITIONS", "problems"]
+__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "HOLDS", "EDITIONS"]
 
 TAGS = K.tags(K.ERE)
 """Its own kinds, in its `Term`'s order, before invalid syntax."""
@@ -42,11 +42,6 @@ HOLDS = K.holds(K.ERE)
 or an anchor too (`ERE_expression ERE_dupl_symbol`)."""
 
 EDITIONS = K.EDITIONS
-
-
-def problems(node: F.Node) -> list[str]:
-    """A node's checks: what its terms may be (`HOLDS`), and its attributes' values."""
-    return K.problems(K.ERE, node)
 
 
 def install(txn: Any) -> Any:
