@@ -1,5 +1,5 @@
 <!-- nav -->
-[← 8 · Constraints for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 15 · Constraints for firmware and hardware (TypeScript)](../typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
 
 # Equivalence of the implementations
 
@@ -17,6 +17,7 @@ the translators between them.
 | API conformance to the visitor protocols and the framework's protocols, on classes and on live instances | VIS-01, VIS-02, FRM-01 |
 | JSON is byte-identical, for a case of every dialect; YAML and JSON are interchangeable | the CONF suite over the shared corpus in `conformance/` |
 | The agent guides are current, and their links resolve: every notebook case the skill links, in both languages but those listed in [Cases in one language only](#cases-in-one-language-only) | the SKL suite |
+| Every tutorial has the same steps in both languages: the same notebooks, titles and `## NN.k · title` headings, in the same order, each step's cell starting with its anchor | SKL-05 |
 | The TypeScript model of Python's rules gives what Python gives | DIA-02's tables of values and errors, which the Python suite runs against Python itself |
 | Full code coverage in both | the coverage gates below |
 
@@ -47,6 +48,7 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | Python3's completeness against `ast` | DIA-20 checks `grammars/python3-ast.json` against the running Python's `ast` too | DIA-20 checks the same file against the dialect alone | `ast` is Python's | DIA-20 |
 | Python's constants with no JavaScript value | `P.constant(None)`, `P.constant(...)`, `P.constant(2j)`: Python's own | `P.constant(null)`, `P.constant(P.ELLIPSIS)`, `P.constant(new P.Complex(0, 2))` | JavaScript has no `Ellipsis` or complex numbers; the terms written are the same, and the corpus's `python3` case holds each | DIA-01, CONF |
 | Python3's writers' options | `P.lambda_(body, args, posonlyargs=..., vararg=..., kwonlyargs=..., kwarg=...)`; `P.comprehension(target, iter, ifs, is_async)`, `P.formattedvalue(value, conversion, format_spec, debug, text)` by keyword or position | `P.lambda_(body, args, { posonlyargs, vararg, kwonlyargs, kwarg })`; the others by position | no keyword arguments: an options object where there are several | DIA-01, DIA-19 |
+| A kind tagged by a Python keyword, in builder calls | `getattr(u, "lambda")(...)`, `getattr(u, "import")(...)`, or by the dialect's constant (`getattr(u, P.IMPORT)(...)`): a keyword is no attribute name | `u.lambda(...)`, `u.import(...)` | Python's grammar refuses a keyword after a dot, where JavaScript allows a reserved word as a property name | FRM-05, FRM-10, TRN-02, DIA-01 |
 | TypeScript5's literals | a number's value a `float`, a bigint's an `int` (`ts(1.5)`, `ts(1)`) | a number's a `number`, a bigint's a `bigint` (`ts(1.5)`, `ts(1n)`) | each language's numbers; the terms written are the same, a number always a float | DIA-21, CONF |
 | TypeScript5's number spelling | `Text.number`, JavaScript's `String(number)` written in Python, from `repr`'s shortest digits | `Text.number` is `String(number)` | JavaScript's own; DIA-22 checks the two alike, at each notation's bounds | DIA-22 |
 | Nested reading: TypeScript5's, C's and C++'s | `Terms.node(tag, record)` and TypeScript5's `Expressions.tree(term)`, a `Terms.Node` dataclass, its `attributes`, `slots` and `helpers` dicts, `many` a tuple, a helper's many nodes a tuple; `binding_names` (TypeScript5's and TypeScript Patterns', one function) | `Terms.node(tag, record)` and `Expressions.tree(term)`, a `Terms.Node` class, its fields `Map`s, `many` an array, a helper's many nodes an array; `bindingNames` (TypeScript5's and TypeScript Patterns', one function) | each language's records and names | DIA-21, DIA-24, DIA-25 |
@@ -60,7 +62,7 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | Excel's error values | `Error("#FIELD!")`, equal by value | `Error.of("#FIELD!")`, one instance per code, compared with `===` | JavaScript has no value equality for objects | DIA-06..08, TRN-06 |
 | Patterns' natives' domains, for inference | `Domains.Int` is `Framework.Domains.OfTypes("int", int)`, and so on for `bool`, `float`, `str` and `bytes` | `new D.OfTypes("int", BigInt)`, a float's `Number`, `Boolean`, `String` and `Uint8Array` | every int is a `bigint` in the data model; both compare by identity | DOM-01, DOM-09 |
 | IEEE 754 formats (`Ieee754`) | `FORMATS` gives `(base, precision, emax)` as `int`s, and a `Datum`'s coefficient is an `int`; DOM-11's table is also checked against Python's `decimal` module and the host's binary16 and binary32 rounding | the base and a `Datum`'s coefficient are `bigint`s, the precision and exponents `number`s; the table alone | coefficients outgrow numbers, exponents do not; the references are Python's | DOM-10..12 |
-| Domains' reading interface | `Domains.kind_of` gives a tuple `(dialect, tag, record)`; `properties` and `operations` dicts, a container a tuple; `name_of` a str or None; and the standards' (`Standards`): `standards` and `properties` dicts, a container and a revision tuples (`("year", 2011)`), `tags` a tuple, `kinds` a list, `designation_of` and `find` a str or an edition, or None | `Domains.kindOf` gives an array `[dialect, tag, record]`; `properties` and `operations` `Map`s, a container an array; `nameOf` a string or `null`; and the standards' camelCase (`designationOf`): `standards` and `properties` `Map`s, a container, a revision (`["year", 2011n]`), `tags` and `kinds` arrays, `designationOf` and `find` a string or an edition, or `null`; a module's identity is checked by dynamic import where Python checks `__name__` | the languages' own collections | DOM-03, DOM-17, DOM-18, DOM-19, FRM-13, CONF-04, T07.5 |
+| Domains' reading interface | `Domains.kind_of` gives a tuple `(dialect, tag, record)`; `properties` and `operations` dicts, a container a tuple; `name_of` a str or None; and the standards' (`Standards`): `standards` and `properties` dicts, a container and a revision tuples (`("year", 2011)`), `tags` a tuple, `kinds` a list, `designation_of` and `find` a str or an edition, or None | `Domains.kindOf` gives an array `[dialect, tag, record]`; `properties` and `operations` `Map`s, a container an array; `nameOf` a string or `null`; and the standards' camelCase (`designationOf`): `standards` and `properties` `Map`s, a container, a revision (`["year", 2011n]`), `tags` and `kinds` arrays, `designationOf` and `find` a string or an edition, or `null`; a module's identity is checked by dynamic import where Python checks `__name__` | the languages' own collections | DOM-03, DOM-17, DOM-18, DOM-19, FRM-13, CONF-04, T01.3 |
 | Collections | `Domains.Collection` and `Domains.Record`, and inference's collection domains `Domains.List` and `Domains.Keyed`, are frozen dataclasses compared with `==`, a collection's items and keys tuples and a record's fields a `dict`; a scope's list or tuple is a positional collection | classes compared with `equals()` (a record by identity), items and keys arrays and fields a `Map`; a scope's array is a positional collection | each language's records and sequences | COL-01..08 |
 | Conversions of literals and container constructors | `Convert(left, right, forward, backward)`'s functions take and give a literal's attributes as a `dict`, or None; `Elementwise(left, right, left_attributes, right_attributes, direction)` takes dicts and keyword arguments | they take and give a plain object (`Attributes`), or `null`; `new Elementwise(left, right, leftAttributes, rightAttributes, direction)`, plain objects, positional | a form's attributes are a `Map`, which a function reads more plainly as an object | TRN-01 |
 | Partial evaluation | `Partials.REDUCER(term, variables)`, a callable; variables a mapping | `Partials.REDUCER.run(term, variables)`; variables an object | no callable instances, as for `Interpreter` | PAR-01..04 |
@@ -76,16 +78,20 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 
 ## Tutorials
 
-`python3/tutorials/` and `typescript5/tutorials/` are the same seven case studies (the fourth deferred), with the same answers. Both build
-their constraints with writers, each written in a store within a transaction, so that the expressions, and their JSON,
-are the same; Python also reads Python source with `Text.FromText`, where TypeScript writes the same expression with
-the Python3 dialect's constructors. Each toolkit's `show` writes floats as Python does (`2.0`), so the expressions print
+`python3/tutorials/` and `typescript5/tutorials/` are the same notebooks, in two parts, with the same steps and the
+same answers. Part I (tutorials 1 to 8) writes each model in the builders' fluent calls and checks that its dialect's
+`Text.ToText` gives the language's own text back; Python's notebooks also read Python3's text with `Text.FromText`,
+where TypeScript's build the same model, under the same case ID. Part II (9 to 15, seven case studies) builds its
+constraints with writers, each written in a store within a transaction, so that the expressions, and their JSON, are
+the same; Python also reads Python source with `Text.FromText`, where TypeScript writes the same expression with the
+Python3 dialect's constructors. Each toolkit's `show` writes floats as Python does (`2.0`), so the expressions print
 alike; values printed by each language's own means (`4n`, `4.0` against `4`) follow that language. Both are run as
 tests and committed with outputs (Python's from its kernel, TypeScript's from Deno's Jupyter kernel).
 
 Both languages' steps carry the same IDs, `## NN.k · title`, in the same order, and each step's markdown cell starts
 with the same anchor, `<a id="Tnn.k"></a>`, which the skill links, as each test case's starts with its ID's
-(`<a id="EXP-01"></a>`). When a case study changes, change both, and rerun both notebooks to refresh their outputs.
+(`<a id="EXP-01"></a>`); SKL-05 checks that every tutorial has the same steps in both languages. When a tutorial
+changes, change both, and rerun both notebooks to refresh their outputs.
 
 ## Cases in one language only
 
@@ -99,4 +105,4 @@ its language and why.
 ---
 
 <!-- nav -->
-[← 8 · Constraints for firmware and hardware (TypeScript)](../typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)
+[← 15 · Constraints for firmware and hardware (TypeScript)](../typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb) · [Home](../README.md) · [Conformance corpus →](../conformance/README.md)

@@ -12,8 +12,10 @@ does, and why by rules, is mbse-basis'
    declared, and `forward(term)` translates a term into a writer of the target's term, which you write where you want
    it, in a transaction, in a store where the target's install has run. Translating directly or through a third
    dialect gives the same expression, so pick the pair you need.
-   - Python: [T07.1: Translating](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1) · TypeScript: [T07.1: Translating](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1)
-   - Python: [T07.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.3) · TypeScript: [T07.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.3)
+   - Python: [T03.6: 2.5, a string, a boolean](mbse:mbse-expressions/python3/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.6) · TypeScript: [T03.6: 2.5, a string, a boolean](mbse:mbse-expressions/typescript5/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.6)
+   - Python: [T04.5: Names across languages](mbse:mbse-expressions/python3/tutorials/04_Names.ipynb#T04.5) · TypeScript: [T04.5: Names across languages](mbse:mbse-expressions/typescript5/tutorials/04_Names.ipynb#T04.5)
+   - Python: [T14.1: Translating](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1) · TypeScript: [T14.1: Translating](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1)
+   - Python: [T14.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3) · TypeScript: [T14.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3)
    - Python: [TRN-02: Every pair translates both ways; forms round-trip where both dialects have them](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-02) · TypeScript: [TRN-02: Every pair translates both ways; forms round-trip where both dialects have them](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-02)
    - Python: [TRN-03: Translating the same pair of dialects by any route gives the same expression](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-03) · TypeScript: [TRN-03: Translating the same pair of dialects by any route gives the same expression](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-03)
 2. **Trace what became what.** *When*: reporting where a part of a constraint went, or checking sharing. *How*: give
@@ -30,7 +32,7 @@ does, and why by rules, is mbse-basis'
 
 - **The form, not always the value.** Each dialect evaluates by its own rules (see [Dialects](dialects.md)), so a
   translated constraint can give a different answer on the same data: missing values, `1 == 1.0`, case in text.
-  - Python: [T07.2: Each language evaluates by its own rules](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.2) · TypeScript: [T07.2: Each language evaluates by its own rules](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.2)
+  - Python: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2) · TypeScript: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2)
   - Python: [TRN-06: Translations evaluate alike where the dialects' rules agree, and apart where they do not](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-06) · TypeScript: [TRN-06: Translations evaluate alike where the dialects' rules agree, and apart where they do not](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-06)
 - **Round trips, where both dialects can say it.** The exceptions:
 
@@ -52,6 +54,7 @@ does, and why by rules, is mbse-basis'
 | a quantifier or a collection operation | Excel | `MAP` and `LAMBDA` and array functions (`AND(MAP(xs, LAMBDA(p, p > 0)))`, `ROWS(xs)`, `INDEX(xs, i + 1)`); `unique(xs)` is written `ROWS(UNIQUE(xs)) = ROWS(xs)`, which does not read back |
 | a quantifier or a collection operation | LaTeX, C, Cpp | no counterpart yet, a known gap ([CAP-102: collections translated to LaTeX and C and C++](mbse:mbse-basis/docs/capabilities/CAP-102.md)); Python, MATLAB and Excel also translate collections into each other directly |
 
+- Python: [T05.5: Chains and n-ary logic](mbse:mbse-expressions/python3/tutorials/05_Operators.ipynb#T05.5) · TypeScript: [T05.5: Chains and n-ary logic](mbse:mbse-expressions/typescript5/tutorials/05_Operators.ipynb#T05.5)
 - Python: [TRN-02: Every pair translates both ways; forms round-trip where both dialects have them](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-02) · TypeScript: [TRN-02: Every pair translates both ways; forms round-trip where both dialects have them](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-02)
 - Python: [TRN-08: Patterns and C, and Patterns and C++, translate into each other by one rule set; lets are inlined, and `has`, `->`, typed literals, casts and the other kinds have no counterpart](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-08) · TypeScript: [TRN-08: Patterns and C, and Patterns and C++, translate into each other by one rule set; lets are inlined, and `has`, `->`, typed literals, casts and the other kinds have no counterpart](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-08)
 - Python: [TRN-09: Patterns and SystemVerilog translate into each other; lets are inlined, bools are single bits, and `has`, sized vectors and 4-state comparisons have no counterpart](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-09) · TypeScript: [TRN-09: Patterns and SystemVerilog translate into each other; lets are inlined, bools are single bits, and `has`, sized vectors and 4-state comparisons have no counterpart](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-09)
@@ -62,8 +65,10 @@ does, and why by rules, is mbse-basis'
 - Python: [TRN-14: Collections translate directly between Python, MATLAB and Excel, as they do through Patterns](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-14) · TypeScript: [TRN-14: Collections translate directly between Python, MATLAB and Excel, as they do through Patterns](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-14)
 - **What it cannot say, it refuses.** A term with no counterpart raises `ValueError` naming it, by its dialect and its
   kind: "Excel cell has no MATLAB counterpart", "Patterns call 'entries' has no Python3 counterpart".
-  - Python: [T07.1: Translating](mbse:mbse-expressions/python3/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1) · TypeScript: [T07.1: Translating](mbse:mbse-expressions/typescript5/tutorials/07_One_Constraint_Many_Languages.ipynb#T07.1)
-  - Python: [T08.5: What has no counterpart](mbse:mbse-expressions/python3/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.5) · TypeScript: [T08.5: What has no counterpart](mbse:mbse-expressions/typescript5/tutorials/08_Constraints_For_Firmware_And_Hardware.ipynb#T08.5)
+  - Python: [T06.2: An item](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.2) · TypeScript: [T06.2: An item](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.2)
+  - Python: [T06.3: A call](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.3) · TypeScript: [T06.3: A call](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.3)
+  - Python: [T14.1: Translating](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1) · TypeScript: [T14.1: Translating](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1)
+  - Python: [T15.5: What has no counterpart](mbse:mbse-expressions/python3/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.5) · TypeScript: [T15.5: What has no counterpart](mbse:mbse-expressions/typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.5)
   - Python: [TRN-05: What a dialect cannot say is refused, naming the term](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-05) · TypeScript: [TRN-05: What a dialect cannot say is refused, naming the term](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-05)
 
 ## How translators are written
@@ -83,7 +88,7 @@ domain); `Elementwise` maps a container constructor of any number of arguments (
 `VSTACK(a, b)`, Python's `[a, b]` and MATLAB's `[a, b]`). A translator between a dialect and itself, `Pairwise(DIALECT,
 DIALECT, rules)`, is a rewriting.
 
-- Python: [T06.5: Rewriting](mbse:mbse-expressions/python3/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.5) · TypeScript: [T06.5: Rewriting](mbse:mbse-expressions/typescript5/tutorials/06_Analyzing_And_Rewriting_Constraints.ipynb#T06.5)
+- Python: [T13.5: Rewriting](mbse:mbse-expressions/python3/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.5) · TypeScript: [T13.5: Rewriting](mbse:mbse-expressions/typescript5/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.5)
 - Python: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-01) · TypeScript: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-01)
 
 ## Go deeper

@@ -5,9 +5,9 @@
 
 This proposes how this repository's tutorials are rebuilt: a new first part, eight notebooks that teach how values,
 their domains and each language's expressions are modeled, from a single literal up; then today's seven case studies
-on constraints, renumbered after it, trimmed of what the first part now teaches, with no gap in their numbering. It
-asks what only the user can decide. No notebook or code changes until it is decided, and the build waits for stage 6
-(SystemVerilog complete) to merge.
+on constraints, renumbered after it, trimmed of what the first part now teaches, with no gap in their numbering. The
+user has decided its questions ([Decided](#decided)), and stage 6 (SystemVerilog complete) has merged; it is being
+built on the branch `tutorials`, as [The build plan](#the-build-plan) says.
 
 ## Why
 
@@ -258,15 +258,15 @@ Python  a + b * c    C  (a + b) * c    SystemVerilog  a + b * c    Excel  =a + b
 ```
 
 ```python
-var = lambda n: lambda d: d.variable(lambda v: v.name(n))
+variable = lambda name: lambda d: d.variable(lambda v: v.name(name))
 with store.transaction():
     patterns = S.Patterns.Expressions.Expression(lambda e: e.root(lambda u: u.call(lambda c: c.callable("add").arguments([
-        lambda t: t.patterns(var("a")),
+        lambda t: t.patterns(variable("a")),
         lambda t: t.patterns(lambda d: d.call(lambda m: m.callable("mul").arguments([
-            lambda t: t.patterns(var("b")), lambda t: t.patterns(var("c"))])))]))))
+            lambda t: t.patterns(variable("b")), lambda t: t.patterns(variable("c"))])))]))))
     c = S.C.Expressions.Expression(lambda e: e.root(lambda u: u.binaryexpression(lambda b: b
-        .left(lambda l: l.binaryexpression(lambda s: s.left(var("a")).operator("+").right(var("b"))))
-        .operator("*").right(var("c")))).abi([amd64]))
+        .left(lambda l: l.binaryexpression(lambda s: s.left(variable("a")).operator("+").right(variable("b"))))
+        .operator("*").right(variable("c")))).abi([amd64]))
 C.Text.ToText(c)    # '(a + b) * c'
 ```
 
@@ -291,9 +291,9 @@ Python  x.readings[0]    Excel  =INDEX(x.readings, 0 + 1)    MATLAB  x.readings(
 ```
 
 ```python
-with store.transaction():  # var, as in 5's example
+with store.transaction():  # variable, as in 5's example
     call = S.Python.Python3.Expression(lambda e: e.root(lambda u: u.call(lambda c: c
-        .func(var("f")).args([var("x")])
+        .func(variable("f")).args([variable("x")])
         .keywords([lambda k: k.arg("y").value(lambda t: t.literal(lambda r: r.value(lambda v: v.as_scalar(1))))]))))
 ```
 
@@ -407,8 +407,8 @@ What they change here, as the dialects proposal records them
 - **The retrofit**: every binding kind refines the framework's `Let` ("Q8") and the other dialects' types, patterns,
   regular expressions and preprocessors become dialects: tutorials 7 and 8.
 
-So nothing is built until stage 6 merges: tutorials 1 to 6 and Part II then; 7 and 8 after the retrofit, if the user
-agrees (Question 3). Part II's 15 is re-executed after stage 6 either way, since its SystemVerilog outputs change.
+So nothing is built until stage 6 merges: tutorials 1 to 6 and Part II then; 7 and 8 after the retrofit, as the user
+decided (Question 3). Part II's 15 is re-executed after stage 6 either way, since its SystemVerilog outputs change.
 
 ## The build plan
 
@@ -458,6 +458,23 @@ relating to [FEA-024: expressions as data](https://github.com/pitaman71/mbse-bas
 values, their domains and each language's expressions are modeled, from one literal up, before constraints, each step a
 case run in both languages. Its ID is assigned when it is added. This proposal is drained into it once built.
 
+## Decided
+
+The user merged this proposal on 2026-11-11 (mbse-expressions#33), which the coordinating session takes as accepting
+its three recommendations: the acceptance is inferred from the merge, not stated by the user. The request it answers,
+the user's, 2026-11-10: "Before moving to `mbse-programs`, `mbse-expressions/<language>/tutorials` needs an overhaul.
+The content seems to focus entirely on constraints, which should be preceded by Jupyter notebooks that serve as both
+tutorial and test, building up knowledge of how domains are represented, how native expressions correspond to modeled
+expressions starting with trivial expressions and building up complexity."
+
+1. **Builder calls in Part I** (Question 1, option a): every model in Part I is written in the builders' fluent calls,
+   and each dialect's writers are shown once, in 03.1, as the shorthand Part II uses, asserting `Terms.same`.
+2. **Native text printed, and read where it can be** (Question 2, option a): each model is built, then checked that
+   its dialect's `Text.ToText` gives the native text; Python's notebooks also read Python3 with `Text.FromText`, the
+   listed deliberate difference, under the same case ID.
+3. **Tutorials 1 to 6 and Part II now, 7 and 8 after the retrofit** (Question 3, option a): built now that stage 6 has
+   merged; tutorials 7 and 8 once the retrofit lands.
+
 ## Decided by an agent, for review
 
 Minutiae this proposal settles, each the simplest default consistent with the records:
@@ -474,11 +491,19 @@ Minutiae this proposal settles, each the simplest default consistent with the re
 - **Deferred steps join where they belong without renumbering**: *Values with widths*, when domain inference lands,
   as further steps of 2, 3 and 15.
 - **SKL-05, new, in both suites**, checks that every tutorial has the same steps in both languages.
+- **One name helper, `variable`** *(agent)*: tutorials 5 and 6 write a name through one line,
+  `variable = lambda name: lambda d: d.variable(lambda v: v.name(name))`, the same in both notebooks and both
+  languages. It follows this proposal's plan, whose examples (5 and 6) wrote it; it is a spec, the callable a builder
+  takes and returns ([PRI-004: one visitor protocol per kind](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-004)),
+  not a function that builds a model; and it is named after the kind it writes, not `var`, as the plan had it, since
+  `var` is a reserved word in TypeScript.
 - **The findings fixed in the build**: the skill's "Names" section corrected for `Domains` and `Standards`
   (finding 5), and the keyword-tagged kinds' `getattr` listed in `docs/EQUIVALENCE.md` (finding 6). Finding 4,
   Python's `FromText` dropping parentheses, is `ast`'s, and stays as built: 05.3 says so.
 
 ## Questions for the user
+
+Answered: each as recommended ([Decided](#decided)).
 
 1. **Writers or builder calls in Part I.** [PRI-019: fluent builder syntax](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-019)
    prefers the builders' own calls and calls helpers that wrap them "another DSL"; this repository's writers
