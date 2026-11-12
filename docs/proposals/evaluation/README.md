@@ -78,3 +78,44 @@ The options, each with what it keeps and what it closes
 
 *Recommended: (b)*, to verify first that mbse-schemas narrows a container's element by refinement, as it narrows a
 property; (d) stays open.
+
+## 3. Which dialect evaluates
+
+ISO/IEC 11404 is the published standard for this: language-independent datatypes, each defined by its values and its
+characterizing operations (Boolean's Not, And and Or; Integer's Equal, InOrder, Add, Multiply and Negate; Modulo's
+wrapping Add and Multiply; State's Equal; Sequence's Head, Tail and Append; Record's field selection; ...), written so
+that languages' datatypes map onto them. [CAP-180: ISO/IEC 11404 datatypes replace the Basic expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-180.md)
+already holds the user's direction, "Datatype operations are modeled, not coded", half built: its dialect holds the
+kinds, and every dialect's stored domains are already of its kinds or of the other standard dialects'
+([CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#value-domains)).
+Modeled from a standard, it is not the neutral language VOC-027 names, and needs no approval under
+[PRI-022: second-order inventions by approval](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-022).
+The options:
+
+- **(a) Each dialect its own evaluator, as today.** Closing the inventory's 79 gaps means modeling ECMAScript's
+  abstract operations in Python, Python's equality and closures in TypeScript, C's object-free arithmetic and
+  SystemVerilog's system functions, each twice ([PRI-028: both implementations change together](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-028)):
+  nine semantics for consumers that need one. Keeps fidelity; closes nothing, at the highest cost.
+- **(b) The standard dialects evaluate; every other dialect is evaluated by its lowering into them.** ISO/IEC 11404's
+  dialect gains terms: the framework's kinds, its calls naming its characterizing operations as data
+  ([CAP-098: dialects over one framework](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-098.md),
+  `Operates`), each implemented once per language as an intrinsic, IEEE 754's, IEEE 1164's and Unicode's operations
+  beside them. A language's dialect is evaluated by translating its terms into those, its own rules written out
+  (C's promotions as conversions, as CAP-232's design already has it), by declared rules as
+  [CAP-101: translation between dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-101.md)'s
+  are; the translators into Patterns, which six dialects have, are where that starts. A parameter binding is written
+  in 11404's dialect itself and evaluated with no translation: the "neutral" dialect the user found missing, taken
+  from a standard. Patterns keeps only what is mbse-schemas' (`get`, `has`, `entries`, its quantifiers over a
+  pattern), extending 11404's dialect. Keeps one semantics, small, in both languages; closes fidelity where a
+  language's meaning has no 11404 form, which is left unevaluated (section 4).
+- **(c) Each language's own runtime** ([CAP-203: evaluators delegating to per-language libraries](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-203.md)):
+  a term printed and run by CPython, Node, a C compiler or a simulator. Exact fidelity; but neither implementation
+  can run the other's, so the two give different answers ([QUA-006: the same in every language](https://github.com/pitaman71/mbse-basis/blob/main/docs/QUALITIES.md#QUA-006)).
+  Kept open as an optional check of a lowering, not as the evaluator.
+- **(d) None.** This repository validates, stores and translates; evaluation is the caller's. CAP-142 stays blocked
+  until someone else builds (a) or (b).
+
+*Recommended: (b)*, with (c) open as CAP-203 has it, and today's evaluators kept as they are, not grown, until each
+dialect's lowering covers what it evaluates (the dialects' "a shallow evaluator", question 8, stands meanwhile). Where
+11404 is silent, so is (b): it has no bitwise operations or shifts, which Patterns has; IEEE 1164 defines the logical
+operators over bit vectors, and IEEE 1076's `numeric_std` the shifts *(agent)*, question 4.
