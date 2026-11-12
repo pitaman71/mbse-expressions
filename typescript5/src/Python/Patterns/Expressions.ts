@@ -54,6 +54,7 @@ import type { Listed } from "../../Framework/Objects.js";
 import * as F from "../../Framework/Terms.js";
 import * as Family from "../Python3/Domains.js";
 import * as P from "../Python3/Expressions.js";
+import * as PythonRegExp from "../RegExp/Expressions.js";
 import * as PythonTypes from "../Types/Expressions.js";
 
 const { repr } = Repr;
@@ -244,7 +245,7 @@ function kinds(): Record<string, F.Kind> {
 
 /** The dialects of its family whose terms its positions hold, read when first needed. */
 function reads(): readonly F.Dialect[] {
-  return [P.DIALECT, PythonTypes.DIALECT];
+  return [P.DIALECT, PythonTypes.DIALECT, PythonRegExp.DIALECT];
 }
 
 /** The Python Patterns dialect: its kinds, as the framework reads them, and its family's other dialects' terms. */

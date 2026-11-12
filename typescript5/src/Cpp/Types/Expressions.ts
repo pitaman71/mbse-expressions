@@ -39,6 +39,7 @@ import * as F from "../../Framework/Terms.js";
 import * as K from "../../C/Expressions/Kinds.js";
 import * as CPreprocessor from "../../C/Preprocessor/Expressions.js";
 import * as Cpp from "../Expressions/Expressions.js";
+import * as CppRegExp from "../RegExp/Expressions.js";
 
 export const ENUMERATOR = K.ENUMERATOR;
 
@@ -134,9 +135,10 @@ export function define(txn: any): any {
 }
 
 /** The dialects whose terms its positions hold, read when first needed: C++'s, whose terms and helpers a type-id holds,
- * and C Preprocessor's, whose directives an enumeration's body holds. */
+ * and C Preprocessor's, whose directives an enumeration's body holds; and Cpp RegExp's, which no position holds, as each
+ * family's dialects read one another *(agent)*. */
 function reads(): readonly F.Dialect[] {
-  return [Cpp.DIALECT, CPreprocessor.DIALECT];
+  return [Cpp.DIALECT, CPreprocessor.DIALECT, CppRegExp.DIALECT];
 }
 
 /** The Cpp Types dialect: its kinds, as the framework reads them, and the terms of the dialects its positions hold. */

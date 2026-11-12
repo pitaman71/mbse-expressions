@@ -43,9 +43,10 @@
  * holder too.
  *
  * The editions of ECMA-262 it covers are data, which `define` writes, each owned by its designation as Ecma
- * International writes it (`ECMA-262 6th Edition`), from the 5.1 Edition to the 16th (ECMAScript 2025), each with its
+ * International writes it (`ECMA-262 6th Edition`), from the 5.1 Edition to the 17th (ECMAScript 2026), each with its
  * body, its number, its edition and its common names (`ECMAScript 2015`, `ES2015`), and the kinds it has: the `v` flag's
- * five from the 15th (ES2024), `modifiers` from the 16th, every other in each (`SINCE`); a feature within a kind (a named
+ * five from the 15th (ES2024), `modifiers` from the 16th, every other in each (`SINCE`), the 17th's pattern grammar
+ * (22.2.1) the 16th's *(agent)*; a feature within a kind (a named
  * group, a lookbehind, a property escape, ES2018) is not recorded. `DIALECT` reads its kinds and its family's other
  * dialects' terms (`reads`). `Text` writes its kinds as ECMAScript source, as the family's printer
  * (`TypeScript5.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
@@ -109,10 +110,10 @@ export const MODIFIERS: readonly (readonly [string, string])[] = [["ignoreCase",
  * names and its frame symbol. */
 export type Edition = readonly [string, readonly [string, string | bigint], readonly string[], string];
 
-/** The editions of ECMA-262 it covers, the 5.1 Edition to the 16th *(agent)*. */
+/** The editions of ECMA-262 it covers, the 5.1 Edition to the 17th *(agent)*. */
 export const EDITIONS: readonly Edition[] = [
   ["ECMA-262 5.1 Edition", ["version", "5.1"], ["ECMAScript 5.1", "ES5.1"], "ES5_1"],
-  ...Array.from({ length: 11 }, (_, i): Edition => {
+  ...Array.from({ length: 12 }, (_, i): Edition => {
     const n = i + 6;
     return [`ECMA-262 ${n}th Edition`, ["edition", BigInt(n)], [`ECMAScript ${2009 + n}`, `ES${2009 + n}`], `ES${2009 + n}`];
   }),
@@ -208,7 +209,7 @@ export function install(txn: any): any {
 
 /**
  * TypeScript RegExp's dialect as data: the singleton `Expressions.TypeScript.RegExp` owning the editions of ECMA-262 it
- * covers, by designation (`standards`, through `Expressions.Framework.Covers`), the 5.1 Edition to the 16th, each with
+ * covers, by designation (`standards`, through `Expressions.Framework.Covers`), the 5.1 Edition to the 17th, each with
  * its body, `org.ecma-international`, its number, `262`, its revision, its common names and its own kinds it has
  * (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
  * (`dialect`) and each edition by its last common name spelled as an identifier (`ES5_1`, `ES2015`).

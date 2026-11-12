@@ -142,7 +142,7 @@ export const EXTENSIONS: ReadonlySet<string> = new Set([JSXELEMENT, JSXFRAGMENT,
 /** A string's quotes, as TypeScript writes them. */
 export const QUOTES: readonly string[] = Nodes.QUOTES;
 
-/** A regular expression's flags, as ECMAScript 2025 has them. */
+/** A regular expression's flags, as ECMAScript 2026 has them. */
 export const FLAGS = "dgimsuvy";
 
 /** TypeScript5's union of its kinds, added to the framework's terms as the branch `typescript5`, its own kinds, the

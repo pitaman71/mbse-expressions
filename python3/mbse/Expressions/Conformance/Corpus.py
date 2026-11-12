@@ -13,8 +13,10 @@ case is a TypeScript5 term of every kind, written through the builders. The `inv
 invalid syntax and literals with their spelling. The `systemverilog_patterns`, `systemverilog_assertions`,
 `systemverilog_constraints` and `systemverilog_preprocessor` cases are each a term of SystemVerilog's sublanguage of every
 kind, written through the builders, the `python_types` and `python_patterns` cases a term of Python's, the
-`typescript_types` and `typescript_patterns` cases each a term of TypeScript's, and the `c_types`, `cpp_types` and
-`c_preprocessor` cases each a term of the C family's new dialects of every kind. Each implementation writes its snapshots to
+`typescript_types` and `typescript_patterns` cases each a term of TypeScript's, the `c_types`, `cpp_types` and
+`c_preprocessor` cases each a term of the C family's new dialects of every kind, and the `python_regexp`,
+`typescript_regexp` and `cpp_regexp` cases each a regular expression of every kind of its family's RegExp dialect. Each
+implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
 the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values,
 same order of statements. """
@@ -39,9 +41,9 @@ from mbse.Expressions.SystemVerilog import Assertions as SVAssertions, Constrain
     Expressions as SystemVerilog, Patterns as SVPatterns, Preprocessor as SVPreprocessor, Types as SVTypes
 from mbse.Expressions.TypeScript import TypeScript5
 from mbse.Expressions.C import Preprocessor as CPreprocessor, Types as CTypes  # the retrofit's new dialects
-from mbse.Expressions.Cpp import Types as CppTypes
-from mbse.Expressions.Python import Patterns as PythonPatterns, Types as PythonTypes  # the retrofit's, built
-from mbse.Expressions.TypeScript import Patterns as TypeScriptPatterns, Types as TypeScriptTypes
+from mbse.Expressions.Cpp import RegExp as CppRegExp, Types as CppTypes
+from mbse.Expressions.Python import Patterns as PythonPatterns, RegExp as PythonRegExp, Types as PythonTypes  # the retrofit's, built
+from mbse.Expressions.TypeScript import Patterns as TypeScriptPatterns, RegExp as TypeScriptRegExp, Types as TypeScriptTypes
 from mbse.Expressions.C.Expressions import Expressions as CE
 from mbse.Expressions.Cpp.Expressions import Expressions as CPP
 from mbse.Expressions.Excel.Expressions import Expressions as X
@@ -56,7 +58,8 @@ from mbse.Schemas.Framework import Builders
 CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp", "systemverilog",
          "typescript5", "invalid", "systemverilog_patterns", "systemverilog_assertions", "systemverilog_constraints",
          "systemverilog_preprocessor", "python_types", "python_patterns", "typescript_types", "typescript_patterns",
-         "c_types", "cpp_types", "c_preprocessor", "systemverilog_domains", "python3_domains", "typescript5_domains", "matlab_domains",
+         "c_types", "cpp_types", "c_preprocessor", "python_regexp", "typescript_regexp", "cpp_regexp", "systemverilog_domains",
+         "python3_domains", "typescript5_domains", "matlab_domains",
          "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains", "standards"]
 
 DIALECTS = {"python3": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "latex": L.DIALECT, "c": CE.DIALECT,
@@ -67,7 +70,9 @@ DIALECTS = {"python3": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "late
             "python_types": PythonTypes.Expressions.DIALECT, "python_patterns": PythonPatterns.Expressions.DIALECT,
             "typescript_types": TypeScriptTypes.Expressions.DIALECT,
             "typescript_patterns": TypeScriptPatterns.Expressions.DIALECT, "c_types": CTypes.Expressions.DIALECT,
-            "cpp_types": CppTypes.Expressions.DIALECT, "c_preprocessor": CPreprocessor.Expressions.DIALECT}
+            "cpp_types": CppTypes.Expressions.DIALECT, "c_preprocessor": CPreprocessor.Expressions.DIALECT,
+            "python_regexp": PythonRegExp.Expressions.DIALECT,
+            "typescript_regexp": TypeScriptRegExp.Expressions.DIALECT, "cpp_regexp": CppRegExp.Expressions.DIALECT}
 """The dialect that reads each case, where it is not Patterns."""
 
 DOMAINS = {"domains": "Expressions.ISOIEC11404.Expressions", "systemverilog_domains": "Expressions.SystemVerilog.Expressions",
@@ -102,7 +107,8 @@ def build():
     for module in (SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # its family
         store.transaction(module.install)
     store.transaction(TypeScript5.install)
-    for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor):
+    for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor,
+                   PythonRegExp, TypeScriptRegExp, CppRegExp):
         store.transaction(module.install)  # the retrofit's new dialects, each after its family's
     defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
     stored = {case: store.transaction(module.define)[0]["dialect"] for case, module in [  # each dialect's stored domains
@@ -111,7 +117,8 @@ def build():
         ("amd64_domains", AMD64), ("aapcs64_domains", AAPCS64)]}
     for module in (SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # the editions they cover
         store.transaction(module.define)
-    for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor):
+    for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor,
+                   PythonRegExp, TypeScriptRegExp, CppRegExp):
         store.transaction(module.define)  # their data: the editions each covers
 
     # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
@@ -600,6 +607,77 @@ def build():
                     CPRE.spec(lambda m: m.otherdirective(lambda o: o.directive("pragma").text("once"))),
                     CPRE.spec(lambda m: m.ifdefdirective(lambda o: o.name(identified("W"))))])))))))))
 
+    # --- python_regexp: every kind of Python's RegExp, a character with its spelling --- the text:
+    # (?:a|)(?P<n>[^a-z\d]+?)(?<!b)(?P=n)\1(?(1)a|)(?>.)b*+\A(?#note)|(?i-m:\x61)$
+    character = lambda value: lambda c: c.character(lambda v: v.value(value))  # noqa: E731: a character, by its code point
+    sequence = lambda *elements: lambda a: a.alternative(lambda s: s.elements(list(elements)))  # noqa: E731: an alternative
+    python_regexp = PythonRegExp.Expressions.DIALECT.spec(lambda u: u.pattern(lambda p: p.alternatives([
+        sequence(
+            lambda e: e.group(lambda g: g.alternatives([sequence(character(97)), sequence()])),
+            lambda e: e.capturinggroup(lambda g: g.name("n").alternatives([sequence(
+                lambda q: q.quantifier(lambda r: r.min(1).greedy(False).element(lambda k: k.characterclass(lambda c: c.negate(True).elements([
+                    lambda r: r.characterclassrange(lambda n: n.min(character(97)).max(character(122))),
+                    lambda s: s.characterset(lambda v: v.kind("digit"))])))))])),
+            lambda e: e.assertion(lambda t: t.kind("lookbehind").negate(True).alternatives([sequence(character(98))])),
+            lambda e: e.backreference(lambda r: r.name("n")),
+            lambda e: e.backreference(lambda r: r.number(1)),
+            lambda e: e.conditional(lambda c: c.number(1).yes(sequence(character(97))).no(sequence())),
+            lambda e: e.atomicgroup(lambda g: g.alternatives([sequence(lambda s: s.characterset(lambda v: v.kind("any")))])),
+            lambda e: e.quantifier(lambda q: q.min(0).possessive(True).element(character(98))),
+            lambda e: e.assertion(lambda t: t.kind("stringstart")),
+            lambda e: e.comment(lambda c: c.text("note"))),
+        sequence(
+            lambda e: e.flags(lambda f: f.add("i").remove("m").alternatives([sequence(
+                lambda c: c.character(lambda v: v.value(97).text("\\x61")))])),
+            lambda e: e.assertion(lambda t: t.kind("end")))])))
+
+    # --- typescript_regexp: every kind of TypeScript's RegExp, a literal --- the text:
+    # /(?i:a)(?<n>b{1,}?)[a-c\d][\q{x|y}&&[x]][\w--a]\p{L}\b(?=c)\k<n>|$/v
+    rx_char = lambda c: lambda e: e.character(lambda h: h.value(ord(c)))  # noqa: E731
+    rx_seq = lambda *items: lambda e: e.alternative(lambda a: a.elements(list(items)))  # noqa: E731
+    typescript_regexp = lambda u: u.regexpliteral(lambda l: l.pattern(lambda p: p.pattern(lambda q: q.alternatives([  # noqa: E731
+        rx_seq(lambda e: e.group(lambda g: g.modifiers(lambda m: m.modifiers(lambda s: s.add(lambda f: f.raw("i").ignoreCase(
+                   True)))).alternatives([rx_seq(rx_char("a"))])),
+               lambda e: e.capturinggroup(lambda g: g.name("n").alternatives([rx_seq(lambda e: e.quantifier(lambda q: q.raw(
+                   "b{1,}?").min(1).greedy(False).element(rx_char("b"))))])),
+               lambda e: e.characterclass(lambda c: c.unicodeSets(True).elements([lambda e: e.characterclassrange(
+                   lambda r: r.min(rx_char("a")).max(rx_char("c"))), lambda e: e.characterset(lambda s: s.raw("\\d").setKind(
+                       "digit").negate(False))])),
+               lambda e: e.expressioncharacterclass(lambda x: x.negate(False).expression(lambda e: e.classintersection(
+                   lambda i: i.left(lambda e: e.classstringdisjunction(lambda d: d.alternatives([
+                       lambda e: e.stringalternative(lambda s: s.elements([rx_char("x")])),
+                       lambda e: e.stringalternative(lambda s: s.elements([rx_char("y")]))]))).right(
+                       lambda e: e.characterclass(lambda c: c.unicodeSets(True).elements([rx_char("x")])))))),
+               lambda e: e.expressioncharacterclass(lambda x: x.expression(lambda e: e.classsubtraction(lambda s: s.left(
+                   lambda e: e.characterset(lambda t: t.setKind("word"))).right(lambda e: e.character(lambda h: h.raw(
+                       "a").value(97)))))),
+               lambda e: e.characterset(lambda s: s.raw("\\p{L}").setKind("property").strings(False).key(
+                   "General_Category").value("L")),
+               lambda e: e.assertion(lambda a: a.assertionKind("word").negate(False)),
+               lambda e: e.assertion(lambda a: a.assertionKind("lookahead").negate(False).alternatives([rx_seq(rx_char("c"))])),
+               lambda e: e.backreference(lambda b: b.raw("\\k<n>").ref("n"))),
+        rx_seq(lambda e: e.assertion(lambda a: a.assertionKind("end")))]))).flags(lambda f: f.raw("v").unicodeSets(True)))
+
+    # --- cpp_regexp: a regex of every kind but grep's list of patterns, which ECMAScript, the one grammar of the others,
+    # has not: ECMAScript's, case-insensitive --- ^(a|\.)[^a-[.ch.][:alpha:][=e=]\d]{1,3}.$|(?:b)(?!c)x*?\1\b
+    XR = CppRegExp.Expressions.DIALECT
+    char = lambda c: lambda u: u.character(lambda r: r.value(ord(c)))  # noqa: E731
+    alt = lambda *elements: lambda u: u.alternative(lambda r: r.elements(list(elements)))  # noqa: E731
+    cpp_regexp = XR.spec(lambda u: u.regex(lambda r: r.flags(["ECMAScript", "icase"]).pattern(lambda p: p.pattern(lambda q: q.alternatives([
+        alt(
+            lambda e: e.assertion(lambda a: a.kind("start")),
+            lambda e: e.capturinggroup(lambda g: g.alternatives([alt(char("a")), alt(char("."))])),
+            lambda e: e.quantifier(lambda m: m.min(1).max(3).element(lambda c: c.characterclass(lambda k: k.negate(True).elements([
+                lambda x: x.characterclassrange(lambda y: y.min(char("a")).max(lambda z: z.collatingelement(lambda n: n.name("ch")))),
+                lambda x: x.exclass(lambda n: n.name("alpha")), lambda x: x.equivalence(lambda n: n.name("e")),
+                lambda x: x.characterset(lambda n: n.kind("digit"))])))),
+            lambda e: e.characterset(lambda n: n.kind("any")), lambda e: e.assertion(lambda a: a.kind("end"))),
+        alt(
+            lambda e: e.group(lambda g: g.alternatives([alt(char("b"))])),
+            lambda e: e.assertion(lambda a: a.kind("lookahead").negate(True).alternatives([alt(char("c"))])),
+            lambda e: e.quantifier(lambda m: m.min(0).greedy(False).element(char("x")).text("*?")),
+            lambda e: e.backreference(lambda b: b.ref(1)), lambda e: e.assertion(lambda a: a.kind("word")))])))))
+
     # --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
     # their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
     # (a binop's operands are Python3's terms, written in its union)
@@ -618,7 +696,9 @@ def build():
             ("systemverilog_preprocessor", preprocessor), ("python_types", python_types), ("python_patterns", python_patterns),
             ("typescript_types", TypeScriptTypes.Expressions.DIALECT.spec(typescript_types)),
             ("typescript_patterns", TypeScriptPatterns.Expressions.DIALECT.spec(typescript_patterns)),
-            ("c_types", enumeration(CT, CE)), ("cpp_types", enumeration(XT, CPP)), ("c_preprocessor", c_preprocessor)]}
+            ("c_types", enumeration(CT, CE)), ("cpp_types", enumeration(XT, CPP)), ("c_preprocessor", c_preprocessor),
+            ("python_regexp", python_regexp),
+            ("typescript_regexp", TypeScriptRegExp.Expressions.DIALECT.spec(typescript_regexp)), ("cpp_regexp", cpp_regexp)]}
     terms["domains"] = defined["dialect"]
     terms.update(stored)
     terms.update({case: store.singleton(path).standards({"designation": designation})  # an edition, by its path

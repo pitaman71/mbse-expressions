@@ -1,0 +1,85 @@
+python_regexp:
+  pattern:
+    alternatives:
+    - alternative:
+        elements:
+        - group:
+            alternatives:
+            - alternative:
+                elements:
+                - character:
+                    value: 97
+            - alternative:
+                elements: []
+        - capturinggroup:
+            name: 'n'
+            alternatives:
+            - alternative:
+                elements:
+                - quantifier:
+                    min: 1
+                    greedy: false
+                    element:
+                      characterclass:
+                        negate: true
+                        elements:
+                        - characterclassrange:
+                            min:
+                              character:
+                                value: 97
+                            max:
+                              character:
+                                value: 122
+                        - characterset:
+                            kind: digit
+        - assertion:
+            kind: lookbehind
+            negate: true
+            alternatives:
+            - alternative:
+                elements:
+                - character:
+                    value: 98
+        - backreference:
+            name: 'n'
+        - backreference:
+            number: 1
+        - conditional:
+            number: 1
+            'yes':
+              alternative:
+                elements:
+                - character:
+                    value: 97
+            'no':
+              alternative:
+                elements: []
+        - atomicgroup:
+            alternatives:
+            - alternative:
+                elements:
+                - characterset:
+                    kind: any
+        - quantifier:
+            min: 0
+            possessive: true
+            element:
+              character:
+                value: 98
+        - assertion:
+            kind: stringstart
+        - comment:
+            text: note
+    - alternative:
+        elements:
+        - flags:
+            add: i
+            remove: m
+            alternatives:
+            - alternative:
+                elements:
+                - character:
+                    value: 97
+                    text: \x61
+        - assertion:
+            kind: end

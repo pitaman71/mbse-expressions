@@ -1,0 +1,219 @@
+{
+  "typescript_regexp": {
+    "regexpliteral": {
+      "pattern": {
+        "pattern": {
+          "alternatives": [
+            {
+              "alternative": {
+                "elements": [
+                  {
+                    "group": {
+                      "modifiers": {
+                        "modifiers": {
+                          "add": {
+                            "raw": "i",
+                            "ignoreCase": true
+                          }
+                        }
+                      },
+                      "alternatives": [
+                        {
+                          "alternative": {
+                            "elements": [
+                              {
+                                "character": {
+                                  "value": 97
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "capturinggroup": {
+                      "name": "n",
+                      "alternatives": [
+                        {
+                          "alternative": {
+                            "elements": [
+                              {
+                                "quantifier": {
+                                  "raw": "b{1,}?",
+                                  "min": 1,
+                                  "greedy": false,
+                                  "element": {
+                                    "character": {
+                                      "value": 98
+                                    }
+                                  }
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "characterclass": {
+                      "unicodeSets": true,
+                      "elements": [
+                        {
+                          "characterclassrange": {
+                            "min": {
+                              "character": {
+                                "value": 97
+                              }
+                            },
+                            "max": {
+                              "character": {
+                                "value": 99
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "characterset": {
+                            "raw": "\\d",
+                            "setKind": "digit",
+                            "negate": false
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "expressioncharacterclass": {
+                      "negate": false,
+                      "expression": {
+                        "classintersection": {
+                          "left": {
+                            "classstringdisjunction": {
+                              "alternatives": [
+                                {
+                                  "stringalternative": {
+                                    "elements": [
+                                      {
+                                        "character": {
+                                          "value": 120
+                                        }
+                                      }
+                                    ]
+                                  }
+                                },
+                                {
+                                  "stringalternative": {
+                                    "elements": [
+                                      {
+                                        "character": {
+                                          "value": 121
+                                        }
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            }
+                          },
+                          "right": {
+                            "characterclass": {
+                              "unicodeSets": true,
+                              "elements": [
+                                {
+                                  "character": {
+                                    "value": 120
+                                  }
+                                }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "expressioncharacterclass": {
+                      "expression": {
+                        "classsubtraction": {
+                          "left": {
+                            "characterset": {
+                              "setKind": "word"
+                            }
+                          },
+                          "right": {
+                            "character": {
+                              "raw": "a",
+                              "value": 97
+                            }
+                          }
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "characterset": {
+                      "raw": "\\p{L}",
+                      "setKind": "property",
+                      "strings": false,
+                      "key": "General_Category",
+                      "value": "L"
+                    }
+                  },
+                  {
+                    "assertion": {
+                      "assertionKind": "word",
+                      "negate": false
+                    }
+                  },
+                  {
+                    "assertion": {
+                      "assertionKind": "lookahead",
+                      "negate": false,
+                      "alternatives": [
+                        {
+                          "alternative": {
+                            "elements": [
+                              {
+                                "character": {
+                                  "value": 99
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "backreference": {
+                      "raw": "\\k<n>",
+                      "ref": "n"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "alternative": {
+                "elements": [
+                  {
+                    "assertion": {
+                      "assertionKind": "end"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "flags": {
+        "raw": "v",
+        "unicodeSets": true
+      }
+    }
+  }
+}

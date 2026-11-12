@@ -14,8 +14,10 @@
  * TypeScript5 term of every kind, written through the builders; the `systemverilog_patterns`, `systemverilog_assertions`,
  * `systemverilog_constraints` and `systemverilog_preprocessor` cases each a term of SystemVerilog's sublanguage of every
  * kind, written through the builders, the `python_types` and `python_patterns` cases a term of Python's, the
- * `typescript_types` and `typescript_patterns` cases each a term of TypeScript's, and the `c_types`, `cpp_types` and
- * `c_preprocessor` cases each a term of the C family's new dialects of every kind. Each implementation writes its snapshots to
+ * `typescript_types` and `typescript_patterns` cases each a term of TypeScript's, the `c_types`, `cpp_types` and
+ * `c_preprocessor` cases each a term of the C family's new dialects of every kind, and the `python_regexp`,
+ * `typescript_regexp` and `cpp_regexp` cases each a regular expression of every kind of its family's RegExp dialect. Each
+ * implementation writes its snapshots to
  * `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files
  * (see the CONF test suite). Keep record module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
  * cases, same values, same order of statements.
@@ -48,10 +50,13 @@ import * as SVTypes from "../SystemVerilog/Types/index.js";
 import * as TypeScript5 from "../TypeScript/TypeScript5/index.js";
 import * as CPreprocessor from "../C/Preprocessor/index.js"; // the retrofit's new dialects
 import * as CTypes from "../C/Types/index.js";
+import * as CppRegExp from "../Cpp/RegExp/index.js";
 import * as CppTypes from "../Cpp/Types/index.js";
 import * as PythonPatterns from "../Python/Patterns/index.js";
+import * as PythonRegExp from "../Python/RegExp/index.js";
 import * as PythonTypes from "../Python/Types/index.js";
 import * as TypeScriptPatterns from "../TypeScript/Patterns/index.js";
+import * as TypeScriptRegExp from "../TypeScript/RegExp/index.js";
 import * as TypeScriptTypes from "../TypeScript/Types/index.js";
 import * as Framework from "../Framework/index.js";
 import type * as Terms from "../Framework/Terms.js";
@@ -64,7 +69,8 @@ const TS = TypeScript5.Expressions;
 export const CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp",
   "systemverilog", "typescript5", "invalid", "systemverilog_patterns", "systemverilog_assertions",
   "systemverilog_constraints", "systemverilog_preprocessor", "python_types", "python_patterns", "typescript_types",
-  "typescript_patterns", "c_types", "cpp_types", "c_preprocessor", "systemverilog_domains", "python3_domains", "typescript5_domains",
+  "typescript_patterns", "c_types", "cpp_types", "c_preprocessor", "python_regexp", "typescript_regexp", "cpp_regexp",
+  "systemverilog_domains", "python3_domains", "typescript5_domains",
   "matlab_domains", "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains",
   "standards"] as const;
 
@@ -78,6 +84,8 @@ export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
   ["python_types", PythonTypes.Expressions.DIALECT], ["python_patterns", PythonPatterns.Expressions.DIALECT],
   ["typescript_types", TypeScriptTypes.Expressions.DIALECT], ["typescript_patterns", TypeScriptPatterns.Expressions.DIALECT],
   ["c_types", CTypes.Expressions.DIALECT], ["cpp_types", CppTypes.Expressions.DIALECT], ["c_preprocessor", CPreprocessor.Expressions.DIALECT],
+  ["python_regexp", PythonRegExp.Expressions.DIALECT], ["typescript_regexp", TypeScriptRegExp.Expressions.DIALECT],
+  ["cpp_regexp", CppRegExp.Expressions.DIALECT],
 ]);
 
 /** The cases that are data, not terms: each a dialect's singleton, by its path, written as one document of its schema,
@@ -120,7 +128,8 @@ export function build(): Map<string, Case> {
     store.transaction(module.install);
   }
   store.transaction(TypeScript5.install);
-  const retrofit = [PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor];
+  const retrofit = [PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor,
+    PythonRegExp, TypeScriptRegExp, CppRegExp];
   for (const module of retrofit) store.transaction(module.install); // the retrofit's new dialects, each after its family's
   const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
   const stored = new Map<string, any>(([ // each dialect's stored domains
@@ -612,6 +621,77 @@ export function build(): Map<string, Case> {
           CPRE.spec((m: any) => m.otherdirective((o: any) => o.directive("pragma").text("once"))),
           CPRE.spec((m: any) => m.ifdefdirective((o: any) => o.name(identified("W"))))])))))))));
 
+  // --- python_regexp: every kind of Python's RegExp, a character with its spelling --- the text:
+  // (?:a|)(?P<n>[^a-z\d]+?)(?<!b)(?P=n)\1(?(1)a|)(?>.)b*+\A(?#note)|(?i-m:\x61)$
+  const character = (value: bigint) => (c: any) => c.character((v: any) => v.value(value)); // a character, by its code point
+  const sequence = (...elements: unknown[]) => (a: any) => a.alternative((s: any) => s.elements(elements)); // an alternative
+  const pythonRegExp = PythonRegExp.Expressions.DIALECT.spec((u: any) => u.pattern((p: any) => p.alternatives([
+    sequence(
+      (e: any) => e.group((g: any) => g.alternatives([sequence(character(97n)), sequence()])),
+      (e: any) => e.capturinggroup((g: any) => g.name("n").alternatives([sequence(
+        (q: any) => q.quantifier((r: any) => r.min(1n).greedy(false).element((k: any) => k.characterclass((c: any) => c.negate(true).elements([
+          (r: any) => r.characterclassrange((n: any) => n.min(character(97n)).max(character(122n))),
+          (s: any) => s.characterset((v: any) => v.kind("digit"))])))))])),
+      (e: any) => e.assertion((t: any) => t.kind("lookbehind").negate(true).alternatives([sequence(character(98n))])),
+      (e: any) => e.backreference((r: any) => r.name("n")),
+      (e: any) => e.backreference((r: any) => r.number(1n)),
+      (e: any) => e.conditional((c: any) => c.number(1n).yes(sequence(character(97n))).no(sequence())),
+      (e: any) => e.atomicgroup((g: any) => g.alternatives([sequence((s: any) => s.characterset((v: any) => v.kind("any")))])),
+      (e: any) => e.quantifier((q: any) => q.min(0n).possessive(true).element(character(98n))),
+      (e: any) => e.assertion((t: any) => t.kind("stringstart")),
+      (e: any) => e.comment((c: any) => c.text("note"))),
+    sequence(
+      (e: any) => e.flags((f: any) => f.add("i").remove("m").alternatives([sequence(
+        (c: any) => c.character((v: any) => v.value(97n).text("\\x61")))])),
+      (e: any) => e.assertion((t: any) => t.kind("end")))])));
+
+  // --- typescript_regexp: every kind of TypeScript's RegExp, a literal --- the text:
+  // /(?i:a)(?<n>b{1,}?)[a-c\d][\q{x|y}&&[x]][\w--a]\p{L}\b(?=c)\k<n>|$/v
+  const rxChar = (c: string) => (e: any) => e.character((h: any) => h.value(BigInt(c.codePointAt(0)!)));
+  const rxSeq = (...items: unknown[]) => (e: any) => e.alternative((a: any) => a.elements(items));
+  const typescriptRegExp = (u: any) => u.regexpliteral((l: any) => l.pattern((p: any) => p.pattern((q: any) => q.alternatives([
+    rxSeq((e: any) => e.group((g: any) => g.modifiers((m: any) => m.modifiers((s: any) => s.add((f: any) => f.raw("i").ignoreCase(
+      true)))).alternatives([rxSeq(rxChar("a"))])),
+    (e: any) => e.capturinggroup((g: any) => g.name("n").alternatives([rxSeq((e: any) => e.quantifier((q: any) => q.raw(
+      "b{1,}?").min(1n).greedy(false).element(rxChar("b"))))])),
+    (e: any) => e.characterclass((c: any) => c.unicodeSets(true).elements([(e: any) => e.characterclassrange(
+      (r: any) => r.min(rxChar("a")).max(rxChar("c"))), (e: any) => e.characterset((s: any) => s.raw("\\d").setKind(
+        "digit").negate(false))])),
+    (e: any) => e.expressioncharacterclass((x: any) => x.negate(false).expression((e: any) => e.classintersection(
+      (i: any) => i.left((e: any) => e.classstringdisjunction((d: any) => d.alternatives([
+        (e: any) => e.stringalternative((s: any) => s.elements([rxChar("x")])),
+        (e: any) => e.stringalternative((s: any) => s.elements([rxChar("y")]))]))).right(
+        (e: any) => e.characterclass((c: any) => c.unicodeSets(true).elements([rxChar("x")])))))),
+    (e: any) => e.expressioncharacterclass((x: any) => x.expression((e: any) => e.classsubtraction((s: any) => s.left(
+      (e: any) => e.characterset((t: any) => t.setKind("word"))).right((e: any) => e.character((h: any) => h.raw(
+        "a").value(97n)))))),
+    (e: any) => e.characterset((s: any) => s.raw("\\p{L}").setKind("property").strings(false).key(
+      "General_Category").value("L")),
+    (e: any) => e.assertion((a: any) => a.assertionKind("word").negate(false)),
+    (e: any) => e.assertion((a: any) => a.assertionKind("lookahead").negate(false).alternatives([rxSeq(rxChar("c"))])),
+    (e: any) => e.backreference((b: any) => b.raw("\\k<n>").ref("n"))),
+    rxSeq((e: any) => e.assertion((a: any) => a.assertionKind("end")))]))).flags((f: any) => f.raw("v").unicodeSets(true)));
+
+  // --- cpp_regexp: a regex of every kind but grep's list of patterns, which ECMAScript, the one grammar of the others,
+  // has not: ECMAScript's, case-insensitive --- ^(a|\.)[^a-[.ch.][:alpha:][=e=]\d]{1,3}.$|(?:b)(?!c)x*?\1\b
+  const XR = CppRegExp.Expressions.DIALECT;
+  const char = (c: string) => (u: any) => u.character((r: any) => r.value(BigInt(c.codePointAt(0) as number)));
+  const alt = (...elements: unknown[]) => (u: any) => u.alternative((r: any) => r.elements(elements));
+  const cppRegexp = XR.spec((u: any) => u.regex((r: any) => r.flags(["ECMAScript", "icase"]).pattern((p: any) => p.pattern((q: any) => q.alternatives([
+    alt(
+      (e: any) => e.assertion((a: any) => a.kind("start")),
+      (e: any) => e.capturinggroup((g: any) => g.alternatives([alt(char("a")), alt(char("."))])),
+      (e: any) => e.quantifier((m: any) => m.min(1n).max(3n).element((c: any) => c.characterclass((k: any) => k.negate(true).elements([
+        (x: any) => x.characterclassrange((y: any) => y.min(char("a")).max((z: any) => z.collatingelement((n: any) => n.name("ch")))),
+        (x: any) => x.exclass((n: any) => n.name("alpha")), (x: any) => x.equivalence((n: any) => n.name("e")),
+        (x: any) => x.characterset((n: any) => n.kind("digit"))])))),
+      (e: any) => e.characterset((n: any) => n.kind("any")), (e: any) => e.assertion((a: any) => a.kind("end"))),
+    alt(
+      (e: any) => e.group((g: any) => g.alternatives([alt(char("b"))])),
+      (e: any) => e.assertion((a: any) => a.kind("lookahead").negate(true).alternatives([alt(char("c"))])),
+      (e: any) => e.quantifier((m: any) => m.min(0n).greedy(false).element(char("x")).text("*?")),
+      (e: any) => e.backreference((b: any) => b.ref(1n)), (e: any) => e.assertion((a: any) => a.kind("word")))])))));
+
   // --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
   // their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
   // (a binop's operands are Python3's terms, written in its union)
@@ -630,6 +710,8 @@ export function build(): Map<string, Case> {
     ["typescript_types", TypeScriptTypes.Expressions.DIALECT.spec(typescriptTypes)],
     ["typescript_patterns", TypeScriptPatterns.Expressions.DIALECT.spec(typescriptPatterns)],
     ["c_types", enumeration(CT, CE)], ["cpp_types", enumeration(XT, CPP)], ["c_preprocessor", cPreprocessor],
+    ["python_regexp", pythonRegExp], ["typescript_regexp", TypeScriptRegExp.Expressions.DIALECT.spec(typescriptRegExp)],
+    ["cpp_regexp", cppRegexp],
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   terms.set("domains", defined.get("dialect"));
   for (const [name, dialect] of stored) terms.set(name, dialect);

@@ -116,7 +116,7 @@ QUOTES = Nodes.QUOTES
 """A string's quotes, as TypeScript writes them."""
 
 FLAGS = "dgimsuvy"
-"""A regular expression's flags, as ECMAScript 2025 has them."""
+"""A regular expression's flags, as ECMAScript 2026 has them."""
 
 
 def install(txn: Any) -> Any:
