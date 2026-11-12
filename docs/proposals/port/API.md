@@ -1554,8 +1554,8 @@ mapped where mbse-programs' `_Reader.py` builds the node: 229 mapped, 304 not.
      FRM-04 (`_parts`' and `_members`' new shapes), FRM-11, FRM-12 (its title), FRM-13 (each dialect's `SINCE`);
      TRN-09, TRN-11; CONF-04 (`systemverilog_domains` lists 8 editions, and the four new cases); and the suites SVP,
      SVA, SVC and SVD.
-216. **Open, with the user**: a constant is described as `None` in refusal messages ("SystemVerilog constant None of
-     logic [7:0] ..."), left as it is.
+216. **A constant described as `None` in refusal messages** ("SystemVerilog constant None of logic [7:0] ..."): open
+     with the user then, left as it was; decided since, a constant's text shown (item 269).
 
 ## Settled in the retrofit, for the user's review
 
@@ -1740,8 +1740,33 @@ install lists.
 267. **Tests**: 203 cases in each language, with the same IDs in the same order: PYT, PYP, TST, TSP, CTY, XTY and CPD
      new, 54 cases; FRM-01, FRM-02, FRM-04, FRM-11, FRM-13, DIA-20 to DIA-26, DIA-30, CONF-04 and SKL-03 under their
      IDs.
-268. **Open, with the user**: the regular expression dialects (the design's Open, 1), JSX (Open, 2), and a constant
-     described as `None` in refusal messages (item 216), each left as it is.
+268. **Open, with the user** then, each left as it was, and decided since ([the dialects proposal](../dialects/README.md#decided-for-the-retrofit-2026-11-12),
+     Decided for the retrofit): the regular expression dialects (the design's Open, 1), each a language's standard
+     defines, built apart; JSX (Open, 2), which stays TypeScript5's; and a constant described as `None` in refusal
+     messages (item 216), which shows its text (item 269).
+
+## Settled with the user's answers on the retrofit, for the user's review
+
+Built as [the dialects proposal](../dialects/README.md#decided-for-the-retrofit-2026-11-12) records the user's answers
+(Decided for the retrofit, 4 and 5); each choice where they were silent is marked *(agent)*. The three regular
+expression dialects (2) are built apart. A breaking change, in 0.10.0: TypeScript's `binding_names` is gone.
+
+269. **A refusal shows a constant's text** (Decided for the retrofit, 4): `Terms.Kind`'s `shown(attributes)` gives what
+     a refusal shows of a literal-role kind that holds no value, where a literal shows its value's `repr`; each
+     dialect's `constant` sets it to its new `constant_text(attributes)` (`constantText`), the function its printer
+     writes it with *(agent)*: its text as written (`text`), else its default spelling, Python3's `None`, `...` or a
+     complex number as Python's `repr` writes it, TypeScript5's `null` or a regular expression (`/a+/g`), C's and
+     C++'s `nullptr`, SystemVerilog's `null`, a fill or a vector in its base. So "SystemVerilog constant 8'd200 of
+     logic [7:0] has no Patterns counterpart", where it was "constant None", "4'b10xz", "Python3 constant 2j of
+     complex" and "C constant nullptr of nullptr_t"; a SystemVerilog constant that holds no value is refused as its
+     printer refuses it ("SystemVerilog constant has no value to print"). SystemVerilog's default spelling moves from
+     its `Text` to its `Expressions`, as does, in TypeScript, Python3's complex spelling, so that a kind reads it
+     without importing its printer *(agent)*. TRN-05, TRN-08 and TRN-09 assert the messages.
+270. **`bound_names` (`boundNames`), TypeScript's too** (Decided for the retrofit, 5): `TypeScript.TypeScript5.Nodes`',
+     `TypeScript.TypeScript5.Expressions`' and `TypeScript.Patterns.Expressions`' `binding_names` (`bindingNames`)
+     is renamed `bound_names` (`boundNames`), the name `Python.Patterns`, `SystemVerilog.Patterns` and
+     `C.Expressions.Kinds` give what a pattern binds, with no alias; its callers, tutorial 8 (T08.2) and
+     [Equivalence](../../EQUIVALENCE.md) follow. DIA-21 and TSP-02 under their IDs.
 
 ## What stage 2b needed (done)
 
