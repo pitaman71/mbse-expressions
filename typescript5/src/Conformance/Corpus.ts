@@ -631,19 +631,19 @@ export function build(): Map<string, Case> {
       (e: any) => e.capturinggroup((g: any) => g.name("n").alternatives([sequence(
         (q: any) => q.quantifier((r: any) => r.min(1n).greedy(false).element((k: any) => k.characterclass((c: any) => c.negate(true).elements([
           (r: any) => r.characterclassrange((n: any) => n.min(character(97n)).max(character(122n))),
-          (s: any) => s.characterset((v: any) => v.kind("digit"))])))))])),
-      (e: any) => e.assertion((t: any) => t.kind("lookbehind").negate(true).alternatives([sequence(character(98n))])),
-      (e: any) => e.backreference((r: any) => r.name("n")),
-      (e: any) => e.backreference((r: any) => r.number(1n)),
-      (e: any) => e.conditional((c: any) => c.number(1n).yes(sequence(character(97n))).no(sequence())),
-      (e: any) => e.atomicgroup((g: any) => g.alternatives([sequence((s: any) => s.characterset((v: any) => v.kind("any")))])),
+          (s: any) => s.characterset((v: any) => v.setKind("digit"))])))))])),
+      (e: any) => e.assertion((t: any) => t.assertionKind("lookbehind").negate(true).alternatives([sequence(character(98n))])),
+      (e: any) => e.backreference((r: any) => r.ref("n")),
+      (e: any) => e.backreference((r: any) => r.ref(1n)),
+      (e: any) => e.conditional((c: any) => c.ref(1n).yes(sequence(character(97n))).no(sequence())),
+      (e: any) => e.atomicgroup((g: any) => g.alternatives([sequence((s: any) => s.characterset((v: any) => v.setKind("any")))])),
       (e: any) => e.quantifier((q: any) => q.min(0n).possessive(true).element(character(98n))),
-      (e: any) => e.assertion((t: any) => t.kind("stringstart")),
+      (e: any) => e.assertion((t: any) => t.assertionKind("stringstart")),
       (e: any) => e.comment((c: any) => c.text("note"))),
     sequence(
       (e: any) => e.flags((f: any) => f.add("i").remove("m").alternatives([sequence(
-        (c: any) => c.character((v: any) => v.value(97n).text("\\x61")))])),
-      (e: any) => e.assertion((t: any) => t.kind("end")))])));
+        (c: any) => c.character((v: any) => v.raw("\\x61").value(97n)))])),
+      (e: any) => e.assertion((t: any) => t.assertionKind("end")))])));
 
   // --- typescript_regexp: every kind of TypeScript's RegExp, a literal --- the text:
   // /(?i:a)(?<n>b{1,}?)[a-c\d][\q{x|y}&&[x]][\w--a]\p{L}\b(?=c)\k<n>|$/v
@@ -679,18 +679,18 @@ export function build(): Map<string, Case> {
   const alt = (...elements: unknown[]) => (u: any) => u.alternative((r: any) => r.elements(elements));
   const cppRegexp = XR.spec((u: any) => u.regex((r: any) => r.flags(["ECMAScript", "icase"]).pattern((p: any) => p.pattern((q: any) => q.alternatives([
     alt(
-      (e: any) => e.assertion((a: any) => a.kind("start")),
+      (e: any) => e.assertion((a: any) => a.assertionKind("start")),
       (e: any) => e.capturinggroup((g: any) => g.alternatives([alt(char("a")), alt(char("."))])),
       (e: any) => e.quantifier((m: any) => m.min(1n).max(3n).element((c: any) => c.characterclass((k: any) => k.negate(true).elements([
         (x: any) => x.characterclassrange((y: any) => y.min(char("a")).max((z: any) => z.collatingelement((n: any) => n.name("ch")))),
         (x: any) => x.exclass((n: any) => n.name("alpha")), (x: any) => x.equivalence((n: any) => n.name("e")),
-        (x: any) => x.characterset((n: any) => n.kind("digit"))])))),
-      (e: any) => e.characterset((n: any) => n.kind("any")), (e: any) => e.assertion((a: any) => a.kind("end"))),
+        (x: any) => x.characterset((n: any) => n.setKind("digit"))])))),
+      (e: any) => e.characterset((n: any) => n.setKind("any")), (e: any) => e.assertion((a: any) => a.assertionKind("end"))),
     alt(
       (e: any) => e.group((g: any) => g.alternatives([alt(char("b"))])),
-      (e: any) => e.assertion((a: any) => a.kind("lookahead").negate(true).alternatives([alt(char("c"))])),
-      (e: any) => e.quantifier((m: any) => m.min(0n).greedy(false).element(char("x")).text("*?")),
-      (e: any) => e.backreference((b: any) => b.ref(1n)), (e: any) => e.assertion((a: any) => a.kind("word")))])))));
+      (e: any) => e.assertion((a: any) => a.assertionKind("lookahead").negate(true).alternatives([alt(char("c"))])),
+      (e: any) => e.quantifier((m: any) => m.raw("*?").min(0n).greedy(false).element(char("x"))),
+      (e: any) => e.backreference((b: any) => b.ref(1n)), (e: any) => e.assertion((a: any) => a.assertionKind("word")))])))));
 
   // --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
   // their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>

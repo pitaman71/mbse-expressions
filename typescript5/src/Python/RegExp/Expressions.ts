@@ -23,15 +23,15 @@
  * - `quantifier` (`*`, `+`, `?`, `{m}`, `{m,}`, `{m,n}`: its `min`, its `max`, absent where unbounded, whether it is
  *   `greedy`, absent where it is, and `possessive`, `*+`, absent where it is not; its `element`);
  * - `characterclass` (`[...]`, `[^...]`: whether it is negated, `negate`, and its `elements`), `characterclassrange`
- *   (`a-z` in a class: its `min` and `max`, characters), `characterset` (its `kind`: `any`, `.`; `digit`, `space` and
+ *   (`a-z` in a class: its `min` and `max`, characters), `characterset` (its `setKind`: `any`, `.`; `digit`, `space` and
  *   `word`, `\d`, `\s` and `\w`, and their negations with `negate`, `\D`, `\S` and `\W`) and `character` (its
- *   `value`, a code point, with its `text`, its spelling as written: `a`, `\n`, `\x41`, `\u00e9`, `\N{EM DASH}`, `\101`,
+ *   `raw`, its spelling as written, with its `value`, a code point: `a`, `\n`, `\x41`, `\u00e9`, `\N{EM DASH}`, `\101`,
  *   `\.`, and a default spelling where it has none);
- * - `assertion` (its `kind`: `start`, `^`; `end`, `$`; `stringstart`, `\A`; `stringend`, `\Z` or `\z`; `word`, `\b`, and
+ * - `assertion` (its `assertionKind`: `start`, `^`; `end`, `$`; `stringstart`, `\A`; `stringend`, `\Z` or `\z`; `word`, `\b`, and
  *   `\B` with `negate`; `lookahead`, `(?=...)` and `(?!...)`, and `lookbehind`, `(?<=...)` and `(?<!...)`, each holding
  *   `alternatives`);
- * - `backreference` (`\1` by its `number`, `(?P=name)` by its `name`);
- * - Python's own: `conditional` (`(?(1)yes|no)`, `(?(name)yes|no)`: the group it tests by `number` or `name`, and its
+ * - `backreference` (its `ref`, a group's number, `\1`, or its name, `(?P=name)`);
+ * - Python's own: `conditional` (`(?(1)yes|no)`, `(?(name)yes|no)`: the group it tests, its `ref`, and its
  *   `yes` and `no`, alternatives), `atomicgroup` (`(?>...)`, Python 3.11), and `flags` (its letters to `add` and to
  *   `remove`: an inline `(?aiLmsux)`, global, holding no alternatives, or scoped, `(?a-i:...)`, holding them);
  * - `comment` (`(?#...)`, its `text`), which `re`'s parser skips, kept so that a pattern prints as written;
@@ -183,15 +183,15 @@ export function install(txn: any): any {
       (_: any) => _.CharacterClassRange.name("Expressions.Python.RegExp.CharacterClassRange").properties({
         min: _.Term, max: _.Term }),
       (_: any) => _.CharacterSet.name("Expressions.Python.RegExp.CharacterSet").properties({
-        kind: S.OfStr, negate: S.OfBool }),
+        setKind: S.OfStr, negate: S.OfBool }),
       (_: any) => _.Character.name("Expressions.Python.RegExp.Character").properties({
-        value: S.OfInt, text: S.OfStr }), // its code point, and its spelling as written
+        raw: S.OfStr, value: S.OfInt }), // its spelling as written, and its code point
       (_: any) => _.Assertion.name("Expressions.Python.RegExp.Assertion").properties({
-        kind: S.OfStr, negate: S.OfBool, alternatives: many(_.Term) }), // a lookaround's alternatives
+        assertionKind: S.OfStr, negate: S.OfBool, alternatives: many(_.Term) }), // a lookaround's alternatives
       (_: any) => _.Backreference.name("Expressions.Python.RegExp.Backreference").properties({
-        number: S.OfInt, name: S.OfStr }),
+        ref: S.OfAny((a: any) => a.schemas([S.OfInt, S.OfStr])) }), // a group's number or its name
       (_: any) => _.Conditional.name("Expressions.Python.RegExp.Conditional").properties({
-        number: S.OfInt, name: S.OfStr, yes: _.Term, no: _.Term }),
+        ref: S.OfAny((a: any) => a.schemas([S.OfInt, S.OfStr])), yes: _.Term, no: _.Term }),
       (_: any) => _.AtomicGroup.name("Expressions.Python.RegExp.AtomicGroup").properties({
         alternatives: many(_.Term) }),
       (_: any) => _.Flags.name("Expressions.Python.RegExp.Flags").properties({
@@ -283,15 +283,15 @@ function attributes(term: any): Map<string, any> {
 /** A character's spelling within a class, as written or by default, for a message. */
 function within(term: any): string {
   const found = attributes(term);
-  return found.has("text") ? found.get("text") as string : spelling(found.get("value") as bigint, true);
+  return found.has("raw") ? found.get("raw") as string : spelling(found.get("value") as bigint, true);
 }
 
-/** A backreference's or a conditional's group: a number, positive, or a name, an identifier, not both. */
+/** A backreference's or a conditional's group, its `ref`: a number, positive, or a name, an identifier. */
 function reference(what: string, found: ReadonlyMap<string, any>): string[] {
-  if (found.has("number") === found.has("name")) return [`${what} has a number or a name`];
-  const number = found.get("number");
-  if (typeof number === "bigint" && number < 1n) return [`${what}'s number must be positive, got ${number}`];
-  return P.identifierProblems(`${what}'s name`, found.get("name"));
+  const ref = found.get("ref");
+  if (ref === undefined) return [`${what} needs a ref`];
+  if (typeof ref === "bigint" && ref < 1n) return [`${what}'s ref must be positive, got ${ref}`];
+  return typeof ref === "string" ? P.identifierProblems(`${what}'s ref`, ref) : [];
 }
 
 /** An inline flags' letters, checked as `re`'s parser checks them. */
@@ -312,7 +312,7 @@ function flagProblems(add: string, remove: string, scoped: boolean): string[] {
 function repeatable(term: any): string[] {
   const tag = tagOf(term);
   if (tag === QUANTIFIER) return ["multiple repeat"];
-  if ((tag === ASSERTION && !LOOKAROUNDS.includes(attributes(term).get("kind"))) || (tag === FLAGS && F.form(term).arguments.length === 0)
+  if ((tag === ASSERTION && !LOOKAROUNDS.includes(attributes(term).get("assertionKind"))) || (tag === FLAGS && F.form(term).arguments.length === 0)
     || [COMMENT, PATTERN, ALTERNATIVE, CHARACTERCLASSRANGE].includes(tag)) {
     return ["nothing to repeat"];
   }
@@ -344,10 +344,11 @@ function groups(alternatives: readonly any[]): string[] {
     }
   }
   for (const found_ of references) {
-    if (found_.has("name") && !found_.has("number") && !names.has(found_.get("name"))) {
-      found.push(`unknown group name ${repr(found_.get("name"))}`);
-    } else if (found_.has("number") && !found_.has("name") && typeof found_.get("number") === "bigint" && found_.get("number") > BigInt(count)) {
-      found.push(`invalid group reference ${found_.get("number")}`);
+    const ref = found_.get("ref");
+    if (typeof ref === "string" && !names.has(ref)) {
+      found.push(`unknown group name ${repr(ref)}`);
+    } else if (typeof ref === "bigint" && ref > BigInt(count)) {
+      found.push(`invalid group reference ${ref}`);
     }
   }
   const first = alternatives[0] ?? null;
@@ -384,7 +385,7 @@ export function problems(node: F.Node): string[] {
       const tag = tagOf(item);
       if (![CHARACTER, CHARACTERCLASSRANGE, CHARACTERSET, ...INVALID].includes(tag)) {
         found.push(`a characterclass's element cannot be ${F.article(tag)}`);
-      } else if (tag === CHARACTERSET && attributes(item).get("kind") === "any") {
+      } else if (tag === CHARACTERSET && attributes(item).get("setKind") === "any") {
         found.push("a characterclass's element cannot be the characterset any");
       }
     }
@@ -402,22 +403,22 @@ export function problems(node: F.Node): string[] {
       found.push(`bad character range ${within(ends.get("min"))}-${within(ends.get("max"))}`);
     }
   } else if (kind === CHARACTERSET) {
-    if (!SETS.includes(found_.get("kind") ?? "any")) {
-      found.push(`CharacterSet.kind cannot be ${repr(found_.get("kind"))}`);
-    } else if (found_.get("negate") === true && found_.get("kind") === "any") {
+    if (!SETS.includes(found_.get("setKind") ?? "any")) {
+      found.push(`CharacterSet.setKind cannot be ${repr(found_.get("setKind"))}`);
+    } else if (found_.get("negate") === true && found_.get("setKind") === "any") {
       found.push("the characterset any cannot be negated");
     }
   } else if (kind === CHARACTER) {
     const value = found_.get("value");
     if (typeof value === "bigint" && !(value >= 0n && value <= 0x10FFFFn)) {
       found.push(`a character's value must be a code point, got ${value}`);
-    } else if (typeof value === "bigint" && typeof found_.get("text") === "string" && !spells(found_.get("text"), value)) {
-      found.push(`a character's text ${repr(found_.get("text"))} does not spell U+${value.toString(16).toUpperCase().padStart(4, "0")}`);
+    } else if (typeof value === "bigint" && typeof found_.get("raw") === "string" && !spells(found_.get("raw"), value)) {
+      found.push(`a character's raw ${repr(found_.get("raw"))} does not spell U+${value.toString(16).toUpperCase().padStart(4, "0")}`);
     }
   } else if (kind === ASSERTION) {
-    const assertion = found_.get("kind");
+    const assertion = found_.get("assertionKind");
     if (assertion !== undefined && !ASSERTIONS.includes(assertion)) {
-      found.push(`Assertion.kind cannot be ${repr(assertion)}`);
+      found.push(`Assertion.assertionKind cannot be ${repr(assertion)}`);
     } else if (assertion !== undefined) {
       if (found_.get("negate") === true && !["word", ...LOOKAROUNDS].includes(assertion)) {
         found.push(`the assertion ${assertion} cannot be negated`);
@@ -473,9 +474,9 @@ function kinds(): Record<string, F.Kind> {
     [QUANTIFIER]: application(QUANTIFIER, { required: ["min"] }),
     [CHARACTERCLASS]: application(CHARACTERCLASS),
     [CHARACTERCLASSRANGE]: application(CHARACTERCLASSRANGE),
-    [CHARACTERSET]: application(CHARACTERSET, { required: ["kind"] }),
+    [CHARACTERSET]: application(CHARACTERSET, { required: ["setKind"] }),
     [CHARACTER]: application(CHARACTER, { required: ["value"] }),
-    [ASSERTION]: application(ASSERTION, { required: ["kind"] }),
+    [ASSERTION]: application(ASSERTION, { required: ["assertionKind"] }),
     [BACKREFERENCE]: application(BACKREFERENCE),
     [CONDITIONAL]: application(CONDITIONAL, { optional: ["no"] }),
     [ATOMICGROUP]: application(ATOMICGROUP),

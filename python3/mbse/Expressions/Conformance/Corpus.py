@@ -617,19 +617,19 @@ def build():
             lambda e: e.capturinggroup(lambda g: g.name("n").alternatives([sequence(
                 lambda q: q.quantifier(lambda r: r.min(1).greedy(False).element(lambda k: k.characterclass(lambda c: c.negate(True).elements([
                     lambda r: r.characterclassrange(lambda n: n.min(character(97)).max(character(122))),
-                    lambda s: s.characterset(lambda v: v.kind("digit"))])))))])),
-            lambda e: e.assertion(lambda t: t.kind("lookbehind").negate(True).alternatives([sequence(character(98))])),
-            lambda e: e.backreference(lambda r: r.name("n")),
-            lambda e: e.backreference(lambda r: r.number(1)),
-            lambda e: e.conditional(lambda c: c.number(1).yes(sequence(character(97))).no(sequence())),
-            lambda e: e.atomicgroup(lambda g: g.alternatives([sequence(lambda s: s.characterset(lambda v: v.kind("any")))])),
+                    lambda s: s.characterset(lambda v: v.setKind("digit"))])))))])),
+            lambda e: e.assertion(lambda t: t.assertionKind("lookbehind").negate(True).alternatives([sequence(character(98))])),
+            lambda e: e.backreference(lambda r: r.ref("n")),
+            lambda e: e.backreference(lambda r: r.ref(1)),
+            lambda e: e.conditional(lambda c: c.ref(1).yes(sequence(character(97))).no(sequence())),
+            lambda e: e.atomicgroup(lambda g: g.alternatives([sequence(lambda s: s.characterset(lambda v: v.setKind("any")))])),
             lambda e: e.quantifier(lambda q: q.min(0).possessive(True).element(character(98))),
-            lambda e: e.assertion(lambda t: t.kind("stringstart")),
+            lambda e: e.assertion(lambda t: t.assertionKind("stringstart")),
             lambda e: e.comment(lambda c: c.text("note"))),
         sequence(
             lambda e: e.flags(lambda f: f.add("i").remove("m").alternatives([sequence(
-                lambda c: c.character(lambda v: v.value(97).text("\\x61")))])),
-            lambda e: e.assertion(lambda t: t.kind("end")))])))
+                lambda c: c.character(lambda v: v.raw("\\x61").value(97)))])),
+            lambda e: e.assertion(lambda t: t.assertionKind("end")))])))
 
     # --- typescript_regexp: every kind of TypeScript's RegExp, a literal --- the text:
     # /(?i:a)(?<n>b{1,}?)[a-c\d][\q{x|y}&&[x]][\w--a]\p{L}\b(?=c)\k<n>|$/v
@@ -665,18 +665,18 @@ def build():
     alt = lambda *elements: lambda u: u.alternative(lambda r: r.elements(list(elements)))  # noqa: E731
     cpp_regexp = XR.spec(lambda u: u.regex(lambda r: r.flags(["ECMAScript", "icase"]).pattern(lambda p: p.pattern(lambda q: q.alternatives([
         alt(
-            lambda e: e.assertion(lambda a: a.kind("start")),
+            lambda e: e.assertion(lambda a: a.assertionKind("start")),
             lambda e: e.capturinggroup(lambda g: g.alternatives([alt(char("a")), alt(char("."))])),
             lambda e: e.quantifier(lambda m: m.min(1).max(3).element(lambda c: c.characterclass(lambda k: k.negate(True).elements([
                 lambda x: x.characterclassrange(lambda y: y.min(char("a")).max(lambda z: z.collatingelement(lambda n: n.name("ch")))),
                 lambda x: x.exclass(lambda n: n.name("alpha")), lambda x: x.equivalence(lambda n: n.name("e")),
-                lambda x: x.characterset(lambda n: n.kind("digit"))])))),
-            lambda e: e.characterset(lambda n: n.kind("any")), lambda e: e.assertion(lambda a: a.kind("end"))),
+                lambda x: x.characterset(lambda n: n.setKind("digit"))])))),
+            lambda e: e.characterset(lambda n: n.setKind("any")), lambda e: e.assertion(lambda a: a.assertionKind("end"))),
         alt(
             lambda e: e.group(lambda g: g.alternatives([alt(char("b"))])),
-            lambda e: e.assertion(lambda a: a.kind("lookahead").negate(True).alternatives([alt(char("c"))])),
-            lambda e: e.quantifier(lambda m: m.min(0).greedy(False).element(char("x")).text("*?")),
-            lambda e: e.backreference(lambda b: b.ref(1)), lambda e: e.assertion(lambda a: a.kind("word")))])))))
+            lambda e: e.assertion(lambda a: a.assertionKind("lookahead").negate(True).alternatives([alt(char("c"))])),
+            lambda e: e.quantifier(lambda m: m.raw("*?").min(0).greedy(False).element(char("x"))),
+            lambda e: e.backreference(lambda b: b.ref(1)), lambda e: e.assertion(lambda a: a.assertionKind("word")))])))))
 
     # --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
     # their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>

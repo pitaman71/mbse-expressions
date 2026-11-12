@@ -29,14 +29,14 @@ reference parser, regexpp, names its nodes (as `TypeScript RegExp`'s are, each f
   `alternative` (an ECMAScript Alternative, a POSIX `RE_expression` or `ERE_branch`), its `elements`;
 - `group`, ECMAScript's `(?:...)`, and `capturinggroup`, ECMAScript's and an ERE's `(...)` and a BRE's `\\(...\\)`,
   each its `alternatives`;
-- `quantifier`: its `min`, its `max` (absent: no bound), whether it is `greedy` (absent: it is; ECMAScript's `*?` is
-  not), its `element`, and its `text` as written (`\\{2,\\}`, `{0,}`), printed where it has one;
+- `quantifier`: its `raw`, as written (`\\{2,\\}`, `{0,}`), printed where it has one, its `min`, its `max` (absent: no
+  bound), whether it is `greedy` (absent: it is; ECMAScript's `*?` is not), and its `element`;
 - `characterclass`, a bracket expression (`[^...]`): whether it is `negate`d, and its `elements`; and
   `characterclassrange` (`a-z`), its `min` and `max`, each a character or a collating element;
-- `characterset`: its `kind`, `any` (`.`), or ECMAScript's `digit`, `space` or `word` (`\\d`, `\\s`, `\\w`), and
+- `characterset`: its `setKind`, `any` (`.`), or ECMAScript's `digit`, `space` or `word` (`\\d`, `\\s`, `\\w`), and
   whether it is `negate`d (`\\D`);
-- `character`: its `value`, a code point, and its `text` as written (`\\x41`, `\\n`, `\\.`), printed where it has one;
-- `assertion`: its `kind`, `start` (`^`), `end` (`$`), ECMAScript's `word` (`\\b`) or `lookahead` (`(?=...)`, with its
+- `character`: its `raw`, as written (`\\x41`, `\\n`, `\\.`), printed where it has one, and its `value`, a code point;
+- `assertion`: its `assertionKind`, `start` (`^`), `end` (`$`), ECMAScript's `word` (`\\b`) or `lookahead` (`(?=...)`, with its
   `alternatives`), and whether it is `negate`d (`\\B`, `(?!...)`);
 - `backreference` (`\\1`), its `ref`;
 - [re.grammar]'s and POSIX's class atoms, each its `name`: `exclass` (ClassAtomExClass, `[:alpha:]`),
@@ -193,16 +193,16 @@ def install(txn: Any) -> Any:
             lambda _: _.CapturingGroup.name("Expressions.Cpp.RegExp.CapturingGroup").properties({
                 "alternatives": many(_.Term)}),
             lambda _: _.Quantifier.name("Expressions.Cpp.RegExp.Quantifier").properties({
-                "min": S.OfInt, "max": S.OfInt, "greedy": S.OfBool, "element": _.Term, "text": S.OfStr}),
+                "raw": S.OfStr, "min": S.OfInt, "max": S.OfInt, "greedy": S.OfBool, "element": _.Term}),
             lambda _: _.CharacterClass.name("Expressions.Cpp.RegExp.CharacterClass").properties({
                 "negate": S.OfBool, "elements": many(_.Term)}),
             lambda _: _.CharacterClassRange.name("Expressions.Cpp.RegExp.CharacterClassRange").properties({
                 "min": _.Term, "max": _.Term}),
             lambda _: _.CharacterSet.name("Expressions.Cpp.RegExp.CharacterSet").properties({
-                "kind": S.OfStr, "negate": S.OfBool}),
-            lambda _: _.Character.name("Expressions.Cpp.RegExp.Character").properties({"value": S.OfInt, "text": S.OfStr}),
+                "setKind": S.OfStr, "negate": S.OfBool}),
+            lambda _: _.Character.name("Expressions.Cpp.RegExp.Character").properties({"raw": S.OfStr, "value": S.OfInt}),
             lambda _: _.Assertion.name("Expressions.Cpp.RegExp.Assertion").properties({
-                "kind": S.OfStr, "negate": S.OfBool, "alternatives": many(_.Term)}),
+                "assertionKind": S.OfStr, "negate": S.OfBool, "alternatives": many(_.Term)}),
             lambda _: _.Backreference.name("Expressions.Cpp.RegExp.Backreference").properties({"ref": S.OfInt}),
             lambda _: _.ExClass.name("Expressions.Cpp.RegExp.ExClass").properties({"name": S.OfStr}),
             lambda _: _.CollatingElement.name("Expressions.Cpp.RegExp.CollatingElement").properties({"name": S.OfStr}),
@@ -270,12 +270,12 @@ def _grammar_problems(grammar_: str, root: Any) -> list[str]:
             lacks("alternation")
         if kind == GROUP:
             lacks("a group")
-        if kind == ASSERTION and attributes.get("kind") in ("word", "lookahead"):
-            lacks(f"a {attributes['kind']} assertion")
-        if kind == ASSERTION and attributes.get("kind") in ("start", "end") and not anchored:
+        if kind == ASSERTION and attributes.get("assertionKind") in ("word", "lookahead"):
+            lacks(f"a {attributes['assertionKind']} assertion")
+        if kind == ASSERTION and attributes.get("assertionKind") in ("start", "end") and not anchored:
             lacks("an anchor within the expression")
-        if kind == CHARACTERSET and attributes.get("kind") in ("digit", "space", "word"):
-            lacks(f"a {attributes['kind']} characterset")
+        if kind == CHARACTERSET and attributes.get("setKind") in ("digit", "space", "word"):
+            lacks(f"a {attributes['setKind']} characterset")
         if kind == QUANTIFIER:
             if attributes.get("greedy") is False:
                 lacks("a lazy quantifier")
@@ -283,7 +283,7 @@ def _grammar_problems(grammar_: str, root: Any) -> list[str]:
             inner = _read(element) if element is not None else None
             if inner is not None and inner.kind == QUANTIFIER:
                 lacks("a repeated quantifier")
-            if inner is not None and inner.kind == ASSERTION and inner.attributes.get("kind") in ("start", "end"):
+            if inner is not None and inner.kind == ASSERTION and inner.attributes.get("assertionKind") in ("start", "end"):
                 lacks("a repeated anchor")
         if kind == BACKREFERENCE:
             lacks("a backreference")
@@ -292,7 +292,7 @@ def _grammar_problems(grammar_: str, root: Any) -> list[str]:
         if kind == ALTERNATIVE:
             elements = node.lists["elements"]
             for i, element in enumerate(elements):
-                assertion = _read(element).attributes.get("kind")
+                assertion = _read(element).attributes.get("assertionKind")
                 visit(element, False, top and (assertion == "start" and i == 0 or assertion == "end"
                                                and i == len(elements) - 1))
             return
@@ -329,22 +329,22 @@ def problems(node: F.Node) -> list[str]:
         if type(least) is int and type(most) is int and most < least:
             found.append(f"a quantifier's max cannot be less than its min, got {most} and {least}")
         element = node.slots["element"]
-        if element is not None and _read(element).attributes.get("kind") == "word":
+        if element is not None and _read(element).attributes.get("assertionKind") == "word":
             found.append("a quantifier cannot repeat a word assertion")
-    elif kind == CHARACTERSET and "kind" in attributes:
-        if attributes["kind"] not in SETS:
-            found.append(f"CharacterSet.kind cannot be {attributes['kind']!r}")
-        elif attributes["kind"] == "any" and attributes.get("negate"):
+    elif kind == CHARACTERSET and "setKind" in attributes:
+        if attributes["setKind"] not in SETS:
+            found.append(f"CharacterSet.setKind cannot be {attributes['setKind']!r}")
+        elif attributes["setKind"] == "any" and attributes.get("negate"):
             found.append("an any characterset cannot be negated")
     elif kind == CHARACTER and type(attributes.get("value")) is int and not 0 <= attributes["value"] <= 0x10FFFF:
         found.append(f"a character's value must be a code point, got {attributes['value']}")
-    elif kind == ASSERTION and "kind" in attributes:
-        if attributes["kind"] not in ASSERTIONS:
-            found.append(f"Assertion.kind cannot be {attributes['kind']!r}")
-        elif attributes["kind"] in ("start", "end") and attributes.get("negate"):
-            found.append(f"a {attributes['kind']} assertion cannot be negated")
-        if attributes["kind"] != "lookahead" and node.lists["alternatives"]:
-            found.append(f"{F._article(attributes['kind'])} assertion holds no alternatives")
+    elif kind == ASSERTION and "assertionKind" in attributes:
+        if attributes["assertionKind"] not in ASSERTIONS:
+            found.append(f"Assertion.assertionKind cannot be {attributes['assertionKind']!r}")
+        elif attributes["assertionKind"] in ("start", "end") and attributes.get("negate"):
+            found.append(f"a {attributes['assertionKind']} assertion cannot be negated")
+        if attributes["assertionKind"] != "lookahead" and node.lists["alternatives"]:
+            found.append(f"{F._article(attributes['assertionKind'])} assertion holds no alternatives")
     elif kind == BACKREFERENCE and type(attributes.get("ref")) is int and attributes["ref"] < 1:
         found.append(f"a backreference's ref must be positive, got {attributes['ref']}")
     elif kind in (EXCLASS, COLLATINGELEMENT, EQUIVALENCE) and type(attributes.get("name")) is str:
@@ -356,7 +356,7 @@ def _check(tag: str) -> Callable[[Any], list[str]]:
     return lambda record: problems(F.node(tag, record))
 
 
-_REQUIRED = {QUANTIFIER: ("min",), CHARACTERSET: ("kind",), CHARACTER: ("value",), ASSERTION: ("kind",),
+_REQUIRED = {QUANTIFIER: ("min",), CHARACTERSET: ("setKind",), CHARACTER: ("value",), ASSERTION: ("assertionKind",),
              BACKREFERENCE: ("ref",), EXCLASS: ("name",), COLLATINGELEMENT: ("name",), EQUIVALENCE: ("name",)}
 
 

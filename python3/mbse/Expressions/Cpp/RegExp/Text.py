@@ -4,11 +4,11 @@ as the pattern `std::regex` is given, in its grammar: a `regex`'s, by its flags,
 
 Its kinds print as each grammar writes them: alternatives joined by `|`, grep's and egrep's list of patterns by
 newlines; a capturing group `(...)`, a BRE's (basic and grep) `\\(...\\)`; ECMAScript's group `(?:...)` and lookahead
-`(?=...)` or `(?!...)`; a quantifier in its `text` where it has one, else `*`, `+` and `?` where its bounds are theirs
+`(?=...)` or `(?!...)`; a quantifier in its `raw` where it has one, else `*`, `+` and `?` where its bounds are theirs
 (a BRE's `*` alone), else in braces, a BRE's escaped (`\\{2,\\}`), ECMAScript's lazy one followed by `?`; a bracket
 expression `[^...]`, a range `a-z`, a class atom `[:alpha:]`, `[.ch.]` or `[=a=]`; `.`, ECMAScript's `\\d`, `\\s`,
 `\\w` and their negations; `^`, `$`, ECMAScript's `\\b` and `\\B`; a backreference `\\1`. A character is written in
-its `text` where it has one, else as itself, escaped where its grammar makes it special (ECMAScript's syntax
+its `raw` where it has one, else as itself, escaped where its grammar makes it special (ECMAScript's syntax
 characters, and within a class `\\`, `]`, `-` and `^`; a BRE's or an ERE's special characters, XBD 9.3.3 and 9.4.3,
 none within a bracket expression, which has no escapes), a control character as ECMAScript's or awk's escape writes
 it (`\\n`, `\\x01`; awk's `\\001`), as a BRE and an ERE have none. Invalid syntax is written as written
@@ -84,8 +84,8 @@ class _Printer:
 
     def quantifier(self, node: F.Node, within: bool) -> str:
         element = self.term(node.slots["element"])
-        if "text" in node.attributes:
-            return element + node.attributes["text"]
+        if "raw" in node.attributes:
+            return element + node.attributes["raw"]
         least, most = node.attributes["min"], node.attributes.get("max")
         shorthand = {(0, None): "*", (1, None): "+", (0, 1): "?"}.get((least, most))
         if shorthand is not None and (shorthand == "*" or self.grammar not in _BRE):
@@ -103,15 +103,15 @@ class _Printer:
         return f"{self.term(node.slots['min'], True)}-{self.term(node.slots['max'], True)}"
 
     def characterset(self, node: F.Node, within: bool) -> str:
-        kind = node.attributes["kind"]
+        kind = node.attributes["setKind"]
         if kind == "any":
             return "."
         letter = kind[0]
         return "\\" + (letter.upper() if node.attributes.get("negate") else letter)
 
     def character(self, node: F.Node, within: bool) -> str:
-        if "text" in node.attributes:
-            return node.attributes["text"]
+        if "raw" in node.attributes:
+            return node.attributes["raw"]
         code = node.attributes["value"]
         c = chr(code)
         if self.grammar == "awk" and code in _AWK:
@@ -127,7 +127,7 @@ class _Printer:
         return "\\" + c if c in ("\\]-^" if within else _SPECIAL[E.ECMASCRIPT]) else c
 
     def assertion(self, node: F.Node, within: bool) -> str:
-        kind, negate = node.attributes["kind"], node.attributes.get("negate")
+        kind, negate = node.attributes["assertionKind"], node.attributes.get("negate")
         if kind == "lookahead":
             return f"(?{'!' if negate else '='}{self.alternatives(node)})"
         return {"start": "^", "end": "$", "word": "\\B" if negate else "\\b"}[kind]

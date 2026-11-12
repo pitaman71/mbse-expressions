@@ -30,14 +30,14 @@
  *   `alternative` (an ECMAScript Alternative, a POSIX `RE_expression` or `ERE_branch`), its `elements`;
  * - `group`, ECMAScript's `(?:...)`, and `capturinggroup`, ECMAScript's and an ERE's `(...)` and a BRE's `\(...\)`,
  *   each its `alternatives`;
- * - `quantifier`: its `min`, its `max` (absent: no bound), whether it is `greedy` (absent: it is; ECMAScript's `*?` is
- *   not), its `element`, and its `text` as written (`\{2,\}`, `{0,}`), printed where it has one;
+ * - `quantifier`: its `raw`, as written (`\{2,\}`, `{0,}`), printed where it has one, its `min`, its `max` (absent: no
+ *   bound), whether it is `greedy` (absent: it is; ECMAScript's `*?` is not), and its `element`;
  * - `characterclass`, a bracket expression (`[^...]`): whether it is `negate`d, and its `elements`; and
  *   `characterclassrange` (`a-z`), its `min` and `max`, each a character or a collating element;
- * - `characterset`: its `kind`, `any` (`.`), or ECMAScript's `digit`, `space` or `word` (`\d`, `\s`, `\w`), and
+ * - `characterset`: its `setKind`, `any` (`.`), or ECMAScript's `digit`, `space` or `word` (`\d`, `\s`, `\w`), and
  *   whether it is `negate`d (`\D`);
- * - `character`: its `value`, a code point, and its `text` as written (`\x41`, `\n`, `\.`), printed where it has one;
- * - `assertion`: its `kind`, `start` (`^`), `end` (`$`), ECMAScript's `word` (`\b`) or `lookahead` (`(?=...)`, with its
+ * - `character`: its `raw`, as written (`\x41`, `\n`, `\.`), printed where it has one, and its `value`, a code point;
+ * - `assertion`: its `assertionKind`, `start` (`^`), `end` (`$`), ECMAScript's `word` (`\b`) or `lookahead` (`(?=...)`, with its
  *   `alternatives`), and whether it is `negate`d (`\B`, `(?!...)`);
  * - `backreference` (`\1`), its `ref`;
  * - [re.grammar]'s and POSIX's class atoms, each its `name`: `exclass` (ClassAtomExClass, `[:alpha:]`),
@@ -200,16 +200,16 @@ export function install(txn: any): any {
       (_: any) => _.CapturingGroup.name("Expressions.Cpp.RegExp.CapturingGroup").properties({
           alternatives: many(_.Term)}),
       (_: any) => _.Quantifier.name("Expressions.Cpp.RegExp.Quantifier").properties({
-          min: S.OfInt, max: S.OfInt, greedy: S.OfBool, element: _.Term, text: S.OfStr}),
+          raw: S.OfStr, min: S.OfInt, max: S.OfInt, greedy: S.OfBool, element: _.Term}),
       (_: any) => _.CharacterClass.name("Expressions.Cpp.RegExp.CharacterClass").properties({
           negate: S.OfBool, elements: many(_.Term)}),
       (_: any) => _.CharacterClassRange.name("Expressions.Cpp.RegExp.CharacterClassRange").properties({
           min: _.Term, max: _.Term}),
       (_: any) => _.CharacterSet.name("Expressions.Cpp.RegExp.CharacterSet").properties({
-          kind: S.OfStr, negate: S.OfBool}),
-      (_: any) => _.Character.name("Expressions.Cpp.RegExp.Character").properties({ value: S.OfInt, text: S.OfStr }),
+          setKind: S.OfStr, negate: S.OfBool}),
+      (_: any) => _.Character.name("Expressions.Cpp.RegExp.Character").properties({ raw: S.OfStr, value: S.OfInt }),
       (_: any) => _.Assertion.name("Expressions.Cpp.RegExp.Assertion").properties({
-          kind: S.OfStr, negate: S.OfBool, alternatives: many(_.Term)}),
+          assertionKind: S.OfStr, negate: S.OfBool, alternatives: many(_.Term)}),
       (_: any) => _.Backreference.name("Expressions.Cpp.RegExp.Backreference").properties({ ref: S.OfInt }),
       (_: any) => _.ExClass.name("Expressions.Cpp.RegExp.ExClass").properties({ name: S.OfStr }),
       (_: any) => _.CollatingElement.name("Expressions.Cpp.RegExp.CollatingElement").properties({ name: S.OfStr }),
@@ -273,21 +273,21 @@ function grammarProblems(grammar_: string, root: any): string[] {
     if (kind === PATTERNLIST) lacks("a patternlist");
     if ((node.lists.get("alternatives") ?? []).length > 1) lacks("alternation");
     if (kind === GROUP) lacks("a group");
-    if (kind === ASSERTION && ["word", "lookahead"].includes(attributes.get("kind"))) {
-      lacks(`a ${attributes.get("kind") as string} assertion`);
+    if (kind === ASSERTION && ["word", "lookahead"].includes(attributes.get("assertionKind"))) {
+      lacks(`a ${attributes.get("assertionKind") as string} assertion`);
     }
-    if (kind === ASSERTION && ["start", "end"].includes(attributes.get("kind")) && !anchored) {
+    if (kind === ASSERTION && ["start", "end"].includes(attributes.get("assertionKind")) && !anchored) {
       lacks("an anchor within the expression");
     }
-    if (kind === CHARACTERSET && ["digit", "space", "word"].includes(attributes.get("kind"))) {
-      lacks(`a ${attributes.get("kind") as string} characterset`);
+    if (kind === CHARACTERSET && ["digit", "space", "word"].includes(attributes.get("setKind"))) {
+      lacks(`a ${attributes.get("setKind") as string} characterset`);
     }
     if (kind === QUANTIFIER) {
       if (attributes.get("greedy") === false) lacks("a lazy quantifier");
       const element = node.slots.get("element") ?? null;
       const inner = element !== null ? read(element) : null;
       if (inner !== null && inner.kind === QUANTIFIER) lacks("a repeated quantifier");
-      if (inner !== null && inner.kind === ASSERTION && ["start", "end"].includes(inner.attributes.get("kind"))) {
+      if (inner !== null && inner.kind === ASSERTION && ["start", "end"].includes(inner.attributes.get("assertionKind"))) {
         lacks("a repeated anchor");
       }
     }
@@ -298,7 +298,7 @@ function grammarProblems(grammar_: string, root: any): string[] {
     if (kind === ALTERNATIVE) {
       const elements = node.lists.get("elements") as readonly any[];
       elements.forEach((element, i) => {
-        const assertion = read(element).attributes.get("kind");
+        const assertion = read(element).attributes.get("assertionKind");
         visit(element, false, top && (assertion === "start" && i === 0 || assertion === "end" && i === elements.length - 1));
       });
       return;
@@ -341,22 +341,22 @@ export function problems(node: F.Node): string[] {
       found.push(`a quantifier's max cannot be less than its min, got ${most} and ${least}`);
     }
     const element = node.slots.get("element") ?? null;
-    if (element !== null && read(element).attributes.get("kind") === "word") {
+    if (element !== null && read(element).attributes.get("assertionKind") === "word") {
       found.push("a quantifier cannot repeat a word assertion");
     }
-  } else if (kind === CHARACTERSET && attributes.has("kind")) {
-    if (!SETS.includes(attributes.get("kind"))) {
-      found.push(`CharacterSet.kind cannot be ${repr(attributes.get("kind"))}`);
-    } else if (attributes.get("kind") === "any" && attributes.get("negate") === true) {
+  } else if (kind === CHARACTERSET && attributes.has("setKind")) {
+    if (!SETS.includes(attributes.get("setKind"))) {
+      found.push(`CharacterSet.setKind cannot be ${repr(attributes.get("setKind"))}`);
+    } else if (attributes.get("setKind") === "any" && attributes.get("negate") === true) {
       found.push("an any characterset cannot be negated");
     }
   } else if (kind === CHARACTER && typeof attributes.get("value") === "bigint"
     && !(attributes.get("value") >= 0n && attributes.get("value") <= 0x10FFFFn)) {
     found.push(`a character's value must be a code point, got ${attributes.get("value") as bigint}`);
-  } else if (kind === ASSERTION && attributes.has("kind")) {
-    const assertion = attributes.get("kind") as string;
+  } else if (kind === ASSERTION && attributes.has("assertionKind")) {
+    const assertion = attributes.get("assertionKind") as string;
     if (!ASSERTIONS.includes(assertion)) {
-      found.push(`Assertion.kind cannot be ${repr(assertion)}`);
+      found.push(`Assertion.assertionKind cannot be ${repr(assertion)}`);
     } else if (["start", "end"].includes(assertion) && attributes.get("negate") === true) {
       found.push(`a ${assertion} assertion cannot be negated`);
     }
@@ -377,7 +377,7 @@ function check(tag: string): (record: any) => string[] {
 }
 
 const REQUIRED: ReadonlyMap<string, readonly string[]> = new Map([
-  [QUANTIFIER, ["min"]], [CHARACTERSET, ["kind"]], [CHARACTER, ["value"]], [ASSERTION, ["kind"]],
+  [QUANTIFIER, ["min"]], [CHARACTERSET, ["setKind"]], [CHARACTER, ["value"]], [ASSERTION, ["assertionKind"]],
   [BACKREFERENCE, ["ref"]], [EXCLASS, ["name"]], [COLLATINGELEMENT, ["name"]], [EQUIVALENCE, ["name"]],
 ]);
 

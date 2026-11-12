@@ -22,15 +22,15 @@ names them:
 - `quantifier` (`*`, `+`, `?`, `{m}`, `{m,}`, `{m,n}`: its `min`, its `max`, absent where unbounded, whether it is
   `greedy`, absent where it is, and `possessive`, `*+`, absent where it is not; its `element`);
 - `characterclass` (`[...]`, `[^...]`: whether it is negated, `negate`, and its `elements`), `characterclassrange`
-  (`a-z` in a class: its `min` and `max`, characters), `characterset` (its `kind`: `any`, `.`; `digit`, `space` and
+  (`a-z` in a class: its `min` and `max`, characters), `characterset` (its `setKind`: `any`, `.`; `digit`, `space` and
   `word`, `\\d`, `\\s` and `\\w`, and their negations with `negate`, `\\D`, `\\S` and `\\W`) and `character` (its
-  `value`, a code point, with its `text`, its spelling as written: `a`, `\\n`, `\\x41`, `\\u00e9`, `\\N{EM DASH}`, `\\101`,
+  `raw`, its spelling as written, with its `value`, a code point: `a`, `\\n`, `\\x41`, `\\u00e9`, `\\N{EM DASH}`, `\\101`,
   `\\.`, and a default spelling where it has none);
-- `assertion` (its `kind`: `start`, `^`; `end`, `$`; `stringstart`, `\\A`; `stringend`, `\\Z` or `\\z`; `word`, `\\b`, and
+- `assertion` (its `assertionKind`: `start`, `^`; `end`, `$`; `stringstart`, `\\A`; `stringend`, `\\Z` or `\\z`; `word`, `\\b`, and
   `\\B` with `negate`; `lookahead`, `(?=...)` and `(?!...)`, and `lookbehind`, `(?<=...)` and `(?<!...)`, each holding
   `alternatives`);
-- `backreference` (`\\1` by its `number`, `(?P=name)` by its `name`);
-- Python's own: `conditional` (`(?(1)yes|no)`, `(?(name)yes|no)`: the group it tests by `number` or `name`, and its
+- `backreference` (its `ref`, a group's number, `\\1`, or its name, `(?P=name)`);
+- Python's own: `conditional` (`(?(1)yes|no)`, `(?(name)yes|no)`: the group it tests, its `ref`, and its
   `yes` and `no`, alternatives), `atomicgroup` (`(?>...)`, Python 3.11), and `flags` (its letters to `add` and to
   `remove`: an inline `(?aiLmsux)`, global, holding no alternatives, or scoped, `(?a-i:...)`, holding them);
 - `comment` (`(?#...)`, its `text`), which `re`'s parser skips, kept so that a pattern prints as written;
@@ -174,15 +174,15 @@ def install(txn: Any) -> Any:
             lambda _: _.CharacterClassRange.name("Expressions.Python.RegExp.CharacterClassRange").properties({
                 "min": _.Term, "max": _.Term}),
             lambda _: _.CharacterSet.name("Expressions.Python.RegExp.CharacterSet").properties({
-                "kind": S.OfStr, "negate": S.OfBool}),
+                "setKind": S.OfStr, "negate": S.OfBool}),
             lambda _: _.Character.name("Expressions.Python.RegExp.Character").properties({
-                "value": S.OfInt, "text": S.OfStr}),  # its code point, and its spelling as written
+                "raw": S.OfStr, "value": S.OfInt}),  # its spelling as written, and its code point
             lambda _: _.Assertion.name("Expressions.Python.RegExp.Assertion").properties({
-                "kind": S.OfStr, "negate": S.OfBool, "alternatives": many(_.Term)}),  # a lookaround's alternatives
+                "assertionKind": S.OfStr, "negate": S.OfBool, "alternatives": many(_.Term)}),  # a lookaround's alternatives
             lambda _: _.Backreference.name("Expressions.Python.RegExp.Backreference").properties({
-                "number": S.OfInt, "name": S.OfStr}),
+                "ref": S.OfAny(lambda a: a.schemas([S.OfInt, S.OfStr]))}),  # a group's number or its name
             lambda _: _.Conditional.name("Expressions.Python.RegExp.Conditional").properties({
-                "number": S.OfInt, "name": S.OfStr, "yes": _.Term, "no": _.Term}),
+                "ref": S.OfAny(lambda a: a.schemas([S.OfInt, S.OfStr])), "yes": _.Term, "no": _.Term}),
             lambda _: _.AtomicGroup.name("Expressions.Python.RegExp.AtomicGroup").properties({
                 "alternatives": many(_.Term)}),
             lambda _: _.Flags.name("Expressions.Python.RegExp.Flags").properties({
@@ -276,17 +276,17 @@ def _attributes(term: Any) -> dict[str, Any]:
 def _within(term: Any) -> str:
     """A character's spelling within a class, as written or by default, for a message."""
     attributes = _attributes(term)
-    return attributes["text"] if "text" in attributes else spelling(attributes["value"], True)
+    return attributes["raw"] if "raw" in attributes else spelling(attributes["value"], True)
 
 
 def _reference(what: str, attributes: dict[str, Any]) -> list[str]:
-    """A backreference's or a conditional's group: a number, positive, or a name, an identifier, not both."""
-    if ("number" in attributes) == ("name" in attributes):
-        return [f"{what} has a number or a name"]
-    number = attributes.get("number")
-    if type(number) is int and number < 1:
-        return [f"{what}'s number must be positive, got {number}"]
-    return P._identifier_problems(f"{what}'s name", attributes.get("name"))
+    """A backreference's or a conditional's group, its `ref`: a number, positive, or a name, an identifier."""
+    ref = attributes.get("ref")
+    if ref is None:
+        return [f"{what} needs a ref"]
+    if type(ref) is int and ref < 1:
+        return [f"{what}'s ref must be positive, got {ref}"]
+    return P._identifier_problems(f"{what}'s ref", ref) if type(ref) is str else []
 
 
 def _flags(add: str, remove: str, scoped: bool) -> list[str]:
@@ -314,7 +314,7 @@ def _repeatable(term: Any) -> list[str]:
     if tag == QUANTIFIER:
         return ["multiple repeat"]
     attributes = _attributes(term)
-    if (tag == ASSERTION and attributes.get("kind") not in LOOKAROUNDS or tag == FLAGS and not F.form(term).arguments
+    if (tag == ASSERTION and attributes.get("assertionKind") not in LOOKAROUNDS or tag == FLAGS and not F.form(term).arguments
             or tag in (COMMENT, PATTERN, ALTERNATIVE, CHARACTERCLASSRANGE)):
         return ["nothing to repeat"]
     return []
@@ -341,10 +341,11 @@ def _groups(alternatives: tuple[Any, ...]) -> list[str]:
         elif tag == FLAGS and not F.form(term).arguments:
             globals_ += 1
     for attributes in references:
-        if "name" in attributes and "number" not in attributes and attributes["name"] not in names:
-            found.append(f"unknown group name {attributes['name']!r}")
-        elif "number" in attributes and "name" not in attributes and type(attributes["number"]) is int and attributes["number"] > count:
-            found.append(f"invalid group reference {attributes['number']}")
+        ref = attributes.get("ref")
+        if type(ref) is str and ref not in names:
+            found.append(f"unknown group name {ref!r}")
+        elif type(ref) is int and ref > count:
+            found.append(f"invalid group reference {ref}")
     first = alternatives[0] if alternatives else None
     leading = 0
     for element in F.form(first).arguments if first is not None and _tag(first) == ALTERNATIVE else ():
@@ -377,7 +378,7 @@ def problems(node: F.Node) -> list[str]:
             tag = _tag(item)
             if tag not in (CHARACTER, CHARACTERCLASSRANGE, CHARACTERSET, *_INVALID):
                 found.append(f"a characterclass's element cannot be {F._article(tag)}")
-            elif tag == CHARACTERSET and _attributes(item).get("kind") == "any":
+            elif tag == CHARACTERSET and _attributes(item).get("setKind") == "any":
                 found.append("a characterclass's element cannot be the characterset any")
         if not node.many:
             found.append("a characterclass needs an element")
@@ -390,20 +391,20 @@ def problems(node: F.Node) -> list[str]:
         if not found and len(values) == 2 and all(type(v) is int for v in values) and values[1] < values[0]:
             found.append(f"bad character range {_within(ends['min'])}-{_within(ends['max'])}")
     elif kind == CHARACTERSET:
-        if attributes.get("kind", "any") not in SETS:
-            found.append(f"CharacterSet.kind cannot be {attributes['kind']!r}")
-        elif attributes.get("negate") is True and attributes.get("kind") == "any":
+        if attributes.get("setKind", "any") not in SETS:
+            found.append(f"CharacterSet.setKind cannot be {attributes['setKind']!r}")
+        elif attributes.get("negate") is True and attributes.get("setKind") == "any":
             found.append("the characterset any cannot be negated")
     elif kind == CHARACTER:
         value = attributes.get("value")
         if type(value) is int and not 0 <= value <= 0x10FFFF:
             found.append(f"a character's value must be a code point, got {value}")
-        elif type(value) is int and type(attributes.get("text")) is str and not spells(attributes["text"], value):
-            found.append(f"a character's text {attributes['text']!r} does not spell U+{value:04X}")
+        elif type(value) is int and type(attributes.get("raw")) is str and not spells(attributes["raw"], value):
+            found.append(f"a character's raw {attributes['raw']!r} does not spell U+{value:04X}")
     elif kind == ASSERTION:
-        assertion = attributes.get("kind")
+        assertion = attributes.get("assertionKind")
         if assertion is not None and assertion not in ASSERTIONS:
-            found.append(f"Assertion.kind cannot be {assertion!r}")
+            found.append(f"Assertion.assertionKind cannot be {assertion!r}")
         elif assertion is not None:
             if attributes.get("negate") is True and assertion not in ("word", *LOOKAROUNDS):
                 found.append(f"the assertion {assertion} cannot be negated")
@@ -456,9 +457,9 @@ def _kinds() -> dict[str, F.Kind]:
         QUANTIFIER: application(QUANTIFIER, required=("min",)),
         CHARACTERCLASS: application(CHARACTERCLASS),
         CHARACTERCLASSRANGE: application(CHARACTERCLASSRANGE),
-        CHARACTERSET: application(CHARACTERSET, required=("kind",)),
+        CHARACTERSET: application(CHARACTERSET, required=("setKind",)),
         CHARACTER: application(CHARACTER, required=("value",)),
-        ASSERTION: application(ASSERTION, required=("kind",)),
+        ASSERTION: application(ASSERTION, required=("assertionKind",)),
         BACKREFERENCE: application(BACKREFERENCE),
         CONDITIONAL: application(CONDITIONAL, optional=("no",)),
         ATOMICGROUP: application(ATOMICGROUP),

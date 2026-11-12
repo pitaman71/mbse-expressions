@@ -1,5 +1,5 @@
 {
- "grammar": "The codes `re`'s parser writes, Python 3.0 to 3.15 (`sre_constants` to 3.10, `re._constants` from 3.11): its operation codes (`OPCODES`, with `MIN_REPEAT` and `MAX_REPEAT`, which only the parser writes), position codes (`ATCODES`), category codes (`CHCODES`) and flags (`SRE_FLAG_*`, an inline flags' letters), each with the version it arrived in (`since`) and, where it was removed, the last that has it (`until`); each mapped to the kinds of the Python RegExp dialect it is read as (`kinds`, each a branch of `Expressions.Python.RegExp.Term`), with the attributes it gives them (`attributes`: a flag's `letter`, among a flags' `add` and `remove`), or listed as not an expression (`not`), the compiler's, with its reason; `unwritten` lists the kinds no code writes",
+ "grammar": "The codes `re`'s parser writes, Python 3.0 to 3.15 (`sre_constants` to 3.10, `re._constants` from 3.11): its operation codes (`OPCODES`, with `MIN_REPEAT` and `MAX_REPEAT`, which only the parser writes), position codes (`ATCODES`), category codes (`CHCODES`) and flags (`SRE_FLAG_*`, an inline flags' letters), each with the version it arrived in (`since`) and, where it was removed, the last that has it (`until`); each mapped to the kinds of the Python RegExp dialect it is read as (`kinds`, each a branch of `Expressions.Python.RegExp.Term`), with the attributes it gives them (`attributes`, named as the kinds' properties: a character set's `setKind`, an assertion's `assertionKind`, a flag's `letter`, among a flags' `add` and `remove`), or listed as not an expression (`not`), the compiler's, with its reason; `unwritten` lists the kinds no code writes",
  "checked": "each version's `Lib/sre_constants.py` or `Lib/re/_constants.py` at its tag in CPython's repository (v3.0 to v3.2, v3.3.0 to v3.15.0), and the running Python 3.14.7 and 3.15.0rc2's `re._constants`",
  "codes": [
   {
@@ -22,7 +22,7 @@
     "characterset"
    ],
    "attributes": {
-    "kind": "any"
+    "setKind": "any"
    }
   },
   {
@@ -362,7 +362,7 @@
     "assertion"
    ],
    "attributes": {
-    "kind": "start"
+    "assertionKind": "start"
    }
   },
   {
@@ -379,7 +379,7 @@
     "assertion"
    ],
    "attributes": {
-    "kind": "stringstart"
+    "assertionKind": "stringstart"
    }
   },
   {
@@ -390,7 +390,7 @@
     "assertion"
    ],
    "attributes": {
-    "kind": "word"
+    "assertionKind": "word"
    }
   },
   {
@@ -401,7 +401,7 @@
     "assertion"
    ],
    "attributes": {
-    "kind": "word",
+    "assertionKind": "word",
     "negate": true
    }
   },
@@ -413,7 +413,7 @@
     "assertion"
    ],
    "attributes": {
-    "kind": "end"
+    "assertionKind": "end"
    }
   },
   {
@@ -430,7 +430,7 @@
     "assertion"
    ],
    "attributes": {
-    "kind": "stringend"
+    "assertionKind": "stringend"
    }
   },
   {
@@ -465,7 +465,7 @@
     "characterset"
    ],
    "attributes": {
-    "kind": "digit"
+    "setKind": "digit"
    }
   },
   {
@@ -476,7 +476,7 @@
     "characterset"
    ],
    "attributes": {
-    "kind": "digit",
+    "setKind": "digit",
     "negate": true
    }
   },
@@ -488,7 +488,7 @@
     "characterset"
    ],
    "attributes": {
-    "kind": "space"
+    "setKind": "space"
    }
   },
   {
@@ -499,7 +499,7 @@
     "characterset"
    ],
    "attributes": {
-    "kind": "space",
+    "setKind": "space",
     "negate": true
    }
   },
@@ -511,7 +511,7 @@
     "characterset"
    ],
    "attributes": {
-    "kind": "word"
+    "setKind": "word"
    }
   },
   {
@@ -522,7 +522,7 @@
     "characterset"
    ],
    "attributes": {
-    "kind": "word",
+    "setKind": "word",
     "negate": true
    }
   },

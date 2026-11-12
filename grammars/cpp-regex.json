@@ -56,7 +56,7 @@
   {
    "node": "QuantifierPrefix",
    "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
-   "not": "a quantifier's `min` and `max`, and its `text` as written"
+   "not": "a quantifier's `min` and `max`, and its `raw` as written"
   },
   {
    "node": "Atom",
@@ -98,7 +98,7 @@
   {
    "node": "ControlLetter",
    "source": "ECMA-262 3rd edition, 15.10.1, as [re.grammar] modifies it",
-   "not": "the letter of a control escape (`\\cJ`), within a character's `text`"
+   "not": "the letter of a control escape (`\\cJ`), within a character's `raw`"
   },
   {
    "node": "IdentityEscape",
@@ -234,7 +234,7 @@
    "kinds": [
     "RegExp.character"
    ],
-   "note": "a special character escaped, its `text`"
+   "note": "a special character escaped, its `raw`"
   },
   {
    "node": "DUP_COUNT",
@@ -376,7 +376,7 @@
   {
    "node": "RE_dupl_symbol",
    "source": "ISO/IEC/IEEE 9945, XBD 9.5",
-   "not": "a quantifier's `min` and `max`, and its `text` as written"
+   "not": "a quantifier's `min` and `max`, and its `raw` as written"
   },
   {
    "node": "bracket_expression",
@@ -488,7 +488,7 @@
   {
    "node": "ERE_dupl_symbol",
    "source": "ISO/IEC/IEEE 9945, XBD 9.5",
-   "not": "a quantifier's `min` and `max`, and its `text` as written"
+   "not": "a quantifier's `min` and `max`, and its `raw` as written"
   },
   {
    "node": "escape sequence",

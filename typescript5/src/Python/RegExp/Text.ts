@@ -35,7 +35,7 @@ function alternatives(p: Printer, node: F.Node): string {
 
 /** A character, in its spelling as written, else in its default spelling where it stands. */
 function character(node: F.Node, within: boolean): string {
-  return node.attributes.has("text") ? node.attributes.get("text") as string : R.spelling(node.attributes.get("value") as bigint, within);
+  return node.attributes.has("raw") ? node.attributes.get("raw") as string : R.spelling(node.attributes.get("value") as bigint, within);
 }
 
 /** An element of a class: a character and a range's ends spelled as within a class, any other as it is written. */
@@ -54,7 +54,7 @@ function elements(p: Printer, node: F.Node): Written {
   const written = node.many.map((element) => p.text(element)[0]);
   node.many.slice(0, -1).forEach((element, i) => {
     const [tag, record] = F.kindOf(element);
-    if (tag === R.BACKREFERENCE && F.attributesOf(record).has("number") && DIGITS.includes((written[i + 1] as string).slice(0, 1) || "_")) {
+    if (tag === R.BACKREFERENCE && typeof F.attributesOf(record).get("ref") === "bigint" && DIGITS.includes((written[i + 1] as string).slice(0, 1) || "_")) {
       written[i] = `(?:${written[i] as string})`;
     }
   });
@@ -78,13 +78,13 @@ function class_(p: Printer, node: F.Node): Written {
 
 /** `.`, `\d`, `\s`, `\w`, and the negations in capitals. */
 function set(_: Printer, node: F.Node): Written {
-  const written = SETS.get(node.attributes.get("kind")) as string;
+  const written = SETS.get(node.attributes.get("setKind")) as string;
   return [node.attributes.get("negate") === true ? written.toUpperCase() : written, CLOSED];
 }
 
 /** `^`, `$`, `\A`, `\Z`, `\b`, `\B`, and the lookarounds around their alternatives. */
 function assertion(p: Printer, node: F.Node): Written {
-  const [kind, negate] = [node.attributes.get("kind") as string, node.attributes.get("negate") === true];
+  const [kind, negate] = [node.attributes.get("assertionKind") as string, node.attributes.get("negate") === true];
   if (R.LOOKAROUNDS.includes(kind)) return [`${LOOKAROUNDS.get(`${kind} ${negate}`) as string}${alternatives(p, node)})`, CLOSED];
   const written = ASSERTIONS.get(kind) as string;
   return [negate ? written.toUpperCase() : written, CLOSED];
@@ -92,13 +92,13 @@ function assertion(p: Printer, node: F.Node): Written {
 
 /** A group's number, or its name. */
 function reference(node: F.Node): string {
-  return node.attributes.has("number") ? `${node.attributes.get("number")}` : node.attributes.get("name") as string;
+  return `${node.attributes.get("ref") as bigint | string}`;
 }
 
 /** `\1`, `(?P=name)`. */
 function backreference(_: Printer, node: F.Node): Written {
-  if (node.attributes.has("number")) return [`\\${node.attributes.get("number")}`, CLOSED];
-  return [`(?P=${node.attributes.get("name") as string})`, CLOSED];
+  const ref = node.attributes.get("ref") as bigint | string;
+  return [typeof ref === "bigint" ? `\\${ref}` : `(?P=${ref})`, CLOSED];
 }
 
 /** `(?(1)yes|no)`, `(?(name)yes)`. */

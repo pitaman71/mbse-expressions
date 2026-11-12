@@ -39,7 +39,7 @@ def _alternatives(p: Any, node: F.Node) -> str:
 
 def _character(node: F.Node, within: bool) -> str:
     """A character, in its spelling as written, else in its default spelling where it stands."""
-    return node.attributes["text"] if "text" in node.attributes else R.spelling(node.attributes["value"], within)
+    return node.attributes["raw"] if "raw" in node.attributes else R.spelling(node.attributes["value"], within)
 
 
 def _member(p: Any, item: Any) -> str:
@@ -58,7 +58,7 @@ def _elements(p: Any, node: F.Node) -> tuple[str, int]:
     written = [p.text(element)[0] for element in node.many]
     for i, element in enumerate(node.many[:-1]):
         tag, record = F.kind_of(element)
-        if tag == R.BACKREFERENCE and "number" in F.attributes_of(record) and written[i + 1][:1] in _DIGITS:
+        if tag == R.BACKREFERENCE and type(F.attributes_of(record).get("ref")) is int and written[i + 1][:1] in _DIGITS:
             written[i] = f"(?:{written[i]})"
     return "".join(written), CLOSED
 
@@ -81,13 +81,13 @@ def _class(p: Any, node: F.Node) -> tuple[str, int]:
 
 def _set(p: Any, node: F.Node) -> tuple[str, int]:
     """`.`, `\\d`, `\\s`, `\\w`, and the negations in capitals."""
-    written = _SETS[node.attributes["kind"]]
+    written = _SETS[node.attributes["setKind"]]
     return (written.upper() if node.attributes.get("negate") is True else written), CLOSED
 
 
 def _assertion(p: Any, node: F.Node) -> tuple[str, int]:
     """`^`, `$`, `\\A`, `\\Z`, `\\b`, `\\B`, and the lookarounds around their alternatives."""
-    kind, negate = node.attributes["kind"], node.attributes.get("negate") is True
+    kind, negate = node.attributes["assertionKind"], node.attributes.get("negate") is True
     if kind in R.LOOKAROUNDS:
         return f"{_LOOKAROUNDS[(kind, negate)]}{_alternatives(p, node)})", CLOSED
     written = _ASSERTIONS[kind]
@@ -96,14 +96,13 @@ def _assertion(p: Any, node: F.Node) -> tuple[str, int]:
 
 def _reference(node: F.Node) -> str:
     """A group's number, or its name."""
-    return f"{node.attributes['number']}" if "number" in node.attributes else node.attributes["name"]
+    return f"{node.attributes['ref']}"
 
 
 def _backreference(p: Any, node: F.Node) -> tuple[str, int]:
     """`\\1`, `(?P=name)`."""
-    if "number" in node.attributes:
-        return f"\\{node.attributes['number']}", CLOSED
-    return f"(?P={node.attributes['name']})", CLOSED
+    ref = node.attributes["ref"]
+    return (f"\\{ref}" if type(ref) is int else f"(?P={ref})"), CLOSED
 
 
 def _conditional(p: Any, node: F.Node) -> tuple[str, int]:

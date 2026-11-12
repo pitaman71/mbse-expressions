@@ -5,11 +5,11 @@
  *
  * Its kinds print as each grammar writes them: alternatives joined by `|`, grep's and egrep's list of patterns by
  * newlines; a capturing group `(...)`, a BRE's (basic and grep) `\(...\)`; ECMAScript's group `(?:...)` and lookahead
- * `(?=...)` or `(?!...)`; a quantifier in its `text` where it has one, else `*`, `+` and `?` where its bounds are theirs
+ * `(?=...)` or `(?!...)`; a quantifier in its `raw` where it has one, else `*`, `+` and `?` where its bounds are theirs
  * (a BRE's `*` alone), else in braces, a BRE's escaped (`\{2,\}`), ECMAScript's lazy one followed by `?`; a bracket
  * expression `[^...]`, a range `a-z`, a class atom `[:alpha:]`, `[.ch.]` or `[=a=]`; `.`, ECMAScript's `\d`, `\s`,
  * `\w` and their negations; `^`, `$`, ECMAScript's `\b` and `\B`; a backreference `\1`. A character is written in
- * its `text` where it has one, else as itself, escaped where its grammar makes it special (ECMAScript's syntax
+ * its `raw` where it has one, else as itself, escaped where its grammar makes it special (ECMAScript's syntax
  * characters, and within a class `\`, `]`, `-` and `^`; a BRE's or an ERE's special characters, XBD 9.3.3 and 9.4.3,
  * none within a bracket expression, which has no escapes), a control character as ECMAScript's or awk's escape writes
  * it (`\n`, `\x01`; awk's `\001`), as a BRE and an ERE have none. Invalid syntax is written as written
@@ -89,7 +89,7 @@ class Printer {
 
   quantifier(node: F.Node): string {
     const element = this.term(node.slots.get("element"));
-    if (node.attributes.has("text")) return element + (node.attributes.get("text") as string);
+    if (node.attributes.has("raw")) return element + (node.attributes.get("raw") as string);
     const [least, most] = [node.attributes.get("min") as bigint, node.attributes.get("max") as bigint | undefined];
     const shorthand = most === undefined ? (least === 0n ? "*" : least === 1n ? "+" : null)
       : least === 0n && most === 1n ? "?" : null;
@@ -113,14 +113,14 @@ class Printer {
   }
 
   characterset(node: F.Node): string {
-    const kind = node.attributes.get("kind") as string;
+    const kind = node.attributes.get("setKind") as string;
     if (kind === "any") return ".";
     const letter = kind[0] as string;
     return "\\" + (node.attributes.get("negate") === true ? letter.toUpperCase() : letter);
   }
 
   character(node: F.Node, within: boolean): string {
-    if (node.attributes.has("text")) return node.attributes.get("text") as string;
+    if (node.attributes.has("raw")) return node.attributes.get("raw") as string;
     const code = Number(node.attributes.get("value") as bigint);
     const c = String.fromCodePoint(code);
     if (this.grammar === "awk" && AWK.has(code)) return "\\" + (AWK.get(code) as string);
@@ -134,7 +134,7 @@ class Printer {
   }
 
   assertion(node: F.Node): string {
-    const [kind, negate] = [node.attributes.get("kind") as string, node.attributes.get("negate") === true];
+    const [kind, negate] = [node.attributes.get("assertionKind") as string, node.attributes.get("negate") === true];
     if (kind === "lookahead") return `(?${negate ? "!" : "="}${this.alternatives(node)})`;
     return ({ start: "^", end: "$", word: negate ? "\\B" : "\\b" } as Record<string, string>)[kind] as string;
   }
