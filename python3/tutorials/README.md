@@ -45,7 +45,7 @@ tells no story. Tutorials 7 and 8 come after the dialects' retrofit.
 | 4 | [Names](04_Names.ipynb) | A variable in each language; free names; names kept as written |
 | 5 | [Operators](05_Operators.ipynb) | `a + b * c` as a tree; parentheses and precedence across languages; operations as data; each language's arithmetic |
 | 6 | [Calls, members and subscripts](06_Calls_Members_And_Subscripts.ipynb) | Properties, items and calls in each language, and what has no counterpart |
-| 7 | Bindings | `let`, lambdas, quantifiers and comprehensions, each a variation of `let` (after the dialects' retrofit) |
+| 7 | [Bindings](07_Bindings.ipynb) | `let`, lambdas, quantifiers and comprehensions, each a variation of `let` |
 | 8 | Sublanguages | Types, patterns, assertions and constraints as dialects of their own (after the dialects' retrofit) |
 
 ## Part II · Constraints as data, in seven case studies
