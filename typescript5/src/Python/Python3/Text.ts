@@ -18,7 +18,7 @@ import * as RegExpText from "../RegExp/Text.js";
 import * as TypesText from "../Types/Text.js";
 import * as P from "./Expressions.js";
 
-const { repr, pyFloat } = Repr;
+const { repr } = Repr;
 
 // --- Rendering ---
 
@@ -45,17 +45,6 @@ function constantText(value: unknown): Written {
     text = repr(value);
   }
   return [text, text.startsWith("-") ? UNARY : PRIMARY];
-}
-
-/** A complex number as Python's `repr` writes it: `2j`, `(1-2j)`. */
-function complexText(real: number, imag: number): string {
-  const part = (x: number): string => {
-    const text = pyFloat(x);
-    return text.endsWith(".0") ? text.slice(0, -2) : text;
-  };
-  if (Object.is(real, 0)) return `${part(imag)}j`;
-  const imaginary = part(imag);
-  return `(${part(real)}${imaginary.startsWith("-") ? "" : "+"}${imaginary}j)`;
 }
 
 function importLine(tag: string, attributes: Attributes): string {
@@ -88,15 +77,11 @@ export class Printer {
     const attributes = F.attributesOf(record);
     const args = F.argumentsOf(record);
     if (tag === P.LITERAL || tag === P.CONSTANT) {
-      if (attributes.has("text")) { // its spelling, as written
-        const text = attributes.get("text") as string;
+      if (tag === P.CONSTANT || attributes.has("text")) { // its spelling, as written, or a constant's default one
+        const text = tag === P.CONSTANT ? P.constantText(attributes) : attributes.get("text") as string;
         return [text, text.startsWith("-") ? UNARY : PRIMARY];
       }
-      if (tag === P.LITERAL) return constantText(attributes.get("value"));
-      if (attributes.has("singleton")) return [attributes.get("singleton"), PRIMARY];
-      const parts = (attributes.get("complex") as F.Part).attributes; // a complex number's, `Expressions.Python.Python3.Complex`
-      const text = complexText((parts.get("real") as number | undefined) ?? 0, parts.get("imag") as number);
-      return [text, text.startsWith("-") ? UNARY : PRIMARY];
+      return constantText(attributes.get("value"));
     }
     if (tag === "error" || tag === "missing") { // as written, by the dialect of its family that owns it
       return [F.invalidTermText(P.DIALECT, node), PRIMARY];

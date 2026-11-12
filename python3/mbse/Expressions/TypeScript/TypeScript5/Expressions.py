@@ -54,7 +54,7 @@ and types hold alike stay its own: an annotation (`TSTypeAnnotation`), a type pa
 instantiation of type parameters. `DIALECT` reads its family's other dialects' terms (`reads`), as each of them reads
 its own; the framework reads a value of a helper as a `Terms.Part`, and its family's terms, the types and patterns
 within it, as its arguments. `Nodes` holds what the three dialects read alike: a node's checks, the names a pattern
-binds (`binding_names`) and the names each argument has bound.
+binds (`bound_names`) and the names each argument has bound.
 
 The versions of TypeScript 5 the dialect covers are data, which `define` writes, each owned by its published name,
 TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each has
@@ -77,7 +77,7 @@ overflow), `string` (its own `string`), and the token `null` (its own `null`). `
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
@@ -85,7 +85,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 from . import Domains, Nodes
 
 __all__ = ["install", "define", "DIALECT", "EXTENSIONS", "QUOTES", "FLAGS", "TYPE_PARAMETERS", "Node", "tree",
-           "binding_names"]
+           "bound_names", "constant_text"]
 
 IDENTIFIER, PRIVATEIDENTIFIER, LITERAL, CONSTANT = "identifier", "privateidentifier", "literal", "constant"
 TEMPLATELITERAL, TAGGEDTEMPLATEEXPRESSION, THISEXPRESSION, SUPER = (
@@ -492,8 +492,23 @@ def tree(term: Any) -> Node:
     return F.node(tag, record)
 
 
-binding_names = Nodes.binding_names
-"""The names a pattern binds (`Nodes.binding_names`)."""
+bound_names = Nodes.bound_names
+"""The names a pattern binds (`Nodes.bound_names`)."""
+
+
+def constant_text(attributes: Mapping[str, Any], regexp: Callable[[], str] | None = None) -> str:
+    """A constant's text: as written (`text`), else its default spelling, `null` or a regular expression (`/a+/g`), or,
+    where it has no `pattern`, its `regexp`'s text, which `regexp` gives (the printer's text of it: this module has no
+    printer, and a refusal that shows the constant, `Kind.shown`, none to give). The printer writes it."""
+    if "text" in attributes:
+        return attributes["text"]
+    if "singleton" in attributes:
+        return attributes["singleton"]
+    if "pattern" not in attributes:  # its regexp, where it has no spelling
+        if regexp is None:
+            raise ValueError("a TypeScript5 constant with no pattern is written from its regexp, by its printer")
+        return regexp()
+    return f"/{attributes['pattern']}/{attributes.get('flags', '')}"
 
 
 # --- Checks ---
@@ -564,7 +579,7 @@ DIALECT = F.Dialect("TypeScript.TypeScript5", {
     PRIVATEIDENTIFIER: F.Kind(F.REFERENCE, required=("name",), lexical=False, check=Nodes.check(PRIVATEIDENTIFIER)),
     LITERAL: F.Kind(F.LITERAL, spelling=("text", "problems", "quote", "base", "separators"), check=Nodes.check(LITERAL)),
     CONSTANT: F.Kind(F.LITERAL, spelling=("text", "problems"), check=_constant_problems,
-                     typed=lambda record: Domains.constant(F.attributes_of(record))),
+                     typed=lambda record: Domains.constant(F.attributes_of(record)), shown=constant_text),
     TEMPLATELITERAL: _application(TEMPLATELITERAL, FD.Opaque(Domains.String)),
     TAGGEDTEMPLATEEXPRESSION: _application(TAGGEDTEMPLATEEXPRESSION, required=("quasi",)),
     THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False),

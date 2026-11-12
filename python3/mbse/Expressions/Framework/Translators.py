@@ -244,7 +244,9 @@ def _describe(dialect: Terms.Dialect, node: Any) -> str:
         return f"{label} {Terms.operator_of(node, kind)!r}"
     if kind.role == Terms.LITERAL:
         typed = kind.typed(record) if kind.typed is not None else None
-        return f"{label} {Terms.attributes_of(record).get('value')!r}" + ("" if typed is None else f" of {typed.name()}")
+        attributes = Terms.attributes_of(record)
+        shown = kind.shown(attributes) if kind.shown is not None else repr(attributes.get("value"))
+        return f"{label} {shown}" + ("" if typed is None else f" of {typed.name()}")
     return label
 
 

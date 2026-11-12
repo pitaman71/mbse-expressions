@@ -55,7 +55,7 @@
  * declaration and instantiation of type parameters. `DIALECT` reads its family's other dialects' terms (`reads`), as
  * each of them reads its own; the framework reads a value of a helper as a `Terms.Part`, and its family's terms, the
  * types and patterns within it, as its arguments. `Nodes` holds what the three dialects read alike: a node's checks,
- * the names a pattern binds (`bindingNames`) and the names each argument has bound.
+ * the names a pattern binds (`boundNames`) and the names each argument has bound.
  *
  * The versions of TypeScript 5 the dialect covers are data, which `define` writes, each owned by its published name,
  * TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each
@@ -78,7 +78,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Repr } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
@@ -513,8 +513,23 @@ export function tree(term: any): Node {
   return F.node(tag, record);
 }
 
-/** The names a pattern binds (`Nodes.bindingNames`). */
-export const bindingNames = Nodes.bindingNames;
+/** The names a pattern binds (`Nodes.boundNames`). */
+export const boundNames = Nodes.boundNames;
+
+/** A constant's text: as written (`text`), else its default spelling, `null` or a regular expression (`/a+/g`), or,
+ * where it has no `pattern`, its `regexp`'s text, which `regexp` gives (the printer's text of it: this module has no
+ * printer, and a refusal that shows the constant, `Kind.shown`, none to give). The printer writes it. */
+export function constantText(attributes: ReadonlyMap<string, any>, regexp: (() => string) | null = null): string {
+  if (attributes.has("text")) return attributes.get("text");
+  if (attributes.has("singleton")) return attributes.get("singleton");
+  if (!attributes.has("pattern")) { // its regexp, where it has no spelling
+    if (regexp === null) {
+      throw new Errors.ValueError("a TypeScript5 constant with no pattern is written from its regexp, by its printer");
+    }
+    return regexp();
+  }
+  return `/${attributes.get("pattern")}/${attributes.get("flags") ?? ""}`;
+}
 
 // --- Checks ---
 
@@ -580,7 +595,7 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
   [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "quote", "base", "separators"],
     check: Nodes.check(LITERAL) }),
   [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: constantProblems,
-    typed: (record) => Domains.constant(F.attributesOf(record)) }),
+    typed: (record) => Domains.constant(F.attributesOf(record)), shown: constantText }),
   [TEMPLATELITERAL]: application(TEMPLATELITERAL, new FD.Opaque(Domains.String)),
   [TAGGEDTEMPLATEEXPRESSION]: application(TAGGEDTEMPLATEEXPRESSION, new FD.Opaque(), { required: ["quasi"] }),
   [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false }),

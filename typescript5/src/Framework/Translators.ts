@@ -247,7 +247,9 @@ function describe(dialect: Terms.Dialect, node: unknown): string {
   }
   if (kind.role === Terms.LITERAL) {
     const typed = kind.typed !== null ? kind.typed(record) : null;
-    return `${named} ${repr(Terms.attributesOf(record).get("value"))}${typed === null ? "" : ` of ${typed.name()}`}`;
+    const attributes = Terms.attributesOf(record);
+    const shown = kind.shown !== null ? kind.shown(attributes) : repr(attributes.get("value"));
+    return `${named} ${shown}${typed === null ? "" : ` of ${typed.name()}`}`;
   }
   return named;
 }

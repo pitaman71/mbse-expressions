@@ -181,11 +181,7 @@ export class Printer {
   }
 
   _constant(node: T.Node): string {
-    const { attributes } = node;
-    if (attributes.has("text")) return attributes.get("text");
-    if (attributes.has("singleton")) return attributes.get("singleton");
-    if (!attributes.has("pattern")) return this.text(node.slots.get("regexp")); // its regexp, where it has no spelling
-    return `/${attributes.get("pattern")}/${attributes.get("flags") ?? ""}`;
+    return T.constantText(node.attributes, () => this.text(node.slots.get("regexp")));
   }
 
   _templateliteral(node: T.Node): string {

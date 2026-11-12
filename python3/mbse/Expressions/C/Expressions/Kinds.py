@@ -18,7 +18,8 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 from . import Domains
 
 __all__ = ["EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "CPP_SUFFIXES", "OPTIONAL", "SPELLING", "Writers", "type_name", "cast_type",
-           "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds", "identifier_problems"]
+           "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds", "identifier_problems",
+           "constant_text"]
 
 LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE = "literal", "constant", "concatenatedstring", "variable"
 PARENTHESIZEDEXPRESSION, GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION = (
@@ -173,6 +174,12 @@ def _literal_problems(attributes: Mapping[str, Any], prefixes: tuple[str, ...],
     return problems + ([out] if out is not None else [])
 
 
+def constant_text(attributes: Mapping[str, Any]) -> str:
+    """A constant's text: as written (`text`), else its default spelling, `nullptr`. The printer writes it, and a
+    refusal shows it (`Kind.shown`)."""
+    return attributes.get("text", "nullptr")
+
+
 def _constant_problems(attributes: Mapping[str, Any]) -> list[str]:
     """A constant holds `nullptr`, unless its text is invalid, its problems said."""
     singleton = attributes.get("singleton")
@@ -283,7 +290,8 @@ def kinds(language: str, tags: tuple[str, ...], prefixes: tuple[str, ...],
                                 typed=lambda record: Domains.literal(F.attributes_of(record), language,
                                                                      Domains.Types(record, _path(language)))),
         CONSTANT: lambda: F.Kind(F.LITERAL, spelling=("text", "problems"), check=check(CONSTANT),
-                                 typed=lambda record: Domains.NULLPTR),
+                                 typed=lambda record: Domains.NULLPTR,
+                                 shown=constant_text),
         CONCATENATEDSTRING: lambda: application(CONCATENATEDSTRING, FD.Opaque(Domains.String)),
         VARIABLE: lambda: F.Kind(F.REFERENCE, required=("name",), check=check(VARIABLE)),
         PARENTHESIZEDEXPRESSION: lambda: application(PARENTHESIZEDEXPRESSION, _ANY1),

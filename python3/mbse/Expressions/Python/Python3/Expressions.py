@@ -94,8 +94,8 @@ from mbse.Schemas.Framework import Schemas
 
 from . import Domains
 
-__all__ = ["install", "define", "DIALECT", "BUILTINS", "EXTENSIONS", "Writer", "Helper", "constant", "name",
-           "concatenatedstring", "joinedstr", "templatestr", "stringtext", "formattedvalue", "interpolation",
+__all__ = ["install", "define", "DIALECT", "BUILTINS", "EXTENSIONS", "Writer", "Helper", "constant", "constant_text",
+           "name", "concatenatedstring", "joinedstr", "templatestr", "stringtext", "formattedvalue", "interpolation",
            "parenthesized", "tuple_", "list_", "set_", "dict_", "listcomp", "setcomp", "dictcomp", "generatorexp",
            "comprehension", "yield_", "yieldfrom", "await_", "attribute", "subscript", "slice_", "call", "keyword",
            "starred", "unaryop", "binop", "compare", "comparison", "boolop", "namedexpr", "ifexp", "lambda_", "arg",
@@ -770,11 +770,23 @@ def _reads() -> tuple[F.Dialect, ...]:
     return PythonTypes.DIALECT, PythonPatterns.DIALECT, PythonRegExp.DIALECT
 
 
+def constant_text(attributes: Mapping[str, Any]) -> str:
+    """A constant's text: as written (`text`), else its default spelling, `None`, `...` or a complex number as Python's
+    `repr` writes it (`2j`, `(1-2j)`). The printer writes it, and a refusal shows it (`Kind.shown`)."""
+    if "text" in attributes:
+        return attributes["text"]
+    if "singleton" in attributes:
+        return attributes["singleton"]
+    parts = attributes["complex"].attributes  # a complex number's, `Expressions.Python.Python3.Complex`
+    return repr(complex(parts.get("real", 0.0), parts["imag"]))
+
+
 DIALECT = F.Dialect("Python.Python3", {
     LITERAL: F.Kind(F.LITERAL, spelling=("text", "problems", "prefix", "quote", "base", "separators"),
                     check=_literal_check),
     CONSTANT: F.Kind(F.LITERAL, spelling=("text", "problems", "separators"), check=_constant_check,
-                     typed=lambda record: Domains.constant(F.attributes_of(record))),
+                     typed=lambda record: Domains.constant(F.attributes_of(record)),
+                     shown=constant_text),
     NAME: F.Kind(F.REFERENCE, required=("name",), ambient=BUILTINS, check=_identifier("name", "a name")),
     CONCATENATEDSTRING: _application(FD.Opaque(Domains.Str), check=_needs(CONCATENATEDSTRING, "values", "two strings", 2)),
     JOINEDSTR: _application(FD.Opaque(Domains.Str), check=_string_check(JOINEDSTR, "f")),

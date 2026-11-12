@@ -52,39 +52,6 @@ export const RIGHT: ReadonlySet<number> = new Set([IMPLY, CONDITIONAL]);
 
 const ESCAPES: Record<string, string> = { "\\": "\\\\", '"': '\\"', "\n": "\\n", "\t": "\\t" };
 
-/** A vector's digits in a base, or null when some digit would mix x, z and known bits. */
-function digitsOf(bits: string, base: string): string | null {
-  const known = (group: string) => [...group].every((b) => "01".includes(b));
-  if (base === "d") {
-    if (known(bits)) return BigInt("0b" + bits).toString();
-    return new Set(bits).size === 1 ? bits[0] as string : null;
-  }
-  const size = E.BASES[base] as number;
-  if (size === 1) return bits;
-  const padded = "0".repeat((size - (bits.length % size)) % size) + bits;
-  const digits: string[] = [];
-  for (let i = 0; i < padded.length; i += size) {
-    const group = padded.slice(i, i + size);
-    if (known(group)) digits.push("0123456789abcdef"[parseInt(group, 2)] as string);
-    else if (new Set(group).size === 1) digits.push(group[0] as string);
-    else return null;
-  }
-  return digits.join("");
-}
-
-/** A constant's default spelling: `null`, a fill, or a vector in its base where the base can write its bits, else in
- * binary. */
-function constantText(attributes: ReadonlyMap<string, any>): string {
-  if (attributes.has("singleton")) return attributes.get("singleton");
-  if (attributes.has("fill")) return "'" + attributes.get("fill");
-  const bits: string = attributes.get("bits");
-  let base: string = attributes.get("base") ?? "b";
-  let digits = digitsOf(bits, base);
-  if (digits === null) [base, digits] = ["b", bits];
-  const size = attributes.get("size") ?? null;
-  return `${size !== null ? size : ""}'${attributes.get("signed") ? "s" : ""}${base}${digits}`;
-}
-
 /** A number's default spelling: an int in its base (`'hff`, `'sd5`), a real with a point or an exponent, a time with
  * its unit, and a float that has no literal as a division. */
 function numberText(value: bigint | number, attributes: ReadonlyMap<string, any>): string {
@@ -206,11 +173,7 @@ export class Printer {
   }
 
   constant(node: F.Node): string {
-    if (node.attributes.has("text")) return node.attributes.get("text");
-    if (E.vectorProblems(node.attributes).length > 0 || !["singleton", "fill", "bits"].some((k) => node.attributes.has(k))) {
-      throw new ValueError("SystemVerilog constant has no value to print");
-    }
-    return constantText(node.attributes);
+    return E.constantText(node.attributes);
   }
 
   unary(node: F.Node): string {

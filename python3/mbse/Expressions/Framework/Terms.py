@@ -853,7 +853,8 @@ class Kind:
     chain's), each checked against its vocabulary, and the domain they give (`result(attributes, domains)`); an
     equivalent form of simpler terms (`unfold(form)`, or None: a comparison chain as the `and` of its links), which
     translation reads where no rule reads the term itself; and, for a literal, the attributes that spell it rather than
-    give its value (`spelling`), which no translation carries."""
+    give its value (`spelling`), which no translation carries, and, for a constant, which has no value, its text as a
+    refusal shows it (`shown(attributes)`: as written, else its default spelling), where a literal shows its value."""
 
     role: str
     operator: str | None = None
@@ -873,6 +874,7 @@ class Kind:
     result: Callable[[Mapping[str, Any], list[Domains.Domain]], Domains.Domain] | None = None
     unfold: Callable[[Form], Form | None] | None = None
     spelling: tuple[str, ...] = ("text", "problems")
+    shown: Callable[[Mapping[str, Any]], str] | None = None
 
 
 def invalid_problems(tag: str, attributes: Mapping[str, Any]) -> list[str]:

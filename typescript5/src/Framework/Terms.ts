@@ -904,6 +904,7 @@ export interface KindOptions {
   result?: ((attributes: ReadonlyMap<string, any>, domains: Domains.Domain[]) => Domains.Domain) | null;
   unfold?: ((form: Form) => Form | null) | null;
   spelling?: readonly string[];
+  shown?: ((attributes: ReadonlyMap<string, any>) => string) | null;
 }
 
 /** How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`, or null
@@ -925,7 +926,8 @@ export interface KindOptions {
  * chain's), each checked against its vocabulary, and the domain they give (`result(attributes, domains)`); an
  * equivalent form of simpler terms (`unfold(form)`, or null: a comparison chain as the `and` of its links), which
  * translation reads where no rule reads the term itself; and, for a literal, the attributes that spell it rather than
- * give its value (`spelling`), which no translation carries. */
+ * give its value (`spelling`), which no translation carries, and, for a constant, which has no value, its text as a
+ * refusal shows it (`shown(attributes)`: as written, else its default spelling), where a literal shows its value. */
 export class Kind {
   readonly operator: string | null;
   readonly vocabulary: ReadonlyMap<string, Domains.Signature> | null;
@@ -944,6 +946,7 @@ export class Kind {
   readonly result: ((attributes: ReadonlyMap<string, any>, domains: Domains.Domain[]) => Domains.Domain) | null;
   readonly unfold: ((form: Form) => Form | null) | null;
   readonly spelling: readonly string[];
+  readonly shown: ((attributes: ReadonlyMap<string, any>) => string) | null;
 
   constructor(readonly role: string, options: KindOptions = {}) {
     this.operator = options.operator ?? null;
@@ -963,6 +966,7 @@ export class Kind {
     this.result = options.result ?? null;
     this.unfold = options.unfold ?? null;
     this.spelling = options.spelling ?? ["text", "problems"];
+    this.shown = options.shown ?? null;
     Object.freeze(this);
   }
 }

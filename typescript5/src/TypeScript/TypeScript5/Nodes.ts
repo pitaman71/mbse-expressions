@@ -53,15 +53,15 @@ export function nodeOf(value: any): Node {
 
 /** The names a pattern binds, a term's or a `Node`'s: an identifier's, and those within an array, an object, a default,
  * a rest or a parameter property; a member, or any other target, binds none. */
-export function bindingNames(node: any): ReadonlySet<string> {
+export function boundNames(node: any): ReadonlySet<string> {
   if (node === null || node === undefined) return new Set();
   node = nodeOf(node);
   if (node.kind === IDENTIFIER) return new Set(node.attributes.has("name") ? [node.attributes.get("name")] : []);
-  if (node.kind === PROPERTY) return bindingNames(node.slots.get("value"));
+  if (node.kind === PROPERTY) return boundNames(node.slots.get("value"));
   const found = new Set<string>();
   for (const inner of [...node.lists.get("elements") ?? [], ...node.lists.get("properties") ?? [],
     ...["left", "argument", "parameter"].map((name) => node.slots.get(name))]) {
-    for (const bound of bindingNames(inner)) found.add(bound);
+    for (const bound of boundNames(inner)) found.add(bound);
   }
   return found;
 }
@@ -70,7 +70,7 @@ export function bindingNames(node: any): ReadonlySet<string> {
 function parameters(node: Node): Set<string> {
   const found = new Set<string>();
   for (const parameter of [...node.lists.get("params") ?? [], ...node.lists.get("parameters") ?? []]) {
-    for (const name of bindingNames(parameter)) found.add(name);
+    for (const name of boundNames(parameter)) found.add(name);
   }
   return found;
 }

@@ -50,44 +50,6 @@ RIGHT = {IMPLY, CONDITIONAL}
 _ESCAPES = {"\\": "\\\\", '"': '\\"', "\n": "\\n", "\t": "\\t"}
 
 
-def _digits(bits: str, base: str) -> str | None:
-    """A vector's digits in a base, or None when some digit would mix x, z and known bits."""
-    if base == "d":
-        if all(b in "01" for b in bits):
-            return str(int(bits, 2))
-        return bits[0] if len(set(bits)) == 1 else None
-    size = E.BASES[base]
-    if size == 1:
-        return bits
-    padded = "0" * (-len(bits) % size) + bits
-    digits = []
-    for i in range(0, len(padded), size):
-        group = padded[i:i + size]
-        if all(b in "01" for b in group):
-            digits.append("0123456789abcdef"[int(group, 2)])
-        elif len(set(group)) == 1:
-            digits.append(group[0])
-        else:
-            return None
-    return "".join(digits)
-
-
-def _constant(attributes: Mapping[str, Any]) -> str:
-    """A constant's default spelling: `null`, a fill, or a vector in its base where the base can write its bits, else
-    in binary."""
-    if "singleton" in attributes:
-        return attributes["singleton"]
-    if "fill" in attributes:
-        return "'" + attributes["fill"]
-    bits = attributes["bits"]
-    base = attributes.get("base") or "b"
-    digits = _digits(bits, base)
-    if digits is None:
-        base, digits = "b", bits
-    size = attributes.get("size")
-    return f"{size if size is not None else ''}'{'s' if attributes.get('signed') else ''}{base}{digits}"
-
-
 def _number(value: Any, attributes: Mapping[str, Any]) -> str:
     """A number's default spelling: an int in its base (`'hff`, `'sd5`), a real with a point or an exponent, a time with
     its unit, and a float that has no literal as a division."""
@@ -207,11 +169,7 @@ class Printer:
         return _literal(node.attributes)
 
     def constant(self, node: F.Node) -> str:
-        if "text" in node.attributes:
-            return node.attributes["text"]
-        if E._vector_problems(node.attributes) or not {"singleton", "fill", "bits"} & node.attributes.keys():
-            raise ValueError("SystemVerilog constant has no value to print")
-        return _constant(node.attributes)
+        return E.constant_text(node.attributes)
 
     def unary(self, node: F.Node) -> str:
         operand = self.operand(node.slots["operand"], UNARY + 1)

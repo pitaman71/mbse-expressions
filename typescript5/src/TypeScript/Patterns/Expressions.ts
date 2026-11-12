@@ -21,7 +21,7 @@
  * expressions hold them (a `property`'s value, where an object pattern holds it).
  *
  * A pattern binds through what holds it (the dialects proposal, Retrofit's design, the binders): a function's
- * parameters within it, as its kind's scopes say; none of its kinds refines `Let`. `bindingNames` gives the names a
+ * parameters within it, as its kind's scopes say; none of its kinds refines `Let`. `boundNames` gives the names a
  * pattern binds. Within an assignment's target, a name is a reference to what it assigns.
  *
  * The versions of TypeScript 5 it covers are data, which `define` writes, as `TypeScript5`'s are: TypeScript 5.0 to 5.9,
@@ -61,9 +61,9 @@ export const HELPERS: readonly string[] = [];
 /** The version each of its kinds arrived in: none, every kind being older than TypeScript 5.0. */
 export const SINCE: ReadonlyMap<string, number> = new Map();
 
-/** The names a pattern binds, a term's or a `Node`'s (`Nodes.bindingNames`): an identifier's, and those within an
+/** The names a pattern binds, a term's or a `Node`'s (`Nodes.boundNames`): an identifier's, and those within an
  * array, an object, a default, a rest or a parameter property; a member, or any other target, binds none. */
-export const bindingNames = Nodes.bindingNames;
+export const boundNames = Nodes.boundNames;
 
 /** The schemas of `TypeScript5` it names, created where its install has not run. */
 const NAMED: readonly string[] = ["Identifier", "MemberExpression", "ParenthesizedExpression", "TSAsExpression",

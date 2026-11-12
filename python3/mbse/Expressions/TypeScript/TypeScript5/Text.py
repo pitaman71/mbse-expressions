@@ -192,14 +192,7 @@ class Printer:
         return node.attributes["text"] if "text" in node.attributes else _literal(node.attributes)
 
     def _constant(self, node: T.Node) -> str:
-        attributes = node.attributes
-        if "text" in attributes:
-            return attributes["text"]
-        if "singleton" in attributes:
-            return attributes["singleton"]
-        if "pattern" not in attributes:  # its regexp, where it has no spelling
-            return self.text(node.slots["regexp"])
-        return f"/{attributes['pattern']}/{attributes.get('flags', '')}"
+        return T.constant_text(node.attributes, lambda: self.text(node.slots["regexp"]))
 
     def _templateliteral(self, node: T.Node) -> str:
         quasis = _nodes(node.helpers.get("quasis"))

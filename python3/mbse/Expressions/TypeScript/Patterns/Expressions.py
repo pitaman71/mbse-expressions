@@ -20,7 +20,7 @@ object pattern's `property` and an array pattern's hole, `elision`; and invalid 
 expressions hold them (a `property`'s value, where an object pattern holds it).
 
 A pattern binds through what holds it (the dialects proposal, Retrofit's design, the binders): a function's
-parameters within it, as its kind's scopes say; none of its kinds refines `Let`. `binding_names` gives the names a
+parameters within it, as its kind's scopes say; none of its kinds refines `Let`. `bound_names` gives the names a
 pattern binds. Within an assignment's target, a name is a reference to what it assigns.
 
 The versions of TypeScript 5 it covers are data, which `define` writes, as `TypeScript5`'s are: TypeScript 5.0 to 5.9,
@@ -38,7 +38,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from ..TypeScript5 import Domains as _family, Nodes
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "binding_names"]
+__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "bound_names"]
 
 ARRAYPATTERN, OBJECTPATTERN, ASSIGNMENTPATTERN, RESTELEMENT, TSPARAMETERPROPERTY = (
     "arraypattern", "objectpattern", "assignmentpattern", "restelement", "tsparameterproperty")
@@ -57,8 +57,8 @@ HELPERS: tuple[str, ...] = ()
 SINCE: dict[str, int] = {}
 """The version each of its kinds arrived in: none, every kind being older than TypeScript 5.0."""
 
-binding_names = Nodes.binding_names
-"""The names a pattern binds, a term's or a `Node`'s (`Nodes.binding_names`): an identifier's, and those within an
+bound_names = Nodes.bound_names
+"""The names a pattern binds, a term's or a `Node`'s (`Nodes.bound_names`): an identifier's, and those within an
 array, an object, a default, a rest or a parameter property; a member, or any other target, binds none."""
 
 
