@@ -1920,8 +1920,7 @@ coordinator's merge and decisions (302 to 310). Each choice where the design and
      FRM-02, FRM-11, FRM-13, PYT-01, PYP-01, TSR-05 and SKL-03 under their IDs; the install lists of DIA's, TRN's
      and DOM's setups.
 310. **Open, with the user**: Cpp RegExp as one dialect for the six grammars, the grammar among a regex's flags (item
-     293), against a kind per grammar or a POSIX dialect beside ECMAScript's; built so, the coordinator agreeing. Still
-     open from before: a constant described as `None` in refusal messages (item 216).
+     293), against a kind per grammar or a POSIX dialect beside ECMAScript's; built so, the coordinator agreeing.
 
 ## What stage 2b needed (done)
 
