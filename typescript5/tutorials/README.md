@@ -52,7 +52,7 @@ expression as text (case study 13 explains it).
 
 Each step pairs a language's own text with the model its dialect holds, written in the builders' fluent calls, and
 checks that the dialect's `Text.ToText` gives that text back; Python's notebooks also read Python3's text, with
-`Text.FromText`, where these build it. Part I tells no story. Tutorials 7 and 8 come after the dialects' retrofit.
+`Text.FromText`, where these build it. Part I tells no story.
 
 | # | Notebook | What you learn |
 |---|---|---|
@@ -63,7 +63,7 @@ checks that the dialect's `Text.ToText` gives that text back; Python's notebooks
 | 5 | [Operators](05_Operators.ipynb) | `a + b * c` as a tree; parentheses and precedence across languages; operations as data; each language's arithmetic |
 | 6 | [Calls, members and subscripts](06_Calls_Members_And_Subscripts.ipynb) | Properties, items and calls in each language, and what has no counterpart |
 | 7 | [Bindings](07_Bindings.ipynb) | `let`, lambdas, quantifiers and comprehensions, each a variation of `let` |
-| 8 | Sublanguages | Types, patterns, assertions and constraints as dialects of their own (after the dialects' retrofit) |
+| 8 | [Sublanguages](08_Sublanguages.ipynb) | Types, patterns, assertions, constraints and preprocessors as dialects of their own, each with its holder, held where its language's expressions put one |
 
 ## Part II · Constraints as data, in seven case studies
 
