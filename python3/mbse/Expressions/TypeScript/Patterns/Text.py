@@ -31,15 +31,15 @@ def _objectpattern(p: X.Printer, node: F.Node) -> str:
 
 
 def _assignmentpattern(p: X.Printer, node: F.Node) -> str:
-    return _pattern(p, node, f"{p.text(node.slots['left'])} = {p.e(node.slots['right'], X.ASSIGN)}")
+    return _pattern(p, node, f"{p.text(node.subterms['left'])} = {p.e(node.subterms['right'], X.ASSIGN)}")
 
 
 def _restelement(p: X.Printer, node: F.Node) -> str:
-    return _pattern(p, node, "..." + p.text(node.slots["argument"]))
+    return _pattern(p, node, "..." + p.text(node.subterms["argument"]))
 
 
 def _parameterproperty(p: X.Printer, node: F.Node) -> str:
-    return p.decorators(node) + p.modifiers(node) + p.text(node.slots["parameter"])
+    return p.decorators(node) + p.modifiers(node) + p.text(node.subterms["parameter"])
 
 
 TEXTS: dict[str, Callable[[X.Printer, F.Node], str]] = {

@@ -32,9 +32,9 @@ def _condition(p: X.Printer, node: F.Node, kind: str) -> str:
     """A conditional directive's macro's name, or its condition."""
     if "name" in node.helpers:
         return p.spelling(node.helpers["name"])
-    if node.slots["condition"] is None:
+    if node.subterms["condition"] is None:
         raise ValueError(f"SystemVerilog Preprocessor {kind} has no name or condition to print")
-    return p.text(node.slots["condition"])
+    return p.text(node.subterms["condition"])
 
 
 def _branch(p: X.Printer, items: tuple[Any, ...]) -> list[str]:

@@ -179,7 +179,7 @@ class Printer:
 
     def annotation(self, node: T.Node) -> str:
         held = node.helpers.get("typeAnnotation")
-        return "" if held is None else ": " + self.t(held.slots["typeAnnotation"], self.types.FUNCTION)
+        return "" if held is None else ": " + self.t(held.subterms["typeAnnotation"], self.types.FUNCTION)
 
     def _identifier(self, node: T.Node) -> str:
         optional = "?" if node.attributes.get("optional") else ""
@@ -192,7 +192,7 @@ class Printer:
         return node.attributes["text"] if "text" in node.attributes else _literal(node.attributes)
 
     def _constant(self, node: T.Node) -> str:
-        return T.constant_text(node.attributes, lambda: self.text(node.slots["regexp"]))
+        return T.constant_text(node.attributes, lambda: self.text(node.subterms["regexp"]))
 
     def _templateliteral(self, node: T.Node) -> str:
         quasis = _nodes(node.helpers.get("quasis"))
@@ -206,13 +206,13 @@ class Printer:
         return "" if held is None else self.text(held)
 
     def _taggedtemplateexpression(self, node: T.Node) -> str:
-        return self.e(node.slots["tag"], MEMBER) + self.type_arguments(node) + self.text(node.helpers["quasi"])
+        return self.e(node.subterms["tag"], MEMBER) + self.type_arguments(node) + self.text(node.helpers["quasi"])
 
     def _parenthesizedexpression(self, node: T.Node) -> str:
-        return f"({self.e(node.slots['expression'], SEQUENCE)})"
+        return f"({self.e(node.subterms['expression'], SEQUENCE)})"
 
     def _spreadelement(self, node: T.Node) -> str:
-        return "..." + self.e(node.slots["argument"], ASSIGN)
+        return "..." + self.e(node.subterms["argument"], ASSIGN)
 
     # Displays
 
@@ -232,11 +232,11 @@ class Printer:
 
     def _property(self, node: T.Node) -> str:
         attributes = node.attributes
-        key = self.key(node.slots["key"], attributes.get("computed", False))
-        value = self.node(node.slots["value"])
+        key = self.key(node.subterms["key"], attributes.get("computed", False))
+        value = self.node(node.subterms["value"])
         if attributes.get("shorthand"):
             if value.kind == T.ASSIGNMENTPATTERN:
-                return f"{self.text(value.slots['left'])} = {self.e(value.slots['right'], ASSIGN)}"
+                return f"{self.text(value.subterms['left'])} = {self.e(value.subterms['right'], ASSIGN)}"
             return key
         accessor = attributes.get("propertyKind") in ("get", "set")
         if accessor or attributes.get("method"):
@@ -260,7 +260,7 @@ class Printer:
         params = ", ".join(self.text(parameter) for parameter in node.lists.get("params", ()))
         returned = node.helpers.get("returnType")
         returns = "" if returned is None else (" => " if arrow else ": ") + self.t(
-            returned.slots["typeAnnotation"], self.types.FUNCTION)
+            returned.subterms["typeAnnotation"], self.types.FUNCTION)
         return f"{parameters}({params}){returns}"
 
     def _functionexpression(self, node: T.Node) -> str:
@@ -278,10 +278,10 @@ class Printer:
         parameters = node.helpers.get("typeParameters")
         if parameters is not None:
             params = _nodes(parameters.helpers.get("params"))
-            if len(params) == 1 and params[0].slots["constraint"] is None:  # `<T>(` would open an element in a .tsx file
+            if len(params) == 1 and params[0].subterms["constraint"] is None:  # `<T>(` would open an element in a .tsx file
                 written = self.text(parameters)
                 head = head.replace(written, written[:-1] + ",>", 1)
-        body = node.slots["body"]
+        body = node.subterms["body"]
         if body is None:
             return head + " => {}"
         text = self.e(body, ASSIGN)
@@ -290,15 +290,15 @@ class Printer:
         return f"{head} => {text}"
 
     def heritage(self, node: T.Node) -> str:
-        return self.e(node.slots["expression"], MEMBER) + self.type_arguments(node)
+        return self.e(node.subterms["expression"], MEMBER) + self.type_arguments(node)
 
     def _classexpression(self, node: T.Node) -> str:
         head = "class"
         if "id" in node.helpers:
             head += " " + self.text(node.helpers["id"])
         head += self.type_arguments(node, "typeParameters")
-        if node.slots["superClass"] is not None:
-            head += f" extends {self.e(node.slots['superClass'], MEMBER)}" + self.type_arguments(node, "superTypeArguments")
+        if node.subterms["superClass"] is not None:
+            head += f" extends {self.e(node.subterms['superClass'], MEMBER)}" + self.type_arguments(node, "superTypeArguments")
         implements = _nodes(node.helpers.get("implements"))
         if implements:
             head += " implements " + ", ".join(self.heritage(heritage) for heritage in implements)
@@ -311,61 +311,61 @@ class Printer:
 
     def _memberexpression(self, node: T.Node) -> str:
         attributes = node.attributes
-        target = self.e(node.slots["object"], MEMBER)
-        if self.node(node.slots["object"]).kind == T.LITERAL and target.strip("0123456789_") == "":
+        target = self.e(node.subterms["object"], MEMBER)
+        if self.node(node.subterms["object"]).kind == T.LITERAL and target.strip("0123456789_") == "":
             target = f"({target})"  # `1.toString()` would be a number
         if attributes.get("computed"):
-            return f"{target}{'?.' if attributes.get('optional') else ''}[{self.e(node.slots['property'], SEQUENCE)}]"
-        return f"{target}{'?.' if attributes.get('optional') else '.'}{self.text(node.slots['property'])}"
+            return f"{target}{'?.' if attributes.get('optional') else ''}[{self.e(node.subterms['property'], SEQUENCE)}]"
+        return f"{target}{'?.' if attributes.get('optional') else '.'}{self.text(node.subterms['property'])}"
 
     def arguments(self, arguments: tuple[Any, ...]) -> str:
         return ", ".join(self.e(argument, ASSIGN) for argument in arguments)
 
     def _callexpression(self, node: T.Node) -> str:
         optional = "?." if node.attributes.get("optional") else ""
-        return f"{self.e(node.slots['callee'], MEMBER)}{optional}{self.type_arguments(node)}({self.arguments(node.many)})"
+        return f"{self.e(node.subterms['callee'], MEMBER)}{optional}{self.type_arguments(node)}({self.arguments(node.many)})"
 
     def _chainexpression(self, node: T.Node) -> str:
-        return self.text(node.slots["expression"])
+        return self.text(node.subterms["expression"])
 
     def calls(self, value: Any) -> bool:
         """Whether a `new`'s callee holds a call, a `new` or a non-null assertion outside parentheses, which would end
         the callee: `new a!.b()` reads as `(new a)!.b()`."""
         node = self.node(value)
         while node.kind == T.MEMBEREXPRESSION:
-            node = self.node(node.slots["object"])
+            node = self.node(node.subterms["object"])
         return node.kind in (T.CALLEXPRESSION, T.CHAINEXPRESSION, T.IMPORTEXPRESSION, T.TSNONNULLEXPRESSION,
                              T.NEWEXPRESSION)
 
     def _newexpression(self, node: T.Node) -> str:
-        callee = self.e(node.slots["callee"], NEW)
-        if self.calls(node.slots["callee"]):
+        callee = self.e(node.subterms["callee"], NEW)
+        if self.calls(node.subterms["callee"]):
             callee = f"({callee})"  # `new f()()` would call `f`'s instance
         return f"new {callee}{self.type_arguments(node)}({self.arguments(node.many)})"
 
     def _importexpression(self, node: T.Node) -> str:
-        held = [node.slots["source"]] + ([] if node.slots["options"] is None else [node.slots["options"]])
+        held = [node.subterms["source"]] + ([] if node.subterms["options"] is None else [node.subterms["options"]])
         return "import" + (".defer" if node.attributes.get("phase") == "defer" else "") + f"({self.arguments(tuple(held))})"
 
     def _updateexpression(self, node: T.Node) -> str:
-        operator, argument = node.attributes["operator"], node.slots["argument"]
+        operator, argument = node.attributes["operator"], node.subterms["argument"]
         if node.attributes.get("prefix"):
             return operator + self.e(argument, UNARY)
         return self.e(argument, POSTFIX + 1) + operator
 
     def _unaryexpression(self, node: T.Node) -> str:
-        operator, argument = node.attributes["operator"], self.e(node.slots["argument"], UNARY)
+        operator, argument = node.attributes["operator"], self.e(node.subterms["argument"], UNARY)
         if operator in ("typeof", "void", "delete") or (operator in ("+", "-") and argument.startswith(operator)):
             return f"{operator} {argument}"  # `--a` and `++a` would be updates
         return operator + argument
 
     def _awaitexpression(self, node: T.Node) -> str:
-        return "await " + self.e(node.slots["argument"], UNARY)
+        return "await " + self.e(node.subterms["argument"], UNARY)
 
     def _binaryexpression(self, node: T.Node) -> str:
         operator = node.attributes["operator"]
         level = self.precedence(node)
-        left_node, right_node = self.node(node.slots["left"]), self.node(node.slots["right"])
+        left_node, right_node = self.node(node.subterms["left"]), self.node(node.subterms["right"])
         if operator == "**":
             left = self.e(left_node, POWER + 1)
             if left_node.kind in (T.UNARYEXPRESSION, T.AWAITEXPRESSION, T.TSTYPEASSERTION) or (
@@ -385,60 +385,60 @@ class Printer:
     _logicalexpression = _binaryexpression
 
     def _conditionalexpression(self, node: T.Node) -> str:
-        slots = node.slots
-        return (f"{self.e(slots['test'], COALESCE)} ? {self.e(slots['consequent'], ASSIGN)} : "
-                f"{self.e(slots['alternate'], ASSIGN)}")
+        subterms = node.subterms
+        return (f"{self.e(subterms['test'], COALESCE)} ? {self.e(subterms['consequent'], ASSIGN)} : "
+                f"{self.e(subterms['alternate'], ASSIGN)}")
 
     def _assignmentexpression(self, node: T.Node) -> str:
-        target = self.node(node.slots["left"])
+        target = self.node(node.subterms["left"])
         left = self.text(target) if target.kind in (T.OBJECTPATTERN, T.ARRAYPATTERN) else self.e(target, MEMBER)
-        return f"{left} {node.attributes['operator']} {self.e(node.slots['right'], ASSIGN)}"
+        return f"{left} {node.attributes['operator']} {self.e(node.subterms['right'], ASSIGN)}"
 
     def _sequenceexpression(self, node: T.Node) -> str:
         return ", ".join(self.e(expression, ASSIGN) for expression in node.many)
 
     def _yieldexpression(self, node: T.Node) -> str:
-        argument = node.slots["argument"]
+        argument = node.subterms["argument"]
         return ("yield*" if node.attributes.get("delegate") else "yield") + (
             "" if argument is None else " " + self.e(argument, ASSIGN))
 
     def _tsasexpression(self, node: T.Node) -> str:
-        return f"{self.e(node.slots['expression'], RELATIONAL)} as {self.t(node.slots['typeAnnotation'], 0)}"
+        return f"{self.e(node.subterms['expression'], RELATIONAL)} as {self.t(node.subterms['typeAnnotation'], 0)}"
 
     def _tssatisfiesexpression(self, node: T.Node) -> str:
-        return f"{self.e(node.slots['expression'], RELATIONAL)} satisfies {self.t(node.slots['typeAnnotation'], 0)}"
+        return f"{self.e(node.subterms['expression'], RELATIONAL)} satisfies {self.t(node.subterms['typeAnnotation'], 0)}"
 
     def _tstypeassertion(self, node: T.Node) -> str:
-        return f"<{self.t(node.slots['typeAnnotation'], 0)}>{self.e(node.slots['expression'], UNARY)}"
+        return f"<{self.t(node.subterms['typeAnnotation'], 0)}>{self.e(node.subterms['expression'], UNARY)}"
 
     def _tsnonnullexpression(self, node: T.Node) -> str:
-        return self.e(node.slots["expression"], MEMBER) + "!"
+        return self.e(node.subterms["expression"], MEMBER) + "!"
 
     def _tsinstantiationexpression(self, node: T.Node) -> str:
-        return self.e(node.slots["expression"], MEMBER) + self.type_arguments(node)
+        return self.e(node.subterms["expression"], MEMBER) + self.type_arguments(node)
 
     def leftmost(self, value: Any) -> T.Node:
         """The expression a statement made of `value` starts with."""
         node = self.node(value)
         while True:
-            kind, slots = node.kind, node.slots
+            kind, subterms = node.kind, node.subterms
             if kind in (T.BINARYEXPRESSION, T.LOGICALEXPRESSION):
-                node = self.node(slots["left"])
+                node = self.node(subterms["left"])
             elif kind == T.ASSIGNMENTEXPRESSION:
-                node = self.node(slots["left"])
+                node = self.node(subterms["left"])
             elif kind == T.MEMBEREXPRESSION:
-                node = self.node(slots["object"])
+                node = self.node(subterms["object"])
             elif kind in (T.CALLEXPRESSION, T.TAGGEDTEMPLATEEXPRESSION):
-                node = self.node(slots["callee" if kind == T.CALLEXPRESSION else "tag"])
+                node = self.node(subterms["callee" if kind == T.CALLEXPRESSION else "tag"])
             elif kind == T.CONDITIONALEXPRESSION:
-                node = self.node(slots["test"])
+                node = self.node(subterms["test"])
             elif kind == T.SEQUENCEEXPRESSION:
                 node = self.node(node.many[0])
             elif kind in (T.TSASEXPRESSION, T.TSSATISFIESEXPRESSION, T.TSNONNULLEXPRESSION, T.CHAINEXPRESSION,
                           T.TSINSTANTIATIONEXPRESSION):
-                node = self.node(slots["expression"])
+                node = self.node(subterms["expression"])
             elif kind == T.UPDATEEXPRESSION and not node.attributes.get("prefix"):
-                node = self.node(slots["argument"])
+                node = self.node(subterms["argument"])
             else:
                 return node
 
@@ -456,10 +456,10 @@ class Printer:
         text = "".join(word + " " for word, flag in (("const", "const"), ("in", "isIn"), ("out", "isOut"))
                        if attributes.get(flag))
         text += self.text(helpers["name"])
-        if node.slots["constraint"] is not None:
-            text += f" extends {self.t(node.slots['constraint'], self.types.FUNCTION)}"
-        if node.slots["default"] is not None:
-            text += f" = {self.t(node.slots['default'], self.types.FUNCTION)}"
+        if node.subterms["constraint"] is not None:
+            text += f" extends {self.t(node.subterms['constraint'], self.types.FUNCTION)}"
+        if node.subterms["default"] is not None:
+            text += f" = {self.t(node.subterms['default'], self.types.FUNCTION)}"
         return text
 
     def _tstypeparameterdeclaration(self, node: T.Node) -> str:
@@ -480,10 +480,10 @@ class Printer:
         return f"{self.text(node.helpers['object'])}.{self.text(node.helpers['property'])}"
 
     def _jsxexpressioncontainer(self, node: T.Node) -> str:
-        return "{" + self.text(node.slots["expression"]) + "}"
+        return "{" + self.text(node.subterms["expression"]) + "}"
 
     def _jsxspreadchild(self, node: T.Node) -> str:
-        return "{..." + self.text(node.slots["expression"]) + "}"
+        return "{..." + self.text(node.subterms["expression"]) + "}"
 
     def _jsxtext(self, node: T.Node) -> str:
         return node.attributes.get("raw", "")
@@ -493,7 +493,7 @@ class Printer:
         return self.text(node.helpers["name"]) + ("" if value is None else "=" + self.text(value))
 
     def _jsxspreadattribute(self, node: T.Node) -> str:
-        return "{..." + self.e(node.slots["argument"], ASSIGN) + "}"
+        return "{..." + self.e(node.subterms["argument"], ASSIGN) + "}"
 
     def children(self, node: T.Node) -> str:
         return "".join(self.text(child) for child in _nodes(node.helpers.get("children")))

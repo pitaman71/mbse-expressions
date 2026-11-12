@@ -9,8 +9,8 @@
  * so inherits the adjacency `abi`, through which its type names are read as C++'s are. Its kinds, each a value object
  * `Expressions.Cpp.Types.<Kind>`, named as mbse-programs names them, lowercased as branch tags:
  *
- * - `typeid`, a type-id: its `specifiers` and its abstract `declarator`. C++'s `Term` lists it too, for the positions
- *   that hold an expression or a type alike (`sizeof(int)`, a template's arguments); every position of a type (a cast's,
+ * - `typeid`, a type-id: its `specifiers` and its abstract `declarator`. C++'s `Term` lists it too, for the subterms
+ *   that may be an expression or a type alike (`sizeof(int)`, a template's arguments); every type subterm (a cast's,
  *   a named cast's, `new`'s, a conversion function's name's, a trailing return type, an enumeration's fixed type, a type
  *   parameter's default) holds this dialect's `Term`.
  * - `enumerator`, an enumeration's enumerator (`name`, an identifier, `attributes`, and its `value`, a C++ term), which an
@@ -29,9 +29,9 @@
  * both in each (`SINCE`). No kind binds a name a term scopes. Evaluation refuses each of its kinds by name; a cast reads
  * its type from it (`C.Evaluators`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.typeid((i) => i.specifiers([(s) =>
- * s.primitivetypespecifier((p) => p.keyword("int"))]))`. `DIALECT` reads its kinds and the terms of the dialects its
- * positions hold, `Cpp` and `C Preprocessor` (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis [CAP-098:
- * dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)).
+ * s.primitivetypespecifier((p) => p.keyword("int"))]))`. `DIALECT` reads its kinds and the terms of the dialects whose
+ * terms are its subterms, `Cpp` and `C Preprocessor` (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis
+ * [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)).
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -134,13 +134,14 @@ export function define(txn: any): any {
     ])]))]);
 }
 
-/** The dialects whose terms its positions hold, read when first needed: C++'s, whose terms and helpers a type-id holds,
- * and C Preprocessor's, whose directives an enumeration's body holds; and Cpp RegExp's, which no position holds, as each
- * family's dialects read one another *(agent)*. */
+/** The dialects whose terms are its subterms, read when first needed: C++'s, whose terms and helpers a type-id holds,
+ * and C Preprocessor's, whose directives an enumeration's body holds; and Cpp RegExp's, of which no subterm is one, as
+ * each family's dialects read one another *(agent)*. */
 function reads(): readonly F.Dialect[] {
   return [Cpp.DIALECT, CPreprocessor.DIALECT, CppRegExp.DIALECT];
 }
 
-/** The Cpp Types dialect: its kinds, as the framework reads them, and the terms of the dialects its positions hold. */
+/** The Cpp Types dialect: its kinds, as the framework reads them, and the terms of the dialects whose terms are its
+ * subterms. */
 export const DIALECT = new F.Dialect("Cpp.Types", K.kinds("C++", TAGS, K.PREFIXES, K.CPP_SUFFIXES),
   { domain_of: K.untyped, reads });

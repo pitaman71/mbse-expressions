@@ -9,7 +9,7 @@
  * standard defines, its library's included), named `Cpp RegExp` (`Terms.dialectName`), its tag `cpp_regexp`. Its terms
  * are values of its `Term`, `Expressions.Cpp.RegExp.Term`, the branch `cpp_regexp` of `Expressions.Framework.Term`; its
  * holder, `Expressions.Cpp.RegExp.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
- * `Term`. No position of C++ holds one: a pattern is a string there, passed to `std::regex`, and that a string is a
+ * `Term`. No subterm in C++ is one: a pattern is a string there, passed to `std::regex`, and that a string is a
  * regular expression is the program's to say, never guessed (mbse-basis [PRI-025: never guess the schema](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-025)); mbse-programs, or a constraint's author, holds one through its holder.
  *
  * One dialect covers the six grammars *(agent)*, as one `std::basic_regex` reads them, the grammar being one element of
@@ -253,9 +253,9 @@ function read(term: any): F.Node {
   return F.node(...F.kindOf(term));
 }
 
-/** The terms a kind's property `name` holds: a slot's, where it is not empty, or a container's. */
+/** The terms a kind's property `name` holds: a subterm's, where it is not empty, or a container's. */
 function held(node: F.Node, name: string): readonly any[] {
-  if (node.slots.has(name)) return (node.slots.get(name) ?? null) === null ? [] : [node.slots.get(name)];
+  if (node.subterms.has(name)) return (node.subterms.get(name) ?? null) === null ? [] : [node.subterms.get(name)];
   return node.lists.get(name) as readonly any[];
 }
 
@@ -284,7 +284,7 @@ function grammarProblems(grammar_: string, root: any): string[] {
     }
     if (kind === QUANTIFIER) {
       if (attributes.get("greedy") === false) lacks("a lazy quantifier");
-      const element = node.slots.get("element") ?? null;
+      const element = node.subterms.get("element") ?? null;
       const inner = element !== null ? read(element) : null;
       if (inner !== null && inner.kind === QUANTIFIER) lacks("a repeated quantifier");
       if (inner !== null && inner.kind === ASSERTION && ["start", "end"].includes(inner.attributes.get("assertionKind"))) {
@@ -331,8 +331,8 @@ export function problems(node: F.Node): string[] {
     const grammars = flags.filter((flag) => GRAMMARS.includes(flag));
     if (grammars.length > 1) {
       found.push(`a regex has at most one grammar element, got ${grammars.join(", ")}`);
-    } else if ((node.slots.get("pattern") ?? null) !== null) {
-      found.push(...grammarProblems(grammar(flags), node.slots.get("pattern")));
+    } else if ((node.subterms.get("pattern") ?? null) !== null) {
+      found.push(...grammarProblems(grammar(flags), node.subterms.get("pattern")));
     }
   } else if (kind === QUANTIFIER) {
     const [least, most] = [attributes.get("min"), attributes.get("max")];
@@ -340,7 +340,7 @@ export function problems(node: F.Node): string[] {
     if (typeof least === "bigint" && typeof most === "bigint" && most < least) {
       found.push(`a quantifier's max cannot be less than its min, got ${most} and ${least}`);
     }
-    const element = node.slots.get("element") ?? null;
+    const element = node.subterms.get("element") ?? null;
     if (element !== null && read(element).attributes.get("assertionKind") === "word") {
       found.push("a quantifier cannot repeat a word assertion");
     }

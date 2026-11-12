@@ -28,10 +28,10 @@
  *
  * Its helpers: `delaystep`, `propertycaseitem`, and a clock's `eventcontrol` (`@(...)`, `@(*)` without events) and its
  * `eventexpression`s (`posedge clk iff en`), IEEE 1800's event control (9.4.2), held here as a sequence's or a property's
- * clock. A position the standard writes `expression_or_dist` (an `if`'s, a `case`'s and its items' expressions, an abort's
- * condition, `disable iff`'s) holds its `Term`, which lists `distexpression`; a match item, a cycle range's bound and an
- * event's expression and condition hold `Expressions`' `Term`. None of its kinds binds a name: a sequence's local
- * variables are its declaration's, a statement's.
+ * clock. A subterm the standard writes `expression_or_dist` (an `if`'s, a `case`'s and its items' expressions, an
+ * abort's condition, `disable iff`'s) is of its `Term`, which lists `distexpression`; a match item, a cycle range's
+ * bound and an event's expression and condition hold `Expressions`' `Term`. None of its kinds binds a name: a
+ * sequence's local variables are its declaration's, a statement's.
  *
  * The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
  * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: `strengthproperty`, `abortproperty`
@@ -111,9 +111,9 @@ const CHOICES: ReadonlyMap<string, readonly [string, Readonly<Record<string, rea
 /** SystemVerilog Assertions' union of its kinds, added to the framework's terms as the branch `systemverilog_assertions`,
  * its own kinds, the helpers they hold, and its dialect's schema, whose singleton is `Expressions.SystemVerilog.Assertions`:
  * run after `Framework.install`, in a transaction of its own, before or after the other SystemVerilog dialects'
- * installs; run again, it writes nothing. `Expressions.SystemVerilog.Expressions.Term`, which its expressions' positions
- * hold, is named, created where that dialect's install has not run; that install adds its branches to this `Term`, as
- * the Preprocessor's adds `macrousage` and the Constraints' `distexpression`. Its holder,
+ * installs; run again, it writes nothing. `Expressions.SystemVerilog.Expressions.Term`, of which its expression
+ * subterms are, is named, created where that dialect's install has not run; that install adds its branches to this
+ * `Term`, as the Preprocessor's adds `macrousage` and the Constraints' `distexpression`. Its holder,
  * `Expressions.SystemVerilog.Assertions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
  * `Term`. */
 export function install(txn: any): any {
@@ -275,7 +275,7 @@ function check(tag: string): (record: any) => string[] {
   return (record) => problems(F.node(tag, record));
 }
 
-/** The slots of its kinds' helpers that may be empty: a clock's event's condition (`iff`). */
+/** The subterms of its kinds' helpers that may be empty: a clock's event's condition (`iff`). */
 const OPTIONAL: readonly string[] = ["clock.events.condition"];
 
 /** How the framework reads its own kinds: each an application of no operation it evaluates, binding no name. */
@@ -304,7 +304,7 @@ function kinds(): Record<string, F.Kind> {
   };
 }
 
-/** The dialects of its family whose terms its positions hold, read when first needed. */
+/** The dialects of its family whose terms are its subterms, read when first needed. */
 function reads(): readonly F.Dialect[] {
   return [X.DIALECT, Types.DIALECT, Patterns.DIALECT, Constraints.DIALECT, Preprocessor.DIALECT];
 }

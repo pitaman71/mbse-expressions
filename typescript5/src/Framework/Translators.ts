@@ -26,12 +26,12 @@
  *   e.g. `import numpy as np` around an expression that uses `np`.
  *
  * A pattern names a kind by its branch's tag in its dialect's `Term` (`call`, `binop`) and its attributes and arguments
- * as `Terms.form` reads them: a hole in an argument binds the term in that place, slots then variadic arguments, and a
- * fixed attribute must be set to an equal scalar, with every attribute of the term matched (an attribute that is not set
- * is absent), but a literal's spelling (its kind's `spelling`: `text` and `problems`, and a Python literal's prefix,
- * quotes, base and digit separators), which is its own dialect's: a literal translates by its value, and one with no
- * value has no counterpart. A helper's structure is among a form's attributes (`Terms.Part`), so a pattern matches a
- * Python comparison's operators or a comprehension's clauses as attributes, and its terms as arguments.
+ * as `Terms.form` reads them: a hole in an argument binds the term in that place, subterms then variadic arguments, and
+ * a fixed attribute must be set to an equal scalar, with every attribute of the term matched (an attribute that is not
+ * set is absent), but a literal's spelling (its kind's `spelling`: `text` and `problems`, and a Python literal's
+ * prefix, quotes, base and digit separators), which is its own dialect's: a literal translates by its value, and one
+ * with no value has no counterpart. A helper's structure is among a form's attributes (`Terms.Part`), so a pattern
+ * matches a Python comparison's operators or a comprehension's clauses as attributes, and its terms as arguments.
  *
  * Translating co-traverses: at each term, the first rule whose source pattern matches (the most specific first: the
  * one with the most terms and fixed attributes) is applied by traversing the pattern and the term in lockstep, binding
@@ -68,7 +68,7 @@ export interface Translator {
   inverse(): Translator;
 }
 
-/** A named hole in a pattern. In an argument position it matches an expression; in an attribute it matches a native
+/** A named hole in a pattern. In an argument it matches an expression; in an attribute it matches a native
  * value, of one of `types` (native tokens) if any are given. */
 export class Hole {
   readonly types: readonly unknown[];
@@ -88,8 +88,8 @@ export function holes(...names: string[]): Hole[] {
 }
 
 /** A form with holes: `kind`, `attributes` (natives or holes) and `args` (patterns or holes). */
-/** A form with holes: `kind`, `args` (patterns, holes, or null for an empty slot: a binder's `value` it leaves unset)
- * and `attributes` (natives or holes). */
+/** A form with holes: `kind`, `args` (patterns, holes, or null for an empty subterm: a binder's `value` it leaves
+ * unset) and `attributes` (natives or holes). */
 export class Pattern {
   readonly args: readonly (Pattern | Hole | null)[];
   readonly attributes: ReadonlyMap<string, unknown>;
@@ -117,7 +117,7 @@ export class Pattern {
   }
 
   toString(): string {
-    const parts = [...this.args.map((a) => (a === null ? "None" : String(a))), // an empty slot, as Python writes it
+    const parts = [...this.args.map((a) => (a === null ? "None" : String(a))), // an empty subterm, as Python writes it
       ...[...this.attributes].map(([k, v]) => `${k}=${v instanceof Hole ? v.name : repr(v)}`)];
     return `${this.kind}(${parts.join(", ")})`;
   }
@@ -397,7 +397,7 @@ class Run {
     throw new ValueError(`${described} has no ${this.direction.target.name()} counterpart`);
   }
 
-  /** Co-traverses `pattern` and `node`, binding the pattern's holes; null matches an empty slot. */
+  /** Co-traverses `pattern` and `node`, binding the pattern's holes; null matches an empty subterm. */
   private match(pattern: Pattern | Hole | null, node: unknown, bindings: Map<string, unknown>): boolean {
     if (pattern === null) return node === null;
     if (pattern instanceof Hole) {
@@ -444,7 +444,7 @@ class Run {
   }
 
   private instantiate(pattern: Pattern | Hole | null, bindings: Map<string, unknown>, environment: Environment): Built | null {
-    if (pattern === null) return null; // an empty slot
+    if (pattern === null) return null; // an empty subterm
     if (pattern instanceof Hole) return this.translate(bindings.get(pattern.name), environment);
     const attributes = new Map([...pattern.attributes].map(([name, value]) => [name, filled(value, bindings)] as [string, unknown]));
     const args = pattern.args.map((argument) => this.instantiate(argument, bindings, environment));

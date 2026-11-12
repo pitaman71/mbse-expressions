@@ -6,7 +6,7 @@
  * It is a dialect of the SystemVerilog family (the dialects proposal, Decided for stage 6: "most languages will have a
  * dialect for type expressions"), named `SystemVerilog Types` (`Terms.dialect_name`), its tag `systemverilog_types`. Its
  * terms are values of its `Term`, `Expressions.SystemVerilog.Types.Term`, the branch `systemverilog_types` of
- * `Expressions.Framework.Term`; a position that holds a type or an expression (mbse-programs' `DataType | Expression`)
+ * `Expressions.Framework.Term`; a subterm that may be a type or an expression (mbse-programs' `DataType | Expression`)
  * holds it, so it lists, besides its own kinds, every branch of `Expressions.SystemVerilog.Expressions.Term`, which that
  * dialect's install adds ("(b)"). Its own kinds are mbse-programs' data types (`mbse:mbse-programs/python3/mbse/Programs/
  * Verilog/Syntax.py`), with mbse-programs' names, lowercased as branch tags, and its properties in source order, each a
@@ -254,11 +254,11 @@ export function problems(node: F.Node): string[] {
   if (kind === STRUCTTYPE && (attributes.get("qualifier") ?? null) !== null && attributes.get("keyword") !== "union") {
     found.push("a StructType with a qualifier is a union");
   }
-  if (kind === "enummember" && (node.slots.get("right") ?? null) !== null && (node.slots.get("left") ?? null) === null) {
+  if (kind === "enummember" && (node.subterms.get("right") ?? null) !== null && (node.subterms.get("left") ?? null) === null) {
     found.push("an EnumMember with a right has a left");
   }
   if (choice === undefined && kind !== STRUCTTYPE && kind !== "enummember") {
-    found.push(...X.problems(new F.Node(kind, attributes, node.slots, node.many, new Map())));
+    found.push(...X.problems(new F.Node(kind, attributes, node.subterms, node.many, new Map())));
   }
   for (const value of node.helpers.values()) for (const inner of nodes(value)) found.push(...problems(inner));
   return found;
@@ -268,8 +268,8 @@ function check(tag: string): (record: any) => string[] {
   return (record) => problems(F.node(tag, record));
 }
 
-/** The slots of a type's helpers that may be empty: a queue's bound, an attribute's, a declarator's and an enumeration
- * member's value, an associative array's index type (`[*]`), and an enumeration member's numbers. */
+/** The subterms of a type's helpers that may be empty: a queue's bound, an attribute's, a declarator's and an
+ * enumeration member's value, an associative array's index type (`[*]`), and an enumeration member's numbers. */
 const OPTIONAL: readonly string[] = ["*.bound", "*.value", "dimensions.type", "members.declarators.dimensions.type",
   "members.left", "members.right"];
 
@@ -291,7 +291,7 @@ function kinds(): Record<string, F.Kind> {
   };
 }
 
-/** The dialects of its family whose terms its positions hold, read when first needed. */
+/** The dialects of its family whose terms are its subterms, read when first needed. */
 function reads(): readonly F.Dialect[] {
   return [X.DIALECT, Patterns.DIALECT, Assertions.DIALECT, Constraints.DIALECT, Preprocessor.DIALECT];
 }

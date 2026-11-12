@@ -54,7 +54,7 @@ function letters(node: F.Node | undefined, allowed: typeof R.FLAGS): string {
 }
 
 function regexpliteral(p: Printer, node: F.Node): string {
-  return `/${p.text(node.slots.get("pattern"))}/${letters(node.helpers.get("flags") as F.Node | undefined, R.FLAGS)}`;
+  return `/${p.text(node.subterms.get("pattern"))}/${letters(node.helpers.get("flags") as F.Node | undefined, R.FLAGS)}`;
 }
 
 function alternative(p: Printer, node: F.Node): string {
@@ -62,7 +62,7 @@ function alternative(p: Printer, node: F.Node): string {
 }
 
 function group(p: Printer, node: F.Node): string {
-  const held = node.slots.get("modifiers");
+  const held = node.subterms.get("modifiers");
   return `(?${held === null ? "" : p.text(held)}:${disjunction(p, node)})`;
 }
 
@@ -72,7 +72,7 @@ function capturinggroup(p: Printer, node: F.Node): string {
 }
 
 function quantifier(p: Printer, node: F.Node): string {
-  const element = p.text(node.slots.get("element"));
+  const element = p.text(node.subterms.get("element"));
   const raw: string | undefined = node.attributes.get("raw");
   if (raw !== undefined && raw.startsWith(element) && raw.length > element.length) return raw;
   const low: bigint = node.attributes.get("min");
@@ -89,11 +89,11 @@ function characterclass(p: Printer, node: F.Node): string {
 }
 
 function characterclassrange(p: Printer, node: F.Node): string {
-  return `${inClass(p, node.slots.get("min"))}-${inClass(p, node.slots.get("max"))}`;
+  return `${inClass(p, node.subterms.get("min"))}-${inClass(p, node.subterms.get("max"))}`;
 }
 
 function operation(operator: string): Text {
-  return (p, node) => `${inClass(p, node.slots.get("left"))}${operator}${inClass(p, node.slots.get("right"))}`;
+  return (p, node) => `${inClass(p, node.subterms.get("left"))}${operator}${inClass(p, node.subterms.get("right"))}`;
 }
 
 function classstringdisjunction(p: Printer, node: F.Node): string {
@@ -105,7 +105,7 @@ function stringalternative(p: Printer, node: F.Node): string {
 }
 
 function expressioncharacterclass(p: Printer, node: F.Node): string {
-  return `[${node.attributes.get("negate") ? "^" : ""}${p.text(node.slots.get("expression"))}]`;
+  return `[${node.attributes.get("negate") ? "^" : ""}${p.text(node.subterms.get("expression"))}]`;
 }
 
 const SETS: ReadonlyMap<string, string> = new Map([["digit", "d"], ["space", "s"], ["word", "w"]]);

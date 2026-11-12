@@ -5,7 +5,7 @@ assignment pattern's type and a type reference hold.
 It is a dialect of the SystemVerilog family (the dialects proposal, Decided for stage 6: "most languages will have a
 dialect for type expressions"), named `SystemVerilog Types` (`Terms.dialect_name`), its tag `systemverilog_types`. Its
 terms are values of its `Term`, `Expressions.SystemVerilog.Types.Term`, the branch `systemverilog_types` of
-`Expressions.Framework.Term`; a position that holds a type or an expression (mbse-programs' `DataType | Expression`)
+`Expressions.Framework.Term`; a subterm that may be a type or an expression (mbse-programs' `DataType | Expression`)
 holds it, so it lists, besides its own kinds, every branch of `Expressions.SystemVerilog.Expressions.Term`, which that
 dialect's install adds ("(b)"). Its own kinds are mbse-programs' data types (`mbse:mbse-programs/python3/mbse/Programs/
 Verilog/Syntax.py`), with mbse-programs' names, lowercased as branch tags, and its properties in source order, each a
@@ -240,10 +240,10 @@ def problems(node: F.Node) -> list[str]:
                 found.append(f"{name}.{attribute} cannot be {value!r}")
     if kind == STRUCTTYPE and attributes.get("qualifier") is not None and attributes.get("keyword") != "union":
         found.append("a StructType with a qualifier is a union")
-    if kind == "enummember" and node.slots.get("right") is not None and node.slots.get("left") is None:
+    if kind == "enummember" and node.subterms.get("right") is not None and node.subterms.get("left") is None:
         found.append("an EnumMember with a right has a left")
     if kind not in _CHOICES and kind not in (STRUCTTYPE, "enummember"):
-        found += X.problems(F.Node(kind, attributes, node.slots, node.many, {}))
+        found += X.problems(F.Node(kind, attributes, node.subterms, node.many, {}))
     for value in node.helpers.values():
         for inner in _nodes(value):
             found += problems(inner)
@@ -256,8 +256,8 @@ def _check(tag: str) -> Callable[[Any], list[str]]:
 
 _OPTIONAL = ("*.bound", "*.value", "dimensions.type", "members.declarators.dimensions.type", "members.left",
              "members.right")
-"""The slots of a type's helpers that may be empty: a queue's bound, an attribute's, a declarator's and an enumeration
-member's value, an associative array's index type (`[*]`), and an enumeration member's numbers."""
+"""The subterms of a type's helpers that may be empty: a queue's bound, an attribute's, a declarator's and an
+enumeration member's value, an associative array's index type (`[*]`), and an enumeration member's numbers."""
 
 
 def _kinds() -> dict[str, F.Kind]:
@@ -280,7 +280,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions hold, imported when first needed."""
+    """The dialects of its family whose terms are its subterms, imported when first needed."""
     from ..Assertions import Expressions as Assertions
     from ..Constraints import Expressions as Constraints
     from ..Patterns import Expressions as Patterns

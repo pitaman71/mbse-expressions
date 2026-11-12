@@ -15,7 +15,7 @@
  * it (`\n`, `\x01`; awk's `\001`), as a BRE and an ERE have none. Invalid syntax is written as written
  * (`Terms.invalid_text`), refused by the name of the dialect that owns it.
  *
- * Its printer is its own *(agent)*: its terms hold no other dialect's, and no other dialect's position holds one, so it
+ * Its printer is its own *(agent)*: its terms hold no other dialect's, and no other dialect's subterm is one, so it
  * shares nothing with the C family's printer (`C.Expressions.Text`) but its reading of invalid syntax, and its grammar,
  * which a term alone does not say, is the context it writes in.
  */
@@ -64,7 +64,7 @@ class Printer {
   }
 
   regex(node: F.Node): string {
-    return this.term(node.slots.get("pattern"));
+    return this.term(node.subterms.get("pattern"));
   }
 
   patternlist(node: F.Node): string {
@@ -88,7 +88,7 @@ class Printer {
   }
 
   quantifier(node: F.Node): string {
-    const element = this.term(node.slots.get("element"));
+    const element = this.term(node.subterms.get("element"));
     if (node.attributes.has("raw")) return element + (node.attributes.get("raw") as string);
     const [least, most] = [node.attributes.get("min") as bigint, node.attributes.get("max") as bigint | undefined];
     const shorthand = most === undefined ? (least === 0n ? "*" : least === 1n ? "+" : null)
@@ -109,7 +109,7 @@ class Printer {
   }
 
   characterclassrange(node: F.Node): string {
-    return `${this.term(node.slots.get("min"), true)}-${this.term(node.slots.get("max"), true)}`;
+    return `${this.term(node.subterms.get("min"), true)}-${this.term(node.subterms.get("max"), true)}`;
   }
 
   characterset(node: F.Node): string {

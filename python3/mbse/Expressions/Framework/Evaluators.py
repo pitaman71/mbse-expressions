@@ -90,10 +90,10 @@ class Interpreter:
             return scope.lookup(node)
         arguments = Terms.arguments_of(record)
         if kind.role in (Terms.BINDING, Terms.IMPORT, Terms.QUANTIFIER):
-            slots, _, _ = Terms._parts(record.as_schema())
-            for slot, argument in zip(slots, arguments):
-                if argument is None and slot not in kind.optional:  # an import's `value`, which it leaves unset
-                    raise ValueError(f"{Terms._article(tag)} needs {Terms._article(slot)}")
+            subterms, _, _ = Terms._parts(record.as_schema())
+            for subterm, argument in zip(subterms, arguments):
+                if argument is None and subterm not in kind.optional:  # an import's `value`, which it leaves unset
+                    raise ValueError(f"{Terms._article(tag)} needs {Terms._article(subterm)}")
             if kind.role == Terms.QUANTIFIER:
                 return self._apply(node, tag, kind, arguments, scope)
             if kind.role == Terms.IMPORT:  # its body, its last argument

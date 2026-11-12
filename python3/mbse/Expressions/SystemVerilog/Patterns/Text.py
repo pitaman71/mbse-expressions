@@ -22,7 +22,7 @@ __all__ = ["ToText", "TEXTS", "PRECEDENCE", "INLINE"]
 
 def _tagged(p: X.Printer, node: F.Node) -> str:
     """`tagged member pattern`, or `tagged member` where it has no pattern."""
-    pattern = f" {p.text(node.slots['pattern'])}" if node.slots["pattern"] is not None else ""
+    pattern = f" {p.text(node.subterms['pattern'])}" if node.subterms["pattern"] is not None else ""
     return f"tagged {p.spelling(node.helpers['member'])}{pattern}"
 
 
@@ -31,8 +31,8 @@ TEXTS: dict[str, Callable[[X.Printer, F.Node], str]] = {
     P.WILDCARDPATTERN: lambda p, n: ".*",
     P.TAGGEDPATTERN: _tagged,
     P.STRUCTUREPATTERN: lambda p, n: "'{" + ", ".join(p.text(item) for item in n.many) + "}",
-    P.PATTERNMEMBER: lambda p, n: f"{p.spelling(n.helpers['name'])}: {p.text(n.slots['pattern'])}",
-    P.PARENTHESIZEDPATTERN: lambda p, n: f"({p.text(n.slots['pattern'])})",
+    P.PATTERNMEMBER: lambda p, n: f"{p.spelling(n.helpers['name'])}: {p.text(n.subterms['pattern'])}",
+    P.PARENTHESIZEDPATTERN: lambda p, n: f"({p.text(n.subterms['pattern'])})",
 }
 """How each of its kinds is written."""
 

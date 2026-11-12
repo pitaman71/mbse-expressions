@@ -22,40 +22,40 @@ function nodes(value: unknown): readonly F.Node[] {
 
 /** `if (condition) consequence`, and ` else alternative` where it has one. */
 function conditional(p: Printer, node: F.Node): string {
-  const alternative = node.slots.get("alternative") ?? null;
+  const alternative = node.subterms.get("alternative") ?? null;
   const written = alternative !== null ? ` else ${p.text(alternative)}` : "";
-  return `if (${p.text(node.slots.get("condition"))}) ${p.text(node.slots.get("consequence"))}${written}`;
+  return `if (${p.text(node.subterms.get("condition"))}) ${p.text(node.subterms.get("consequence"))}${written}`;
 }
 
 /** `foreach (array[variables]) body`, a dimension it skips written empty (`q[, j]`). */
 function foreach(p: Printer, node: F.Node): string {
   const variables = nodes(node.helpers.get("variables")).map((v) => v.kind === "emptyargument" ? "" : p.spelling(v)).join(", ");
-  return `foreach (${p.text(node.slots.get("value"))}[${variables}]) ${p.text(node.slots.get("body"))}`;
+  return `foreach (${p.text(node.subterms.get("value"))}[${variables}]) ${p.text(node.subterms.get("body"))}`;
 }
 
 /** A distribution's item: its value, or `default`, and its operator and weight where it has them. */
 function item(p: Printer, node: F.Node): string {
-  const value = node.slots.get("value") ?? null;
-  const weight = node.attributes.has("operator") ? ` ${node.attributes.get("operator")} ${p.text(node.slots.get("weight"))}` : "";
+  const value = node.subterms.get("value") ?? null;
+  const weight = node.attributes.has("operator") ? ` ${node.attributes.get("operator")} ${p.text(node.subterms.get("weight"))}` : "";
   return (value === null ? "default" : p.text(value)) + weight;
 }
 
 /** `value dist { items }`. */
 function dist(p: Printer, node: F.Node): string {
   const items = nodes(node.helpers.get("items")).map((i) => item(p, i)).join(", ");
-  return `${p.operand(node.slots.get("value"), XT.RELATIONAL)} dist {${items}}`;
+  return `${p.operand(node.subterms.get("value"), XT.RELATIONAL)} dist {${items}}`;
 }
 
 /** How each of its kinds is written. */
 export const TEXTS: ReadonlyMap<string, (p: Printer, n: F.Node) => string> = new Map<string, (p: Printer, n: F.Node) => string>([
   [C.CONSTRAINTBLOCK, (p, n) => p.inline(n.many)],
-  [C.EXPRESSIONCONSTRAINT, (p, n) => `${n.attributes.get("soft") ? "soft " : ""}${p.text(n.slots.get("expression"))};`],
-  [C.IMPLICATIONCONSTRAINT, (p, n) => `${p.operand(n.slots.get("condition"), XT.IMPLY + 1)} -> ${p.text(n.slots.get("body"))}`],
+  [C.EXPRESSIONCONSTRAINT, (p, n) => `${n.attributes.get("soft") ? "soft " : ""}${p.text(n.subterms.get("expression"))};`],
+  [C.IMPLICATIONCONSTRAINT, (p, n) => `${p.operand(n.subterms.get("condition"), XT.IMPLY + 1)} -> ${p.text(n.subterms.get("body"))}`],
   [C.CONDITIONALCONSTRAINT, conditional],
   [C.FOREACHCONSTRAINT, foreach],
   [C.SOLVEBEFORECONSTRAINT, (p, n) => `solve ${(n.lists.get("solve") as any[]).map((e) => p.text(e)).join(", ")} before ${
     (n.lists.get("before") as any[]).map((e) => p.text(e)).join(", ")};`],
-  [C.DISABLESOFTCONSTRAINT, (p, n) => `disable soft ${p.text(n.slots.get("target"))};`],
+  [C.DISABLESOFTCONSTRAINT, (p, n) => `disable soft ${p.text(n.subterms.get("target"))};`],
   [C.UNIQUECONSTRAINT, (p, n) => `unique {${n.many.map((r) => p.text(r)).join(", ")}};`],
   [C.DISTEXPRESSION, dist],
 ]);

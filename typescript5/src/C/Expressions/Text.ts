@@ -168,7 +168,7 @@ class Printer {
     return (TEXTS[node.kind] as Text)(this, node);
   }
 
-  /** A term a slot holds, as written: a type name where a position holds a type. */
+  /** A subterm, as written: a type name where the subterm is a type. */
   term(value: any): string {
     return this.text(this.node(value));
   }
@@ -189,8 +189,8 @@ class Printer {
     const operator = node.attributes.get("operator");
     if (node.kind === E.BINARYEXPRESSION && (operator === "&&" || operator === "||")) {
       const level = BINARY[operator] as number;
-      const [left, right] = [this.constraint(node.slots.get("left"), level),
-        this.constraint(node.slots.get("right"), level + 1)];
+      const [left, right] = [this.constraint(node.subterms.get("left"), level),
+        this.constraint(node.subterms.get("right"), level + 1)];
       const written = `${left} ${operator} ${right}`;
       return level < needed ? `(${written})` : written;
     }
@@ -219,7 +219,7 @@ class Printer {
   }
 
   initializer(node: F.Node): string {
-    if (node.kind === "equalinitializer") return " = " + this.expression(node.slots.get("value"), ASSIGNMENT);
+    if (node.kind === "equalinitializer") return " = " + this.expression(node.subterms.get("value"), ASSIGNMENT);
     if (node.kind === "parenthesizedinitializer") return "(" + this.list(node.many) + ")";
     return this.text(node);
   }
@@ -233,7 +233,7 @@ class Printer {
   }
 
   unary(node: F.Node): string {
-    const [operand, operator] = [this.expression(node.slots.get("operand"), UNARY),
+    const [operand, operator] = [this.expression(node.subterms.get("operand"), UNARY),
         node.attributes.get("operator") as string];
     const first = operand.slice(0, 1);
     const space = ["+", "-", "&", "*"].includes(first) && first === operator.slice(-1) ? " " : "";
@@ -243,51 +243,51 @@ class Printer {
   binary(node: F.Node): string {
     const operator = node.attributes.get("operator") as string;
     const level = BINARY[operator] as number;
-    const [left, right] = [this.expression(node.slots.get("left"), level), this.expression(node.slots.get("right"),
+    const [left, right] = [this.expression(node.subterms.get("left"), level), this.expression(node.subterms.get("right"),
         level + 1)];
     if (operator === ".*" || operator === "->*") return left + operator + right;
     return operator === "," ? `${left}, ${right}` : `${left} ${operator} ${right}`;
   }
 
   assignment(node: F.Node): string {
-    return `${this.expression(node.slots.get("left"), BINARY["||"] as number)} ${node.attributes.get("operator")} `
-      + this.expression(node.slots.get("right"), ASSIGNMENT);
+    return `${this.expression(node.subterms.get("left"), BINARY["||"] as number)} ${node.attributes.get("operator")} `
+      + this.expression(node.subterms.get("right"), ASSIGNMENT);
   }
 
   conditional(node: F.Node): string {
-    const condition = this.expression(node.slots.get("condition"), BINARY["||"] as number);
-    const alternative = this.expression(node.slots.get("alternative"), ASSIGNMENT);
-    if (node.slots.get("consequence") === null) return `${condition} ?: ${alternative}`; // GNU's
-    return `${condition} ? ${this.expression(node.slots.get("consequence"), COMMA)} : ${alternative}`;
+    const condition = this.expression(node.subterms.get("condition"), BINARY["||"] as number);
+    const alternative = this.expression(node.subterms.get("alternative"), ASSIGNMENT);
+    if (node.subterms.get("consequence") === null) return `${condition} ?: ${alternative}`; // GNU's
+    return `${condition} ? ${this.expression(node.subterms.get("consequence"), COMMA)} : ${alternative}`;
   }
 
   call(node: F.Node): string {
-    return this.expression(node.slots.get("function"), POSTFIX) + "(" + this.list(node.many) + ")";
+    return this.expression(node.subterms.get("function"), POSTFIX) + "(" + this.list(node.many) + ")";
   }
 
   subscript(node: F.Node): string {
     const indices = node.many.map((index) => this.expression(index, ASSIGNMENT)).join(", ");
-    return `${this.expression(node.slots.get("object"), POSTFIX)}[${indices}]`;
+    return `${this.expression(node.subterms.get("object"), POSTFIX)}[${indices}]`;
   }
 
   member(node: F.Node): string {
-    return this.expression(node.slots.get("object"), POSTFIX) + node.attributes.get("operator")
+    return this.expression(node.subterms.get("object"), POSTFIX) + node.attributes.get("operator")
       + (node.attributes.get("template_keyword") ? "template " : "") + this.name(node, "member");
   }
 
   postfix(node: F.Node): string {
-    return this.expression(node.slots.get("operand"), POSTFIX) + node.attributes.get("operator");
+    return this.expression(node.subterms.get("operand"), POSTFIX) + node.attributes.get("operator");
   }
 
   sizeof(node: F.Node): string {
-    const operand = this.node(node.slots.get("operand"));
+    const operand = this.node(node.subterms.get("operand"));
     if (operand.kind === E.TYPEID) return `sizeof(${this.text(operand)})`;
     const written = this.expression(operand, UNARY);
     return "sizeof" + (written.startsWith("(") ? "" : " ") + written;
   }
 
   cast(node: F.Node): string {
-    return `(${this.term(node.slots.get("type"))})${this.expression(node.slots.get("operand"), UNARY)}`;
+    return `(${this.term(node.subterms.get("type"))})${this.expression(node.subterms.get("operand"), UNARY)}`;
   }
 
   initializerList(node: F.Node): string {
@@ -302,9 +302,9 @@ class Printer {
 
   designator(node: F.Node): string {
     if (node.kind === "fielddesignator") return "." + this.name(node, "name");
-    const last = node.slots.get("last");
+    const last = node.subterms.get("last");
     const range = last !== null ? ` ... ${this.expression(last, CONDITIONAL)}` : "";
-    return `[${this.expression(node.slots.get("index"), CONDITIONAL)}${range}]`;
+    return `[${this.expression(node.subterms.get("index"), CONDITIONAL)}${range}]`;
   }
 
   generic(node: F.Node): string {
@@ -314,13 +314,13 @@ class Printer {
       associations.push((type !== null ? this.term(type) : "default") + ": " + this.expression(node.many[i + 1],
         ASSIGNMENT));
     }
-    return `_Generic(${[this.operand(node.slots.get("controlling"), ASSIGNMENT), ...associations].join(", ")})`;
+    return `_Generic(${[this.operand(node.subterms.get("controlling"), ASSIGNMENT), ...associations].join(", ")})`;
   }
 
   newText(node: F.Node): string {
     let written = (node.attributes.get("global_scope") ? "::" : "") + "new ";
     if (node.many.length > 0) written += "(" + this.list(node.many) + ") ";
-    const type = this.term(node.slots.get("type"));
+    const type = this.term(node.subterms.get("type"));
     written += node.attributes.get("parenthesized_type") ? `(${type})` : type;
     return written + (node.helpers.has("initializer") ? this.initializer(one(node.helpers.get("initializer")) as F.Node)
       : "");
@@ -329,11 +329,11 @@ class Printer {
   deleteText(node: F.Node): string {
     return (node.attributes.get("global_scope") ? "::" : "") + "delete" + (node.attributes.get("array") ? "[]" : "")
       + " "
-      + this.expression(node.slots.get("operand"), UNARY);
+      + this.expression(node.subterms.get("operand"), UNARY);
   }
 
   fold(node: F.Node): string {
-    const [operator, left, right] = [node.attributes.get("operator"), node.slots.get("left"), node.slots.get("right")];
+    const [operator, left, right] = [node.attributes.get("operator"), node.subterms.get("left"), node.subterms.get("right")];
     const writtenLeft = left !== null ? this.expression(left, UNARY) + ` ${operator} ` : "";
     const writtenRight = right !== null ? ` ${operator} ` + this.expression(right, UNARY) : "";
     return `(${writtenLeft}...${writtenRight})`;
@@ -343,7 +343,7 @@ class Printer {
     let written = "[" + nodes(node.helpers.get("captures")).map((c) => this.text(c)).join(", ") + "]";
     const parameters = nodes(node.helpers.get("template_parameters"));
     if (parameters.length > 0) written += "<" + parameters.map((p) => this.text(p)).join(", ") + ">";
-    const requires = node.slots.get("template_requires");
+    const requires = node.subterms.get("template_requires");
     if (requires !== null) written += " requires " + this.constraint(requires);
     written += this.attributesAfter(node);
     // without a declarator, the lambda has no parameter list: `[] { ... }`
@@ -357,8 +357,8 @@ class Printer {
     written += nodes(node.helpers.get("specifiers")).map((s) => " " + s.attributes.get("keyword")).join("");
     if (node.helpers.has("exception")) written += " " + this.text(one(node.helpers.get("exception")) as F.Node);
     written += this.attributesAfter(node);
-    if (node.slots.get("trailing_return") !== null) written += " -> " + this.term(node.slots.get("trailing_return"));
-    if (node.slots.get("requires") !== null) written += " requires " + this.constraint(node.slots.get("requires"));
+    if (node.subterms.get("trailing_return") !== null) written += " -> " + this.term(node.subterms.get("trailing_return"));
+    if (node.subterms.get("requires") !== null) written += " requires " + this.constraint(node.subterms.get("requires"));
     return written;
   }
 
@@ -384,17 +384,17 @@ class Printer {
   }
 
   requirement(node: F.Node): string {
-    if (node.kind === "simplerequirement") return this.expression(node.slots.get("expression"), COMMA) + ";";
+    if (node.kind === "simplerequirement") return this.expression(node.subterms.get("expression"), COMMA) + ";";
     if (node.kind === "typerequirement") return `typename ${this.text(one(node.helpers.get("name")) as F.Node)};`;
-    if (node.kind === "nestedrequirement") return `requires ${this.constraint(node.slots.get("constraint"))};`;
-    let written = "{ " + this.expression(node.slots.get("expression"), COMMA) + " }";
+    if (node.kind === "nestedrequirement") return `requires ${this.constraint(node.subterms.get("constraint"))};`;
+    let written = "{ " + this.expression(node.subterms.get("expression"), COMMA) + " }";
     if (node.attributes.get("noexcept")) written += " noexcept";
     if (node.helpers.has("return_type")) written += " -> " + this.text(one(node.helpers.get("return_type")) as F.Node);
     return written + ";";
   }
 
   packExpansion(node: F.Node): string {
-    const pattern = this.node(node.slots.get("pattern"));
+    const pattern = this.node(node.subterms.get("pattern"));
     return (pattern.kind === E.TYPEID ? this.text(pattern) : this.expression(pattern, POSTFIX)) + "...";
   }
 
@@ -407,7 +407,7 @@ class Printer {
       const operator = attributes.get("operator") as string;
       return "operator" + (/[A-Za-z]/.test(operator[0] as string) ? " " : "") + operator;
     }
-    if (kind === "conversionname") return "operator " + this.term(node.slots.get("type"));
+    if (kind === "conversionname") return "operator " + this.term(node.subterms.get("type"));
     if (kind === "literaloperatorname") return `operator""${attributes.get("suffix")}`;
     if (kind === "destructorname") return "~" + this.text(one(node.helpers.get("type")) as F.Node);
     if (kind === "templateid") {
@@ -426,15 +426,15 @@ class Printer {
     const kind = node.kind;
     if (kind === "namedtypespecifier") return this.name(node, "name");
     if (kind === "typenamespecifier") return "typename " + this.text(one(node.helpers.get("name")) as F.Node);
-    if (kind === "decltypespecifier") return `decltype(${this.expression(node.slots.get("expression"), COMMA)})`;
+    if (kind === "decltypespecifier") return `decltype(${this.expression(node.subterms.get("expression"), COMMA)})`;
     if (kind === "placeholdertypespecifier") {
       const constraint = node.helpers.has("constraint") ? this.text(one(node.helpers.get("constraint")) as F.Node) + " "
         : "";
       return constraint + (node.attributes.get("decltype") ? "decltype(auto)" : "auto");
     }
-    if (kind === "typeofspecifier") return this.keywordCall(node.attributes.get("keyword"), node.slots.get("operand"));
-    if (kind === "atomictypespecifier") return `_Atomic(${this.term(node.slots.get("type"))})`;
-    return `_BitInt(${this.expression(node.slots.get("width"), ASSIGNMENT)})`;
+    if (kind === "typeofspecifier") return this.keywordCall(node.attributes.get("keyword"), node.subterms.get("operand"));
+    if (kind === "atomictypespecifier") return `_Atomic(${this.term(node.subterms.get("type"))})`;
+    return `_BitInt(${this.expression(node.subterms.get("width"), ASSIGNMENT)})`;
   }
 
   classText(node: F.Node): string {
@@ -460,7 +460,7 @@ class Printer {
   enumText(node: F.Node): string {
     let written = node.attributes.get("key") + this.attributesAfter(node);
     if (node.helpers.has("name")) written += " " + this.name(node, "name");
-    if (node.slots.get("base") !== null) written += " : " + this.term(node.slots.get("base"));
+    if (node.subterms.get("base") !== null) written += " : " + this.term(node.subterms.get("base"));
     return written + (node.attributes.get("body") ? " " + this.enumerators(node) : "");
   }
 
@@ -511,7 +511,7 @@ class Printer {
 
   enumerator(node: F.Node): string {
     const written = this.name(node, "name") + this.attributesAfter(node);
-    const value = node.slots.get("value");
+    const value = node.subterms.get("value");
     return written + (value !== null ? ` = ${this.expression(value, CONDITIONAL)}` : "");
   }
 
@@ -525,7 +525,7 @@ class Printer {
   directive(node: F.Node, depth: number, enumerators: boolean): string {
     const { kind, attributes } = node;
     if (kind === "includedirective") {
-      const macro = node.slots.get("macro");
+      const macro = node.subterms.get("macro");
       let target: string;
       if (macro !== null) target = this.expression(macro, COMMA);
       else if (!attributes.has("path")) {
@@ -552,14 +552,14 @@ class Printer {
     const kind = node.kind;
     let head: string;
     if (kind === "ifdirective" || kind === "elifdirective") {
-      head = `#${kind === "ifdirective" ? "if" : "elif"} ${this.expression(node.slots.get("condition"), COMMA)}`;
+      head = `#${kind === "ifdirective" ? "if" : "elif"} ${this.expression(node.subterms.get("condition"), COMMA)}`;
     } else if (kind === "ifdefdirective" || kind === "elifdefdirective") {
       const keyword = kind === "ifdefdirective" ? "if" : "elif";
       head = `#${keyword}${node.attributes.get("negated") ? "ndef" : "def"} ${this.name(node, "name")}`;
     } else head = "#else";
     const items = node.many.map((item) => this.node(item));
     const body = this.lines(items, (i, item) => this.item(item, depth, enumerators)).map((line) => "\n" + line).join("");
-    const alternative = node.slots.get("alternative") ?? null;
+    const alternative = node.subterms.get("alternative") ?? null;
     const tail = alternative === null ? "" : "\n" + this.branch(this.node(alternative), depth, enumerators);
     return head + body + tail;
   }
@@ -590,7 +590,7 @@ class Printer {
     if (kind === "arraydeclarator") {
       const inside = [...(attributes.get("static") ? ["static"] : []),
         ...nodes(node.helpers.get("qualifiers")).map((q) => q.attributes.get("keyword"))].join(" ");
-      const size = node.slots.get("size");
+      const size = node.subterms.get("size");
       const writtenSize = attributes.get("star") ? "*" : size !== null ? this.expression(size, ASSIGNMENT) : "";
       const both = inside !== "" && writtenSize !== "" ? inside + " " + writtenSize : inside + writtenSize;
       return inner + `[${both}]` + this.attributesAfter(node);
@@ -600,7 +600,7 @@ class Printer {
     if (attributes.has("ref_qualifier")) written += " " + attributes.get("ref_qualifier");
     if (node.helpers.has("exception")) written += " " + this.text(one(node.helpers.get("exception")) as F.Node);
     written += this.attributesAfter(node);
-    const trailing = node.slots.get("trailing_return") ?? null; // C++'s
+    const trailing = node.subterms.get("trailing_return") ?? null; // C++'s
     if (trailing !== null) written += " -> " + this.term(trailing);
     return written;
   }
@@ -620,7 +620,7 @@ class Printer {
       + (node.attributes.get("this_keyword") ? "this " : "");
     const declarator = one(node.helpers.get("declarator"));
     written += declaredText(this.specifiers(node), this.declarator(declarator), abstract(declarator));
-    const value = node.slots.get("default") ?? null;
+    const value = node.subterms.get("default") ?? null;
     return written + (value !== null ? ` = ${this.expression(value, ASSIGNMENT)}` : "");
   }
 
@@ -632,20 +632,20 @@ class Printer {
         : attributes.get("key") ?? "typename";
     } else {
       written = "template <" + nodes(node.helpers.get("parameters")).map((p) => this.text(p)).join(", ") + ">";
-      if (node.slots.get("requires") !== null) written += " requires " + this.constraint(node.slots.get("requires"));
+      if (node.subterms.get("requires") !== null) written += " requires " + this.constraint(node.subterms.get("requires"));
       written += " " + attributes.get("key");
     }
     written += attributes.get("pack") ? "..." : "";
     if (node.helpers.has("name")) written += " " + this.name(node, "name");
     if (node.kind === "typeparameter") { // a type, or a template template parameter's name
-      return written + (node.slots.get("default") !== null ? " = " + this.term(node.slots.get("default")) : "");
+      return written + (node.subterms.get("default") !== null ? " = " + this.term(node.subterms.get("default")) : "");
     }
     return written + (node.helpers.has("default") ? " = " + this.text(one(node.helpers.get("default")) as F.Node) : "");
   }
 
   exception(node: F.Node): string {
     if (node.kind === "noexceptspecifier") {
-      const condition = node.slots.get("condition");
+      const condition = node.subterms.get("condition");
       return "noexcept" + (condition !== null ? `(${this.expression(condition, COMMA)})` : "");
     }
     return "throw(" + this.list(node.many) + ")";
@@ -661,7 +661,7 @@ class Printer {
       return "[[" + using + held.map((a) => this.text(a)).join(", ") + "]]";
     }
     if (kind === "alignasspecifier") {
-      const operand = this.keywordCall(attributes.get("keyword"), node.slots.get("operand"));
+      const operand = this.keywordCall(attributes.get("keyword"), node.subterms.get("operand"));
       return attributes.get("pack") ? operand.slice(0, -1) + "...)" : operand;
     }
     if (kind === "gnuattributespecifier") return attributes.get("keyword") + "((" + held.map((a) => this.text(a))
@@ -686,7 +686,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   variable: (p, n) => n.attributes.get("name"),
   idexpression: (p, n) => p.text(one(n.helpers.get("name")) as F.Node),
   thisexpression: () => "this",
-  parenthesizedexpression: (p, n) => `(${p.expression(n.slots.get("expression"), COMMA)})`,
+  parenthesizedexpression: (p, n) => `(${p.expression(n.subterms.get("expression"), COMMA)})`,
   lambdaexpression: (p, n) => p.lambda(n), lambdadeclarator: (p, n) => p.lambdaDeclarator(n),
   defaultcapture: (p, n) => p.capture(n), simplecapture: (p, n) => p.capture(n), thiscapture: (p, n) => p.capture(n),
   initcapture: (p, n) => p.capture(n),
@@ -698,29 +698,29 @@ const TEXTS: Readonly<Record<string, Text>> = {
   functionalcastexpression: (p, n) => p.text(one(n.helpers.get("type")) as F.Node)
     + p.initializer(one(n.helpers.get("initializer")) as F.Node),
   memberexpression: (p, n) => p.member(n), postfixexpression: (p, n) => p.postfix(n),
-  namedcastexpression: (p, n) => `${n.attributes.get("operator")}<${p.term(n.slots.get("type"))}>`
-    + `(${p.expression(n.slots.get("operand"), COMMA)})`,
-  typeidexpression: (p, n) => p.keywordCall("typeid", n.slots.get("operand")),
+  namedcastexpression: (p, n) => `${n.attributes.get("operator")}<${p.term(n.subterms.get("type"))}>`
+    + `(${p.expression(n.subterms.get("operand"), COMMA)})`,
+  typeidexpression: (p, n) => p.keywordCall("typeid", n.subterms.get("operand")),
   unaryexpression: (p, n) => p.unary(n),
-  awaitexpression: (p, n) => "co_await " + p.expression(n.slots.get("operand"), UNARY),
+  awaitexpression: (p, n) => "co_await " + p.expression(n.subterms.get("operand"), UNARY),
   sizeofexpression: (p, n) => p.sizeof(n),
   sizeofpackexpression: (p, n) => `sizeof...(${p.name(n, "pack")})`,
-  alignofexpression: (p, n) => p.keywordCall(n.attributes.get("keyword"), n.slots.get("operand")),
-  noexceptexpression: (p, n) => p.keywordCall("noexcept", n.slots.get("operand")),
+  alignofexpression: (p, n) => p.keywordCall(n.attributes.get("keyword"), n.subterms.get("operand")),
+  noexceptexpression: (p, n) => p.keywordCall("noexcept", n.subterms.get("operand")),
   newexpression: (p, n) => p.newText(n), deleteexpression: (p, n) => p.deleteText(n), castexpression: (p,
     n) => p.cast(n),
   binaryexpression: (p, n) => p.binary(n), conditionalexpression: (p, n) => p.conditional(n),
   assignmentexpression: (p, n) => p.assignment(n),
-  throwexpression: (p, n) => "throw" + (n.slots.get("operand") !== null ? " " + p.expression(n.slots.get("operand"),
+  throwexpression: (p, n) => "throw" + (n.subterms.get("operand") !== null ? " " + p.expression(n.subterms.get("operand"),
     ASSIGNMENT) : ""),
-  yieldexpression: (p, n) => "co_yield " + p.expression(n.slots.get("operand"), ASSIGNMENT),
+  yieldexpression: (p, n) => "co_yield " + p.expression(n.subterms.get("operand"), ASSIGNMENT),
   packexpansion: (p, n) => p.packExpansion(n), initializerlist: (p, n) => p.initializerList(n),
   designatedinitializer: (p, n) => p.designated(n), fielddesignator: (p, n) => p.designator(n),
   indexdesignator: (p, n) => p.designator(n),
-  compoundliteralexpression: (p, n) => `(${p.term(n.slots.get("type"))})`
+  compoundliteralexpression: (p, n) => `(${p.term(n.subterms.get("type"))})`
     + p.initializerList(one(n.helpers.get("initializer")) as F.Node),
   statementexpression: () => "({})", // its body of statements, not part of the term
-  extensionexpression: (p, n) => "__extension__ " + p.expression(n.slots.get("operand"), UNARY),
+  extensionexpression: (p, n) => "__extension__ " + p.expression(n.subterms.get("operand"), UNARY),
   typeid: (p, n) => p.typeId(n),
   identifier: (p, n) => p.nameText(n), operatorname: (p, n) => p.nameText(n), conversionname: (p, n) => p.nameText(n),
   literaloperatorname: (p, n) => p.nameText(n), destructorname: (p, n) => p.nameText(n), templateid: (p,

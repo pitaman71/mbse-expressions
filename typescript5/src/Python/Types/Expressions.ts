@@ -137,7 +137,7 @@ function kinds(): Record<string, F.Kind> {
   };
 }
 
-/** The dialects of its family whose terms its positions hold, read when first needed. */
+/** The dialects of its family whose terms are its subterms, read when first needed. */
 function reads(): readonly F.Dialect[] {
   return [P.DIALECT, PythonPatterns.DIALECT, PythonRegExp.DIALECT];
 }

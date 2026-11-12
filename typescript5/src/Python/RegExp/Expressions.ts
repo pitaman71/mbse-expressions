@@ -6,8 +6,8 @@
  * sublanguage then it's definitely at least a separate dialect", and "regular expressions (ECMA-262's, Python's `re`)";
  * its Retrofit's design, Python; the user's "(b)" to its Open, 1: every regular expression a language's standard defines,
  * its library's included), named `Python RegExp` (`Terms.dialectName`), its tag `python_regexp`. Its terms are values of
- * its `Term`, `Expressions.Python.RegExp.Term`, the branch `python_regexp` of `Expressions.Framework.Term`. No position of
- * `Python3` holds one: a pattern is a string there, and that a string is a regular expression is the program's to say,
+ * its `Term`, `Expressions.Python.RegExp.Term`, the branch `python_regexp` of `Expressions.Framework.Term`. No subterm
+ * of `Python3` is one: a pattern is a string there, and that a string is a regular expression is the program's to say,
  * never guessed (mbse-basis [PRI-025: never guess the schema](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-025)); mbse-programs,
  * or a constraint's author, holds one through this dialect's holder, `Expressions.Python.RegExp.Expression`, which refines
  * `Expressions.Framework.Expression`, its `root` narrowed to its `Term`.
@@ -391,7 +391,7 @@ export function problems(node: F.Node): string[] {
     }
     if (node.many.length === 0) found.push("a characterclass needs an element");
   } else if (kind === CHARACTERCLASSRANGE) {
-    const ends = new Map(["min", "max"].map((end) => [end, node.slots.get(end) ?? null] as [string, any])
+    const ends = new Map(["min", "max"].map((end) => [end, node.subterms.get(end) ?? null] as [string, any])
       .filter(([, term]) => term !== null));
     for (const [end, term] of ends) {
       if (![CHARACTER, ...INVALID].includes(tagOf(term))) {
@@ -437,12 +437,12 @@ export function problems(node: F.Node): string[] {
       found.push("min repeat greater than max repeat");
     }
     if (found_.get("greedy") === false && found_.get("possessive") === true) found.push("a quantifier is lazy or possessive, not both");
-    const element = node.slots.get("element") ?? null;
+    const element = node.subterms.get("element") ?? null;
     if (element !== null) found.push(...repeatable(element));
   } else if (kind === BACKREFERENCE || kind === CONDITIONAL) {
     found.push(...reference(what, found_));
     for (const end of kind === CONDITIONAL ? ["yes", "no"] : []) {
-      const term = node.slots.get(end) ?? null;
+      const term = node.subterms.get(end) ?? null;
       if (term !== null && ![ALTERNATIVE, ...INVALID].includes(tagOf(term))) {
         found.push(`a conditional's ${end} must be an alternative, got ${F.article(tagOf(term))}`);
       }

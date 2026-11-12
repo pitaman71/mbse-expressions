@@ -141,7 +141,7 @@ export class Printer {
   /** `(* name = value, ... *) (* ... *)`. */
   attributeText(instances: readonly F.Node[]): string {
     return instances.map((i) => "(* " + nodes(i.helpers.get("specs")).map((s) => this.spelling(s.helpers.get("name"))
-      + ((s.slots.get("value") ?? null) !== null ? ` = ${this.text(s.slots.get("value"))}` : "")).join(", ") + " *)").join(" ");
+      + ((s.subterms.get("value") ?? null) !== null ? ` = ${this.text(s.subterms.get("value"))}` : "")).join(", ") + " *)").join(" ");
   }
 
   /** Whether a node is a data type, of the Types dialect. */
@@ -177,9 +177,9 @@ export class Printer {
   }
 
   unary(node: F.Node): string {
-    let operand = this.operand(node.slots.get("operand"), UNARY + 1);
-    if ([E.UNARYEXPRESSION, E.INCREMENTEXPRESSION].includes(this.node(node.slots.get("operand")).kind)) {
-      operand = `(${this.text(node.slots.get("operand"))})`;
+    let operand = this.operand(node.subterms.get("operand"), UNARY + 1);
+    if ([E.UNARYEXPRESSION, E.INCREMENTEXPRESSION].includes(this.node(node.subterms.get("operand")).kind)) {
+      operand = `(${this.text(node.subterms.get("operand"))})`;
     }
     const attributes = nodes(node.helpers.get("attributes"));
     if (attributes.length > 0) { // `- (* a *) x`: apart, so that `(*` starts the attributes
@@ -189,7 +189,7 @@ export class Printer {
   }
 
   increment(node: F.Node): string {
-    const [operand, operator] = [this.operand(node.slots.get("operand"), PRIMARY), node.attributes.get("operator")];
+    const [operand, operator] = [this.operand(node.subterms.get("operand"), PRIMARY), node.attributes.get("operator")];
     const attributes = nodes(node.helpers.get("attributes"));
     if (attributes.length > 0) {
       const written = this.attributeText(attributes);
@@ -204,26 +204,26 @@ export class Printer {
     const [leftLevel, rightLevel] = RIGHT.has(level) ? [level + 1, level] : [level, level + 1];
     const attributes = nodes(node.helpers.get("attributes"));
     const written = attributes.length > 0 ? ` ${this.attributeText(attributes)}` : "";
-    return `${this.operand(node.slots.get("left"), leftLevel)} ${operator}${written} ${this.operand(node.slots.get("right"), rightLevel)}`;
+    return `${this.operand(node.subterms.get("left"), leftLevel)} ${operator}${written} ${this.operand(node.subterms.get("right"), rightLevel)}`;
   }
 
   assignment(node: F.Node): string {
-    return `${this.text(node.slots.get("target"))} ${node.attributes.get("operator")} ${this.text(node.slots.get("value"))}`;
+    return `${this.text(node.subterms.get("target"))} ${node.attributes.get("operator")} ${this.text(node.subterms.get("value"))}`;
   }
 
   conditional(node: F.Node): string {
     const attributes = nodes(node.helpers.get("attributes"));
     const written = attributes.length > 0 ? `${this.attributeText(attributes)} ` : "";
-    const condition = node.slots.get("condition");
+    const condition = node.subterms.get("condition");
     const matching = [E.MATCHESEXPRESSION, E.PREDICATEEXPRESSION].includes(this.node(condition).kind); // never parenthesized
     const test = matching ? this.text(condition) : this.operand(condition, CONDITIONAL + 1);
-    return `${test} ? ${written}${this.operand(node.slots.get("consequence"), CONDITIONAL + 1)} : `
-      + this.operand(node.slots.get("alternative"), CONDITIONAL);
+    return `${test} ? ${written}${this.operand(node.subterms.get("consequence"), CONDITIONAL + 1)} : `
+      + this.operand(node.subterms.get("alternative"), CONDITIONAL);
   }
 
   tagged(node: F.Node): string {
     const member = this.spelling(node.helpers.get("member"));
-    const value = node.slots.get("value") ?? null;
+    const value = node.subterms.get("value") ?? null;
     if (value === null) return `tagged ${member}`;
     const nested = this.node(value).kind === E.TAGGEDEXPRESSION; // `tagged a tagged b 1` needs no parentheses
     return `tagged ${member} ${nested ? this.text(value) : this.operand(value, UNARY)}`;
@@ -231,37 +231,37 @@ export class Printer {
 
   inside(node: F.Node): string {
     const ranges = node.many.map((r) => this.text(r)).join(", ");
-    return `${this.operand(node.slots.get("value"), RELATIONAL + 1)} inside {${ranges}}`;
+    return `${this.operand(node.subterms.get("value"), RELATIONAL + 1)} inside {${ranges}}`;
   }
 
   valueRange(node: F.Node): string {
     const operator = node.attributes.get("operator") ?? null;
     const between = operator !== null ? ` ${operator} ` : ":";
-    return `[${this.text(node.slots.get("left"))}${between}${this.text(node.slots.get("right"))}]`;
+    return `[${this.text(node.subterms.get("left"))}${between}${this.text(node.subterms.get("right"))}]`;
   }
 
   replication(node: F.Node): string {
-    return `{${this.operand(node.slots.get("count"), PRIMARY)}{${node.many.map((i) => this.text(i)).join(", ")}}}`;
+    return `{${this.operand(node.subterms.get("count"), PRIMARY)}{${node.many.map((i) => this.text(i)).join(", ")}}}`;
   }
 
   assignmentPattern(node: F.Node): string {
-    const type = node.slots.get("type") ?? null;
+    const type = node.subterms.get("type") ?? null;
     const prefix = type !== null ? this.text(type) : "";
     const items = node.many.map((i) => this.text(i)).join(", ");
-    const count = node.slots.get("count") ?? null;
+    const count = node.subterms.get("count") ?? null;
     if (count !== null) return `${prefix}'{${this.operand(count, PRIMARY)}{${items}}}`;
     return `${prefix}'{${items}}`;
   }
 
   patternItem(node: F.Node): string {
-    const key = node.slots.get("key") ?? null;
-    return `${key === null ? "default" : this.text(key)}: ${this.text(node.slots.get("value"))}`;
+    const key = node.subterms.get("key") ?? null;
+    return `${key === null ? "default" : this.text(key)}: ${this.text(node.subterms.get("value"))}`;
   }
 
   call(node: F.Node): string {
     const attributes = nodes(node.helpers.get("attributes"));
     const written = attributes.length > 0 ? ` ${this.attributeText(attributes)} ` : "";
-    return `${this.operand(node.slots.get("callee"), PRIMARY)}${written}(${node.many.map((a) => this.text(a)).join(", ")})`;
+    return `${this.operand(node.subterms.get("callee"), PRIMARY)}${written}(${node.many.map((a) => this.text(a)).join(", ")})`;
   }
 
   systemCall(node: F.Node): string {
@@ -272,25 +272,25 @@ export class Printer {
   }
 
   cast(node: F.Node): string {
-    const target = node.slots.get("type");
+    const target = node.subterms.get("type");
     const written = this.isType(this.node(target)) ? this.text(target) : this.operand(target, PRIMARY);
-    return `${written}'(${this.text(node.slots.get("value"))})`;
+    return `${written}'(${this.text(node.subterms.get("value"))})`;
   }
 
   streaming(node: F.Node): string {
-    const slice = node.slots.get("slice") ?? null;
+    const slice = node.subterms.get("slice") ?? null;
     const written = slice !== null ? ` ${this.text(slice)} ` : "";
     const items = nodes(node.helpers.get("items")).map((i) => this.streamItem(i)).join(", ");
     return `{${node.attributes.get("operator")}${written}{${items}}}`;
   }
 
   streamItem(node: F.Node): string {
-    const left = node.slots.get("left") ?? null;
-    if (left === null) return this.text(node.slots.get("expression"));
+    const left = node.subterms.get("left") ?? null;
+    if (left === null) return this.text(node.subterms.get("expression"));
     const operator = node.attributes.get("operator") ?? null;
     const between = operator === null ? "" : operator === ":" ? operator : ` ${operator} `;
-    const right = node.slots.get("right") ?? null;
-    return `${this.text(node.slots.get("expression"))} with [${this.text(left)}${between}${right !== null ? this.text(right) : ""}]`;
+    const right = node.subterms.get("right") ?? null;
+    return `${this.text(node.subterms.get("expression"))} with [${this.text(left)}${between}${right !== null ? this.text(right) : ""}]`;
   }
 
   newText(node: F.Node): string {
@@ -303,8 +303,8 @@ export class Printer {
   }
 
   newArray(node: F.Node): string {
-    const value = node.slots.get("value") ?? null;
-    return `new[${this.text(node.slots.get("size"))}]${value !== null ? `(${this.text(value)})` : ""}`;
+    const value = node.subterms.get("value") ?? null;
+    return `new[${this.text(node.subterms.get("size"))}]${value !== null ? `(${this.text(value)})` : ""}`;
   }
 
   randomizeWith(node: F.Node): string {
@@ -312,13 +312,13 @@ export class Printer {
     if (node.attributes.get("restricted")) {
       variables = ` (${nodes(node.helpers.get("variables")).map((v) => this.spelling(v)).join(", ")})`;
     }
-    return `${this.operand(node.slots.get("call"), PRIMARY)} with${variables} ${this.inline(node.many)}`;
+    return `${this.operand(node.subterms.get("call"), PRIMARY)} with${variables} ${this.inline(node.many)}`;
   }
 
   namedConnection(node: F.Node): string {
     const name = this.spelling(node.helpers.get("name"));
     if (node.attributes.get("implicit")) return `.${name}`;
-    const value = node.slots.get("value") ?? null;
+    const value = node.subterms.get("value") ?? null;
     return `.${name}(${value === null ? "" : this.text(value)})`;
   }
 }
@@ -327,12 +327,12 @@ export class Printer {
 export const TEXTS: ReadonlyMap<string, Text> = new Map<string, Text>([
   [E.LITERAL, (p, n) => p.literal(n)], [E.CONSTANT, (p, n) => p.constant(n)],
   [E.NAMEEXPRESSION, (p, n) => p.name(n.helpers.get("name") as F.Node)],
-  [E.MEMBEREXPRESSION, (p, n) => `${p.operand(n.slots.get("value"), PRIMARY)}.${p.spelling(n.helpers.get("member"))}`],
-  [E.INDEXEXPRESSION, (p, n) => `${p.operand(n.slots.get("value"), PRIMARY)}[${p.text(n.slots.get("index"))}]`],
+  [E.MEMBEREXPRESSION, (p, n) => `${p.operand(n.subterms.get("value"), PRIMARY)}.${p.spelling(n.helpers.get("member"))}`],
+  [E.INDEXEXPRESSION, (p, n) => `${p.operand(n.subterms.get("value"), PRIMARY)}[${p.text(n.subterms.get("index"))}]`],
   [E.RANGESELECT, (p, n) => {
     const operator = n.attributes.get("operator") as string;
-    return `${p.operand(n.slots.get("value"), PRIMARY)}[${p.text(n.slots.get("left"))}`
-      + `${operator === ":" ? operator : ` ${operator} `}${p.text(n.slots.get("right"))}]`;
+    return `${p.operand(n.subterms.get("value"), PRIMARY)}[${p.text(n.subterms.get("left"))}`
+      + `${operator === ":" ? operator : ` ${operator} `}${p.text(n.subterms.get("right"))}]`;
   }],
   [E.UNARYEXPRESSION, (p, n) => p.unary(n)], [E.INCREMENTEXPRESSION, (p, n) => p.increment(n)],
   [E.BINARYEXPRESSION, (p, n) => p.binary(n)], [E.ASSIGNMENTEXPRESSION, (p, n) => p.assignment(n)],
@@ -342,16 +342,16 @@ export const TEXTS: ReadonlyMap<string, Text> = new Map<string, Text>([
   [E.REPLICATION, (p, n) => p.replication(n)], [E.ASSIGNMENTPATTERN, (p, n) => p.assignmentPattern(n)],
   [E.PATTERNITEM, (p, n) => p.patternItem(n)],
   [E.THISEXPRESSION, () => "this"], [E.SUPEREXPRESSION, () => "super"], [E.NEWEXPRESSION, (p, n) => p.newText(n)],
-  [E.NEWCOPYEXPRESSION, (p, n) => `new ${p.operand(n.slots.get("value"), PRIMARY)}`],
+  [E.NEWCOPYEXPRESSION, (p, n) => `new ${p.operand(n.subterms.get("value"), PRIMARY)}`],
   [E.NEWARRAYEXPRESSION, (p, n) => p.newArray(n)], [E.RANDOMIZEWITHEXPRESSION, (p, n) => p.randomizeWith(n)],
-  [E.ARRAYMETHODWITHEXPRESSION, (p, n) => `${p.operand(n.slots.get("value"), PRIMARY)} with (${p.text(n.slots.get("body"))})`],
+  [E.ARRAYMETHODWITHEXPRESSION, (p, n) => `${p.operand(n.subterms.get("value"), PRIMARY)} with (${p.text(n.subterms.get("body"))})`],
   [E.CALLEXPRESSION, (p, n) => p.call(n)], [E.SYSTEMCALL, (p, n) => p.systemCall(n)], [E.CASTEXPRESSION, (p, n) => p.cast(n)],
-  [E.PARENTHESIZEDEXPRESSION, (p, n) => `(${p.text(n.slots.get("expression"))})`],
+  [E.PARENTHESIZEDEXPRESSION, (p, n) => `(${p.text(n.subterms.get("expression"))})`],
   [E.DOLLAREXPRESSION, () => "$"], [E.TAGGEDEXPRESSION, (p, n) => p.tagged(n)],
-  [E.MATCHESEXPRESSION, (p, n) => `${p.text(n.slots.get("value"))} matches ${p.text(n.slots.get("pattern"))}`],
+  [E.MATCHESEXPRESSION, (p, n) => `${p.text(n.subterms.get("value"))} matches ${p.text(n.subterms.get("pattern"))}`],
   [E.PREDICATEEXPRESSION, (p, n) => n.many.map((c) => p.text(c)).join(" &&& ")],
   [E.STREAMINGCONCATENATION, (p, n) => p.streaming(n)],
-  [E.MINTYPMAXEXPRESSION, (p, n) => `${p.text(n.slots.get("min"))}:${p.text(n.slots.get("typ"))}:${p.text(n.slots.get("max"))}`],
+  [E.MINTYPMAXEXPRESSION, (p, n) => `${p.text(n.subterms.get("min"))}:${p.text(n.subterms.get("typ"))}:${p.text(n.subterms.get("max"))}`],
   [E.ROOTEXPRESSION, () => "$root"], [E.EMPTYQUEUE, () => "{}"],
   [E.NAMEDCONNECTION, (p, n) => p.namedConnection(n)], [E.EMPTYARGUMENT, () => ""],
 ]);

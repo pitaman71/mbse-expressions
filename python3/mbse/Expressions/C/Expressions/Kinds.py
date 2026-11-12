@@ -115,10 +115,10 @@ _BINDERS = frozenset({"functiondeclarator", "lambdaexpression", "requiresexpress
 
 def _bound(node: F.Node, inner: frozenset[str]) -> list[frozenset[str]]:
     """The names each of a node's arguments has bound, in order: within a function declarator, a lambda or a requires
-    expression, its parameters' (and init captures') names; its slots, its variadic arguments, then its helpers'."""
+    expression, its parameters' (and init captures') names; its subterms, its variadic arguments, then its helpers'."""
     if node.kind in _BINDERS:
         inner = inner | bound_names(node)
-    found = [inner] * (len(node.slots) + len(node.many))
+    found = [inner] * (len(node.subterms) + len(node.many))
     for value in node.helpers.values():
         for helper in _nodes(value):
             found += _bound(helper, inner)
@@ -212,7 +212,7 @@ def problems(node: F.Node, types: Domains.Types, suffixes: Mapping[type, re.Patt
 _ANY1 = FD.Function((FD.Anything,), FD.Anything)
 
 OPTIONAL = ("*.size", "*.last", "*.condition", "*.default", "*.requires", "*.base", "*.trailing_return")
-"""The slots of a kind's helpers that may be empty, wherever its type names nest them: an array declarator's size, a
+"""The subterms of a kind's helpers that may be empty, wherever its type names nest them: an array declarator's size, a
 designator's range's last index, a noexcept specifier's condition, a parameter's default argument or a type
 parameter's default type, a lambda's or a template parameter's requires clause, an enumeration's fixed type, and a
 function's or a lambda's trailing return type."""
@@ -274,7 +274,7 @@ def kinds(language: str, tags: tuple[str, ...], prefixes: tuple[str, ...],
 
     def typed_cast(record: Any) -> FD.Domain | None:
         """A cast's arithmetic type, which is its domain, read from the store of the term's holder."""
-        return cast_type(type_name(F.node(CASTEXPRESSION, record).slots["type"]), Domains.Types(record, _path(language)))
+        return cast_type(type_name(F.node(CASTEXPRESSION, record).subterms["type"]), Domains.Types(record, _path(language)))
 
     def application(tag: str, signature: FD.Signature = FD.Opaque(), optional: tuple[str, ...] = (),
                     **options: Any) -> F.Kind:

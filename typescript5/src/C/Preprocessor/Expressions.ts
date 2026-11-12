@@ -246,13 +246,13 @@ export function problems(node: F.Node): string[] {
   const { kind, attributes } = node;
   const found: string[] = [];
   if (kind === INCLUDEDIRECTIVE) {
-    if (attributes.has("path") === (node.slots.get("macro") !== null)) found.push("an IncludeDirective has a path or a macro");
+    if (attributes.has("path") === (node.subterms.get("macro") !== null)) found.push("an IncludeDirective has a path or a macro");
     const directive = attributes.get("directive");
     if (directive !== undefined && !INCLUDES.includes(directive)) {
       found.push(`IncludeDirective.directive cannot be ${repr(directive)}`);
     }
   }
-  const alternative = node.slots.get("alternative") ?? null;
+  const alternative = node.subterms.get("alternative") ?? null;
   if (alternative !== null && !ALTERNATIVES.has(F.kindOf(alternative)[0])) {
     found.push(`an ${label(kind)}'s alternative is an elifdirective, an elifdefdirective or an elsedirective`);
   }
@@ -288,13 +288,13 @@ export function macros(condition: unknown): ReadonlySet<string> {
 function conditionScopes(tag: string): (record: any) => ReadonlySet<string>[] {
   return (record) => {
     const node = F.node(tag, record);
-    return [macros(node.slots.get("condition")), new Set(), ...node.many.map(() => new Set<string>())];
+    return [macros(node.subterms.get("condition")), new Set(), ...node.many.map(() => new Set<string>())];
   };
 }
 
 /** What an include's macro has bound: its macros' names, as a condition's. */
 function includeScopes(record: any): ReadonlySet<string>[] {
-  return [macros(F.node(INCLUDEDIRECTIVE, record).slots.get("macro"))];
+  return [macros(F.node(INCLUDEDIRECTIVE, record).subterms.get("macro"))];
 }
 
 /** How the framework reads its own kinds. */
@@ -315,7 +315,7 @@ function kinds(): Record<string, F.Kind> {
   };
 }
 
-/** The dialects whose terms its positions hold, read when first needed: C's and C++'s expressions, a condition's, and
+/** The dialects whose terms are its subterms, read when first needed: C's and C++'s expressions, a condition's, and
  * their types, an enumeration's items. */
 function reads(): readonly F.Dialect[] {
   return [C.DIALECT, CTypes.DIALECT, Cpp.DIALECT, CppTypes.DIALECT];

@@ -14,7 +14,7 @@ none within a bracket expression, which has no escapes), a control character as 
 it (`\\n`, `\\x01`; awk's `\\001`), as a BRE and an ERE have none. Invalid syntax is written as written
 (`Terms.invalid_text`), refused by the name of the dialect that owns it.
 
-Its printer is its own *(agent)*: its terms hold no other dialect's, and no other dialect's position holds one, so it
+Its printer is its own *(agent)*: its terms hold no other dialect's, and no other dialect's subterm is one, so it
 shares nothing with the C family's printer (`C.Expressions.Text`) but its reading of invalid syntax, and its grammar,
 which a term alone does not say, is the context it writes in."""
 
@@ -63,7 +63,7 @@ class _Printer:
         return "|".join(self.term(alternative) for alternative in node.lists["alternatives"])
 
     def regex(self, node: F.Node, within: bool) -> str:
-        return self.term(node.slots["pattern"])
+        return self.term(node.subterms["pattern"])
 
     def patternlist(self, node: F.Node, within: bool) -> str:
         return "\n".join(self.term(pattern) for pattern in node.many)
@@ -83,7 +83,7 @@ class _Printer:
         return f"({self.alternatives(node)})"
 
     def quantifier(self, node: F.Node, within: bool) -> str:
-        element = self.term(node.slots["element"])
+        element = self.term(node.subterms["element"])
         if "raw" in node.attributes:
             return element + node.attributes["raw"]
         least, most = node.attributes["min"], node.attributes.get("max")
@@ -100,7 +100,7 @@ class _Printer:
         return f"[{negate}{''.join(self.term(element, True) for element in node.many)}]"
 
     def characterclassrange(self, node: F.Node, within: bool) -> str:
-        return f"{self.term(node.slots['min'], True)}-{self.term(node.slots['max'], True)}"
+        return f"{self.term(node.subterms['min'], True)}-{self.term(node.subterms['max'], True)}"
 
     def characterset(self, node: F.Node, within: bool) -> str:
         kind = node.attributes["setKind"]

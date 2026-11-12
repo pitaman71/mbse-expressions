@@ -139,7 +139,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions hold, imported when first needed."""
+    """The dialects of its family whose terms are its subterms, imported when first needed."""
     from ..Patterns import Expressions as PythonPatterns
     from ..RegExp import Expressions as PythonRegExp
     return P.DIALECT, PythonPatterns.DIALECT, PythonRegExp.DIALECT

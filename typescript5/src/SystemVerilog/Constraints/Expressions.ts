@@ -215,13 +215,13 @@ export function problems(node: F.Node): string[] {
   if (kind === "distitem") {
     const operator = attributes.get("operator") ?? null;
     if (operator !== null && !OPERATORS.includes(operator)) found.push(`DistItem.operator cannot be ${repr(operator)}`);
-    if ((operator === null) !== ((node.slots.get("weight") ?? null) === null)) {
+    if ((operator === null) !== ((node.subterms.get("weight") ?? null) === null)) {
       found.push("a DistItem has both an operator and a weight, or neither");
-    } else if ((node.slots.get("value") ?? null) === null && operator !== ":/") {
+    } else if ((node.subterms.get("value") ?? null) === null && operator !== ":/") {
       found.push("a default DistItem weighs its values with :/");
     }
   } else {
-    found.push(...X.problems(new F.Node(kind, attributes, node.slots, node.many, new Map())));
+    found.push(...X.problems(new F.Node(kind, attributes, node.subterms, node.many, new Map())));
   }
   for (const value of node.helpers.values()) for (const inner of nodes(value)) found.push(...problems(inner));
   return found;
@@ -261,7 +261,7 @@ function kinds(): Record<string, F.Kind> {
   };
 }
 
-/** The dialects of its family whose terms its positions hold, read when first needed. */
+/** The dialects of its family whose terms are its subterms, read when first needed. */
 function reads(): readonly F.Dialect[] {
   return [X.DIALECT, Types.DIALECT, Patterns.DIALECT, Assertions.DIALECT, Preprocessor.DIALECT];
 }

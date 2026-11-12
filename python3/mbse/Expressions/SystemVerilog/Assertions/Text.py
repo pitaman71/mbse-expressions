@@ -69,7 +69,7 @@ def cycles(p: X.Printer, value: Any) -> str:
 
 
 def _cycle_range(p: X.Printer, node: F.Node) -> str:
-    return f"{p.text(node.slots['low'])}:{p.text(node.slots['high'])}"
+    return f"{p.text(node.subterms['low'])}:{p.text(node.subterms['high'])}"
 
 
 def _simple(node: F.Node) -> bool:
@@ -100,19 +100,19 @@ def clock(p: X.Printer, node: F.Node) -> str:
 
 def _event(p: X.Printer, node: F.Node) -> str:
     edge = node.attributes.get("edge")
-    written = (f"{edge} " if edge else "") + p.text(node.slots["expression"])
-    return written + (f" iff {p.text(node.slots['condition'])}" if node.slots["condition"] is not None else "")
+    written = (f"{edge} " if edge else "") + p.text(node.subterms["expression"])
+    return written + (f" iff {p.text(node.subterms['condition'])}" if node.subterms["condition"] is not None else "")
 
 
 def _binary(p: X.Printer, node: F.Node, last: bool) -> str:
     level = _level(p, node)
     left, right = (level + 1, level) if level in _RIGHT else (level, level + 1)
-    return (f"{part(p, node.slots['left'], left, False)} {node.attributes['operator']} "
-            f"{part(p, node.slots['right'], right, last)}")
+    return (f"{part(p, node.subterms['left'], left, False)} {node.attributes['operator']} "
+            f"{part(p, node.subterms['right'], right, last)}")
 
 
 def _delay(p: X.Printer, node: F.Node, last: bool) -> str:
-    first = f"{part(p, node.slots['first'], DELAY, False)} " if node.slots["first"] is not None else ""
+    first = f"{part(p, node.subterms['first'], DELAY, False)} " if node.subterms["first"] is not None else ""
     steps = _pairs(node.many)
     final = len(steps) - 1
     return first + " ".join(_delay_step(p, s, last and i == final) for i, s in enumerate(steps))
@@ -125,50 +125,50 @@ def _pairs(many: tuple[Any, ...]) -> list[F.Node]:
 
 def _matched(p: X.Printer, node: F.Node, head: str) -> str:
     """A sequence with its match items, in parentheses, or in `first_match`'s."""
-    return f"{head}({', '.join([p.text(node.slots['sequence']), *(p.text(i) for i in node.many)])})"
+    return f"{head}({', '.join([p.text(node.subterms['sequence']), *(p.text(i) for i in node.many)])})"
 
 
 def _conditional(p: X.Printer, node: F.Node, last: bool) -> str:
-    condition = p.text(node.slots["condition"])
-    if node.slots["alternative"] is None:
-        return f"if ({condition}) {part(p, node.slots['consequence'], TEMPORAL, last)}"
-    return (f"if ({condition}) {part(p, node.slots['consequence'], TEMPORAL + 1, False)} "
-            f"else {part(p, node.slots['alternative'], TEMPORAL, last)}")
+    condition = p.text(node.subterms["condition"])
+    if node.subterms["alternative"] is None:
+        return f"if ({condition}) {part(p, node.subterms['consequence'], TEMPORAL, last)}"
+    return (f"if ({condition}) {part(p, node.subterms['consequence'], TEMPORAL + 1, False)} "
+            f"else {part(p, node.subterms['alternative'], TEMPORAL, last)}")
 
 
 def _case(p: X.Printer, node: F.Node) -> str:
-    items = " ".join((", ".join(p.text(e) for e in i.many) if i.many else "default") + f": {p.text(i.slots['body'])};"
+    items = " ".join((", ".join(p.text(e) for e in i.many) if i.many else "default") + f": {p.text(i.subterms['body'])};"
                      for i in _nodes(node.helpers.get("items")))
-    return f"case ({p.text(node.slots['expression'])}) {items} endcase"
+    return f"case ({p.text(node.subterms['expression'])}) {items} endcase"
 
 
 def _unary(p: X.Printer, node: F.Node, last: bool) -> str:
-    range_ = f" [{cycles(p, node.slots['range'])}]" if node.slots["range"] is not None else ""
-    return f"{node.attributes['operator']}{range_} {part(p, node.slots['operand'], _level(p, node), last)}"
+    range_ = f" [{cycles(p, node.subterms['range'])}]" if node.subterms["range"] is not None else ""
+    return f"{node.attributes['operator']}{range_} {part(p, node.subterms['operand'], _level(p, node), last)}"
 
 
 _PROPERTIES: dict[str, Callable[[X.Printer, F.Node, bool], str]] = {
     A.DELAYSEQUENCE: _delay,
-    A.REPETITIONSEQUENCE: lambda p, n, last: (f"{part(p, n.slots['sequence'], REPEAT, False)}"
-                                              f"[{n.attributes['operator']}{cycles(p, n.slots['count'])}]"),
+    A.REPETITIONSEQUENCE: lambda p, n, last: (f"{part(p, n.subterms['sequence'], REPEAT, False)}"
+                                              f"[{n.attributes['operator']}{cycles(p, n.subterms['count'])}]"),
     A.BINARYSEQUENCE: _binary,
     A.PARENTHESIZEDSEQUENCE: lambda p, n, last: _matched(p, n, ""),
     A.FIRSTMATCHSEQUENCE: lambda p, n, last: _matched(p, n, "first_match"),
     A.CLOCKEDSEQUENCE: lambda p, n, last: (f"{clock(p, n.helpers['clock'])} "
-                                           f"{part(p, n.slots['sequence'], TEMPORAL, last)}"),
-    A.IMPLICATIONPROPERTY: lambda p, n, last: (f"{part(p, n.slots['antecedent'], IMPLICATION + 1, False)} "
+                                           f"{part(p, n.subterms['sequence'], TEMPORAL, last)}"),
+    A.IMPLICATIONPROPERTY: lambda p, n, last: (f"{part(p, n.subterms['antecedent'], IMPLICATION + 1, False)} "
                                                f"{n.attributes['operator']} "
-                                               f"{part(p, n.slots['consequent'], IMPLICATION, last)}"),
+                                               f"{part(p, n.subterms['consequent'], IMPLICATION, last)}"),
     A.BINARYPROPERTY: _binary,
     A.UNARYPROPERTY: _unary,
-    A.STRENGTHPROPERTY: lambda p, n, last: f"{n.attributes['keyword']}({p.text(n.slots['sequence'])})",
-    A.ABORTPROPERTY: lambda p, n, last: (f"{n.attributes['keyword']} ({p.text(n.slots['condition'])}) "
-                                         f"{part(p, n.slots['operand'], TEMPORAL, last)}"),
+    A.STRENGTHPROPERTY: lambda p, n, last: f"{n.attributes['keyword']}({p.text(n.subterms['sequence'])})",
+    A.ABORTPROPERTY: lambda p, n, last: (f"{n.attributes['keyword']} ({p.text(n.subterms['condition'])}) "
+                                         f"{part(p, n.subterms['operand'], TEMPORAL, last)}"),
     A.CONDITIONALPROPERTY: _conditional,
     A.CASEPROPERTY: lambda p, n, last: _case(p, n),
-    A.PARENTHESIZEDPROPERTY: lambda p, n, last: f"({p.text(n.slots['property'])})",
+    A.PARENTHESIZEDPROPERTY: lambda p, n, last: f"({p.text(n.subterms['property'])})",
     A.CLOCKEDPROPERTY: lambda p, n, last: (f"{clock(p, n.helpers['clock'])} "
-                                           f"{part(p, n.slots['property'], TEMPORAL, last)}"),
+                                           f"{part(p, n.subterms['property'], TEMPORAL, last)}"),
 }
 """How each sequence and property is written, given whether nothing follows it."""
 
@@ -180,8 +180,8 @@ def _property(p: X.Printer, node: F.Node, last: bool) -> str:
 def _spec(p: X.Printer, node: F.Node) -> str:
     """`@(clock) disable iff (disable) property`."""
     parts = (clock(p, node.helpers["clock"]) if "clock" in node.helpers else None,
-             f"disable iff ({p.text(node.slots['disable'])})" if node.slots["disable"] is not None else None,
-             p.text(node.slots["property"]))
+             f"disable iff ({p.text(node.subterms['disable'])})" if node.subterms["disable"] is not None else None,
+             p.text(node.subterms["property"]))
     return " ".join(written for written in parts if written)
 
 

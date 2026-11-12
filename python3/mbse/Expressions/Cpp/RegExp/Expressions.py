@@ -8,7 +8,7 @@ expression dialects"; the user, on its Retrofit's design, Open, 1: "(b)", every 
 standard defines, its library's included), named `Cpp RegExp` (`Terms.dialect_name`), its tag `cpp_regexp`. Its terms
 are values of its `Term`, `Expressions.Cpp.RegExp.Term`, the branch `cpp_regexp` of `Expressions.Framework.Term`; its
 holder, `Expressions.Cpp.RegExp.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
-`Term`. No position of C++ holds one: a pattern is a string there, passed to `std::regex`, and that a string is a
+`Term`. No subterm in C++ is one: a pattern is a string there, passed to `std::regex`, and that a string is a
 regular expression is the program's to say, never guessed (mbse-basis [PRI-025: never guess the schema](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-025)); mbse-programs, or a constraint's author, holds one through its holder.
 
 One dialect covers the six grammars *(agent)*, as one `std::basic_regex` reads them, the grammar being one element of
@@ -244,9 +244,9 @@ def _read(term: Any) -> F.Node:
 
 
 def _held(node: F.Node, name: str) -> tuple[Any, ...]:
-    """The terms a kind's property `name` holds: a slot's, where it is not empty, or a container's."""
-    if name in node.slots:
-        return () if node.slots[name] is None else (node.slots[name],)
+    """The terms a kind's property `name` holds: a subterm's, where it is not empty, or a container's."""
+    if name in node.subterms:
+        return () if node.subterms[name] is None else (node.subterms[name],)
     return node.lists[name]
 
 
@@ -279,7 +279,7 @@ def _grammar_problems(grammar_: str, root: Any) -> list[str]:
         if kind == QUANTIFIER:
             if attributes.get("greedy") is False:
                 lacks("a lazy quantifier")
-            element = node.slots["element"]
+            element = node.subterms["element"]
             inner = _read(element) if element is not None else None
             if inner is not None and inner.kind == QUANTIFIER:
                 lacks("a repeated quantifier")
@@ -320,15 +320,15 @@ def problems(node: F.Node) -> list[str]:
         grammars = [flag for flag in flags if flag in GRAMMARS]
         if len(grammars) > 1:
             found.append(f"a regex has at most one grammar element, got {', '.join(grammars)}")
-        elif node.slots["pattern"] is not None:
-            found += _grammar_problems(grammar(flags), node.slots["pattern"])
+        elif node.subterms["pattern"] is not None:
+            found += _grammar_problems(grammar(flags), node.subterms["pattern"])
     elif kind == QUANTIFIER:
         least, most = attributes.get("min"), attributes.get("max")
         if type(least) is int and least < 0:
             found.append(f"a quantifier's min cannot be negative, got {least}")
         if type(least) is int and type(most) is int and most < least:
             found.append(f"a quantifier's max cannot be less than its min, got {most} and {least}")
-        element = node.slots["element"]
+        element = node.subterms["element"]
         if element is not None and _read(element).attributes.get("assertionKind") == "word":
             found.append("a quantifier cannot repeat a word assertion")
     elif kind == CHARACTERSET and "setKind" in attributes:
