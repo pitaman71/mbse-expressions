@@ -1,0 +1,702 @@
+{
+ "grammar": "The codes `re`'s parser writes, Python 3.0 to 3.15 (`sre_constants` to 3.10, `re._constants` from 3.11): its operation codes (`OPCODES`, with `MIN_REPEAT` and `MAX_REPEAT`, which only the parser writes), position codes (`ATCODES`), category codes (`CHCODES`) and flags (`SRE_FLAG_*`, an inline flags' letters), each with the version it arrived in (`since`) and, where it was removed, the last that has it (`until`); each mapped to the kinds of the Python RegExp dialect it is read as (`kinds`, each a branch of `Expressions.Python.RegExp.Term`), with the attributes it gives them (`attributes`: a flag's `letter`, among a flags' `add` and `remove`), or listed as not an expression (`not`), the compiler's, with its reason; `unwritten` lists the kinds no code writes",
+ "checked": "each version's `Lib/sre_constants.py` or `Lib/re/_constants.py` at its tag in CPython's repository (v3.0 to v3.2, v3.3.0 to v3.15.0), and the running Python 3.14.7 and 3.15.0rc2's `re._constants`",
+ "codes": [
+  {
+   "code": "FAILURE",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a match that fails"
+  },
+  {
+   "code": "SUCCESS",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a match that succeeds"
+  },
+  {
+   "code": "ANY",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterset"
+   ],
+   "attributes": {
+    "kind": "any"
+   }
+  },
+  {
+   "code": "ANY_ALL",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: `.` under the flag `s` (DOTALL), a characterset any"
+  },
+  {
+   "code": "ASSERT",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "assertion"
+   ],
+   "attributes": {
+    "negate": false
+   },
+   "note": "its direction a lookahead's or a lookbehind's kind"
+  },
+  {
+   "code": "ASSERT_NOT",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "assertion"
+   ],
+   "attributes": {
+    "negate": true
+   },
+   "note": "its direction a lookahead's or a lookbehind's kind"
+  },
+  {
+   "code": "AT",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "assertion"
+   ],
+   "note": "its position code its kind"
+  },
+  {
+   "code": "BRANCH",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "alternative"
+   ],
+   "note": "its items the alternatives of what holds them, a pattern, a group or a lookaround"
+  },
+  {
+   "code": "CALL",
+   "class": "OPCODES",
+   "since": "3.0",
+   "until": "3.10",
+   "not": "a code no parser or compiler of Python 3 writes, removed in 3.11"
+  },
+  {
+   "code": "CATEGORY",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterset"
+   ],
+   "note": "its category code its kind"
+  },
+  {
+   "code": "CHARSET",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a class compiled to a bitmap"
+  },
+  {
+   "code": "BIGCHARSET",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a class compiled to a bitmap of bitmaps"
+  },
+  {
+   "code": "GROUPREF",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "backreference"
+   ]
+  },
+  {
+   "code": "GROUPREF_EXISTS",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "conditional"
+   ]
+  },
+  {
+   "code": "GROUPREF_IGNORE",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: GROUPREF under the flag `i` (IGNORECASE)"
+  },
+  {
+   "code": "IN",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterclass",
+    "characterset"
+   ],
+   "note": "a class, or `\\d`, `\\s` or `\\w` outside one"
+  },
+  {
+   "code": "IN_IGNORE",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: IN under the flag `i` (IGNORECASE)"
+  },
+  {
+   "code": "INFO",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a pattern's prefix and widths"
+  },
+  {
+   "code": "JUMP",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a branch's jump"
+  },
+  {
+   "code": "LITERAL",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "character"
+   ]
+  },
+  {
+   "code": "LITERAL_IGNORE",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: LITERAL under the flag `i` (IGNORECASE)"
+  },
+  {
+   "code": "MARK",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a group's start or end"
+  },
+  {
+   "code": "MAX_UNTIL",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: the end of a greedy repeat"
+  },
+  {
+   "code": "MIN_UNTIL",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: the end of a lazy repeat"
+  },
+  {
+   "code": "NOT_LITERAL",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterclass"
+   ],
+   "attributes": {
+    "negate": true
+   },
+   "note": "`[^a]`, a negated class of one character"
+  },
+  {
+   "code": "NOT_LITERAL_IGNORE",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: NOT_LITERAL under the flag `i` (IGNORECASE)"
+  },
+  {
+   "code": "NEGATE",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterclass"
+   ],
+   "attributes": {
+    "negate": true
+   }
+  },
+  {
+   "code": "RANGE",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterclassrange"
+   ]
+  },
+  {
+   "code": "REPEAT",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a repeat of a subpattern"
+  },
+  {
+   "code": "REPEAT_ONE",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a greedy repeat of one character"
+  },
+  {
+   "code": "SUBPATTERN",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "capturinggroup",
+    "group",
+    "flags"
+   ],
+   "note": "a group, numbered or not, with the flags it scopes"
+  },
+  {
+   "code": "MIN_REPEAT_ONE",
+   "class": "OPCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: a lazy repeat of one character"
+  },
+  {
+   "code": "RANGE_IGNORE",
+   "class": "OPCODES",
+   "since": "3.5",
+   "until": "3.6",
+   "not": "the compiler's, which the parser never writes: a range under the flag `i` (IGNORECASE)"
+  },
+  {
+   "code": "GROUPREF_LOC_IGNORE",
+   "class": "OPCODES",
+   "since": "3.7",
+   "not": "the compiler's, which the parser never writes: GROUPREF under the flags `L` (LOCALE) and `i` (IGNORECASE)"
+  },
+  {
+   "code": "IN_LOC_IGNORE",
+   "class": "OPCODES",
+   "since": "3.7",
+   "not": "the compiler's, which the parser never writes: IN under the flags `L` (LOCALE) and `i` (IGNORECASE)"
+  },
+  {
+   "code": "LITERAL_LOC_IGNORE",
+   "class": "OPCODES",
+   "since": "3.7",
+   "not": "the compiler's, which the parser never writes: LITERAL under the flags `L` (LOCALE) and `i` (IGNORECASE)"
+  },
+  {
+   "code": "NOT_LITERAL_LOC_IGNORE",
+   "class": "OPCODES",
+   "since": "3.7",
+   "not": "the compiler's, which the parser never writes: NOT_LITERAL under the flags `L` (LOCALE) and `i` (IGNORECASE)"
+  },
+  {
+   "code": "GROUPREF_UNI_IGNORE",
+   "class": "OPCODES",
+   "since": "3.7",
+   "not": "the compiler's, which the parser never writes: GROUPREF under the flag `i` (IGNORECASE) of a str pattern"
+  },
+  {
+   "code": "IN_UNI_IGNORE",
+   "class": "OPCODES",
+   "since": "3.7",
+   "not": "the compiler's, which the parser never writes: IN under the flag `i` (IGNORECASE) of a str pattern"
+  },
+  {
+   "code": "LITERAL_UNI_IGNORE",
+   "class": "OPCODES",
+   "since": "3.7",
+   "not": "the compiler's, which the parser never writes: LITERAL under the flag `i` (IGNORECASE) of a str pattern"
+  },
+  {
+   "code": "NOT_LITERAL_UNI_IGNORE",
+   "class": "OPCODES",
+   "since": "3.7",
+   "not": "the compiler's, which the parser never writes: NOT_LITERAL under the flag `i` (IGNORECASE) of a str pattern"
+  },
+  {
+   "code": "RANGE_UNI_IGNORE",
+   "class": "OPCODES",
+   "since": "3.7",
+   "not": "the compiler's, which the parser never writes: RANGE under the flag `i` (IGNORECASE) of a str pattern"
+  },
+  {
+   "code": "ATOMIC_GROUP",
+   "class": "OPCODES",
+   "since": "3.11",
+   "kinds": [
+    "atomicgroup"
+   ]
+  },
+  {
+   "code": "POSSESSIVE_REPEAT",
+   "class": "OPCODES",
+   "since": "3.11",
+   "kinds": [
+    "quantifier"
+   ],
+   "attributes": {
+    "possessive": true
+   }
+  },
+  {
+   "code": "POSSESSIVE_REPEAT_ONE",
+   "class": "OPCODES",
+   "since": "3.11",
+   "not": "the compiler's, which the parser never writes: a possessive repeat of one character"
+  },
+  {
+   "code": "MIN_REPEAT",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "quantifier"
+   ],
+   "attributes": {
+    "greedy": false
+   }
+  },
+  {
+   "code": "MAX_REPEAT",
+   "class": "OPCODES",
+   "since": "3.0",
+   "kinds": [
+    "quantifier"
+   ]
+  },
+  {
+   "code": "AT_BEGINNING",
+   "class": "ATCODES",
+   "since": "3.0",
+   "kinds": [
+    "assertion"
+   ],
+   "attributes": {
+    "kind": "start"
+   }
+  },
+  {
+   "code": "AT_BEGINNING_LINE",
+   "class": "ATCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: `^` under the flag `m` (MULTILINE), an assertion start"
+  },
+  {
+   "code": "AT_BEGINNING_STRING",
+   "class": "ATCODES",
+   "since": "3.0",
+   "kinds": [
+    "assertion"
+   ],
+   "attributes": {
+    "kind": "stringstart"
+   }
+  },
+  {
+   "code": "AT_BOUNDARY",
+   "class": "ATCODES",
+   "since": "3.0",
+   "kinds": [
+    "assertion"
+   ],
+   "attributes": {
+    "kind": "word"
+   }
+  },
+  {
+   "code": "AT_NON_BOUNDARY",
+   "class": "ATCODES",
+   "since": "3.0",
+   "kinds": [
+    "assertion"
+   ],
+   "attributes": {
+    "kind": "word",
+    "negate": true
+   }
+  },
+  {
+   "code": "AT_END",
+   "class": "ATCODES",
+   "since": "3.0",
+   "kinds": [
+    "assertion"
+   ],
+   "attributes": {
+    "kind": "end"
+   }
+  },
+  {
+   "code": "AT_END_LINE",
+   "class": "ATCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: `$` under the flag `m` (MULTILINE), an assertion end"
+  },
+  {
+   "code": "AT_END_STRING",
+   "class": "ATCODES",
+   "since": "3.0",
+   "kinds": [
+    "assertion"
+   ],
+   "attributes": {
+    "kind": "stringend"
+   }
+  },
+  {
+   "code": "AT_LOC_BOUNDARY",
+   "class": "ATCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: AT_BOUNDARY under the flag `L` (LOCALE)"
+  },
+  {
+   "code": "AT_LOC_NON_BOUNDARY",
+   "class": "ATCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: AT_NON_BOUNDARY under the flag `L` (LOCALE)"
+  },
+  {
+   "code": "AT_UNI_BOUNDARY",
+   "class": "ATCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: AT_BOUNDARY under a str pattern's Unicode matching"
+  },
+  {
+   "code": "AT_UNI_NON_BOUNDARY",
+   "class": "ATCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: AT_NON_BOUNDARY under a str pattern's Unicode matching"
+  },
+  {
+   "code": "CATEGORY_DIGIT",
+   "class": "CHCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterset"
+   ],
+   "attributes": {
+    "kind": "digit"
+   }
+  },
+  {
+   "code": "CATEGORY_NOT_DIGIT",
+   "class": "CHCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterset"
+   ],
+   "attributes": {
+    "kind": "digit",
+    "negate": true
+   }
+  },
+  {
+   "code": "CATEGORY_SPACE",
+   "class": "CHCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterset"
+   ],
+   "attributes": {
+    "kind": "space"
+   }
+  },
+  {
+   "code": "CATEGORY_NOT_SPACE",
+   "class": "CHCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterset"
+   ],
+   "attributes": {
+    "kind": "space",
+    "negate": true
+   }
+  },
+  {
+   "code": "CATEGORY_WORD",
+   "class": "CHCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterset"
+   ],
+   "attributes": {
+    "kind": "word"
+   }
+  },
+  {
+   "code": "CATEGORY_NOT_WORD",
+   "class": "CHCODES",
+   "since": "3.0",
+   "kinds": [
+    "characterset"
+   ],
+   "attributes": {
+    "kind": "word",
+    "negate": true
+   }
+  },
+  {
+   "code": "CATEGORY_LINEBREAK",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "a category no syntax writes, which neither the parser nor the compiler reaches"
+  },
+  {
+   "code": "CATEGORY_NOT_LINEBREAK",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "a category no syntax writes, which neither the parser nor the compiler reaches"
+  },
+  {
+   "code": "CATEGORY_LOC_WORD",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_WORD under the flag `L` (LOCALE)"
+  },
+  {
+   "code": "CATEGORY_LOC_NOT_WORD",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_NOT_WORD under the flag `L` (LOCALE)"
+  },
+  {
+   "code": "CATEGORY_UNI_DIGIT",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_DIGIT under a str pattern's Unicode matching"
+  },
+  {
+   "code": "CATEGORY_UNI_NOT_DIGIT",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_NOT_DIGIT under a str pattern's Unicode matching"
+  },
+  {
+   "code": "CATEGORY_UNI_SPACE",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_SPACE under a str pattern's Unicode matching"
+  },
+  {
+   "code": "CATEGORY_UNI_NOT_SPACE",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_NOT_SPACE under a str pattern's Unicode matching"
+  },
+  {
+   "code": "CATEGORY_UNI_WORD",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_WORD under a str pattern's Unicode matching"
+  },
+  {
+   "code": "CATEGORY_UNI_NOT_WORD",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_NOT_WORD under a str pattern's Unicode matching"
+  },
+  {
+   "code": "CATEGORY_UNI_LINEBREAK",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_LINEBREAK under a str pattern's Unicode matching"
+  },
+  {
+   "code": "CATEGORY_UNI_NOT_LINEBREAK",
+   "class": "CHCODES",
+   "since": "3.0",
+   "not": "the compiler's, which the parser never writes: CATEGORY_NOT_LINEBREAK under a str pattern's Unicode matching"
+  },
+  {
+   "code": "SRE_FLAG_TEMPLATE",
+   "class": "FLAGS",
+   "since": "3.0",
+   "until": "3.12",
+   "not": "`re.T`, `re.template`'s flag, which no inline letter writes; removed in 3.13"
+  },
+  {
+   "code": "SRE_FLAG_IGNORECASE",
+   "class": "FLAGS",
+   "since": "3.0",
+   "kinds": [
+    "flags"
+   ],
+   "attributes": {
+    "letter": "i"
+   }
+  },
+  {
+   "code": "SRE_FLAG_LOCALE",
+   "class": "FLAGS",
+   "since": "3.0",
+   "kinds": [
+    "flags"
+   ],
+   "attributes": {
+    "letter": "L"
+   }
+  },
+  {
+   "code": "SRE_FLAG_MULTILINE",
+   "class": "FLAGS",
+   "since": "3.0",
+   "kinds": [
+    "flags"
+   ],
+   "attributes": {
+    "letter": "m"
+   }
+  },
+  {
+   "code": "SRE_FLAG_DOTALL",
+   "class": "FLAGS",
+   "since": "3.0",
+   "kinds": [
+    "flags"
+   ],
+   "attributes": {
+    "letter": "s"
+   }
+  },
+  {
+   "code": "SRE_FLAG_UNICODE",
+   "class": "FLAGS",
+   "since": "3.0",
+   "kinds": [
+    "flags"
+   ],
+   "attributes": {
+    "letter": "u"
+   }
+  },
+  {
+   "code": "SRE_FLAG_VERBOSE",
+   "class": "FLAGS",
+   "since": "3.0",
+   "kinds": [
+    "flags"
+   ],
+   "attributes": {
+    "letter": "x"
+   }
+  },
+  {
+   "code": "SRE_FLAG_DEBUG",
+   "class": "FLAGS",
+   "since": "3.0",
+   "not": "`re.DEBUG`, a flag of the call, which no inline letter writes"
+  },
+  {
+   "code": "SRE_FLAG_ASCII",
+   "class": "FLAGS",
+   "since": "3.0",
+   "kinds": [
+    "flags"
+   ],
+   "attributes": {
+    "letter": "a"
+   }
+  }
+ ],
+ "unwritten": [
+  {
+   "kind": "pattern",
+   "reason": "the parser's result, a `SubPattern` of its alternatives, which no code writes: a `BRANCH` where it has several"
+  },
+  {
+   "kind": "comment",
+   "reason": "`(?#...)`, which the parser skips, writing nothing"
+  }
+ ]
+}
