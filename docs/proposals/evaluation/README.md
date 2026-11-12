@@ -119,3 +119,28 @@ The options:
 dialect's lowering covers what it evaluates (the dialects' "a shallow evaluator", question 8, stands meanwhile). Where
 11404 is silent, so is (b): it has no bitwise operations or shifts, which Patterns has; IEEE 1164 defines the logical
 operators over bit vectors, and IEEE 1076's `numeric_std` the shifts *(agent)*, question 4.
+
+## 4. The boundary inside mixed-dialect expressions
+
+A caller does not pass a domain to an evaluator: a term carries none, and "whatever reference object owns the root term
+must specify its schema" ([CAP-097: value domains of published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-097.md#decided)).
+The domains come from the holder and its context: the schema that holds the expression, a parameter's schema for a
+binding, the schemas the scope's values are written with, each reaching its domain through `HasDomain`; giving each
+subterm its domain from them is CAP-232's. What the user's second question names is the boundary: where evaluation
+stops, and what the caller sees there.
+
+- **Where it stops.** Under (b), evaluation reaches whatever lowers into the standard dialects. It stops at a subterm
+  with no lowering: a kind the inventory classes (b), with no value of its own; (d), mbse-programs' or a simulator's;
+  (c), until its capability is met; or an (a) whose rule is not written yet. Under section 2's (b), a subterm of
+  another dialect sits only where a union lists it or under an explicit boundary kind, which lowers through its own
+  dialect's rules, so a boundary between dialects is one more lowering, not a stop.
+- **What the caller sees: a residual, not a refusal.** Today a refused subterm raises, in partial evaluation too. In
+  its place, a subterm evaluation cannot reach stays a subterm of the residual
+  ([CAP-099: partial evaluation](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-099.md)),
+  named with its dialect, its kind and its class; full evaluation reads it as unknown, so that Kleene's logic still
+  decides what does not depend on it (`false and x` is false;
+  [PRI-007: three-valued checking on request](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-007)).
+  A residual preserves what a refusal drops, so refusal stays only where nothing can be preserved
+  ([PRI-002: preserve, don't lose](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-002)): a
+  term no dialect can read. This is the user's staged simplifier (Q11), substitution first, operations applied by
+  plugins to a value or to unknown, with the standard dialects' operations the plugins this repository ships.
