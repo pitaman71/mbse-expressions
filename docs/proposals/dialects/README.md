@@ -395,6 +395,22 @@ Asked five questions the retrofit left open (*Retrofit's design*, Open, for the 
    a pattern binds, in both languages, its callers, tests, skill and [Equivalence](../../EQUIVALENCE.md) following,
    with no alias. Built as [the API](../port/API.md), item 270.
 
+### Decided for the POSIX family (2026-11-12)
+
+Asked whether `Cpp RegExp` is one dialect for C++'s six regex grammars, as built (the regular expression dialects'
+*As built*, below; [the API](../port/API.md), items 293 and 310), the user: "yes to a new posix family". By the rules
+recorded ("if the standard says it's a sublanguage then it's definitely at least a separate dialect"; mbse-basis
+[PRI-012: model published standards](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-012); "not supporting the full standard is prohibited"), what decides it
+is who defines each grammar: ISO/IEC 14882 [re.grammar] defines only its modified ECMAScript grammar (ECMA-262's third
+edition, as modified); [re.synopt]'s `basic`, `extended`, `awk`, `grep` and `egrep` select grammars POSIX (IEEE Std
+1003.1, The Open Group Base Specifications) defines, in its Base Definitions, chapter 9, and its utilities' descriptions.
+So `Cpp RegExp` is narrowed to [re.grammar]'s grammar, complete, and POSIX's are a family of their own,
+`Expressions.POSIX.<Dialect>`, a C++ regex naming another grammar in its flags holding a POSIX dialect's term, read as
+C++ reads the ABI dialects (mbse-basis [CAP-267: C and C++ terms read under the ABI their holder names](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-267.md)). Which of awk's, grep's and
+egrep's grammars are dialects of their own, and which are variants of basic or extended, is decided by the same rule,
+from what POSIX itself says *(agent)*: built as [the API](../port/API.md), items 311 to 323, and the *As built, the
+POSIX family*, below. No compatibility alias: 0.10.0 is unreleased.
+
 ## Questions for the user
 
 1. **Names.** Proposed: the module, schemas and singleton renamed by dialect (`Python` to `Python3`,
@@ -997,7 +1013,8 @@ change as it lands.
        utilities awk, grep and egrep, to which [re.synopt] refers. mbse-programs has no kinds for it, so its kinds are
        named as regexpp names ECMAScript's (as `TypeScript RegExp`'s, each family its own copy) and as [re.grammar] names
        its own productions.
-       - *One dialect for the six grammars* *(agent, open with the user)*: one `std::basic_regex` reads them all, the
+       - *One dialect for the six grammars* *(agent; superseded by Decided for the POSIX family, 2026-11-12: Cpp RegExp is
+         [re.grammar]'s, the other five POSIX's own dialects)*: one `std::basic_regex` reads them all, the
          grammar being one element of the `syntax_option_type` it is constructed with ([re.synopt]: "A valid value of
          type syntax_option_type shall have at most one of the grammar elements ECMAScript, basic, extended, awk, grep,
          egrep, set. If no grammar element is set, the default grammar is ECMAScript"). So the grammar is a regex's data,
@@ -1259,6 +1276,29 @@ change as it lands.
      its pattern grammar unchanged, and recorded (API 303).
    - **mbse-programs has no kinds for a regular expression's body** (reported in the design, above): its readers leave
      the three dialects unwritten until they parse one, as regexpp and `re`'s parser do.
+
+   *As built, the POSIX family* (branch `posix-regexp`, as Decided for the POSIX family has it; every choice made where
+   the decision was silent is in [the API, Settled in the POSIX family](../port/API.md#settled-in-the-posix-family-for-the-users-review),
+   items 311 to 323). The standards' texts were checked first: [re.synopt] names POSIX's basic and extended regular
+   expressions and its awk and grep utilities, [intro.refs] cites ISO/IEC 9945:2003 (C++17, C++20) and ISO/IEC/IEEE
+   9945:2009 (C++23); POSIX's XBD 9 defines two grammars, basic and extended (9.3, 9.4, 9.5), grep reads its patterns
+   as one or the other in a newline-separated list, and awk its EREs with C's escapes. So two dialects, in both
+   languages, each with its install, `define` (POSIX.1-2001, 2008, 2017 and 2024), holder, `Terms.Dialect` reading the
+   other, printer, grammar entries and suite: `POSIX BRE` (`Expressions.POSIX.BRE`, `26_POSIX_BRE`, BRE) and `POSIX
+   ERE` (`Expressions.POSIX.ERE`, `27_POSIX_ERE`, ERE), each with grep's `patternlist`, awk's escapes ERE's printing
+   (`Text.text(expression, awk)`); their kinds shared in `POSIX.Kinds`, each dialect its own schemas;
+   `grammars/posix-regex.json` maps XBD 9.5's productions and tokens, 2024's among them. `Cpp RegExp` keeps
+   [re.grammar]'s grammar: `patternlist` goes to POSIX's, a regex's `pattern` holds the framework's `Term`, a term of
+   the dialect its grammar names, and what C++ does not select of a POSIX term (grep's list under another grammar,
+   2024's BRE alternation and ERE repetition modifier) is checked under the regex; `grammars/cpp-regex.json` keeps
+   [re.grammar]'s 32 productions; XRX is rewritten under its IDs. The corpus gains `posix_bre` and `posix_ere`.
+
+   *Found while building*:
+   - **A `?` over an ERE quantifier reads as POSIX.1-2024's lazy one**: `(a+)?` without its group, `a+?`, is 2024's
+     repetition modifier; the printer writes a `?` over a quantifier as `{0,1}` (API 317).
+   - **Alternation within a BRE subexpression**, which Cpp RegExp printed `\(a|b\)`, is no BRE before 2024, where
+     `|` is a character; POSIX BRE prints 2024's `\(a\|b\)`, and C++ refuses it under `basic` and `grep` (API 317,
+     319).
 
 7. **Tutorials, skill, README, EQUIVALENCE; the releases.** The tutorials and the skill followed each stage as it
    landed. **0.8.0 is released after stage 5**, as the user decided (Decided, "0.8.0 holds stages 1 to 5"): stages 1

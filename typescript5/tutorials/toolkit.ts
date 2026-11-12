@@ -24,6 +24,8 @@ import * as CPreprocessor from "@mbse/expressions/C/Preprocessor";
 import * as CTypes from "@mbse/expressions/C/Types";
 import * as CppRegExp from "@mbse/expressions/Cpp/RegExp";
 import * as CppTypes from "@mbse/expressions/Cpp/Types";
+import * as PosixBRE from "@mbse/expressions/POSIX/BRE";
+import * as PosixERE from "@mbse/expressions/POSIX/ERE";
 import * as PythonPatterns from "@mbse/expressions/Python/Patterns";
 import * as PythonRegExp from "@mbse/expressions/Python/RegExp";
 import * as PythonTypes from "@mbse/expressions/Python/Types";
@@ -46,7 +48,9 @@ import { Builders } from "@mbse/schemas/Framework";
  * language's dialect, TypeScript5's among them, the two ABI dialects (`SystemV/AMD64`, `Arm/AAPCS64`) and
  * SystemVerilog's six, then the sublanguages' dialects of Python, TypeScript, C and C++ (`Python Types`, `Python
  * Patterns`, `TypeScript Types`, `TypeScript Patterns`, `C Types`, `Cpp Types`, `C Preprocessor`), then their regular
- * expressions' (`Python RegExp`, `TypeScript RegExp`, `Cpp RegExp`), each after its family's, each in a transaction of its own; then each one's `define`, the standard dialects' first, each in a
+ * expressions' (`Python RegExp`, `TypeScript RegExp`, `Cpp RegExp`), each after its family's, and POSIX's (`POSIX BRE`,
+ * `POSIX ERE`), which a C++ regex may hold, each in a transaction of its own; then each one's `define`, the standard
+ * dialects' first, each in a
  * transaction of its own, writing its singleton, its operations, its domains and the editions it covers. LaTeX
  * defines nothing. Part I starts from it; tutorial 1 builds such a store by hand. */
 export function dialects(): any {
@@ -54,13 +58,13 @@ export function dialects(): any {
   for (const module of [Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, TypeScript5, Matlab, Excel,
     Latex, C, Cpp, AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor,
     PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor, PythonRegExp,
-    TypeScriptRegExp, CppRegExp] as any[]) {
+    TypeScriptRegExp, CppRegExp, PosixBRE, PosixERE] as any[]) {
     store.transaction(module.install);
   }
   for (const module of [ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns, Python3, TypeScript5, Matlab, Excel, C, Cpp,
     AMD64, AAPCS64, SystemVerilog, SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor, PythonTypes,
     PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor, PythonRegExp, TypeScriptRegExp,
-    CppRegExp] as any[]) {
+    CppRegExp, PosixBRE, PosixERE] as any[]) {
     store.transaction(module.define);
   }
   return store;
