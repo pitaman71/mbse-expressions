@@ -141,7 +141,8 @@ def _kinds() -> dict[str, F.Kind]:
 def _reads() -> tuple[F.Dialect, ...]:
     """The dialects of its family whose terms its positions hold, imported when first needed."""
     from ..Patterns import Expressions as PythonPatterns
-    return P.DIALECT, PythonPatterns.DIALECT
+    from ..RegExp import Expressions as PythonRegExp
+    return P.DIALECT, PythonPatterns.DIALECT, PythonRegExp.DIALECT
 
 
 DIALECT = F.Dialect("Python.Types", _kinds(), domain_of=_family.of, literal=P._native, reads=_reads)

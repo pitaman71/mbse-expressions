@@ -277,10 +277,12 @@ _KINDS.update({
 
 def _reads() -> tuple[F.Dialect, ...]:
     """The dialects whose terms its positions hold, imported when first needed: `TypeScript5`, whose terms a type holds,
-    and `TypeScript Patterns`, a function type's and a signature's parameters."""
+    and `TypeScript Patterns`, a function type's and a signature's parameters; and `TypeScript RegExp`, as its family's
+    dialects read one another, though no type holds a regular expression."""
     from ..Patterns import Expressions as TypeScriptPatterns
+    from ..RegExp import Expressions as TypeScriptRegExp
     from ..TypeScript5 import Expressions as TypeScript5
-    return TypeScript5.DIALECT, TypeScriptPatterns.DIALECT
+    return TypeScript5.DIALECT, TypeScriptPatterns.DIALECT, TypeScriptRegExp.DIALECT
 
 
 DIALECT = F.Dialect("TypeScript.Types", _KINDS, domain_of=_family.of, reads=_reads)

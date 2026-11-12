@@ -920,7 +920,8 @@ change as it lands.
        preprocessor is a dialect per family (C's, shared by C and C++ as each standard defines it ...)" (Decided
        for stage 6, Macros), as mbse-programs has one set of directives for both (`Ccpp/Syntax.py`, "Preprocessing
        directives [cpp]"), each recording the editions of both languages that have it. C's and C++'s `Pattern`
-       unions stay, as the user decided them (the rule above). C++'s `std::regex` grammar is Open, below.
+       unions stay, as the user decided them (the rule above). C++'s `std::regex` grammars are `Cpp RegExp`, designed
+       once Open, 1, below, was answered.
      - *`C Types`* (`Expressions.C.Types`; tag `c_types`) and *`Cpp Types`* (`Expressions.Cpp.Types`; tag `cpp_types`).
        Each `Term` is today's `Type`, its branches unchanged: `typeid` (its `specifiers` and abstract `declarator`),
        whose schema moves to it, and invalid syntax; each family's `Expressions` `Term` keeps listing `typeid` for the
@@ -965,6 +966,46 @@ change as it lands.
        `elifdefdirective` C23's and C++23's (mbse-programs' `both(2023, 2023)`); a directive's name within
        `otherdirective` (`#warning`, `#embed`) a feature not recorded. Completeness: the C and C++ grammar files'
        `preproc_*` entries, `comment` and `preproc_defined`, listed today as not expressions, mapped to its kinds.
+     - *`Cpp RegExp`* (`Expressions.Cpp.RegExp`; tag `cpp_regexp`), designed once Open, 1 was answered "(b)": the
+       regular expressions ISO/IEC 14882 defines for `std::basic_regex` ([re.grammar], [re.synopt]), in six grammars:
+       ECMAScript's (ECMA-262's third edition, 15.10.1, the edition [intro.refs] cites, as [re.grammar] modifies it:
+       `ClassAtom` and `IdentityEscape` modified, `ClassAtomExClass`, `ClassAtomCollatingElement`, `ClassAtomEquivalence`
+       added), POSIX's basic and extended regular expressions (ISO/IEC/IEEE 9945, XBD 9.3 to 9.5), and those of the
+       utilities awk, grep and egrep, to which [re.synopt] refers. mbse-programs has no kinds for it, so its kinds are
+       named as regexpp names ECMAScript's (as `TypeScript RegExp`'s, each family its own copy) and as [re.grammar] names
+       its own productions.
+       - *One dialect for the six grammars* *(agent, open with the user)*: one `std::basic_regex` reads them all, the
+         grammar being one element of the `syntax_option_type` it is constructed with ([re.synopt]: "A valid value of
+         type syntax_option_type shall have at most one of the grammar elements ECMAScript, basic, extended, awk, grep,
+         egrep, set. If no grammar element is set, the default grammar is ECMAScript"). So the grammar is a regex's data,
+         not a dialect: `regex`, what `basic_regex` holds, keeps its `flags` as written (`icase`, `nosubs`, `optimize`,
+         `collate`, `multiline` and at most one grammar) and its `pattern`, and a term held otherwise is read as
+         ECMAScript's, the default grammar. Which grammar has a construct is a constraint, checked by validation
+         (`FEATURES`: alternation not in the basic grammar, a group and a lookahead ECMAScript's alone, a repeated
+         quantifier or anchor an ERE's, a backreference no ERE's), as which standard has a kind is for C and C++
+         (Decided, 3 and 4). The alternatives: a kind per grammar where they differ, or a POSIX dialect beside an
+         ECMAScript one.
+       - *Its kinds*: `regex`, `patternlist` (grep's and egrep's newline-separated list of patterns, XCU grep's
+         "pattern_list"), `pattern` (ECMAScript's Disjunction, POSIX's `basic_reg_exp` and `extended_reg_exp`) and
+         `alternative`, `group` (ECMAScript's `(?:...)`) and `capturinggroup`, `quantifier`, `characterclass` (a bracket
+         expression) and `characterclassrange`, `characterset` (`.`, ECMAScript's `\d`, `\s`, `\w`), `character`,
+         `assertion` (`^`, `$`, ECMAScript's `\b` and lookahead), `backreference` (by its number), and the class atoms
+         `exclass` (`[:alpha:]`), `collatingelement` (`[.ch.]`) and `equivalence` (`[=a=]`); then invalid syntax. No
+         helpers. What a kind's terms may be (`HOLDS`), which the schema leaves to validation (Decided, 4), is checked.
+       - *Positions*: none in `Cpp`: a pattern is a string passed to `std::regex`, and that a string is a regular
+         expression is the program's to say, never guessed (mbse-basis
+         [PRI-025: never guess the schema](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-025));
+         mbse-programs, or a constraint's author, holds one through its holder, which names its ABI as every C++
+         holder does. It reads its family's dialects, `Cpp`, `Cpp Types` and C's `C Preprocessor`, and `Cpp` and `Cpp
+         Types` read it, as each family's dialects read one another. No kind binds a name a term scopes: ECMA-262's third
+         edition has no named group, and a backreference resolves a group by its number.
+       - *Editions*: C++17, C++20 and C++23, every kind in each: [re.grammar] is the same in the three.
+       - *Printing*: by a printer of its own *(agent)*, as each grammar writes its kinds, the grammar, which a term
+         alone does not say, its context (a BRE's `\(...\)` and `\{m,n\}`, awk's escapes, grep's list by newlines).
+       - *Completeness*: `grammars/cpp-regex.json`, written from [re.grammar], ECMA-262's third edition and XBD 9.5,
+         production by production, each mapped to its kinds or listed as not a kind with its reason.
+       - *The work*: a group of its own (XR), owning `Cpp/RegExp/` in both languages, `grammars/cpp-regex.json` and the
+         suite `25_Cpp_RegExp` (XRX); touch points FRM-01, FRM-02, FRM-13 and its corpus case (`cpp_regexp`).
      - *`C` and `Cpp`* themselves: their `Type` unions become the two `Types`' `Term`s, each position that held one
        holding it; their `Term`s list `definedexpression`; C++'s binders refine `Let` (C has none: C expressions
        bind no names); each `DIALECT` reads its own `Types` and `C Preprocessor`, and C++'s reads none of C's other
@@ -1120,13 +1161,15 @@ change as it lands.
         ECMA-262's, Python's `re` and C++'s [re.grammar], as `Cpp RegExp`, a further group designed once answered;
         not MATLAB's or Excel's, which have no standard recorded. (c) (b), and MATLAB's `regexp` and Excel's
         `REGEX` functions too. *Recommended: (b)*, the record's rule read as written; group PR proceeds under (b)
-        or (c).
+        or (c). *Answered* (2026-11-12): "(b) ofc": `Python RegExp`, `TypeScript RegExp` and `Cpp RegExp`, MATLAB's and
+        Excel's not; built as the *As built* of the regular expression dialects has it, below.
      2. *JSX.* Decided, 5 named JSX among the sublanguages an expression holds, and stage 6 makes a sublanguage a
         dialect; but the retrofit as recorded ("type, pattern, regex and preprocessor dialects") does not name it,
         and JSX's own specification calls it a syntax extension of ECMAScript, which mbse-programs marks as an
         extension. (a) JSX stays `TypeScript5`'s extension kinds. (b) `TypeScript JSX`, a dialect of its own, its
         kinds and helpers moved as the types' are, in group T. *Recommended: (a)*: no standard defines it as a
-        sublanguage, and it can move later as the types do now, with nothing built on it to rework.
+        sublanguage, and it can move later as the types do now, with nothing built on it to rework. *Answered*: "(a)
+        is fine": JSX stays `TypeScript5`'s extension kinds.
    - **Reported, for mbse-programs' port** (mbse-basis [PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)):
      it has no kinds for a regular expression's body, in TypeScript or in Python, so its reader leaves
      `TypeScript RegExp` unwritten until it parses one (as regexpp does); and it cannot tell a C or C++ macro's use
@@ -1143,8 +1186,9 @@ change as it lands.
    `19_TypeScript_Types` (TST), `20_TypeScript_Patterns` (TSP), `22_C_Types` (CTY), `23_Cpp_Types` (XTY) and
    `24_C_Preprocessor` (CPD); the grammar files map each new dialect's nodes, DIA-20, DIA-23 and DIA-26 checking them;
    the corpus has a case of each. Two choices differ from the design, for review: an enumerator is a kind of each
-   `Types` dialect, not a helper union (API 247), and a type's position is a term slot (API 249). Not built, waiting on
-   the user: `Python RegExp` and `TypeScript RegExp` (Open, 1, groups PR and TR) and JSX (Open, 2).
+   `Types` dialect, not a helper union (API 247), and a type's position is a term slot (API 249). Not built then, waiting on
+   the user, and since answered: the regular expression dialects (Open, 1, built below) and JSX (Open, 2, which stays
+   `TypeScript5`'s).
    Recorded in mbse-basis as [CAP-276: Python's type expressions and match patterns as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-276.md),
    [CAP-277: TypeScript's types and destructuring patterns as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-277.md),
    [CAP-278: C's and C++'s type names and preprocessor directives as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-278.md) and
@@ -1165,6 +1209,35 @@ change as it lands.
    - **Invalid syntax within a helper holds no term**, so no owner can be read from it: a printer names it by the
      dialect printing it (API 261).
    - **A constant is described as `None` in refusal messages** (API 216): still open with the user, left as it is.
+
+   *As built, the regular expression dialects* (branch `regexp`: `regexp-python`, `regexp-typescript` and
+   `regexp-cpp` merged, then the coordinator's decisions; every choice made where the design and the decisions were
+   silent is in [the API, Settled in the regular expression dialects](../port/API.md#settled-in-the-regular-expression-dialects-for-the-users-review),
+   items 271 to 310). Open, 1 answered "(b)", three dialects are built, in both languages, each with its install,
+   `define` (its editions), holder, `Terms.Dialect` reading its family's others, printer, grammar file and suite:
+   `Python RegExp` (`18_Python_RegExp`, PYR), as designed, with `comment` beside the design's kinds and the flags among
+   its completeness file's classes; `TypeScript RegExp` (`21_TypeScript_RegExp`, TSR), regexpp's node types, held by
+   TypeScript5's `constant` as its `regexp`, ECMA-262's 5.1 Edition to the 17th; and `Cpp RegExp` (`25_Cpp_RegExp`,
+   XRX), as its design above has it, one dialect for the six grammars, open with the user. The coordinator's decisions:
+   the three name ECMAScript's constructs alike, after regexpp (`setKind`, `assertionKind`, `raw`, `ref`, API 302);
+   ECMA-262's 17th Edition (ES2026) recorded, its pattern grammar the 16th's (API 303); `Cpp` and `Cpp Types` read `Cpp
+   RegExp`, as each family's dialects read one another (API 304); the tutorials' toolkit installs all three (API 305).
+   The corpus has a case of each. JSX stays `TypeScript5`'s (Open, 2, answered).
+
+   *Found while building*:
+   - **The groups named ECMAScript's constructs differently**: TypeScript RegExp after regexpp (`setKind`,
+     `assertionKind`, `raw`, `ref`), Python RegExp and Cpp RegExp `kind`, `text` and, in Python's, `number` and `name`.
+     Harmonized on regexpp's names (API 302).
+   - **A word character set read as a word assertion**: Cpp RegExp's check that a quantifier repeats no word assertion
+     read an element's `kind`, which a `\w` character set shares, so `\w*` was refused; with the names harmonized it
+     reads `assertionKind`, and XRX-03 asserts `\w*` valid.
+   - **The groups placed their dialects differently** among the install lists, and two of them in none of DIA's, TRN's
+     and DOM's: reconciled, the three last, in the merge's order (API 305, 306).
+   - **Suite TSR's cells stood each before its heading**: reordered (API 307).
+   - **ECMA-262's 17th Edition** (June 2026) was published after TypeScript RegExp's design named the 16th: checked,
+     its pattern grammar unchanged, and recorded (API 303).
+   - **mbse-programs has no kinds for a regular expression's body** (reported in the design, above): its readers leave
+     the three dialects unwritten until they parse one, as regexpp and `re`'s parser do.
 
 7. **Tutorials, skill, README, EQUIVALENCE; the releases.** The tutorials and the skill followed each stage as it
    landed. **0.8.0 is released after stage 5**, as the user decided (Decided, "0.8.0 holds stages 1 to 5"): stages 1

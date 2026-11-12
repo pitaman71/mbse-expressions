@@ -1741,7 +1741,186 @@ install lists.
      new, 54 cases; FRM-01, FRM-02, FRM-04, FRM-11, FRM-13, DIA-20 to DIA-26, DIA-30, CONF-04 and SKL-03 under their
      IDs.
 268. **Open, with the user**: the regular expression dialects (the design's Open, 1), JSX (Open, 2), and a constant
-     described as `None` in refusal messages (item 216), each left as it is.
+     described as `None` in refusal messages (item 216), each left as it is. *Since answered*: the regular expression
+     dialects "(b) ofc" (2026-11-12, built as items 271 to 310) and JSX "(a) is fine", it stays TypeScript5's.
+
+## Settled in the regular expression dialects, for the user's review
+
+Built as [the dialects proposal](../dialects/README.md#stages-proposed-once-decided) designs them (stage 6's *Retrofit's
+design*, Python's and TypeScript's regular expressions, and *Cpp RegExp*), on the user's answer to its Open, 1
+(2026-11-12), "(b) ofc": every regular expression a language's standard defines is a dialect, its library's included.
+Three groups built in parallel, Python (271 to 282), TypeScript (283 to 292) and C++ (293 to 301); then the
+coordinator's merge and decisions (302 to 310). Each choice where the design and the decisions were silent is marked
+*(agent)*. Numbered after 269 and 270, which mbse-expressions#39 adds.
+
+### Python RegExp (group PR)
+
+271. **Its kinds** *(agent)*: the design's, `pattern`, `alternative`, `group`, `capturinggroup`, `quantifier`,
+     `characterclass`, `characterclassrange`, `characterset`, `character`, `assertion` and `backreference`, then
+     Python's own `conditional`, `atomicgroup` and `flags`, and one beyond the design's list, `comment` (`(?#...)`), which
+     `re`'s parser skips, kept so that a pattern prints as written; then invalid syntax. No helpers. Tags as regexpp's
+     node types, lowercased; each kind a value object `Expressions.Python.RegExp.<Kind>`.
+272. **Its properties, regexpp's names** *(agent; as harmonized, item 302)*: `alternatives`, `elements`, `name`, `min`,
+     `max`, `greedy`, `element`, `negate`, `setKind`, `assertionKind`, `raw`, `value` and `ref`; Python's own
+     `possessive`, a conditional's `ref`, `yes` and `no` (alternatives), a flags' `add` and `remove` (letters) and
+     `alternatives` (none: a global `(?i)`; some: a scoped `(?i-m:...)`), and a comment's `text`.
+273. **A character is its spelling and its code point** *(agent)*: `raw` and `value` (an int); no `problems`, as no parser
+     here writes one: validation checks that the spelling spells the value (`spells`: the character, a control escape,
+     `\xhh`, `\uhhhh`, `\Uhhhhhhhh`, octal to `\377`, `\` before ASCII punctuation, and `\N{...}` by its form alone, as
+     TypeScript has no Unicode name database); a character without a spelling prints in a default one (`spelling`),
+     escaped as where it stands, within a class or not, a space and `#` escaped outside one so that verbose mode reads
+     it. Every kind is an application of no domain known statically (`Opaque`), a character too, not a literal.
+274. **Absent means the default** *(agent)*: a quantifier's `max` absent is unbounded, `greedy` absent greedy,
+     `possessive` absent not; `min` required.
+275. **Checks as `re`'s parser makes them** *(agent)*: its messages where it has one ("nothing to repeat", "multiple
+     repeat", "min repeat greater than max repeat", "bad character range z-a", "unknown flag", "missing flag", "missing
+     :", "bad inline flags: ...", "redefinition of group name ...", "unknown group name ...", "invalid group reference
+     N", "global flags not at the start of the expression"), ours elsewhere (what each kind may hold, a choice among a
+     few, a code point and its spelling, "a backreference needs a ref"). Groups and references are resolved at a
+     `pattern`, the root; global flags must lead in every edition (3.11's rule, a warning before); `L` and `u` both
+     accepted, a str or a bytes pattern being its string's; a lookbehind's width, the compiler's, is not checked.
+276. **Printing in one layout** *(agent)*: every kind closed, at the family's primary level; a quantifier's shortest
+     bounds (`{0,}` prints `*`); a numbered backreference before a digit in a group of its own (`(?:\1)0`); `\z` (3.14)
+     prints `\Z`, as an assertion keeps no spelling.
+277. **Reads** *(agent, the design's)*: each of Python's four dialects reads the other three, so `Python3`, `Python
+     Types` and `Python Patterns` gain `Python RegExp` in `reads`, and the family's printer merges its `TEXTS`; Python3's
+     evaluator refuses each kind by its dialect's name ("Python RegExp pattern is not evaluated").
+278. **Editions** *(agent)*: Python 3.0 to 3.15, `atomicgroup` from 3.11; a feature within a kind not recorded (a
+     possessive quantifier, 3.11; scoped flags, 3.6; `\N{...}`, 3.8; `\z`, 3.14).
+279. **Completeness data** *(agent)*: `grammars/python3-re.json`, generated from each version's `sre_constants.py` (3.0
+     to 3.10) and `re/_constants.py` (3.11 on) at its CPython tag: 86 codes, the design's three classes (`OPCODES` with
+     `MIN_REPEAT` and `MAX_REPEAT`, `ATCODES`, `CHCODES`) and a fourth, the flags (`SRE_FLAG_*`), each mapped to kinds
+     with the attributes it gives them (`setKind`, `assertionKind`, `negate`, `greedy`, `possessive`, a flag's
+     `letter`) or listed `not`, the compiler's, with its reason; `unwritten` names the kinds no code writes, `pattern`
+     and `comment`. PYR-09 checks it in both languages, and in Python against the running `re._constants`.
+280. **Install lists** *(agent)*: wherever every new dialect is installed (FRM's `RETROFIT`, DIA's, TRN's, DOM's, the
+     corpus), not in the suites that install part of the family (PAR, SVC, PYT, PYP); placed as item 305 has it.
+281. **The corpus** *(agent)*: `python_regexp`, a term of every kind, a character with its spelling; placed as item 306
+     has it.
+282. **Tests**: suite PYR (18, nine cases); FRM-01 (the dialect, its package, `reads`), FRM-02 (a sample of every kind),
+     FRM-11 (invalid syntax, its printer), FRM-13 (its editions), PYT-01 and PYP-01 (their `reads`) under their IDs;
+     CONF over the new corpus case. PYR-07 and PYR-09 also run Python's `re` in Python
+     ([Equivalence](../../EQUIVALENCE.md#deliberate-differences)).
+
+### TypeScript RegExp (group TR)
+
+283. **Its kinds, regexpp's node types** *(agent, the design's)*: `regexpliteral`, `pattern`, `alternative`, `group`,
+     `capturinggroup`, `quantifier`, `characterclass`, `characterclassrange`, `classintersection`, `classsubtraction`,
+     `classstringdisjunction`, `stringalternative`, `expressioncharacterclass`, `characterset`, `character`,
+     `assertion`, `backreference` and `modifiers`, then invalid syntax; its helpers regexpp's two node types that are a
+     kind's parts, `Flags` (a literal's) and `ModifierFlags` (a modifiers'). Each kind's properties in the order regexpp
+     declares them; a property whose name is a keyword of Python or the framework's `kind` is renamed as mbse-programs
+     renames typescript-estree's: `setKind`, `assertionKind`, and a flag's `isGlobal` *(agent)*.
+284. **What regexpp derives is not kept** *(agent)*: a node's `parent`, `start` and `end`, a group's `references`, a
+     backreference's `resolved` and `ambiguous`.
+285. **A spelling, regexpp's `raw`, kept where the tree does not give it** *(agent)*: a leaf's (`character`,
+     `characterset`, `backreference`), `Flags`' and `ModifierFlags`', and a quantifier's, whose `{0,}` its bounds do not
+     tell from `*` (mbse-basis [PRI-023: domain representations](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-023)).
+286. **A quantifier's `max` absent where it is unbounded**, regexpp's `Infinity` *(agent)*; a backreference's `ref` a
+     group's number or its name (`OfAny` of an int and a str).
+287. **Checks** *(agent)*: what ECMA-262's early errors its data can show (a quantifier's bounds, a range's order, a
+     literal's flags each once, never both `u` and `v`, a modifiers adding or removing a flag, never both), and what
+     each kind may hold (a range's ends characters, an expression class's expression an intersection or a subtraction);
+     which kinds a mode allows (the `v` flag's classes in a literal without it), like which terms a position allows, is
+     a constraint (the dialects proposal, Decided, 4).
+288. **Editions** *(agent)*: ECMA-262's, the 5.1 Edition to the 16th as built, the 17th added by item 303, each by Ecma
+     International's designation (`ECMA-262 6th Edition`), body `org.ecma-international`, number `262`, revision its
+     edition (the 5.1 Edition's a version), common names as Ecma writes them (`ECMAScript 2015`, `ES2015`), frame
+     symbols `ES5_1` ... ; `SINCE` gives the `v` flag's five kinds the 15th (ES2024) and `modifiers` the 16th (ES2025);
+     a feature within a kind (a named group, a lookbehind, a property escape, ES2018) not recorded.
+289. **TypeScript5's `constant` holds its `regexp`** (the design's) *(agent)*: a regular expression literal's `pattern`
+     and `flags` as written and `regexp`, the `regexpliteral` they encode, absent where they do not parse, holding
+     `Expressions.TypeScript.RegExp.Term` by name (either install creating it); validated with the constant, its problems
+     labelled `regexp:`; printed from it where the constant has no spelling; that it is what `pattern` and `flags` spell
+     is not checked, as a literal's `value` is not against its `text`. The constant's checks run through `Nodes.check`'s
+     own, so that no branch of it goes unread. TypeScript5 reads TypeScript RegExp; nothing else holds one, a string
+     given to `new RegExp` being a string (mbse-basis [PRI-025: never guess the schema](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-025)).
+290. **Printing** *(agent)*: by the family's printer; a node with a spelling as written; a quantifier as written where
+     its spelling begins with its element's text, else in its shortest form; a character with no spelling as itself,
+     but a syntax character or `/`, and in a class `-` too, escaped by `\`, and a control, a line terminator or a lone
+     surrogate as `\t`, `\n`, `\v`, `\f`, `\r`, `\xHH` or `\uHHHH`; flags with no spelling in the order
+     `RegExp.prototype.flags` writes them, a modifiers' as ECMA-262 lists them (`ims`).
+291. **Completeness**: `grammars/ecmascript-regexpp.json`, generated from @eslint-community/regexpp 4.12.3's declarations:
+     its 20 node types, of 28 interfaces, each a kind or a helper (TSR-02).
+292. **Tests and the corpus**: suite TSR (21, seven cases); FRM-01, FRM-02, FRM-11 and FRM-13 under their IDs; the
+     corpus's `typescript_regexp`, a literal of every kind.
+
+### Cpp RegExp (group XR)
+
+293. **One dialect for `std::regex`'s six grammars** *(agent, open with the user)*: ECMAScript's (ECMA-262's third
+     edition, 15.10.1, as [re.grammar] modifies it), POSIX's basic and extended regular expressions (XBD 9.3 to 9.5),
+     and awk's, grep's and egrep's, as one `std::basic_regex` reads them, the grammar one element of the
+     `syntax_option_type` it is constructed with ([re.synopt]: "at most one of the grammar elements ECMAScript, basic,
+     extended, awk, grep, egrep ... If no grammar element is set, the default grammar is ECMAScript"). A `regex`, what
+     `basic_regex` holds, keeps its `flags` as written (`icase`, `nosubs`, `optimize`, `collate`, `multiline` and at
+     most one grammar, `SYNTAX_OPTIONS`) and its `pattern`; a term held otherwise is read as ECMAScript's.
+294. **Its kinds** *(agent)*: the constructs the grammars share, each once, named as regexpp names ECMAScript's (as
+     TypeScript RegExp's are, each family its own copy) and as [re.grammar] names its own productions: `regex`,
+     `patternlist` (grep's and egrep's newline-separated list), `pattern`, `alternative`, `group`, `capturinggroup`,
+     `quantifier`, `characterclass`, `characterclassrange`, `characterset`, `character`, `assertion`, `backreference`,
+     and the class atoms `exclass` (`[:alpha:]`), `collatingelement` (`[.ch.]`) and `equivalence` (`[=a=]`); then
+     invalid syntax. No helpers.
+295. **What a kind's terms may be, and what each grammar has, checked by validation** *(agent)*: `HOLDS` (an
+     alternative's elements atoms, a class's its class atoms, a range's ends a character or a collating element), and,
+     under a `regex`, `FEATURES` (alternation not in the basic grammar but in grep's list of patterns, a group and a
+     lookahead ECMAScript's alone, a repeated quantifier or anchor an ERE's, a backreference no ERE's, past `\9`
+     ECMAScript's), as which standard has a kind is for C and C++ (the dialects proposal, Decided, 3 and 4).
+296. **Its properties** *(agent; as harmonized, item 302)*: a quantifier's `raw` (its spelling, printed where it has one),
+     `min`, `max`, `greedy` and `element`; a character's `raw` and `value`; a character set's `setKind` and `negate`; an
+     assertion's `assertionKind`, `negate` and `alternatives` (a lookahead's); a backreference's `ref`, a number, as no
+     grammar names a group; a class atom's `name`.
+297. **Editions** *(agent)*: C++'s three, C++17, C++20 and C++23, every kind in each: [re.grammar] is the same in the
+     three.
+298. **Its printer is its own** *(agent)*: its terms hold no other dialect's, and no position of another dialect holds
+     one, so it shares nothing with the C family's printer but its reading of invalid syntax; the grammar, which a term
+     alone does not say, is the context it writes in (a BRE's `\(...\)` and `\{m,n\}`, awk's escapes, ECMAScript's).
+299. **Nothing bound** *(agent)*: a capturing group is numbered, not named, in every grammar (ECMA-262's third edition
+     has no named group), and a backreference resolves it by its number.
+300. **Completeness** *(agent)*: `grammars/cpp-regex.json`, written from [re.grammar], ECMA-262's third edition and
+     POSIX XBD 9.5, production by production, each mapped to its kinds, or listed as not a kind with its reason (XRX-10).
+301. **Tests and the corpus**: suite XRX (25, ten cases); FRM-01, FRM-02 and FRM-13 under their IDs; the corpus's
+     `cpp_regexp`, a regex of every kind but `patternlist`, which ECMAScript, the one grammar of the others, has not,
+     and which FRM-02's sample holds *(agent)*.
+
+### The merge, and the coordinator's decisions
+
+302. **The three dialects name ECMAScript's constructs alike** (the coordinator's decision): where a construct is
+     ECMAScript's too, Python RegExp and Cpp RegExp name its properties as TypeScript RegExp does, after regexpp: a
+     character set's `setKind` and an assertion's `assertionKind` (each was `kind`), a spelling as written `raw` (a
+     character's, first as regexpp orders it, and Cpp RegExp's quantifier's, each was `text`), and Python RegExp's
+     backreference's and conditional's group `ref`, a number or a name (were `number` and `name`, exactly one)
+     *(agent: a conditional, Python's own, takes the backreference's name for the group it tests)*. Their messages
+     follow ("CharacterSet.setKind cannot be ...", "a backreference needs a ref", "a backreference's ref must be
+     positive, got 0"), with their printers, grammar files, corpus cases and suites. Python RegExp's comment keeps
+     `text`, its content, not a spelling.
+303. **ECMA-262's 17th Edition (ES2026), recorded as data** (the coordinator's decision, "not supporting the full
+     standard is prohibited"): its pattern grammar (22.2.1) was checked against the 16th's, production by production,
+     130 each, identical (tc39.es/ecma262/2025 and /2026, the 2026 edition published June 2026); none of ES2026's
+     proposals changes it (TC39's finished proposals: RegExp modifiers and duplicate named groups are ES2025's,
+     `RegExp.escape` a function). So `TypeScript RegExp`'s editions run to the 17th, which has the 16th's kinds, no new
+     kind *(agent)*; TSR-05 and FRM-13 assert it; TypeScript5's flags are ECMAScript 2026's.
+304. **Cpp and Cpp Types read Cpp RegExp** (the coordinator's decision), as each family's dialects read one another and
+     Python's do, though no position of theirs holds one; Cpp RegExp reads Cpp, Cpp Types and C Preprocessor; C
+     Preprocessor does not read Cpp RegExp, its conditions and items holding no regular expression *(agent)*. FRM-01's
+     `READS` asserts it.
+305. **The installs** *(agent)*: wherever every new dialect is installed (FRM's `RETROFIT`, DIA's, TRN's, DOM's, the
+     corpus's store), the three RegExp dialects come last, after C Preprocessor, in the merge's order: Python RegExp,
+     TypeScript RegExp, Cpp RegExp; a list of some families gets theirs (TRN's Python's and C++'s; DOM's Python's and
+     TypeScript's). The tutorials' toolkit's `dialects()` installs and defines all three (the coordinator's decision);
+     `cold_chain()`, which holds what the case studies translate into, none.
+306. **The corpus's order** *(agent)*: `python_regexp`, `typescript_regexp` and `cpp_regexp` after `c_preprocessor`, and
+     their statements in that order in both languages; JSON byte-identical in both languages.
+307. **Suite TSR's cells reordered** *(agent, a fix)*: each case's code stood before its heading, against
+     mbse-basis [PRI-035: tests are notebooks: one suite each, the same case IDs in the same order in both languages](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-035) (a case is a markdown cell, then one code cell); each
+     heading now precedes its code, in both languages.
+308. **The skill** *(agent)*: its install list names the three, each after its family's dialect; the dialects
+     reference's item 6 gains the regular expression dialects and links PYR-01, PYR-07, PYR-09, TSR-01, TSR-06, TSR-07,
+     XRX-01, XRX-04, XRX-08 and XRX-10 (SKL-03: 652 links).
+309. **Tests**: 230 cases in each language, with the same IDs in the same order: PYR, TSR and XRX new, 26 cases; FRM-01,
+     FRM-02, FRM-11, FRM-13, PYT-01, PYP-01, TSR-05 and SKL-03 under their IDs; the install lists of DIA's, TRN's
+     and DOM's setups.
+310. **Open, with the user**: Cpp RegExp as one dialect for the six grammars, the grammar among a regex's flags (item
+     293), against a kind per grammar or a POSIX dialect beside ECMAScript's; built so, the coordinator agreeing.
 
 ## What stage 2b needed (done)
 

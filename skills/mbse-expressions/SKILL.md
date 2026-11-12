@@ -65,9 +65,9 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    (`store.transaction(Framework.install)`, `store.transaction(IEEE754.install)`, ..., `Patterns.install`, ...,
    `C.install`, `Cpp.install`, and the ABI dialects' you need, `AMD64.install`, `AAPCS64.install`; SystemVerilog's six
    together, in any order, as each reads the others' terms; and each family's sublanguage dialects after its family's
-   dialect, as each reads its family's terms: `Python.Types` and `Python.Patterns` after `Python3`,
-   `TypeScript.Types` and `TypeScript.Patterns` after `TypeScript5`, `C.Types` after `C`, `Cpp.Types` after `Cpp`,
-   and `C.Preprocessor` after both); then each one's
+   dialect, as each reads its family's terms: `Python.Types`, `Python.Patterns` and `Python.RegExp` after `Python3`,
+   `TypeScript.Types`, `TypeScript.Patterns` and `TypeScript.RegExp` after `TypeScript5`, `C.Types` after `C`,
+   `Cpp.Types` and `Cpp.RegExp` after `Cpp`, and `C.Preprocessor` after both); then each one's
    `define` whose data its validation, inference or evaluation reads, each in a transaction of its own: Patterns',
    which names the operations validation reads (`store.transaction(Patterns.define)`), and C's, C++'s, the ABI
    dialects', SystemVerilog's, which write the types they read; a sublanguage dialect's writes the editions it covers. A C or C++ expression names the ABI its terms are read

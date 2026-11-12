@@ -4,7 +4,7 @@
  * (`FromText`) needs Python's own parser, so it is in the Python implementation only.
  *
  * The family's printer prints a tree that mixes its dialects' terms from any of their holders: each sublanguage's kinds
- * are written by its own package's `Text` module, which the printer dispatches to by tag (`Types.Text`, `Patterns.Text`),
+ * are written by its own package's `Text` module, which the printer dispatches to by tag (`Types.Text`, `Patterns.Text`, `RegExp.Text`),
  * each with its `TEXTS` (a kind's tag to the function that writes it, given the printer and its `Terms.Node`, giving its
  * text and its precedence, on this module's scale). */
 
@@ -14,6 +14,7 @@ import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as F from "../../Framework/Terms.js";
 import * as PatternsText from "../Patterns/Text.js";
+import * as RegExpText from "../RegExp/Text.js";
 import * as TypesText from "../Types/Text.js";
 import * as P from "./Expressions.js";
 
@@ -366,7 +367,7 @@ let TEXTS: ReadonlyMap<string, (p: Printer, n: F.Node) => Written> | null = null
 /** How the kinds of its family's sublanguages are written: each dialect's `Text` module's `TEXTS`, merged, read when
  * first needed. */
 function texts(): ReadonlyMap<string, (p: Printer, n: F.Node) => Written> {
-  TEXTS ??= new Map([...TypesText.TEXTS, ...PatternsText.TEXTS]);
+  TEXTS ??= new Map([...TypesText.TEXTS, ...PatternsText.TEXTS, ...RegExpText.TEXTS]);
   return TEXTS;
 }
 

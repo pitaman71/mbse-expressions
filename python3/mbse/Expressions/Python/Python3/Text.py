@@ -11,7 +11,7 @@ lambda as a `lambda`. A writer is written where a caller writes a term, within a
 `store.Expressions.Framework.Term(FromText("a + 1"))`.
 
 The family's printer prints a tree that mixes its dialects' terms from any of their holders: each sublanguage's kinds
-are written by its own package's `Text` module, which the printer dispatches to by tag (`Types.Text`, `Patterns.Text`),
+are written by its own package's `Text` module, which the printer dispatches to by tag (`Types.Text`, `Patterns.Text`, `RegExp.Text`),
 each with its `TEXTS` (a kind's tag to the function that writes it, given the printer and its `Terms.Node`, giving its
 text and its precedence, on this module's scale).
 
@@ -326,8 +326,9 @@ def _texts() -> dict[str, Any]:
     first needed."""
     if not _TEXTS:
         from ..Patterns import Text as Patterns
+        from ..RegExp import Text as RegExp
         from ..Types import Text as Types
-        _TEXTS.append({**Types.TEXTS, **Patterns.TEXTS})
+        _TEXTS.append({**Types.TEXTS, **Patterns.TEXTS, **RegExp.TEXTS})
     return _TEXTS[0]
 
 

@@ -43,6 +43,7 @@ import * as F from "../../Framework/Terms.js";
 import * as Family from "../Python3/Domains.js";
 import * as P from "../Python3/Expressions.js";
 import * as PythonPatterns from "../Patterns/Expressions.js";
+import * as PythonRegExp from "../RegExp/Expressions.js";
 
 export const TYPEVAR = "typevar";
 export const PARAMSPEC = "paramspec";
@@ -138,7 +139,7 @@ function kinds(): Record<string, F.Kind> {
 
 /** The dialects of its family whose terms its positions hold, read when first needed. */
 function reads(): readonly F.Dialect[] {
-  return [P.DIALECT, PythonPatterns.DIALECT];
+  return [P.DIALECT, PythonPatterns.DIALECT, PythonRegExp.DIALECT];
 }
 
 /** The Python Types dialect: its kinds, as the framework reads them, and its family's other dialects' terms. */

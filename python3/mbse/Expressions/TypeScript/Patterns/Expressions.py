@@ -167,10 +167,12 @@ def _application(tag: str) -> F.Kind:
 
 def _reads() -> tuple[F.Dialect, ...]:
     """The dialects whose terms its positions hold, imported when first needed: `TypeScript5`, whose terms a target may
-    be and a default is, and `TypeScript Types`, a pattern's annotation."""
+    be and a default is, and `TypeScript Types`, a pattern's annotation; and `TypeScript RegExp`, as its family's dialects
+    read one another, though no pattern holds a regular expression."""
+    from ..RegExp import Expressions as TypeScriptRegExp
     from ..TypeScript5 import Expressions as TypeScript5
     from ..Types import Expressions as TypeScriptTypes
-    return TypeScript5.DIALECT, TypeScriptTypes.DIALECT
+    return TypeScript5.DIALECT, TypeScriptTypes.DIALECT, TypeScriptRegExp.DIALECT
 
 
 DIALECT = F.Dialect("TypeScript.Patterns", {tag: _application(tag) for tag in TAGS}, domain_of=_family.of,
