@@ -25,6 +25,7 @@
     "./TypeScript/TypeScript5": "./src/TypeScript/TypeScript5/index.ts",
     "./TypeScript/Types": "./src/TypeScript/Types/index.ts",
     "./TypeScript/Patterns": "./src/TypeScript/Patterns/index.ts",
+    "./TypeScript/RegExp": "./src/TypeScript/RegExp/index.ts",
     "./C/Expressions": "./src/C/Expressions/index.ts",
     "./C/Types": "./src/C/Types/index.ts",
     "./C/Preprocessor": "./src/C/Preprocessor/index.ts",

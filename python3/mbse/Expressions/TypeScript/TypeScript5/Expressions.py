@@ -18,7 +18,8 @@ carries no domain. Its kinds:
   an int, or a string, with what its text encodes, mbse-basis
   [PRI-023: domain representations](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-023): `quote`, `base` and `separators`),
   `constant`, TypeScript5's own, for what no schema holds (`null`, its `singleton`, and a regular expression, its
-  `pattern` and `flags`), with its spelling too; `templateliteral` (`quasis`, each a `templateelement`, and
+  `pattern` and `flags` as written and its `regexp`, the `TypeScript RegExp` term they encode, absent where they do not
+  parse), with its spelling too; `templateliteral` (`quasis`, each a `templateelement`, and
   `expressions`), `taggedtemplateexpression`, `thisexpression`, `super`; `parenthesizedexpression`, parentheses written in
   the source; `undefined` is an `identifier`, as in TypeScript.
 - Displays: `arrayexpression`, the framework's `list` (its `elements`, any term: an `elision` for a hole, a
@@ -139,7 +140,7 @@ def install(txn: Any) -> Any:
                   "Dialects": S.OfUnion, "Dialect": S.OfObject, "FrameworkTerm": S.OfUnion, "Term": S.OfUnion,
                   # its family's types and patterns, by name: their installs', created here where they have not run
                   "Types": S.OfUnion, "Patterns": S.OfUnion, "ArrayPattern": S.OfObject, "ObjectPattern": S.OfObject,
-                  "AssignmentPattern": S.OfObject,
+                  "AssignmentPattern": S.OfObject, "RegExp": S.OfUnion,
                   "JSXTagNameExpression": S.OfUnion, "JSXAttributeName": S.OfUnion, "JSXAttributeValue": S.OfUnion,
                   "JSXAttributeItem": S.OfUnion, "JSXChild": S.OfUnion, "Expression": S.OfObject,
                   "Identifier": S.OfObject, "PrivateIdentifier": S.OfObject, "Literal": S.OfObject,
@@ -230,6 +231,7 @@ def install(txn: Any) -> Any:
             lambda _: _.ArrayPattern.name("Expressions.TypeScript.Patterns.ArrayPattern"),
             lambda _: _.ObjectPattern.name("Expressions.TypeScript.Patterns.ObjectPattern"),
             lambda _: _.AssignmentPattern.name("Expressions.TypeScript.Patterns.AssignmentPattern"),
+            lambda _: _.RegExp.name("Expressions.TypeScript.RegExp.Term"),  # a constant's regexp: its install's
             # names and literals
             lambda _: _.Identifier.name("Expressions.TypeScript.TypeScript5.Identifier").properties({
                 "decorators": many(_.Decorator), "name": S.OfStr, "optional": S.OfBool,
@@ -243,6 +245,7 @@ def install(txn: Any) -> Any:
             lambda _: _.Constant.name("Expressions.TypeScript.TypeScript5.Constant").properties({
                 "singleton": S.OfStr,  # `null`
                 "pattern": S.OfStr, "flags": S.OfStr,  # a regular expression's, as written between and after its `/`s
+                "regexp": _.RegExp,  # the regular expression they encode, a `regexpliteral` (PRI-023)
                 "text": S.OfStr,  # its spelling, unvalidated
                 "problems": many(S.OfStr),  # what is wrong with it
             }),
@@ -496,16 +499,26 @@ binding_names = Nodes.binding_names
 # --- Checks ---
 
 
-def _constant_problems(attributes: Mapping[str, Any]) -> list[str]:
-    """A constant holds `null` or a regular expression, its `pattern` at least, its flags among `FLAGS`, each once."""
-    singleton, regex = attributes.get("singleton"), "pattern" in attributes or "flags" in attributes
+def _constant_problems(record: Any) -> list[str]:
+    """A constant holds `null` or a regular expression, its `pattern` or its `regexp` at least, its flags among `FLAGS`,
+    each once; its `regexp`'s problems, as `TypeScript RegExp` validates it, too. That its `regexp` is what its `pattern`
+    and `flags` spell is not checked, as a literal's `value` is not against its `text`."""
+    node = F.node(CONSTANT, record)
+    regexp = node.slots["regexp"]
+    held = [] if regexp is None else [f"regexp: {problem}" for problem in DIALECT.validate(regexp)]
+    return Nodes.check(CONSTANT)(record) + _constant(node.attributes, regexp is not None) + held
+
+
+def _constant(attributes: Mapping[str, Any], regexp: bool) -> list[str]:
+    singleton = attributes.get("singleton")
+    regex = "pattern" in attributes or "flags" in attributes or regexp
     if singleton is None and not regex:  # unless its text is invalid, its problems said
         return [] if "problems" in attributes else ["a constant needs a singleton or a regular expression"]
     if singleton is not None and regex:
         return ["a constant holds a singleton or a regular expression, not both"]
     if singleton is not None:
         return [] if singleton == "null" else [f"a constant's singleton must be null, got {singleton!r}"]
-    if "pattern" not in attributes:
+    if "pattern" not in attributes and not regexp:
         return ["a regular expression needs a pattern"]
     flags = str(attributes.get("flags", ""))
     if any(flag not in FLAGS for flag in flags) or len(set(flags)) != len(flags):
@@ -539,17 +552,18 @@ def _operator(tag: str, vocabulary: dict[str, FD.Signature]) -> F.Kind:
 
 def _reads() -> tuple[F.Dialect, ...]:
     """The dialects of its family whose terms its positions hold, imported when first needed (the dialects proposal,
-    Retrofit's design): `TypeScript Types` and `TypeScript Patterns`."""
+    Retrofit's design): `TypeScript Types`, `TypeScript Patterns` and `TypeScript RegExp`, a constant's `regexp`."""
     from ..Patterns import Expressions as TypeScriptPatterns
+    from ..RegExp import Expressions as TypeScriptRegExp
     from ..Types import Expressions as TypeScriptTypes
-    return TypeScriptTypes.DIALECT, TypeScriptPatterns.DIALECT
+    return TypeScriptTypes.DIALECT, TypeScriptPatterns.DIALECT, TypeScriptRegExp.DIALECT
 
 
 DIALECT = F.Dialect("TypeScript.TypeScript5", {
     IDENTIFIER: F.Kind(F.REFERENCE, required=("name",), check=Nodes.check(IDENTIFIER)),
     PRIVATEIDENTIFIER: F.Kind(F.REFERENCE, required=("name",), lexical=False, check=Nodes.check(PRIVATEIDENTIFIER)),
     LITERAL: F.Kind(F.LITERAL, spelling=("text", "problems", "quote", "base", "separators"), check=Nodes.check(LITERAL)),
-    CONSTANT: F.Kind(F.LITERAL, spelling=("text", "problems"), check=Nodes.check(CONSTANT, _constant_problems),
+    CONSTANT: F.Kind(F.LITERAL, spelling=("text", "problems"), check=_constant_problems,
                      typed=lambda record: Domains.constant(F.attributes_of(record))),
     TEMPLATELITERAL: _application(TEMPLATELITERAL, FD.Opaque(Domains.String)),
     TAGGEDTEMPLATEEXPRESSION: _application(TAGGEDTEMPLATEEXPRESSION, required=("quasi",)),
