@@ -46,6 +46,7 @@
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as TypeScriptPatterns from "../Patterns/Expressions.js";
+import * as TypeScriptRegExp from "../RegExp/Expressions.js";
 import * as Family from "../TypeScript5/Domains.js";
 import * as Nodes from "../TypeScript5/Nodes.js";
 import * as TypeScript5 from "../TypeScript5/Expressions.js";
@@ -274,9 +275,10 @@ Object.assign(KINDS, {
 });
 
 /** The dialects whose terms its positions hold, read when first needed: `TypeScript5`, whose terms a type holds, and
- * `TypeScript Patterns`, a function type's and a signature's parameters. */
+ * `TypeScript Patterns`, a function type's and a signature's parameters; and `TypeScript RegExp`, as its family's
+ * dialects read one another, though no type holds a regular expression. */
 function reads(): readonly F.Dialect[] {
-  return [TypeScript5.DIALECT, TypeScriptPatterns.DIALECT];
+  return [TypeScript5.DIALECT, TypeScriptPatterns.DIALECT, TypeScriptRegExp.DIALECT];
 }
 
 /** The TypeScript Types dialect: its kinds, as the framework reads them, an identifier among them, and its family's

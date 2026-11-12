@@ -35,6 +35,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
+import * as TypeScriptRegExp from "../RegExp/Expressions.js";
 import * as Family from "../TypeScript5/Domains.js";
 import * as Nodes from "../TypeScript5/Nodes.js";
 import * as TypeScript5 from "../TypeScript5/Expressions.js";
@@ -173,9 +174,10 @@ function application(tag: string): F.Kind {
 }
 
 /** The dialects whose terms its positions hold, read when first needed: `TypeScript5`, whose terms a target may be and a
- * default is, and `TypeScript Types`, a pattern's annotation. */
+ * default is, and `TypeScript Types`, a pattern's annotation; and `TypeScript RegExp`, as its family's dialects read one
+ * another, though no pattern holds a regular expression. */
 function reads(): readonly F.Dialect[] {
-  return [TypeScript5.DIALECT, TypeScriptTypes.DIALECT];
+  return [TypeScript5.DIALECT, TypeScriptTypes.DIALECT, TypeScriptRegExp.DIALECT];
 }
 
 /** The TypeScript Patterns dialect: its kinds, as the framework reads them, and its family's other dialects' terms. */

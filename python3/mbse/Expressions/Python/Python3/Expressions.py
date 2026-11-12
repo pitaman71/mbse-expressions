@@ -63,8 +63,8 @@ The versions of Python 3 the dialect covers are data, which `define` writes, eac
 extension is in none. A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
 calls, not a dialect.
 
-`DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types` and `Python
-Patterns` (`reads`), so that a tree mixing them is validated, inferred and printed from any of their holders. The
+`DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types`, `Python
+Patterns` and `Python RegExp` (`reads`), so that a tree mixing them is validated, inferred and printed from any of their holders. The
 writers (`constant`, `name`, `attribute`, ...) write them through the builders, wherever a term is written, in a
 transaction; a helper's writer (`keyword`, `comparison`, `comprehension`, `arg`, `formattedvalue`, ...) is given where
 its kind takes one. `Text.ToText` writes an expression as Python source,
@@ -763,10 +763,11 @@ def _operator_kind(vocabulary: dict[str, FD.Signature], **options: Any) -> F.Kin
 
 def _reads() -> tuple[F.Dialect, ...]:
     """The dialects of its family whose terms it reads, imported when first needed (the dialects proposal, Retrofit's
-    design): `Python Types`, whose `Term` a parameter's annotation holds, and `Python Patterns`."""
+    design): `Python Types`, whose `Term` a parameter's annotation holds, `Python Patterns` and `Python RegExp`."""
     from ..Patterns import Expressions as PythonPatterns
+    from ..RegExp import Expressions as PythonRegExp
     from ..Types import Expressions as PythonTypes
-    return PythonTypes.DIALECT, PythonPatterns.DIALECT
+    return PythonTypes.DIALECT, PythonPatterns.DIALECT, PythonRegExp.DIALECT
 
 
 def constant_text(attributes: Mapping[str, Any]) -> str:

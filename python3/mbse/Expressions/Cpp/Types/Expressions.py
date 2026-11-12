@@ -133,10 +133,12 @@ def define(txn: Any) -> Any:
 
 def _reads() -> tuple[F.Dialect, ...]:
     """The dialects whose terms its positions hold, imported when first needed: C++'s, whose terms and helpers a
-    type-id holds, and C Preprocessor's, whose directives an enumeration's body holds."""
+    type-id holds, and C Preprocessor's, whose directives an enumeration's body holds; and Cpp RegExp's, which no
+    position holds, as each family's dialects read one another *(agent)*."""
     from ...C.Preprocessor import Expressions as CPreprocessor
     from ..Expressions import Expressions as Cpp
-    return Cpp.DIALECT, CPreprocessor.DIALECT
+    from ..RegExp import Expressions as CppRegExp
+    return Cpp.DIALECT, CPreprocessor.DIALECT, CppRegExp.DIALECT
 
 
 DIALECT = F.Dialect("Cpp.Types", K.kinds("C++", TAGS, K.PREFIXES, K.CPP_SUFFIXES), domain_of=K.untyped, reads=_reads)

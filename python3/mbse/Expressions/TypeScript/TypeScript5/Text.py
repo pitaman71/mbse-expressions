@@ -1,5 +1,5 @@
-"""Text of the TypeScript family: `ToText(expression)` is a term of TypeScript5, `TypeScript Types` or `TypeScript
-Patterns` (or anything `Terms.term` reads one from) as TypeScript source, as mbse-programs' printer writes it
+"""Text of the TypeScript family: `ToText(expression)` is a term of TypeScript5, `TypeScript Types`, `TypeScript
+Patterns` or `TypeScript RegExp` (or anything `Terms.term` reads one from) as TypeScript source, as mbse-programs' printer writes it
 (`mbse:mbse-programs/python3/mbse/Programs/TypeScript/_Printer.py`): its types, patterns and JSX within it, parentheses
 written in the term printed, and those its precedence needs added (for an expression, also where `??` meets `||` or
 `&&`, where an arrow's body is an object, around a `new`'s callee that calls, and around a number's member access; for a
@@ -10,8 +10,9 @@ with its `n`, a string in its quote (a double quote by default) with its escapes
 (`Terms.invalid_text`), refused by the name of the dialect whose `Term` holds it. A body of statements, not part of the
 term, is written `{}`, where mbse-programs writes the statements it relates. An arrow's lone type parameter without a
 constraint is written `<T,>`, so that the text reads alike in a `.ts` and a `.tsx` file. Its `Printer` writes
-TypeScript5's kinds and helpers itself, and dispatches the types' and the patterns' to their dialects' `Text.TEXTS`, as
-SystemVerilog's family printer does. Reading TypeScript (`FromText`) is mbse-programs' (the dialects proposal, Decided,
+TypeScript5's kinds and helpers itself, and dispatches the types', the patterns' and the regular expressions' to their
+dialects' `Text.TEXTS`, as SystemVerilog's family printer does. A regular expression's constant is written in its
+spelling, `/pattern/flags`, else, where it has none, as its `regexp` is written. Reading TypeScript (`FromText`) is mbse-programs' (the dialects proposal, Decided,
 6)."""
 
 from __future__ import annotations
@@ -114,12 +115,14 @@ def _nodes(value: Any) -> tuple[T.Node, ...]:
 
 class Printer:
     """Writes a term's source, of any dialect of the family: its kind as TypeScript writes it, its helpers from its
-    `Node`; a `TypeScript Types`' or a `TypeScript Patterns`' kind or helper as its dialect's `Text.TEXTS` writes it."""
+    `Node`; a `TypeScript Types`', a `TypeScript Patterns`' or a `TypeScript RegExp`' kind or helper as its dialect's
+    `Text.TEXTS` writes it."""
 
     def __init__(self) -> None:
         from ..Patterns import Text as Patterns
+        from ..RegExp import Text as RegExp
         from ..Types import Text as Types
-        self.texts = {**Types.TEXTS, **Patterns.TEXTS}
+        self.texts = {**Types.TEXTS, **Patterns.TEXTS, **RegExp.TEXTS}
         self.types = Types
         self.invalid: dict[int, tuple[T.Node, Any]] = {}  # each node of invalid syntax read, and the dialect holding it
 
@@ -189,7 +192,7 @@ class Printer:
         return node.attributes["text"] if "text" in node.attributes else _literal(node.attributes)
 
     def _constant(self, node: T.Node) -> str:
-        return T.constant_text(node.attributes)
+        return T.constant_text(node.attributes, lambda: self.text(node.slots["regexp"]))
 
     def _templateliteral(self, node: T.Node) -> str:
         quasis = _nodes(node.helpers.get("quasis"))

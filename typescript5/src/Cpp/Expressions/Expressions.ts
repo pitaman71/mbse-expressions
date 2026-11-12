@@ -73,6 +73,7 @@ import * as F from "../../Framework/Terms.js";
 import * as Domains from "../../C/Expressions/Domains.js";
 import * as C from "../../C/Expressions/Kinds.js";
 import * as CPreprocessor from "../../C/Preprocessor/Expressions.js";
+import * as CppRegExp from "../RegExp/Expressions.js";
 import * as CppTypes from "../Types/Expressions.js";
 
 export const [USERDEFINEDLITERAL, IDEXPRESSION, THISEXPRESSION, LAMBDAEXPRESSION] = [
@@ -687,9 +688,10 @@ function native(value: unknown): Writer | null {
 }
 
 /** The dialects whose terms its positions are to hold, read when first needed (the dialects proposal, Retrofit's
- * design): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects. */
+ * design): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects; and `Cpp RegExp`, which no position
+ * holds, as each family's dialects read one another *(agent)*. */
 function reads(): readonly F.Dialect[] {
-  return [CppTypes.DIALECT, CPreprocessor.DIALECT];
+  return [CppTypes.DIALECT, CPreprocessor.DIALECT, CppRegExp.DIALECT];
 }
 
 /** The Cpp dialect: its kinds, as the framework reads them, and the terms of the dialects it reads. */

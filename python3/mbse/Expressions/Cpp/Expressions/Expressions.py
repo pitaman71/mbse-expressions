@@ -700,10 +700,12 @@ def _native(value: Any) -> Writer | None:
 
 def _reads() -> tuple[F.Dialect, ...]:
     """The dialects whose terms its positions are to hold, imported when first needed (the dialects proposal,
-    Retrofit's design): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects."""
+    Retrofit's design): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects; and `Cpp RegExp`, which
+    no position holds, as each family's dialects read one another *(agent)*."""
     from ...C.Preprocessor import Expressions as CPreprocessor
+    from ..RegExp import Expressions as CppRegExp
     from ..Types import Expressions as CppTypes
-    return CppTypes.DIALECT, CPreprocessor.DIALECT
+    return CppTypes.DIALECT, CPreprocessor.DIALECT, CppRegExp.DIALECT
 
 
 DIALECT = F.Dialect("Cpp.Expressions", {tag: _SHARED[tag] if tag in _SHARED else _OWN[tag] for tag in _TAGS},

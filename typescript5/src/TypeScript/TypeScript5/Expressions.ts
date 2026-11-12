@@ -19,7 +19,8 @@
  *   float, a bigint, an int, or a string, with what its text encodes, mbse-basis
  *   [PRI-023: domain representations](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-023): `quote`, `base` and `separators`),
  *   `constant`, TypeScript5's own, for what no schema holds (`null`, its `singleton`, and a regular expression, its
- *   `pattern` and `flags`), with its spelling too; `templateliteral` (`quasis`, each a `templateelement`, and
+ *   `pattern` and `flags` as written and its `regexp`, the `TypeScript RegExp` term they encode, absent where they do
+ *   not parse), with its spelling too; `templateliteral` (`quasis`, each a `templateelement`, and
  *   `expressions`), `taggedtemplateexpression`, `thisexpression`, `super`; `parenthesizedexpression`, parentheses written
  *   in the source; `undefined` is an `identifier`, as in TypeScript.
  * - Displays: `arrayexpression`, the framework's `list` (its `elements`, any term: an `elision` for a hole, a
@@ -77,11 +78,12 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { Repr } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as TypeScriptPatterns from "../Patterns/Expressions.js";
+import * as TypeScriptRegExp from "../RegExp/Expressions.js";
 import * as TypeScriptTypes from "../Types/Expressions.js";
 import * as Domains from "./Domains.js";
 import * as Nodes from "./Nodes.js";
@@ -140,7 +142,7 @@ export const EXTENSIONS: ReadonlySet<string> = new Set([JSXELEMENT, JSXFRAGMENT,
 /** A string's quotes, as TypeScript writes them. */
 export const QUOTES: readonly string[] = Nodes.QUOTES;
 
-/** A regular expression's flags, as ECMAScript 2025 has them. */
+/** A regular expression's flags, as ECMAScript 2026 has them. */
 export const FLAGS = "dgimsuvy";
 
 /** TypeScript5's union of its kinds, added to the framework's terms as the branch `typescript5`, its own kinds, the
@@ -161,7 +163,7 @@ export function install(txn: any): any {
       Dialects: S.OfUnion, Dialect: S.OfObject, FrameworkTerm: S.OfUnion, Term: S.OfUnion,
       // its family's types and patterns, by name: their installs', created here where they have not run
       Types: S.OfUnion, Patterns: S.OfUnion, ArrayPattern: S.OfObject, ObjectPattern: S.OfObject,
-      AssignmentPattern: S.OfObject,
+      AssignmentPattern: S.OfObject, RegExp: S.OfUnion,
       JSXTagNameExpression: S.OfUnion, JSXAttributeName: S.OfUnion, JSXAttributeValue: S.OfUnion,
       JSXAttributeItem: S.OfUnion, JSXChild: S.OfUnion, Expression: S.OfObject,
       Identifier: S.OfObject, PrivateIdentifier: S.OfObject, Literal: S.OfObject,
@@ -252,6 +254,7 @@ export function install(txn: any): any {
       (_: any) => _.ArrayPattern.name("Expressions.TypeScript.Patterns.ArrayPattern"),
       (_: any) => _.ObjectPattern.name("Expressions.TypeScript.Patterns.ObjectPattern"),
       (_: any) => _.AssignmentPattern.name("Expressions.TypeScript.Patterns.AssignmentPattern"),
+      (_: any) => _.RegExp.name("Expressions.TypeScript.RegExp.Term"), // a constant's regexp: its install's
       // names and literals
       (_: any) => _.Identifier.name("Expressions.TypeScript.TypeScript5.Identifier").properties({
           decorators: many(_.Decorator), name: S.OfStr, optional: S.OfBool,
@@ -265,6 +268,7 @@ export function install(txn: any): any {
       (_: any) => _.Constant.name("Expressions.TypeScript.TypeScript5.Constant").properties({
           singleton: S.OfStr,  // `null`
           pattern: S.OfStr, flags: S.OfStr,  // a regular expression's, as written between and after its `/`s
+          regexp: _.RegExp,  // the regular expression they encode, a `regexpliteral` (PRI-023)
           text: S.OfStr,  // its spelling, unvalidated
           problems: many(S.OfStr),  // what is wrong with it
       }),
@@ -512,26 +516,42 @@ export function tree(term: any): Node {
 /** The names a pattern binds (`Nodes.boundNames`). */
 export const boundNames = Nodes.boundNames;
 
-/** A constant's text: as written (`text`), else its default spelling, `null` or a regular expression (`/a+/g`). The
- * printer writes it, and a refusal shows it (`Kind.shown`). */
-export function constantText(attributes: ReadonlyMap<string, any>): string {
+/** A constant's text: as written (`text`), else its default spelling, `null` or a regular expression (`/a+/g`), or,
+ * where it has no `pattern`, its `regexp`'s text, which `regexp` gives (the printer's text of it: this module has no
+ * printer, and a refusal that shows the constant, `Kind.shown`, none to give). The printer writes it. */
+export function constantText(attributes: ReadonlyMap<string, any>, regexp: (() => string) | null = null): string {
   if (attributes.has("text")) return attributes.get("text");
   if (attributes.has("singleton")) return attributes.get("singleton");
+  if (!attributes.has("pattern")) { // its regexp, where it has no spelling
+    if (regexp === null) {
+      throw new Errors.ValueError("a TypeScript5 constant with no pattern is written from its regexp, by its printer");
+    }
+    return regexp();
+  }
   return `/${attributes.get("pattern")}/${attributes.get("flags") ?? ""}`;
 }
 
 // --- Checks ---
 
-/** A constant holds `null` or a regular expression, its `pattern` at least, its flags among `FLAGS`, each once. */
-function constantProblems(attributes: ReadonlyMap<string, any>): string[] {
+/** A constant holds `null` or a regular expression, its `pattern` or its `regexp` at least, its flags among `FLAGS`,
+ * each once; its `regexp`'s problems, as `TypeScript RegExp` validates it, too. That its `regexp` is what its `pattern`
+ * and `flags` spell is not checked, as a literal's `value` is not against its `text`. */
+function constantProblems(record: any): string[] {
+  const node = F.node(CONSTANT, record);
+  const regexp = node.slots.get("regexp");
+  const held = regexp === null ? [] : DIALECT.validate(regexp).map((problem) => `regexp: ${problem}`);
+  return [...Nodes.check(CONSTANT, (attributes) => constant(attributes, regexp !== null))(record), ...held];
+}
+
+function constant(attributes: ReadonlyMap<string, any>, regexp: boolean): string[] {
   const singleton = attributes.get("singleton");
-  const regex = attributes.has("pattern") || attributes.has("flags");
+  const regex = attributes.has("pattern") || attributes.has("flags") || regexp;
   if (singleton === undefined && !regex) { // unless its text is invalid, its problems said
     return attributes.has("problems") ? [] : ["a constant needs a singleton or a regular expression"];
   }
   if (singleton !== undefined && regex) return ["a constant holds a singleton or a regular expression, not both"];
   if (singleton !== undefined) return singleton === "null" ? [] : [`a constant's singleton must be null, got ${repr(singleton)}`];
-  if (!attributes.has("pattern")) return ["a regular expression needs a pattern"];
+  if (!attributes.has("pattern") && !regexp) return ["a regular expression needs a pattern"];
   const flags = String(attributes.get("flags") ?? "");
   if ([...flags].some((flag) => !FLAGS.includes(flag)) || new Set(flags).size !== flags.length) {
     return [`a regular expression's flags cannot be ${repr(flags)}`];
@@ -562,9 +582,9 @@ function operatorKind(tag: string, vocabulary: ReadonlyMap<string, FD.Signature>
 }
 
 /** The dialects of its family whose terms its positions hold, read when first needed (the dialects proposal,
- * Retrofit's design): `TypeScript Types` and `TypeScript Patterns`. */
+ * Retrofit's design): `TypeScript Types`, `TypeScript Patterns` and `TypeScript RegExp`, a constant's `regexp`. */
 function reads(): readonly F.Dialect[] {
-  return [TypeScriptTypes.DIALECT, TypeScriptPatterns.DIALECT];
+  return [TypeScriptTypes.DIALECT, TypeScriptPatterns.DIALECT, TypeScriptRegExp.DIALECT];
 }
 
 /** The TypeScript5 dialect: its kinds, as the framework reads them, and its family's other dialects' terms: the patterns
@@ -574,9 +594,8 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
   [PRIVATEIDENTIFIER]: new F.Kind(F.REFERENCE, { required: ["name"], lexical: false, check: Nodes.check(PRIVATEIDENTIFIER) }),
   [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "quote", "base", "separators"],
     check: Nodes.check(LITERAL) }),
-  [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: Nodes.check(CONSTANT, constantProblems),
-    typed: (record) => Domains.constant(F.attributesOf(record)),
-    shown: constantText }),
+  [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: constantProblems,
+    typed: (record) => Domains.constant(F.attributesOf(record)), shown: constantText }),
   [TEMPLATELITERAL]: application(TEMPLATELITERAL, new FD.Opaque(Domains.String)),
   [TAGGEDTEMPLATEEXPRESSION]: application(TAGGEDTEMPLATEEXPRESSION, new FD.Opaque(), { required: ["quasi"] }),
   [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false }),

@@ -1,0 +1,306 @@
+{
+ "grammar": "regexpp's node types (`type`), in the order its `Node` union lists them, each a kind of the TypeScript RegExp dialect (`kinds`, a branch of `Expressions.TypeScript.RegExp.Term`, its type lowercased) or one of its helpers (`helpers`, the value object schema `Expressions.TypeScript.RegExp.<schema>`): `Flags` and `ModifierFlags`, a literal's and a modifiers' parts. A type several interfaces share lists them (`interfaces`), each with the values of its `kind` it has, an assertion's `assertionKind` and a character set's `setKind`. Each type's `properties` maps regexpp's properties but `type`, `parent`, `start` and `end` (its tag, and where it stands in its tree and its source) to the kind's or the helper's, in regexpp's order: a property named `kind` is `assertionKind` or `setKind`, and `global` `isGlobal`, as mbse-programs renames a property named by a keyword of Python or the framework's `kind`; `dropped` lists what regexpp derives from the tree rather than reads (a group's `references`, a backreference's `resolved` and `ambiguous`), and `raw` where the kind's parts spell it. Generated from regexpp's declarations of its tree (`index.d.ts`, module `@eslint-community/regexpp/ast`)",
+ "checked": "@eslint-community/regexpp 4.12.3 (ECMAScript 2025, its latest): its 20 node types, of 28 interfaces",
+ "nodes": [
+  {
+   "node": "Alternative",
+   "kinds": [
+    "alternative"
+   ],
+   "properties": {
+    "elements": "elements"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "CapturingGroup",
+   "kinds": [
+    "capturinggroup"
+   ],
+   "properties": {
+    "name": "name",
+    "alternatives": "alternatives"
+   },
+   "dropped": [
+    "raw",
+    "references"
+   ]
+  },
+  {
+   "node": "CharacterClass",
+   "kinds": [
+    "characterclass"
+   ],
+   "interfaces": {
+    "ClassRangesCharacterClass": [],
+    "UnicodeSetsCharacterClass": []
+   },
+   "properties": {
+    "unicodeSets": "unicodeSets",
+    "negate": "negate",
+    "elements": "elements"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "CharacterClassRange",
+   "kinds": [
+    "characterclassrange"
+   ],
+   "properties": {
+    "min": "min",
+    "max": "max"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "ClassIntersection",
+   "kinds": [
+    "classintersection"
+   ],
+   "properties": {
+    "left": "left",
+    "right": "right"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "ClassStringDisjunction",
+   "kinds": [
+    "classstringdisjunction"
+   ],
+   "properties": {
+    "alternatives": "alternatives"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "ClassSubtraction",
+   "kinds": [
+    "classsubtraction"
+   ],
+   "properties": {
+    "left": "left",
+    "right": "right"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "ExpressionCharacterClass",
+   "kinds": [
+    "expressioncharacterclass"
+   ],
+   "properties": {
+    "negate": "negate",
+    "expression": "expression"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "Group",
+   "kinds": [
+    "group"
+   ],
+   "properties": {
+    "modifiers": "modifiers",
+    "alternatives": "alternatives"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "Assertion",
+   "kinds": [
+    "assertion"
+   ],
+   "interfaces": {
+    "LookaheadAssertion": [
+     "lookahead"
+    ],
+    "LookbehindAssertion": [
+     "lookbehind"
+    ],
+    "EdgeAssertion": [
+     "end",
+     "start"
+    ],
+    "WordBoundaryAssertion": [
+     "word"
+    ]
+   },
+   "properties": {
+    "kind": "assertionKind",
+    "negate": "negate",
+    "alternatives": "alternatives"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "Modifiers",
+   "kinds": [
+    "modifiers"
+   ],
+   "properties": {
+    "add": "add",
+    "remove": "remove"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "Pattern",
+   "kinds": [
+    "pattern"
+   ],
+   "properties": {
+    "alternatives": "alternatives"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "Quantifier",
+   "kinds": [
+    "quantifier"
+   ],
+   "properties": {
+    "raw": "raw",
+    "min": "min",
+    "max": "max",
+    "greedy": "greedy",
+    "element": "element"
+   }
+  },
+  {
+   "node": "RegExpLiteral",
+   "kinds": [
+    "regexpliteral"
+   ],
+   "properties": {
+    "pattern": "pattern",
+    "flags": "flags"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "StringAlternative",
+   "kinds": [
+    "stringalternative"
+   ],
+   "properties": {
+    "elements": "elements"
+   },
+   "dropped": [
+    "raw"
+   ]
+  },
+  {
+   "node": "Backreference",
+   "kinds": [
+    "backreference"
+   ],
+   "interfaces": {
+    "AmbiguousBackreference": [],
+    "UnambiguousBackreference": []
+   },
+   "properties": {
+    "raw": "raw",
+    "ref": "ref"
+   },
+   "dropped": [
+    "ambiguous",
+    "resolved"
+   ]
+  },
+  {
+   "node": "Character",
+   "kinds": [
+    "character"
+   ],
+   "properties": {
+    "raw": "raw",
+    "value": "value"
+   }
+  },
+  {
+   "node": "CharacterSet",
+   "kinds": [
+    "characterset"
+   ],
+   "interfaces": {
+    "AnyCharacterSet": [
+     "any"
+    ],
+    "EscapeCharacterSet": [
+     "digit",
+     "space",
+     "word"
+    ],
+    "CharacterUnicodePropertyCharacterSet": [
+     "property"
+    ],
+    "StringsUnicodePropertyCharacterSet": [
+     "property"
+    ]
+   },
+   "properties": {
+    "raw": "raw",
+    "kind": "setKind",
+    "negate": "negate",
+    "strings": "strings",
+    "key": "key",
+    "value": "value"
+   }
+  },
+  {
+   "node": "Flags",
+   "helpers": [
+    "Flags"
+   ],
+   "properties": {
+    "raw": "raw",
+    "dotAll": "dotAll",
+    "global": "isGlobal",
+    "hasIndices": "hasIndices",
+    "ignoreCase": "ignoreCase",
+    "multiline": "multiline",
+    "sticky": "sticky",
+    "unicode": "unicode",
+    "unicodeSets": "unicodeSets"
+   }
+  },
+  {
+   "node": "ModifierFlags",
+   "helpers": [
+    "ModifierFlags"
+   ],
+   "properties": {
+    "raw": "raw",
+    "dotAll": "dotAll",
+    "ignoreCase": "ignoreCase",
+    "multiline": "multiline"
+   }
+  }
+ ]
+}

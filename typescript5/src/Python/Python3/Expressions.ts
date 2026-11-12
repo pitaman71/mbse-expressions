@@ -64,8 +64,8 @@
  * in none. A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
  * calls, not a dialect.
  *
- * `DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types` and `Python
- * Patterns` (`reads`), so that a tree mixing them is validated, inferred and printed from any of their holders. The
+ * `DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types`, `Python
+ * Patterns` and `Python RegExp` (`reads`), so that a tree mixing them is validated, inferred and printed from any of their holders. The
  * writers (`constant`, `name`, `attribute`, ...) write them through the builders, wherever a term is written, in a
  * transaction; a helper's writer (`keyword`, `comparison`, `comprehension`, `arg`, `formattedvalue`, ...) is given where
  * its kind takes one. JavaScript has no complex numbers and no `Ellipsis`: `Complex` and `ELLIPSIS` stand for them where
@@ -93,6 +93,7 @@ import { Repr, Schemas } from "@mbse/schemas/Framework";
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as PythonPatterns from "../Patterns/Expressions.js";
+import * as PythonRegExp from "../RegExp/Expressions.js";
 import * as PythonTypes from "../Types/Expressions.js";
 import * as Domains from "./Domains.js";
 
@@ -762,9 +763,9 @@ function operatorKind(vocabulary: ReadonlyMap<string, FD.Signature>, options: F.
 }
 
 /** The dialects of its family whose terms it reads, read when first needed (the dialects proposal, Retrofit's design):
- * `Python Types`, whose `Term` a parameter's annotation holds, and `Python Patterns`. */
+ * `Python Types`, whose `Term` a parameter's annotation holds, `Python Patterns` and `Python RegExp`. */
 function reads(): readonly F.Dialect[] {
-  return [PythonTypes.DIALECT, PythonPatterns.DIALECT];
+  return [PythonTypes.DIALECT, PythonPatterns.DIALECT, PythonRegExp.DIALECT];
 }
 
 /** The Python3 dialect: its kinds, as the framework reads them, and its family's other dialects' terms. */
