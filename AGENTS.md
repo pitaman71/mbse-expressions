@@ -63,7 +63,8 @@ no programs and no per-language cheat sheets. `skills/sync.sh` copies it byte fo
 `python3/mbse/Expressions/skill/` and `typescript5/skill/`; SKL-01 checks the copies in both suites, and SKL-03 that
 every case it links has its `<a id>` in both languages, but for the cases
 [Equivalence of the implementations](docs/EQUIVALENCE.md#cases-in-one-language-only) lists as one language's only (none yet). Each
-tutorial step's markdown cell starts with `<a id="Tnn.k"></a>`, and each test case's with `<a id="ID"></a>`, the same in
+tutorial step's markdown cell starts with `<a id="Tnn.k"></a>` (on a page of a tutorial, `nn_mm_<Name>`, such as
+tutorial 8's sublanguages, `<a id="Tnn.mm.k"></a>`), and each test case's with `<a id="ID"></a>`, the same in
 both languages. A how the skill teaches with no case is a bug, since it is untested
 ([the basis](https://github.com/pitaman71/mbse-basis/blob/main/docs/README.md#the-doc-spec)): write the case, in both languages, before linking it.
 SKL-04 finds such gaps: each section of the skill (a `##` or `###` heading and its text) links a case in each
