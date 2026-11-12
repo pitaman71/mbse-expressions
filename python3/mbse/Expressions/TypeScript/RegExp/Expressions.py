@@ -258,13 +258,16 @@ def _alternatives(node: F.Node) -> list[str]:
 
 def _code_point(node: F.Node | None) -> int | None:
     """A character's code point, where a node is a character holding one."""
-    return node.attributes.get("value") if node is not None and node.kind == CHARACTER else None
+    value = node.attributes.get("value") if node is not None and node.kind == CHARACTER else None
+    return value if type(value) is int else None
 
 
 def _quantifier(node: F.Node) -> list[str]:
     low, high = node.attributes.get("min"), node.attributes.get("max")
     if low is None:
         return ["a quantifier needs a min"]
+    if type(low) is not int or (high is not None and type(high) is not int):  # validation reports its type
+        return []
     if low < 0:
         return [f"a quantifier's min must not be negative, got {low}"]
     return [f"a quantifier's max {high} is less than its min {low}"] if high is not None and high < low else []
@@ -310,6 +313,8 @@ def _character(node: F.Node) -> list[str]:
     value = node.attributes.get("value")
     if value is None:
         return ["a character needs a value"]
+    if type(value) is not int:  # validation reports its type
+        return []
     return [] if 0 <= value <= 0x10FFFF else [f"a character's value must be a code point, got {value}"]
 
 

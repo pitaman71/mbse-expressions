@@ -271,13 +271,15 @@ function alternatives(node: F.Node): string[] {
 
 /** A character's code point, where a node is a character holding one. */
 function codePoint(node: F.Node | undefined): bigint | undefined {
-  return node !== undefined && node.kind === CHARACTER ? node.attributes.get("value") : undefined;
+  const value = node !== undefined && node.kind === CHARACTER ? node.attributes.get("value") : undefined;
+  return typeof value === "bigint" ? value : undefined;
 }
 
 function quantifier(node: F.Node): string[] {
   const low: bigint | undefined = node.attributes.get("min");
   const high: bigint | undefined = node.attributes.get("max");
   if (low === undefined) return ["a quantifier needs a min"];
+  if (typeof low !== "bigint" || (high !== undefined && typeof high !== "bigint")) return []; // validation reports its type
   if (low < 0n) return [`a quantifier's min must not be negative, got ${low}`];
   return high !== undefined && high < low ? [`a quantifier's max ${high} is less than its min ${low}`] : [];
 }
@@ -319,6 +321,7 @@ function characterSet(node: F.Node): string[] {
 function character(node: F.Node): string[] {
   const value: bigint | undefined = node.attributes.get("value");
   if (value === undefined) return ["a character needs a value"];
+  if (typeof value !== "bigint") return []; // validation reports its type
   return value >= 0n && value <= 0x10FFFFn ? [] : [`a character's value must be a code point, got ${value}`];
 }
 
