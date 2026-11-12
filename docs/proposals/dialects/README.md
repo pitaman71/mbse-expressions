@@ -372,6 +372,29 @@ quoted as given.
   of the other dialects (type, pattern, regex and preprocessor dialects, `let` variations). Its timing against the INI
   priorities is open; which release holds what is decided (Decided, "0.8.0 holds stages 1 to 5").
 
+### Decided for the retrofit (2026-11-12)
+
+Asked five questions the retrofit left open (*Retrofit's design*, Open, for the user; [the API](../port/API.md), items
+216 and 268), each with a recommendation, the user answered four, quoted as given, and, asked again, the fifth:
+
+1. **An inventory of what evaluation refuses**: "1. defer this past 2,3,4,5". Deferred: taken up once the four
+   decisions below are built.
+2. **Which regular expressions are dialects**: "2. (b) ofc". Every regular expression a language's standard defines,
+   its library's included, is a dialect: ECMA-262's RegExp (`TypeScript RegExp`), Python's `re`, its Library
+   Reference's (`Python RegExp`), and C++'s `std::regex`, whose grammars ISO/IEC 14882 defines in [re.grammar]
+   (`Cpp RegExp`); not MATLAB's `regexp` or Excel's `REGEX`, which have no standard recorded. This closes the
+   retrofit's Open, 1, as recommended.
+3. **JSX**: "3. (a) is fine". JSX stays `TypeScript5`'s extension kinds, as mbse-programs marks it, and is no dialect
+   of its own: no standard defines it as a sublanguage. This closes the retrofit's Open, 2, as recommended.
+4. **A constant in a refusal**: "4. yes". Where a refusal message describes a constant, which has no value, it shows
+   the constant's text as written, else its default spelling, where it showed `None`: "SystemVerilog constant 8'd200
+   of logic [7:0] has no Patterns counterpart", not "SystemVerilog constant None of logic [7:0] ..." (API 216); in
+   every dialect, in both languages. Built as [the API](../port/API.md), item 269.
+5. **One name for what a pattern binds**: "5 - yes as you suggested". TypeScript's `binding_names` (`bindingNames`)
+   is renamed `bound_names` (`boundNames`), the name Python's and SystemVerilog's patterns and the C family give what
+   a pattern binds, in both languages, its callers, tests, skill and [Equivalence](../../EQUIVALENCE.md) following,
+   with no alias. Built as [the API](../port/API.md), item 270.
+
 ## Questions for the user
 
 1. **Names.** Proposed: the module, schemas and singleton renamed by dialect (`Python` to `Python3`,
@@ -1109,24 +1132,22 @@ change as it lands.
        and [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md)'s
        stage 6 marked built; then the release, 0.10.0.
 
-   - **Open, for the user** (each checked against the Decided sections, which do not settle it; the build proceeds
-     on the recommendation, each answer changing one group at most):
+   - **Decided by the user** (2026-11-12, Decided for the retrofit, 2 and 3; each was open here, checked against the
+     Decided sections, which did not settle it):
      1. *Which regular expressions are dialects.* The record names "ECMA-262's, Python's `re`", by the rule "if the
         standard says it's a sublanguage". Python's is its Library Reference's, a pattern held by no grammar
         position, only by a string; and ISO/IEC 14882 itself defines `std::regex`'s grammars ([re.grammar]:
-        ECMAScript's, modified, and POSIX's basic, extended, awk, grep and egrep), which the record does not name.
-        (a) Only a regular expression a language's grammar holds (ECMAScript's literal): `Python RegExp` dropped,
-        against the record's naming of it. (b) Each a language's standard defines, its library's included:
-        ECMA-262's, Python's `re` and C++'s [re.grammar], as `Cpp RegExp`, a further group designed once answered;
-        not MATLAB's or Excel's, which have no standard recorded. (c) (b), and MATLAB's `regexp` and Excel's
-        `REGEX` functions too. *Recommended: (b)*, the record's rule read as written; group PR proceeds under (b)
-        or (c).
+        ECMAScript's, modified, and POSIX's basic, extended, awk, grep and egrep), which the record did not name.
+        Of (a) only a regular expression a language's grammar holds (ECMAScript's literal), (b) each a language's
+        standard defines, its library's included, and (c) (b) and MATLAB's `regexp` and Excel's `REGEX` too, the
+        user chose (b), as recommended: ECMA-262's, Python's `re` and C++'s [re.grammar], as `Cpp RegExp`, a further
+        group beside PR and TR; not MATLAB's or Excel's, which have no standard recorded.
      2. *JSX.* Decided, 5 named JSX among the sublanguages an expression holds, and stage 6 makes a sublanguage a
         dialect; but the retrofit as recorded ("type, pattern, regex and preprocessor dialects") does not name it,
         and JSX's own specification calls it a syntax extension of ECMAScript, which mbse-programs marks as an
-        extension. (a) JSX stays `TypeScript5`'s extension kinds. (b) `TypeScript JSX`, a dialect of its own, its
-        kinds and helpers moved as the types' are, in group T. *Recommended: (a)*: no standard defines it as a
-        sublanguage, and it can move later as the types do now, with nothing built on it to rework.
+        extension. Of (a) JSX staying `TypeScript5`'s extension kinds and (b) `TypeScript JSX`, a dialect of its own,
+        the user chose (a), as recommended: no standard defines it as a sublanguage, and it can move later as the
+        types do now, with nothing built on it to rework.
    - **Reported, for mbse-programs' port** (mbse-basis [PRI-032: a sibling's gap is reported, not worked around](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-032)):
      it has no kinds for a regular expression's body, in TypeScript or in Python, so its reader leaves
      `TypeScript RegExp` unwritten until it parses one (as regexpp does); and it cannot tell a C or C++ macro's use
@@ -1144,7 +1165,8 @@ change as it lands.
    `24_C_Preprocessor` (CPD); the grammar files map each new dialect's nodes, DIA-20, DIA-23 and DIA-26 checking them;
    the corpus has a case of each. Two choices differ from the design, for review: an enumerator is a kind of each
    `Types` dialect, not a helper union (API 247), and a type's position is a term slot (API 249). Not built, waiting on
-   the user: `Python RegExp` and `TypeScript RegExp` (Open, 1, groups PR and TR) and JSX (Open, 2).
+   the user then, and since decided (Decided for the retrofit, 2): the three regular expression dialects, `Python RegExp`,
+   `TypeScript RegExp` and `Cpp RegExp` (groups PR and TR, and C++'s), built apart; JSX stays `TypeScript5`'s (3).
    Recorded in mbse-basis as [CAP-276: Python's type expressions and match patterns as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-276.md),
    [CAP-277: TypeScript's types and destructuring patterns as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-277.md),
    [CAP-278: C's and C++'s type names and preprocessor directives as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-278.md) and
@@ -1164,7 +1186,8 @@ change as it lands.
      it; the coordinator decided for the owner, everywhere, through the framework's `Dialect.owner` (API 261, 262).
    - **Invalid syntax within a helper holds no term**, so no owner can be read from it: a printer names it by the
      dialect printing it (API 261).
-   - **A constant is described as `None` in refusal messages** (API 216): still open with the user, left as it is.
+   - **A constant was described as `None` in refusal messages** (API 216): it shows its text since, as the user decided
+     (Decided for the retrofit, 4; API 269).
 
 7. **Tutorials, skill, README, EQUIVALENCE; the releases.** The tutorials and the skill followed each stage as it
    landed. **0.8.0 is released after stage 5**, as the user decided (Decided, "0.8.0 holds stages 1 to 5"): stages 1
