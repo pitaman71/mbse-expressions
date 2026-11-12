@@ -145,6 +145,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    maximum of nothing unknown.
    [CAP-096: collections in expressions](mbse:mbse-basis/docs/capabilities/CAP-096.md#collections).
    - Python: [T06.2: An item](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.2) · TypeScript: [T06.2: An item](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.2)
+   - Python: [T07.4: Quantifiers bind too](mbse:mbse-expressions/python3/tutorials/07_Bindings.ipynb#T07.4) · TypeScript: [T07.4: Quantifiers bind too](mbse:mbse-expressions/typescript5/tutorials/07_Bindings.ipynb#T07.4)
    - Python: [T11.1: A list is a collection](mbse:mbse-expressions/python3/tutorials/11_Constraints_Over_Collections.ipynb#T11.1) · TypeScript: [T11.1: A list is a collection](mbse:mbse-expressions/typescript5/tutorials/11_Constraints_Over_Collections.ipynb#T11.1)
    - Python: [T11.2: Quantifiers](mbse:mbse-expressions/python3/tutorials/11_Constraints_Over_Collections.ipynb#T11.2) · TypeScript: [T11.2: Quantifiers](mbse:mbse-expressions/typescript5/tutorials/11_Constraints_Over_Collections.ipynb#T11.2)
    - Python: [T11.3: Empty collections](mbse:mbse-expressions/python3/tutorials/11_Constraints_Over_Collections.ipynb#T11.3) · TypeScript: [T11.3: Empty collections](mbse:mbse-expressions/typescript5/tutorials/11_Constraints_Over_Collections.ipynb#T11.3)
@@ -186,6 +187,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    rewriting is a translator from a dialect to itself, a list of rules ([Translating](references/translating.md)).
    [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#the-framework).
    - Python: [T04.3: Free names](mbse:mbse-expressions/python3/tutorials/04_Names.ipynb#T04.3) · TypeScript: [T04.3: Free names](mbse:mbse-expressions/typescript5/tutorials/04_Names.ipynb#T04.3)
+   - Python: [T07.1: let](mbse:mbse-expressions/python3/tutorials/07_Bindings.ipynb#T07.1) · TypeScript: [T07.1: let](mbse:mbse-expressions/typescript5/tutorials/07_Bindings.ipynb#T07.1)
    - Python: [T05.1: a + b * c is a tree](mbse:mbse-expressions/python3/tutorials/05_Operators.ipynb#T05.1) · TypeScript: [T05.1: a + b * c is a tree](mbse:mbse-expressions/typescript5/tutorials/05_Operators.ipynb#T05.1)
    - Python: [T06.4: A chain](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.4) · TypeScript: [T06.4: A chain](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.4)
    - Python: [T06.5: Helpers are parts, not terms](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.5) · TypeScript: [T06.5: Helpers are parts, not terms](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.5)
