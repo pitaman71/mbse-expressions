@@ -83,14 +83,10 @@ class _Printer:
         attributes = F.attributes_of(record)
         arguments = F.arguments_of(record)
         if tag in (P.LITERAL, P.CONSTANT):
-            if "text" in attributes:  # its spelling, as written
-                return attributes["text"], _UNARY if attributes["text"].startswith("-") else _PRIMARY
-            if tag == P.LITERAL:
-                return _constant(attributes["value"])
-            if "singleton" in attributes:
-                return attributes["singleton"], _PRIMARY
-            parts = attributes["complex"].attributes  # a complex number's, `Expressions.Python.Python3.Complex`
-            return _constant(complex(parts.get("real", 0.0), parts["imag"]))
+            if tag == P.CONSTANT or "text" in attributes:  # its spelling, as written, or a constant's default one
+                text = P.constant_text(attributes) if tag == P.CONSTANT else attributes["text"]
+                return text, _UNARY if text.startswith("-") else _PRIMARY
+            return _constant(attributes["value"])
         if tag in ("error", "missing"):  # as written, by the dialect of its family that owns it
             return F.invalid_term_text(P.DIALECT, node), _PRIMARY
         if tag in _IMPORTS:

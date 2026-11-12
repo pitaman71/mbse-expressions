@@ -680,7 +680,7 @@ class Printer {
 const TEXTS: Readonly<Record<string, Text>> = {
   error: (p, n) => p.invalid(n), missing: (p, n) => p.invalid(n),
   literal: (p, n) => p.literal(n),
-  constant: (p, n) => n.attributes.get("text") ?? "nullptr",
+  constant: (p, n) => E.constantText(n.attributes),
   userdefinedliteral: (p, n) => p.literal(one(n.helpers.get("literal")) as F.Node) + n.attributes.get("suffix"),
   concatenatedstring: (p, n) => n.many.map((part) => p.expression(part, PRIMARY)).join(" "),
   variable: (p, n) => n.attributes.get("name"),

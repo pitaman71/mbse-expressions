@@ -96,7 +96,7 @@ from . import Domains
 __all__ = ["install", "define", "DIALECT", "EDITIONS", "SINCE", "editions", "Writer", "literal", "vector", "identifier",
            "unary", "binary", "conditional", "concatenation", "replication", "select", "range_", "inside", "span",
            "cast", "member", "call", "method", "iterate", "type_name", "problems", "SYSTEM", "METHODS", "REDUCTIONS",
-           "BASES", "UNITS", "SPELLING", "TAGS", "HELPERS"]
+           "BASES", "UNITS", "SPELLING", "TAGS", "HELPERS", "constant_text"]
 
 LITERAL, CONSTANT, NAMEEXPRESSION, MEMBEREXPRESSION, INDEXEXPRESSION, RANGESELECT = (
     "literal", "constant", "nameexpression", "memberexpression", "indexexpression", "rangeselect")
@@ -586,6 +586,49 @@ def _vector_problems(attributes: Mapping[str, Any]) -> list[str]:
     return found
 
 
+def _digits(bits: str, base: str) -> str | None:
+    """A vector's digits in a base, or None when some digit would mix x, z and known bits."""
+    if base == "d":
+        if all(b in "01" for b in bits):
+            return str(int(bits, 2))
+        return bits[0] if len(set(bits)) == 1 else None
+    size = BASES[base]
+    if size == 1:
+        return bits
+    padded = "0" * (-len(bits) % size) + bits
+    digits = []
+    for i in range(0, len(padded), size):
+        group = padded[i:i + size]
+        if all(b in "01" for b in group):
+            digits.append("0123456789abcdef"[int(group, 2)])
+        elif len(set(group)) == 1:
+            digits.append(group[0])
+        else:
+            return None
+    return "".join(digits)
+
+
+def constant_text(attributes: Mapping[str, Any]) -> str:
+    """A constant's text: as written (`text`), else its default spelling: `null`, a fill, or a vector in its base where
+    the base can write its bits, else in binary. The printer writes it, and a refusal shows it (`Kind.shown`); a
+    constant that holds no value has none ("SystemVerilog constant has no value to print")."""
+    if "text" in attributes:
+        return attributes["text"]
+    if _vector_problems(attributes) or not {"singleton", "fill", "bits"} & attributes.keys():
+        raise ValueError("SystemVerilog constant has no value to print")
+    if "singleton" in attributes:
+        return attributes["singleton"]
+    if "fill" in attributes:
+        return "'" + attributes["fill"]
+    bits = attributes["bits"]
+    base = attributes.get("base") or "b"
+    digits = _digits(bits, base)
+    if digits is None:
+        base, digits = "b", bits
+    size = attributes.get("size")
+    return f"{size if size is not None else ''}'{'s' if attributes.get('signed') else ''}{base}{digits}"
+
+
 def _base_problems(attributes: Mapping[str, Any], what: str) -> list[str]:
     base = attributes.get("base")
     return [] if base in (None, *BASES) else [f"{what}'s base must be b, o, d or h, got {base!r}"]
@@ -814,7 +857,8 @@ def _kinds() -> dict[str, F.Kind]:
 
     return {
         LITERAL: F.Kind(F.LITERAL, spelling=SPELLING, check=_literal_check, typed=_literal_typed),
-        CONSTANT: F.Kind(F.LITERAL, spelling=SPELLING, check=_check(CONSTANT), typed=_constant_typed),
+        CONSTANT: F.Kind(F.LITERAL, spelling=SPELLING, check=_check(CONSTANT), typed=_constant_typed,
+                         shown=constant_text),
         NAMEEXPRESSION: F.Kind(F.REFERENCE, required=("name",), check=_check(NAMEEXPRESSION)),
         MEMBEREXPRESSION: application(MEMBEREXPRESSION, Domains.MEMBER, required=("member",)),
         INDEXEXPRESSION: application(INDEXEXPRESSION, Domains.SELECT),

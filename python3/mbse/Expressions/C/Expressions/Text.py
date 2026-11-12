@@ -633,7 +633,7 @@ class _Printer:
 
     TEXTS: dict[str, Any] = {
         "error": invalid, "missing": invalid, "literal": literal,
-        "constant": lambda self, node: node.attributes.get("text", "nullptr"),
+        "constant": lambda self, node: E.constant_text(node.attributes),
         "userdefinedliteral": lambda self, node: self.literal(node.helpers["literal"]) + node.attributes["suffix"],
         "concatenatedstring": lambda self, node: " ".join(self.expression(p, PRIMARY) for p in node.many),
         "variable": lambda self, node: node.attributes["name"],

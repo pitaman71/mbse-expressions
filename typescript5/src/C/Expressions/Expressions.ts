@@ -102,8 +102,8 @@ export { // the family's shared reading of its kinds, re-exported
   CONCATENATEDSTRING, CONDITIONALEXPRESSION, CONSTANT, DESIGNATEDINITIALIZER, EXTENSIONS, EXTENSIONEXPRESSION,
   GENERICSELECTION, INITIALIZERLIST, LITERAL, MEMBEREXPRESSION, OPTIONAL, PARENTHESIZEDEXPRESSION, POSTFIXEXPRESSION,
   PREFIXES, QUOTES, SIZEOFEXPRESSION, SPELLING, STATEMENTEXPRESSION, SUBSCRIPTEXPRESSION, SUFFIXES, TYPEID,
-  UNARYEXPRESSION, VARIABLE, Writers, boundNames, castType, kinds, problems, scopes, size, spelling, truth, typeName,
-  untyped,
+  UNARYEXPRESSION, VARIABLE, Writers, boundNames, castType, constantText, kinds, problems, scopes, size, spelling,
+  truth, typeName, untyped,
 } from "./Kinds.js";
 export type { Suffixes } from "./Kinds.js";
 

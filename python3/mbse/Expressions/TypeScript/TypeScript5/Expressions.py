@@ -84,7 +84,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 from . import Domains, Nodes
 
 __all__ = ["install", "define", "DIALECT", "EXTENSIONS", "QUOTES", "FLAGS", "TYPE_PARAMETERS", "Node", "tree",
-           "binding_names"]
+           "binding_names", "constant_text"]
 
 IDENTIFIER, PRIVATEIDENTIFIER, LITERAL, CONSTANT = "identifier", "privateidentifier", "literal", "constant"
 TEMPLATELITERAL, TAGGEDTEMPLATEEXPRESSION, THISEXPRESSION, SUPER = (
@@ -493,6 +493,16 @@ binding_names = Nodes.binding_names
 """The names a pattern binds (`Nodes.binding_names`)."""
 
 
+def constant_text(attributes: Mapping[str, Any]) -> str:
+    """A constant's text: as written (`text`), else its default spelling, `null` or a regular expression
+    (`/a+/g`). The printer writes it, and a refusal shows it (`Kind.shown`)."""
+    if "text" in attributes:
+        return attributes["text"]
+    if "singleton" in attributes:
+        return attributes["singleton"]
+    return f"/{attributes['pattern']}/{attributes.get('flags', '')}"
+
+
 # --- Checks ---
 
 
@@ -550,7 +560,8 @@ DIALECT = F.Dialect("TypeScript.TypeScript5", {
     PRIVATEIDENTIFIER: F.Kind(F.REFERENCE, required=("name",), lexical=False, check=Nodes.check(PRIVATEIDENTIFIER)),
     LITERAL: F.Kind(F.LITERAL, spelling=("text", "problems", "quote", "base", "separators"), check=Nodes.check(LITERAL)),
     CONSTANT: F.Kind(F.LITERAL, spelling=("text", "problems"), check=Nodes.check(CONSTANT, _constant_problems),
-                     typed=lambda record: Domains.constant(F.attributes_of(record))),
+                     typed=lambda record: Domains.constant(F.attributes_of(record)),
+                     shown=constant_text),
     TEMPLATELITERAL: _application(TEMPLATELITERAL, FD.Opaque(Domains.String)),
     TAGGEDTEMPLATEEXPRESSION: _application(TAGGEDTEMPLATEEXPRESSION, required=("quasi",)),
     THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False),

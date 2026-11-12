@@ -101,7 +101,7 @@ export const Complex = Domains.ComplexValue;
 /** Python's `...` (`Ellipsis`), which JavaScript has none of. */
 export const ELLIPSIS = Domains.ELLIPSIS;
 
-const { repr } = Repr;
+const { repr, pyFloat } = Repr;
 
 export const LITERAL = "literal";
 export const CONSTANT = "constant";
@@ -772,7 +772,8 @@ export const DIALECT = new F.Dialect("Python.Python3", {
   [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "prefix", "quote", "base", "separators"],
     check: literalCheck }),
   [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "separators"], check: constantCheck,
-    typed: (record) => Domains.constant(F.attributesOf(record)) }),
+    typed: (record) => Domains.constant(F.attributesOf(record)),
+    shown: constantText }),
   [NAME]: new F.Kind(F.REFERENCE, { required: ["name"], ambient: BUILTINS, check: identifier("name", "a name") }),
   [CONCATENATEDSTRING]: application(new FD.Opaque(Domains.Str),
     { check: needs(CONCATENATEDSTRING, "values", "two strings", 2) }),
@@ -892,6 +893,26 @@ export function constant(value: unknown, text: string | null = null): Writer {
     r.value((p: any) => p.as_scalar(value));
     return text === null ? r : r.text(text);
   }));
+}
+
+/** A constant's text: as written (`text`), else its default spelling, `None`, `...` or a complex number as Python's
+ * `repr` writes it (`2j`, `(1-2j)`). The printer writes it, and a refusal shows it (`Kind.shown`). */
+export function constantText(attributes: ReadonlyMap<string, any>): string {
+  if (attributes.has("text")) return attributes.get("text");
+  if (attributes.has("singleton")) return attributes.get("singleton");
+  const parts = (attributes.get("complex") as F.Part).attributes; // a complex number's, `Expressions.Python.Python3.Complex`
+  return complexText((parts.get("real") as number | undefined) ?? 0, parts.get("imag") as number);
+}
+
+/** A complex number as Python's `repr` writes it: `2j`, `(1-2j)`. */
+function complexText(real: number, imag: number): string {
+  const part = (x: number): string => {
+    const text = pyFloat(x);
+    return text.endsWith(".0") ? text.slice(0, -2) : text;
+  };
+  if (Object.is(real, 0)) return `${part(imag)}j`;
+  const imaginary = part(imag);
+  return `(${part(real)}${imaginary.startsWith("-") ? "" : "+"}${imaginary}j)`;
 }
 
 /** A complex number as a constant holds it, `Expressions.Python.Python3.Complex`: its `real` and `imag` parts, each an

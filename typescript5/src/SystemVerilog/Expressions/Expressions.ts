@@ -600,6 +600,44 @@ export function vectorProblems(attributes: ReadonlyMap<string, any>): string[] {
   return found;
 }
 
+/** A vector's digits in a base, or null when some digit would mix x, z and known bits. */
+function digitsOf(bits: string, base: string): string | null {
+  const known = (group: string) => [...group].every((b) => "01".includes(b));
+  if (base === "d") {
+    if (known(bits)) return BigInt("0b" + bits).toString();
+    return new Set(bits).size === 1 ? bits[0] as string : null;
+  }
+  const size = BASES[base] as number;
+  if (size === 1) return bits;
+  const padded = "0".repeat((size - (bits.length % size)) % size) + bits;
+  const digits: string[] = [];
+  for (let i = 0; i < padded.length; i += size) {
+    const group = padded.slice(i, i + size);
+    if (known(group)) digits.push("0123456789abcdef"[parseInt(group, 2)] as string);
+    else if (new Set(group).size === 1) digits.push(group[0] as string);
+    else return null;
+  }
+  return digits.join("");
+}
+
+/** A constant's text: as written (`text`), else its default spelling: `null`, a fill, or a vector in its base where the
+ * base can write its bits, else in binary. The printer writes it, and a refusal shows it (`Kind.shown`); a constant that
+ * holds no value has none ("SystemVerilog constant has no value to print"). */
+export function constantText(attributes: ReadonlyMap<string, any>): string {
+  if (attributes.has("text")) return attributes.get("text");
+  if (vectorProblems(attributes).length > 0 || !["singleton", "fill", "bits"].some((k) => attributes.has(k))) {
+    throw new ValueError("SystemVerilog constant has no value to print");
+  }
+  if (attributes.has("singleton")) return attributes.get("singleton");
+  if (attributes.has("fill")) return "'" + attributes.get("fill");
+  const bits: string = attributes.get("bits");
+  let base: string = attributes.get("base") ?? "b";
+  let digits = digitsOf(bits, base);
+  if (digits === null) [base, digits] = ["b", bits];
+  const size = attributes.get("size") ?? null;
+  return `${size !== null ? size : ""}'${attributes.get("signed") ? "s" : ""}${base}${digits}`;
+}
+
 function baseProblems(attributes: ReadonlyMap<string, any>, what: string): string[] {
   const base = attributes.get("base") ?? null;
   return base === null || Object.hasOwn(BASES, base) ? [] : [`${what}'s base must be b, o, d or h, got ${repr(base)}`];
@@ -825,7 +863,10 @@ function kinds(): Record<string, F.Kind> {
       check: check(tag), optional: OPTIONAL, ...options });
   return {
     [LITERAL]: new F.Kind(F.LITERAL, { spelling: SPELLING, check: literalCheck, typed: literalTyped }),
-    [CONSTANT]: new F.Kind(F.LITERAL, { spelling: SPELLING, check: check(CONSTANT), typed: constantTyped }),
+    [CONSTANT]: new F.Kind(F.LITERAL, {
+      spelling: SPELLING, check: check(CONSTANT), typed: constantTyped,
+      shown: constantText,
+    }),
     [NAMEEXPRESSION]: new F.Kind(F.REFERENCE, { required: ["name"], check: check(NAMEEXPRESSION) }),
     [MEMBEREXPRESSION]: application(MEMBEREXPRESSION, Domains.MEMBER, { required: ["member"] }),
     [INDEXEXPRESSION]: application(INDEXEXPRESSION, Domains.SELECT),

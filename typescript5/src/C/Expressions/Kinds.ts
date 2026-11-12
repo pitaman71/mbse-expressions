@@ -186,6 +186,12 @@ function literalProblems(attributes: ReadonlyMap<string, any>, prefixes: readonl
   return problems;
 }
 
+/** A constant's text: as written (`text`), else its default spelling, `nullptr`. The printer writes it, and a refusal
+ * shows it (`Kind.shown`). */
+export function constantText(attributes: ReadonlyMap<string, any>): string {
+  return attributes.get("text") ?? "nullptr";
+}
+
 /** A constant holds `nullptr`, unless its text is invalid, its problems said. */
 function constantProblems(attributes: ReadonlyMap<string, any>): string[] {
   const singleton = attributes.get("singleton");
@@ -289,7 +295,7 @@ export function kinds(language: string, tags: readonly string[], prefixes: reado
       typed: (record: any) => Domains.literal(F.attributesOf(record), language, new Domains.Types(record,
         pathOf(language))) }),
     [CONSTANT]: () => new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: check(CONSTANT),
-      typed: () => Domains.NULLPTR }),
+      typed: () => Domains.NULLPTR, shown: constantText }),
     [CONCATENATEDSTRING]: () => application(CONCATENATEDSTRING, new FD.Opaque(Domains.String)),
     [VARIABLE]: () => new F.Kind(F.REFERENCE, { required: ["name"], check: check(VARIABLE) }),
     [PARENTHESIZEDEXPRESSION]: () => application(PARENTHESIZEDEXPRESSION, ANY1),

@@ -512,6 +512,14 @@ export function tree(term: any): Node {
 /** The names a pattern binds (`Nodes.bindingNames`). */
 export const bindingNames = Nodes.bindingNames;
 
+/** A constant's text: as written (`text`), else its default spelling, `null` or a regular expression (`/a+/g`). The
+ * printer writes it, and a refusal shows it (`Kind.shown`). */
+export function constantText(attributes: ReadonlyMap<string, any>): string {
+  if (attributes.has("text")) return attributes.get("text");
+  if (attributes.has("singleton")) return attributes.get("singleton");
+  return `/${attributes.get("pattern")}/${attributes.get("flags") ?? ""}`;
+}
+
 // --- Checks ---
 
 /** A constant holds `null` or a regular expression, its `pattern` at least, its flags among `FLAGS`, each once. */
@@ -567,7 +575,8 @@ export const DIALECT: F.Dialect = new F.Dialect("TypeScript.TypeScript5", {
   [LITERAL]: new F.Kind(F.LITERAL, { spelling: ["text", "problems", "quote", "base", "separators"],
     check: Nodes.check(LITERAL) }),
   [CONSTANT]: new F.Kind(F.LITERAL, { spelling: ["text", "problems"], check: Nodes.check(CONSTANT, constantProblems),
-    typed: (record) => Domains.constant(F.attributesOf(record)) }),
+    typed: (record) => Domains.constant(F.attributesOf(record)),
+    shown: constantText }),
   [TEMPLATELITERAL]: application(TEMPLATELITERAL, new FD.Opaque(Domains.String)),
   [TAGGEDTEMPLATEEXPRESSION]: application(TAGGEDTEMPLATEEXPRESSION, new FD.Opaque(), { required: ["quasi"] }),
   [THISEXPRESSION]: new F.Kind(F.REFERENCE, { lexical: false }),

@@ -94,13 +94,13 @@ from .Kinds import (  # the family's shared reading of its kinds, re-exported
     COMPOUNDLITERALEXPRESSION, CONCATENATEDSTRING, CONDITIONALEXPRESSION, CONSTANT, DESIGNATEDINITIALIZER, EXTENSIONS,
     EXTENSIONEXPRESSION, GENERICSELECTION, INITIALIZERLIST, LITERAL, MEMBEREXPRESSION, OPTIONAL, PARENTHESIZEDEXPRESSION,
     POSTFIXEXPRESSION, PREFIXES, QUOTES, SIZEOFEXPRESSION, SPELLING, STATEMENTEXPRESSION, SUBSCRIPTEXPRESSION, SUFFIXES,
-    TYPEID, UNARYEXPRESSION, VARIABLE, Writers, bound_names, cast_type, kinds, problems, scopes, size, truth, type_name,
-    untyped)
+    TYPEID, UNARYEXPRESSION, VARIABLE, Writers, bound_names, cast_type, constant_text, kinds, problems, scopes, size,
+    truth, type_name, untyped)
 
 __all__ = ["install", "define", "DIALECT", "EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "Writer",
            "Writers", "literal", "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call",
            "type_name", "cast_type", "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds",
-           "SPELLING", "OPTIONAL"]
+           "SPELLING", "OPTIONAL", "constant_text"]
 
 
 def install(txn: Any) -> Any:
