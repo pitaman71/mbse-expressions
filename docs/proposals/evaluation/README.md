@@ -40,3 +40,41 @@ evaluator is CAP-142 and what waits on it, the checking of a binding, and every 
 lost without each language's own evaluator is only fidelity to that language, which no consumer above asks for and
 which [CAP-203: evaluators delegating to per-language libraries](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-203.md)
 already leaves to the language's own library.
+
+## 2. The hole: one `Term` over every dialect
+
+As built ([CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided)),
+`Expressions.Framework.Term` is the union of every dialect's `Term`, and each holder narrows its `root` to its own
+dialect's. But the framework's shared kinds, `call`, `let`, `list`, `mapping` and their `Pair`, hold a subterm of
+`Framework.Term`, and most dialects reuse them: a Python3 list's element may be, by schema, a C term. The user decided
+that this closure is "by constraints not by schema" (dialects' question 4); no such constraint was built, nor designed
+([CAP-166: constraints attached where they constrain](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-166.md)).
+So:
+
+- validation accepts any dialect's subterm beneath a shared kind, and a type checker cannot tell
+  ([CAP-255: type checkers catch mistakes in code that builds expressions](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-255.md));
+- every reader, validation, inference, evaluation and translation, dispatches per subterm on its owner, and an
+  evaluator meets other dialects' terms it can only refuse;
+- domain inference ([CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md))
+  has no seam to convert at: a Python3 `int` met by C's `+` is neither dialect's question.
+
+The options, each with what it keeps and what it closes
+([PRI-042: optionality kept](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-042)):
+
+- **(a) Keep the schema, build the constraint** (as decided): a dialect's validation refuses another's subterm except
+  where its union lists that kind. Keeps mixing anywhere and the decision as made; closes nothing new, but keeps the
+  per-subterm dispatch and leaves type checkers blind.
+- **(b) Each dialect closed by schema, by refinement**: each dialect refines each shared kind it reuses, its subterms
+  narrowed to its own `Term`, as each holder already narrows `root` and as `let`'s variations already refine `Let`
+  ([CAP-279: names an expression binds found alike in every language](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-279.md)),
+  through [CAP-167: schemas refined by other schemas](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-167.md).
+  Mixing is kept, explicitly: a sublanguage's kinds listed in its host's union, as today, or a boundary kind
+  (section 4). Keeps the framework's generic reads and both kinds of mixing; closes only implicit mixing.
+- **(c) Each dialect its own copies of the shared kinds**, as C and C++ define theirs: closed by schema, but the
+  framework no longer knows a `call` as one, and the copies are repeated per dialect.
+- **(d) Parametric shared kinds** (`List` of a dialect's `Term`): mbse-schemas has no schema parameters yet (as
+  [CAP-049: type parameters in Python3](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-049) finds, blocked), so a
+  deferred option, open to add later.
+
+*Recommended: (b)*, to verify first that mbse-schemas narrows a container's element by refinement, as it narrows a
+property; (d) stays open.
