@@ -54,7 +54,7 @@
  * declaration and instantiation of type parameters. `DIALECT` reads its family's other dialects' terms (`reads`), as
  * each of them reads its own; the framework reads a value of a helper as a `Terms.Part`, and its family's terms, the
  * types and patterns within it, as its arguments. `Nodes` holds what the three dialects read alike: a node's checks,
- * the names a pattern binds (`bindingNames`) and the names each argument has bound.
+ * the names a pattern binds (`boundNames`) and the names each argument has bound.
  *
  * The versions of TypeScript 5 the dialect covers are data, which `define` writes, each owned by its published name,
  * TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each
@@ -509,8 +509,8 @@ export function tree(term: any): Node {
   return F.node(tag, record);
 }
 
-/** The names a pattern binds (`Nodes.bindingNames`). */
-export const bindingNames = Nodes.bindingNames;
+/** The names a pattern binds (`Nodes.boundNames`). */
+export const boundNames = Nodes.boundNames;
 
 /** A constant's text: as written (`text`), else its default spelling, `null` or a regular expression (`/a+/g`). The
  * printer writes it, and a refusal shows it (`Kind.shown`). */

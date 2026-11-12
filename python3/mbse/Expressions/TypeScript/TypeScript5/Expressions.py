@@ -53,7 +53,7 @@ and types hold alike stay its own: an annotation (`TSTypeAnnotation`), a type pa
 instantiation of type parameters. `DIALECT` reads its family's other dialects' terms (`reads`), as each of them reads
 its own; the framework reads a value of a helper as a `Terms.Part`, and its family's terms, the types and patterns
 within it, as its arguments. `Nodes` holds what the three dialects read alike: a node's checks, the names a pattern
-binds (`binding_names`) and the names each argument has bound.
+binds (`bound_names`) and the names each argument has bound.
 
 The versions of TypeScript 5 the dialect covers are data, which `define` writes, each owned by its published name,
 TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each has
@@ -84,7 +84,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 from . import Domains, Nodes
 
 __all__ = ["install", "define", "DIALECT", "EXTENSIONS", "QUOTES", "FLAGS", "TYPE_PARAMETERS", "Node", "tree",
-           "binding_names", "constant_text"]
+           "bound_names", "constant_text"]
 
 IDENTIFIER, PRIVATEIDENTIFIER, LITERAL, CONSTANT = "identifier", "privateidentifier", "literal", "constant"
 TEMPLATELITERAL, TAGGEDTEMPLATEEXPRESSION, THISEXPRESSION, SUPER = (
@@ -489,8 +489,8 @@ def tree(term: Any) -> Node:
     return F.node(tag, record)
 
 
-binding_names = Nodes.binding_names
-"""The names a pattern binds (`Nodes.binding_names`)."""
+bound_names = Nodes.bound_names
+"""The names a pattern binds (`Nodes.bound_names`)."""
 
 
 def constant_text(attributes: Mapping[str, Any]) -> str:

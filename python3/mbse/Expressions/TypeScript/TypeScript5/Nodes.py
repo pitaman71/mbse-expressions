@@ -10,7 +10,7 @@ from typing import Any
 
 from mbse.Expressions.Framework import Terms as F
 
-__all__ = ["QUOTES", "SIGNATURES", "Node", "nodes", "binding_names", "check", "bound", "scopes"]
+__all__ = ["QUOTES", "SIGNATURES", "Node", "nodes", "bound_names", "check", "bound", "scopes"]
 
 IDENTIFIER, PRIVATEIDENTIFIER, LITERAL, PROPERTY, MEMBEREXPRESSION = (
     "identifier", "privateidentifier", "literal", "property", "memberexpression")
@@ -46,7 +46,7 @@ def node_of(value: Any) -> Node:
 # --- What a pattern binds ---
 
 
-def binding_names(node: Any) -> frozenset[str]:
+def bound_names(node: Any) -> frozenset[str]:
     """The names a pattern binds, a term's or a `Node`'s: an identifier's, and those within an array, an object, a
     default, a rest or a parameter property; a member, or any other target, binds none."""
     if node is None:
@@ -55,11 +55,11 @@ def binding_names(node: Any) -> frozenset[str]:
     if node.kind == IDENTIFIER:
         return frozenset({node.attributes["name"]}) if "name" in node.attributes else frozenset()
     if node.kind == PROPERTY:
-        return binding_names(node.slots.get("value"))
+        return bound_names(node.slots.get("value"))
     found: frozenset[str] = frozenset()
     for inner in (*node.lists.get("elements", ()), *node.lists.get("properties", ()),
                   *(node.slots.get(name) for name in ("left", "argument", "parameter"))):
-        found |= binding_names(inner)
+        found |= bound_names(inner)
     return found
 
 
@@ -67,7 +67,7 @@ def _parameters(node: Node) -> frozenset[str]:
     """The names a function's, a function type's or a signature's parameters bind."""
     found: frozenset[str] = frozenset()
     for parameter in (*node.lists.get("params", ()), *node.lists.get("parameters", ())):
-        found |= binding_names(parameter)
+        found |= bound_names(parameter)
     return found
 
 
