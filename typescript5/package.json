@@ -33,6 +33,8 @@
     "./Cpp/Expressions": "./src/Cpp/Expressions/index.ts",
     "./Cpp/Types": "./src/Cpp/Types/index.ts",
     "./Cpp/RegExp": "./src/Cpp/RegExp/index.ts",
+    "./POSIX/BRE": "./src/POSIX/BRE/index.ts",
+    "./POSIX/ERE": "./src/POSIX/ERE/index.ts",
     "./SystemVerilog/Expressions": "./src/SystemVerilog/Expressions/index.ts",
     "./SystemVerilog/Types": "./src/SystemVerilog/Types/index.ts",
     "./SystemVerilog/Patterns": "./src/SystemVerilog/Patterns/index.ts",

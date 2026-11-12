@@ -1026,8 +1026,10 @@ export interface DialectOptions {
 type Environment = Record<string, Domains.Domain>;
 
 /** The sublanguages a family's dialects may be, by their own names (the namespace decision): a dialect whose own name is
- * one of them is named by its family too (`SystemVerilog Types`), so that no two families' sublanguages share a name. */
-export const SUBLANGUAGES: readonly string[] = ["Types", "Patterns", "Assertions", "Constraints", "Preprocessor", "RegExp"];
+ * one of them is named by its family too (`SystemVerilog Types`, `POSIX BRE`), so that no two families' sublanguages
+ * share a name. */
+export const SUBLANGUAGES: readonly string[] = ["Types", "Patterns", "Assertions", "Constraints", "Preprocessor", "RegExp",
+  "BRE", "ERE"];
 
 /** A dialect's name, of its path below `Expressions` (its family's name and its own): its own (`Python.Python3`'s is
  * `Python3`, `Patterns.Expressions`' `Patterns`), or its family's where its own says only that it is the family's
