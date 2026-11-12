@@ -13,7 +13,7 @@
                 "elements": [
                   {
                     "assertion": {
-                      "kind": "start"
+                      "assertionKind": "start"
                     }
                   },
                   {
@@ -78,7 +78,7 @@
                             },
                             {
                               "characterset": {
-                                "kind": "digit"
+                                "setKind": "digit"
                               }
                             }
                           ]
@@ -88,12 +88,12 @@
                   },
                   {
                     "characterset": {
-                      "kind": "any"
+                      "setKind": "any"
                     }
                   },
                   {
                     "assertion": {
-                      "kind": "end"
+                      "assertionKind": "end"
                     }
                   }
                 ]
@@ -121,7 +121,7 @@
                   },
                   {
                     "assertion": {
-                      "kind": "lookahead",
+                      "assertionKind": "lookahead",
                       "negate": true,
                       "alternatives": [
                         {
@@ -140,14 +140,14 @@
                   },
                   {
                     "quantifier": {
+                      "raw": "*?",
                       "min": 0,
                       "greedy": false,
                       "element": {
                         "character": {
                           "value": 120
                         }
-                      },
-                      "text": "*?"
+                      }
                     }
                   },
                   {
@@ -157,7 +157,7 @@
                   },
                   {
                     "assertion": {
-                      "kind": "word"
+                      "assertionKind": "word"
                     }
                   }
                 ]

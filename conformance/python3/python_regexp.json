@@ -58,7 +58,7 @@
                                     },
                                     {
                                       "characterset": {
-                                        "kind": "digit"
+                                        "setKind": "digit"
                                       }
                                     }
                                   ]
@@ -74,7 +74,7 @@
               },
               {
                 "assertion": {
-                  "kind": "lookbehind",
+                  "assertionKind": "lookbehind",
                   "negate": true,
                   "alternatives": [
                     {
@@ -93,17 +93,17 @@
               },
               {
                 "backreference": {
-                  "name": "n"
+                  "ref": "n"
                 }
               },
               {
                 "backreference": {
-                  "number": 1
+                  "ref": 1
                 }
               },
               {
                 "conditional": {
-                  "number": 1,
+                  "ref": 1,
                   "yes": {
                     "alternative": {
                       "elements": [
@@ -130,7 +130,7 @@
                         "elements": [
                           {
                             "characterset": {
-                              "kind": "any"
+                              "setKind": "any"
                             }
                           }
                         ]
@@ -152,7 +152,7 @@
               },
               {
                 "assertion": {
-                  "kind": "stringstart"
+                  "assertionKind": "stringstart"
                 }
               },
               {
@@ -176,8 +176,8 @@
                         "elements": [
                           {
                             "character": {
-                              "value": 97,
-                              "text": "\\x61"
+                              "raw": "\\x61",
+                              "value": 97
                             }
                           }
                         ]
@@ -188,7 +188,7 @@
               },
               {
                 "assertion": {
-                  "kind": "end"
+                  "assertionKind": "end"
                 }
               }
             ]

@@ -9,7 +9,7 @@ cpp_regexp:
         - alternative:
             elements:
             - assertion:
-                kind: start
+                assertionKind: start
             - capturinggroup:
                 alternatives:
                 - alternative:
@@ -39,11 +39,11 @@ cpp_regexp:
                     - equivalence:
                         name: e
                     - characterset:
-                        kind: digit
+                        setKind: digit
             - characterset:
-                kind: any
+                setKind: any
             - assertion:
-                kind: end
+                assertionKind: end
         - alternative:
             elements:
             - group:
@@ -53,7 +53,7 @@ cpp_regexp:
                     - character:
                         value: 98
             - assertion:
-                kind: lookahead
+                assertionKind: lookahead
                 negate: true
                 alternatives:
                 - alternative:
@@ -61,13 +61,13 @@ cpp_regexp:
                     - character:
                         value: 99
             - quantifier:
+                raw: '*?'
                 min: 0
                 greedy: false
                 element:
                   character:
                     value: 120
-                text: '*?'
             - backreference:
                 ref: 1
             - assertion:
-                kind: word
+                assertionKind: word

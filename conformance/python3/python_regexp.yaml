@@ -31,9 +31,9 @@ python_regexp:
                               character:
                                 value: 122
                         - characterset:
-                            kind: digit
+                            setKind: digit
         - assertion:
-            kind: lookbehind
+            assertionKind: lookbehind
             negate: true
             alternatives:
             - alternative:
@@ -41,11 +41,11 @@ python_regexp:
                 - character:
                     value: 98
         - backreference:
-            name: 'n'
+            ref: 'n'
         - backreference:
-            number: 1
+            ref: 1
         - conditional:
-            number: 1
+            ref: 1
             'yes':
               alternative:
                 elements:
@@ -59,7 +59,7 @@ python_regexp:
             - alternative:
                 elements:
                 - characterset:
-                    kind: any
+                    setKind: any
         - quantifier:
             min: 0
             possessive: true
@@ -67,7 +67,7 @@ python_regexp:
               character:
                 value: 98
         - assertion:
-            kind: stringstart
+            assertionKind: stringstart
         - comment:
             text: note
     - alternative:
@@ -79,7 +79,7 @@ python_regexp:
             - alternative:
                 elements:
                 - character:
+                    raw: \x61
                     value: 97
-                    text: \x61
         - assertion:
-            kind: end
+            assertionKind: end
