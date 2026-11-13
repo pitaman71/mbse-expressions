@@ -1948,7 +1948,92 @@ coordinator's merge and decisions (302 to 310). Each choice where the design and
      FRM-02, FRM-11, FRM-13, PYT-01, PYP-01, TSR-05 and SKL-03 under their IDs; the install lists of DIA's, TRN's
      and DOM's setups.
 310. **Open, with the user**: Cpp RegExp as one dialect for the six grammars, the grammar among a regex's flags (item
-     293), against a kind per grammar or a POSIX dialect beside ECMAScript's; built so, the coordinator agreeing.
+     293), against a kind per grammar or a POSIX dialect beside ECMAScript's; built so, the coordinator agreeing. Decided since (2026-11-12): "yes to a new posix family", built as items 311 to 323.
+
+## Settled in the POSIX family, for the user's review
+
+Built on the user's answer (2026-11-12) to item 310, "yes to a new posix family", as [the dialects
+proposal](../dialects/README.md#decided-for-the-posix-family-2026-11-12) records it: `Cpp RegExp` keeps [re.grammar]'s
+grammar alone, and the grammars [re.synopt] selects by naming POSIX are POSIX's own dialects. Each choice where the
+decision was silent is marked *(agent)*. A breaking change, in 0.10.0, which is unreleased, so with no alias: Cpp
+RegExp's `patternlist` and its `PatternList`, its `Text.text`, and a regex's `pattern` schema.
+
+311. **The standards' texts, checked first** (the brief's "verify"): ISO/IEC 14882 [re.synopt] (N4950, Table 118):
+     `ECMAScript` "that used by ECMAScript in ECMA-262, as modified in [re.grammar]"; `basic` and `extended` "that used by
+     basic (extended) regular expressions in POSIX"; `awk` "that used by the utility awk in POSIX", `grep` "by the
+     utility grep in POSIX", `egrep` "by the utility grep when given the -E option in POSIX"; "at most one of the grammar
+     elements". [intro.refs]: C++17 (N4659) and C++20 (N4861) cite ISO/IEC 9945:2003, C++23 (N4950) ISO/IEC/IEEE
+     9945:2009, each ECMA-262's third edition (1999). POSIX (IEEE Std 1003.1, pubs.opengroup.org): XBD 9 defines two
+     grammars, basic (9.3) and extended (9.4) regular expressions, in 9.5.2 (`basic_reg_exp`, with the bracket
+     expression grammar both share) and 9.5.3 (`extended_reg_exp`); XCU grep defines none, reading its patterns as BREs,
+     or EREs with `-E`, a `pattern_list` "separated by a <newline>"; XCU awk, Regular Expressions, uses "the extended
+     regular expression notation ... except that it shall allow the use of C-language conventions for escaping special
+     characters". The 2004 edition of 1003.1-2001, 1003.1-2008 and 1003.1-2017 have the same grammar, token for token;
+     1003.1-2024 renames the BRE's productions (`RE_expression` to `BRE_branch` ...), adds `Back_qm`, `Back_plus` and
+     `Back_bar` (`\?`, `\+`, `\|`, each the implementation's to read so), an ERE's repetition modifier (9.4.6, `*?`)
+     and `REG_MINIMAL`. Nothing contradicts the decision's table.
+312. **Two dialects, `Expressions.POSIX.BRE` and `Expressions.POSIX.ERE`** *(agent)*: by the rule "if the standard says
+     it's a sublanguage then it's definitely at least a separate dialect", the grammars POSIX defines are XBD 9's two;
+     grep's and egrep's are BREs and EREs in a list, which XCU grep defines without a grammar, and awk's are EREs spelled
+     with C's escapes. So grep's list is a kind of each, `patternlist`, and awk an ERE printed with its escapes
+     (`POSIX.ERE.Text.text(expression, awk)`), neither a dialect nor an edition. Named as POSIX abbreviates them (BRE,
+     ERE); `Terms.SUBLANGUAGES` gains `BRE` and `ERE`, so `Terms.dialect_name` names them `POSIX BRE` and `POSIX ERE`,
+     their tags `posix_bre` and `posix_ere`.
+313. **One shared reading, `POSIX.Kinds`** *(agent)*: internal, as `C.Expressions.Kinds` is, giving each dialect's
+     install, define, kinds, checks and printer from one definition; each dialect defines its own schemas
+     (`Expressions.POSIX.BRE.Quantifier`, `Expressions.POSIX.ERE.Quantifier`), as C and C++ each define theirs.
+314. **Their kinds** *(agent)*: `patternlist`, `pattern`, `alternative`, `capturinggroup`, `quantifier`,
+     `characterclass`, `characterclassrange`, `characterset`, `character`, `assertion`, a BRE's `backreference`,
+     `exclass`, `collatingelement` and `equivalence`, then invalid syntax; no helpers; named as Cpp RegExp's (regexpp's
+     and [re.grammar]'s), each family its own copy. Their properties: Cpp RegExp's, less what POSIX lacks: a character
+     set's `setKind` alone (`any`), an assertion's `assertionKind` alone (`start`, `end`), no group or lookahead, and a
+     quantifier's `greedy` an ERE's alone.
+315. **Checks, as XBD 9.5 has them** *(agent)*: what each kind's terms may be (`HOLDS`): a BRE's quantifier repeats no
+     quantifier and no anchor (`nondupl_BRE BRE_dupl_symbol`), an ERE's any atom (`ERE_expression ERE_dupl_symbol`); a
+     class's elements no character set. A BRE's anchor stands only first or last in its alternative ("a start
+     assertion stands only where a BRE begins", L_ANCHOR, R_ANCHOR) and none within a subexpression ("a BRE's
+     subexpression holds no anchor", 9.3.8 leaving it to the implementation); a backreference `\1` to `\9` ("a
+     backreference's ref must be 1 to 9, got 10", `BACKREF`); Cpp RegExp's other messages.
+316. **Editions** *(agent)*: POSIX.1's four, `IEEE Std 1003.1-2001`, `-2008`, `-2017` and `-2024`, body `org.ieee`,
+     number `1003.1`, revision the year, common names `POSIX.1-2001` ... and the ISO/IEC designation C++ cites where one
+     is the edition's (`ISO/IEC 9945:2003`, `ISO/IEC/IEEE 9945:2009`), frame symbols `POSIX_2001` ...; an edition that
+     only incorporates technical corrigenda (2004, 2013, 2016) is not one of its own; every kind in each (`SINCE` empty);
+     what 2024 added within a kind (a BRE's `\|`, `\?`, `\+`; an ERE's repetition modifier) is not recorded, as a
+     feature within a kind is not for any dialect.
+317. **Printing** *(agent)*: a BRE as XBD 9.3 writes it, `\(...\)`, `*` or `\{m,n\}`, its alternatives joined by
+     `\|` (2024's; a BRE before has one); an ERE as 9.4 writes it, `*`, `+`, `?` or `{m,n}`, `?` after a lazy one, and a
+     `?` over a quantifier as `{0,1}`, since `a+?` reads as 2024's lazy `+`; grep's list a line each; a character in its
+     `raw`, else escaped where its grammar makes it special, never within brackets; with `awk`, a control character as
+     awk's escapes write it. Each prints a term of the other in the other's grammar.
+318. **What reads what** *(agent)*: each POSIX dialect reads the other, as each family's dialects read one another; Cpp
+     RegExp reads them after its family's (`Cpp`, `Cpp Types`, `C Preprocessor`, `POSIX BRE`, `POSIX ERE`), as a C++
+     term reads its holder's ABI dialect (mbse-basis [CAP-267: C and C++ terms read under the ABI their holder names](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-267.md)); POSIX's read
+     nothing of C++'s. `reads` is code, not data naming what a dialect uses: not a reason to reinstate `Uses`.
+319. **Cpp RegExp narrowed to [re.grammar]** *(agent)*: its kinds lose `patternlist`; a `regex`'s `pattern` holds
+     `Expressions.Framework.Term`, a term of the dialect its grammar names (`GRAMMAR_DIALECTS`: ECMAScript Cpp RegExp,
+     `basic` and `grep` POSIX BRE, `extended`, `awk` and `egrep` POSIX ERE), refused otherwise ("the basic grammar's
+     pattern is a POSIX BRE term, got a Cpp RegExp term"); `FEATURES` keeps what C++ does not select of a POSIX term:
+     grep's list under another grammar, and 2024's BRE alternation and ERE repetition modifier, which the editions C++
+     cites lack ("alternation is not in the grep grammar", "a lazy quantifier is not in the extended grammar"). A
+     quantifier repeats an atom alone (ECMA-262, 15.10.1, Term), checked as `HOLDS` ("a quantifier's element cannot
+     hold an assertion"), replacing "a quantifier cannot repeat a word assertion" and the repeated quantifier's and
+     anchor's features. Its printer writes ECMAScript alone, a regex's POSIX pattern by POSIX's printer, awk's with its
+     escapes; `Text.text(expression, grammar)` goes, `ToText` stays.
+320. **Completeness as data** *(agent)*: `grammars/posix-regex.json`, new, XBD 9.5's 57 productions and tokens, 2001's
+     to 2017's and 2024's, XCU grep's `pattern_list` and awk's escape sequence, each mapped to `BRE.<tag>` or
+     `ERE.<tag>` or listed `not`; BRE-10 and ERE-10 check every kind mapped exactly. `grammars/cpp-regex.json` keeps
+     [re.grammar]'s 32, its `syntax_option_type` naming the POSIX dialects (XRX-10).
+321. **Installs** *(agent)*: wherever Cpp RegExp is installed, POSIX's two follow it (FRM's `RETROFIT`, DIA's, TRN's,
+     DOM's, the corpus's store and the tutorials' toolkit), each define after Cpp RegExp's; Cpp RegExp's install does
+     not need them, a regex's pattern being the framework's `Term`.
+322. **The corpus** *(agent)*: `posix_bre` and `posix_ere` after `cpp_regexp`, each grep's list of patterns of every
+     kind of its dialect, a character with its spelling; `cpp_regexp`'s pattern now written with its dialect, as the
+     framework's `Term` is; JSON byte-identical in both languages.
+323. **Tests**: 250 cases in each language, with the same IDs in the same order: BRE (26) and ERE (27) new, 20 cases;
+     XRX rewritten under its IDs, its titles following; FRM-01, FRM-02 and FRM-13 read the POSIX dialects (samples,
+     `reads`, editions; `SUBLANGUAGES`); DIA's, TRN's and DOM's install lists; SKL-03 (668 links); CONF over the new
+     cases. The skill's dialects reference links XRX-01, XRX-04, XRX-08, XRX-10, BRE-01, BRE-03, BRE-04, BRE-08, BRE-10,
+     ERE-01, ERE-04 and ERE-08.
 
 ## What stage 2b needed (done)
 

@@ -916,9 +916,10 @@ INVALID_KINDS = {"error": Kind(INVALID, check=_invalid_check), "missing": Kind(I
 """The framework's kinds of invalid syntax, which every dialect's `Term` holds and every dialect reads."""
 
 
-SUBLANGUAGES = ("Types", "Patterns", "Assertions", "Constraints", "Preprocessor", "RegExp")
+SUBLANGUAGES = ("Types", "Patterns", "Assertions", "Constraints", "Preprocessor", "RegExp", "BRE", "ERE")
 """The sublanguages a family's dialects may be, by their own names (the namespace decision): a dialect whose own name is
-one of them is named by its family too (`SystemVerilog Types`), so that no two families' sublanguages share a name."""
+one of them is named by its family too (`SystemVerilog Types`, `POSIX BRE`), so that no two families' sublanguages
+share a name."""
 
 
 def dialect_name(path: str) -> str:

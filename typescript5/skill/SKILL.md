@@ -67,7 +67,8 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    together, in any order, as each reads the others' terms; and each family's sublanguage dialects after its family's
    dialect, as each reads its family's terms: `Python.Types`, `Python.Patterns` and `Python.RegExp` after `Python3`,
    `TypeScript.Types`, `TypeScript.Patterns` and `TypeScript.RegExp` after `TypeScript5`, `C.Types` after `C`,
-   `Cpp.Types` and `Cpp.RegExp` after `Cpp`, and `C.Preprocessor` after both); then each one's
+   `Cpp.Types` and `Cpp.RegExp` after `Cpp`, and `C.Preprocessor` after both; POSIX's two, `POSIX.BRE` and
+   `POSIX.ERE`, which a C++ regex may hold, in either order); then each one's
    `define` whose data its validation, inference or evaluation reads, each in a transaction of its own: Patterns',
    which names the operations validation reads (`store.transaction(Patterns.define)`), and C's, C++'s, the ABI
    dialects', SystemVerilog's, which write the types they read; a sublanguage dialect's writes the editions it covers. A C or C++ expression names the ABI its terms are read
