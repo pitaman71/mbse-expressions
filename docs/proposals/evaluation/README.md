@@ -14,8 +14,7 @@ names as one to avoid ([QUA-003: no second-order inventions](https://github.com/
 This proposes the published standard to model in its place, ISO/IEC 11404, and asks what only the user can decide.
 It builds nothing.
 
-It starts from [the evaluation inventory](https://github.com/pitaman71/mbse-expressions/blob/82be48b/docs/proposals/dialects/README.md#evaluation-what-is-refused-and-why)
-(unmerged, branch `evaluation-inventory`): of 373 kinds of term in 25 dialects, 78 are evaluated and 295 refused; of
+It starts from [the evaluation inventory](../dialects/README.md#evaluation-what-is-refused-and-why): of 373 kinds of term in 25 dialects, 78 are evaluated and 295 refused; of
 those, 79 are gaps a statement-free evaluator should close, 161 have no value of their own, 6 wait on
 [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)
 or constraint resolution, and 49 need what only mbse-programs or a simulator has. Its build partition, one evaluator's
@@ -198,6 +197,27 @@ The user's answers to section 5, quoted:
   left in the residual. "agreed no evaluator".
 
 Still open: question 7, to revisit; and 11404's characterizing operations, named here from memory of the standard, to check against its text before they are built.
+
+## Decided: the order of the work (2026-11-13)
+
+After the checks of 11404's operations found that integer division and remainder have no characterizing operation, the
+user set the order of the work, which supersedes the order section 5's answers implied: "The insinuation that we need a
+div operation hints at two dialects being overlaid. Our first priority is to build for each dialect completely
+self-contained evaluation of each expresions that do not involve other dialects, then evaluation of expressions that
+involve sub-dialects. Evaluation of expressions that contain statements, type algebra, or which transpile to other
+dialects is deferred." So:
+
+- **First**: each dialect evaluates, by its own language's semantics, every statement-free expression that involves no
+  other dialect: [the inventory](../dialects/README.md#evaluation-what-is-refused-and-why)'s class (a), kinds and
+  refusals within evaluated kinds, dialect by dialect, both languages.
+- **Second**: expressions that involve a sub-dialect (a host reading its sublanguage's terms: a cast's type, a
+  `randomize() with` constraint, a preprocessor condition).
+- **Deferred**: expressions with statements (the inventory's class (d)); type algebra (types' kinds, class (b)); and
+  evaluation by translation into another dialect, which is question 3's (b), the lowering into the standard dialects,
+  with questions 4, 5 and 7 that follow from it. Question 1 reads accordingly: each dialect evaluates its own
+  expressions completely, not only what the consumers in section 1 need.
+- **Stand**: question 2 (dialects closed by refinement), 6 (a residual in place of a refusal) and 8 (no evaluator for
+  writes, SystemVerilog's sequences and properties, JSX).
 
 ## 6. What it would add or supersede
 
