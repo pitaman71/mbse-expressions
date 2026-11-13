@@ -1,7 +1,7 @@
 <!-- nav -->
 [← Tutorials, from domains and trivial expressions up](../tutorials/README.md) · [Home](../../../README.md)
 
-# What is evaluated, and in which dialect (a proposal, for review)
+# What is evaluated, and in which dialect (a proposal)
 
 *Initiative*: [INI-012: domain + expression dialect framework](https://github.com/pitaman71/mbse-basis/blob/main/proposals/PRIORITIES.md#ini-012--domain--expression-dialect-framework).
 
@@ -173,6 +173,31 @@ stops, and what the caller sees there.
 8. **The inventory's own questions** (writes, SystemVerilog's sequences and properties, JSX). Under (b) each is
    whether a lowering exists, and none does: a write, a trace and a JSX factory have no 11404 form. *Recommended: as
    the inventory recommends*, (d), (d) and (b), each left in the residual.
+
+## Decided (2026-11-12)
+
+The user's answers to section 5, quoted:
+
+- **1. What evaluation is for**: scoped to its consumers' needs, a constraint's truth, a binding's value, a residual;
+  the inventory's partition, an evaluator grown per family, is not built, and today's evaluators keep what they do.
+  "this is okay for the time being".
+- **2. The hole**: (b), each dialect closed by schema, refining each shared kind it reuses, mixing only where explicit.
+  "yes, (b)". First, check that mbse-schemas narrows a container's element by refinement.
+- **3. Which dialect evaluates**: (b), the standard dialects, every other by its lowering into them, a parameter binding
+  written in ISO/IEC 11404's dialect; (c), each language's runtime, as an optional check. "yes, (b) with (c) as optional
+  backup".
+- **4. Where ISO/IEC 11404 is silent**: (a), bitwise operations from IEEE 1164's logical operators and shifts from IEEE
+  1076's `numeric_std`, each a standard dialect's. "yes (a)".
+- **5. Patterns' place**: Patterns keeps only mbse-schemas' access and its quantifiers over a pattern, extending 11404's
+  dialect; CAP-260 a prerequisite. "yes".
+- **6. A residual in place of a refusal**, in evaluation and partial evaluation alike, each residual subterm named with
+  its class. "yes".
+- **7. Where the lowerings live**: here, as declared rules (PRI-011); translation between two languages stays
+  mbse-transforms'. Provisional: "okay for now but we should come back to this", so it stays open below.
+- **8. The inventory's questions**: writes, SystemVerilog's sequences and properties, and JSX get no evaluator, each
+  left in the residual. "agreed no evaluator".
+
+Still open: question 7, to revisit; and 11404's characterizing operations, named here from memory of the standard, to check against its text before they are built.
 
 ## 6. What it would add or supersede
 
