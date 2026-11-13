@@ -17,7 +17,7 @@ the translators between them.
 | API conformance to the visitor protocols and the framework's protocols, on classes and on live instances | VIS-01, VIS-02, FRM-01 |
 | JSON is byte-identical, for a case of every dialect; YAML and JSON are interchangeable | the CONF suite over the shared corpus in `conformance/` |
 | The agent guides are current, and their links resolve: every notebook case the skill links, in both languages but those listed in [Cases in one language only](#cases-in-one-language-only) | the SKL suite |
-| Every tutorial has the same steps in both languages: the same notebooks, titles and `## NN.k · title` headings, in the same order, each step's cell starting with its anchor | SKL-05 |
+| Every tutorial has the same steps in both languages: the same notebooks, titles and `## NN.k · title` headings (a page's `## NN.MM.k · title`), in the same order, each step's cell starting with its anchor, each case ID one step's | SKL-05 |
 | The TypeScript model of Python's rules gives what Python gives | DIA-02's tables of values and errors, which the Python suite runs against Python itself |
 | Full code coverage in both | the coverage gates below |
 
@@ -91,7 +91,11 @@ tests and committed with outputs (Python's from its kernel, TypeScript's from De
 
 Both languages' steps carry the same IDs, `## NN.k · title`, in the same order, and each step's markdown cell starts
 with the same anchor, `<a id="Tnn.k"></a>`, which the skill links, as each test case's starts with its ID's
-(`<a id="EXP-01"></a>`); SKL-05 checks that every tutorial has the same steps in both languages. When a tutorial
+(`<a id="EXP-01"></a>`). A tutorial may have pages, each a notebook read after it and numbered as a page of it: tutorial
+8's sublanguages, `08_01_Python_Types` to `08_17_SystemVerilog_Preprocessor`, titled `8.01 · Python Types` and so on,
+whose steps are `## NN.MM.k · title` and `<a id="Tnn.mm.k"></a>` (`T08.01.1`), after tutorial 8 itself,
+`08_00_Sublanguages`, whose steps keep `T08.k`. SKL-05 checks that every tutorial has the same steps in both languages,
+and that no two steps share a case ID. When a tutorial
 changes, change both, and rerun both notebooks to refresh their outputs.
 
 ## Cases in one language only

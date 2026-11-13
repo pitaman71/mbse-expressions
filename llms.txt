@@ -17,7 +17,7 @@ Patterns is three-valued (an absent property is unknown) and never coerces, only
 
 ## Learning it
 
-- [Python tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) and [TypeScript tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tutorials/README.md): in two parts, each step a notebook case committed with its outputs: Part I, how values, their domains and each language's expressions are modeled, from one literal up (tutorials 1 to 8); Part II, seven case studies on constraints (9 to 15), from a constraint written in code to the same constraint in C and SystemVerilog
+- [Python tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/python3/tutorials/README.md) and [TypeScript tutorial](https://github.com/pitaman71/mbse-expressions/blob/main/typescript5/tutorials/README.md): in two parts, each step a notebook case committed with its outputs: Part I, how values, their domains and each language's expressions are modeled, from one literal up (tutorials 1 to 8, and 8's pages, 8.01 to 8.17, one for each sublanguage); Part II, seven case studies on constraints (9 to 15), from a constraint written in code to the same constraint in C and SystemVerilog
 
 ## Design
 

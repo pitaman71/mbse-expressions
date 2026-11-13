@@ -357,7 +357,7 @@ each case shows its own:
 <!-- no case: points to the tutorials and the test plan as a whole -->
 
 The tutorials teach it in two parts, each notebook committed with its outputs and run as a test: Part I, how values,
-their domains and each language's expressions are modeled, from one literal up (tutorials 1 to 6; 7 and 8 after the
-dialects' retrofit), and Part II, seven case studies on constraints (9 to 15), from a first constraint to C and
+their domains and each language's expressions are modeled, from one literal up (tutorials 1 to 8, and 8's pages,
+8.01 to 8.17, one for each sublanguage), and Part II, seven case studies on constraints (9 to 15), from a first constraint to C and
 SystemVerilog: [Python](mbse:mbse-expressions/python3/tutorials/README.md) and [TypeScript](mbse:mbse-expressions/typescript5/tutorials/README.md). The test plan,
 [Test plan — python3](mbse:mbse-expressions/python3/tests/TestPlan.md), lists every case.

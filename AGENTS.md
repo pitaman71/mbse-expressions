@@ -12,7 +12,7 @@ evaluates, and Python3, TypeScript5, MATLAB, Excel, LaTeX, C, Cpp and SystemVeri
 |---|---|
 | Know why the mbse repositories exist, and this one's part in them | [Why the mbse repositories exist](MBSE.md) |
 | Use the library: write, evaluate, store or translate constraints | The skill, written once: [its source](skills/mbse-expressions/SKILL.md), packaged in each language as [the Python copy](python3/mbse/Expressions/skill/SKILL.md) and [the TypeScript copy](typescript5/skill/SKILL.md). Each practice links its case in each language's tutorials or tests; it loads its references only as needed |
-| Learn it by example: how values, domains and each language's expressions are modeled, then constraints from a first one to C and SystemVerilog | [Tutorial: expressions as models, then constraints as data](python3/tutorials/README.md): Part I, expressions as models (tutorials 1 to 8), and Part II, seven case studies on constraints (9 to 15); the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
+| Learn it by example: how values, domains and each language's expressions are modeled, then constraints from a first one to C and SystemVerilog | [Tutorial: expressions as models, then constraints as data](python3/tutorials/README.md): Part I, expressions as models (tutorials 1 to 8, and 8's pages, 8.01 to 8.17, one for each sublanguage), and Part II, seven case studies on constraints (9 to 15); the same in [typescript5/tutorials/](typescript5/tutorials/README.md) |
 | Understand a design decision or an open question | mbse-basis [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) and its capabilities' detail files |
 | Change the framework, a dialect or a translator | this file, then [docs/EQUIVALENCE.md, Deliberate differences](docs/EQUIVALENCE.md#deliberate-differences) |
 | Find or add a test case | [Test plan — python3](python3/tests/TestPlan.md) (TypeScript's plan lists only its differences) |
@@ -63,7 +63,8 @@ no programs and no per-language cheat sheets. `skills/sync.sh` copies it byte fo
 `python3/mbse/Expressions/skill/` and `typescript5/skill/`; SKL-01 checks the copies in both suites, and SKL-03 that
 every case it links has its `<a id>` in both languages, but for the cases
 [Equivalence of the implementations](docs/EQUIVALENCE.md#cases-in-one-language-only) lists as one language's only (none yet). Each
-tutorial step's markdown cell starts with `<a id="Tnn.k"></a>`, and each test case's with `<a id="ID"></a>`, the same in
+tutorial step's markdown cell starts with `<a id="Tnn.k"></a>` (on a page of a tutorial, `nn_mm_<Name>`, such as
+tutorial 8's sublanguages, `<a id="Tnn.mm.k"></a>`), and each test case's with `<a id="ID"></a>`, the same in
 both languages. A how the skill teaches with no case is a bug, since it is untested
 ([the basis](https://github.com/pitaman71/mbse-basis/blob/main/docs/README.md#the-doc-spec)): write the case, in both languages, before linking it.
 SKL-04 finds such gaps: each section of the skill (a `##` or `###` heading and its text) links a case in each
