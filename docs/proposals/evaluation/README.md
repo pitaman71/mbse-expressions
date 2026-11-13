@@ -214,13 +214,13 @@ differ:
   for the user to confirm; "as expressions are value objects, and value objects are immutable, simplification is
   immplemented as recursive substitution"; "if simplification returns a literal as the simplified root, that is
   equivalent to successful evaluation".
-- **In plan**, [CAP-295](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-295) to
-  [CAP-299](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-299): simplification of
+- **In plan**, [CAP-295: simplification of single-dialect expressions with literal leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-295) to
+  [CAP-299: simplification across a sub-dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-299): simplification of
   single-dialect expressions with only literal leaf terms; with leaf terms mixing literals, arguments or variables, and
   parameters; across binding states, fully bound, partially bound and fully unbound; expressions involving type
   parameters, but not type algebra; expressions involving a sub-dialect.
-- **Deferred**, [CAP-300](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-300) to
-  [CAP-302](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-302): type algebra; terms
+- **Deferred**, [CAP-300: simplification over type algebra](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-300) to
+  [CAP-302: simplification of expressions with statements](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-302): type algebra; terms
   whose evaluation delegates to a surrogate dialect (question 3's (b), the lowering into the standard dialects, with
   questions 4, 5 and 7, and its (c)); statements.
 - **So**: question 1 reads as each dialect simplifying its own expressions completely; question 6, a residual in place
