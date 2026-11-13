@@ -2,8 +2,8 @@
  * Expressions of the Python Patterns dialect: the patterns of Python's `match` statement, a grammar of their own (the
  * Language Reference, 8.6.4, "Patterns"), as mbse-programs has them.
  *
- * It is a dialect of the Python family (the dialects proposal, Decided for stage 6: "if the standard says it's a
- * sublanguage then it's definitely at least a separate dialect"; Retrofit's design, Python), named `Python Patterns`
+ * It is a dialect of the Python family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "if the standard says it's a
+ * sublanguage then it's definitely at least a separate dialect"; mbse-basis [CAP-276: Python's type expressions and match patterns as data](mbse:mbse-basis/docs/capabilities/CAP-276.md)), named `Python Patterns`
  * (`Terms.dialectName`), its tag `python_patterns`. Its terms are values of its `Term`,
  * `Expressions.Python.Patterns.Term`, the branch `python_patterns` of `Expressions.Framework.Term`. A `match` is a
  * statement, so no subterm of `Python3` is a pattern: mbse-programs' `case` holds one through this dialect's

@@ -52,8 +52,7 @@ their `body`, an `importfrom`'s `name` what it imports. Each keeps its role and 
 A binding target, a comprehension's `target` and a named expression's, holds `Expressions.Python.Python3.Pattern`, the union of
 the terms a target may be (`variable`, `tuple`, `list`, `starred`, `attribute`, `subscript`, `parenthesized`), each a
 schema of a term too, and invalid syntax (the framework's `error` and `missing`), as every dialect's `Type` and
-`Pattern` hold it: every dialect has a `Pattern` union for its binding targets, as the dialects proposal decided
-("(ii)"). The framework reads a target, as any helper, as a `Terms.Part`, its terms after the clause's own; a lambda's
+`Pattern` hold it: every dialect has a `Pattern` union for its binding targets, as the user decided ("(ii)", mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided)). The framework reads a target, as any helper, as a `Terms.Part`, its terms after the clause's own; a lambda's
 parameters are `arg`s, not patterns. A parameter's `annotation` holds `Expressions.Python.Types.Term`, the `Term` of its
 family's dialect of type expressions, which lists every branch of Python3's `Term` (this install adds them) beside its
 own kinds; a lambda's parameters have none, but mbse-programs' function definitions share the helper.
@@ -113,7 +112,7 @@ LET, IMPORT, IMPORTFROM = "let", "import", "importfrom"
 COMPREHENSIONS = (LISTCOMP, SETCOMP, DICTCOMP, GENERATOREXP)
 
 EXTENSIONS = frozenset({LET, IMPORT, IMPORTFROM})
-"""The kinds with no counterpart in Python's grammar, kept as extensions (the dialects proposal, Decided, 2)."""
+"""The kinds with no counterpart in Python's grammar, kept as extensions (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "mbse-programs' kinds, names and shapes")."""
 
 _SINCE = {YIELDFROM: 3, AWAIT: 5, JOINEDSTR: 6, NAMEDEXPR: 8, TEMPLATESTR: 14}
 """The minor version of Python 3 each kind arrived in, where it is not 3.0, from which `define` writes the kinds each
@@ -204,7 +203,7 @@ def install(txn: Any) -> Any:
             # Python Types' union lists its branches: an annotation, a bound or a default may be any expression ("(b)")
             lambda _: _.TypesTerm.name("Expressions.Python.Types.Term").branches(own(_)),
             # its patterns: what a binding target may be (Python's language reference, 7.2), each a schema of a term too,
-            # as the dialects proposal decided for every dialect ("(ii)")
+            # as the user decided for every dialect ("(ii)", mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided))
             lambda _: _.Pattern.name("Expressions.Python.Python3.Pattern").branches([
                 lambda t: t.name("variable").schema([Framework.Variable]),
                 lambda t: t.name("tuple").schema([_.Tuple]),
@@ -762,8 +761,7 @@ def _operator_kind(vocabulary: dict[str, FD.Signature], **options: Any) -> F.Kin
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms it reads, imported when first needed (the dialects proposal, Retrofit's
-    design): `Python Types`, whose `Term` a parameter's annotation holds, `Python Patterns` and `Python RegExp`."""
+    """The dialects of its family whose terms it reads, imported when first needed (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `Python Types`, whose `Term` a parameter's annotation holds, `Python Patterns` and `Python RegExp`."""
     from ..Patterns import Expressions as PythonPatterns
     from ..RegExp import Expressions as PythonRegExp
     from ..Types import Expressions as PythonTypes

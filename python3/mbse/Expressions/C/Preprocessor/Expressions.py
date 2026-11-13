@@ -3,7 +3,7 @@
 as mbse-programs has them, one set of directives for both languages (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/
 Syntax.py`, "Preprocessing directives [cpp]").
 
-It is the C family's dialect that both C and C++ read (the dialects proposal, Decided for stage 6, "Macros": "the
+It is the C family's dialect that both C and C++ read (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Macros, and a preprocessor per family": "the
 preprocessor is a dialect per family (C's, shared by C and C++ as each standard defines it ...)"), named `C
 Preprocessor` (`Terms.dialect_name`), its tag `c_preprocessor`. Its terms are values of its `Term`,
 `Expressions.C.Preprocessor.Term`, the branch `c_preprocessor` of `Expressions.Framework.Term`: its own kinds and
@@ -25,7 +25,7 @@ order, each a value object `Expressions.C.Preprocessor.<Kind>`:
 
 A name is C's `Identifier` (`Expressions.C.Expressions.Identifier`), a preprocessing token the same in both
 standards. A condition and an include's `macro` hold `Expressions.Framework.Term`: a C or a C++ term, as the
-framework's shared kinds hold any dialect's (the dialects proposal, Decided, 4), each standard defining its own
+framework's shared kinds hold any dialect's (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The framework's kinds with subterms stay shared"), each standard defining its own
 condition's grammar. A directive's `items` hold `Expressions.Framework.Term` too, where a value holds the directive:
 an enumeration's body, whose items are C Types' or Cpp Types' terms (their enumerators, and this dialect's directives
 and comments, which its install adds to both `Term`s); elsewhere mbse-programs relates its items. Which language a

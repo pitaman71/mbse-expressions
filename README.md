@@ -198,22 +198,37 @@ gone; a term that reads stored data read within the expression that holds it, so
 read under the ABI their expression names, `SystemV.AMD64` or `Arm.AAPCS64`
 ([CAP-267: C and C++ terms read under the ABI their holder names](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-267.md)); and standards as tagged data
 ([CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md)). The package root exports `Framework` alone, and Patterns is
-`Expressions.Patterns.Expressions`. Built for 0.10.0, not yet released: stage 6, `SystemVerilog` complete over IEEE
+`Expressions.Patterns.Expressions`. Released in 0.10.0, on mbse-schemas 0.26.10: stage 6, `SystemVerilog` complete over IEEE
 1800-2023, Verilog its subset ([CAP-231: the SystemVerilog expression dialect, complete](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-231.md)),
 six dialects of one family, its expressions and its types, patterns, assertions, constraints and preprocessor, each
 reading the others' terms, printed in both languages, recording the IEEE editions that have its kinds, and checked
-against slang's syntax kinds; a kind may hold several lists of terms; its evaluator keeps what it evaluated. Built for
-0.10.0 too, the retrofit of the other dialects: each family's sublanguages dialects of their own, Python's type
+against slang's syntax kinds; a kind may hold several lists of terms; its evaluator keeps what it evaluated. And the
+retrofit of the other dialects: each family's sublanguages dialects of their own, Python's type
 expressions and `match` patterns ([CAP-276: Python's type expressions and match patterns as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-276.md)),
 TypeScript's types and destructuring patterns ([CAP-277: TypeScript's types and destructuring patterns as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-277.md)),
 and C's and C++'s type names and preprocessor directives ([CAP-278: C's and C++'s type names and preprocessor directives as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-278.md)),
 and every kind that binds names a variation of `let` ([CAP-279: names an expression binds found alike in every language](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-279.md));
-and the regular expressions each language's standard defines, Python's `re`, ECMA-262's and C++'s `std::regex`, each
+the regular expressions each language's standard defines, Python's `re`, ECMA-262's and C++'s `std::regex`, each
 family's dialect ([CAP-281: Python's, ECMAScript's and C++'s regular expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-281.md)), C++'s its own
 grammar, [re.grammar]'s, and the five it selects by naming POSIX's a family of their own, POSIX's basic and extended
-regular expressions (`POSIX.BRE`, `POSIX.ERE`), which a C++ regex naming one holds, JSX staying `TypeScript5`'s. Not built yet: domain
-inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
-interface through which mbse-schemas will choose union branches and check constraints.
+regular expressions (`POSIX.BRE`, `POSIX.ERE`), which a C++ regex naming one holds
+([CAP-294: POSIX's regular expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-294.md)), JSX staying `TypeScript5`'s; a child term called a
+subterm throughout, never a slot; and the tutorials, from values and their domains and one literal up to every
+sublanguage, before the case studies on constraints ([CAP-303: mbse-expressions' tutorials, from domains and trivial expressions up](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-303.md)).
+A breaking release: the moved schemas' names, the binders' renamed properties and the callers' install lists change,
+with no alias.
+
+Coming next: simplification, not evaluation, as the user decided
+([PRI-046: simplification, not evaluation](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-046)): each dialect simplifies an expression by its own
+language's semantics, by recursive substitution, a literal as the simplified root being its evaluation, over literal
+leaves ([CAP-295: simplification of single-dialect expressions with literal leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-295)), over literals, variables and parameters
+([CAP-296: simplification over literals, variables and parameters](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-296)), in every binding state
+([CAP-297: simplification in every binding state](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-297)), over type parameters
+([CAP-298: simplification over type parameters](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-298)) and across a sub-dialect
+([CAP-299: simplification across a sub-dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-299)), as [the evaluation proposal](docs/proposals/evaluation/README.md)
+designs it. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
+conversions) waits for, and the evaluator interface through which mbse-schemas will choose union branches and check
+constraints.
 
 ---
 

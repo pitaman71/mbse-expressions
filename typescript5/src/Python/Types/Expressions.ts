@@ -3,12 +3,11 @@
  * (typing.python.org, "Type annotations"), and its type parameter lists (the Language Reference, 8.11), as
  * mbse-programs has them.
  *
- * It is a dialect of the Python family (the dialects proposal, Decided for stage 6: "most languages will have a dialect
- * for type expressions"; Retrofit's design, Python), named `Python Types` (`Terms.dialectName`), its tag
+ * It is a dialect of the Python family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "most languages will have a dialect
+ * for type expressions"; mbse-basis [CAP-276: Python's type expressions and match patterns as data](mbse:mbse-basis/docs/capabilities/CAP-276.md)), named `Python Types` (`Terms.dialectName`), its tag
  * `python_types`. Its terms are values of its `Term`, `Expressions.Python.Types.Term`, the branch `python_types` of
  * `Expressions.Framework.Term`. A type expression's terms are Python expressions, and an annotation, a bound or a
- * default may be any expression in Python's grammar (which ones the typing specification allows is a constraint, the
- * dialects proposal's Decided, 4), so its `Term` lists every branch of `Expressions.Python.Python3.Term`, which that
+ * default may be any expression in Python's grammar (which ones the typing specification allows is a constraint, mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The framework's kinds with subterms stay shared"), so its `Term` lists every branch of `Expressions.Python.Python3.Term`, which that
  * dialect's install adds, then its own kinds and invalid syntax ("(b)"). `Python3`'s parameter (`arg`) holds it as its
  * `annotation`; mbse-programs' annotations, return types, type aliases' values and type parameter lists hold it through
  * this dialect's holder, `Expressions.Python.Types.Expression`, which refines `Expressions.Framework.Expression`, its

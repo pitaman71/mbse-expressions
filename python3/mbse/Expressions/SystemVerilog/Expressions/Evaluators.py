@@ -9,8 +9,7 @@ domain inference). Every named type it computes in (a literal's, a cast's, `===`
 read once per evaluation when it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError),
 and a store where SystemVerilog's `define` has not run defines none.
 
-It keeps what it evaluated before the dialect was complete, over the kinds that replaced its own (the dialects
-proposal, Decided for stage 6, Q11: "stage 6 extends no evaluator"): a `literal` (an unsized integer, decimal or based,
+It keeps what it evaluated before the dialect was complete, over the kinds that replaced its own (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11: "stage 6 extends no evaluator"): a `literal` (an unsized integer, decimal or based,
 a real, a string) and a `constant` (a vector, sized or not, and a fill in its context's width); a `nameexpression` of an
 identifier; `memberexpression`, `indexexpression`, `rangeselect` (`[msb:lsb]`), `unaryexpression`,
 `binaryexpression`, `conditionalexpression`, `parenthesizedexpression`, `insideexpression` with `valuerange`s,

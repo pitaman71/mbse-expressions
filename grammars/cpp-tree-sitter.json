@@ -145,7 +145,7 @@
   },
   {
    "node": "bitfield_clause",
-   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), \"Bodies within expressions are not part of the term\")"
   },
   {
    "node": "break_statement",
@@ -413,11 +413,11 @@
   },
   {
    "node": "field_declaration",
-   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), \"Bodies within expressions are not part of the term\")"
   },
   {
    "node": "field_declaration_list",
-   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+   "not": "a body of declarations (a struct's, a union's, a class's or an enum's), which is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), \"Bodies within expressions are not part of the term\")"
   },
   {
    "node": "field_designator",

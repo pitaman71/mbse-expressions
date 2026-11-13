@@ -212,8 +212,8 @@ As the user decided (2026-10-30), reviewing a first draft that made domains obje
 3. **Terms hold values.** "terms are not restricted to scalars. Terms can have any value (Schemas.OfAny)"; then "yes
    restrict `literal` to scalars, but also provide container constructors as terms". A `literal` stayed an `OfAny` of
    the five basic scalars (the agent's gloss of "scalars"); new kinds construct containers from terms. *Superseded*
-   (2026-11-02): a literal holds any value, the restriction dropped as the user decided (the
-   [complete-dialects proposal](../dialects/README.md#decided), Decided).
+   (2026-11-02): a literal holds any value, the restriction dropped as the user decided (mbse-basis
+   [CAP-233: literals of any value](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-233.md#decided), "A literal holds any value").
 4. **Expressions deal in values.** "CORRECTION: 'expressions only deal in scalars' -> 'expressions only deal in
    values'" (Schema extension, Decided, 13).
 5. **Every domain a schema.** "(i) can we make every domain a schema too?" (asked; proposed below, A).

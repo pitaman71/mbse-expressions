@@ -1,7 +1,7 @@
 """Expressions of the SystemVerilog Preprocessor dialect: Verilog's and SystemVerilog's compiler directives and macro
 usages (IEEE 1800 clause 22), and the comments kept among them (clause 5), as mbse-programs has them.
 
-It is a dialect of the SystemVerilog family (the dialects proposal, Decided for stage 6, "Macros": "the preprocessor is
+It is a dialect of the SystemVerilog family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Macros, and a preprocessor per family": "the preprocessor is
 a dialect per family ..., a macro usage in an expression position a term of it held by (b)"), named `SystemVerilog
 Preprocessor` (`Terms.dialect_name`), its tag `systemverilog_preprocessor`. Its terms are values of its `Term`,
 `Expressions.SystemVerilog.Preprocessor.Term`, the branch `systemverilog_preprocessor` of

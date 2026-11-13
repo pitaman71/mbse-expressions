@@ -3,7 +3,7 @@
  * mbse-programs has them, the sublanguage of type expressions a cast, a system call's arguments (`$bits(int)`), an
  * assignment pattern's type and a type reference hold.
  *
- * It is a dialect of the SystemVerilog family (the dialects proposal, Decided for stage 6: "most languages will have a
+ * It is a dialect of the SystemVerilog family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "most languages will have a
  * dialect for type expressions"), named `SystemVerilog Types` (`Terms.dialect_name`), its tag `systemverilog_types`. Its
  * terms are values of its `Term`, `Expressions.SystemVerilog.Types.Term`, the branch `systemverilog_types` of
  * `Expressions.Framework.Term`; a subterm that may be a type or an expression (mbse-programs' `DataType | Expression`)

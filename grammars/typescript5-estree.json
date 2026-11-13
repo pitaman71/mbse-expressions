@@ -62,7 +62,7 @@
   },
   {
    "node": "BlockStatement",
-   "not": "a body of statements, which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+   "not": "a body of statements, which is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), \"Bodies within expressions are not part of the term\")"
   },
   {
    "node": "BreakStatement",
@@ -88,7 +88,7 @@
   },
   {
    "node": "ClassBody",
-   "not": "a class's body, which is not part of the term (the dialects proposal, Decided, 5, \"(i)\")"
+   "not": "a class's body, which is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), \"Bodies within expressions are not part of the term\")"
   },
   {
    "node": "ClassDeclaration",

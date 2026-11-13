@@ -2,7 +2,7 @@
 over 6.7's specifiers and declarators), as mbse-programs has them (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/
 Syntax.py`).
 
-It is a dialect of the C family (the dialects proposal, Retrofit's design: "most languages will have a dialect for type
+It is a dialect of the C family (mbse-basis [CAP-278: C's and C++'s type names and preprocessor directives as data](mbse:mbse-basis/docs/capabilities/CAP-278.md): "most languages will have a dialect for type
 expressions"), named `C Types` (`Terms.dialect_name`), its tag `c_types`. Its terms are values of its `Term`,
 `Expressions.C.Types.Term`, the branch `c_types` of `Expressions.Framework.Term`; its holder,
 `Expressions.C.Types.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its `Term`, and so
@@ -14,7 +14,7 @@ value object `Expressions.C.Types.<Kind>`, named as mbse-programs names them, lo
   argument); a cast's, a compound literal's and a generic association's type hold this dialect's `Term`.
 - `enumerator`, an enumeration's enumerator (`name`, an identifier, `attributes`, and its `value`, a C term), which an
   enumeration's body holds as data: mbse-programs models it as nodes (`EnumeratorList` of `Enumerator`s, directives
-  and comments), so it is data of the family's `Types` (the dialects proposal, Retrofit's design, "Bodies").
+  and comments), so it is data of the family's `Types` (mbse-basis [CAP-278: C's and C++'s type names and preprocessor directives as data](mbse:mbse-basis/docs/capabilities/CAP-278.md)).
 - C Preprocessor's directives and `comment`, which its install adds to this dialect's `Term`, as an enumeration's
   body holds them among its enumerators.
 - The framework's kinds of invalid syntax, `error` and `missing`.
@@ -25,7 +25,7 @@ after mbse-programs' category: `Specifier` (keywords, a named type, a struct, un
 `Declarator` (an identifier, a pointer, an array, a function, parentheses), `Parameter` and `AttributeSpecifier`. A
 name is C's `Name` (`Expressions.C.Expressions.Name`), and a term a type name holds (an array's size, `typeof`'s
 operand, an attribute's arguments, an enumerator's value) is C's `Term`, each read through `reads`. A struct's or a
-union's body, its member declarations, is not part of the term (the dialects proposal, Decided, 5, "(i)"): `body` says
+union's body, its member declarations, is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not part of the term"): `body` says
 whether it has one. An enumeration's `body` says whether it has one too (`enum E` against `enum E {}`), and its
 `enumerators` hold its body's items, this dialect's terms, with its `trailing_comma`.
 

@@ -3,7 +3,7 @@
  * 9.5.2), as grep reads its patterns (XCU grep), and as C++'s `std::regex` reads them under its `basic` and `grep`
  * grammars ([re.synopt]).
  *
- * It is a dialect of the POSIX family (the dialects proposal, Decided for stage 6: "if the standard says it's a
+ * It is a dialect of the POSIX family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "if the standard says it's a
  * sublanguage then it's definitely at least a separate dialect"; the user, 2026-11-12: "yes to a new posix family"),
  * named `POSIX BRE` (`Terms.dialectName`), its tag `posix_bre`. Its terms are values of its `Term`,
  * `Expressions.POSIX.BRE.Term`, the branch `posix_bre` of `Expressions.Framework.Term`; its holder,

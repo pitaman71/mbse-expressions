@@ -1,9 +1,9 @@
 """Expressions of the Python RegExp dialect: the regular expressions of Python's `re` module, a grammar of their own (the
 Library Reference, `re`, "Regular Expression Syntax"), as `re`'s parser reads them.
 
-It is a dialect of the Python family (the dialects proposal, Decided for stage 6: "if the standard says it's a
+It is a dialect of the Python family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "if the standard says it's a
 sublanguage then it's definitely at least a separate dialect", and "regular expressions (ECMA-262's, Python's `re`)";
-its Retrofit's design, Python; the user's "(b)" to its Open, 1: every regular expression a language's standard defines,
+mbse-basis [CAP-281: Python's, ECMAScript's and C++'s regular expressions as data](mbse:mbse-basis/docs/capabilities/CAP-281.md); the user's "(b)": every regular expression a language's standard defines,
 its library's included), named `Python RegExp` (`Terms.dialect_name`), its tag `python_regexp`. Its terms are values of
 its `Term`, `Expressions.Python.RegExp.Term`, the branch `python_regexp` of `Expressions.Framework.Term`. No subterm of
 `Python3` is one: a pattern is a string there, and that a string is a regular expression is the program's to say,
@@ -469,8 +469,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family, whose terms it reads as they read its own, imported when first needed (the dialects
-    proposal, Retrofit's design: each of Python's dialects reads the other three)."""
+    """The dialects of its family, whose terms it reads as they read its own, imported when first needed (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms": each of Python's dialects reads the other three)."""
     from ..Patterns import Expressions as PythonPatterns
     from ..Types import Expressions as PythonTypes
     return P.DIALECT, PythonTypes.DIALECT, PythonPatterns.DIALECT

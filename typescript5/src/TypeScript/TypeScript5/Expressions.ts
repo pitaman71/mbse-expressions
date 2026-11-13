@@ -26,8 +26,7 @@
  * - Displays: `arrayexpression`, the framework's `list` (its `elements`, any term: an `elision` for a hole, a
  *   `spreadelement` for `...x`), `objectexpression` (`properties`, each a `property` or a `spreadelement`).
  * - Functions and classes: `functionexpression`, `arrowfunctionexpression`, `classexpression`,
- *   `tsemptybodyfunctionexpression`; a body of statements is not part of the term (the dialects proposal, Decided, 5,
- *   "(i)"): it is absent, and mbse-programs relates its statements to what holds the expression. An arrow whose body is
+ *   `tsemptybodyfunctionexpression`; a body of statements is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not part of the term"): it is absent, and mbse-programs relates its statements to what holds the expression. An arrow whose body is
  *   an expression holds it as its `body`, a term; one whose `body` is absent has a block of statements. Each is a
  *   binder, refining the framework's `Let`, Let's `name` and `value` unset: what it binds, its scopes say.
  * - Operators and access: `metaproperty`, `memberexpression`, `callexpression`, `chainexpression`, `newexpression`,
@@ -42,8 +41,7 @@
  *   `jsxemptyexpression`, with their helpers.
  * - The framework's kinds of invalid syntax, `error` and `missing`.
  *
- * Its sublanguages are dialects of their own, of the TypeScript family (the dialects proposal, Decided for stage 6, and
- * its Retrofit's design), whose `Term`s were its `Type` and `Pattern` unions, their branches unchanged:
+ * Its sublanguages are dialects of their own, of the TypeScript family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6, and mbse-basis [CAP-277: TypeScript's types and destructuring patterns as data](mbse:mbse-basis/docs/capabilities/CAP-277.md)), whose `Term`s were its `Type` and `Pattern` unions, their branches unchanged:
  * `TypeScript Types` (`Expressions.TypeScript.Types.Term`), TypeScript's type nodes, held by what holds a type (`x as T`,
  * `x satisfies T`, `<T>x`, an annotation, a type argument, a type parameter's constraint and default); and
  * `TypeScript Patterns` (`Expressions.TypeScript.Patterns.Term`), destructuring patterns, held by a function's
@@ -581,8 +579,7 @@ function operatorKind(tag: string, vocabulary: ReadonlyMap<string, FD.Signature>
     check: Nodes.check(tag), scopes: Nodes.scopes(tag), optional: TYPE_PARAMETERS });
 }
 
-/** The dialects of its family whose terms are its subterms, read when first needed (the dialects proposal,
- * Retrofit's design): `TypeScript Types`, `TypeScript Patterns` and `TypeScript RegExp`, a constant's `regexp`. */
+/** The dialects of its family whose terms are its subterms, read when first needed (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `TypeScript Types`, `TypeScript Patterns` and `TypeScript RegExp`, a constant's `regexp`. */
 function reads(): readonly F.Dialect[] {
   return [TypeScriptTypes.DIALECT, TypeScriptPatterns.DIALECT, TypeScriptRegExp.DIALECT];
 }

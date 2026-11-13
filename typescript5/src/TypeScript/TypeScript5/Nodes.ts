@@ -1,6 +1,6 @@
 /**
  * How the TypeScript family reads a node, shared by its three dialects, `TypeScript5`, `TypeScript Types` and
- * `TypeScript Patterns` (the dialects proposal, Retrofit's design): a node's own checks, as mbse-programs has them, and
+ * `TypeScript Patterns` (mbse-basis [CAP-277: TypeScript's types and destructuring patterns as data](mbse:mbse-basis/docs/capabilities/CAP-277.md)): a node's own checks, as mbse-programs has them, and
  * its helpers' in turn; the names a pattern binds; and the names each of a kind's arguments has bound. It imports only
  * the framework, so that the family's dialects, which read each other's terms, each import it without a cycle.
  */

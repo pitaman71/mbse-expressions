@@ -14,7 +14,7 @@ A literal is written in its spelling where it has one (`text`), else in its valu
 integer in its base (`'hff`), a real with a point or an exponent, a time with its unit, a string with its escapes, and a
 float that has no literal as a division (`1.0 / 0.0`); a constant's vector in its base wherever the base can write its
 bits (`8'hff`, `4'b10x1`), a fill as `'0`, `null`. Invalid syntax is written as written (`Terms.invalid_text`). Reading
-SystemVerilog (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6)."""
+SystemVerilog (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'")."""
 
 from __future__ import annotations
 

@@ -1,7 +1,7 @@
 """Expressions of the SystemVerilog Patterns dialect: the patterns `matches` compares a value with, binding its
 variables (IEEE 1800 12.6), as mbse-programs has them.
 
-It is a dialect of the SystemVerilog family (the dialects proposal, Decided for stage 6: "if the standard says it's a
+It is a dialect of the SystemVerilog family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "if the standard says it's a
 sublanguage then it's definitely at least a separate dialect"), named `SystemVerilog Patterns`
 (`Terms.dialect_name`), its tag `systemverilog_patterns`. Its terms are values of its `Term`,
 `Expressions.SystemVerilog.Patterns.Term`, the branch `systemverilog_patterns` of `Expressions.Framework.Term`; a

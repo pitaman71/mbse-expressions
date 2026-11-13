@@ -197,7 +197,7 @@
   },
   {
    "node": "BinSelectWithFilterExpr",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "BinaryAndExpression",
@@ -207,11 +207,11 @@
   },
   {
    "node": "BinaryBinsSelectExpr",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "BinaryBlockEventExpression",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "BinaryConditionalDirectiveExpression",
@@ -251,11 +251,11 @@
   },
   {
    "node": "BinsSelectConditionExpr",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "BinsSelection",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "BitSelect",
@@ -269,7 +269,7 @@
   },
   {
    "node": "BlockCoverageEvent",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "BlockingEventTriggerStatement",
@@ -381,11 +381,11 @@
   },
   {
    "node": "ClockingDirection",
-   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "ClockingItem",
-   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "ClockingPropertyExpr",
@@ -401,7 +401,7 @@
   },
   {
    "node": "ClockingSkew",
-   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "ColonExpressionClause",
@@ -511,7 +511,7 @@
   },
   {
    "node": "CoverCross",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "CoverPropertyStatement",
@@ -523,19 +523,19 @@
   },
   {
    "node": "CoverageBins",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "CoverageBinsArraySize",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "CoverageIffClause",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "CoverageOption",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "CovergroupDeclaration",
@@ -543,7 +543,7 @@
   },
   {
    "node": "Coverpoint",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "CycleDelay",
@@ -590,7 +590,7 @@
   },
   {
    "node": "DefaultCoverageBinInitializer",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "DefaultDecayTimeDirective",
@@ -638,7 +638,7 @@
   },
   {
    "node": "DefaultSkewItem",
-   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "DefaultTriregStrengthDirective",
@@ -949,7 +949,7 @@
   },
   {
    "node": "ExpressionCoverageBinInitializer",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "ExpressionOrDist",
@@ -1083,7 +1083,7 @@
   },
   {
    "node": "IdWithExprCoverageBinInitializer",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "IdentifierName",
@@ -1259,7 +1259,7 @@
   },
   {
    "node": "IntersectClause",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "IntersectSequenceExpr",
@@ -1292,7 +1292,7 @@
   },
   {
    "node": "LetDeclaration",
-   "not": "a property's, a sequence's or a `let`'s declaration, which mbse-programs holds as an owned reference object, not a term (the dialects proposal, Q5)"
+   "not": "a property's, a sequence's or a `let`'s declaration, which mbse-programs holds as an owned reference object, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "LibraryDeclaration",
@@ -1620,7 +1620,7 @@
   },
   {
    "node": "OneStepDelay",
-   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "part of a clocking block, a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "OrAssignmentExpression",
@@ -1710,7 +1710,7 @@
   },
   {
    "node": "ParenthesizedBinsSelectExpr",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "ParenthesizedConditionalDirectiveExpression",
@@ -1797,7 +1797,7 @@
   },
   {
    "node": "PrimaryBlockEventExpression",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "PrimitiveInstantiation",
@@ -1833,7 +1833,7 @@
   },
   {
    "node": "PropertyDeclaration",
-   "not": "a property's, a sequence's or a `let`'s declaration, which mbse-programs holds as an owned reference object, not a term (the dialects proposal, Q5)"
+   "not": "a property's, a sequence's or a `let`'s declaration, which mbse-programs holds as an owned reference object, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "PropertySpec",
@@ -1889,7 +1889,7 @@
   },
   {
    "node": "RangeCoverageBinInitializer",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "RangeDimensionSpecifier",
@@ -2010,7 +2010,7 @@
   },
   {
    "node": "SequenceDeclaration",
-   "not": "a property's, a sequence's or a `let`'s declaration, which mbse-programs holds as an owned reference object, not a term (the dialects proposal, Q5)"
+   "not": "a property's, a sequence's or a `let`'s declaration, which mbse-programs holds as an owned reference object, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "SequenceMatchList",
@@ -2061,7 +2061,7 @@
   },
   {
    "node": "SimpleBinsSelectExpr",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "SimplePathSuffix",
@@ -2277,19 +2277,19 @@
   },
   {
    "node": "TransListCoverageBinInitializer",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "TransRange",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "TransRepeatRange",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "TransSet",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "TypeAssignment",
@@ -2343,7 +2343,7 @@
   },
   {
    "node": "UnaryBinsSelectExpr",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "UnaryBitwiseAndExpression",
@@ -2595,7 +2595,7 @@
   },
   {
    "node": "WithClause",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "WithFunctionClause",
@@ -2603,7 +2603,7 @@
   },
   {
    "node": "WithFunctionSample",
-   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (the dialects proposal, Q5)"
+   "not": "coverage (a covergroup, its coverpoints, crosses, bins and their selections), a declaration's, which mbse-programs holds, not a term (mbse-basis [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md#decided), Q5)"
   },
   {
    "node": "WithinSequenceExpr",

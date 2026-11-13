@@ -25,7 +25,7 @@
  *   requires bound and evaluation resolves; `thisexpression`;
  * - `lambdaexpression` (`captures`, `template_parameters`, `template_requires`, `attributes`, `declarator`), whose body
  *   of
- *   statements is not part of the term (the dialects proposal, Decided, 5, "(i)"); `foldexpression`;
+ *   statements is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not part of the term"); `foldexpression`;
  *   `requiresexpression` (`parameters`, `requirements`). A lambda and a requires expression are binders, refining the
  *   framework's `Let`, Let's `name`, `value` and `body` unset: what each binds, its scopes say;
  * - casts: `functionalcastexpression` (`T(x)`, `T{x}`), `namedcastexpression` (`static_cast<T>(x)` and its siblings),
@@ -33,7 +33,7 @@
  * - `awaitexpression` (`co_await`), `yieldexpression` (`co_yield`), `sizeofpackexpression` (`sizeof...(pack)`),
  *   `noexceptexpression`, `newexpression`, `deleteexpression`, `throwexpression`, `packexpansion` (`pattern...`).
  *
- * Its sublanguages are dialects of their own, which it reads (`reads`; the dialects proposal, Retrofit's design): `Cpp
+ * Its sublanguages are dialects of their own, which it reads (`reads`; mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `Cpp
  * Types`, C++'s type-ids (`Expressions.Cpp.Types.Term`), which every type subterm is of (a cast's, a named cast's,
  * `new`'s, a conversion function's name's, a trailing return type, an enumeration's fixed type, a type parameter's
  * default), and C's `C Preprocessor`, the directives C and C++ share; `Term` lists their `typeid` and `definedexpression`
@@ -687,8 +687,7 @@ function native(value: unknown): Writer | null {
   return ["bigint", "number", "boolean", "string"].includes(typeof value) ? literal(value) : null;
 }
 
-/** The dialects whose terms are to be its subterms, read when first needed (the dialects proposal, Retrofit's
- * design): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects; and `Cpp RegExp`, of which no subterm
+/** The dialects whose terms are to be its subterms, read when first needed (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects; and `Cpp RegExp`, of which no subterm
  * is one, as each family's dialects read one another *(agent)*. */
 function reads(): readonly F.Dialect[] {
   return [CppTypes.DIALECT, CPreprocessor.DIALECT, CppRegExp.DIALECT];

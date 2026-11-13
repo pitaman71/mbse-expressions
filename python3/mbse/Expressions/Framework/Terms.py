@@ -6,8 +6,7 @@ An expression is an `Expressions.Framework.Expression`, a reference object whose
 `Expressions.<Dialect>.Expression`, a reference object refining it whose `root` is narrowed to the dialect's `Term`
 (mbse-schemas 0.26.7 confirms a member narrowed from a union to one of its branches' schemas), so `HasRoot`, linking
 the framework's `Expression`, links any dialect's holder; `is_expression` tells either. `Term` is the union of the dialects' `Term`s
-([Complete expression dialects](../../../../docs/proposals/dialects/README.md#decided), Decided, 1, revised
-2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
+(mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "`Expressions.Framework.Term` is a union of the dialects' unions", revised 2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
 each added by its dialect's install by schema extension, and each branch's schema is that dialect's `Term`, the value
 union of its kinds, `Expressions.<Dialect>.Term`, whose branches are its kinds, named plainly (`binop`). Within a term
 tree every parent-child link is a property: a dialect's own kinds hold its `Term`, so its terms nest its terms; the
@@ -107,7 +106,7 @@ The roles are:
   names it binds for lexical references. An import refining `Let` leaves Let's `value` empty and binds by its role.
 
 Every kind that binds names refines `Let` (a binder), listing Let's `name`, `value` and `body` first, any it has no
-name or term for left unset (the dialects proposal, Retrofit's design, the binders); a kind keeps its role, which
+name or term for left unset (mbse-basis [CAP-279: names an expression binds found alike in every language](mbse:mbse-basis/docs/capabilities/CAP-279.md)); a kind keeps its role, which
 evaluation and inference read.
 - `INVALID`: invalid syntax, `error` and `missing`: validation reports it, and evaluation refuses it by name.
 """
@@ -943,7 +942,7 @@ def dialect_tag(name: str) -> str:
 
 def is_binder(schema: Any) -> bool:
     """Whether a kind's schema binds names: `Expressions.Framework.Let`, or a schema refining it, as every kind that binds
-    symbols does (the dialects proposal, Decided for stage 6, Q8, "(a)"). A binder binds by its kind's `scopes` where it
+    symbols does (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Binding kinds refine `Let`", "(a)"). A binder binds by its kind's `scopes` where it
     has them, else by its role: a quantifier its `name` to each item of its first argument, an import what it declares
     (`Kind.names`), and any other its `name` within its arguments after the first, as a let does."""
     while isinstance(schema, Schemas.OfObject.Data):
@@ -956,7 +955,7 @@ def is_binder(schema: Any) -> bool:
 def _lets(kind: Kind, record: Any) -> bool:
     """Whether a term binds as a let does, its name within its arguments after the first: a binder (`is_binder`) whose
     role is `BINDING` and whose kind has no `scopes`. A binder whose role is `QUANTIFIER` or `IMPORT` binds by its role,
-    and one with `scopes` by them (the dialects proposal, Retrofit's design, the binders)."""
+    and one with `scopes` by them (mbse-basis [CAP-279: names an expression binds found alike in every language](mbse:mbse-basis/docs/capabilities/CAP-279.md))."""
     return kind.role == BINDING and kind.scopes is None and is_binder(record.as_schema())
 
 
@@ -1021,8 +1020,7 @@ class Dialect:
         """The dialect that owns a term's kind, whose name its refusals and its printing of invalid syntax give: the
         dialect whose `Term` holds it, this one or one it reads, or, for a kind that `Term` lists and a dialect it reads
         declares, that dialect ("Python Types typevar is not evaluated", "C Types error has no text to print"); a term
-        of any other dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as the
-        dialects proposal's Retrofit's design has it ("Python Patterns matchas is not evaluated")."""
+        of any other dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review) records it ("Python Patterns matchas is not evaluated")."""
         reader = self._reader(term_)
         tag = kind_of(term_)[0]
         if reader is None or tag in reader._kinds:  # another dialect's term, or its reader's own kind

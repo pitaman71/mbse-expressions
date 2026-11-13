@@ -4,8 +4,7 @@
  *
  * An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
  * `Expressions.Framework.Term`, held nested ([Porting to the stabilized mbse-schemas](../../../docs/proposals/port/README.md#decided), Decided, 2). `Term` is the union of the dialects' `Term`s
- * ([Complete expression dialects](../../../docs/proposals/dialects/README.md#decided), Decided, 1, revised
- * 2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
+ * (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "`Expressions.Framework.Term` is a union of the dialects' unions", revised 2026-11-03): its branches are the dialects (`patterns`, `python3`, ...),
  * each added by its dialect's install by schema extension, and each branch's schema is that dialect's `Term`, the value
  * union of its kinds, `Expressions.<Dialect>.Term`, whose branches are its kinds, named plainly (`binop`). Within a term
  * tree every parent-child link is a property: a dialect's own kinds hold its `Term`, so its terms nest its terms; the
@@ -105,7 +104,7 @@
  * - `INVALID`: invalid syntax, `error` and `missing`: validation reports it, and evaluation refuses it by name.
  *
  * Every kind that binds names refines `Let` (a binder), listing Let's `name`, `value` and `body` first, any it has no
- * name or term for left unset (the dialects proposal, Retrofit's design, the binders); a kind keeps its role, which
+ * name or term for left unset (mbse-basis [CAP-279: names an expression binds found alike in every language](mbse:mbse-basis/docs/capabilities/CAP-279.md)); a kind keeps its role, which
  * evaluation and inference read.
  */
 
@@ -1050,7 +1049,7 @@ export function dialectTag(name: string): string {
 }
 
 /** Whether a kind's schema binds names: `Expressions.Framework.Let`, or a schema refining it, as every kind that binds
- * symbols does (the dialects proposal, Decided for stage 6, Q8, "(a)"). A binder binds by its kind's `scopes` where it
+ * symbols does (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Binding kinds refine `Let`", "(a)"). A binder binds by its kind's `scopes` where it
  * has them, else by its role: a quantifier its `name` to each item of its first argument, an import what it declares
  * (`Kind.names`), and any other its `name` within its arguments after the first, as a let does. */
 export function isBinder(schema: unknown): boolean {
@@ -1064,7 +1063,7 @@ export function isBinder(schema: unknown): boolean {
 
 /** Whether a term binds as a let does, its name within its arguments after the first: a binder (`isBinder`) whose role
  * is `BINDING` and whose kind has no `scopes`. A binder whose role is `QUANTIFIER` or `IMPORT` binds by its role, and
- * one with `scopes` by them (the dialects proposal, Retrofit's design, the binders). */
+ * one with `scopes` by them (mbse-basis [CAP-279: names an expression binds found alike in every language](mbse:mbse-basis/docs/capabilities/CAP-279.md)). */
 export function _lets(kind: Kind, record: any): boolean {
   return kind.role === BINDING && kind.scopes === null && isBinder(record.as_schema());
 }
@@ -1149,8 +1148,7 @@ export class Dialect {
   /** The dialect that owns a term's kind, whose name its refusals and its printing of invalid syntax give: the dialect
    * whose `Term` holds it, this one or one it reads, or, for a kind that `Term` lists and a dialect it reads declares,
    * that dialect ("Python Types typevar is not evaluated", "C Types error has no text to print"); a term of any other
-   * dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as the dialects proposal's
-   * Retrofit's design has it ("Python Patterns matchas is not evaluated"). */
+   * dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review) records it ("Python Patterns matchas is not evaluated"). */
   owner(term_: any): Dialect {
     const reader = this.reader(term_);
     const tag = kindOf(term_)[0];

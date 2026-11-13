@@ -12,8 +12,7 @@ term, is written `{}`, where mbse-programs writes the statements it relates. An 
 constraint is written `<T,>`, so that the text reads alike in a `.ts` and a `.tsx` file. Its `Printer` writes
 TypeScript5's kinds and helpers itself, and dispatches the types', the patterns' and the regular expressions' to their
 dialects' `Text.TEXTS`, as SystemVerilog's family printer does. A regular expression's constant is written in its
-spelling, `/pattern/flags`, else, where it has none, as its `regexp` is written. Reading TypeScript (`FromText`) is mbse-programs' (the dialects proposal, Decided,
-6)."""
+spelling, `/pattern/flags`, else, where it has none, as its `regexp` is written. Reading TypeScript (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'")."""
 
 from __future__ import annotations
 

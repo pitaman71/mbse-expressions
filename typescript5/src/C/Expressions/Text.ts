@@ -16,7 +16,7 @@
  * ending the line before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`,
  * `#elif`, `#elifdef`, `#else`) on a line of its own, its items on the lines between, and `#endif`. Invalid syntax is
  * written as written (`Terms.invalidText`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`).
- * Reading C (`FromText`) is mbse-programs' (the dialects proposal, Decided, 6).
+ * Reading C (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'").
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

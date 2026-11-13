@@ -3,7 +3,7 @@
 category `Pattern`): what a function's, an arrow's, a signature's, a function type's and an index signature's
 parameters bind, and what an assignment's target assigns.
 
-It is a dialect of the TypeScript family (the dialects proposal, Retrofit's design), named `TypeScript Patterns`
+It is a dialect of the TypeScript family (mbse-basis [CAP-277: TypeScript's types and destructuring patterns as data](mbse:mbse-basis/docs/capabilities/CAP-277.md)), named `TypeScript Patterns`
 (`Terms.dialect_name`), its tag `typescript_patterns`. Its terms are values of its `Term`,
 `Expressions.TypeScript.Patterns.Term`, the branch `typescript_patterns` of `Expressions.Framework.Term`, which was
 `TypeScript5`'s `Pattern` union, its 16 branches unchanged, so that a pattern's data, written by branch tags, is as it
@@ -19,7 +19,7 @@ object pattern's `property` and an array pattern's hole, `elision`; and invalid 
 `TypeScript5`'s `Term` lists `arraypattern`, `objectpattern` and `assignmentpattern` too, as typescript-estree's
 expressions hold them (a `property`'s value, where an object pattern holds it).
 
-A pattern binds through what holds it (the dialects proposal, Retrofit's design, the binders): a function's
+A pattern binds through what holds it (mbse-basis [CAP-279: names an expression binds found alike in every language](mbse:mbse-basis/docs/capabilities/CAP-279.md)): a function's
 parameters within it, as its kind's scopes say; none of its kinds refines `Let`. `bound_names` gives the names a
 pattern binds. Within an assignment's target, a name is a reference to what it assigns.
 

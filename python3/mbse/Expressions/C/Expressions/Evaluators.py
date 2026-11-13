@@ -32,7 +32,7 @@ neither dialect defines, by name. C's rules apply:
   (`Framework.Objects`), or a key of a mapping); `array[index]` an element of a list, or of a container; `f(args)`
   calls a function the scope provides, by its name, and nothing else.
 
-Evaluation stays shallow (the dialects proposal, Decided, 8): `EVALUATED` names the kinds C evaluated before it was
+Evaluation stays shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): `EVALUATED` names the kinds C evaluated before it was
 complete, in their complete shapes; any other kind raises `NotImplementedError` by name ("C sizeofexpression is not
 evaluated"), and so does what an evaluated kind holds beyond its former shape: an operator its vocabulary has but no
 rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not evaluated"), a literal of a type no evaluator has values

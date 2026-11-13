@@ -4,8 +4,8 @@
  * modifies it), and a `regex` naming among its flags another grammar, POSIX's, which [re.synopt] refers to: `basic` and
  * `extended`, POSIX's basic and extended regular expressions, and `awk`, `grep` and `egrep`, those of POSIX's utilities.
  *
- * It is a dialect of the Cpp family (the dialects proposal, Decided for stage 6: "constraints, regexes and patterns are
- * expression dialects"; the user, on its Retrofit's design, Open, 1: "(b)", every regular expression a language's
+ * It is a dialect of the Cpp family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "constraints, regexes and patterns are
+ * expression dialects"; the user's "(b)" (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Which regular expressions are dialects"), every regular expression a language's
  * standard defines, its library's included), named `Cpp RegExp` (`Terms.dialectName`), its tag `cpp_regexp`. Its terms
  * are values of its `Term`, `Expressions.Cpp.RegExp.Term`, the branch `cpp_regexp` of `Expressions.Framework.Term`; its
  * holder, `Expressions.Cpp.RegExp.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
@@ -48,8 +48,7 @@
  * structure, of no domain known statically, and are not evaluated, each refused by its dialect's name ("Cpp RegExp regex
  * is not evaluated"). The editions it covers are data, which `define` writes, C++'s (C++17, C++20, C++23), every kind in
  * each (`SINCE`): [re.grammar] is the same in the three. `DIALECT` reads its kinds, its family's other dialects' terms,
- * as each family's dialects read one another (the dialects proposal, Retrofit's design, "Installs in any order within a
- * family"), and POSIX's, which a regex holds (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis
+ * as each family's dialects read one another (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"), and POSIX's, which a regex holds (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis
  * [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)). Its terms are written
  * through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
  * `(u) => u.character((c) => c.value(97n))`.
@@ -117,7 +116,7 @@ const CLASS_ATOMS = [CHARACTERCLASSRANGE, CHARACTERSET, CHARACTER, EXCLASS, COLL
 const ENDS = [CHARACTER, COLLATINGELEMENT];
 
 /** What each kind's terms may be, by property, besides invalid syntax: the grammar's structure, which the schema, every
- * property holding its `Term`, leaves to validation (the dialects proposal, Decided, 4); a quantifier repeats an Atom,
+ * property holding its `Term`, leaves to validation (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The framework's kinds with subterms stay shared"); a quantifier repeats an Atom,
  * never an Assertion or another quantifier (ECMA-262, 15.10.1, Term). */
 export const HOLDS: ReadonlyMap<string, ReadonlyMap<string, readonly string[]>> = new Map([
   [PATTERN, new Map([["alternatives", [ALTERNATIVE]]])],

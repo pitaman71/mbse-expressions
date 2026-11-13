@@ -2,7 +2,7 @@
  * Expressions of the Cpp Types dialect: C++'s type-ids, a grammar of their own (ISO/IEC 14882, [dcl.name], over
  * [dcl.spec] and [dcl.decl]), as mbse-programs has them (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`).
  *
- * It is a dialect of the Cpp family (the dialects proposal, Retrofit's design: "most languages will have a dialect for
+ * It is a dialect of the Cpp family (mbse-basis [CAP-278: C's and C++'s type names and preprocessor directives as data](mbse:mbse-basis/docs/capabilities/CAP-278.md): "most languages will have a dialect for
  * type expressions"), named `Cpp Types` (`Terms.dialectName`), its tag `cpp_types`. Its terms are values of its `Term`,
  * `Expressions.Cpp.Types.Term`, the branch `cpp_types` of `Expressions.Framework.Term`; its holder,
  * `Expressions.Cpp.Types.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its `Term`, and
@@ -14,7 +14,7 @@
  *   a named cast's, `new`'s, a conversion function's name's, a trailing return type, an enumeration's fixed type, a type
  *   parameter's default) holds this dialect's `Term`.
  * - `enumerator`, an enumeration's enumerator (`name`, an identifier, `attributes`, and its `value`, a C++ term), which an
- *   enumeration's body holds as data (the dialects proposal, Retrofit's design, "Bodies"): C++'s `EnumSpecifier` holds
+ *   enumeration's body holds as data (mbse-basis [CAP-278: C's and C++'s type names and preprocessor directives as data](mbse:mbse-basis/docs/capabilities/CAP-278.md)): C++'s `EnumSpecifier` holds
  *   them, its `enumerators`. C++ defines no enumeration in a type-id an expression holds ([dcl.type.general]), so an
  *   enumeration's data is held only through a holder, by mbse-programs' alias declarations.
  * - C Preprocessor's directives and `comment`, which its install adds to this dialect's `Term`, as an enumeration's
