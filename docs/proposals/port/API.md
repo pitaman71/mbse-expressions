@@ -3,7 +3,7 @@
 
 # The API after the complete dialects' stage 4 (as settled in the port's stages 2a, 2b and 3, and the dialects' stages 2 to 4)
 
-Since the complete dialects' stage 2 ([the dialects proposal](../dialects/README.md#stages-proposed-once-decided)), Basic
+Since the complete dialects' stage 2 ([the dialects proposal](../dialects/README.md#stages)), Basic
 is Patterns, Python is Python3, and Ccpp is C and Cpp; `Expressions.Framework.Term` is the union of the dialects' `Term`s
 (`Expressions.<path>.Term`, each the value union of its kinds). Since the namespace rename, each dialect lives at
 `Expressions.<Family>.<Dialect>`, its path (`Patterns.Expressions`, `Python.Python3`, `TypeScript.TypeScript5`,
@@ -103,7 +103,7 @@ transaction: what tests and evaluators that need no expression object use. A tra
 
 **Writers stay** (Decided, 10, until mbse-codegen-python moves off them; then they go with the builders' `set`,
 `argument` and `arguments`). C's writers stay beyond that (and C++'s, which are C's, writing C++'s terms), as the user
-decided reviewing stage 5 (2026-11-04, [the dialects proposal's Decided](../dialects/README.md#decided)): "4. for
+decided reviewing stage 5 (2026-11-04, mbse-basis [CAP-229: the C expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-229.md#decided)): "4. for
 codegen, we keep the writers separately because they emit code not just wire format for the model". A `Writer` is now a
 spec: a callable that writes a term through the builders. Called with the `Visitors.OfProperty` of a term property
 (`root`), the `Visitors.OfAny` of a container's element (`arguments`) or the `Visitors.OfUnion` of a term value
@@ -385,8 +385,8 @@ singleton by name was the coordinating agent's proposal, built on that direction
 
 ## Settled in the complete dialects' stage 2, for the user's review
 
-Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 1, 3, 4, 7 and 9, the literal's
-two decisions, and the rename of Basic) and as the brief for stage 2 asked; each choice below is where they were silent.
+Built as the user decided, the decisions now recorded in mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided) (its questions 1, 3, 4, 7 and 9, and the rename of
+Basic) and [CAP-233: literals of any value](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-233.md#decided) (the literal's two decisions) and as the brief for stage 2 asked; each choice below is where they were silent.
 
 30. **A dialect's `Term` is recognized by its name.** A subterm is a property whose schema is a union named
     `Expressions.<Dialect>.Term`, `Expressions.Framework.Term` among them; so is a container's element (variadic
@@ -412,7 +412,7 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
     through it, so they refuse it too; a printer folds bottom-up, so it names the first such term it reads, the
     deepest. So a term of a shared kind is no longer the same value in each dialect that reuses it (as item 15 had it):
     Patterns' call in a Python3 or Excel expression is refused.
-35. *(Superseded 2026-11-03, as the user decided, the proposal's Decided, 1, revised: "Framework.Term ->
+35. *(Superseded 2026-11-03, as the user decided, mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided), revised: "Framework.Term ->
     Dialects.C.Term / Framework.Term -> Dialects.Cpp.Term".)* ~~C's and C++'s shared kinds: each kind defined once,
     `Expressions.C.<Kind>`, by C's install, listed by both unions, its subterms of `Expressions.Framework.Term`.~~ Now
     **C and C++ each define the kinds they share**: `Expressions.C.<Kind>` by C's install, its properties holding
@@ -499,8 +499,9 @@ two decisions, and the rename of Basic) and as the brief for stage 2 asked; each
 
 ## Settled in stage 3 (Python3), for the user's review
 
-Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 2, 5, 6 and 8, the subscript's
-and the literal's decisions) and as the brief for stage 3 asked; each choice below is where they were silent.
+Built as the user decided, the decisions now recorded in mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided) (its questions 2, 5, 6 and 8),
+[CAP-227: the Python3 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-227.md#decided) (the subscript's) and
+[CAP-233: literals of any value](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-233.md#decided) (the literal's) and as the brief for stage 3 asked; each choice below is where they were silent.
 
 50. **Kinds, named and shaped as mbse-programs has them.** Each of `ast`'s expression kinds is a kind of
     `Expressions.Python3.Term`, its schema `Expressions.Python3.<Name>` with mbse-programs' properties in source order
@@ -627,9 +628,10 @@ and the literal's decisions) and as the brief for stage 3 asked; each choice bel
 
 ## Settled in stage 4 (TypeScript5), for the user's review
 
-Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 2, 5, 6, 8 and 9, the literal's
-decisions, and the sublanguage unions' decision of 2026-11-03: "(b) as you recommended", "yes, stay `Identifier`
-terms") and as the brief for stage 4 asked; each choice below is where they were silent.
+Built as the user decided, the decisions now recorded in mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided) (its questions 2, 5, 6, 8 and 9),
+[CAP-233: literals of any value](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-233.md#decided) (the literal's) and
+[CAP-228: the TypeScript5 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-228.md#decided) (the sublanguage unions' decision of 2026-11-03:
+"(b) as you recommended", "yes, stay `Identifier` terms") and as the brief for stage 4 asked; each choice below is where they were silent.
 
 70. **Kinds, named and shaped as mbse-programs has them**, which is as typescript-estree has them
     (`mbse-programs/python3/mbse/Programs/TypeScript/Syntax.py`): each a value object `Expressions.TypeScript5.<Name>`
@@ -646,7 +648,7 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
     `tsemptybodyfunctionexpression`: item 72), the patterns an expression's place holds (`arraypattern`,
     `objectpattern`, `assignmentpattern`: item 71), and the framework's `error` and `missing`.
 71. **Sublanguages, each a union of its own, a schema a branch of the union of every subterm it may be** (as the user
-    decided, (b)). `Expressions.TypeScript5.Pattern` (14 branches): the four patterns (`arraypattern`,
+    decided, (b): mbse-basis [CAP-228: the TypeScript5 expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-228.md#decided)). `Expressions.TypeScript5.Pattern` (14 branches): the four patterns (`arraypattern`,
     `objectpattern`, `assignmentpattern`, `restelement`), the terms a target may be (`identifier`,
     `memberexpression`, `parenthesizedexpression`, `tsasexpression`, `tssatisfiesexpression`, `tstypeassertion`,
     `tsnonnullexpression`), and what an object or array pattern or a parameter list holds beside them (`property`,
@@ -754,14 +756,14 @@ terms") and as the brief for stage 4 asked; each choice below is where they were
 
 ## Settled in stage 5 (C and Cpp), for the user's review
 
-Built as [the dialects proposal](../dialects/README.md#decided) decided (its Decided, 3, 5, 6, 8 and 9, the revision
-of 2026-11-03 that each of C and C++ defines the kinds they share, the sublanguage unions' "(b)", "Every dialect has a
+Built as the user decided, the decisions now recorded in mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided) and its dialects' items (its questions 3, 5, 6, 8 and
+9, the revision of 2026-11-03 that each of C and C++ defines the kinds they share, the sublanguage unions' "(b)", "Every dialect has a
 `Pattern` union", "(ii)", and, from the review of 2026-11-04, "A name is whatever the language's own grammar makes
 it") and as the brief for stage 5 asked; each choice below is where they were silent. Items 88, 90, 92 to 94, 96, 98
 and 100 are revised by that review, and items 104 to 106 added; items 87 to 89, 91, 94, 96, 98, 100, 103, 105 and 106
-are revised by the user's decisions of 2026-11-04 on item 106 (the proposal's Decided, "C++ writes a name used as an
-expression only as `idexpression`", "C++'s init capture holds its name as a `Pattern`" and "C's writers stay, for code
-generation"), and item 107 added.
+are revised by the user's decisions of 2026-11-04 on item 106 (mbse-basis [CAP-230: the C++ expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-230.md#decided), "C++ writes a name used as an
+expression only as `idexpression`" and "C++'s init capture holds its name as a `Pattern`", and
+[CAP-229: the C expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-229.md#decided), "C's writers stay, for code generation"), and item 107 added.
 
 87. **Kinds, named and shaped as mbse-programs has them** (`mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`): each a
     value object `Expressions.C.<Name>` or `Expressions.Cpp.<Name>`, with mbse-programs' properties in source order,
@@ -854,7 +856,7 @@ generation"), and item 107 added.
     `subscript(object, *indices)` and `call(function, *arguments)`, as a `Writers(dialect, writer)` each dialect has;
     both write a member's name as an `identifier`, its `Name`; `identifier(name)`, and a callee named by a string, is
     C's `variable` and C++'s `idexpression` of the identifier (Cpp's `Writers` derives C's, its one difference). They
-    stay, for code generation, as the user decided (2026-11-04): "4. for codegen, we keep the writers separately
+    stay, for code generation, as the user decided (2026-11-04, mbse-basis [CAP-229: the C expression dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-229.md#decided)): "4. for codegen, we keep the writers separately
     because they emit code not just wire format for the model". A cast's `type` is a spec of the dialect's `Type`,
     written through the builders: the writer does not read a type name from a string, which would guess whether each
     word is a keyword or a type's name (PRI-025), so `PRIMITIVES` is gone. A native value is written as its literal (a
@@ -955,7 +957,7 @@ generation"), and item 107 added.
 
 ## Settled in the namespace rename, for the user's review
 
-Built as [the dialects proposal](../dialects/README.md#decided) decided ("Namespace": `Expressions.<family>.<dialect>`)
+Built as the user decided ("The namespace": `Expressions.<family>.<dialect>`, mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided))
 and as the user answered its eight questions (2026-11-05, "yes, go"); a rename only, each choice below is where they
 were silent. The JSON corpora change only where a schema or singleton name appears (`domains`), byte-identical across
 the languages; every other case's wire is unchanged, since branch tags are.
@@ -1014,8 +1016,7 @@ Built in domains as data's stage 1 (#27) as the user decided, the decisions now 
 silent.
 
 112. **The standard dialects.** `ISOIEC11404`, `IEEE754`, `IEEE1164` and `Unicode`, each a family holding its one
-     dialect, `Expressions`, laid out as every dialect is (item 108; the dialects proposal's Decided, Namespace, 6 and
-     7): the Python package `mbse.Expressions.<Family>.Expressions`, at `mbse/Expressions/<Family>/Expressions/`, its
+     dialect, `Expressions`, laid out as every dialect is (item 108; mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided), "The namespace"): the Python package `mbse.Expressions.<Family>.Expressions`, at `mbse/Expressions/<Family>/Expressions/`, its
      module `Expressions` holding `install`, `define` and `STANDARDS`, which the package exports; TypeScript's at
      `src/<Family>/Expressions/`, exported as `@mbse/expressions/<Family>/Expressions` and nothing for the family. Each
      dialect is a singleton of its own schema, `Expressions.<Family>.Expressions`, a branch of `Expressions.Framework.Dialect`
@@ -1295,8 +1296,7 @@ group 2 (SystemVerilog) 141 to 148, group 3 (Python3, TypeScript5, MATLAB and Ex
 
 ## Settled in domains as data's stage 4, for the user's review
 
-Built in domains as data's stage 4 (#31), from the user's decisions now recorded in mbse-basis [CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md#decided) (the dialects
-proposal's Decided, Q10, and "Standards as tagged data, a stage of its own"); each choice where they were silent is
+Built in domains as data's stage 4 (#31), from the user's decisions now recorded in mbse-basis [CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md#decided) ("Standards as tags", stage 6's Q10, and "Standards as tagged data, a stage of its own"); each choice where they were silent is
 marked *(agent)*. A breaking change, in 0.9.0, a
 breaking release anyway.
 
@@ -1338,7 +1338,7 @@ breaking release anyway.
      C++'s, Python3's and TypeScript5's tables of standards by kind (`_C_STANDARDS`, `_STANDARDS` and `_SINCE_20`'s
      names, `_since`, `_ALL`), each now the define's table. `EXTENSIONS` stays.
 159. **SystemVerilog, Patterns, MATLAB, Excel and LaTeX cover none** *(agent)*: their code names no standard.
-     SystemVerilog's editions are stage 6's, which records them in this model (the dialects proposal's Decided, Q10):
+     SystemVerilog's editions are stage 6's, which records them in this model (stage 6's Q10, mbse-basis [CAP-268: standards as tagged data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-268.md#decided), "Standards as tags"):
      *superseded* for SystemVerilog by item 177, its six dialects covering IEEE 1364's and IEEE 1800's editions.
 160. **The corpus** *(agent)*: each data case that writes a dialect's singleton as one document now holds its `Covers`
      entries; a new data case, `standards` (`STANDARD`), writes C23's edition, ISO/IEC 9899:2024, as one document of
@@ -1352,8 +1352,8 @@ breaking release anyway.
 
 ## Settled in stage 6 (SystemVerilog), for the user's review
 
-Built as [the dialects proposal](../dialects/README.md#decided-for-stage-6-systemverilog-and-after-2026-11-05) decided
-(Decided for stage 6, its principles, Q1 to Q12 and the namespace) and as stage 6's *Design* planned it; each choice
+Built as the user decided stage 6 (its principles, Q1 to Q12 and the namespace, now recorded in mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided) and
+[CAP-231: the SystemVerilog expression dialect, complete](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-231.md#decided)) and as stage 6's *Design* planned it; each choice
 where they were silent is marked *(agent)*. The core (162 to 179) was built first, then the slang data (180 to 186),
 then the four sublanguages in parallel (Patterns 187 to 191, Assertions 192 to 197, Constraints 198 to 203,
 Preprocessor 204 to 209), then the coordinator's decisions (210 to 213). A breaking change, in 0.10.0: SystemVerilog's
@@ -1559,12 +1559,12 @@ mapped where mbse-programs' `_Reader.py` builds the node: 229 mapped, 304 not.
 
 ## Settled in the retrofit, for the user's review
 
-Built as [the dialects proposal](../dialects/README.md#stages-proposed-once-decided) designs it (stage 6's *Retrofit's
-design*), applying Decided for stage 6 to the other dialects; each choice where the design and the decisions were
+Built as [the dialects proposal](../dialects/README.md#stages) designed it (the retrofit), applying stage 6's decisions to the other
+dialects (mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided), its rules where they were silent among that item's decisions by an agent); each choice where the design and the decisions were
 silent is marked *(agent)*. The core (217 to 224) was built first, alone; then three groups in parallel, Python (225
 to 235), TypeScript (236 to 245) and C and C++ (246 to 260); then the coordinator's merge and decisions (261 to 268).
-The regular expression dialects (`Python RegExp`, `TypeScript RegExp`) and JSX wait on the user (the design's Open, 1
-and 2). A breaking change, in 0.10.0: the moved schemas' names, the binders' renamed properties, and the callers'
+The regular expression dialects (`Python RegExp`, `TypeScript RegExp`) and JSX waited on the user then (the design's Open, 1
+and 2), decided since (item 268). A breaking change, in 0.10.0: the moved schemas' names, the binders' renamed properties, and the callers'
 install lists.
 
 ### The core
@@ -1740,18 +1740,19 @@ install lists.
 267. **Tests**: 203 cases in each language, with the same IDs in the same order: PYT, PYP, TST, TSP, CTY, XTY and CPD
      new, 54 cases; FRM-01, FRM-02, FRM-04, FRM-11, FRM-13, DIA-20 to DIA-26, DIA-30, CONF-04 and SKL-03 under their
      IDs.
-268. **Open, with the user** then, each left as it was, and decided since ([the dialects proposal](../dialects/README.md#decided-for-the-retrofit-2026-11-12),
-     Decided for the retrofit): the regular expression dialects (the design's Open, 1), each a language's standard
+268. **Open, with the user** then, each left as it was, and decided since (mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided), "Which regular expressions are dialects", "JSX
+     stays `TypeScript5`'s" and "A constant in a refusal shows its text"): the regular expression dialects (the design's Open, 1), each a language's standard
      defines, "(b) ofc", built as items 271 to 310; JSX (Open, 2), which stays TypeScript5's; and a constant described as `None` in refusal
      messages (item 216), which shows its text (item 269).
 
 ## Settled with the user's answers on the retrofit, for the user's review
 
-Built as [the dialects proposal](../dialects/README.md#decided-for-the-retrofit-2026-11-12) records the user's answers
-(Decided for the retrofit, 4 and 5); each choice where they were silent is marked *(agent)*. The three regular
+Built on the user's answers to the retrofit's fourth and fifth questions (mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided), "A constant in a
+refusal shows its text", and [CAP-277: TypeScript's types and destructuring patterns as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-277.md#decided), "One name for what a
+pattern binds"); each choice where they were silent is marked *(agent)*. The three regular
 expression dialects (2) are built as items 271 to 310. A breaking change, in 0.10.0: TypeScript's `binding_names` is gone.
 
-269. **A refusal shows a constant's text** (Decided for the retrofit, 4): `Terms.Kind`'s `shown(attributes)` gives what
+269. **A refusal shows a constant's text** (the retrofit's question 4, "4. yes"): `Terms.Kind`'s `shown(attributes)` gives what
      a refusal shows of a literal-role kind that holds no value, where a literal shows its value's `repr`; each
      dialect's `constant` sets it to its new `constant_text(attributes)` (`constantText`), the function its printer
      writes it with *(agent)*: its text as written (`text`), else its default spelling, Python3's `None`, `...` or a
@@ -1766,7 +1767,7 @@ expression dialects (2) are built as items 271 to 310. A breaking change, in 0.1
      `constant_text(attributes, regexp)` takes the regexp's text from a callable its printer gives, as the module has
      no printer, and without one refuses ("a TypeScript5 constant with no pattern is written from its regexp, by its
      printer"); TypeScript5 has no translator, so no refusal shows one *(agent)*. TSR-07 asserts it.
-270. **`bound_names` (`boundNames`), TypeScript's too** (Decided for the retrofit, 5): `TypeScript.TypeScript5.Nodes`',
+270. **`bound_names` (`boundNames`), TypeScript's too** (the retrofit's question 5, "5 - yes as you suggested"): `TypeScript.TypeScript5.Nodes`',
      `TypeScript.TypeScript5.Expressions`' and `TypeScript.Patterns.Expressions`' `binding_names` (`bindingNames`)
      is renamed `bound_names` (`boundNames`), the name `Python.Patterns`, `SystemVerilog.Patterns` and
      `C.Expressions.Kinds` give what a pattern binds, with no alias; its callers, tutorial 8 (T08.2) and
@@ -1774,9 +1775,8 @@ expression dialects (2) are built as items 271 to 310. A breaking change, in 0.1
 
 ## Settled in the regular expression dialects, for the user's review
 
-Built as [the dialects proposal](../dialects/README.md#stages-proposed-once-decided) designs them (stage 6's *Retrofit's
-design*, Python's and TypeScript's regular expressions, and *Cpp RegExp*), on the user's answer to its Open, 1
-(2026-11-12), "(b) ofc": every regular expression a language's standard defines is a dialect, its library's included.
+Built as [the dialects proposal](../dialects/README.md#stages) designed them (the retrofit's regular expressions, and *Cpp RegExp*), on the
+user's answer (2026-11-12), "(b) ofc" (mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided), "Which regular expressions are dialects"): every regular expression a language's standard defines is a dialect, its library's included.
 Three groups built in parallel, Python (271 to 282), TypeScript (283 to 292) and C++ (293 to 301); then the
 coordinator's merge and decisions (302 to 310). Each choice where the design and the decisions were silent is marked
 *(agent)*. Numbered after 269 and 270, which mbse-expressions#39 adds.
@@ -1850,7 +1850,7 @@ coordinator's merge and decisions (302 to 310). Each choice where the design and
      literal's flags each once, never both `u` and `v`, a modifiers adding or removing a flag, never both), and what
      each kind may hold (a range's ends characters, an expression class's expression an intersection or a subtraction);
      which kinds a mode allows (the `v` flag's classes in a literal without it), like which terms a subterm may be, is
-     a constraint (the dialects proposal, Decided, 4).
+     a constraint (mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided), "The framework's kinds with subterms stay shared").
 288. **Editions** *(agent)*: ECMA-262's, the 5.1 Edition to the 16th as built, the 17th added by item 303, each by Ecma
      International's designation (`ECMA-262 6th Edition`), body `org.ecma-international`, number `262`, revision its
      edition (the 5.1 Edition's a version), common names as Ecma writes them (`ECMAScript 2015`, `ES2015`), frame
@@ -1892,7 +1892,8 @@ coordinator's merge and decisions (302 to 310). Each choice where the design and
      alternative's elements atoms, a class's its class atoms, a range's ends a character or a collating element), and,
      under a `regex`, `FEATURES` (alternation not in the basic grammar but in grep's list of patterns, a group and a
      lookahead ECMAScript's alone, a repeated quantifier or anchor an ERE's, a backreference no ERE's, past `\9`
-     ECMAScript's), as which standard has a kind is for C and C++ (the dialects proposal, Decided, 3 and 4).
+     ECMAScript's), as which standard has a kind is for C and C++ (mbse-basis [CAP-226: complete expression dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-226.md#decided), "One dialect per language" and "The framework's kinds
+     with subterms stay shared").
 296. **Its properties** *(agent; as harmonized, item 302)*: a quantifier's `raw` (its spelling, printed where it has one),
      `min`, `max`, `greedy` and `element`; a character's `raw` and `value`; a character set's `setKind` and `negate`; an
      assertion's `assertionKind`, `negate` and `alternatives` (a lookahead's); a backreference's `ref`, a number, as no
@@ -1952,8 +1953,8 @@ coordinator's merge and decisions (302 to 310). Each choice where the design and
 
 ## Settled in the POSIX family, for the user's review
 
-Built on the user's answer (2026-11-12) to item 310, "yes to a new posix family", as [the dialects
-proposal](../dialects/README.md#decided-for-the-posix-family-2026-11-12) records it: `Cpp RegExp` keeps [re.grammar]'s
+Built on the user's answer (2026-11-12) to item 310, "yes to a new posix family", as mbse-basis
+[CAP-281: Python's, ECMAScript's and C++'s regular expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-281.md#decided) records it: `Cpp RegExp` keeps [re.grammar]'s
 grammar alone, and the grammars [re.synopt] selects by naming POSIX are POSIX's own dialects. Each choice where the
 decision was silent is marked *(agent)*. A breaking change, in 0.10.0, which is unreleased, so with no alias: Cpp
 RegExp's `patternlist` and its `PatternList`, its `Text.text`, and a regex's `pattern` schema.
