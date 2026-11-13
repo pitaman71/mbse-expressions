@@ -46,7 +46,24 @@ tells no story.
 | 5 | [Operators](05_Operators.ipynb) | `a + b * c` as a tree; parentheses and precedence across languages; operations as data; each language's arithmetic |
 | 6 | [Calls, members and subscripts](06_Calls_Members_And_Subscripts.ipynb) | Properties, items and calls in each language, and what has no counterpart |
 | 7 | [Bindings](07_Bindings.ipynb) | `let`, lambdas, quantifiers and comprehensions, each a variation of `let` |
-| 8 | [Sublanguages](08_Sublanguages.ipynb) | Types, patterns, assertions, constraints and preprocessors as dialects of their own, each with its holder, held where its language's expressions put one |
+| 8 | [Sublanguages](08_00_Sublanguages.ipynb) | Types, patterns, assertions, constraints and preprocessors as dialects of their own, each with its holder, held where its language's expressions put one; then a page for each sublanguage, 8.01 to 8.17 |
+| 8.01 | [Python Types](08_01_Python_Types.ipynb) | Type expressions, Python3's kinds, and type parameters, `Python Types`' own: built, printed, validated, held by a parameter's annotation, evaluated or refused, and their editions |
+| 8.02 | [Python Patterns](08_02_Python_Patterns.ipynb) | A `match` statement's patterns, from a capture to class and mapping patterns: what each binds and reads, validated, held by its holder alone, and their editions |
+| 8.03 | [Python RegExp](08_03_Python_RegExp.ipynb) | `re`'s regular expressions from a character up, a spelling beside its code point, validated with `re`'s messages, never guessed from a string, and their editions |
+| 8.04 | [TypeScript Types](08_04_TypeScript_Types.ipynb) | Types from a keyword up to mapped and conditional types, where TypeScript5 holds one, what a type binds, validated, inferred as `any`, and their editions |
+| 8.05 | [TypeScript Patterns](08_05_TypeScript_Patterns.ipynb) | Destructuring from a name up, what a pattern binds through what holds it, validated, and their editions |
+| 8.06 | [TypeScript RegExp](08_06_TypeScript_RegExp.ipynb) | ECMA-262's regular expressions from a character up to a literal, TypeScript5's literal holding one, spellings kept, validated, and ECMA-262's editions |
+| 8.07 | [C Types](08_07_C_Types.ipynb) | A C type name from `int` to declarators, structures and enumerations; checked and kept as written; a cast's type, which C converts and infers by; C's editions |
+| 8.08 | [C Preprocessor](08_08_C_Preprocessor.ipynb) | The directives C and C++ share, a conditional one's branches as one tree, what a condition binds, `defined(X)` in C's and C++'s expressions, six editions |
+| 8.09 | [Cpp Types](08_09_Cpp_Types.ipynb) | C++'s type-ids, a scoped enumeration's fixed type, every place C++ puts a type, a lambda's parameters in its return type, casts, C++'s editions |
+| 8.10 | [Cpp RegExp](08_10_Cpp_RegExp.ipynb) | [re.grammar]'s ECMAScript grammar; a `regex` and its flags; a POSIX grammar's pattern a POSIX term, and what C++ selects of POSIX |
+| 8.11 | [POSIX BRE](08_11_POSIX_BRE.ipynb) | A basic regular expression built up; where its anchors stand; grep's pattern list; C++'s `basic` and `grep`; POSIX.1's editions |
+| 8.12 | [POSIX ERE](08_12_POSIX_ERE.ipynb) | An extended regular expression; what it has and lacks; egrep's lists and awk's escapes; C++'s `extended`, `awk` and `egrep` |
+| 8.13 | [SystemVerilog Types](08_13_SystemVerilog_Types.ipynb) | Keyword and vector types, dimensions, structures, unions and enumerations as `SystemVerilog Types` terms; read by a cast, `$bits` and an assignment pattern; no domain or value of their own; their editions |
+| 8.14 | [SystemVerilog Patterns](08_14_SystemVerilog_Patterns.ipynb) | Variable, wildcard, tagged and structure patterns, what each binds, held by a `matches` that binds them in its consequence; never evaluated |
+| 8.15 | [SystemVerilog Assertions](08_15_SystemVerilog_Assertions.ipynb) | Sequences (delays, repetitions, operators) and properties, a property's clock and reset, printed by the standard's precedence; held by a call's argument; never evaluated |
+| 8.16 | [SystemVerilog Constraints](08_16_SystemVerilog_Constraints.ipynb) | Expression constraints, `inside` and `dist`, implications, `foreach` binding its loop variables, `solve ... before`, `disable soft`, `unique`; held by `randomize() with` |
+| 8.17 | [SystemVerilog Preprocessor](08_17_SystemVerilog_Preprocessor.ipynb) | Macro usages where an expression stands, directives, conditional directives and comments among constraints; never expanded or evaluated; every Verilog and SystemVerilog edition |
 
 ## Part II · Constraints as data, in seven case studies
 

@@ -32,12 +32,12 @@ carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own litera
   `noexceptexpression`, `newexpression`, `deleteexpression`, `throwexpression`, `packexpansion` (`pattern...`).
 
 Its sublanguages are dialects of their own, which it reads (`reads`; the dialects proposal, Retrofit's design): `Cpp
-Types`, C++'s type-ids (`Expressions.Cpp.Types.Term`), which every position of a type holds (a cast's, a named cast's,
+Types`, C++'s type-ids (`Expressions.Cpp.Types.Term`), which every type subterm is of (a cast's, a named cast's,
 `new`'s, a conversion function's name's, a trailing return type, an enumeration's fixed type, a type parameter's
 default), and C's `C Preprocessor`, the directives C and C++ share; `Term` lists their `typeid` and `definedexpression`
 ("(b)"). `Expressions.Cpp.Expressions.Pattern` is its union for binding targets ("(ii)"): an init capture's name (`[n =
 1]`), an `identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a
-branch of every union whose positions hold it: `Term` lists `designatedinitializer`, as C's does, `Pattern` lists
+branch of the union of every subterm it may be: `Term` lists `designatedinitializer`, as C's does, `Pattern` lists
 `identifier`, `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a
 `parameterdeclaration` and `Initializer` an `initializerlist`. A type-id's and a lambda's parts are its helpers, as a
 lambda's declarator holds parameters with their specifiers and declarators (so they stay this dialect's, read by `Cpp
@@ -98,7 +98,7 @@ def install(txn: Any) -> Any:
     """Cpp's union of its kinds, added to the framework's terms as the branch `cpp`, its own kinds, its union of binding
     targets (`Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
     `Expressions.Cpp.Expressions`: run after `Framework.install`, in a transaction of its own, before or after its
-    family's other installs; run again, it writes nothing. Cpp Types' `Term` and its `typeid`, which its positions hold,
+    family's other installs; run again, it writes nothing. Cpp Types' `Term` and its `typeid`, which its subterms may be,
     are named by name, each created where Cpp Types' install has not run. Its holder,
     `Expressions.Cpp.Expressions.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
     `Term`."""
@@ -482,8 +482,8 @@ def install(txn: Any) -> Any:
                 "keyword": S.OfStr, "attributes": many(_.Attribute)}),
             lambda _: _.DeclspecSpecifier.name("Expressions.Cpp.Expressions.DeclspecSpecifier").properties({
                 "attributes": many(_.Attribute)}),
-            # a type name, Cpp Types' kind, which `Term` lists for the positions that hold an expression or a type
-            # alike, and Cpp Types' `Term`, which every position of a type holds: each by name, created where Cpp
+            # a type name, Cpp Types' kind, which `Term` lists for the subterms that may be an expression or a type
+            # alike, and Cpp Types' `Term`, which every type subterm is of: each by name, created where Cpp
             # Types' install has not run
             lambda _: _.TypeId.name("Expressions.Cpp.Types.TypeId"),
             lambda _: _.TypesTerm.name("Expressions.Cpp.Types.Term"),
@@ -699,9 +699,9 @@ def _native(value: Any) -> Writer | None:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects whose terms its positions are to hold, imported when first needed (the dialects proposal,
-    Retrofit's design): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects; and `Cpp RegExp`, which
-    no position holds, as each family's dialects read one another *(agent)*."""
+    """The dialects whose terms are to be its subterms, imported when first needed (the dialects proposal,
+    Retrofit's design): `Cpp Types` and C's `C Preprocessor`, and none of C's other dialects; and `Cpp RegExp`, of which
+    no subterm is one, as each family's dialects read one another *(agent)*."""
     from ...C.Preprocessor import Expressions as CPreprocessor
     from ..RegExp import Expressions as CppRegExp
     from ..Types import Expressions as CppTypes

@@ -245,7 +245,7 @@ function refused(what: string): Error {
 }
 
 /** A term read once for one evaluation: its `tag` (as `Expressions.DIALECT` reads it, a term of any of its family's
- * dialects), and its members by name, its attributes (null where not set), its helpers (`Terms.Node`s), its slots (a
+ * dialects), and its members by name, its attributes (null where not set), its helpers (`Terms.Node`s), its subterms (a
  * `Node`, null where empty) and its variadic arguments (each container's, an array of `Node`s). `term` is the term value read. */
 class Node {
   [member: string]: any;
@@ -257,7 +257,7 @@ class Node {
     for (const name of names) this[name] = null;
     for (const [name, value] of node.attributes) this[name] = value;
     for (const [name, value] of node.helpers) this[name] = value;
-    for (const [name, value] of node.slots) this[name] = value === null ? null : new Node(value);
+    for (const [name, value] of node.subterms) this[name] = value === null ? null : new Node(value);
     for (const [name, terms] of node.lists) this[name] = terms.map((a) => new Node(a));
     this.tag = tag;
   }

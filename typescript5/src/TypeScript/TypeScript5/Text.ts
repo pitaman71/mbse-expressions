@@ -164,7 +164,7 @@ export class Printer {
 
   annotation(node: T.Node): string {
     const held = node.helpers.get("typeAnnotation") as T.Node | undefined;
-    return held === undefined ? "" : ": " + this.t(held.slots.get("typeAnnotation"), TypesText.FUNCTION);
+    return held === undefined ? "" : ": " + this.t(held.subterms.get("typeAnnotation"), TypesText.FUNCTION);
   }
 
   _identifier(node: T.Node): string {
@@ -181,7 +181,7 @@ export class Printer {
   }
 
   _constant(node: T.Node): string {
-    return T.constantText(node.attributes, () => this.text(node.slots.get("regexp")));
+    return T.constantText(node.attributes, () => this.text(node.subterms.get("regexp")));
   }
 
   _templateliteral(node: T.Node): string {
@@ -199,15 +199,15 @@ export class Printer {
   }
 
   _taggedtemplateexpression(node: T.Node): string {
-    return this.e(node.slots.get("tag"), MEMBER) + this.typeArguments(node) + this.text(one(node, "quasi"));
+    return this.e(node.subterms.get("tag"), MEMBER) + this.typeArguments(node) + this.text(one(node, "quasi"));
   }
 
   _parenthesizedexpression(node: T.Node): string {
-    return `(${this.e(node.slots.get("expression"), SEQUENCE)})`;
+    return `(${this.e(node.subterms.get("expression"), SEQUENCE)})`;
   }
 
   _spreadelement(node: T.Node): string {
-    return "..." + this.e(node.slots.get("argument"), ASSIGN);
+    return "..." + this.e(node.subterms.get("argument"), ASSIGN);
   }
 
   // Displays
@@ -230,11 +230,11 @@ export class Printer {
 
   _property(node: T.Node): string {
     const { attributes } = node;
-    const key = this.key(node.slots.get("key"), attributes.get("computed") ?? false);
-    const value = this.node(node.slots.get("value"));
+    const key = this.key(node.subterms.get("key"), attributes.get("computed") ?? false);
+    const value = this.node(node.subterms.get("value"));
     if (attributes.get("shorthand")) {
       if (value.kind === T.ASSIGNMENTPATTERN) {
-        return `${this.text(value.slots.get("left"))} = ${this.e(value.slots.get("right"), ASSIGN)}`;
+        return `${this.text(value.subterms.get("left"))} = ${this.e(value.subterms.get("right"), ASSIGN)}`;
       }
       return key;
     }
@@ -261,7 +261,7 @@ export class Printer {
     const params = node.lists.get("params")!.map((parameter) => this.text(parameter)).join(", ");
     const returned = node.helpers.get("returnType") as T.Node | undefined;
     const returns = returned === undefined ? ""
-      : (arrow ? " => " : ": ") + this.t(returned.slots.get("typeAnnotation"), TypesText.FUNCTION);
+      : (arrow ? " => " : ": ") + this.t(returned.subterms.get("typeAnnotation"), TypesText.FUNCTION);
     return `${parameters}(${params})${returns}`;
   }
 
@@ -282,12 +282,12 @@ export class Printer {
     const parameters = node.helpers.get("typeParameters") as T.Node | undefined;
     if (parameters !== undefined) {
       const params = nodes(parameters.helpers.get("params"));
-      if (params.length === 1 && params[0]!.slots.get("constraint") === null) { // `<T>(` would open an element in a .tsx file
+      if (params.length === 1 && params[0]!.subterms.get("constraint") === null) { // `<T>(` would open an element in a .tsx file
         const written = this.text(parameters);
         head = head.replace(written, written.slice(0, -1) + ",>");
       }
     }
-    const body = node.slots.get("body");
+    const body = node.subterms.get("body");
     if (body === null) return head + " => {}";
     let text = this.e(body, ASSIGN);
     if ([T.OBJECTEXPRESSION, T.OBJECTPATTERN].includes(this.leftmost(body).kind)) text = `(${text})`;
@@ -295,15 +295,15 @@ export class Printer {
   }
 
   heritage(node: T.Node): string {
-    return this.e(node.slots.get("expression"), MEMBER) + this.typeArguments(node);
+    return this.e(node.subterms.get("expression"), MEMBER) + this.typeArguments(node);
   }
 
   _classexpression(node: T.Node): string {
     let head = "class";
     if (node.helpers.has("id")) head += " " + this.text(one(node, "id"));
     head += this.typeArguments(node, "typeParameters");
-    if (node.slots.get("superClass") !== null) {
-      head += ` extends ${this.e(node.slots.get("superClass"), MEMBER)}` + this.typeArguments(node, "superTypeArguments");
+    if (node.subterms.get("superClass") !== null) {
+      head += ` extends ${this.e(node.subterms.get("superClass"), MEMBER)}` + this.typeArguments(node, "superTypeArguments");
     }
     const implemented = nodes(node.helpers.get("implements"));
     if (implemented.length > 0) head += " implements " + implemented.map((heritage) => this.heritage(heritage)).join(", ");
@@ -318,14 +318,14 @@ export class Printer {
 
   _memberexpression(node: T.Node): string {
     const { attributes } = node;
-    let target = this.e(node.slots.get("object"), MEMBER);
-    if (this.node(node.slots.get("object")).kind === T.LITERAL && /^[0-9_]*$/.test(target)) {
+    let target = this.e(node.subterms.get("object"), MEMBER);
+    if (this.node(node.subterms.get("object")).kind === T.LITERAL && /^[0-9_]*$/.test(target)) {
       target = `(${target})`; // `1.toString()` would be a number
     }
     if (attributes.get("computed")) {
-      return `${target}${attributes.get("optional") ? "?." : ""}[${this.e(node.slots.get("property"), SEQUENCE)}]`;
+      return `${target}${attributes.get("optional") ? "?." : ""}[${this.e(node.subterms.get("property"), SEQUENCE)}]`;
     }
-    return `${target}${attributes.get("optional") ? "?." : "."}${this.text(node.slots.get("property"))}`;
+    return `${target}${attributes.get("optional") ? "?." : "."}${this.text(node.subterms.get("property"))}`;
   }
 
   arguments(args: readonly any[]): string {
@@ -334,43 +334,43 @@ export class Printer {
 
   _callexpression(node: T.Node): string {
     const optional = node.attributes.get("optional") ? "?." : "";
-    return `${this.e(node.slots.get("callee"), MEMBER)}${optional}${this.typeArguments(node)}(${this.arguments(node.many)})`;
+    return `${this.e(node.subterms.get("callee"), MEMBER)}${optional}${this.typeArguments(node)}(${this.arguments(node.many)})`;
   }
 
   _chainexpression(node: T.Node): string {
-    return this.text(node.slots.get("expression"));
+    return this.text(node.subterms.get("expression"));
   }
 
   /** Whether a `new`'s callee holds a call, a `new` or a non-null assertion outside parentheses, which would end the
    * callee: `new a!.b()` reads as `(new a)!.b()`. */
   calls(value: any): boolean {
     let node = this.node(value);
-    while (node.kind === T.MEMBEREXPRESSION) node = this.node(node.slots.get("object"));
+    while (node.kind === T.MEMBEREXPRESSION) node = this.node(node.subterms.get("object"));
     return [T.CALLEXPRESSION, T.CHAINEXPRESSION, T.IMPORTEXPRESSION, T.TSNONNULLEXPRESSION, T.NEWEXPRESSION].includes(node.kind);
   }
 
   _newexpression(node: T.Node): string {
-    let callee = this.e(node.slots.get("callee"), NEW);
-    if (this.calls(node.slots.get("callee"))) callee = `(${callee})`; // `new f()()` would call `f`'s instance
+    let callee = this.e(node.subterms.get("callee"), NEW);
+    if (this.calls(node.subterms.get("callee"))) callee = `(${callee})`; // `new f()()` would call `f`'s instance
     return `new ${callee}${this.typeArguments(node)}(${this.arguments(node.many)})`;
   }
 
   _importexpression(node: T.Node): string {
-    const options = node.slots.get("options");
-    const held = [node.slots.get("source"), ...(options === null ? [] : [options])];
+    const options = node.subterms.get("options");
+    const held = [node.subterms.get("source"), ...(options === null ? [] : [options])];
     return "import" + (node.attributes.get("phase") === "defer" ? ".defer" : "") + `(${this.arguments(held)})`;
   }
 
   _updateexpression(node: T.Node): string {
     const operator = node.attributes.get("operator");
-    const argument = node.slots.get("argument");
+    const argument = node.subterms.get("argument");
     if (node.attributes.get("prefix")) return operator + this.e(argument, UNARY);
     return this.e(argument, POSTFIX + 1) + operator;
   }
 
   _unaryexpression(node: T.Node): string {
     const operator = node.attributes.get("operator");
-    const argument = this.e(node.slots.get("argument"), UNARY);
+    const argument = this.e(node.subterms.get("argument"), UNARY);
     if (["typeof", "void", "delete"].includes(operator) || (["+", "-"].includes(operator) && argument.startsWith(operator))) {
       return `${operator} ${argument}`; // `--a` and `++a` would be updates
     }
@@ -378,14 +378,14 @@ export class Printer {
   }
 
   _awaitexpression(node: T.Node): string {
-    return "await " + this.e(node.slots.get("argument"), UNARY);
+    return "await " + this.e(node.subterms.get("argument"), UNARY);
   }
 
   _binaryexpression(node: T.Node): string {
     const operator = node.attributes.get("operator");
     const level = this.precedence(node);
-    const leftNode = this.node(node.slots.get("left"));
-    const rightNode = this.node(node.slots.get("right"));
+    const leftNode = this.node(node.subterms.get("left"));
+    const rightNode = this.node(node.subterms.get("right"));
     if (operator === "**") {
       let left = this.e(leftNode, POWER + 1);
       if ([T.UNARYEXPRESSION, T.AWAITEXPRESSION, T.TSTYPEASSERTION].includes(leftNode.kind)
@@ -413,15 +413,15 @@ export class Printer {
   }
 
   _conditionalexpression(node: T.Node): string {
-    const { slots } = node;
-    return `${this.e(slots.get("test"), COALESCE)} ? ${this.e(slots.get("consequent"), ASSIGN)} : `
-      + this.e(slots.get("alternate"), ASSIGN);
+    const { subterms } = node;
+    return `${this.e(subterms.get("test"), COALESCE)} ? ${this.e(subterms.get("consequent"), ASSIGN)} : `
+      + this.e(subterms.get("alternate"), ASSIGN);
   }
 
   _assignmentexpression(node: T.Node): string {
-    const target = this.node(node.slots.get("left"));
+    const target = this.node(node.subterms.get("left"));
     const left = [T.OBJECTPATTERN, T.ARRAYPATTERN].includes(target.kind) ? this.text(target) : this.e(target, MEMBER);
-    return `${left} ${node.attributes.get("operator")} ${this.e(node.slots.get("right"), ASSIGN)}`;
+    return `${left} ${node.attributes.get("operator")} ${this.e(node.subterms.get("right"), ASSIGN)}`;
   }
 
   _sequenceexpression(node: T.Node): string {
@@ -429,45 +429,45 @@ export class Printer {
   }
 
   _yieldexpression(node: T.Node): string {
-    const argument = node.slots.get("argument");
+    const argument = node.subterms.get("argument");
     return (node.attributes.get("delegate") ? "yield*" : "yield") + (argument === null ? "" : " " + this.e(argument, ASSIGN));
   }
 
   _tsasexpression(node: T.Node): string {
-    return `${this.e(node.slots.get("expression"), RELATIONAL)} as ${this.t(node.slots.get("typeAnnotation"), 0)}`;
+    return `${this.e(node.subterms.get("expression"), RELATIONAL)} as ${this.t(node.subterms.get("typeAnnotation"), 0)}`;
   }
 
   _tssatisfiesexpression(node: T.Node): string {
-    return `${this.e(node.slots.get("expression"), RELATIONAL)} satisfies ${this.t(node.slots.get("typeAnnotation"), 0)}`;
+    return `${this.e(node.subterms.get("expression"), RELATIONAL)} satisfies ${this.t(node.subterms.get("typeAnnotation"), 0)}`;
   }
 
   _tstypeassertion(node: T.Node): string {
-    return `<${this.t(node.slots.get("typeAnnotation"), 0)}>${this.e(node.slots.get("expression"), UNARY)}`;
+    return `<${this.t(node.subterms.get("typeAnnotation"), 0)}>${this.e(node.subterms.get("expression"), UNARY)}`;
   }
 
   _tsnonnullexpression(node: T.Node): string {
-    return this.e(node.slots.get("expression"), MEMBER) + "!";
+    return this.e(node.subterms.get("expression"), MEMBER) + "!";
   }
 
   _tsinstantiationexpression(node: T.Node): string {
-    return this.e(node.slots.get("expression"), MEMBER) + this.typeArguments(node);
+    return this.e(node.subterms.get("expression"), MEMBER) + this.typeArguments(node);
   }
 
   /** The expression a statement made of `value` starts with. */
   leftmost(value: any): T.Node {
     let node = this.node(value);
     for (;;) {
-      const { kind, slots } = node;
-      if (kind === T.BINARYEXPRESSION || kind === T.LOGICALEXPRESSION) node = this.node(slots.get("left"));
-      else if (kind === T.ASSIGNMENTEXPRESSION) node = this.node(slots.get("left"));
-      else if (kind === T.MEMBEREXPRESSION) node = this.node(slots.get("object"));
+      const { kind, subterms } = node;
+      if (kind === T.BINARYEXPRESSION || kind === T.LOGICALEXPRESSION) node = this.node(subterms.get("left"));
+      else if (kind === T.ASSIGNMENTEXPRESSION) node = this.node(subterms.get("left"));
+      else if (kind === T.MEMBEREXPRESSION) node = this.node(subterms.get("object"));
       else if (kind === T.CALLEXPRESSION || kind === T.TAGGEDTEMPLATEEXPRESSION) {
-        node = this.node(slots.get(kind === T.CALLEXPRESSION ? "callee" : "tag"));
-      } else if (kind === T.CONDITIONALEXPRESSION) node = this.node(slots.get("test"));
+        node = this.node(subterms.get(kind === T.CALLEXPRESSION ? "callee" : "tag"));
+      } else if (kind === T.CONDITIONALEXPRESSION) node = this.node(subterms.get("test"));
       else if (kind === T.SEQUENCEEXPRESSION) node = this.node(node.many[0]);
       else if ([T.TSASEXPRESSION, T.TSSATISFIESEXPRESSION, T.TSNONNULLEXPRESSION, T.CHAINEXPRESSION,
-        T.TSINSTANTIATIONEXPRESSION].includes(kind)) node = this.node(slots.get("expression"));
-      else if (kind === T.UPDATEEXPRESSION && !node.attributes.get("prefix")) node = this.node(slots.get("argument"));
+        T.TSINSTANTIATIONEXPRESSION].includes(kind)) node = this.node(subterms.get("expression"));
+      else if (kind === T.UPDATEEXPRESSION && !node.attributes.get("prefix")) node = this.node(subterms.get("argument"));
       else return node;
     }
   }
@@ -483,12 +483,12 @@ export class Printer {
   }
 
   _tstypeparameter(node: T.Node): string {
-    const { attributes, slots } = node;
+    const { attributes, subterms } = node;
     let text = [["const", "const"], ["in", "isIn"], ["out", "isOut"]].filter(([, flag]) => attributes.get(flag!))
       .map(([word]) => word + " ").join("");
     text += this.text(one(node, "name"));
-    if (slots.get("constraint") !== null) text += ` extends ${this.t(slots.get("constraint"), TypesText.FUNCTION)}`;
-    if (slots.get("default") !== null) text += ` = ${this.t(slots.get("default"), TypesText.FUNCTION)}`;
+    if (subterms.get("constraint") !== null) text += ` extends ${this.t(subterms.get("constraint"), TypesText.FUNCTION)}`;
+    if (subterms.get("default") !== null) text += ` = ${this.t(subterms.get("default"), TypesText.FUNCTION)}`;
     return text;
   }
 
@@ -515,11 +515,11 @@ export class Printer {
   }
 
   _jsxexpressioncontainer(node: T.Node): string {
-    return "{" + this.text(node.slots.get("expression")) + "}";
+    return "{" + this.text(node.subterms.get("expression")) + "}";
   }
 
   _jsxspreadchild(node: T.Node): string {
-    return "{..." + this.text(node.slots.get("expression")) + "}";
+    return "{..." + this.text(node.subterms.get("expression")) + "}";
   }
 
   _jsxtext(node: T.Node): string {
@@ -532,7 +532,7 @@ export class Printer {
   }
 
   _jsxspreadattribute(node: T.Node): string {
-    return "{..." + this.e(node.slots.get("argument"), ASSIGN) + "}";
+    return "{..." + this.e(node.subterms.get("argument"), ASSIGN) + "}";
   }
 
   children(node: T.Node): string {

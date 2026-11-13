@@ -1,59 +1,54 @@
 """Expressions of the Cpp RegExp dialect: the regular expressions `std::basic_regex` reads, as ISO/IEC 14882 defines
-them ([re.grammar], [re.synopt]), in each of its six grammars: ECMAScript's (ECMA-262, third edition, 15.10.1, as
-[re.grammar] modifies it), and POSIX's basic and extended regular expressions (ISO/IEC/IEEE 9945, XBD 9.3 to 9.5), and
-those of the utilities awk, grep and egrep (`grep -E`), which [re.synopt] refers to.
+them ([re.grammar], [re.synopt]): its own grammar, ECMAScript's (ECMA-262, third edition, 15.10.1, as [re.grammar]
+modifies it), and a `regex` naming among its flags another grammar, POSIX's, which [re.synopt] refers to: `basic` and
+`extended`, POSIX's basic and extended regular expressions, and `awk`, `grep` and `egrep`, those of POSIX's utilities.
 
 It is a dialect of the Cpp family (the dialects proposal, Decided for stage 6: "constraints, regexes and patterns are
 expression dialects"; the user, on its Retrofit's design, Open, 1: "(b)", every regular expression a language's
 standard defines, its library's included), named `Cpp RegExp` (`Terms.dialect_name`), its tag `cpp_regexp`. Its terms
 are values of its `Term`, `Expressions.Cpp.RegExp.Term`, the branch `cpp_regexp` of `Expressions.Framework.Term`; its
 holder, `Expressions.Cpp.RegExp.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
-`Term`. No position of C++ holds one: a pattern is a string there, passed to `std::regex`, and that a string is a
+`Term`. No subterm in C++ is one: a pattern is a string there, passed to `std::regex`, and that a string is a
 regular expression is the program's to say, never guessed (mbse-basis [PRI-025: never guess the schema](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-025)); mbse-programs, or a constraint's author, holds one through its holder.
 
-One dialect covers the six grammars *(agent)*, as one `std::basic_regex` reads them, the grammar being one element of
-the `syntax_option_type` it is constructed with ([re.synopt]: "A valid value of type syntax_option_type shall have at
-most one of the grammar elements ECMAScript, basic, extended, awk, grep, egrep, set. If no grammar element is set, the
-default grammar is ECMAScript"): its kinds are the constructs the grammars share, each once, and which grammar has a
-construct is a constraint, checked by validation, as which standard has a kind is for C and C++ (the dialects
-proposal, Decided, 3 and 4). Its kinds, each a value object `Expressions.Cpp.RegExp.<Kind>`, are named as ECMAScript's
-reference parser, regexpp, names its nodes (as `TypeScript RegExp`'s are, each family defining its own copy), and
-[re.grammar]'s own productions as it names them; tags lowercased:
+Its kinds are [re.grammar]'s grammar alone, as ISO/IEC 14882 defines only that one; the other five, which [re.synopt]
+selects by naming POSIX, are POSIX's dialects' (the user, 2026-11-12: "yes to a new posix family"): a `regex` whose
+flags name `basic` or `grep` holds a `POSIX BRE` term, one naming `extended`, `awk` or `egrep` a `POSIX ERE` term, read
+as that dialect reads it, as a C++ term is read under the ABI its holder names (mbse-basis [CAP-267: C and C++ terms read under the ABI their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md)); what C++'s grammar
+selects of POSIX's beyond the dialect's own checks is checked under the `regex` (`FEATURES`). Its kinds, each a value
+object `Expressions.Cpp.RegExp.<Kind>`, are named as ECMAScript's reference parser, regexpp, names its nodes (as
+`TypeScript RegExp`'s are, each family defining its own copy), and [re.grammar]'s own productions as it names them;
+tags lowercased:
 
 - `regex`, what `basic_regex` holds: its `flags`, the `syntax_option_type` elements it is constructed with, as written
   (`basic_regex::flags()`: `icase`, `nosubs`, `optimize`, `collate`, `multiline` and at most one grammar), and its
-  `pattern`;
-- `patternlist`, grep's and egrep's newline-separated list of patterns (POSIX, XCU grep, "pattern_list"), its
-  `patterns`;
-- `pattern` (ECMAScript's Disjunction, POSIX's `basic_reg_exp` and `extended_reg_exp`), its `alternatives`, and
-  `alternative` (an ECMAScript Alternative, a POSIX `RE_expression` or `ERE_branch`), its `elements`;
-- `group`, ECMAScript's `(?:...)`, and `capturinggroup`, ECMAScript's and an ERE's `(...)` and a BRE's `\\(...\\)`,
-  each its `alternatives`;
-- `quantifier`: its `raw`, as written (`\\{2,\\}`, `{0,}`), printed where it has one, its `min`, its `max` (absent: no
-  bound), whether it is `greedy` (absent: it is; ECMAScript's `*?` is not), and its `element`;
-- `characterclass`, a bracket expression (`[^...]`): whether it is `negate`d, and its `elements`; and
-  `characterclassrange` (`a-z`), its `min` and `max`, each a character or a collating element;
-- `characterset`: its `setKind`, `any` (`.`), or ECMAScript's `digit`, `space` or `word` (`\\d`, `\\s`, `\\w`), and
-  whether it is `negate`d (`\\D`);
+  `pattern`, a term of the dialect its grammar names (`GRAMMAR_DIALECTS`);
+- `pattern` (Disjunction), its `alternatives`, and `alternative`, its `elements`;
+- `group`, `(?:...)`, and `capturinggroup`, `(...)`, each its `alternatives`;
+- `quantifier`: its `raw`, as written (`{0,}`), printed where it has one, its `min`, its `max` (absent: no bound),
+  whether it is `greedy` (absent: it is; `*?` is not), and its `element`;
+- `characterclass` (`[^...]`): whether it is `negate`d, and its `elements`; and `characterclassrange` (`a-z`), its
+  `min` and `max`, each a character or a collating element;
+- `characterset`: its `setKind`, `any` (`.`), `digit`, `space` or `word` (`\\d`, `\\s`, `\\w`), and whether it is
+  `negate`d (`\\D`);
 - `character`: its `raw`, as written (`\\x41`, `\\n`, `\\.`), printed where it has one, and its `value`, a code point;
-- `assertion`: its `assertionKind`, `start` (`^`), `end` (`$`), ECMAScript's `word` (`\\b`) or `lookahead` (`(?=...)`, with its
+- `assertion`: its `assertionKind`, `start` (`^`), `end` (`$`), `word` (`\\b`) or `lookahead` (`(?=...)`, with its
   `alternatives`), and whether it is `negate`d (`\\B`, `(?!...)`);
 - `backreference` (`\\1`), its `ref`;
-- [re.grammar]'s and POSIX's class atoms, each its `name`: `exclass` (ClassAtomExClass, `[:alpha:]`),
-  `collatingelement` (ClassAtomCollatingElement, `[.ch.]`) and `equivalence` (ClassAtomEquivalence, `[=a=]`);
+- [re.grammar]'s class atoms, each its `name`: `exclass` (ClassAtomExClass, `[:alpha:]`), `collatingelement`
+  (ClassAtomCollatingElement, `[.ch.]`) and `equivalence` (ClassAtomEquivalence, `[=a=]`);
 
 then the framework's kinds of invalid syntax, `error` and `missing`. Its helpers are none (`HELPERS`). What a kind's
-terms may be is checked (`HOLDS`: an alternative's elements are atoms, a class's its class atoms), and, under a
-`regex`, what its grammar has (`FEATURES`: alternation is not in the basic grammar, nor a group in the extended one). A
-term held otherwise than by a `regex` is read as ECMAScript's, the default grammar.
+terms may be is checked (`HOLDS`: an alternative's elements are atoms, a quantifier's an atom but an assertion or a
+quantifier, a class's its class atoms).
 
-No kind binds a name a term scopes: a capturing group is numbered, not named, in every grammar (ECMA-262's third
-edition has no named group), and a backreference resolves it by its number. Its kinds are applications the framework
-reads by their structure, of no domain known statically, and are not evaluated, each refused by its dialect's name
-("Cpp RegExp regex is not evaluated"). The editions it covers are data, which `define` writes, C++'s (C++17, C++20,
-C++23), every kind in each (`SINCE`): [re.grammar] is the same in the three. `DIALECT` reads its kinds, and its
-family's other dialects' terms (`reads`), as each family's dialects read one another (the dialects proposal,
-Retrofit's design, "Installs in any order within a family"); none of it is a reason to reinstate `Uses` (mbse-basis
+No kind binds a name a term scopes: a capturing group is numbered, not named (ECMA-262's third edition has no named
+group), and a backreference resolves it by its number. Its kinds are applications the framework reads by their
+structure, of no domain known statically, and are not evaluated, each refused by its dialect's name ("Cpp RegExp regex
+is not evaluated"). The editions it covers are data, which `define` writes, C++'s (C++17, C++20, C++23), every kind in
+each (`SINCE`): [re.grammar] is the same in the three. `DIALECT` reads its kinds, its family's other dialects' terms,
+as each family's dialects read one another (the dialects proposal, Retrofit's design, "Installs in any order within a
+family"), and POSIX's, which a regex holds (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis
 [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)). Its terms are written
 through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
 `lambda u: u.character(lambda c: c.value(ord("a")))`."""
@@ -66,15 +61,14 @@ from typing import Any
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 __all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "GRAMMARS", "SYNTAX_OPTIONS", "ECMASCRIPT",
-           "CLASS_NAMES", "SETS", "ASSERTIONS", "HOLDS", "FEATURES", "grammar", "problems"]
+           "GRAMMAR_DIALECTS", "CLASS_NAMES", "SETS", "ASSERTIONS", "HOLDS", "FEATURES", "grammar", "problems"]
 
-(REGEX, PATTERNLIST, PATTERN, ALTERNATIVE, GROUP, CAPTURINGGROUP, QUANTIFIER, CHARACTERCLASS, CHARACTERCLASSRANGE,
- CHARACTERSET, CHARACTER, ASSERTION, BACKREFERENCE, EXCLASS, COLLATINGELEMENT, EQUIVALENCE) = (
-    "regex", "patternlist", "pattern", "alternative", "group", "capturinggroup", "quantifier", "characterclass",
-    "characterclassrange", "characterset", "character", "assertion", "backreference", "exclass", "collatingelement",
-    "equivalence")
+(REGEX, PATTERN, ALTERNATIVE, GROUP, CAPTURINGGROUP, QUANTIFIER, CHARACTERCLASS, CHARACTERCLASSRANGE, CHARACTERSET,
+ CHARACTER, ASSERTION, BACKREFERENCE, EXCLASS, COLLATINGELEMENT, EQUIVALENCE) = (
+    "regex", "pattern", "alternative", "group", "capturinggroup", "quantifier", "characterclass", "characterclassrange",
+    "characterset", "character", "assertion", "backreference", "exclass", "collatingelement", "equivalence")
 
-TAGS = (REGEX, PATTERNLIST, PATTERN, ALTERNATIVE, GROUP, CAPTURINGGROUP, QUANTIFIER, CHARACTERCLASS, CHARACTERCLASSRANGE,
+TAGS = (REGEX, PATTERN, ALTERNATIVE, GROUP, CAPTURINGGROUP, QUANTIFIER, CHARACTERCLASS, CHARACTERCLASSRANGE,
         CHARACTERSET, CHARACTER, ASSERTION, BACKREFERENCE, EXCLASS, COLLATINGELEMENT, EQUIVALENCE)
 """Its own kinds, in its `Term`'s order, before invalid syntax."""
 
@@ -93,58 +87,50 @@ GRAMMARS = (ECMASCRIPT, "basic", "extended", "awk", "grep", "egrep")
 SYNTAX_OPTIONS = ("icase", "nosubs", "optimize", "collate", *GRAMMARS, "multiline")
 """The elements of `syntax_option_type`, in [re.synopt]'s order: what a regex's `flags` may hold."""
 
+GRAMMAR_DIALECTS = {ECMASCRIPT: "Cpp.RegExp", "basic": "POSIX.BRE", "extended": "POSIX.ERE", "awk": "POSIX.ERE",
+                    "grep": "POSIX.BRE", "egrep": "POSIX.ERE"}
+"""The dialect each grammar's patterns are terms of, by its path ([re.synopt]): ECMAScript's this one's; `basic` and
+`grep` (POSIX's grep, its patterns BREs) POSIX's basic regular expressions; `extended`, `awk` (whose EREs take C's
+escapes) and `egrep` (`grep -E`) its extended ones."""
+
 CLASS_NAMES = ("alnum", "alpha", "blank", "cntrl", "digit", "graph", "lower", "print", "punct", "space", "upper",
                "xdigit", "d", "s", "w")
 """The class names every traits class recognizes, at least ([re.grammar], 7); which others it does is its own."""
 
 SETS = ("any", "digit", "space", "word")
-"""A characterset's kinds: `.`, and ECMAScript's `\\d`, `\\s` and `\\w`."""
+"""A characterset's kinds: `.`, `\\d`, `\\s` and `\\w`."""
 
 ASSERTIONS = ("start", "end", "word", "lookahead")
-"""An assertion's kinds: `^`, `$`, and ECMAScript's `\\b` and `(?=...)`."""
+"""An assertion's kinds: `^`, `$`, `\\b` and `(?=...)`."""
 
 ATOMS = (GROUP, CAPTURINGGROUP, QUANTIFIER, CHARACTERCLASS, CHARACTERSET, CHARACTER, ASSERTION, BACKREFERENCE)
+QUANTIFIED = (GROUP, CAPTURINGGROUP, CHARACTERCLASS, CHARACTERSET, CHARACTER, BACKREFERENCE)
 CLASS_ATOMS = (CHARACTERCLASSRANGE, CHARACTERSET, CHARACTER, EXCLASS, COLLATINGELEMENT, EQUIVALENCE)
 ENDS = (CHARACTER, COLLATINGELEMENT)
 
 HOLDS: dict[str, dict[str, tuple[str, ...]]] = {
-    REGEX: {"pattern": (PATTERN, PATTERNLIST)},
-    PATTERNLIST: {"patterns": (PATTERN,)},
     PATTERN: {"alternatives": (ALTERNATIVE,)},
     ALTERNATIVE: {"elements": ATOMS},
     GROUP: {"alternatives": (ALTERNATIVE,)},
     CAPTURINGGROUP: {"alternatives": (ALTERNATIVE,)},
-    QUANTIFIER: {"element": ATOMS},
+    QUANTIFIER: {"element": QUANTIFIED},
     CHARACTERCLASS: {"elements": CLASS_ATOMS},
     CHARACTERCLASSRANGE: {"min": ENDS, "max": ENDS},
     ASSERTION: {"alternatives": (ALTERNATIVE,)},
 }
-"""What each kind's terms may be, by property, besides invalid syntax: the grammars' structure, which the schema, every
-property holding its `Term`, leaves to validation (the dialects proposal, Decided, 4)."""
-
-_EXTENDED = ("extended", "awk", "egrep")
+"""What each kind's terms may be, by property, besides invalid syntax: the grammar's structure, which the schema, every
+property holding its `Term`, leaves to validation (the dialects proposal, Decided, 4); a quantifier repeats an Atom,
+never an Assertion or another quantifier (ECMA-262, 15.10.1, Term)."""
 
 FEATURES: dict[str, tuple[str, ...]] = {
     "a patternlist": ("grep", "egrep"),
-    "alternation": (ECMASCRIPT, *_EXTENDED),
-    "a group": (ECMASCRIPT,),
-    "a lookahead assertion": (ECMASCRIPT,),
-    "a word assertion": (ECMASCRIPT,),
-    "a digit characterset": (ECMASCRIPT,),
-    "a space characterset": (ECMASCRIPT,),
-    "a word characterset": (ECMASCRIPT,),
-    "a lazy quantifier": (ECMASCRIPT,),
-    "a repeated quantifier": _EXTENDED,
-    "a repeated anchor": _EXTENDED,
-    "an anchor within the expression": (ECMASCRIPT, *_EXTENDED),
-    "a backreference": (ECMASCRIPT, "basic", "grep"),
-    "a backreference past 9": (ECMASCRIPT,),
+    "alternation": ("extended", "awk", "egrep"),
+    "a lazy quantifier": (),
 }
-"""The constructs not every grammar has, each with the grammars that have it: ECMAScript's own (a group, a lookahead, a
-word boundary, a class escape, a lazy quantifier); alternation, which a BRE has not (XBD 9.5.2), but grep's list of
-patterns; grep's and egrep's list; a repeated quantifier or anchor, which only an ERE's grammar allows
-(`ERE_expression ERE_dupl_symbol`, XBD 9.5.3); an anchor anywhere but where a BRE begins or ends (`L_ANCHOR`,
-`R_ANCHOR`); and a backreference, which no ERE has, a BRE's being `\\1` to `\\9` (`BACKREF`)."""
+"""What a POSIX grammar's term may have that C++'s grammar does not select, each with the grammars that have it: grep's
+and egrep's list of patterns, which [re.synopt]'s other POSIX grammars are not; and what POSIX.1-2024 added, which the
+editions C++ cites ([intro.refs]: ISO/IEC 9945:2003, ISO/IEC/IEEE 9945:2009) have not: a BRE's alternation (`\\|`) and
+an ERE's repetition modifier (`*?`)."""
 
 
 def grammar(flags: tuple[str, ...]) -> str:
@@ -155,15 +141,16 @@ def grammar(flags: tuple[str, ...]) -> str:
 def install(txn: Any) -> Any:
     """Cpp RegExp's union of its kinds, added to the framework's terms as the branch `cpp_regexp`, its own kinds, and its
     dialect's schema, whose singleton is `Expressions.Cpp.RegExp`: run after `Framework.install`, in a transaction of its
-    own, before or after its family's other installs; run again, it writes nothing. Its kinds hold its own terms alone.
-    Its holder, `Expressions.Cpp.RegExp.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to
-    its `Term`."""
+    own, before or after its family's other installs; run again, it writes nothing. Its kinds hold its own terms alone,
+    but a regex, whose pattern is `Expressions.Framework.Term`, a term of the dialect its grammar names. Its holder,
+    `Expressions.Cpp.RegExp.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
+    `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
 
     def many(element: Any) -> Any:
         return S.OfContainer(lambda c: c.index([S.OfInt]).element([element]))
 
-    names =("Regex", "PatternList", "Pattern", "Alternative", "Group", "CapturingGroup", "Quantifier", "CharacterClass",
+    names = ("Regex", "Pattern", "Alternative", "Group", "CapturingGroup", "Quantifier", "CharacterClass",
              "CharacterClassRange", "CharacterSet", "Character", "Assertion", "Backreference", "ExClass",
              "CollatingElement", "Equivalence")
     return txn.uid("mbse.Expressions.Cpp.RegExp/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
@@ -183,10 +170,9 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
-            # a regex: the `syntax_option_type` it is constructed with, and its pattern
+            # a regex: the `syntax_option_type` it is constructed with, and its pattern, of the dialect its grammar names
             lambda _: _.Regex.name("Expressions.Cpp.RegExp.Regex").properties({
-                "flags": many(S.OfStr), "pattern": _.Term}),
-            lambda _: _.PatternList.name("Expressions.Cpp.RegExp.PatternList").properties({"patterns": many(_.Term)}),
+                "flags": many(S.OfStr), "pattern": _.FrameworkTerm}),
             lambda _: _.Pattern.name("Expressions.Cpp.RegExp.Pattern").properties({"alternatives": many(_.Term)}),
             lambda _: _.Alternative.name("Expressions.Cpp.RegExp.Alternative").properties({"elements": many(_.Term)}),
             lambda _: _.Group.name("Expressions.Cpp.RegExp.Group").properties({"alternatives": many(_.Term)}),
@@ -244,14 +230,15 @@ def _read(term: Any) -> F.Node:
 
 
 def _held(node: F.Node, name: str) -> tuple[Any, ...]:
-    """The terms a kind's property `name` holds: a slot's, where it is not empty, or a container's."""
-    if name in node.slots:
-        return () if node.slots[name] is None else (node.slots[name],)
+    """The terms a kind's property `name` holds: a subterm's, where it is not empty, or a container's."""
+    if name in node.subterms:
+        return () if node.subterms[name] is None else (node.subterms[name],)
     return node.lists[name]
 
 
 def _grammar_problems(grammar_: str, root: Any) -> list[str]:
-    """What a regex's pattern has that its grammar has not (`FEATURES`), each once, in the order first met."""
+    """What a POSIX grammar's pattern has that C++ does not select of it (`FEATURES`), each once, in the order first
+    met."""
     found: list[str] = []
 
     def lacks(feature: str) -> None:
@@ -259,54 +246,28 @@ def _grammar_problems(grammar_: str, root: Any) -> list[str]:
         if grammar_ not in FEATURES[feature] and message not in found:
             found.append(message)
 
-    def visit(term: Any, top: bool, anchored: bool) -> None:
+    def visit(term: Any) -> None:
         node = _read(term)
-        kind, attributes = node.kind, node.attributes
-        if kind in F.INVALID_KINDS:
+        if node.kind in F.INVALID_KINDS:
             return
-        if kind == PATTERNLIST:
+        if node.kind == "patternlist":
             lacks("a patternlist")
         if len(node.lists.get("alternatives", ())) > 1:
             lacks("alternation")
-        if kind == GROUP:
-            lacks("a group")
-        if kind == ASSERTION and attributes.get("assertionKind") in ("word", "lookahead"):
-            lacks(f"a {attributes['assertionKind']} assertion")
-        if kind == ASSERTION and attributes.get("assertionKind") in ("start", "end") and not anchored:
-            lacks("an anchor within the expression")
-        if kind == CHARACTERSET and attributes.get("setKind") in ("digit", "space", "word"):
-            lacks(f"a {attributes['setKind']} characterset")
-        if kind == QUANTIFIER:
-            if attributes.get("greedy") is False:
-                lacks("a lazy quantifier")
-            element = node.slots["element"]
-            inner = _read(element) if element is not None else None
-            if inner is not None and inner.kind == QUANTIFIER:
-                lacks("a repeated quantifier")
-            if inner is not None and inner.kind == ASSERTION and inner.attributes.get("assertionKind") in ("start", "end"):
-                lacks("a repeated anchor")
-        if kind == BACKREFERENCE:
-            lacks("a backreference")
-            if type(attributes.get("ref")) is int and attributes["ref"] > 9:
-                lacks("a backreference past 9")
-        if kind == ALTERNATIVE:
-            elements = node.lists["elements"]
-            for i, element in enumerate(elements):
-                assertion = _read(element).attributes.get("assertionKind")
-                visit(element, False, top and (assertion == "start" and i == 0 or assertion == "end"
-                                               and i == len(elements) - 1))
-            return
-        for name in HOLDS.get(kind, {}):
-            for held in _held(node, name):
-                visit(held, kind in (REGEX, PATTERNLIST, PATTERN) and top, False)
+        if node.kind == QUANTIFIER and node.attributes.get("greedy") is False:
+            lacks("a lazy quantifier")
+        for held in [*node.subterms.values(), *node.many]:
+            if held is not None:
+                visit(held)
 
-    visit(root, True, False)
+    visit(root)
     return found
 
 
 def problems(node: F.Node) -> list[str]:
-    """A node's checks: what its terms may be (`HOLDS`), its attributes' values, and, of a regex, its flags and what its
-    pattern has that its grammar has not (`FEATURES`)."""
+    """A node's checks: what its terms may be (`HOLDS`), its attributes' values, and, of a regex, its flags, that its
+    pattern is a pattern of the dialect its grammar names (`GRAMMAR_DIALECTS`), and what that has that C++ does not
+    select of it (`FEATURES`)."""
     found: list[str] = []
     kind, attributes = node.kind, node.attributes
     for name, allowed in HOLDS.get(kind, {}).items():
@@ -318,19 +279,28 @@ def problems(node: F.Node) -> list[str]:
         flags = attributes["flags"].values if "flags" in attributes else ()
         found += [f"{flag!r} is not a syntax_option_type element" for flag in flags if flag not in SYNTAX_OPTIONS]
         grammars = [flag for flag in flags if flag in GRAMMARS]
+        pattern = node.subterms["pattern"]
         if len(grammars) > 1:
             found.append(f"a regex has at most one grammar element, got {', '.join(grammars)}")
-        elif node.slots["pattern"] is not None:
-            found += _grammar_problems(grammar(flags), node.slots["pattern"])
+        elif pattern is not None:
+            grammar_ = grammar(flags)
+            expected = F.dialect_name(GRAMMAR_DIALECTS[grammar_])
+            held = F.dialect_name(F.dialect_of(pattern)[len("Expressions."):-len(".Term")])
+            tag = F.kind_of(pattern)[0]
+            if tag in F.INVALID_KINDS:  # its own problem, as the dialect holding it reads it
+                return found
+            if held != expected:
+                found.append(f"the {grammar_} grammar's pattern is {F._article(expected)} term, got {F._article(held)} term")
+            elif tag not in ((PATTERN,) if grammar_ == ECMASCRIPT else (PATTERN, "patternlist")):
+                found.append(f"a regex's pattern cannot hold {F._article(tag)}")
+            elif grammar_ != ECMASCRIPT:
+                found += _grammar_problems(grammar_, pattern)
     elif kind == QUANTIFIER:
         least, most = attributes.get("min"), attributes.get("max")
         if type(least) is int and least < 0:
             found.append(f"a quantifier's min cannot be negative, got {least}")
         if type(least) is int and type(most) is int and most < least:
             found.append(f"a quantifier's max cannot be less than its min, got {most} and {least}")
-        element = node.slots["element"]
-        if element is not None and _read(element).attributes.get("assertionKind") == "word":
-            found.append("a quantifier cannot repeat a word assertion")
     elif kind == CHARACTERSET and "setKind" in attributes:
         if attributes["setKind"] not in SETS:
             found.append(f"CharacterSet.setKind cannot be {attributes['setKind']!r}")
@@ -367,12 +337,15 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family, imported when first needed: C++'s, Cpp Types' and C Preprocessor's."""
+    """The dialects of its family, imported when first needed, C++'s, Cpp Types' and C Preprocessor's, then POSIX's,
+    whose terms a regex naming a POSIX grammar holds: POSIX BRE's and POSIX ERE's."""
     from ...C.Preprocessor import Expressions as CPreprocessor
+    from ...POSIX.BRE import Expressions as BRE
+    from ...POSIX.ERE import Expressions as ERE
     from ..Expressions import Expressions as Cpp
     from ..Types import Expressions as CppTypes
-    return Cpp.DIALECT, CppTypes.DIALECT, CPreprocessor.DIALECT
+    return Cpp.DIALECT, CppTypes.DIALECT, CPreprocessor.DIALECT, BRE.DIALECT, ERE.DIALECT
 
 
 DIALECT = F.Dialect("Cpp.RegExp", _kinds(), domain_of=lambda value: FD.Anything, reads=_reads)
-"""The Cpp RegExp dialect: its kinds, as the framework reads them, and its family's other dialects' terms."""
+"""The Cpp RegExp dialect: its kinds, as the framework reads them, its family's other dialects' terms, and POSIX's."""

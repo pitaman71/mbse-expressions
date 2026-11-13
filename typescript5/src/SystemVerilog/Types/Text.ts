@@ -23,14 +23,14 @@ function join(...parts: unknown[]): string {
 
 /** A dimension: `[left:right]`, `[size]`, `[]`, `[type]` or `[*]`, `[$]` or `[$:bound]`. */
 export function dimension(p: Printer, node: F.Node): string {
-  if (node.kind === "rangedimension") return `[${p.text(node.slots.get("left"))}:${p.text(node.slots.get("right"))}]`;
-  if (node.kind === "sizedimension") return `[${p.text(node.slots.get("size"))}]`;
+  if (node.kind === "rangedimension") return `[${p.text(node.subterms.get("left"))}:${p.text(node.subterms.get("right"))}]`;
+  if (node.kind === "sizedimension") return `[${p.text(node.subterms.get("size"))}]`;
   if (node.kind === "unsizeddimension") return "[]";
   if (node.kind === "associativedimension") {
-    const type = node.slots.get("type") ?? null;
+    const type = node.subterms.get("type") ?? null;
     return `[${type !== null ? p.text(type) : "*"}]`;
   }
-  const bound = node.slots.get("bound") ?? null; // a queue's
+  const bound = node.subterms.get("bound") ?? null; // a queue's
   return `[$${bound !== null ? ":" + p.text(bound) : ""}]`;
 }
 
@@ -45,7 +45,7 @@ function sized(p: Printer, node: F.Node, head: string): string {
 
 function declarators(p: Printer, declarators: readonly F.Node[]): string {
   return declarators.map((d) => p.spelling(d.helpers.get("name")) + dimensions(p, d)
-    + ((d.slots.get("value") ?? null) !== null ? ` = ${p.text(d.slots.get("value"))}` : "")).join(", ");
+    + ((d.subterms.get("value") ?? null) !== null ? ` = ${p.text(d.subterms.get("value"))}` : "")).join(", ");
 }
 
 /** A structure's member: its attributes, `rand` or `randc`, its type and its declarators. */
@@ -53,13 +53,13 @@ function member(p: Printer, node: F.Node): string {
   const random = node.attributes.get("random") ? `${node.attributes.get("random")} ` : "";
   const attributes = nodes(node.helpers.get("attributes"));
   const written = attributes.length > 0 ? `${p.attributeText(attributes)} ` : "";
-  return `${written}${random}${p.text(node.slots.get("type"))} ${declarators(p, nodes(node.helpers.get("declarators")))}`;
+  return `${written}${random}${p.text(node.subterms.get("type"))} ${declarators(p, nodes(node.helpers.get("declarators")))}`;
 }
 
 /** An enumeration's member: `name`, `name[left]` or `name[left:right]`, and its value. */
 function enumMember(p: Printer, node: F.Node): string {
   let numbers = "";
-  const [left, right, value] = ["left", "right", "value"].map((name) => node.slots.get(name) ?? null);
+  const [left, right, value] = ["left", "right", "value"].map((name) => node.subterms.get(name) ?? null);
   if (left !== null) numbers = `[${p.text(left)}${right !== null ? `:${p.text(right)}` : ""}]`;
   return p.spelling(node.helpers.get("name")) + numbers + (value !== null ? ` = ${p.text(value)}` : "");
 }
@@ -72,7 +72,7 @@ function struct(p: Printer, node: F.Node): string {
 }
 
 function enumText(p: Printer, node: F.Node): string {
-  const base = node.slots.get("base") ?? null;
+  const base = node.subterms.get("base") ?? null;
   const members = nodes(node.helpers.get("members")).map((m) => enumMember(p, m)).join(", ");
   return sized(p, node, `enum${base !== null ? ` ${p.text(base)}` : ""} {${members}}`);
 }
@@ -94,7 +94,7 @@ export const TEXTS: ReadonlyMap<string, (p: Printer, n: F.Node) => string> = new
   [T.IMPLICITTYPE, (p, n) => join(n.attributes.get("signing"), dimensions(p, n))],
   [T.STRUCTTYPE, struct],
   [T.ENUMTYPE, enumText],
-  [T.TYPEREFERENCE, (p, n) => `type(${p.text(n.slots.get("operand"))})`],
+  [T.TYPEREFERENCE, (p, n) => `type(${p.text(n.subterms.get("operand"))})`],
 ]);
 
 /** Each of its kinds' precedence, where it is not a primary's: none. */

@@ -43,8 +43,8 @@
  *   `missing`.
  *
  * Its helpers: the `Name` union, `attributeinstance` and `attributespec` (`(* keep *)`), `identifier` and `streamitem`.
- * Where a position holds one sublanguage, it holds that dialect's `Term`; where it holds a sublanguage's kinds or an
- * expression (mbse-programs' `DataType | Expression`, `Property | Expression`, `Pattern | Expression`), it holds the
+ * Where a subterm may be of one sublanguage, it is of that dialect's `Term`; where it may be a sublanguage's kinds or
+ * an expression (mbse-programs' `DataType | Expression`, `Property | Expression`, `Pattern | Expression`), it is of the
  * sublanguage's `Term`, which lists, as branches, every branch of this dialect's `Term` besides its own kinds: `install`
  * adds them to the `Term`s of `Types`, `Patterns`, `Assertions` and `Constraints`, creating any that is not yet installed,
  * as each of those installs names this `Term`, so that the six installs run in any order. A store holding some of them and
@@ -295,8 +295,8 @@ export function install(txn: any): any {
               (t: any) => t.name("systemverilog").schema([_.Dialect])]),
           // its union of its kinds: its own, and invalid syntax (the Preprocessor's install adds `macrousage`)
           (_: any) => _.Term.name("Expressions.SystemVerilog.Expressions.Term").branches(own(_)),
-          // the sublanguages' unions list its branches: a position that holds a sublanguage's kinds or an expression
-          // holds the sublanguage's `Term` ("(b)")
+          // the sublanguages' unions list its branches: a subterm that may be a sublanguage's kinds or an expression
+          // is of the sublanguage's `Term` ("(b)")
           (_: any) => _.TypesTerm.name("Expressions.SystemVerilog.Types.Term").branches(own(_)),
           (_: any) => _.PatternsTerm.name("Expressions.SystemVerilog.Patterns.Term").branches(own(_)),
           (_: any) => _.AssertionsTerm.name("Expressions.SystemVerilog.Assertions.Term").branches(own(_)),
@@ -673,7 +673,7 @@ export function problems(node: F.Node): string[] {
     if (value !== null && !choices.includes(value)) found.push(`${name}.${attribute} cannot be ${repr(value)}`);
   }
   if (kind === CONSTANT) found.push(...vectorProblems(attributes), ...baseProblems(attributes, "a constant"));
-  if (kind === ASSIGNMENTPATTERN && (node.slots.get("count") ?? null) !== null
+  if (kind === ASSIGNMENTPATTERN && (node.subterms.get("count") ?? null) !== null
     && node.many.some((item) => F.kindOf(item)[0] === PATTERNITEM)) {
     found.push("a repeated AssignmentPattern has positional items only");
   }
@@ -683,7 +683,7 @@ export function problems(node: F.Node): string[] {
     found.push("a defaulted NewExpression is super.new(default)");
   }
   if (kind === "streamitem") {
-    const [left, operator, right] = [node.slots.get("left") ?? null, attributes.get("operator") ?? null, node.slots.get("right") ?? null];
+    const [left, operator, right] = [node.subterms.get("left") ?? null, attributes.get("operator") ?? null, node.subterms.get("right") ?? null];
     if ((operator === null) !== (right === null) || left === null && operator !== null) {
       found.push("a StreamItem's `with` has a left, and an operator and a right, or neither");
     }
@@ -716,7 +716,7 @@ function iterator(call: any): string {
 
 /** What an array method's call and its `with` expression have bound: its iterator, in both (its call declares it). */
 export function arrayMethodScopes(record: any): ReadonlySet<string>[] {
-  const value = F.node(ARRAYMETHODWITHEXPRESSION, record).slots.get("value") ?? null;
+  const value = F.node(ARRAYMETHODWITHEXPRESSION, record).subterms.get("value") ?? null;
   const bound: ReadonlySet<string> = value !== null ? new Set([iterator(value)]) : new Set();
   return [bound, bound];
 }
@@ -727,8 +727,8 @@ function matched(condition: any): ReadonlySet<string> {
   if (condition === null) return new Set();
   const [tag, record] = F.kindOf(condition);
   const node = F.node(tag, record);
-  if (tag === MATCHESEXPRESSION && node.slots.get("pattern") !== null) {
-    return Patterns.boundNames(node.slots.get("pattern"));
+  if (tag === MATCHESEXPRESSION && node.subterms.get("pattern") !== null) {
+    return Patterns.boundNames(node.subterms.get("pattern"));
   }
   if (tag === PREDICATEEXPRESSION) return new Set(node.many.flatMap((c) => [...matched(c)]));
   return new Set();
@@ -736,7 +736,7 @@ function matched(condition: any): ReadonlySet<string> {
 
 /** What a conditional's arguments have bound: its condition's matched variables, in its consequence (12.6.2). */
 function conditionalScopes(record: any): ReadonlySet<string>[] {
-  const names = matched(F.node(CONDITIONALEXPRESSION, record).slots.get("condition") ?? null);
+  const names = matched(F.node(CONDITIONALEXPRESSION, record).subterms.get("condition") ?? null);
   return [new Set(), names, new Set(), ...F.argumentsOf(record).slice(3).map(() => new Set<string>())];
 }
 
@@ -770,7 +770,7 @@ export function typeName(value: any): string | null {
  * its checks. */
 function castCheck(record: any): string[] {
   const node = F.node(CASTEXPRESSION, record);
-  const target = node.slots.get("type") ?? null;
+  const target = node.subterms.get("type") ?? null;
   const found = problems(node);
   const name = typeName(target);
   const [tag, held] = target !== null ? F.kindOf(target) : [null, null];
@@ -789,7 +789,7 @@ function castCheck(record: any): string[] {
 /** A cast to a type SystemVerilog defines by name: that type, read from the store of the term's holder; one to a width,
  * a signing or any other type is not known statically. */
 function castTyped(record: any): FD.Domain | null {
-  const name = typeName(F.node(CASTEXPRESSION, record).slots.get("type")); // a valid cast holds its type
+  const name = typeName(F.node(CASTEXPRESSION, record).subterms.get("type")); // a valid cast holds its type
   return name !== null && Domains.NAMES.includes(name) ? Domains.named(Proxies.store_of(record), name) : null;
 }
 
@@ -846,7 +846,7 @@ export function native(value: unknown): Writer | null {
   return ["bigint", "number", "string"].includes(typeof value) ? literal(value) : null;
 }
 
-/** The slots of a kind's helpers that may be empty, wherever they nest: an attribute's value (`(* keep *)`). */
+/** The subterms of a kind's helpers that may be empty, wherever they nest: an attribute's value (`(* keep *)`). */
 const OPTIONAL: readonly string[] = ["*.value"];
 
 /** How the framework reads SystemVerilog's kinds. */
@@ -908,7 +908,7 @@ function kinds(): Record<string, F.Kind> {
   };
 }
 
-/** The dialects of its family whose terms its positions hold, read when first needed. */
+/** The dialects of its family whose terms are its subterms, read when first needed. */
 function reads(): readonly F.Dialect[] {
   return [Types.DIALECT, Patterns.DIALECT, Assertions.DIALECT, Constraints.DIALECT, Preprocessor.DIALECT];
 }

@@ -28,6 +28,8 @@
     "@mbse/expressions/Cpp/Expressions": "./src/Cpp/Expressions/index.ts",
     "@mbse/expressions/Cpp/Types": "./src/Cpp/Types/index.ts",
     "@mbse/expressions/Cpp/RegExp": "./src/Cpp/RegExp/index.ts",
+    "@mbse/expressions/POSIX/BRE": "./src/POSIX/BRE/index.ts",
+    "@mbse/expressions/POSIX/ERE": "./src/POSIX/ERE/index.ts",
     "@mbse/expressions/SystemVerilog/Expressions": "./src/SystemVerilog/Expressions/index.ts",
     "@mbse/expressions/SystemVerilog/Types": "./src/SystemVerilog/Types/index.ts",
     "@mbse/expressions/SystemVerilog/Patterns": "./src/SystemVerilog/Patterns/index.ts",

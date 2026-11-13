@@ -62,7 +62,7 @@ def _letters(node: F.Node | None, allowed: tuple[tuple[str, str], ...]) -> str:
 
 
 def _regexpliteral(p: X.Printer, node: F.Node) -> str:
-    return f"/{p.text(node.slots['pattern'])}/{_letters(node.helpers.get('flags'), R.FLAGS)}"
+    return f"/{p.text(node.subterms['pattern'])}/{_letters(node.helpers.get('flags'), R.FLAGS)}"
 
 
 def _alternative(p: X.Printer, node: F.Node) -> str:
@@ -70,7 +70,7 @@ def _alternative(p: X.Printer, node: F.Node) -> str:
 
 
 def _group(p: X.Printer, node: F.Node) -> str:
-    modifiers = node.slots["modifiers"]
+    modifiers = node.subterms["modifiers"]
     return f"(?{'' if modifiers is None else p.text(modifiers)}:{_disjunction(p, node)})"
 
 
@@ -80,7 +80,7 @@ def _capturinggroup(p: X.Printer, node: F.Node) -> str:
 
 
 def _quantifier(p: X.Printer, node: F.Node) -> str:
-    element = p.text(node.slots["element"])
+    element = p.text(node.subterms["element"])
     raw = node.attributes.get("raw")
     if raw is not None and raw.startswith(element) and len(raw) > len(element):
         return raw
@@ -98,11 +98,11 @@ def _characterclass(p: X.Printer, node: F.Node) -> str:
 
 
 def _characterclassrange(p: X.Printer, node: F.Node) -> str:
-    return f"{_in_class(p, node.slots['min'])}-{_in_class(p, node.slots['max'])}"
+    return f"{_in_class(p, node.subterms['min'])}-{_in_class(p, node.subterms['max'])}"
 
 
 def _operation(operator: str) -> Callable[[X.Printer, F.Node], str]:
-    return lambda p, node: f"{_in_class(p, node.slots['left'])}{operator}{_in_class(p, node.slots['right'])}"
+    return lambda p, node: f"{_in_class(p, node.subterms['left'])}{operator}{_in_class(p, node.subterms['right'])}"
 
 
 def _classstringdisjunction(p: X.Printer, node: F.Node) -> str:
@@ -114,7 +114,7 @@ def _stringalternative(p: X.Printer, node: F.Node) -> str:
 
 
 def _expressioncharacterclass(p: X.Printer, node: F.Node) -> str:
-    return f"[{'^' if node.attributes.get('negate') else ''}{p.text(node.slots['expression'])}]"
+    return f"[{'^' if node.attributes.get('negate') else ''}{p.text(node.subterms['expression'])}]"
 
 
 _SETS = {"digit": "d", "space": "s", "word": "w"}

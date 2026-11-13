@@ -27,8 +27,8 @@ its properties in source order, each a value object `Expressions.SystemVerilog.A
 
 Its helpers: `delaystep`, `propertycaseitem`, and a clock's `eventcontrol` (`@(...)`, `@(*)` without events) and its
 `eventexpression`s (`posedge clk iff en`), IEEE 1800's event control (9.4.2), held here as a sequence's or a property's
-clock. A position the standard writes `expression_or_dist` (an `if`'s, a `case`'s and its items' expressions, an abort's
-condition, `disable iff`'s) holds its `Term`, which lists `distexpression`; a match item, a cycle range's bound and an
+clock. A subterm the standard writes `expression_or_dist` (an `if`'s, a `case`'s and its items' expressions, an abort's
+condition, `disable iff`'s) is of its `Term`, which lists `distexpression`; a match item, a cycle range's bound and an
 event's expression and condition hold `Expressions`' `Term`. None of its kinds binds a name: a sequence's local
 variables are its declaration's, a statement's.
 
@@ -99,7 +99,7 @@ def install(txn: Any) -> Any:
     `systemverilog_assertions`, its own kinds, the helpers they hold, and its dialect's schema, whose singleton is
     `Expressions.SystemVerilog.Assertions`: run after `Framework.install`, in a transaction of its own, before or after
     the other SystemVerilog dialects' installs; run again, it writes nothing. `Expressions.SystemVerilog.Expressions.Term`,
-    which its expressions' positions hold, is named, created where that dialect's install has not run; that install adds
+    of which its expression subterms are, is named, created where that dialect's install has not run; that install adds
     its branches to this `Term`, as the Preprocessor's adds `macrousage` and the Constraints' `distexpression`. Its
     holder, `Expressions.SystemVerilog.Assertions.Expression`, refines `Expressions.Framework.Expression`, its `root`
     narrowed to its `Term`."""
@@ -263,7 +263,7 @@ def _check(tag: str) -> Callable[[Any], list[str]]:
 
 
 _OPTIONAL = ("clock.events.condition",)
-"""The slots of its kinds' helpers that may be empty: a clock's event's condition (`iff`)."""
+"""The subterms of its kinds' helpers that may be empty: a clock's event's condition (`iff`)."""
 
 
 def _kinds() -> dict[str, F.Kind]:
@@ -294,7 +294,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions hold, imported when first needed."""
+    """The dialects of its family whose terms are its subterms, imported when first needed."""
     from ..Constraints import Expressions as Constraints
     from ..Patterns import Expressions as Patterns
     from ..Preprocessor import Expressions as Preprocessor

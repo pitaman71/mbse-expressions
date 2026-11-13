@@ -28,40 +28,40 @@ def _nodes(value: Any) -> tuple[F.Node, ...]:
 
 def _conditional(p: X.Printer, node: F.Node) -> str:
     """`if (condition) consequence`, and ` else alternative` where it has one."""
-    alternative = node.slots["alternative"]
+    alternative = node.subterms["alternative"]
     written = f" else {p.text(alternative)}" if alternative is not None else ""
-    return f"if ({p.text(node.slots['condition'])}) {p.text(node.slots['consequence'])}{written}"
+    return f"if ({p.text(node.subterms['condition'])}) {p.text(node.subterms['consequence'])}{written}"
 
 
 def _foreach(p: X.Printer, node: F.Node) -> str:
     """`foreach (array[variables]) body`, a dimension it skips written empty (`q[, j]`)."""
     variables = ", ".join("" if v.kind == "emptyargument" else p.spelling(v)
                           for v in _nodes(node.helpers.get("variables")))
-    return f"foreach ({p.text(node.slots['value'])}[{variables}]) {p.text(node.slots['body'])}"
+    return f"foreach ({p.text(node.subterms['value'])}[{variables}]) {p.text(node.subterms['body'])}"
 
 
 def _item(p: X.Printer, node: F.Node) -> str:
     """A distribution's item: its value, or `default`, and its operator and weight where it has them."""
-    value = node.slots["value"]
-    weight = f" {node.attributes['operator']} {p.text(node.slots['weight'])}" if "operator" in node.attributes else ""
+    value = node.subterms["value"]
+    weight = f" {node.attributes['operator']} {p.text(node.subterms['weight'])}" if "operator" in node.attributes else ""
     return ("default" if value is None else p.text(value)) + weight
 
 
 def _dist(p: X.Printer, node: F.Node) -> str:
     """`value dist { items }`."""
     items = ", ".join(_item(p, i) for i in _nodes(node.helpers.get("items")))
-    return f"{p.operand(node.slots['value'], RELATIONAL)} dist {{{items}}}"
+    return f"{p.operand(node.subterms['value'], RELATIONAL)} dist {{{items}}}"
 
 
 TEXTS: dict[str, Callable[[X.Printer, F.Node], str]] = {
     C.CONSTRAINTBLOCK: lambda p, n: p.inline(n.many),
-    C.EXPRESSIONCONSTRAINT: lambda p, n: f"{'soft ' if n.attributes.get('soft') else ''}{p.text(n.slots['expression'])};",
-    C.IMPLICATIONCONSTRAINT: lambda p, n: f"{p.operand(n.slots['condition'], IMPLY + 1)} -> {p.text(n.slots['body'])}",
+    C.EXPRESSIONCONSTRAINT: lambda p, n: f"{'soft ' if n.attributes.get('soft') else ''}{p.text(n.subterms['expression'])};",
+    C.IMPLICATIONCONSTRAINT: lambda p, n: f"{p.operand(n.subterms['condition'], IMPLY + 1)} -> {p.text(n.subterms['body'])}",
     C.CONDITIONALCONSTRAINT: _conditional,
     C.FOREACHCONSTRAINT: _foreach,
     C.SOLVEBEFORECONSTRAINT: lambda p, n: (f"solve {', '.join(p.text(e) for e in n.lists['solve'])} before "
                                            f"{', '.join(p.text(e) for e in n.lists['before'])};"),
-    C.DISABLESOFTCONSTRAINT: lambda p, n: f"disable soft {p.text(n.slots['target'])};",
+    C.DISABLESOFTCONSTRAINT: lambda p, n: f"disable soft {p.text(n.subterms['target'])};",
     C.UNIQUECONSTRAINT: lambda p, n: f"unique {{{', '.join(p.text(r) for r in n.many)}}};",
     C.DISTEXPRESSION: _dist,
 }

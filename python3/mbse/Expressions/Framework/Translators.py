@@ -25,7 +25,7 @@ of dialects has its own, specialized to what the two have in common, and is decl
   `import numpy as np` around an expression that uses `np`.
 
 A pattern names a kind by its branch's tag in its dialect's `Term` (`call`, `binop`) and its attributes and arguments
-as `Terms.form` reads them: a hole in an argument binds the term in that place, slots then variadic arguments, and a
+as `Terms.form` reads them: a hole in an argument binds the term in that place, subterms then variadic arguments, and a
 fixed attribute must be set to an equal scalar, with every attribute of the term matched (an attribute that is not set
 is absent), but a literal's spelling (its kind's `spelling`: `text` and `problems`, and a Python literal's prefix,
 quotes, base and digit separators), which is its own dialect's: a literal translates by its value, and one with no
@@ -79,7 +79,7 @@ class Translator(Protocol):
 
 
 class Hole:
-    """A named hole in a pattern. In an argument position it matches an expression; in an attribute it matches a
+    """A named hole in a pattern. In an argument it matches an expression; in an attribute it matches a
     native value, of one of `types` if any are given."""
 
     def __init__(self, name: str, *types: type):
@@ -95,8 +95,8 @@ def holes(*names: str) -> tuple[Hole, ...]:
 
 
 class Pattern:
-    """A form with holes: `kind`, `arguments` (patterns, holes, or None for an empty slot: a binder's `value` it leaves
-    unset) and `attributes` (natives or holes)."""
+    """A form with holes: `kind`, `arguments` (patterns, holes, or None for an empty subterm: a binder's `value` it
+    leaves unset) and `attributes` (natives or holes)."""
 
     def __init__(self, kind: str, *arguments: Pattern | Hole | None, **attributes: Any):
         self.kind, self.arguments, self.attributes = kind, arguments, attributes
@@ -375,7 +375,7 @@ class _Run:
         raise ValueError(f"{described} has no {self.direction.target.name()} counterpart")
 
     def _match(self, pattern: Pattern | Hole | None, node: Any, bindings: dict[str, Any]) -> bool:
-        """Co-traverses `pattern` and `node`, binding the pattern's holes; None matches an empty slot."""
+        """Co-traverses `pattern` and `node`, binding the pattern's holes; None matches an empty subterm."""
         if pattern is None:
             return node is None
         if isinstance(pattern, Hole):
@@ -420,7 +420,7 @@ class _Run:
 
     def _instantiate(self, pattern: Pattern | Hole | None, bindings: dict[str, Any],
                      environment: dict[str, _Built]) -> _Built | None:
-        if pattern is None:  # an empty slot
+        if pattern is None:  # an empty subterm
             return None
         if isinstance(pattern, Hole):
             return self.translate(bindings[pattern.name], environment)

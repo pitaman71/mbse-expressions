@@ -17,7 +17,7 @@ the translators between them.
 | API conformance to the visitor protocols and the framework's protocols, on classes and on live instances | VIS-01, VIS-02, FRM-01 |
 | JSON is byte-identical, for a case of every dialect; YAML and JSON are interchangeable | the CONF suite over the shared corpus in `conformance/` |
 | The agent guides are current, and their links resolve: every notebook case the skill links, in both languages but those listed in [Cases in one language only](#cases-in-one-language-only) | the SKL suite |
-| Every tutorial has the same steps in both languages: the same notebooks, titles and `## NN.k · title` headings, in the same order, each step's cell starting with its anchor | SKL-05 |
+| Every tutorial has the same steps in both languages: the same notebooks, titles and `## NN.k · title` headings (a page's `## NN.MM.k · title`), in the same order, each step's cell starting with its anchor, each case ID one step's | SKL-05 |
 | The TypeScript model of Python's rules gives what Python gives | DIA-02's tables of values and errors, which the Python suite runs against Python itself |
 | Full code coverage in both | the coverage gates below |
 
@@ -52,7 +52,7 @@ Beyond mbse-schemas' own (native types, `Map` for plain data, errors, and so on)
 | A kind tagged by a Python keyword, in builder calls | `getattr(u, "lambda")(...)`, `getattr(u, "import")(...)`, or by the dialect's constant (`getattr(u, P.IMPORT)(...)`): a keyword is no attribute name | `u.lambda(...)`, `u.import(...)` | Python's grammar refuses a keyword after a dot, where JavaScript allows a reserved word as a property name | FRM-05, FRM-10, TRN-02, DIA-01 |
 | TypeScript5's literals | a number's value a `float`, a bigint's an `int` (`ts(1.5)`, `ts(1)`) | a number's a `number`, a bigint's a `bigint` (`ts(1.5)`, `ts(1n)`) | each language's numbers; the terms written are the same, a number always a float | DIA-21, CONF |
 | TypeScript5's number spelling | `Text.number`, JavaScript's `String(number)` written in Python, from `repr`'s shortest digits | `Text.number` is `String(number)` | JavaScript's own; DIA-22 checks the two alike, at each notation's bounds | DIA-22 |
-| Nested reading: TypeScript5's, C's and C++'s | `Terms.node(tag, record)` and TypeScript5's `Expressions.tree(term)`, a `Terms.Node` dataclass, its `attributes`, `slots` and `helpers` dicts, `many` a tuple, a helper's many nodes a tuple; `bound_names` (TypeScript5's and TypeScript Patterns', one function) | `Terms.node(tag, record)` and `Expressions.tree(term)`, a `Terms.Node` class, its fields `Map`s, `many` an array, a helper's many nodes an array; `boundNames` (TypeScript5's and TypeScript Patterns', one function) | each language's records and names | DIA-21, DIA-24, DIA-25 |
+| Nested reading: TypeScript5's, C's and C++'s | `Terms.node(tag, record)` and TypeScript5's `Expressions.tree(term)`, a `Terms.Node` dataclass, its `attributes`, `subterms` and `helpers` dicts, `many` a tuple, a helper's many nodes a tuple; `bound_names` (TypeScript5's and TypeScript Patterns', one function) | `Terms.node(tag, record)` and `Expressions.tree(term)`, a `Terms.Node` class, its fields `Map`s, `many` an array, a helper's many nodes an array; `boundNames` (TypeScript5's and TypeScript Patterns', one function) | each language's records and names | DIA-21, DIA-24, DIA-25 |
 | C's and C++'s literals and writers | an int `C.literal(5, "u")`, a float `C.literal(1.5, "f")`; `C.Domains.literal(attributes, language, types)` and `out_of_range` of a dict; `C.Expressions.type_name`, `bound_names` | a bigint `C.literal(5n, "u")`, a number `C.literal(1.5, "f")`; `C.Domains.literal(attributes, language, types)` and `outOfRange` of a `Map`; `C.Expressions.typeName`, `boundNames`; a language's suffixes a `Suffixes` of two `RegExp`s | each language's numbers and names; the terms written are the same | DIA-11, DIA-12, DIA-24 |
 | C's and C++'s types | `C.Domains.Types(value, path)`, its `find` None where neither dialect defines a name; a `CType` a frozen dataclass compared with `==`, its `format` a name or a tuple of IEEE 754's parameters (`(2, 64, 16383)`), its integers `int`s | `new C.Domains.Types(value, path)`, its `find` null; a `CType` a class compared with `equals()`, two formats the same by name or by their parameters, its `format` a name or an array (`[2n, 64, 16383]`), a radix a `bigint` and widths `number`s | JavaScript has no value equality; IEEE 754's parameters are `Ieee754`'s, whose radix is a `bigint` | DIA-11, DIA-12, DOM-19 |
 | The retrofit's sublanguage dialects' functions | `Python.Patterns.bound_names(pattern)`, `TypeScript.Patterns.bound_names`, `C.Expressions.Kinds.identifier_problems(spelling)`, `C.Preprocessor.macros(condition)`, a frozenset | `boundNames`, `boundNames`, `identifierProblems`, `macros`, a `ReadonlySet` | each language's idiom for names and sequences; the same functions and results | PYP-03, TSP-02, CTY-03, CPD-04 |
@@ -91,7 +91,11 @@ tests and committed with outputs (Python's from its kernel, TypeScript's from De
 
 Both languages' steps carry the same IDs, `## NN.k · title`, in the same order, and each step's markdown cell starts
 with the same anchor, `<a id="Tnn.k"></a>`, which the skill links, as each test case's starts with its ID's
-(`<a id="EXP-01"></a>`); SKL-05 checks that every tutorial has the same steps in both languages. When a tutorial
+(`<a id="EXP-01"></a>`). A tutorial may have pages, each a notebook read after it and numbered as a page of it: tutorial
+8's sublanguages, `08_01_Python_Types` to `08_17_SystemVerilog_Preprocessor`, titled `8.01 · Python Types` and so on,
+whose steps are `## NN.MM.k · title` and `<a id="Tnn.mm.k"></a>` (`T08.01.1`), after tutorial 8 itself,
+`08_00_Sublanguages`, whose steps keep `T08.k`. SKL-05 checks that every tutorial has the same steps in both languages,
+and that no two steps share a case ID. When a tutorial
 changes, change both, and rerun both notebooks to refresh their outputs.
 
 ## Cases in one language only

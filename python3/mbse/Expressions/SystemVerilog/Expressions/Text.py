@@ -138,7 +138,7 @@ class Printer:
     def attribute_text(self, instances: Any) -> str:
         """`(* name = value, ... *) (* ... *)`."""
         return " ".join("(* " + ", ".join(self.spelling(s.helpers["name"]) + (
-            f" = {self.text(s.slots['value'])}" if s.slots["value"] is not None else "")
+            f" = {self.text(s.subterms['value'])}" if s.subterms["value"] is not None else "")
             for s in _nodes(i.helpers.get("specs"))) + " *)" for i in instances)
 
     def is_type(self, node: F.Node) -> bool:
@@ -172,16 +172,16 @@ class Printer:
         return E.constant_text(node.attributes)
 
     def unary(self, node: F.Node) -> str:
-        operand = self.operand(node.slots["operand"], UNARY + 1)
-        if self.node(node.slots["operand"]).kind in (E.UNARYEXPRESSION, E.INCREMENTEXPRESSION):
-            operand = f"({self.text(node.slots['operand'])})"
+        operand = self.operand(node.subterms["operand"], UNARY + 1)
+        if self.node(node.subterms["operand"]).kind in (E.UNARYEXPRESSION, E.INCREMENTEXPRESSION):
+            operand = f"({self.text(node.subterms['operand'])})"
         attributes = _nodes(node.helpers.get("attributes"))
         if attributes:  # `- (* a *) x`: apart, so that `(*` starts the attributes
             return f"{node.attributes['operator']} {self.attribute_text(attributes)} {operand}"
         return f"{node.attributes['operator']}{operand}"
 
     def increment(self, node: F.Node) -> str:
-        operand, operator = self.operand(node.slots["operand"], PRIMARY), node.attributes["operator"]
+        operand, operator = self.operand(node.subterms["operand"], PRIMARY), node.attributes["operator"]
         attributes = _nodes(node.helpers.get("attributes"))
         if attributes:
             written = self.attribute_text(attributes)
@@ -195,56 +195,56 @@ class Printer:
         left_level, right_level = (level + 1, level) if level in RIGHT else (level, level + 1)
         attributes = _nodes(node.helpers.get("attributes"))
         written = f" {self.attribute_text(attributes)}" if attributes else ""
-        return (f"{self.operand(node.slots['left'], left_level)} {operator}{written} "
-                f"{self.operand(node.slots['right'], right_level)}")
+        return (f"{self.operand(node.subterms['left'], left_level)} {operator}{written} "
+                f"{self.operand(node.subterms['right'], right_level)}")
 
     def assignment(self, node: F.Node) -> str:
-        return f"{self.text(node.slots['target'])} {node.attributes['operator']} {self.text(node.slots['value'])}"
+        return f"{self.text(node.subterms['target'])} {node.attributes['operator']} {self.text(node.subterms['value'])}"
 
     def conditional(self, node: F.Node) -> str:
         attributes = _nodes(node.helpers.get("attributes"))
         written = f"{self.attribute_text(attributes)} " if attributes else ""
-        condition = node.slots["condition"]
+        condition = node.subterms["condition"]
         matching = self.node(condition).kind in (E.MATCHESEXPRESSION, E.PREDICATEEXPRESSION)  # never parenthesized
         test = self.text(condition) if matching else self.operand(condition, CONDITIONAL + 1)
-        return (f"{test} ? {written}{self.operand(node.slots['consequence'], CONDITIONAL + 1)} : "
-                f"{self.operand(node.slots['alternative'], CONDITIONAL)}")
+        return (f"{test} ? {written}{self.operand(node.subterms['consequence'], CONDITIONAL + 1)} : "
+                f"{self.operand(node.subterms['alternative'], CONDITIONAL)}")
 
     def tagged(self, node: F.Node) -> str:
         member = self.spelling(node.helpers["member"])
-        if node.slots["value"] is None:
+        if node.subterms["value"] is None:
             return f"tagged {member}"
-        value = node.slots["value"]
+        value = node.subterms["value"]
         nested = self.node(value).kind == E.TAGGEDEXPRESSION  # `tagged a tagged b 1` needs no parentheses
         return f"tagged {member} {self.text(value) if nested else self.operand(value, UNARY)}"
 
     def inside(self, node: F.Node) -> str:
         ranges = ", ".join(self.text(r) for r in node.many)
-        return f"{self.operand(node.slots['value'], RELATIONAL + 1)} inside {{{ranges}}}"
+        return f"{self.operand(node.subterms['value'], RELATIONAL + 1)} inside {{{ranges}}}"
 
     def value_range(self, node: F.Node) -> str:
         operator = node.attributes.get("operator")
         between = f" {operator} " if operator is not None else ":"
-        return f"[{self.text(node.slots['left'])}{between}{self.text(node.slots['right'])}]"
+        return f"[{self.text(node.subterms['left'])}{between}{self.text(node.subterms['right'])}]"
 
     def replication(self, node: F.Node) -> str:
-        return f"{{{self.operand(node.slots['count'], PRIMARY)}{{{', '.join(self.text(i) for i in node.many)}}}}}"
+        return f"{{{self.operand(node.subterms['count'], PRIMARY)}{{{', '.join(self.text(i) for i in node.many)}}}}}"
 
     def assignment_pattern(self, node: F.Node) -> str:
-        prefix = self.text(node.slots["type"]) if node.slots["type"] is not None else ""
+        prefix = self.text(node.subterms["type"]) if node.subterms["type"] is not None else ""
         items = ", ".join(self.text(i) for i in node.many)
-        if node.slots["count"] is not None:
-            return f"{prefix}'{{{self.operand(node.slots['count'], PRIMARY)}{{{items}}}}}"
+        if node.subterms["count"] is not None:
+            return f"{prefix}'{{{self.operand(node.subterms['count'], PRIMARY)}{{{items}}}}}"
         return f"{prefix}'{{{items}}}"
 
     def pattern_item(self, node: F.Node) -> str:
-        key = "default" if node.slots["key"] is None else self.text(node.slots["key"])
-        return f"{key}: {self.text(node.slots['value'])}"
+        key = "default" if node.subterms["key"] is None else self.text(node.subterms["key"])
+        return f"{key}: {self.text(node.subterms['value'])}"
 
     def call(self, node: F.Node) -> str:
         attributes = _nodes(node.helpers.get("attributes"))
         written = f" {self.attribute_text(attributes)} " if attributes else ""
-        return (f"{self.operand(node.slots['callee'], PRIMARY)}{written}"
+        return (f"{self.operand(node.subterms['callee'], PRIMARY)}{written}"
                 f"({', '.join(self.text(a) for a in node.many)})")
 
     def system_call(self, node: F.Node) -> str:
@@ -255,22 +255,22 @@ class Printer:
         return f"{name}({arguments})" if node.many else name
 
     def cast(self, node: F.Node) -> str:
-        target = node.slots["type"]
+        target = node.subterms["type"]
         written = self.text(target) if self.is_type(self.node(target)) else self.operand(target, PRIMARY)
-        return f"{written}'({self.text(node.slots['value'])})"
+        return f"{written}'({self.text(node.subterms['value'])})"
 
     def streaming(self, node: F.Node) -> str:
-        slice_ = f" {self.text(node.slots['slice'])} " if node.slots["slice"] is not None else ""
+        slice_ = f" {self.text(node.subterms['slice'])} " if node.subterms["slice"] is not None else ""
         items = ", ".join(self.stream_item(i) for i in _nodes(node.helpers.get("items")))
         return f"{{{node.attributes['operator']}{slice_}{{{items}}}}}"
 
     def stream_item(self, node: F.Node) -> str:
-        if node.slots["left"] is None:
-            return self.text(node.slots["expression"])
+        if node.subterms["left"] is None:
+            return self.text(node.subterms["expression"])
         operator = node.attributes.get("operator")
         between = "" if operator is None else operator if operator == ":" else f" {operator} "
-        right = self.text(node.slots["right"]) if node.slots["right"] is not None else ""
-        return f"{self.text(node.slots['expression'])} with [{self.text(node.slots['left'])}{between}{right}]"
+        right = self.text(node.subterms["right"]) if node.subterms["right"] is not None else ""
+        return f"{self.text(node.subterms['expression'])} with [{self.text(node.subterms['left'])}{between}{right}]"
 
     def new(self, node: F.Node) -> str:
         scope, written = node.helpers.get("scope"), ""
@@ -281,31 +281,31 @@ class Printer:
         return f"{written}new{arguments}"
 
     def new_array(self, node: F.Node) -> str:
-        value = f"({self.text(node.slots['value'])})" if node.slots["value"] is not None else ""
-        return f"new[{self.text(node.slots['size'])}]{value}"
+        value = f"({self.text(node.subterms['value'])})" if node.subterms["value"] is not None else ""
+        return f"new[{self.text(node.subterms['size'])}]{value}"
 
     def randomize_with(self, node: F.Node) -> str:
         variables = ""
         if node.attributes.get("restricted"):
             variables = f" ({', '.join(self.spelling(v) for v in _nodes(node.helpers.get('variables')))})"
-        return f"{self.operand(node.slots['call'], PRIMARY)} with{variables} {self.inline(node.many)}"
+        return f"{self.operand(node.subterms['call'], PRIMARY)} with{variables} {self.inline(node.many)}"
 
     def named_connection(self, node: F.Node) -> str:
         name = self.spelling(node.helpers["name"])
         if node.attributes.get("implicit"):
             return f".{name}"
-        value = "" if node.slots["value"] is None else self.text(node.slots["value"])
+        value = "" if node.subterms["value"] is None else self.text(node.subterms["value"])
         return f".{name}({value})"
 
 
 TEXTS: dict[str, Callable[[Printer, F.Node], str]] = {
     E.LITERAL: Printer.literal, E.CONSTANT: Printer.constant,
     E.NAMEEXPRESSION: lambda p, n: p.name(n.helpers["name"]),
-    E.MEMBEREXPRESSION: lambda p, n: f"{p.operand(n.slots['value'], PRIMARY)}.{p.spelling(n.helpers['member'])}",
-    E.INDEXEXPRESSION: lambda p, n: f"{p.operand(n.slots['value'], PRIMARY)}[{p.text(n.slots['index'])}]",
-    E.RANGESELECT: lambda p, n: (f"{p.operand(n.slots['value'], PRIMARY)}[{p.text(n.slots['left'])}"
+    E.MEMBEREXPRESSION: lambda p, n: f"{p.operand(n.subterms['value'], PRIMARY)}.{p.spelling(n.helpers['member'])}",
+    E.INDEXEXPRESSION: lambda p, n: f"{p.operand(n.subterms['value'], PRIMARY)}[{p.text(n.subterms['index'])}]",
+    E.RANGESELECT: lambda p, n: (f"{p.operand(n.subterms['value'], PRIMARY)}[{p.text(n.subterms['left'])}"
                                  f"{n.attributes['operator'] if n.attributes['operator'] == ':' else ' ' + n.attributes['operator'] + ' '}"
-                                 f"{p.text(n.slots['right'])}]"),
+                                 f"{p.text(n.subterms['right'])}]"),
     E.UNARYEXPRESSION: Printer.unary, E.INCREMENTEXPRESSION: Printer.increment, E.BINARYEXPRESSION: Printer.binary,
     E.ASSIGNMENTEXPRESSION: Printer.assignment, E.CONDITIONALEXPRESSION: Printer.conditional,
     E.INSIDEEXPRESSION: Printer.inside, E.VALUERANGE: Printer.value_range,
@@ -313,16 +313,16 @@ TEXTS: dict[str, Callable[[Printer, F.Node], str]] = {
     E.REPLICATION: Printer.replication, E.ASSIGNMENTPATTERN: Printer.assignment_pattern,
     E.PATTERNITEM: Printer.pattern_item,
     E.THISEXPRESSION: lambda p, n: "this", E.SUPEREXPRESSION: lambda p, n: "super", E.NEWEXPRESSION: Printer.new,
-    E.NEWCOPYEXPRESSION: lambda p, n: f"new {p.operand(n.slots['value'], PRIMARY)}",
+    E.NEWCOPYEXPRESSION: lambda p, n: f"new {p.operand(n.subterms['value'], PRIMARY)}",
     E.NEWARRAYEXPRESSION: Printer.new_array, E.RANDOMIZEWITHEXPRESSION: Printer.randomize_with,
-    E.ARRAYMETHODWITHEXPRESSION: lambda p, n: f"{p.operand(n.slots['value'], PRIMARY)} with ({p.text(n.slots['body'])})",
+    E.ARRAYMETHODWITHEXPRESSION: lambda p, n: f"{p.operand(n.subterms['value'], PRIMARY)} with ({p.text(n.subterms['body'])})",
     E.CALLEXPRESSION: Printer.call, E.SYSTEMCALL: Printer.system_call, E.CASTEXPRESSION: Printer.cast,
-    E.PARENTHESIZEDEXPRESSION: lambda p, n: f"({p.text(n.slots['expression'])})",
+    E.PARENTHESIZEDEXPRESSION: lambda p, n: f"({p.text(n.subterms['expression'])})",
     E.DOLLAREXPRESSION: lambda p, n: "$", E.TAGGEDEXPRESSION: Printer.tagged,
-    E.MATCHESEXPRESSION: lambda p, n: f"{p.text(n.slots['value'])} matches {p.text(n.slots['pattern'])}",
+    E.MATCHESEXPRESSION: lambda p, n: f"{p.text(n.subterms['value'])} matches {p.text(n.subterms['pattern'])}",
     E.PREDICATEEXPRESSION: lambda p, n: " &&& ".join(p.text(c) for c in n.many),
     E.STREAMINGCONCATENATION: Printer.streaming,
-    E.MINTYPMAXEXPRESSION: lambda p, n: f"{p.text(n.slots['min'])}:{p.text(n.slots['typ'])}:{p.text(n.slots['max'])}",
+    E.MINTYPMAXEXPRESSION: lambda p, n: f"{p.text(n.subterms['min'])}:{p.text(n.subterms['typ'])}:{p.text(n.subterms['max'])}",
     E.ROOTEXPRESSION: lambda p, n: "$root", E.EMPTYQUEUE: lambda p, n: "{}",
     E.NAMEDCONNECTION: Printer.named_connection, E.EMPTYARGUMENT: lambda p, n: "",
 }

@@ -5,10 +5,10 @@ It is a dialect of the Python family (the dialects proposal, Decided for stage 6
 sublanguage then it's definitely at least a separate dialect"; Retrofit's design, Python), named `Python Patterns`
 (`Terms.dialect_name`), its tag `python_patterns`. Its terms are values of its `Term`,
 `Expressions.Python.Patterns.Term`, the branch `python_patterns` of `Expressions.Framework.Term`. A `match` is a
-statement, so no position of `Python3` holds a pattern: mbse-programs' `case` holds one through this dialect's holder,
+statement, so no subterm of `Python3` is a pattern: mbse-programs' `case` holds one through this dialect's holder,
 `Expressions.Python.Patterns.Expression`, which refines `Expressions.Framework.Expression`, its `root` narrowed to its
-`Term`. Its `Term` lists none of `Python3`'s branches: an expression in a pattern stands in a kind's own slot, which
-holds `Expressions.Python.Python3.Term`.
+`Term`. Its `Term` lists none of `Python3`'s branches: an expression in a pattern is a kind's own subterm, of
+`Expressions.Python.Python3.Term`.
 
 Its kinds are mbse-programs' patterns (`mbse:mbse-programs/python3/mbse/Programs/Python/Syntax.py`), as `ast` has them,
 with mbse-programs' names, lowercased as branch tags, and its properties in source order, each a value object
@@ -79,7 +79,7 @@ def install(txn: Any) -> Any:
     """Python Patterns' union of its kinds, added to the framework's terms as the branch `python_patterns`, its own
     kinds, and its dialect's schema, whose singleton is `Expressions.Python.Patterns`: run after `Framework.install`, in
     a transaction of its own, before or after its family's other installs; run again, it writes nothing. `Python3`'s
-    `Term`, which its slots for expressions hold, is named, created where that install has not run. Its holder,
+    `Term`, its expression subterms' schema, is named, created where that install has not run. Its holder,
     `Expressions.Python.Patterns.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
     `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
@@ -174,8 +174,8 @@ def bound_names(pattern: Any) -> frozenset[str]:
     if tag in (MATCHSEQUENCE, MATCHMAPPING, MATCHCLASS, MATCHOR):
         inner = node.many[len(node.lists.get("keys", ())):]  # its patterns, after a mapping's keys
         return frozenset(names).union(*(bound_names(item) for item in inner))
-    if tag == MATCHAS and node.slots["pattern"] is not None:
-        return frozenset(names) | bound_names(node.slots["pattern"])
+    if tag == MATCHAS and node.subterms["pattern"] is not None:
+        return frozenset(names) | bound_names(node.subterms["pattern"])
     return frozenset(names)
 
 
@@ -207,7 +207,7 @@ def problems(node: F.Node) -> list[str]:
         for attr in attrs:
             found += P._identifier_problems("a matchclass's kwd_attr", attr)
     elif node.kind in (MATCHSTAR, MATCHAS):
-        if node.kind == MATCHAS and node.slots["pattern"] is not None and "name" not in attributes:
+        if node.kind == MATCHAS and node.subterms["pattern"] is not None and "name" not in attributes:
             found.append("a matchas with a pattern needs a name")  # as `ast` has it: a wildcard has no pattern
         found += _capture(f"{F._article(node.kind)}'s name", attributes.get("name"))
     elif node.kind == MATCHOR and len(node.many) < 2:
@@ -238,7 +238,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions hold, imported when first needed."""
+    """The dialects of its family whose terms are its subterms, imported when first needed."""
     from ..RegExp import Expressions as PythonRegExp
     from ..Types import Expressions as PythonTypes
     return P.DIALECT, PythonTypes.DIALECT, PythonRegExp.DIALECT

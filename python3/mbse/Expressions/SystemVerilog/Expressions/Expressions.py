@@ -42,8 +42,8 @@ tags (`binaryexpression`), and its properties in source order, each a value obje
   `missing`.
 
 Its helpers: the `Name` union, `attributeinstance` and `attributespec` (`(* keep *)`), `identifier` and `streamitem`.
-Where a position holds one sublanguage, it holds that dialect's `Term`; where it holds a sublanguage's kinds or an
-expression (mbse-programs' `DataType | Expression`, `Property | Expression`, `Pattern | Expression`), it holds the
+Where a subterm may be of one sublanguage, it is of that dialect's `Term`; where it may be a sublanguage's kinds or an
+expression (mbse-programs' `DataType | Expression`, `Property | Expression`, `Pattern | Expression`), it is of the
 sublanguage's `Term`, which lists, as branches, every branch of this dialect's `Term` besides its own kinds: `install`
 adds them to the `Term`s of `Types`, `Patterns`, `Assertions` and `Constraints`, creating any that is not yet installed,
 as each of those installs names this `Term`, so that the six installs run in any order. A store holding some of them and
@@ -278,8 +278,8 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("systemverilog").schema([_.Dialect])]),
             # its union of its kinds: its own, and invalid syntax (the Preprocessor's install adds `macrousage`)
             lambda _: _.Term.name("Expressions.SystemVerilog.Expressions.Term").branches(own(_)),
-            # the sublanguages' unions list its branches: a position that holds a sublanguage's kinds or an expression
-            # holds the sublanguage's `Term` ("(b)")
+            # the sublanguages' unions list its branches: a subterm that may be a sublanguage's kinds or an expression
+            # is of the sublanguage's `Term` ("(b)")
             lambda _: _.TypesTerm.name("Expressions.SystemVerilog.Types.Term").branches(own(_)),
             lambda _: _.PatternsTerm.name("Expressions.SystemVerilog.Patterns.Term").branches(own(_)),
             lambda _: _.AssertionsTerm.name("Expressions.SystemVerilog.Assertions.Term").branches(own(_)),
@@ -664,7 +664,7 @@ def problems(node: F.Node) -> list[str]:
             found.append(f"{name}.{attribute} cannot be {value!r}")
     if kind == CONSTANT:
         found += _vector_problems(attributes) + _base_problems(attributes, "a constant")
-    if kind == ASSIGNMENTPATTERN and node.slots.get("count") is not None and any(
+    if kind == ASSIGNMENTPATTERN and node.subterms.get("count") is not None and any(
             F.kind_of(item)[0] == PATTERNITEM for item in node.many):
         found.append("a repeated AssignmentPattern has positional items only")
     if kind == PREDICATEEXPRESSION and len(node.many) < 2:
@@ -673,7 +673,7 @@ def problems(node: F.Node) -> list[str]:
             getattr(node.helpers.get("scope"), "kind", None) != SUPEREXPRESSION or node.many):
         found.append("a defaulted NewExpression is super.new(default)")
     if kind == "streamitem":
-        left, operator, right = node.slots.get("left"), attributes.get("operator"), node.slots.get("right")
+        left, operator, right = node.subterms.get("left"), attributes.get("operator"), node.subterms.get("right")
         if (operator is None) != (right is None) or left is None and operator is not None:
             found.append("a StreamItem's `with` has a left, and an operator and a right, or neither")
     for value in node.helpers.values():
@@ -705,7 +705,7 @@ def _iterator(call: Any) -> str:
 
 def _array_method_scopes(record: Any) -> list[frozenset[str]]:
     """What an array method's call and its `with` expression have bound: its iterator, in both (its call declares it)."""
-    value = F.node(ARRAYMETHODWITHEXPRESSION, record).slots["value"]
+    value = F.node(ARRAYMETHODWITHEXPRESSION, record).subterms["value"]
     iterator = frozenset({_iterator(value)}) if value is not None else frozenset()
     return [iterator, iterator]
 
@@ -717,9 +717,9 @@ def _matched(condition: Any) -> frozenset[str]:
         return frozenset()
     tag, record = F.kind_of(condition)
     node = F.node(tag, record)
-    if tag == MATCHESEXPRESSION and node.slots["pattern"] is not None:
+    if tag == MATCHESEXPRESSION and node.subterms["pattern"] is not None:
         from ..Patterns import Expressions as Patterns
-        return Patterns.bound_names(node.slots["pattern"])
+        return Patterns.bound_names(node.subterms["pattern"])
     if tag == PREDICATEEXPRESSION:
         return frozenset().union(*(_matched(c) for c in node.many))
     return frozenset()
@@ -728,7 +728,7 @@ def _matched(condition: Any) -> frozenset[str]:
 def _conditional_scopes(record: Any) -> list[frozenset[str]]:
     """What a conditional's arguments have bound: its condition's matched variables, in its consequence (12.6.2)."""
     node = F.node(CONDITIONALEXPRESSION, record)
-    names = _matched(node.slots["condition"])
+    names = _matched(node.subterms["condition"])
     return [frozenset(), names, frozenset()] + [frozenset()] * (len(F.arguments_of(record)) - 3)
 
 
@@ -760,7 +760,7 @@ def _cast_check(record: Any) -> list[str]:
     another keyword's, such as `realtime`, is not read), one to a width written as a literal is to a positive one, and
     its checks."""
     node = F.node(CASTEXPRESSION, record)
-    target, found = node.slots["type"], problems(node)
+    target, found = node.subterms["type"], problems(node)
     name, (tag, held) = type_name(target), F.kind_of(target) if target is not None else (None, None)
     width = F.attributes_of(held).get("value") if tag == LITERAL else None
     if type(width) is int and width < 1:  # a width, written as a literal
@@ -776,7 +776,7 @@ def _cast_check(record: Any) -> list[str]:
 def _cast_typed(record: Any) -> Any:
     """A cast to a type SystemVerilog defines by name: that type, read from the store of the term's holder; one to a
     width, a signing or any other type is not known statically."""
-    name = type_name(F.node(CASTEXPRESSION, record).slots["type"])
+    name = type_name(F.node(CASTEXPRESSION, record).subterms["type"])
     return Domains.named(Proxies.store_of(record), name) if name in Domains.NAMES else None
 
 
@@ -836,7 +836,7 @@ def _native(value: Any) -> Writer | None:
 
 
 _OPTIONAL = ("*.value",)
-"""The slots of a kind's helpers that may be empty, wherever they nest: an attribute's value (`(* keep *)`)."""
+"""The subterms of a kind's helpers that may be empty, wherever they nest: an attribute's value (`(* keep *)`)."""
 
 
 def _kinds() -> dict[str, F.Kind]:
@@ -901,7 +901,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms its positions hold, imported when first needed."""
+    """The dialects of its family whose terms are its subterms, imported when first needed."""
     from ..Assertions import Expressions as Assertions
     from ..Constraints import Expressions as Constraints
     from ..Patterns import Expressions as Patterns

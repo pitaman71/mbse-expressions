@@ -1,0 +1,53 @@
+posix_ere:
+  patternlist:
+    patterns:
+    - pattern:
+        alternatives:
+        - alternative:
+            elements:
+            - assertion:
+                assertionKind: start
+            - capturinggroup:
+                alternatives:
+                - alternative:
+                    elements:
+                    - character:
+                        value: 97
+                - alternative:
+                    elements:
+                    - characterset:
+                        setKind: any
+            - quantifier:
+                min: 1
+                max: 3
+                greedy: false
+                element:
+                  characterclass:
+                    negate: true
+                    elements:
+                    - characterclassrange:
+                        min:
+                          character:
+                            value: 97
+                        max:
+                          collatingelement:
+                            name: ch
+                    - exclass:
+                        name: alpha
+                    - equivalence:
+                        name: e
+            - assertion:
+                assertionKind: end
+    - pattern:
+        alternatives:
+        - alternative:
+            elements:
+            - quantifier:
+                min: 0
+                max: 1
+                element:
+                  quantifier:
+                    min: 1
+                    element:
+                      character:
+                        value: 98

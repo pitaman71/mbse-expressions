@@ -3,8 +3,8 @@
 Excel's terms are values of its `Term`, `Expressions.Excel.Expressions.Term`, the branch `excel` of
 `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are the
 framework's kinds (`mbse.Expressions.Framework.Terms`) where a formula's construct has their shape, five of its own,
-each a value object `Expressions.Excel.Expressions.<Kind>` whose slots hold Excel's terms, and the framework's kinds of invalid
-syntax (`error`, `missing`); a term carries no domain:
+each a value object `Expressions.Excel.Expressions.<Kind>` whose subterms are Excel's terms, and the framework's kinds
+of invalid syntax (`error`, `missing`); a term carries no domain:
 
 - `literal` (the framework's): a constant, a number (`int` or `float`), text (`str`) or a logical (`bool`), with its
   spelling (`text`) where it has one.
@@ -228,10 +228,10 @@ def _spec(value: Any) -> Any:
     return None if value is None else DIALECT.spec(value)
 
 
-def _set(record: Any, **slots: Any) -> Any:
-    for slot, value in slots.items():
+def _set(record: Any, **subterms: Any) -> Any:
+    for subterm, value in subterms.items():
         if value is not None:
-            getattr(record, slot)(value)
+            getattr(record, subterm)(value)
     return record
 
 

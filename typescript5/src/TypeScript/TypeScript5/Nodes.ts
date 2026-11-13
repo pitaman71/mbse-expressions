@@ -57,10 +57,10 @@ export function boundNames(node: any): ReadonlySet<string> {
   if (node === null || node === undefined) return new Set();
   node = nodeOf(node);
   if (node.kind === IDENTIFIER) return new Set(node.attributes.has("name") ? [node.attributes.get("name")] : []);
-  if (node.kind === PROPERTY) return boundNames(node.slots.get("value"));
+  if (node.kind === PROPERTY) return boundNames(node.subterms.get("value"));
   const found = new Set<string>();
   for (const inner of [...node.lists.get("elements") ?? [], ...node.lists.get("properties") ?? [],
-    ...["left", "argument", "parameter"].map((name) => node.slots.get(name))]) {
+    ...["left", "argument", "parameter"].map((name) => node.subterms.get(name))]) {
     for (const bound of boundNames(inner)) found.add(bound);
   }
   return found;
@@ -99,7 +99,7 @@ function infers(value: any): Set<string> {
     return new Set(name !== undefined && name.attributes.has("name") ? [name.attributes.get("name")] : []);
   }
   const found = new Set<string>();
-  for (const inner of [...node.slots.values(), ...node.many]) for (const name of infers(inner)) found.add(name);
+  for (const inner of [...node.subterms.values(), ...node.many]) for (const name of infers(inner)) found.add(name);
   return found;
 }
 
@@ -156,7 +156,7 @@ function problemsOf(node: Node, deep: boolean): string[] {
     for (const inner of nodes(value)) {
       problems.push(...problemsOf(inner, deep));
       if (deep) {
-        for (const held of [...inner.slots.values(), ...inner.many]) {
+        for (const held of [...inner.subterms.values(), ...inner.many]) {
           if (held !== null) problems.push(...problemsOf(nodeOf(held), deep));
         }
       }
@@ -185,7 +185,7 @@ function union(a: ReadonlySet<string>, b: Iterable<string>): ReadonlySet<string>
  * signature's parameters bound within it. */
 export function bound(node: Node, inner: ReadonlySet<string>): ReadonlySet<string>[] {
   const found: ReadonlySet<string>[] = [];
-  for (const [name, argument] of node.slots) {
+  for (const [name, argument] of node.subterms) {
     const named = (name === "property" && node.kind === MEMBEREXPRESSION)
       || (name === "key" && [PROPERTY, "tspropertysignature", "tsmethodsignature"].includes(node.kind));
     if (named && !node.attributes.get("computed") && argument !== null && F.kindOf(argument)[0] === IDENTIFIER) {
@@ -220,10 +220,10 @@ export function scopes(tag: string): (record: any) => ReadonlySet<string>[] {
       const bound = new Set([key.attributes.get("name") as string]);
       names = new Map([["body", bound], ["nameType", bound]]);
     } else if (tag === "tsconditionaltype") {
-      names = new Map([["trueType", infers(node.slots.get("extendsType"))]]);
+      names = new Map([["trueType", infers(node.subterms.get("extendsType"))]]);
     }
-    [...node.slots.keys()].forEach((slot, i) => {
-      found[i] = union(found[i] as ReadonlySet<string>, names.get(slot) ?? []);
+    [...node.subterms.keys()].forEach((subterm, i) => {
+      found[i] = union(found[i] as ReadonlySet<string>, names.get(subterm) ?? []);
     });
     return found;
   };

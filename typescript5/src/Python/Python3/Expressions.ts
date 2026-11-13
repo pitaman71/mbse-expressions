@@ -541,7 +541,7 @@ function constantCheck(record: any): string[] {
   return [];
 }
 
-/** The check that a record's helpers `prop`, or its arguments, where it has no slots, number at least `least`. */
+/** The check that a record's helpers `prop`, or its arguments, where it has no subterms, number at least `least`. */
 function needs(what: string, prop: string, needed: string, least = 1): (record: any) => string[] {
   return (record) => {
     const held = F._helpers(record.as_schema()).includes(prop) ? F.attributesOf(record).get(prop) ?? []
@@ -751,8 +751,8 @@ export function native(value: unknown): Writer {
 
 const ANY = new FD.Function([FD.Anything], FD.Anything);
 const ANY2 = new FD.Function([FD.Anything, FD.Anything], FD.Anything);
-const ARGUMENT_SLOTS = ["posonlyargs", "args", "vararg", "kwonlyargs", "kwarg"].flatMap((group) =>
-  ["annotation", "default_value"].map((slot) => `args.${group}.${slot}`));
+const ARGUMENT_SUBTERMS = ["posonlyargs", "args", "vararg", "kwonlyargs", "kwarg"].flatMap((group) =>
+  ["annotation", "default_value"].map((subterm) => `args.${group}.${subterm}`));
 
 function application(signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}): F.Kind {
   return new F.Kind(F.APPLICATION, { signature, ...options });
@@ -809,7 +809,7 @@ export const DIALECT = new F.Dialect("Python.Python3", {
   [BOOLOP]: operatorKind(Domains.BOOLOP, { check: needs(BOOLOP, "values", "two values", 2), unfold: boolopUnfold }),
   [NAMEDEXPR]: application(new FD.Opaque(), { scopes: namedexprScopes, check: namedexprCheck, optional: ["body"] }),
   [IFEXP]: application(new FD.Function([FD.Anything, FD.Anything, FD.Anything], FD.Anything)),
-  [LAMBDA]: application(new FD.Opaque(), { scopes: lambdaScopes, check: lambdaCheck, optional: ["value", ...ARGUMENT_SLOTS] }),
+  [LAMBDA]: application(new FD.Opaque(), { scopes: lambdaScopes, check: lambdaCheck, optional: ["value", ...ARGUMENT_SUBTERMS] }),
   [LET]: new F.Kind(F.BINDING, { required: ["name"], check: identifier("name", "a let's name") }),
   [IMPORT]: new F.Kind(F.IMPORT, { required: ["module"], names: importNames, check: importCheck, optional: ["value"] }),
   [IMPORTFROM]: new F.Kind(F.IMPORT, { required: ["module", "name"], names: importfromNames, check: importfromCheck,
@@ -847,16 +847,16 @@ const spec = (value: unknown): F.Writer => DIALECT.spec(value);
 
 type Helpers = Record<string, Helper | Helper[] | null>;
 
-/** The writer of a record: its attributes, its slots (specs) and its variadic arguments (specs) that are not null, and
- * its helpers (a `Helper`, or a list of them). */
-function fields(attributes: Record<string, unknown>, slots: Record<string, unknown>,
+/** The writer of a record: its attributes, its subterms (specs) and its variadic arguments (specs) that are not null,
+ * and its helpers (a `Helper`, or a list of them). */
+function fields(attributes: Record<string, unknown>, subterms: Record<string, unknown>,
   variadic: [string, unknown[]] | null, helpers: Helpers): (r: any) => any {
-  const specs = Object.entries(slots).filter(([, value]) => value !== null && value !== undefined)
-    .map(([slot, value]) => [slot, spec(value)] as const);
+  const specs = Object.entries(subterms).filter(([, value]) => value !== null && value !== undefined)
+    .map(([subterm, value]) => [subterm, spec(value)] as const);
   const many = variadic === null ? null : [variadic[0], variadic[1].map(spec)] as const;
   return (r: any) => {
     for (const [name, value] of Object.entries(attributes)) if (value !== null && value !== undefined) r[name](value);
-    for (const [slot, value] of specs) r[slot](value);
+    for (const [subterm, value] of specs) r[subterm](value);
     if (many !== null) r[many[0]](many[1]);
     for (const [name, helper] of Object.entries(helpers)) {
       if (helper === null || (Array.isArray(helper) && helper.length === 0)) continue;
@@ -867,15 +867,15 @@ function fields(attributes: Record<string, unknown>, slots: Record<string, unkno
 }
 
 /** The writer of a term of kind `tag`. */
-function kind(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown>,
+function kind(tag: string, attributes: Record<string, unknown>, subterms: Record<string, unknown>,
   variadic: [string, unknown[]] | null = null, helpers: Helpers = {}): Writer {
-  const record = fields(attributes, slots, variadic, helpers);
+  const record = fields(attributes, subterms, variadic, helpers);
   return new Writer((union: any) => union[tag](record));
 }
 
-function helper(tag: string, attributes: Record<string, unknown>, slots: Record<string, unknown>,
+function helper(tag: string, attributes: Record<string, unknown>, subterms: Record<string, unknown>,
   variadic: [string, unknown[]] | null = null, helpers: Helpers = {}): Helper {
-  return new Helper(tag, fields(attributes, slots, variadic, helpers));
+  return new Helper(tag, fields(attributes, subterms, variadic, helpers));
 }
 
 /** A target or a callee written as a str: a name. */

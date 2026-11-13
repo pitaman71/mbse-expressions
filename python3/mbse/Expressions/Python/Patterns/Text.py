@@ -57,19 +57,19 @@ def _class(p: Any, node: F.Node) -> tuple[str, int]:
     attrs = node.attributes["kwd_attrs"].values if "kwd_attrs" in node.attributes else ()
     arguments = _items(p, node.lists["patterns"])
     arguments += [f"{attr}={pattern}" for attr, pattern in zip(attrs, _items(p, node.lists["kwd_patterns"]))]
-    return f"{p.write(node.slots['cls'], CLOSED)}({', '.join(arguments)})", CLOSED
+    return f"{p.write(node.subterms['cls'], CLOSED)}({', '.join(arguments)})", CLOSED
 
 
 def _as(p: Any, node: F.Node) -> tuple[str, int]:
     """`pattern as name`; a capture `name`, or the wildcard `_`, without a pattern."""
     name = node.attributes.get("name", "_")
-    if node.slots["pattern"] is None:
+    if node.subterms["pattern"] is None:
         return name, CLOSED
-    return f"{p.write(node.slots['pattern'], OR)} as {name}", AS
+    return f"{p.write(node.subterms['pattern'], OR)} as {name}", AS
 
 
 TEXTS: dict[str, Callable[[Any, F.Node], tuple[str, int]]] = {
-    P.MATCHVALUE: lambda p, n: (p.text(n.slots["value"])[0], CLOSED),
+    P.MATCHVALUE: lambda p, n: (p.text(n.subterms["value"])[0], CLOSED),
     P.MATCHSINGLETON: lambda p, n: (n.attributes["value"], CLOSED),
     P.MATCHSEQUENCE: _sequence,
     P.MATCHMAPPING: _mapping,

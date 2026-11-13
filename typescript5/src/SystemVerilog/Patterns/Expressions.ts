@@ -166,7 +166,7 @@ export function boundNames(pattern: any): ReadonlySet<string> {
     return new Set(spelling === null ? [] : [spelling]);
   }
   if (tag === TAGGEDPATTERN || tag === PATTERNMEMBER || tag === PARENTHESIZEDPATTERN) {
-    const inner = node.slots.get("pattern") ?? null;
+    const inner = node.subterms.get("pattern") ?? null;
     return inner === null ? new Set() : boundNames(inner);
   }
   if (tag === STRUCTUREPATTERN) return new Set(node.many.flatMap((item) => [...boundNames(item)]));
@@ -204,7 +204,7 @@ function kinds(): Record<string, F.Kind> {
   };
 }
 
-/** The dialects of its family whose terms its positions hold, read when first needed. */
+/** The dialects of its family whose terms are its subterms, read when first needed. */
 function reads(): readonly F.Dialect[] {
   return [X.DIALECT, Types.DIALECT, Assertions.DIALECT, Constraints.DIALECT, Preprocessor.DIALECT];
 }

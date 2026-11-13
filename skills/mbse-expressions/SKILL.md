@@ -67,7 +67,8 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    together, in any order, as each reads the others' terms; and each family's sublanguage dialects after its family's
    dialect, as each reads its family's terms: `Python.Types`, `Python.Patterns` and `Python.RegExp` after `Python3`,
    `TypeScript.Types`, `TypeScript.Patterns` and `TypeScript.RegExp` after `TypeScript5`, `C.Types` after `C`,
-   `Cpp.Types` and `Cpp.RegExp` after `Cpp`, and `C.Preprocessor` after both); then each one's
+   `Cpp.Types` and `Cpp.RegExp` after `Cpp`, and `C.Preprocessor` after both; POSIX's two, `POSIX.BRE` and
+   `POSIX.ERE`, which a C++ regex may hold, in either order); then each one's
    `define` whose data its validation, inference or evaluation reads, each in a transaction of its own: Patterns',
    which names the operations validation reads (`store.transaction(Patterns.define)`), and C's, C++'s, the ABI
    dialects', SystemVerilog's, which write the types they read; a sublanguage dialect's writes the editions it covers. A C or C++ expression names the ABI its terms are read
@@ -233,7 +234,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    name ("a Patterns variable is not a Python3 term"). Write a dialect's terms with its own writers, or translate them.
    - Python: [T03.3: The same literal in each language](mbse:mbse-expressions/python3/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.3) · TypeScript: [T03.3: The same literal in each language](mbse:mbse-expressions/typescript5/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.3)
    - Python: [FRM-04: Every dialect's install adds its union of its kinds to `Term`, and its terms round-trip](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-04) · TypeScript: [FRM-04: Every dialect's install adds its union of its kinds to `Term`, and its terms round-trip](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-04)
-   - Python: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-12) · TypeScript: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's slot holds any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-12)
+   - Python: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's subterm may be any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-12) · TypeScript: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's subterm may be any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-12)
    - Python: [EVL-05: The union of terms names each branch by its dialect, and a dialect's `Term` each by its kind's tag](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-05) · TypeScript: [EVL-05: The union of terms names each branch by its dialect, and a dialect's `Term` each by its kind's tag](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-05)
 12. **Dialects, operations and domains are data.** *Why*: a program learns what a dialect can say from the store,
    without its code, and a domain is named once. *When*: listing a dialect's vocabulary, or reading a domain. *How*:
@@ -356,7 +357,7 @@ each case shows its own:
 <!-- no case: points to the tutorials and the test plan as a whole -->
 
 The tutorials teach it in two parts, each notebook committed with its outputs and run as a test: Part I, how values,
-their domains and each language's expressions are modeled, from one literal up (tutorials 1 to 6; 7 and 8 after the
-dialects' retrofit), and Part II, seven case studies on constraints (9 to 15), from a first constraint to C and
+their domains and each language's expressions are modeled, from one literal up (tutorials 1 to 8, and 8's pages,
+8.01 to 8.17, one for each sublanguage), and Part II, seven case studies on constraints (9 to 15), from a first constraint to C and
 SystemVerilog: [Python](mbse:mbse-expressions/python3/tutorials/README.md) and [TypeScript](mbse:mbse-expressions/typescript5/tutorials/README.md). The test plan,
 [Test plan — python3](mbse:mbse-expressions/python3/tests/TestPlan.md), lists every case.

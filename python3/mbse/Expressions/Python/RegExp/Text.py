@@ -49,7 +49,7 @@ def _member(p: Any, item: Any) -> str:
         return _character(F.node(tag, record), True)
     if tag == R.CHARACTERCLASSRANGE:
         node = F.node(tag, record)
-        return f"{_member(p, node.slots['min'])}-{_member(p, node.slots['max'])}"
+        return f"{_member(p, node.subterms['min'])}-{_member(p, node.subterms['max'])}"
     return p.text(item)[0]
 
 
@@ -70,7 +70,7 @@ def _quantifier(p: Any, node: F.Node) -> tuple[str, int]:
     if bounds is None:
         bounds = "{" + (f"{least}" if most == least else f"{least}," if most is None else f"{least},{most}") + "}"
     lazy = "?" if node.attributes.get("greedy") is False else "+" if node.attributes.get("possessive") is True else ""
-    return p.text(node.slots["element"])[0] + bounds + lazy, CLOSED
+    return p.text(node.subterms["element"])[0] + bounds + lazy, CLOSED
 
 
 def _class(p: Any, node: F.Node) -> tuple[str, int]:
@@ -107,8 +107,8 @@ def _backreference(p: Any, node: F.Node) -> tuple[str, int]:
 
 def _conditional(p: Any, node: F.Node) -> tuple[str, int]:
     """`(?(1)yes|no)`, `(?(name)yes)`."""
-    no = node.slots["no"]
-    alternatives = p.text(node.slots["yes"])[0] + ("" if no is None else "|" + p.text(no)[0])
+    no = node.subterms["no"]
+    alternatives = p.text(node.subterms["yes"])[0] + ("" if no is None else "|" + p.text(no)[0])
     return f"(?({_reference(node)}){alternatives})", CLOSED
 
 
@@ -133,7 +133,7 @@ TEXTS: dict[str, Callable[[Any, F.Node], tuple[str, int]]] = {
     R.CAPTURINGGROUP: _capturing,
     R.QUANTIFIER: _quantifier,
     R.CHARACTERCLASS: _class,
-    R.CHARACTERCLASSRANGE: lambda p, n: (f"{_member(p, n.slots['min'])}-{_member(p, n.slots['max'])}", CLOSED),
+    R.CHARACTERCLASSRANGE: lambda p, n: (f"{_member(p, n.subterms['min'])}-{_member(p, n.subterms['max'])}", CLOSED),
     R.CHARACTERSET: _set,
     R.CHARACTER: lambda p, n: (_character(n, False), CLOSED),
     R.ASSERTION: _assertion,

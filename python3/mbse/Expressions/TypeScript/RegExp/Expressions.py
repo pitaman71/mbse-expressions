@@ -33,7 +33,7 @@ A regular expression binds nothing a term scopes: a named group's name is a labe
 backreference resolves, so none of its kinds refines `Let`, as the dialects proposal's Retrofit's design has it. It
 holds no other dialect's terms, and none of its kinds is evaluated (Q11): each is refused by name ("TypeScript RegExp
 character is not evaluated"). Which kinds a mode allows (the `v` flag's classes in a literal without it), like which
-terms a position allows, is a constraint (the dialects proposal, Decided, 4), not its checks'.
+terms a subterm may be, is a constraint (the dialects proposal, Decided, 4), not its checks'.
 
 Where it is held: `TypeScript5`'s `constant`, a regular expression literal, keeps its `pattern` and `flags` as written
 and holds its `regexp`, the `regexpliteral` they encode, absent where they do not parse (PRI-023); nothing else holds
@@ -275,7 +275,7 @@ def _quantifier(node: F.Node) -> list[str]:
 
 
 def _range(node: F.Node) -> list[str]:
-    ends = {name: F.node(*F.kind_of(term)) for name, term in node.slots.items() if term is not None}
+    ends = {name: F.node(*F.kind_of(term)) for name, term in node.subterms.items() if term is not None}
     problems = [f"a characterclassrange's {name} must be a character, got {end.kind}" for name, end in ends.items()
                 if end.kind not in (CHARACTER, "error", "missing")]
     low, high = _code_point(ends.get("min")), _code_point(ends.get("max"))
@@ -285,7 +285,7 @@ def _range(node: F.Node) -> list[str]:
 
 
 def _expression_class(node: F.Node) -> list[str]:
-    expression = node.slots.get("expression")
+    expression = node.subterms.get("expression")
     kind = None if expression is None else F.kind_of(expression)[0]
     if kind in (None, CLASSINTERSECTION, CLASSSUBTRACTION, "error", "missing"):
         return []

@@ -238,12 +238,12 @@ def problems(node: F.Node) -> list[str]:
     kind, attributes = node.kind, node.attributes
     found: list[str] = []
     if kind == INCLUDEDIRECTIVE:
-        if ("path" in attributes) == (node.slots["macro"] is not None):
+        if ("path" in attributes) == (node.subterms["macro"] is not None):
             found.append("an IncludeDirective has a path or a macro")
         directive = attributes.get("directive")
         if directive is not None and directive not in INCLUDES:
             found.append(f"IncludeDirective.directive cannot be {directive!r}")
-    alternative = node.slots.get("alternative")
+    alternative = node.subterms.get("alternative")
     if alternative is not None and F.kind_of(alternative)[0] not in _ALTERNATIVES:
         found.append(f"an {_label(kind)}'s alternative is an elifdirective, an elifdefdirective or an elsedirective")
     if kind in _ALTERNATIVES or kind in (IFDIRECTIVE, IFDEFDIRECTIVE):
@@ -279,14 +279,14 @@ def _condition_scopes(tag: str) -> Callable[[Any], list[frozenset[str]]]:
     items, nothing."""
     def scopes(record: Any) -> list[frozenset[str]]:
         node = F.node(tag, record)
-        return [macros(node.slots["condition"]), frozenset(), *[frozenset()] * len(node.many)]
+        return [macros(node.subterms["condition"]), frozenset(), *[frozenset()] * len(node.many)]
 
     return scopes
 
 
 def _include_scopes(record: Any) -> list[frozenset[str]]:
     """What an include's macro has bound: its macros' names, as a condition's."""
-    return [macros(F.node(INCLUDEDIRECTIVE, record).slots["macro"])]
+    return [macros(F.node(INCLUDEDIRECTIVE, record).subterms["macro"])]
 
 
 def _kinds() -> dict[str, F.Kind]:
@@ -310,7 +310,7 @@ def _kinds() -> dict[str, F.Kind]:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects whose terms its positions hold, imported when first needed: C's and C++'s expressions, a
+    """The dialects whose terms are its subterms, imported when first needed: C's and C++'s expressions, a
     condition's, and their types, an enumeration's items."""
     from ...Cpp.Expressions import Expressions as Cpp
     from ...Cpp.Types import Expressions as CppTypes

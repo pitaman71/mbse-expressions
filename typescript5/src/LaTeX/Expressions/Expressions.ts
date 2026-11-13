@@ -4,8 +4,8 @@
  * LaTeX's terms are values of its `Term`, `Expressions.LaTeX.Expressions.Term`, the branch `latex` of
  * `Expressions.Framework.Term`, which `install` defines and adds to `Expressions.Framework.Term` by schema extension. Its branches are four of
  * the framework's kinds (`Framework/Terms`), whose shape notation's constructs have, four of its own,
- * each a value object whose slots hold LaTeX's terms, and the framework's kinds of invalid syntax (`error`, `missing`); a
- * term carries no domain:
+ * each a value object whose subterms are LaTeX's terms, and the framework's kinds of invalid syntax (`error`,
+ * `missing`); a term carries no domain:
  *
  * - `literal` (the framework's): a constant, a number (`int` or `float`), text (`str`, written `\\text{...}`) or a truth
  *   value (`bool`): its `value`, with its spelling (`text`) where it has one. Notation has no bytes: validation reports a literal holding one.

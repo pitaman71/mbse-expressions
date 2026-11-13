@@ -5,7 +5,7 @@
 
 Scope: everything under `typescript5/src` (the framework, the standard dialects ISO/IEC 11404, IEEE 754, IEEE 1164 and
 Unicode, the Patterns, Python3, MATLAB, Excel, LaTeX, C, Cpp, SystemVerilog and TypeScript5 dialects, each family's
-sublanguage dialects, and the translators between them) and cross-implementation conformance. The design reference is
+sublanguage dialects, the POSIX family's regular expressions, and the translators between them) and cross-implementation conformance. The design reference is
 mbse-basis [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md), with its capabilities;
 this plan and the Python one mirror each other case for case, with the deliberate differences of
 `../../docs/EQUIVALENCE.md`. mbse-schemas is tested in mbse-schemas.
@@ -49,6 +49,8 @@ Each case's and each tutorial step's markdown cell starts with its anchor, as in
 | `23_Cpp_Types.ipynb` | XTY | 9 | as in Python |
 | `24_C_Preprocessor.ipynb` | CPD | 9 | as in Python |
 | `25_Cpp_RegExp.ipynb` | XRX | 10 | as in Python |
+| `26_POSIX_BRE.ipynb` | BRE | 10 | as in Python |
+| `27_POSIX_ERE.ipynb` | ERE | 10 | as in Python |
 
 ## Retired cases
 
@@ -65,7 +67,7 @@ A retired case's ID is not reused; the cases after it keep theirs.
 | DOM-16 | `pack` gave a packed value's code in its representation, and `unpack` the packed value of a code | Deferred with domain inference (stage 3, Decided, 2) |
 | SKL-02 | Every complete program in the skill ran: Python's, and TypeScript's type-checked strictly first | The skill holds no programs, as the user decided (2026-11-03): its hows are these suites' and the tutorials' cases, which SKL-03 checks it links in both languages |
 
-Total: 230 cases (PYR, TSR and XRX added with the regular expression dialects, 26 cases: Python RegExp, TypeScript RegExp and Cpp RegExp; SKL-05 added in the tutorials' overhaul, every tutorial with the same steps in both languages; PYT and PYP added in the retrofit's group P, 18 cases: Python Types and Python Patterns; TST and TSP in its group T, 9 cases: TypeScript Types and TypeScript Patterns; CTY, XTY and CPD in its group C, 27 cases: C Types, Cpp Types and C Preprocessor; DIA-30 added in the retrofit's core, every binder refining `Let`; DIA-27, DIA-28 and DIA-29 added in stage 6, `SystemVerilog` complete, with the suites SVP, SVA, SVC and SVD, 37 cases; FRM-11, FRM-12 and DIA-18 added in stage 2; DIA-19 and DIA-20 in stage 3, `Python3` complete; DIA-21, DIA-22 and DIA-23 in stage 4, `TypeScript5`; DIA-24, DIA-25 and DIA-26 in stage 5, `C` and `Cpp`; SKL-04 added, for skill gaps; SKL-02 retired; DOM-17 added in domains as data's stage 1, the standard dialects, and DOM-18, a language's own kinds; DOM-02 retired in its stage 2, with Patterns' code domains; DOM-19, DOM-20 and DOM-21 added in its stage 3, the stored domains of C, C++ and the ABI dialects, of SystemVerilog, and of Python3, TypeScript5, MATLAB and Excel; FRM-13 added in its stage 4, standards as data), with the same IDs in the same order in both implementations.
+Total: 250 cases (BRE and ERE added with the POSIX family, 20 cases: POSIX BRE and POSIX ERE, XRX rewritten under its IDs as Cpp RegExp narrowed to [re.grammar]'s grammar; PYR, TSR and XRX added with the regular expression dialects, 26 cases: Python RegExp, TypeScript RegExp and Cpp RegExp; SKL-05 added in the tutorials' overhaul, every tutorial with the same steps in both languages; PYT and PYP added in the retrofit's group P, 18 cases: Python Types and Python Patterns; TST and TSP in its group T, 9 cases: TypeScript Types and TypeScript Patterns; CTY, XTY and CPD in its group C, 27 cases: C Types, Cpp Types and C Preprocessor; DIA-30 added in the retrofit's core, every binder refining `Let`; DIA-27, DIA-28 and DIA-29 added in stage 6, `SystemVerilog` complete, with the suites SVP, SVA, SVC and SVD, 37 cases; FRM-11, FRM-12 and DIA-18 added in stage 2; DIA-19 and DIA-20 in stage 3, `Python3` complete; DIA-21, DIA-22 and DIA-23 in stage 4, `TypeScript5`; DIA-24, DIA-25 and DIA-26 in stage 5, `C` and `Cpp`; SKL-04 added, for skill gaps; SKL-02 retired; DOM-17 added in domains as data's stage 1, the standard dialects, and DOM-18, a language's own kinds; DOM-02 retired in its stage 2, with Patterns' code domains; DOM-19, DOM-20 and DOM-21 added in its stage 3, the stored domains of C, C++ and the ABI dialects, of SystemVerilog, and of Python3, TypeScript5, MATLAB and Excel; FRM-13 added in its stage 4, standards as data), with the same IDs in the same order in both implementations.
 
 ---
 

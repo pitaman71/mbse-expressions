@@ -20,7 +20,7 @@ export { ToText } from "../Python3/Text.js";
 /** A type parameter's writer: its stars, its name, its bound, where it has one, and its default, where it has one. */
 function parameter(star: string): (p: Printer, node: F.Node) => Written {
   return (p, node) => {
-    const [bound, defaultValue] = [node.slots.get("bound") ?? null, node.slots.get("default_value") ?? null];
+    const [bound, defaultValue] = [node.subterms.get("bound") ?? null, node.subterms.get("default_value") ?? null];
     let text = star + (node.attributes.get("name") ?? "");
     text += bound === null ? "" : `: ${p.element(bound)}`;
     return [text + (defaultValue === null ? "" : ` = ${p.element(defaultValue)}`), X.PRIMARY];

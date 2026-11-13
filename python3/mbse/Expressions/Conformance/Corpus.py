@@ -14,8 +14,9 @@ invalid syntax and literals with their spelling. The `systemverilog_patterns`, `
 `systemverilog_constraints` and `systemverilog_preprocessor` cases are each a term of SystemVerilog's sublanguage of every
 kind, written through the builders, the `python_types` and `python_patterns` cases a term of Python's, the
 `typescript_types` and `typescript_patterns` cases each a term of TypeScript's, the `c_types`, `cpp_types` and
-`c_preprocessor` cases each a term of the C family's new dialects of every kind, and the `python_regexp`,
-`typescript_regexp` and `cpp_regexp` cases each a regular expression of every kind of its family's RegExp dialect. Each
+`c_preprocessor` cases each a term of the C family's new dialects of every kind, the `python_regexp`,
+`typescript_regexp` and `cpp_regexp` cases each a regular expression of every kind of its family's RegExp dialect, and
+the `posix_bre` and `posix_ere` cases each grep's list of patterns of every kind of POSIX's dialect. Each
 implementation writes its snapshots to
 `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files (see
 the CONF test suite). Keep this module and `typescript5/src/Conformance/Corpus.ts` in lockstep: same cases, same values,
@@ -42,6 +43,7 @@ from mbse.Expressions.SystemVerilog import Assertions as SVAssertions, Constrain
 from mbse.Expressions.TypeScript import TypeScript5
 from mbse.Expressions.C import Preprocessor as CPreprocessor, Types as CTypes  # the retrofit's new dialects
 from mbse.Expressions.Cpp import RegExp as CppRegExp, Types as CppTypes
+from mbse.Expressions.POSIX import BRE as PosixBRE, ERE as PosixERE  # POSIX's, which a C++ regex may hold
 from mbse.Expressions.Python import Patterns as PythonPatterns, RegExp as PythonRegExp, Types as PythonTypes  # the retrofit's, built
 from mbse.Expressions.TypeScript import Patterns as TypeScriptPatterns, RegExp as TypeScriptRegExp, Types as TypeScriptTypes
 from mbse.Expressions.C.Expressions import Expressions as CE
@@ -58,7 +60,8 @@ from mbse.Schemas.Framework import Builders
 CASES = ["expression", "python3", "matlab", "excel", "latex", "domains", "collections", "c", "cpp", "systemverilog",
          "typescript5", "invalid", "systemverilog_patterns", "systemverilog_assertions", "systemverilog_constraints",
          "systemverilog_preprocessor", "python_types", "python_patterns", "typescript_types", "typescript_patterns",
-         "c_types", "cpp_types", "c_preprocessor", "python_regexp", "typescript_regexp", "cpp_regexp", "systemverilog_domains",
+         "c_types", "cpp_types", "c_preprocessor", "python_regexp", "typescript_regexp", "cpp_regexp", "posix_bre", "posix_ere",
+         "systemverilog_domains",
          "python3_domains", "typescript5_domains", "matlab_domains",
          "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains", "standards"]
 
@@ -72,7 +75,8 @@ DIALECTS = {"python3": P.DIALECT, "matlab": M.DIALECT, "excel": X.DIALECT, "late
             "typescript_patterns": TypeScriptPatterns.Expressions.DIALECT, "c_types": CTypes.Expressions.DIALECT,
             "cpp_types": CppTypes.Expressions.DIALECT, "c_preprocessor": CPreprocessor.Expressions.DIALECT,
             "python_regexp": PythonRegExp.Expressions.DIALECT,
-            "typescript_regexp": TypeScriptRegExp.Expressions.DIALECT, "cpp_regexp": CppRegExp.Expressions.DIALECT}
+            "typescript_regexp": TypeScriptRegExp.Expressions.DIALECT, "cpp_regexp": CppRegExp.Expressions.DIALECT,
+            "posix_bre": PosixBRE.Expressions.DIALECT, "posix_ere": PosixERE.Expressions.DIALECT}
 """The dialect that reads each case, where it is not Patterns."""
 
 DOMAINS = {"domains": "Expressions.ISOIEC11404.Expressions", "systemverilog_domains": "Expressions.SystemVerilog.Expressions",
@@ -108,8 +112,8 @@ def build():
         store.transaction(module.install)
     store.transaction(TypeScript5.install)
     for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor,
-                   PythonRegExp, TypeScriptRegExp, CppRegExp):
-        store.transaction(module.install)  # the retrofit's new dialects, each after its family's
+                   PythonRegExp, TypeScriptRegExp, CppRegExp, PosixBRE, PosixERE):
+        store.transaction(module.install)  # the retrofit's new dialects, each after its family's, POSIX's after C++'s
     defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
     stored = {case: store.transaction(module.define)[0]["dialect"] for case, module in [  # each dialect's stored domains
         ("systemverilog_domains", SystemVerilog), ("python3_domains", Python3), ("typescript5_domains", TypeScript5),
@@ -118,7 +122,7 @@ def build():
     for module in (SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # the editions they cover
         store.transaction(module.define)
     for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor,
-                   PythonRegExp, TypeScriptRegExp, CppRegExp):
+                   PythonRegExp, TypeScriptRegExp, CppRegExp, PosixBRE, PosixERE):
         store.transaction(module.define)  # their data: the editions each covers
 
     # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
@@ -566,7 +570,7 @@ def build():
         lambda d: d.paramspec(lambda s: s.name("P").default_value(lambda e: e.typevartuple(lambda v: v.name("Ts").default_value(
             P.starred(P.subscript(P.name("tuple"), P.tuple_(P.name("int"), P.constant(...)))))))))))
 
-    # --- python_patterns: every kind of Python's Patterns, Python3's terms in their slots --- the text:
+    # --- python_patterns: every kind of Python's Patterns, Python3's terms in their subterms --- the text:
     # record.Point(0, y=[a, *rest]) | {'k': None, **kw} | (record.RED as c)
     python_patterns = PythonPatterns.Expressions.DIALECT.spec(lambda u: u.matchor(lambda o: o.patterns([
         lambda p: p.matchclass(lambda c: c.cls(P.attribute(P.name("record"), "Point")).patterns([
@@ -658,12 +662,12 @@ def build():
                lambda e: e.backreference(lambda b: b.raw("\\k<n>").ref("n"))),
         rx_seq(lambda e: e.assertion(lambda a: a.assertionKind("end")))]))).flags(lambda f: f.raw("v").unicodeSets(True)))
 
-    # --- cpp_regexp: a regex of every kind but grep's list of patterns, which ECMAScript, the one grammar of the others,
-    # has not: ECMAScript's, case-insensitive --- ^(a|\.)[^a-[.ch.][:alpha:][=e=]\d]{1,3}.$|(?:b)(?!c)x*?\1\b
+    # --- cpp_regexp: a regex of every kind, ECMAScript's, case-insensitive, its pattern a term of Cpp RegExp held as the
+    # framework's, as a regex naming a POSIX grammar holds POSIX's --- ^(a|\.)[^a-[.ch.][:alpha:][=e=]\d]{1,3}.$|(?:b)(?!c)x*?\1\b
     XR = CppRegExp.Expressions.DIALECT
     char = lambda c: lambda u: u.character(lambda r: r.value(ord(c)))  # noqa: E731
     alt = lambda *elements: lambda u: u.alternative(lambda r: r.elements(list(elements)))  # noqa: E731
-    cpp_regexp = XR.spec(lambda u: u.regex(lambda r: r.flags(["ECMAScript", "icase"]).pattern(lambda p: p.pattern(lambda q: q.alternatives([
+    cpp_regexp = XR.spec(lambda u: u.regex(lambda r: r.flags(["ECMAScript", "icase"]).pattern(XR.spec(lambda p: p.pattern(lambda q: q.alternatives([
         alt(
             lambda e: e.assertion(lambda a: a.assertionKind("start")),
             lambda e: e.capturinggroup(lambda g: g.alternatives([alt(char("a")), alt(char("."))])),
@@ -676,7 +680,33 @@ def build():
             lambda e: e.group(lambda g: g.alternatives([alt(char("b"))])),
             lambda e: e.assertion(lambda a: a.assertionKind("lookahead").negate(True).alternatives([alt(char("c"))])),
             lambda e: e.quantifier(lambda m: m.raw("*?").min(0).greedy(False).element(char("x"))),
-            lambda e: e.backreference(lambda b: b.ref(1)), lambda e: e.assertion(lambda a: a.assertionKind("word")))])))))
+            lambda e: e.backreference(lambda b: b.ref(1)), lambda e: e.assertion(lambda a: a.assertionKind("word")))]))))))
+
+    # --- posix_bre, posix_ere: grep's list of patterns, every kind of POSIX's BRE and ERE, a character with its spelling
+    # --- the texts: ^\(a\|\.\)[^a-[.ch.][:alpha:][=e=]]\{1,3\}.\1$ and b\{0,\}, as grep reads them; then, as grep -E
+    # does, ^(a|.)[^a-[.ch.][:alpha:][=e=]]{1,3}?$ and b+{0,1}
+    posix_class = lambda c: c.characterclass(lambda k: k.negate(True).elements([  # noqa: E731
+        lambda x: x.characterclassrange(lambda y: y.min(char("a")).max(lambda z: z.collatingelement(lambda n: n.name("ch")))),
+        lambda x: x.exclass(lambda n: n.name("alpha")), lambda x: x.equivalence(lambda n: n.name("e"))]))
+    posix_bre = PosixBRE.Expressions.DIALECT.spec(lambda u: u.patternlist(lambda q: q.patterns([
+        lambda v: v.pattern(lambda w: w.alternatives([alt(
+            lambda e: e.assertion(lambda a: a.assertionKind("start")),
+            lambda e: e.capturinggroup(lambda g: g.alternatives([alt(char("a")), alt(lambda c: c.character(
+                lambda h: h.raw("\\.").value(46)))])),
+            lambda e: e.quantifier(lambda m: m.min(1).max(3).element(posix_class)),
+            lambda e: e.characterset(lambda n: n.setKind("any")),
+            lambda e: e.backreference(lambda b: b.ref(1)), lambda e: e.assertion(lambda a: a.assertionKind("end")))])),
+        lambda v: v.pattern(lambda w: w.alternatives([alt(lambda e: e.quantifier(lambda m: m.raw("\\{0,\\}").min(0).element(
+            char("b"))))]))])))
+    posix_ere = PosixERE.Expressions.DIALECT.spec(lambda u: u.patternlist(lambda q: q.patterns([
+        lambda v: v.pattern(lambda w: w.alternatives([alt(
+            lambda e: e.assertion(lambda a: a.assertionKind("start")),
+            lambda e: e.capturinggroup(lambda g: g.alternatives([alt(char("a")), alt(lambda s: s.characterset(
+                lambda n: n.setKind("any")))])),
+            lambda e: e.quantifier(lambda m: m.min(1).max(3).greedy(False).element(posix_class)),
+            lambda e: e.assertion(lambda a: a.assertionKind("end")))])),
+        lambda v: v.pattern(lambda w: w.alternatives([alt(lambda e: e.quantifier(lambda m: m.min(0).max(1).element(
+            lambda f: f.quantifier(lambda n: n.min(1).element(char("b"))))))]))])))
 
     # --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
     # their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
@@ -698,7 +728,8 @@ def build():
             ("typescript_patterns", TypeScriptPatterns.Expressions.DIALECT.spec(typescript_patterns)),
             ("c_types", enumeration(CT, CE)), ("cpp_types", enumeration(XT, CPP)), ("c_preprocessor", c_preprocessor),
             ("python_regexp", python_regexp),
-            ("typescript_regexp", TypeScriptRegExp.Expressions.DIALECT.spec(typescript_regexp)), ("cpp_regexp", cpp_regexp)]}
+            ("typescript_regexp", TypeScriptRegExp.Expressions.DIALECT.spec(typescript_regexp)), ("cpp_regexp", cpp_regexp),
+            ("posix_bre", posix_bre), ("posix_ere", posix_ere)]}
     terms["domains"] = defined["dialect"]
     terms.update(stored)
     terms.update({case: store.singleton(path).standards({"designation": designation})  # an edition, by its path

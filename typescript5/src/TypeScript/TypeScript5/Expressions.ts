@@ -48,8 +48,8 @@
  * `x satisfies T`, `<T>x`, an annotation, a type argument, a type parameter's constraint and default); and
  * `TypeScript Patterns` (`Expressions.TypeScript.Patterns.Term`), destructuring patterns, held by a function's
  * parameters and an assignment's target. As the user decided ("(b) as you recommended"), one schema is a branch of
- * every union whose positions hold it: a pattern's `Term` lists the terms a target may be, and a type's the terms a type
- * holds. Which terms are allowed where, beyond that, is a constraint. Names that only declare (a type parameter's
+ * the union of every subterm it may be: a pattern's `Term` lists the terms a target may be, and a type's the terms a
+ * type holds. Which terms are allowed where, beyond that, is a constraint. Names that only declare (a type parameter's
  * `name`, a function's `id`) are `Identifier`s, as mbse-programs has them ("yes, stay `Identifier` terms"). The helpers
  * expressions and types hold alike stay its own: an annotation (`TSTypeAnnotation`), a type parameter, and the
  * declaration and instantiation of type parameters. `DIALECT` reads its family's other dialects' terms (`reads`), as
@@ -538,7 +538,7 @@ export function constantText(attributes: ReadonlyMap<string, any>, regexp: (() =
  * and `flags` spell is not checked, as a literal's `value` is not against its `text`. */
 function constantProblems(record: any): string[] {
   const node = F.node(CONSTANT, record);
-  const regexp = node.slots.get("regexp");
+  const regexp = node.subterms.get("regexp");
   const held = regexp === null ? [] : DIALECT.validate(regexp).map((problem) => `regexp: ${problem}`);
   return [...Nodes.check(CONSTANT, (attributes) => constant(attributes, regexp !== null))(record), ...held];
 }
@@ -568,7 +568,7 @@ function native(value: unknown): F.Writer | null {
 const ANY = new FD.Function([FD.Anything], FD.Anything);
 const ANY2 = new FD.Function([FD.Anything, FD.Anything], FD.Anything);
 
-/** A type parameter's slots, which may be empty at any depth (`Kind.optional`): its constraint and its default. */
+/** A type parameter's subterms, which may be empty at any depth (`Kind.optional`): its constraint and its default. */
 export const TYPE_PARAMETERS: readonly string[] = ["*.constraint", "*.default"];
 
 function application(tag: string, signature: FD.Signature = new FD.Opaque(), options: F.KindOptions = {}): F.Kind {
@@ -581,7 +581,7 @@ function operatorKind(tag: string, vocabulary: ReadonlyMap<string, FD.Signature>
     check: Nodes.check(tag), scopes: Nodes.scopes(tag), optional: TYPE_PARAMETERS });
 }
 
-/** The dialects of its family whose terms its positions hold, read when first needed (the dialects proposal,
+/** The dialects of its family whose terms are its subterms, read when first needed (the dialects proposal,
  * Retrofit's design): `TypeScript Types`, `TypeScript Patterns` and `TypeScript RegExp`, a constant's `regexp`. */
 function reads(): readonly F.Dialect[] {
   return [TypeScriptTypes.DIALECT, TypeScriptPatterns.DIALECT, TypeScriptRegExp.DIALECT];

@@ -15,8 +15,9 @@
  * `systemverilog_constraints` and `systemverilog_preprocessor` cases each a term of SystemVerilog's sublanguage of every
  * kind, written through the builders, the `python_types` and `python_patterns` cases a term of Python's, the
  * `typescript_types` and `typescript_patterns` cases each a term of TypeScript's, the `c_types`, `cpp_types` and
- * `c_preprocessor` cases each a term of the C family's new dialects of every kind, and the `python_regexp`,
- * `typescript_regexp` and `cpp_regexp` cases each a regular expression of every kind of its family's RegExp dialect. Each
+ * `c_preprocessor` cases each a term of the C family's new dialects of every kind, the `python_regexp`,
+ * `typescript_regexp` and `cpp_regexp` cases each a regular expression of every kind of its family's RegExp dialect, and
+ * the `posix_bre` and `posix_ere` cases each grep's list of patterns of every kind of POSIX's dialect. Each
  * implementation writes its snapshots to
  * `conformance/<implementation>/<case>.json` and `.yaml`, and checks them against every other implementation's files
  * (see the CONF test suite). Keep record module and `python3/mbse/Expressions/Conformance/Corpus.py` in lockstep: same
@@ -51,6 +52,8 @@ import * as TypeScript5 from "../TypeScript/TypeScript5/index.js";
 import * as CPreprocessor from "../C/Preprocessor/index.js"; // the retrofit's new dialects
 import * as CTypes from "../C/Types/index.js";
 import * as CppRegExp from "../Cpp/RegExp/index.js";
+import * as PosixBRE from "../POSIX/BRE/index.js"; // POSIX's, which a C++ regex may hold
+import * as PosixERE from "../POSIX/ERE/index.js";
 import * as CppTypes from "../Cpp/Types/index.js";
 import * as PythonPatterns from "../Python/Patterns/index.js";
 import * as PythonRegExp from "../Python/RegExp/index.js";
@@ -70,6 +73,7 @@ export const CASES = ["expression", "python3", "matlab", "excel", "latex", "doma
   "systemverilog", "typescript5", "invalid", "systemverilog_patterns", "systemverilog_assertions",
   "systemverilog_constraints", "systemverilog_preprocessor", "python_types", "python_patterns", "typescript_types",
   "typescript_patterns", "c_types", "cpp_types", "c_preprocessor", "python_regexp", "typescript_regexp", "cpp_regexp",
+  "posix_bre", "posix_ere",
   "systemverilog_domains", "python3_domains", "typescript5_domains",
   "matlab_domains", "excel_domains", "c_domains", "cpp_domains", "amd64_domains", "aapcs64_domains",
   "standards"] as const;
@@ -85,7 +89,8 @@ export const DIALECTS: ReadonlyMap<string, Terms.Dialect> = new Map([
   ["typescript_types", TypeScriptTypes.Expressions.DIALECT], ["typescript_patterns", TypeScriptPatterns.Expressions.DIALECT],
   ["c_types", CTypes.Expressions.DIALECT], ["cpp_types", CppTypes.Expressions.DIALECT], ["c_preprocessor", CPreprocessor.Expressions.DIALECT],
   ["python_regexp", PythonRegExp.Expressions.DIALECT], ["typescript_regexp", TypeScriptRegExp.Expressions.DIALECT],
-  ["cpp_regexp", CppRegExp.Expressions.DIALECT],
+  ["cpp_regexp", CppRegExp.Expressions.DIALECT], ["posix_bre", PosixBRE.Expressions.DIALECT],
+  ["posix_ere", PosixERE.Expressions.DIALECT],
 ]);
 
 /** The cases that are data, not terms: each a dialect's singleton, by its path, written as one document of its schema,
@@ -129,8 +134,9 @@ export function build(): Map<string, Case> {
   }
   store.transaction(TypeScript5.install);
   const retrofit = [PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor,
-    PythonRegExp, TypeScriptRegExp, CppRegExp];
-  for (const module of retrofit) store.transaction(module.install); // the retrofit's new dialects, each after its family's
+    PythonRegExp, TypeScriptRegExp, CppRegExp, PosixBRE, PosixERE];
+  for (const module of retrofit) store.transaction(module.install); // the retrofit's new dialects, each after its family's,
+  // POSIX's after C++'s
   const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
   const stored = new Map<string, any>(([ // each dialect's stored domains
     ["systemverilog_domains", SystemVerilog], ["python3_domains", Python3], ["typescript5_domains", TypeScript5],
@@ -582,7 +588,7 @@ export function build(): Map<string, Case> {
     (d: any) => d.paramspec((s: any) => s.name("P").default_value((e: any) => e.typevartuple((v: any) => v.name("Ts").default_value(
       P.starred(P.subscript(P.name("tuple"), P.tuple_(P.name("int"), P.constant(P.ELLIPSIS)))))))))));
 
-  // --- python_patterns: every kind of Python's Patterns, Python3's terms in their slots --- the text:
+  // --- python_patterns: every kind of Python's Patterns, Python3's terms in their subterms --- the text:
   // record.Point(0, y=[a, *rest]) | {'k': None, **kw} | (record.RED as c)
   const pythonPatterns = PythonPatterns.Expressions.DIALECT.spec((u: any) => u.matchor((o: any) => o.patterns([
     (p: any) => p.matchclass((c: any) => c.cls(P.attribute(P.name("record"), "Point")).patterns([
@@ -672,12 +678,12 @@ export function build(): Map<string, Case> {
     (e: any) => e.backreference((b: any) => b.raw("\\k<n>").ref("n"))),
     rxSeq((e: any) => e.assertion((a: any) => a.assertionKind("end")))]))).flags((f: any) => f.raw("v").unicodeSets(true)));
 
-  // --- cpp_regexp: a regex of every kind but grep's list of patterns, which ECMAScript, the one grammar of the others,
-  // has not: ECMAScript's, case-insensitive --- ^(a|\.)[^a-[.ch.][:alpha:][=e=]\d]{1,3}.$|(?:b)(?!c)x*?\1\b
+  // --- cpp_regexp: a regex of every kind, ECMAScript's, case-insensitive, its pattern a term of Cpp RegExp held as the
+  // framework's, as a regex naming a POSIX grammar holds POSIX's --- ^(a|\.)[^a-[.ch.][:alpha:][=e=]\d]{1,3}.$|(?:b)(?!c)x*?\1\b
   const XR = CppRegExp.Expressions.DIALECT;
   const char = (c: string) => (u: any) => u.character((r: any) => r.value(BigInt(c.codePointAt(0) as number)));
   const alt = (...elements: unknown[]) => (u: any) => u.alternative((r: any) => r.elements(elements));
-  const cppRegexp = XR.spec((u: any) => u.regex((r: any) => r.flags(["ECMAScript", "icase"]).pattern((p: any) => p.pattern((q: any) => q.alternatives([
+  const cppRegexp = XR.spec((u: any) => u.regex((r: any) => r.flags(["ECMAScript", "icase"]).pattern(XR.spec((p: any) => p.pattern((q: any) => q.alternatives([
     alt(
       (e: any) => e.assertion((a: any) => a.assertionKind("start")),
       (e: any) => e.capturinggroup((g: any) => g.alternatives([alt(char("a")), alt(char("."))])),
@@ -690,7 +696,33 @@ export function build(): Map<string, Case> {
       (e: any) => e.group((g: any) => g.alternatives([alt(char("b"))])),
       (e: any) => e.assertion((a: any) => a.assertionKind("lookahead").negate(true).alternatives([alt(char("c"))])),
       (e: any) => e.quantifier((m: any) => m.raw("*?").min(0n).greedy(false).element(char("x"))),
-      (e: any) => e.backreference((b: any) => b.ref(1n)), (e: any) => e.assertion((a: any) => a.assertionKind("word")))])))));
+      (e: any) => e.backreference((b: any) => b.ref(1n)), (e: any) => e.assertion((a: any) => a.assertionKind("word")))]))))));
+
+  // --- posix_bre, posix_ere: grep's list of patterns, every kind of POSIX's BRE and ERE, a character with its spelling
+  // --- the texts: ^\(a\|\.\)[^a-[.ch.][:alpha:][=e=]]\{1,3\}.\1$ and b\{0,\}, as grep reads them; then, as grep -E
+  // does, ^(a|.)[^a-[.ch.][:alpha:][=e=]]{1,3}?$ and b+{0,1}
+  const posixClass = (c: any) => c.characterclass((k: any) => k.negate(true).elements([
+    (x: any) => x.characterclassrange((y: any) => y.min(char("a")).max((z: any) => z.collatingelement((n: any) => n.name("ch")))),
+    (x: any) => x.exclass((n: any) => n.name("alpha")), (x: any) => x.equivalence((n: any) => n.name("e"))]));
+  const posixBre = PosixBRE.Expressions.DIALECT.spec((u: any) => u.patternlist((q: any) => q.patterns([
+    (v: any) => v.pattern((w: any) => w.alternatives([alt(
+      (e: any) => e.assertion((a: any) => a.assertionKind("start")),
+      (e: any) => e.capturinggroup((g: any) => g.alternatives([alt(char("a")), alt((c: any) => c.character(
+        (h: any) => h.raw("\\.").value(46n)))])),
+      (e: any) => e.quantifier((m: any) => m.min(1n).max(3n).element(posixClass)),
+      (e: any) => e.characterset((n: any) => n.setKind("any")),
+      (e: any) => e.backreference((b: any) => b.ref(1n)), (e: any) => e.assertion((a: any) => a.assertionKind("end")))])),
+    (v: any) => v.pattern((w: any) => w.alternatives([alt((e: any) => e.quantifier((m: any) => m.raw("\\{0,\\}").min(0n).element(
+      char("b"))))]))])));
+  const posixEre = PosixERE.Expressions.DIALECT.spec((u: any) => u.patternlist((q: any) => q.patterns([
+    (v: any) => v.pattern((w: any) => w.alternatives([alt(
+      (e: any) => e.assertion((a: any) => a.assertionKind("start")),
+      (e: any) => e.capturinggroup((g: any) => g.alternatives([alt(char("a")), alt((s: any) => s.characterset(
+        (n: any) => n.setKind("any")))])),
+      (e: any) => e.quantifier((m: any) => m.min(1n).max(3n).greedy(false).element(posixClass)),
+      (e: any) => e.assertion((a: any) => a.assertionKind("end")))])),
+    (v: any) => v.pattern((w: any) => w.alternatives([alt((e: any) => e.quantifier((m: any) => m.min(0n).max(1n).element(
+      (f: any) => f.quantifier((n: any) => n.min(1n).element(char("b"))))))]))])));
 
   // --- invalid: a Python3 term holding an error, its recovered term within it, and a missing operand; literals with
   // their spelling, one whose text is invalid holding no value but its problem --- 0x10 + (x +* 1) + 08 - <missing>
@@ -711,7 +743,7 @@ export function build(): Map<string, Case> {
     ["typescript_patterns", TypeScriptPatterns.Expressions.DIALECT.spec(typescriptPatterns)],
     ["c_types", enumeration(CT, CE)], ["cpp_types", enumeration(XT, CPP)], ["c_preprocessor", cPreprocessor],
     ["python_regexp", pythonRegExp], ["typescript_regexp", TypeScriptRegExp.Expressions.DIALECT.spec(typescriptRegExp)],
-    ["cpp_regexp", cppRegexp],
+    ["cpp_regexp", cppRegexp], ["posix_bre", posixBre], ["posix_ere", posixEre],
   ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
   terms.set("domains", defined.get("dialect"));
   for (const [name, dialect] of stored) terms.set(name, dialect);

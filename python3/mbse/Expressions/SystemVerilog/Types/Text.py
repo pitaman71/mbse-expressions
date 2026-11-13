@@ -30,14 +30,14 @@ def _join(*parts: Any) -> str:
 def dimension(p: X.Printer, node: F.Node) -> str:
     """A dimension: `[left:right]`, `[size]`, `[]`, `[type]` or `[*]`, `[$]` or `[$:bound]`."""
     if node.kind == "rangedimension":
-        return f"[{p.text(node.slots['left'])}:{p.text(node.slots['right'])}]"
+        return f"[{p.text(node.subterms['left'])}:{p.text(node.subterms['right'])}]"
     if node.kind == "sizedimension":
-        return f"[{p.text(node.slots['size'])}]"
+        return f"[{p.text(node.subterms['size'])}]"
     if node.kind == "unsizeddimension":
         return "[]"
     if node.kind == "associativedimension":
-        return f"[{p.text(node.slots['type']) if node.slots['type'] is not None else '*'}]"
-    return f"[${':' + p.text(node.slots['bound']) if node.slots['bound'] is not None else ''}]"  # a queue's
+        return f"[{p.text(node.subterms['type']) if node.subterms['type'] is not None else '*'}]"
+    return f"[${':' + p.text(node.subterms['bound']) if node.subterms['bound'] is not None else ''}]"  # a queue's
 
 
 def _dimensions(p: X.Printer, node: F.Node) -> str:
@@ -51,7 +51,7 @@ def _sized(p: X.Printer, node: F.Node, head: str) -> str:
 
 def _declarators(p: X.Printer, declarators: Any) -> str:
     return ", ".join(p.spelling(d.helpers["name"]) + _dimensions(p, d)
-                     + (f" = {p.text(d.slots['value'])}" if d.slots["value"] is not None else "") for d in declarators)
+                     + (f" = {p.text(d.subterms['value'])}" if d.subterms["value"] is not None else "") for d in declarators)
 
 
 def _member(p: X.Printer, node: F.Node) -> str:
@@ -59,16 +59,16 @@ def _member(p: X.Printer, node: F.Node) -> str:
     random = f"{node.attributes['random']} " if node.attributes.get("random") else ""
     attributes = _nodes(node.helpers.get("attributes"))
     written = f"{p.attribute_text(attributes)} " if attributes else ""
-    return f"{written}{random}{p.text(node.slots['type'])} {_declarators(p, _nodes(node.helpers.get('declarators')))}"
+    return f"{written}{random}{p.text(node.subterms['type'])} {_declarators(p, _nodes(node.helpers.get('declarators')))}"
 
 
 def _enum_member(p: X.Printer, node: F.Node) -> str:
     """An enumeration's member: `name`, `name[left]` or `name[left:right]`, and its value."""
     numbers = ""
-    if node.slots["left"] is not None:
-        right = f":{p.text(node.slots['right'])}" if node.slots["right"] is not None else ""
-        numbers = f"[{p.text(node.slots['left'])}{right}]"
-    value = f" = {p.text(node.slots['value'])}" if node.slots["value"] is not None else ""
+    if node.subterms["left"] is not None:
+        right = f":{p.text(node.subterms['right'])}" if node.subterms["right"] is not None else ""
+        numbers = f"[{p.text(node.subterms['left'])}{right}]"
+    value = f" = {p.text(node.subterms['value'])}" if node.subterms["value"] is not None else ""
     return p.spelling(node.helpers["name"]) + numbers + value
 
 
@@ -80,7 +80,7 @@ def _struct(p: X.Printer, node: F.Node) -> str:
 
 
 def _enum(p: X.Printer, node: F.Node) -> str:
-    base = f" {p.text(node.slots['base'])}" if node.slots["base"] is not None else ""
+    base = f" {p.text(node.subterms['base'])}" if node.subterms["base"] is not None else ""
     members = ", ".join(_enum_member(p, m) for m in _nodes(node.helpers.get("members")))
     return _sized(p, node, f"enum{base} {{{members}}}")
 
@@ -101,7 +101,7 @@ TEXTS: dict[str, Callable[[X.Printer, F.Node], str]] = {
     T.IMPLICITTYPE: lambda p, n: _join(n.attributes.get("signing"), _dimensions(p, n)),
     T.STRUCTTYPE: _struct,
     T.ENUMTYPE: _enum,
-    T.TYPEREFERENCE: lambda p, n: f"type({p.text(n.slots['operand'])})",
+    T.TYPEREFERENCE: lambda p, n: f"type({p.text(n.subterms['operand'])})",
 }
 """How each of its kinds is written."""
 

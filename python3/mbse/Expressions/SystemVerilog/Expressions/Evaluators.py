@@ -228,7 +228,7 @@ def _refused(what: str) -> NotImplementedError:
 class _Node:
     """A term read once for one evaluation: its `kind` (as `Expressions.DIALECT` reads it, a term of any of its family's
     dialects), and its members as attributes, its attributes (None where not set), its helpers (`Terms.Node`s), its
-    slots (a `_Node`, None where empty) and its variadic arguments (each container's, a tuple of `_Node`s). `term` is the term value
+    subterms (a `_Node`, None where empty) and its variadic arguments (each container's, a tuple of `_Node`s). `term` is the term value
     read."""
 
     def __init__(self, term: Any):
@@ -238,7 +238,7 @@ class _Node:
         members: dict[str, Any] = dict.fromkeys(names)
         members.update(node.attributes)
         members.update(node.helpers)
-        members.update({name: None if a is None else _Node(a) for name, a in node.slots.items()})
+        members.update({name: None if a is None else _Node(a) for name, a in node.subterms.items()})
         members.update({name: tuple(_Node(a) for a in terms) for name, terms in node.lists.items()})
         self.__dict__.update(members)
         self.term, self.kind = term, tag

@@ -17,7 +17,7 @@ syntax:
   keys to their values.
 - `quantifier`, its own, a binder refining the framework's `Let`: binds a `name` to each item of a collection (Let's
   `value`) within a `body`, and gives whether it holds for `all` or `any` of them, or for how many (`count`): its
-  `quantifier`. Its slots hold Patterns' terms.
+  `quantifier`. Its subterms are Patterns' terms.
 - `error` and `missing`: invalid syntax, which no reader of Patterns writes.
 
 A term carries no domain. Patterns' operations are data: `install` defines each as a `Schemas.OfExpression` in its

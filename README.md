@@ -119,7 +119,7 @@ npm test                       # type-check and run the test suites and the tuto
 
 | Read | For |
 |---|---|
-| [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | In two parts. Part I, expressions as models: domains as data, one value's domain in each language, then literals, names, operators, calls, bindings and sublanguages, each language's text beside the model its dialect holds. Part II, constraints as data, in seven case studies, from a constraint written in code to the same constraint in C and SystemVerilog: constraints as data, unknowns, collections, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
+| [Python tutorial](python3/tutorials/README.md), [TypeScript tutorial](typescript5/tutorials/README.md) | In two parts. Part I, expressions as models: domains as data, one value's domain in each language, then literals, names, operators, calls, bindings and sublanguages, with a page for each sublanguage, each language's text beside the model its dialect holds. Part II, constraints as data, in seven case studies, from a constraint written in code to the same constraint in C and SystemVerilog: constraints as data, unknowns, collections, partial evaluation, analysis and rewriting, translation, and C and SystemVerilog. Start here. |
 | mbse-basis [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md) | The design, as its capabilities' detail files: the Patterns dialect's (formerly Basic) terms and core vocabulary, three-valued evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, and open questions |
 | [Equivalence](docs/EQUIVALENCE.md) | How the two implementations are kept equivalent, and where they deliberately differ |
 | [Guide for AI agents](AGENTS.md), [Agent skill](skills/mbse-expressions/SKILL.md), [Summary for LLMs](llms.txt) | Guidance for AI agents, layered so each loads only what its task needs. The skill, written once and mostly language-independent, links each how to its case in both languages' notebooks, and also ships inside both packages |
@@ -209,8 +209,9 @@ TypeScript's types and destructuring patterns ([CAP-277: TypeScript's types and 
 and C's and C++'s type names and preprocessor directives ([CAP-278: C's and C++'s type names and preprocessor directives as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-278.md)),
 and every kind that binds names a variation of `let` ([CAP-279: names an expression binds found alike in every language](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-279.md));
 and the regular expressions each language's standard defines, Python's `re`, ECMA-262's and C++'s `std::regex`, each
-family's dialect ([CAP-281: Python's, ECMAScript's and C++'s regular expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-281.md)), JSX staying
-`TypeScript5`'s. Not built yet: domain
+family's dialect ([CAP-281: Python's, ECMAScript's and C++'s regular expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-281.md)), C++'s its own
+grammar, [re.grammar]'s, and the five it selects by naming POSIX's a family of their own, POSIX's basic and extended
+regular expressions (`POSIX.BRE`, `POSIX.ERE`), which a C++ regex naming one holds, JSX staying `TypeScript5`'s. Not built yet: domain
 inference, which giving terms domains (widths, overflow, IEEE 754 formats, conversions) waits for, and the evaluator
 interface through which mbse-schemas will choose union branches and check constraints.
 

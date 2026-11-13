@@ -55,20 +55,20 @@ function class_(p: Printer, node: F.Node): Written {
   const keywords = items(p, node.lists.get("kwd_patterns") as readonly any[]);
   const written = [...items(p, node.lists.get("patterns") as readonly any[]),
     ...attrs.map((attr, i) => `${attr as string}=${keywords[i]}`)];
-  return [`${p.write(node.slots.get("cls"), CLOSED)}(${written.join(", ")})`, CLOSED];
+  return [`${p.write(node.subterms.get("cls"), CLOSED)}(${written.join(", ")})`, CLOSED];
 }
 
 /** `pattern as name`; a capture `name`, or the wildcard `_`, without a pattern. */
 function as(p: Printer, node: F.Node): Written {
   const name = (node.attributes.get("name") ?? "_") as string;
-  const pattern = node.slots.get("pattern") ?? null;
+  const pattern = node.subterms.get("pattern") ?? null;
   if (pattern === null) return [name, CLOSED];
   return [`${p.write(pattern, OR)} as ${name}`, AS];
 }
 
 /** How each of its kinds is written, and its precedence. */
 export const TEXTS: ReadonlyMap<string, (p: Printer, n: F.Node) => Written> = new Map<string, (p: Printer, n: F.Node) => Written>([
-  [P.MATCHVALUE, (p, n) => [p.text(n.slots.get("value"))[0], CLOSED]],
+  [P.MATCHVALUE, (p, n) => [p.text(n.subterms.get("value"))[0], CLOSED]],
   [P.MATCHSINGLETON, (_, n) => [n.attributes.get("value") as string, CLOSED]],
   [P.MATCHSEQUENCE, sequence],
   [P.MATCHMAPPING, mapping],

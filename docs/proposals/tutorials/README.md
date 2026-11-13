@@ -1,5 +1,5 @@
 <!-- nav -->
-[← Domains as data](../domains/README.md) · [Home](../../../README.md)
+[← Domains as data](../domains/README.md) · [Home](../../../README.md) · [What is evaluated, and in which dialect →](../evaluation/README.md)
 
 # Tutorials, from domains and trivial expressions up (a proposal, for review)
 
@@ -527,4 +527,4 @@ Answered: each as recommended ([Decided](#decided)).
 ---
 
 <!-- nav -->
-[← Domains as data](../domains/README.md) · [Home](../../../README.md)
+[← Domains as data](../domains/README.md) · [Home](../../../README.md) · [What is evaluated, and in which dialect →](../evaluation/README.md)

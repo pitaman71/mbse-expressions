@@ -57,14 +57,14 @@ have it through the extension adjacency `standards` (`Expressions.Framework.HasS
 `Domains` reads stored domains and operations, `Standards` stored standards.
 
 Terms are built through mbse-schemas' builders, in a transaction, and read through its readers: a term's kind is the
-branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's slots (a term
+branch its dialect's `Term` holds, its properties the branch's members. Which properties are a kind's subterms (a term
 each: a property whose schema is `Expressions.Framework.Term` or a dialect's `Term`), its variadic arguments (each
 container of terms, or of value objects of terms, a mapping's pairs, read as their terms in turn; a kind may hold
 several, read in declaration order: a `solve ... before ...` constraint's two lists), its helpers (a value object that is not a
 term and not a pair, or a container of them, or of a union of them: a Python call's keywords, a comparison's links, a
 comprehension's `for` clauses) or its attributes (anything else) is read from the kind's schema. A helper is read as a
 `Part` among the attributes, its kind, its own attributes and how many arguments it holds, and its terms are the
-term's arguments too, after its slots and variadic arguments; so a form keeps a helper's structure in its attributes
+term's arguments too, after its subterms and variadic arguments; so a form keeps a helper's structure in its attributes
 and its terms in its arguments, and `make` writes it back. Where a kind holds several containers of terms, its form's
 attributes hold each one's size, as a `Part` named by the container (`Part("solve", {}, 2)`), so that its arguments are
 read back into the container each came from. What the framework needs to know beyond the schema, how each
@@ -154,7 +154,8 @@ def install(txn: Any) -> Any:
             # The union of the dialects' `Term`s: each dialect adds its own, `Expressions.<Dialect>.Term`, as the
             # branch named after it (`patterns`), by schema extension.
             lambda _: _.Term.name("Expressions.Framework.Term"),
-            # The shared kinds, which a dialect's `Term` lists where it reuses them; their slots hold any dialect's term.
+            # The shared kinds, which a dialect's `Term` lists where it reuses them; their subterms may be any dialect's
+            # terms.
             lambda _: _.Literal.name("Expressions.Framework.Literal").properties({  # a domain representation (PRI-023)
                 "value": S.OfAny(lambda a: a),  # any value; absent where its text is invalid
                 "text": S.OfStr,  # its source spelling, unvalidated
@@ -258,7 +259,7 @@ def _type_name(value: object) -> str:
 class Form:
     """A term's structure: its `kind` (its branch's tag), its `attributes` (its properties that are not terms, those set,
     by name, and, where it holds several containers of terms, each one's size, a `Part`) and its ordered `arguments`
-    (its slots, None where empty, then its variadic arguments, each container's in declaration order)."""
+    (its subterms, None where empty, then its variadic arguments, each container's in declaration order)."""
 
     kind: str
     attributes: Mapping[str, Any] = field(default_factory=dict)
@@ -269,7 +270,7 @@ class Form:
 class Part:
     """A helper a term holds, as its form's attributes read it: its `kind` (its branch's tag, where a union of helpers
     holds it, else its schema's name's last part, lowercased: `keyword`), its `attributes`, read as a term's are, and
-    its `size`, how many of the term's arguments are its terms (its slots, None where empty, its variadic arguments and
+    its `size`, how many of the term's arguments are its terms (its subterms, None where empty, its variadic arguments and
     its own helpers' terms). Where a kind holds several containers of terms, a part also gives each one's size: its
     kind the container's name, no attributes, its size how many terms it holds. Two parts are the same where their
     kinds, attributes and sizes are."""
@@ -308,16 +309,16 @@ def _is_helper(schema: Any) -> bool:
 
 
 def _parts(schema: Any) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
-    """A kind's schema's slots (properties holding a term), its variadic properties (each a container of terms, or of
+    """A kind's schema's subterms (properties holding a term), its variadic properties (each a container of terms, or of
     value objects of terms such as a mapping's pairs), and its attributes (the rest, its helpers among them), each in
     declaration order."""
     cached = _PARTS.get(id(schema))
     if cached is not None and cached[0] is schema:
         return cached[1][0]
-    slots, variadic, attributes, helpers = [], [], [], []
+    subterms, variadic, attributes, helpers = [], [], [], []
     for name, prop in schema.properties.items():
         if _holds_terms(prop.schema):
-            slots.append(name)
+            subterms.append(name)
         elif isinstance(prop.schema, Schemas.OfContainer.Data) and (
                 _holds_terms(prop.schema.element) or _is_pair(prop.schema.element)):
             variadic.append(name)
@@ -326,7 +327,7 @@ def _parts(schema: Any) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ..
             if _is_helper(prop.schema) or _is_pair(prop.schema) or (  # a value object of terms held alone: a helper
                     isinstance(prop.schema, Schemas.OfContainer.Data) and _is_helper(prop.schema.element)):
                 helpers.append(name)
-    parts = (tuple(slots), tuple(variadic), tuple(attributes))
+    parts = (tuple(subterms), tuple(variadic), tuple(attributes))
     _PARTS[id(schema)] = (schema, (parts, tuple(helpers)))
     return parts
 
@@ -438,8 +439,8 @@ def _scalar(record: Any, name: str) -> Any:
     return found[0] if found else None
 
 
-def _slot(record: Any, name: str) -> Any:
-    """The term a slot holds, or None."""
+def _subterm(record: Any, name: str) -> Any:
+    """The subterm a property holds, or None."""
     found: list[Any] = []
     getattr(record, name).as_value(lambda a: a.as_union(lambda u: found.append(u) or u))
     return found[0] if found and found[0].as_schema() is not None else None
@@ -454,7 +455,7 @@ def _variadic(record: Any, name: str) -> tuple[Any, ...]:
     found: list[Any] = []
     for _, element in pairs:
         if members:
-            element.as_object(lambda o: found.extend(_slot(o, member) for member in members) or o)
+            element.as_object(lambda o: found.extend(_subterm(o, member) for member in members) or o)
         else:
             element.as_union(lambda u: found.append(u) or u)
     return tuple(found)
@@ -508,14 +509,15 @@ def attributes_of(record: Any) -> dict[str, Any]:
 
 
 def _arguments(record: Any) -> tuple[Any, ...]:
-    """A record's own arguments: its slots, None where empty, then its variadic arguments, each container's in turn."""
-    slots, variadic, _ = _parts(record.as_schema())
-    return tuple(_slot(record, name) for name in slots) + tuple(
+    """A record's own arguments: its subterms, None where empty, then its variadic arguments, each container's in
+    turn."""
+    subterms, variadic, _ = _parts(record.as_schema())
+    return tuple(_subterm(record, name) for name in subterms) + tuple(
         argument for name in variadic for argument in _variadic(record, name))
 
 
 def arguments_of(record: Any) -> tuple[Any, ...]:
-    """A record's arguments: its slots, None where empty, then its variadic arguments, then its helpers' arguments, in
+    """A record's arguments: its subterms, None where empty, then its variadic arguments, then its helpers' arguments, in
     order."""
     found = _arguments(record)
     for name in _helpers(record.as_schema()):
@@ -533,14 +535,14 @@ def form(term_: Any) -> Form:
 @dataclass(frozen=True)
 class Node:
     """A term or a helper, its helpers nested: its `kind` (its tag, or its helper's), its `attributes` (scalars, and
-    containers of scalars, by name), its `slots` (its terms by property, None where empty), its `many` (its variadic
+    containers of scalars, by name), its `subterms` (its terms by property, None where empty), its `many` (its variadic
     arguments: terms, or a pair's members in turn, each container's in declaration order), its `helpers` (by property:
     a `Node`, or a tuple of them) and its `lists` (its variadic arguments by container: a `solve ... before ...`
     constraint's `solve` and `before`)."""
 
     kind: str
     attributes: Mapping[str, Any] = field(default_factory=dict)
-    slots: Mapping[str, Any] = field(default_factory=dict)
+    subterms: Mapping[str, Any] = field(default_factory=dict)
     many: tuple[Any, ...] = ()
     helpers: Mapping[str, Any] = field(default_factory=dict)
     lists: Mapping[str, tuple[Any, ...]] = field(default_factory=dict)
@@ -565,7 +567,7 @@ def _split(variadic: tuple[str, ...], attributes: Mapping[str, Any], terms: Any,
 
 def _nest(schema: Any, kind: str, attributes: Mapping[str, Any], arguments: tuple[Any, ...]) -> Node:
     """A record's `Node`, from its schema, its form's attributes and its arguments, as `form` reads them."""
-    slot_names, variadic, _ = _parts(schema)
+    subterm_names, variadic, _ = _parts(schema)
     helper_names = _helpers(schema)
     held = {name: attributes[name] for name in helper_names if name in attributes}
     size = sum(part.size for value in held.values() for part in (value if isinstance(value, tuple) else (value,)))
@@ -583,9 +585,9 @@ def _nest(schema: Any, kind: str, attributes: Mapping[str, Any], arguments: tupl
         helpers[name] = tuple(nodes) if isinstance(value, tuple) else nodes[0]
     sizes = set(variadic) if len(variadic) > 1 else set()  # the containers' sizes, which the lists give
     plain = {name: value for name, value in attributes.items() if name not in held and name not in sizes}
-    slots = dict(zip(slot_names, arguments))
-    many = tuple(arguments[len(slot_names):len(arguments) - size])
-    return Node(kind, plain, slots, many, helpers, _split(variadic, attributes, many, kind) if variadic else {})
+    subterms = dict(zip(subterm_names, arguments))
+    many = tuple(arguments[len(subterm_names):len(arguments) - size])
+    return Node(kind, plain, subterms, many, helpers, _split(variadic, attributes, many, kind) if variadic else {})
 
 
 def node(tag: str, record: Any) -> Node:
@@ -633,7 +635,7 @@ def walk(term_: Any) -> Iterator[Any]:
 
 def fold(term_: Any, function: Callable[[Any, list[Any]], Any]) -> Any:
     """Combines a term bottom-up: `function(node, results)` is called once per term, with the results for its arguments
-    (None for empty slots)."""
+    (None for empty subterms)."""
 
     def visit(node: Any) -> Any:
         return function(node, [None if a is None else visit(a) for a in form(node).arguments])
@@ -745,8 +747,8 @@ def _labelled(record: Any) -> list[tuple[str, str, Any]]:
     """A record's arguments, as `arguments_of` gives them, each with its label (`left`, `argument 0`, `key 1`,
     `keywords 0 value`) and its path (`left`, `argument`, `key`, `keywords.value`)."""
     schema = record.as_schema()
-    slots, variadic, _ = _parts(schema)
-    found = [(slot, slot, argument) for slot, argument in zip(slots, _arguments(record))]
+    subterms, variadic, _ = _parts(schema)
+    found = [(subterm, subterm, argument) for subterm, argument in zip(subterms, _arguments(record))]
     for name in variadic:  # one container's are `argument j`; each of several's, by its name: `solve j`
         members, word = _members(schema, name), name if len(variadic) > 1 else "argument"
         for j, argument in enumerate(_variadic(record, name)):
@@ -763,9 +765,9 @@ def _labelled(record: Any) -> list[tuple[str, str, Any]]:
 
 def _fill(r: Any, kind: str, attributes: Mapping[str, Any], arguments: list[Any]) -> Any:
     """Writes a record of a term or a helper (`kind`, for messages): its attributes, then its arguments, in order, to
-    its slots, its variadic property and its helpers, each helper's part taking its size."""
+    its subterms, its variadic property and its helpers, each helper's part taking its size."""
     schema = r.as_schema()
-    slots, variadic, names = _parts(schema)
+    subterms, variadic, names = _parts(schema)
     helpers = _helpers(schema)
     parts: list[tuple[str, Part]] = []
     for name, value in attributes.items():
@@ -781,14 +783,14 @@ def _fill(r: Any, kind: str, attributes: Mapping[str, Any], arguments: list[Any]
         else:
             getattr(r, name)(lambda p, value=value: p.as_scalar(value))
     held = sum(part.size for _, part in parts)
-    if len(arguments) < len(slots) + held or (not variadic and len(arguments) != len(slots) + held):
+    if len(arguments) < len(subterms) + held or (not variadic and len(arguments) != len(subterms) + held):
         least = "" if not variadic else "at least "
-        raise ValueError(f"{_article(kind)} takes {least}{len(slots) + held} arguments, got {len(arguments)}")
-    for name, argument in zip(slots, arguments):
+        raise ValueError(f"{_article(kind)} takes {least}{len(subterms) + held} arguments, got {len(arguments)}")
+    for name, argument in zip(subterms, arguments):
         if argument is not None:
             getattr(r, name)(argument)
     if variadic:
-        for name, rest in _split(variadic, attributes, arguments[len(slots):len(arguments) - held], kind).items():
+        for name, rest in _split(variadic, attributes, arguments[len(subterms):len(arguments) - held], kind).items():
             members = _members(schema, name)
             if members and len(rest) % len(members):
                 raise ValueError(f"{_article(kind)} takes its arguments in {len(members)}s "
@@ -845,9 +847,9 @@ class Kind:
     for an import, the names it binds, of its attributes (`names(attributes)`); its own problems (`check(record)`); the
     domain its own attributes give it, where they give one (`typed(record)`: C's type of a constant or a cast; a
     term carries no domain). The standards that have it are data, its schema's `standards` (`Framework.Standards`).
-    Where its role says too little: the slots that may be empty (`optional`, by path: a slot's name, a pair's member's,
+    Where its role says too little: the subterms that may be empty (`optional`, by path: a subterm's name, a pair's member's,
     or a helper property's name, a dot, and the path within the helper: `generators.target`; or, written `*.size`, a
-    helper's slot of that name at any depth, as a type name's declarators nest); the names each of its
+    helper's subterm of that name at any depth, as a type name's declarators nest); the names each of its
     arguments has bound, besides its scope's (`scopes(record)`, one set per argument: a comprehension's targets, a
     lambda's parameters); the operators it applies, where it applies several (`operators(attributes)`: a comparison
     chain's), each checked against its vocabulary, and the domain they give (`result(attributes, domains)`); an
@@ -914,9 +916,10 @@ INVALID_KINDS = {"error": Kind(INVALID, check=_invalid_check), "missing": Kind(I
 """The framework's kinds of invalid syntax, which every dialect's `Term` holds and every dialect reads."""
 
 
-SUBLANGUAGES = ("Types", "Patterns", "Assertions", "Constraints", "Preprocessor", "RegExp")
+SUBLANGUAGES = ("Types", "Patterns", "Assertions", "Constraints", "Preprocessor", "RegExp", "BRE", "ERE")
 """The sublanguages a family's dialects may be, by their own names (the namespace decision): a dialect whose own name is
-one of them is named by its family too (`SystemVerilog Types`), so that no two families' sublanguages share a name."""
+one of them is named by its family too (`SystemVerilog Types`, `POSIX BRE`), so that no two families' sublanguages
+share a name."""
 
 
 def dialect_name(path: str) -> str:
@@ -968,7 +971,7 @@ class Dialect:
     base's union, whose terms it reads. A dialect may read the terms of other dialects (`reads`, a callable giving
     them, called once when first needed, so that dialects that read each other are built without a cycle): a term of
     their `Term`s, by their kinds, and a term of its own `Term` of a kind they declare and its `Term` lists (one schema
-    a branch of every union whose positions hold it); any other dialect's term it refuses. It validates (`validate`),
+    a branch of the union of every subterm it may be); any other dialect's term it refuses. It validates (`validate`),
     infers (`infer`) and writes (`make`) terms of its kinds."""
 
     def __init__(self, path: str, kinds: Mapping[str, Kind], *, domain_of: Callable[[Any], Domains.Domain],
@@ -1057,7 +1060,7 @@ class Dialect:
 
     def make(self, form_: Form) -> Writer:
         """The writer of a term with this form: its attributes written as scalars (a container of scalars as a
-        container, a helper's `Part` as the helper), its arguments (specs: terms, writers, native values) to its slots
+        container, a helper's `Part` as the helper), its arguments (specs: terms, writers, native values) to its subterms
         in order, then to its variadic properties, each the size its part gives where it has several, then to its
         helpers, each its part's size. Its kind is one this
         dialect reads (`kind_named`), written where a union holds it."""
@@ -1189,7 +1192,7 @@ class Dialect:
             item = Domains.Anything if signature is None else signature.items(collection)  # type: ignore[attr-defined]
             inner = {**environment, name_of(node): item}
             domains = [collection, *(self._infer(argument, inner) for argument in arguments[1:])]
-        else:  # an empty slot, where it may be empty, is not known
+        else:  # an empty subterm, where it may be empty, is not known
             domains = [Domains.Anything if argument is None else self._infer(argument, scope)
                        for argument, scope in zip(arguments, environments)]
         if kind.result is not None:  # several operators, which the kind applies itself

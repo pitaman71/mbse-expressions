@@ -9,8 +9,8 @@ expressions"), named `C Types` (`Terms.dialect_name`), its tag `c_types`. Its te
 inherits the adjacency `abi`, through which its type names are read as C's are (`Domains.Types`). Its kinds, each a
 value object `Expressions.C.Types.<Kind>`, named as mbse-programs names them, lowercased as branch tags:
 
-- `typeid`, a type name: its `specifiers` and its abstract `declarator`. C's `Term` lists it too, for the positions
-  that hold an expression or a type alike (`sizeof(int)`, `_Generic`'s controlling operand, `offsetof`'s first
+- `typeid`, a type name: its `specifiers` and its abstract `declarator`. C's `Term` lists it too, for the subterms
+  that may be an expression or a type alike (`sizeof(int)`, `_Generic`'s controlling operand, `offsetof`'s first
   argument); a cast's, a compound literal's and a generic association's type hold this dialect's `Term`.
 - `enumerator`, an enumeration's enumerator (`name`, an identifier, `attributes`, and its `value`, a C term), which an
   enumeration's body holds as data: mbse-programs models it as nodes (`EnumeratorList` of `Enumerator`s, directives
@@ -230,7 +230,7 @@ def define(txn: Any) -> Any:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects whose terms its positions hold, imported when first needed: C's, whose terms a type name holds, and
+    """The dialects whose terms are its subterms, imported when first needed: C's, whose terms a type name holds, and
     C Preprocessor's, whose directives an enumeration's body holds."""
     from ..Expressions import Expressions as C
     from ..Preprocessor import Expressions as CPreprocessor

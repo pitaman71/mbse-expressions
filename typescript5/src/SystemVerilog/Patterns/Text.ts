@@ -16,7 +16,7 @@ export { ToText } from "../Expressions/Text.js";
 
 /** `tagged member pattern`, or `tagged member` where it has no pattern. */
 function tagged(p: Printer, node: F.Node): string {
-  const pattern = node.slots.get("pattern") ?? null;
+  const pattern = node.subterms.get("pattern") ?? null;
   return `tagged ${p.spelling(node.helpers.get("member"))}${pattern !== null ? ` ${p.text(pattern)}` : ""}`;
 }
 
@@ -26,8 +26,8 @@ export const TEXTS: ReadonlyMap<string, (p: Printer, n: F.Node) => string> = new
   [P.WILDCARDPATTERN, () => ".*"],
   [P.TAGGEDPATTERN, tagged],
   [P.STRUCTUREPATTERN, (p, n) => "'{" + n.many.map((item) => p.text(item)).join(", ") + "}"],
-  [P.PATTERNMEMBER, (p, n) => `${p.spelling(n.helpers.get("name"))}: ${p.text(n.slots.get("pattern"))}`],
-  [P.PARENTHESIZEDPATTERN, (p, n) => `(${p.text(n.slots.get("pattern"))})`],
+  [P.PATTERNMEMBER, (p, n) => `${p.spelling(n.helpers.get("name"))}: ${p.text(n.subterms.get("pattern"))}`],
+  [P.PARENTHESIZEDPATTERN, (p, n) => `(${p.text(n.subterms.get("pattern"))})`],
 ]);
 
 /** Each of its kinds' precedence, where it is not a primary's: none. */
