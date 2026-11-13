@@ -14,8 +14,7 @@ names as one to avoid ([QUA-003: no second-order inventions](https://github.com/
 This proposes the published standard to model in its place, ISO/IEC 11404, and asks what only the user can decide.
 It builds nothing.
 
-It starts from [the evaluation inventory](https://github.com/pitaman71/mbse-expressions/blob/82be48b/docs/proposals/dialects/README.md#evaluation-what-is-refused-and-why)
-(unmerged, branch `evaluation-inventory`): of 373 kinds of term in 25 dialects, 78 are evaluated and 295 refused; of
+It starts from [the evaluation inventory](../dialects/README.md#evaluation-what-is-refused-and-why): of 373 kinds of term in 25 dialects, 78 are evaluated and 295 refused; of
 those, 79 are gaps a statement-free evaluator should close, 161 have no value of their own, 6 wait on
 [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)
 or constraint resolution, and 49 need what only mbse-programs or a simulator has. Its build partition, one evaluator's
@@ -198,6 +197,36 @@ The user's answers to section 5, quoted:
   left in the residual. "agreed no evaluator".
 
 Still open: question 7, to revisit; and 11404's characterizing operations, named here from memory of the standard, to check against its text before they are built.
+
+## Decided: simplification, not evaluation (2026-11-13)
+
+After the checks of 11404's operations found that integer division and remainder have no characterizing operation, the
+user first said: "The insinuation that we need a div operation hints at two dialects being overlaid. Our first priority
+is to build for each dialect completely self-contained evaluation of each expresions that do not involve other dialects,
+then evaluation of expressions that involve sub-dialects. Evaluation of expressions that contain statements, type
+algebra, or which transpile to other dialects is deferred." Then, asked how disruptive it would be to build only
+simplification, the user decided the rules and the capabilities, which supersede section 5's answers wherever they
+differ:
+
+- **The rules**, [PRI-046: simplification, not
+  evaluation](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-046): "dialects implement a
+  simplification procedure"; "dialects do not implement a simplification procedure", read as an evaluation procedure,
+  for the user to confirm; "as expressions are value objects, and value objects are immutable, simplification is
+  immplemented as recursive substitution"; "if simplification returns a literal as the simplified root, that is
+  equivalent to successful evaluation".
+- **In plan**, [CAP-295](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-295) to
+  [CAP-299](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-299): simplification of
+  single-dialect expressions with only literal leaf terms; with leaf terms mixing literals, arguments or variables, and
+  parameters; across binding states, fully bound, partially bound and fully unbound; expressions involving type
+  parameters, but not type algebra; expressions involving a sub-dialect.
+- **Deferred**, [CAP-300](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-300) to
+  [CAP-302](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-302): type algebra; terms
+  whose evaluation delegates to a surrogate dialect (question 3's (b), the lowering into the standard dialects, with
+  questions 4, 5 and 7, and its (c)); statements.
+- **So**: question 1 reads as each dialect simplifying its own expressions completely; question 6, a residual in place
+  of a refusal, is the rule itself; questions 2 and 8 stand. [The
+  inventory](../dialects/README.md#evaluation-what-is-refused-and-why)'s class (a) is read as simplification: a kind
+  whose value has no literal form (a closure, an object) stays in the residual.
 
 ## 6. What it would add or supersede
 
