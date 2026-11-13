@@ -9,7 +9,7 @@ dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules). Its terms are 
 (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`), with mbse-programs' names, lowercased as branch tags
 (`binaryexpression`), and its properties in source order (`template_keyword`, `trailing_comma`), each a value object
 `Expressions.C.Expressions.<Kind>`; a property only C++ has is not C's (`Cpp` defines its own copy of each kind the two
-share, holding C++'s terms). A name is as the grammar makes it (the dialects proposal, Decided): where mbse-programs
+share, holding C++'s terms). A name is as the grammar makes it (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A name is whatever the language's own grammar makes it"): where mbse-programs
 holds a `Name`, C holds its `Name` union, whose one branch is `identifier` (`Expressions.C.Expressions.Identifier`, its
 `spelling`), C's one name; where it holds an `Identifier`, an `Identifier`; where it holds a `str` (an attribute's
 name), a `str`. A term carries no domain. Its kinds:
@@ -35,7 +35,7 @@ name), a `str`. A term carries no domain. Its kinds:
 - Initializers: `initializerlist` (`{items}`, with `trailing_comma`), whose items may be `designatedinitializer`s
   (`.x = 1`, `[2].y = 3`).
 - GNU extensions, outside every standard as mbse-programs marks them (`EXTENSIONS`): `statementexpression` (`({ ...
-  })`, whose body of statements is not part of the term: the dialects proposal, Decided, 5, "(i)") and
+  })`, whose body of statements is not part of the term: mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not part of the term") and
   `extensionexpression` (`__extension__ operand`).
 - C Types' `typeid`, a type name, where a subterm may be an expression or a type alike (`sizeof(int)`, `_Generic`'s
   controlling operand, `offsetof(struct s, m)`'s first argument), and C Preprocessor's `definedexpression`,
@@ -43,7 +43,7 @@ name), a `str`. A term carries no domain. Its kinds:
   dialect's `Term` lists ("(b)").
 - The framework's kinds of invalid syntax, `error` and `missing`.
 
-Its sublanguages are dialects of their own, which it reads (`reads`; the dialects proposal, Retrofit's design): `C
+Its sublanguages are dialects of their own, which it reads (`reads`; mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `C
 Types`, C's type names (`Expressions.C.Types.Term`), which a cast's, a compound literal's and a generic association's
 `type` hold, a type name's specifiers, declarators, parameters and attribute specifiers its helpers, as no expression
 holds them; and `C Preprocessor`, the directives C and C++ share. `Expressions.C.Expressions.Pattern` is its union for
@@ -439,8 +439,7 @@ def _native(value: Any) -> Writer | None:
 
 
 def _reads() -> tuple[F.Dialect, ...]:
-    """The dialects of its family whose terms are to be its subterms, imported when first needed (the dialects
-    proposal, Retrofit's design): `C Types` and `C Preprocessor`."""
+    """The dialects of its family whose terms are to be its subterms, imported when first needed (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `C Types` and `C Preprocessor`."""
     from ..Preprocessor import Expressions as CPreprocessor
     from ..Types import Expressions as CTypes
     return CTypes.DIALECT, CPreprocessor.DIALECT

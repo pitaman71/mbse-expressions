@@ -4,7 +4,7 @@
  * C++'s `std::regex` reads them under its `extended`, `awk` and `egrep` grammars ([re.synopt]); awk's escapes are a way of
  * printing an ERE's characters (`Text.text`'s `awk`), not a grammar of their own.
  *
- * It is a dialect of the POSIX family (the dialects proposal, Decided for stage 6: "if the standard says it's a
+ * It is a dialect of the POSIX family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "if the standard says it's a
  * sublanguage then it's definitely at least a separate dialect"; the user, 2026-11-12: "yes to a new posix family"),
  * named `POSIX ERE` (`Terms.dialectName`), its tag `posix_ere`. Its terms are values of its `Term`,
  * `Expressions.POSIX.ERE.Term`, the branch `posix_ere` of `Expressions.Framework.Term`; its holder,

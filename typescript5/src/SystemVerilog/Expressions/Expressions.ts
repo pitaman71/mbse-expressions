@@ -5,7 +5,7 @@
  * The dialect is complete over SystemVerilog's expression syntax (mbse-basis [CAP-231: the SystemVerilog expression
  * dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md), by [CAP-226: complete expression
  * dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md)'s rules), its sublanguages dialects of their own in its family
- * (the dialects proposal, Decided for stage 6): `Types` (data types), `Patterns` (`matches`' patterns), `Assertions`
+ * (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6): `Types` (data types), `Patterns` (`matches`' patterns), `Assertions`
  * (sequences and properties), `Constraints` (constraint blocks) and `Preprocessor` (compiler directives and macro usages),
  * each at `mbse.Expressions.SystemVerilog.<Dialect>`. Its terms are values of its `Term`,
  * `Expressions.SystemVerilog.Expressions.Term`, the branch `systemverilog` of `Expressions.Framework.Term`, which `install`

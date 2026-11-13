@@ -3,8 +3,7 @@
 A dialect owns each edition it covers by its designation, as its standards body writes it (`ISO/IEC 9899:2011`,
 `IEEE Std 754-2019`), through `Expressions.Framework.Covers`; an edition is an `Expressions.Framework.Standard`, holding
 its formal reference's parts (its `bodies` by reverse-domain name, one or a joint pair; its `number`; its `revision`,
-a year, an edition or a version) and its common `names` (`C11`), so that a reference of either kind finds it (the
-dialects proposal's Decided, Q10: "If we treat standards as tags, we could support both"). Each kind's schema records
+a year, an edition or a version) and its common `names` (`C11`), so that a reference of either kind finds it (mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md#decided), "Standards as tags", Q10: "If we treat standards as tags, we could support both"). Each kind's schema records
 the editions that have it (`Expressions.Framework.HasStandard`); a kind none has is an extension, or invalid syntax.
 See mbse-basis [CAP-268: standards as tagged data](mbse:mbse-basis/docs/capabilities/CAP-268.md).
 

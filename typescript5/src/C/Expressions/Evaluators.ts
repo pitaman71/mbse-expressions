@@ -33,7 +33,7 @@
  *   calls a function the scope provides, by its name, and nothing else.
  *
  * A literal's type is what its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's
- * `int` and C++'s `char`), else its value's. Evaluation stays shallow (the dialects proposal, Decided, 8): `EVALUATED`
+ * `int` and C++'s `char`), else its value's. Evaluation stays shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): `EVALUATED`
  * names the kinds C evaluated before it was complete, in their complete shapes; any other kind throws
  * `NotImplementedError` by name ("C sizeofexpression is not evaluated"), and so does what an evaluated kind holds
  * beyond its former shape: an operator its vocabulary has but no rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*'

@@ -16,7 +16,7 @@ each with its `TEXTS` (a kind's tag to the function that writes it, given the pr
 text and its precedence, on this module's scale).
 
 `FromText` is the Python implementation's alone (mbse-expressions' EQUIVALENCE.md): Python's own parser reads the text,
-until mbse-programs reads `Python3` (the dialects proposal, Decided, 6). An f-string's parts are located as Python 3.12
+until mbse-programs reads `Python3` (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'"). An f-string's parts are located as Python 3.12
 and later locate them."""
 
 from __future__ import annotations

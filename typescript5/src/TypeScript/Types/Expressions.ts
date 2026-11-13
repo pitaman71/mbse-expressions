@@ -3,8 +3,8 @@
  * them, the sublanguage of type expressions that `as`, `satisfies`, `<T>x`, an annotation, a type argument and a type
  * parameter's constraint and default hold.
  *
- * It is a dialect of the TypeScript family (the dialects proposal, Decided for stage 6: "most languages will have a
- * dialect for type expressions"; its Retrofit's design), named `TypeScript Types` (`Terms.dialectName`), its tag
+ * It is a dialect of the TypeScript family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "most languages will have a
+ * dialect for type expressions"; mbse-basis [CAP-277: TypeScript's types and destructuring patterns as data](mbse:mbse-basis/docs/capabilities/CAP-277.md)), named `TypeScript Types` (`Terms.dialectName`), its tag
  * `typescript_types`. Its terms are values of its `Term`, `Expressions.TypeScript.Types.Term`, the branch
  * `typescript_types` of `Expressions.Framework.Term`, which was `TypeScript5`'s `Type` union, its 45 branches unchanged,
  * so that a type's data, written by branch tags, is as it was. Its own kinds are mbse-programs' 37 type nodes
@@ -27,8 +27,7 @@
  *
  * In a type, an identifier names a type, or a value whose type `typeof` reads, which statements a term does not model
  * declare (an interface, an alias, an import): its `DIALECT` reads `identifier` as a reference that is not lexical,
- * never reported unbound *(agent)*. Its binders refine the framework's `Let` (the dialects proposal, Decided for stage
- * 6, Q8, "(a)"): `tsmappedtype`, its constraint Let's `value` and its type Let's `body`, binding its `key` in its
+ * never reported unbound *(agent)*. Its binders refine the framework's `Let` (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Binding kinds refine `Let`", "(a)"): `tsmappedtype`, its constraint Let's `value` and its type Let's `body`, binding its `key` in its
  * `nameType` and its `body`; and `tsfunctiontype` and `tsconstructortype`, Let's properties unset, binding their type
  * parameters and parameters within them. A `tsconditionaltype` binds its `infer` declarations within its `trueType` by
  * its scopes, and does not refine `Let` *(agent)*; a signature binds its parameters through the type literal that holds

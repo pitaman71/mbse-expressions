@@ -2,7 +2,7 @@
  * Expressions of the SystemVerilog Assertions dialect: SystemVerilog Assertions' sequences and properties (IEEE 1800
  * 16.7 to 16.12), as mbse-programs has them.
  *
- * It is a dialect of the SystemVerilog family (the dialects proposal, Decided for stage 6: "if the standard says it's a
+ * It is a dialect of the SystemVerilog family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "if the standard says it's a
  * sublanguage then it's definitely at least a separate dialect"), named `SystemVerilog Assertions` (`Terms.dialect_name`),
  * its tag `systemverilog_assertions`. Its terms are values of its `Term`, `Expressions.SystemVerilog.Assertions.Term`, the
  * branch `systemverilog_assertions` of `Expressions.Framework.Term`; a call's arguments, a named connection's value and
@@ -38,7 +38,7 @@
  * and `caseproperty` arrived in IEEE 1800-2009). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
  * writes its kinds as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches them to it, by
  * IEEE 1800's precedence of sequence and property operators (Table 16-3). The evaluator refuses each of its kinds by name
- * (the dialects proposal, Q11). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
+ * (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.repetitionsequence((r) => r.sequence(a)
  * .operator("*").count(two))`.
  */

@@ -11,7 +11,7 @@
  * patterns as BREs, or as EREs with `-E` (XCU grep), a newline-separated list of them (its `pattern_list`); awk EREs,
  * "except that it shall allow the use of C-language conventions for escaping special characters" (XCU awk, Regular
  * Expressions), which changes how a character is spelled, not the grammar. So the two grammars are the family's
- * dialects *(agent)* (the dialects proposal, Decided for stage 6: "if the standard says it's a sublanguage then it's
+ * dialects *(agent)* (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "if the standard says it's a sublanguage then it's
  * definitely at least a separate dialect"), grep's list of patterns a kind of each, `patternlist`, and awk's escapes a
  * way of printing an ERE's characters (`Text`'s `awk`).
  *
@@ -98,7 +98,7 @@ export function tags(which: string): readonly string[] {
 }
 
 /** What each kind's terms may be, by property, besides invalid syntax: XBD 9.5's structure, which the schema, every
- * property holding its `Term`, leaves to validation (the dialects proposal, Decided, 4). */
+ * property holding its `Term`, leaves to validation (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The framework's kinds with subterms stay shared"). */
 export function holds(which: string): ReadonlyMap<string, ReadonlyMap<string, readonly string[]>> {
   const atoms = [CAPTURINGGROUP, QUANTIFIER, CHARACTERCLASS, CHARACTERSET, CHARACTER, ASSERTION,
     ...(which === BRE ? [BACKREFERENCE] : [])];

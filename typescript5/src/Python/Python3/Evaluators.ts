@@ -20,7 +20,7 @@
  * - Attributes whose names start with `_` are refused.
  * - A call may call only a builtin of the scope, a value of `variables`, or a function of an allowed module.
  *
- * The evaluator is shallow (the dialects proposal, Decided, 8): it evaluates the kinds Python's constraints were written
+ * The evaluator is shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): it evaluates the kinds Python's constraints were written
  * with before the dialect was complete (`EVALUATED`), in their complete shapes: a comparison chain, `and` and `or` of
  * any number of values, a call of positional arguments, a subscript, a generator expression of any number of `for`
  * clauses over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), a

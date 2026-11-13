@@ -3,8 +3,8 @@
  * a regular expression literal holds (12.9.5), as @eslint-community/regexpp reads them, the parser ESLint and
  * typescript-eslint read a regular expression's body with, as typescript-estree reads TypeScript's.
  *
- * It is a dialect of the TypeScript family (the dialects proposal, Decided for stage 6: "constraints, regexes and
- * patterns are expression dialects"; its Retrofit's design; the user's "(b)" on which regular expressions are
+ * It is a dialect of the TypeScript family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "constraints, regexes and
+ * patterns are expression dialects"; mbse-basis [CAP-281: Python's, ECMAScript's and C++'s regular expressions as data](mbse:mbse-basis/docs/capabilities/CAP-281.md); the user's "(b)" on which regular expressions are
  * dialects), named `TypeScript RegExp` (`Terms.dialectName`), its tag `typescript_regexp`. Its terms are values of its
  * `Term`, `Expressions.TypeScript.RegExp.Term`, the branch `typescript_regexp` of `Expressions.Framework.Term`.
  * mbse-programs has no kinds for a regular expression's body, so its kinds are regexpp's node types
@@ -25,16 +25,16 @@
  * (`HELPERS`). What regexpp derives from a tree rather than reads (a node's `parent`, `start` and `end`, a group's
  * `references`, a backreference's `resolved` and `ambiguous`) is not kept *(agent)*. A node's spelling, regexpp's `raw`,
  * is kept where the tree does not give it, as a literal's `text` is (mbse-basis [PRI-023: domain
- * representations](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-023); the dialects proposal, Decided, 2, "concrete syntax
+ * representations](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-023); mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "mbse-programs' kinds, names and shapes", "concrete syntax
  * kept, so source prints back as written"): a leaf's, `character`'s, `characterset`'s and `backreference`'s, `Flags`'
  * and `ModifierFlags`', and a quantifier's, whose `{0,}` its bounds do not tell from `*` *(agent)*. A quantifier's `max`
  * is absent where it is unbounded, regexpp's `Infinity` *(agent)*.
  *
  * A regular expression binds nothing a term scopes: a named group's name is a label within its pattern, which a
- * backreference resolves, so none of its kinds refines `Let`, as the dialects proposal's Retrofit's design has it. It
+ * backreference resolves, so none of its kinds refines `Let`, as mbse-basis [CAP-279: names an expression binds found alike in every language](mbse:mbse-basis/docs/capabilities/CAP-279.md) has it. It
  * holds no other dialect's terms, and none of its kinds is evaluated (Q11): each is refused by name ("TypeScript RegExp
  * character is not evaluated"). Which kinds a mode allows (the `v` flag's classes in a literal without it), like which
- * terms a subterm may be, is a constraint (the dialects proposal, Decided, 4), not its checks'.
+ * terms a subterm may be, is a constraint (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The framework's kinds with subterms stay shared"), not its checks'.
  *
  * Where it is held: `TypeScript5`'s `constant`, a regular expression literal, keeps its `pattern` and `flags` as written
  * and holds its `regexp`, the `regexpliteral` they encode, absent where they do not parse (PRI-023); nothing else holds
@@ -374,8 +374,7 @@ function application(tag: string): F.Kind {
   return new F.Kind(F.APPLICATION, { signature: new FD.Opaque(), check: check(tag), optional: ["modifiers"] });
 }
 
-/** The dialects of its family, whose terms it reads, as each of them reads its (the dialects proposal, Retrofit's
- * design), read when first needed: `TypeScript5`, `TypeScript Types` and `TypeScript Patterns`. None of its kinds holds
+/** The dialects of its family, whose terms it reads, as each of them reads its (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"), read when first needed: `TypeScript5`, `TypeScript Types` and `TypeScript Patterns`. None of its kinds holds
  * their terms. */
 function reads(): readonly F.Dialect[] {
   return [TypeScript5.DIALECT, TypeScriptTypes.DIALECT, TypeScriptPatterns.DIALECT];

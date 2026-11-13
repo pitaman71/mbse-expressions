@@ -1,7 +1,7 @@
 """Expressions of the SystemVerilog Constraints dialect: the constraints and distributions of constraint blocks (IEEE
 1800 18.5), as mbse-programs has them.
 
-It is a dialect of the SystemVerilog family (the dialects proposal, Decided for stage 6: "if the standard says it's a
+It is a dialect of the SystemVerilog family (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), stage 6: "if the standard says it's a
 sublanguage then it's definitely at least a separate dialect"), named `SystemVerilog Constraints`
 (`Terms.dialect_name`), its tag `systemverilog_constraints`. Its terms are values of its `Term`,
 `Expressions.SystemVerilog.Constraints.Term`, the branch `systemverilog_constraints` of `Expressions.Framework.Term`; a
