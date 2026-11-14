@@ -436,7 +436,7 @@ export function define(txn: any): any {
     ])]))]);
 }
 
-/** The builtins an expression may use without importing them: the default builtins of a scope (see `Evaluators`). */
+/** The builtins an expression may use without importing them: the default builtins of a scope (see `Simplifiers`). */
 export const BUILTINS: ReadonlySet<string> = new Set([
   "abs", "all", "any", "bool", "float", "getattr", "hasattr", "int", "len", "max", "min", "round", "set", "str", "sum"]);
 

@@ -1,16 +1,18 @@
 /**
- * Evaluators of the MATLAB dialect: compute an expression by MATLAB's rules for scalars.
+ * Simplifiers of the MATLAB dialect: simplify an expression by MATLAB's rules for scalars.
  *
- * `Evaluators.OfAny(term, scope)` evaluates a term (or anything `Terms.term` reads one from, such as an `Expression`)
+ * `Simplifiers.OfAny(term, scope)` simplifies a term (or anything `Terms.term` reads one from, such as an `Expression`)
  * with variables bound to numbers, logicals, strings and structs (mappings, or data objects, read through mbse-schemas'
- * readers). Values are `number` (double), `boolean` (logical) and
- * `string` (string scalar). MATLAB's rules apply, not Patterns':
+ * readers), folding what they determine into the constant of its value, a double's, a logical's or a string's, or an
+ * array's concatenation of its elements' constants (`[1, 2]`); a struct has none, and its subterm stays; see
+ * `Framework/Simplifiers`. Values are `number` (double), `boolean` (logical) and `string` (string scalar). MATLAB's
+ * rules apply, not Patterns':
  *
  * - Two-valued logic: `&&` and `||` short-circuit, and take numbers or logicals (nonzero is true; NaN throws).
  * - Numbers and logicals convert into each other: `true + 1` is 2, and `1 == true` is true. A comparison of a string
  *   with a number compares the string with the number's text, as MATLAB converts it. `+` with a string concatenates.
- * - There is no unknown: reading a field a struct does not have throws, as `isfield` exists to avoid. Unbound
- *   variables throw too, with MATLAB's messages.
+ * - There is no unknown: reading a field a struct does not have throws, as `isfield` exists to avoid. A variable, a
+ *   function or an import the scope does not provide stays in the residual.
  * - The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
  *   53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
  * - An array is a JavaScript array: a container property's values, a variable's array, or a concatenation `[a, b]`, the
@@ -32,8 +34,7 @@
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
 
-import { ImportError, NameError } from "../../Framework/Errors.js";
-import * as F from "../../Framework/Evaluators.js";
+import * as F from "../../Framework/Simplifiers.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
@@ -276,10 +277,6 @@ function sum(values: number[]): number {
   return total;
 }
 
-function unrecognized(name: string): NameError {
-  return new NameError(`Unrecognized function or variable '${name}'.`);
-}
-
 function split(name: string): [string, string] {
   const dot = name.lastIndexOf(".");
   return dot < 0 ? ["", name] : [name.slice(0, dot), name.slice(dot + 1)];
@@ -303,10 +300,6 @@ export class Scope extends S.Variables {
     return toDouble(super.lookup(reference)); // numbers are doubles
   }
 
-  override unbound(reference: any): never {
-    throw unrecognized(Terms.nameOf(reference) as string);
-  }
-
   override enter(declaration: any): Scope {
     const declared = Terms.nameOf(declaration) as string;
     const [pkg, name] = split(declared);
@@ -314,7 +307,7 @@ export class Scope extends S.Variables {
     let found: ReadonlyMap<string, Fn>;
     if (name === "*" && this.packages.has(pkg)) found = functions;
     else if (functions.has(name)) found = new Map([[name, functions.get(name) as Fn]]);
-    else throw new ImportError(`Import argument '${declared}' cannot be found or cannot be imported.`);
+    else throw new S.Unbound(declared);
     const inner = this.copy();
     inner.imported = new Map([...this.imported, ...found]);
     return inner;
@@ -326,7 +319,7 @@ export class Scope extends S.Variables {
     const [pkg, short] = split(name);
     const found = this.packages.get(pkg)?.get(short);
     if (found !== undefined) return found;
-    throw unrecognized(name);
+    throw new S.Unbound(name);
   }
 }
 
@@ -335,7 +328,8 @@ function extension(name: string, args: F.Thunk[], _node: unknown, scope: Scope):
 }
 
 /** The interpreter of the MATLAB dialect. */
-export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
+/** The folding rules of the MATLAB dialect. */
+export const RULES = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
   ["binary", new Map<string, F.Implementation>([
     ["==", compare("==", (o) => o === 0)], ["~=", compare("~=", (o) => o !== 0)],
     ["<", compare("<", (o) => o < 0)], ["<=", compare("<=", (o) => o <= 0)],
@@ -359,7 +353,19 @@ export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string
   ["list", concatenate],
 ]), { literal: toDouble, scope: (variables) => new Scope(variables), extension });
 
-/** The value of a term in `scope`, or with the variables in an object bound. */
-export function OfAny(expression: unknown, scope: Scope | S.Bindings | null = null): unknown {
-  return INTERPRETER.run(expression, scope);
+const LITERAL = F.natives(Expressions.DIALECT);
+
+/** An array's concatenation of its elements' constants; null where an element has none. */
+function display(value: unknown): unknown {
+  if (!Array.isArray(value)) return null;
+  const elements = value.map(LITERAL);
+  return elements.includes(null) ? null : Expressions.array(...elements);
+}
+
+/** The simplifier of the MATLAB dialect. */
+export const SIMPLIFIER = new F.Simplifier(RULES, { literal: LITERAL, display });
+
+/** The simplification of a term in `scope`, or with the variables in an object bound. */
+export function OfAny(expression: unknown, scope: Scope | S.Bindings | null = null): F.Simplified {
+  return SIMPLIFIER.run(expression, scope);
 }
