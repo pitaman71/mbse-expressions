@@ -2069,7 +2069,8 @@ every family's folding rules fill, evaluation retired as a public procedure.
      a container of values with literals is written as its display where the dialect has one (Python3's list and dict,
      MATLAB's concatenation), not a literal. Where the scope does not resolve a reference the subterm is rebuilt from
      its simplified arguments, each in the scope its names are bound in: a let's of a known value bound to it, any
-     other hidden (`Symbolics.UNKNOWN`), an import's entered where the scope provides it. A let whose body no longer
+     other hidden (`Symbolics.UNKNOWN`), an import's among them: its root not having folded, its module is not entered
+     again. A let whose body no longer
      refers to its name is its body. A subterm unchanged is kept as read, not rewritten.
 328. **No refusals** *(agent)*: a kind or an operator a dialect has no rule for, invalid syntax (`error`, `missing`, of
      class `b`) and a kind of another dialect of its family stay in the residual, named; a subterm of a term the rules

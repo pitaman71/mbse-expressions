@@ -182,15 +182,15 @@ class Simplifier:
     def reduce(self, node: Any, scope: Any, residues: dict[Residue, None], root: bool = False) -> Result:
         """A subterm simplified in `scope`, noting in `residues` each subterm its dialect has no rule for."""
         tag, record, kind = self.dialect.kind(node)
-        computed: tuple[Any, ...] = ()
+        known, value = False, None  # a value its rules computed, with no literal
         if self._folds is None or self._folds(node, root):
             try:
-                value = self.rules.evaluate(node, scope)
+                value, known = self.rules.evaluate(node, scope), True
             except Symbolics.Unbound:
                 pass
             except NoRule as refusal:
-                self._note(refusal, node, residues)
-            else:
+                self._note(refusal, residues)
+            if known:
                 if kind.role == Terms.LITERAL:  # already a literal: kept as written
                     return Result(node, True, value, True, changed=False)
                 written = self._literal(value)
@@ -199,36 +199,29 @@ class Simplifier:
                 shown = self._display(value) if self._display is not None else None
                 if shown is not None:  # a container of values that have literals: its display
                     return Result(shown, True, value)
-                computed = (value,)
         if kind.role in (Terms.LITERAL, Terms.REFERENCE, Terms.INVALID) and not Terms.arguments_of(record):
             free = frozenset(Symbolics.free(node, self.dialect))
-            return Result(node, bool(computed), computed[0] if computed else None, free=free, changed=False)
+            return Result(node, known, value, free=free, changed=False)
         # a subterm of a term its rules computed (a cast's type) needs no rule of its own: what it lacks is not noted
-        return self._rebuild(node, record, kind, scope, {} if computed else residues, computed)
+        return self._rebuild(node, record, kind, scope, {} if known else residues, known, value)
 
     def _rebuild(self, node: Any, record: Any, kind: Terms.Kind, scope: Any, residues: dict[Residue, None],
-                 computed: tuple[Any, ...]) -> Result:
+                 known: bool, value: Any) -> Result:
         """A term rebuilt from its simplified arguments, each in the scope its names are bound in: a let's of a known
-        value bound to it, any other name hidden (`Symbolics.UNKNOWN`); an import's in the scope it declares, where
-        the scope provides it. A let whose body no longer refers to its name is its body."""
+        value bound to it, any other name hidden (`Symbolics.UNKNOWN`), an import's among them (its root having not
+        folded, its module is not entered again). A let whose body no longer refers to its name is its body."""
         arguments = Terms.arguments_of(record)
         bound = Symbolics.scopes(node, self.dialect)
         lets = Terms._lets(kind, record)
         results: list[Result | None] = []
-        inner = scope
-        if kind.role == Terms.IMPORT:
-            try:
-                inner = scope.enter(node)
-            except Symbolics.Unbound:
-                inner = self._hide(scope, bound[0] if bound else frozenset())
         for i, (argument, names) in enumerate(zip(arguments, bound)):
             if argument is None:
                 results.append(None)
                 continue
-            within = inner
+            within = scope
             if lets and i > 0 and results[0] is not None and results[0].known:
                 within = scope.bind(Terms.name_of(node), results[0].value)
-            elif names and kind.role != Terms.IMPORT:
+            elif names:
                 within = self._hide(scope, names)
             results.append(self.reduce(argument, within, residues))
         name = Terms.name_of(node)
@@ -238,7 +231,6 @@ class Simplifier:
         simplified = self._simplify(node, [r for r in results if r is not None]) if self._simplify else None
         if simplified is not None:
             return simplified
-        known, value = bool(computed), computed[0] if computed else None
         if not any(r is not None and r.changed for r in results):
             return Result(node, known, value, free=free, changed=False)
         form = Terms.form(node)
@@ -253,8 +245,8 @@ class Simplifier:
             scope = scope.bind(name, Symbolics.UNKNOWN)
         return scope
 
-    def _note(self, refusal: NoRule, node: Any, residues: dict[Residue, None]) -> None:
-        kind, what = refusal.kind or Terms.kind_of(node)[0], refusal.what
+    def _note(self, refusal: NoRule, residues: dict[Residue, None]) -> None:
+        kind, what = refusal.kind or "", refusal.what  # its kind set by the rules, for the term they have no rule for
         residues.setdefault(Residue(refusal.dialect, kind, what, self.category(refusal.dialect, what, kind)), None)
 
 

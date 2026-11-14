@@ -181,52 +181,41 @@ export class Simplifier {
   /** A subterm simplified in `scope`, noting in `residues` each subterm its dialect has no rule for. */
   reduce(node: any, scope: any, residues: Map<string, Residue>, root = false): Result {
     const [, record, kind] = this.dialect.kind(node);
-    let computed: [unknown] | [] = [];
+    let known = false; // a value its rules computed, with no literal
+    let value: unknown = null;
     if (this.folds === null || this.folds(node, root)) {
-      let value: unknown;
-      let folded = false;
       try {
         value = this.rules.evaluate(node, scope);
-        folded = true;
+        known = true;
       } catch (error) {
-        if (error instanceof NoRule) this.note(error, node, residues);
+        if (error instanceof NoRule) this.note(error, residues);
         else if (!(error instanceof Unbound)) throw error;
       }
-      if (folded) {
+      if (known) {
         if (kind.role === Terms.LITERAL) return new Result(node, true, value, true, new Set(), false); // kept as written
         const written = this.literal(value);
         if (written !== null) return new Result(written, true, value, true);
         const shown = this.display !== null ? this.display(value) : null;
         if (shown !== null) return new Result(shown, true, value); // a container of values that have literals: its display
-        computed = [value];
       }
     }
     if ((kind.role === Terms.LITERAL || kind.role === Terms.REFERENCE || kind.role === Terms.INVALID)
       && Terms.argumentsOf(record).length === 0) {
-      return new Result(node, computed.length > 0, computed[0] ?? null, false, freeNames(node, this.dialect), false);
+      return new Result(node, known, value, false, freeNames(node, this.dialect), false);
     }
     // a subterm of a term its rules computed (a cast's type) needs no rule of its own: what it lacks is not noted
-    return this.rebuild(node, record, kind, scope, computed.length > 0 ? new Map() : residues, computed);
+    return this.rebuild(node, record, kind, scope, known ? new Map() : residues, known, value);
   }
 
   /** A term rebuilt from its simplified arguments, each in the scope its names are bound in: a let's of a known value
-   * bound to it, any other name hidden (`Symbolics.UNKNOWN`); an import's in the scope it declares, where the scope
-   * provides it. A let whose body no longer refers to its name is its body. */
+   * bound to it, any other name hidden (`Symbolics.UNKNOWN`), an import's among them (its root having not folded, its
+   * module is not entered again). A let whose body no longer refers to its name is its body. */
   private rebuild(node: any, record: any, kind: Terms.Kind, scope: any, residues: Map<string, Residue>,
-    computed: [unknown] | []): Result {
+    known: boolean, value: unknown): Result {
     const args = Terms.argumentsOf(record);
     const bound = scopes(node, this.dialect);
     const lets = Terms._lets(kind, record);
     const results: (Result | null)[] = [];
-    let inner = scope;
-    if (kind.role === Terms.IMPORT) {
-      try {
-        inner = scope.enter(node);
-      } catch (error) {
-        if (!(error instanceof Unbound)) throw error;
-        inner = Simplifier.hide(scope, bound[0] ?? new Set());
-      }
-    }
     args.forEach((argument, i) => {
       if (argument === null) {
         results.push(null);
@@ -234,9 +223,9 @@ export class Simplifier {
       }
       const names = bound[i] as ReadonlySet<string>;
       const first = results[0] ?? null;
-      let within = inner;
+      let within = scope;
       if (lets && i > 0 && first !== null && first.known) within = scope.bind(Terms.nameOf(node) as string, first.value);
-      else if (names.size > 0 && kind.role !== Terms.IMPORT) within = Simplifier.hide(scope, names);
+      else if (names.size > 0) within = Simplifier.hide(scope, names);
       results.push(this.reduce(argument, within, residues));
     });
     const name = Terms.nameOf(node) as string;
@@ -248,8 +237,6 @@ export class Simplifier {
     });
     const simplified = this.simplify !== null ? this.simplify(node, results.filter((r): r is Result => r !== null)) : null;
     if (simplified !== null) return simplified;
-    const known = computed.length > 0;
-    const value = computed[0] ?? null;
     if (!results.some((result) => result !== null && result.changed)) return new Result(node, known, value, false, free, false);
     const form = Terms.form(node);
     const reader = this.dialect.reader(node) ?? this.dialect;
@@ -264,8 +251,8 @@ export class Simplifier {
     return hidden;
   }
 
-  private note(refusal: NoRule, node: any, residues: Map<string, Residue>): void {
-    const kind = refusal.kind ?? Terms.kindOf(node)[0];
+  private note(refusal: NoRule, residues: Map<string, Residue>): void {
+    const kind = refusal.kind as string; // set by the rules, for the term they have no rule for
     const residue = new Residue(refusal.dialect, kind, refusal.what, this.category(refusal.dialect, refusal.what, kind));
     const key = JSON.stringify([residue.dialect, residue.kind, residue.what, residue.category]);
     if (!residues.has(key)) residues.set(key, residue);
