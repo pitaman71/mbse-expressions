@@ -392,9 +392,11 @@ def _lambda(arguments: list[F.Thunk], node: Any, scope: Any) -> _Closure:
                                   for group in ("posonlyargs", "args", "kwonlyargs")}
     for group in ("vararg", "kwarg"):
         parameters[group] = held[group].attributes["arg"] if group in held else None
+    ordered = [part for group in ("posonlyargs", "args", "vararg", "kwonlyargs", "kwarg") for part in (
+        held.get(group, ()) if group not in ("vararg", "kwarg") else (held[group],) if group in held else ())]
     terms = Terms.arguments_of(record)  # Let's empty value, its body, then each parameter's annotation and default
     defaults = {part.attributes["arg"]: arguments[3 + 2 * i]()
-                for i, part in enumerate(Expressions._parameters(record)) if terms[3 + 2 * i] is not None}
+                for i, part in enumerate(ordered) if terms[3 + 2 * i] is not None}
     return _Closure(parameters, defaults, terms[1], scope)
 
 
@@ -601,8 +603,8 @@ def _supported(value: Any, spec: str) -> bool:
     kind = f["type"] or ""
     if type(value) is str:
         return kind in ("", "s") and not (f["sign"] or f["z"] or f["alt"] or f["grouping"]) and f["align"] != "="
-    if kind in _FLOATS or type(value) is float:
-        return kind in ("",) + tuple(_FLOATS)
+    if (kind and kind in _FLOATS) or type(value) is float:
+        return kind == "" or kind in _FLOATS
     if kind == "c":
         return not (f["sign"] or f["alt"] or f["grouping"] or f["precision"] or f["z"])
     return kind != "s" and not (f["precision"] or f["z"]) and (f["grouping"] != "," or kind in ("", "d"))
