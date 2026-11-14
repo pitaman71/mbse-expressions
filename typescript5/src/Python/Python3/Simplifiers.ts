@@ -525,8 +525,7 @@ function power(a: Complex, b: Complex): Complex {
       p = product(p, p);
     }
     r = b.real > 0 ? result : quotientOrZero(new Complex(1, 0), result);
-  } else if (b.real === 0 && b.imag === 0) r = new Complex(1, 0);
-  else if (a.real === 0 && a.imag === 0) r = b.imag !== 0 || b.real < 0 ? null : new Complex(0, 0);
+  } else if (a.real === 0 && a.imag === 0) r = b.imag !== 0 || b.real < 0 ? null : new Complex(0, 0);
   else throw refuse("binop '**' of a complex power");
   if (r === null) throw new ZeroDivisionError("zero to a negative or complex power");
   if (!Number.isFinite(r.real) && !Number.isNaN(r.real) || !Number.isFinite(r.imag) && !Number.isNaN(r.imag)) {
@@ -580,7 +579,8 @@ function hypot(x: number, y: number): number {
   const scaled = total << BigInt(shift);
   let root = isqrt(scaled);
   root = (root << 1n) | (root * root !== scaled ? 1n : 0n); // a sticky bit below the rounding position
-  const result = Number(root) * 2 ** (low - shift / 2 - 1);
+  const exponent = low - shift / 2 - 1; // scaled in two steps, each exact but the last, as `ldexp` scales
+  const result = Number(root) * 2 ** Math.trunc(exponent / 2) * 2 ** (exponent - Math.trunc(exponent / 2));
   if (!Number.isFinite(result)) throw new OverflowError("absolute value too large");
   return result;
 }
@@ -596,7 +596,6 @@ function bits(x: number): [bigint, number] {
 }
 
 function isqrt(n: bigint): bigint {
-  if (n < 2n) return n;
   let x = 1n << BigInt(Math.ceil(n.toString(2).length / 2));
   for (;;) {
     const y = (x + n / x) >> 1n;
@@ -1443,14 +1442,9 @@ function fixedDigits(x: number, precision: number): string {
 function scientificDigits(x: number, precision: number): [string, number] {
   const [n, d] = fraction(x);
   if (n === 0n) return ["0".repeat(precision + 1), 0];
-  let exponent = Math.floor(Math.log10(Math.abs(x)));
   const scale = (k: number): [bigint, bigint] => (k >= 0 ? [n * 10n ** BigInt(k), d] : [n, d * 10n ** BigInt(-k)]);
-  for (;;) { // 10 ** exponent <= |x| < 10 ** (exponent + 1), exactly
-    const [a, b] = scale(-exponent);
-    if (a < b) exponent -= 1;
-    else if (a >= 10n * b) exponent += 1;
-    else break;
-  }
+  let exponent = Math.floor(Math.log10(Math.abs(x))) + 1; // above the exponent, which the loop finds exactly
+  for (let [a, b] = scale(-exponent); a < b; [a, b] = scale(-exponent)) exponent -= 1;
   const [a, b] = scale(precision - exponent);
   let digits = divideEven(a, b);
   if (digits === 10n ** BigInt(precision + 1)) {
@@ -1466,7 +1460,7 @@ function floatBody(x: number, type: string, precision: number | undefined, alt: 
   const upper = type === "E" || type === "F" || type === "G";
   const exponentText = (e: number) => `${upper ? "E" : "e"}${e < 0 ? "-" : "+"}${String(Math.abs(e)).padStart(2, "0")}`;
   const point = (digits: string, places: number): [string, string] => {
-    const whole = digits.slice(0, digits.length - places) || "0";
+    const whole = digits.slice(0, digits.length - places);
     const rest = places > 0 ? `.${digits.slice(digits.length - places)}` : alt ? "." : "";
     return [whole, rest];
   };
@@ -1594,7 +1588,7 @@ function field(part: Terms.Part, thunks: Iterator<F.Thunk>, raw: boolean, templa
 }
 
 function piece(part: Terms.Part, thunks: Iterator<F.Thunk>, raw: boolean, template: boolean): unknown {
-  if (part.kind === "stringtext") return text((part.attributes.get("spelling") ?? "") as string, raw);
+  if (part.kind === "stringtext") return text(part.attributes.get("spelling") as string, raw);
   return field(part, thunks, raw, template);
 }
 
@@ -1614,7 +1608,7 @@ function templatestr(args: F.Thunk[], node: any): Template {
   const interpolations: Interpolation[] = [];
   for (const part of (attributes.get("values") ?? []) as Terms.Part[]) {
     if (part.kind === "stringtext") {
-      strings[strings.length - 1] += text((part.attributes.get("spelling") ?? "") as string, raw);
+      strings[strings.length - 1] += text(part.attributes.get("spelling") as string, raw);
       continue;
     }
     if (part.attributes.get("debug") === true) strings[strings.length - 1] += (part.attributes.get("text") ?? "") as string;
@@ -1843,7 +1837,7 @@ function simplify(node: any, results: F.Result[]): F.Result | null {
   if (tag === P.TEMPLATESTR) return new F.Result(node, false, null, false, S.free(node, P.DIALECT), false);
   const form = Terms.form(node);
   const changed = results.map((result) => result.changed)[Symbol.iterator]();
-  const values = ((form.attributes.get("values") ?? []) as Terms.Part[]).flatMap((part) => respelled(part, changed));
+  const values = (form.attributes.get("values") as Terms.Part[]).flatMap((part) => respelled(part, changed)); // a term changed: it has a field
   const written = P.DIALECT.make(new Terms.Form(tag, new Map([...form.attributes, ["values", values]]),
     results.map((result) => result.expression)));
   const free = new Set<string>();
