@@ -171,7 +171,7 @@ function constant(node: any): unknown {
 
 /** A template's strings, cooked (TV) or raw (TRV), its line terminators LF. */
 function template(node: Terms.Node, cooked = true): unknown[] {
-  const raws = ((node.helpers.get("quasis") ?? []) as readonly Terms.Node[])
+  const raws = (node.helpers.get("quasis") as readonly Terms.Node[])
     .map((quasi) => ((quasi.attributes.get("raw") ?? "") as string).replace(/\r\n?/g, "\n"));
   return cooked ? raws.map((raw) => A.cook(raw) ?? undefined) : raws;
 }
@@ -181,7 +181,7 @@ function templateliteral(args: F.Thunk[], node: any): string {
   if (strings.includes(undefined)) throw new ValueError("a templateliteral's quasi has an invalid escape");
   let written = strings[0] as string;
   args.forEach((argument, i) => {
-    written += A.toString(argument()) + (strings[i + 1] as string);
+    written = A.binary("+", A.binary("+", written, A.toString(argument())), strings[i + 1]) as string;
   });
   return written;
 }
@@ -263,10 +263,14 @@ function objectexpression(_args: F.Thunk[], node: any, scope: any): Record<strin
   return A.ordered(properties);
 }
 
-/** A property alone, as an object's simplification meets it: its key and its value. */
-function property(_args: F.Thunk[], node: any, scope: any): [string, unknown] {
+/** A property alone, as an object's simplification meets it: its key and its value, no object of its own. */
+class Property {
+  constructor(readonly key: string, readonly value: unknown) {}
+}
+
+function property(_args: F.Thunk[], node: any, scope: any): Property {
   const inner = nodeOf(node);
-  return [keyOf(inner, scope), evaluate(inner.subterms.get("value"), scope)];
+  return new Property(keyOf(inner, scope), evaluate(inner.subterms.get("value"), scope));
 }
 
 /** A TypeScript assertion's value, its operand's: the type is erased. */
@@ -402,7 +406,7 @@ const NAME = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 
 /** A property's key as written: an identifier where it is one, an array index a number, else a string. */
 function writtenKey(key: string): Terms.Writer {
-  if (NAME.test(key)) return named(key);
+  if (NAME.test(key) && key !== "__proto__") return named(key);
   return T.DIALECT.spec(A.isArrayIndex(key) ? Number(key) : key);
 }
 
@@ -418,8 +422,8 @@ function display(value: any): unknown {
   if (found === "object") {
     const written = Object.entries(A.ordered(value)).map(([key, item]) => [key, literal(item) ?? display(item)] as const);
     if (written.some(([, item]) => item === null)) return null;
-    return make(T.OBJECTEXPRESSION, {}, ...written.map(([key, item]) => make(T.PROPERTY, {
-      propertyKind: "init", computed: false, method: false, shorthand: false }, writtenKey(key), item)));
+    return make(T.OBJECTEXPRESSION, {}, ...written.map(([key, item]) => make(T.PROPERTY, { // `__proto__` computed, a
+      propertyKind: "init", computed: key === "__proto__", method: false, shorthand: false }, writtenKey(key), item))); // property, no prototype
   }
   return null;
 }

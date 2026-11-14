@@ -177,7 +177,7 @@ def _constant(node: Any) -> Any:
 def _template(node: T.Node, cooked: bool = True) -> list[Any]:
     """A template's strings, cooked (TV) or raw (TRV), its line terminators LF."""
     raws = [quasi.attributes.get("raw", "").replace("\r\n", "\n").replace("\r", "\n")
-            for quasi in node.helpers.get("quasis") or ()]
+            for quasi in node.helpers["quasis"]]
     if not cooked:
         return raws
     return [A.UNDEFINED if text is None else text for text in map(A.cook, raws)]
@@ -189,8 +189,8 @@ def _templateliteral(arguments: list[F.Thunk], node: Any, scope: Any) -> str:
         raise ValueError("a templateliteral's quasi has an invalid escape")
     written = strings[0]
     for argument, string in zip(arguments, strings[1:]):
-        written += A.to_string(argument()) + string
-    return A.normalize(written)
+        written = A.binary("+", A.binary("+", written, A.to_string(argument())), string)
+    return written
 
 
 def _taggedtemplate(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
@@ -273,7 +273,7 @@ def _object(arguments: list[F.Thunk], node: Any, scope: Any) -> dict[str, Any]:
 
 
 def _property(arguments: list[F.Thunk], node: Any, scope: Any) -> tuple[str, Any]:
-    """A property alone, as an object's simplification meets it: its key and its value."""
+    """A property alone, as an object's simplification meets it: its key and its value, no object of its own."""
     inner = _node(node)
     return _key(inner, scope), _evaluate(inner.subterms["value"], scope)
 
@@ -424,7 +424,7 @@ _NAME = re.compile(r"[A-Za-z_$][A-Za-z0-9_$]*")
 
 def _written_key(key: str) -> Terms.Writer:
     """A property's key as written: an identifier where it is one, an array index a number, else a string."""
-    if _NAME.fullmatch(key):
+    if _NAME.fullmatch(key) and key != "__proto__":
         return _name(key)
     return T.DIALECT.spec(float(key) if A.is_array_index(key) else key)
 
@@ -440,9 +440,9 @@ def _display(value: Any) -> Any:
         written = [(key, _literal(item) or _display(item)) for key, item in A.ordered(value).items()]
         if any(item is None for _, item in written):
             return None
-        return _make(T.OBJECTEXPRESSION, {}, *(_make(T.PROPERTY, {
-            "propertyKind": "init", "computed": False, "method": False, "shorthand": False}, _written_key(key), item)
-            for key, item in written))
+        return _make(T.OBJECTEXPRESSION, {}, *(_make(T.PROPERTY, {  # `__proto__` computed, a property, no prototype
+            "propertyKind": "init", "computed": key == "__proto__", "method": False, "shorthand": False},
+            _written_key(key), item) for key, item in written))
     return None
 
 

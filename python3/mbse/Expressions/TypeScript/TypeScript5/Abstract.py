@@ -14,8 +14,8 @@ operation reads (each raises `NoRule`, "TypeScript5 host value is not simplified
 Its abstract operations, as ECMA-262 names them (7.1 and 7.2): `type_of` (13.5.3), `to_boolean`, `to_primitive` (an
 object's own `valueOf` and `toString` called where they are functions, else the built-in ones: an array joined, an
 object `[object Object]`), `to_number` (a string by StringToNumber), `to_numeric`, `to_string` (a number by
-Number::toString's shortest round trip, `Text.number`), `to_property_key`, `to_int32`, `to_uint32`,
-`is_strictly_equal`, `is_loosely_equal` and `is_less_than`; the operators over numbers and bigints (`binary`, `unary`,
+Number::toString's shortest round trip, `Text.number`), `to_property_key`, `is_strictly_equal`, `is_loosely_equal`
+and `is_less_than`; the operators over numbers and bigints (`binary`, `unary`,
 6.1.6), with BigInt's errors; property access (`get`, `has_property`), iteration (`iterate`), an object's own entries
 (`own_entries`) and calls (`call`, `construct`). A built-in method (`String.prototype.toUpperCase`) is read, but not
 modeled: reading one raises `NoRule` by its name, as `BUILTINS` lists them, since its value is the language's runtime's.
@@ -35,7 +35,7 @@ from . import Text
 
 __all__ = ["UNDEFINED", "HOLE", "RangeError", "RegExp", "Closure", "TemplateStrings", "BUILTINS", "MAX_BIGINT_BITS",
            "kind", "type_of", "is_primitive", "to_boolean", "to_primitive", "to_number", "to_numeric", "to_string",
-           "to_property_key", "to_int32", "to_uint32", "string_to_number", "string_to_bigint", "normalize", "length",
+           "to_property_key", "string_to_number", "string_to_bigint",
            "is_strictly_equal", "is_loosely_equal", "is_less_than", "binary", "unary", "get", "has_property",
            "iterate", "own_entries", "ordered", "call", "construct", "instance_of", "cook", "is_array_index"]
 
@@ -56,9 +56,6 @@ UNDEFINED: Any = _Undefined()
 class _Hole:
     """An array's missing element (an elision): no property at its index."""
 
-    def __repr__(self) -> str:
-        return "<hole>"
-
 
 HOLE: Any = _Hole()
 """An array's missing element."""
@@ -75,18 +72,12 @@ class RegExp:
     def __init__(self, source: str, flags: str):
         self.source, self.flags = source, flags
 
-    def __repr__(self) -> str:
-        return f"/{self.source}/{self.flags}"
-
 
 class Closure:
     """A function an arrow makes, by identity: `call(arguments)` gives its value, its parameters bound to them."""
 
     def __init__(self, call: Callable[[list[Any]], Any]):
         self.call = call
-
-    def __repr__(self) -> str:
-        return "<closure>"
 
 
 class TemplateStrings(list):  # type: ignore[type-arg]
@@ -130,7 +121,9 @@ _PROTOTYPE_OF = {"string": "String", "number": "Number", "boolean": "Boolean", "
                  "function": "Function", "regexp": "RegExp"}
 
 MAX_BIGINT_BITS = 1 << 30
-"""The most bits a bigint may have, as V8 allows: beyond, RangeError "Maximum BigInt size exceeded"."""
+"""The most bits a bigint may have, as V8 allows: an exponent or a left shift beyond it, whose result has more,
+raises RangeError "Maximum BigInt size exceeded" before it is computed (a result that grows beyond it otherwise is
+computed in Python, whose ints are unbounded, and raises in TypeScript, as V8 does)."""
 
 _PRIMITIVES = frozenset({"undefined", "null", "boolean", "number", "bigint", "string"})
 
@@ -197,14 +190,9 @@ def _from_units(units: Iterable[int]) -> str:
     return b"".join(unit.to_bytes(2, "little") for unit in units).decode("utf-16-le", "surrogatepass")
 
 
-def normalize(value: str) -> str:
+def _normalize(value: str) -> str:
     """A string as ECMAScript holds it: its UTF-16 code units, a surrogate pair one code point."""
     return _from_units(_units(value))
-
-
-def length(value: str) -> int:
-    """A string's length, in UTF-16 code units."""
-    return len(_units(value))
 
 
 _ARRAY_INDEX = re.compile(r"0|[1-9][0-9]*")
@@ -265,8 +253,8 @@ def to_primitive(value: Any, hint: str = "default") -> Any:
     raise TypeError("Cannot convert object to primitive value")
 
 
-_WHITESPACE = frozenset("\t\n\v\f\r              "
-                        "    　﻿")
+_WHITESPACE = frozenset("\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+                        "\u2028\u2029\u202f\u205f\u3000\ufeff")
 _DECIMAL = re.compile(r"[+-]?(?:Infinity|(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)")
 _NON_DECIMAL = re.compile(r"0(?:[xX]([0-9a-fA-F]+)|[oO]([0-7]+)|[bB]([01]+))")
 _INTEGER = re.compile(r"[+-]?[0-9]+")
@@ -367,7 +355,7 @@ def to_property_key(value: Any) -> str:
     return to_string(to_primitive(value, "string"))
 
 
-def to_uint32(value: Any) -> int:
+def _to_uint32(value: Any) -> int:
     """ToUint32 (7.1.7), as an int."""
     number = to_number(value)
     if math.isnan(number) or math.isinf(number):
@@ -375,9 +363,9 @@ def to_uint32(value: Any) -> int:
     return int(number) % 2 ** 32
 
 
-def to_int32(value: Any) -> int:
+def _to_int32(value: Any) -> int:
     """ToInt32 (7.1.6), as an int."""
-    unsigned = to_uint32(value)
+    unsigned = _to_uint32(value)
     return unsigned - 2 ** 32 if unsigned >= 2 ** 31 else unsigned
 
 
@@ -464,12 +452,6 @@ def _too_big() -> RangeError:
     return RangeError("Maximum BigInt size exceeded")
 
 
-def _sized(value: int) -> int:
-    if value.bit_length() > MAX_BIGINT_BITS:
-        raise _too_big()
-    return value
-
-
 def _divide(x: float, y: float) -> float:
     if y == 0:
         if math.isnan(x) or x == 0:
@@ -517,11 +499,11 @@ def _int32(value: int) -> float:
 _NUMBER: dict[str, Callable[[float, float], float]] = {
     "+": lambda x, y: x + y, "-": lambda x, y: x - y, "*": lambda x, y: x * y, "/": _divide, "%": _remainder,
     "**": _exponentiate,
-    "<<": lambda x, y: _int32(to_int32(x) << (to_uint32(y) & 31)),
-    ">>": lambda x, y: float(to_int32(x) >> (to_uint32(y) & 31)),
-    ">>>": lambda x, y: float(to_uint32(x) >> (to_uint32(y) & 31)),
-    "&": lambda x, y: float(to_int32(x) & to_int32(y)), "|": lambda x, y: float(to_int32(x) | to_int32(y)),
-    "^": lambda x, y: float(to_int32(x) ^ to_int32(y)),
+    "<<": lambda x, y: _int32(_to_int32(x) << (_to_uint32(y) & 31)),
+    ">>": lambda x, y: float(_to_int32(x) >> (_to_uint32(y) & 31)),
+    ">>>": lambda x, y: float(_to_uint32(x) >> (_to_uint32(y) & 31)),
+    "&": lambda x, y: float(_to_int32(x) & _to_int32(y)), "|": lambda x, y: float(_to_int32(x) | _to_int32(y)),
+    "^": lambda x, y: float(_to_int32(x) ^ _to_int32(y)),
 }
 
 
@@ -535,17 +517,17 @@ def _big_divide(x: int, y: int, remainder: bool) -> int:
 def _big_power(x: int, y: int) -> int:
     if y < 0:
         raise RangeError("Exponent must be non-negative")
-    if abs(x) > 1 and (abs(x).bit_length() - 1) * y > MAX_BIGINT_BITS:
+    if abs(x) > 1 and y > MAX_BIGINT_BITS:  # more bits than its exponent
         raise _too_big()
-    return _sized(x ** y)
+    return x ** y
 
 
 def _big_shift(x: int, y: int) -> int:
     if y < 0:
         return x >> -y
-    if x != 0 and y > MAX_BIGINT_BITS:
+    if x != 0 and y > MAX_BIGINT_BITS:  # more bits than its shift
         raise _too_big()
-    return _sized(x << y)
+    return x << y
 
 
 def _unsigned(x: int, y: int) -> int:
@@ -553,7 +535,7 @@ def _unsigned(x: int, y: int) -> int:
 
 
 _BIGINT: dict[str, Callable[[int, int], int]] = {
-    "+": lambda x, y: _sized(x + y), "-": lambda x, y: _sized(x - y), "*": lambda x, y: _sized(x * y),
+    "+": lambda x, y: x + y, "-": lambda x, y: x - y, "*": lambda x, y: x * y,
     "/": lambda x, y: _big_divide(x, y, False), "%": lambda x, y: _big_divide(x, y, True), "**": _big_power,
     "<<": _big_shift, ">>": lambda x, y: _big_shift(x, -y), ">>>": _unsigned,
     "&": lambda x, y: x & y, "|": lambda x, y: x | y, "^": lambda x, y: x ^ y,
@@ -566,7 +548,7 @@ def binary(operator: str, left: Any, right: Any) -> Any:
     if operator == "+":
         left, right = to_primitive(left), to_primitive(right)
         if type(left) is str or type(right) is str:
-            return normalize(to_string(left) + to_string(right))
+            return _normalize(to_string(left) + to_string(right))
     x, y = to_numeric(left), to_numeric(right)
     if type(x) is not type(y):
         raise _mix()
@@ -582,7 +564,7 @@ def unary(operator: str, value: Any) -> Any:
     numeric = to_numeric(value)
     if operator == "-":
         return -numeric
-    return ~numeric if type(numeric) is int else float(~to_int32(numeric))
+    return ~numeric if type(numeric) is int else float(~_to_int32(numeric))
 
 
 # --- Objects ---
@@ -677,7 +659,7 @@ def iterate(value: Any) -> list[Any]:
     if found == "array":
         return [UNDEFINED if item is HOLE else item for item in value]
     if found == "string":
-        return list(normalize(value))
+        return list(_normalize(value))
     if found == "host":
         raise _host()
     raise TypeError(f"{'null' if found == 'null' else type_of(value)} is not iterable")
@@ -744,7 +726,7 @@ def cook(raw: str) -> str | None:
             continue
         escape = raw[i:i + 1]
         i += 1
-        if escape in ("\n", " ", " "):  # a line continuation
+        if escape in ("\n", "\u2028", "\u2029"):  # a line continuation
             continue
         if escape == "0" and not (raw[i:i + 1] and raw[i:i + 1] in _DIGITS):
             written.append("\0")
@@ -767,4 +749,4 @@ def cook(raw: str) -> str | None:
                 return None
         else:
             written.append(_SINGLE.get(escape, escape))
-    return normalize("".join(written))
+    return _normalize("".join(written))

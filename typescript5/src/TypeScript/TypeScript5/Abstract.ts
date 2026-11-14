@@ -13,7 +13,7 @@
  * Its abstract operations, as ECMA-262 names them (7.1 and 7.2): `typeOf` (13.5.3), `toBoolean`, `toPrimitive` (an
  * object's own `valueOf` and `toString` called where they are functions, else the built-in ones: an array joined, an
  * object `[object Object]`), `toNumber` (a string by StringToNumber), `toNumeric`, `toString` (a number by
- * Number::toString), `toPropertyKey`, `toInt32`, `toUint32`, `isStrictlyEqual`, `isLooselyEqual` and `isLessThan`; the
+ * Number::toString), `toPropertyKey`, `isStrictlyEqual`, `isLooselyEqual` and `isLessThan`; the
  * operators over numbers and bigints (`binary`, `unary`, 6.1.6), with BigInt's errors; property access (`get`,
  * `hasProperty`), iteration (`iterate`), an object's own entries (`ownEntries`) and calls (`call`, `construct`). A
  * built-in method (`String.prototype.toUpperCase`) is read, but not modeled: reading one throws `NoRule` by its name,
@@ -87,7 +87,9 @@ const PROTOTYPE_OF: Record<string, string> = {
   regexp: "RegExp",
 };
 
-/** The most bits a bigint may have, as V8 allows: beyond, RangeError "Maximum BigInt size exceeded". */
+/** The most bits a bigint may have, as V8 allows: an exponent or a left shift beyond it, whose result has more, throws
+ * RangeError "Maximum BigInt size exceeded" before it is computed (a result that grows beyond it otherwise throws as V8
+ * does, and is computed in Python, whose ints are unbounded). */
 export const MAX_BIGINT_BITS = 1n << 30n;
 
 const PRIMITIVES = new Set(["undefined", "null", "boolean", "number", "bigint", "string"]);
@@ -131,16 +133,6 @@ export function toBoolean(value: unknown): boolean {
   if (found === "number") return !(value === 0 || Number.isNaN(value));
   if (found === "boolean" || found === "bigint" || found === "string") return Boolean(value);
   return true;
-}
-
-/** A string as ECMAScript holds it: as JavaScript does (Python's twin joins a surrogate pair). */
-export function normalize(value: string): string {
-  return value;
-}
-
-/** A string's length, in UTF-16 code units. */
-export function length(value: string): number {
-  return value.length;
 }
 
 const ARRAY_INDEX = /^(?:0|[1-9][0-9]*)$/;
@@ -200,8 +192,8 @@ export function toPrimitive(value: unknown, hint = "default"): unknown {
   throw new TypeError("Cannot convert object to primitive value");
 }
 
-const WHITESPACE = new Set("\t\n\v\f\r              "
-  + "    　﻿");
+const WHITESPACE = new Set("\t\n\v\f\r \u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a"
+  + "\u2028\u2029\u202f\u205f\u3000\ufeff");
 const DECIMAL = /^[+-]?(?:Infinity|(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)$/;
 const NON_DECIMAL = /^0(?:[xX][0-9a-fA-F]+|[oO][0-7]+|[bB][01]+)$/;
 const INTEGER = /^[+-]?[0-9]+$/;
@@ -261,16 +253,6 @@ export function toString(value: unknown): string {
 /** ToPropertyKey (7.1.19): a string (ECMAScript's symbols are not modeled). */
 export function toPropertyKey(value: unknown): string {
   return toString(toPrimitive(value, "string"));
-}
-
-/** ToUint32 (7.1.7). */
-export function toUint32(value: unknown): number {
-  return toNumber(value) >>> 0;
-}
-
-/** ToInt32 (7.1.6). */
-export function toInt32(value: unknown): number {
-  return toNumber(value) | 0;
 }
 
 // --- Equality and order (7.2) ---
@@ -348,22 +330,6 @@ function tooBig(): RangeError {
   return new RangeError("Maximum BigInt size exceeded");
 }
 
-function bits(value: bigint): bigint {
-  return value === 0n ? 0n : BigInt((value < 0n ? -value : value).toString(2).length);
-}
-
-function sized(compute: () => bigint): bigint {
-  let value: bigint;
-  try {
-    value = compute();
-  } catch (error) {
-    if (error instanceof RangeError) throw tooBig(); // beyond V8's own limit
-    throw error;
-  }
-  if (bits(value) > MAX_BIGINT_BITS) throw tooBig();
-  return value;
-}
-
 const NUMBER: Record<string, (x: number, y: number) => number> = {
   "+": (x, y) => x + y, "-": (x, y) => x - y, "*": (x, y) => x * y, "/": (x, y) => x / y, "%": (x, y) => x % y,
   "**": (x, y) => x ** y, "<<": (x, y) => x << y, ">>": (x, y) => x >> y, ">>>": (x, y) => x >>> y,
@@ -377,18 +343,18 @@ function bigDivide(x: bigint, y: bigint, remainder: boolean): bigint {
 
 function bigPower(x: bigint, y: bigint): bigint {
   if (y < 0n) throw new RangeError("Exponent must be non-negative");
-  if ((x > 1n || x < -1n) && (bits(x) - 1n) * y > MAX_BIGINT_BITS) throw tooBig();
-  return sized(() => x ** y);
+  if ((x > 1n || x < -1n) && y > MAX_BIGINT_BITS) throw tooBig(); // more bits than its exponent
+  return x ** y;
 }
 
 function bigShift(x: bigint, y: bigint): bigint {
   if (y < 0n) return x >> -y;
-  if (x !== 0n && y > MAX_BIGINT_BITS) throw tooBig();
-  return sized(() => x << y);
+  if (x !== 0n && y > MAX_BIGINT_BITS) throw tooBig(); // more bits than its shift
+  return x << y;
 }
 
 const BIGINT: Record<string, (x: bigint, y: bigint) => bigint> = {
-  "+": (x, y) => sized(() => x + y), "-": (x, y) => sized(() => x - y), "*": (x, y) => sized(() => x * y),
+  "+": (x, y) => x + y, "-": (x, y) => x - y, "*": (x, y) => x * y,
   "/": (x, y) => bigDivide(x, y, false), "%": (x, y) => bigDivide(x, y, true), "**": bigPower,
   "<<": bigShift, ">>": (x, y) => bigShift(x, -y),
   ">>>": () => {
@@ -563,7 +529,7 @@ export function cook(raw: string): string | null {
     }
     const escape = raw.slice(i, i + 1);
     i++;
-    if (escape === "\n" || escape === " " || escape === " ") continue; // a line continuation
+    if (escape === "\n" || escape === "\u2028" || escape === "\u2029") continue; // a line continuation
     const next = raw.slice(i, i + 1);
     if (escape === "0" && !(next !== "" && DIGITS.includes(next))) {
       written.push("\0");
