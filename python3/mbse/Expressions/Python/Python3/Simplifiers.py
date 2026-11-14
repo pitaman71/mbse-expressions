@@ -3,8 +3,8 @@ reach.
 
 `Simplifiers.OfAny(expression, scope)` simplifies in a `Scope`, or in one made from a mapping of variables (see
 `mbse.Expressions.Framework.Simplifiers`): what the scope determines is folded into the literal of its value, a basic
-scalar's (a list, a dict, an object or a generator has none, and its subterm stays, its own subterms simplified), and
-the rest stays a Python3 expression. Python's rules apply, not Patterns': `and` and `or` give one of their operands,
+scalar's, or, for a list or a dict of such values, into its display (`[1, 2]`); an object or a generator has none,
+and its subterm stays, its own subterms simplified. The rest stays a Python3 expression. Python's rules apply, not Patterns': `and` and `or` give one of their operands,
 `1 == 1.0` is True, `True + 1` is 2, and a missing attribute raises `AttributeError`. Data objects, read through
 mbse-schemas' readers (`Framework.Objects`), have their properties as attributes.
 
@@ -258,7 +258,22 @@ RULES = F.Interpreter(_P.DIALECT, {    _P.ATTRIBUTE: lambda arguments, node, sco
 }, scope=Scope, folded=FOLDED)
 """The folding rules of the Python3 dialect."""
 
-SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(_P.DIALECT), categories=CATEGORIES)
+_LITERAL = F.natives(_P.DIALECT)
+
+
+def _display(value: Any) -> Any:
+    """A list's or a dict's display, of its items' literals and displays; None where an item has neither."""
+    if type(value) is list:
+        items = [_LITERAL(item) or _display(item) for item in value]
+        return None if None in items else _P.list_(*items)
+    if type(value) is dict:
+        keys = [_LITERAL(key) for key in value]
+        items = [_LITERAL(item) or _display(item) for item in value.values()]
+        return None if None in keys or None in items else _P.dict_(*zip(keys, items))
+    return None
+
+
+SIMPLIFIER = F.Simplifier(RULES, literal=_LITERAL, categories=CATEGORIES, display=_display)
 """The simplifier of the Python3 dialect."""
 
 

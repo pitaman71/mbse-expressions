@@ -23,7 +23,8 @@ and operator, are the folding rules); a dialect whose rules need the whole term 
 gives its own, and says by `folds(node, root)` which subterms may fold. `literal(value)` writes the literal of a value,
 or gives None where the dialect has none; `simplify(node, results)` decides what does not depend on an unsimplified
 subterm, as Kleene's logic does in Patterns (`false and x` is `false`); `native(value)` gives the value a caller sees of
-a value of the rules (C's, its native without its type).
+a value of the rules (C's, its native without its type); `display(value)` writes a container of values that have
+literals as a term of their literals, a display (Python's `[1, 2]`), not a literal.
 
 `Interpreter` folds a term by its kind's role (see `Terms`): a literal gives its value (through `literal`, or `typed`
 when its kind's attributes give it a domain of its own, as C's type does a constant), a reference what the scope
@@ -147,9 +148,11 @@ class Simplifier:
                  simplify: Callable[[Any, list[Result]], Result | None] | None = None,
                  categories: Mapping[str, Mapping[str, str]] | None = None,
                  native: Callable[[Any], Any] = lambda value: value,
-                 folds: Callable[[Any, bool], bool] | None = None):
+                 folds: Callable[[Any, bool], bool] | None = None,
+                 display: Callable[[Any], Any] | None = None):
         self.rules, self.dialect = rules, rules.dialect
         self._literal, self._simplify, self._native, self._folds = literal, simplify, native, folds
+        self._display = display
         self._categories = dict(categories or {})
 
     def __call__(self, expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Simplified:
@@ -193,11 +196,15 @@ class Simplifier:
                 written = self._literal(value)
                 if written is not None:
                     return Result(written, True, value, True)
+                shown = self._display(value) if self._display is not None else None
+                if shown is not None:  # a container of values that have literals: its display
+                    return Result(shown, True, value)
                 computed = (value,)
         if kind.role in (Terms.LITERAL, Terms.REFERENCE, Terms.INVALID) and not Terms.arguments_of(record):
             free = frozenset(Symbolics.free(node, self.dialect))
             return Result(node, bool(computed), computed[0] if computed else None, free=free, changed=False)
-        return self._rebuild(node, record, kind, scope, residues, computed)
+        # a subterm of a term its rules computed (a cast's type) needs no rule of its own: what it lacks is not noted
+        return self._rebuild(node, record, kind, scope, {} if computed else residues, computed)
 
     def _rebuild(self, node: Any, record: Any, kind: Terms.Kind, scope: Any, residues: dict[Residue, None],
                  computed: tuple[Any, ...]) -> Result:

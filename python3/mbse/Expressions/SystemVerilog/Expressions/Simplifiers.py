@@ -787,6 +787,9 @@ class _Rules:
         return Scope(variables)
 
     def evaluate(self, node: Any, scope: Any) -> Any:
+        invalid = next((n for n in F.walk(node) if F.kind_of(n)[0] in F.INVALID_KINDS), None)
+        if invalid is not None:  # invalid syntax: no rule, named by its owner, as every dialect names it
+            raise FS.NoRule(X.DIALECT.owner(invalid).name(), F.kind_of(invalid)[0], F.kind_of(invalid)[0])
         problems = X.DIALECT.validate(node, bound=S.free(node, X.DIALECT))
         if problems:
             raise ValueError(f"cannot simplify an invalid expression: {problems[0]}")
@@ -800,16 +803,18 @@ def _folds(node: Any, root: bool) -> bool:
 
 
 def _literal(value: Any) -> Any:
-    """The literal of a value: a real's; an `integer`'s or a `longint`'s, an unsized decimal integer; any other
+    """The literal of a value: a real's; an `integer`'s (a signed 4-state value of 32 bits) or a `longint`'s, an
+    unsized decimal integer; any other
     integral value's, a sized vector of its bits and signedness (of 4 states: a 2-state value's type is not kept); none
     for an object."""
     if type(value) is float:
         return X.literal(value)
     if not isinstance(value, Logic):
         return None
-    if value.known and value.type.label in ("integer", "longint"):
+    integer = value.type.width == 32 and value.type.signed and value.type.states == 4  # `integer`'s, by any name
+    if value.known and (integer or value.type.label == "longint"):
         return X.literal(value.integer())
-    return X.vector(value.bits(), value.type.signed)
+    return X.vector(value.bits, value.type.signed)
 
 
 CATEGORIES: dict[str, dict[str, str]] = {

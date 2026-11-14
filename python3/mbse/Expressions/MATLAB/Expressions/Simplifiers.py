@@ -2,8 +2,8 @@
 
 `Simplifiers.OfAny(term, scope)` simplifies a term (or anything `Terms.term` reads one from, such as an `Expression`)
 with variables bound to numbers, logicals, strings and structs (mappings, or data objects, read through mbse-schemas'
-readers), folding what they determine into the constant of its value, a double's, a logical's or a string's (an
-array or a struct has none, and its subterm stays); see `mbse.Expressions.Framework.Simplifiers`. Values are Python
+readers), folding what they determine into the constant of its value, a double's, a logical's or a string's, or an
+array's concatenation of its elements' constants (`[1, 2]`); a struct has none, and its subterm stays; see `mbse.Expressions.Framework.Simplifiers`. Values are Python
 `float` (double), `bool` (logical) and `str` (string scalar). MATLAB's rules apply, not Patterns':
 
 - Two-valued logic: `&&` and `||` short-circuit, and take numbers or logicals (nonzero is true; NaN raises).
@@ -354,7 +354,18 @@ RULES = F.Interpreter(Expressions.DIALECT, {
 }, literal=lambda value: float(value) if type(value) is int else value, scope=Scope, extension=_extension)
 """The folding rules of the MATLAB dialect."""
 
-SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(Expressions.DIALECT))
+_LITERAL = F.natives(Expressions.DIALECT)
+
+
+def _display(value: Any) -> Any:
+    """An array's concatenation of its elements' constants; None where an element has none."""
+    if type(value) is not list:
+        return None
+    elements = [_LITERAL(element) for element in value]
+    return None if None in elements else Expressions.array(*elements)
+
+
+SIMPLIFIER = F.Simplifier(RULES, literal=_LITERAL, display=_display)
 """The simplifier of the MATLAB dialect."""
 
 
