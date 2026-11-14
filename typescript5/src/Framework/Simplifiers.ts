@@ -239,7 +239,7 @@ export class Simplifier {
     if (simplified !== null) return simplified;
     if (!results.some((result) => result !== null && result.changed)) return new Result(node, known, value, false, free, false);
     const form = Terms.form(node);
-    const reader = this.dialect.reader(node) ?? this.dialect;
+    const reader = this.dialect.reader(node) as Terms.Dialect; // the dialect whose `Term` holds it: this one, or one it reads
     const written = reader.make(new Terms.Form(form.kind, form.attributes,
       results.map((result) => (result === null ? null : result.expression))));
     return new Result(written, known, value, false, free);

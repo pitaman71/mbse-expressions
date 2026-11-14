@@ -234,7 +234,7 @@ class Simplifier:
         if not any(r is not None and r.changed for r in results):
             return Result(node, known, value, free=free, changed=False)
         form = Terms.form(node)
-        reader = self.dialect._reader(node) or self.dialect
+        reader = self.dialect._reader(node)  # the dialect whose `Term` holds it: this one, or one it reads
         written = reader.make(Terms.Form(form.kind, form.attributes,
                                          tuple(None if r is None else r.expression for r in results)))
         return Result(written, known, value, free=free)

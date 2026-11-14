@@ -58,7 +58,7 @@ checks that the dialect's `Text.ToText` gives that text back; Python's notebooks
 |---|---|---|
 | 1 | [Values and their domains](01_Values_And_Their_Domains.ipynb) | A domain is data: the standard dialects' domains, kinds, parameters, inferred properties, schemas and editions |
 | 2 | [One value, a domain in each language](02_One_Value_A_Domain_In_Each_Language.ipynb) | `42` as Python's `int`, TypeScript's `number`, C's `int` under each ABI, SystemVerilog's `integer` and `int` |
-| 3 | [The smallest expression, a literal](03_The_Smallest_Expression_A_Literal.ipynb) | A term in its holder; a literal in each language, printed, read, inferred, evaluated; what no scalar holds |
+| 3 | [The smallest expression, a literal](03_The_Smallest_Expression_A_Literal.ipynb) | A term in its holder; a literal in each language, printed, read, inferred, simplified; what no scalar holds |
 | 4 | [Names](04_Names.ipynb) | A variable in each language; free names; names kept as written |
 | 5 | [Operators](05_Operators.ipynb) | `a + b * c` as a tree; parentheses and precedence across languages; operations as data; each language's arithmetic |
 | 6 | [Calls, members and subscripts](06_Calls_Members_And_Subscripts.ipynb) | Properties, items and calls in each language, and what has no counterpart |
@@ -77,10 +77,10 @@ checks that the dialect's `Text.ToText` gives that text back; Python's notebooks
 | 8.11 | [POSIX BRE](08_11_POSIX_BRE.ipynb) | A basic regular expression built up; where its anchors stand; grep's pattern list; C++'s `basic` and `grep`; POSIX.1's editions |
 | 8.12 | [POSIX ERE](08_12_POSIX_ERE.ipynb) | An extended regular expression; what it has and lacks; egrep's lists and awk's escapes; C++'s `extended`, `awk` and `egrep` |
 | 8.13 | [SystemVerilog Types](08_13_SystemVerilog_Types.ipynb) | Keyword and vector types, dimensions, structures, unions and enumerations as `SystemVerilog Types` terms; read by a cast, `$bits` and an assignment pattern; no domain or value of their own; their editions |
-| 8.14 | [SystemVerilog Patterns](08_14_SystemVerilog_Patterns.ipynb) | Variable, wildcard, tagged and structure patterns, what each binds, held by a `matches` that binds them in its consequence; never evaluated |
-| 8.15 | [SystemVerilog Assertions](08_15_SystemVerilog_Assertions.ipynb) | Sequences (delays, repetitions, operators) and properties, a property's clock and reset, printed by the standard's precedence; held by a call's argument; never evaluated |
+| 8.14 | [SystemVerilog Patterns](08_14_SystemVerilog_Patterns.ipynb) | Variable, wildcard, tagged and structure patterns, what each binds, held by a `matches` that binds them in its consequence; never simplified |
+| 8.15 | [SystemVerilog Assertions](08_15_SystemVerilog_Assertions.ipynb) | Sequences (delays, repetitions, operators) and properties, a property's clock and reset, printed by the standard's precedence; held by a call's argument; never simplified |
 | 8.16 | [SystemVerilog Constraints](08_16_SystemVerilog_Constraints.ipynb) | Expression constraints, `inside` and `dist`, implications, `foreach` binding its loop variables, `solve ... before`, `disable soft`, `unique`; held by `randomize() with` |
-| 8.17 | [SystemVerilog Preprocessor](08_17_SystemVerilog_Preprocessor.ipynb) | Macro usages where an expression stands, directives, conditional directives and comments among constraints; never expanded or evaluated; every Verilog and SystemVerilog edition |
+| 8.17 | [SystemVerilog Preprocessor](08_17_SystemVerilog_Preprocessor.ipynb) | Macro usages where an expression stands, directives, conditional directives and comments among constraints; never expanded or simplified; every Verilog and SystemVerilog edition |
 
 ## Part II · Constraints as data, in seven case studies
 
@@ -89,12 +89,12 @@ languages.
 
 | # | Notebook | The problem | What you learn |
 |---|---|---|---|
-| 9 | [Constraints as data](09_Constraints_As_Data.ipynb) | One constraint, four hand-written copies in four languages | Writing a constraint with writers, as an expression in a store; evaluating it; the core vocabulary; validating; saving and loading |
+| 9 | [Constraints as data](09_Constraints_As_Data.ipynb) | One constraint, four hand-written copies in four languages | Writing a constraint with writers, as an expression in a store; simplifying it, its data bound; the core vocabulary; validating; saving and loading |
 | 10 | [Answers you can trust](10_Answers_You_Can_Trust.ipynb) | A logger that never reported: neither true nor false | Unknown; `has`; Kleene's logic; deciding what unknown means; no coercion; what throws |
 | 11 | [Constraints over collections](11_Constraints_Over_Collections.ipynb) | Every reading, not just the last; every logger's battery | Collections; `count`, `item`, `max` and friends; quantifiers; empty collections; an object's related objects; lists and mappings built from terms |
-| 12 | [Deciding what you can now](12_Deciding_What_You_Can_Now.ipynb) | A constraint per product; a question that waits on the clock | Partial evaluation; templates; residuals; how Kleene's logic simplifies; lets of known values |
+| 12 | [Deciding what you can now](12_Deciding_What_You_Can_Now.ipynb) | A constraint per product; a question that waits on the clock | Simplification with some values known: residuals; templates; residuals; how Kleene's logic simplifies; lets of known values |
 | 13 | [Analyzing and rewriting constraints](13_Analyzing_And_Rewriting_Constraints.ipynb) | Which constraints read a property; one way to write each constraint | Forms; `walk`, `fold`, `same` and `free`; rewriting with patterns and holes |
-| 14 | [One constraint, many languages](14_One_Constraint_Many_Languages.ipynb) | The constraint in Excel, Python, MATLAB and LaTeX | Dialects and translators; each language's own evaluation; reading constraints back; scopes as allowlists |
+| 14 | [One constraint, many languages](14_One_Constraint_Many_Languages.ipynb) | The constraint in Excel, Python, MATLAB and LaTeX | Dialects and translators; each language's own simplification; reading constraints back; scopes as allowlists |
 | 15 | [Constraints for firmware and hardware](15_Constraints_For_Firmware_And_Hardware.ipynb) | A packet constraint in C and SystemVerilog | C's widths, promotions and undefined behavior; `x` and `z`; what has no counterpart |
 
 A case study on values with widths (a radio packet's `int16_t` and `uint8_t` members: typed literals, overflow, bits,
