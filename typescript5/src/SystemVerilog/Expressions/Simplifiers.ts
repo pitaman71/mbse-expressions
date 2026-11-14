@@ -1,26 +1,31 @@
 /**
- * Evaluators of the SystemVerilog dialect: compute an expression by IEEE 1800's rules, in TypeScript.
+ * Simplifiers of the SystemVerilog dialect: simplify an expression by IEEE 1800's rules, in TypeScript.
  *
- * `Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
+ * `Simplifiers.OfAny(expression, scope)` simplifies a term (or anything `Terms.term` reads one from) in a
  * `new Scope(variables, { functions })` and gives a `Domains.Logic` for an integral result or a number for a real one. A
  * variable's type is its value's: a `Logic` its own, a boolean a `bit`, a bigint an `integer` (or a `longint` beyond 32
  * bits), a number a `real`, and a string a vector of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for
  * domain inference). Every named type it computes in (a literal's, a cast's, `===`'s `bit`, `size()`'s `int`, `$bits`'
  * `integer`, ...) is the domain SystemVerilog defines by that name in the store of the term's holder (`Domains.named`),
- * read once per evaluation when it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError),
+ * read once per folding when it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError),
  * and a store where SystemVerilog's `define` has not run defines none.
  *
- * It keeps what it evaluated before the dialect was complete, over the kinds that replaced its own (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11: "stage 6 extends no evaluator"): a `literal` (an unsized integer, decimal or based,
+ * Its rules fold what it evaluated before the dialect was complete, over the kinds that replaced its own (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11: "stage 6 extends no evaluator"): a `literal` (an unsized integer, decimal or based,
  * a real, a string) and a `constant` (a vector, sized or not, and a fill in its context's width); a `nameexpression` of an
  * identifier; `memberexpression`, `indexexpression`, `rangeselect` (`[msb:lsb]`), `unaryexpression`,
  * `binaryexpression`, `conditionalexpression`, `parenthesizedexpression`, `insideexpression` with `valuerange`s,
  * `concatenation`, `replication`, `castexpression` (to a type SystemVerilog defines by its keyword, a signing, or a
  * width), `systemcall` (the system functions `SYSTEM`), `callexpression` (of a function the scope provides, or of an
  * array's method of no arguments, `a.size()`) and `arraymethodwithexpression` (a reduction with a `with` clause). Every
- * other kind, the other dialects' of its family among them, is refused by name, `NotImplementedError` ("SystemVerilog
- * incrementexpression is not evaluated", "SystemVerilog Types structtype is not evaluated"), and so is what an evaluated
- * kind holds beyond what it evaluated before (a scoped name, an indexed part select, a time literal, `null`). IEEE
- * 1800's rules apply:
+ * other kind, the other dialects' of its family among them, stays in the residual, named ("SystemVerilog
+ * incrementexpression is not simplified", "SystemVerilog Types structtype is not simplified"), and so does what a folded
+ * kind holds beyond what it evaluated before (a scoped name, an indexed part select, a time literal, `null`); `CATEGORIES`
+ * gives each the evaluation inventory's class. A name or a function the scope does not provide stays too. The root folds
+ * into the literal of its value, an unsized integer for an `integer`'s or a `longint`'s, a sized vector for any other
+ * integral type's (of 4 states: a 2-state type is not kept), a real; and so does a name, replaced by the literal of its
+ * value. No other subterm folds alone: an operand's width is its context's (11.6), so an operand folded at its own width
+ * could compute otherwise, and it stays, its value the root's to compute (see `Framework/Simplifiers`,
+ * `folds`). IEEE 1800's rules apply:
  *
  * - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
  *   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its
@@ -48,7 +53,8 @@
 
 import { Errors, Proxies, Repr } from "@mbse/schemas/Framework";
 
-import { NameError, OverflowError } from "../../Framework/Errors.js";
+import { OverflowError } from "../../Framework/Errors.js";
+import * as FS from "../../Framework/Simplifiers.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as F from "../../Framework/Terms.js";
@@ -58,7 +64,7 @@ import * as Domains from "./Domains.js";
 import * as X from "./Expressions.js";
 import { Logic, SvType } from "./Domains.js";
 
-const { KeyError, NotImplementedError, ValueError } = Errors;
+const { KeyError, ValueError } = Errors;
 const { repr, typeName } = Repr;
 type Fn = (...args: any[]) => unknown;
 
@@ -74,13 +80,9 @@ export class Scope extends S.Variables {
     this.functions = new Map(Object.entries(options.functions ?? {}));
   }
 
-  override unbound(reference: any): never {
-    throw new NameError(`identifier '${F.nameOf(reference)}' is not declared`);
-  }
-
   function(name: string): Fn {
     const fn = this.functions.get(name);
-    if (fn === undefined) throw new NameError(`function '${name}' is not declared`);
+    if (fn === undefined) throw new S.Unbound(name);
     return fn;
   }
 }
@@ -239,10 +241,6 @@ function owner(node: Node): string {
   return X.DIALECT.owner(node.term).name();
 }
 
-function refused(what: string): Error {
-  return new NotImplementedError(`${what} is not evaluated`);
-}
-
 /** A term read once for one evaluation: its `tag` (as `Expressions.DIALECT` reads it, a term of any of its family's
  * dialects), and its members by name, its attributes (null where not set), its helpers (`Terms.Node`s), its subterms (a
  * `Node`, null where empty) and its variadic arguments (each container's, an array of `Node`s). `term` is the term value read. */
@@ -276,7 +274,7 @@ class Evaluation {
 
   /** The term's self-determined type (null for an object); a kind it does not evaluate is refused by name. */
   type(node: any): SvType | null {
-    if (!EVALUATED.has(kindOf(node))) throw refused(`${owner(node)} ${kindOf(node)}`);
+    if (!EVALUATED.has(kindOf(node))) throw new FS.NoRule(owner(node), kindOf(node), kindOf(node));
     if (!this.types.has(node)) this.types.set(node, this.typeOf(node));
     return this.types.get(node) as SvType | null;
   }
@@ -339,7 +337,7 @@ class Evaluation {
       if (width < 1n) throw new ValueError(`a cast's width must be positive, got ${width}`);
       return Domains.vector(Number(width), operand.signed, operand.states);
     }
-    throw refused(`${owner(target)} ${kindOf(target)}`);
+    throw new FS.NoRule(owner(target), kindOf(target), kindOf(target));
   }
 
   /** A self-determined term's value, of its own type, once. */
@@ -353,7 +351,7 @@ class Evaluation {
       case X.LITERAL: return this.literal(node);
       case X.CONSTANT: return this.vector(node);
       case X.NAMEEXPRESSION:
-        if (F.nameOf(node.term) === null) throw refused("SystemVerilog nameexpression of a name that is not an identifier");
+        if (F.nameOf(node.term) === null) throw new FS.NoRule("SystemVerilog", "nameexpression of a name that is not an identifier", kindOf(node));
         return typed(this.scope.lookup(node.term), this.stored);
       case X.MEMBEREXPRESSION: return this.member(node);
       case X.INDEXEXPRESSION: return this.select(node);
@@ -369,14 +367,14 @@ class Evaluation {
   /** A literal's value: an unsized based integer of its own type, a decimal one an `integer` or a `longint`, a real, or
    * a string's bytes. */
   private literal(node: any): unknown {
-    if (node.unit !== null) throw refused("SystemVerilog time literal");
+    if (node.unit !== null) throw new FS.NoRule("SystemVerilog", "time literal", kindOf(node));
     if (node.base !== null) return Logic.number(Domains.unsized(node.value, Boolean(node.signed)), node.value);
     return typed(node.value, this.stored);
   }
 
   /** A constant's vector: of its size, or, unsized, extended to 32 bits by its leftmost bit where x or z. */
   private vector(node: any): Logic {
-    if (node.bits === null) throw refused(`SystemVerilog constant ${node.singleton}`);
+    if (node.bits === null) throw new FS.NoRule("SystemVerilog", `constant ${node.singleton}`, kindOf(node));
     let bits: string = node.bits;
     if (node.size === null && bits.length < 32) bits = ("xz".includes(bits[0] as string) ? bits[0] as string : "0").repeat(32 - bits.length) + bits;
     return Logic.of(bits, Boolean(node.signed));
@@ -560,7 +558,7 @@ class Evaluation {
     const items: any[][] = []; // a term, a range's ends, or an array's element
     for (const item of node.set) {
       if (kindOf(item) === X.VALUERANGE) {
-        if (item.operator !== null) throw refused(`SystemVerilog valuerange ${repr(item.operator)}`);
+        if (item.operator !== null) throw new FS.NoRule("SystemVerilog", `valuerange ${repr(item.operator)}`, kindOf(item));
         items.push([item.left, item.right]);
       } else if (this.type(item) === null && Array.isArray(this.own(item))) { // an array: each of its elements
         for (const element of this.items(this.own(item), "inside")) items.push(["element", element]);
@@ -628,7 +626,7 @@ class Evaluation {
     const call = node.value;
     const callee = kindOf(call) === X.CALLEXPRESSION ? call.callee : null;
     if (callee === null || kindOf(callee) !== X.MEMBEREXPRESSION || !X.REDUCTIONS.includes(spelling(callee.member))) {
-      throw refused("SystemVerilog arraymethodwithexpression of a call that is not a reduction's");
+      throw new FS.NoRule("SystemVerilog", "arraymethodwithexpression of a call that is not a reduction's", kindOf(node));
     }
     const method = spelling(callee.member);
     const iterator = [...(X.arrayMethodScopes(F.kindOf(node.term)[1])[1] as ReadonlySet<string>)][0] as string;
@@ -684,7 +682,7 @@ class Evaluation {
   }
 
   private range(node: any): Logic {
-    if (node.operator !== ":") throw refused(`SystemVerilog rangeselect ${repr(node.operator)}`);
+    if (node.operator !== ":") throw new FS.NoRule("SystemVerilog", `rangeselect ${repr(node.operator)}`, kindOf(node));
     const target = this.value(node.value);
     if (!(target instanceof Logic)) throw new TypeError(`a ${typeName(target)} cannot be selected from`);
     const [msb, lsb] = [this.constant(node.left, "a range's msb"), this.constant(node.right, "a range's lsb")];
@@ -713,7 +711,7 @@ class Evaluation {
   /** A system function's call: one of `SYSTEM`, of one argument. */
   private systemCall(node: any): unknown {
     const name = node.name;
-    if (!X.SYSTEM.includes(name)) throw refused(`SystemVerilog systemcall ${repr(name)}`);
+    if (!X.SYSTEM.includes(name)) throw new FS.NoRule("SystemVerilog", `systemcall ${repr(name)}`, kindOf(node));
     if (node.arguments.length !== 1) throw new TypeError(`${name} takes 1 argument, got ${node.arguments.length}`);
     const argument = node.arguments[0];
     if (name === "$bits") { // its argument's type's width, or a type's; the argument is not evaluated
@@ -735,7 +733,7 @@ class Evaluation {
     if (kindOf(callee) === X.MEMBEREXPRESSION && X.METHODS.includes(spelling(callee.member)) && node.arguments.length === 0) {
       return this.method(callee.value, spelling(callee.member));
     }
-    throw refused(`SystemVerilog callexpression of a ${kindOf(callee)}`);
+    throw new FS.NoRule("SystemVerilog", `callexpression of a ${kindOf(callee)}`, kindOf(node));
   }
 
   /** An array element's type: it must be integral or real. */
@@ -780,10 +778,61 @@ function realPower(base: number, exponent: number, ctype: SvType): number {
   return ctype.format === "binary32" ? Ieee754.convert("binary64", result, "binary32", EVEN) as number : result;
 }
 
-/** The value of an expression in `scope`, or with the variables in an object bound: a `Logic` or a number. */
-export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
-  const term = F.term(expression);
-  const problems = X.DIALECT.validate(term, S.free(term, X.DIALECT)); // its structure: references resolve as they go
-  if (problems.length > 0) throw new ValueError(`cannot evaluate an invalid expression: ${problems[0]}`);
-  return new Evaluation(S.isScope(scope) ? scope as Scope : new Scope(scope as S.Bindings), new Types(term)).value(new Node(term));
+/** SystemVerilog's folding rules: a term's value in a scope, by IEEE 1800's rules, the term's structure validated
+ * first (its references resolve as they go). */
+class Rules implements FS.Rules {
+  readonly dialect = X.DIALECT;
+
+  scope(variables: S.Bindings): Scope {
+    return new Scope(variables);
+  }
+
+  evaluate(node: any, scope: any): unknown {
+    const invalid = [...F.walk(node)].find((n) => F.INVALID_KINDS.has(F.kindOf(n)[0]));
+    if (invalid !== undefined) { // invalid syntax: no rule, named by its owner, as every dialect names it
+      throw new FS.NoRule(X.DIALECT.owner(invalid).name(), F.kindOf(invalid)[0], F.kindOf(invalid)[0]);
+    }
+    const problems = X.DIALECT.validate(node, S.free(node, X.DIALECT));
+    if (problems.length > 0) throw new ValueError(`cannot simplify an invalid expression: ${problems[0]}`);
+    return new Evaluation(scope, new Types(node)).value(new Node(node));
+  }
+}
+
+/** Whether a subterm folds: the root, and a name, which a literal of its value's type replaces. An operand's width is
+ * its context's (11.6), so an operand folded alone, at its own width, would compute otherwise: it stays. */
+function folds(node: any, root: boolean): boolean {
+  return root || X.DIALECT.kind(node)[2].role === F.REFERENCE;
+}
+
+/** The literal of a value: a real's; an `integer`'s (a signed 4-state value of 32 bits) or a `longint`'s, an unsized
+ * decimal integer; any other integral value's, a sized vector of its bits and signedness (of 4 states: a 2-state
+ * value's type is not kept); none for an object. */
+function literalOf(value: unknown): unknown {
+  if (typeof value === "number") return X.literal(value);
+  if (!(value instanceof Logic)) return null;
+  const integer = value.type.width === 32 && value.type.signed && value.type.states === 4; // `integer`'s, by any name
+  if (value.known && (integer || value.type.label === "longint")) return X.literal(value.integer());
+  return X.vector(value.bits, value.type.signed);
+}
+
+/** The evaluation inventory's class of what each dialect of the family has no rule for (`a` where none is given). */
+export const CATEGORIES: Record<string, Record<string, string>> = {
+  SystemVerilog: {
+    valuerange: "b", patternitem: "b", assignmentpattern: "c", taggedexpression: "c", newarrayexpression: "c",
+    randomizewithexpression: "c",
+    ...Object.fromEntries(["superexpression", "newexpression", "newcopyexpression", "rootexpression",
+      "incrementexpression", "assignmentexpression"].map((kind) => [kind, "d"])),
+  },
+  "SystemVerilog Types": { "*": "b" }, "SystemVerilog Patterns": { "*": "b" }, "SystemVerilog Assertions": { "*": "d" },
+  "SystemVerilog Constraints": { solvebeforeconstraint: "b", disablesoftconstraint: "b" },
+  "SystemVerilog Preprocessor": { "*": "b", macrousage: "d" },
+};
+
+/** The simplifier of the SystemVerilog dialect. */
+export const SIMPLIFIER = new FS.Simplifier(new Rules(), { literal: literalOf, categories: CATEGORIES, folds });
+
+/** The simplification of an expression in `scope`, or with the variables in an object bound: folded into a literal
+ * when the scope determines it, its value a `Logic` or a number. */
+export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): FS.Simplified {
+  return SIMPLIFIER.run(expression, scope);
 }

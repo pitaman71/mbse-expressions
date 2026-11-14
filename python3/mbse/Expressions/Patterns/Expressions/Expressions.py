@@ -1,4 +1,4 @@
-"""Expressions of the Patterns dialect (formerly Basic): the core vocabulary, for constraints. `Evaluators` evaluates
+"""Expressions of the Patterns dialect (formerly Basic): the core vocabulary, for constraints. `Simplifiers` simplifies
 them.
 
 Patterns' terms are values of its `Term`, `Expressions.Patterns.Expressions.Term`, the branch `patterns` of

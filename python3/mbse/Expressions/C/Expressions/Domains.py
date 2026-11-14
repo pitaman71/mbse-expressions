@@ -1,4 +1,4 @@
-"""Domains of the C dialect: the types C's and C++'s evaluation, inference and validation compute on, each read from the
+"""Domains of the C dialect: the types C's and C++'s folding rules, inference and validation compute on, each read from the
 domains their dialects and their holder's ABI store, and the signatures of their operators, which `Cpp` shares.
 
 A `CType` is a type and a domain: `bool`, an integer by its width and signedness, or a floating type of an IEEE 754
@@ -21,8 +21,8 @@ names an ABI (a cast to a type a program declares).
 `promoted(type)` applies the integer promotions (a narrower integer or a bool becomes `int`) and `common(a, b)` the
 usual arithmetic conversions: the wider floating type if either is floating, otherwise the promoted types, the wider if
 they agree in signedness, else the unsigned one when it is at least as wide, else the signed one; a decimal floating
-type and a binary one have none (C's constraint), so `common` gives None. The signatures follow the evaluator's rules
-(see `Evaluators`): arithmetic gives the common type, shifts the promoted left operand's, comparisons and logic `bool`,
+type and a binary one have none (C's constraint), so `common` gives None. The signatures follow the folding rules
+(see `Simplifiers`): arithmetic gives the common type, shifts the promoted left operand's, comparisons and logic `bool`,
 which the dialect's kinds read from the store (`Expressions`), and a result is named by the first of `NAMES`, C's names
 in the order its standard lists them, that its types define equal to it. `of(value, types)` names a native value's type:
 `int`, `long` or `unsigned long` for an int, as the first that holds it, `double` for a float, `bool`; None otherwise.
@@ -35,13 +35,13 @@ and its base, the first of the types they allow that holds its value (an `unsign
 without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double` for `L`,
 `_Float16` for `f16` in C and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in
 C and `char` in C++, its encoding prefix's type otherwise (`wchar_t`, `char8_t`); a bool's `bool`; a string's `String`.
-What `_BitInt` or a prefix no language has encodes is a domain named by its type, which no evaluator has values of; a
+What `_BitInt` or a prefix no language has encodes is a domain named by its type, which no folding rule has values of; a
 suffix the language does not write gives `Anything`, its type unknown. `out_of_range(attributes, language, types)` says
 what is wrong with an integer literal that its type does not hold, one that fits none of the types its suffix and base
 allow, by the stored domain's range (a value out of range, PRI-023). `arithmetic(names)` is the name of the arithmetic
 type a type name's specifiers name (`unsigned int`, `uint8_t`), or None.
 
-The other operators, which no evaluator computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`, `->*`,
+The other operators, which no folding rule computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`, `->*`,
 its folds and named casts), have signatures that say only how many operands each takes.
 """
 
@@ -341,7 +341,7 @@ def _integer_suffix(suffix: str) -> str:
 def literal(attributes: Any, language: str, types: Types) -> D.Domain | None:
     """A literal's type, by what its text encodes (its `prefix`, `quote`, `base` and `suffix`) and its value, in
     `language` (`C` or `C++`), found through `types`; None where its value has none (an int no type holds, or no
-    value). A domain of a type no evaluator has values of is named by it (`_BitInt`)."""
+    value). A domain of a type no folding rule has values of is named by it (`_BitInt`)."""
     value, prefix, suffix = attributes.get("value"), attributes.get("prefix"), attributes.get("suffix")
     if type(value) is str:
         return String if prefix is None else D.OfTypes(f"{_ENCODINGS.get(prefix, prefix)} string", str)

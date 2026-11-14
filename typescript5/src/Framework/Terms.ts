@@ -1,5 +1,5 @@
 /**
- * Terms: the framework's schemas, and the generic reads of terms that every dialect's evaluator, validator and
+ * Terms: the framework's schemas, and the generic reads of terms that every dialect's simplifier, validator and
  * translator shares.
  *
  * An expression is an `Expressions.Framework.Expression`, a reference object whose `root` is a term: a value of
@@ -91,7 +91,7 @@
  * - `APPLICATION`: an operator, named by the property `operator` (or, if it is null, by the kind's tag), applied to
  *   arguments. A kind's `vocabulary` maps operator names to signatures; operators outside it are extensions, unless the
  *   vocabulary is None, when any name is accepted and `signature` applies to all, or the kind is `closed`, when they
- *   are refused by evaluation; where its operations are data (`Kind.operations`), validation refuses any its dialect
+ *   stay in the residual when simplified; where its operations are data (`Kind.operations`), validation refuses any its dialect
  *   does not define. The container constructors are applications named by their tags.
  * - `BINDING`: binds its name to its first argument within the others: a let, whose schema is
  *   `Expressions.Framework.Let`; a kind refining `Let` (a binder, `isBinder`) binds what its `scopes` say, where it has
@@ -101,11 +101,11 @@
  *   refining `Let` holds its collection as Let's `value` and binds by its role, not as a let.
  * - `IMPORT`: makes what it declares available within its body, its last argument; `Kind.names(attributes)` gives the
  *   names it binds for lexical references. An import refining `Let` leaves Let's `value` empty and binds by its role.
- * - `INVALID`: invalid syntax, `error` and `missing`: validation reports it, and evaluation refuses it by name.
+ * - `INVALID`: invalid syntax, `error` and `missing`: validation reports it, and simplification leaves it in the residual, named.
  *
  * Every kind that binds names refines `Let` (a binder), listing Let's `name`, `value` and `body` first, any it has no
  * name or term for left unset (mbse-basis [CAP-279: names an expression binds found alike in every language](mbse:mbse-basis/docs/capabilities/CAP-279.md)); a kind keeps its role, which
- * evaluation and inference read.
+ * simplification and inference read.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -910,7 +910,7 @@ export interface KindOptions {
 /** How the framework reads a kind, beyond its schema: its `role`; the property naming its operator (`operator`, or null
  * when its tag names it); for an application or a quantifier, its `vocabulary` (operator names to signatures; null
  * accepts any name, with `signature`), and whether it is `closed`, its dialect defining its operations and no others,
- * so that evaluation refuses any other; where its operations are data, those its dialect defines in a store
+ * so that simplification leaves any other in the residual; where its operations are data, those its dialect defines in a store
  * (`operations(store)`, by name, each its `Schemas.OfExpression`), which validation reads in place of its vocabulary
  * from the store of the term's holder (`Proxies.store_of`: a lone term belongs to no store), refusing any other whether
  * or not it asks for the core, its vocabulary left to `infer`; the properties it requires
@@ -1147,8 +1147,8 @@ export class Dialect {
 
   /** The dialect that owns a term's kind, whose name its refusals and its printing of invalid syntax give: the dialect
    * whose `Term` holds it, this one or one it reads, or, for a kind that `Term` lists and a dialect it reads declares,
-   * that dialect ("Python Types typevar is not evaluated", "C Types error has no text to print"); a term of any other
-   * dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review) records it ("Python Patterns matchas is not evaluated"). */
+   * that dialect ("Python Types typevar is not simplified", "C Types error has no text to print"); a term of any other
+   * dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review) records it ("Python Patterns matchas is not simplified"). */
   owner(term_: any): Dialect {
     const reader = this.reader(term_);
     const tag = kindOf(term_)[0];
@@ -1163,7 +1163,7 @@ export class Dialect {
 
   /** The dialect that reads a term value: this one, for a term of its `Term`; one it reads, for a term of that one's;
    * or null, for a term of any other dialect. */
-  private reader(term_: any): Dialect | null {
+  reader(term_: any): Dialect | null {
     const union = dialectOf(term_);
     if (union === this.union) return this;
     return this.reads().find((other) => other.union === union) ?? null;

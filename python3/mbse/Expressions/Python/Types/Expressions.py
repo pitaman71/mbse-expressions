@@ -23,8 +23,8 @@ branch tags, and its properties in source order, each a value object `Expression
 A type parameter declares a name that the statement listing it binds (a generic function, class or type alias), not a
 term: none of its kinds refines `Let` and none has scopes, so a name its bound or its default refers to is a reference
 the scope binds. Its kinds are applications the framework reads by their structure, of no domain known statically, and
-are not evaluated: Python3's evaluator refuses each by name ("Python Types typevar is not evaluated"); a type expression
-of `Python3`'s kinds evaluates as `Python3` evaluates it.
+are not simplified: Python3's rules leave each in the residual, named ("Python Types typevar is not simplified"); a type
+expression of `Python3`'s kinds simplifies as `Python3` simplifies it.
 
 The versions of Python it covers are data, which `define` writes: Python 3.0 to 3.15, as `Python3`'s, each with its own
 kinds it has (`SINCE`: every one since Python 3.12; a default, 3.13, a feature within a kind, not recorded).

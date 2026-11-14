@@ -1,25 +1,30 @@
-"""Evaluators of the SystemVerilog dialect: compute an expression by IEEE 1800's rules, in Python.
+"""Simplifiers of the SystemVerilog dialect: simplify an expression by IEEE 1800's rules, in Python.
 
-`Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
+`Simplifiers.OfAny(expression, scope)` simplifies a term (or anything `Terms.term` reads one from) in a
 `Scope(variables, functions)` and gives a `Domains.Logic` for an integral result or a float for a real one. A variable's
 type is its value's: a `Logic` its own, a bool a `bit`, an int an `integer` (or a `longint` beyond 32 bits), a float a
 `real`, and a string a vector of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for
 domain inference). Every named type it computes in (a literal's, a cast's, `===`'s `bit`, `size()`'s `int`, `$bits`'
 `integer`, ...) is the domain SystemVerilog defines by that name in the store of the term's holder (`Domains.named`),
-read once per evaluation when it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError),
+read once per folding when it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError),
 and a store where SystemVerilog's `define` has not run defines none.
 
-It keeps what it evaluated before the dialect was complete, over the kinds that replaced its own (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11: "stage 6 extends no evaluator"): a `literal` (an unsized integer, decimal or based,
+Its rules fold what it evaluated before the dialect was complete, over the kinds that replaced its own (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11: "stage 6 extends no evaluator"): a `literal` (an unsized integer, decimal or based,
 a real, a string) and a `constant` (a vector, sized or not, and a fill in its context's width); a `nameexpression` of an
 identifier; `memberexpression`, `indexexpression`, `rangeselect` (`[msb:lsb]`), `unaryexpression`,
 `binaryexpression`, `conditionalexpression`, `parenthesizedexpression`, `insideexpression` with `valuerange`s,
 `concatenation`, `replication`, `castexpression` (to a type SystemVerilog defines by its keyword, a signing, or a
 width), `systemcall` (the system functions `SYSTEM`), `callexpression` (of a function the scope provides, or of an
 array's method of no arguments, `a.size()`) and `arraymethodwithexpression` (a reduction with a `with` clause). Every
-other kind, the other dialects' of its family among them, is refused by name, `NotImplementedError` ("SystemVerilog
-incrementexpression is not evaluated", "SystemVerilog Types structtype is not evaluated"), and so is what an evaluated
-kind holds beyond what it evaluated before (a scoped name, an indexed part select, a time literal, `null`). IEEE
-1800's rules apply:
+other kind, the other dialects' of its family among them, stays in the residual, named ("SystemVerilog
+incrementexpression is not simplified", "SystemVerilog Types structtype is not simplified"), and so does what a folded
+kind holds beyond what it evaluated before (a scoped name, an indexed part select, a time literal, `null`); `CATEGORIES`
+gives each the evaluation inventory's class. A name or a function the scope does not provide stays too. The root folds
+into the literal of its value, an unsized integer for an `integer`'s or a `longint`'s, a sized vector for any other
+integral type's (of 4 states: a 2-state type is not kept), a real; and so does a name, replaced by the literal of its
+value. No other subterm folds alone: an operand's width is its context's (11.6), so an operand folded at its own width
+could compute otherwise, and it stays, its value the root's to compute (see `mbse.Expressions.Framework.Simplifiers`,
+`folds`). IEEE 1800's rules apply:
 
 - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its
@@ -52,13 +57,13 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from mbse.Expressions.Patterns.Expressions import Ieee754
-from mbse.Expressions.Framework import Errors, Objects, Symbolics as S, Terms as F
+from mbse.Expressions.Framework import Objects, Simplifiers as FS, Symbolics as S, Terms as F
 from mbse.Schemas.Framework import Proxies
 
 from . import Domains, Expressions as X
 from .Domains import Logic, SvType
 
-__all__ = ["OfAny", "Scope"]
+__all__ = ["OfAny", "Scope", "SIMPLIFIER", "CATEGORIES"]
 
 _EVEN = "roundTiesToEven"
 _ONE = Domains.vector(1)
@@ -72,12 +77,9 @@ class Scope(S.Variables):
         super().__init__(variables)
         self.functions = dict(functions or {})
 
-    def unbound(self, reference: Any) -> Any:
-        raise Errors.NameError(f"identifier '{F.name_of(reference)}' is not declared")
-
     def function(self, name: str) -> Callable[..., Any]:
         if name not in self.functions:
-            raise Errors.NameError(f"function '{name}' is not declared")
+            raise S.Unbound(name)
         return self.functions[name]
 
 
@@ -220,10 +222,6 @@ def _owner(node: Any) -> str:
     return X.DIALECT.owner(node.term).name()
 
 
-def _refused(what: str) -> NotImplementedError:
-    return NotImplementedError(f"{what} is not evaluated")
-
-
 class _Node:
     """A term read once for one evaluation: its `kind` (as `Expressions.DIALECT` reads it, a term of any of its family's
     dialects), and its members as attributes, its attributes (None where not set), its helpers (`Terms.Node`s), its
@@ -258,7 +256,7 @@ class _Evaluation:
     def type(self, node: Any) -> SvType | None:
         """The term's self-determined type (None for an object); a kind it does not evaluate is refused by name."""
         if node.kind not in _EVALUATED:
-            raise _refused(f"{_owner(node)} {node.kind}")
+            raise FS.NoRule(_owner(node), node.kind, node.kind)
         if id(node) not in self._types:
             self._types[id(node)] = self._type_of(node)
         return self._types[id(node)]
@@ -325,7 +323,7 @@ class _Evaluation:
             if width < 1:
                 raise ValueError(f"a cast's width must be positive, got {width}")
             return Domains.vector(width, operand.signed, operand.states)
-        raise _refused(f"{_owner(target)} {target.kind}")
+        raise FS.NoRule(_owner(target), target.kind, target.kind)
 
     def own(self, node: Any) -> Any:
         """A self-determined term's value, of its own type, once."""
@@ -340,7 +338,7 @@ class _Evaluation:
             return self._vector(node)
         if node.kind == X.NAMEEXPRESSION:
             if F.name_of(node.term) is None:
-                raise _refused("SystemVerilog nameexpression of a name that is not an identifier")
+                raise FS.NoRule("SystemVerilog", "nameexpression of a name that is not an identifier", node.kind)
             return typed(self.scope.lookup(node.term), self.stored)
         if node.kind == X.MEMBEREXPRESSION:
             return self._member(node)
@@ -362,7 +360,7 @@ class _Evaluation:
         """A literal's value: an unsized based integer of its own type, a decimal one an `integer` or a `longint`, a
         real, or a string's bytes."""
         if node.unit is not None:
-            raise _refused("SystemVerilog time literal")
+            raise FS.NoRule("SystemVerilog", "time literal", node.kind)
         if node.base is not None:
             return Logic.number(Domains.unsized(node.value, bool(node.signed)), node.value)
         return typed(node.value, self.stored)
@@ -370,7 +368,7 @@ class _Evaluation:
     def _vector(self, node: Any) -> Logic:
         """A constant's vector: of its size, or, unsized, extended to 32 bits by its leftmost bit where x or z."""
         if node.bits is None:
-            raise _refused(f"SystemVerilog constant {node.singleton}")
+            raise FS.NoRule("SystemVerilog", f"constant {node.singleton}", node.kind)
         bits = node.bits
         if node.size is None and len(bits) < 32:
             bits = (bits[0] if bits[0] in "xz" else "0") * (32 - len(bits)) + bits
@@ -563,7 +561,7 @@ class _Evaluation:
         for item in node.set:
             if item.kind == X.VALUERANGE:
                 if item.operator is not None:
-                    raise _refused(f"SystemVerilog valuerange {item.operator!r}")
+                    raise FS.NoRule("SystemVerilog", f"valuerange {item.operator!r}", item.kind)
                 items.append((item.left, item.right))
             elif self.type(item) is None and isinstance(self.own(item), list):  # an array: each of its elements
                 items.extend(("element", element) for element in self._items(self.own(item), "inside"))
@@ -629,7 +627,7 @@ class _Evaluation:
         call = node.value
         callee = call.callee if call.kind == X.CALLEXPRESSION else None
         if callee is None or callee.kind != X.MEMBEREXPRESSION or _spelling(callee.member) not in X.REDUCTIONS:
-            raise _refused("SystemVerilog arraymethodwithexpression of a call that is not a reduction's")
+            raise FS.NoRule("SystemVerilog", "arraymethodwithexpression of a call that is not a reduction's", node.kind)
         method = _spelling(callee.member)
         iterator = next(iter(X._array_method_scopes(F.kind_of(node.term)[1])[1]))
         items = self._items(self.value(callee.value), f"{method}()")
@@ -686,7 +684,7 @@ class _Evaluation:
 
     def _range(self, node: Any) -> Logic:
         if node.operator != ":":
-            raise _refused(f"SystemVerilog rangeselect {node.operator!r}")
+            raise FS.NoRule("SystemVerilog", f"rangeselect {node.operator!r}", node.kind)
         target = self.value(node.value)
         if not isinstance(target, Logic):
             raise TypeError(f"a {type(target).__name__} cannot be selected from")
@@ -714,7 +712,7 @@ class _Evaluation:
         """A system function's call: one of `SYSTEM`, of one argument."""
         name = node.name
         if name not in X.SYSTEM:
-            raise _refused(f"SystemVerilog systemcall {name!r}")
+            raise FS.NoRule("SystemVerilog", f"systemcall {name!r}", node.kind)
         if len(node.arguments) != 1:
             raise TypeError(f"{name} takes 1 argument, got {len(node.arguments)}")
         argument = node.arguments[0]
@@ -733,7 +731,7 @@ class _Evaluation:
                          self.stored)
         if callee.kind == X.MEMBEREXPRESSION and _spelling(callee.member) in X.METHODS and not node.arguments:
             return self._method(callee.value, _spelling(callee.member))
-        raise _refused(f"SystemVerilog callexpression of a {callee.kind}")
+        raise FS.NoRule("SystemVerilog", f"callexpression of a {callee.kind}", node.kind)
 
     def _element_type(self, value: Any) -> SvType:
         """An array element's type: it must be integral or real."""
@@ -784,12 +782,63 @@ def _real_power(base: float, exponent: float, ctype: SvType) -> float:
     return Ieee754.convert("binary64", result, "binary32", _EVEN) if ctype.format == "binary32" else result
 
 
-def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
-    """The value of an expression in `scope`, or with the variables in a mapping bound: a `Logic` or a float."""
-    if not isinstance(scope, S.Scope):
-        scope = Scope(dict(scope or {}))
-    term = F.term(expression)
-    problems = X.DIALECT.validate(term, bound=S.free(term, X.DIALECT))  # its structure: references resolve as they go
-    if problems:
-        raise ValueError(f"cannot evaluate an invalid expression: {problems[0]}")
-    return _Evaluation(scope, _Types(term)).value(_Node(term))
+class _Rules:
+    """SystemVerilog's folding rules: a term's value in a scope, by IEEE 1800's rules, the term's structure validated
+    first (its references resolve as they go)."""
+
+    dialect = X.DIALECT
+
+    def scope(self, variables: Mapping[str, Any]) -> Scope:
+        return Scope(variables)
+
+    def evaluate(self, node: Any, scope: Any) -> Any:
+        invalid = next((n for n in F.walk(node) if F.kind_of(n)[0] in F.INVALID_KINDS), None)
+        if invalid is not None:  # invalid syntax: no rule, named by its owner, as every dialect names it
+            raise FS.NoRule(X.DIALECT.owner(invalid).name(), F.kind_of(invalid)[0], F.kind_of(invalid)[0])
+        problems = X.DIALECT.validate(node, bound=S.free(node, X.DIALECT))
+        if problems:
+            raise ValueError(f"cannot simplify an invalid expression: {problems[0]}")
+        return _Evaluation(scope, _Types(node)).value(_Node(node))
+
+
+def _folds(node: Any, root: bool) -> bool:
+    """Whether a subterm folds: the root, and a name, which a literal of its value's type replaces. An operand's width
+    is its context's (11.6), so an operand folded alone, at its own width, would compute otherwise: it stays."""
+    return root or X.DIALECT.kind(node)[2].role == F.REFERENCE
+
+
+def _literal(value: Any) -> Any:
+    """The literal of a value: a real's; an `integer`'s (a signed 4-state value of 32 bits) or a `longint`'s, an
+    unsized decimal integer; any other
+    integral value's, a sized vector of its bits and signedness (of 4 states: a 2-state value's type is not kept); none
+    for an object."""
+    if type(value) is float:
+        return X.literal(value)
+    if not isinstance(value, Logic):
+        return None
+    integer = value.type.width == 32 and value.type.signed and value.type.states == 4  # `integer`'s, by any name
+    if value.known and (integer or value.type.label == "longint"):
+        return X.literal(value.integer())
+    return X.vector(value.bits, value.type.signed)
+
+
+CATEGORIES: dict[str, dict[str, str]] = {
+    "SystemVerilog": {
+        "valuerange": "b", "patternitem": "b", "assignmentpattern": "c", "taggedexpression": "c",
+        "newarrayexpression": "c", "randomizewithexpression": "c",
+        **dict.fromkeys(("superexpression", "newexpression", "newcopyexpression", "rootexpression",
+                         "incrementexpression", "assignmentexpression"), "d")},
+    "SystemVerilog Types": {"*": "b"}, "SystemVerilog Patterns": {"*": "b"}, "SystemVerilog Assertions": {"*": "d"},
+    "SystemVerilog Constraints": {"solvebeforeconstraint": "b", "disablesoftconstraint": "b"},
+    "SystemVerilog Preprocessor": {"*": "b", "macrousage": "d"},
+}
+"""The evaluation inventory's class of what each dialect of the family has no rule for (`a` where none is given)."""
+
+SIMPLIFIER = FS.Simplifier(_Rules(), literal=_literal, categories=CATEGORIES, folds=_folds)
+"""The simplifier of the SystemVerilog dialect."""
+
+
+def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> FS.Simplified:
+    """The simplification of an expression in `scope`, or with the variables in a mapping bound: folded into a literal
+    when the scope determines it, its value a `Logic` or a float."""
+    return SIMPLIFIER(expression, scope)
