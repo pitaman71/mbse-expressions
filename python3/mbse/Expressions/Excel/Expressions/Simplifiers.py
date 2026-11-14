@@ -1,8 +1,10 @@
-"""Evaluators of the Excel dialect: compute a formula by Excel's rules, in Python.
+"""Simplifiers of the Excel dialect: simplify a formula by Excel's rules, in Python.
 
-`Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from: an `Expression`, its
+`Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from: an `Expression`, its
 root) with names bound to numbers, text, logicals and records (mappings, or data objects read through mbse-schemas'
-readers, `Framework.Objects`). Values are Python `float` (number), `str` (text), `bool` (logical) and
+readers, `Framework.Objects`), folding what they determine into the constant of its value, a number's, a text's or a
+logical's (an error, an array or a record has none, and its subterm stays); see
+`mbse.Expressions.Framework.Simplifiers`. Values are Python `float` (number), `str` (text), `bool` (logical) and
 `Domains.Error`. Excel's rules apply, not Patterns':
 
 - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
@@ -29,9 +31,10 @@ readers, `Framework.Objects`). Values are Python `float` (number), `str` (text),
 
 A `Workbook(names, sheets, ...)` is the scope: its defined `names`, its `sheets` of cells (`{'Sheet1': {'A1': 1}}`),
 the current `sheet` (by default the first), other workbooks by name (`books`) and `add_ins`, the functions beyond the
-built-ins. A name is its innermost `LET`, then a defined name, else `#NAME?`; a cell is its value, 0 when empty, or
-`#REF!` when its sheet or book does not exist; an add-in function is called with its arguments' values, and an unknown
-function is `#NAME?`. An evaluator given a mapping makes a workbook whose defined names it holds.
+built-ins. A name is its innermost `LET`, then a defined name; a cell is its value, 0 when empty; an add-in function
+is called with its arguments' values. A name the workbook does not define, a cell of a sheet or a book it does not
+have, and a function neither built in nor an add-in stay in the residual, as the workbook does not say what they are.
+A simplifier given a mapping makes a workbook whose defined names it holds.
 """
 
 from __future__ import annotations
@@ -41,14 +44,14 @@ import re
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Objects, Symbolics as S, Terms
+from mbse.Expressions.Framework import Objects, Simplifiers as F, Symbolics as S, Terms
 
 from . import Domains, Expressions
 from .Domains import Error
 
-__all__ = ["OfAny", "Error", "Workbook", "INTERPRETER"]
+__all__ = ["OfAny", "Error", "Workbook", "RULES", "SIMPLIFIER"]
 
-_VALUE, _FIELD, _NAME, _REF, _NUM, _NA = (Error(code) for code in ("#VALUE!", "#FIELD!", "#NAME?", "#REF!", "#NUM!", "#N/A"))
+_VALUE, _FIELD, _REF, _NUM, _NA = (Error(code) for code in ("#VALUE!", "#FIELD!", "#REF!", "#NUM!", "#N/A"))
 _BITS = 1 << 48
 
 
@@ -94,23 +97,23 @@ class Workbook(S.Variables):
         tag, record = Terms.kind_of(reference)
         if tag != "cell":
             name = Terms.name_of(reference)
-            return _value(self.values[name]) if name in self.values else _NAME
+            return _value(self.value(name))
         attributes = Terms.attributes_of(record)
         book, other, sheet = self, attributes.get("book"), attributes.get("sheet")
         if other is not None and other != self.name:
             if other not in self.books:
-                return _REF
+                raise S.Unbound(other)
             book = self.books[other]
         cells = book.sheets.get(sheet or book.sheet)
         if cells is None:
-            return _REF
+            raise S.Unbound(sheet or book.sheet)
         return _number_of(cells.get(Expressions.address(attributes["address"]), 0.0))  # type: ignore[arg-type]
 
 
 def _add_in(name: str, arguments: list[F.Thunk], node: Any, scope: Workbook) -> Any:
     function = scope.add_ins.get(name.upper())
     if function is None:
-        return _NAME
+        raise S.Unbound(name)
     values = [argument() for argument in arguments]
     for value in values:
         if isinstance(value, Error):
@@ -349,7 +352,7 @@ def _field(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     return _value(fields[name])
 
 
-INTERPRETER = F.Interpreter(Expressions.DIALECT, {
+RULES = F.Interpreter(Expressions.DIALECT, {
     "call": {
         "AND": _logic("AND", all), "OR": _logic("OR", any), "NOT": _not, "IF": _if,
         "ISERROR": lambda arguments, node, scope: isinstance(arguments[0](), Error),
@@ -370,12 +373,13 @@ INTERPRETER = F.Interpreter(Expressions.DIALECT, {
     "field": _field,
     "map": _map,
 }, literal=_number_of, scope=Workbook, extension=_add_in)
+"""The folding rules of the Excel dialect."""
+
+SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(Expressions.DIALECT))
+"""The simplifier of the Excel dialect."""
 
 
-"""Evaluates the terms of the Excel dialect."""
-
-
-def OfAny(expression: Any, scope: Workbook | Mapping[str, Any] | None = None) -> Any:
-    """The value of a formula (a term value, or anything `Terms.term` reads one from) in a workbook, or with the
-    defined names in a mapping."""
-    return INTERPRETER(expression, scope)
+def OfAny(expression: Any, scope: Workbook | Mapping[str, Any] | None = None) -> F.Simplified:
+    """The simplification of a formula (a term value, or anything `Terms.term` reads one from) in a workbook, or with
+    the defined names in a mapping."""
+    return SIMPLIFIER(expression, scope)

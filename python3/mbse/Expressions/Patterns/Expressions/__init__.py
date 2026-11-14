@@ -4,7 +4,7 @@ operations; `define` writes its dialect's data, its operations by name. It owns 
 domains its values take are the standard dialects' (`mbse.Expressions.ISOIEC11404.Expressions` and the others).
 See mbse-basis [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md)."""
 
-from . import Domains, Evaluators, Expressions, Ieee754, Partials
+from . import Domains, Expressions, Ieee754, Simplifiers
 from .Expressions import define, install
 
-__all__ = ["Domains", "Evaluators", "Expressions", "Ieee754", "Partials", "define", "install"]
+__all__ = ["Domains", "Expressions", "Ieee754", "Simplifiers", "define", "install"]

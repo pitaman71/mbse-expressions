@@ -2,7 +2,7 @@
 JSX, printed as TypeScript writes it and evaluated no further than its literals. `install` adds its kinds to the
 framework's terms, its kinds of domain and its domains' schemas; `define` writes its domains."""
 
-from . import Domains, Evaluators, Expressions, Text
+from . import Domains, Expressions, Simplifiers, Text
 from .Expressions import define, install
 
-__all__ = ["Domains", "Evaluators", "Expressions", "Text", "define", "install"]
+__all__ = ["Domains", "Expressions", "Simplifiers", "Text", "define", "install"]

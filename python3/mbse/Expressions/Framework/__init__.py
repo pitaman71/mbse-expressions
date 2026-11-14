@@ -4,8 +4,8 @@ cover (`Standards`), evaluation and translation, and the machinery that implemen
 framework's schemas in a store. See mbse-basis [CAP-098: dialects over one
 framework](mbse:mbse-basis/docs/capabilities/CAP-098.md)."""
 
-from . import Domains, Errors, Evaluators, Objects, Partials, Standards, Symbolics, Terms, Translators
+from . import Domains, Errors, Objects, Simplifiers, Standards, Symbolics, Terms, Translators
 from .Terms import install
 
-__all__ = ["Domains", "Errors", "Evaluators", "Objects", "Partials", "Standards", "Symbolics", "Terms", "Translators",
+__all__ = ["Domains", "Errors", "Objects", "Simplifiers", "Standards", "Symbolics", "Terms", "Translators",
            "install"]

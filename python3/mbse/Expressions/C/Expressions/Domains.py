@@ -22,7 +22,7 @@ names an ABI (a cast to a type a program declares).
 usual arithmetic conversions: the wider floating type if either is floating, otherwise the promoted types, the wider if
 they agree in signedness, else the unsigned one when it is at least as wide, else the signed one; a decimal floating
 type and a binary one have none (C's constraint), so `common` gives None. The signatures follow the evaluator's rules
-(see `Evaluators`): arithmetic gives the common type, shifts the promoted left operand's, comparisons and logic `bool`,
+(see `Simplifiers`): arithmetic gives the common type, shifts the promoted left operand's, comparisons and logic `bool`,
 which the dialect's kinds read from the store (`Expressions`), and a result is named by the first of `NAMES`, C's names
 in the order its standard lists them, that its types define equal to it. `of(value, types)` names a native value's type:
 `int`, `long` or `unsigned long` for an int, as the first that holds it, `double` for a float, `bool`; None otherwise.

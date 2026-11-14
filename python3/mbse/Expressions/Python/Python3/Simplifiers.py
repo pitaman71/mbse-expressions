@@ -1,28 +1,32 @@
-"""Evaluators of the Python3 dialect: compute an expression by Python's rules, in a scope that decides what it may reach.
+"""Simplifiers of the Python3 dialect: simplify an expression by Python's rules, in a scope that decides what it may
+reach.
 
-`Evaluators.OfAny(expression, scope)` evaluates in a `Scope`, or in one made from a mapping of variables. Python's
-rules apply, not Patterns': `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
-missing attribute raises `AttributeError`. Data objects, read through mbse-schemas' readers (`Framework.Objects`), have
-their properties as attributes.
+`Simplifiers.OfAny(expression, scope)` simplifies in a `Scope`, or in one made from a mapping of variables (see
+`mbse.Expressions.Framework.Simplifiers`): what the scope determines is folded into the literal of its value, a basic
+scalar's (a list, a dict, an object or a generator has none, and its subterm stays, its own subterms simplified), and
+the rest stays a Python3 expression. Python's rules apply, not Patterns': `and` and `or` give one of their operands,
+`1 == 1.0` is True, `True + 1` is 2, and a missing attribute raises `AttributeError`. Data objects, read through
+mbse-schemas' readers (`Framework.Objects`), have their properties as attributes.
 
 A `Scope(variables, modules, builtins)` resolves names as Python does, innermost first: names bound by lets and
 imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`, `float`,
-`getattr`, `hasattr`, `int`, `len`, `max`, `min`, `round`, `set`, `str`, `sum`). A list property is a list of its
-values, a keyed list's too; a list display is a list, and a dict display a dict. Nothing else is reachable from an expression, since expressions
-may come from data:
+`getattr`, `hasattr`, `int`, `len`, `max`, `min`, `round`, `set`, `str`, `sum`). A name it does not bind stays in the
+residual. A list property is a list of its values, a keyed list's too; a list display is a list, and a dict display a
+dict. Nothing else is reachable from an expression, since expressions may come from data:
 
 - An import resolves only a module in `modules`, or a submodule of one: `Scope(modules={'numpy': numpy})` allows
-  `import numpy as np` and `from numpy.ma import getmaskarray`, and every other import raises `ImportError`.
-- Attributes whose names start with `_` are refused.
+  `import numpy as np` and `from numpy.ma import getmaskarray`; any other import stays in the residual, unresolved.
+- Attributes whose names start with `_` are refused (`AttributeError`).
 - A call may call only a builtin of the scope, a value of `variables`, or a function of an allowed module.
 
-The evaluator is shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): it evaluates the kinds Python's constraints were written
-with before the dialect was complete (`EVALUATED`), in their complete shapes: a comparison chain, `and` and `or` of any
+Its rules are shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): they fold the kinds Python's constraints were written
+with before the dialect was complete (`FOLDED`), in their complete shapes: a comparison chain, `and` and `or` of any
 number of values, a call of positional arguments, a subscript, a generator expression of any number of `for` clauses
-over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), a kind of its
-family's other dialects, and invalid syntax, by the name of the dialect that owns it, as the framework's interpreter
-refuses them ("Python Types typevar is not evaluated"; a type expression of Python3's kinds evaluates as Python3's), and so are what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target that is
-not a name, and the operators `is`, `is not` and `@`.
+over names. Any other kind stays in the residual, named ("Python3 lambda is not simplified"), as does a kind of its
+family's other dialects, and invalid syntax, by the name of the dialect that owns it ("Python Types typevar is not
+simplified"; a type expression of Python3's kinds simplifies as Python3's), and so does what the kinds it folds hold
+beyond that: a keyword argument, a dict's `**` item, an `async for`, a target that is not a name, and the operators
+`is`, `is not` and `@`. `CATEGORIES` gives each the evaluation inventory's class.
 """
 
 from __future__ import annotations
@@ -32,11 +36,11 @@ import types
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Objects, Symbolics as S, Terms
+from mbse.Expressions.Framework import Objects, Simplifiers as F, Symbolics as S, Terms
 
 from . import Domains, Expressions
 
-__all__ = ["OfAny", "INTERPRETER", "Scope", "BUILTINS", "EVALUATED"]
+__all__ = ["OfAny", "RULES", "SIMPLIFIER", "Scope", "BUILTINS", "FOLDED", "CATEGORIES"]
 
 
 def attribute(value: Any, name: str) -> Any:
@@ -82,22 +86,20 @@ class Scope(S.Variables):
 
     def lookup(self, reference: Any) -> Any:
         name = Terms.name_of(reference)
-        if name in self.values:
-            return self.values[name]
-        if name in self.builtins:
-            return self.builtins[name]
-        raise NameError(f"name {name!r} is not defined")
+        if name in self.values or name not in self.builtins:
+            return self.value(name)
+        return self.builtins[name]
 
     def module(self, name: str) -> types.ModuleType:
         """The module `name`, if allowed: one of `modules`, or a submodule reached through its attributes."""
         root, *parts = name.split(".")
         if root not in self.modules:
-            raise ImportError(f"import of {name!r} is not allowed by the scope")
+            raise S.Unbound(name)
         module = self.modules[root]
         for part in parts:
             module = getattr(module, part, None) if not part.startswith("_") else None
             if not isinstance(module, types.ModuleType):
-                raise ImportError(f"No module named {name!r}")
+                raise S.Unbound(name)
         return module
 
     def enter(self, declaration: Any) -> Scope:
@@ -112,7 +114,7 @@ class Scope(S.Variables):
             return self.bind(root, self.modules[root])
         module, name = self.module(module_name), attributes["name"]
         if name.startswith("_") or not hasattr(module, name):
-            raise ImportError(f"cannot import name {name!r} from {module_name!r}")
+            raise S.Unbound(f"{module_name}.{name}")
         return self.bind(alias or name, getattr(module, name))
 
     def allows(self, function: Any) -> bool:
@@ -125,8 +127,8 @@ class Scope(S.Variables):
         return type(module) is str and module.split(".")[0] in self.modules
 
 
-def _refuse(what: str) -> NotImplementedError:
-    return NotImplementedError(f"Python3 {what} is not evaluated")
+def _refuse(what: str) -> F.NoRule:
+    return F.NoRule("Python3", what)
 
 
 def _call(arguments: list[F.Thunk], node: Any, scope: Scope) -> Any:
@@ -148,8 +150,8 @@ def _generatorexp(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
         if part.attributes.get("is_async"):
             raise _refuse("async comprehension")
         target = part.attributes.get("target")  # a pattern, its terms the clause's last
-        if target is not None and target.kind in Terms.INVALID_KINDS:  # invalid syntax, refused as every dialect refuses it
-            raise ValueError(f"Python3 {target.kind} is not evaluated")
+        if target is not None and target.kind in Terms.INVALID_KINDS:  # invalid syntax, named as every dialect names it
+            raise _refuse(target.kind)
         if target is None or target.kind != Expressions.NAME:
             raise _refuse(f"{'missing' if target is None else target.kind} target")
         clauses.append((target.attributes["name"], terms[i], terms[i + 1:i + part.size - target.size]))
@@ -161,11 +163,11 @@ def _generatorexp(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
         name, _, conditions = clauses[k]
         for item in items:
             bound = inner.bind(name, item)
-            if all(INTERPRETER.evaluate(condition, bound) for condition in conditions):
+            if all(RULES.evaluate(condition, bound) for condition in conditions):
                 if k + 1 == len(clauses):
-                    yield INTERPRETER.evaluate(terms[1], bound)
+                    yield RULES.evaluate(terms[1], bound)
                 else:
-                    yield from generate(k + 1, bound, INTERPRETER.evaluate(clauses[k + 1][1], bound))
+                    yield from generate(k + 1, bound, RULES.evaluate(clauses[k + 1][1], bound))
 
     return generate(0, scope, iter(arguments[2]()))  # the first iterable, after the element
 
@@ -200,8 +202,7 @@ def _compare(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     operators = [part.attributes["op"] for part in _attributes(node)["comparisons"]]
     for op in operators:
         if op not in _COMPARE:
-            raise _refuse(f"compare {op!r}") if op in Domains.COMPARE else NotImplementedError(
-                f"{op!r} is not a core operation")
+            raise _refuse(f"compare {op!r}")
     left, result = arguments[0](), None
     for op, argument in zip(operators, arguments[1:]):
         right = argument()
@@ -232,12 +233,18 @@ def _dict(arguments: list[F.Thunk], node: Any, scope: Any) -> dict[Any, Any]:
     return result
 
 
-EVALUATED = frozenset({_P.LITERAL, _P.NAME, _P.LET, _P.LIST, _P.DICT, _P.ATTRIBUTE, _P.SUBSCRIPT, _P.CALL, _P.COMPARE,
-                       _P.BOOLOP, _P.BINOP, _P.UNARYOP, _P.IFEXP, _P.GENERATOREXP, _P.IMPORT, _P.IMPORTFROM})
-"""The kinds the evaluator evaluates; any other is refused by name."""
+FOLDED = frozenset({_P.LITERAL, _P.NAME, _P.LET, _P.LIST, _P.DICT, _P.ATTRIBUTE, _P.SUBSCRIPT, _P.CALL, _P.COMPARE,
+                    _P.BOOLOP, _P.BINOP, _P.UNARYOP, _P.IFEXP, _P.GENERATOREXP, _P.IMPORT, _P.IMPORTFROM})
+"""The kinds its rules fold; any other stays in the residual, named."""
 
-INTERPRETER = F.Interpreter(_P.DIALECT, {
-    _P.ATTRIBUTE: lambda arguments, node, scope: attribute(arguments[0](), _attributes(node)["attr"]),
+CATEGORIES: dict[str, dict[str, str]] = {
+    "Python3": {"yield": "d", "yieldfrom": "d", "await": "d", "async comprehension": "d", "attribute target": "d",
+                "subscript target": "d"},
+    "Python Types": {"*": "b"}, "Python Patterns": {"*": "b"}, "Python RegExp": {"*": "b"},
+}
+"""The evaluation inventory's class of what each dialect of the family has no rule for (`a` where none is given)."""
+
+RULES = F.Interpreter(_P.DIALECT, {    _P.ATTRIBUTE: lambda arguments, node, scope: attribute(arguments[0](), _attributes(node)["attr"]),
     _P.SUBSCRIPT: lambda arguments, node, scope: arguments[0]()[arguments[1]()],
     _P.GENERATOREXP: _generatorexp,
     _P.CALL: _call,
@@ -248,12 +255,15 @@ INTERPRETER = F.Interpreter(_P.DIALECT, {
     _P.IFEXP: lambda arguments, node, scope: arguments[0]() if arguments[1]() else arguments[2](),
     _P.LIST: lambda arguments, node, scope: [argument() for argument in arguments],
     _P.DICT: _dict,
-}, scope=Scope, evaluated=EVALUATED)
-"""The interpreter of the Python3 dialect."""
+}, scope=Scope, folded=FOLDED)
+"""The folding rules of the Python3 dialect."""
+
+SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(_P.DIALECT), categories=CATEGORIES)
+"""The simplifier of the Python3 dialect."""
 
 
-def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
-    """The value of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in a mapping
-    bound."""
-    return INTERPRETER(expression, scope)
+def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> F.Simplified:
+    """The simplification of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in a
+    mapping bound."""
+    return SIMPLIFIER(expression, scope)
 

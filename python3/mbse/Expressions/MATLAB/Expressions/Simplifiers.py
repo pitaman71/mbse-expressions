@@ -1,15 +1,16 @@
-"""Evaluators of the MATLAB dialect: compute an expression by MATLAB's rules for scalars, in Python.
+"""Simplifiers of the MATLAB dialect: simplify an expression by MATLAB's rules for scalars, in Python.
 
-`Evaluators.OfAny(term, scope)` evaluates a term (or anything `Terms.term` reads one from, such as an `Expression`)
+`Simplifiers.OfAny(term, scope)` simplifies a term (or anything `Terms.term` reads one from, such as an `Expression`)
 with variables bound to numbers, logicals, strings and structs (mappings, or data objects, read through mbse-schemas'
-readers). Values are Python `float` (double), `bool` (logical) and `str`
-(string scalar). MATLAB's rules apply, not Patterns':
+readers), folding what they determine into the constant of its value, a double's, a logical's or a string's (an
+array or a struct has none, and its subterm stays); see `mbse.Expressions.Framework.Simplifiers`. Values are Python
+`float` (double), `bool` (logical) and `str` (string scalar). MATLAB's rules apply, not Patterns':
 
 - Two-valued logic: `&&` and `||` short-circuit, and take numbers or logicals (nonzero is true; NaN raises).
 - Numbers and logicals convert into each other: `true + 1` is 2, and `1 == true` is true. A comparison of a string
   with a number compares the string with the number's text, as MATLAB converts it. `+` with a string concatenates.
-- There is no unknown: reading a field a struct does not have raises, as `isfield` exists to avoid. Unbound
-  variables raise too, with MATLAB's messages.
+- There is no unknown: reading a field a struct does not have raises, as `isfield` exists to avoid. A variable, a
+  function or an import the scope does not provide stays in the residual.
 - The bit functions take doubles (or logicals) holding integers from 0 to `flintmax` (2^53), as unsigned integers of
   53 bits: `bitshift(a, k)` shifts left by `k`, or right when `k` is negative, and drops the bits beyond 53.
 - An array is a list: a container property's values, a variable's list, or a concatenation `[a, b]`, the elements of
@@ -33,11 +34,11 @@ import math
 from collections.abc import Callable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Objects, Symbolics as S, Terms
+from mbse.Expressions.Framework import Objects, Simplifiers as F, Symbolics as S, Terms
 
 from . import Domains, Expressions
 
-__all__ = ["OfAny", "Scope", "INTERPRETER"]
+__all__ = ["OfAny", "Scope", "RULES", "SIMPLIFIER"]
 
 
 def _double(value: Any) -> float | None:
@@ -282,10 +283,6 @@ def _sum(numbers: list[float]) -> float:
     return total
 
 
-def _unrecognized(name: str) -> NameError:
-    return NameError(f"Unrecognized function or variable '{name}'.")
-
-
 class Scope(S.Variables):
     """MATLAB's scope for an expression: `variables`, the `functions` on the path, and the `packages` that qualified
     names and imports find functions in."""
@@ -300,9 +297,6 @@ class Scope(S.Variables):
     def lookup(self, reference: Any) -> Any:
         return _value(super().lookup(reference))  # numbers are doubles, lists arrays
 
-    def unbound(self, reference: Any) -> Any:
-        raise _unrecognized(Terms.name_of(reference))
-
     def enter(self, declaration: Any) -> Scope:
         declared = Terms.name_of(declaration)
         package, _, name = declared.rpartition(".")
@@ -312,7 +306,7 @@ class Scope(S.Variables):
         elif name in functions:
             found = {name: functions[name]}
         else:
-            raise ImportError(f"Import argument '{declared}' cannot be found or cannot be imported.")
+            raise S.Unbound(declared)
         inner = self._copy()
         inner.imported = {**self.imported, **found}
         return inner
@@ -325,7 +319,7 @@ class Scope(S.Variables):
         package, _, short = name.rpartition(".")
         if short in self.packages.get(package, {}):
             return self.packages[package][short]
-        raise _unrecognized(name)
+        raise S.Unbound(name)
 
 
 def _extension(name: str, arguments: list[F.Thunk], node: Any, scope: Scope) -> Any:
@@ -334,7 +328,7 @@ def _extension(name: str, arguments: list[F.Thunk], node: Any, scope: Scope) -> 
     return float(value) if type(value) is int else value
 
 
-INTERPRETER = F.Interpreter(Expressions.DIALECT, {
+RULES = F.Interpreter(Expressions.DIALECT, {
     "binary": {
         "==": _compare("==", lambda a, b: a == b), "~=": _compare("~=", lambda a, b: a != b),
         "<": _compare("<", lambda a, b: a < b), "<=": _compare("<=", lambda a, b: a <= b),
@@ -358,9 +352,12 @@ INTERPRETER = F.Interpreter(Expressions.DIALECT, {
     "arrayfun": _arrayfun,
     "list": _concatenate,
 }, literal=lambda value: float(value) if type(value) is int else value, scope=Scope, extension=_extension)
-"""The interpreter of the MATLAB dialect."""
+"""The folding rules of the MATLAB dialect."""
+
+SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(Expressions.DIALECT))
+"""The simplifier of the MATLAB dialect."""
 
 
-def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
-    """The value of a term in `scope`, or with the variables in a mapping bound."""
-    return INTERPRETER(expression, scope)
+def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> F.Simplified:
+    """The simplification of a term in `scope`, or with the variables in a mapping bound."""
+    return SIMPLIFIER(expression, scope)

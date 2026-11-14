@@ -1163,7 +1163,7 @@ export class Dialect {
 
   /** The dialect that reads a term value: this one, for a term of its `Term`; one it reads, for a term of that one's;
    * or null, for a term of any other dialect. */
-  private reader(term_: any): Dialect | null {
+  reader(term_: any): Dialect | null {
     const union = dialectOf(term_);
     if (union === this.union) return this;
     return this.reads().find((other) => other.union === union) ?? null;

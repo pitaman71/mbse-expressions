@@ -7,7 +7,7 @@ and writes them. See mbse-basis
 [CAP-229: the C expression dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md) and
 [CAP-100: six languages' expression dialects](mbse:mbse-basis/docs/capabilities/CAP-100.md)."""
 
-from . import Domains, Evaluators, Expressions, Text
+from . import Domains, Expressions, Simplifiers, Text
 from .Expressions import define, install
 
-__all__ = ["Domains", "Evaluators", "Expressions", "Text", "define", "install"]
+__all__ = ["Domains", "Expressions", "Simplifiers", "Text", "define", "install"]

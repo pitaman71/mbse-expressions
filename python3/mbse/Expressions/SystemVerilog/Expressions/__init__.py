@@ -6,7 +6,7 @@ domains, IEEE 1800's built-in types, which its evaluation, inference and validat
 the editions it covers. See mbse-basis
 [CAP-231: the SystemVerilog expression dialect, complete](mbse:mbse-basis/docs/capabilities/CAP-231.md)."""
 
-from . import Domains, Evaluators, Expressions, Text
+from . import Domains, Expressions, Simplifiers, Text
 from .Expressions import define, install
 
-__all__ = ["Domains", "Evaluators", "Expressions", "Text", "define", "install"]
+__all__ = ["Domains", "Expressions", "Simplifiers", "Text", "define", "install"]

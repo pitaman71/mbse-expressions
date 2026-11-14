@@ -78,7 +78,7 @@ none, since no basic scalar holds x or z. `define` writes its domains, IEEE 1800
 What reads a named type reads its stored domain, through the store of the term's holder (`Proxies.store_of`), by
 `Domains.named`: validation, a cast to a type SystemVerilog defines (`int'(x)`), which must be defined in that store;
 inference, a constant's type (`integer`, `longint`, `real`), a cast's and `===`'s (`bit`); and evaluation (see
-`Evaluators`). A lone term reaches no store: reading a type, it is refused (mbse-schemas' TypeError, "the value does
+`Simplifiers`). A lone term reaches no store: reading a type, it is refused (mbse-schemas' TypeError, "the value does
 not belong to a store"), and a term that reads none, a sized vector's, is read as before.
 """
 

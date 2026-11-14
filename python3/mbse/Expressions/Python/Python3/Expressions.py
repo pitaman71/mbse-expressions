@@ -41,7 +41,7 @@ carries no domain. Its kinds:
   body)(value)`, Python's idiom for binding a name; `import` (`import module` or `... as alias`) and `importfrom`
   (`from module import name` or `... as alias`), which bind a name within their `body`, the rest of the expression;
   `Text.ToText` writes them as the lines before it. What they may import is up to the scope that evaluates them (see
-  `Evaluators`).
+  `Simplifiers`).
 - The framework's kinds of invalid syntax, `error` and `missing`.
 
 Every kind that binds names is a binder, refining the framework's `Let` (`Terms.is_binder`), Let's `name`, `value` and
@@ -428,7 +428,7 @@ def define(txn: Any) -> Any:
 
 BUILTINS = frozenset({"abs", "all", "any", "bool", "float", "getattr", "hasattr", "int", "len", "max", "min", "round", "set",
                       "str", "sum"})
-"""The builtins an expression may use without importing them: the default builtins of a scope (see `Evaluators`)."""
+"""The builtins an expression may use without importing them: the default builtins of a scope (see `Simplifiers`)."""
 
 
 # --- Checks ---

@@ -6,7 +6,7 @@ domains, the types C++'s standard fixes, which it reads with its holder's ABI di
 [CAP-230: the C++ expression dialect](mbse:mbse-basis/docs/capabilities/CAP-230.md)."""
 
 from ...C.Expressions import Domains
-from . import Evaluators, Expressions, Text
+from . import Expressions, Simplifiers, Text
 from .Expressions import define, install
 
-__all__ = ["Domains", "Evaluators", "Expressions", "Text", "define", "install"]
+__all__ = ["Domains", "Expressions", "Simplifiers", "Text", "define", "install"]

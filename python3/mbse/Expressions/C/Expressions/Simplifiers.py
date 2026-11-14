@@ -1,10 +1,12 @@
-"""Evaluators of the C dialect: compute an expression by C's rules for arithmetic types, which C++ shares (`Cpp`'s
-interpreter is `interpreter(Cpp.Expressions.DIALECT)`).
+"""Simplifiers of the C dialect: simplify an expression by C's rules for arithmetic types, which C++ shares (`Cpp`'s
+simplifier is `simplifier(Cpp.Expressions.DIALECT, ...)`).
 
-`Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from, an `Expression`) in a
-`Scope(variables, functions)`. Values carry their C type while
-evaluating, and the result is its native: an int, a float (a value of a format whose values are text, `long double`'s
-under most ABIs, as its text, as `Patterns.Ieee754` writes it), a bool, a string, or an object. A literal's type is what
+`Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from, an `Expression`) in
+a `Scope(variables, functions)` (see `mbse.Expressions.Framework.Simplifiers`). Values carry their C type while
+folding, and a value folds into the literal of its type, its suffix as C writes it (`5u`, `2.5f`, `true`, a string),
+where its type has one: an `int`, `long` or `long long`, signed or not, a finite `float` or `double`, a `bool`; a value
+of another type (a `char`, a `short`, `long double`) or an object stays, its subterms simplified. A simplification
+whose root is a literal gives its native as its value: an int, a float, a bool or a string. A literal's type is what
 its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`), else
 its value's; a variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or `unsigned long` as the
 first that holds it, and a float a `double` (a value carries no domain: a variable of another type waits for domain
@@ -32,16 +34,17 @@ neither dialect defines, by name. C's rules apply:
   (`Framework.Objects`), or a key of a mapping); `array[index]` an element of a list, or of a container; `f(args)`
   calls a function the scope provides, by its name, and nothing else.
 
-Evaluation stays shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): `EVALUATED` names the kinds C evaluated before it was
-complete, in their complete shapes; any other kind raises `NotImplementedError` by name ("C sizeofexpression is not
-evaluated"), and so does what an evaluated kind holds beyond its former shape: an operator its vocabulary has but no
-rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not evaluated"), a literal of a type no evaluator has values
-of ("C literal of _BitInt is not evaluated"), a cast to a type that is not arithmetic, a subscript of several indices,
+Its rules stay shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): `FOLDED` names the kinds C evaluated before it was
+complete, in their complete shapes; any other kind stays in the residual, named ("C sizeofexpression is not
+simplified"), and so does what a folded kind holds beyond its former shape: an operator its vocabulary has but no
+rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not simplified"), a literal of a type no rule has values
+of ("C literal of _BitInt is not simplified"), a cast to a type that is not arithmetic, a subscript of several indices,
 a call of a callee that is not a function's name, a member that is not an identifier, C++'s name used as an expression
-that is not an identifier (`std::cout`, "Cpp idexpression of a name that is not an identifier is not evaluated"), and
+that is not an identifier (`std::cout`, "Cpp idexpression of a name that is not an identifier is not simplified"), and
 GNU's conditional without a consequence. C's name used as an expression is the framework's `variable`, and C++'s an
-`idexpression` holding its identifier (`Cpp.Evaluators.EVALUATED`). Invalid syntax raises `ValueError` by name, as
-every dialect's does ("C error is not evaluated"), where a cast's type stands too.
+`idexpression` holding its identifier (`Cpp.Simplifiers.FOLDED`). Invalid syntax stays too, named, as every dialect's
+does ("C error is not simplified"), where a cast's type stands too. A name the scope does not bind, or a function it
+does not provide, stays. `CATEGORIES` gives what stays the evaluation inventory's class.
 """
 
 from __future__ import annotations
@@ -52,12 +55,12 @@ from dataclasses import dataclass
 from typing import Any
 
 from mbse.Expressions.Patterns.Expressions import Ieee754
-from mbse.Expressions.Framework import Errors, Evaluators as F, Objects, Symbolics as S, Terms
+from mbse.Expressions.Framework import Objects, Simplifiers as F, Symbolics as S, Terms
 
 from . import Domains, Expressions, Kinds
 from .Domains import CType
 
-__all__ = ["OfAny", "Scope", "INTERPRETER", "EVALUATED", "interpreter"]
+__all__ = ["OfAny", "Scope", "SIMPLIFIER", "FOLDED", "CATEGORIES", "rules", "simplifier"]
 
 _EVEN, _ZERO = "roundTiesToEven", "roundTowardZero"
 
@@ -97,8 +100,8 @@ def _bool(ctype: CType) -> CType:
     return ctype.types.named("bool")  # type: ignore[union-attr]
 
 
-def _refuse(dialect: Any, what: str) -> NotImplementedError:
-    return NotImplementedError(f"{dialect.name()} {what} is not evaluated")
+def _refuse(dialect: Any, what: str) -> F.NoRule:
+    return F.NoRule(dialect.name(), what)
 
 
 def _literal(dialect: Any) -> Any:
@@ -296,8 +299,8 @@ def _cast(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
         type_ = Terms.arguments_of(Terms.kind_of(node)[1])[0]  # a C Types term, which the cast reads, not evaluates
         kind = Terms.kind_of(type_)[0]
-        if kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, refused by its owner, as every dialect does
-            raise ValueError(f"{dialect.owner(type_).name()} {kind} is not evaluated")
+        if kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, named by its owner, as every dialect does
+            raise F.NoRule(dialect.owner(type_).name(), kind)
         target = Expressions.cast_type(Expressions.type_name(type_), _types(node, dialect))
         if target is None:
             raise _refuse(dialect, "castexpression to a type that is not arithmetic")
@@ -377,27 +380,53 @@ class Scope(S.Variables):
     def lookup(self, reference: Any) -> Any:
         path = Terms.dialect_of(reference)[len("Expressions."):-len(".Term")]
         if Terms.name_of(reference) is None:  # C++'s idexpression of a name that is not an identifier: `std::cout`
-            raise NotImplementedError(f"{Terms.dialect_name(path)} {Terms.kind_of(reference)[0]} of a name that is not "
-                                      "an identifier is not evaluated")
+            raise F.NoRule(Terms.dialect_name(path), f"{Terms.kind_of(reference)[0]} of a name that is not an identifier")
         return _typed(super().lookup(reference), Domains.Types(reference, path))
-
-    def unbound(self, reference: Any) -> Any:
-        raise Errors.NameError(f"use of undeclared identifier '{Terms.name_of(reference)}'")
 
     def function(self, name: str) -> Callable[..., Any]:
         if name not in self.functions:
-            raise Errors.NameError(f"use of undeclared identifier '{name}'")
+            raise S.Unbound(name)
         return self.functions[name]
 
 
-EVALUATED = frozenset({Expressions.LITERAL, Expressions.VARIABLE, Expressions.UNARYEXPRESSION,
-                       Expressions.BINARYEXPRESSION, Expressions.CONDITIONALEXPRESSION, Expressions.CASTEXPRESSION,
-                       Expressions.MEMBEREXPRESSION, Expressions.SUBSCRIPTEXPRESSION, Expressions.CALLEXPRESSION})
-"""The kinds the evaluator evaluates, those C evaluated before it was complete; any other is refused by name."""
+FOLDED = frozenset({Expressions.LITERAL, Expressions.VARIABLE, Expressions.UNARYEXPRESSION,
+                    Expressions.BINARYEXPRESSION, Expressions.CONDITIONALEXPRESSION, Expressions.CASTEXPRESSION,
+                    Expressions.MEMBEREXPRESSION, Expressions.SUBSCRIPTEXPRESSION, Expressions.CALLEXPRESSION})
+"""The kinds its rules fold, those C evaluated before it was complete; any other stays in the residual, named."""
+
+_D = "d"
+CATEGORIES: dict[str, dict[str, str]] = {
+    "C": {"initializerlist": "b", "designatedinitializer": "b",
+          **dict.fromkeys(("statementexpression", "assignmentexpression", "postfixexpression", "unaryexpression '*'",
+                           "unaryexpression '&'", "unaryexpression '++'", "unaryexpression '--'",
+                           "castexpression to a type that is not arithmetic",
+                           "callexpression of a callee that is not a function's name"), _D)},
+    "C Types": {"*": "b"}, "C Preprocessor": {"*": "b", "definedexpression": "a"},
+}
+"""The evaluation inventory's class of what each dialect C reads has no rule for (`a` where none is given)."""
+
+_SUFFIXES = {"int": None, "unsigned int": "u", "long": "l", "unsigned long": "ul", "long long": "ll",
+             "unsigned long long": "ull", "double": None, "float": "f", "bool": None}
+"""The suffix of a literal of each type that has one, as C writes it."""
 
 
-def interpreter(dialect: Any, evaluated: frozenset[str] = EVALUATED) -> F.Interpreter:
-    """The interpreter of a dialect of the C family, `C`'s or `Cpp`'s, evaluating the kinds `evaluated` names: its
+def _literal_of(write: Callable[..., Any]) -> Callable[[_Typed], Any]:
+    """The literal of a value of its type, written by `write`; None for a type no literal has, or an object."""
+
+    def literal(value: _Typed) -> Any:
+        native = value.value
+        if value.ctype is None:
+            return write(native) if type(native) is str else None
+        name = value.ctype.name()
+        if name not in _SUFFIXES or type(native) is float and not math.isfinite(native):
+            return None
+        return write(native, _SUFFIXES[name])
+
+    return literal
+
+
+def rules(dialect: Any, folded: frozenset[str] = FOLDED) -> F.Interpreter:
+    """The folding rules of a dialect of the C family, `C`'s or `Cpp`'s, folding the kinds `folded` names: its
     values carry their C types."""
     return F.Interpreter(dialect, {
         Expressions.BINARYEXPRESSION: {
@@ -410,13 +439,19 @@ def interpreter(dialect: Any, evaluated: frozenset[str] = EVALUATED) -> F.Interp
         Expressions.CONDITIONALEXPRESSION: _conditional(dialect), Expressions.CASTEXPRESSION: _cast(dialect),
         Expressions.MEMBEREXPRESSION: _member(dialect), Expressions.SUBSCRIPTEXPRESSION: _subscript(dialect),
         Expressions.CALLEXPRESSION: _call(dialect),
-    }, literal=_untyped, typed=_literal(dialect), scope=Scope, evaluated=evaluated)
+    }, literal=_untyped, typed=_literal(dialect), scope=Scope, folded=folded)
 
 
-INTERPRETER = interpreter(Expressions.DIALECT)
-"""The interpreter of the C dialect."""
+def simplifier(dialect: Any, folded: frozenset[str], categories: Mapping[str, Mapping[str, str]],
+               write: Callable[..., Any]) -> F.Simplifier:
+    """The simplifier of a dialect of the C family, by `rules(dialect, folded)`, its literals written by `write`."""
+    return F.Simplifier(rules(dialect, folded), literal=_literal_of(write), categories=categories, native=_native)
 
 
-def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Any:
-    """The value of a term in `scope`, or with the variables in a mapping bound: its native."""
-    return _native(INTERPRETER(expression, scope))
+SIMPLIFIER = simplifier(Expressions.DIALECT, FOLDED, CATEGORIES, Expressions.literal)
+"""The simplifier of the C dialect."""
+
+
+def OfAny(expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> F.Simplified:
+    """The simplification of a term in `scope`, or with the variables in a mapping bound."""
+    return SIMPLIFIER(expression, scope)
