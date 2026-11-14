@@ -2036,6 +2036,73 @@ RegExp's `patternlist` and its `PatternList`, its `Text.text`, and a regex's `pa
      cases. The skill's dialects reference links XRX-01, XRX-04, XRX-08, XRX-10, BRE-01, BRE-03, BRE-04, BRE-08, BRE-10,
      ERE-01, ERE-04 and ERE-08.
 
+## Settled in simplification, for the user's review
+
+Step 1 of [PRI-046: simplification, not evaluation](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-046)
+([the evaluation proposal](../evaluation/README.md#as-built-the-framework-0110), As built), in 0.11.0: the framework
+every family's folding rules fill, evaluation retired as a public procedure.
+
+324. **`Framework.Simplifiers`**, the one procedure: `Simplifier(rules, literal=..., simplify=..., categories=...,
+     native=..., folds=..., display=...)`, called (TypeScript: `run`) with an expression and a scope, or a mapping of
+     variables, gives a `Simplified`: its `residual` (a `Writer` of a term of the dialect), whether its root is a
+     `literal`, then its `value` (else none: three-valued, a residual reads as unknown), the names it still needs
+     (`free`), and its `residues`; `evaluate()` gives the value, or raises `NotEvaluated` (a `ValueError`) naming why
+     the root is not a literal: "the root is not a literal: Python3 lambda is not simplified", "... x is not bound",
+     "... its value has no literal". A `Residue` names a subterm left for want of a rule: its `dialect`, its `kind`,
+     `what` it has no rule for, and its `category`, the evaluation inventory's class (`a` to `d`); its `reason` is "D
+     what is not simplified". `NoRule(dialect, what, kind)`, a `NotImplementedError`, is what rules raise where they
+     have none. `natives(dialect)` writes a native's literal as the dialect does. The name *(agent)*: `Simplifiers`,
+     as `Evaluators` was, a module of procedures; `Simplified` for what it gives.
+325. **Each dialect's `Simplifiers`** *(agent)*: `OfAny(expression, scope)` gives a `Simplified`; `SIMPLIFIER` is its
+     simplifier, `RULES` its folding rules (C's and C++'s through `rules(dialect, folded)` and `simplifier(...)`),
+     `FOLDED` the kinds its rules fold (`EVALUATED` renamed), `CATEGORIES` the inventory's classes of what its family
+     has no rule for. `OfLiteral`, `OfCall`, `OfVariable`, `OfLet` and `OfQuantifier` go: one entry point per kind
+     ([PRI-005: one entry point per kind](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-005)).
+326. **Evaluators and Partials go**, with no alias (0.11.0 is unreleased): `Framework.Evaluators.Interpreter` is
+     `Framework.Simplifiers.Interpreter`, its tables the folding rules, `evaluated` renamed `folded`, and no public
+     call of its own (`evaluate(node, scope)` is the rules' protocol); `Framework.Partials` and Patterns' `Partials`
+     fold into the simplifier, Kleene's short-circuits Patterns' `simplify`.
+327. **The algorithm** *(agent)*: recursive substitution over immutable terms, a new term written, the old one never
+     changed. At each subterm (each one `folds` allows: all but SystemVerilog's), the rules compute its value in the
+     scope; a value with a literal replaces the subterm, a literal subterm stays as written, a value with none (an
+     object, a collection, unknown) keeps the subterm, simplified in turn, its value known to its parent's `simplify`;
+     a container of values with literals is written as its display where the dialect has one (Python3's list and dict,
+     MATLAB's concatenation), not a literal. Where the scope does not resolve a reference the subterm is rebuilt from
+     its simplified arguments, each in the scope its names are bound in: a let's of a known value bound to it, any
+     other hidden (`Symbolics.UNKNOWN`), an import's entered where the scope provides it. A let whose body no longer
+     refers to its name is its body. A subterm unchanged is kept as read, not rewritten.
+328. **No refusals** *(agent)*: a kind or an operator a dialect has no rule for, invalid syntax (`error`, `missing`, of
+     class `b`) and a kind of another dialect of its family stay in the residual, named; a subterm of a term the rules
+     computed (a cast's type) needs no rule, and is not named. What the dialect's own semantics make an error still
+     raises, as the expression would in its language (an operand of the wrong type, a wrong number of arguments, a
+     division by zero, an overflow, a member a value lacks), and so does a malformed term (a literal with no value, a
+     let with no body).
+329. **Scopes** *(agent)*: what a scope does not resolve raises `Symbolics.Unbound`, which the simplifier catches: a
+     name it does not bind, or binds to `UNKNOWN`; a function, a module or an import it does not provide. So
+     `KeyError` "variable 'x' is not bound", Python's `NameError` and `ImportError`, MATLAB's "Unrecognized function or
+     variable", C's "use of undeclared identifier" and SystemVerilog's "is not declared" go, and `Errors` loses
+     `NameError` and `ImportError`. Excel's workbook keeps a name it does not define, a sheet or a book it does not
+     have, and a function neither built in nor an add-in, in the residual, where they were `#NAME?` and `#REF!`; a
+     blank cell of a sheet it has is still 0. `Symbolics.scopes(node, dialect)` gives what a term binds for each
+     argument, which `free` reads too.
+330. **Literals** *(agent)*: Patterns', TypeScript5's, MATLAB's and Excel's a native's; Python3's a basic scalar's, a
+     list's and a dict's display; C's and C++'s a value of `int`, `long` or `long long`, signed or not, a finite
+     `float` or `double`, `bool` or a string, with the suffix of its type (`3u`, `2.5f`), any other type's (`char`,
+     `short`, `long double`, the decimal types, `_BitInt`) and a non-finite float staying; SystemVerilog's root and
+     names alone fold (an operand's width is its context's, 11.6), an `integer`'s value an unsized decimal integer, any
+     other integral value a sized 4-state vector of its bits and signedness, a real a real. C's simplification gives
+     its native (`native`).
+331. **Categories** *(agent)*: each family's module holds its dialects' classes, from the evaluation inventory, keyed
+     by `what`, then by kind, then `*`; invalid syntax is `b`; anything not listed `a`.
+332. **Tests**: `02_Evaluators` is `02_Simplifiers` and `11_Partials` `11_Residuals`, their suites' IDs kept (EVL,
+     PAR); every value assertion of a value with a literal asserts it through `value` or `evaluate()`, a value with
+     none (an Excel error, an array, a `char`) through the dialect's folding rules (`SIMPLIFIER.rules`) or the
+     residual's text; every "is not evaluated" refusal asserts a residue ("is not simplified") or `NotEvaluated`.
+     Titles naming evaluation follow; the skill's links follow them.
+333. **Tutorials**: 10 and 12 teach simplification, unknown a residual and the residual the question left; 3, 4 and
+     tutorial 8's pages teach a kind with no rule left in the residual, named; 9's, 10's and 14's steps renamed under
+     their anchors (T09.2, T09.4, T10.5, T14.2).
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,

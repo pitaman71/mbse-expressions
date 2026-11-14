@@ -40,7 +40,7 @@ carries no domain. Its kinds:
 - Extensions, with no counterpart in Python's grammar (`EXTENSIONS`): `let`, the framework's, `(lambda name:
   body)(value)`, Python's idiom for binding a name; `import` (`import module` or `... as alias`) and `importfrom`
   (`from module import name` or `... as alias`), which bind a name within their `body`, the rest of the expression;
-  `Text.ToText` writes them as the lines before it. What they may import is up to the scope that evaluates them (see
+  `Text.ToText` writes them as the lines before it. What they may import is up to the scope that simplifies them (see
   `Simplifiers`).
 - The framework's kinds of invalid syntax, `error` and `missing`.
 

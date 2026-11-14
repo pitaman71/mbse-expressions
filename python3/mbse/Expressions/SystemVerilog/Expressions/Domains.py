@@ -1,4 +1,4 @@
-"""Domains of the SystemVerilog dialect: the types its evaluation, inference and validation compute on, each read from
+"""Domains of the SystemVerilog dialect: the types its folding rules, inference and validation compute on, each read from
 the domains its dialect stores, and the sized vectors computed from a term's own width and signedness.
 
 An `SvType` is a type and a domain: `integral` (a vector of `width` bits, `signed` or not, of 4 states (0, 1, x, z) or

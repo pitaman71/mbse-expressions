@@ -12,7 +12,7 @@ its value's; a variable's type is its value's: a bool is a `bool`, an int an `in
 first that holds it, and a float a `double` (a value carries no domain: a variable of another type waits for domain
 inference, the port's stage 3, Decided, 2). Every named type it computes in (a literal's, a variable's, a cast's, the
 promotions' `int`, a comparison's `bool`) is a stored domain, read through the term's holder (`Domains.Types`): among
-its dialect's domains, then its holder's ABI's, so the same term evaluates as each ABI says (`(char)200` is -56 under
+its dialect's domains, then its holder's ABI's, so the same term folds as each ABI says (`(char)200` is -56 under
 x86-64's System V ABI, where `char` is signed, and 200 under AAPCS64's; `long double` is x87's format under the one and
 `binary128` under the other). A lone term is refused where it reads a type (mbse-schemas' TypeError), and so is a type
 neither dialect defines, by name. C's rules apply:
@@ -67,7 +67,7 @@ _EVEN, _ZERO = "roundTiesToEven", "roundTowardZero"
 
 @dataclass(frozen=True)
 class _Typed:
-    """A value while evaluating: its C type (None for a string or an object) and its native."""
+    """A value while folding: its C type (None for a string or an object) and its native."""
 
     ctype: CType | None
     value: Any
@@ -106,7 +106,7 @@ def _refuse(dialect: Any, what: str) -> F.NoRule:
 
 def _literal(dialect: Any) -> Any:
     """A literal of the type its text encodes: an integer that its type holds, a floating value rounded to its
-    type; a type no evaluator has values of is refused."""
+    type; a type no rule has values of stays, named."""
     def typed(domain: Any, value: Any) -> _Typed:
         if not isinstance(domain, CType):
             if domain is Domains.String:
@@ -297,7 +297,7 @@ def _attributes(node: Any) -> dict[str, Any]:
 
 def _cast(dialect: Any) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> _Typed:
-        type_ = Terms.arguments_of(Terms.kind_of(node)[1])[0]  # a C Types term, which the cast reads, not evaluates
+        type_ = Terms.arguments_of(Terms.kind_of(node)[1])[0]  # a C Types term, which the cast reads, not folds
         kind = Terms.kind_of(type_)[0]
         if kind in Terms.INVALID_KINDS:  # invalid syntax where the type stands, named by its owner, as every dialect does
             raise F.NoRule(dialect.owner(type_).name(), kind)

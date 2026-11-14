@@ -78,7 +78,7 @@
  *
  * What reads a named type reads its stored domain, through the store of the term's holder (`Domains.Types`), among C's
  * domains, then among its holder's ABI's: validation, a literal's range (`5u`'s `unsigned int`); inference, a literal's
- * type, a cast's, a comparison's `bool`, `sizeof`'s `size_t`; and evaluation (see `Evaluators`). A lone term reaches no
+ * type, a cast's, a comparison's `bool`, `sizeof`'s `size_t`; and evaluation (see `Simplifiers`). A lone term reaches no
  * store: reading a type, it is refused (mbse-schemas' TypeError, "the value does not belong to a store"); and a type
  * neither dialect defines is refused by name, "'int' is not a type C defines, and its expression names no ABI", which
  * validation reports as a problem.

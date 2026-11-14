@@ -1,6 +1,6 @@
 """mbse-expressions: constraints as neutral, language-independent data.
 
-Expression languages (dialects) that are serializable, traversable, validatable, evaluatable and translatable into
+Expression languages (dialects) that are serializable, traversable, validatable, simplifiable and translatable into
 each other. See mbse-basis [FEA-024: expressions as data](mbse:mbse-basis/docs/features/FEA-024.md).
 
 For AI agents: read `skill/SKILL.md` next to this file first. It says when to use this package, the practices that

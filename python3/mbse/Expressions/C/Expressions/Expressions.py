@@ -56,7 +56,7 @@ union named after mbse-programs' category: `Name`, `Designator`, `Initializer`, 
 The editions C covers are data, which `define` writes, each owned by its designation and holding the kinds it has
 (`Framework.Standards`): ISO/IEC 9899:2011, 2018 and 2024, C11, C17 and C23 (C17 is C11's corrigenda, with no new
 syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. `DIALECT` reads the kinds
-(`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated before it
+(`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C folded before it
 was complete through the builders, in a transaction, a cast's type a spec of C Types' `Term`, written through the
 builders too:
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through the builders
@@ -77,7 +77,7 @@ through its adjacency `abi`:
 
 What reads a named type reads its stored domain, through the store of the term's holder (`Domains.Types`), among C's
 domains, then among its holder's ABI's: validation, a literal's range (`5u`'s `unsigned int`); inference, a literal's
-type, a cast's, a comparison's `bool`, `sizeof`'s `size_t`; and evaluation (see `Simplifiers`). A lone term reaches no
+type, a cast's, a comparison's `bool`, `sizeof`'s `size_t`; and simplification (see `Simplifiers`). A lone term reaches no
 store: reading a type, it is refused (mbse-schemas' TypeError, "the value does not belong to a store"); and a type
 neither dialect defines is refused by name, "'int' is not a type C defines, and its expression names no ABI", which
 validation reports as a problem.

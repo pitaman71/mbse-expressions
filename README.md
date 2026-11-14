@@ -9,9 +9,10 @@ formalized and be tightened as the design matures; it is checked alike in Python
 each implementation language, from Excel and MATLAB to C and SystemVerilog. It is the constraints layer of the mbse
 repositories' [executable specifications](MBSE.md).
 
-Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas), and their evaluation. An
+Serializable expressions for [mbse-schemas](https://github.com/pitaman71/mbse-schemas), and their simplification. An
 expression, such as "65 or older, with an email address on file", is data with a schema: it can be stored with the
-rest of your data, sent between programs, and evaluated the same way in Python and TypeScript.
+rest of your data, sent between programs, and simplified the same way in Python and TypeScript, to a literal, its
+value, where the data decides it, else to the question that is left.
 [mbse-patterns](https://github.com/pitaman71/mbse-patterns) uses them as constraints on mbse-schemas data, and as queries.
 
 ```python
@@ -20,7 +21,7 @@ from mbse.Expressions.IEEE1164 import Expressions as IEEE1164
 from mbse.Expressions.IEEE754 import Expressions as IEEE754
 from mbse.Expressions.ISOIEC11404 import Expressions as ISOIEC11404
 from mbse.Expressions.Patterns import Expressions as Patterns
-from mbse.Expressions.Patterns.Expressions import Evaluators, Expressions
+from mbse.Expressions.Patterns.Expressions import Expressions, Simplifiers
 from mbse.Expressions.Unicode import Expressions as Unicode
 from mbse.Schemas.Framework import Builders
 
@@ -32,7 +33,7 @@ contact = Expressions.variable("contact")
 with store.transaction():
     senior = store.Expressions.Patterns.Expressions.Expression(lambda e: e.root(
         contact.age.ge(65).and_(contact.has("email"))))
-Evaluators.OfAny(senior, {'contact': ada})   # True, False, or None when a value is unknown
+Simplifiers.OfAny(senior, {'contact': ada}).value   # True, False, or None when a value is unknown
 ```
 
 ```typescript
@@ -41,7 +42,7 @@ import * as IEEE1164 from "@mbse/expressions/IEEE1164/Expressions";
 import * as IEEE754 from "@mbse/expressions/IEEE754/Expressions";
 import * as ISOIEC11404 from "@mbse/expressions/ISOIEC11404/Expressions";
 import * as Patterns from "@mbse/expressions/Patterns/Expressions";
-import { Evaluators, Expressions } from "@mbse/expressions/Patterns/Expressions";
+import { Expressions, Simplifiers } from "@mbse/expressions/Patterns/Expressions";
 import * as Unicode from "@mbse/expressions/Unicode/Expressions";
 import { Builders } from "@mbse/schemas/Framework";
 
@@ -51,7 +52,7 @@ store.transaction(Patterns.define); // Patterns' operations, which validation re
 const contact = Expressions.variable("contact");
 const senior = store.transaction(() => store.Expressions.Patterns.Expressions.Expression((e: any) => e.root(
   contact.age.ge(65n).and_(contact.has("email")))));
-Evaluators.OfAny(senior, { contact: ada });
+Simplifiers.OfAny(senior, { contact: ada }).value;
 ```
 
 Like mbse-schemas, it has two equivalent implementations, in Python and TypeScript, with the same API, the same
@@ -142,11 +143,11 @@ skills/                   the agent skill (SKILL.md plus per-task references, li
 ## Dialects
 
 Expressions come in dialects that implement one framework: each is serializable, traversable, validatable and
-evaluatable, and pairwise translators convert between them. A term is a value of `Expressions.Framework.Term`, the union of
+simplifiable, and pairwise translators convert between them. A term is a value of `Expressions.Framework.Term`, the union of
 the dialects' `Term`s: written with its dialect, then its kind. Patterns (formerly Basic), above, is the core vocabulary.
 Python3 (every expression of Python 3, 3.0 to 3.15, as CPython's `ast` has it, with NumPy as a module it imports), MATLAB,
-Excel and LaTeX (notation, without evaluation) model those languages' expressions, render as their source, resolve names, imports and cell references as those languages do, and
-evaluate by their rules; C and Cpp (every expression of C11 to C23 and of C++17 to C++23, with their type names, each
+Excel and LaTeX (notation, without simplification) model those languages' expressions, render as their source, resolve names, imports and cell references as those languages do, and
+simplify by their rules; C and Cpp (every expression of C11 to C23 and of C++17 to C++23, with their type names, each
 with its own copy of the kinds they share) and SystemVerilog model those languages' expressions over their own types:
 
 ```python
@@ -168,7 +169,7 @@ implementation, read under the ABI the expression holding a C or C++ term names.
 
 ## Status
 
-Built in both languages: the framework (protocols for expressions, domains, evaluation and translation), the Patterns,
+Built in both languages: the framework (protocols for expressions, domains, simplification and translation), the Patterns,
 Python3, TypeScript5, MATLAB, Excel, LaTeX, C and Cpp dialects and SystemVerilog's six, each with its `Term`, the union of its kinds, in the
 framework's union of the dialects' `Term`s, and translators between them; terms as values in an mbse-schemas store, with the container
 constructors `list` and `mapping`, literals holding any value with their spelling, and the kinds of invalid syntax
@@ -218,16 +219,21 @@ sublanguage, before the case studies on constraints ([CAP-303: mbse-expressions'
 A breaking release: the moved schemas' names, the binders' renamed properties and the callers' install lists change,
 with no alias.
 
-Coming next: simplification, not evaluation, as the user decided
-([PRI-046: simplification, not evaluation](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-046)): each dialect simplifies an expression by its own
-language's semantics, by recursive substitution, a literal as the simplified root being its evaluation, over literal
-leaves ([CAP-295: simplification of single-dialect expressions with literal leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-295)), over literals, variables and parameters
+Next, in 0.11.0 (on branch `simplification`): simplification, not evaluation, as the user decided
+([PRI-046: simplification, not evaluation](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-046)). Its
+framework is built: `Framework.Simplifiers`, the one procedure every dialect implements, simplifies an expression in
+a scope that binds some, all or none of its names, by recursive substitution, to a residual of the same dialect, a
+literal root being its evaluation; each dialect's operator semantics are its folding rules, what it evaluated before
+folding into literals; and nothing is refused: what a dialect has no rule for stays in the residual, named with the
+evaluation inventory's class, and Kleene's logic decides what does not depend on it. `Evaluators` and `Partials` are
+gone. Each family's rules are filled next, over literal leaves
+([CAP-295: simplification of single-dialect expressions with literal leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-295)), over literals, variables and parameters
 ([CAP-296: simplification over literals, variables and parameters](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-296)), in every binding state
 ([CAP-297: simplification in every binding state](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-297)), over type parameters
 ([CAP-298: simplification over type parameters](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-298)) and across a sub-dialect
-([CAP-299: simplification across a sub-dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-299)), as [the evaluation proposal](docs/proposals/evaluation/README.md)
-designs it. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
-conversions) waits for, and the evaluator interface through which mbse-schemas will choose union branches and check
+([CAP-299: simplification across a sub-dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-299)), as [the evaluation proposal](docs/proposals/evaluation/README.md#as-built-the-framework-0110)
+records it. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
+conversions) waits for, and the interface through which mbse-schemas will choose union branches and check
 constraints.
 
 ---

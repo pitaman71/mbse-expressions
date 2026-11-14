@@ -14,7 +14,7 @@
  * carries no domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). Every
  * named type it computes in (a literal's, a variable's, a cast's, the promotions' `int`, a comparison's `bool`) is a
  * stored domain, read through the term's holder (`Domains.Types`): among its dialect's domains, then its holder's
- * ABI's, so the same term evaluates as each ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is
+ * ABI's, so the same term folds as each ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is
  * signed, and 200 under AAPCS64's; `long double` is x87's format under the one and `binary128` under the other). A lone
  * term is refused where it reads a type (mbse-schemas' TypeError), and so is a type neither dialect defines, by name.
  * C's rules apply:
@@ -70,7 +70,7 @@ type CType = Domains.CType;
 type Fn = (...args: any[]) => unknown;
 const [EVEN, ZERO] = ["roundTiesToEven", "roundTowardZero"];
 
-/** A value while evaluating: its C type (null for a string or an object) and its native. */
+/** A value while folding: its C type (null for a string or an object) and its native. */
 class Typed {
   constructor(readonly ctype: CType | null, readonly value: any) {}
 }
@@ -302,7 +302,7 @@ function attributes(node: any): Map<string, any> {
 
 function cast(dialect: Terms.Dialect): F.Implementation {
   return (args, node) => {
-    const type_ = Terms.argumentsOf(Terms.kindOf(node)[1])[0]; // a C Types term, which the cast reads, not evaluates
+    const type_ = Terms.argumentsOf(Terms.kindOf(node)[1])[0]; // a C Types term, which the cast reads, not folds
     const [kind] = Terms.kindOf(type_);
     // invalid syntax where the type stands, named by its owner, as every dialect names it
     if (Terms.INVALID_KINDS.has(kind)) throw new F.NoRule(dialect.owner(type_).name(), kind);

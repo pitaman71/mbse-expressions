@@ -59,7 +59,7 @@ bound_names`) within its conditional's consequence and the conditions after it i
 The editions of the standards it covers are data, which `define` writes, each owned by its designation (`IEEE Std
 1364-1995` to `IEEE Std 1800-2023`) and holding the kinds it has, by mbse-programs' `SINCE`. `DIALECT` reads the kinds
 (`Terms.Dialect`), and the five other dialects' terms (`reads`). The writers (`literal`, `vector`, `identifier`,
-`binary`, `cast`, ...) write the kinds SystemVerilog evaluated before it was complete through the builders, a cast's
+`binary`, `cast`, ...) write the kinds SystemVerilog folded before it was complete through the builders, a cast's
 type a spec of `Types`' `Term`, written through the builders too; every other term is written through the builders
 (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an
 expression as SystemVerilog source, with its precedence.
@@ -77,7 +77,7 @@ none, since no basic scalar holds x or z. `define` writes its domains, IEEE 1800
 
 What reads a named type reads its stored domain, through the store of the term's holder (`Proxies.store_of`), by
 `Domains.named`: validation, a cast to a type SystemVerilog defines (`int'(x)`), which must be defined in that store;
-inference, a constant's type (`integer`, `longint`, `real`), a cast's and `===`'s (`bit`); and evaluation (see
+inference, a constant's type (`integer`, `longint`, `real`), a cast's and `===`'s (`bit`); and simplification (see
 `Simplifiers`). A lone term reaches no store: reading a type, it is refused (mbse-schemas' TypeError, "the value does
 not belong to a store"), and a term that reads none, a sized vector's, is read as before.
 """
@@ -130,11 +130,11 @@ HELPERS = ("AttributeInstance", "AttributeSpec", "Identifier", "ScopedName", "Lo
 completeness data (`grammars/systemverilog-slang.json`) names them."""
 
 SYSTEM = ("$signed", "$unsigned", "$clog2", "$bits", "$countones", "$onehot", "$onehot0", "$isunknown")
-"""The system functions its evaluator computes."""
+"""The system functions its rules fold."""
 REDUCTIONS = ("sum", "product", "and", "or", "xor")
 """The array reduction methods, which may have a `with` clause."""
 METHODS = ("size", *REDUCTIONS, "min", "max", "unique")
-"""The array methods of no arguments its evaluator computes."""
+"""The array methods of no arguments its rules fold."""
 BASES = {"b": 1, "o": 3, "h": 4, "d": 0}
 """The bases a literal or a constant is written in, by its letter, with the bits a digit holds (decimal: none)."""
 UNITS = ("s", "ms", "us", "ns", "ps", "fs")

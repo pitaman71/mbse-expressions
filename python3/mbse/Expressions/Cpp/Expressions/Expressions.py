@@ -21,7 +21,7 @@ carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own litera
 - names: `idexpression`, every name used as an expression, holding its `Name` (`x`, `std::cout`, `f<int>`,
   `operator+`), as C++'s grammar makes it: C++ has no `variable` (the user's decision of 2026-11-04, in the dialects
   proposal's Decided), and an `idexpression` of an identifier is a lexical reference to its spelling, which validation
-  requires bound and evaluation resolves; `thisexpression`;
+  requires bound and simplification resolves; `thisexpression`;
 - `lambdaexpression` (`captures`, `template_parameters`, `template_requires`, `attributes`, `declarator`), whose body of
   statements is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not part of the term"); `foldexpression`;
   `requiresexpression` (`parameters`, `requirements`). A lambda and a requires expression are binders, refining the

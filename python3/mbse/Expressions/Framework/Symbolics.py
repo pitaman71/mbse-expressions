@@ -36,12 +36,7 @@ class Unbound(Exception):
     function or an import it does not provide. The simplifier catches it, leaving the reference in the residual."""
 
 
-class _Unknown:
-    def __repr__(self) -> str:
-        return "UNKNOWN"
-
-
-UNKNOWN: Any = _Unknown()
+UNKNOWN: Any = object()
 """The value a scope binds a name to whose value is not known: looking it up raises `Unbound`."""
 
 

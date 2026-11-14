@@ -1,25 +1,30 @@
-"""Evaluators of the SystemVerilog dialect: compute an expression by IEEE 1800's rules, in Python.
+"""Simplifiers of the SystemVerilog dialect: simplify an expression by IEEE 1800's rules, in Python.
 
-`Evaluators.OfAny(expression, scope)` evaluates a term (or anything `Terms.term` reads one from) in a
+`Simplifiers.OfAny(expression, scope)` simplifies a term (or anything `Terms.term` reads one from) in a
 `Scope(variables, functions)` and gives a `Domains.Logic` for an integral result or a float for a real one. A variable's
 type is its value's: a `Logic` its own, a bool a `bit`, an int an `integer` (or a `longint` beyond 32 bits), a float a
 `real`, and a string a vector of its bytes (in UTF-8) (a value carries no domain: a variable of another type waits for
 domain inference). Every named type it computes in (a literal's, a cast's, `===`'s `bit`, `size()`'s `int`, `$bits`'
 `integer`, ...) is the domain SystemVerilog defines by that name in the store of the term's holder (`Domains.named`),
-read once per evaluation when it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError),
+read once per folding when it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError),
 and a store where SystemVerilog's `define` has not run defines none.
 
-It keeps what it evaluated before the dialect was complete, over the kinds that replaced its own (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11: "stage 6 extends no evaluator"): a `literal` (an unsized integer, decimal or based,
+Its rules fold what it evaluated before the dialect was complete, over the kinds that replaced its own (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11: "stage 6 extends no evaluator"): a `literal` (an unsized integer, decimal or based,
 a real, a string) and a `constant` (a vector, sized or not, and a fill in its context's width); a `nameexpression` of an
 identifier; `memberexpression`, `indexexpression`, `rangeselect` (`[msb:lsb]`), `unaryexpression`,
 `binaryexpression`, `conditionalexpression`, `parenthesizedexpression`, `insideexpression` with `valuerange`s,
 `concatenation`, `replication`, `castexpression` (to a type SystemVerilog defines by its keyword, a signing, or a
 width), `systemcall` (the system functions `SYSTEM`), `callexpression` (of a function the scope provides, or of an
 array's method of no arguments, `a.size()`) and `arraymethodwithexpression` (a reduction with a `with` clause). Every
-other kind, the other dialects' of its family among them, is refused by name, `NotImplementedError` ("SystemVerilog
-incrementexpression is not evaluated", "SystemVerilog Types structtype is not evaluated"), and so is what an evaluated
-kind holds beyond what it evaluated before (a scoped name, an indexed part select, a time literal, `null`). IEEE
-1800's rules apply:
+other kind, the other dialects' of its family among them, stays in the residual, named ("SystemVerilog
+incrementexpression is not simplified", "SystemVerilog Types structtype is not simplified"), and so does what a folded
+kind holds beyond what it evaluated before (a scoped name, an indexed part select, a time literal, `null`); `CATEGORIES`
+gives each the evaluation inventory's class. A name or a function the scope does not provide stays too. The root folds
+into the literal of its value, an unsized integer for an `integer`'s or a `longint`'s, a sized vector for any other
+integral type's (of 4 states: a 2-state type is not kept), a real; and so does a name, replaced by the literal of its
+value. No other subterm folds alone: an operand's width is its context's (11.6), so an operand folded at its own width
+could compute otherwise, and it stays, its value the root's to compute (see `mbse.Expressions.Framework.Simplifiers`,
+`folds`). IEEE 1800's rules apply:
 
 - Sizing: an operator's operands are context-determined or self-determined (11.6); the context-determined ones are
   extended to the expression's width before it is computed, sign-extended when the expression is signed (all its

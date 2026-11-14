@@ -360,7 +360,6 @@ function field(args: F.Thunk[], node: any): unknown {
   return valueOf(fields.get(name));
 }
 
-/** Evaluates the terms of the Excel dialect. */
 /** The folding rules of the Excel dialect. */
 export const RULES = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
   ["call", new Map<string, F.Implementation>([

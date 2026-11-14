@@ -1,4 +1,4 @@
-/** The MATLAB dialect: MATLAB expressions over scalars and structs, evaluated by MATLAB's rules. `install` adds its
+/** The MATLAB dialect: MATLAB expressions over scalars and structs, simplified by MATLAB's rules. `install` adds its
  * kinds to the framework's terms, its kind of domain and its domains' schemas; `define` writes its domains. See mbse-basis
  * [CAP-100: six languages' expression dialects](mbse:mbse-basis/docs/capabilities/CAP-100.md). */
 

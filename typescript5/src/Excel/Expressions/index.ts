@@ -1,4 +1,4 @@
-/** The Excel dialect: worksheet formulas, evaluated by Excel's rules, errors as values included. `install` adds its
+/** The Excel dialect: worksheet formulas, simplified by Excel's rules, errors as values included. `install` adds its
  * kinds to the framework's terms, its kinds of domain and its domains' schemas; `define` writes its domains. See mbse-basis
  * [CAP-100: six languages' expression dialects](mbse:mbse-basis/docs/capabilities/CAP-100.md). */
 
