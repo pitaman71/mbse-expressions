@@ -213,7 +213,7 @@ differ:
   simplification procedure, not an evaluation procedure, by recursive substitution over immutable terms. A
   simplification evaluates its expression when the root is a closed constructor expression, as the criterion of
   [CAP-295: simplification of single-dialect expressions with literal leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-295.md#decided)
-  states; the user moved that criterion out of PRI-046 on 2026-11-15.
+  states.
 - **In plan**, [CAP-295: simplification of single-dialect expressions with literal leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-295) to
   [CAP-299: simplification across a sub-dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-299): simplification of
   single-dialect expressions with only literal leaf terms; with leaf terms mixing literals, arguments or variables, and
