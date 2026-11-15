@@ -276,6 +276,17 @@ implementation; and, of class (a), what needs the platform or the implementation
 that is no integer one, a field whose text is an object's address or a set's order, a locale's format spec, a spec
 Python refuses, and a `\N{...}` escape.
 
+## As built: C and C++ (0.11.0)
+
+Step 2 for the C family, on branch `simp-c-family` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 351 to 362): C and C++ fold
+every kind the inventory gives class (a), and every class (a) refusal within a kind they evaluated, by ISO/IEC 9899
+and ISO/IEC 14882, in the types and layouts their holder's ABI stores
+([CAP-267: C and C++ terms read under the ABI their holder names](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-267.md)). A value with a literal of its type folds to it (a suffix by the
+type's identity; a floating value a binary64 literal spells exactly; `nullptr`; a `_BitInt` whose narrowest literal is
+of its type); a `char`, a `short`, an array, an ordering and `void` stay. What stays, named: the object model, writes,
+statements, declarations (`d`); an operand whose declaration gives its type (`c`, CAP-232); a layout no ABI dialect
+stores, nested braces and an array of arrays in a compound literal (`a`); an initializer alone, a type name (`b`).
+
 ## 6. What it would add or supersede
 
 Named in prose; the user adds the items. It would add capabilities implementing

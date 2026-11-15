@@ -2218,6 +2218,101 @@ every family's folding rules fill, evaluation retired as a public procedure.
      asserts a lambda's value has no literal. Tutorial 3's T03.7 shows the constants fold (`2j`, `None` and `...`
      literal roots), re-run with its outputs in both languages; no other tutorial's outputs change.
 
+### C and C++ (step 2)
+
+351. **C's and C++'s folding rules** *(agent)*: `C/Expressions/Simplifiers` folds every kind the evaluation inventory
+     gives C class (a), 8, and its 4 refusals within evaluated kinds, by ISO/IEC 9899: `constant` (`nullptr`),
+     `parenthesizedexpression`, `extensionexpression`, `concatenatedstring`, `genericselection`, `sizeofexpression`,
+     `alignofexpression`, `compoundliteralexpression`, the comma, a literal of `_BitInt(N)`, a cast to `void` and GNU's
+     `a ?: b` (`FOLDED`, 17 kinds with the literal, `variable` and those C folded before). `Cpp/Expressions/Simplifiers`
+     folds C++'s 14 and its 2 within, by ISO/IEC 14882: `thisexpression`, `userdefinedliteral`,
+     `functionalcastexpression`, `namedcastexpression`'s `static_cast`, `sizeofpackexpression`, `foldexpression`,
+     `packexpansion`, `throwexpression`, `<=>` and an `idexpression` of a qualified name, with C's that C++ has
+     (`FOLDED`, 23 kinds). The two dialects share C's rules where C++ has C's kinds: `rules(dialect, folded, extend)`
+     builds them, `extend(operations, rules)` adding a dialect's own (C++'s), and `simplifier(dialect, folded,
+     categories, write, extend)`; `RULES` is each dialect's (`SIMPLIFIER.rules`). The rules are `Rules`, the framework's
+     `Interpreter` with `nullptr`'s value, `declared(type, node, scope)` (the type a type name names), `type_of(term,
+     scope)` (an unevaluated operand's type, TypeScript `typeOf`) and `typings` (C++'s casts'); values while folding
+     are `Typed` (a C type and a native), `VOID` (a cast to `void`'s value), `ArrayType`, `Pack`; `Untyped` is what
+     typing raises where a declaration gives the type.
+352. **Literals written back** *(agent)*: a value folds into the literal of its type where its type, by its identity
+     (`Domains.Types.identity`, 355), has a suffix (`Domains.literal_suffix(name, language)`, TypeScript
+     `literalSuffix`): `int`, `long`, `long long`, signed or not, `bool`, `float`, `double`, `long double` (`L`), C's
+     `_FloatN`, `_FloatNx` and decimal types (`f16`, `f32x`, `df`), C++'s `std::floatN_t` and `std::bfloat16_t`
+     (`f16`, `bf16`), where the binary64 value of its literal rounds back to it exactly (`3.0L`, `0.3dd`; a long double
+     third stays); a bit-precise integer where its narrowest literal is of its type (`7wb`, not a `_BitInt(4)` 1); a
+     string; `nullptr` its `constant`. A typedef's value is the standard integer type it is (`(int64_t)5 + 1` is `6l`).
+     A value of a type with no suffix stays: `char`, `short`, `wchar_t` in C++ (a type of its own there), a
+     `uint8_t`; its promoted arithmetic folds (`(char)200 + 0` is `-56`). This supersedes API 330's list of types that
+     stay (`long double` and the decimal types now fold where a literal spells them exactly; `_BitInt` where its
+     narrowest literal does). Writing a value of no literal as a cast of a literal was considered and not done: its
+     root would be a cast, not a literal, against "a literal root is a successful evaluation".
+353. **Unevaluated operands** *(agent)*: `sizeof`'s, `alignof`'s, `_Generic`'s controlling operand and the
+     conditional's other operand are typed, not evaluated (`sizeof(1 / 0)` is `4ul`), by their kinds: a literal's,
+     a cast's, the promotions and the usual arithmetic conversions, a comparison's (C's `int`, C++'s `bool`: C's
+     folding still gives `bool`, see tech debt), `sizeof`'s `size_t`, a string literal's array of its encoding's code
+     units and its zero. A variable's type is its value's, as folding types it. A member's, a call's, a subscript's,
+     or an operand an `*` or `&` holds is its declaration's: it stays, class `c` (mbse-basis [CAP-232: domains inferred
+     for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md)).
+354. **Layout** *(agent)*: a scalar type's size and alignment, `Domains.layout(type)`, are its width rounded up to a
+     power of two bytes, as both stored ABIs (x86-64 System V and AAPCS64) lay every scalar they store out (`long
+     double`'s 80 bits under AMD64 in 16 bytes, aligned to 16); an array's, its elements'. The ABI dialects store no
+     size or alignment, nor a pointer's, `nullptr_t`'s or `_BitInt(N)`'s layout (the two psABIs differ there): `sizeof`
+     of those stays, class `a`.
+355. **Identity of types** *(agent)*: `Domains.Types.identity(type, language)` names the type a type is: a type its
+     standard names is itself (`char`, neither `signed char` nor `unsigned char`; `long` apart from `long long`; a
+     floating or a bit-precise integer type; C++'s `wchar_t`, `char8_t`, `char16_t`, `char32_t`); a typedef is the
+     standard integer type it is, plain `char` excepted (`int64_t` is `long`, `uint8_t` `unsigned char`). `_Generic`
+     matches by it; a qualified association type matches no operand; a pointer, an array or a structure, none of an
+     arithmetic operand; a type a declaration names (a typedef no dialect defines, an enumeration) stays, class `d`.
+356. **The conditional** *(agent)*: `c ? a : b` converts the chosen operand to the type the usual arithmetic
+     conversions give the two (ISO/IEC 9899, 6.5.15; C++ keeps one type where both are it), where the other's type is
+     known without evaluating it; where only its declaration gives it, the chosen operand's type is kept, as before.
+     `1 ? 2 : 3.5` is now `2.0` (DIA-12 follows); C's `1 ? true : false` is the `int` `1`, C++'s `true`. GNU's `a ?:
+     b` folds the same way, `a` evaluated once.
+357. **`_BitInt(N)`** *(agent, from the earlier attempt's diff)*: `Domains.CType` gains `precise` (last, so that its
+     positional arguments keep their places); `Domains.bit_precise(width, signed, types)` (TypeScript `bitPrecise`) is
+     C23's type, labelled `_BitInt(N)`; a `wb` literal is of the narrowest that holds it (a sign bit and N >= 2;
+     `uwb` N >= 1); the integer promotions leave it; it ranks below a standard type of its width (C23, 6.3.1.1), so
+     `1wb + 1` is an `int`; the usual arithmetic conversions of a signed standard type and an unsigned bit-precise one
+     of its width give the standard unsigned type. A cast to `_BitInt(N)` reads its width, an integer constant;
+     too small a width, or one that is not an integer, raises TypeError.
+358. **C++'s names, literals and casts** *(agent)*: an `idexpression` of a qualified name of identifiers is the scope's
+     variable of its spelling (`ns::x`, `::x`), like a module's member in Python3's scope; `this` the variable `this`,
+     as TypeScript5's; any other name (`operator+`, `f<int>`) stays, class `d`. A user-defined literal calls the
+     literal operator the scope provides by its name (`operator""_km`) with its literal's value, the standard
+     library's among them (no model of `<chrono>` or `<string>`: the scope provides them, else they stay); a
+     functional cast to an arithmetic type converts as a cast, `T()` and `T{}` its zero, a braced one refusing a
+     narrowing conversion by the value converted (to `bool`, floating to integer, or a value not kept); `static_cast` is
+     a cast; `const_cast`, `dynamic_cast`, `reinterpret_cast` and a cast to a class stay, class `d`.
+359. **C++'s `<=>`, packs and `throw`** *(agent)*: `<=>` gives an `Ordering` (`std::strong_ordering` of integers,
+     `std::partial_ordering` of floating values, unordered with NaN), which has no literal and compares with the
+     literal 0 and with an ordering of its category; a narrowing conversion of an integer operand raises. A parameter
+     pack is the scope's: `Scope(variables, functions=..., packs=...)` (TypeScript `new Scope(variables, { functions,
+     packs })`); `sizeof...` its size; a pack expansion expands its pattern over the packs it names (a `Pack` a call's
+     arguments splice); a fold, unary or binary, right or left, by the binary operator's rule, an empty one by `&&`,
+     `||` and `,` only; a fold over an assignment, `.*` or `->*` stays, class `d`. `throw x` raises `Thrown`, carrying
+     `x`'s native (message "an exception is thrown"); a rethrow stays, class `d`.
+360. **Compound literals** *(agent)*: of an arithmetic type, its initializer's value converted (`(int){}` zero); of an
+     array of one, an array value (its type's length or its initializer's, designators and GNU's ranges, a character
+     array's string with its zero, unset elements zero), which has no literal, whose elements a subscript reads in
+     their type; a structure's or a union's members are a declaration's, which the term does not hold: it stays,
+     class `d`; nested braces and an array of arrays stay, class `a`.
+361. **What stays, named** *(agent)*: `CATEGORIES` gains, for C (and C++, which copies C's): `sizeofexpression`,
+     `alignofexpression` and `genericselection` "of an operand of unknown type" `c`; "of a type that is not
+     arithmetic" (`sizeof`, `alignof`, `_Generic`'s), "genericselection of an association of a type a declaration
+     names" and "compoundliteralexpression of a type that is not arithmetic" `d`; for C++, the named casts but
+     `static_cast`, "namedcastexpression to a type that is not arithmetic", "functionalcastexpression to a type that is
+     not arithmetic", "throwexpression without an operand", "idexpression of a name that is not an identifier", and
+     a fold over each assignment operator, `.*` and `->*`, `d`. What a layout no ABI dialect stores, nested braces and
+     an array of arrays leave is `a` by default.
+362. **Tests**: suite CCS, `30_C_Cpp`, fourteen cases, the same in both languages (*agent*: 28 is the Python3
+     family's). Existing cases follow: DIA-11 (a `wb` literal's type `_BitInt(4)`), DIA-12 (the conditional's common
+     type; what now folds removed from what stays: `sizeof`, parentheses, the comma, a `_BitInt` literal, GNU's `?:`),
+     DIA-24 (`FOLDED` a superset; a qualified name resolved by the scope; `operator+` stays), CTY-09 (`sizeof(int)` is
+     4), XTY-09 (`static_cast<int>(1.5)` is 1, `const_cast` stays). Tutorials 8.07 (08.07.5: `sizeof(int)` folds to
+     `4ul`) and 8.09 (08.09.5: `static_cast<int>(1)` folds to `1`) follow, re-run.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,

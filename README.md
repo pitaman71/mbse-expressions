@@ -238,7 +238,10 @@ array or an object of them to its display; built-in methods and host values stay
 folds every statement-free expression the evaluation inventory gives a value, by CPython 3.14's semantics, which
 TypeScript models alike (complex numbers, tuples, sets, slices, closures, `format()`'s mini-language and templates
 among them), a value with a Python literal folding to it and a list, a tuple or a dict of them to its display; what
-Python leaves to a statement, its implementation or its platform stays, named. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
+Python leaves to a statement, its implementation or its platform stays, named. C's and C++'s are filled: they fold every
+statement-free expression the evaluation inventory gives a value, by ISO C and ISO C++ in the types and layouts their
+holder's ABI stores (`sizeof`, `_Generic`, compound literals, `_BitInt`, `nullptr`; C++'s casts, `<=>`, packs, folds and
+`throw`); a value of a type with no literal stays. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
 conversions) waits for, and the interface through which mbse-schemas will choose union branches and check
 constraints.
 
