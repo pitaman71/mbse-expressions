@@ -249,7 +249,9 @@ evaluation retired as a public procedure ([the port's API](../port/API.md#settle
   `Residue`: its dialect, its kind, what it has no rule for, and its class in the inventory (`CATEGORIES`, each family's
   module). Kleene's logic still decides what does not depend on it, as `simplify` does in Patterns (`false and x` is
   `false`). What a scope does not provide stays too (`Symbolics.Unbound`). What the dialect's semantics make an error
-  still raises, as the expression would in its language.
+  still raises, as the expression would in its language, wherever its language evaluates the subterm; one it may
+  never evaluate (an untaken branch, a short circuit's right operand, a lambda's body, `sizeof`'s operand) is guarded,
+  and stays ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 374).
 - **What it leaves to the families.** Each family's class (a) is the next step's: a kind or an operator gains a rule by
   an implementation in its family's `RULES` and its tag in `FOLDED`; its residues then disappear. Type parameters, a
   sub-dialect's terms and the deferred capabilities (type algebra, a surrogate dialect, statements) are later steps.

@@ -140,27 +140,29 @@ subset of their languages; completing them adds kinds, which is not this invento
 ### Counts
 
 Refused kinds, each counted once, in the dialect that owns it; then the refusals within evaluated kinds (shapes and
-operators, one row each in the tables below). Where a question below is open, the kinds it covers are counted as its
+operators, one row each in the tables below). The counts are as simplification reads them in 0.11.0: "evaluated" is a
+kind its dialect folds, and "refused" one that stays in the residual, named; Python3's, TypeScript5's, C's, C++'s and
+SystemVerilog's class (a) rows are folded since. Where a question below is open, the kinds it covers are counted as its
 recommendation has them, marked †.
 
 | Dialect | Kinds | Evaluated | Refused | (a) | (b) | (c) | (d) | Within evaluated kinds: (a), (c), (d) |
 |---|---|---|---|---|---|---|---|---|
 | Patterns | 7 | 7 | 0 | | | | | |
-| Python3 | 33 | 16 | 17 | 14 | | | 3 | 5, 0, 2 |
+| Python3 | 33 | 30 | 3 | | | | 3 | 5, 0, 2 |
 | Python Types | 3 | 0 | 3 | | 3 | | | |
 | Python Patterns | 8 | 0 | 8 | | 8 | | | |
 | Python RegExp | 15 | 0 | 15 | | 15 | | | |
-| TypeScript5 | 41 | 1 | 40 | 26 | 4 (3†) | | 10 (2†) | |
+| TypeScript5 | 41 | 27 | 14 | | 4 (3†) | | 10 (2†) | 1, 140, 3 |
 | TypeScript Types | 38 | 0 | 38 | | 38 | | | |
 | TypeScript Patterns | 5 | 0 | 5 | | 5 | | | |
 | TypeScript RegExp | 18 | 0 | 18 | | 18 | | | |
-| C | 22 | 9 | 13 | 8 | 2 | | 3 (2†) | 4, 0, 4 (1†) |
+| C | 22 | 17 | 5 | | 2 | | 3 (2†) | 6, 3, 9 (1†) |
 | C Types | 2 | 0 | 2 | | 2 | | | |
 | C Preprocessor | 10 | 0 | 10 | 1 | 9 | | | |
-| Cpp | 36 | 9 | 27 | 14 | 2 | 2 | 9 (2†) | 2, 0, 4, and C's |
+| Cpp | 36 | 23 | 13 | | 2 | 2 | 9 (2†) | 0, 0, 9 (1†), and C's |
 | Cpp Types | 2 | 0 | 2 | | 2 | | | |
 | Cpp RegExp | 16 | 0 | 16 | | 16 | | | |
-| SystemVerilog | 38 | 17 | 21 | 9 | 2 | 4 | 6 (2†) | 9, 3, 4 (1†) |
+| SystemVerilog | 38 | 26 | 12 | | 2 | 4 | 6 (2†) | 1, 3, 4 (1†) |
 | SystemVerilog Types | 10 | 0 | 10 | | 10 | | | |
 | SystemVerilog Patterns | 6 | 0 | 6 | | 6 | | | |
 | SystemVerilog Assertions | 17 | 0 | 17 | | | | 17† | |
@@ -169,12 +171,15 @@ recommendation has them, marked †.
 | MATLAB | 10 | 10 | 0 | | | | | |
 | Excel | 9 | 9 | 0 | | | | | |
 | LaTeX | 8 | 0 | 8 | | 8 | | | |
-| **All** | **373** | **78** | **295** | **79** | **161** | **6** | **49** | **20, 3, 14** |
+| **All** | **373** | **149** | **224** | **8** | **161** | **6** | **49** | **13, 146, 27** |
 
-So of 295 refused kinds, 79 are gaps by the principle (a), 161 have no value of their own (b), 6 wait on domain
-inference or constraint resolution (c), and 49 need what only mbse-programs or a simulator has (d), 25 of those by
-the recommendations of questions 1 and 2. Within evaluated kinds, 20 refusals are gaps, 3 wait on domain inference and
-14 are mbse-programs', 2 of those by question 1's recommendation.
+So of 224 kinds that stay, 8 are gaps by the principle (a), C Preprocessor's `defined` and SystemVerilog Constraints'
+7, 161 have no value of their own (b), 6 wait on domain inference or constraint resolution (c), and 49 need what only
+mbse-programs or a simulator has (d), 25 of those by the recommendations of questions 1 and 2. Within folded kinds, 13
+refusals are gaps, each one the two implementations cannot compute alike yet (a complex power, a locale's format, a
+layout no ABI dialect stores); 146 wait on an open capability, 139 of them ECMAScript's built-in methods on a surrogate
+for the language's runtime, the others on domain inference; and 27 are mbse-programs' or a simulator's, 3 of those by
+question 1's recommendation.
 
 ### Python
 
@@ -201,6 +206,10 @@ the recommendations of questions 1 and 2. Within evaluated kinds, 20 refusals ar
 | an `async for` | (d) | an event loop, within an `async def` body |
 | `is`, `is not` | (a) | identity, as Python defines it: the singletons `None`, `True`, `False`, `...` and a reference object by identity; Python leaves other equal immutables' identity to the implementation, which the evaluator should state |
 | `@` | (a) | Python's rule, `__matmul__` of the operand: a library's (NumPy's) in Python, and a `TypeError` for every value a TypeScript evaluator holds, since no builtin type has one |
+
+Folded in 0.11.0 (suite PYS): every row of class (a) above, by CPython 3.14's semantics, which the TypeScript
+implementation models. `is` between equal immutable values stays, read as (b); a complex power that is no integer one
+stays, as do a locale's format spec and a field whose text is its implementation's.
 
 **Python Types** (`typevar`, `paramspec`, `typevartuple`): (b). A type parameter is declared by a `def`, `class` or
 `type` statement (Language Reference, 8.10, type parameter lists); its object is made when that statement runs. An
@@ -241,6 +250,10 @@ BigInt, an object as an ordered map (integer keys first), an array with holes, a
 | `super`, `privateidentifier` (`#x`), `metaproperty` (`new.target`, `import.meta`) | (d) | an enclosing class's members, a function's invocation, or the host's module: declarations and execution, mbse-programs' |
 | `awaitexpression`, `yieldexpression`, `importexpression` | (d) | a coroutine's or a generator's resumption; `import()` gives a promise, which only `await` reads, within an `async` body or a module |
 | `assignmentexpression`, `updateexpression`, and `unaryexpression`'s `delete` | (d)† | question 1: a write, to a binding or to data |
+
+Folded in 0.11.0 (suite TSS): every row of class (a) above, by `Abstract`'s model of ECMA-262's abstract operations. A
+regular expression is an object of its source and flags; its matching, as every built-in method, is the language's
+runtime's (c).
 
 **TypeScript Types** (all 38): (b). A type is erased: it has no run-time value (TypeScript's compiler emits none for
 any of them, `typeof x` in a type's position among them).
@@ -312,6 +325,12 @@ declarations; an evaluator of values bound by name has no object to point at, so
 | a subscript of several indices (C++23) | (d) | an overloaded `operator[]`: a class's declaration |
 | a callee that is not a function's name (`s.f(x)`) | (d) | a member function: a class's declaration |
 
+Folded in 0.11.0 (suite CCS): every row of class (a) above, C's and C++'s, by their standards, in the types and layouts
+their holder's ABI stores. `sizeof` of a bit-precise integer type and of `nullptr_t` waits on the ABI dialects storing
+those layouts (a); an operand whose declaration gives its type, on
+[CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md) (c).
+The standard library's user-defined literals are the scope's to provide.
+
 **C Types** and **Cpp Types** (`typeid`, `enumerator` each): (b). A type name denotes a type (C, 6.7.7; C++,
 [dcl.name]) and has no value; a cast and `sizeof` read it. An enumerator declares an enumeration constant; a use of
 one is a name, resolved by the scope.
@@ -366,10 +385,15 @@ time, its scheduling and the values a signal had at earlier clock ticks are no s
 | a hierarchical name, and a cast to a `typedef`'s name | (d) | the elaborated hierarchy; the `typedef`'s declaration |
 | an array's or a queue's methods that change it (`sort`, `reverse`, `shuffle`, `push_back`, `pop_front`, ...), and `$cast` | (d)† | question 1: a write |
 
+Folded in 0.11.0 (suite SVS): every row of class (a) above, but `const'(x)`, which no term writes (`SystemVerilog
+Types` has no `const`); a time literal by the scope's time unit, `min:typ:max` by its choice, a scope-provided
+function's formals and defaults by `Subroutine`.
+
 **SystemVerilog Types** (all 10): (b). A data type (6) has no value; casts and `$bits` read it.
 
 **SystemVerilog Patterns** (all 6): (b). A pattern is matched by `matches` and `case ... matches` (12.6) and has no
-value of its own; `matchesexpression`, (a) above, evaluates it.
+value of its own; `matchesexpression`, (a) above, evaluates it (constant, wildcard and variable patterns; a tagged
+or structure pattern within a `matches` is (c)).
 
 **SystemVerilog Assertions** (all 17, sequences and properties): (d)†, question 2. A sequence or a property holds, or
 fails, over the clock ticks of a trace (16; Annex F gives its formal semantics), not at one instant in one scope.

@@ -2076,8 +2076,8 @@ every family's folding rules fill, evaluation retired as a public procedure.
      class `b`) and a kind of another dialect of its family stay in the residual, named; a subterm of a term the rules
      computed (a cast's type) needs no rule, and is not named. What the dialect's own semantics make an error still
      raises, as the expression would in its language (an operand of the wrong type, a wrong number of arguments, a
-     division by zero, an overflow, a member a value lacks), and so does a malformed term (a literal with no value, a
-     let with no body).
+     division by zero, an overflow, a member a value lacks), wherever its language evaluates the subterm; one it may
+     never evaluate stays (item 374). A malformed term raises too (a literal with no value, a let with no body).
 329. **Scopes** *(agent)*: what a scope does not resolve raises `Symbolics.Unbound`, which the simplifier catches: a
      name it does not bind, or binds to `UNKNOWN`; a function, a module or an import it does not provide. So
      `KeyError` "variable 'x' is not bound", Python's `NameError` and `ImportError`, MATLAB's "Unrecognized function or
@@ -2401,6 +2401,31 @@ every family's folding rules fill, evaluation retired as a public procedure.
      lists the package's `Formats`. Tutorial pages 8.13 (08.13.5: vectors of constant dimensions convert) and 8.14
      (08.14.5, retitled "Matched by a `matches`, never simplified alone": `v matches .x ? x + 1 : 0` is 2) teach the
      folds, re-run in both languages; no other tutorial's outputs change.
+
+### The integration (coordinator)
+
+374. **Guarded subterms** *(coordinator)*: item 328's "raises, as the expression would in its language" read exactly:
+     an error raises wherever the language evaluates the subterm (`x + (1 + "a")` in Patterns, PAR-04), and a subterm
+     the language may never evaluate is guarded: an error folding it, or anything within it, leaves it in the
+     residual, to raise where it is evaluated, naming no residue. Before, an untaken branch raised (`c ? 1 : null.a`
+     with `c` unbound). Guarded: a body its parent binds names in, but a let's (a comprehension's element, a lambda's
+     with parameters), and the arguments a dialect's `guarded(node, index)` names, a new option of `Simplifier`, which
+     `Framework.Simplifiers.guards(dialect, table)` builds from a table by operator, or tag where a kind has none:
+     Patterns' `and`, `or` and `implies` (the second); MATLAB's `&&` and `||` (the right); Excel's `IF` (its
+     branches); Python3's conditional's branches, `and`'s and `or`'s operands after the first, a comparison chain's
+     after its first comparison, a lambda's body; TypeScript5's `&&`, `||` and `??`, its conditional's branches and an
+     arrow's body; C's and C++'s conditional's branches, `&&`'s and `||`'s right operand, every operand of `sizeof`,
+     `alignof` and `_Generic` (C's `GUARDED`, by `guarding(dialect, table)`, each argument where its entry is None),
+     and C++'s lambda's and requires expression's body and `noexcept`'s and `typeid`'s operands; SystemVerilog's
+     conditional's branches and the right operand of `&&`, `||` and `->`. Cases: PAR-04, DIA-04, DIA-07, PYS-12,
+     TSS-09, CCS-03, CCS-05, CCS-13, SVS-02.
+375. **A known `undefined`** *(coordinator)*: TypeScript's `Result` took `null` for a value passed as `undefined`, its
+     parameter's default applying to it; `value` has no default now, so `void 0`, and a variable bound to `undefined`,
+     simplify to `undefined` (TSS-01). Python's `Result` had no such bug, `A.UNDEFINED` being a value of its own.
+376. **Suites** *(coordinator)*: each family's suite numbered after POSIX's two, in the inventory's partition's order:
+     `28_Python3` (PYS, 12), `29_TypeScript5` (TSS, 9), `30_C_Cpp` (CCS, 14), `31_SystemVerilog` (SVS, 14); 299 cases
+     in each language. The families' API items numbered in that order too: TypeScript5's 334 to 340 (merged first),
+     Python3's 341 to 350, C's and C++'s 351 to 362, SystemVerilog's 363 to 373.
 
 ## What stage 2b needed (done)
 
