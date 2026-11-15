@@ -1875,7 +1875,9 @@ export const RULES = new Rules();
 
 /** The simplifier of the SystemVerilog dialect. */
 export const SIMPLIFIER = new FS.Simplifier(RULES, { literal: literalOf, categories: CATEGORIES, folds: RULES.folds,
-  simplify: RULES.simplify });
+  simplify: RULES.simplify,
+  // what IEEE 1800 may never evaluate (11.4.7, 11.4.11): the right operand, by the left; the branches, by the condition
+  guarded: FS.guards(X.DIALECT, { "&&": [1], "||": [1], "->": [1], [X.CONDITIONALEXPRESSION]: [1, 2] }) });
 
 /** The simplification of an expression in `scope`, or with the variables in an object bound: folded into a literal
  * when the scope determines it, its value a `Logic`, a number, null (`null`), an array or an object. */

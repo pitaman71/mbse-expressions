@@ -1865,7 +1865,10 @@ the residual's meaning (11.6)."""
 RULES = _Rules()
 """The folding rules of the SystemVerilog dialect."""
 
-SIMPLIFIER = FS.Simplifier(RULES, literal=_literal, categories=CATEGORIES, folds=RULES.folds, simplify=RULES.simplify)
+SIMPLIFIER = FS.Simplifier(RULES, literal=_literal, categories=CATEGORIES, folds=RULES.folds, simplify=RULES.simplify,
+                           guarded=FS.guards(X.DIALECT, {  # what IEEE 1800 may never evaluate (11.4.7, 11.4.11)
+                               "&&": frozenset({1}), "||": frozenset({1}), "->": frozenset({1}),  # by the left operand
+                               X.CONDITIONALEXPRESSION: frozenset({1, 2})}))  # by the condition
 """The simplifier of the SystemVerilog dialect."""
 
 
