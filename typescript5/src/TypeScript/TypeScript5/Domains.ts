@@ -3,9 +3,9 @@
  *
  * `Boolean`, `Number`, `BigInt` and `String` are a literal's: a number is a float (IEEE 754 binary64, as JavaScript's
  * numbers are) and a bigint an int. `Null` and `RegExp` are the domains of TypeScript5's own constants, `null` and a
- * regular expression. Anything else is `Anything`: the dialect has no folding rule beyond its literals, so its operators'
- * signatures (`UNARY`, `UPDATE`, `BINARY`, `LOGICAL`, `ASSIGNMENT`, by mbse-programs' operators) say only how many
- * operands each takes.
+ * regular expression. Anything else is `Anything`: its operators' values are ECMAScript's, by its folding rules
+ * (`Simplifiers`, `Abstract`), not by signatures, so its operators' signatures (`UNARY`, `UPDATE`, `BINARY`, `LOGICAL`,
+ * `ASSIGNMENT`, by mbse-programs' operators) say only how many operands each takes.
  */
 
 import * as D from "../../Framework/Domains.js";
