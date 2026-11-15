@@ -31,18 +31,20 @@ simplification in every binding state](mbse:mbse-basis/docs/capabilities/README.
 (`FOLDED`): constants, displays and their `*` and `**` unpacking, comprehensions of any number of clauses over targets
 that unpack, f-strings by `format()`'s mini-language (a complex number's among them) and t-strings, slices, calls with
 keywords and unpacking, lambdas called with Python's binding of parameters, named expressions, `is` and `is not` by
-identity, and `@`. What stays in the residual, named, is what has no value outside a statement (`yield`, `yield from`,
-`await`, an `async for`, a target that writes into data), a kind of its family's other dialects and invalid syntax, by
-the name of the dialect that owns it ("Python Types typevar is not simplified"; a type expression of Python3's kinds
-simplifies as Python3's), and what Python leaves to its implementation or its platform, each named where it is decided:
-`is` between equal immutable values; an f-string's field whose text is an implementation's (a set's order, an object's
-address), a format spec of a locale (`n`), or one Python refuses, and a `\\N{...}` escape (Unicode's names); a complex
-power other than an integer one, and a real power whose value is complex, which need the platform's `pow`, `atan2`,
-`cos` and `sin`. `CATEGORIES` gives each the evaluation inventory's class.
+identity, `@`, and a `\\N{...}` escape by Unicode's character names and aliases, as CPython reads them. What stays in
+the residual, named, is what has no value outside a statement (`yield`, `yield from`, `await`, an `async for`, a target
+that writes into data), a kind of its family's other dialects and invalid syntax, by the name of the dialect that owns
+it ("Python Types typevar is not simplified"; a type expression of Python3's kinds simplifies as Python3's), a
+`\\N{...}` escape Python refuses to compile (malformed, or of an unknown name), and what Python leaves to its
+implementation or its platform, each named where it is decided: `is` between equal immutable values; an f-string's
+field whose text is an implementation's (a set's order, an object's address), a format spec of a locale (`n`), or one
+Python refuses; a complex power other than an integer one, and a real power whose value is complex, which need the
+platform's `pow`, `atan2`, `cos` and `sin`. `CATEGORIES` gives each the evaluation inventory's class.
 """
 
 from __future__ import annotations
 
+import codecs
 import functools
 import math
 import operator
@@ -539,7 +541,7 @@ _HEX = {"x": 2, "u": 4, "U": 8}
 
 def _text(spelling: str, raw: bool) -> str:
     """An f-string's or a t-string's text as written, as Python reads it: `{{` and `}}` one brace each, and, unless it
-    is raw, its escapes; `\\N{name}` stays in the residual (its names are Unicode's data)."""
+    is raw, its escapes, `\\N{name}` among them."""
     out, i = [], 0
     while i < len(spelling):
         char = spelling[i]
@@ -563,11 +565,25 @@ def _text(spelling: str, raw: bool) -> str:
             out.append(chr(int(hexdigits, 16)))
             i += 2 + _HEX[code]
         elif code == "N":
-            raise _refuse("joinedstr's \\N escape")
+            named, i = _named(spelling, i)
+            out.append(named)
         else:  # not an escape: kept as written
             out.append(char)
             i += 1
     return "".join(out)
+
+
+def _named(spelling: str, i: int) -> tuple[str, int]:
+    """The character the `\\N{name}` escape at `i` names, and the index after it: a name or an alias of Unicode's, its
+    case ignored, as CPython's `unicodeescape` codec looks it up, which its compiler reads a string with. A malformed
+    escape and an unknown name, which Python refuses to compile, stay in the residual, of class (b)."""
+    end = spelling.find("}", i + 3)
+    if spelling[i + 2:i + 3] != "{" or end <= i + 3:
+        raise _refuse("joinedstr's malformed \\N character escape")
+    try:
+        return codecs.decode(spelling[i:end + 1].encode("ascii"), "unicode_escape"), end + 1
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        raise _refuse("joinedstr's unknown Unicode character name") from None
 
 
 def _representable(value: Any) -> bool:
@@ -796,15 +812,17 @@ FOLDED = frozenset({_P.LITERAL, _P.CONSTANT, _P.NAME, _P.LET, _P.LIST, _P.TUPLE,
 
 CATEGORIES: dict[str, dict[str, str]] = {
     "Python3": {"yield": "d", "yieldfrom": "d", "await": "d", "async comprehension": "d", "attribute target": "d",
-                "subscript target": "d", "starred target": "b", "compare 'is' of equal immutable values": "b"},
+                "subscript target": "d", "starred target": "b", "compare 'is' of equal immutable values": "b",
+                "joinedstr's malformed \\N character escape": "b", "joinedstr's unknown Unicode character name": "b"},
     "Python Types": {"*": "b"}, "Python Patterns": {"*": "b"}, "Python RegExp": {"*": "b"},
 }
 """The evaluation inventory's class of what each dialect of the family has no rule for (`a` where none is given):
 `yield`, `yield from`, `await` and an `async for` need a statement body (d), as does a target that writes into data;
 a lone starred target, or two, is invalid syntax (b); whether equal immutable values are one object Python leaves to
-the implementation (b). The rest is (a): a format or a field whose text Python leaves to its platform or its
-implementation, a complex power, and a `\\N{...}` escape. A value with no closed constructor expression (an empty
-set, a frozenset, a slice, a closure, a template, an object, a generator) is no gap: its rule computes it, its subterm stays, and nothing is named."""
+the implementation (b); a `\\N{...}` escape Python refuses to compile, malformed or of an unknown name (b). The rest is
+(a): a format or a field whose text Python leaves to its platform or its implementation, and a complex power. A value
+with no closed constructor expression (an empty set, a frozenset, a slice, a closure, a template, an object, a
+generator) is no gap: its rule computes it, its subterm stays, and nothing is named."""
 
 
 class _Rules(F.Interpreter):
