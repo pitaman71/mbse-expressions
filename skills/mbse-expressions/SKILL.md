@@ -15,10 +15,13 @@ and translated between expression languages, called dialects:
   values, property access, lets, lists and mappings, and collections with quantifiers. Every binding simplifies it.
 - **Python3**, **MATLAB** and **Excel**, which model those languages' expressions: each renders as its source text and
   simplifies by its own rules. Python3 holds every expression of Python 3 (3.0 to 3.15), as CPython's `ast` has it, and
-  folds the kinds constraints use, leaving the others in the residual, named.
+  folds every statement-free kind by CPython's semantics (constants and complex numbers, displays and unpacking,
+  f-strings and t-strings, slices, comprehensions, lambdas and keywords), leaving what needs a statement, or what
+  Python leaves to its implementation or its platform, in the residual, named.
 - **TypeScript5**, every expression of TypeScript 5 (5.0 to 5.9) as typescript-estree has it, with its types,
-  destructuring patterns and JSX: it renders as TypeScript and folds its literals alone, leaving the others in the
-  residual, named; it has no translator yet, and its terms are written through the builders.
+  destructuring patterns and JSX: it renders as TypeScript and simplifies by ECMAScript's semantics (ToPrimitive,
+  loose and strict equality, UTF-16 strings, bigints, closures of arrows), leaving what has no rule in the residual,
+  named; it has no translator yet, and its terms are written through the builders.
 - **LaTeX**, mathematical notation: it renders, validates and translates, but has no simplifier.
 - **C** and **Cpp**, every expression of C (C11 to C23) and of C++ (C++17 to C++23) as mbse-programs has them, with the
   type names they hold: each renders as its source and simplifies, over its arithmetic types, by C's rules (promotions,
@@ -30,8 +33,10 @@ and translated between expression languages, called dialects:
   x87's extended format or `binary128`), and serves C and C++ alike.
 - **SystemVerilog**, every expression of IEEE 1800-2023, Verilog its subset, over 4-state vectors and reals, in six
   dialects of one family: its expressions, and its types, patterns, assertions (sequences and properties), constraints
-  and preprocessor, each a dialect reading the others' terms. It renders as its source and simplifies its constraint
-  kinds by IEEE 1800's rules (sizing by context, x and z propagating), leaving the others in the residual, named.
+  and preprocessor, each a dialect reading the others' terms. It renders as its source and simplifies by IEEE
+  1800-2023's rules (sizing by context from the whole expression, x and z propagating, casts as assignments, pattern
+  matching, streaming, the system functions that compute a value, strings' and arrays' methods), folding a subterm
+  wherever its literal keeps its meaning, and leaves what has no rule in the residual, named.
 - **ISOIEC11404**, **IEEE754**, **IEEE1164** and **Unicode**, the standard dialects: each holds a published standard's
   kinds of domain and its domains, named as the standard names them (ISO/IEC 11404's `integer`, `octet`, a code, and
   `modulo(256)`, wrapping arithmetic; IEEE 754's `binary64`), and has no terms yet. The other dialects' values take their domains.

@@ -375,7 +375,8 @@ RULES = F.Interpreter(Expressions.DIALECT, {
 }, literal=_number_of, scope=Workbook, extension=_add_in)
 """The folding rules of the Excel dialect."""
 
-SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(Expressions.DIALECT))
+SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(Expressions.DIALECT), guarded=F.guards(
+    Expressions.DIALECT, {"IF": frozenset({1, 2})}))  # IF's branches, by its test
 """The simplifier of the Excel dialect."""
 
 

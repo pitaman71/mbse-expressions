@@ -232,7 +232,19 @@ gone. Each family's rules are filled next, over literal leaves
 ([CAP-297: simplification in every binding state](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-297)), over type parameters
 ([CAP-298: simplification over type parameters](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-298)) and across a sub-dialect
 ([CAP-299: simplification across a sub-dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-299)), as [the evaluation proposal](docs/proposals/evaluation/README.md#as-built-the-framework-0110)
-records it. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
+records it. TypeScript5's are filled: it folds every statement-free expression the evaluation inventory gives a value, by
+ECMA-262's abstract operations modeled alike in both languages, a value with a TypeScript literal folding to it and an
+array or an object of them to its display; built-in methods and host values stay, named. Python3's are filled: it
+folds every statement-free expression the evaluation inventory gives a value, by CPython 3.14's semantics, which
+TypeScript models alike (complex numbers, tuples, sets, slices, closures, `format()`'s mini-language and templates
+among them), a value with a Python literal folding to it and a list, a tuple or a dict of them to its display; what
+Python leaves to a statement, its implementation or its platform stays, named. C's and C++'s are filled: they fold every
+statement-free expression the evaluation inventory gives a value, by ISO C and ISO C++ in the types and layouts their
+holder's ABI stores (`sizeof`, `_Generic`, compound literals, `_BitInt`, `nullptr`; C++'s casts, `<=>`, packs, folds and
+`throw`); a value of a type with no literal stays. SystemVerilog's are filled: it folds every statement-free expression
+the evaluation inventory gives a value, by IEEE 1800-2023 (4-state values, sizing by context, casts as assignments,
+pattern matching, streaming, the system functions and methods that compute a value), each subterm wherever its literal
+keeps its meaning, as 11.6 sizes it from the whole expression; what has no literal or no rule stays, named. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
 conversions) waits for, and the interface through which mbse-schemas will choose union branches and check
 constraints.
 

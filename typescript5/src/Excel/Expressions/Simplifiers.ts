@@ -382,7 +382,9 @@ export const RULES = new F.Interpreter(Expressions.DIALECT, new Map<string, any>
 ]), { literal: numberOf, scope: (names) => new Workbook(names), extension: addIn });
 
 /** The simplifier of the Excel dialect. */
-export const SIMPLIFIER = new F.Simplifier(RULES, { literal: F.natives(Expressions.DIALECT) });
+export const SIMPLIFIER = new F.Simplifier(RULES, {
+  literal: F.natives(Expressions.DIALECT), guarded: F.guards(Expressions.DIALECT, { IF: [1, 2] }), // IF's branches, by its test
+});
 
 /** The simplification of a formula (a term value, or anything `Terms.term` reads one from) in a workbook, or with the
  * defined names in an object. */

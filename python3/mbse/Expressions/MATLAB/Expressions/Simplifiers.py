@@ -365,7 +365,8 @@ def _display(value: Any) -> Any:
     return None if None in elements else Expressions.array(*elements)
 
 
-SIMPLIFIER = F.Simplifier(RULES, literal=_LITERAL, display=_display)
+SIMPLIFIER = F.Simplifier(RULES, literal=_LITERAL, display=_display, guarded=F.guards(
+    Expressions.DIALECT, {"&&": frozenset({1}), "||": frozenset({1})}))  # the right operand, by the left
 """The simplifier of the MATLAB dialect."""
 
 

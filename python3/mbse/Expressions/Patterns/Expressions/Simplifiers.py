@@ -462,7 +462,8 @@ def _simplify(node: Any, results: list[F.Result]) -> F.Result | None:
     return None
 
 
-SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(Expressions.DIALECT), simplify=_simplify)
+SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(Expressions.DIALECT), simplify=_simplify, guarded=F.guards(
+    Expressions.DIALECT, {name: frozenset({1}) for name in ("and", "or", "implies")}))  # each one's second, by the first
 """The simplifier of the Patterns dialect."""
 
 

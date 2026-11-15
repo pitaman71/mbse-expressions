@@ -15,9 +15,12 @@
  * simulator has; see mbse-expressions' [the evaluation
  * inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#evaluation-what-is-refused-and-why)). Errors the
  * dialect's own semantics define (an operand of the wrong type, a division by zero) still throw, as the expression
- * would in its language.
+ * would in its language, wherever its language would evaluate them. A subterm its language may never evaluate is
+ * guarded: a body its parent binds names in, but a let's (an arrow's, a comprehension's element), and an argument the
+ * dialect's `guarded(node, index)` names (a conditional's branches, the right operand of a short circuit); an error
+ * folding it, or anything within it, throws leaves it in the residual, to throw where it is evaluated.
  *
- * A `Simplifier(rules, { literal, simplify, categories, native, folds })` simplifies the terms of one dialect; each
+ * A `Simplifier(rules, { literal, simplify, categories, native, folds, guarded })` simplifies the terms of one dialect; each
  * dialect's `Simplifiers.OfAny` is one. Its `rules` are the dialect's folding rules: what the dialect computes over
  * values, `rules.evaluate(node, scope)` giving a subterm's value or throwing `NoRule` where it has none, over a scope
  * `rules.scope(variables)` makes. `Interpreter` is the rules most dialects build theirs on (its tables, by kind and
@@ -112,7 +115,8 @@ export interface Rules {
  * computed, and then its `value`; whether it is a `literal`; the names it refers to that nothing within it binds
  * (`free`); and whether it differs from the subterm it simplified (`changed`). */
 export class Result {
-  constructor(readonly expression: unknown, readonly known: boolean = false, readonly value: unknown = null,
+  // `value` has no default, which would apply to a known `undefined` too
+  constructor(readonly expression: unknown, readonly known: boolean = false, readonly value?: unknown,
     readonly literal: boolean = false, readonly free: ReadonlySet<string> = new Set(),
     readonly changed: boolean = true) {}
 }
@@ -125,12 +129,19 @@ export interface SimplifierOptions {
   native?: (value: any) => unknown;
   folds?: (node: any, root: boolean) => boolean;
   display?: (value: any) => unknown;
+  guarded?: (node: any, index: number) => boolean;
 }
 
 /** The literal of a native value (a basic scalar), as `dialect` writes one (`Terms.Dialect.spec`); null for any other
  * value, or a native it has no literal of: a simplifier's `literal`, where a dialect's values are natives. */
 export function natives(dialect: Terms.Dialect): (value: unknown) => unknown {
   return (value) => (Schemas.hostOf(value) !== null ? (dialect._literal as (value: unknown) => unknown)(value) : null);
+}
+
+/** A simplifier's `guarded`: the arguments, by index, that a term's language evaluates only on a condition, by the
+ * term's operator, or its tag where its kind has none (`{ and: [1] }`). */
+export function guards(dialect: Terms.Dialect, table: Record<string, readonly number[]>): (node: any, index: number) => boolean {
+  return (node, index) => (table[Terms.operatorOf(node, dialect.kind(node)[2])] ?? []).includes(index);
 }
 
 /** Simplifies the terms of a dialect by its `rules` (see the module's description). */
@@ -142,6 +153,7 @@ export class Simplifier {
   private readonly native: (value: any) => unknown;
   private readonly folds: ((node: any, root: boolean) => boolean) | null;
   private readonly display: ((value: any) => unknown) | null;
+  private readonly guarded: ((node: any, index: number) => boolean) | null;
 
   constructor(readonly rules: Rules, options: SimplifierOptions) {
     this.dialect = rules.dialect;
@@ -151,6 +163,7 @@ export class Simplifier {
     this.native = options.native ?? ((value) => value);
     this.folds = options.folds ?? null;
     this.display = options.display ?? null;
+    this.guarded = options.guarded ?? null;
   }
 
   /** The simplification of a term (see `Terms.term`) in `scope`, or with the variables in an object bound: Python's
@@ -178,8 +191,9 @@ export class Simplifier {
     return new Result(written, true, value, true);
   }
 
-  /** A subterm simplified in `scope`, noting in `residues` each subterm its dialect has no rule for. */
-  reduce(node: any, scope: any, residues: Map<string, Residue>, root = false): Result {
+  /** A subterm simplified in `scope`, noting in `residues` each subterm its dialect has no rule for; an error folding it
+   * throws unless it is `guarded`, one its language may never evaluate. */
+  reduce(node: any, scope: any, residues: Map<string, Residue>, root = false, guarded = false): Result {
     const [, record, kind] = this.dialect.kind(node);
     let known = false; // a value its rules computed, with no literal
     let value: unknown = null;
@@ -189,7 +203,7 @@ export class Simplifier {
         known = true;
       } catch (error) {
         if (error instanceof NoRule) this.note(error, residues);
-        else if (!(error instanceof Unbound)) throw error;
+        else if (!(error instanceof Unbound) && !guarded) throw error; // guarded, perhaps never evaluated: it stays
       }
       if (known) {
         if (kind.role === Terms.LITERAL) return new Result(node, true, value, true, new Set(), false); // kept as written
@@ -204,14 +218,14 @@ export class Simplifier {
       return new Result(node, known, value, false, freeNames(node, this.dialect), false);
     }
     // a subterm of a term its rules computed (a cast's type) needs no rule of its own: what it lacks is not noted
-    return this.rebuild(node, record, kind, scope, known ? new Map() : residues, known, value);
+    return this.rebuild(node, record, kind, scope, known ? new Map() : residues, known, value, guarded);
   }
 
   /** A term rebuilt from its simplified arguments, each in the scope its names are bound in: a let's of a known value
    * bound to it, any other name hidden (`Symbolics.UNKNOWN`), an import's among them (its root having not folded, its
    * module is not entered again). A let whose body no longer refers to its name is its body. */
   private rebuild(node: any, record: any, kind: Terms.Kind, scope: any, residues: Map<string, Residue>,
-    known: boolean, value: unknown): Result {
+    known: boolean, value: unknown, guarded: boolean): Result {
     const args = Terms.argumentsOf(record);
     const bound = scopes(node, this.dialect);
     const lets = Terms._lets(kind, record);
@@ -226,7 +240,8 @@ export class Simplifier {
       let within = scope;
       if (lets && i > 0 && first !== null && first.known) within = scope.bind(Terms.nameOf(node) as string, first.value);
       else if (names.size > 0) within = Simplifier.hide(scope, names);
-      results.push(this.reduce(argument, within, residues));
+      const maybe = guarded || (names.size > 0 && !lets) || (this.guarded !== null && this.guarded(node, i));
+      results.push(this.reduce(argument, within, residues, false, maybe));
     });
     const name = Terms.nameOf(node) as string;
     const body = results[1] ?? null;
