@@ -87,7 +87,7 @@ import * as X from "./Expressions.js";
 import * as Formats from "./Formats.js";
 import { Logic, SvType } from "./Domains.js";
 
-const { KeyError, NotImplementedError, ValueError } = Errors;
+const { KeyError, ValueError } = Errors;
 const { repr, typeName } = Repr;
 type Fn = (...args: any[]) => unknown;
 
@@ -603,6 +603,7 @@ class Evaluation {
       case X.NAMEEXPRESSION: return this.name(node);
       case X.THISEXPRESSION: return typed(this.scope.value("this"), this.stored);
       case X.EMPTYQUEUE: return [];
+      case X.DOLLAREXPRESSION: return this.dollar();
       case X.MEMBEREXPRESSION: return this.member(node);
       case X.INDEXEXPRESSION: return this.select(node);
       case X.RANGESELECT: return this.range(node);
@@ -754,10 +755,7 @@ class Evaluation {
       const [leftType, rightType] = [this.type(node.left), this.type(node.right)];
       if ((leftType === null || rightType === null) && ["==", "!=", "===", "!=="].includes(op)) { // class handles, by identity
         const [left, right] = [this.value(node.left), this.value(node.right)];
-        if (!(isHandle(left) && isHandle(right))) {
-          this.numeric(leftType === null ? node.left : node.right, op);
-          throw new TypeError(`${op} compares a class handle with a class handle`);
-        }
+        if (!(isHandle(left) && isHandle(right))) this.numeric(leftType === null ? node.left : node.right, op); // a handle and a number, or an array: no comparison
         const same = BOOLEAN((left === right) === (op === "==" || op === "==="));
         return convert(op === "===" || op === "!==" ? new Logic(this.stored.named("bit"), BigInt(same)) : bit(same), target, false);
       }
@@ -1200,7 +1198,7 @@ class Evaluation {
   }
 
   /** `$`: the last index of the array the innermost select indexes. */
-  dollar(): Logic {
+  private dollar(): Logic {
     if (this.last.length === 0) throw new InContext("$");
     const last = this.last[this.last.length - 1];
     if (last === null) throw new TypeError("$ is the last index of a queue or an array, not of a vector");
@@ -1558,12 +1556,6 @@ type Position = SvType | null | typeof UNKNOWN_TYPE;
 type How = SvType | null | typeof OWN_TYPE | typeof DEFAULT | typeof ROOT;
 type Child = [any, Evaluation, Position, boolean];
 
-/** Whether an error is one a term's own semantics raise, or its scope's: what sizing reads as an unknown type. */
-function expected(error: unknown): boolean {
-  return error instanceof S.Unbound || error instanceof NotImplementedError || error instanceof TypeError
-    || error instanceof ValueError || error instanceof KeyError || error instanceof OverflowError;
-}
-
 /** How each subterm of an expression may fold, as 11.6 sizes it from the whole expression in a scope: `how` gives, by
  * its term, null (it stays), `OWN_TYPE` (into its own type's literal), a type (into the literal of its value in that
  * context), or `DEFAULT`; `owned` its self-determined type, where the scope determines it. */
@@ -1579,12 +1571,13 @@ class Sizing {
     }
   }
 
+  /** A term's type, or `UNKNOWN_TYPE` where the scope does not determine it: any error is read so, and thrown again
+   * where the term is folded, if it is. */
   private static typeOf(evaluation: Evaluation, node: any): SvType | null | typeof UNKNOWN_TYPE {
     try {
       return evaluation.type(node);
-    } catch (error) {
-      if (expected(error)) return UNKNOWN_TYPE;
-      throw error;
+    } catch {
+      return UNKNOWN_TYPE;
     }
   }
 
@@ -1644,8 +1637,7 @@ class Sizing {
       let branch: Evaluation;
       try {
         branch = ev.branch(node.condition);
-      } catch (error) {
-        if (!expected(error)) throw error;
+      } catch {
         branch = ev.within(new Map([...matched(node.condition.term)].map((name) => [name, null])), true);
       }
       return [...selfDetermined(node.condition), [node.consequence, branch, target, true], [node.alternative, ev, target, true]];
@@ -1654,8 +1646,7 @@ class Sizing {
       let shared: Position;
       try {
         shared = ev.insideType(node, ev.insideItems(node));
-      } catch (error) {
-        if (!expected(error)) throw error;
+      } catch {
         shared = UNKNOWN_TYPE;
       }
       const ends = node.set.filter((item: any) => kindOf(item) === X.VALUERANGE).flatMap((item: any) => [item.left, item.right]);
@@ -1671,8 +1662,7 @@ class Sizing {
       let position: Position;
       try {
         position = ev.castContext(node);
-      } catch (error) {
-        if (!expected(error)) throw error;
+      } catch {
         position = UNKNOWN_TYPE;
       }
       return [...this.typeTerms(node.type, ev), [node.value, ev, position, true]];
@@ -1720,8 +1710,7 @@ class Sizing {
         try {
           const bound = inner.bindings(condition);
           if (bound.size > 0) inner = inner.within(bound);
-        } catch (error) {
-          if (!expected(error)) throw error;
+        } catch {
           inner = inner.within(new Map([...matched(condition.term)].map((name) => [name, null])), true);
         }
       }
@@ -1812,17 +1801,13 @@ class Rules implements FS.Rules {
       if (operands.some((result) => result.known && truth(result.value) === decisive)) return SIMPLIFIER.known(node, bit(decisive));
     }
     if (tag === X.CONDITIONALEXPRESSION && (results[0] as FS.Result).known && this.sizing !== null) {
-      const [condition, consequence, alternative] = F.argumentsOf(record);
+      const [, consequence, alternative] = F.argumentsOf(record);
       const t = truth((results[0] as FS.Result).value);
       const sizing = this.sizing;
-      const owned = (term: unknown) => (sizing.owned.has(term as object) ? sizing.owned.get(term as object) : UNKNOWN_TYPE) as
-        SvType | null | typeof UNKNOWN_TYPE;
-      const kept = t === 1 ? consequence : t === 0 ? alternative : null;
+      const owned = (term: unknown) => sizing.owned.get(term as object) ?? UNKNOWN_TYPE; // a term no sizing visited: unknown
+      const kept = t === 1 ? consequence : t === 0 ? alternative : null; // a condition that binds names never folds
       const found = kept === null ? UNKNOWN_TYPE : owned(kept);
-      if (kept !== null && matched(condition).size === 0 && found !== UNKNOWN_TYPE && found !== null
-        && found.equals(owned(node))) {
-        return (t === 1 ? results[1] : results[2]) as FS.Result;
-      }
+      if (found !== UNKNOWN_TYPE && found.equals(owned(node))) return (t === 1 ? results[1] : results[2]) as FS.Result;
     }
     return null;
   };

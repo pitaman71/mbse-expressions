@@ -724,9 +724,8 @@ class _Evaluation:
             left_type, right_type = self.type(node.left), self.type(node.right)
             if None in (left_type, right_type) and op in ("==", "!=", "===", "!=="):  # class handles, by identity
                 left, right = self.value(node.left), self.value(node.right)
-                if not (_handle(left) and _handle(right)):
+                if not (_handle(left) and _handle(right)):  # a handle and a number, or an array: no comparison
                     self._numeric(node.left if left_type is None else node.right, op)
-                    raise TypeError(f"{op} compares a class handle with a class handle")
                 same = int((left is right) == (op in ("==", "===")))
                 return _convert(Logic(self.stored.named("bit"), same) if op in ("===", "!==") else _bit(same),
                                 target, False)
@@ -1545,7 +1544,6 @@ _ROOT: Any = object()
 """How a term folds that is not a subterm of the expression being simplified: as a root."""
 _NEVER = frozenset({X.NAMEDCONNECTION, X.EMPTYARGUMENT, X.VALUERANGE, X.DOLLAREXPRESSION, X.PATTERNITEM})
 """The kinds that have no value of their own, but within the kind that holds them."""
-_ERRORS = (S.Unbound, NotImplementedError, TypeError, ValueError, KeyError, OverflowError)
 
 
 class _Sizing:
@@ -1563,9 +1561,11 @@ class _Sizing:
 
     @staticmethod
     def _type(evaluation: _Evaluation, node: Any) -> Any:
+        """A term's type, or `_UNKNOWN` where the scope does not determine it: any error is read so, and raised again
+        where the term is folded, if it is."""
         try:
             return evaluation.type(node)
-        except _ERRORS:
+        except Exception:
             return _UNKNOWN
 
     def _visit(self, node: Any, evaluation: _Evaluation, context: Any, sensitive: bool) -> None:
@@ -1623,14 +1623,14 @@ class _Sizing:
         if kind == X.CONDITIONALEXPRESSION:
             try:
                 branch = ev._branch(node.condition)
-            except _ERRORS:
+            except Exception:
                 branch = ev.within(dict.fromkeys(X._matched(node.condition.term)), hidden=True)
             return [*self_determined(node.condition), (node.consequence, branch, target, True),
                     (node.alternative, ev, target, True)]
         if kind == X.INSIDEEXPRESSION:
             try:
                 shared = ev._inside_type(node, ev._inside_items(node))
-            except _ERRORS:
+            except Exception:
                 shared = _UNKNOWN
             ends = [end for item in node.set if item.kind == X.VALUERANGE for end in (item.left, item.right)]
             return [(child, ev, shared, True) for child in (node.value, *node.set, *ends)]
@@ -1646,7 +1646,7 @@ class _Sizing:
         if kind == X.CASTEXPRESSION:
             try:
                 position = ev._cast_context(node)
-            except _ERRORS:
+            except Exception:
                 position = _UNKNOWN
             return [*self._types(node.type, ev), (node.value, ev, position, True)]
         if kind == X.SYSTEMCALL:
@@ -1690,7 +1690,7 @@ class _Sizing:
                 found.append((condition, inner, None, False))
                 try:
                     bound = inner._bindings(condition)
-                except _ERRORS:
+                except Exception:
                     bound = dict.fromkeys(X._matched(condition.term))
                     inner = inner.within(bound, hidden=True)
                     continue
@@ -1786,13 +1786,13 @@ class _Rules:
             if any(result.known and _truth(result.value) == decisive[0] for result in operands):
                 return SIMPLIFIER.known(node, _bit(decisive[1]))
         if tag == X.CONDITIONALEXPRESSION and results[0].known and self._sizing is not None:
-            condition, consequence, alternative = F.arguments_of(record)[:3]
+            _, consequence, alternative = F.arguments_of(record)[:3]
             truth = _truth(results[0].value)
-            own = {id(term): self._sizing.own.get(id(term), (None, _UNKNOWN))[1]
+            own = {id(term): self._sizing.own.get(id(term), (None, _UNKNOWN))[1]  # a term no sizing visited: unknown
                    for term in (node, consequence, alternative)}
-            kept = consequence if truth == 1 else alternative if truth == 0 else None
-            if kept is not None and not X._matched(condition) and own[id(kept)] is not _UNKNOWN and (
-                    own[id(kept)] == own[id(node)]):
+            kept = consequence if truth == 1 else alternative if truth == 0 else None  # a binding condition never folds
+            found = _UNKNOWN if kept is None else own[id(kept)]
+            if found is not _UNKNOWN and found == own[id(node)]:
                 return results[1] if truth == 1 else results[2]
         return None
 
