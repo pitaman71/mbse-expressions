@@ -1,5 +1,5 @@
-"""Domains of the C dialect: the types C's and C++'s folding rules, inference and validation compute on, each read from the
-domains their dialects and their holder's ABI store, and the signatures of their operators, which `Cpp` shares.
+"""Domains of the C dialect: the types C's and C++'s folding rules, inference and validation compute on, each read from
+the domains their dialects and their holder's ABI store, and the signatures of their operators, which `Cpp` shares.
 
 A `CType` is a type and a domain: `bool`, an integer by its width and signedness, or a floating type of an IEEE 754
 format, named (`binary64`) or, where IEEE 754 names none, by its parameters (x87's `(2, 64, 16383)`). It is the working
@@ -8,41 +8,52 @@ types are among C's own domains (`Expressions.C.Expressions`, which its `define`
 integers, the `_FloatN` and decimal types), then among those of the ABI its holder names
 (`Expressions.Framework.HasAbi`, the holder's adjacency `abi`: `Expressions.SystemV.AMD64` or `Expressions.Arm.AAPCS64`,
 which hold `int`, `long`, `char`, `long double`, `size_t`, ...); a C++ term's among C++'s
-(`Expressions.Cpp.Expressions`) then its holder's ABI's (mbse-basis [CAP-267: C and C++ terms read under the ABI their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md#decided)). `Types(term, path)` finds the
-holder from any term or record within it (`Terms.holder_of`: a lone term is refused, mbse-schemas' TypeError, "the value
-does not belong to a store") when it first reads a type, and reads each once: `named(name)` is the type, a `CType`
-labelled with its `Defines` name and keeping the domain it was read from and the `Types` it was read through, so that a
-rule reaches the store for a type no operand carries (the promotions' `int`); its width and signedness come from its
-kind (11404's `integer`; `modulo`, unsigned, of the width its modulus gives; `boolean`), a floating type's format and
-width from IEEE 754's. A type neither dialect defines is refused by name: "'int' is not a type C defines, and its
-expression names no ABI", or "'int' is not a type C or AMD64 defines"; `find(name)` gives None instead where the holder
-names an ABI (a cast to a type a program declares).
+(`Expressions.Cpp.Expressions`) then its holder's ABI's (mbse-basis [CAP-267: C and C++ terms read under the ABI their
+holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md#decided)). `Types(term, path)` finds the holder from any term
+or record within it (`Terms.holder_of`: a lone term is refused, mbse-schemas' TypeError, "the value does not belong to a
+store") when it first reads a type, and reads each once: `named(name)` is the type, a `CType` labelled with its
+`Defines` name and keeping the domain it was read from and the `Types` it was read through, so that a rule reaches the
+store for a type no operand carries (the promotions' `int`); its width and signedness come from its kind (11404's
+`integer`; `modulo`, unsigned, of the width its modulus gives; `boolean`), a floating type's format and width from IEEE
+754's. A type neither dialect defines is refused by name: "'int' is not a type C defines, and its expression names no
+ABI", or "'int' is not a type C or AMD64 defines"; `find(name)` gives None instead where the holder names an ABI (a cast
+to a type a program declares).
 
-`promoted(type)` applies the integer promotions (a narrower integer or a bool becomes `int`) and `common(a, b)` the
-usual arithmetic conversions: the wider floating type if either is floating, otherwise the promoted types, the wider if
-they agree in signedness, else the unsigned one when it is at least as wide, else the signed one; a decimal floating
-type and a binary one have none (C's constraint), so `common` gives None. The signatures follow the folding rules
-(see `Simplifiers`): arithmetic gives the common type, shifts the promoted left operand's, comparisons and logic `bool`,
-which the dialect's kinds read from the store (`Expressions`), and a result is named by the first of `NAMES`, C's names
-in the order its standard lists them, that its types define equal to it. `of(value, types)` names a native value's type:
-`int`, `long` or `unsigned long` for an int, as the first that holds it, `double` for a float, `bool`; None otherwise.
-The rules stay code, and the signatures are `Dialect.infer`'s, to be replaced with stored domains as domain inference
-reads them ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
+`promoted(type)` applies the integer promotions (a narrower integer or a bool becomes `int`; a bit-precise integer type
+stays) and `common(a, b)` the usual arithmetic conversions: the wider floating type if either is floating, otherwise the
+promoted types, the one of greater rank if they agree in signedness (a bit-precise type ranks below a standard one of
+its width), else the unsigned one when its rank is at least the other's, else the signed one when it is wider, else the
+unsigned type of the signed one's width; a decimal floating type and a binary one have none (C's constraint), so
+`common` gives None. `layout(type)` is a scalar type's size and alignment in bytes, as both ABIs lay a scalar out (its
+width rounded up to a power of two bytes), None for a bit-precise integer type, whose layout no ABI dialect stores.
+`Types.identity(type, language)` names the type a type is, by C's or C++'s identity of types (a typedef the standard
+integer type it is). The signatures follow the folding rules (see `Simplifiers`): arithmetic gives the common type,
+shifts the promoted left operand's, comparisons and logic `bool`, which the dialect's kinds read from the store
+(`Expressions`), and a result is named by the first of `NAMES`, C's names in the order its standard lists them, that its
+types define equal to it. `of(value, types)` names a native value's type: `int`, `long` or `unsigned long` for an int,
+as the first that holds it, `double` for a float, `bool`; None otherwise. The rules stay code, and the signatures are
+`Dialect.infer`'s, to be replaced with stored domains as domain inference reads them ([CAP-232: domains inferred for
+terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
 
 A literal's type is what its text encodes (`literal(attributes, language, types)`), as C's and C++'s standards give it,
-a stored domain found by name (mbse-basis [CAP-229: the C expression dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md#decided)): an integer's by its suffix
-and its base, the first of the types they allow that holds its value (an `unsigned int` for `5u`; a decimal integer
-without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double` for `L`,
-`_Float16` for `f16` in C and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in
-C and `char` in C++, its encoding prefix's type otherwise (`wchar_t`, `char8_t`); a bool's `bool`; a string's `String`.
-What `_BitInt` or a prefix no language has encodes is a domain named by its type, which no folding rule has values of; a
-suffix the language does not write gives `Anything`, its type unknown. `out_of_range(attributes, language, types)` says
-what is wrong with an integer literal that its type does not hold, one that fits none of the types its suffix and base
-allow, by the stored domain's range (a value out of range, PRI-023). `arithmetic(names)` is the name of the arithmetic
-type a type name's specifiers name (`unsigned int`, `uint8_t`), or None.
+a stored domain found by name (mbse-basis [CAP-229: the C expression
+dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md#decided)): an integer's by its suffix and its base, the first of
+the types they allow that holds its value (an `unsigned int` for `5u`; a decimal integer without a suffix is its
+value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double` for `L`, `_Float16` for `f16` in C
+and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in C and `char` in C++, its
+encoding prefix's type otherwise (`wchar_t`, `char8_t`); a bool's `bool`; a string's `String`. An integer literal with
+C23's `wb` suffix is of the narrowest bit-precise integer type that holds it (`bit_precise`, `_BitInt(N)`, of a sign bit
+and N >= 2; `unsigned _BitInt(N)` with `uwb`), which no domain stores; a prefix no language has encodes a domain named
+by it, which no folding rule has values of; a suffix the language does not write gives `Anything`, its type unknown.
+`literal_suffix(name, language)` is the suffix a literal of a type is written with, or None where the type has no
+literal. `out_of_range(attributes, language, types)` says what is wrong with an integer literal that its type does not
+hold, one that fits none of the types its suffix and base allow, by the stored domain's range (a value out of range,
+PRI-023). `arithmetic(names)` is the name of the arithmetic type a type name's specifiers name (`unsigned int`,
+`uint8_t`), or None.
 
-The other operators, which no folding rule computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`, `->*`,
-its folds and named casts), have signatures that say only how many operands each takes.
+The other operators (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`, `->*`, its folds and named casts)
+have signatures that say only how many operands each takes; the folding rules compute some of them (see `Simplifiers`).
+
 """
 
 from __future__ import annotations
@@ -57,9 +68,10 @@ from mbse.Expressions.Framework import Domains as D, Objects, Terms
 from mbse.Expressions.Framework.Domains import Anything
 from mbse.Schemas.Framework import Proxies
 
-__all__ = ["CType", "Types", "NAMES", "String", "Anything", "promoted", "common", "of", "literal", "out_of_range",
-           "arithmetic", "NULLPTR", "BINARY", "BINARY_CPP", "UNARY", "POSTFIX", "ASSIGNMENT", "FOLD", "CASTS", "MEMBER",
-           "SUBSCRIPT", "CALL", "CONDITIONAL", "CAST", "SIZE"]
+__all__ = ["CType", "Types", "NAMES", "String", "Anything", "bit_precise", "layout", "promoted", "common", "of",
+           "literal", "literal_suffix", "out_of_range", "arithmetic", "QUALIFIERS", "NULLPTR", "BINARY", "BINARY_CPP",
+           "UNARY", "POSTFIX",
+           "ASSIGNMENT", "FOLD", "CASTS", "MEMBER", "SUBSCRIPT", "CALL", "CONDITIONAL", "CAST", "SIZE"]
 
 _NATIVE = ("binary16", "binary32", "binary64")  # the formats whose values are floats; any other's are text
 
@@ -67,9 +79,10 @@ _NATIVE = ("binary16", "binary32", "binary64")  # the formats whose values are f
 @dataclass(frozen=True)
 class CType:
     """An arithmetic type: its `kind` ('bool', 'integer' or 'floating'), its `width` in bits, its signedness, and for a
-    floating type its IEEE 754 `format`, a name or its parameters. Its `name` is its `label`, the name its stored domain
-    is defined by; its `domain` is that stored domain, and `types` the `Types` it was read through; types compare by the
-    rest."""
+    floating type its IEEE 754 `format`, a name or its parameters; whether it is a bit-precise integer type (`precise`,
+    C23's `_BitInt(N)`, which no domain stores: its width is its N). Its `name` is its `label`, the name its stored
+    domain is defined by (a bit-precise type's, `_BitInt(N)`); its `domain` is that stored domain, and `types` the
+    `Types` it was read through; types compare by the rest."""
 
     kind: str
     width: int
@@ -78,6 +91,7 @@ class CType:
     label: str = field(default="", compare=False)
     domain: Any = field(default=None, compare=False, repr=False)
     types: Types | None = field(default=None, compare=False, repr=False)
+    precise: bool = False
 
     def name(self) -> str:
         return self.label
@@ -180,6 +194,16 @@ class Types:
         its own."""
         return next((t for t in map(self._lookup, NAMES) if t == ctype), ctype)
 
+    def identity(self, ctype: CType, language: str = "C") -> str:
+        """The name of the type a type is, by `language`'s identity of types (`C` or `C++`): a type its standard
+        names is itself (`char`, `long long`, a floating or a bit-precise integer type, and C++'s character types,
+        which are distinct there); a type a typedef names is the standard integer type it is, plain `char` excepted
+        (`int64_t` is `long` under both ABIs, `uint8_t` `unsigned char`)."""
+        label = ctype.label
+        if label in NAMES or ctype.kind == "floating" or ctype.precise or label in _DISTINCT[language]:
+            return label
+        return next(name for name in NAMES if name not in ("bool", "char") and self._lookup(name) == ctype)
+
 
 String = D.OfTypes("string", str)
 NULLPTR = D.OfTypes("nullptr_t", type(None))
@@ -190,18 +214,44 @@ def _types(ctype: CType) -> Types:
     return ctype.types  # type: ignore[return-value]
 
 
+def bit_precise(width: int, signed: bool, types: Types) -> CType:
+    """C23's bit-precise integer type of `width` bits, `_BitInt(N)` or `unsigned _BitInt(N)`, read through `types`."""
+    label = f"{'' if signed else 'unsigned '}_BitInt({width})"
+    return CType("integer", width, signed, None, label, None, types, True)
+
+
+def layout(ctype: CType) -> int | None:
+    """A scalar type's size in bytes, which is its alignment too, as each ABI dialect's psABI lays its scalars out: its
+    width rounded up to a power of two bytes (`long double`'s 80 bits under AMD64 in 16 bytes); None for a bit-precise
+    integer type, whose layout no ABI dialect stores."""
+    if ctype.precise:
+        return None
+    size = 1
+    while size * 8 < ctype.width:
+        size *= 2
+    return size
+
+
 def promoted(ctype: CType) -> CType:
     """The integer promotions: a bool or an integer narrower than `int` becomes `int`, read through the type's
-    `Types`."""
-    if ctype.kind == "floating":
+    `Types`; a bit-precise integer type is not promoted (C23, 6.3.1.1)."""
+    if ctype.kind == "floating" or ctype.precise:
         return ctype
     int_ = _types(ctype).named("int")
     return int_ if ctype.kind == "bool" or ctype.width < int_.width else ctype
 
 
+def _rank(ctype: CType) -> tuple[int, bool]:
+    """An integer type's conversion rank: by its width, a standard type above a bit-precise one of the same width
+    (C23, 6.3.1.1)."""
+    return ctype.width, not ctype.precise
+
+
 def common(a: CType, b: CType) -> CType | None:
     """The usual arithmetic conversions of two arithmetic types; None for a decimal floating type and a binary one,
-    which C does not convert to one another."""
+    which C does not convert to one another. Of two integer types, the one of greater rank if they agree in
+    signedness, else the unsigned one where its rank is at least the signed one's, else the signed one where it is
+    wider, else the unsigned type of the signed one's width."""
     if a.kind == "floating" or b.kind == "floating":
         floats = [t for t in (a, b) if t.kind == "floating"]
         if len(floats) == 2 and a.decimal != b.decimal:
@@ -209,9 +259,13 @@ def common(a: CType, b: CType) -> CType | None:
         return max(floats, key=lambda t: t.width)
     a, b = promoted(a), promoted(b)
     if a.signed == b.signed:
-        return a if a.width >= b.width else b
+        return a if _rank(a) >= _rank(b) else b
     unsigned, signed = (a, b) if not a.signed else (b, a)
-    return unsigned if unsigned.width >= signed.width else signed
+    if _rank(unsigned) >= _rank(signed):
+        return unsigned
+    if signed.width > unsigned.width:
+        return signed
+    return _types(signed).label(CType("integer", signed.width, False))  # a standard signed type, its unsigned one
 
 
 def of(value: Any, types: Types) -> str | None:
@@ -325,6 +379,20 @@ _EXTENDED = {
             "bf16": "std::bfloat16_t"},
 }
 """The extended floating suffixes each language writes, and the types they name."""
+_DISTINCT = {"C": (), "C++": ("wchar_t", "char8_t", "char16_t", "char32_t")}
+"""The character types a language has as types of their own, not as typedefs of an integer type."""
+_SUFFIXES = {"bool": "", "int": "", "unsigned int": "u", "long": "l", "unsigned long": "ul", "long long": "ll",
+             "unsigned long long": "ull", "float": "f", "double": "", "long double": "L"}
+
+
+def literal_suffix(name: str, language: str) -> str | None:
+    """The suffix a literal of the type named `name` (by `Types.identity`) is written with, in `language` (`C` or
+    `C++`): "" for a type a literal without a suffix has (`int`, `double`, `bool`), `u`, `ul`, `f`, `L`, an extended
+    floating type's (`f16`, `df`; C++'s `bf16`); None for a type no literal has (`char`, `short`, a bit-precise type,
+    whose literal is its narrowest)."""
+    if name in _SUFFIXES:
+        return _SUFFIXES[name]
+    return next((suffix for suffix, named in _EXTENDED[language].items() if named == name), None)
 _DECIMAL = {"": ("int", "long", "long long"), "u": ("unsigned int", "unsigned long", "unsigned long long"),
             "l": ("long", "long long"), "ul": ("unsigned long", "unsigned long long"), "ll": ("long long",),
             "ull": ("unsigned long long",), "z": ("long",), "uz": ("size_t",)}
@@ -341,7 +409,7 @@ def _integer_suffix(suffix: str) -> str:
 def literal(attributes: Any, language: str, types: Types) -> D.Domain | None:
     """A literal's type, by what its text encodes (its `prefix`, `quote`, `base` and `suffix`) and its value, in
     `language` (`C` or `C++`), found through `types`; None where its value has none (an int no type holds, or no
-    value). A domain of a type no folding rule has values of is named by it (`_BitInt`)."""
+    value). A domain of a type no folding rule has values of is named by it (a prefix no language has)."""
     value, prefix, suffix = attributes.get("value"), attributes.get("prefix"), attributes.get("suffix")
     if type(value) is str:
         return String if prefix is None else D.OfTypes(f"{_ENCODINGS.get(prefix, prefix)} string", str)
@@ -361,8 +429,9 @@ def literal(attributes: Any, language: str, types: Types) -> D.Domain | None:
             return types.named("unsigned char")
         return types.named(_ENCODINGS[prefix]) if prefix in _ENCODINGS else D.OfTypes(prefix, int)
     normal = _integer_suffix(suffix or "")
-    if normal in ("wb", "uwb"):
-        return D.OfTypes("unsigned _BitInt" if normal == "uwb" else "_BitInt", int)
+    if normal in ("wb", "uwb"):  # the narrowest bit-precise type that holds it (C23, 6.4.4.1): a sign bit, N >= 2
+        return bit_precise(max(value.bit_length(), 1), False, types) if normal == "uwb" else bit_precise(
+            max(value.bit_length() + 1, 2), True, types)
     decimal = attributes.get("base") in (None, 10)
     if not normal and decimal:
         name = of(value, types)
@@ -390,14 +459,15 @@ def out_of_range(attributes: Any, language: str, types: Types) -> str | None:
 
 
 _KEYWORDS = frozenset({"signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"})
-_QUALIFIERS = frozenset({"const", "volatile", "restrict", "__restrict", "__restrict__"})
+QUALIFIERS = frozenset({"const", "volatile", "restrict", "__restrict", "__restrict__"})
+"""The cv-qualifiers a type name's specifiers may hold, which name no type."""
 
 
 def arithmetic(names: Any) -> str | None:
     """The name of the arithmetic type a type name's specifiers name, by their keywords and type names in any order
     (`unsigned long int` is `unsigned long`; `uint8_t`, a type's name, is itself), cv-qualifiers aside; None for any
     other type (`void`, several names)."""
-    words = [name for name in names if name not in _QUALIFIERS]
+    words = [name for name in names if name not in QUALIFIERS]
     if len(words) == 1 and type(words[0]) is str and words[0] not in _KEYWORDS and words[0] != "void":
         return words[0]  # a type's name, which the store may define
     if not words or any(word not in _KEYWORDS for word in words):
