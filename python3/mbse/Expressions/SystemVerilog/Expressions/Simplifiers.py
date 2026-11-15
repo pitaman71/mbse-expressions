@@ -57,14 +57,16 @@ IEEE 1800's rules apply:
   type maps x and z to 0, a real rounds to the nearest integer (ties away from zero), an integer becomes a real, and a
   vector becomes a `string` of its bytes, NUL bytes dropped.
 
-What stays keeps its meaning: a subterm folds only into a literal that means what it meant there. A self-determined
-subterm (a concatenation's operand, a shift's count, a condition, an index, a function's argument) folds alone, into the
-literal of its own type; a context-determined one (an operand of `+`, of a comparison, a conditional's branch), whose
-width and signedness are its context's, folds once its context is known, as 11.6 sizes it from the whole expression:
-the types of the scope's values, and of the names it does not bind as its `types` declare them. A subterm whose
-context's type is not known, or whose type has no literal in SystemVerilog (a 2-state type, `shortreal`), where its
-states or format could still change what stays around it, is kept, its own subterms simplified; it is the rule, not a
-gap, and names no residue. The root, whose context is no expression's, always folds; an `integer`'s value is written as
+What stays keeps its meaning: a subterm folds only into a closed constructor expression that means what it meant there.
+A self-determined subterm (a concatenation's operand, a shift's count, a condition, an index, a function's argument)
+folds alone, into the literal of its own type; a context-determined one (an operand of `+`, of a comparison, a
+conditional's branch), whose width and signedness are its context's, folds once its context is known, as 11.6 sizes it
+from the whole expression: the types of the scope's values, and of the names it does not bind as its `types` declare
+them. A type no literal has (a 2-state type, `shortreal`), where its states or format could change what stays around
+it, folds into a cast of a literal to that type (6.24.1), which keeps them: `int'(5)`, `bit'(1'b1)`, `shortreal'(0.1)`,
+and for a keyword's type of the other signedness that cast's signing, `unsigned'(int'(-1))`. A subterm whose context's
+type is not known, or whose type neither a literal nor such a cast has (a 2-state vector as wide as no keyword's type),
+is kept, its own subterms simplified; it is the rule, not a gap, and names no residue. The root, whose context is no expression's, always folds; an `integer`'s value is written as
 an unsized decimal integer, any other integral value as a sized vector of its bits and signedness, a real as a real and
 `null` as itself. `&&` and `||` are decided by an operand that decides them (`y && 0` is `1'b0`), and a conditional by a
 known condition, where the branch it keeps has the conditional's own type.
@@ -216,6 +218,16 @@ def _representable(ctype: SvType) -> bool:
     """Whether a literal has the type: a 4-state integral type's (a sized vector, or an unsized decimal integer's), or a
     real's; no literal has a 2-state type, nor `shortreal`."""
     return ctype.states == 4 if ctype.kind == "integral" else ctype.format == "binary64"
+
+
+_ATOMS = {1: ("bit", False), 8: ("byte", True), 16: ("shortint", True), 32: ("int", True), 64: ("longint", True)}
+"""The 2-state types SystemVerilog's keywords name, by width: each keyword, and whether its type is signed."""
+
+
+def _castable(ctype: SvType) -> bool:
+    """Whether a cast of a literal has the type, where no literal does: a 2-state integral type as wide as a keyword's
+    (`bit`, `byte`, `shortint`, `int`, `longint`), signed or not, or `shortreal`."""
+    return ctype.states == 2 and ctype.width in _ATOMS if ctype.kind == "integral" else ctype.format == "binary32"
 
 
 # --- 4-state bits ---
@@ -1440,10 +1452,11 @@ class _Evaluation:
         letter = Formats.unwritten(format)
         if letter is not None:
             raise FS.NoRule("SystemVerilog", f"systemcall '$sformatf' %{letter}", X.SYSTEMCALL)
-        for value in values[1:]:
-            if not isinstance(value, (Logic, float)):
-                raise TypeError(f"$sformatf writes numbers and strings, not a {type(value).__name__}")
-        return Formats.vector(Formats.sformatf(format, values[1:]))
+        return Formats.vector(Formats.sformatf(format, [self._formatted(value) for value in values[1:]]))
+
+    def _formatted(self, value: Any) -> Any:
+        """An argument of `$sformatf`: an array's items typed, as an assignment pattern writes them."""
+        return [self._formatted(item) for item in value] if isinstance(value, list) else typed(value, self.stored)
 
     def _element_type(self, value: Any) -> SvType:
         """An array element's type: it must be integral or real."""
@@ -1542,6 +1555,20 @@ _DEFAULT: Any = object()
 """How a subterm of a term no rule reads folds: alone, where its own type's literal is its value wherever it stands."""
 _ROOT: Any = object()
 """How a term folds that is not a subterm of the expression being simplified: as a root."""
+class _Cast:
+    """How a subterm folds whose type no literal has: into a cast of a literal to `type`, of its value in that type."""
+
+    def __init__(self, type_: SvType):
+        self.type = type_
+
+
+class _Typed:
+    """A value folded where only a cast of a literal keeps its type: its `value`, and its `type`."""
+
+    def __init__(self, value: Any, type_: SvType):
+        self.value, self.type = value, type_
+
+
 _NEVER = frozenset({X.NAMEDCONNECTION, X.EMPTYARGUMENT, X.VALUERANGE, X.DOLLAREXPRESSION, X.PATTERNITEM})
 """The kinds that have no value of their own, but within the kind that holds them."""
 
@@ -1586,10 +1613,16 @@ class _Sizing:
             return None
         if _transparent(node):  # its value is its context's: of the context's type, when it is known
             folded = own if context is None else context
-            return folded if folded not in (_UNKNOWN, None) and (_representable(folded) or not sensitive) else None
+            if folded in (_UNKNOWN, None):
+                return None
+            if _representable(folded) or not sensitive:
+                return folded
+            return _Cast(folded) if _castable(folded) else None
         if own is None or _representable(own) or context is None and not sensitive:
             return _OWN
-        return context if context not in (None, _UNKNOWN) and _representable(context) else None
+        if context not in (None, _UNKNOWN) and _representable(context):
+            return context
+        return _Cast(own) if _castable(own) else None  # its own type's cast means what it does wherever it stands
 
     def _shared(self, evaluation: _Evaluation, nodes: list[Any]) -> Any:
         """The type context-determined operands share, if the scope determines each one's."""
@@ -1759,9 +1792,11 @@ class _Rules:
             return evaluation.value(wrapped)
         if how is _DEFAULT:
             own = evaluation.type(wrapped)
-            if _transparent(wrapped) or own is not None and not _representable(own):
+            if _transparent(wrapped) or own is not None and not (_representable(own) or _castable(own)):
                 raise _InContext(node)
-            how = _OWN
+            how = _OWN if own is None or _representable(own) else _Cast(own)
+        if isinstance(how, _Cast):
+            return _Typed(evaluation.value(wrapped, how.type), how.type)
         return _plain(evaluation.value(wrapped, None if how is _OWN else how))
 
     @staticmethod
@@ -1820,18 +1855,51 @@ def _literal(value: Any) -> Any:
     return X.vector(value.bits, value.type.signed)
 
 
+def _keyword(tag: str, keyword: str) -> Any:
+    """A type of `SystemVerilog Types` its keyword names (`int`, `bit`, `shortreal`), as a cast's type."""
+    return lambda t: getattr(t, tag)(lambda n: n.keyword(keyword))
+
+
+def _shortest(value: float) -> float:
+    """The real with the fewest significant digits that a cast to `shortreal` rounds to the `shortreal` value."""
+    if not math.isfinite(value):
+        return value
+    precision = 0  # 17 significant digits spell any binary64 value, and a `shortreal` is one: the search ends
+    while Ieee754.convert("binary64", float(Formats.real("e", value, precision)), "binary32", _EVEN) != value:
+        precision += 1
+    return float(Formats.real("e", value, precision))
+
+
+def _construct(value: Any) -> Any:
+    """The closed constructor expression of a value whose type no literal has: a cast of a literal to its type (6.24.1),
+    `int'(5)`, `bit'(1'b1)`, `shortreal'(0.1)`; to a keyword's type of the other signedness, that cast's signing,
+    `unsigned'(int'(-1))`. None for any other value."""
+    if not isinstance(value, _Typed):
+        return None
+    ctype = value.type
+    if ctype.kind == "real":
+        return X.cast(_keyword(_NONINTEGER, "shortreal"), X.literal(_shortest(value.value)))
+    keyword, signed = _ATOMS[ctype.width]
+    operand = _literal(Logic(Domains.vector(ctype.width, signed, 4), value.value.aval))
+    written = X.cast(_keyword(_VECTOR if keyword == "bit" else _ATOM, keyword), operand)
+    if signed == ctype.signed:
+        return written
+    signing = "signed" if ctype.signed else "unsigned"
+    return X.cast(lambda t: t.implicittype(lambda i: i.signing(signing)), written)
+
+
 def _what(prefix: str, *kinds: str) -> list[str]:
     return [f"{prefix} {kind}" for kind in kinds]
 
 
 CATEGORIES: dict[str, dict[str, str]] = {
     "SystemVerilog": {
-        **dict.fromkeys((f"systemcall '$sformatf' %{letter}" for letter in ("u", "z", "p")), "a"),
         **dict.fromkeys(("valuerange", "patternitem", "namedconnection", "emptyargument",
                          "castexpression to implicittype",
                          "systemcall '$bits' of keywordtype"), "b"),
         **dict.fromkeys(("assignmentpattern", "taggedexpression", "newarrayexpression", "randomizewithexpression",
                          "matchesexpression taggedpattern", "matchesexpression structurepattern", "systemcall '$typename'",
+                         "systemcall '$sformatf' %p of an object",
                          *_what("castexpression to", "structtype", "enumtype", "typereference"),
                          *_what("systemcall '$bits' of", "structtype", "enumtype", "typereference", "namedtype"),
                          *(f"callexpression method {name!r}" for name in ("first", "last", "next", "prev", "num",
@@ -1858,14 +1926,14 @@ methods); what needs mbse-programs or a simulator (`d`: a write, a class, the de
 system function that reads a simulator's state or acts, an array's or a string's method that writes it). What stays by
 the rules, not for want of one, names no residue: a name or a function the scope does not provide; a time literal with
 no time unit in the scope is a residue of class `a`, its unit a parameter of simplification the scope may give; and a
-subterm whose context's type is not known, or whose own type has no literal (a 2-state type, `shortreal`) where its
-states or format could change what stays around it, stays as written, since a literal of another type would change
-the residual's meaning (11.6)."""
+subterm whose context's type is not known, or whose own type neither a literal nor a cast of a literal has, where its
+states could change what stays around it, stays as written, since a literal of another type would change the
+residual's meaning (11.6)."""
 
 RULES = _Rules()
 """The folding rules of the SystemVerilog dialect."""
 
-SIMPLIFIER = FS.Simplifier(RULES, literal=_literal, categories=CATEGORIES, folds=RULES.folds, simplify=RULES.simplify,
+SIMPLIFIER = FS.Simplifier(RULES, literal=_literal, construct=_construct, categories=CATEGORIES, folds=RULES.folds, simplify=RULES.simplify,
                            guarded=FS.guards(X.DIALECT, {  # what IEEE 1800 may never evaluate (11.4.7, 11.4.11)
                                "&&": frozenset({1}), "||": frozenset({1}), "->": frozenset({1}),  # by the left operand
                                X.CONDITIONALEXPRESSION: frozenset({1, 2})}))  # by the condition
