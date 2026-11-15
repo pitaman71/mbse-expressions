@@ -15,10 +15,13 @@ and translated between expression languages, called dialects:
   values, property access, lets, lists and mappings, and collections with quantifiers. Every binding simplifies it.
 - **Python3**, **MATLAB** and **Excel**, which model those languages' expressions: each renders as its source text and
   simplifies by its own rules. Python3 holds every expression of Python 3 (3.0 to 3.15), as CPython's `ast` has it, and
-  folds the kinds constraints use, leaving the others in the residual, named.
+  folds every statement-free kind by CPython's semantics (constants and complex numbers, displays and unpacking,
+  f-strings and t-strings, slices, comprehensions, lambdas and keywords), leaving what needs a statement, or what
+  Python leaves to its implementation or its platform, in the residual, named.
 - **TypeScript5**, every expression of TypeScript 5 (5.0 to 5.9) as typescript-estree has it, with its types,
-  destructuring patterns and JSX: it renders as TypeScript and folds its literals alone, leaving the others in the
-  residual, named; it has no translator yet, and its terms are written through the builders.
+  destructuring patterns and JSX: it renders as TypeScript and simplifies by ECMAScript's semantics (ToPrimitive,
+  loose and strict equality, UTF-16 strings, bigints, closures of arrows), leaving what has no rule in the residual,
+  named; it has no translator yet, and its terms are written through the builders.
 - **LaTeX**, mathematical notation: it renders, validates and translates, but has no simplifier.
 - **C** and **Cpp**, every expression of C (C11 to C23) and of C++ (C++17 to C++23) as mbse-programs has them, with the
   type names they hold: each renders as its source and simplifies, over its arithmetic types, by C's rules (promotions,

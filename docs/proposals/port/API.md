@@ -2104,6 +2104,120 @@ every family's folding rules fill, evaluation retired as a public procedure.
      tutorial 8's pages teach a kind with no rule left in the residual, named; 9's, 10's and 14's steps renamed under
      their anchors (T09.2, T09.4, T10.5, T14.2).
 
+### TypeScript5 (step 2)
+
+334. **TypeScript5's folding rules** *(agent)*: `TypeScript/TypeScript5/Simplifiers` folds every kind the evaluation
+     inventory gives class (a), 26, and its literal (`FOLDED`, 27 kinds): `identifier` (a `Scope`'s variables, then the
+     global object's `undefined`, `NaN` and `Infinity`, `GLOBALS`), `thisexpression` (the scope's `this`, by that
+     name), `constant` (`null`; a regular expression a new object of its source and flags, as its text has them), the
+     templates (a tagged one's tag called with a strings array, its `raw` beside it, `undefined` where a quasi's escape
+     is invalid), arrays (holes, spreads by iteration), objects (keys in ECMAScript's order, computed keys, shorthands,
+     spreads; a literal `__proto__: v` stays, "TypeScript5 objectexpression __proto__ is not simplified", an object
+     having no prototype here), member access (`?.` short-circuiting its chain), calls and `new` (of what the scope
+     provides, or an arrow's closure), arrows with an expression body (closures binding their parameters by TypeScript
+     Patterns' destructuring: defaults, rests, array and object patterns), the unary, binary, logical, conditional and
+     sequence operators, parentheses, and TypeScript's five assertions, erased to their operand. The rules subclass the
+     framework's `Interpreter` for `constant` and `this` only.
+335. **ECMAScript's values and abstract operations, `TypeScript/TypeScript5/Abstract`** *(agent, as the inventory's
+     partition proposed)*: the value model both implementations share, and ECMA-262's operations over it, named as the
+     standard names them (`type_of`/`typeOf`, `to_boolean`, `to_primitive`, `to_number`, `to_numeric`, `to_string`,
+     `to_property_key`, `string_to_number`, `string_to_bigint`, `is_strictly_equal`, `is_loosely_equal`,
+     `is_less_than`, `binary`, `unary`, `get`, `has_property`, `iterate`, `own_entries`, `ordered`, `call`,
+     `construct`, `instance_of`, `cook`, `is_array_index`), with `UNDEFINED` and `HOLE` (Python), `RegExp`, `Closure`,
+     `TemplateStrings` (Python; TypeScript `templateStrings`/`isTemplateStrings`), `BUILTINS`, `MAX_BIGINT_BITS`, `kind`
+     and `is_primitive`. TypeScript computes over its natives where ECMAScript's operation is JavaScript's own (number
+     arithmetic, string order, bigints), Python models it (UTF-16 code units, ToInt32, Number::remainder and
+     ::exponentiate, truncating bigint division); every error both raise is thrown by the module's own code, by the same
+     class and message (TypeError, RangeError: Python's `Abstract.RangeError`, a `ValueError`).
+336. **What is reachable** *(agent)*: nothing beyond the scope, since expressions may come from data. A call calls only
+     a function the scope provides or a closure the expression makes; `new`, a class the scope provides (Python: a
+     `type`; TypeScript: a constructor); a host function is called without `this`. ECMAScript's built-in methods are read,
+     not modeled: a property a value inherits from a built-in prototype raises `NoRule` by its name,
+     "TypeScript5 String.prototype.toUpperCase is not simplified" (`Abstract.BUILTINS`, ECMAScript 2025's prototypes'
+     properties, Annex B's among them, 139), class `c`; any other inherited name is `undefined`, and `in` finds both. A
+     host value (neither a primitive, an array, a plain object, a regular expression, a function nor a data object) is
+     read by nothing: "TypeScript5 host value is not simplified", class `c`. A data object (mbse-schemas') reads as an
+     object of its set properties, a list an array, an int a bigint.
+337. **Literals written back** *(agent)*: a boolean's, a string's, a non-negative number's and bigint's literal; a
+     negative one as `-` of its magnitude (a negative literal is no TypeScript source, and `(-3) ** x` needs the
+     unary); NaN, Infinity and `undefined` by their global names, -0 as `-0`; `null` and a regular expression a
+     `constant`. An array of such values is its display, a hole an elision; an object its display, a key an identifier
+     where it is `[A-Za-z_$][A-Za-z0-9_$]*`, an array index a number, else a string, `__proto__` computed. A
+     closure, a data object, a host value and a tagged template's strings have none.
+338. **Short circuits** *(agent)*: `true && x`, `false || x` and `null ?? x` are `x`; `c ? a : b` its chosen branch
+     when `c` is known; a sequence whose leading terms are known its last; parentheses kept as written.
+339. **BigInt's size** *(agent)*: an exponent or a left shift beyond `MAX_BIGINT_BITS` (2 ** 30, V8's limit) raises
+     RangeError "Maximum BigInt size exceeded" before it is computed; any other result is computed (Python's ints are
+     unbounded, V8 throws beyond its limit with the same message).
+340. **Tests**: suite TSS, `29_TypeScript5` *(agent: the inventory's partition numbered TypeScript5's suite 27, after
+     Python3's; with POSIX's at 26 and 27, the order shifts by two)*, nine cases, the same in both languages; DIA-21's
+     simplification assertions follow (its title: "simplification by ECMAScript's semantics (TSS)"); tutorials 8.0,
+     8.04, 8.05 and 8.06 show the folds (`x as Reading` with `x = 5` folds to 5; a regular expression constant is a
+     literal, its value an object; a pattern's name resolves in a scope).
+
+### Python3 (step 2)
+
+341. **Python3's folding rules** *(agent)*: `Python/Python3/Simplifiers` folds every kind the evaluation inventory gives
+     class (a), 14, beside the 16 it folded before (`FOLDED`, 30 kinds): `constant` (`None`, `...`, a complex number),
+     `parenthesized`, `concatenatedstring`, `joinedstr`, `templatestr`, `tuple`, `set`, `starred`, `slice`, `listcomp`,
+     `setcomp`, `dictcomp`, `namedexpr` and `lambda`; and the inventory's 5 class (a) refusals within the kinds it
+     folded: keywords and `**` in a call, a dict's `**` item, a comprehension's target that unpacks (a tuple, a list,
+     one `*starred`, parentheses), `is` and `is not`, and `@`. Python 3.15's `*` element of a comprehension and `**` of a
+     dict comprehension fold too. The rules subclass the framework's `Interpreter` for `constant` only. A `None`, `...`
+     or complex value folds to a `constant` (`P.constant(value)`); a tuple to its display, as a list's and a dict's are;
+     a set (its order is its hash table's), a slice, a closure, a template and a generator have no literal: their
+     subterms are simplified, and nothing is named.
+342. **Closures** *(agent)*: a `lambda`'s value is a closure over the scope it is made in, its defaults evaluated then,
+     callable by `call` in any scope (the scope allows what the expression made), binding Python's parameters
+     (positional-only, defaults, `*args`, keyword-only, `**kwargs`) with CPython's messages ("<lambda>() missing 1
+     required positional argument: 'a'", "<lambda>() takes from 1 to 2 positional arguments but 3 were given"). In
+     TypeScript it is a function that also takes keywords. A residual lambda's body is simplified in the scope it is
+     made in, its parameters hidden (`lambda x: x + 2` where `y` is 2).
+343. **Keywords** *(agent)*: a builtin of the scope takes the keywords Python's takes (`max` and `min`: `key`,
+     `default`; `sum`: `start`), any other "abs() takes no keyword arguments"; a function of the scope's variables or
+     modules takes them in Python, and none in TypeScript ("f() takes no keyword arguments"), a JavaScript function
+     having no keyword parameters (EQUIVALENCE).
+344. **Identity** *(agent)*: `is` is True for the same singleton (`None`, `...`, `True`, `False`) or the same other
+     value (a list, an object, a closure), False across types or for unequal values; whether two equal immutable values
+     (`1 is 1`, `'a' is 'a'`, `(1,) is (1,)`, two NaNs) are one object Python leaves to the implementation, so it stays,
+     "Python3 compare 'is' of equal immutable values is not simplified", of class `b`, no value of the language's own.
+345. **f-strings and t-strings** *(agent)*: a field converted (`!r`, `!s`, `!a`) and formatted by `format()`'s
+     mini-language for a str, an int, a bool, a float and a complex number, correctly rounded in TypeScript as CPython
+     rounds. A complex number's format is composed as CPython 3.14's `format_complex_internal` composes it: each part a
+     float's, the imaginary part signed `+` unless the real part is left out, then `j`; with no type, repr's digits (`g`'s
+     with a precision), in parentheses unless the real part is +0, which is left out; padded as a whole (cross-checked,
+     the TypeScript model against CPython, on 16,728 generated values and specs, 7,008 of them folded). What stays,
+     named, of class `a`: a field of a value whose text is its implementation's (a set's order, an object's, a
+     generator's, a function's or a template's address: "joinedstr's field of set"); a format of such a value; a spec a
+     locale decides (`n`); a spec Python refuses (a sign for a str, zero padding for a complex number, an int's code for
+     a float), which stays rather than raising Python's `ValueError` (open below); and a `\N{...}` escape (Unicode's
+     names). A t-string's value is a template, as Python 3.14's `string.templatelib` has it (`strings`,
+     `interpolations`, `values`; an interpolation's `value`, `expression`, `conversion`, `format_spec`), with no
+     literal; its residual keeps its text as written, which is its value's.
+346. **A residual f-string** *(agent)*: a field whose term simplified loses its text as written, so that it prints its
+     new term; a debug field's (`{x=}`) label becomes text before it, its conversion `!r` unless it has one or a spec
+     (`f'x + (1+2)={x + 3!r}'`), through the simplifier's `simplify` hook. The framework rebuilds a helper with its
+     attributes as read, so a dialect whose helper spells its terms must respell it itself (open below).
+347. **Complex numbers** *(agent)*: CPython 3.14's arithmetic, in TypeScript too: a real operand not made complex
+     (`(1-0j) + 1.0` is `(2-0j)`), division by Smith's algorithm, products and quotients recovering infinities as C11's
+     Annex G does, and a power by repeated multiplication where its exponent is an integer of at most 100; any other
+     complex power, and a real power whose value is complex (`(-8) ** 0.5`), needs the platform's `pow`, `atan2`, `cos`
+     and `sin`, so it stays, "Python3 binop '**' of a complex power is not simplified", of class `a`. `abs` of a complex
+     number is the correctly rounded `hypot` in both languages, which CPython's libm need not give: a deliberate
+     difference from CPython in its last bit, where libm's `hypot` is not correctly rounded.
+348. **Targets** *(agent)*: a comprehension's targets are checked when it folds: a target that writes into data
+     (`for o.a in ...`, `for (p, o[0]) in ...`) and an `async for` stay, of class `d`; two starred targets in one
+     sequence, or one alone, of class `b`, as invalid syntax.
+349. **TypeScript's values** *(agent)*: a tuple is mbse-schemas' `Repr.Tuple`, a set a `Set` of Python-distinct items
+     in insertion order, a dict a `Map` (or an object of variables), a complex number a `Domains.ComplexValue`, a slice
+     and a template private classes whose type names are Python's; `@` raises Python's `TypeError` for every value, none
+     having `__matmul__`.
+350. **Tests**: suite PYS, `28_Python3` (the number the coordinator assigned, before TypeScript5's 29), twelve cases, the same in both languages, from the earlier draft's DIA-31, split by construct;
+     `06_Dialects` is DIA-01 to DIA-30 again, DIA-02's tables keeping three rows the step added (a `*` argument, a
+     chain with `is`, `None`) and asserting `@`'s TypeError and the builtins' keywords where they named residues; PYT-08
+     asserts a lambda's value has no literal. Tutorial 3's T03.7 shows the constants fold (`2j`, `None` and `...`
+     literal roots), re-run with its outputs in both languages; no other tutorial's outputs change.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,
