@@ -258,7 +258,7 @@ evaluation retired as a public procedure ([the port's API](../port/API.md#settle
 
 Step 2 for the TypeScript family, on branch `simp-typescript5` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 334 to 340):
 TypeScript5 folds every kind the inventory gives class (a), by ECMA-262's semantics, modeled alike in both
-implementations (`Abstract`: ToPrimitive, ToNumber, ToString, IsLooselyEqual, IsStrictlyEqual, IsLessThan, UTF-16 code
+implementations (`ECMAScript`: ToPrimitive, ToNumber, ToString, IsLooselyEqual, IsStrictlyEqual, IsLessThan, UTF-16 code
 units, bigints). A value with a TypeScript literal folds to it; an array or an object of them to its display; a closure,
 a data object and a host value stay. What stays, named: what the inventory gives (b) and (d), `delete` and an async or
 block-bodied arrow's call (d), a literal `__proto__` (a), and ECMAScript's built-in methods and host values (c, waiting

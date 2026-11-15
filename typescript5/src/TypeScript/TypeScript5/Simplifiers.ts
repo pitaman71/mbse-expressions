@@ -41,7 +41,7 @@ import { Errors } from "@mbse/schemas/Framework";
 import * as F from "../../Framework/Simplifiers.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
-import * as A from "./Abstract.js";
+import * as ES from "./ECMAScript.js";
 import * as T from "./Expressions.js";
 import * as Text from "./Text.js";
 
@@ -83,7 +83,7 @@ function nullish(value: unknown): boolean {
 function spread(terms: readonly any[], scope: any): unknown[] {
   const values: unknown[] = [];
   for (const term of terms) {
-    if (tagOf(term) === T.SPREADELEMENT) values.push(...A.iterate(evaluate(nodeOf(term).subterms.get("argument"), scope)));
+    if (tagOf(term) === T.SPREADELEMENT) values.push(...ES.iterate(evaluate(nodeOf(term).subterms.get("argument"), scope)));
     else values.push(evaluate(term, scope));
   }
   return values;
@@ -94,7 +94,7 @@ function spread(terms: readonly any[], scope: any): unknown[] {
 function keyOf(node: Terms.Node, scope: any): string {
   const key = node.subterms.get("key");
   if (!node.attributes.get("computed") && tagOf(key) === T.IDENTIFIER) return Terms.nameOf(key) as string;
-  return A.toPropertyKey(evaluate(key, scope));
+  return ES.toPropertyKey(evaluate(key, scope));
 }
 
 function define(object: Record<string, unknown>, key: string, value: unknown): void {
@@ -113,7 +113,7 @@ function bind(pattern: any, value: unknown, scope: any): any {
     return bind(node.subterms.get("left"), value === undefined ? evaluate(node.subterms.get("right"), scope) : value, scope);
   }
   if (tag === T.ARRAYPATTERN) {
-    const items = A.iterate(value);
+    const items = ES.iterate(value);
     (node.lists.get("elements") as readonly any[]).forEach((element, i) => {
       if (tagOf(element) === T.RESTELEMENT) scope = bind(nodeOf(element).subterms.get("argument"), items.slice(i), scope);
       else if (tagOf(element) !== T.ELISION) scope = bind(element, items[i], scope);
@@ -121,18 +121,18 @@ function bind(pattern: any, value: unknown, scope: any): any {
     return scope;
   }
   if (tag === T.OBJECTPATTERN) {
-    if (nullish(value)) throw new TypeError(`Cannot destructure '${A.toString(value)}' as it is ${A.toString(value)}.`);
+    if (nullish(value)) throw new TypeError(`Cannot destructure '${ES.toString(value)}' as it is ${ES.toString(value)}.`);
     const taken: string[] = [];
     for (const member of node.lists.get("properties") as readonly any[]) {
       if (tagOf(member) === T.RESTELEMENT) {
         const rest: Record<string, unknown> = {};
-        for (const [key, item] of A.ownEntries(value)) if (!taken.includes(key)) define(rest, key, item);
+        for (const [key, item] of ES.ownEntries(value)) if (!taken.includes(key)) define(rest, key, item);
         scope = bind(nodeOf(member).subterms.get("argument"), rest, scope);
       } else {
         const inner = nodeOf(member);
         const key = keyOf(inner, scope);
         taken.push(key);
-        scope = bind(inner.subterms.get("value"), A.get(value, key), scope);
+        scope = bind(inner.subterms.get("value"), ES.get(value, key), scope);
       }
     }
     return scope;
@@ -142,14 +142,14 @@ function bind(pattern: any, value: unknown, scope: any): any {
 
 /** An arrow's closure: called, its parameters bound to the arguments in the scope it was made in, its body's value. An
  * async arrow's call, and a block body's, stay: a promise and statements are mbse-programs'. */
-function arrow(_args: F.Thunk[], node: any, scope: any): A.Closure {
+function arrow(_args: F.Thunk[], node: any, scope: any): ES.Closure {
   const made = nodeOf(node);
   const body = made.subterms.get("body") ?? null;
   const parameters = made.lists.get("params") as readonly any[];
   const asynchronous = Boolean(made.attributes.get("isAsync"));
-  return new A.Closure((values) => {
-    if (asynchronous) throw new F.NoRule(A.DIALECT, "async arrowfunctionexpression");
-    if (body === null) throw new F.NoRule(A.DIALECT, "arrowfunctionexpression block");
+  return new ES.Closure((values) => {
+    if (asynchronous) throw new F.NoRule(ES.DIALECT, "async arrowfunctionexpression");
+    if (body === null) throw new F.NoRule(ES.DIALECT, "arrowfunctionexpression block");
     let inner = scope;
     parameters.forEach((parameter, i) => {
       if (tagOf(parameter) === T.RESTELEMENT) inner = bind(nodeOf(parameter).subterms.get("argument"), values.slice(i), inner);
@@ -166,14 +166,14 @@ function constant(node: any): unknown {
   if (Terms.attributesOf(Terms.kindOf(node)[1]).get("singleton") === "null") return null;
   const text = Text.ToText(node);
   const end = text.lastIndexOf("/");
-  return new A.RegExp(text.slice(1, end), text.slice(end + 1));
+  return new ES.RegExp(text.slice(1, end), text.slice(end + 1));
 }
 
 /** A template's strings, cooked (TV) or raw (TRV), its line terminators LF. */
 function template(node: Terms.Node, cooked = true): unknown[] {
   const raws = (node.helpers.get("quasis") as readonly Terms.Node[])
     .map((quasi) => ((quasi.attributes.get("raw") ?? "") as string).replace(/\r\n?/g, "\n"));
-  return cooked ? raws.map((raw) => A.cook(raw) ?? undefined) : raws;
+  return cooked ? raws.map((raw) => ES.cook(raw) ?? undefined) : raws;
 }
 
 function templateliteral(args: F.Thunk[], node: any): string {
@@ -181,21 +181,21 @@ function templateliteral(args: F.Thunk[], node: any): string {
   if (strings.includes(undefined)) throw new ValueError("a templateliteral's quasi has an invalid escape");
   let written = strings[0] as string;
   args.forEach((argument, i) => {
-    written = A.binary("+", A.binary("+", written, A.toString(argument())), strings[i + 1]) as string;
+    written = ES.binary("+", ES.binary("+", written, ES.toString(argument())), strings[i + 1]) as string;
   });
   return written;
 }
 
 function called(fn: unknown, values: unknown[], callee: any): unknown {
-  if (A.kind(fn) !== "function") throw new TypeError(`${Text.ToText(callee)} is not a function`);
-  return A.call(fn, values);
+  if (ES.kind(fn) !== "function") throw new TypeError(`${Text.ToText(callee)} is not a function`);
+  return ES.call(fn, values);
 }
 
 function taggedtemplate(args: F.Thunk[], node: any, scope: any): unknown {
   const tagged = nodeOf(node);
   const fn = (args[0] as F.Thunk)();
   const quasi = tagged.helpers.get("quasi") as Terms.Node;
-  const strings = A.templateStrings(template(quasi), template(quasi, false) as string[]);
+  const strings = ES.templateStrings(template(quasi), template(quasi, false) as string[]);
   const values = quasi.many.map((term) => evaluate(term, scope));
   return called(fn, [strings, ...values], tagged.subterms.get("tag"));
 }
@@ -211,7 +211,7 @@ function newexpression(args: F.Thunk[], node: any, scope: any): unknown {
   const made = nodeOf(node);
   const constructor = (args[0] as F.Thunk)();
   const values = spread(made.lists.get("arguments") as readonly any[], scope);
-  const value = A.kind(constructor) === "function" ? A.construct(constructor, values) : null;
+  const value = ES.kind(constructor) === "function" ? ES.construct(constructor, values) : null;
   if (value === null) throw new TypeError(`${Text.ToText(made.subterms.get("callee"))} is not a constructor`);
   return value;
 }
@@ -222,10 +222,10 @@ function memberexpression(args: F.Thunk[], node: any): unknown {
   if (member.attributes.get("optional") && nullish(value)) throw new ShortCircuit();
   const property = member.subterms.get("property");
   let key: string;
-  if (member.attributes.get("computed")) key = A.toPropertyKey((args[1] as F.Thunk)());
+  if (member.attributes.get("computed")) key = ES.toPropertyKey((args[1] as F.Thunk)());
   else if (tagOf(property) === T.IDENTIFIER) key = Terms.nameOf(property) as string;
-  else throw new F.NoRule(A.DIALECT, tagOf(property)); // `#x`, a class's
-  return A.get(value, key);
+  else throw new F.NoRule(ES.DIALECT, tagOf(property)); // `#x`, a class's
+  return ES.get(value, key);
 }
 
 function chainexpression(args: F.Thunk[]): unknown {
@@ -251,16 +251,16 @@ function objectexpression(_args: F.Thunk[], node: any, scope: any): Record<strin
   for (const member of nodeOf(node).lists.get("properties") as readonly any[]) {
     const inner = nodeOf(member);
     if (tagOf(member) === T.SPREADELEMENT) {
-      for (const [key, item] of A.ownEntries(evaluate(inner.subterms.get("argument"), scope))) define(properties, key, item);
+      for (const [key, item] of ES.ownEntries(evaluate(inner.subterms.get("argument"), scope))) define(properties, key, item);
       continue;
     }
     const key = keyOf(inner, scope);
     if (key === "__proto__" && !inner.attributes.get("computed") && !inner.attributes.get("shorthand")) {
-      throw new F.NoRule(A.DIALECT, "objectexpression __proto__"); // an object's prototype, which no value models
+      throw new F.NoRule(ES.DIALECT, "objectexpression __proto__"); // an object's prototype, which no value models
     }
     define(properties, key, evaluate(inner.subterms.get("value"), scope));
   }
-  return A.ordered(properties);
+  return ES.ordered(properties);
 }
 
 /** A property alone, as an object's simplification meets it: its key and its value, no object of its own. */
@@ -282,8 +282,8 @@ function logical(operator: string): F.Implementation {
   return (args) => {
     const left = (args[0] as F.Thunk)();
     const right = args[1] as F.Thunk;
-    if (operator === "&&") return A.toBoolean(left) ? right() : left;
-    if (operator === "||") return A.toBoolean(left) ? left : right();
+    if (operator === "&&") return ES.toBoolean(left) ? right() : left;
+    if (operator === "||") return ES.toBoolean(left) ? left : right();
     return nullish(left) ? right() : left;
   };
 }
@@ -293,24 +293,24 @@ function strict(fn: (...values: any[]) => unknown): F.Implementation {
 }
 
 function relation(operator: string): (x: unknown, y: unknown) => boolean {
-  if (operator === "<") return (x, y) => A.isLessThan(x, y) === true;
-  if (operator === ">") return (x, y) => A.isLessThan(y, x, false) === true;
-  if (operator === "<=") return (x, y) => A.isLessThan(y, x, false) === false;
-  return (x, y) => A.isLessThan(x, y) === false;
+  if (operator === "<") return (x, y) => ES.isLessThan(x, y) === true;
+  if (operator === ">") return (x, y) => ES.isLessThan(y, x, false) === true;
+  if (operator === "<=") return (x, y) => ES.isLessThan(y, x, false) === false;
+  return (x, y) => ES.isLessThan(x, y) === false;
 }
 
 const BINARY: [string, (x: any, y: any) => unknown][] = [
   ...["+", "-", "*", "/", "%", "**", "<<", ">>", ">>>", "&", "|", "^"]
-    .map((operator): [string, (x: any, y: any) => unknown] => [operator, (x, y) => A.binary(operator, x, y)]),
+    .map((operator): [string, (x: any, y: any) => unknown] => [operator, (x, y) => ES.binary(operator, x, y)]),
   ...["<", ">", "<=", ">="].map((operator): [string, (x: any, y: any) => unknown] => [operator, relation(operator)]),
-  ["==", A.isLooselyEqual], ["!=", (x, y) => !A.isLooselyEqual(x, y)],
-  ["===", A.isStrictlyEqual], ["!==", (x, y) => !A.isStrictlyEqual(x, y)],
-  ["in", (x, y) => A.hasProperty(y, x)], ["instanceof", A.instanceOf],
+  ["==", ES.isLooselyEqual], ["!=", (x, y) => !ES.isLooselyEqual(x, y)],
+  ["===", ES.isStrictlyEqual], ["!==", (x, y) => !ES.isStrictlyEqual(x, y)],
+  ["in", (x, y) => ES.hasProperty(y, x)], ["instanceof", ES.instanceOf],
 ];
 
 const UNARY: [string, (x: any) => unknown][] = [
-  ...["-", "+", "~", "!"].map((operator): [string, (x: any) => unknown] => [operator, (x) => A.unary(operator, x)]),
-  ["typeof", A.typeOf], ["void", () => undefined],
+  ...["-", "+", "~", "!"].map((operator): [string, (x: any) => unknown] => [operator, (x) => ES.unary(operator, x)]),
+  ["typeof", ES.typeOf], ["void", () => undefined],
 ];
 
 /** The kinds its rules fold: a literal, and every kind of class (a); any other stays in the residual, named. */
@@ -331,7 +331,7 @@ export const CATEGORIES: Record<string, Record<string, string>> = {
       "awaitexpression", "yieldexpression", "importexpression", "assignmentexpression", "updateexpression",
       "unaryexpression 'delete'", "async arrowfunctionexpression", "arrowfunctionexpression block"]
       .map((kind) => [kind, "d"])),
-    ...Object.fromEntries([...A.BUILTINS, "host value"].map((what) => [what, "c"])),
+    ...Object.fromEntries([...ES.BUILTINS, "host value"].map((what) => [what, "c"])),
   },
   "TypeScript Types": { "*": "b" }, "TypeScript Patterns": { "*": "b" }, "TypeScript RegExp": { "*": "b" },
 };
@@ -358,15 +358,15 @@ export const RULES: F.Interpreter = new Rules(T.DIALECT, new Map<string, any>([
   [T.TEMPLATELITERAL, templateliteral], [T.TAGGEDTEMPLATEEXPRESSION, taggedtemplate],
   [T.PARENTHESIZEDEXPRESSION, (args: F.Thunk[]) => (args[0] as F.Thunk)()],
   [T.SEQUENCEEXPRESSION, (args: F.Thunk[]) => args.map((argument) => argument()).at(-1)],
-  [T.ELISION, () => A.HOLE],
-  [T.SPREADELEMENT, (args: F.Thunk[]) => new Spread(A.iterate((args[0] as F.Thunk)()))], // spread where it stands
+  [T.ELISION, () => ES.HOLE],
+  [T.SPREADELEMENT, (args: F.Thunk[]) => new Spread(ES.iterate((args[0] as F.Thunk)()))], // spread where it stands
   [T.ARRAYEXPRESSION, arrayexpression], [T.PROPERTY, property], [T.OBJECTEXPRESSION, objectexpression],
   [T.MEMBEREXPRESSION, memberexpression], [T.CHAINEXPRESSION, chainexpression], [T.CALLEXPRESSION, callexpression],
   [T.NEWEXPRESSION, newexpression], [T.ARROWFUNCTIONEXPRESSION, arrow],
   [T.UNARYEXPRESSION, new Map(UNARY.map(([operator, fn]) => [operator, strict(fn)]))],
   [T.BINARYEXPRESSION, new Map(BINARY.map(([operator, fn]) => [operator, strict(fn)]))],
   [T.LOGICALEXPRESSION, new Map(["&&", "||", "??"].map((operator) => [operator, logical(operator)]))],
-  [T.CONDITIONALEXPRESSION, (args: F.Thunk[]) => (A.toBoolean((args[0] as F.Thunk)()) ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)())],
+  [T.CONDITIONALEXPRESSION, (args: F.Thunk[]) => (ES.toBoolean((args[0] as F.Thunk)()) ? (args[1] as F.Thunk)() : (args[2] as F.Thunk)())],
   [T.TSASEXPRESSION, operand], [T.TSSATISFIESEXPRESSION, operand], [T.TSTYPEASSERTION, operand],
   [T.TSNONNULLEXPRESSION, operand], [T.TSINSTANTIATIONEXPRESSION, operand],
 ]), { scope: (variables) => new Scope(variables), folded: FOLDED });
@@ -388,7 +388,7 @@ function negated(written: unknown): Terms.Writer {
 /** The literal of a value: a boolean's, a string's, a non-negative number's or bigint's, a negative one's negated; NaN,
  * Infinity and `undefined` by name; `null` and a regular expression a constant. Null for any other value. */
 function literal(value: any): unknown {
-  const found = A.kind(value);
+  const found = ES.kind(value);
   if (found === "boolean" || found === "string") return T.DIALECT.spec(value);
   if (found === "bigint") return value >= 0n ? T.DIALECT.spec(value) : negated(T.DIALECT.spec(-value));
   if (found === "number") {
@@ -407,20 +407,20 @@ const NAME = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
 /** A property's key as written: an identifier where it is one, an array index a number, else a string. */
 function writtenKey(key: string): Terms.Writer {
   if (NAME.test(key) && key !== "__proto__") return named(key);
-  return T.DIALECT.spec(A.isArrayIndex(key) ? Number(key) : key);
+  return T.DIALECT.spec(ES.isArrayIndex(key) ? Number(key) : key);
 }
 
 /** An array's or an object's display, of its items' literals and displays, a hole an elision; null where an item has
  * neither, or for any other value (a tagged template's strings among them). */
 function display(value: any): unknown {
-  const found = A.kind(value);
-  if (found === "array" && !A.isTemplateStrings(value)) {
+  const found = ES.kind(value);
+  if (found === "array" && !ES.isTemplateStrings(value)) {
     const items: unknown[] = [];
     for (let i = 0; i < value.length; i++) items.push(i in value ? literal(value[i]) ?? display(value[i]) : make(T.ELISION, {}));
     return items.includes(null) ? null : make(T.ARRAYEXPRESSION, {}, ...items);
   }
   if (found === "object") {
-    const written = Object.entries(A.ordered(value)).map(([key, item]) => [key, literal(item) ?? display(item)] as const);
+    const written = Object.entries(ES.ordered(value)).map(([key, item]) => [key, literal(item) ?? display(item)] as const);
     if (written.some(([, item]) => item === null)) return null;
     return make(T.OBJECTEXPRESSION, {}, ...written.map(([key, item]) => make(T.PROPERTY, { // `__proto__` computed, a
       propertyKind: "init", computed: key === "__proto__", method: false, shorthand: false }, writtenKey(key), item))); // property, no prototype
@@ -436,10 +436,10 @@ function simplify(node: any, results: F.Result[]): F.Result | null {
   if (tag === T.LOGICALEXPRESSION && first.known) {
     const operator = Terms.attributesOf(record).get("operator");
     const left = first.value;
-    if ((operator === "&&" && A.toBoolean(left)) || (operator === "||" && !A.toBoolean(left))
+    if ((operator === "&&" && ES.toBoolean(left)) || (operator === "||" && !ES.toBoolean(left))
       || (operator === "??" && nullish(left))) return results[1] as F.Result;
   }
-  if (tag === T.CONDITIONALEXPRESSION && first.known) return (A.toBoolean(first.value) ? results[1] : results[2]) as F.Result;
+  if (tag === T.CONDITIONALEXPRESSION && first.known) return (ES.toBoolean(first.value) ? results[1] : results[2]) as F.Result;
   if (tag === T.SEQUENCEEXPRESSION && results.slice(0, -1).every((result) => result.known)) return results.at(-1) as F.Result;
   return null;
 }
