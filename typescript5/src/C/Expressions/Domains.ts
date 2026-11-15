@@ -19,10 +19,15 @@
  * type C defines, and its expression names no ABI", or "'int' is not a type C or AMD64 defines"; `find(name)` gives
  * null instead where the holder names an ABI (a cast to a type a program declares).
  *
- * `promoted(type)` applies the integer promotions (a narrower integer or a bool becomes `int`) and `common(a, b)` the
- * usual arithmetic conversions: the wider floating type if either is floating, otherwise the promoted types, the wider
- * if they agree in signedness, else the unsigned one when it is at least as wide, else the signed one; a decimal
- * floating type and a binary one have none (C's constraint), so `common` gives null. The signatures follow the
+ * `promoted(type)` applies the integer promotions (a narrower integer or a bool becomes `int`; a bit-precise integer
+ * type stays) and `common(a, b)` the usual arithmetic conversions: the wider floating type if either is floating,
+ * otherwise the promoted types, the one of greater rank if they agree in signedness (a bit-precise type ranks below a
+ * standard one of its width), else the unsigned one when its rank is at least the other's, else the signed one when it
+ * is wider, else the unsigned type of the signed one's width; a decimal floating type and a binary one have none (C's
+ * constraint), so `common` gives null. `layout(type)` is a scalar type's size and alignment in bytes, as both ABIs lay
+ * a scalar out (its width rounded up to a power of two bytes), null for a bit-precise integer type, whose layout no ABI
+ * dialect stores. `Types.identity(type, language)` names the type a type is, by C's or C++'s identity of types (a
+ * typedef the standard integer type it is). The signatures follow the
  * evaluator's rules (see `Simplifiers`): arithmetic gives the common type, shifts the promoted left operand's,
  * comparisons and logic `bool`, which the dialect's kinds read from the store (`Expressions`), and a result is named by
  * the first of `NAMES`, C's names in the order its standard lists them, that its types define equal to it. `of(value,
@@ -37,8 +42,11 @@
  * integer without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double`
  * for `L`, `_Float16` for `f16` in C and `std::float16_t` in C++), else `double`; a character literal's (an int, its
  * code) `int` in C and `char` in C++, its encoding prefix's type otherwise (`wchar_t`, `char8_t`); a bool's `bool`; a
- * string's `String`. What `_BitInt` or a prefix no language has encodes is a domain named by its type, which no
- * evaluator has values of; a suffix the language does not write gives `Anything`, its type unknown.
+ * string's `String`. An integer literal with C23's `wb` suffix is of the narrowest bit-precise integer type that holds
+ * it (`bitPrecise`, `_BitInt(N)`, of a sign bit and N >= 2; `unsigned _BitInt(N)` with `uwb`), which no domain stores;
+ * a prefix no language has encodes a domain named by it, which no folding rule has values of; a suffix the language
+ * does not write gives `Anything`, its type unknown. `literalSuffix(name, language)` is the suffix a literal of a type
+ * is written with, or null where the type has no literal.
  * `outOfRange(attributes, language, types)` says what is wrong with an integer literal that its type does not hold, one
  * that fits none of the types its suffix and base allow, by the stored domain's range (a value out of range, PRI-023).
  * `arithmetic(names)` is the name of the arithmetic type a type name's specifiers name (`unsigned int`, `uint8_t`), or
@@ -69,13 +77,15 @@ function sameFormat(a: Ieee754.Format | null, b: Ieee754.Format | null): boolean
 }
 
 /** An arithmetic type: its `kind` ('bool', 'integer' or 'floating'), its `width` in bits, its signedness, and for a
- * floating type its IEEE 754 `format`, a name or its parameters. Its `name` is its `label`, the name its stored domain
- * is defined by; its `domain` is that stored domain, and `types` the `Types` it was read through; types compare by the
- * rest. */
+ * floating type its IEEE 754 `format`, a name or its parameters; whether it is a bit-precise integer type (`precise`,
+ * C23's `_BitInt(N)`, which no domain stores: its width is its N). Its `name` is its `label`, the name its stored
+ * domain is defined by (a bit-precise type's, `_BitInt(N)`); its `domain` is that stored domain, and `types` the
+ * `Types` it was read through; types compare by the rest. */
 export class CType implements D.Domain {
   constructor(readonly kind: string, readonly width: number, readonly signed: boolean = true,
     readonly format: Ieee754.Format | null = null, readonly label: string = "",
-    readonly domain: Readers.OfObject | null = null, readonly types: Types | null = null) {}
+    readonly domain: Readers.OfObject | null = null, readonly types: Types | null = null,
+    readonly precise: boolean = false) {}
 
   name(): string {
     return this.label;
@@ -105,7 +115,7 @@ export class CType implements D.Domain {
   /** The same type, whatever its name. */
   equals(other: unknown): boolean {
     return other instanceof CType && other.kind === this.kind && other.width === this.width
-      && other.signed === this.signed
+      && other.signed === this.signed && other.precise === this.precise
       && sameFormat(other.format, this.format);
   }
 
@@ -205,7 +215,23 @@ export class Types {
   label(ctype: CType): CType {
     return NAMES.map((name) => this.lookup(name)).find((t) => t !== null && t.equals(ctype)) ?? ctype;
   }
+
+  /** The name of the type a type is, by `language`'s identity of types (`C` or `C++`): a type its standard names is
+   * itself (`char`, `long long`, a floating or a bit-precise integer type, and C++'s character types, which are
+   * distinct there); a type a typedef names is the standard integer type it is, plain `char` excepted (`int64_t` is
+   * `long` under both ABIs, `uint8_t` `unsigned char`). */
+  identity(ctype: CType, language = "C"): string {
+    const label = ctype.label;
+    if (NAMES.includes(label) || ctype.kind === "floating" || ctype.precise
+      || (DISTINCT.get(language) as readonly string[]).includes(label)) return label;
+    return NAMES.find((name) => name !== "bool" && name !== "char" && (this.lookup(name)?.equals(ctype) ?? false))
+      ?? label;
+  }
 }
+
+/** The character types a language has as types of their own, not as typedefs of an integer type. */
+const DISTINCT: ReadonlyMap<string, readonly string[]> = new Map([
+  ["C", []], ["C++", ["wchar_t", "char8_t", "char16_t", "char32_t"]]]);
 
 const StringDomain = new D.OfTypes("string", String);
 export { StringDomain as String };
@@ -214,15 +240,39 @@ export const NULLPTR = new D.OfTypes("nullptr_t", null);
 
 const typesOf = (ctype: CType) => ctype.types as Types;
 
-/** The integer promotions: a bool or an integer narrower than `int` becomes `int`, read through the type's `Types`. */
+/** C23's bit-precise integer type of `width` bits, `_BitInt(N)` or `unsigned _BitInt(N)`, read through `types`. */
+export function bitPrecise(width: number, signed: boolean, types: Types): CType {
+  return new CType("integer", width, signed, null, `${signed ? "" : "unsigned "}_BitInt(${width})`, null, types, true);
+}
+
+/** A scalar type's size in bytes, which is its alignment too, as each ABI dialect's psABI lays its scalars out: its
+ * width rounded up to a power of two bytes (`long double`'s 80 bits under AMD64 in 16 bytes); null for a bit-precise
+ * integer type, whose layout no ABI dialect stores. */
+export function layout(ctype: CType): number | null {
+  if (ctype.precise) return null;
+  let size = 1;
+  while (size * 8 < ctype.width) size *= 2;
+  return size;
+}
+
+/** The integer promotions: a bool or an integer narrower than `int` becomes `int`, read through the type's `Types`; a
+ * bit-precise integer type is not promoted (C23, 6.3.1.1). */
 export function promoted(ctype: CType): CType {
-  if (ctype.kind === "floating") return ctype;
+  if (ctype.kind === "floating" || ctype.precise) return ctype;
   const int = typesOf(ctype).named("int");
   return ctype.kind === "bool" || ctype.width < int.width ? int : ctype;
 }
 
+/** An integer type's conversion rank: by its width, a standard type above a bit-precise one of the same width (C23,
+ * 6.3.1.1); a rank compared with another's. */
+function rank(a: CType, b: CType): number {
+  return a.width !== b.width ? a.width - b.width : Number(!a.precise) - Number(!b.precise);
+}
+
 /** The usual arithmetic conversions of two arithmetic types; null for a decimal floating type and a binary one, which C
- * does not convert to one another. */
+ * does not convert to one another. Of two integer types, the one of greater rank if they agree in signedness, else the
+ * unsigned one where its rank is at least the signed one's, else the signed one where it is wider, else the unsigned
+ * type of the signed one's width. */
 export function common(a: CType, b: CType): CType | null {
   if (a.kind === "floating" || b.kind === "floating") {
     const floats = [a, b].filter((t) => t.kind === "floating");
@@ -230,9 +280,11 @@ export function common(a: CType, b: CType): CType | null {
     return floats.reduce((wider, t) => (t.width > wider.width ? t : wider));
   }
   [a, b] = [promoted(a), promoted(b)];
-  if (a.signed === b.signed) return a.width >= b.width ? a : b;
+  if (a.signed === b.signed) return rank(a, b) >= 0 ? a : b;
   const [unsigned, signed] = a.signed ? [b, a] : [a, b];
-  return unsigned.width >= signed.width ? unsigned : signed;
+  if (rank(unsigned, signed) >= 0) return unsigned;
+  if (signed.width > unsigned.width) return signed;
+  return typesOf(signed).label(new CType("integer", signed.width, false)); // a standard signed type, its unsigned one
 }
 
 /** The name of a constant's type: the first of `int`, `long` and `unsigned long` that holds a bigint, `double` for a
@@ -345,6 +397,22 @@ const EXTENDED: ReadonlyMap<string, ReadonlyMap<string, string>> = new Map([
   ["C++", new Map([["f16", "std::float16_t"], ["f32", "std::float32_t"], ["f64", "std::float64_t"],
     ["f128", "std::float128_t"], ["bf16", "std::bfloat16_t"]])],
 ]);
+const SUFFIXES: ReadonlyMap<string, string> = new Map([["bool", ""], ["int", ""], ["unsigned int", "u"], ["long", "l"],
+  ["unsigned long", "ul"], ["long long", "ll"], ["unsigned long long", "ull"], ["float", "f"], ["double", ""],
+  ["long double", "L"]]);
+
+/** The suffix a literal of the type named `name` (by `Types.identity`) is written with, in `language` (`C` or `C++`):
+ * "" for a type a literal without a suffix has (`int`, `double`, `bool`), `u`, `ul`, `f`, `L`, an extended floating
+ * type's (`f16`, `df`; C++'s `bf16`); null for a type no literal has (`char`, `short`, a bit-precise type, whose literal
+ * is its narrowest). */
+export function literalSuffix(name: string, language: string): string | null {
+  const found = SUFFIXES.get(name);
+  if (found !== undefined) return found;
+  for (const [suffix, named] of EXTENDED.get(language) as ReadonlyMap<string, string>) {
+    if (named === name) return suffix;
+  }
+  return null;
+}
 const DECIMAL: ReadonlyMap<string, readonly string[]> = new Map([["", ["int", "long", "long long"]],
   ["u", ["unsigned int", "unsigned long", "unsigned long long"]], ["l", ["long", "long long"]],
   ["ul", ["unsigned long", "unsigned long long"]], ["ll", ["long long"]], ["ull", ["unsigned long long"]],
@@ -361,7 +429,7 @@ function integerSuffix(suffix: string): string {
 
 /** A literal's type, by what its text encodes (its `prefix`, `quote`, `base` and `suffix`) and its value, in
  * `language` (`C` or `C++`), found through `types`; null where its value has none (a bigint no type holds, or no
- * value). A domain of a type no folding rule has values of is named by it (`_BitInt`). */
+ * value). A domain of a type no folding rule has values of is named by it (a prefix no language has). */
 export function literal(attributes: ReadonlyMap<string, any>, language: string, types: Types): D.Domain | null {
   const value = attributes.get("value");
   const prefix = attributes.get("prefix") as string | undefined;
@@ -384,8 +452,10 @@ export function literal(attributes: ReadonlyMap<string, any>, language: string, 
     return encoded === undefined ? new D.OfTypes(prefix, BigInt) : types.named(encoded);
   }
   const normal = integerSuffix(suffix ?? "");
-  if (normal === "wb" || normal === "uwb") {
-    return new D.OfTypes(normal === "uwb" ? "unsigned _BitInt" : "_BitInt", BigInt);
+  if (normal === "wb" || normal === "uwb") { // the narrowest bit-precise type that holds it (C23, 6.4.4.1): N >= 2 signed
+    const bits = value === 0n ? 0 : (value < 0n ? -value : value).toString(2).length; // Python's `int.bit_length()`
+    return normal === "uwb" ? bitPrecise(Math.max(bits, 1), false, types)
+      : bitPrecise(Math.max(bits + 1, 2), true, types);
   }
   const base = attributes.get("base");
   const decimal = base === undefined || base === 10n;
@@ -414,7 +484,8 @@ export function outOfRange(attributes: ReadonlyMap<string, any>, language: strin
 
 const KEYWORDS: ReadonlySet<string> = new Set([
   "signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"]);
-const QUALIFIERS: ReadonlySet<string> = new Set(["const", "volatile", "restrict", "__restrict", "__restrict__"]);
+/** The cv-qualifiers a type name's specifiers may hold, which name no type. */
+export const QUALIFIERS: ReadonlySet<string> = new Set(["const", "volatile", "restrict", "__restrict", "__restrict__"]);
 
 /** The name of the arithmetic type a type name's specifiers name, by their keywords and type names in any order
  * (`unsigned long int` is `unsigned long`; `uint8_t`, a type's name, is itself), cv-qualifiers aside; null for any
