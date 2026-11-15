@@ -446,7 +446,7 @@ function simplify(node: any, results: F.Result[]): F.Result | null {
 
 /** The simplifier of the TypeScript5 dialect. */
 export const SIMPLIFIER = new F.Simplifier(RULES, {
-  literal, categories: CATEGORIES, display, simplify,
+  literal, categories: CATEGORIES, construct: display, simplify,
   // the right operand, by the left; the branches, by the test; an arrow's body, when it is called
   guarded: F.guards(T.DIALECT, { "&&": [1], "||": [1], "??": [1], [T.CONDITIONALEXPRESSION]: [1, 2], [T.ARROWFUNCTIONEXPRESSION]: [1] }),
 });

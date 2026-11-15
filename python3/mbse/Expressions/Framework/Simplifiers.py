@@ -5,9 +5,11 @@ As expressions are value objects, and value objects are immutable, simplificatio
 changes a term, it writes a new one (mbse-basis [PRI-046: simplification, not
 evaluation](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-046)). A reference the scope binds is replaced by the literal of its
 value, and a subterm the scope closes is folded, by its dialect's rules, into the literal of its value; a subterm the
-dialect has no rule for, or whose value has no literal (a closure, an object, a collection), stays, its subterms
-simplified in turn. If the residual's root is a literal, simplification evaluated the expression: `Simplified.evaluate()`
-gives its value, or raises `NotEvaluated` naming why it is not a literal. Nothing is refused: where a dialect has no rule
+dialect has no rule for, or whose value the dialect does not write as a closed constructor expression (a closure, an
+object), stays, its subterms simplified in turn. If the residual's root is a closed constructor expression (a literal,
+or a display or a cast of literals: mbse-basis [VOC-034: closed constructor
+expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), simplification evaluated the expression: `Simplified.evaluate()`
+gives its value, or raises `NotEvaluated` naming why the root is not one. Nothing is refused: where a dialect has no rule
 for a kind or an operator, the subterm stays in the residual, and a `Residue` names it, its dialect, its kind and the
 class the evaluation inventory gives it (`a` statement-free with a value its language defines, `b` no value of its own,
 `c` waiting on an open capability, `d` needing what only mbse-programs or a simulator has; see mbse-expressions'
@@ -18,7 +20,7 @@ evaluate is guarded: a body its parent binds names in, but a let's (a lambda's, 
 argument the dialect's `guarded(node, index)` names (a conditional's branches, the right operand of a short circuit);
 an error folding it, or anything within it, raises leaves it in the residual, to raise where it is evaluated.
 
-A `Simplifier(rules, literal=..., simplify=..., categories=..., native=..., folds=..., guarded=...)` simplifies the terms of one
+A `Simplifier(rules, literal=..., simplify=..., categories=..., native=..., folds=..., construct=..., guarded=...)` simplifies the terms of one
 dialect; each dialect's `Simplifiers.OfAny` is one. Its `rules` are the dialect's folding rules: what the dialect
 computes over values, `rules.evaluate(node, scope)` giving a subterm's value or raising `NoRule` where it has none, over
 a scope `rules.scope(mapping)` makes. `Interpreter` is the rules most dialects build theirs on (its tables, by kind
@@ -26,8 +28,9 @@ and operator, are the folding rules); a dialect whose rules need the whole term 
 gives its own, and says by `folds(node, root)` which subterms may fold. `literal(value)` writes the literal of a value,
 or gives None where the dialect has none; `simplify(node, results)` decides what does not depend on an unsimplified
 subterm, as Kleene's logic does in Patterns (`false and x` is `false`); `native(value)` gives the value a caller sees of
-a value of the rules (C's, its native without its type); `display(value)` writes a container of values that have
-literals as a term of their literals, a display (Python's `[1, 2]`), not a literal.
+a value of the rules (C's, its native without its type); `construct(value)` writes a value that has no literal as a
+closed constructor expression of literals (a display, Python's `[1, 2]`; a cast, C's `(short)3`), or gives None where
+the dialect has none.
 
 `Interpreter` folds a term by its kind's role (see `Terms`): a literal gives its value (through `literal`, or `typed`
 when its kind's attributes give it a domain of its own, as C's type does a constant), a reference what the scope
@@ -94,7 +97,8 @@ class Residue:
 @dataclass(frozen=True)
 class Simplified:
     """What simplification gives: the `residual`, a `Writer` of a term of the dialect, which its caller writes where it
-    wants it (in a transaction); whether its root is a `literal`, simplification having evaluated the expression, and
+    wants it (in a transaction); whether its root is a `literal`; whether its root is a closed constructor expression
+    (`constructed`: a literal, a display or a cast of literals), simplification having evaluated the expression, and
     then its `value` (None otherwise: three-valued, a residual reads as unknown); the names it still needs (`free`);
     and the `residues`, each subterm that stayed for want of a rule, in the order they were found."""
 
@@ -103,19 +107,21 @@ class Simplified:
     value: Any
     free: frozenset[str]
     residues: tuple[Residue, ...]
+    constructed: bool = False
 
     def evaluate(self) -> Any:
-        """The value of the literal at the residual's root; raises `NotEvaluated` naming why the root is not a
-        literal: a subterm the dialect has no rule for, a name the scope does not bind, or a value with no literal."""
-        if self.literal:
+        """The value of the closed constructor expression at the residual's root; raises `NotEvaluated` naming why the
+        root is not one: a subterm the dialect has no rule for, a name the scope does not bind, or a value the dialect
+        does not write as a closed constructor expression."""
+        if self.constructed:
             return self.value
         if self.residues:
             why = self.residues[0].reason
         elif self.free:
             why = f"{sorted(self.free)[0]} is not bound"
         else:
-            why = "its value has no literal"
-        raise NotEvaluated(f"the root is not a literal: {why}")
+            why = "its value has no closed constructor expression"
+        raise NotEvaluated(f"the root is not a closed constructor expression: {why}")
 
 
 class Rules(Protocol):
@@ -134,7 +140,8 @@ class Rules(Protocol):
 class Result:
     """A simplified subterm: its `expression` (a term value, or a `Writer`), whether it is `known`, a value its
     dialect computed, and then its `value`; whether it is a `literal`; the names it refers to that nothing within it
-    binds (`free`); and whether it differs from the subterm it simplified (`changed`)."""
+    binds (`free`); whether it differs from the subterm it simplified (`changed`); and whether it is a closed
+    constructor expression (`constructed`), as every literal is."""
 
     expression: Any
     known: bool = False
@@ -142,6 +149,11 @@ class Result:
     literal: bool = False
     free: frozenset[str] = frozenset()
     changed: bool = True
+    constructed: bool = False
+
+    def __post_init__(self) -> None:
+        if self.literal and not self.constructed:  # a literal is the simplest closed constructor expression
+            object.__setattr__(self, "constructed", True)
 
 
 class Simplifier:
@@ -152,11 +164,11 @@ class Simplifier:
                  categories: Mapping[str, Mapping[str, str]] | None = None,
                  native: Callable[[Any], Any] = lambda value: value,
                  folds: Callable[[Any, bool], bool] | None = None,
-                 display: Callable[[Any], Any] | None = None,
+                 construct: Callable[[Any], Any] | None = None,
                  guarded: Callable[[Any, int], bool] | None = None):
         self.rules, self.dialect = rules, rules.dialect
         self._literal, self._simplify, self._native, self._folds = literal, simplify, native, folds
-        self._display, self._guarded = display, guarded
+        self._construct, self._guarded = construct, guarded
         self._categories = dict(categories or {})
 
     def __call__(self, expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Simplified:
@@ -165,9 +177,9 @@ class Simplifier:
             scope = self.rules.scope(dict(scope or {}))
         residues: dict[Residue, None] = {}
         result = self.reduce(Terms.term(expression), scope, residues, True)
-        literal = result.literal
+        literal, constructed = result.literal, result.constructed
         return Simplified(self.dialect.spec(result.expression), literal,
-                          self._native(result.value) if literal else None, result.free, tuple(residues))
+                          self._native(result.value) if constructed else None, result.free, tuple(residues), constructed)
 
     def category(self, dialect: str, what: str, kind: str) -> str:
         """The evaluation inventory's class of what a dialect has no rule for: by `what`, then by its kind, then `b` for
@@ -177,11 +189,15 @@ class Simplifier:
         return table.get(what, table.get(kind, default))
 
     def known(self, expression: Any, value: Any) -> Result:
-        """The result of a subterm whose value is known: its literal, when the dialect has one."""
+        """The result of a subterm whose value is known: its literal, when the dialect has one, else its closed
+        constructor expression, when the dialect writes one."""
         written = self._literal(value)
-        if written is None:
-            return Result(expression, True, value, free=frozenset(Symbolics.free(expression, self.dialect)))
-        return Result(written, True, value, True)
+        if written is not None:
+            return Result(written, True, value, True)
+        built = self._construct(value) if self._construct is not None else None
+        if built is not None:
+            return Result(built, True, value, constructed=True)
+        return Result(expression, True, value, free=frozenset(Symbolics.free(expression, self.dialect)))
 
     def reduce(self, node: Any, scope: Any, residues: dict[Residue, None], root: bool = False,
                guarded: bool = False) -> Result:
@@ -205,9 +221,9 @@ class Simplifier:
                 written = self._literal(value)
                 if written is not None:
                     return Result(written, True, value, True)
-                shown = self._display(value) if self._display is not None else None
-                if shown is not None:  # a container of values that have literals: its display
-                    return Result(shown, True, value)
+                built = self._construct(value) if self._construct is not None else None
+                if built is not None:  # a value with no literal: its closed constructor expression
+                    return Result(built, True, value, constructed=True)
         if kind.role in (Terms.LITERAL, Terms.REFERENCE, Terms.INVALID) and not Terms.arguments_of(record):
             free = frozenset(Symbolics.free(node, self.dialect))
             return Result(node, known, value, free=free, changed=False)

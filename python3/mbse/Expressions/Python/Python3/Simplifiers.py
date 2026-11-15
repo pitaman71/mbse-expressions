@@ -915,7 +915,7 @@ def _guarded(node: Any, index: int) -> bool:
             or tag == _P.LAMBDA and index == 1)
 
 
-SIMPLIFIER = F.Simplifier(RULES, literal=_literal, simplify=_simplify, categories=CATEGORIES, display=_display,
+SIMPLIFIER = F.Simplifier(RULES, literal=_literal, simplify=_simplify, categories=CATEGORIES, construct=_display,
                           guarded=_guarded)
 """The simplifier of the Python3 dialect."""
 

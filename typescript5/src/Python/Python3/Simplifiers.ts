@@ -1891,7 +1891,7 @@ function guarded(node: any, index: number): boolean {
 }
 
 /** The simplifier of the Python3 dialect. */
-export const SIMPLIFIER = new F.Simplifier(RULES, { literal, simplify, categories: CATEGORIES, display, guarded });
+export const SIMPLIFIER = new F.Simplifier(RULES, { literal, simplify, categories: CATEGORIES, construct: display, guarded });
 
 /** The simplification of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in an
  * object bound. */

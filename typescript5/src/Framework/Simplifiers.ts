@@ -6,9 +6,11 @@
  * never changes a term, it writes a new one (mbse-basis [PRI-046: simplification, not
  * evaluation](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-046)). A reference the scope binds is replaced by the literal of
  * its value, and a subterm the scope closes is folded, by its dialect's rules, into the literal of its value; a
- * subterm the dialect has no rule for, or whose value has no literal (a closure, an object, a collection), stays, its
- * subterms simplified in turn. If the residual's root is a literal, simplification evaluated the expression:
- * `Simplified.evaluate()` gives its value, or throws `NotEvaluated` naming why it is not a literal. Nothing is refused:
+ * subterm the dialect has no rule for, or whose value the dialect does not write as a closed constructor expression (a
+ * closure, an object), stays, its subterms simplified in turn. If the residual's root is a closed constructor expression
+ * (a literal, or a display or a cast of literals: mbse-basis [VOC-034: closed constructor
+ * expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), simplification evaluated the expression:
+ * `Simplified.evaluate()` gives its value, or throws `NotEvaluated` naming why the root is not one. Nothing is refused:
  * where a dialect has no rule for a kind or an operator, the subterm stays in the residual, and a `Residue` names it,
  * its dialect, its kind and the class the evaluation inventory gives it (`a` statement-free with a value its language
  * defines, `b` no value of its own, `c` waiting on an open capability, `d` needing what only mbse-programs or a
@@ -20,7 +22,7 @@
  * dialect's `guarded(node, index)` names (a conditional's branches, the right operand of a short circuit); an error
  * folding it, or anything within it, throws leaves it in the residual, to throw where it is evaluated.
  *
- * A `Simplifier(rules, { literal, simplify, categories, native, folds, guarded })` simplifies the terms of one dialect; each
+ * A `Simplifier(rules, { literal, simplify, categories, native, folds, construct, guarded })` simplifies the terms of one dialect; each
  * dialect's `Simplifiers.OfAny` is one. Its `rules` are the dialect's folding rules: what the dialect computes over
  * values, `rules.evaluate(node, scope)` giving a subterm's value or throwing `NoRule` where it has none, over a scope
  * `rules.scope(variables)` makes. `Interpreter` is the rules most dialects build theirs on (its tables, by kind and
@@ -28,8 +30,9 @@
  * gives its own, and says by `folds(node, root)` which subterms may fold. `literal(value)` writes the literal of a
  * value, or gives null where the dialect has none; `simplify(node, results)` decides what does not depend on an
  * unsimplified subterm, as Kleene's logic does in Patterns (`false and x` is `false`); `native(value)` gives the value
- * a caller sees of a value of the rules (C's, its native without its type); `display(value)` writes a container of
- * values that have literals as a term of their literals, a display (Python's `[1, 2]`), not a literal.
+ * a caller sees of a value of the rules (C's, its native without its type); `construct(value)` writes a value that
+ * has no literal as a closed constructor expression of literals (a display, Python's `[1, 2]`; a cast, C's `(short)3`),
+ * or gives null where the dialect has none.
  *
  * `Interpreter` folds a term by its kind's role (see `Terms`): a literal gives its value (through `literal`, or
  * `typed` when its kind's attributes give it a domain of its own, as C's type does a constant), a reference what the
@@ -89,16 +92,17 @@ export class Residue {
  * and the `residues`, each subterm that stayed for want of a rule, in the order they were found. */
 export class Simplified {
   constructor(readonly residual: Terms.Writer, readonly literal: boolean, readonly value: unknown,
-    readonly free: ReadonlySet<string>, readonly residues: readonly Residue[]) {}
+    readonly free: ReadonlySet<string>, readonly residues: readonly Residue[], readonly constructed: boolean = false) {}
 
-  /** The value of the literal at the residual's root; throws `NotEvaluated` naming why the root is not a literal: a
-   * subterm the dialect has no rule for, a name the scope does not bind, or a value with no literal. */
+  /** The value of the closed constructor expression at the residual's root; throws `NotEvaluated` naming why the root is
+   * not one: a subterm the dialect has no rule for, a name the scope does not bind, or a value the dialect does not
+   * write as a closed constructor expression. */
   evaluate(): unknown {
-    if (this.literal) return this.value;
-    let why = "its value has no literal";
+    if (this.constructed) return this.value;
+    let why = "its value has no closed constructor expression";
     if (this.residues.length > 0) why = (this.residues[0] as Residue).reason;
     else if (this.free.size > 0) why = `${[...this.free].sort()[0]} is not bound`;
-    throw new NotEvaluated(`the root is not a literal: ${why}`);
+    throw new NotEvaluated(`the root is not a closed constructor expression: ${why}`);
   }
 }
 
@@ -115,10 +119,11 @@ export interface Rules {
  * computed, and then its `value`; whether it is a `literal`; the names it refers to that nothing within it binds
  * (`free`); and whether it differs from the subterm it simplified (`changed`). */
 export class Result {
-  // `value` has no default, which would apply to a known `undefined` too
+  // `value` has no default, which would apply to a known `undefined` too; a literal is the simplest closed constructor
+  // expression, so `constructed` is true wherever `literal` is
   constructor(readonly expression: unknown, readonly known: boolean = false, readonly value?: unknown,
     readonly literal: boolean = false, readonly free: ReadonlySet<string> = new Set(),
-    readonly changed: boolean = true) {}
+    readonly changed: boolean = true, readonly constructed: boolean = literal) {}
 }
 
 /** The options of a `Simplifier` (see the module's description). */
@@ -128,7 +133,7 @@ export interface SimplifierOptions {
   categories?: Record<string, Record<string, string>>;
   native?: (value: any) => unknown;
   folds?: (node: any, root: boolean) => boolean;
-  display?: (value: any) => unknown;
+  construct?: (value: any) => unknown;
   guarded?: (node: any, index: number) => boolean;
 }
 
@@ -152,7 +157,7 @@ export class Simplifier {
   private readonly categories: Record<string, Record<string, string>>;
   private readonly native: (value: any) => unknown;
   private readonly folds: ((node: any, root: boolean) => boolean) | null;
-  private readonly display: ((value: any) => unknown) | null;
+  private readonly construct: ((value: any) => unknown) | null;
   private readonly guarded: ((node: any, index: number) => boolean) | null;
 
   constructor(readonly rules: Rules, options: SimplifierOptions) {
@@ -162,7 +167,7 @@ export class Simplifier {
     this.categories = options.categories ?? {};
     this.native = options.native ?? ((value) => value);
     this.folds = options.folds ?? null;
-    this.display = options.display ?? null;
+    this.construct = options.construct ?? null;
     this.guarded = options.guarded ?? null;
   }
 
@@ -173,7 +178,7 @@ export class Simplifier {
     const residues = new Map<string, Residue>();
     const result = this.reduce(Terms.term(expression), resolved, residues, true);
     return new Simplified(this.dialect.spec(result.expression), result.literal,
-      result.literal ? this.native(result.value) : null, result.free, [...residues.values()]);
+      result.constructed ? this.native(result.value) : null, result.free, [...residues.values()], result.constructed);
   }
 
   /** The evaluation inventory's class of what a dialect has no rule for: by `what`, then by its kind, then `b` for
@@ -187,8 +192,10 @@ export class Simplifier {
   /** The result of a subterm whose value is known: its literal, when the dialect has one. */
   known(expression: unknown, value: unknown): Result {
     const written = this.literal(value);
-    if (written === null) return new Result(expression, true, value, false, freeNames(expression, this.dialect));
-    return new Result(written, true, value, true);
+    if (written !== null) return new Result(written, true, value, true);
+    const built = this.construct !== null ? this.construct(value) : null;
+    if (built !== null) return new Result(built, true, value, false, new Set(), true, true);
+    return new Result(expression, true, value, false, freeNames(expression, this.dialect));
   }
 
   /** A subterm simplified in `scope`, noting in `residues` each subterm its dialect has no rule for; an error folding it
@@ -209,8 +216,9 @@ export class Simplifier {
         if (kind.role === Terms.LITERAL) return new Result(node, true, value, true, new Set(), false); // kept as written
         const written = this.literal(value);
         if (written !== null) return new Result(written, true, value, true);
-        const shown = this.display !== null ? this.display(value) : null;
-        if (shown !== null) return new Result(shown, true, value); // a container of values that have literals: its display
+        const built = this.construct !== null ? this.construct(value) : null;
+        // a value with no literal: its closed constructor expression
+        if (built !== null) return new Result(built, true, value, false, new Set(), true, true);
       }
     }
     if ((kind.role === Terms.LITERAL || kind.role === Terms.REFERENCE || kind.role === Terms.INVALID)
