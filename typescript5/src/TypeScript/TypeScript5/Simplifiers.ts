@@ -9,7 +9,8 @@
  * is folded into the literal of its value: a boolean's, a number's, a bigint's or a string's, a negative number as the
  * negation of its magnitude and NaN, Infinity and -0 by their names (`NaN`, `Infinity`, `-0`, as ECMAScript spells
  * them), `undefined` by its name, `null` and a regular expression as TypeScript5's `constant`; an array or an object of
- * such values into its display (`[1, , "a"]`, `{ a: 1 }`). A function (a closure an arrow makes, or one the scope
+ * such values into its display (`[1, , "a"]`, `{ a: 1 }`), an object's prototype, where it is not %Object.prototype%,
+ * written as its `__proto__` (`{ __proto__: null, a: 1 }`). A function (a closure an arrow makes, or one the scope
  * provides), a data object and a host value have no literal: such a subterm stays, its own subterms simplified, as does
  * a name the scope does not bind. The rest stays a TypeScript5 expression. A short circuit decides what does not depend
  * on what stays: `true && x` is `x`, `c ? a : b` its chosen branch when `c` is known, and `(1, x)` is `x`.
@@ -24,8 +25,8 @@
  * Its rules fold every kind the evaluation inventory gives class (a) (mbse-expressions'
  * [the evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#typescript), TypeScript), `FOLDED`:
  * names and `this`, `null` and a regular expression, templates (a tagged one's tag called with its strings and their
- * `raw`), arrays (holes and spreads), objects (computed keys, shorthands, spreads), member access (`?.` short-circuiting
- * its chain), calls and `new`, arrows with an expression body (closures binding their parameters by TypeScript
+ * `raw`), arrays (holes and spreads), objects (computed keys, shorthands, spreads, and a `__proto__: v` that sets the
+ * object's prototype, ECMA-262 B.3.1), member access (`?.` short-circuiting its chain), calls and `new`, arrows with an expression body (closures binding their parameters by TypeScript
  * Patterns' destructuring, with defaults and rests), the unary, binary, logical, conditional and sequence operators, and
  * TypeScript's own assertions, erased to their operand. What stays, named: `delete`, writes, `await`, `yield`,
  * `import()`, `super`, `#x`, `new.target`, and an arrow's block or an async arrow's call (class `d`: statements, a
@@ -33,7 +34,8 @@
  * and JSX (`b`); a built-in method and a host value (`c`: the language's own runtime, mbse-basis
  * [CAP-301: simplification delegated to a surrogate dialect](mbse:mbse-basis/docs/capabilities/README.md#CAP-301)); a
  * term of `TypeScript Types`, `TypeScript Patterns` or `TypeScript RegExp`, by the dialect that owns it (`b`); and
- * invalid syntax. `CATEGORIES` gives each the evaluation inventory's class.
+ * invalid syntax, and an object with two `__proto__: v`, which ECMA-262 makes an early error (`b`). `CATEGORIES` gives
+ * each the evaluation inventory's class.
  */
 
 import { Errors } from "@mbse/schemas/Framework";
@@ -246,21 +248,39 @@ function arrayexpression(_args: F.Thunk[], node: any, scope: any): unknown[] {
   return values;
 }
 
+/** Whether an object's member is a `__proto__: v` that sets the object's prototype (ECMA-262, B.3.1): a property whose
+ * key is `__proto__`, an identifier or a string, neither computed, a shorthand, a method nor an accessor. */
+function setsPrototype(member: any, scope: any): boolean {
+  if (tagOf(member) !== T.PROPERTY) return false;
+  const inner = nodeOf(member);
+  const attributes = inner.attributes;
+  if (attributes.get("computed") || attributes.get("shorthand") || attributes.get("method")
+    || attributes.get("propertyKind") !== "init") return false;
+  return keyOf(inner, scope) === "__proto__";
+}
+
 function objectexpression(_args: F.Thunk[], node: any, scope: any): Record<string, unknown> {
+  const members = nodeOf(node).lists.get("properties") as readonly any[];
+  if (members.filter((member) => setsPrototype(member, scope)).length > 1) { // an early error: the object never exists
+    throw new F.NoRule(ES.DIALECT, "objectexpression duplicate __proto__");
+  }
   const properties: Record<string, unknown> = {};
-  for (const member of nodeOf(node).lists.get("properties") as readonly any[]) {
+  let prototype = ES.OBJECT_PROTOTYPE;
+  for (const member of members) {
     const inner = nodeOf(member);
     if (tagOf(member) === T.SPREADELEMENT) {
       for (const [key, item] of ES.ownEntries(evaluate(inner.subterms.get("argument"), scope))) define(properties, key, item);
       continue;
     }
-    const key = keyOf(inner, scope);
-    if (key === "__proto__" && !inner.attributes.get("computed") && !inner.attributes.get("shorthand")) {
-      throw new F.NoRule(ES.DIALECT, "objectexpression __proto__"); // an object's prototype, which no value models
+    if (setsPrototype(member, scope)) { // its prototype, where its value is an object or null; else ignored
+      const value = evaluate(inner.subterms.get("value"), scope);
+      if (value === null || !ES.isPrimitive(value)) prototype = value;
+      continue;
     }
+    const key = keyOf(inner, scope);
     define(properties, key, evaluate(inner.subterms.get("value"), scope));
   }
-  return ES.ordered(properties);
+  return ES.ordinaryObjectCreate(prototype, ES.ordered(properties));
 }
 
 /** A property alone, as an object's simplification meets it: its key and its value, no object of its own. */
@@ -327,6 +347,7 @@ export const FOLDED: ReadonlySet<string> = new Set([
 export const CATEGORIES: Record<string, Record<string, string>> = {
   TypeScript5: {
     tsemptybodyfunctionexpression: "b", jsxelement: "b", jsxfragment: "b", jsxemptyexpression: "b",
+    "objectexpression duplicate __proto__": "b",
     ...Object.fromEntries(["functionexpression", "classexpression", "super", "privateidentifier", "metaproperty",
       "awaitexpression", "yieldexpression", "importexpression", "assignmentexpression", "updateexpression",
       "unaryexpression 'delete'", "async arrowfunctionexpression", "arrowfunctionexpression block"]
@@ -410,8 +431,9 @@ function writtenKey(key: string): Terms.Writer {
   return T.DIALECT.spec(ES.isArrayIndex(key) ? Number(key) : key);
 }
 
-/** An array's or an object's display, of its items' literals and displays, a hole an elision; null where an item has
- * neither, or for any other value (a tagged template's strings among them). */
+/** An array's or an object's display, of its items' literals and displays, a hole an elision, an object's prototype its
+ * `__proto__` where it is not %Object.prototype%; null where an item or a prototype has neither, or for any other value
+ * (a tagged template's strings among them). */
 function display(value: any): unknown {
   const found = ES.kind(value);
   if (found === "array" && !ES.isTemplateStrings(value)) {
@@ -421,9 +443,15 @@ function display(value: any): unknown {
   }
   if (found === "object") {
     const written = Object.entries(ES.ordered(value)).map(([key, item]) => [key, literal(item) ?? display(item)] as const);
-    if (written.some(([, item]) => item === null)) return null;
-    return make(T.OBJECTEXPRESSION, {}, ...written.map(([key, item]) => make(T.PROPERTY, { // `__proto__` computed, a
-      propertyKind: "init", computed: key === "__proto__", method: false, shorthand: false }, writtenKey(key), item))); // property, no prototype
+    const prototype = ES.getPrototypeOf(value);
+    const inherited = prototype === ES.OBJECT_PROTOTYPE ? null : literal(prototype) ?? display(prototype);
+    if (written.some(([, item]) => item === null) || (prototype !== ES.OBJECT_PROTOTYPE && inherited === null)) return null;
+    const members = written.map(([key, item]) => make(T.PROPERTY, { // a key `__proto__` computed: a property, not the
+      propertyKind: "init", computed: key === "__proto__", method: false, shorthand: false }, writtenKey(key), item)); // prototype
+    if (inherited !== null) { // its prototype, first: `__proto__` neither computed nor a shorthand (B.3.1)
+      members.unshift(make(T.PROPERTY, { propertyKind: "init", computed: false, method: false, shorthand: false }, named("__proto__"), inherited));
+    }
+    return make(T.OBJECTEXPRESSION, {}, ...members);
   }
   return null;
 }

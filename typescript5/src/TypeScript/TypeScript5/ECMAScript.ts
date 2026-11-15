@@ -5,7 +5,8 @@
  *
  * Its values, each as JavaScript holds it: `undefined`, `null`, a boolean, a number, a bigint, a string, an array (its
  * holes missing elements; a tagged template's strings a `templateStrings`), an object (a plain object, its own
- * properties in ECMAScript's order), a regular expression (`RegExp`, its source and flags: its matching is not
+ * properties in ECMAScript's order; its prototype `OBJECT_PROTOTYPE`, unless `ordinaryObjectCreate` gave it another,
+ * an object or null, `getPrototypeOf`), a regular expression (`RegExp`, its source and flags: its matching is not
  * modeled), a function (a `Closure` an arrow makes, or a function the scope provides), a data object (mbse-schemas',
  * read through `Framework.Objects`, its properties as an object's), and any other value the scope provides, a host
  * value, which no operation reads (each throws `NoRule`, "TypeScript5 host value is not simplified").
@@ -14,12 +15,16 @@
  * object's own `valueOf` and `toString` called where they are functions, else the built-in ones: an array joined, an
  * object `[object Object]`), `toNumber` (a string by StringToNumber), `toNumeric`, `toString` (a number by
  * Number::toString), `toPropertyKey`, `isStrictlyEqual`, `isLooselyEqual` and `isLessThan`; the
- * operators over numbers and bigints (`binary`, `unary`, 6.1.6), with BigInt's errors; property access (`get`,
- * `hasProperty`), iteration (`iterate`), an object's own entries (`ownEntries`) and calls (`call`, `construct`). A
+ * operators over numbers and bigints (`binary`, `unary`, 6.1.6), with BigInt's errors; an object made with a
+ * prototype (`ordinaryObjectCreate`, 10.1.12) and its prototype (`getPrototypeOf`); property access (`get`,
+ * `hasProperty`), through an object's prototypes, iteration (`iterate`), an object's own entries (`ownEntries`) and
+ * calls (`call`, `construct`). A
  * built-in method (`String.prototype.toUpperCase`) is read, but not modeled: reading one throws `NoRule` by its name,
  * as `BUILTINS` lists them, since its value is the language's runtime's. Errors are ECMAScript's, of the same names
  * and messages in both implementations: TypeError, and RangeError. Python's twin is `ECMAScript.py`: what JavaScript
- * has natively, it models (`UNDEFINED`, a `HOLE` in a list, UTF-16 code units, bigints' sizes).
+ * has natively, it models (`UNDEFINED`, a `HOLE` in a list, UTF-16 code units, bigints' sizes). An object made with a
+ * prototype other than %Object.prototype% has no prototype of JavaScript's own (`Object.create(null)`): the module
+ * records its prototype, so that nothing JavaScript inherits reaches it.
  */
 
 import * as F from "../../Framework/Simplifiers.js";
@@ -29,6 +34,12 @@ export const DIALECT = "TypeScript5";
 
 /** An array's missing element, as the rule of an elision alone gives it: in an array, a hole. */
 export const HOLE: unknown = Symbol("hole");
+
+/** %Object.prototype%, as `getPrototypeOf` gives it: its properties are `BUILTINS`', read but not modeled. */
+export const OBJECT_PROTOTYPE: unknown = Symbol("Object.prototype");
+
+/** The prototype of each object made with one other than %Object.prototype% and null (`ordinaryObjectCreate`). */
+const PROTOTYPE = new WeakMap<object, unknown>();
 
 /** A regular expression object, by identity: its `source` and its `flags`, as written. Its matching is not modeled. */
 export class RegExp {
@@ -146,6 +157,20 @@ export function isArrayIndex(key: string): boolean {
 
 const BUILTIN = Symbol("builtin");
 
+/** An object's property `name`, its own or its prototypes': the object that has it, and its value; `BUILTIN` where none
+ * of them owns it, the built-in one of the last object's kind; undefined where the chain ends at null. */
+function method(value: unknown, found: string, name: string): [unknown, unknown] {
+  for (;;) {
+    if (found === "host") throw host();
+    const own_ = own(value, found, name);
+    if (own_ !== BUILTIN || found !== "object") return [value, own_];
+    const prototype = getPrototypeOf(value);
+    if (prototype === OBJECT_PROTOTYPE) return [value, BUILTIN];
+    if (prototype === null) return [value, undefined];
+    [value, found] = [prototype, kind(prototype)];
+  }
+}
+
 /** An object's own property `name`, or `BUILTIN` where it has none, its prototype's then read. */
 function own(value: any, found: string, name: string): unknown {
   if (found === "object" && Object.hasOwn(value, name)) return value[name];
@@ -179,13 +204,19 @@ export function toPrimitive(value: unknown, hint = "default"): unknown {
   if (PRIMITIVES.has(found)) return value;
   if (found === "host") throw host();
   for (const name of hint === "string" ? ["toString", "valueOf"] : ["valueOf", "toString"]) {
-    const method = own(value, found, name);
-    if (method === BUILTIN) {
-      if (name === "toString") return builtinString(value, found);
+    const [holder, found_] = method(value, found, name);
+    if (found_ === BUILTIN) {
+      if (name === "toString") {
+        const held = kind(holder);
+        if (holder !== value && (held === "array" || held === "regexp")) { // generic, over an object it is not of
+          throw new F.NoRule(DIALECT, `${PROTOTYPE_OF[held] as string}.prototype.toString`);
+        }
+        return builtinString(holder, held);
+      }
       continue; // Object.prototype.valueOf gives the object itself
     }
-    if (kind(method) === "function") {
-      const result = call(method, []);
+    if (kind(found_) === "function") {
+      const result = call(found_, []);
       if (isPrimitive(result)) return result;
     }
   }
@@ -395,6 +426,39 @@ function listed(value: unknown): unknown {
   return value instanceof Objects.Listed ? value.values.map(listed) : value;
 }
 
+/** OrdinaryObjectCreate (10.1.12): an object of `properties`, in ECMAScript's order, whose prototype is `prototype`:
+ * `OBJECT_PROTOTYPE`, null or an object; a primitive a TypeError. */
+export function ordinaryObjectCreate(prototype: unknown, properties: Record<string, unknown>): Record<string, unknown> {
+  if (prototype !== OBJECT_PROTOTYPE && prototype !== null && isPrimitive(prototype)) {
+    throw new TypeError(`Object prototype may only be an Object or null: ${toString(prototype)}`);
+  }
+  const object: Record<string, unknown> = prototype === OBJECT_PROTOTYPE ? {} : Object.create(null);
+  for (const [key, item] of Object.entries(properties)) {
+    Object.defineProperty(object, key, { value: item, writable: true, enumerable: true, configurable: true });
+  }
+  if (prototype !== OBJECT_PROTOTYPE && prototype !== null) PROTOTYPE.set(object, prototype);
+  return object;
+}
+
+/** An object's prototype, its [[Prototype]] (10.1.1): `OBJECT_PROTOTYPE` unless `ordinaryObjectCreate` gave it another,
+ * null or an object. */
+export function getPrototypeOf(value: any): unknown {
+  if (PROTOTYPE.has(value)) return PROTOTYPE.get(value);
+  return Object.getPrototypeOf(value) === null ? null : OBJECT_PROTOTYPE;
+}
+
+/** Where an object's chain of prototypes leaves the objects this module makes: the object whose prototype is
+ * %Object.prototype%, or the first prototype of another kind (an array, a function, a data object, a host value); null
+ * where the chain ends at null. Any other value is its own. */
+function base(value: unknown): unknown {
+  while (kind(value) === "object") {
+    const prototype = getPrototypeOf(value);
+    if (prototype === OBJECT_PROTOTYPE) break;
+    value = prototype;
+  }
+  return value;
+}
+
 /** An object's properties in ECMAScript's order (OrdinaryOwnPropertyKeys, 10.1.11.1): its array indices ascending,
  * then its other keys as inserted, as JavaScript holds them. */
 export function ordered(properties: Record<string, unknown>): Record<string, unknown> {
@@ -429,6 +493,8 @@ export function get(value: any, key: string): unknown {
     if (key === "raw" && isTemplateStrings(value)) return value.raw;
   } else if (found === "object") {
     if (Object.hasOwn(value, key)) return value[key];
+    const prototype = getPrototypeOf(value);
+    if (prototype !== OBJECT_PROTOTYPE) return prototype === null ? undefined : get(prototype, key); // inherited, or not
   } else if (found === "data") {
     const properties = Objects.properties(value);
     if (properties.has(key)) return listed(properties.get(key));
@@ -444,6 +510,11 @@ export function hasProperty(value: any, key: unknown): boolean {
   }
   if (found === "host") throw host();
   const name = toPropertyKey(key);
+  if (found === "object" && !Object.hasOwn(value, name)) {
+    const prototype = getPrototypeOf(value);
+    // inherited from its prototype, or from none
+    if (prototype !== OBJECT_PROTOTYPE) return prototype !== null && hasProperty(prototype, name);
+  }
   if (builtin(found, name) !== null) return true;
   if (found === "array") {
     if (isArrayIndex(name)) return Number(name) in value;
@@ -460,7 +531,10 @@ export function iterate(value: unknown): unknown[] {
   const found = kind(value);
   if (found === "array") return Array.from(value as unknown[]);
   if (found === "string") return [...(value as string)];
-  if (found === "host") throw host();
+  const inherited = kind(base(value));
+  // an object that inherits from an array: Array.prototype's iterator, generic over it
+  if (inherited === "array") throw new F.NoRule(DIALECT, "Array.prototype.values");
+  if (inherited === "host") throw host();
   throw new TypeError(`${found === "null" ? "null" : typeOf(value)} is not iterable`);
 }
 
@@ -504,7 +578,8 @@ export function instanceOf(value: unknown, target: unknown): boolean {
   if (!(typeof target === "function" && isConstructor(target))) {
     throw new TypeError("Function has non-object prototype 'undefined' in instanceof check");
   }
-  return value instanceof (target as new () => unknown);
+  const made = base(value); // what a class made, in its chain of prototypes
+  return made !== null && made instanceof (target as new () => unknown);
 }
 
 // --- Templates (13.2.8) ---
