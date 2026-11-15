@@ -411,8 +411,8 @@ class Part {
   }
 }
 
-function partsOf(value: F.Node | readonly F.Node[] | null): unknown {
-  if (value === null) return null;
+/** A helper's parts: one, or each of many (a helper not set is not among a node's helpers). */
+function partsOf(value: F.Node | readonly F.Node[]): unknown {
   return Array.isArray(value) ? value.map((p) => new Part(p)) : new Part(value as F.Node);
 }
 
