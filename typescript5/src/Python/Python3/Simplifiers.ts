@@ -1882,8 +1882,16 @@ function simplify(node: any, results: F.Result[]): F.Result | null {
   return new F.Result(written, false, null, false, free);
 }
 
+/** What Python may never evaluate: a conditional's branches, by its test; an `and`'s or an `or`'s operands after the
+ * first, and a comparison chain's after its first comparison, by those before; a lambda's body, when it is called. */
+function guarded(node: any, index: number): boolean {
+  const tag = Terms.kindOf(node)[0];
+  return (tag === P.IFEXP && index !== 1) || (tag === P.BOOLOP && index > 0) || (tag === P.COMPARE && index > 1)
+    || (tag === P.LAMBDA && index === 1);
+}
+
 /** The simplifier of the Python3 dialect. */
-export const SIMPLIFIER = new F.Simplifier(RULES, { literal, simplify, categories: CATEGORIES, display });
+export const SIMPLIFIER = new F.Simplifier(RULES, { literal, simplify, categories: CATEGORIES, display, guarded });
 
 /** The simplification of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in an
  * object bound. */

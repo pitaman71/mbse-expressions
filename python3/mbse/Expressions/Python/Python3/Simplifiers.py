@@ -907,7 +907,16 @@ def _simplify(node: Any, results: list[F.Result]) -> F.Result | None:
     return F.Result(written, free=frozenset().union(*(result.free for result in results)))
 
 
-SIMPLIFIER = F.Simplifier(RULES, literal=_literal, simplify=_simplify, categories=CATEGORIES, display=_display)
+def _guarded(node: Any, index: int) -> bool:
+    """What Python may never evaluate: a conditional's branches, by its test; an `and`'s or an `or`'s operands after the
+    first, and a comparison chain's after its first comparison, by those before; a lambda's body, when it is called."""
+    tag = Terms.kind_of(node)[0]
+    return (tag == _P.IFEXP and index != 1 or tag == _P.BOOLOP and index > 0 or tag == _P.COMPARE and index > 1
+            or tag == _P.LAMBDA and index == 1)
+
+
+SIMPLIFIER = F.Simplifier(RULES, literal=_literal, simplify=_simplify, categories=CATEGORIES, display=_display,
+                          guarded=_guarded)
 """The simplifier of the Python3 dialect."""
 
 
