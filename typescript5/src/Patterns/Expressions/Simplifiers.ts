@@ -440,7 +440,10 @@ function simplify(node: any, results: F.Result[]): F.Result | null {
 }
 
 /** The simplifier of the Patterns dialect. */
-export const SIMPLIFIER = new F.Simplifier(RULES, { literal: F.natives(Expressions.DIALECT), simplify });
+export const SIMPLIFIER = new F.Simplifier(RULES, {
+  literal: F.natives(Expressions.DIALECT), simplify,
+  guarded: F.guards(Expressions.DIALECT, { and: [1], or: [1], implies: [1] }), // each one's second, by the first
+});
 
 /** The simplification of any term, with the variables in `scope` bound. Python's `OfAny`. */
 export function OfAny(expression: unknown, scope: Scope | null = null): F.Simplified {

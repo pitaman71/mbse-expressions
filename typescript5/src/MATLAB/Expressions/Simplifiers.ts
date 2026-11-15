@@ -363,7 +363,9 @@ function display(value: unknown): unknown {
 }
 
 /** The simplifier of the MATLAB dialect. */
-export const SIMPLIFIER = new F.Simplifier(RULES, { literal: LITERAL, display });
+export const SIMPLIFIER = new F.Simplifier(RULES, {
+  literal: LITERAL, display, guarded: F.guards(Expressions.DIALECT, { "&&": [1], "||": [1] }), // the right operand, by the left
+});
 
 /** The simplification of a term in `scope`, or with the variables in an object bound. */
 export function OfAny(expression: unknown, scope: Scope | S.Bindings | null = null): F.Simplified {

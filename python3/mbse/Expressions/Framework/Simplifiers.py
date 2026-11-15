@@ -13,9 +13,12 @@ class the evaluation inventory gives it (`a` statement-free with a value its lan
 `c` waiting on an open capability, `d` needing what only mbse-programs or a simulator has; see mbse-expressions'
 [the evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#evaluation-what-is-refused-and-why)).
 Errors the dialect's own semantics define (an operand of the wrong type, a division by zero) still raise, as the
-expression would raise in its language.
+expression would raise in its language, wherever its language would evaluate them. A subterm its language may never
+evaluate is guarded: a body its parent binds names in, but a let's (a lambda's, a comprehension's element), and an
+argument the dialect's `guarded(node, index)` names (a conditional's branches, the right operand of a short circuit);
+an error folding it, or anything within it, raises leaves it in the residual, to raise where it is evaluated.
 
-A `Simplifier(rules, literal=..., simplify=..., categories=..., native=..., folds=...)` simplifies the terms of one
+A `Simplifier(rules, literal=..., simplify=..., categories=..., native=..., folds=..., guarded=...)` simplifies the terms of one
 dialect; each dialect's `Simplifiers.OfAny` is one. Its `rules` are the dialect's folding rules: what the dialect
 computes over values, `rules.evaluate(node, scope)` giving a subterm's value or raising `NoRule` where it has none, over
 a scope `rules.scope(mapping)` makes. `Interpreter` is the rules most dialects build theirs on (its tables, by kind
@@ -51,7 +54,7 @@ from . import Symbolics, Terms
 from .Symbolics import Scope, Variables
 
 __all__ = ["Simplifier", "Simplified", "Residue", "NotEvaluated", "NoRule", "Rules", "Interpreter", "Result", "Thunk",
-           "Implementation", "natives"]
+           "Implementation", "natives", "guards"]
 
 Thunk = Callable[[], Any]
 Implementation = Callable[[list[Thunk], Any, Any], Any]
@@ -149,10 +152,11 @@ class Simplifier:
                  categories: Mapping[str, Mapping[str, str]] | None = None,
                  native: Callable[[Any], Any] = lambda value: value,
                  folds: Callable[[Any, bool], bool] | None = None,
-                 display: Callable[[Any], Any] | None = None):
+                 display: Callable[[Any], Any] | None = None,
+                 guarded: Callable[[Any, int], bool] | None = None):
         self.rules, self.dialect = rules, rules.dialect
         self._literal, self._simplify, self._native, self._folds = literal, simplify, native, folds
-        self._display = display
+        self._display, self._guarded = display, guarded
         self._categories = dict(categories or {})
 
     def __call__(self, expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Simplified:
@@ -179,8 +183,10 @@ class Simplifier:
             return Result(expression, True, value, free=frozenset(Symbolics.free(expression, self.dialect)))
         return Result(written, True, value, True)
 
-    def reduce(self, node: Any, scope: Any, residues: dict[Residue, None], root: bool = False) -> Result:
-        """A subterm simplified in `scope`, noting in `residues` each subterm its dialect has no rule for."""
+    def reduce(self, node: Any, scope: Any, residues: dict[Residue, None], root: bool = False,
+               guarded: bool = False) -> Result:
+        """A subterm simplified in `scope`, noting in `residues` each subterm its dialect has no rule for; an error
+        folding it raises unless it is `guarded`, one its language may never evaluate."""
         tag, record, kind = self.dialect.kind(node)
         known, value = False, None  # a value its rules computed, with no literal
         if self._folds is None or self._folds(node, root):
@@ -190,6 +196,9 @@ class Simplifier:
                 pass
             except NoRule as refusal:
                 self._note(refusal, residues)
+            except Exception:  # guarded, perhaps never evaluated: it stays (see the module's description)
+                if not guarded:
+                    raise
             if known:
                 if kind.role == Terms.LITERAL:  # already a literal: kept as written
                     return Result(node, True, value, True, changed=False)
@@ -203,10 +212,10 @@ class Simplifier:
             free = frozenset(Symbolics.free(node, self.dialect))
             return Result(node, known, value, free=free, changed=False)
         # a subterm of a term its rules computed (a cast's type) needs no rule of its own: what it lacks is not noted
-        return self._rebuild(node, record, kind, scope, {} if known else residues, known, value)
+        return self._rebuild(node, record, kind, scope, {} if known else residues, known, value, guarded)
 
     def _rebuild(self, node: Any, record: Any, kind: Terms.Kind, scope: Any, residues: dict[Residue, None],
-                 known: bool, value: Any) -> Result:
+                 known: bool, value: Any, guarded: bool) -> Result:
         """A term rebuilt from its simplified arguments, each in the scope its names are bound in: a let's of a known
         value bound to it, any other name hidden (`Symbolics.UNKNOWN`), an import's among them (its root having not
         folded, its module is not entered again). A let whose body no longer refers to its name is its body."""
@@ -223,7 +232,8 @@ class Simplifier:
                 within = scope.bind(Terms.name_of(node), results[0].value)
             elif names:
                 within = self._hide(scope, names)
-            results.append(self.reduce(argument, within, residues))
+            maybe = guarded or bool(names) and not lets or self._guarded is not None and self._guarded(node, i)
+            results.append(self.reduce(argument, within, residues, guarded=maybe))
         name = Terms.name_of(node)
         if lets and len(results) > 1 and results[1] is not None and name not in results[1].free:
             return results[1]
@@ -254,6 +264,12 @@ def natives(dialect: Terms.Dialect) -> Callable[[Any], Any]:
     """The literal of a native value (a basic scalar), as `dialect` writes one (`Terms.Dialect.spec`); None for any
     other value, or a native it has no literal of: a simplifier's `literal`, where a dialect's values are natives."""
     return lambda value: dialect._literal(value) if type(value) in Schemas.SCALAR_TYPES else None
+
+
+def guards(dialect: Terms.Dialect, table: Mapping[str, frozenset[int]]) -> Callable[[Any, int], bool]:
+    """A simplifier's `guarded`: the arguments, by index, that a term's language evaluates only on a condition, by the
+    term's operator, or its tag where its kind has none (`{"and": frozenset({1})}`)."""
+    return lambda node, index: index in table.get(Terms.operator_of(node, dialect.kind(node)[2]), ())
 
 
 class Interpreter:

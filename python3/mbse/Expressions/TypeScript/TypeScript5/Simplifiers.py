@@ -462,7 +462,10 @@ def _simplify(node: Any, results: list[F.Result]) -> F.Result | None:
     return None
 
 
-SIMPLIFIER = F.Simplifier(RULES, literal=_literal, categories=CATEGORIES, display=_display, simplify=_simplify)
+SIMPLIFIER = F.Simplifier(RULES, literal=_literal, categories=CATEGORIES, display=_display, simplify=_simplify, guarded=F.guards(
+    T.DIALECT, {"&&": frozenset({1}), "||": frozenset({1}), "??": frozenset({1}),  # the right operand, by the left
+                T.CONDITIONALEXPRESSION: frozenset({1, 2}),  # the branches, by the test
+                T.ARROWFUNCTIONEXPRESSION: frozenset({1})}))  # the body, when it is called
 """The simplifier of the TypeScript5 dialect."""
 
 
