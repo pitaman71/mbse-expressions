@@ -1,6 +1,6 @@
-"""Simplifiers of the Cpp dialect: simplify an expression by ISO/IEC 14882's rules, which are C's for the kinds C++ shares
-with C (see `C.Simplifiers`, `Scope` among them), under the ABI the expression's holder names: `Simplifiers.OfAny(term,
-scope)` simplifies a term value in a `Scope(variables, functions, packs)`.
+"""Simplifiers of the Cpp dialect: simplify an expression by ISO/IEC 14882's rules, which are C's for the kinds C++
+shares with C (see `C.Simplifiers`, `Scope` among them), under the ABI the expression's holder names:
+`Simplifiers.OfAny(term, scope)` simplifies a term value in a `Scope(variables, functions, packs)`.
 
 A name used as an expression is an `idexpression`: an identifier's value is the scope's variable of its name, a
 qualified name's (`ns::x`, `::x`) the variable of its spelling; `this` is the scope's variable `this`. C++'s own kinds
@@ -16,16 +16,17 @@ fold by its rules:
   (`Ordering`): `std::strong_ordering` for integers, `std::partial_ordering` for floating values, unordered where one is
   NaN. An ordering has no literal; it compares with the literal 0 (`(a <=> b) < 0`), and with an ordering of its
   category by `==`.
-- A parameter pack is the scope's `packs`, by its name: `sizeof...(p)` is its size; `f(p...)` and `f((p + 1)...)`
-  expand a pattern over its packs' values into a call's arguments; `(p + ...)`, `(... + p)`, `(p + ... + i)` and `(i +
-  ... + p)` fold its values by a binary operator, an empty one by `&&` (`true`), `||` (`false`) and `,` (`void`).
-  A fold over an assignment operator, `.*` or `->*` stays (class `d`).
+- A parameter pack is the scope's `packs`, by its name: `sizeof...(p)` is its size; `f(p...)` and `f((p + 1)...)` expand
+  a pattern over its packs' values into a call's arguments; `(p + ...)`, `(... + p)`, `(p + ... + i)` and `(i + ... +
+  p)` fold its values by a binary operator, an empty one by `&&` (`true`), `||` (`false`) and `,` (`void`). A fold over
+  an assignment operator, `.*` or `->*` stays (class `d`).
 - `throw x` evaluates `x` and raises `Thrown`, carrying its value (`c ? x : throw e` raises only where `c` is false); a
   rethrow, `throw` alone, stays (class `d`: a handler's).
 
 What stays, named, with its class (`CATEGORIES`): a lambda, `new` and `delete`, `noexcept`, coroutines, statements,
-writes, pointers to members and names that are not identifiers or qualified identifiers (`f<int>`, `operator+`),
-class `d`; `requires` and `typeid`, class `c`; C's own (see `C.Simplifiers`); a term of `Cpp Types` or `Cpp RegExp`.
+writes, pointers to members and names that are not identifiers or qualified identifiers (`f<int>`, `operator+`), class
+`d`; `requires` and `typeid`, class `c`; C's own (see `C.Simplifiers`); a term of `Cpp Types` or `Cpp RegExp`.
+
 """
 
 from __future__ import annotations

@@ -224,8 +224,7 @@ export class Types {
     const label = ctype.label;
     if (NAMES.includes(label) || ctype.kind === "floating" || ctype.precise
       || (DISTINCT.get(language) as readonly string[]).includes(label)) return label;
-    return NAMES.find((name) => name !== "bool" && name !== "char" && (this.lookup(name)?.equals(ctype) ?? false))
-      ?? label;
+    return NAMES.find((name) => name !== "bool" && name !== "char" && (this.lookup(name) as CType).equals(ctype)) as string;
   }
 }
 

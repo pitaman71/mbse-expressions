@@ -1,28 +1,28 @@
 /**
- * Simplifiers of the Cpp dialect: simplify an expression by ISO/IEC 14882's rules, which are C's for the kinds C++ shares
- * with C (see `C/Simplifiers`, `Scope` among them), under the ABI the expression's holder names: `Simplifiers.OfAny(term,
- * scope)` simplifies a term value in a `new Scope(variables, { functions, packs })`.
+ * Simplifiers of the Cpp dialect: simplify an expression by ISO/IEC 14882's rules, which are C's for the kinds C++
+ * shares with C (see `C/Simplifiers`, `Scope` among them), under the ABI the expression's holder names:
+ * `Simplifiers.OfAny(term, scope)` simplifies a term value in a `new Scope(variables, { functions, packs })`.
  *
  * A name used as an expression is an `idexpression`: an identifier's value is the scope's variable of its name, a
- * qualified name's (`ns::x`, `::x`) the variable of its spelling; `this` is the scope's variable `this`. C++'s own kinds
- * fold by its rules:
+ * qualified name's (`ns::x`, `::x`) the variable of its spelling; `this` is the scope's variable `this`. C++'s own
+ * kinds fold by its rules:
  *
  * - `T(x)` and `T{x}`, a functional cast to an arithmetic type, convert as a cast does (`T()` and `T{}` its zero), a
- *   braced one refusing a narrowing conversion, one that does not keep its value (`TypeError`); `static_cast<T>(x)` is a
- *   cast. `const_cast`, `dynamic_cast` and `reinterpret_cast`, and a cast to a class type, stay (class `d`).
+ *   braced one refusing a narrowing conversion, one that does not keep its value (`TypeError`); `static_cast<T>(x)` is
+ *   a cast. `const_cast`, `dynamic_cast` and `reinterpret_cast`, and a cast to a class type, stay (class `d`).
  * - `12_km` calls the literal operator `operator""_km` the scope provides, by that name, with its literal's value, the
  *   standard library's (`1s`, `"a"s`) among them; one the scope does not provide stays.
  * - `a <=> b` compares two arithmetic values, after the usual arithmetic conversions (refusing one that narrows an
  *   integer's value, as C++ refuses a narrowing conversion there), into a value of `<compare>`'s comparison categories
- *   (`Ordering`): `std::strong_ordering` for integers, `std::partial_ordering` for floating values, unordered where one is
- *   NaN. An ordering has no literal; it compares with the literal 0 (`(a <=> b) < 0`), and with an ordering of its
+ *   (`Ordering`): `std::strong_ordering` for integers, `std::partial_ordering` for floating values, unordered where one
+ *   is NaN. An ordering has no literal; it compares with the literal 0 (`(a <=> b) < 0`), and with an ordering of its
  *   category by `==`.
  * - A parameter pack is the scope's `packs`, by its name: `sizeof...(p)` is its size; `f(p...)` and `f((p + 1)...)`
- *   expand a pattern over its packs' values into a call's arguments; `(p + ...)`, `(... + p)`, `(p + ... + i)` and `(i +
- *   ... + p)` fold its values by a binary operator, an empty one by `&&` (`true`), `||` (`false`) and `,` (`void`).
- *   A fold over an assignment operator, `.*` or `->*` stays (class `d`).
- * - `throw x` evaluates `x` and throws `Thrown`, carrying its value (`c ? x : throw e` throws only where `c` is false); a
- *   rethrow, `throw` alone, stays (class `d`: a handler's).
+ *   expand a pattern over its packs' values into a call's arguments; `(p + ...)`, `(... + p)`, `(p + ... + i)` and `(i
+ *   + ... + p)` fold its values by a binary operator, an empty one by `&&` (`true`), `||` (`false`) and `,` (`void`). A
+ *   fold over an assignment operator, `.*` or `->*` stays (class `d`).
+ * - `throw x` evaluates `x` and throws `Thrown`, carrying its value (`c ? x : throw e` throws only where `c` is false);
+ *   a rethrow, `throw` alone, stays (class `d`: a handler's).
  *
  * What stays, named, with its class (`CATEGORIES`): a lambda, `new` and `delete`, `noexcept`, coroutines, statements,
  * writes, pointers to members and names that are not identifiers or qualified identifiers (`f<int>`, `operator+`),

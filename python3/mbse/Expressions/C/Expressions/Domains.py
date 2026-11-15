@@ -197,7 +197,7 @@ class Types:
         label = ctype.label
         if label in NAMES or ctype.kind == "floating" or ctype.precise or label in _DISTINCT[language]:
             return label
-        return next((name for name in NAMES if name not in ("bool", "char") and self._lookup(name) == ctype), label)
+        return next(name for name in NAMES if name not in ("bool", "char") and self._lookup(name) == ctype)
 
 
 String = D.OfTypes("string", str)

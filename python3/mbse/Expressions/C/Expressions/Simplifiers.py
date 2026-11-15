@@ -2,8 +2,8 @@
 has C's kinds (`Cpp`'s simplifier is `simplifier(Cpp.Expressions.DIALECT, ...)`, its own kinds' rules added by
 `rules(..., extend)`), under the ABI the expression's holder names.
 
-`Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from, an `Expression`) in
-a `Scope(variables, functions, packs)` (see `mbse.Expressions.Framework.Simplifiers`). Values carry their C type while
+`Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from, an `Expression`) in a
+`Scope(variables, functions, packs)` (see `mbse.Expressions.Framework.Simplifiers`). Values carry their C type while
 folding (`Typed`), and a value folds into the literal of its type, its suffix as C writes it, where its type has one
 (`Domains.literal_suffix`): an `int`, `long` or `long long`, signed or not (`5u`; a typedef's value as the standard type
 it is, an `int64_t`'s `5l`), a `bool`, a string, `nullptr`, a floating value of a type with a suffix whose binary64
@@ -13,23 +13,23 @@ subterms simplified: a `char`, a `short`, a `wchar_t` in C++, a `long double` th
 `_BitInt(N)` wider than its value's literal, an array, `void`, an object. Its arithmetic folds all the same, its
 operands promoted: `(char)200 + 0` is the `int` -56 under x86-64's System V ABI. A simplification whose root is a
 literal gives its native as its value: an int, a float, a bool, a string, None for `nullptr`. A literal's type is what
-its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, `5wb`
-a `_BitInt(4)`), else its value's; a variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or
+its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, `5wb` a
+`_BitInt(4)`), else its value's; a variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or
 `unsigned long` as the first that holds it, a float a `double`, None `nullptr` (a value carries no domain: a variable of
 another type waits for domain inference, mbse-basis [CAP-232: domains inferred for
 terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)). Every named type it computes in is a stored domain, read through
-the term's holder (`Domains.Types`): among its dialect's domains, then its holder's ABI's, so the same term folds as each
-ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is signed, and 200 under AAPCS64's; `long double`
-is x87's format under the one and `binary128` under the other; `sizeof(long double)` 16 under both, mbse-basis
+the term's holder (`Domains.Types`): among its dialect's domains, then its holder's ABI's, so the same term folds as
+each ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is signed, and 200 under AAPCS64's; `long
+double` is x87's format under the one and `binary128` under the other; `sizeof(long double)` 16 under both, mbse-basis
 [CAP-267: C and C++ terms read under the ABI their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md)). A lone
 term is refused where it reads a type (mbse-schemas' TypeError), and so is a type neither dialect defines, by name. C's
 rules apply:
 
-- The integer promotions and the usual arithmetic conversions decide the type an operator computes in (see
-  `Domains`); a bit-precise integer type is not promoted, and ranks below a standard type of its width (C23, 6.3.1.1);
-  unsigned arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754 specifies, in the
-  type's format, decimal ones too; a decimal floating operand with a binary one is refused (`TypeError`), as C's
-  constraint has it.
+- The integer promotions and the usual arithmetic conversions decide the type an operator computes in (see `Domains`); a
+  bit-precise integer type is not promoted, and ranks below a standard type of its width (C23, 6.3.1.1); unsigned
+  arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754 specifies, in the type's
+  format, decimal ones too; a decimal floating operand with a binary one is refused (`TypeError`), as C's constraint has
+  it.
 - What C leaves undefined raises: a signed result outside its type (`OverflowError`), an integer divided by zero
   (`ZeroDivisionError`), a shift by a negative count or by the width or more, a left shift of a negative value, and a
   cast of a floating value outside the target type (`OverflowError`) or of NaN (`ValueError`).
@@ -56,14 +56,15 @@ rules apply:
   literal; `f(args)` calls a function the scope provides, by its name, and nothing else, a pack expansion's values
   spliced among its arguments.
 
-`FOLDED` names the kinds its rules fold, every kind of class (a) in the evaluation inventory (mbse-expressions'
-[the evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#c-and-c), C and C++). What stays,
-named, with its class (`CATEGORIES`): writes, statements, the object model (`*`, `&`, a cast to a type that is not
-arithmetic, a call of a callee that is not a function's name), class `d`; an initializer list alone, class `b`; an
-operand whose type its declaration gives (`sizeof(x.a)`), class `c`; a layout no ABI dialect stores (a bit-precise
-integer's, `nullptr_t`'s), nested braces and an array of arrays in a compound literal, class `a`; a term of `C Types`
-or `C Preprocessor`, by the dialect that owns it; and invalid syntax ("C error is not simplified"), where a cast's type
-stands too. A name the scope does not bind, or a function it does not provide, stays.
+`FOLDED` names the kinds its rules fold, every kind of class (a) in the evaluation inventory (mbse-expressions' [the
+evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#c-and-c), C and C++). What stays, named,
+with its class (`CATEGORIES`): writes, statements, the object model (`*`, `&`, a cast to a type that is not arithmetic,
+a call of a callee that is not a function's name), class `d`; an initializer list alone, class `b`; an operand whose
+type its declaration gives (`sizeof(x.a)`), class `c`; a layout no ABI dialect stores (a bit-precise integer's,
+`nullptr_t`'s), nested braces and an array of arrays in a compound literal, class `a`; a term of `C Types` or `C
+Preprocessor`, by the dialect that owns it; and invalid syntax ("C error is not simplified"), where a cast's type stands
+too. A name the scope does not bind, or a function it does not provide, stays.
+
 """
 
 from __future__ import annotations
@@ -474,7 +475,7 @@ class Rules(F.Interpreter):
         tag, record = Terms.kind_of(node)
         if tag == Kinds.CONSTANT and self.dialect.owner(node) is self.dialect:
             if Terms.attributes_of(record).get("singleton") != "nullptr":
-                raise ValueError("a constant needs a singleton")
+                raise ValueError("a constant needs the singleton nullptr")
             return Typed(None, None)
         return super().evaluate(node, scope)
 
@@ -485,9 +486,7 @@ class Rules(F.Interpreter):
         tag = Terms.kind_of(term)[0]
         if tag in Terms.INVALID_KINDS:
             raise F.NoRule(self.dialect.owner(term).name(), tag)
-        tree = Terms.node(*Terms.kind_of(term))
-        if tree.kind != Kinds.TYPEID:
-            return None
+        tree = Terms.node(*Terms.kind_of(term))  # a typeid, or an enumerator, which names none
         base = self._specified(tree.helpers.get("specifiers", ()), _types(node, self.dialect), scope)
         return None if base is None else self._derived(tree.helpers.get("declarator"), base, scope)
 
@@ -506,7 +505,7 @@ class Rules(F.Interpreter):
         rest = [word for word in words if word not in Domains.QUALIFIERS]
         if width is not None:  # C23's `_BitInt(N)`, signed or not
             if rest not in ([], ["signed"], ["unsigned"]):
-                return None
+                raise TypeError(f"invalid type specifiers with '_BitInt': {' '.join(rest)}")
             signed, bits = rest != ["unsigned"], self.evaluate(width, scope)
             named = f"{'' if signed else 'unsigned '}_BitInt"
             if bits.ctype is None or bits.ctype.kind != "integer":
@@ -520,11 +519,9 @@ class Rules(F.Interpreter):
 
     def _derived(self, declarator: Terms.Node | None, base: Any, scope: Any) -> Any:
         """The type an abstract declarator derives from `base`: arrays, each of its size (`int[2][3]` an array of 2
-        arrays of 3); None for a pointer or a function."""
+        arrays of 3); None for any other (a pointer, a function)."""
         if declarator is None:
             return base
-        if declarator.kind == "parenthesizeddeclarator":
-            return self._derived(declarator.helpers.get("declarator"), base, scope)
         if declarator.kind != "arraydeclarator" or base is VOID:
             return None
         size, length = declarator.subterms.get("size"), None
@@ -878,8 +875,8 @@ def _elements(rules: Rules, array: ArrayType, items: tuple[Any, ...], scope: Any
     """An array's initialized elements by position: each item in turn, or where its designator says (`[2] = 5`, GNU's
     `[0 ... 2] = 5`); a character array's string, its code units and its terminating zero."""
     element = array.element
-    if len(items) == 1 and Terms.kind_of(items[0])[0] in (Kinds.LITERAL, Kinds.CONCATENATEDSTRING) and \
-            element.kind == "integer" and element.width == 8:
+    first = Terms.kind_of(items[0])[0] if len(items) == 1 else None
+    if first in (Kinds.LITERAL, Kinds.CONCATENATEDSTRING) and element.kind == "integer" and element.width == 8:
         text = rules.evaluate(items[0], scope).value
         if type(text) is str:  # its terminating zero dropped where the array's length leaves no room for it
             codes = [*text.encode("utf-8"), 0]

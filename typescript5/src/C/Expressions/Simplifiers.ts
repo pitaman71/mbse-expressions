@@ -3,68 +3,70 @@
  * has C's kinds (`Cpp`'s simplifier is `simplifier(Cpp.Expressions.DIALECT, ...)`, its own kinds' rules added by
  * `rules(..., extend)`), under the ABI the expression's holder names.
  *
- * `Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from, an `Expression`) in
- * a `new Scope(variables, { functions, packs })` (see `Framework/Simplifiers`). Values carry their C type while
+ * `Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from, an `Expression`)
+ * in a `new Scope(variables, { functions, packs })` (see `Framework/Simplifiers`). Values carry their C type while
  * folding (`Typed`), and a value folds into the literal of its type, its suffix as C writes it, where its type has one
- * (`Domains.literal_suffix`): an `int`, `long` or `long long`, signed or not (`5u`; a typedef's value as the standard type
- * it is, an `int64_t`'s `5l`), a `bool`, a string, `nullptr`, a floating value of a type with a suffix whose binary64
- * literal rounds back to it exactly (`2.5f`, `3.0L`, `0.3dd`, `1.5f16`; a non-finite one has none), and a bit-precise
- * integer's whose narrowest literal is of its type (`7wb`). A value of any other type has no literal, and stays, its
- * subterms simplified: a `char`, a `short`, a `wchar_t` in C++, a `long double` that no binary64 literal spells, a
- * `_BitInt(N)` wider than its value's literal, an array, `void`, an object. Its arithmetic folds all the same, its
- * operands promoted: `(char)200 + 0` is the `int` -56 under x86-64's System V ABI. A simplification whose root is a
- * literal gives its native as its value: a bigint, a number (a value of a format whose values are text, as its text, as `Patterns.Ieee754` writes it), a boolean, a string, null for `nullptr`. A literal's type is what
- * its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, `5wb`
- * a `_BitInt(4)`), else its value's; a variable's type is its value's: a boolean is a `bool`, a bigint an `int`, `long` or
- * `unsigned long` as the first that holds it, a number a `double`, null `nullptr` (a value carries no domain: a variable of
- * another type waits for domain inference, mbse-basis [CAP-232: domains inferred for
- * terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)). Every named type it computes in is a stored domain, read through
- * the term's holder (`Domains.Types`): among its dialect's domains, then its holder's ABI's, so the same term folds as each
- * ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is signed, and 200 under AAPCS64's; `long double`
- * is x87's format under the one and `binary128` under the other; `sizeof(long double)` 16 under both, mbse-basis
- * [CAP-267: C and C++ terms read under the ABI their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md)). A lone
- * term is refused where it reads a type (mbse-schemas' TypeError), and so is a type neither dialect defines, by name. C's
- * rules apply:
+ * (`Domains.literalSuffix`): an `int`, `long` or `long long`, signed or not (`5u`; a typedef's value as the standard
+ * type it is, an `int64_t`'s `5l`), a `bool`, a string, `nullptr`, a floating value of a type with a suffix whose
+ * binary64 literal rounds back to it exactly (`2.5f`, `3.0L`, `0.3dd`, `1.5f16`; a non-finite one has none), and a
+ * bit-precise integer's whose narrowest literal is of its type (`7wb`). A value of any other type has no literal, and
+ * stays, its subterms simplified: a `char`, a `short`, a `wchar_t` in C++, a `long double` that no binary64 literal
+ * spells, a `_BitInt(N)` wider than its value's literal, an array, `void`, an object. Its arithmetic folds all the
+ * same, its operands promoted: `(char)200 + 0` is the `int` -56 under x86-64's System V ABI. A simplification whose
+ * root is a literal gives its native as its value: a bigint, a number (a value of a format whose values are text, as
+ * its text, as `Patterns.Ieee754` writes it), a boolean, a string, null for `nullptr`. A literal's type is what its
+ * text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, `5wb` a
+ * `_BitInt(4)`), else its value's; a variable's type is its value's: a boolean is a `bool`, a bigint an `int`, `long`
+ * or `unsigned long` as the first that holds it, a number a `double`, null `nullptr` (a value carries no domain: a
+ * variable of another type waits for domain inference, mbse-basis [CAP-232: domains inferred for
+ * terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)). Every named type it computes in is a stored domain, read
+ * through the term's holder (`Domains.Types`): among its dialect's domains, then its holder's ABI's, so the same term
+ * folds as each ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is signed, and 200 under
+ * AAPCS64's; `long double` is x87's format under the one and `binary128` under the other; `sizeof(long double)` 16
+ * under both, mbse-basis [CAP-267: C and C++ terms read under the ABI their holder
+ * names](mbse:mbse-basis/docs/capabilities/CAP-267.md)). A lone term is refused where it reads a type (mbse-schemas'
+ * TypeError), and so is a type neither dialect defines, by name. C's rules apply:
  *
  * - The integer promotions and the usual arithmetic conversions decide the type an operator computes in (see
- *   `Domains`); a bit-precise integer type is not promoted, and ranks below a standard type of its width (C23, 6.3.1.1);
- *   unsigned arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754 specifies, in the
- *   type's format, decimal ones too; a decimal floating operand with a binary one is refused (`TypeError`), as C's
- *   constraint has it.
+ *   `Domains`); a bit-precise integer type is not promoted, and ranks below a standard type of its width (C23,
+ *   6.3.1.1); unsigned arithmetic wraps, and floating arithmetic rounds to nearest, ties to even, as IEEE 754
+ *   specifies, in the type's format, decimal ones too; a decimal floating operand with a binary one is refused
+ *   (`TypeError`), as C's constraint has it.
  * - What C leaves undefined throws: a signed result outside its type (`OverflowError`), an integer divided by zero
  *   (`ZeroDivisionError`), a shift by a negative count or by the width or more, a left shift of a negative value, and a
  *   cast of a floating value outside the target type (`OverflowError`) or of NaN (`ValueError`).
  * - Division truncates toward zero, and `%` takes the dividend's sign; `>>` of a negative value is arithmetic.
  * - Comparisons and `&&`, `||` and `!` give `bool`, as in C++ (C's `int` results compute alike once promoted); `&&` and
- *   `||` evaluate their second operand only when the first does not decide. `nullptr` (C23's and C++'s) is false, equals
- *   `nullptr` and the integer literal 0, and is the operand of nothing else.
+ *   `||` evaluate their second operand only when the first does not decide. `nullptr` (C23's and C++'s) is false,
+ *   equals `nullptr` and the integer literal 0, and is the operand of nothing else.
  * - A cast converts, to an arithmetic type: to an integer type by wrapping into its width (as C++20 defines), from a
- *   floating value by truncation; to a floating type by rounding; to `bool` by comparing with zero; to `void`, its operand
- *   evaluated, to no value; to `_BitInt(N)` as to any integer type.
- * - `condition ? a : b` evaluates only the operand it chooses, converted to the type the usual arithmetic conversions give
- *   the two (ISO/IEC 9899, 6.5.15), where the other's type is known without evaluating it (its declaration's otherwise,
- *   the chosen one's kept); GNU's `a ?: b` is `a`, evaluated once, unless it is zero. `a, b` evaluates `a`, then is `b`:
- *   where `a` is known, `b` is the residual.
+ *   floating value by truncation; to a floating type by rounding; to `bool` by comparing with zero; to `void`, its
+ *   operand evaluated, to no value; to `_BitInt(N)` as to any integer type.
+ * - `condition ? a : b` evaluates only the operand it chooses, converted to the type the usual arithmetic conversions
+ *   give the two (ISO/IEC 9899, 6.5.15), where the other's type is known without evaluating it (its declaration's
+ *   otherwise, the chosen one's kept); GNU's `a ?: b` is `a`, evaluated once, unless it is zero. `a, b` evaluates `a`,
+ *   then is `b`: where `a` is known, `b` is the residual.
  * - Parentheses and GNU's `__extension__` are their operand; adjacent string literals one string.
- * - `sizeof` and `alignof` (`_Alignof`) give a `size_t`, of a type name or of an operand's type, unevaluated: a scalar's
- *   size and alignment are its ABI's (`Domains.layout`), an array's its elements'. `_Generic` chooses the association
- *   whose type is its controlling operand's (its value unevaluated), by C's identity of types (`Domains.Types.identity`:
- *   `int64_t` is `long`, `char` is neither `signed char` nor `unsigned char`), or its `default`. A compound literal of an
- *   arithmetic type is its initializer's value converted; of an array of one, an array (designators and string
- *   initializers of a character array among its items), whose elements a subscript reads, with no literal of its own.
+ * - `sizeof` and `alignof` (`_Alignof`) give a `size_t`, of a type name or of an operand's type, unevaluated: a
+ *   scalar's size and alignment are its ABI's (`Domains.layout`), an array's its elements'. `_Generic` chooses the
+ *   association whose type is its controlling operand's (its value unevaluated), by C's identity of types
+ *   (`Domains.Types.identity`: `int64_t` is `long`, `char` is neither `signed char` nor `unsigned char`), or its
+ *   `default`. A compound literal of an arithmetic type is its initializer's value converted; of an array of one, an
+ *   array (designators and string initializers of a character array among its items), whose elements a subscript reads,
+ *   with no literal of its own.
  * - `object.name` and `object->name` read a member (a property of a data object, read through mbse-schemas' readers
- *   (`Framework.Objects`), or a key of a mapping); `array[index]` an element of an array, of a container or of a compound
- *   literal; `f(args)` calls a function the scope provides, by its name, and nothing else, a pack expansion's values
- *   spliced among its arguments.
+ *   (`Framework.Objects`), or a key of a mapping); `array[index]` an element of an array, of a container or of a
+ *   compound literal; `f(args)` calls a function the scope provides, by its name, and nothing else, a pack expansion's
+ *   values spliced among its arguments.
  *
- * `FOLDED` names the kinds its rules fold, every kind of class (a) in the evaluation inventory (mbse-expressions'
- * [the evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#c-and-c), C and C++). What stays,
+ * `FOLDED` names the kinds its rules fold, every kind of class (a) in the evaluation inventory (mbse-expressions' [the
+ * evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#c-and-c), C and C++). What stays,
  * named, with its class (`CATEGORIES`): writes, statements, the object model (`*`, `&`, a cast to a type that is not
  * arithmetic, a call of a callee that is not a function's name), class `d`; an initializer list alone, class `b`; an
  * operand whose type its declaration gives (`sizeof(x.a)`), class `c`; a layout no ABI dialect stores (a bit-precise
  * integer's, `nullptr_t`'s), nested braces and an array of arrays in a compound literal, class `a`; a term of `C Types`
- * or `C Preprocessor`, by the dialect that owns it; and invalid syntax ("C error is not simplified"), where a cast's type
- * stands too. A name the scope does not bind, or a function it does not provide, stays.
+ * or `C Preprocessor`, by the dialect that owns it; and invalid syntax ("C error is not simplified"), where a cast's
+ * type stands too. A name the scope does not bind, or a function it does not provide, stays.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -468,7 +470,9 @@ export class Rules extends F.Interpreter {
   override evaluate(node: any, scope: any): any {
     const [tag, record] = Terms.kindOf(node);
     if (tag === Expressions.CONSTANT && this.dialect.owner(node) === this.dialect) {
-      if (Terms.attributesOf(record).get("singleton") !== "nullptr") throw new ValueError("a constant needs a singleton");
+      if (Terms.attributesOf(record).get("singleton") !== "nullptr") {
+        throw new ValueError("a constant needs the singleton nullptr");
+      }
       return new Typed(null, null);
     }
     return super.evaluate(node, scope);
@@ -480,10 +484,8 @@ export class Rules extends F.Interpreter {
   declared(term: any, node: any, scope: any): any {
     const [tag] = Terms.kindOf(term);
     if (Terms.INVALID_KINDS.has(tag)) throw new F.NoRule(this.dialect.owner(term).name(), tag);
-    const tree = Terms.node(...Terms.kindOf(term));
-    if (tree.kind !== Expressions.TYPEID) return null;
-    const base = this.specified((tree.helpers.get("specifiers") ?? []) as readonly Terms.Node[],
-      typesOf(node, this.dialect), scope);
+    const tree = Terms.node(...Terms.kindOf(term)); // a typeid, or an enumerator, which names none
+    const base = this.specified(many(tree.helpers.get("specifiers")), typesOf(node, this.dialect), scope);
     return base === null ? null : this.derived((tree.helpers.get("declarator") ?? null) as Terms.Node | null, base,
       scope);
   }
@@ -504,7 +506,9 @@ export class Rules extends F.Interpreter {
     }
     const rest = words.filter((word) => !Domains.QUALIFIERS.has(word as string));
     if (width !== null) { // C23's `_BitInt(N)`, signed or not
-      if (rest.length > 1 || (rest.length === 1 && rest[0] !== "signed" && rest[0] !== "unsigned")) return null;
+      if (rest.length > 1 || (rest.length === 1 && rest[0] !== "signed" && rest[0] !== "unsigned")) {
+        throw new TypeError(`invalid type specifiers with '_BitInt': ${rest.join(" ")}`);
+      }
       const signed = rest[0] !== "unsigned";
       const bits = this.evaluate(width, scope) as Typed;
       const named = `${signed ? "" : "unsigned "}_BitInt`;
@@ -519,11 +523,10 @@ export class Rules extends F.Interpreter {
   }
 
   /** The type an abstract declarator derives from `base`: arrays, each of its size (`int[2][3]` an array of 2 arrays
-   * of 3); null for a pointer or a function. */
+   * of 3); null for any other (a pointer, a function). */
   private derived(declarator: Terms.Node | null, base: any, scope: any): any {
     if (declarator === null) return base;
     const inner = (declarator.helpers.get("declarator") ?? null) as Terms.Node | null;
-    if (declarator.kind === "parenthesizeddeclarator") return this.derived(inner, base, scope);
     if (declarator.kind !== "arraydeclarator" || base === VOID) return null;
     const size = declarator.subterms.get("size") ?? null;
     let length: bigint | null = null;
@@ -680,7 +683,7 @@ export class Rules extends F.Interpreter {
         continue;
       }
       const tree = Terms.node(...Terms.kindOf(association));
-      const specifiers = (tree.helpers.get("specifiers") ?? []) as readonly Terms.Node[];
+      const specifiers = many(tree.helpers.get("specifiers"));
       // a qualified type, which no operand's type is after its lvalue conversion
       if (tree.kind === Expressions.TYPEID && specifiers.some((s) => s.kind === "cvqualifier")) continue;
       const declared = this.declared(association, term, scope);
@@ -701,6 +704,11 @@ export class Rules extends F.Interpreter {
     }
     return (chosen ?? fallback) as number;
   }
+}
+
+/** A helper's nodes: none where it holds none. */
+function many(value: unknown): readonly Terms.Node[] {
+  return (value ?? []) as readonly Terms.Node[];
 }
 
 function typeNameOf(type: any): string {
@@ -893,9 +901,9 @@ function elements(rules: Rules, target: ArrayType, items: readonly unknown[], sc
   dialect: Terms.Dialect): Map<number, Typed> {
   const type = target.element as CType;
   const limit = target.length === null ? null : Number(target.length);
-  const [first] = Terms.kindOf(items[0] ?? null as any);
-  if (items.length === 1 && (first === Expressions.LITERAL || first === Expressions.CONCATENATEDSTRING)
-    && type.kind === "integer" && type.width === 8) {
+  const first = items.length === 1 ? Terms.kindOf(items[0])[0] : null;
+  if ((first === Expressions.LITERAL || first === Expressions.CONCATENATEDSTRING) && type.kind === "integer"
+    && type.width === 8) {
     const text = (rules.evaluate(items[0], scope) as Typed).value;
     if (typeof text === "string") { // its terminating zero dropped where the array's length leaves no room for it
       const codes = [...new TextEncoder().encode(text), 0];
@@ -910,7 +918,7 @@ function elements(rules: Rules, target: ArrayType, items: readonly unknown[], sc
     let [low, high] = [position, position];
     if (Terms.kindOf(term)[0] === Expressions.DESIGNATEDINITIALIZER) {
       const designated = Terms.node(...Terms.kindOf(term));
-      const designators = (designated.helpers.get("designators") ?? []) as readonly Terms.Node[];
+      const designators = many(designated.helpers.get("designators"));
       const designator = designators[0];
       if (designators.length !== 1 || designator === undefined || designator.kind !== "indexdesignator") {
         throw new TypeError("an array's element is designated by its index");
