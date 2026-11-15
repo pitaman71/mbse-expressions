@@ -7,13 +7,14 @@
  *
  * `Simplifiers.OfAny(expression, scope)` simplifies in a `Scope`, or in one made from an object of variables (see
  * `Framework/Simplifiers`): what the scope determines is folded into the literal of its value, a basic scalar's or a
- * constant's (`None`, `...`, a complex number), or, for a list, a tuple or a dict of such values, into its display
- * (`[1, 2]`); a value with no literal stays, its subterm kept and its own subterms simplified: an object, a generator,
- * a set (whose order is its hash table's), a slice, a closure (a `lambda`'s value) and a template (a t-string's). The
- * rest stays a Python3 expression. Python's rules apply, not Patterns': `and` and `or` give one of their operands,
- * `1 == 1.0` is True, `True + 1` is 2, and a missing attribute throws `AttributeError`. Data objects, read through
- * mbse-schemas' readers (`Framework/Objects`), have their properties as attributes; a `Module` has its members as
- * attributes.
+ * constant's (`None`, `...`, a complex number), or, for a list, a tuple, a dict or a non-empty set of such values,
+ * into its display (`[1, 2]`, a set's items in an order of their values, `{1, 'a'}`), each a closed constructor
+ * expression (mbse-basis [VOC-034: closed constructor expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)); a value
+ * with none stays, its subterm kept and its own subterms simplified: an object, a generator, an empty set, a slice, a
+ * closure (a `lambda`'s value) and a template (a t-string's). The rest stays a Python3 expression. Python's rules
+ * apply, not Patterns': `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a missing
+ * attribute throws `AttributeError`. Data objects, read through mbse-schemas' readers (`Framework/Objects`), have their
+ * properties as attributes; a `Module` has its members as attributes.
  *
  * A `new Scope(variables, { modules, builtins })` resolves names as Python does, innermost first: names bound by lets
  * and imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`,
@@ -1751,8 +1752,8 @@ export const FOLDED: ReadonlySet<string> = new Set([P.LITERAL, P.CONSTANT, P.NAM
  * `yield`, `yield from`, `await` and an `async for` need a statement body (d), as does a target that writes into data;
  * a lone starred target, or two, is invalid syntax (b); whether equal immutable values are one object Python leaves to
  * the implementation (b). The rest is (a): a format or a field whose text Python leaves to its platform or its
- * implementation, a complex power, and a `\N{...}` escape. A value with no literal (a set, a slice, a closure, a
- * template, an object, a generator) is no gap: its rule computes it, its subterm stays, and nothing is named. */
+ * implementation, a complex power, and a `\N{...}` escape. A value with no closed constructor expression (an empty
+ * set, a slice, a closure, a template, an object, a generator) is no gap: its rule computes it, its subterm stays, and nothing is named. */
 export const CATEGORIES: Record<string, Record<string, string>> = {
   Python3: { yield: "d", yieldfrom: "d", await: "d", "async comprehension": "d", "attribute target": "d",
     "subscript target": "d", "starred target": "b", "compare 'is' of equal immutable values": "b" },
@@ -1829,12 +1830,57 @@ function literal(value: unknown): unknown {
   return NATIVE(value);
 }
 
-/** A list's, a tuple's or a dict's display, of its items' literals and displays; null where an item has neither. A
- * dict is a `Map`, or an object of variables, by its string keys. */
+/** The order of the kinds of item a set's display writes: None, `...`, real numbers, complex numbers, strs, bytes and
+ * tuples. */
+function rank(value: unknown): number {
+  if (value === null) return 0;
+  if (value === ELLIPSIS) return 1;
+  if (isNumeric(value)) return 2;
+  if (value instanceof Complex) return 3;
+  if (typeof value === "string") return 4;
+  return value instanceof Uint8Array ? 5 : 6;
+}
+
+/** -1, 0 or 1 ordering two real numbers by value, as Python compares them, a NaN after every other. */
+function compareReals(a: Integral | number, b: Integral | number): number {
+  const [x, y] = [typeof a === "number" && Number.isNaN(a), typeof b === "number" && Number.isNaN(b)];
+  if (x || y) return Number(x) - Number(y);
+  return compareNumbers(a, b);
+}
+
+/** -1, 0 or 1 ordering two items of a set's display (`rank`): real numbers by value, a NaN last; complex numbers by
+ * their real parts, then their imaginary ones; strs by code point and bytes by byte, as Python orders them; tuples item
+ * by item, then by length. Values that compare 0 are written alike. */
+function compareItems(a: unknown, b: unknown): number {
+  const [x, y] = [rank(a), rank(b)];
+  if (x !== y) return x < y ? -1 : 1;
+  if (x < 2) return 0; // None and `...`, each one value
+  if (x === 2) return compareReals(a as Integral | number, b as Integral | number);
+  if (a instanceof Complex) return compareReals(a.real, (b as Complex).real) || compareReals(a.imag, (b as Complex).imag);
+  if (typeof a === "string") return Math.sign(compareStrings(a, b as string));
+  if (a instanceof Uint8Array) return Math.sign(compareBytes(a, b as Uint8Array));
+  const [p, q] = [itemsOf(a as Tuple), itemsOf(b as Tuple)];
+  for (let i = 0; i < Math.min(p.length, q.length); i++) {
+    const order = compareItems(p[i], q[i]);
+    if (order !== 0) return order;
+  }
+  return Math.sign(p.length - q.length);
+}
+
+/** A list's, a tuple's, a dict's or a non-empty set's display, of its items' literals and displays; null where an item
+ * has neither. A dict is a `Map`, or an object of variables, by its string keys. A set's items are written in an order
+ * both implementations compute (`compareItems`), not their insertion's: an empty set has no display (`{}` is a dict,
+ * and `set()` calls a name). */
 function display(value: unknown): unknown {
   if (Array.isArray(value) || value instanceof Tuple) {
     const items = itemsOf(value).map((item) => literal(item) ?? display(item));
     return items.includes(null) ? null : Array.isArray(value) ? P.list_(...items) : P.tuple_(...items);
+  }
+  if (value instanceof Set && value.size > 0) { // its items hashable: each written is one `rank` orders
+    const items = [...value].map((item) => [item, literal(item) ?? display(item)] as const);
+    if (items.some(([, written]) => written === null)) return null;
+    items.sort(([a], [b]) => compareItems(a, b));
+    return P.set_(...items.map(([, written]) => written));
   }
   if (!isDict(value)) return null;
   const pairs = entries(value);

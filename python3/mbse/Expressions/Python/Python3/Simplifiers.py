@@ -3,12 +3,14 @@ reach.
 
 `Simplifiers.OfAny(expression, scope)` simplifies in a `Scope`, or in one made from a mapping of variables (see
 `mbse.Expressions.Framework.Simplifiers`): what the scope determines is folded into the literal of its value, a basic
-scalar's or a constant's (`None`, `...`, a complex number), or, for a list, a tuple or a dict of such values, into its
-display (`[1, 2]`); a value with no literal stays, its subterm kept and its own subterms simplified: an object, a
-generator, a set (whose order is its hash table's), a slice, a closure (a `lambda`'s value) and a template (a
-t-string's). The rest stays a Python3 expression. Python's rules apply, not Patterns': `and` and `or` give one of their
-operands, `1 == 1.0` is True, `True + 1` is 2, and a missing attribute raises `AttributeError`. Data objects, read
-through mbse-schemas' readers (`Framework.Objects`), have their properties as attributes.
+scalar's or a constant's (`None`, `...`, a complex number), or, for a list, a tuple, a dict or a non-empty set of such
+values, into its display (`[1, 2]`, a set's items in an order of their values, `{1, 'a'}`), each a closed constructor
+expression (mbse-basis [VOC-034: closed constructor expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)); a value
+with none stays, its subterm kept and its own subterms simplified: an object, a generator, an empty set, a frozenset, a
+slice, a closure (a `lambda`'s value) and a template (a t-string's). The rest stays a Python3 expression. Python's
+rules apply, not Patterns': `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
+missing attribute raises `AttributeError`. Data objects, read through mbse-schemas' readers (`Framework.Objects`), have
+their properties as attributes.
 
 A `Scope(variables, modules, builtins)` resolves names as Python does, innermost first: names bound by lets and
 imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`, `float`,
@@ -41,6 +43,7 @@ power other than an integer one, and a real power whose value is complex, which 
 
 from __future__ import annotations
 
+import functools
 import math
 import operator
 import re
@@ -800,8 +803,8 @@ CATEGORIES: dict[str, dict[str, str]] = {
 `yield`, `yield from`, `await` and an `async for` need a statement body (d), as does a target that writes into data;
 a lone starred target, or two, is invalid syntax (b); whether equal immutable values are one object Python leaves to
 the implementation (b). The rest is (a): a format or a field whose text Python leaves to its platform or its
-implementation, a complex power, and a `\\N{...}` escape. A value with no literal (a set, a slice, a closure, a
-template, an object, a generator) is no gap: its rule computes it, its subterm stays, and nothing is named."""
+implementation, a complex power, and a `\\N{...}` escape. A value with no closed constructor expression (an empty
+set, a frozenset, a slice, a closure, a template, an object, a generator) is no gap: its rule computes it, its subterm stays, and nothing is named."""
 
 
 class _Rules(F.Interpreter):
@@ -858,11 +861,53 @@ def _literal(value: Any) -> Any:
     return _NATIVE(value)
 
 
+_RANKS = {type(None): 0, type(Ellipsis): 1, bool: 2, int: 2, float: 2, complex: 3, str: 4, bytes: 5, tuple: 6}
+"""The order of the kinds of item a set's display writes: None, `...`, real numbers, complex numbers, strs, bytes and
+tuples."""
+
+
+def _real(a: Any, b: Any) -> int:
+    """-1, 0 or 1 ordering two real numbers by value, as Python compares them, a NaN after every other."""
+    if a != a or b != b:
+        return (a != a) - (b != b)
+    return (a > b) - (a < b)
+
+
+def _compare(a: Any, b: Any) -> int:
+    """-1, 0 or 1 ordering two items of a set's display (`_RANKS`): real numbers by value, a NaN last; complex numbers
+    by their real parts, then their imaginary ones; strs by code point and bytes by byte, as Python orders them; tuples
+    item by item, then by length. Values that compare 0 are written alike."""
+    ranks = _RANKS[type(a)], _RANKS[type(b)]
+    if ranks[0] != ranks[1]:
+        return -1 if ranks[0] < ranks[1] else 1
+    if ranks[0] < 2:  # None and `...`, each one value
+        return 0
+    if type(a) is complex:
+        return _real(a.real, b.real) or _real(a.imag, b.imag)
+    if type(a) is tuple:
+        for x, y in zip(a, b):
+            order = _compare(x, y)
+            if order:
+                return order
+        return (len(a) > len(b)) - (len(a) < len(b))
+    if ranks[0] == 2:
+        return _real(a, b)
+    return (a > b) - (a < b)
+
+
 def _display(value: Any) -> Any:
-    """A list's, a tuple's or a dict's display, of its items' literals and displays; None where an item has neither."""
+    """A list's, a tuple's, a dict's or a non-empty set's display, of its items' literals and displays; None where an
+    item has neither. A set's items are written in an order both implementations compute (`_compare`), not its hash
+    table's: an empty set has no display (`{}` is a dict, and `set()` calls a name), nor has a frozenset."""
     if type(value) in (list, tuple):
         items = [_literal(item) or _display(item) for item in value]
         return None if None in items else (_P.list_ if type(value) is list else _P.tuple_)(*items)
+    if type(value) is set and value:  # its items hashable: each written is one of `_RANKS`
+        items = [(item, _literal(item) or _display(item)) for item in value]
+        if any(written is None for _, written in items):
+            return None
+        items.sort(key=functools.cmp_to_key(lambda a, b: _compare(a[0], b[0])))
+        return _P.set_(*(written for _, written in items))
     if type(value) is dict:
         keys = [_literal(key) or _display(key) for key in value]
         items = [_literal(item) or _display(item) for item in value.values()]
