@@ -2119,18 +2119,17 @@ every family's folding rules fill, evaluation retired as a public procedure.
      sequence operators, parentheses, and TypeScript's five assertions, erased to their operand. The rules subclass the
      framework's `Interpreter` for `constant` and `this` only.
 335. **ECMAScript's values and abstract operations, `TypeScript/TypeScript5/ECMAScript`** *(agent, as the inventory's
-     partition proposed; renamed from `Abstract` on 2026-11-15, as the user agreed, so that the module that models
-     ECMA-262 takes the standard's name, by mbse-basis PRI-012)*: the value model both implementations share, and
-     ECMA-262's operations over it, named as the standard names them (`type_of`/`typeOf`, `to_boolean`, `to_primitive`,
-     `to_number`, `to_numeric`, `to_string`, `to_property_key`, `string_to_number`, `string_to_bigint`,
-     `is_strictly_equal`, `is_loosely_equal`, `is_less_than`, `binary`, `unary`, `get`, `has_property`, `iterate`,
-     `own_entries`, `ordered`, `call`, `construct`, `instance_of`, `cook`, `is_array_index`), with `UNDEFINED` and
-     `HOLE` (Python), `RegExp`, `Closure`, `TemplateStrings` (Python; TypeScript `templateStrings`/`isTemplateStrings`),
-     `BUILTINS`, `MAX_BIGINT_BITS`, `kind` and `is_primitive`. TypeScript computes over its natives where ECMAScript's
-     operation is JavaScript's own (number arithmetic, string order, bigints), Python models it (UTF-16 code units,
-     ToInt32, Number::remainder and ::exponentiate, truncating bigint division); every error both raise is thrown by the
-     module's own code, by the same class and message (TypeError, RangeError: Python's `ECMAScript.RangeError`, a
-     `ValueError`).
+     partition proposed; the module takes the name of the standard it models, ECMA-262, by mbse-basis PRI-012)*: the
+     value model both implementations share, and ECMA-262's operations over it, named as the standard names them
+     (`type_of`/`typeOf`, `to_boolean`, `to_primitive`, `to_number`, `to_numeric`, `to_string`, `to_property_key`,
+     `string_to_number`, `string_to_bigint`, `is_strictly_equal`, `is_loosely_equal`, `is_less_than`, `binary`, `unary`,
+     `get`, `has_property`, `iterate`, `own_entries`, `ordered`, `call`, `construct`, `instance_of`, `cook`,
+     `is_array_index`), with `UNDEFINED` and `HOLE` (Python), `RegExp`, `Closure`, `TemplateStrings` (Python; TypeScript
+     `templateStrings`/`isTemplateStrings`), `BUILTINS`, `MAX_BIGINT_BITS`, `kind` and `is_primitive`. TypeScript
+     computes over its natives where ECMAScript's operation is JavaScript's own (number arithmetic, string order,
+     bigints), Python models it (UTF-16 code units, ToInt32, Number::remainder and ::exponentiate, truncating bigint
+     division); every error both raise is thrown by the module's own code, by the same class and message (TypeError,
+     RangeError: Python's `ECMAScript.RangeError`, a `ValueError`).
 336. **What is reachable** *(agent)*: nothing beyond the scope, since expressions may come from data. A call calls only
      a function the scope provides or a closure the expression makes; `new`, a class the scope provides (Python: a
      `type`; TypeScript: a constructor); a host function is called without `this`. ECMAScript's built-in methods are
