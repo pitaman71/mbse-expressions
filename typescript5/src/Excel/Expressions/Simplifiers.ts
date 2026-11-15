@@ -1,10 +1,11 @@
 /**
- * Evaluators of the Excel dialect: compute a formula by Excel's rules.
+ * Simplifiers of the Excel dialect: simplify a formula by Excel's rules.
  *
- * `Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from: an `Expression`, its
- * root) with names bound to numbers, text, logicals and records (mappings, or data objects read through mbse-schemas'
- * readers, `Framework.Objects`). Values are `number`, `string` (text), `boolean` (logical) and
- * `Domains.Error`. Excel's rules apply, not Patterns':
+ * `Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from: an `Expression`,
+ * its root) with names bound to numbers, text, logicals and records (mappings, or data objects read through
+ * mbse-schemas' readers, `Framework.Objects`), folding what they determine into the constant of its value, a number's,
+ * a text's or a logical's (an error, an array or a record has none, and its subterm stays); see
+ * `Framework/Simplifiers`. Values are `number`, `string` (text), `boolean` (logical) and `Domains.Error`. Excel's rules apply, not Patterns':
  *
  * - Errors are values: a field a record does not have is `#FIELD!`, a name not bound is `#NAME?`, and an operand of the
  *   wrong type is `#VALUE!`. Errors propagate through operators and functions, except `ISERROR`, which tests for them,
@@ -30,17 +31,17 @@
  *
  * A `new Workbook(names, sheets, ...)` is the scope: its defined `names`, its `sheets` of cells (`{ Sheet1: { A1: 1n
  * } }`), the current `sheet` (by default the first), other workbooks by name (`books`) and `add_ins`, the functions
- * beyond the built-ins. A name is its innermost `LET`, then a defined name, else `#NAME?`; a cell is its value, 0 when
- * empty, or `#REF!` when its sheet or book does not exist; an add-in function is called with its arguments' values,
- * and an unknown function is `#NAME?`. An evaluator given an object of names makes a workbook whose defined names it
- * holds.
+ * beyond the built-ins. A name is its innermost `LET`, then a defined name; a cell is its value, 0 when empty; an
+ * add-in function is called with its arguments' values. A name the workbook does not define, a cell of a sheet or a
+ * book it does not have, and a function neither built in nor an add-in stay in the residual, as the workbook does not
+ * say what they are. A simplifier given an object of names makes a workbook whose defined names it holds.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
 
-import * as F from "../../Framework/Evaluators.js";
+import * as F from "../../Framework/Simplifiers.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
@@ -55,7 +56,6 @@ type Fn = (...args: any[]) => unknown;
 
 const VALUE = Domains.Error.of("#VALUE!");
 const FIELD = Domains.Error.of("#FIELD!");
-const NAME = Domains.Error.of("#NAME?");
 const REF = Domains.Error.of("#REF!");
 const NUM = Domains.Error.of("#NUM!");
 const NA = Domains.Error.of("#N/A");
@@ -103,19 +103,18 @@ export class Workbook extends S.Variables {
   override lookup(reference: any): unknown {
     const [tag, record] = Terms.kindOf(reference);
     if (tag !== "cell") {
-      const [found, value] = this.find(Terms.nameOf(reference));
-      return found ? valueOf(value) : NAME;
+      return valueOf(this.value(Terms.nameOf(reference) as string));
     }
     const attributes = Terms.attributesOf(record);
     const [other, sheet] = [attributes.get("book") ?? null, attributes.get("sheet") ?? null];
     let book: Workbook = this;
     if (other !== null && other !== this.name) {
       const found = this.books.get(other);
-      if (found === undefined) return REF;
+      if (found === undefined) throw new S.Unbound(other);
       book = found;
     }
     const cells = book.sheets.get(sheet ?? book.sheet);
-    if (cells === undefined) return REF;
+    if (cells === undefined) throw new S.Unbound(sheet ?? book.sheet);
     const key = Expressions.address(attributes.get("address")) as string;
     return cells.has(key) ? numberOf(cells.get(key)) : 0;
   }
@@ -127,7 +126,7 @@ function isError(value: unknown): value is ExcelError {
 
 function addIn(name: string, args: F.Thunk[], _node: unknown, scope: Workbook): unknown {
   const fn = scope.add_ins.get(name.toUpperCase());
-  if (fn === undefined) return NAME;
+  if (fn === undefined) throw new S.Unbound(name);
   const values = args.map((argument) => argument());
   for (const value of values) if (isError(value)) return value;
   return numberOf(fn(...values));
@@ -361,8 +360,8 @@ function field(args: F.Thunk[], node: any): unknown {
   return valueOf(fields.get(name));
 }
 
-/** Evaluates the terms of the Excel dialect. */
-export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
+/** The folding rules of the Excel dialect. */
+export const RULES = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([
   ["call", new Map<string, F.Implementation>([
     ["AND", logic("AND", (truths) => truths.every(Boolean))], ["OR", logic("OR", (truths) => truths.some(Boolean))],
     ["NOT", not], ["IF", if_], ["ISERROR", (args) => isError((args[0] as F.Thunk)())],
@@ -382,8 +381,11 @@ export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string
   ["map", map],
 ]), { literal: numberOf, scope: (names) => new Workbook(names), extension: addIn });
 
-/** The value of a formula (a term value, or anything `Terms.term` reads one from) in a workbook, or with the defined
- * names in an object. */
-export function OfAny(expression: unknown, scope: Workbook | S.Bindings = {}): unknown {
-  return INTERPRETER.run(expression, scope);
+/** The simplifier of the Excel dialect. */
+export const SIMPLIFIER = new F.Simplifier(RULES, { literal: F.natives(Expressions.DIALECT) });
+
+/** The simplification of a formula (a term value, or anything `Terms.term` reads one from) in a workbook, or with the
+ * defined names in an object. */
+export function OfAny(expression: unknown, scope: Workbook | S.Bindings = {}): F.Simplified {
+  return SIMPLIFIER.run(expression, scope);
 }

@@ -1,8 +1,8 @@
 # mbse-expressions
 
-> Constraints as neutral, language-independent data: expressions with schemas, built on mbse-schemas. An expression is stored, validated, evaluated, and translated between expression languages (dialects): Patterns (formerly Basic), the core vocabulary, and Python3, TypeScript5, MATLAB, Excel, LaTeX, C, Cpp and SystemVerilog, each rendered as its source, and all but LaTeX evaluated by their own rules. Equivalent Python (`mbse.Expressions`) and TypeScript (`@mbse/expressions`) implementations write byte-identical JSON. Aimed at the constraints of interfaces and model-based systems engineering (MBSE) models, and at union discriminators for mbse-schemas.
+> Constraints as neutral, language-independent data: expressions with schemas, built on mbse-schemas. An expression is stored, validated, simplified (evaluated where the data decides it), and translated between expression languages (dialects): Patterns (formerly Basic), the core vocabulary, and Python3, TypeScript5, MATLAB, Excel, LaTeX, C, Cpp and SystemVerilog, each rendered as its source, and all but LaTeX evaluated by their own rules. Equivalent Python (`mbse.Expressions`) and TypeScript (`@mbse/expressions`) implementations write byte-identical JSON. Aimed at the constraints of interfaces and model-based systems engineering (MBSE) models, and at union discriminators for mbse-schemas.
 
-Patterns is three-valued (an absent property is unknown) and never coerces, only its core vocabulary is guaranteed, each dialect evaluates by its own language's rules, and evaluators reach only what their scope allowlists.
+Patterns is three-valued (an absent property is unknown) and never coerces, only its core vocabulary is guaranteed, each dialect simplifies by its own language's rules, and simplifiers reach only what their scope allowlists.
 
 ## Why
 
@@ -11,7 +11,7 @@ Patterns is three-valued (an absent property is unknown) and never coerces, only
 ## Using it
 
 - [Agent skill](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/SKILL.md): when to use it, the practices that prevent most mistakes (why, when and how, each how linked to its case in the Python and TypeScript notebooks), and references loaded per task
-- [Dialects](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/references/dialects.md): choosing one, its constructors and source text, its evaluation rules and its scope
+- [Dialects](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/references/dialects.md): choosing one, its constructors and source text, its simplification rules and its scope
 - [Translating](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/references/translating.md): pairwise translators, and what survives a round trip
 - [Extending](https://github.com/pitaman71/mbse-expressions/blob/main/skills/mbse-expressions/references/extending.md): adding a dialect or a translator
 
@@ -21,7 +21,7 @@ Patterns is three-valued (an absent property is unknown) and never coerces, only
 
 ## Design
 
-- [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md), in mbse-basis, with its capabilities: the Patterns dialect, evaluation, collections, value domains, the framework, partial evaluation, the dialects and the translators, plus the open questions
+- [FEA-024: expressions as data](https://github.com/pitaman71/mbse-basis/blob/main/docs/features/FEA-024.md), in mbse-basis, with its capabilities: the Patterns dialect, simplification, collections, value domains, the framework, partial evaluation, the dialects and the translators, plus the open questions
 
 ## Optional
 

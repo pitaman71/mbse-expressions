@@ -1,14 +1,19 @@
 /**
- * Evaluators of the Patterns dialect: compute the value of an expression.
+ * Simplifiers of the Patterns dialect: simplify an expression, folding what its scope determines into literals.
  *
- * `Evaluators.OfAny(term, scope)` evaluates any term with the variables in `scope` bound, and `Evaluators.OfLiteral`,
- * `OfCall`, `OfVariable`, `OfLet` and `OfQuantifier` evaluate one kind; each takes a term value, or anything
- * `Terms.term` reads one from (an `Expression`, its root). The value is a native value, an object, or `null` when it is
- * unknown.
+ * `Simplifiers.OfAny(term, scope)` simplifies any term with the variables in `scope` bound (see
+ * `Framework/Simplifiers`): a term value, or anything `Terms.term` reads one from (an `Expression`, its root). What the
+ * scope determines is folded into the literal of its value, a native's (an object, a collection or an unknown value
+ * has none, and its subterm stays); the rest stays a Patterns expression, the residual, which agrees with the term
+ * wherever the term has a value. Its root is a literal when the scope determines the whole term: then
+ * `Simplified.value` is its value; otherwise `value` is `null`, which three-valued logic reads as unknown.
  *
  * - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are
- *   unknown. `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the
- *   first does not decide.
+ *   unknown. `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is folded only when the first
+ *   does not decide, and with what is known of either: a false operand of `and` (a true one of `or`) decides it, a true
+ *   operand of `and` (a false one of `or`) drops out, and `implies` is true when its condition is false or its
+ *   conclusion true, and its conclusion when its condition is true (mbse-basis [CAP-106: expressions evaluated
+ *   three-valued](mbse:mbse-basis/docs/capabilities/CAP-106.md)).
  * - No coercion. Comparisons follow mbse-basis [CAP-111: equality and ordering defined by the
  *   schema](mbse:mbse-basis/docs/capabilities/CAP-111.md): natives of one type by value, reference objects by
  *   identity, everything else deeply (see Deep equality); values of different types are incomparable. Arithmetic takes
@@ -21,8 +26,8 @@
  *   `entries` gives an object's entries as one of `Domains.Record`s, which `get` and `has` read. The collection
  *   operations and the quantifiers (`all`, `any`, `count`) follow Kleene's logic over the items; an unknown collection
  *   gives unknown.
- * - Only the operations Patterns defines (its install's, which `define` names) are evaluated. Unknown operations, wrong numbers of
- *   arguments, unbound variables and wrong operand types raise, as do the problems `validate()` reports.
+ * - Only the operations Patterns defines (its install's, which `define` names) are folded; any other stays, as an
+ *   extension. Wrong numbers of arguments and wrong operand types throw, as do the problems `validate()` reports.
  * - `get` and `has` read any data object, read through mbse-schemas' readers (`Framework/Objects`): reference
  *   objects, value objects, union and intersection values.
  * - Deep equality: a value object, a union or intersection value, or an entry's record is equal to another when the
@@ -30,16 +35,17 @@
  *   through the visitor protocols; a property present in one and absent in the other is incomparable. A positional collection is equal to another of the same length whose items are equal in order, and
  *   unequal to one of another length; a keyed collection to another with the same keys and equal values, in any
  *   order, and incomparable to one with other keys. Equal is Kleene's and of the parts' equalities.
+ * - A let of a known value binds it in its body and stays only while the body refers to its name.
  *
- * A constraint about a value is evaluated with the variable it names bound to it, such as `person`:
- * `Evaluators.OfAny(constraint, { person: value })`.
+ * A constraint about a value is simplified with the variable it names bound to it, such as `person`:
+ * `Simplifiers.OfAny(constraint, { person: value }).value`, true, false or unknown (`null`).
  */
 
 import { Comparison, Errors, Repr, Schemas } from "@mbse/schemas/Framework";
 import type { Visitors } from "@mbse/schemas/Framework";
 
 import type * as FD from "../../Framework/Domains.js";
-import * as F from "../../Framework/Evaluators.js";
+import * as F from "../../Framework/Simplifiers.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
@@ -50,7 +56,7 @@ const { typeName } = Repr;
 const { ValueError } = Errors;
 type Native = Visitors.Scalar;
 
-/** The variables an expression is evaluated with, or a scope. */
+/** The variables an expression is simplified with, or a scope. */
 export type Scope = S.Scope | S.Bindings;
 
 const NATIVES: ReadonlyMap<string, unknown> = new Map<string, unknown>([
@@ -409,43 +415,34 @@ export const OPERATIONS: ReadonlyMap<string, F.Implementation> = new Map<string,
   ["sum", strict(sum)], ["min", strict(extreme)], ["max", strict(extreme)], ["entries", strict(entries)],
 ]);
 
-/** The interpreter of the Patterns dialect, which `Partials` reduces with. */
-export const INTERPRETER = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([["call", OPERATIONS],
+/** The folding rules of the Patterns dialect. */
+export const RULES = new F.Interpreter(Expressions.DIALECT, new Map<string, any>([["call", OPERATIONS],
   ["quantifier", QUANTIFIERS], ["list", list], ["mapping", mapping]]));
 
-/** The value of any term, with the variables in `scope` bound. */
-export function OfAny(expression: unknown, scope: Scope | null = null): unknown {
-  return INTERPRETER.run(expression, scope);
+/** Kleene's short-circuits for `and`, `or` and `implies`, with what is known of their operands. */
+function simplify(node: any, results: F.Result[]): F.Result | null {
+  const name = Terms.attributesOf(Terms.kindOf(node)[1]).get("callable"); // a call's: the only application
+  if (name === "and" || name === "or") {
+    const decisive = name === "or"; // the value that decides: true for or, false for and
+    for (const result of results) if (result.known && result.value === decisive) return SIMPLIFIER.known(result.expression, decisive);
+    for (const [i, result] of results.entries()) {
+      if (result.known && result.value === !decisive) return results[1 - i] as F.Result;
+    }
+  }
+  if (name === "implies") {
+    const [condition, conclusion] = results as [F.Result, F.Result];
+    if ((condition.known && condition.value === false) || (conclusion.known && conclusion.value === true)) {
+      return SIMPLIFIER.known(node, true);
+    }
+    if (condition.known && condition.value === true) return conclusion;
+  }
+  return null;
 }
 
-function of(tag: string, expression: unknown, scope: Scope | null): unknown {
-  const term = Terms.term(expression);
-  const found = Terms.kindOf(term)[0];
-  if (found !== tag) throw new TypeError(`expected ${Terms.article(tag)}, got ${Terms.article(found)}`);
-  return INTERPRETER.run(term, scope);
-}
+/** The simplifier of the Patterns dialect. */
+export const SIMPLIFIER = new F.Simplifier(RULES, { literal: F.natives(Expressions.DIALECT), simplify });
 
-/** The value of a literal. */
-export function OfLiteral(expression: unknown, scope: Scope | null = null): unknown {
-  return of("literal", expression, scope);
-}
-
-/** The value of a call, with the variables in `scope` bound. */
-export function OfCall(expression: unknown, scope: Scope | null = null): unknown {
-  return of("call", expression, scope);
-}
-
-/** The value `scope` binds to a variable. */
-export function OfVariable(expression: unknown, scope: Scope | null = null): unknown {
-  return of("variable", expression, scope);
-}
-
-/** The value of a let's body, with its name bound to its value and the variables in `scope` bound. */
-export function OfLet(expression: unknown, scope: Scope | null = null): unknown {
-  return of("let", expression, scope);
-}
-
-/** The value of a quantifier, with the variables in `scope` bound. */
-export function OfQuantifier(expression: unknown, scope: Scope | null = null): unknown {
-  return of("quantifier", expression, scope);
+/** The simplification of any term, with the variables in `scope` bound. Python's `OfAny`. */
+export function OfAny(expression: unknown, scope: Scope | null = null): F.Simplified {
+  return SIMPLIFIER.run(expression, scope);
 }

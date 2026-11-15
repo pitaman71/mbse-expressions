@@ -1,16 +1,20 @@
 /**
- * Evaluators of the C dialect: compute an expression by C's rules for arithmetic types, which C++ shares (`Cpp`'s
- * interpreter is `interpreter(Cpp.Expressions.DIALECT)`), in TypeScript.
+ * Simplifiers of the C dialect: simplify an expression by C's rules for arithmetic types, which C++ shares (`Cpp`'s
+ * simplifier is `simplifier(Cpp.Expressions.DIALECT, ...)`), in TypeScript.
  *
- * `Evaluators.OfAny(term, scope)` evaluates a term value (or anything `Terms.term` reads one from, an `Expression`) in
- * a `new Scope(variables, { functions })`. Values carry their C type while evaluating, and the result is its native: a
+ * `Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from, an `Expression`) in
+ * a `new Scope(variables, { functions })` (see `Framework/Simplifiers`). Values carry their C type while folding, and a
+ * value folds into the literal of its type, its suffix as C writes it (`5u`, `2.5f`, `true`, a string), where its type
+ * has one: an `int`, `long` or `long long`, signed or not, a finite `float` or `double`, a `bool`; a value of another
+ * type (a `char`, a `short`, `long double`) or an object stays, its subterms simplified. A simplification whose root is
+ * a literal gives its native as its value: a
  * bigint, a number (a value of a format whose values are text, `long double`'s under most ABIs, as its text, as
  * `Patterns.Ieee754` writes it), a boolean, a string, or an object. A variable's type is its value's: a boolean is a
  * `bool`, a bigint an `int`, `long` or `unsigned long` as the first that holds it, and a number a `double` (a value
  * carries no domain: a variable of another type waits for domain inference, the port's stage 3, Decided, 2). Every
  * named type it computes in (a literal's, a variable's, a cast's, the promotions' `int`, a comparison's `bool`) is a
  * stored domain, read through the term's holder (`Domains.Types`): among its dialect's domains, then its holder's
- * ABI's, so the same term evaluates as each ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is
+ * ABI's, so the same term folds as each ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is
  * signed, and 200 under AAPCS64's; `long double` is x87's format under the one and `binary128` under the other). A lone
  * term is refused where it reads a type (mbse-schemas' TypeError), and so is a type neither dialect defines, by name.
  * C's rules apply:
@@ -33,25 +37,26 @@
  *   calls a function the scope provides, by its name, and nothing else.
  *
  * A literal's type is what its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's
- * `int` and C++'s `char`), else its value's. Evaluation stays shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): `EVALUATED`
- * names the kinds C evaluated before it was complete, in their complete shapes; any other kind throws
- * `NotImplementedError` by name ("C sizeofexpression is not evaluated"), and so does what an evaluated kind holds
- * beyond its former shape: an operator its vocabulary has but no rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*'
- * is not evaluated"), a literal of a type no evaluator has values of ("C literal of _BitInt is not evaluated"), a cast
- * to a type that is not arithmetic, a subscript of several indices, a call of a callee that is not a function's name, a
- * member that is not an identifier, C++'s name used as an expression that is not an identifier (`std::cout`, "Cpp
- * idexpression of a name that is not an identifier is not evaluated"), and GNU's conditional without a consequence. C's
- * name used as an expression is the framework's `variable`, and C++'s an `idexpression` holding its identifier
- * (`Cpp/Evaluators`' `EVALUATED`). Invalid syntax throws `ValueError` by name, as every dialect's does ("C error is not
- * evaluated"), where a cast's type stands too.
+ * `int` and C++'s `char`), else its value's. Its rules stay shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"):
+ * `FOLDED` names the kinds C evaluated before it was complete, in their complete shapes; any other kind stays in the
+ * residual, named ("C sizeofexpression is not simplified"), and so does what a folded kind holds beyond its former
+ * shape: an operator its vocabulary has but no rule here (`*`, `&`, `++`, `,`, "C unaryexpression '*' is not
+ * simplified"), a literal of a type no rule has values of ("C literal of _BitInt is not simplified"), a cast to a type
+ * that is not arithmetic, a subscript of several indices, a call of a callee that is not a function's name, a member
+ * that is not an identifier, C++'s name used as an expression that is not an identifier (`std::cout`, "Cpp idexpression
+ * of a name that is not an identifier is not simplified"), and GNU's conditional without a consequence. C's name used as
+ * an expression is the framework's `variable`, and C++'s an `idexpression` holding its identifier (`Cpp/Simplifiers`'
+ * `FOLDED`). Invalid syntax stays too, named, as every dialect's does ("C error is not simplified"), where a cast's type
+ * stands too. A name the scope does not bind, or a function it does not provide, stays. `CATEGORIES` gives what stays
+ * the evaluation inventory's class.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
 
-import { NameError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
-import * as F from "../../Framework/Evaluators.js";
+import { OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
+import * as F from "../../Framework/Simplifiers.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
@@ -59,13 +64,13 @@ import * as Ieee754 from "../../Patterns/Expressions/Ieee754.js";
 import * as Domains from "./Domains.js";
 import * as Expressions from "./Expressions.js";
 
-const { KeyError, NotImplementedError, ValueError } = Errors;
+const { KeyError, ValueError } = Errors;
 const { repr, typeName } = Repr;
 type CType = Domains.CType;
 type Fn = (...args: any[]) => unknown;
 const [EVEN, ZERO] = ["roundTiesToEven", "roundTowardZero"];
 
-/** A value while evaluating: its C type (null for a string or an object) and its native. */
+/** A value while folding: its C type (null for a string or an object) and its native. */
 class Typed {
   constructor(readonly ctype: CType | null, readonly value: any) {}
 }
@@ -97,7 +102,7 @@ function bool(ctype: CType): CType {
 }
 
 function refuse(dialect: Terms.Dialect, what: string): Error {
-  return new NotImplementedError(`${dialect.name()} ${what} is not evaluated`);
+  return new F.NoRule(dialect.name(), what);
 }
 
 /** A literal of the type its text encodes: an integer that its type holds, a floating value rounded to its type; a
@@ -297,10 +302,10 @@ function attributes(node: any): Map<string, any> {
 
 function cast(dialect: Terms.Dialect): F.Implementation {
   return (args, node) => {
-    const type_ = Terms.argumentsOf(Terms.kindOf(node)[1])[0]; // a C Types term, which the cast reads, not evaluates
+    const type_ = Terms.argumentsOf(Terms.kindOf(node)[1])[0]; // a C Types term, which the cast reads, not folds
     const [kind] = Terms.kindOf(type_);
-    // invalid syntax where the type stands, refused as every dialect refuses it
-    if (Terms.INVALID_KINDS.has(kind)) throw new ValueError(`${dialect.owner(type_).name()} ${kind} is not evaluated`);
+    // invalid syntax where the type stands, named by its owner, as every dialect names it
+    if (Terms.INVALID_KINDS.has(kind)) throw new F.NoRule(dialect.owner(type_).name(), kind);
     const target = Expressions.castType(Expressions.typeName(type_), typesOf(node, dialect));
     if (target === null) throw refuse(dialect, "castexpression to a type that is not arithmetic");
     return convert((args[1] as F.Thunk)(), target);
@@ -370,32 +375,55 @@ export class Scope extends S.Variables {
   override lookup(reference: any): unknown {
     const path = Terms.dialectOf(reference).slice("Expressions.".length, -".Term".length);
     if (Terms.nameOf(reference) === null) { // C++'s idexpression of a name that is not an identifier: `std::cout`
-      throw new NotImplementedError(`${Terms.dialectName(path)} ${Terms.kindOf(reference)[0]} of a name that is not `
-        + "an identifier is not evaluated");
+      throw new F.NoRule(Terms.dialectName(path), `${Terms.kindOf(reference)[0]} of a name that is not an identifier`);
     }
     return typed(super.lookup(reference), new Domains.Types(reference, path));
   }
 
-  override unbound(reference: any): never {
-    throw new NameError(`use of undeclared identifier '${Terms.nameOf(reference)}'`);
-  }
-
   function(name: string): Fn {
     const fn = this.functions.get(name);
-    if (fn === undefined) throw new NameError(`use of undeclared identifier '${name}'`);
+    if (fn === undefined) throw new S.Unbound(name);
     return fn;
   }
 }
 
-/** The kinds the evaluator evaluates, those C evaluated before it was complete; any other is refused by name. */
-export const EVALUATED: ReadonlySet<string> = new Set([Expressions.LITERAL, Expressions.VARIABLE,
+/** The kinds its rules fold, those C evaluated before it was complete; any other stays in the residual, named. */
+export const FOLDED: ReadonlySet<string> = new Set([Expressions.LITERAL, Expressions.VARIABLE,
   Expressions.UNARYEXPRESSION, Expressions.BINARYEXPRESSION, Expressions.CONDITIONALEXPRESSION,
   Expressions.CASTEXPRESSION, Expressions.MEMBEREXPRESSION, Expressions.SUBSCRIPTEXPRESSION,
   Expressions.CALLEXPRESSION]);
 
-/** The interpreter of a dialect of the C family, `C`'s or `Cpp`'s, evaluating the kinds `evaluated` names: its values
+/** The evaluation inventory's class of what each dialect C reads has no rule for (`a` where none is given). */
+export const CATEGORIES: Record<string, Record<string, string>> = {
+  C: {
+    initializerlist: "b", designatedinitializer: "b",
+    ...Object.fromEntries(["statementexpression", "assignmentexpression", "postfixexpression", "unaryexpression '*'",
+      "unaryexpression '&'", "unaryexpression '++'", "unaryexpression '--'",
+      "castexpression to a type that is not arithmetic", "callexpression of a callee that is not a function's name"]
+      .map((what) => [what, "d"])),
+  },
+  "C Types": { "*": "b" }, "C Preprocessor": { "*": "b", definedexpression: "a" },
+};
+
+/** The suffix of a literal of each type that has one, as C writes it. */
+const SUFFIXES = new Map<string, string | null>([["int", null], ["unsigned int", "u"], ["long", "l"],
+  ["unsigned long", "ul"], ["long long", "ll"], ["unsigned long long", "ull"], ["double", null], ["float", "f"],
+  ["bool", null]]);
+
+/** The literal of a value of its type, written by `write`; null for a type no literal has, or an object. */
+function literalOf(write: (value: unknown, suffix?: string | null) => unknown): (value: Typed) => unknown {
+  return (value) => {
+    const native = value.value;
+    if (value.ctype === null) return typeof native === "string" ? write(native) : null;
+    const name = value.ctype.name();
+    if (!SUFFIXES.has(name) || (typeof native === "number" && !Number.isFinite(native))) return null;
+    return write(native, SUFFIXES.get(name));
+  };
+}
+
+/** The folding rules of a dialect of the C family, `C`'s or `Cpp`'s, folding the kinds `folded` names: its values
  * carry their C types. */
-export function interpreter(dialect: Terms.Dialect, evaluated: ReadonlySet<string> = EVALUATED): F.Interpreter {
+export function rules(dialect: Terms.Dialect, folded: ReadonlySet<string> = FOLDED): F.Interpreter {
   return new F.Interpreter(dialect, new Map<string, any>([
     [Expressions.BINARYEXPRESSION, new Map<string, F.Implementation>([
       ...["+", "-", "*", "/", "%", "&", "^", "|"].map((op) => [op, binaryArithmetic(op)] as [string, F.Implementation]),
@@ -407,13 +435,19 @@ export function interpreter(dialect: Terms.Dialect, evaluated: ReadonlySet<strin
     [Expressions.CONDITIONALEXPRESSION, conditional(dialect)], [Expressions.CASTEXPRESSION, cast(dialect)],
     [Expressions.MEMBEREXPRESSION, member(dialect)], [Expressions.SUBSCRIPTEXPRESSION, subscript(dialect)],
     [Expressions.CALLEXPRESSION, call(dialect)],
-  ]), { literal: untyped, typed: literal(dialect), scope: (variables) => new Scope(variables), evaluated });
+  ]), { literal: untyped, typed: literal(dialect), scope: (variables) => new Scope(variables), folded });
 }
 
-/** The interpreter of the C dialect. */
-export const INTERPRETER = interpreter(Expressions.DIALECT);
+/** The simplifier of a dialect of the C family, by `rules(dialect, folded)`, its literals written by `write`. */
+export function simplifier(dialect: Terms.Dialect, folded: ReadonlySet<string>,
+  categories: Record<string, Record<string, string>>, write: (value: unknown, suffix?: string | null) => unknown): F.Simplifier {
+  return new F.Simplifier(rules(dialect, folded), { literal: literalOf(write), categories, native: (value: Typed) => value.value });
+}
 
-/** The value of a term in `scope`, or with the variables in an object bound: its native. */
-export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
-  return (INTERPRETER.run(expression, scope) as Typed).value;
+/** The simplifier of the C dialect. */
+export const SIMPLIFIER = simplifier(Expressions.DIALECT, FOLDED, CATEGORIES, Expressions.literal);
+
+/** The simplification of a term in `scope`, or with the variables in an object bound. */
+export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): F.Simplified {
+  return SIMPLIFIER.run(expression, scope);
 }

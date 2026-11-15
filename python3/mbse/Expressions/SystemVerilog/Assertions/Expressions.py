@@ -36,7 +36,7 @@ The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 18
 (`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: `strengthproperty`, `abortproperty`
 and `caseproperty` arrived in IEEE 1800-2009). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
 writes its kinds as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches them to it, by
-IEEE 1800's precedence of sequence and property operators (Table 16-3). The evaluator refuses each of its kinds by name
+IEEE 1800's precedence of sequence and property operators (Table 16-3). Simplification leaves each of its kinds in the residual, named
 (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
 syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t: t.repetitionsequence(lambda r: r.sequence(a)
 .operator("*").count(two))`."""
@@ -267,7 +267,7 @@ _OPTIONAL = ("clock.events.condition",)
 
 
 def _kinds() -> dict[str, F.Kind]:
-    """How the framework reads its own kinds: each an application of no operation it evaluates, binding no name."""
+    """How the framework reads its own kinds: each an application of no operation it folds, binding no name."""
 
     def application(tag: str, optional: tuple[str, ...] = (), **options: Any) -> F.Kind:
         return F.Kind(F.APPLICATION, signature=FD.Opaque(), check=_check(tag), optional=optional + _OPTIONAL, **options)

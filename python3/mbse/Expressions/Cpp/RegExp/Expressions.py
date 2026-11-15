@@ -44,8 +44,8 @@ quantifier, a class's its class atoms).
 
 No kind binds a name a term scopes: a capturing group is numbered, not named (ECMA-262's third edition has no named
 group), and a backreference resolves it by its number. Its kinds are applications the framework reads by their
-structure, of no domain known statically, and are not evaluated, each refused by its dialect's name ("Cpp RegExp regex
-is not evaluated"). The editions it covers are data, which `define` writes, C++'s (C++17, C++20, C++23), every kind in
+structure, of no domain known statically, and are not simplified, each left in the residual, named by its dialect (\"Cpp RegExp regex
+is not simplified\"). The editions it covers are data, which `define` writes, C++'s (C++17, C++20, C++23), every kind in
 each (`SINCE`): [re.grammar] is the same in the three. `DIALECT` reads its kinds, its family's other dialects' terms,
 as each family's dialects read one another (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"), and POSIX's, which a regex holds (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis
 [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)). Its terms are written

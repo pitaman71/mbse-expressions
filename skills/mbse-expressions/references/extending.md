@@ -2,7 +2,7 @@
 
 A dialect's terms are values in an mbse-schemas store: its install defines its kinds, and the framework reads them,
 validates them, infers their domains and traverses them from a declaration of how each is read. A new dialect writes
-its install, its kinds' declarations, its writers, its domains, its evaluator and its source text. The framework it
+its install, its kinds' declarations, its writers, its domains, its simplifier and its source text. The framework it
 builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#the-framework).
 
 ## A dialect
@@ -24,15 +24,15 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
    - Python: [EXP-05: The framework's schemas are an install: ordinary, registered schemas, which Patterns' install extends](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-05) · TypeScript: [EXP-05: The framework's schemas are an install: ordinary, registered schemas, which Patterns' install extends](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-05)
    - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)
 2. **Reuse the framework's kinds wherever the shape is the same.** *Why*: a kind shared is read, translated and
-   evaluated alike in every dialect that has it. *How*: its `Term` lists the framework's kinds it reuses, `literal`,
+   simplified alike in every dialect that has it. *How*: its `Term` lists the framework's kinds it reuses, `literal`,
    `variable`, `let` and `call` (`callable` by name, positional `arguments`), and the container constructors `list`
    and `mapping`, wherever its kind has that shape exactly, whose subterms may be any dialect's terms, and the
    framework's `error` and `missing`. It keeps a kind of its own only where the shape differs (Python3's call has a term
    for its callee; C's literal adds what its text encodes); a restriction of its own on a reused kind ("no bytes") is
    its `Kind`'s check.
    - Python: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's subterm may be any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-12) · TypeScript: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's subterm may be any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-12)
-   - Python: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-11) · TypeScript: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, evaluation refuses them by name, and printers write them as written](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-11)
-3. **Declare how each kind is read.** *Why*: validation, inference, evaluation and translation read every dialect
+   - Python: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, simplification leaves them in the residual, named, and printers write them as written](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-11) · TypeScript: [FRM-11: Invalid syntax, `error` and `missing`: every dialect's `Term`, `Type` and `Pattern` hold them, validation reports them, simplification leaves them in the residual, named, and printers write them as written](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-11)
+3. **Declare how each kind is read.** *Why*: validation, inference, simplification and translation read every dialect
    through these declarations, never through its code. *How*: its `Terms.Dialect`, made with its path
    (`Terms.Dialect("LaTeX.Expressions", kinds, ...)`, named `LaTeX`), declares a `Terms.Kind` per tag,
    whose role tells them how to treat it:
@@ -41,11 +41,11 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
 |---|---|---|
 | `LITERAL` | a value, its `value` (and its spelling, `text`, and `problems`) | `typed(record)`, the domain its own attributes give it (C's `type`) |
 | `REFERENCE` | what the scope resolves, by its `name` | `lexical=False` for references that need no binding (Excel cells), `ambient` for names always bound (Python's builtins) |
-| `APPLICATION` | an operator applied to arguments | `operator` (the property naming it, or none when the tag does), `vocabulary` (names to signatures) or `signature` for an open vocabulary; `closed=True` makes evaluation refuse names outside the vocabulary; `operations(store)`, the operations the dialect defines as data (Patterns'), makes validation refuse any other, read from the store of the term's holder |
+| `APPLICATION` | an operator applied to arguments | `operator` (the property naming it, or none when the tag does), `vocabulary` (names to signatures) or `signature` for an open vocabulary; `closed=True` makes simplification leave names outside the vocabulary in the residual; `operations(store)`, the operations the dialect defines as data (Patterns'), makes validation refuse any other, read from the store of the term's holder |
 | `BINDING` | a let: binds its `name` | its subterms, value then body |
 | `QUANTIFIER` | binds its `name` to each item of a collection | `operator`, `vocabulary`, as an application |
 | `IMPORT` | makes something available within its body | `names(attributes)`, the names it binds; the scope resolves it with `enter` |
-| `INVALID` | invalid syntax, the framework's `error` and `missing`, which every dialect reads | nothing: validation reports it, evaluation refuses it |
+| `INVALID` | invalid syntax, the framework's `error` and `missing`, which every dialect reads | nothing: validation reports it, simplification leaves it in the residual, named |
 
    A kind whose role says too little declares more (Python3's do): `optional`, the subterms that may be empty (`lower`
    of a slice, `generators.target` within a helper); `scopes(record)`, the names each argument has bound (a
@@ -60,17 +60,22 @@ builds on is mbse-basis' [CAP-098: dialects over one framework](mbse:mbse-basis/
    - Python: [FRM-06: Domains and signatures](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-06) · TypeScript: [FRM-06: Domains and signatures](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-06)
    - Python: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-07) · TypeScript: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-07)
    - Python: [DIA-19: Python3's kinds beyond the narrower ones: literals keeping what their text encodes, f-strings as written, each kind's own checks and what it binds, stored as any term](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-19) · TypeScript: [DIA-19: Python3's kinds beyond the narrower ones: literals keeping what their text encodes, f-strings as written, each kind's own checks and what it binds, stored as any term](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-19)
-4. **Write its writers, its source text and its evaluator.** *How*: a writer of its terms is a `Terms.Writer` of its
+4. **Write its writers, its source text and its simplifier.** *How*: a writer of its terms is a `Terms.Writer` of its
    dialect's tag, one per kind, writing the kind wherever a term is written. Its `Text` module's `ToText(term)` reads
    each term through its `DIALECT.kind` (which refuses another dialect's terms), a literal's `text` where it has one,
-   and `Terms.invalid_text` for `error` and `missing`. Its evaluator builds on `Framework.Evaluators.Interpreter`, with
-   one implementation per operator (each takes thunks for its arguments, so it decides what to evaluate) and a scope
-   derived from `Framework.Symbolics.Variables`. An interpreter given the kinds it `evaluated` refuses any other by
-   name. Evaluation is optional: a dialect may only render and translate.
-   - Python: [FRM-08: The interpreter evaluates by role and raises what validation reports](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-08) · TypeScript: [FRM-08: The interpreter evaluates by role and raises what validation reports](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-08)
+   and `Terms.invalid_text` for `error` and `missing`. Its `Simplifiers` module is a `Framework.Simplifiers.Simplifier`
+   over its folding rules, a `Framework.Simplifiers.Interpreter`: one implementation per operator in its tables (each
+   takes thunks for its arguments, so it decides what to fold), the kinds it folds (`folded`), and a scope derived from
+   `Framework.Symbolics.Variables`, which raises `Symbolics.Unbound` for what it does not resolve. Give the simplifier
+   the literal of a value (`literal`: `Simplifiers.natives(DIALECT)` where its values are natives), and the inventory's
+   class of what it has no rule for (`categories`). A rule raises `Simplifiers.NoRule(dialect, what)` where it has no
+   rule; the subterm then stays in the residual, named. To fold a new kind or operator, add its implementation to the
+   tables and its tag to `folded`; nothing else changes. A simplifier is optional: a dialect may only render and
+   translate.
+   - Python: [FRM-08: Folding rules fold by role; a simplifier leaves what they have no rule for, named, and raises what validation reports](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-08) · TypeScript: [FRM-08: Folding rules fold by role; a simplifier leaves what they have no rule for, named, and raises what validation reports](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-08)
    - Python: [FRM-09: Symbolics: the names an expression needs, and the imports it declares](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-09) · TypeScript: [FRM-09: Symbolics: the names an expression needs, and the imports it declares](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-09)
    - Python: [FRM-10: A dialect may extend another: its kinds are the base's and its own, added to its union by schema extension](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-10) · TypeScript: [FRM-10: A dialect may extend another: its kinds are the base's and its own, added to its union by schema extension](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-10)
-   - Python: [FRM-01: Every dialect, expression, evaluator and translator implements its protocol](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-01) · TypeScript: [FRM-01: Every dialect, expression, evaluator and translator implements its protocol](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-01)
+   - Python: [FRM-01: Every dialect, expression, simplifier and translator implements its protocol](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-01) · TypeScript: [FRM-01: Every dialect, expression, simplifier and translator implements its protocol](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-01)
 5. **Check it is complete.** *When*: a dialect models a language whose grammar is published. *How*: keep the
    language's nodes as data, and check that each is a kind, a helper or an operator of a kind, or is listed as not an
    expression, with its reason, as Python3 does with `grammars/python3-ast.json`.

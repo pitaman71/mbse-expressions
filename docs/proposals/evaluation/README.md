@@ -228,6 +228,31 @@ differ:
   inventory](../dialects/README.md#evaluation-what-is-refused-and-why)'s class (a) is read as simplification: a kind
   whose value has no literal form (a closure, an object) stays in the residual.
 
+## As built: the framework (0.11.0)
+
+Step 1 of the decision above, on branch `simplification`: the framework every family's folding rules fill, and
+evaluation retired as a public procedure ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review),
+324 to 333).
+
+- **One procedure.** `Framework.Simplifiers.Simplifier` simplifies an expression of its dialect in a scope that binds
+  some, all or none of its names, to a residual of the same dialect, by recursive substitution: a new term written, the
+  old one never changed. Each dialect's `Simplifiers.OfAny(expression, scope)` is one; what it gives, a `Simplified`,
+  holds the `residual`, whether its root is a `literal` (then its `value`), the names still `free`, and the `residues`.
+  A literal root is a successful evaluation: `evaluate()` gives its value, or raises `NotEvaluated` naming why the root
+  is not a literal.
+- **Operator semantics are folding rules.** What each dialect's evaluator computed over literals, its rules fold into
+  literals, every operator it evaluated before (`FOLDED`, the tables of its `Interpreter`, `RULES`); what has no
+  literal form (an object, a closure, a collection, an Excel error, a C `char`) stays a subterm of the residual, its
+  own subterms simplified. SystemVerilog folds its root and its names only, an operand's width being its context's.
+- **No refusals** (question 6). Where a dialect has no rule for a kind or an operator, the subterm stays, named by a
+  `Residue`: its dialect, its kind, what it has no rule for, and its class in the inventory (`CATEGORIES`, each family's
+  module). Kleene's logic still decides what does not depend on it, as `simplify` does in Patterns (`false and x` is
+  `false`). What a scope does not provide stays too (`Symbolics.Unbound`). What the dialect's semantics make an error
+  still raises, as the expression would in its language.
+- **What it leaves to the families.** Each family's class (a) is the next step's: a kind or an operator gains a rule by
+  an implementation in its family's `RULES` and its tag in `FOLDED`; its residues then disappear. Type parameters, a
+  sub-dialect's terms and the deferred capabilities (type algebra, a surrogate dialect, statements) are later steps.
+
 ## 6. What it would add or supersede
 
 Named in prose; the user adds the items. It would add capabilities implementing

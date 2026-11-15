@@ -23,8 +23,8 @@
  * - `import` (`Expressions.MATLAB.Expressions.Import`): `import pkg.fn` or `import pkg.*` (its `name`), which make a
  *   package's functions callable by their short names within its body, the rest of the expression; `Text.ToText` writes
  *   it as a line before it. A binder refining `Let`, its `name` what it imports, its `value` unset. Functions are also
- *   found on the path and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that evaluates them
- *   (see `Evaluators`).
+ *   found on the path and by their qualified names (`pkg.fn(x)`); which exist is up to the scope that simplifies them
+ *   (see `Simplifiers`).
  *
  * Its kinds are named plainly in its union, though other dialects have kinds of the same names (`binary`, `import`, ...):
  * each union names its own. There is no binding: translators substitute a

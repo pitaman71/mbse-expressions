@@ -1,5 +1,5 @@
 /**
- * Domains of the SystemVerilog dialect: the types its evaluation, inference and validation compute on, each read from
+ * Domains of the SystemVerilog dialect: the types its folding rules, inference and validation compute on, each read from
  * the domains its dialect stores, and the sized vectors computed from a term's own width and signedness.
  *
  * An `SvType` is a type and a domain: `integral` (a vector of `width` bits, `signed` or not, of 4 states (0, 1, x, z) or
@@ -17,7 +17,7 @@
  * its signedness. `real` values are numbers.
  *
  * Expressions are sized as IEEE 1800 says (11.6, 11.8): `common` gives the type context-determined operands share, and
- * the signatures follow (see `Evaluators`). `of(value)` names a constant's type. The rules (`common`, the signatures,
+ * the signatures follow (see `Simplifiers`). `of(value)` names a constant's type. The rules (`common`, the signatures,
  * which type a constant has) stay code, and the signatures are `Dialect.infer`'s, to be replaced with stored domains as
  * domain inference reads them ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
  */

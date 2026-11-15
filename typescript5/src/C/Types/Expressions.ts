@@ -31,8 +31,8 @@
  * `enumerators` hold its body's items, this dialect's terms, with its `trailing_comma`.
  *
  * The editions it covers are data, which `define` writes, C's (C11, C17, C23), each with its own kinds it has, both in
- * each (`SINCE`). No kind binds a name a term scopes. Evaluation refuses each of its kinds by name; a cast reads its type
- * from it (`C.Evaluators`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
+ * each (`SINCE`). No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads its type
+ * from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
  * `(t) => t.typeid((i) => i.specifiers([(s) => s.primitivetypespecifier((p) => p.keyword("int"))]))`.
  * `DIALECT` reads its kinds and the terms of its family's other dialects, `C` and `C Preprocessor` (`reads`); none of

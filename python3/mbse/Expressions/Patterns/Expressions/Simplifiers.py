@@ -1,13 +1,18 @@
-"""Evaluators of the Patterns dialect: compute the value of an expression.
+"""Simplifiers of the Patterns dialect: simplify an expression, folding what its scope determines into literals.
 
-`Evaluators.OfAny(term, scope)` evaluates any term with the variables in `scope` bound, and `Evaluators.OfLiteral`,
-`OfCall`, `OfVariable`, `OfLet` and `OfQuantifier` evaluate one kind; each takes a term value, or anything
-`Terms.term` reads one from (an `Expression`, its root). The value is a native value, an object, or `None` when it is
-unknown.
+`Simplifiers.OfAny(term, scope)` simplifies any term with the variables in `scope` bound (see
+`mbse.Expressions.Framework.Simplifiers`): a term value, or anything `Terms.term` reads one from (an `Expression`,
+its root). What the scope determines is folded into the literal of its value, a native's (an object, a collection or
+an unknown value has none, and its subterm stays); the rest stays a Patterns expression, the residual, which agrees
+with the term wherever the term has a value. Its root is a literal when the scope determines the whole term: then
+`Simplified.value` is its value; otherwise `value` is `None`, which three-valued logic reads as unknown.
 
 - Three-valued logic: an absent property is unknown, and comparisons with unknown or incomparable values are unknown.
-  `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is evaluated only when the first does not
-  decide.
+  `and`, `or`, `not` and `implies` follow Kleene's logic; the second operand is folded only when the first does not
+  decide, and with what is known of either: a false operand of `and` (a true one of `or`) decides it, a true operand
+  of `and` (a false one of `or`) drops out, and `implies` is true when its condition is false or its conclusion true,
+  and its conclusion when its condition is true (mbse-basis [CAP-106: expressions evaluated
+  three-valued](mbse:mbse-basis/docs/capabilities/CAP-106.md)).
 - No coercion. Comparisons follow mbse-basis [CAP-111: equality and ordering defined by the
   schema](mbse:mbse-basis/docs/capabilities/CAP-111.md): natives of one type by value, reference objects by
   identity, everything else deeply (see Deep equality); values of different types are incomparable. Arithmetic takes numbers of one domain.
@@ -18,8 +23,8 @@ unknown.
   constructors, `list` (positional) and `mapping` (keyed: a key unknown makes it unknown, and two equal keys raise), and
   `entries` gives an object's entries as one of `Domains.Record`s, which `get` and `has` read. The collection operations
   and the quantifiers (`all`, `any`, `count`) follow Kleene's logic over the items; an unknown collection gives unknown.
-- Only the operations Patterns defines (its install's, which `define` names) are evaluated. Unknown operations, wrong numbers of
-  arguments, unbound variables and wrong operand types raise, as do the problems `validate()` reports.
+- Only the operations Patterns defines (its install's, which `define` names) are folded; any other stays, as an
+  extension. Wrong numbers of arguments and wrong operand types raise, as do the problems `validate()` reports.
 - `get` and `has` read any data object, read through mbse-schemas' readers (`Framework.Objects`): reference objects,
   value objects, union and intersection values.
 - Deep equality: a value object, a union or intersection value, or an entry's record is equal to another when the
@@ -28,23 +33,23 @@ unknown.
   positional collection is equal to another of the same length whose items are equal in order, and unequal to one of
   another length; a keyed collection to another with the same keys and equal values, in any order, and incomparable to
   one with other keys. Equal is Kleene's and of the parts' equalities.
+- A let of a known value binds it in its body and stays only while the body refers to its name.
 
-A constraint about a value is evaluated with the variable it names bound to it, such as `person`:
-`Evaluators.OfAny(constraint, {"person": value})`. """
+A constraint about a value is simplified with the variable it names bound to it, such as `person`:
+`Simplifiers.OfAny(constraint, {"person": value}).value`, true, false or unknown (`None`). """
 
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Mapping
 from typing import Any
 
-from mbse.Expressions.Framework import Evaluators as F, Objects, Terms
+from mbse.Expressions.Framework import Objects, Simplifiers as F, Terms
 from mbse.Schemas.Framework import Comparison, Schemas
 from mbse.Schemas.Framework.Visitors import Scalar as Native
 
 from . import Domains, Expressions
 
-__all__ = ["OfAny", "OfLiteral", "OfCall", "OfVariable", "OfLet", "OfQuantifier", "OPERATIONS",
-           "QUANTIFIERS", "INTERPRETER"]
+__all__ = ["OfAny", "OPERATIONS", "QUANTIFIERS", "RULES", "SIMPLIFIER"]
 
 Scope = Mapping[str, Any] | None
 
@@ -432,44 +437,35 @@ OPERATIONS: dict[str, F.Implementation] = {
 }
 """The implementation of each operation Patterns defines."""
 
-INTERPRETER = F.Interpreter(Expressions.DIALECT, {"call": OPERATIONS, "quantifier": QUANTIFIERS, "list": _list,
-                                                   "mapping": _mapping})
-"""The interpreter of the Patterns dialect, which `Partials` reduces with."""
+RULES = F.Interpreter(Expressions.DIALECT, {"call": OPERATIONS, "quantifier": QUANTIFIERS, "list": _list,
+                                             "mapping": _mapping})
+"""The folding rules of the Patterns dialect."""
 
 
-def OfAny(expression: Any, scope: Scope = None) -> Any:
-    """The value of any term, with the variables in `scope` bound."""
-    return INTERPRETER(expression, scope)
+def _simplify(node: Any, results: list[F.Result]) -> F.Result | None:
+    """Kleene's short-circuits for `and`, `or` and `implies`, with what is known of their operands."""
+    name = Terms.attributes_of(Terms.kind_of(node)[1]).get("callable")  # a call's: the only application
+    if name in ("and", "or"):
+        decisive = name == "or"  # the value that decides: true for or, false for and
+        for result in results:
+            if result.known and result.value is decisive:
+                return SIMPLIFIER.known(result.expression, decisive)
+        for i, result in enumerate(results):
+            if result.known and result.value is (not decisive):
+                return results[1 - i]
+    if name == "implies":
+        condition, conclusion = results
+        if (condition.known and condition.value is False) or (conclusion.known and conclusion.value is True):
+            return SIMPLIFIER.known(node, True)
+        if condition.known and condition.value is True:
+            return conclusion
+    return None
 
 
-def _of(tag: str, expression: Any, scope: Scope) -> Any:
-    term = Terms.term(expression)
-    found = Terms.kind_of(term)[0]
-    if found != tag:
-        raise TypeError(f"expected {Terms._article(tag)}, got {Terms._article(found)}")
-    return INTERPRETER(term, scope)
+SIMPLIFIER = F.Simplifier(RULES, literal=F.natives(Expressions.DIALECT), simplify=_simplify)
+"""The simplifier of the Patterns dialect."""
 
 
-def OfLiteral(expression: Any, scope: Scope = None) -> Any:
-    """The value of a literal."""
-    return _of("literal", expression, scope)
-
-
-def OfCall(expression: Any, scope: Scope = None) -> Any:
-    """The value of a call, with the variables in `scope` bound."""
-    return _of("call", expression, scope)
-
-
-def OfVariable(expression: Any, scope: Scope = None) -> Any:
-    """The value `scope` binds to a variable."""
-    return _of("variable", expression, scope)
-
-
-def OfLet(expression: Any, scope: Scope = None) -> Any:
-    """The value of a let's body, with its name bound to its value and the variables in `scope` bound."""
-    return _of("let", expression, scope)
-
-
-def OfQuantifier(expression: Any, scope: Scope = None) -> Any:
-    """The value of a quantifier, with the variables in `scope` bound."""
-    return _of("quantifier", expression, scope)
+def OfAny(expression: Any, scope: Scope = None) -> F.Simplified:
+    """The simplification of any term, with the variables in `scope` bound."""
+    return SIMPLIFIER(expression, scope)

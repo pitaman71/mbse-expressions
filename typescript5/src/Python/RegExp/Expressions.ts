@@ -46,7 +46,7 @@
  *
  * A named group's name is a label within its pattern, which a backreference resolves, not a name the expression binds:
  * none of its kinds refines `Let`, and none has scopes. Its kinds are applications the framework reads by their
- * structure, of no domain known statically, and are not evaluated: Python3's evaluator refuses each by name ("Python
+ * structure, of no domain known statically, and are not simplified: Python3's rules leave each in the residual, named ("Python
  * RegExp pattern is not evaluated"); a pattern is matched by `re`, a library call.
  *
  * The versions of Python it covers are data, which `define` writes: Python 3.0 to 3.15, each with its own kinds it has

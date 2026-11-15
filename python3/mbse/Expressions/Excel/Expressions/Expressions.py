@@ -15,7 +15,7 @@ of invalid syntax (`error`, `missing`); a term carries no domain:
   `ISNUMBER`, `SUM`, `MIN`, `MAX` and `UNIQUE` of arrays, and `VSTACK`, which makes one); other names are add-in
   functions, which the workbook provides.
 - `cell`: a cell reference (`address`): `A1` on the current sheet, `Sheet1!A1` (`sheet`), or
-  `[Book.xlsx]Sheet1!A1` (`book`) in another workbook. A workbook (see `Evaluators`) resolves it; it need not be bound.
+  `[Book.xlsx]Sheet1!A1` (`book`) in another workbook. A workbook (see `Simplifiers`) resolves it; it need not be bound.
 - `map`: `MAP(array, LAMBDA(name, body))`, the body's values for each element of the array, Let's `value`, bound to
   `name`: a binder refining the framework's `Let`.
 - `infix`: `left <operator> right`, for `=`, `<>`, `<`, `<=`, `>`, `>=`, `+`, `-` and `*`.

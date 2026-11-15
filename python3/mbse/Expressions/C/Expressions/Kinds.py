@@ -1,6 +1,6 @@
 """How the framework reads the kinds of the C family, the code its dialects share: C's and C++'s expressions and their
 type names (`C`, `Cpp`, `C Types`, `Cpp Types`) read their kinds through `kinds`, check them through `problems`, say
-what a binder binds through `scopes`, and write the kinds C evaluates through `Writers`. An internal module of the C
+what a binder binds through `scopes`, and write the kinds C folds through `Writers`. An internal module of the C
 family, which `C.Expressions` re-exports: it imports none of the family's dialects, so that each dialect's module reads
 it, and no other, while it is loaded (the TypeScript modules of the family import one another, and a module that read
 another's constants while the cycle loaded it would find them undefined). See mbse-basis [CAP-229: the C expression
@@ -333,7 +333,7 @@ def _identifier_name(spelling: str) -> Any:
 
 
 class Writers:
-    """The writers of the kinds the C family evaluates, for one dialect: its `Terms.Dialect`, whose `spec` writes a
+    """The writers of the kinds the C family folds, for one dialect: its `Terms.Dialect`, whose `spec` writes a
     native value as its literal, and its `Writer`. C's are this module's functions; `Cpp`'s, its own."""
 
     def __init__(self, dialect: F.Dialect, writer: type[F.Writer]):

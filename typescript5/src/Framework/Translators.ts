@@ -44,8 +44,8 @@
  * operands written in each), translated as a term is. Pairs of corresponding source terms (or unfolded forms) and target
  * writers are appended to `trace`, if given, each term after the terms within it. A term that no rule matches throws
  * `ValueError` naming it. A
- * translation preserves the expression's form, not always its value: dialects evaluate by their own rules (see each
- * dialect's `Evaluators`).
+ * translation preserves the expression's form, not always its value: dialects simplify by their own rules (see each
+ * dialect's `Simplifiers`).
  */
 
 import { Errors, Repr, Schemas } from "@mbse/schemas/Framework";

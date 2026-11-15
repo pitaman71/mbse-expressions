@@ -1,41 +1,44 @@
 /**
- * Evaluators of the Python3 dialect: compute an expression by Python's rules, in a scope that decides what it may
+ * Simplifiers of the Python3 dialect: simplify an expression by Python's rules, in a scope that decides what it may
  * reach. This implementation models Python's rules over JavaScript values: int is `bigint`, float is `number`, str,
  * bool and bytes (`Uint8Array`) are themselves, and None is `null`.
  *
- * `Evaluators.OfAny(expression, scope)` evaluates in a `Scope`, or in one made from an object of variables. Python's
- * rules apply, not Patterns': `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
- * missing attribute throws `AttributeError`. Data objects, read through mbse-schemas' readers (`Framework/Objects`),
- * have their properties as attributes; a `Module` has its members as attributes.
+ * `Simplifiers.OfAny(expression, scope)` simplifies in a `Scope`, or in one made from an object of variables (see
+ * `Framework/Simplifiers`): what the scope determines is folded into the literal of its value, a basic scalar's, or,
+ * for a list or a dict of such values, into its display (`[1, 2]`); an object or a generator has none, and its subterm
+ * stays, its own subterms simplified. The rest stays a Python3 expression. Python's rules apply, not Patterns': `and`
+ * and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a missing attribute throws
+ * `AttributeError`. Data objects, read through mbse-schemas' readers (`Framework/Objects`), have their properties as
+ * attributes; a `Module` has its members as attributes.
  *
  * A `new Scope(variables, { modules, builtins })` resolves names as Python does, innermost first: names bound by lets
  * and imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`,
- * `float`, `getattr`, `hasattr`, `int`, `len`, `max`, `min`, `round`, `set`, `str`, `sum`). A list property is an
- * array of its values, a keyed list's too; a list display is an array, and a dict display a `Map`, its keys compared as
- * Python compares them. Nothing else is reachable from an expression, since expressions may come
- * from data:
+ * `float`, `getattr`, `hasattr`, `int`, `len`, `max`, `min`, `round`, `set`, `str`, `sum`). A name it does not bind
+ * stays in the residual. A list property is an array of its values, a keyed list's too; a list display is an array,
+ * and a dict display a `Map`, its keys compared as Python compares them. Nothing else is reachable from an expression,
+ * since expressions may come from data:
  *
- * - An import resolves only a module in `modules`, or a submodule of one (a `Module` among its members), and every
- *   other import throws `ImportError`.
- * - Attributes whose names start with `_` are refused.
+ * - An import resolves only a module in `modules`, or a submodule of one (a `Module` among its members); any other
+ *   import stays in the residual, unresolved.
+ * - Attributes whose names start with `_` are refused (`AttributeError`).
  * - A call may call only a builtin of the scope, a value of `variables`, or a function of an allowed module.
  *
- * The evaluator is shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): it evaluates the kinds Python's constraints were written
- * with before the dialect was complete (`EVALUATED`), in their complete shapes: a comparison chain, `and` and `or` of
- * any number of values, a call of positional arguments, a subscript, a generator expression of any number of `for`
- * clauses over names. Any other kind is refused by name ("Python3 lambda is not evaluated", `NotImplementedError`), a
- * kind of its family's other dialects, and invalid syntax, by the name of the dialect that owns it, as the framework's
- * interpreter refuses them ("Python Types typevar is not evaluated"; a type expression of Python3's kinds evaluates as
- * Python3's), and so are what the kinds it evaluates hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target
- * that is not a name, and the operators `is`, `is not` and `@`.
+ * Its rules are shallow (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "A shallow evaluator"): they fold the kinds Python's constraints were
+ * written with before the dialect was complete (`FOLDED`), in their complete shapes: a comparison chain, `and` and `or`
+ * of any number of values, a call of positional arguments, a subscript, a generator expression of any number of `for`
+ * clauses over names. Any other kind stays in the residual, named ("Python3 lambda is not simplified"), as does a kind
+ * of its family's other dialects, and invalid syntax, by the name of the dialect that owns it ("Python Types typevar is
+ * not simplified"; a type expression of Python3's kinds simplifies as Python3's), and so does what the kinds it folds
+ * hold beyond that: a keyword argument, a dict's `**` item, an `async for`, a target that is not a name, and the
+ * operators `is`, `is not` and `@`. `CATEGORIES` gives each the evaluation inventory's class.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Errors, Repr } from "@mbse/schemas/Framework";
 
-import { ImportError, IndexError, NameError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
-import * as F from "../../Framework/Evaluators.js";
+import { IndexError, OverflowError, ZeroDivisionError } from "../../Framework/Errors.js";
+import * as F from "../../Framework/Simplifiers.js";
 import * as Objects from "../../Framework/Objects.js";
 import * as S from "../../Framework/Symbolics.js";
 import * as Terms from "../../Framework/Terms.js";
@@ -520,20 +523,18 @@ export class Scope extends S.Variables {
 
   override lookup(reference: any): unknown {
     const name = Terms.nameOf(reference) as string;
-    const [found, value] = this.find(name);
-    if (found) return value;
-    if (this.builtins.has(name)) return this.builtins.get(name);
-    throw new NameError(`name ${repr(name)} is not defined`);
+    if (this.find(name)[0] || !this.builtins.has(name)) return this.value(name);
+    return this.builtins.get(name);
   }
 
   /** The module `name`, if allowed: one of `modules`, or a submodule reached through its members. */
   module(name: string): Module {
     const [root, ...parts] = name.split(".") as [string, ...string[]];
     let module = this.modules.get(root);
-    if (module === undefined) throw new ImportError(`import of ${repr(name)} is not allowed by the scope`);
+    if (module === undefined) throw new S.Unbound(name);
     for (const part of parts) {
       const member: unknown = part.startsWith("_") ? undefined : module.members.get(part);
-      if (!(member instanceof Module)) throw new ImportError(`No module named ${repr(name)}`);
+      if (!(member instanceof Module)) throw new S.Unbound(name);
       module = member;
     }
     return module;
@@ -551,7 +552,7 @@ export class Scope extends S.Variables {
     }
     const [module, name] = [this.module(moduleName), attributes.get("name") as string];
     if (name.startsWith("_") || !module.members.has(name)) {
-      throw new ImportError(`cannot import name ${repr(name)} from ${repr(moduleName)}`);
+      throw new S.Unbound(`${moduleName}.${name}`);
     }
     return this.bind(alias || name, module.members.get(name));
   }
@@ -565,7 +566,7 @@ export class Scope extends S.Variables {
 }
 
 function refuse(what: string): Error {
-  return new NotImplementedError(`Python3 ${what} is not evaluated`);
+  return new F.NoRule("Python3", what);
 }
 
 function call(args: F.Thunk[], node: unknown, scope: Scope): unknown {
@@ -587,7 +588,7 @@ function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
   for (const part of (attributesOf(node).get("generators") ?? []) as Terms.Part[]) {
     if (part.attributes.get("is_async")) throw refuse("async comprehension");
     const target = part.attributes.get("target") as Terms.Part | undefined; // a pattern, its terms the clause's last
-    if (target !== undefined && Terms.INVALID_KINDS.has(target.kind)) throw new ValueError(`Python3 ${target.kind} is not evaluated`); // invalid syntax, refused as every dialect refuses it
+    if (target !== undefined && Terms.INVALID_KINDS.has(target.kind)) throw refuse(target.kind); // invalid syntax, named as every dialect names it
     if (target === undefined || target.kind !== Expressions.NAME) {
       throw refuse(`${target === undefined ? "missing" : target.kind} target`);
     }
@@ -599,9 +600,9 @@ function generatorexp(args: F.Thunk[], node: any, scope: Scope): PyGenerator {
     const [name, , conditions] = clauses[k] as [string, any, any[]];
     for (const item of items) {
       const bound = inner.bind(name, item);
-      if (!conditions.every((condition) => truthy(INTERPRETER.evaluate(condition, bound)))) continue;
-      if (k + 1 === clauses.length) yield INTERPRETER.evaluate(terms[1], bound);
-      else yield* generate(k + 1, bound, iterate(INTERPRETER.evaluate((clauses[k + 1] as [string, any, any[]])[1], bound)));
+      if (!conditions.every((condition) => truthy(RULES.evaluate(condition, bound)))) continue;
+      if (k + 1 === clauses.length) yield RULES.evaluate(terms[1], bound);
+      else yield* generate(k + 1, bound, iterate(RULES.evaluate((clauses[k + 1] as [string, any, any[]])[1], bound)));
     }
   }
   return new PyGenerator(generate(0, scope, iterate((args[2] as F.Thunk)()))); // the first iterable, after the element
@@ -613,7 +614,7 @@ function compare(args: F.Thunk[], node: any): unknown {
   const operators = (attributesOf(node).get("comparisons") as Terms.Part[]).map((part) => part.attributes.get("op") as string);
   for (const op of operators) {
     if (!COMPARISONS.has(op)) {
-      throw Domains.COMPARE.has(op) ? refuse(`compare ${repr(op)}`) : new NotImplementedError(`${repr(op)} is not a core operation`);
+      throw refuse(`compare ${repr(op)}`);
     }
   }
   let left = (args[0] as F.Thunk)();
@@ -661,11 +662,19 @@ function dict(args: F.Thunk[], node: any): Map<unknown, unknown> {
   return result;
 }
 
-/** The kinds the evaluator evaluates; any other is refused by name. */
-export const EVALUATED: ReadonlySet<string> = new Set([P.LITERAL, P.NAME, P.LET, P.LIST, P.DICT, P.ATTRIBUTE, P.SUBSCRIPT,
+/** The kinds its rules fold; any other stays in the residual, named. */
+export const FOLDED: ReadonlySet<string> = new Set([P.LITERAL, P.NAME, P.LET, P.LIST, P.DICT, P.ATTRIBUTE, P.SUBSCRIPT,
   P.CALL, P.COMPARE, P.BOOLOP, P.BINOP, P.UNARYOP, P.IFEXP, P.GENERATOREXP, P.IMPORT, P.IMPORTFROM]);
 
-export const INTERPRETER: F.Interpreter = new F.Interpreter(P.DIALECT, new Map<string, any>([
+/** The evaluation inventory's class of what each dialect of the family has no rule for (`a` where none is given). */
+export const CATEGORIES: Record<string, Record<string, string>> = {
+  Python3: { yield: "d", yieldfrom: "d", await: "d", "async comprehension": "d", "attribute target": "d",
+    "subscript target": "d" },
+  "Python Types": { "*": "b" }, "Python Patterns": { "*": "b" }, "Python RegExp": { "*": "b" },
+};
+
+/** The folding rules of the Python3 dialect. */
+export const RULES: F.Interpreter = new F.Interpreter(P.DIALECT, new Map<string, any>([
   [P.ATTRIBUTE, (args: F.Thunk[], node: any) => attribute((args[0] as F.Thunk)(), attributesOf(node).get("attr"))],
   [P.SUBSCRIPT, strict((value, key) => index(value, key))],
   [P.GENERATOREXP, generatorexp],
@@ -692,10 +701,30 @@ export const INTERPRETER: F.Interpreter = new F.Interpreter(P.DIALECT, new Map<s
   [P.IFEXP, (args: F.Thunk[]) => (truthy((args[1] as F.Thunk)()) ? (args[0] as F.Thunk)() : (args[2] as F.Thunk)())],
   [P.LIST, (args: F.Thunk[]) => args.map((argument) => argument())],
   [P.DICT, dict],
-]), { scope: (variables) => new Scope(variables), evaluated: EVALUATED });
+]), { scope: (variables) => new Scope(variables), folded: FOLDED });
 
-/** The value of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in an object
- * bound. */
-export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): unknown {
-  return INTERPRETER.run(expression, scope);
+const LITERAL = F.natives(P.DIALECT);
+
+/** A list's or a dict's display, of its items' literals and displays; null where an item has neither. A dict is a
+ * `Map`, or an object of variables, by its string keys. */
+function display(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    const items = value.map((item) => LITERAL(item) ?? display(item));
+    return items.includes(null) ? null : P.list_(...items);
+  }
+  const plain = value !== null && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype;
+  if (!(value instanceof Map) && !plain) return null;
+  const entries: [unknown, unknown][] = value instanceof Map ? [...value.entries()] : Object.entries(value as object);
+  const keys = entries.map(([key]) => LITERAL(key));
+  const items = entries.map(([, item]) => LITERAL(item) ?? display(item));
+  return keys.includes(null) || items.includes(null) ? null : P.dict_(...keys.map((key, i) => [key, items[i]] as const));
+}
+
+/** The simplifier of the Python3 dialect. */
+export const SIMPLIFIER = new F.Simplifier(RULES, { literal: LITERAL, categories: CATEGORIES, display });
+
+/** The simplification of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in an
+ * object bound. */
+export function OfAny(expression: unknown, scope: Scope | S.Bindings = {}): F.Simplified {
+  return SIMPLIFIER.run(expression, scope);
 }

@@ -1,5 +1,5 @@
 /**
- * Domains of the C dialect: the types C's and C++'s evaluation, inference and validation compute on, each read from the
+ * Domains of the C dialect: the types C's and C++'s folding rules, inference and validation compute on, each read from the
  * domains their dialects and their holder's ABI store, and the signatures of their operators, which `Cpp` shares.
  *
  * A `CType` is a type and a domain: `bool`, an integer by its width and signedness, or a floating type of an IEEE 754
@@ -23,7 +23,7 @@
  * usual arithmetic conversions: the wider floating type if either is floating, otherwise the promoted types, the wider
  * if they agree in signedness, else the unsigned one when it is at least as wide, else the signed one; a decimal
  * floating type and a binary one have none (C's constraint), so `common` gives null. The signatures follow the
- * evaluator's rules (see `Evaluators`): arithmetic gives the common type, shifts the promoted left operand's,
+ * evaluator's rules (see `Simplifiers`): arithmetic gives the common type, shifts the promoted left operand's,
  * comparisons and logic `bool`, which the dialect's kinds read from the store (`Expressions`), and a result is named by
  * the first of `NAMES`, C's names in the order its standard lists them, that its types define equal to it. `of(value,
  * types)` names a native value's type: `int`, `long` or `unsigned long` for a bigint, as the first that holds it,
@@ -44,7 +44,7 @@
  * `arithmetic(names)` is the name of the arithmetic type a type name's specifiers name (`unsigned int`, `uint8_t`), or
  * null.
  *
- * The other operators, which no evaluator computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`,
+ * The other operators, which no folding rule computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`,
  * `->*`, its folds and named casts), have signatures that say only how many operands each takes.
  */
 
@@ -361,7 +361,7 @@ function integerSuffix(suffix: string): string {
 
 /** A literal's type, by what its text encodes (its `prefix`, `quote`, `base` and `suffix`) and its value, in
  * `language` (`C` or `C++`), found through `types`; null where its value has none (a bigint no type holds, or no
- * value). A domain of a type no evaluator has values of is named by it (`_BitInt`). */
+ * value). A domain of a type no folding rule has values of is named by it (`_BitInt`). */
 export function literal(attributes: ReadonlyMap<string, any>, language: string, types: Types): D.Domain | null {
   const value = attributes.get("value");
   const prefix = attributes.get("prefix") as string | undefined;

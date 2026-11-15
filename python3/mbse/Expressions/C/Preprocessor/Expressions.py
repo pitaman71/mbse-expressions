@@ -38,7 +38,7 @@ The editions it covers are data, which `define` writes: C's and C++'s (C11, C17,
 with its own kinds it has, every kind in every edition but `elifdefdirective`, C23's and C++23's (`SINCE`: mbse-
 programs' `both(2023, 2023)`); a directive's name within `otherdirective` (`#warning`, `#embed`) is a feature, not
 recorded. `DIALECT` reads its kinds and the terms of C's and C++'s expressions and types, which its conditions and items
-hold. Evaluation refuses each of its kinds by name. Its terms are written through the builders (mbse-basis [PRI-019:
+hold. Simplification leaves each of its kinds in the residual, named. Its terms are written through the builders (mbse-basis [PRI-019:
 fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
 `lambda t: t.ifdefdirective(lambda d: d.name(lambda i: i.spelling("NDEBUG")))`."""
 

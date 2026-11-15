@@ -31,8 +31,8 @@ absent where it is unbounded, regexpp's `Infinity` *(agent)*.
 
 A regular expression binds nothing a term scopes: a named group's name is a label within its pattern, which a
 backreference resolves, so none of its kinds refines `Let`, as mbse-basis [CAP-279: names an expression binds found alike in every language](mbse:mbse-basis/docs/capabilities/CAP-279.md) has it. It
-holds no other dialect's terms, and none of its kinds is evaluated (Q11): each is refused by name ("TypeScript RegExp
-character is not evaluated"). Which kinds a mode allows (the `v` flag's classes in a literal without it), like which
+holds no other dialect's terms, and none of its kinds is folded (Q11): each stays in the residual, named (\"TypeScript RegExp
+character is not simplified\"). Which kinds a mode allows (the `v` flag's classes in a literal without it), like which
 terms a subterm may be, is a constraint (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The framework's kinds with subterms stay shared"), not its checks'.
 
 Where it is held: `TypeScript5`'s `constant`, a regular expression literal, keeps its `pattern` and `flags` as written

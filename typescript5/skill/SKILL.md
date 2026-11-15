@@ -1,28 +1,28 @@
 ---
 name: mbse-expressions
-description: Write constraints once, as language-neutral data (expressions), then validate, evaluate, store (JSON/YAML), and translate them to and from Python, MATLAB, Excel, LaTeX, C/C++ and SystemVerilog, in Python or TypeScript. Use when formalizing the constraints of an interface or model (MBSE/SysML constraints, interface control documents, constraints about mbse-schemas data), when one constraint must mean the same thing in several languages or tools, when generating Excel formulas, MATLAB, Python, C or SystemVerilog from a constraint (embedded software, hardware assertions and constraints), or when writing code that imports mbse.Expressions or @mbse/expressions.
+description: Write constraints once, as language-neutral data (expressions), then validate, simplify (evaluating what the data decides), store (JSON/YAML), and translate them to and from Python, MATLAB, Excel, LaTeX, C/C++ and SystemVerilog, in Python or TypeScript. Use when formalizing the constraints of an interface or model (MBSE/SysML constraints, interface control documents, constraints about mbse-schemas data), when one constraint must mean the same thing in several languages or tools, when generating Excel formulas, MATLAB, Python, C or SystemVerilog from a constraint (embedded software, hardware assertions and constraints), or when writing code that imports mbse.Expressions or @mbse/expressions.
 ---
 
 # mbse-expressions
 
 An expression here is data with a schema, not code. It is the neutral, semantically normalized formalization of the
 constraints in an interface or model, such as "65 or older, with an email on file". It is stored with the rest of the
-data, as [mbse-schemas](https://github.com/pitaman71/mbse-schemas) values, evaluated the same way in Python
+data, as [mbse-schemas](https://github.com/pitaman71/mbse-schemas) values, simplified the same way in Python
 (`mbse.Expressions`) and TypeScript (`@mbse/expressions`), which implement the same API and write byte-identical JSON,
 and translated between expression languages, called dialects:
 
 - **Patterns** (formerly Basic), the core vocabulary: comparisons, Kleene logic, arithmetic and bitwise operations over
-  values, property access, lets, lists and mappings, and collections with quantifiers. Every binding evaluates it.
+  values, property access, lets, lists and mappings, and collections with quantifiers. Every binding simplifies it.
 - **Python3**, **MATLAB** and **Excel**, which model those languages' expressions: each renders as its source text and
-  evaluates by its own rules. Python3 holds every expression of Python 3 (3.0 to 3.15), as CPython's `ast` has it, and
-  evaluates the kinds constraints use, refusing the others by name.
+  simplifies by its own rules. Python3 holds every expression of Python 3 (3.0 to 3.15), as CPython's `ast` has it, and
+  folds the kinds constraints use, leaving the others in the residual, named.
 - **TypeScript5**, every expression of TypeScript 5 (5.0 to 5.9) as typescript-estree has it, with its types,
-  destructuring patterns and JSX: it renders as TypeScript and evaluates its literals alone, refusing the others by
-  name; it has no translator yet, and its terms are written through the builders.
-- **LaTeX**, mathematical notation: it renders, validates and translates, but has no evaluator.
+  destructuring patterns and JSX: it renders as TypeScript and folds its literals alone, leaving the others in the
+  residual, named; it has no translator yet, and its terms are written through the builders.
+- **LaTeX**, mathematical notation: it renders, validates and translates, but has no simplifier.
 - **C** and **Cpp**, every expression of C (C11 to C23) and of C++ (C++17 to C++23) as mbse-programs has them, with the
-  type names they hold: each renders as its source and evaluates, over its arithmetic types, by C's rules (promotions,
-  wrapping unsigned arithmetic, undefined behavior raising), refusing the other kinds by name. Each holds the types its
+  type names they hold: each renders as its source and simplifies, over its arithmetic types, by C's rules (promotions,
+  wrapping unsigned arithmetic, undefined behavior raising), leaving the other kinds in the residual, named. Each holds the types its
   standard fixes (`bool`, `int32_t`, `_Float16`); the types it leaves to the implementation (`int`, `long`, `char`,
   `size_t`, `long double`) are the ABI's that the expression holding the term names.
 - **SystemV.AMD64** and **Arm.AAPCS64**, the ABI dialects of x86-64's System V ABI and of AArch64's AAPCS64: each holds
@@ -30,8 +30,8 @@ and translated between expression languages, called dialects:
   x87's extended format or `binary128`), and serves C and C++ alike.
 - **SystemVerilog**, every expression of IEEE 1800-2023, Verilog its subset, over 4-state vectors and reals, in six
   dialects of one family: its expressions, and its types, patterns, assertions (sequences and properties), constraints
-  and preprocessor, each a dialect reading the others' terms. It renders as its source and evaluates its constraint
-  kinds by IEEE 1800's rules (sizing by context, x and z propagating), refusing the others by name.
+  and preprocessor, each a dialect reading the others' terms. It renders as its source and simplifies its constraint
+  kinds by IEEE 1800's rules (sizing by context, x and z propagating), leaving the others in the residual, named.
 - **ISOIEC11404**, **IEEE754**, **IEEE1164** and **Unicode**, the standard dialects: each holds a published standard's
   kinds of domain and its domains, named as the standard names them (ISO/IEC 11404's `integer`, `octet`, a code, and
   `modulo(256)`, wrapping arithmetic; IEEE 754's `binary64`), and has no terms yet. The other dialects' values take their domains.
@@ -69,7 +69,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    `TypeScript.Types`, `TypeScript.Patterns` and `TypeScript.RegExp` after `TypeScript5`, `C.Types` after `C`,
    `Cpp.Types` and `Cpp.RegExp` after `Cpp`, and `C.Preprocessor` after both; POSIX's two, `POSIX.BRE` and
    `POSIX.ERE`, which a C++ regex may hold, in either order); then each one's
-   `define` whose data its validation, inference or evaluation reads, each in a transaction of its own: Patterns',
+   `define` whose data its validation, inference or simplification reads, each in a transaction of its own: Patterns',
    which names the operations validation reads (`store.transaction(Patterns.define)`), and C's, C++'s, the ABI
    dialects', SystemVerilog's, which write the types they read; a sublanguage dialect's writes the editions it covers. A C or C++ expression names the ABI its terms are read
    under, through its adjacency `abi`, given the ABI dialect's singleton (`store.Instances.Expressions.SystemV.AMD64`),
@@ -80,7 +80,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    `@mbse/expressions/Patterns/Expressions`), as `E`. Build a constraint with writers: `E.variable(name)`,
    `E.literal(value)`, `E.let_(name, value, body)` and `E.operation(name, ...)`; reading a property of a writer is `get`
    (`x.age`, or `x.get(name)` for a name a writer has as a method), and its methods build calls (`.ge(18)`,
-   `.and_(...)`). A writer builds data and evaluates nothing. Write it within a transaction, as the root of an
+   `.and_(...)`). A writer builds data and simplifies nothing. Write it within a transaction, as the root of an
    expression (`Expressions.Patterns.Expressions.Expression`, whose root holds Patterns' terms only, or
    `Expressions.Framework.Expression`, any dialect's), or as a term alone (`Expressions.Framework.Term`). A value of the
    program becomes a literal, so the constraint never refers back to it.
@@ -95,24 +95,27 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [EXP-05: The framework's schemas are an install: ordinary, registered schemas, which Patterns' install extends](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-05) · TypeScript: [EXP-05: The framework's schemas are an install: ordinary, registered schemas, which Patterns' install extends](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-05)
    - Python: [EXP-10: Variables and lets](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-10) · TypeScript: [EXP-10: Variables and lets](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-10)
    - Python: [EXP-11: Writers build terms with methods](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-11) · TypeScript: [EXP-11: Writers build terms with methods](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-11)
-2. **Evaluate on request, three-valued.** *Why*: data is incomplete most of the time, and an answer that treats unknown
+2. **Simplify on request, three-valued.** *Why*: data is incomplete most of the time, and an answer that treats unknown
    as false, or as true, is a silent mistake. *When*: checking a constraint against data. *How*:
-   `Evaluators.OfAny(expression, scope)`, the scope a mapping of variables to values, gives true, false, a value, or
-   unknown (none). An absent property is unknown; `has(x, name)` asks whether it is present, which always has an
+   `Simplifiers.OfAny(expression, scope)`, the scope a mapping of variables to values, simplifies it: what the data
+   decides is folded into literals, and what it doesn't stays, the residual. If the residual's root is a literal, the
+   data decided it: `value` is true, false or a value; otherwise `value` is unknown (none), and `evaluate()` says why
+   (a name not bound, a subterm the dialect has no rule for, a value with no literal)
+   ([PRI-046: simplification, not evaluation](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-046)). An absent property is unknown; `has(x, name)` asks whether it is present, which always has an
    answer. `and`, `or`, `not` and `implies` follow Kleene's logic, so an operand that decides makes the other's
-   unknown not matter. The program asking decides what unknown means, where it acts: compare the result with true or
+   unknown not matter. The program asking decides what unknown means, where it acts: compare `value` with true or
    false, never by its truth. A variable may be bound to a value, not only an object: a value object reads as its
    properties, and a union value as a record of its one branch, by name, so `has(card.reach, 'email')` asks which
    branch it holds.
    [CAP-106: expressions evaluated three-valued](mbse:mbse-basis/docs/capabilities/CAP-106.md#evaluation-in-mbse-expressions),
    [PRI-007: three-valued checking on request](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-007).
-   - Python: [T09.2: Evaluating it](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.2) · TypeScript: [T09.2: Evaluating it](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.2)
+   - Python: [T09.2: Simplifying it, its data bound](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.2) · TypeScript: [T09.2: Simplifying it, its data bound](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.2)
    - Python: [T10.1: Absent is unknown](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.1) · TypeScript: [T10.1: Absent is unknown](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.1)
    - Python: [T10.2: How unknowns combine](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.2) · TypeScript: [T10.2: How unknowns combine](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.2)
    - Python: [T10.3: You decide what unknown means](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.3) · TypeScript: [T10.3: You decide what unknown means](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.3)
-   - Python: [EVL-01: Evaluating literals, variables, lets, `get` and `has`](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-01) · TypeScript: [EVL-01: Evaluating literals, variables, lets, `get` and `has`](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-01)
-   - Python: [EVL-03: Logic follows Kleene; arithmetic keeps one type](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-03) · TypeScript: [EVL-03: Logic follows Kleene; arithmetic keeps one type](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-03)
-   - Python: [EVL-07: A constraint about a value, bound to a variable, reads value objects and union values](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-07) · TypeScript: [EVL-07: A constraint about a value, bound to a variable, reads value objects and union values](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-07)
+   - Python: [EVL-01: Simplifying literals, variables, lets, `get` and `has`](mbse:mbse-expressions/python3/tests/02_Simplifiers.ipynb#EVL-01) · TypeScript: [EVL-01: Simplifying literals, variables, lets, `get` and `has`](mbse:mbse-expressions/typescript5/tests/02_Simplifiers.ipynb#EVL-01)
+   - Python: [EVL-03: Logic follows Kleene; arithmetic keeps one type](mbse:mbse-expressions/python3/tests/02_Simplifiers.ipynb#EVL-03) · TypeScript: [EVL-03: Logic follows Kleene; arithmetic keeps one type](mbse:mbse-expressions/typescript5/tests/02_Simplifiers.ipynb#EVL-03)
+   - Python: [EVL-07: A constraint about a value, bound to a variable, reads value objects and union values](mbse:mbse-expressions/python3/tests/02_Simplifiers.ipynb#EVL-07) · TypeScript: [EVL-07: A constraint about a value, bound to a variable, reads value objects and union values](mbse:mbse-expressions/typescript5/tests/02_Simplifiers.ipynb#EVL-07)
 3. **Nothing is coerced.** *Why*: every language converts numbers by its own rules, and a constraint must mean the same
    everywhere. *When*: writing a literal, or comparing values of two kinds. *How*: an int and a float are different
    kinds of value, as in mbse-schemas: `1 == 1.0` is unknown, and adding an int to a float raises. Write each literal
@@ -120,22 +123,25 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    shift an int count: a term carries no width (practice 4).
    - Python: [T02.2: 42 in Python and TypeScript](mbse:mbse-expressions/python3/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.2) · TypeScript: [T02.2: 42 in Python and TypeScript](mbse:mbse-expressions/typescript5/tutorials/02_One_Value_A_Domain_In_Each_Language.ipynb#T02.2)
    - Python: [T10.4: No coercion](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.4) · TypeScript: [T10.4: No coercion](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.4)
-   - Python: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-02) · TypeScript: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-02)
+   - Python: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/python3/tests/02_Simplifiers.ipynb#EVL-02) · TypeScript: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/typescript5/tests/02_Simplifiers.ipynb#EVL-02)
    - Python: [DOM-08: The bitwise operations take ints, as two's complement of infinite width, and shifts an int count](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-08) · TypeScript: [DOM-08: The bitwise operations take ints, as two's complement of infinite width, and shifts an int count](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-08)
 4. **Only the operations a dialect defines are calls of it; validate what arrives as data.** *Why*: the core vocabulary
-   is small, pure and total, so every binding evaluates it the same way; a constraint from a file or another program
-   may be broken. *When*: before evaluating a constraint you did not write. *How*: `DIALECT.validate(expression,
-   bound)`, of the expression that holds the constraint, lists what evaluating it would raise, empty when valid:
+   is small, pure and total, so every binding simplifies it the same way; a constraint from a file or another program
+   may be broken. *When*: before simplifying a constraint you did not write. *How*: `DIALECT.validate(expression,
+   bound)`, of the expression that holds the constraint, lists what simplifying it would leave open or raise, empty
+   when valid:
    variables nothing binds, wrong numbers of arguments, and calls of operations the dialect does not define ("'contains'
    is not an operation Patterns defines"). A term is validated within its holder, never alone: Patterns' operations are
-   read from the holder's store, where `Patterns.define` names them. Evaluating such a constraint raises. A term carries no domain yet: values are taken by the schemas they are written with, ints
+   read from the holder's store, where `Patterns.define` names them. Simplifying such a constraint leaves the call in the
+   residual, named (`residues`: its dialect, its kind and the evaluation inventory's class); an operand of the wrong
+   kind raises. A term carries no domain yet: values are taken by the schemas they are written with, ints
    unbounded and floats binary64, until
    [CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md).
    [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md#terms-and-the-core-vocabulary).
    - Python: [T04.1: A variable](mbse:mbse-expressions/python3/tutorials/04_Names.ipynb#T04.1) · TypeScript: [T04.1: A variable](mbse:mbse-expressions/typescript5/tutorials/04_Names.ipynb#T04.1)
-   - Python: [T09.4: Validating a constraint before it is evaluated](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.4) · TypeScript: [T09.4: Validating a constraint before it is evaluated](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.4)
-   - Python: [T10.5: What raises](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5) · TypeScript: [T10.5: What raises](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5)
-   - Python: [EVL-04: Checking: `validate()` finds what evaluation would raise](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-04) · TypeScript: [EVL-04: Checking: `validate()` finds what evaluation would raise](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-04)
+   - Python: [T09.4: Validating a constraint before it is simplified](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.4) · TypeScript: [T09.4: Validating a constraint before it is simplified](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.4)
+   - Python: [T10.5: What stays, and what raises](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5) · TypeScript: [T10.5: What stays, and what raises](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5)
+   - Python: [EVL-04: Checking: `validate()` finds what simplification would leave open or raise](mbse:mbse-expressions/python3/tests/02_Simplifiers.ipynb#EVL-04) · TypeScript: [EVL-04: Checking: `validate()` finds what simplification would leave open or raise](mbse:mbse-expressions/typescript5/tests/02_Simplifiers.ipynb#EVL-04)
 5. **Constrain collections with quantifiers, not loops.** *Why*: a quantifier visits each item once, so a constraint
    over a collection stays bounded, total and pure, and the empty case is honest. *When*: a constraint about every
    item of a list, an object's related objects, or a set of values the constraint itself names. *How*: a container
@@ -168,17 +174,18 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [EXP-03: A term is a nested value: written into another it is copied, so it holds no cycle](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-03) · TypeScript: [EXP-03: A term is a nested value: written into another it is copied, so it holds no cycle](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-03)
    - Python: [EXP-06: Round trips through Plain, JSON and YAML: a term written nested, its kind its branch's name](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-06) · TypeScript: [EXP-06: Round trips through Plain, JSON and YAML: a term written nested, its kind its branch's name](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-06)
    - Python: [EXP-07: An expression is a reference object; a schema's expression is linked by `HasRoot`, an extension adjacency](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-07) · TypeScript: [EXP-07: An expression is a reference object; a schema's expression is linked by `HasRoot`, an extension adjacency](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-07)
-7. **Decide what you can now, with partial evaluation.** *Why*: a template's parameters are variables like any other,
-   and a question waiting on one number is best handed to whoever has it. *When*: some variables are known and others
-   are not. *How*: `Partials.OfAny(constraint, known)` evaluates what the known variables decide and keeps the rest:
-   the residual, a writer, written where it is wanted. Kleene's logic simplifies it, and finished with the rest of the
-   variables it gives what the constraint gives.
+7. **Decide what you can now: simplify with what you know.** *Why*: a template's parameters are variables like any
+   other, and a question waiting on one number is best handed to whoever has it. *When*: some variables are known and
+   others are not. *How*: `Simplifiers.OfAny(constraint, known).residual` folds what the known variables decide and
+   keeps the rest: the residual, a writer, written where it is wanted. Kleene's logic simplifies it, and simplified
+   with the rest of the variables it gives what the constraint gives. Simplification is recursive substitution: a new
+   term, never a change to the old one.
    [CAP-099: partial evaluation](mbse:mbse-basis/docs/capabilities/CAP-099.md#partials).
    - Python: [T12.1: One template, many products](mbse:mbse-expressions/python3/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.1) · TypeScript: [T12.1: One template, many products](mbse:mbse-expressions/typescript5/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.1)
    - Python: [T12.2: What the shipment decides](mbse:mbse-expressions/python3/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.2) · TypeScript: [T12.2: What the shipment decides](mbse:mbse-expressions/typescript5/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.2)
    - Python: [T12.3: The residual agrees with the constraint](mbse:mbse-expressions/python3/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.3) · TypeScript: [T12.3: The residual agrees with the constraint](mbse:mbse-expressions/typescript5/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.3)
    - Python: [T12.4: Lets of known values](mbse:mbse-expressions/python3/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.4) · TypeScript: [T12.4: Lets of known values](mbse:mbse-expressions/typescript5/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.4)
-   - Python: [PAR-04: The residual agrees with evaluation in every scope that completes the known one, and is stored as any term](mbse:mbse-expressions/python3/tests/11_Partials.ipynb#PAR-04) · TypeScript: [PAR-04: The residual agrees with evaluation in every scope that completes the known one, and is stored as any term](mbse:mbse-expressions/typescript5/tests/11_Partials.ipynb#PAR-04)
+   - Python: [PAR-04: The residual agrees with the term's simplification in every scope that completes the known one, and is stored as any term](mbse:mbse-expressions/python3/tests/11_Residuals.ipynb#PAR-04) · TypeScript: [PAR-04: The residual agrees with the term's simplification in every scope that completes the known one, and is stored as any term](mbse:mbse-expressions/typescript5/tests/11_Residuals.ipynb#PAR-04)
 8. **Analyze and rewrite constraints through their forms.** *Why*: every term of every dialect has a form, so an
    analysis is a loop or a fold, the same for any dialect. *When*: finding the constraints that read a property, the
    names a constraint needs, or rewriting every constraint one way. *How*: `Terms.form(term)` gives its kind,
@@ -201,11 +208,11 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [FRM-03: `walk`, `fold` and `same` traverse through forms alone](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-03) · TypeScript: [FRM-03: `walk`, `fold` and `same` traverse through forms alone](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-03)
    - Python: [FRM-09: Symbolics: the names an expression needs, and the imports it declares](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-09) · TypeScript: [FRM-09: Symbolics: the names an expression needs, and the imports it declares](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-09)
 9. **Keep the constraint in Patterns; translate it where it is checked.** *Why*: a translation keeps the constraint's
-   form, not always its value: each dialect evaluates by its own language's rules (a missing property is unknown in
+   form, not always its value: each dialect simplifies by its own language's rules (a missing property is unknown in
    Patterns, `#FIELD!` in Excel, an error in Python and MATLAB). *When*: a constraint must run in a spreadsheet, a
    pipeline, firmware or hardware, or be read back from one. *How*: `Translators.between(source, target).forward(term)`
-   gives a writer of the target's term, written in a transaction; its `Text.ToText` writes its source; evaluate it with
-   the target's evaluator, which models its rules. Load [Dialects](references/dialects.md) and
+   gives a writer of the target's term, written in a transaction; its `Text.ToText` writes its source; simplify it with
+   the target's simplifier, whose rules model the language's. Load [Dialects](references/dialects.md) and
    [Translating](references/translating.md).
    [CAP-100: six languages' expression dialects](mbse:mbse-basis/docs/capabilities/CAP-100.md#dialects),
    [CAP-101: translation between dialects](mbse:mbse-basis/docs/capabilities/CAP-101.md#translators).
@@ -215,17 +222,17 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [T06.1: A property](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.1) · TypeScript: [T06.1: A property](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.1)
    - Python: [T06.3: A call](mbse:mbse-expressions/python3/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.3) · TypeScript: [T06.3: A call](mbse:mbse-expressions/typescript5/tutorials/06_Calls_Members_And_Subscripts.ipynb#T06.3)
    - Python: [T14.1: Translating](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1) · TypeScript: [T14.1: Translating](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1)
-   - Python: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2) · TypeScript: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2)
+   - Python: [T14.2: Each language simplifies by its own rules](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2) · TypeScript: [T14.2: Each language simplifies by its own rules](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2)
    - Python: [T14.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3) · TypeScript: [T14.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3)
    - Python: [T15.1: C](mbse:mbse-expressions/python3/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.1) · TypeScript: [T15.1: C](mbse:mbse-expressions/typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.1)
    - Python: [T15.3: SystemVerilog](mbse:mbse-expressions/python3/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.3) · TypeScript: [T15.3: SystemVerilog](mbse:mbse-expressions/typescript5/tutorials/15_Constraints_For_Firmware_And_Hardware.ipynb#T15.3)
-   - Python: [TRN-06: Translations evaluate alike where the dialects' rules agree, and apart where they do not](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-06) · TypeScript: [TRN-06: Translations evaluate alike where the dialects' rules agree, and apart where they do not](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-06)
+   - Python: [TRN-06: Translations simplify alike where the dialects' rules agree, and apart where they do not](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-06) · TypeScript: [TRN-06: Translations simplify alike where the dialects' rules agree, and apart where they do not](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-06)
 10. **Nothing is imported or called unless the scope provides it.** *Why*: constraints travel as data, sometimes from
-   people you do not fully trust. *When*: evaluating a dialect whose expressions import or call (Python, MATLAB,
-   Excel). *How*: give its evaluator a scope that allowlists what it may reach: Python's modules, MATLAB's functions
-   and packages, Excel's workbooks and add-ins ([Dialects](references/dialects.md#scopes-names-imports-and-references)).
+   people you do not fully trust. *When*: simplifying a dialect whose expressions import or call (Python, MATLAB,
+   Excel). *How*: give its simplifier a scope that allowlists what it may reach: Python's modules, MATLAB's functions
+   and packages, Excel's workbooks and add-ins; what the scope does not provide stays in the residual ([Dialects](references/dialects.md#scopes-names-imports-and-references)).
    - Python: [T14.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4) · TypeScript: [T14.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4)
-   - Python: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-02) · TypeScript: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-02)
+   - Python: [DIA-02: Python simplifies by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-02) · TypeScript: [DIA-02: Python simplifies by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-02)
    - Python: [DIA-05: MATLAB resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-05) · TypeScript: [DIA-05: MATLAB resolves functions from imports, the path and packages that the scope provides](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-05)
    - Python: [DIA-08: Excel reads cells from workbooks, and add-in functions from the workbook's add-ins](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-08) · TypeScript: [DIA-08: Excel reads cells from workbooks, and add-in functions from the workbook's add-ins](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-08)
 11. **A dialect reads only its own terms.** *Why*: a kind of the same name means another thing in another language.
@@ -235,7 +242,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [T03.3: The same literal in each language](mbse:mbse-expressions/python3/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.3) · TypeScript: [T03.3: The same literal in each language](mbse:mbse-expressions/typescript5/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.3)
    - Python: [FRM-04: Every dialect's install adds its union of its kinds to `Term`, and its terms round-trip](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-04) · TypeScript: [FRM-04: Every dialect's install adds its union of its kinds to `Term`, and its terms round-trip](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-04)
    - Python: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's subterm may be any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-12) · TypeScript: [FRM-12: A dialect reads only its own terms: a term holds its dialect, a shared kind's subterm may be any dialect's term, and validation reports another's; C and C++ each define the kinds they share](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-12)
-   - Python: [EVL-05: The union of terms names each branch by its dialect, and a dialect's `Term` each by its kind's tag](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-05) · TypeScript: [EVL-05: The union of terms names each branch by its dialect, and a dialect's `Term` each by its kind's tag](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-05)
+   - Python: [EVL-05: The union of terms names each branch by its dialect, and a dialect's `Term` each by its kind's tag](mbse:mbse-expressions/python3/tests/02_Simplifiers.ipynb#EVL-05) · TypeScript: [EVL-05: The union of terms names each branch by its dialect, and a dialect's `Term` each by its kind's tag](mbse:mbse-expressions/typescript5/tests/02_Simplifiers.ipynb#EVL-05)
 12. **Dialects, operations and domains are data.** *Why*: a program learns what a dialect can say from the store,
    without its code, and a domain is named once. *When*: listing a dialect's vocabulary, or reading a domain. *How*:
    a dialect's `define`, run after its install in a transaction of its own, writes its singleton, found by its global
@@ -303,13 +310,13 @@ each case shows its own:
   against an int age is unknown. Python's `True` is not an int, though its `bool` subclasses `int`.
   - Python: [T10.1: Absent is unknown](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.1) · TypeScript: [T10.1: Absent is unknown](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.1)
   - Python: [T10.4: No coercion](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.4) · TypeScript: [T10.4: No coercion](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.4)
-  - Python: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/python3/tests/02_Evaluators.ipynb#EVL-02) · TypeScript: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/typescript5/tests/02_Evaluators.ipynb#EVL-02)
+  - Python: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/python3/tests/02_Simplifiers.ipynb#EVL-02) · TypeScript: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/typescript5/tests/02_Simplifiers.ipynb#EVL-02)
 - **Transactions and arguments.** Python writes within `with store.transaction():`; TypeScript within
   `store.transaction(() => ...)`, which gives back what its function returns. Python passes options by keyword
   (`validate(term, bound={"x"})`, `Scope(variables, modules={...})`); TypeScript positionally (`validate(term,
   ["x"])`) or in an options object (`new Scope(variables, { modules })`).
   - Python: [T09.1: Writing a constraint](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.1) · TypeScript: [T09.1: Writing a constraint](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.1)
-  - Python: [T09.4: Validating a constraint before it is evaluated](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.4) · TypeScript: [T09.4: Validating a constraint before it is evaluated](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.4)
+  - Python: [T09.4: Validating a constraint before it is simplified](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.4) · TypeScript: [T09.4: Validating a constraint before it is simplified](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.4)
   - Python: [T14.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4) · TypeScript: [T14.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4)
 - **Mappings and frames.** A mapping's entries are tuples in Python (`E.mapping(("lo", 0.5))`), arrays in TypeScript
   (`E.mapping(["lo", 0.5])`); a mapping given as data is a `dict` in Python, a `Map` or a plain object in TypeScript,
@@ -328,9 +335,9 @@ each case shows its own:
   - Python: [FRM-02: Forms and `make` are inverses, for every kind of every dialect](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-02) · TypeScript: [FRM-02: Forms and `make` are inverses, for every kind of every dialect](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-02)
   - Python: [T13.5: Rewriting](mbse:mbse-expressions/python3/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.5) · TypeScript: [T13.5: Rewriting](mbse:mbse-expressions/typescript5/tutorials/13_Analyzing_And_Rewriting_Constraints.ipynb#T13.5)
   - Python: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/python3/tests/07_Translators.ipynb#TRN-01) · TypeScript: [TRN-01: Rules pair patterns; holes bind arguments and attributes](mbse:mbse-expressions/typescript5/tests/07_Translators.ipynb#TRN-01)
-- **Python's expressions.** Python's Python3 dialect evaluates with real modules (numpy among them, with the `numpy`
+- **Python's expressions.** Python's Python3 dialect simplifies with real modules (numpy among them, with the `numpy`
   extra) and parses source with `Text.FromText`; TypeScript's models Python's rules, its modules are
-  `new Python3.Evaluators.Module(name, { members })`, it has no numpy, and it has no `FromText`: build the same
+  `new Python3.Simplifiers.Module(name, { members })`, it has no numpy, and it has no `FromText`: build the same
   expression with the dialect's constructors. JavaScript has no `Ellipsis` or complex numbers: `P.constant(P.ELLIPSIS)`
   and `new P.Complex(0, 2)` stand for them, and keyword-only arguments are an options object
   (`P.lambda_(body, ["a"], { kwarg: "k" })`).
@@ -338,20 +345,21 @@ each case shows its own:
   - Python: [T14.3: Reading constraints back](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3) · TypeScript: [T14.3: Reading constraints back](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.3)
   - Python: [T14.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4) · TypeScript: [T14.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4)
   - Python: [DIA-01: Python: expressions as `ast` has them, with their imports; rendered and parsed as source](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-01) · TypeScript: [DIA-01: Python: expressions as `ast` has them, with their imports; rendered and parsed as source](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-01)
-  - Python: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-02) · TypeScript: [DIA-02: Python evaluates by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-02)
-- **Errors.** TypeScript's `NameError`, `ImportError`, `ZeroDivisionError` and `OverflowError` are classes of those
-  names in `@mbse/expressions/Framework`'s `Errors`. Excel's error values are equal by value in Python
+  - Python: [DIA-02: Python simplifies by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-02) · TypeScript: [DIA-02: Python simplifies by Python's rules, in a scope that allowlists what an expression may reach](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-02)
+- **Errors.** TypeScript's `IndexError`, `ZeroDivisionError` and `OverflowError` are classes of those names in
+  `@mbse/expressions/Framework`'s `Errors`, and `NotEvaluated`, a `ValueError`, is `Framework`'s `Simplifiers`' in
+  both. Excel's error values are equal by value in Python
   (`Error("#FIELD!")`), and one instance per code in TypeScript (`Error.of("#FIELD!")`, compared with `===`).
-  - Python: [T10.5: What raises](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5) · TypeScript: [T10.5: What raises](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5)
-  - Python: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2) · TypeScript: [T14.2: Each language evaluates by its own rules](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2)
+  - Python: [T10.5: What stays, and what raises](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5) · TypeScript: [T10.5: What stays, and what raises](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5)
+  - Python: [T14.2: Each language simplifies by its own rules](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2) · TypeScript: [T14.2: Each language simplifies by its own rules](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.2)
   - Python: [DIA-07: Excel coerces, orders values of every type, and computes with errors](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-07) · TypeScript: [DIA-07: Excel coerces, orders values of every type, and computes with errors](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-07)
 - **Traps of both.** Each store has its own schemas: run each install once per store, and an install and what uses it
   in separate transactions. Transactions do not nest: build what a writer needs, a translation's source term say,
   before opening the one that writes it. A translation and a residual give writers, not terms: write them before
-  rendering or evaluating them. Evaluating an operation the dialect does not define raises: validate first.
+  rendering or simplifying them. An operation the dialect does not define stays in the residual: validate first.
   - Python: [T14.1: Translating](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1) · TypeScript: [T14.1: Translating](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.1)
   - Python: [T12.1: One template, many products](mbse:mbse-expressions/python3/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.1) · TypeScript: [T12.1: One template, many products](mbse:mbse-expressions/typescript5/tutorials/12_Deciding_What_You_Can_Now.ipynb#T12.1)
-  - Python: [T10.5: What raises](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5) · TypeScript: [T10.5: What raises](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5)
+  - Python: [T10.5: What stays, and what raises](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5) · TypeScript: [T10.5: What stays, and what raises](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.5)
 
 ## Learn it by example
 <!-- no case: points to the tutorials and the test plan as a whole -->

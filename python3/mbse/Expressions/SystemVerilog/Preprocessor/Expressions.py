@@ -35,7 +35,7 @@ else binds.
 The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are, each
 with its own kinds it has, every one of them in every edition (mbse-programs gives none of them a `SINCE`; an
 `elsif`'s, IEEE 1364-2001's, is its helper's, and a feature within a kind, as a system include's and a condition's
-are, is not recorded). `DIALECT` reads its kinds and the five other dialects' terms. Evaluation refuses each of its
+are, is not recorded). `DIALECT` reads its kinds and the five other dialects' terms. Simplification leaves each of its
 kinds by name. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
 syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
 `lambda t: t.undefdirective(lambda d: d.name(lambda i: i.spelling("WIDTH")))`."""

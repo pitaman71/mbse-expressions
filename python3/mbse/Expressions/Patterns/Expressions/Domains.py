@@ -1,5 +1,5 @@
 """Domains of the Patterns dialect, in code: the domains `Dialect.infer` gives Patterns' values, and the signatures of
-its operations, for inference; and the values evaluation gives collections and entries.
+its operations, for inference; and the values its folding rules give collections and entries.
 
 Patterns holds no kinds of domain and owns no domains: as data they are the standard dialects' (ISO/IEC 11404's,
 IEEE 754's, IEEE 1164's and Unicode's, `mbse.Expressions.ISOIEC11404.Expressions` and the others), read through the
@@ -14,13 +14,13 @@ an unbounded integer, a float an IEEE 754 binary64 number. `of(value)` gives a n
 read through mbse-schemas' readers (`Framework.Objects`), terms and value objects among them, and `Anything` is the
 domain of a value not known statically, such as a property read with `get`. Unknown (`None`) is not a domain.
 
-`SIGNATURES` gives each operation's signature, for inference, following the evaluator's rules: comparisons take two
+`SIGNATURES` gives each operation's signature, for inference, following its folding rules: comparisons take two
 values of one domain, ordered for ints, floats, strs and bytes; logic takes bools; arithmetic takes two numbers of one
 domain and gives that domain, and the bitwise operations and shifts ints. `QUANTIFIERS` are the quantifiers', and
 `LIST` and `MAPPING` the container constructors'; `List` and `Keyed` are the domains of collections, `Records` of an
 adjacency's entries.
 
-`Collection` and `Record` are evaluation's values: a collection's items (and a keyed list's keys), and an entry, as
+`Collection` and `Record` are its folding rules' values: a collection's items (and a keyed list's keys), and an entry, as
 `entries` gives it.
 """
 

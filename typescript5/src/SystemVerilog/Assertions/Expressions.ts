@@ -37,7 +37,7 @@
  * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: `strengthproperty`, `abortproperty`
  * and `caseproperty` arrived in IEEE 1800-2009). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
  * writes its kinds as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches them to it, by
- * IEEE 1800's precedence of sequence and property operators (Table 16-3). The evaluator refuses each of its kinds by name
+ * IEEE 1800's precedence of sequence and property operators (Table 16-3). Simplification leaves each of its kinds in the residual, named
  * (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.repetitionsequence((r) => r.sequence(a)
  * .operator("*").count(two))`.
@@ -278,7 +278,7 @@ function check(tag: string): (record: any) => string[] {
 /** The subterms of its kinds' helpers that may be empty: a clock's event's condition (`iff`). */
 const OPTIONAL: readonly string[] = ["clock.events.condition"];
 
-/** How the framework reads its own kinds: each an application of no operation it evaluates, binding no name. */
+/** How the framework reads its own kinds: each an application of no operation it folds, binding no name. */
 function kinds(): Record<string, F.Kind> {
   const application = (tag: string, options: F.KindOptions = {}) =>
     new F.Kind(F.APPLICATION, { signature: new FD.Opaque(), check: check(tag), ...options,

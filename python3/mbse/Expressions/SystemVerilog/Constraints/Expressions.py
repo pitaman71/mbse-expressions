@@ -37,8 +37,8 @@ The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 18
 (`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: `disablesoftconstraint` and
 `uniqueconstraint` from IEEE 1800-2012). A feature within a kind (`soft`, 2012; a default distribution item, 2023) is
 not recorded, as for C's: a constraint, to come. `DIALECT` reads its kinds and the five other dialects' terms. `Text`
-writes its kinds as SystemVerilog source, as `randomize() with` writes them, on one line. No kind of it is evaluated
-(Q11): SystemVerilog's evaluator refuses each by name. Its terms are written through the builders (mbse-basis
+writes its kinds as SystemVerilog source, as `randomize() with` writes them, on one line. No kind of it is folded
+(Q11): SystemVerilog's rules leave each in the residual, named. Its terms are written through the builders (mbse-basis
 [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
 `lambda c: c.expressionconstraint(lambda e: e.soft(True).expression(...))`."""
 

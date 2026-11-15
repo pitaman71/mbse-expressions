@@ -18,7 +18,7 @@
  *   `\\operatorname{has}(x, \\text{email})`, for the functions in `Domains.FUNCTIONS`.
  * - `let` (the framework's): `body \\quad \\text{where } name = value`, which binds a name within its body.
  *
- * Notation has no evaluator: this dialect is written, rendered, validated, inferred and translated, and evaluation belongs
+ * Notation has no simplifier: this dialect is written, rendered, validated, inferred and translated, and simplification belongs
  * to the dialects it is translated to. `DIALECT` reads its kinds (`Terms.Dialect`); its writers (`constant`, `symbol`,
  * ...) write them through the builders, wherever a term is written, in a transaction. `Text.ToText` writes a term as
  * math-mode LaTeX, parenthesized only where precedence requires.
