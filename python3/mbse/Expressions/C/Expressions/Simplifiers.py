@@ -1017,13 +1017,31 @@ def rules(dialect: Any, folded: frozenset[str] = FOLDED,
     return found
 
 
+GUARDED: Mapping[str, frozenset[int] | None] = {
+    Expressions.CONDITIONALEXPRESSION: frozenset({1, 2}), "&&": frozenset({1}), "||": frozenset({1}),
+    Kinds.SIZEOFEXPRESSION: None, Kinds.ALIGNOFEXPRESSION: None, Kinds.GENERICSELECTION: None}
+"""What C may never evaluate, by a term's operator or tag, each argument where None: a conditional's branches, by its
+condition; the right operand of `&&` and `||`, by the left; and `sizeof`'s, `alignof`'s and `_Generic`'s, which C does
+not evaluate (6.5.3.4, 6.5.1.1), but for the association `_Generic` chooses."""
+
+
+def guarding(dialect: Any, table: Mapping[str, frozenset[int] | None]) -> Callable[[Any, int], bool]:
+    """A simplifier's `guarded`, by `table`, as `GUARDED`."""
+    def guarded(node: Any, index: int) -> bool:
+        key = Terms.operator_of(node, dialect.kind(node)[2])
+        return key in table and (table[key] is None or index in table[key])  # type: ignore[operator]
+
+    return guarded
+
+
 def simplifier(dialect: Any, folded: frozenset[str], categories: Mapping[str, Mapping[str, str]],
                write: Callable[..., Any],
-               extend: Callable[[dict[str, Any], Rules], None] | None = None) -> F.Simplifier:
+               extend: Callable[[dict[str, Any], Rules], None] | None = None,
+               guarded: Mapping[str, frozenset[int] | None] = GUARDED) -> F.Simplifier:
     """The simplifier of a dialect of the C family, by `rules(dialect, folded, extend)`, its literals written by
-    `write`."""
+    `write`, what its language may never evaluate `guarded`, by a table as `GUARDED`."""
     return F.Simplifier(rules(dialect, folded, extend), literal=_literal_of(write, dialect), categories=categories,
-                        native=native, simplify=_simplify)
+                        native=native, simplify=_simplify, guarded=guarding(dialect, guarded))
 
 
 SIMPLIFIER = simplifier(Expressions.DIALECT, FOLDED, CATEGORIES, Expressions.literal)

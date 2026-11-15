@@ -36,8 +36,8 @@ import { Repr } from "@mbse/schemas/Framework";
 import * as Domains from "../../C/Expressions/Domains.js";
 import * as C from "../../C/Expressions/Expressions.js";
 import {
-  CATEGORIES as C_CATEGORIES, FOLDED as C_FOLDED, Pack, Rules, Scope, Typed, Untyped, VOID, common, convert, describe,
-  order, simplifier, typed, zero,
+  CATEGORIES as C_CATEGORIES, FOLDED as C_FOLDED, GUARDED as C_GUARDED, Pack, Rules, Scope, Typed, Untyped, VOID,
+  common, convert, describe, order, simplifier, typed, zero,
 } from "../../C/Expressions/Simplifiers.js";
 import * as F from "../../Framework/Simplifiers.js";
 import * as S from "../../Framework/Symbolics.js";
@@ -326,7 +326,14 @@ export const CATEGORIES: Record<string, Record<string, string>> = {
 };
 
 /** The simplifier of the Cpp dialect; its values carry their C++ types, its residual's literals theirs. */
-export const SIMPLIFIER = simplifier(Expressions.DIALECT, FOLDED, CATEGORIES, Expressions.literal, extend);
+/** What C++ may never evaluate, beside what C may not: a lambda's and a requires expression's body, and `noexcept`'s
+ * and `typeid`'s operands, unevaluated ([expr.prim.lambda], [expr.unary.noexcept], [expr.typeid]). */
+export const GUARDED: Readonly<Record<string, readonly number[] | null>> = {
+  ...C_GUARDED, [Expressions.LAMBDAEXPRESSION]: [1], [Expressions.REQUIRESEXPRESSION]: [1],
+  [Expressions.NOEXCEPTEXPRESSION]: null, [Expressions.TYPEIDEXPRESSION]: null,
+};
+
+export const SIMPLIFIER = simplifier(Expressions.DIALECT, FOLDED, CATEGORIES, Expressions.literal, extend, GUARDED);
 
 /** The folding rules of the Cpp dialect. */
 export const RULES = SIMPLIFIER.rules as Rules;

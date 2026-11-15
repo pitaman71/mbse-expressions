@@ -39,6 +39,7 @@ from mbse.Expressions.C.Expressions import Domains, Kinds
 from mbse.Expressions.C.Expressions.Simplifiers import (CATEGORIES as C_CATEGORIES, FOLDED as C_FOLDED, VOID, Pack,
                                                          Rules, Scope, Typed, Untyped, common, convert, describe,
                                                          native, order, simplifier, typed, zero)
+from mbse.Expressions.C.Expressions.Simplifiers import GUARDED as C_GUARDED
 from mbse.Expressions.Framework import Simplifiers as F, Symbolics as S, Terms
 from mbse.Expressions.Patterns.Expressions import Ieee754
 
@@ -348,7 +349,13 @@ CATEGORIES: dict[str, dict[str, str]] = {
 }
 """The evaluation inventory's class of what each dialect C++ reads has no rule for (`a` where none is given)."""
 
-SIMPLIFIER = simplifier(Expressions.DIALECT, FOLDED, CATEGORIES, Expressions.literal, _extend)
+GUARDED: Mapping[str, frozenset[int] | None] = {
+    **C_GUARDED, Expressions.LAMBDAEXPRESSION: frozenset({1}), Expressions.REQUIRESEXPRESSION: frozenset({1}),
+    Expressions.NOEXCEPTEXPRESSION: None, Expressions.TYPEIDEXPRESSION: None}
+"""What C++ may never evaluate, beside what C may not: a lambda's and a requires expression's body, and `noexcept`'s
+and `typeid`'s operands, unevaluated ([expr.prim.lambda], [expr.unary.noexcept], [expr.typeid])."""
+
+SIMPLIFIER = simplifier(Expressions.DIALECT, FOLDED, CATEGORIES, Expressions.literal, _extend, GUARDED)
 """The simplifier of the Cpp dialect; its values carry their C++ types, its residual's literals theirs."""
 
 RULES = SIMPLIFIER.rules

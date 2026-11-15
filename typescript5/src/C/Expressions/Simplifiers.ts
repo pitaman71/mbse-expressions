@@ -1054,13 +1054,31 @@ export function rules(dialect: Terms.Dialect, folded: ReadonlySet<string> = FOLD
   return found;
 }
 
-/** The simplifier of a dialect of the C family, by `rules(dialect, folded, extend)`, its literals written by `write`.
- */
+/** What C may never evaluate, by a term's operator or tag, each argument where null: a conditional's branches, by its
+ * condition; the right operand of `&&` and `||`, by the left; and `sizeof`'s, `alignof`'s and `_Generic`'s, which C
+ * does not evaluate (6.5.3.4, 6.5.1.1), but for the association `_Generic` chooses. */
+export const GUARDED: Readonly<Record<string, readonly number[] | null>> = {
+  [Expressions.CONDITIONALEXPRESSION]: [1, 2], "&&": [1], "||": [1],
+  [Expressions.SIZEOFEXPRESSION]: null, [Expressions.ALIGNOFEXPRESSION]: null, [Expressions.GENERICSELECTION]: null,
+};
+
+/** A simplifier's `guarded`, by `table`, as `GUARDED`. */
+export function guarding(dialect: Terms.Dialect, table: Readonly<Record<string, readonly number[] | null>>):
+  (node: any, index: number) => boolean {
+  return (node, index) => {
+    const indices = table[Terms.operatorOf(node, dialect.kind(node)[2])];
+    return indices !== undefined && (indices === null || indices.includes(index));
+  };
+}
+
+/** The simplifier of a dialect of the C family, by `rules(dialect, folded, extend)`, its literals written by `write`,
+ * what its language may never evaluate `guarded`, by a table as `GUARDED`. */
 export function simplifier(dialect: Terms.Dialect, folded: ReadonlySet<string>,
   categories: Record<string, Record<string, string>>, write: (value: unknown, suffix?: string | null) => unknown,
-  extend: ((operations: Map<string, any>, rules: Rules) => void) | null = null): F.Simplifier {
+  extend: ((operations: Map<string, any>, rules: Rules) => void) | null = null,
+  guarded: Readonly<Record<string, readonly number[] | null>> = GUARDED): F.Simplifier {
   return new F.Simplifier(rules(dialect, folded, extend), { literal: literalOf(write, dialect), categories,
-    native: (value: Typed) => native(value), simplify });
+    native: (value: Typed) => native(value), simplify, guarded: guarding(dialect, guarded) });
 }
 
 /** The simplifier of the C dialect. */
