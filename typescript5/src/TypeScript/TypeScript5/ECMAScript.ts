@@ -18,7 +18,7 @@
  * `hasProperty`), iteration (`iterate`), an object's own entries (`ownEntries`) and calls (`call`, `construct`). A
  * built-in method (`String.prototype.toUpperCase`) is read, but not modeled: reading one throws `NoRule` by its name,
  * as `BUILTINS` lists them, since its value is the language's runtime's. Errors are ECMAScript's, of the same names
- * and messages in both implementations: TypeError, and RangeError. Python's twin is `Abstract.py`: what JavaScript
+ * and messages in both implementations: TypeError, and RangeError. Python's twin is `ECMAScript.py`: what JavaScript
  * has natively, it models (`UNDEFINED`, a `HOLE` in a list, UTF-16 code units, bigints' sizes).
  */
 

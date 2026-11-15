@@ -44,11 +44,11 @@ from typing import Any
 
 from mbse.Expressions.Framework import Simplifiers as F, Symbolics as S, Terms
 
-from . import Abstract as A, Expressions as T, Text
+from . import ECMAScript as ES, Expressions as T, Text
 
 __all__ = ["OfAny", "RULES", "SIMPLIFIER", "Scope", "GLOBALS", "FOLDED", "CATEGORIES"]
 
-GLOBALS: dict[str, Any] = {"undefined": A.UNDEFINED, "NaN": math.nan, "Infinity": math.inf}
+GLOBALS: dict[str, Any] = {"undefined": ES.UNDEFINED, "NaN": math.nan, "Infinity": math.inf}
 """The global object's values a scope provides (ECMA-262, 19.1): `undefined`, `NaN` and `Infinity`."""
 
 
@@ -83,7 +83,7 @@ def _spread(terms: tuple[Any, ...], scope: Any) -> list[Any]:
     values: list[Any] = []
     for term in terms:
         if _tag(term) == T.SPREADELEMENT:
-            values += A.iterate(_evaluate(_node(term).subterms["argument"], scope))
+            values += ES.iterate(_evaluate(_node(term).subterms["argument"], scope))
         else:
             values.append(_evaluate(term, scope))
     return values
@@ -94,10 +94,10 @@ def _key(node: T.Node, scope: Any) -> str:
     property key."""
     key = node.subterms["key"]
     if node.attributes.get("computed"):
-        return A.to_property_key(_evaluate(key, scope))
+        return ES.to_property_key(_evaluate(key, scope))
     if _tag(key) == T.IDENTIFIER:
         return Terms.name_of(key)
-    return A.to_property_key(_evaluate(key, scope))
+    return ES.to_property_key(_evaluate(key, scope))
 
 
 # --- Closures and their parameters ---
@@ -110,35 +110,35 @@ def _bind(pattern: Any, value: Any, scope: Any) -> Any:
     if tag == T.IDENTIFIER:
         return scope.bind(Terms.name_of(pattern), value)
     if tag == T.ASSIGNMENTPATTERN:
-        if value is A.UNDEFINED:
+        if value is ES.UNDEFINED:
             value = _evaluate(node.subterms["right"], scope)
         return _bind(node.subterms["left"], value, scope)
     if tag == T.ARRAYPATTERN:
-        items = A.iterate(value)
+        items = ES.iterate(value)
         for i, element in enumerate(node.lists["elements"]):
             if _tag(element) == T.RESTELEMENT:
                 scope = _bind(_node(element).subterms["argument"], items[i:], scope)
             elif _tag(element) != T.ELISION:
-                scope = _bind(element, items[i] if i < len(items) else A.UNDEFINED, scope)
+                scope = _bind(element, items[i] if i < len(items) else ES.UNDEFINED, scope)
         return scope
     if tag == T.OBJECTPATTERN:
-        if value is A.UNDEFINED or value is None:
-            raise TypeError(f"Cannot destructure '{A.to_string(value)}' as it is {A.to_string(value)}.")
+        if value is ES.UNDEFINED or value is None:
+            raise TypeError(f"Cannot destructure '{ES.to_string(value)}' as it is {ES.to_string(value)}.")
         taken: list[str] = []
         for member in node.lists["properties"]:
             if _tag(member) == T.RESTELEMENT:
-                rest = {key: item for key, item in A.own_entries(value) if key not in taken}
+                rest = {key: item for key, item in ES.own_entries(value) if key not in taken}
                 scope = _bind(_node(member).subterms["argument"], rest, scope)
             else:
                 inner = _node(member)
                 key = _key(inner, scope)
                 taken.append(key)
-                scope = _bind(inner.subterms["value"], A.get(value, key), scope)
+                scope = _bind(inner.subterms["value"], ES.get(value, key), scope)
         return scope
     raise ValueError(f"{Terms._article(tag)} is not a parameter")
 
 
-def _arrow(arguments: list[F.Thunk], node: Any, scope: Any) -> A.Closure:
+def _arrow(arguments: list[F.Thunk], node: Any, scope: Any) -> ES.Closure:
     """An arrow's closure: called, its parameters bound to the arguments in the scope it was made in, its body's
     value. An async arrow's call, and a block body's, stay: a promise and statements are mbse-programs'."""
     arrow = _node(node)
@@ -147,18 +147,18 @@ def _arrow(arguments: list[F.Thunk], node: Any, scope: Any) -> A.Closure:
 
     def call(values: list[Any]) -> Any:
         if asynchronous:
-            raise F.NoRule(A.DIALECT, "async arrowfunctionexpression")
+            raise F.NoRule(ES.DIALECT, "async arrowfunctionexpression")
         if body is None:
-            raise F.NoRule(A.DIALECT, "arrowfunctionexpression block")
+            raise F.NoRule(ES.DIALECT, "arrowfunctionexpression block")
         inner = scope
         for i, parameter in enumerate(parameters):
             if _tag(parameter) == T.RESTELEMENT:
                 inner = _bind(_node(parameter).subterms["argument"], values[i:], inner)
             else:
-                inner = _bind(parameter, values[i] if i < len(values) else A.UNDEFINED, inner)
+                inner = _bind(parameter, values[i] if i < len(values) else ES.UNDEFINED, inner)
         return _evaluate(body, inner)
 
-    return A.Closure(call)
+    return ES.Closure(call)
 
 
 # --- Kinds ---
@@ -171,7 +171,7 @@ def _constant(node: Any) -> Any:
         return None
     text = Text.ToText(node)
     end = text.rindex("/")
-    return A.RegExp(text[1:end], text[end + 1:])
+    return ES.RegExp(text[1:end], text[end + 1:])
 
 
 def _template(node: T.Node, cooked: bool = True) -> list[Any]:
@@ -180,16 +180,16 @@ def _template(node: T.Node, cooked: bool = True) -> list[Any]:
             for quasi in node.helpers["quasis"]]
     if not cooked:
         return raws
-    return [A.UNDEFINED if text is None else text for text in map(A.cook, raws)]
+    return [ES.UNDEFINED if text is None else text for text in map(ES.cook, raws)]
 
 
 def _templateliteral(arguments: list[F.Thunk], node: Any, scope: Any) -> str:
     strings = _template(_node(node))
-    if A.UNDEFINED in strings:
+    if ES.UNDEFINED in strings:
         raise ValueError("a templateliteral's quasi has an invalid escape")
     written = strings[0]
     for argument, string in zip(arguments, strings[1:]):
-        written = A.binary("+", A.binary("+", written, A.to_string(argument())), string)
+        written = ES.binary("+", ES.binary("+", written, ES.to_string(argument())), string)
     return written
 
 
@@ -197,21 +197,21 @@ def _taggedtemplate(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     tagged = _node(node)
     function = arguments[0]()
     quasi = tagged.helpers["quasi"]
-    strings = A.TemplateStrings(_template(quasi), _template(quasi, cooked=False))
+    strings = ES.TemplateStrings(_template(quasi), _template(quasi, cooked=False))
     values = [_evaluate(term, scope) for term in quasi.many]
     return _called(function, [strings, *values], tagged.subterms["tag"])
 
 
 def _called(function: Any, values: list[Any], callee: Any) -> Any:
-    if A.kind(function) != "function":
+    if ES.kind(function) != "function":
         raise TypeError(f"{Text.ToText(callee)} is not a function")
-    return A.call(function, values)
+    return ES.call(function, values)
 
 
 def _call(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     called = _node(node)
     function = arguments[0]()
-    if called.attributes.get("optional") and (function is None or function is A.UNDEFINED):
+    if called.attributes.get("optional") and (function is None or function is ES.UNDEFINED):
         raise _ShortCircuit()
     return _called(function, _spread(called.lists["arguments"], scope), called.subterms["callee"])
 
@@ -220,7 +220,7 @@ def _new(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     made = _node(node)
     constructor = arguments[0]()
     values = _spread(made.lists["arguments"], scope)
-    made_value = A.construct(constructor, values) if A.kind(constructor) == "function" else None
+    made_value = ES.construct(constructor, values) if ES.kind(constructor) == "function" else None
     if made_value is None:
         raise TypeError(f"{Text.ToText(made.subterms['callee'])} is not a constructor")
     return made_value
@@ -229,30 +229,30 @@ def _new(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
 def _member(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     member = _node(node)
     value = arguments[0]()
-    if member.attributes.get("optional") and (value is None or value is A.UNDEFINED):
+    if member.attributes.get("optional") and (value is None or value is ES.UNDEFINED):
         raise _ShortCircuit()
     property_ = member.subterms["property"]
     if member.attributes.get("computed"):
-        key = A.to_property_key(arguments[1]())
+        key = ES.to_property_key(arguments[1]())
     elif _tag(property_) == T.IDENTIFIER:
         key = Terms.name_of(property_)
     else:  # `#x`, a class's
-        raise F.NoRule(A.DIALECT, _tag(property_))
-    return A.get(value, key)
+        raise F.NoRule(ES.DIALECT, _tag(property_))
+    return ES.get(value, key)
 
 
 def _chain(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
     try:
         return arguments[0]()
     except _ShortCircuit:
-        return A.UNDEFINED
+        return ES.UNDEFINED
 
 
 def _array(arguments: list[F.Thunk], node: Any, scope: Any) -> list[Any]:
     values: list[Any] = []
     for element in Terms.arguments_of(Terms.kind_of(node)[1]):
         if _tag(element) == T.ELISION:
-            values.append(A.HOLE)
+            values.append(ES.HOLE)
         else:
             values += _spread((element,), scope)
     return values
@@ -263,13 +263,13 @@ def _object(arguments: list[F.Thunk], node: Any, scope: Any) -> dict[str, Any]:
     for member in _node(node).lists["properties"]:
         inner = _node(member)
         if _tag(member) == T.SPREADELEMENT:
-            properties.update(A.own_entries(_evaluate(inner.subterms["argument"], scope)))
+            properties.update(ES.own_entries(_evaluate(inner.subterms["argument"], scope)))
             continue
         key = _key(inner, scope)
         if key == "__proto__" and not inner.attributes.get("computed") and not inner.attributes.get("shorthand"):
-            raise F.NoRule(A.DIALECT, "objectexpression __proto__")  # an object's prototype, which no value models
+            raise F.NoRule(ES.DIALECT, "objectexpression __proto__")  # an object's prototype, which no value models
         properties[key] = _evaluate(inner.subterms["value"], scope)
-    return A.ordered(properties)
+    return ES.ordered(properties)
 
 
 def _property(arguments: list[F.Thunk], node: Any, scope: Any) -> tuple[str, Any]:
@@ -287,10 +287,10 @@ def _logical(operator: str) -> F.Implementation:
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> Any:
         left = arguments[0]()
         if operator == "&&":
-            return arguments[1]() if A.to_boolean(left) else left
+            return arguments[1]() if ES.to_boolean(left) else left
         if operator == "||":
-            return left if A.to_boolean(left) else arguments[1]()
-        return arguments[1]() if left is None or left is A.UNDEFINED else left
+            return left if ES.to_boolean(left) else arguments[1]()
+        return arguments[1]() if left is None or left is ES.UNDEFINED else left
 
     return apply
 
@@ -302,28 +302,28 @@ def _strict(function: Any) -> F.Implementation:
 def _relation(operator: str) -> Any:
     def compare(left: Any, right: Any) -> bool:
         if operator == "<":
-            return A.is_less_than(left, right) is True
+            return ES.is_less_than(left, right) is True
         if operator == ">":
-            return A.is_less_than(right, left, False) is True
+            return ES.is_less_than(right, left, False) is True
         if operator == "<=":
-            return A.is_less_than(right, left, False) is False
-        return A.is_less_than(left, right) is False
+            return ES.is_less_than(right, left, False) is False
+        return ES.is_less_than(left, right) is False
 
     return compare
 
 
 _BINARY: dict[str, Any] = {
-    **{operator: (lambda operator: lambda x, y: A.binary(operator, x, y))(operator)
+    **{operator: (lambda operator: lambda x, y: ES.binary(operator, x, y))(operator)
        for operator in ("+", "-", "*", "/", "%", "**", "<<", ">>", ">>>", "&", "|", "^")},
     **{operator: _relation(operator) for operator in ("<", ">", "<=", ">=")},
-    "==": A.is_loosely_equal, "!=": lambda x, y: not A.is_loosely_equal(x, y),
-    "===": A.is_strictly_equal, "!==": lambda x, y: not A.is_strictly_equal(x, y),
-    "in": lambda x, y: A.has_property(y, x), "instanceof": A.instance_of,
+    "==": ES.is_loosely_equal, "!=": lambda x, y: not ES.is_loosely_equal(x, y),
+    "===": ES.is_strictly_equal, "!==": lambda x, y: not ES.is_strictly_equal(x, y),
+    "in": lambda x, y: ES.has_property(y, x), "instanceof": ES.instance_of,
 }
 
 _UNARY: dict[str, Any] = {
-    **{operator: (lambda operator: lambda x: A.unary(operator, x))(operator) for operator in ("-", "+", "~", "!")},
-    "typeof": A.type_of, "void": lambda x: A.UNDEFINED,
+    **{operator: (lambda operator: lambda x: ES.unary(operator, x))(operator) for operator in ("-", "+", "~", "!")},
+    "typeof": ES.type_of, "void": lambda x: ES.UNDEFINED,
 }
 
 FOLDED = frozenset({
@@ -342,7 +342,7 @@ CATEGORIES: dict[str, dict[str, str]] = {
                          "awaitexpression", "yieldexpression", "importexpression", "assignmentexpression",
                          "updateexpression", "unaryexpression 'delete'", "async arrowfunctionexpression",
                          "arrowfunctionexpression block"), _D),
-        **dict.fromkeys((*A.BUILTINS, "host value"), "c")},
+        **dict.fromkeys((*ES.BUILTINS, "host value"), "c")},
     "TypeScript Types": {"*": "b"}, "TypeScript Patterns": {"*": "b"}, "TypeScript RegExp": {"*": "b"},
 }
 """The evaluation inventory's class of what each dialect of the family has no rule for (`a` where none is given): a
@@ -365,8 +365,8 @@ RULES = _Rules(T.DIALECT, {
     T.TEMPLATELITERAL: _templateliteral, T.TAGGEDTEMPLATEEXPRESSION: _taggedtemplate,
     T.PARENTHESIZEDEXPRESSION: lambda arguments, node, scope: arguments[0](),
     T.SEQUENCEEXPRESSION: lambda arguments, node, scope: [argument() for argument in arguments][-1],
-    T.ELISION: lambda arguments, node, scope: A.HOLE,
-    T.SPREADELEMENT: lambda arguments, node, scope: tuple(A.iterate(arguments[0]())),  # spread where it stands
+    T.ELISION: lambda arguments, node, scope: ES.HOLE,
+    T.SPREADELEMENT: lambda arguments, node, scope: tuple(ES.iterate(arguments[0]())),  # spread where it stands
     T.ARRAYEXPRESSION: _array, T.PROPERTY: _property, T.OBJECTEXPRESSION: _object,
     T.MEMBEREXPRESSION: _member, T.CHAINEXPRESSION: _chain, T.CALLEXPRESSION: _call, T.NEWEXPRESSION: _new,
     T.ARROWFUNCTIONEXPRESSION: _arrow,
@@ -374,7 +374,7 @@ RULES = _Rules(T.DIALECT, {
     T.BINARYEXPRESSION: {operator: _strict(function) for operator, function in _BINARY.items()},
     T.LOGICALEXPRESSION: {operator: _logical(operator) for operator in ("&&", "||", "??")},
     T.CONDITIONALEXPRESSION: lambda arguments, node, scope: (
-        arguments[1]() if A.to_boolean(arguments[0]()) else arguments[2]()),
+        arguments[1]() if ES.to_boolean(arguments[0]()) else arguments[2]()),
     T.TSASEXPRESSION: _operand("expression"), T.TSSATISFIESEXPRESSION: _operand("expression"),
     T.TSTYPEASSERTION: _operand("expression"), T.TSNONNULLEXPRESSION: _operand("expression"),
     T.TSINSTANTIATIONEXPRESSION: _operand("expression"),
@@ -400,7 +400,7 @@ def _negated(written: Any) -> Terms.Writer:
 def _literal(value: Any) -> Any:
     """The literal of a value: a boolean's, a string's, a non-negative number's or bigint's, a negative one's negated;
     NaN, Infinity and `undefined` by name; `null` and a regular expression a constant. None for any other value."""
-    found = A.kind(value)
+    found = ES.kind(value)
     if found in ("boolean", "string"):
         return T.DIALECT.spec(value)
     if found == "bigint":
@@ -426,18 +426,18 @@ def _written_key(key: str) -> Terms.Writer:
     """A property's key as written: an identifier where it is one, an array index a number, else a string."""
     if _NAME.fullmatch(key) and key != "__proto__":
         return _name(key)
-    return T.DIALECT.spec(float(key) if A.is_array_index(key) else key)
+    return T.DIALECT.spec(float(key) if ES.is_array_index(key) else key)
 
 
 def _display(value: Any) -> Any:
     """An array's or an object's display, of its items' literals and displays, a hole an elision; None where an item
     has neither, or for any other value (a tagged template's strings among them)."""
-    found = A.kind(value)
-    if found == "array" and not isinstance(value, A.TemplateStrings):
-        items = [_make(T.ELISION, {}) if item is A.HOLE else _literal(item) or _display(item) for item in value]
+    found = ES.kind(value)
+    if found == "array" and not isinstance(value, ES.TemplateStrings):
+        items = [_make(T.ELISION, {}) if item is ES.HOLE else _literal(item) or _display(item) for item in value]
         return None if None in items else _make(T.ARRAYEXPRESSION, {}, *items)
     if found == "object":
-        written = [(key, _literal(item) or _display(item)) for key, item in A.ordered(value).items()]
+        written = [(key, _literal(item) or _display(item)) for key, item in ES.ordered(value).items()]
         if any(item is None for _, item in written):
             return None
         return _make(T.OBJECTEXPRESSION, {}, *(_make(T.PROPERTY, {  # `__proto__` computed, a property, no prototype
@@ -452,11 +452,11 @@ def _simplify(node: Any, results: list[F.Result]) -> F.Result | None:
     tag = Terms.kind_of(node)[0]
     if tag == T.LOGICALEXPRESSION and results[0].known:
         operator, left = Terms.attributes_of(Terms.kind_of(node)[1])["operator"], results[0].value
-        if (operator == "&&" and A.to_boolean(left)) or (operator == "||" and not A.to_boolean(left)) or (
-                operator == "??" and (left is None or left is A.UNDEFINED)):
+        if (operator == "&&" and ES.to_boolean(left)) or (operator == "||" and not ES.to_boolean(left)) or (
+                operator == "??" and (left is None or left is ES.UNDEFINED)):
             return results[1]
     if tag == T.CONDITIONALEXPRESSION and results[0].known:
-        return results[1] if A.to_boolean(results[0].value) else results[2]
+        return results[1] if ES.to_boolean(results[0].value) else results[2]
     if tag == T.SEQUENCEEXPRESSION and all(result.known for result in results[:-1]):
         return results[-1]
     return None
