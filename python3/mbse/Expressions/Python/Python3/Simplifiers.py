@@ -27,16 +27,16 @@ Its rules fold every statement-free kind whose value Python defines (mbse-basis 
 single-dialect expressions with literal leaves](mbse:mbse-basis/docs/capabilities/README.md#CAP-295) to [CAP-297:
 simplification in every binding state](mbse:mbse-basis/docs/capabilities/README.md#CAP-297)), in their complete shapes
 (`FOLDED`): constants, displays and their `*` and `**` unpacking, comprehensions of any number of clauses over targets
-that unpack, f-strings by `format()`'s mini-language and t-strings, slices, calls with keywords and unpacking, lambdas
-called with Python's binding of parameters, named expressions, `is` and `is not` by identity, and `@`. What stays in
-the residual, named, is what has no value outside a statement (`yield`, `yield from`, `await`, an `async for`, a target
-that writes into data), a kind of its family's other dialects and invalid syntax, by the name of the dialect that owns
-it ("Python Types typevar is not simplified"; a type expression of Python3's kinds simplifies as Python3's), and what
-Python leaves to its implementation or its platform, each named where it is decided: `is` between equal immutable
-values; an f-string's field whose text is an implementation's (a set's order, an object's address), a format spec of a
-locale (`n`) or of a complex number, and a `\\N{...}` escape (Unicode's names); a complex power other than an integer
-one, and a real power whose value is complex, which need the platform's `pow`, `atan2`, `cos` and `sin`.
-`CATEGORIES` gives each the evaluation inventory's class.
+that unpack, f-strings by `format()`'s mini-language (a complex number's among them) and t-strings, slices, calls with
+keywords and unpacking, lambdas called with Python's binding of parameters, named expressions, `is` and `is not` by
+identity, and `@`. What stays in the residual, named, is what has no value outside a statement (`yield`, `yield from`,
+`await`, an `async for`, a target that writes into data), a kind of its family's other dialects and invalid syntax, by
+the name of the dialect that owns it ("Python Types typevar is not simplified"; a type expression of Python3's kinds
+simplifies as Python3's), and what Python leaves to its implementation or its platform, each named where it is decided:
+`is` between equal immutable values; an f-string's field whose text is an implementation's (a set's order, an object's
+address), a format spec of a locale (`n`), or one Python refuses, and a `\\N{...}` escape (Unicode's names); a complex
+power other than an integer one, and a real power whose value is complex, which need the platform's `pow`, `atan2`,
+`cos` and `sin`. `CATEGORIES` gives each the evaluation inventory's class.
 """
 
 from __future__ import annotations
@@ -593,9 +593,9 @@ _FLOATS = "eEfFgG%"
 
 
 def _supported(value: Any, spec: str) -> bool:
-    """Whether a format spec is one of `format()`'s mini-language for a str, an int or a bool, or a float, that Python
-    formats without error: where it would raise (a sign for a str, `,` with `x`), or its locale decides (`n`), it stays
-    in the residual."""
+    """Whether a format spec is one of `format()`'s mini-language for a str, an int or a bool, a float, or a complex
+    number, that Python formats without error: where it would raise (a sign for a str, `,` with `x`, zero padding for a
+    complex number), or its locale decides (`n`), it stays in the residual."""
     found = _SPEC.fullmatch(spec)
     if found is None:
         return False
@@ -603,6 +603,8 @@ def _supported(value: Any, spec: str) -> bool:
     kind = f["type"] or ""
     if type(value) is str:
         return kind in ("", "s") and not (f["sign"] or f["z"] or f["alt"] or f["grouping"]) and f["align"] != "="
+    if type(value) is complex:  # a float's type or none, neither zero padding nor `=` alignment
+        return kind in ("", *"eEfFgG") and not f["zero"] and f["fill"] != "0" and f["align"] != "="
     if (kind and kind in _FLOATS) or type(value) is float:
         return kind == "" or kind in _FLOATS
     if kind == "c":
@@ -611,14 +613,14 @@ def _supported(value: Any, spec: str) -> bool:
 
 
 def _formatted(value: Any, spec: str) -> str:
-    """`format(value, spec)`, as Python's mini-language has it for a str, an int, a bool or a float; with no spec, its
-    `str`."""
+    """`format(value, spec)`, as Python's mini-language has it for a str, an int, a bool, a float or a complex number;
+    with no spec, its `str`."""
     if spec == "":
         if not _representable(value):
             raise _refuse(f"joinedstr's field of {_name(value)}")
         return format(value, spec)
-    if type(value) not in (str, int, bool, float):
-        if type(value) is complex or not _representable(value):
+    if type(value) not in (str, int, bool, float, complex):
+        if not _representable(value):
             raise _refuse(f"joinedstr's format of {_name(value)}")
         raise TypeError(f"unsupported format string passed to {_name(value)}.__format__")
     if not _supported(value, spec):

@@ -32,15 +32,15 @@
  * single-dialect expressions with literal leaves](mbse:mbse-basis/docs/capabilities/README.md#CAP-295) to [CAP-297:
  * simplification in every binding state](mbse:mbse-basis/docs/capabilities/README.md#CAP-297)), in their complete
  * shapes (`FOLDED`): constants, displays and their `*` and `**` unpacking, comprehensions of any number of clauses over
- * targets that unpack, f-strings by `format()`'s mini-language and t-strings, slices, calls with keywords and
- * unpacking, lambdas called with Python's binding of parameters, named expressions, `is` and `is not` by identity, and
- * `@`. What stays in the residual, named, is what has no value outside a statement (`yield`, `yield from`, `await`, an
- * `async for`, a target that writes into data), a kind of its family's other dialects and invalid syntax, by the name
- * of the dialect that owns it ("Python Types typevar is not simplified"; a type expression of Python3's kinds
- * simplifies as Python3's), and what Python leaves to its implementation or its platform, each named where it is
- * decided: `is` between equal immutable values; an f-string's field whose text is an implementation's (a set's order,
- * an object's address), a format spec of a locale (`n`) or of a complex number, and a `\N{...}` escape (Unicode's
- * names); a complex power other than an integer one, and a real power whose value is complex, which need the
+ * targets that unpack, f-strings by `format()`'s mini-language (a complex number's among them) and t-strings, slices,
+ * calls with keywords and unpacking, lambdas called with Python's binding of parameters, named expressions, `is` and
+ * `is not` by identity, and `@`. What stays in the residual, named, is what has no value outside a statement (`yield`,
+ * `yield from`, `await`, an `async for`, a target that writes into data), a kind of its family's other dialects and
+ * invalid syntax, by the name of the dialect that owns it ("Python Types typevar is not simplified"; a type expression
+ * of Python3's kinds simplifies as Python3's), and what Python leaves to its implementation or its platform, each named
+ * where it is decided: `is` between equal immutable values; an f-string's field whose text is an implementation's (a
+ * set's order, an object's address), a format spec of a locale (`n`), or one Python refuses, and a `\N{...}` escape
+ * (Unicode's names); a complex power other than an integer one, and a real power whose value is complex, which need the
  * platform's `pow`, `atan2`, `cos` and `sin`. `CATEGORIES` gives each the evaluation inventory's class.
  */
 
@@ -1409,10 +1409,11 @@ function parse(spec: string): Spec | null {
     type: type ?? "" };
 }
 
-/** Whether a format spec is one of `format()`'s mini-language for a str, an int or a bool, or a float, that Python
- * formats without error: where it would raise (a sign for a str, `,` with `x`), or its locale decides (`n`), it stays
- * in the residual. */
+/** Whether a format spec is one of `format()`'s mini-language for a str, an int or a bool, a float, or a complex
+ * number, that Python formats without error: where it would raise (a sign for a str, `,` with `x`, zero padding for a
+ * complex number), or its locale decides (`n`), it stays in the residual. */
 function supported(value: unknown, f: Spec): boolean {
+  if (value instanceof Complex) return ["", ..."eEfFgG"].includes(f.type) && !f.zero && f.fill !== "0" && f.align !== "=";
   if (typeof value === "string") return ["", "s"].includes(f.type) && !(f.sign || f.z || f.alt || f.grouping) && f.align !== "=";
   if (isFloatType(f.type) || typeof value === "number") return f.type === "" || isFloatType(f.type);
   if (f.type === "c") return !(f.sign || f.alt || f.grouping || f.precision !== undefined || f.z);
@@ -1516,18 +1517,54 @@ function grouped(digits: string, separator: string | undefined, size: number, wi
   return out.reverse().join("");
 }
 
-/** `format(value, spec)`, as Python's mini-language has it for a str, an int, a bool or a float. */
+/** A part of a complex number formatted as CPython writes it (`format_complex_internal`): a float's, by `type`, or
+ * by `r` a repr's shortest digits, without `.0`; signed by `sign`, its digits grouped, unpadded. */
+function complexPart(x: number, f: Spec, type: string, sign: string | undefined): string {
+  const negative = x < 0 || Object.is(x, -0);
+  let [whole, rest] = ["", ""];
+  if (!Number.isFinite(x)) whole = Number.isNaN(x) ? "nan" : "inf";
+  else if (type === "r") {
+    const shown = pyFloat(Math.abs(x)).replace(/\.0$/, "");
+    const cut = shown.search(/[.e]/);
+    [whole, rest] = cut < 0 ? [shown, ""] : [shown.slice(0, cut), shown.slice(cut)];
+    if (f.alt && !rest.startsWith(".")) rest = `.${rest}`;
+  } else [whole, rest] = floatBody(x, type, f.precision, f.alt);
+  if (["E", "F", "G"].includes(type)) whole = whole.toUpperCase();
+  const zeroed = negative && f.z && /^[0.]*$/.test(whole + rest.replace(/[eE].*/, ""));
+  const signed = negative && !zeroed && !Number.isNaN(x) ? "-" : sign === "+" ? "+" : sign === " " ? " " : "";
+  if (/^[0-9]+$/.test(whole)) whole = grouped(whole, f.grouping, 3, 0, false);
+  return signed + whole + rest;
+}
+
+/** `format(value, spec)` of a complex number, as CPython composes it: each part a float's, the imaginary part signed
+ * `+` unless the real part is left out, then `j`; with no type, a repr's digits (or `g`'s, with a precision), in
+ * parentheses unless the real part is +0, which is left out; then padded as a whole. */
+function complexFormatted(value: Complex, f: Spec): string {
+  const omitted = f.type === "";
+  const skip = omitted && Object.is(value.real, 0);
+  const type = omitted ? (f.precision === undefined ? "r" : "g") : f.type;
+  const imaginary = `${complexPart(value.imag, f, type, skip ? f.sign : "+")}j`;
+  const body = skip ? imaginary : omitted ? `(${complexPart(value.real, f, type, f.sign)}${imaginary})`
+    : complexPart(value.real, f, type, f.sign) + imaginary;
+  const [fill, padding] = [f.fill ?? " ", Math.max(0, f.width - [...body].length)];
+  if (f.align === "<") return body + fill.repeat(padding);
+  if (f.align === "^") return fill.repeat(Math.floor(padding / 2)) + body + fill.repeat(padding - Math.floor(padding / 2));
+  return fill.repeat(padding) + body;
+}
+
+/** `format(value, spec)`, as Python's mini-language has it for a str, an int, a bool, a float or a complex number. */
 function formatted(value: unknown, spec: string): string {
   if (spec === "") {
     if (!representable(value)) throw refuse(`joinedstr's field of ${typeName(value)}`);
     return str(value);
   }
-  if (!(typeof value === "string" || isNumeric(value))) {
-    if (value instanceof Complex || !representable(value)) throw refuse(`joinedstr's format of ${typeName(value)}`);
+  if (!(typeof value === "string" || isNumeric(value) || value instanceof Complex)) {
+    if (!representable(value)) throw refuse(`joinedstr's format of ${typeName(value)}`);
     throw new TypeError(`unsupported format string passed to ${typeName(value)}.__format__`);
   }
   const f = parse(spec);
   if (f === null || !supported(value, f)) throw refuse(`joinedstr's format spec ${repr(spec)} of ${typeName(value)}`);
+  if (value instanceof Complex) return complexFormatted(value, f);
   const numeric = typeof value !== "string";
   const fill = f.fill ?? (f.zero ? "0" : " ");
   const align = f.align ?? (f.zero && numeric ? "=" : numeric ? ">" : "<");
