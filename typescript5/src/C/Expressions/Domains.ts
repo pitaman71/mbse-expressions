@@ -483,7 +483,9 @@ export function outOfRange(attributes: ReadonlyMap<string, any>, language: strin
   return null;
 }
 
-const KEYWORDS: ReadonlySet<string> = new Set([
+/** The keywords a type name's specifiers name an arithmetic type with; any other type's name is a name of its own
+ * (`wchar_t`, `uint8_t`). */
+export const KEYWORDS: ReadonlySet<string> = new Set([
   "signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"]);
 /** The cv-qualifiers a type name's specifiers may hold, which name no type. */
 export const QUALIFIERS: ReadonlySet<string> = new Set(["const", "volatile", "restrict", "__restrict", "__restrict__"]);
