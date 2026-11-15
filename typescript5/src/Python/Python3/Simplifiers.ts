@@ -1531,7 +1531,7 @@ function complexPart(x: number, f: Spec, type: string, sign: string | undefined)
   } else [whole, rest] = floatBody(x, type, f.precision, f.alt);
   if (["E", "F", "G"].includes(type)) whole = whole.toUpperCase();
   const zeroed = negative && f.z && /^[0.]*$/.test(whole + rest.replace(/[eE].*/, ""));
-  const signed = negative && !zeroed && !Number.isNaN(x) ? "-" : sign === "+" ? "+" : sign === " " ? " " : "";
+  const signed = negative && !zeroed ? "-" : sign === "+" ? "+" : sign === " " ? " " : ""; // a NaN is never negative
   if (/^[0-9]+$/.test(whole)) whole = grouped(whole, f.grouping, 3, 0, false);
   return signed + whole + rest;
 }
