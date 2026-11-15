@@ -24,8 +24,9 @@
  * pattern); a name is `Expressions`' `Identifier`, the family's helper. What a pattern binds is its variables
  * (`bound_names`), which a `matches` binds in its conditional's consequence and the conditions after it in a `&&&`
  * (12.6.2, 12.6.3), as `Expressions`' scopes read them: a pattern binds, but is no binder of its own, so none of its kinds
- * refines `Let`. Its kinds are applications the framework reads by their structure, of no known domain, and are not
- * simplified: SystemVerilog's rules leave each in the residual, named ("SystemVerilog Patterns variablepattern is not evaluated").
+ * refines `Let`. Its kinds are applications the framework reads by their structure, of no known domain: alone, each
+ * stays in the residual, named ("SystemVerilog Patterns variablepattern is not simplified"); a `matches` matches a
+ * constant, a wildcard and a variable pattern (`Expressions.Simplifiers`).
  *
  * The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
  * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: every one since IEEE 1800-2005, as

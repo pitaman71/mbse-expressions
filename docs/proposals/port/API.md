@@ -2063,15 +2063,15 @@ every family's folding rules fill, evaluation retired as a public procedure.
      call of its own (`evaluate(node, scope)` is the rules' protocol); `Framework.Partials` and Patterns' `Partials`
      fold into the simplifier, Kleene's short-circuits Patterns' `simplify`.
 327. **The algorithm** *(agent)*: recursive substitution over immutable terms, a new term written, the old one never
-     changed. At each subterm (each one `folds` allows: all but SystemVerilog's), the rules compute its value in the
-     scope; a value with a literal replaces the subterm, a literal subterm stays as written, a value with none (an
-     object, a collection, unknown) keeps the subterm, simplified in turn, its value known to its parent's `simplify`;
-     a container of values with literals is written as its display where the dialect has one (Python3's list and dict,
-     MATLAB's concatenation), not a literal. Where the scope does not resolve a reference the subterm is rebuilt from
-     its simplified arguments, each in the scope its names are bound in: a let's of a known value bound to it, any
-     other hidden (`Symbolics.UNKNOWN`), an import's among them: its root not having folded, its module is not entered
-     again. A let whose body no longer
-     refers to its name is its body. A subterm unchanged is kept as read, not rewritten.
+     changed. At each subterm (each one `folds` allows: every one, but where SystemVerilog's sizing keeps a subterm,
+     item 364), the rules compute its value in the scope; a value with a literal replaces the subterm, a literal subterm
+     stays as written, a value with none (an object, a collection, unknown) keeps the subterm, simplified in turn, its
+     value known to its parent's `simplify`; a container of values with literals is written as its display where the
+     dialect has one (Python3's list and dict, MATLAB's concatenation), not a literal. Where the scope does not resolve
+     a reference the subterm is rebuilt from its simplified arguments, each in the scope its names are bound in: a let's
+     of a known value bound to it, any other hidden (`Symbolics.UNKNOWN`), an import's among them: its root not having
+     folded, its module is not entered again. A let whose body no longer refers to its name is its body. A subterm
+     unchanged is kept as read, not rewritten.
 328. **No refusals** *(agent)*: a kind or an operator a dialect has no rule for, invalid syntax (`error`, `missing`, of
      class `b`) and a kind of another dialect of its family stay in the residual, named; a subterm of a term the rules
      computed (a cast's type) needs no rule, and is not named. What the dialect's own semantics make an error still
@@ -2089,9 +2089,9 @@ every family's folding rules fill, evaluation retired as a public procedure.
 330. **Literals** *(agent)*: Patterns', TypeScript5's, MATLAB's and Excel's a native's; Python3's a basic scalar's, a
      list's and a dict's display; C's and C++'s a value of `int`, `long` or `long long`, signed or not, a finite
      `float` or `double`, `bool` or a string, with the suffix of its type (`3u`, `2.5f`), any other type's (`char`,
-     `short`, `long double`, the decimal types, `_BitInt`) and a non-finite float staying; SystemVerilog's root and
-     names alone fold (an operand's width is its context's, 11.6), an `integer`'s value an unsized decimal integer, any
-     other integral value a sized 4-state vector of its bits and signedness, a real a real. C's simplification gives
+     `short`, `long double`, the decimal types, `_BitInt`) and a non-finite float staying; SystemVerilog's an
+     `integer`'s value an unsized decimal integer, any other integral value a sized 4-state vector of its bits and
+     signedness, a real a real, `null` the constant (where a subterm folds, item 364). C's simplification gives
      its native (`native`).
 331. **Categories** *(agent)*: each family's module holds its dialects' classes, from the evaluation inventory, keyed
      by `what`, then by kind, then `*`; invalid syntax is `b`; anything not listed `a`.
@@ -2131,13 +2131,13 @@ every family's folding rules fill, evaluation retired as a public procedure.
      class and message (TypeError, RangeError: Python's `Abstract.RangeError`, a `ValueError`).
 336. **What is reachable** *(agent)*: nothing beyond the scope, since expressions may come from data. A call calls only
      a function the scope provides or a closure the expression makes; `new`, a class the scope provides (Python: a
-     `type`; TypeScript: a constructor); a host function is called without `this`. ECMAScript's built-in methods are read,
-     not modeled: a property a value inherits from a built-in prototype raises `NoRule` by its name,
-     "TypeScript5 String.prototype.toUpperCase is not simplified" (`Abstract.BUILTINS`, ECMAScript 2025's prototypes'
-     properties, Annex B's among them, 139), class `c`; any other inherited name is `undefined`, and `in` finds both. A
-     host value (neither a primitive, an array, a plain object, a regular expression, a function nor a data object) is
-     read by nothing: "TypeScript5 host value is not simplified", class `c`. A data object (mbse-schemas') reads as an
-     object of its set properties, a list an array, an int a bigint.
+     `type`; TypeScript: a constructor); a host function is called without `this`. ECMAScript's built-in methods are
+     read, not modeled: a property a value inherits from a built-in prototype raises `NoRule` by its name, "TypeScript5
+     String.prototype.toUpperCase is not simplified" (`Abstract.BUILTINS`, ECMAScript 2025's prototypes' properties,
+     Annex B's among them, 139), class `c`; any other inherited name is `undefined`, and `in` finds both. A host value
+     (neither a primitive, an array, a plain object, a regular expression, a function nor a data object) is read by
+     nothing: "TypeScript5 host value is not simplified", class `c`. A data object (mbse-schemas') reads as an object of
+     its set properties, a list an array, an int a bigint.
 337. **Literals written back** *(agent)*: a boolean's, a string's, a non-negative number's and bigint's literal; a
      negative one as `-` of its magnitude (a negative literal is no TypeScript source, and `(-3) ** x` needs the
      unary); NaN, Infinity and `undefined` by their global names, -0 as `-0`; `null` and a regular expression a
@@ -2162,11 +2162,11 @@ every family's folding rules fill, evaluation retired as a public procedure.
      `parenthesized`, `concatenatedstring`, `joinedstr`, `templatestr`, `tuple`, `set`, `starred`, `slice`, `listcomp`,
      `setcomp`, `dictcomp`, `namedexpr` and `lambda`; and the inventory's 5 class (a) refusals within the kinds it
      folded: keywords and `**` in a call, a dict's `**` item, a comprehension's target that unpacks (a tuple, a list,
-     one `*starred`, parentheses), `is` and `is not`, and `@`. Python 3.15's `*` element of a comprehension and `**` of a
-     dict comprehension fold too. The rules subclass the framework's `Interpreter` for `constant` only. A `None`, `...`
-     or complex value folds to a `constant` (`P.constant(value)`); a tuple to its display, as a list's and a dict's are;
-     a set (its order is its hash table's), a slice, a closure, a template and a generator have no literal: their
-     subterms are simplified, and nothing is named.
+     one `*starred`, parentheses), `is` and `is not`, and `@`. Python 3.15's `*` element of a comprehension and `**` of
+     a dict comprehension fold too. The rules subclass the framework's `Interpreter` for `constant` only. A `None`,
+     `...` or complex value folds to a `constant` (`P.constant(value)`); a tuple to its display, as a list's and a
+     dict's are; a set (its order is its hash table's), a slice, a closure, a template and a generator have no literal:
+     their subterms are simplified, and nothing is named.
 342. **Closures** *(agent)*: a `lambda`'s value is a closure over the scope it is made in, its defaults evaluated then,
      callable by `call` in any scope (the scope allows what the expression made), binding Python's parameters
      (positional-only, defaults, `*args`, keyword-only, `**kwargs`) with CPython's messages ("<lambda>() missing 1
@@ -2184,13 +2184,13 @@ every family's folding rules fill, evaluation retired as a public procedure.
 345. **f-strings and t-strings** *(agent)*: a field converted (`!r`, `!s`, `!a`) and formatted by `format()`'s
      mini-language for a str, an int, a bool, a float and a complex number, correctly rounded in TypeScript as CPython
      rounds. A complex number's format is composed as CPython 3.14's `format_complex_internal` composes it: each part a
-     float's, the imaginary part signed `+` unless the real part is left out, then `j`; with no type, repr's digits (`g`'s
-     with a precision), in parentheses unless the real part is +0, which is left out; padded as a whole (cross-checked,
-     the TypeScript model against CPython, on 16,728 generated values and specs, 7,008 of them folded). What stays,
-     named, of class `a`: a field of a value whose text is its implementation's (a set's order, an object's, a
-     generator's, a function's or a template's address: "joinedstr's field of set"); a format of such a value; a spec a
-     locale decides (`n`); a spec Python refuses (a sign for a str, zero padding for a complex number, an int's code for
-     a float), which stays rather than raising Python's `ValueError` (open below); and a `\N{...}` escape (Unicode's
+     float's, the imaginary part signed `+` unless the real part is left out, then `j`; with no type, repr's digits
+     (`g`'s with a precision), in parentheses unless the real part is +0, which is left out; padded as a whole
+     (cross-checked, the TypeScript model against CPython, on 16,728 generated values and specs, 7,008 of them folded).
+     What stays, named, of class `a`: a field of a value whose text is its implementation's (a set's order, an object's,
+     a generator's, a function's or a template's address: "joinedstr's field of set"); a format of such a value; a spec
+     a locale decides (`n`); a spec Python refuses (a sign for a str, zero padding for a complex number, an int's code
+     for a float), which stays rather than raising Python's `ValueError` (open below); and a `\N{...}` escape (Unicode's
      names). A t-string's value is a template, as Python 3.14's `string.templatelib` has it (`strings`,
      `interpolations`, `values`; an interpolation's `value`, `expression`, `conversion`, `format_spec`), with no
      literal; its residual keeps its text as written, which is its value's.
@@ -2212,11 +2212,12 @@ every family's folding rules fill, evaluation retired as a public procedure.
      in insertion order, a dict a `Map` (or an object of variables), a complex number a `Domains.ComplexValue`, a slice
      and a template private classes whose type names are Python's; `@` raises Python's `TypeError` for every value, none
      having `__matmul__`.
-350. **Tests**: suite PYS, `28_Python3` (the number the coordinator assigned, before TypeScript5's 29), twelve cases, the same in both languages, from the earlier draft's DIA-31, split by construct;
-     `06_Dialects` is DIA-01 to DIA-30 again, DIA-02's tables keeping three rows the step added (a `*` argument, a
-     chain with `is`, `None`) and asserting `@`'s TypeError and the builtins' keywords where they named residues; PYT-08
-     asserts a lambda's value has no literal. Tutorial 3's T03.7 shows the constants fold (`2j`, `None` and `...`
-     literal roots), re-run with its outputs in both languages; no other tutorial's outputs change.
+350. **Tests**: suite PYS, `28_Python3` (the number the coordinator assigned, before TypeScript5's 29), twelve cases,
+     the same in both languages, from the earlier draft's DIA-31, split by construct; `06_Dialects` is DIA-01 to DIA-30
+     again, DIA-02's tables keeping three rows the step added (a `*` argument, a chain with `is`, `None`) and asserting
+     `@`'s TypeError and the builtins' keywords where they named residues; PYT-08 asserts a lambda's value has no
+     literal. Tutorial 3's T03.7 shows the constants fold (`2j`, `None` and `...` literal roots), re-run with its
+     outputs in both languages; no other tutorial's outputs change.
 
 ### C and C++ (step 2)
 
@@ -2312,6 +2313,94 @@ every family's folding rules fill, evaluation retired as a public procedure.
      DIA-24 (`FOLDED` a superset; a qualified name resolved by the scope; `operator+` stays), CTY-09 (`sizeof(int)` is
      4), XTY-09 (`static_cast<int>(1.5)` is 1, `const_cast` stays). Tutorials 8.07 (08.07.5: `sizeof(int)` folds to
      `4ul`) and 8.09 (08.09.5: `static_cast<int>(1)` folds to `1`) follow, re-run.
+
+### SystemVerilog (step 2)
+
+363. **SystemVerilog's folding rules** *(agent)*: `SystemVerilog/Expressions/Simplifiers` folds every kind the
+     evaluation inventory gives class (a), 9, beside the 17 it folded (`FOLDED`, 26): `dollarexpression` (the last
+     index of the array or queue its select indexes; within `inside`'s range, its type's least or greatest value),
+     `streamingconcatenation` (11.4.14: `>>` as the items stand, `<<` slices taken from the right; a slice a constant
+     or a type's width; an array's items, `with [range]`), `mintypmaxexpression` (the scope's choice),
+     `emptyqueue` (an empty array, no literal), `namedconnection` and `emptyargument` (a `Subroutine`'s formals and
+     defaults), `matchesexpression` and `predicateexpression` (item 366), `thisexpression` (the scope's `this`). And
+     every class (a) refusal within a folded kind: a time literal (item 367), `null` (the null class handle, compared by
+     identity with handles, its literal the constant), `+:` and `-:` (of a vector, or an array or queue), `+/-` and
+     `+%-` (1800-2023's tolerances: `a - b` to `a + b`, `a - a*b/100` to `a + a*b/100`, in the `inside`'s type), the
+     system functions of clauses 20 and 21 that compute a value (item 371), strings' methods (item 370), arrays'
+     locator methods with or without `with` (`find`, `find_index`, `find_first`, `find_first_index`, `find_last`,
+     `find_last_index`, `min`, `max`, `unique`, `unique_index`) and an iterator's `index()`, casts to a vector of
+     constant packed dimensions, to an atom with a signing (`int unsigned'(x)`), to `realtime` (`real`, 6.12) and to
+     `string` (its bytes, NUL dropped), and a package's scoped names (item 369). `RULES`, `FOLDED`, `CATEGORIES`,
+     `SYSTEM`, `METHODS`, `STRING_METHODS`, `LOCATORS`, `MATH`, `CONVERSIONS`, `QUERIES`, `Scope` and `Subroutine` are
+     exported. `const'(x)` is not folded: it cannot be written, `SystemVerilog Types` having no `const` keyword (a gap
+     of CAP-231's model, reported).
+364. **Folding inside an expression, by 11.6's sizing** *(agent)*: the dialect's `folds` hook, and its rules, fold a
+     subterm wherever a literal means what the subterm meant there. Once the root has not folded, the rules size the
+     whole expression in the root's scope (`_Sizing`, kept per simplification, keyed by each subterm's identity): each
+     subterm's own type, and the type its position gives it, from the scope's values, and from `Scope.types`, the
+     declared types of names it does not bind. A term that passes its context to its operands (parentheses,
+     `min:typ:max`, the conditional, unary `+ - ~`, the binary arithmetic, bitwise and shift operators: *transparent*)
+     folds into the literal of its value in its context's type, once that type is known; any other term (a name, a
+     concatenation, a comparison, a call, a cast, a select, ...) folds into its own type's literal, sound wherever it
+     stands. A type no literal has (a 2-state type, `shortreal`) folds only where its states or format cannot change
+     what stays around it: a self-determined position whose parent ignores them (a condition, a logical operand, a
+     reduction, a shift count, an index, a count), or a context whose type is known and has a literal. What a binding
+     `matches` binds stays bound: it never folds; a type and a pattern have no value of their own and are not folded;
+     in a sublanguage's term no rule reads, a term folds only where its own type's literal is sound. What stays by these
+     rules names no residue. `&&` and `||` are decided by a deciding operand, `->` by a true consequent (Kleene), a
+     conditional by a known condition where the branch it keeps has the conditional's own type.
+365. **A cast as an assignment** *(agent)*: a cast to an integral type takes its operand as an assignment would
+     (6.24.1, "the value that a variable of the casting type would hold after being assigned the expression"): the
+     operand is computed in the wider of the target's width and its own, by its own signedness, then converted, so
+     `16'(8'hFF + 8'h01)` is `16'h0100`; a signing cast and a cast to a real or to `string` leave their operand
+     self-determined. Before, the operand was self-determined everywhere.
+366. **Pattern matching** *(agent)*: a constant pattern matches a value identical to it (`===`, as slang's
+     `ConstantPattern` does for a conditional's `matches`); a wildcard and a variable pattern match any value, a
+     variable binding the whole value in its conditional's consequence and the conditions after it in a `&&&`, which is
+     Kleene's `and` of its conditions, left to right. A tagged or a structure pattern stays, "SystemVerilog
+     matchesexpression taggedpattern is not simplified", class `c` (its type, CAP-232).
+367. **Parameters of simplification in the scope** *(agent)*: `Scope(variables, functions, packages=, types=,
+     timeunit=, timeprecision=, mintypmax=)` (TypeScript: an options object). A time literal is its magnitude in
+     `timeunit` (`"1ns"`, `"100ps"`: 1, 10 or 100 of a unit), rounded to `timeprecision` (the unit by default) and
+     scaled back, a `real`; with no time unit it stays, "SystemVerilog time literal without a time unit is not
+     simplified", class `a` (no default: IEEE 1800 leaves it to the tool). `min:typ:max` is `typ` by default (11.11).
+368. **Calls by name and with defaults** *(agent)*: a function the scope provides may be a `Subroutine(implementation,
+     formals, defaults)`; a call binds its positional arguments, then its named ones (`.b(2)`, `.b` the caller's `b`,
+     `.b()` the default), an empty argument its formal's default; errors are `TypeError`s ("f's argument 'a' has no
+     default", "f takes 3 arguments, its positional ones first", "f has no formal 'd', or connects it twice"). A plain
+     callable has no formals: a named or an empty argument stays, "SystemVerilog callexpression with a
+     namedconnection is not simplified", class `a`.
+369. **A package's names** *(agent)*: `Scope.packages` maps a package's name (`$unit` the compilation unit's) to a
+     `Scope` of its variables and functions, which `pkg::x` and `pkg::f(x)` read; a scoped name of a package the scope
+     does not provide, or of a class, stays, "SystemVerilog scopedname is not simplified", class `d` (the two cannot be
+     told apart without declarations).
+370. **Strings** *(agent)*: a string is a vector of bytes, as before (6.16 over the rules' values; no `string` type is
+     modeled); its text a byte per character (Latin-1), NUL dropped. `len`, `getc` (0 out of range), `toupper` and
+     `tolower` (ASCII's letters, as C's), `compare` and `icompare` (-1, 0 or 1), `substr` (empty out of range), `atoi`,
+     `atohex`, `atooct`, `atobin` (an optional sign, digits and underscores) and `atoreal`; the methods that write the
+     string (`putc`, `itoa`, `hextoa`, `octtoa`, `bintoa`, `realtoa`) stay, class `d`, as do an array's (`push_back`,
+     `sort`, ...); an enumeration's (`next`, `name`, ...) class `c`; a class handle's, class `d`.
+371. **System functions** *(agent)*: the math functions (`$ln` ... `$atanh`, `$pow`, `$atan2`, `$hypot`) as C's
+     library computes them, a domain error NaN and a pole an infinity, each host's library's last bit its own (item
+     373); `$rtoi`, `$itor`, `$realtobits`, `$bitstoreal`, `$shortrealtobits`, `$bitstoshortreal` (IEEE 754's
+     encodings, x and z as 0); `$countbits` (each control's least significant bit); `$isunbounded`; the array queries
+     (`$left` ... `$unpacked_dimensions`, of a value: an array's or a queue's `[0:n-1]`, then its first item's, then a
+     vector's `[width-1:0]`, a scalar `bit`, `logic` or `reg` none; of a type: its declared packed dimensions; a
+     dimension beyond them `'x`); `$sformatf` (item 372). Any other system function stays, class `d` by default (a
+     simulator's or a PLI's), `$typename` class `c`.
+372. **`Formats`** *(agent)*: a new family module in both languages, exported from the package: `text` and `vector`
+     (strings as byte vectors), `sformatf` (`%d %h %x %o %b %c %s %e %f %g %%`, case-insensitive, with `-`, `0`, a width
+     and a precision; a field as wide as the value's type needs, a decimal in spaces, digits in zeros; x and z digits
+     `x`, `z`, `X`, `Z`; a mismatch of specifications and arguments a `TypeError`), `real` (C's `printf` of a real,
+     from its exact value by `Ieee754.decode`, rounded half to even, the same digits in both languages), `unwritten`
+     and `UNWRITTEN`: `%t %m %l %v` stay (class `d`), `%u %z %p` (class `a`).
+373. **Tests**: suite SVS, `31_SystemVerilog`, 14 cases, the same in both languages (SVS-13 also checks
+     `Formats.real` against Python's own `%`, in Python only, as DIA-02 checks against Python); DIA-14's residues and
+     SVP-08 follow what now folds (SVP-08's title: "Simplification leaves each of its kinds alone in the residual,
+     named; a `matches` folds what it can match, binding its variable in its conditional's consequence"); FRM-01
+     lists the package's `Formats`. Tutorial pages 8.13 (08.13.5: vectors of constant dimensions convert) and 8.14
+     (08.14.5, retitled "Matched by a `matches`, never simplified alone": `v matches .x ? x + 1 : 0` is 2) teach the
+     folds, re-run in both languages; no other tutorial's outputs change.
 
 ## What stage 2b needed (done)
 

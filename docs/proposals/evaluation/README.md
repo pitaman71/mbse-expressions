@@ -243,7 +243,8 @@ evaluation retired as a public procedure ([the port's API](../port/API.md#settle
 - **Operator semantics are folding rules.** What each dialect's evaluator computed over literals, its rules fold into
   literals, every operator it evaluated before (`FOLDED`, the tables of its `Interpreter`, `RULES`); what has no
   literal form (an object, a closure, a collection, an Excel error, a C `char`) stays a subterm of the residual, its
-  own subterms simplified. SystemVerilog folds its root and its names only, an operand's width being its context's.
+  own subterms simplified. SystemVerilog folds a subterm wherever 11.6's sizing of the whole expression keeps its meaning (its own `folds`
+  hook).
 - **No refusals** (question 6). Where a dialect has no rule for a kind or an operator, the subterm stays, named by a
   `Residue`: its dialect, its kind, what it has no rule for, and its class in the inventory (`CATEGORIES`, each family's
   module). Kleene's logic still decides what does not depend on it, as `simplify` does in Patterns (`false and x` is
@@ -286,6 +287,19 @@ type's identity; a floating value a binary64 literal spells exactly; `nullptr`; 
 of its type); a `char`, a `short`, an array, an ordering and `void` stay. What stays, named: the object model, writes,
 statements, declarations (`d`); an operand whose declaration gives its type (`c`, CAP-232); a layout no ABI dialect
 stores, nested braces and an array of arrays in a compound literal (`a`); an initializer alone, a type name (`b`).
+
+## As built: SystemVerilog (0.11.0)
+
+Step 2 for the SystemVerilog family, on branch `simp-sv` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 363 to 373):
+`SystemVerilog` folds every kind and every shape the inventory gives class (a), by IEEE 1800-2023: 4-state values
+through every operator, 11.6's sizing and 11.8's signedness, a cast as an assignment (6.24.1), pattern matching
+(12.6), streaming (11.4.14), the system functions of clauses 20 and 21 that compute a value, and strings' and arrays'
+methods. A subterm folds wherever its literal keeps its meaning: a self-determined one alone, a context-determined one
+once its context's type is known, from the whole expression, the scope's values and the types it declares for the names
+it does not bind; what has no literal (an array, an object, a 2-state or `shortreal` value where its states could
+matter) stays, by rule, naming no residue. What stays, named: what the inventory gives (b), (c) and (d), a time literal
+with no time unit (a, a parameter the scope may give), a call with named or empty arguments of a function whose formals
+the scope does not give (a), and `$sformatf`'s `%u`, `%z`, `%p` (a) and `%t`, `%m`, `%l`, `%v` (d).
 
 ## 6. What it would add or supersede
 

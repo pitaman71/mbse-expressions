@@ -33,8 +33,10 @@ and translated between expression languages, called dialects:
   x87's extended format or `binary128`), and serves C and C++ alike.
 - **SystemVerilog**, every expression of IEEE 1800-2023, Verilog its subset, over 4-state vectors and reals, in six
   dialects of one family: its expressions, and its types, patterns, assertions (sequences and properties), constraints
-  and preprocessor, each a dialect reading the others' terms. It renders as its source and simplifies its constraint
-  kinds by IEEE 1800's rules (sizing by context, x and z propagating), leaving the others in the residual, named.
+  and preprocessor, each a dialect reading the others' terms. It renders as its source and simplifies by IEEE
+  1800-2023's rules (sizing by context from the whole expression, x and z propagating, casts as assignments, pattern
+  matching, streaming, the system functions that compute a value, strings' and arrays' methods), folding a subterm
+  wherever its literal keeps its meaning, and leaves what has no rule in the residual, named.
 - **ISOIEC11404**, **IEEE754**, **IEEE1164** and **Unicode**, the standard dialects: each holds a published standard's
   kinds of domain and its domains, named as the standard names them (ISO/IEC 11404's `integer`, `octet`, a code, and
   `modulo(256)`, wrapping arithmetic; IEEE 754's `binary64`), and has no terms yet. The other dialects' values take their domains.

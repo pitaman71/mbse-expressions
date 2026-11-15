@@ -111,8 +111,9 @@ to analyze it.
    reads the others' terms, so a tree mixing them is validated and printed from any of their holders; install all six,
    in any order, after the standard dialects. A binding kind refines `Let` (`foreach`, an array method's `with`); a kind
    may hold several lists of terms (`solve a before b`, an `` `ifdef ``'s items and its `` `else ``'s), each read apart.
-   Each records the IEEE editions that have its kinds, and simplification keeps folding SystemVerilog's constraint kinds,
-   leaving the sublanguages' in the residual, named.
+   Each records the IEEE editions that have its kinds, and simplification folds SystemVerilog's expressions by IEEE
+   1800-2023 (suite SVS), a `matches` with a constant, wildcard or variable pattern among them, leaving the
+   sublanguages' kinds in the residual, named.
    - Python: [T08.4: SystemVerilog's assertions and constraints](mbse:mbse-expressions/python3/tutorials/08_00_Sublanguages.ipynb#T08.4) · TypeScript: [T08.4: SystemVerilog's assertions and constraints](mbse:mbse-expressions/typescript5/tutorials/08_00_Sublanguages.ipynb#T08.4)
    - Python: [T08.13.5: Read by the expressions that hold it](mbse:mbse-expressions/python3/tutorials/08_13_SystemVerilog_Types.ipynb#T08.13.5) · TypeScript: [T08.13.5: Read by the expressions that hold it](mbse:mbse-expressions/typescript5/tutorials/08_13_SystemVerilog_Types.ipynb#T08.13.5)
    - Python: [T08.14.4: Held by a `matches`](mbse:mbse-expressions/python3/tutorials/08_14_SystemVerilog_Patterns.ipynb#T08.14.4) · TypeScript: [T08.14.4: Held by a `matches`](mbse:mbse-expressions/typescript5/tutorials/08_14_SystemVerilog_Patterns.ipynb#T08.14.4)
@@ -235,7 +236,7 @@ to analyze it.
 | Excel | `#FIELD!` | TRUE | `AND`/`OR` evaluate every argument | errors are values that propagate; text compares ignoring case |
 | LaTeX | no simplifier | | | translate to a dialect that simplifies |
 | C, Cpp | `KeyError` (no member) | true, after the usual conversions | `&&`/`\|\|` short-circuit, give `bool` | ISO C and C++ under the holder's ABI: promotions, the usual arithmetic conversions, unsigned wraps, undefined behavior (signed overflow, ...) raises; `sizeof`, `alignof` and `_Generic` by the ABI's types, compound literals, `_BitInt(N)`, `nullptr`; C++'s casts, `<=>`, packs and folds, `throw`; a value of a type with no literal (`char`, an array, an ordering) stays |
-| SystemVerilog | `KeyError` (no member) | `1'b1`, compared as reals | 1, 0 or x (`1'bx`) by the truth of each operand | values are sized vectors; x and z propagate; division by zero gives x |
+| SystemVerilog | `KeyError` (no member) | `1'b1`, compared as reals | 1, 0 or x (`1'bx`) by the truth of each operand; `y && 0` is `1'b0` | values are sized vectors; x and z propagate; division by zero gives x; a subterm folds where 11.6's sizing of the whole expression keeps its meaning (declared types in `Scope.types`); a time literal needs the scope's time unit |
 
 Test a translated constraint with its own dialect's simplifier, whose rules model those rules:
 
@@ -253,6 +254,7 @@ Test a translated constraint with its own dialect's simplifier, whose rules mode
 - Python: [DIA-12: C simplifies by C's rules: promotions and conversions, wrapping unsigned arithmetic, and undefined behavior raising](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-12) · TypeScript: [DIA-12: C simplifies by C's rules: promotions and conversions, wrapping unsigned arithmetic, and undefined behavior raising](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-12)
 - Python: [CCS-05: `sizeof` and `alignof`: a type's layout under its holder's ABI, an operand's type unevaluated, arrays and strings; what stays, by class](mbse:mbse-expressions/python3/tests/30_C_Cpp.ipynb#CCS-05) · TypeScript: [CCS-05: `sizeof` and `alignof`: a type's layout under its holder's ABI, an operand's type unevaluated, arrays and strings; what stays, by class](mbse:mbse-expressions/typescript5/tests/30_C_Cpp.ipynb#CCS-05)
 - Python: [DIA-14: SystemVerilog simplifies by IEEE 1800's rules: sizing by context, 4-state logic, casts and system functions](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-14) · TypeScript: [DIA-14: SystemVerilog simplifies by IEEE 1800's rules: sizing by context, 4-state logic, casts and system functions](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-14)
+- Python: [SVS-02: Subterms fold where their meaning is kept: a self-determined one alone, a context-determined one once its context's type is known](mbse:mbse-expressions/python3/tests/31_SystemVerilog.ipynb#SVS-02) · TypeScript: [SVS-02: Subterms fold where their meaning is kept: a self-determined one alone, a context-determined one once its context's type is known](mbse:mbse-expressions/typescript5/tests/31_SystemVerilog.ipynb#SVS-02)
 
 Bitwise operations and arrays follow each language's own functions too: Python's operators, MATLAB's and Excel's bit
 functions; SystemVerilog's array methods, MATLAB's `arrayfun` and indexing from 1, Excel's `MAP` and `LAMBDA`.
