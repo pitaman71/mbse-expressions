@@ -123,8 +123,8 @@ class Pack:
 
 
 class Untyped(Exception):
-    """An operand whose type its declaration gives (a member, a call's result), not its value: raised by the typing of an
-    operand left unevaluated."""
+    """An operand whose type its declaration gives (a member, a call's result), not its value: raised by the typing
+    of an operand left unevaluated."""
 
 
 def language(dialect: Any) -> str:
@@ -449,7 +449,8 @@ class Scope(S.Variables):
 
 
 def _qualified(name: Any) -> str | None:
-    """A qualified name's spelling (`ns::x`, `::x`), where its qualifiers and its name are identifiers; None otherwise."""
+    """A qualified name's spelling (`ns::x`, `::x`), where its qualifiers and its name are identifiers; None
+    otherwise."""
     if not isinstance(name, Terms.Part) or name.kind != "qualifiedname":
         return None
     parts = [*name.attributes.get("qualifiers", ()), name.attributes.get("name")]
@@ -463,9 +464,9 @@ def _qualified(name: Any) -> str | None:
 
 
 class Rules(F.Interpreter):
-    """The folding rules of a dialect of the family: the framework's interpreter, with `nullptr`'s value, which its kind's
-    role does not give; `declared(type, node, scope)`, the type a type name names; `type_of(term, scope)`, an unevaluated
-    operand's type; and `typings`, how each kind a dialect adds is typed (C++'s casts)."""
+    """The folding rules of a dialect of the family: the framework's interpreter, with `nullptr`'s value, which its
+    kind's role does not give; `declared(type, node, scope)`, the type a type name names; `type_of(term, scope)`, an
+    unevaluated operand's type; and `typings`, how each kind a dialect adds is typed (C++'s casts)."""
 
     def __init__(self, dialect: Any, operations: Mapping[str, Any], **options: Any):
         super().__init__(dialect, operations, **options)
@@ -481,8 +482,8 @@ class Rules(F.Interpreter):
 
     def declared(self, term: Any, node: Any, scope: Any) -> Any:
         """The type a type name names (a C Types or Cpp Types term): an arithmetic type, a bit-precise integer type,
-        `VOID`, or an array of one (`ArrayType`); None for any other (a pointer, a structure, a function, a type a program
-        declares). Invalid syntax stays, named by its owner."""
+        `VOID`, or an array of one (`ArrayType`); None for any other (a pointer, a structure, a function, a type a
+        program declares). Invalid syntax stays, named by its owner."""
         tag = Terms.kind_of(term)[0]
         if tag in Terms.INVALID_KINDS:
             raise F.NoRule(self.dialect.owner(term).name(), tag)
@@ -627,8 +628,7 @@ class Rules(F.Interpreter):
         """The type of a conditional whose operands' types are `first` and `second`: the usual arithmetic conversions'
         of two arithmetic types (in C++, one type where both are it), `nullptr_t` or `void` where both are."""
         if isinstance(first, CType) and isinstance(second, CType):
-            if language(self.dialect) == "C++" and first.types.identity(first, "C++") == second.types.identity(  # type: ignore[union-attr]
-                    second, "C++"):
+            if language(self.dialect) == "C++" and self.identity(first) == self.identity(second):
                 return first
             found = Domains.common(first, second)
             if found is None:
@@ -961,12 +961,13 @@ def _literal_of(write: Callable[..., Any], dialect: Any) -> Callable[[Typed], An
             if native is None:
                 return dialect.make(Terms.Form(Kinds.CONSTANT, {"singleton": "nullptr"}, ()))
             return write(native) if type(native) is str else None
+        types: Domains.Types = ctype.types  # type: ignore[assignment]
         if ctype.precise:  # its narrowest literal, where that is of its type
             suffix = "wb" if ctype.signed else "uwb"
-            return write(native, suffix) if Domains.literal({"value": native, "suffix": suffix}, written,
-                                                             ctype.types) == ctype else None  # type: ignore[arg-type]
-        name = ctype.label if Domains.literal_suffix(ctype.label, written) is not None else ctype.types.identity(  # type: ignore[union-attr]
-            ctype, written)
+            narrowest = Domains.literal({"value": native, "suffix": suffix}, written, types)
+            return write(native, suffix) if narrowest == ctype else None
+        own = Domains.literal_suffix(ctype.label, written) is not None  # its own name's suffix, else its identity's
+        name = ctype.label if own else types.identity(ctype, written)
         suffix = Domains.literal_suffix(name, written)
         if suffix is None:
             return None
@@ -1002,7 +1003,8 @@ def rules(dialect: Any, folded: frozenset[str] = FOLDED,
             **{op: _logical(op, dialect) for op in ("&&", "||")}, ",": _comma,
         },
         Expressions.UNARYEXPRESSION: {op: _unary(op, dialect) for op in ("+", "-", "~", "!")},
-        Expressions.CONDITIONALEXPRESSION: _conditional(dialect, found), Expressions.CASTEXPRESSION: _cast(dialect, found),
+        Expressions.CONDITIONALEXPRESSION: _conditional(dialect, found),
+        Expressions.CASTEXPRESSION: _cast(dialect, found),
         Expressions.MEMBEREXPRESSION: _member(dialect), Expressions.SUBSCRIPTEXPRESSION: _subscript(dialect),
         Expressions.CALLEXPRESSION: _call(dialect), Kinds.CONCATENATEDSTRING: _concatenated,
         Kinds.PARENTHESIZEDEXPRESSION: lambda arguments, node, scope: arguments[0](),
@@ -1016,7 +1018,8 @@ def rules(dialect: Any, folded: frozenset[str] = FOLDED,
 
 
 def simplifier(dialect: Any, folded: frozenset[str], categories: Mapping[str, Mapping[str, str]],
-               write: Callable[..., Any], extend: Callable[[dict[str, Any], Rules], None] | None = None) -> F.Simplifier:
+               write: Callable[..., Any],
+               extend: Callable[[dict[str, Any], Rules], None] | None = None) -> F.Simplifier:
     """The simplifier of a dialect of the C family, by `rules(dialect, folded, extend)`, its literals written by
     `write`."""
     return F.Simplifier(rules(dialect, folded, extend), literal=_literal_of(write, dialect), categories=categories,

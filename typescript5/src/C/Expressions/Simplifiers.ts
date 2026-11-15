@@ -541,8 +541,8 @@ export class Rules extends F.Interpreter {
     return this.derived(inner, new ArrayType(base, length), scope);
   }
 
-  /** The type of an operand C leaves unevaluated (`sizeof`'s, `_Generic`'s, the conditional's other one): a `CType`,
-   * an `ArrayType` (a string literal's, a compound literal's), `VOID` or `Domains.NULLPTR`, by its kind, a variable's by
+  /** The type of an operand C leaves unevaluated (`sizeof`'s, `_Generic`'s, the conditional's other one): a `CType`, an
+   * `ArrayType` (a string literal's, a compound literal's), `VOID` or `Domains.NULLPTR`, by its kind, a variable's by
    * its value; throws `Untyped` where its declaration gives it (a member, a call's result). */
   typeOf(term: any, scope: any): any {
     const dialect = this.dialect;
@@ -637,8 +637,7 @@ export class Rules extends F.Interpreter {
    * arithmetic types (in C++, one type where both are it), `nullptr_t` or `void` where both are. */
   armsType(first: any, second: any, tag: string): any {
     if (first instanceof Domains.CType && second instanceof Domains.CType) {
-      if (language(this.dialect) === "C++" && (first.types as Domains.Types).identity(first, "C++")
-        === (second.types as Domains.Types).identity(second, "C++")) return first;
+      if (language(this.dialect) === "C++" && this.identity(first) === this.identity(second)) return first;
       const found = Domains.common(first, second);
       if (found === null) {
         throw new TypeError(`invalid operands to conditional expression ('${first.name()}' and '${second.name()}')`);
@@ -907,9 +906,12 @@ function elements(rules: Rules, target: ArrayType, items: readonly unknown[], sc
     const text = (rules.evaluate(items[0], scope) as Typed).value;
     if (typeof text === "string") { // its terminating zero dropped where the array's length leaves no room for it
       const codes = [...new TextEncoder().encode(text), 0];
-      if (limit !== null && codes.length - 1 > limit) throw new TypeError("initializer-string for an array is too long");
+      if (limit !== null && codes.length - 1 > limit) {
+        throw new TypeError("initializer-string for an array is too long");
+      }
       const int = typesOf(items[0], dialect).named("int");
-      return new Map(codes.slice(0, limit ?? undefined).map((code, i) => [i, convert(new Typed(int, BigInt(code)), type)]));
+      return new Map(codes.slice(0, limit ?? undefined)
+        .map((code, i) => [i, convert(new Typed(int, BigInt(code)), type)]));
     }
   }
   const values = new Map<number, Typed>();
@@ -993,7 +995,8 @@ function literalOf(write: (value: unknown, suffix?: string | null) => unknown,
     const types = ctype.types as Domains.Types;
     if (ctype.precise) { // its narrowest literal, where that is of its type
       const suffix = ctype.signed ? "wb" : "uwb";
-      const narrowest = Domains.literal(new Map<string, unknown>([["value", held], ["suffix", suffix]]), written, types);
+      const narrowest = Domains.literal(new Map<string, unknown>([["value", held], ["suffix", suffix]]), written,
+        types);
       return ctype.equals(narrowest) ? write(held, suffix) : null;
     }
     const name = Domains.literalSuffix(ctype.label, written) !== null ? ctype.label : types.identity(ctype, written);
@@ -1039,7 +1042,8 @@ export function rules(dialect: Terms.Dialect, folded: ReadonlySet<string> = FOLD
   ]));
   operations.set(Expressions.UNARYEXPRESSION, new Map(pairs(["+", "-", "~", "!"], (op) => unary(op, dialect))));
   for (const [tag, implementation] of [
-    [Expressions.CONDITIONALEXPRESSION, conditional(dialect, found)], [Expressions.CASTEXPRESSION, cast(dialect, found)],
+    [Expressions.CONDITIONALEXPRESSION, conditional(dialect, found)],
+    [Expressions.CASTEXPRESSION, cast(dialect, found)],
     [Expressions.MEMBEREXPRESSION, member(dialect)], [Expressions.SUBSCRIPTEXPRESSION, subscript(dialect)],
     [Expressions.CALLEXPRESSION, call(dialect)], [Expressions.CONCATENATEDSTRING, concatenated],
     [Expressions.PARENTHESIZEDEXPRESSION, passed], [Expressions.EXTENSIONEXPRESSION, passed],
@@ -1050,7 +1054,8 @@ export function rules(dialect: Terms.Dialect, folded: ReadonlySet<string> = FOLD
   return found;
 }
 
-/** The simplifier of a dialect of the C family, by `rules(dialect, folded, extend)`, its literals written by `write`. */
+/** The simplifier of a dialect of the C family, by `rules(dialect, folded, extend)`, its literals written by `write`.
+ */
 export function simplifier(dialect: Terms.Dialect, folded: ReadonlySet<string>,
   categories: Record<string, Record<string, string>>, write: (value: unknown, suffix?: string | null) => unknown,
   extend: ((operations: Map<string, any>, rules: Rules) => void) | null = null): F.Simplifier {

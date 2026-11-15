@@ -281,8 +281,9 @@ function extend(operations: Map<string, any>, rules: Rules): void {
   operations.set(Expressions.SIZEOFPACKEXPRESSION, sizeOfPack);
   operations.set(Expressions.PACKEXPANSION, expansion(rules));
   operations.set(Expressions.THROWEXPRESSION, throwing);
-  operations.set(Expressions.FOLDEXPRESSION, new Map([...Domains.FOLD.keys()].filter((op) => binary.has(op)) // a fold
-    .map((op) => [op, fold(op, binary.get(op) as F.Implementation, rules)]))); // over an assignment, `.*` or `->*` stays
+  // a fold over an assignment, `.*` or `->*` stays
+  operations.set(Expressions.FOLDEXPRESSION, new Map([...Domains.FOLD.keys()].filter((op) => binary.has(op))
+    .map((op) => [op, fold(op, binary.get(op) as F.Implementation, rules)])));
   rules.typings.set(Expressions.FUNCTIONALCASTEXPRESSION, (term) => {
     const found = specified(Terms.node(...Terms.kindOf(term)).helpers.get("type") as Terms.Node, term);
     if (found === null) throw new Untyped(Expressions.FUNCTIONALCASTEXPRESSION);
@@ -309,13 +310,15 @@ export const FOLDED: ReadonlySet<string> = new Set([
 export const CATEGORIES: Record<string, Record<string, string>> = {
   ...C_CATEGORIES,
   Cpp: {
-    ...C_CATEGORIES["C"], initializerlist: "b", designatedinitializer: "b", requiresexpression: "c", typeidexpression: "c",
+    ...C_CATEGORIES["C"], initializerlist: "b", designatedinitializer: "b", requiresexpression: "c",
+    typeidexpression: "c",
     ...Object.fromEntries(["lambdaexpression", "newexpression", "deleteexpression", "noexceptexpression",
       "awaitexpression", "yieldexpression", "statementexpression", "assignmentexpression", "postfixexpression",
       "binaryexpression '.*'", "binaryexpression '->*'", "memberexpression of a member that is not an identifier",
       "subscriptexpression of several indices", "idexpression of a name that is not an identifier",
-      "namedcastexpression 'const_cast'", "namedcastexpression 'dynamic_cast'", "namedcastexpression 'reinterpret_cast'",
-      "namedcastexpression to a type that is not arithmetic", "functionalcastexpression to a type that is not arithmetic",
+      "namedcastexpression 'const_cast'", "namedcastexpression 'dynamic_cast'",
+      "namedcastexpression 'reinterpret_cast'", "namedcastexpression to a type that is not arithmetic",
+      "functionalcastexpression to a type that is not arithmetic",
       "throwexpression without an operand", "foldexpression '.*'", "foldexpression '->*'",
       ...[...Domains.ASSIGNMENT.keys()].map((op) => `foldexpression '${op}'`)].map((what) => [what, "d"])),
   },

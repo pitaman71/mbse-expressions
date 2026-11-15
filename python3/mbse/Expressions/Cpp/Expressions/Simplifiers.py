@@ -119,7 +119,8 @@ _TESTS: dict[str, Callable[[int], bool]] = {"<": lambda o: o < 0, "<=": lambda o
 
 
 def _ordered(operator: str, comparison: F.Implementation) -> F.Implementation:
-    """A comparison, of an ordering with the literal 0 or with an ordering of its category by `==` and `!=`, else C's."""
+    """A comparison, of an ordering with the literal 0 or with an ordering of its category by `==` and `!=`, else
+    C's."""
 
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> Typed:
         left, right = arguments[0](), arguments[1]()
@@ -335,9 +336,11 @@ CATEGORIES: dict[str, dict[str, str]] = {
                              "awaitexpression", "yieldexpression", "statementexpression", "assignmentexpression",
                              "postfixexpression", "binaryexpression '.*'", "binaryexpression '->*'",
                              "memberexpression of a member that is not an identifier",
-                             "subscriptexpression of several indices", "idexpression of a name that is not an identifier",
+                             "subscriptexpression of several indices",
+                             "idexpression of a name that is not an identifier",
                              "namedcastexpression 'const_cast'", "namedcastexpression 'dynamic_cast'",
-                             "namedcastexpression 'reinterpret_cast'", "namedcastexpression to a type that is not arithmetic",
+                             "namedcastexpression 'reinterpret_cast'",
+                             "namedcastexpression to a type that is not arithmetic",
                              "functionalcastexpression to a type that is not arithmetic",
                              "throwexpression without an operand", "foldexpression '.*'", "foldexpression '->*'",
                              *(f"foldexpression {op!r}" for op in Domains.ASSIGNMENT)), _D)},

@@ -1,6 +1,6 @@
 /**
- * Domains of the C dialect: the types C's and C++'s folding rules, inference and validation compute on, each read from the
- * domains their dialects and their holder's ABI store, and the signatures of their operators, which `Cpp` shares.
+ * Domains of the C dialect: the types C's and C++'s folding rules, inference and validation compute on, each read from
+ * the domains their dialects and their holder's ABI store, and the signatures of their operators, which `Cpp` shares.
  *
  * A `CType` is a type and a domain: `bool`, an integer by its width and signedness, or a floating type of an IEEE 754
  * format, named (`binary64`) or, where IEEE 754 names none, by its parameters (x87's `[2n, 64, 16383]`). It is the
@@ -9,15 +9,16 @@
  * exact-width integers, the `_FloatN` and decimal types), then among those of the ABI its holder names
  * (`Expressions.Framework.HasAbi`, the holder's adjacency `abi`: `Expressions.SystemV.AMD64` or
  * `Expressions.Arm.AAPCS64`, which hold `int`, `long`, `char`, `long double`, `size_t`, ...); a C++ term's among C++'s
- * (`Expressions.Cpp.Expressions`) then its holder's ABI's (mbse-basis [CAP-267: C and C++ terms read under the ABI their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md#decided)). `new Types(term, path)`
- * finds the holder from any term or record within it (`Terms.holderOf`: a lone term is refused, mbse-schemas'
- * TypeError, "the value does not belong to a store") when it first reads a type, and reads each once: `named(name)` is
- * the type, a `CType` labelled with its `Defines` name and keeping the domain it was read from and the `Types` it was
- * read through, so that a rule reaches the store for a type no operand carries (the promotions' `int`); its width and
- * signedness come from its kind (11404's `integer`; `modulo`, unsigned, of the width its modulus gives; `boolean`), a
- * floating type's format and width from IEEE 754's. A type neither dialect defines is refused by name: "'int' is not a
- * type C defines, and its expression names no ABI", or "'int' is not a type C or AMD64 defines"; `find(name)` gives
- * null instead where the holder names an ABI (a cast to a type a program declares).
+ * (`Expressions.Cpp.Expressions`) then its holder's ABI's (mbse-basis [CAP-267: C and C++ terms read under the ABI
+ * their holder names](mbse:mbse-basis/docs/capabilities/CAP-267.md#decided)). `new Types(term, path)` finds the holder
+ * from any term or record within it (`Terms.holderOf`: a lone term is refused, mbse-schemas' TypeError, "the value does
+ * not belong to a store") when it first reads a type, and reads each once: `named(name)` is the type, a `CType`
+ * labelled with its `Defines` name and keeping the domain it was read from and the `Types` it was read through, so that
+ * a rule reaches the store for a type no operand carries (the promotions' `int`); its width and signedness come from
+ * its kind (11404's `integer`; `modulo`, unsigned, of the width its modulus gives; `boolean`), a floating type's format
+ * and width from IEEE 754's. A type neither dialect defines is refused by name: "'int' is not a type C defines, and its
+ * expression names no ABI", or "'int' is not a type C or AMD64 defines"; `find(name)` gives null instead where the
+ * holder names an ABI (a cast to a type a program declares).
  *
  * `promoted(type)` applies the integer promotions (a narrower integer or a bool becomes `int`; a bit-precise integer
  * type stays) and `common(a, b)` the usual arithmetic conversions: the wider floating type if either is floating,
@@ -27,33 +28,33 @@
  * constraint), so `common` gives null. `layout(type)` is a scalar type's size and alignment in bytes, as both ABIs lay
  * a scalar out (its width rounded up to a power of two bytes), null for a bit-precise integer type, whose layout no ABI
  * dialect stores. `Types.identity(type, language)` names the type a type is, by C's or C++'s identity of types (a
- * typedef the standard integer type it is). The signatures follow the
- * evaluator's rules (see `Simplifiers`): arithmetic gives the common type, shifts the promoted left operand's,
- * comparisons and logic `bool`, which the dialect's kinds read from the store (`Expressions`), and a result is named by
- * the first of `NAMES`, C's names in the order its standard lists them, that its types define equal to it. `of(value,
- * types)` names a native value's type: `int`, `long` or `unsigned long` for a bigint, as the first that holds it,
- * `double` for a number, `bool`; null otherwise. The rules stay code, and the signatures are `Dialect.infer`'s, to be
- * replaced with stored domains as domain inference reads them ([CAP-232: domains inferred for
- * terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
+ * typedef the standard integer type it is). The signatures follow the evaluator's rules (see `Simplifiers`): arithmetic
+ * gives the common type, shifts the promoted left operand's, comparisons and logic `bool`, which the dialect's kinds
+ * read from the store (`Expressions`), and a result is named by the first of `NAMES`, C's names in the order its
+ * standard lists them, that its types define equal to it. `of(value, types)` names a native value's type: `int`, `long`
+ * or `unsigned long` for a bigint, as the first that holds it, `double` for a number, `bool`; null otherwise. The rules
+ * stay code, and the signatures are `Dialect.infer`'s, to be replaced with stored domains as domain inference reads
+ * them ([CAP-232: domains inferred for terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)).
  *
  * A literal's type is what its text encodes (`literal(attributes, language, types)`), as C's and C++'s standards give
- * it, a stored domain found by name (mbse-basis [CAP-229: the C expression dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md#decided)): an integer's by its
- * suffix and its base, the first of the types they allow that holds its value (an `unsigned int` for `5u`; a decimal
- * integer without a suffix is its value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double`
- * for `L`, `_Float16` for `f16` in C and `std::float16_t` in C++), else `double`; a character literal's (an int, its
- * code) `int` in C and `char` in C++, its encoding prefix's type otherwise (`wchar_t`, `char8_t`); a bool's `bool`; a
- * string's `String`. An integer literal with C23's `wb` suffix is of the narrowest bit-precise integer type that holds
- * it (`bitPrecise`, `_BitInt(N)`, of a sign bit and N >= 2; `unsigned _BitInt(N)` with `uwb`), which no domain stores;
- * a prefix no language has encodes a domain named by it, which no folding rule has values of; a suffix the language
- * does not write gives `Anything`, its type unknown. `literalSuffix(name, language)` is the suffix a literal of a type
- * is written with, or null where the type has no literal.
- * `outOfRange(attributes, language, types)` says what is wrong with an integer literal that its type does not hold, one
- * that fits none of the types its suffix and base allow, by the stored domain's range (a value out of range, PRI-023).
- * `arithmetic(names)` is the name of the arithmetic type a type name's specifiers name (`unsigned int`, `uint8_t`), or
- * null.
+ * it, a stored domain found by name (mbse-basis [CAP-229: the C expression
+ * dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md#decided)): an integer's by its suffix and its base, the first
+ * of the types they allow that holds its value (an `unsigned int` for `5u`; a decimal integer without a suffix is its
+ * value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double` for `L`, `_Float16` for `f16` in C
+ * and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in C and `char` in C++,
+ * its encoding prefix's type otherwise (`wchar_t`, `char8_t`); a bool's `bool`; a string's `String`. An integer literal
+ * with C23's `wb` suffix is of the narrowest bit-precise integer type that holds it (`bitPrecise`, `_BitInt(N)`, of a
+ * sign bit and N >= 2; `unsigned _BitInt(N)` with `uwb`), which no domain stores; a prefix no language has encodes a
+ * domain named by it, which no folding rule has values of; a suffix the language does not write gives `Anything`, its
+ * type unknown. `literalSuffix(name, language)` is the suffix a literal of a type is written with, or null where the
+ * type has no literal. `outOfRange(attributes, language, types)` says what is wrong with an integer literal that its
+ * type does not hold, one that fits none of the types its suffix and base allow, by the stored domain's range (a value
+ * out of range, PRI-023). `arithmetic(names)` is the name of the arithmetic type a type name's specifiers name
+ * (`unsigned int`, `uint8_t`), or null.
  *
- * The other operators, which no folding rule computes (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`,
- * `->*`, its folds and named casts), have signatures that say only how many operands each takes.
+ * The other operators (`*`, `&`, `++`, `--`, `,`, the assignments, C++'s `<=>`, `.*`, `->*`, its folds and named casts)
+ * have signatures that say only how many operands each takes; the folding rules compute some of them (see
+ * `Simplifiers`).
  */
 
 import { Errors, Proxies, Repr } from "@mbse/schemas/Framework";
@@ -224,7 +225,8 @@ export class Types {
     const label = ctype.label;
     if (NAMES.includes(label) || ctype.kind === "floating" || ctype.precise
       || (DISTINCT.get(language) as readonly string[]).includes(label)) return label;
-    return NAMES.find((name) => name !== "bool" && name !== "char" && (this.lookup(name) as CType).equals(ctype)) as string;
+    return NAMES.find((name) => name !== "bool" && name !== "char"
+      && (this.lookup(name) as CType).equals(ctype)) as string;
   }
 }
 
@@ -402,8 +404,8 @@ const SUFFIXES: ReadonlyMap<string, string> = new Map([["bool", ""], ["int", ""]
 
 /** The suffix a literal of the type named `name` (by `Types.identity`) is written with, in `language` (`C` or `C++`):
  * "" for a type a literal without a suffix has (`int`, `double`, `bool`), `u`, `ul`, `f`, `L`, an extended floating
- * type's (`f16`, `df`; C++'s `bf16`); null for a type no literal has (`char`, `short`, a bit-precise type, whose literal
- * is its narrowest). */
+ * type's (`f16`, `df`; C++'s `bf16`); null for a type no literal has (`char`, `short`, a bit-precise type, whose
+ * literal is its narrowest). */
 export function literalSuffix(name: string, language: string): string | null {
   const found = SUFFIXES.get(name);
   if (found !== undefined) return found;
@@ -451,7 +453,7 @@ export function literal(attributes: ReadonlyMap<string, any>, language: string, 
     return encoded === undefined ? new D.OfTypes(prefix, BigInt) : types.named(encoded);
   }
   const normal = integerSuffix(suffix ?? "");
-  if (normal === "wb" || normal === "uwb") { // the narrowest bit-precise type that holds it (C23, 6.4.4.1): N >= 2 signed
+  if (normal === "wb" || normal === "uwb") { // the narrowest bit-precise type that holds it (C23, 6.4.4.1)
     const bits = value === 0n ? 0 : (value < 0n ? -value : value).toString(2).length; // Python's `int.bit_length()`
     return normal === "uwb" ? bitPrecise(Math.max(bits, 1), false, types)
       : bitPrecise(Math.max(bits + 1, 2), true, types);
