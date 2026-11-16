@@ -6,7 +6,8 @@ Its values, each as Python holds it: `undefined` (`UNDEFINED`), `null` (None), a
 IEEE 754's binary64), a bigint (an int), a string (a str, read as its UTF-16 code units where ECMAScript reads them:
 its length, its indices, its order), an array (a list, `HOLE` where it has no element; a tagged template's strings a
 `TemplateStrings`), an object (a dict of property keys, strings, in ECMAScript's order: array indices ascending, then
-the others as inserted), a regular expression (`RegExp`, its source and flags: its matching is not modeled), a function
+the others as inserted; its prototype `OBJECT_PROTOTYPE`, unless `ordinary_object_create` gave it another, an object
+or null, `get_prototype_of`), a regular expression (`RegExp`, its source and flags: its matching is not modeled), a function
 (a `Closure` an arrow makes, or a callable the scope provides), a data object (mbse-schemas', read through
 `Framework.Objects`, its properties as an object's), and any other value the scope provides, a host value, which no
 operation reads (each raises `NoRule`, "TypeScript5 host value is not simplified").
@@ -16,8 +17,9 @@ object's own `valueOf` and `toString` called where they are functions, else the 
 object `[object Object]`), `to_number` (a string by StringToNumber), `to_numeric`, `to_string` (a number by
 Number::toString's shortest round trip, `Text.number`), `to_property_key`, `is_strictly_equal`, `is_loosely_equal`
 and `is_less_than`; the operators over numbers and bigints (`binary`, `unary`,
-6.1.6), with BigInt's errors; property access (`get`, `has_property`), iteration (`iterate`), an object's own entries
-(`own_entries`) and calls (`call`, `construct`). A built-in method (`String.prototype.toUpperCase`) is read, but not
+6.1.6), with BigInt's errors; an object made with a prototype (`ordinary_object_create`, 10.1.12) and its prototype
+(`get_prototype_of`); property access (`get`, `has_property`), through an object's prototypes, iteration (`iterate`),
+an object's own entries (`own_entries`) and calls (`call`, `construct`). A built-in method (`String.prototype.toUpperCase`) is read, but not
 modeled: reading one raises `NoRule` by its name, as `BUILTINS` lists them, since its value is the language's runtime's.
 Errors are ECMAScript's, of the same names and messages in both implementations: TypeError, and `RangeError`.
 """
@@ -33,9 +35,10 @@ from mbse.Expressions.Framework import Objects, Simplifiers as F
 
 from . import Text
 
-__all__ = ["UNDEFINED", "HOLE", "RangeError", "RegExp", "Closure", "TemplateStrings", "BUILTINS", "MAX_BIGINT_BITS",
-           "kind", "type_of", "is_primitive", "to_boolean", "to_primitive", "to_number", "to_numeric", "to_string",
-           "to_property_key", "string_to_number", "string_to_bigint",
+__all__ = ["UNDEFINED", "HOLE", "OBJECT_PROTOTYPE", "RangeError", "RegExp", "Closure", "TemplateStrings", "BUILTINS",
+           "MAX_BIGINT_BITS", "kind", "type_of", "is_primitive", "to_boolean", "to_primitive", "to_number", "to_numeric",
+           "to_string", "to_property_key", "string_to_number", "string_to_bigint", "ordinary_object_create",
+           "get_prototype_of",
            "is_strictly_equal", "is_loosely_equal", "is_less_than", "binary", "unary", "get", "has_property",
            "iterate", "own_entries", "ordered", "call", "construct", "instance_of", "cook", "is_array_index"]
 
@@ -59,6 +62,24 @@ class _Hole:
 
 HOLE: Any = _Hole()
 """An array's missing element."""
+
+
+class _ObjectPrototype:
+    """ECMAScript's %Object.prototype%, the prototype an object has unless it was made with another."""
+
+
+OBJECT_PROTOTYPE: Any = _ObjectPrototype()
+"""%Object.prototype%, as `get_prototype_of` gives it: its properties are `BUILTINS`', read but not modeled."""
+
+
+class _Object(dict):  # type: ignore[type-arg]
+    """An object whose prototype is not %Object.prototype%: null, or another object (`ordinary_object_create`)."""
+
+    __slots__ = ("prototype",)
+
+    def __init__(self, prototype: Any, properties: dict[str, Any]):
+        super().__init__(properties)
+        self.prototype = prototype
 
 
 class RangeError(ValueError):
@@ -135,7 +156,8 @@ def kind(value: Any) -> str:
         return "undefined"
     if value is None:
         return "null"
-    found = {bool: "boolean", float: "number", int: "bigint", str: "string", dict: "object"}.get(type(value))
+    found = {bool: "boolean", float: "number", int: "bigint", str: "string", dict: "object", _Object: "object"}.get(
+        type(value))
     if found is not None:
         return found
     if isinstance(value, list):
@@ -220,6 +242,23 @@ def _own(value: Any, found: str, name: str) -> Any:
 _BUILTIN: Any = object()
 
 
+def _method(value: Any, found: str, name: str) -> tuple[Any, Any]:
+    """An object's property `name`, its own or its prototypes': the object that has it, and its value; `_BUILTIN`
+    where none of them owns it, the built-in one of the last object's kind; undefined where the chain ends at null."""
+    while True:
+        if found == "host":
+            raise _host()
+        method = _own(value, found, name)
+        if method is not _BUILTIN or found != "object":
+            return value, method
+        prototype = get_prototype_of(value)
+        if prototype is OBJECT_PROTOTYPE:
+            return value, _BUILTIN
+        if prototype is None:
+            return value, UNDEFINED
+        value, found = prototype, kind(prototype)
+
+
 def _builtin_string(value: Any, found: str) -> str:
     """An object's built-in `toString`: an array joined by commas, a regular expression's source and flags, an
     object's `[object Object]`; a function's source text is not modeled."""
@@ -241,10 +280,13 @@ def to_primitive(value: Any, hint: str = "default") -> Any:
     if found == "host":
         raise _host()
     for name in ("toString", "valueOf") if hint == "string" else ("valueOf", "toString"):
-        method = _own(value, found, name)
+        holder, method = _method(value, found, name)
         if method is _BUILTIN:
             if name == "toString":
-                return _builtin_string(value, found)
+                held = kind(holder)
+                if holder is not value and held in ("array", "regexp"):  # generic, over an object it is not of
+                    raise F.NoRule(DIALECT, f"{_PROTOTYPE_OF[held]}.prototype.toString")
+                return _builtin_string(holder, held)
             continue  # Object.prototype.valueOf gives the object itself
         if kind(method) == "function":
             result = call(method, [])
@@ -575,6 +617,33 @@ def _listed(value: Any) -> Any:
     return [_listed(item) for item in value.values] if isinstance(value, Objects.Listed) else value
 
 
+def ordinary_object_create(prototype: Any, properties: dict[str, Any]) -> dict[str, Any]:
+    """OrdinaryObjectCreate (10.1.12): an object of `properties`, in ECMAScript's order, whose prototype is `prototype`:
+    `OBJECT_PROTOTYPE`, null (None) or an object; a primitive a TypeError."""
+    if prototype is not OBJECT_PROTOTYPE and prototype is not None and is_primitive(prototype):
+        raise TypeError(f"Object prototype may only be an Object or null: {to_string(prototype)}")
+    properties = ordered(properties)
+    return properties if prototype is OBJECT_PROTOTYPE else _Object(prototype, properties)
+
+
+def get_prototype_of(value: Any) -> Any:
+    """An object's prototype, its [[Prototype]] (10.1.1): `OBJECT_PROTOTYPE` unless `ordinary_object_create` gave it
+    another, null (None) or an object."""
+    return value.prototype if isinstance(value, _Object) else OBJECT_PROTOTYPE
+
+
+def _base(value: Any) -> Any:
+    """Where an object's chain of prototypes leaves the objects this module makes: the object whose prototype is
+    %Object.prototype%, or the first prototype of another kind (an array, a function, a data object, a host value);
+    None where the chain ends at null. Any other value is its own."""
+    while kind(value) == "object":
+        prototype = get_prototype_of(value)
+        if prototype is OBJECT_PROTOTYPE:
+            break
+        value = prototype
+    return value
+
+
 def ordered(properties: dict[str, Any]) -> dict[str, Any]:
     """An object's properties in ECMAScript's order (OrdinaryOwnPropertyKeys, 10.1.11.1): its array indices ascending,
     then its other keys as inserted."""
@@ -623,6 +692,9 @@ def get(value: Any, key: str) -> Any:
     elif found == "object":
         if key in value:
             return value[key]
+        prototype = get_prototype_of(value)
+        if prototype is not OBJECT_PROTOTYPE:  # inherited from its prototype, or from none
+            return UNDEFINED if prototype is None else get(prototype, key)
     elif found == "data":
         properties = Objects.properties(value)
         if key in properties:
@@ -639,6 +711,10 @@ def has_property(value: Any, key: Any) -> bool:
     if found == "host":
         raise _host()
     name = to_property_key(key)
+    if found == "object" and name not in value:
+        prototype = get_prototype_of(value)
+        if prototype is not OBJECT_PROTOTYPE:  # inherited from its prototype, or from none
+            return prototype is not None and has_property(prototype, name)
     if _builtin(found, name) is not None:
         return True
     if found == "array":
@@ -660,7 +736,10 @@ def iterate(value: Any) -> list[Any]:
         return [UNDEFINED if item is HOLE else item for item in value]
     if found == "string":
         return list(_normalize(value))
-    if found == "host":
+    base = kind(_base(value))
+    if base == "array":  # an object that inherits from an array: Array.prototype's iterator, generic over it
+        raise F.NoRule(DIALECT, "Array.prototype.values")
+    if base == "host":
         raise _host()
     raise TypeError(f"{'null' if found == 'null' else type_of(value)} is not iterable")
 
@@ -702,7 +781,8 @@ def instance_of(value: Any, target: Any) -> bool:
         return False
     if not isinstance(target, type):
         raise TypeError("Function has non-object prototype 'undefined' in instanceof check")
-    return isinstance(value, target)
+    base = _base(value)  # what a class made, in its chain of prototypes
+    return base is not None and isinstance(base, target)
 
 
 # --- Templates (13.2.8) ---

@@ -8,7 +8,8 @@ in both implementations (ECMA-262, 7): `+` concatenating or adding by ToPrimitiv
 determines is folded into the literal of its value: a boolean's, a number's, a bigint's or a string's, a negative
 number as the negation of its magnitude and NaN, Infinity and -0 by their names (`NaN`, `Infinity`, `-0`, as ECMAScript
 spells them), `undefined` by its name, `null` and a regular expression as TypeScript5's `constant`; an array or an
-object of such values into its display (`[1, , "a"]`, `{ a: 1 }`). A function (a closure an arrow makes, or one the
+object of such values into its display (`[1, , "a"]`, `{ a: 1 }`), an object's prototype, where it is not
+%Object.prototype%, written as its `__proto__` (`{ __proto__: null, a: 1 }`). A function (a closure an arrow makes, or one the
 scope provides), a data object and a host value have no literal: such a subterm stays, its own subterms simplified, as
 does a name the scope does not bind. The rest stays a TypeScript5 expression. A short circuit decides what does not
 depend on what stays: `true && x` is `x`, `c ? a : b` its chosen branch when `c` is known, and `(1, x)` is `x`.
@@ -23,8 +24,8 @@ String.prototype.toUpperCase is not simplified"), nor is a host value's property
 Its rules fold every kind the evaluation inventory gives class (a) (mbse-expressions'
 [the evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#typescript), TypeScript), `FOLDED`:
 names and `this`, `null` and a regular expression, templates (a tagged one's tag called with its strings and their
-`raw`), arrays (holes and spreads), objects (computed keys, shorthands, spreads), member access (`?.` short-circuiting
-its chain), calls and `new`, arrows with an expression body (closures binding their parameters by TypeScript
+`raw`), arrays (holes and spreads), objects (computed keys, shorthands, spreads, and a `__proto__: v` that sets the
+object's prototype, ECMA-262 B.3.1), member access (`?.` short-circuiting its chain), calls and `new`, arrows with an expression body (closures binding their parameters by TypeScript
 Patterns' destructuring, with defaults and rests), the unary, binary, logical, conditional and sequence operators, and
 TypeScript's own assertions, erased to their operand. What stays, named: `delete`, writes, `await`, `yield`, `import()`,
 `super`, `#x`, `new.target`, and an arrow's block or an async arrow's call (class `d`: statements, a coroutine, a
@@ -32,7 +33,8 @@ class, a write, mbse-programs'); a function's or a class's expression (`d`); a s
 a built-in method and a host value (`c`: the language's own runtime, mbse-basis
 [CAP-301: simplification delegated to a surrogate dialect](mbse:mbse-basis/docs/capabilities/README.md#CAP-301)); a
 term of `TypeScript Types`, `TypeScript Patterns` or `TypeScript RegExp`, by the dialect that owns it (`b`); and
-invalid syntax. `CATEGORIES` gives each the evaluation inventory's class.
+invalid syntax, and an object with two `__proto__: v`, which ECMA-262 makes an early error (`b`). `CATEGORIES` gives
+each the evaluation inventory's class.
 """
 
 from __future__ import annotations
@@ -258,18 +260,38 @@ def _array(arguments: list[F.Thunk], node: Any, scope: Any) -> list[Any]:
     return values
 
 
+def _sets_prototype(member: Any, scope: Any) -> bool:
+    """Whether an object's member is a `__proto__: v` that sets the object's prototype (ECMA-262, B.3.1): a property
+    whose key is `__proto__`, an identifier or a string, neither computed, a shorthand, a method nor an accessor."""
+    if _tag(member) != T.PROPERTY:
+        return False
+    inner = _node(member)
+    attributes = inner.attributes
+    if attributes.get("computed") or attributes.get("shorthand") or attributes.get("method") or attributes.get(
+            "propertyKind") != "init":
+        return False
+    return _key(inner, scope) == "__proto__"
+
+
 def _object(arguments: list[F.Thunk], node: Any, scope: Any) -> dict[str, Any]:
+    members = _node(node).lists["properties"]
+    if sum(_sets_prototype(member, scope) for member in members) > 1:  # an early error: the object never exists
+        raise F.NoRule(ES.DIALECT, "objectexpression duplicate __proto__")
     properties: dict[str, Any] = {}
-    for member in _node(node).lists["properties"]:
+    prototype = ES.OBJECT_PROTOTYPE
+    for member in members:
         inner = _node(member)
         if _tag(member) == T.SPREADELEMENT:
             properties.update(ES.own_entries(_evaluate(inner.subterms["argument"], scope)))
             continue
+        if _sets_prototype(member, scope):  # its prototype, where its value is an object or null; else ignored
+            value = _evaluate(inner.subterms["value"], scope)
+            if value is None or not ES.is_primitive(value):
+                prototype = value
+            continue
         key = _key(inner, scope)
-        if key == "__proto__" and not inner.attributes.get("computed") and not inner.attributes.get("shorthand"):
-            raise F.NoRule(ES.DIALECT, "objectexpression __proto__")  # an object's prototype, which no value models
         properties[key] = _evaluate(inner.subterms["value"], scope)
-    return ES.ordered(properties)
+    return ES.ordinary_object_create(prototype, properties)
 
 
 def _property(arguments: list[F.Thunk], node: Any, scope: Any) -> tuple[str, Any]:
@@ -338,6 +360,7 @@ _D = "d"
 CATEGORIES: dict[str, dict[str, str]] = {
     "TypeScript5": {
         "tsemptybodyfunctionexpression": "b", "jsxelement": "b", "jsxfragment": "b", "jsxemptyexpression": "b",
+        "objectexpression duplicate __proto__": "b",
         **dict.fromkeys(("functionexpression", "classexpression", "super", "privateidentifier", "metaproperty",
                          "awaitexpression", "yieldexpression", "importexpression", "assignmentexpression",
                          "updateexpression", "unaryexpression 'delete'", "async arrowfunctionexpression",
@@ -430,19 +453,26 @@ def _written_key(key: str) -> Terms.Writer:
 
 
 def _display(value: Any) -> Any:
-    """An array's or an object's display, of its items' literals and displays, a hole an elision; None where an item
-    has neither, or for any other value (a tagged template's strings among them)."""
+    """An array's or an object's display, of its items' literals and displays, a hole an elision, an object's prototype
+    its `__proto__` where it is not %Object.prototype%; None where an item or a prototype has neither, or for any other
+    value (a tagged template's strings among them)."""
     found = ES.kind(value)
     if found == "array" and not isinstance(value, ES.TemplateStrings):
         items = [_make(T.ELISION, {}) if item is ES.HOLE else _literal(item) or _display(item) for item in value]
         return None if None in items else _make(T.ARRAYEXPRESSION, {}, *items)
     if found == "object":
         written = [(key, _literal(item) or _display(item)) for key, item in ES.ordered(value).items()]
-        if any(item is None for _, item in written):
+        prototype = ES.get_prototype_of(value)
+        inherited = None if prototype is ES.OBJECT_PROTOTYPE else _literal(prototype) or _display(prototype)
+        if any(item is None for _, item in written) or prototype is not ES.OBJECT_PROTOTYPE and inherited is None:
             return None
-        return _make(T.OBJECTEXPRESSION, {}, *(_make(T.PROPERTY, {  # `__proto__` computed, a property, no prototype
+        members = [_make(T.PROPERTY, {  # a key `__proto__` computed: a property, not the prototype
             "propertyKind": "init", "computed": key == "__proto__", "method": False, "shorthand": False},
-            _written_key(key), item) for key, item in written))
+            _written_key(key), item) for key, item in written]
+        if inherited is not None:  # its prototype, first: `__proto__` neither computed nor a shorthand (B.3.1)
+            members.insert(0, _make(T.PROPERTY, {
+                "propertyKind": "init", "computed": False, "method": False, "shorthand": False}, _name("__proto__"), inherited))
+        return _make(T.OBJECTEXPRESSION, {}, *members)
     return None
 
 
