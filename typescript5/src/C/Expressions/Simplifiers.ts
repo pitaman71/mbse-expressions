@@ -9,12 +9,19 @@
  * (`Domains.literalSuffix`): an `int`, `long` or `long long`, signed or not (`5u`; a typedef's value as the standard
  * type it is, an `int64_t`'s `5l`), a `bool`, a string, `nullptr`, a floating value of a type with a suffix whose
  * binary64 literal rounds back to it exactly (`2.5f`, `3.0L`, `0.3dd`, `1.5f16`; a non-finite one has none), and a
- * bit-precise integer's whose narrowest literal is of its type (`7wb`). A value of any other type has no literal, and
- * stays, its subterms simplified: a `char`, a `short`, a `wchar_t` in C++, a `long double` that no binary64 literal
- * spells, a `_BitInt(N)` wider than its value's literal, an array, `void`, an object. Its arithmetic folds all the
- * same, its operands promoted: `(char)200 + 0` is the `int` -56 under x86-64's System V ABI. A simplification whose
- * root is a literal gives its native as its value: a bigint, a number (a value of a format whose values are text, as
- * its text, as `Patterns.Ieee754` writes it), a boolean, a string, null for `nullptr`. A literal's type is what its
+ * bit-precise integer's whose narrowest literal is of its type (`7wb`). A value of an arithmetic type no literal has is
+ * written as a closed constructor expression (mbse-basis [VOC-034: closed constructor
+ * expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), a cast of a literal that converts to it exactly, in C and
+ * C++ alike: a `char`, a `short`, a `wchar_t` in C++, a `_BitInt(N)` wider than its value's literal (`(short)3`,
+ * `(_BitInt(4))1`; a typedef's value as the standard type it is, a `uint8_t`'s `(unsigned char)44`). In C, an array of
+ * such values is written as a compound literal of its elements' literals (`(int[]){1, 2}`, `(int[][2]){{1, 2}, {3,
+ * 4}}`); C++ has no compound literal, and a C++ cast names no array type but a declaration's, so a C++ array stays. What
+ * no closed constructor expression spells stays, its subterms simplified: a `long double` that no binary64 literal
+ * spells, a non-finite floating value, `void`, an object. Its arithmetic folds all the same, its operands promoted:
+ * `(char)200 + 0` is the `int` -56 under x86-64's System V ABI. A simplification whose root is a closed constructor
+ * expression gives its native as its value: a bigint, a number (a value of a format whose values are text, as its
+ * text, as `Patterns.Ieee754` writes it), a boolean, a string, null for `nullptr`, an array of its elements' for an
+ * array. A literal's type is what its
  * text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, `5wb` a
  * `_BitInt(4)`), else its value's; a variable's type is its value's: a boolean is a `bool`, a bigint an `int`, `long`
  * or `unsigned long` as the first that holds it, a number a `double`, null `nullptr` (a value carries no domain: a
@@ -51,9 +58,9 @@
  *   scalar's size and alignment are its ABI's (`Domains.layout`), an array's its elements'. `_Generic` chooses the
  *   association whose type is its controlling operand's (its value unevaluated), by C's identity of types
  *   (`Domains.Types.identity`: `int64_t` is `long`, `char` is neither `signed char` nor `unsigned char`), or its
- *   `default`. A compound literal of an arithmetic type is its initializer's value converted; of an array of one, an
- *   array (designators and string initializers of a character array among its items), whose elements a subscript reads,
- *   with no literal of its own.
+ *   `default`. A compound literal of an arithmetic type is its initializer's value converted; of an array of one, or of
+ *   arrays of one, an array, initialized as C initializes one (6.7.10: braces elided or written, designators and GNU's
+ *   ranges, a character array's string), whose elements a subscript reads.
  * - `object.name` and `object->name` read a member (a property of a data object, read through mbse-schemas' readers
  *   (`Framework.Objects`), or a key of a mapping); `array[index]` an element of an array, of a container or of a
  *   compound literal; `f(args)` calls a function the scope provides, by its name, and nothing else, a pack expansion's
@@ -64,8 +71,7 @@
  * named, with its class (`CATEGORIES`): writes, statements, the object model (`*`, `&`, a cast to a type that is not
  * arithmetic, a call of a callee that is not a function's name), class `d`; an initializer list alone, class `b`; an
  * operand whose type its declaration gives (`sizeof(x.a)`), class `c`; a layout no ABI dialect stores (a bit-precise
- * integer's, `nullptr_t`'s), nested braces and an array of arrays in a compound literal, class `a`; a term of `C Types`
- * or `C Preprocessor`, by the dialect that owns it; and invalid syntax ("C error is not simplified"), where a cast's
+ * integer's, `nullptr_t`'s), class `a`; a term of `C Types` or `C Preprocessor`, by the dialect that owns it; and invalid syntax ("C error is not simplified"), where a cast's
  * type stands too. A name the scope does not bind, or a function it does not provide, stays.
  */
 
@@ -861,85 +867,177 @@ function generic(rules: Rules): F.Implementation {
   return (args, node, scope) => (args[rules.select(node, scope)] as F.Thunk)();
 }
 
-/** A compound literal of an arithmetic type, or of an array of one: its initializer's value, converted. */
+/** A compound literal of an arithmetic type, or of an array of one or of arrays of one: its initializer's value,
+ * converted (see `Initializer`). */
 function compound(dialect: Terms.Dialect, rules: Rules): F.Implementation {
   return (_args, node, scope) => {
     const tree = Terms.node(...Terms.kindOf(node));
     const declared = rules.declared(tree.subterms.get("type"), node, scope);
     const items = (tree.helpers.get("initializer") as Terms.Node).many;
-    const zero_ = new Typed(typesOf(node, dialect).named("int"), 0n);
     if (declared instanceof Domains.CType) {
-      if (items.length > 1) throw new TypeError("excess elements in a scalar initializer");
-      return convert(items.length > 0 ? item(rules, items[0], scope, dialect) : zero_, declared);
+      return new Initializer(rules, scope, dialect, node, declared).scalar(declared, items);
     }
     if (!(declared instanceof ArrayType)) {
       throw refuse(dialect, "compoundliteralexpression of a type that is not arithmetic");
     }
-    if (!(declared.element instanceof Domains.CType)) {
-      throw refuse(dialect, "compoundliteralexpression of an array of arrays");
+    let leaf = declared.element;
+    while (leaf instanceof ArrayType) {
+      if (leaf.length === null) throw new TypeError("array has incomplete element type");
+      leaf = leaf.element;
     }
-    const values = elements(rules, declared, items, scope, dialect);
-    const length = declared.length ?? BigInt(Math.max(-1, ...values.keys()) + 1);
-    return new Typed(null, Array.from({ length: Number(length) },
-      (_, i) => values.get(i) ?? convert(zero_, declared.element as CType)));
+    return new Initializer(rules, scope, dialect, node, leaf as CType).array(declared, items);
   };
 }
 
-/** An initializer's item's value; nested braces stay. */
-function item(rules: Rules, term: unknown, scope: any, dialect: Terms.Dialect): Typed {
-  const [tag] = Terms.kindOf(term);
-  if (tag === Expressions.INITIALIZERLIST || tag === Expressions.DESIGNATEDINITIALIZER) {
-    throw refuse(dialect, "compoundliteralexpression of nested braces");
-  }
-  return rules.evaluate(term, scope) as Typed;
+/** How many scalars an object of a type holds: one of an arithmetic type, an array's elements' times its length. */
+function count(type: any): number {
+  return type instanceof Domains.CType ? 1 : Number(type.length) * count(type.element);
 }
 
-/** An array's initialized elements by position: each item in turn, or where its designator says (`[2] = 5`, GNU's
- * `[0 ... 2] = 5`); a character array's string, its code units and its terminating zero. */
-function elements(rules: Rules, target: ArrayType, items: readonly unknown[], scope: any,
-  dialect: Terms.Dialect): Map<number, Typed> {
-  const type = target.element as CType;
-  const limit = target.length === null ? null : Number(target.length);
-  const first = items.length === 1 ? Terms.kindOf(items[0])[0] : null;
-  if ((first === Expressions.LITERAL || first === Expressions.CONCATENATEDSTRING) && type.kind === "integer"
-    && type.width === 8) {
-    const text = (rules.evaluate(items[0], scope) as Typed).value;
-    if (typeof text === "string") { // its terminating zero dropped where the array's length leaves no room for it
-      const codes = [...new TextEncoder().encode(text), 0];
-      if (limit !== null && codes.length - 1 > limit) {
-        throw new TypeError("initializer-string for an array is too long");
+/** The value an initializer gives an object of an arithmetic type, or of an array of one or of arrays of one, by
+ * ISO/IEC 9899's rules (6.7.10), its scalars numbered in order (`leaf` their type): each item initializes the next
+ * scalar, its braces elided; an item in braces initializes the next element of the array it is within, or the scalar it
+ * reaches (`{}` its zero); a designator (`[1] = x`, `[1][0] = x`, GNU's `[0 ... 2] = x`) names the element an item
+ * initializes, and the next item initializes what follows it; a string initializes a character array, its code units
+ * and its terminating zero; a later item overrides an earlier one. An element no item initializes is zero, and an array
+ * of unknown size is as long as the elements its items initialize. */
+class Initializer {
+  private readonly int: CType;
+  private readonly zero: Typed;
+
+  constructor(private readonly rules: Rules, private readonly scope: any, private readonly dialect: Terms.Dialect,
+    node: unknown, private readonly leaf: CType) {
+    this.int = typesOf(node, dialect).named("int");
+    this.zero = convert(new Typed(this.int, 0n), leaf);
+  }
+
+  /** A scalar's value, of the items in its braces: one expression, or none, its zero. */
+  scalar(ctype: CType, items: readonly unknown[]): Typed {
+    if (items.length > 1) throw new TypeError("excess elements in a scalar initializer");
+    if (items.length === 0) return this.zero;
+    const [tag] = Terms.kindOf(items[0]);
+    if (tag === Expressions.INITIALIZERLIST) throw new TypeError("too many braces around a scalar initializer");
+    if (tag === Expressions.DESIGNATEDINITIALIZER) {
+      throw new TypeError(`designator in initializer for scalar type '${ctype.name()}'`);
+    }
+    return convert(this.rules.evaluate(items[0], this.scope) as Typed, ctype);
+  }
+
+  /** An array's value, of the items in its braces. */
+  array(target: ArrayType, items: readonly unknown[]): Typed {
+    const [values, extent] = this.fill(target, items);
+    const stride = count(target.element);
+    const length = target.length !== null ? Number(target.length) : Math.ceil(extent / stride);
+    if (length === 0) throw new TypeError("an array of unknown size is initialized by an empty initializer");
+    return this.assembled(new ArrayType(target.element, BigInt(length)), values, 0);
+  }
+
+  private assembled(type: any, values: ReadonlyMap<number, Typed>, base: number): Typed {
+    if (type instanceof Domains.CType) return values.get(base) ?? this.zero;
+    const stride = count(type.element);
+    return new Typed(null, Array.from({ length: Number(type.length) },
+      (_, i) => this.assembled(type.element, values, base + i * stride)));
+  }
+
+  /** The scalars the items in an array's braces initialize, by their positions in it, and how many scalars they
+   * reach. */
+  private fill(target: ArrayType, items: readonly unknown[]): [Map<number, Typed>, number] {
+    const codes = items.length === 1 ? this.string(target, items[0]) : null;
+    if (codes !== null) return [new Map(codes.map((code, i) => [i, code])), codes.length]; // `{"ab"}`, in its braces
+    const values = new Map<number, Typed>();
+    let [cursor, extent] = [0, 0];
+    for (let term of items) {
+      let braced: readonly unknown[] | null = null;
+      let offsets: number[];
+      let sub: any;
+      const [tag] = Terms.kindOf(term);
+      if (tag === Expressions.DESIGNATEDINITIALIZER) {
+        const designated = Terms.node(...Terms.kindOf(term));
+        [offsets, sub] = this.designated(target, many(designated.helpers.get("designators")));
+        const initializer = designated.helpers.get("initializer") as Terms.Node;
+        if (initializer.kind === "equalinitializer") term = initializer.subterms.get("value");
+        else braced = initializer.many;
+      } else {
+        [offsets, sub] = [[cursor], this.subobject(target, cursor)];
+        if (tag === Expressions.INITIALIZERLIST) braced = Terms.node(...Terms.kindOf(term)).many;
       }
-      const int = typesOf(items[0], dialect).named("int");
-      return new Map(codes.slice(0, limit ?? undefined)
-        .map((code, i) => [i, convert(new Typed(int, BigInt(code)), type)]));
+      const [placed, size] = this.placed(sub, term, braced);
+      for (const offset of offsets) { // what an item initializes, it initializes anew, a later item overriding an earlier
+        for (let position = offset; position < offset + size; position++) values.delete(position);
+        for (const [position, value] of placed) values.set(offset + position, value);
+        cursor = offset + size;
+      }
+      extent = Math.max(extent, cursor);
+    }
+    return [values, extent];
+  }
+
+  /** What an item initializes of the object `sub` it reaches, by position, and how many scalars that is: its braces'
+   * items all of it; a string the first character array within it; an expression its first scalar. */
+  private placed(sub: any, term: unknown, braced: readonly unknown[] | null): [Map<number, Typed>, number] {
+    if (braced !== null) {
+      const placed = sub instanceof Domains.CType ? new Map([[0, this.scalar(sub, braced)]]) : this.fill(sub, braced)[0];
+      return [placed, count(sub)];
+    }
+    let string = sub;
+    while (string instanceof ArrayType && string.element instanceof ArrayType) string = string.element;
+    const codes = string instanceof ArrayType ? this.string(string, term) : null;
+    if (codes !== null) return [new Map(codes.map((code, i) => [i, code])), count(string)];
+    return [new Map([[0, convert(this.rules.evaluate(term, this.scope) as Typed, this.leaf)]]), 1];
+  }
+
+  /** The type of what an item in braces at `offset` initializes: the element of the innermost array that holds the
+   * offset past its start, which begins there. */
+  private subobject(target: ArrayType, offset: number): any {
+    for (;;) {
+      const stride = count(target.element);
+      const [index, within] = [Math.floor(offset / stride), offset % stride];
+      if (target.length !== null && index >= Number(target.length)) {
+        throw new TypeError("excess elements in an array initializer");
+      }
+      if (within === 0) return target.element;
+      [target, offset] = [target.element, within];
     }
   }
-  const values = new Map<number, Typed>();
-  let position = 0;
-  for (let term of items) {
-    let [low, high] = [position, position];
-    if (Terms.kindOf(term)[0] === Expressions.DESIGNATEDINITIALIZER) {
-      const designated = Terms.node(...Terms.kindOf(term));
-      const designators = many(designated.helpers.get("designators"));
-      const designator = designators[0];
-      if (designators.length !== 1 || designator === undefined || designator.kind !== "indexdesignator") {
-        throw new TypeError("an array's element is designated by its index");
+
+  /** The offsets a designation names within an array, each of its range, and the type of what it names. */
+  private designated(target: ArrayType, designators: readonly Terms.Node[]): [number[], any] {
+    let [offsets, sub]: [number[], any] = [[0], target];
+    for (const designator of designators) {
+      if (designator.kind !== "indexdesignator") throw new TypeError("an array's element is designated by its index");
+      if (!(sub instanceof ArrayType)) {
+        throw new TypeError(`designator in initializer for scalar type '${(sub as CType).name()}'`);
       }
-      low = high = index(rules, designator.subterms.get("index"), scope);
-      const last = designator.subterms.get("last") ?? null;
-      if (last !== null) high = index(rules, last, scope);
-      const initializer = designated.helpers.get("initializer") as Terms.Node;
-      if (initializer.kind !== "equalinitializer") throw refuse(dialect, "compoundliteralexpression of nested braces");
-      term = initializer.subterms.get("value");
+      const first = index(this.rules, designator.subterms.get("index"), this.scope);
+      const bound = designator.subterms.get("last") ?? null;
+      const last = bound === null ? first : index(this.rules, bound, this.scope);
+      if (sub.length !== null && last >= Number(sub.length)) {
+        throw new TypeError("excess elements in an array initializer");
+      }
+      const stride = count(sub.element);
+      offsets = offsets.flatMap((offset) => Array.from({ length: Math.max(0, last - first + 1) },
+        (_, i) => offset + (first + i) * stride));
+      sub = sub.element;
     }
-    const value = convert(item(rules, term, scope, dialect), type);
-    for (let i = low; i <= high; i++) {
-      if (limit !== null && i >= limit) throw new TypeError("excess elements in an array initializer");
-      values.set(i, value);
-    }
-    position = high + 1;
+    return [offsets, sub];
   }
-  return values;
+
+  /** A character array's elements a string initializes, its terminating zero dropped where the array's length leaves
+   * no room for it; null where the item is no string, or the array no character array. */
+  private string(target: ArrayType, term: unknown): Typed[] | null {
+    const element = target.element;
+    if (!(element instanceof Domains.CType) || element.kind !== "integer" || element.width !== 8) return null;
+    const [tag] = Terms.kindOf(term);
+    if (tag !== Expressions.LITERAL && tag !== Expressions.CONCATENATEDSTRING) return null;
+    const text = (this.rules.evaluate(term, this.scope) as Typed).value;
+    if (typeof text !== "string") return null;
+    const codes = [...new TextEncoder().encode(text), 0];
+    if (target.length !== null && codes.length - 1 > Number(target.length)) {
+      throw new TypeError("initializer-string for an array is too long");
+    }
+    return codes.slice(0, target.length === null ? undefined : Number(target.length))
+      .map((code) => convert(new Typed(this.int, BigInt(code)), element));
+  }
 }
 
 function index(rules: Rules, term: unknown, scope: any): number {
@@ -963,7 +1061,7 @@ export const FOLDED: ReadonlySet<string> = new Set([Expressions.LITERAL, Express
 /** The evaluation inventory's class of what each dialect C reads has no rule for (`a` where none is given): an operand
  * whose declaration gives its type `c` (mbse-basis [CAP-232: domains inferred for
  * terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)); the object model, a type a declaration names, writes and
- * statements `d`; a layout no ABI dialect stores, nested braces and an array of arrays in a compound literal `a`. */
+ * statements `d`; a layout no ABI dialect stores `a`. */
 export const CATEGORIES: Record<string, Record<string, string>> = {
   C: {
     initializerlist: "b", designatedinitializer: "b",
@@ -1009,6 +1107,94 @@ function literalOf(write: (value: unknown, suffix?: string | null) => unknown,
       return null;
     }
     return write(binary64, suffix === "" ? null : suffix);
+  };
+}
+
+type Write = (value: unknown, suffix?: string | null) => unknown;
+
+/** The spec of the type name a cast or a compound literal writes for a value of `ctype`, around an abstract
+ * `declarator` where given: a bit-precise integer type as C writes it (`_BitInt(4)`); any other its identity's
+ * (`Domains.Types.identity`: a typedef's the standard type it is), of its keywords (`unsigned char`), or its name where
+ * it is not one (C++'s `wchar_t`). */
+function writtenType(ctype: CType, written: string, write: Write, declarator: unknown = null): unknown {
+  let specifiers: ((s: any) => unknown)[];
+  if (ctype.precise) {
+    const sign = ctype.signed ? [] : [(s: any) => s.primitivetypespecifier((p: any) => p.keyword("unsigned"))];
+    specifiers = [...sign, (s: any) => s.bitintspecifier((b: any) => b.width(write(BigInt(ctype.width))))];
+  } else {
+    const name = (ctype.types as Domains.Types).identity(ctype, written);
+    const words = name.split(" ");
+    specifiers = words.every((word) => Domains.KEYWORDS.has(word))
+      ? words.map((w) => (s: any) => s.primitivetypespecifier((p: any) => p.keyword(w)))
+      : [(s: any) => s.namedtypespecifier((n: any) => n.name((m: any) => m.identifier((i: any) => i.spelling(name))))];
+  }
+  return (t: any) => t.typeid((i: any) => declarator === null ? i.specifiers(specifiers)
+    : i.specifiers(specifiers).declarator(declarator));
+}
+
+/** The closed constructor expression of a value no literal spells (mbse-basis [VOC-034: closed constructor
+ * expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), written by `write`: a value of an arithmetic type a cast of
+ * a literal that converts to it exactly (`(short)3`, `(unsigned char)44`, `(_BitInt(4))1`), C's and C++'s alike; in C,
+ * an array of such values a compound literal of its elements' literals (`(int[]){1, 2}`, `(short[][2]){{1, 2}, {3,
+ * 4}}`). Null for a value no literal converts to (a `long double` no binary64 literal spells, a non-finite one), `void`,
+ * an object, an ordering, a list a variable holds, and an array in C++, which has no compound literals and whose casts
+ * name no array type but a declaration's. */
+function constructOf(write: Write, dialect: Terms.Dialect): (value: Typed) => unknown {
+  const [literal, written] = [literalOf(write, dialect), language(dialect)];
+
+  /** A literal that converts to `value` exactly: its own; an integer's, of the first of `int`, `long` and `unsigned
+   * long` that holds it; else its narrowest bit-precise literal (a `_BitInt(N)` wider than 64 bits). */
+  const operand = (value: Typed): unknown => {
+    const [own, ctype] = [literal(value), value.ctype as CType];
+    if (own !== null || ctype.kind !== "integer") return own;
+    const types = ctype.types as Domains.Types;
+    const name = Domains.of(value.value, types);
+    return name === null ? write(value.value, "wb") : literal(new Typed(types.named(name), value.value));
+  };
+
+  /** An array's elements, each its literal, or its own elements' in braces. */
+  const items = (value: Typed): unknown[] | null => {
+    const found: unknown[] = [];
+    for (const element of value.value as Typed[]) {
+      let spelled: unknown;
+      if (element.ctype === null) {
+        const inner = items(element);
+        spelled = inner === null ? null : dialect.spec((u: any) => u.initializerlist((r: any) => r.items(inner)));
+      } else {
+        spelled = operand(element);
+      }
+      if (spelled === null) return null;
+      found.push(spelled);
+    }
+    return found;
+  };
+
+  return (value) => {
+    const [held, ctype] = [value.value, value.ctype];
+    if (ctype !== null) {
+      const spelled = operand(value);
+      return spelled === null ? null : dialect.spec((u: any) => u.castexpression(
+        (r: any) => r.type(writtenType(ctype, written, write)).operand(spelled)));
+    }
+    if (written !== "C" || !Array.isArray(held) || held.length === 0 || !(held[0] instanceof Typed)) {
+      return null; // not an array of a compound literal's values
+    }
+    const found = items(value);
+    if (found === null) return null;
+    let leaf = held[0] as Typed;
+    const lengths: number[] = [];
+    while (leaf.ctype === null) { // an array of arrays: each inner array's length
+      lengths.push(leaf.value.length);
+      leaf = leaf.value[0];
+    }
+    let declarator = (d: any) => d.arraydeclarator((r: any) => r); // the outermost, of its elements' length
+    for (const length of lengths) {
+      const inner = declarator;
+      declarator = (d: any) => d.arraydeclarator((r: any) => r.size(write(BigInt(length))).declarator(inner));
+    }
+    const type = writtenType(leaf.ctype as CType, written, write, declarator);
+    return dialect.spec((u: any) => u.compoundliteralexpression(
+      (r: any) => r.type(type).initializer((i: any) => i.items(found))));
   };
 }
 
@@ -1078,7 +1264,8 @@ export function simplifier(dialect: Terms.Dialect, folded: ReadonlySet<string>,
   extend: ((operations: Map<string, any>, rules: Rules) => void) | null = null,
   guarded: Readonly<Record<string, readonly number[] | null>> = GUARDED): F.Simplifier {
   return new F.Simplifier(rules(dialect, folded, extend), { literal: literalOf(write, dialect), categories,
-    native: (value: Typed) => native(value), simplify, guarded: guarding(dialect, guarded) });
+    native: (value: Typed) => native(value), simplify, construct: constructOf(write, dialect),
+    guarded: guarding(dialect, guarded) });
 }
 
 /** The simplifier of the C dialect. */

@@ -8,11 +8,18 @@ folding (`Typed`), and a value folds into the literal of its type, its suffix as
 (`Domains.literal_suffix`): an `int`, `long` or `long long`, signed or not (`5u`; a typedef's value as the standard type
 it is, an `int64_t`'s `5l`), a `bool`, a string, `nullptr`, a floating value of a type with a suffix whose binary64
 literal rounds back to it exactly (`2.5f`, `3.0L`, `0.3dd`, `1.5f16`; a non-finite one has none), and a bit-precise
-integer's whose narrowest literal is of its type (`7wb`). A value of any other type has no literal, and stays, its
-subterms simplified: a `char`, a `short`, a `wchar_t` in C++, a `long double` that no binary64 literal spells, a
-`_BitInt(N)` wider than its value's literal, an array, `void`, an object. Its arithmetic folds all the same, its
-operands promoted: `(char)200 + 0` is the `int` -56 under x86-64's System V ABI. A simplification whose root is a
-literal gives its native as its value: an int, a float, a bool, a string, None for `nullptr`. A literal's type is what
+integer's whose narrowest literal is of its type (`7wb`). A value of an arithmetic type no literal has is written as a
+closed constructor expression (mbse-basis [VOC-034: closed constructor
+expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), a cast of a literal that converts to it exactly, in C and
+C++ alike: a `char`, a `short`, a `wchar_t` in C++, a `_BitInt(N)` wider than its value's literal (`(short)3`,
+`(_BitInt(4))1`; a typedef's value as the standard type it is, a `uint8_t`'s `(unsigned char)44`). In C, an array of
+such values is written as a compound literal of its elements' literals (`(int[]){1, 2}`, `(int[][2]){{1, 2}, {3, 4}}`);
+C++ has no compound literal, and a C++ cast names no array type but a declaration's, so a C++ array stays. What no
+closed constructor expression spells stays, its subterms simplified: a `long double` that no binary64 literal spells, a
+non-finite floating value, `void`, an object. Its arithmetic folds all the same, its operands promoted: `(char)200 + 0`
+is the `int` -56 under x86-64's System V ABI. A simplification whose root is a closed constructor expression gives its
+native as its value: an int, a float, a bool, a string, None for `nullptr`, a list of its elements' for an array. A
+literal's type is what
 its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, `5wb` a
 `_BitInt(4)`), else its value's; a variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or
 `unsigned long` as the first that holds it, a float a `double`, None `nullptr` (a value carries no domain: a variable of
@@ -49,8 +56,9 @@ rules apply:
   size and alignment are its ABI's (`Domains.layout`), an array's its elements'. `_Generic` chooses the association
   whose type is its controlling operand's (its value unevaluated), by C's identity of types (`Domains.Types.identity`:
   `int64_t` is `long`, `char` is neither `signed char` nor `unsigned char`), or its `default`. A compound literal of an
-  arithmetic type is its initializer's value converted; of an array of one, an array (designators and string
-  initializers of a character array among its items), whose elements a subscript reads, with no literal of its own.
+  arithmetic type is its initializer's value converted; of an array of one, or of arrays of one, an array, initialized
+  as C initializes one (6.7.10: braces elided or written, designators and GNU's ranges, a character array's string),
+  whose elements a subscript reads.
 - `object.name` and `object->name` read a member (a property of a data object, read through mbse-schemas' readers
   (`Framework.Objects`), or a key of a mapping); `array[index]` an element of a list, of a container or of a compound
   literal; `f(args)` calls a function the scope provides, by its name, and nothing else, a pack expansion's values
@@ -61,9 +69,8 @@ evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#c-
 with its class (`CATEGORIES`): writes, statements, the object model (`*`, `&`, a cast to a type that is not arithmetic,
 a call of a callee that is not a function's name), class `d`; an initializer list alone, class `b`; an operand whose
 type its declaration gives (`sizeof(x.a)`), class `c`; a layout no ABI dialect stores (a bit-precise integer's,
-`nullptr_t`'s), nested braces and an array of arrays in a compound literal, class `a`; a term of `C Types` or `C
-Preprocessor`, by the dialect that owns it; and invalid syntax ("C error is not simplified"), where a cast's type stands
-too. A name the scope does not bind, or a function it does not provide, stays.
+`nullptr_t`'s), class `a`; a term of `C Types` or `C Preprocessor`, by the dialect that owns it; and invalid syntax
+("C error is not simplified"), where a cast's type stands too. A name the scope does not bind, or a function it does not provide, stays.
 
 """
 
@@ -842,71 +849,165 @@ def _generic(rules: Rules) -> F.Implementation:
 
 
 def _compound(dialect: Any, rules: Rules) -> F.Implementation:
-    """A compound literal of an arithmetic type, or of an array of one: its initializer's value, converted."""
+    """A compound literal of an arithmetic type, or of an array of one or of arrays of one: its initializer's value,
+    converted (see `_Initializer`)."""
 
     def apply(arguments: list[F.Thunk], node: Any, scope: Any) -> Typed:
         tree = Terms.node(*Terms.kind_of(node))
         declared = rules.declared(tree.subterms["type"], node, scope)
         items = tree.helpers["initializer"].many
-        zero = Typed(_types(node, dialect).named("int"), 0)
         if isinstance(declared, CType):
-            if len(items) > 1:
-                raise TypeError("excess elements in a scalar initializer")
-            return convert(_item(rules, items[0], scope, dialect) if items else zero, declared)
+            return _Initializer(rules, scope, dialect, node, declared).scalar(declared, items)
         if not isinstance(declared, ArrayType):
             raise _refuse(dialect, "compoundliteralexpression of a type that is not arithmetic")
-        if not isinstance(declared.element, CType):
-            raise _refuse(dialect, "compoundliteralexpression of an array of arrays")
-        values = _elements(rules, declared, items, scope, dialect)
-        length = declared.length if declared.length is not None else max(values, default=-1) + 1
-        return Typed(None, [values.get(i, convert(zero, declared.element)) for i in range(length)])
+        leaf = declared.element
+        while isinstance(leaf, ArrayType):
+            if leaf.length is None:
+                raise TypeError("array has incomplete element type")
+            leaf = leaf.element
+        return _Initializer(rules, scope, dialect, node, leaf).array(declared, items)
 
     return apply
 
 
-def _item(rules: Rules, item: Any, scope: Any, dialect: Any) -> Typed:
-    """An initializer's item's value; nested braces stay."""
-    if Terms.kind_of(item)[0] in (Kinds.INITIALIZERLIST, Kinds.DESIGNATEDINITIALIZER):
-        raise _refuse(dialect, "compoundliteralexpression of nested braces")
-    return rules.evaluate(item, scope)
+def _count(type_: Any) -> int:
+    """How many scalars an object of a type holds: one of an arithmetic type, an array's elements' times its length."""
+    return 1 if isinstance(type_, CType) else type_.length * _count(type_.element)  # type: ignore[no-any-return]
 
 
-def _elements(rules: Rules, array: ArrayType, items: tuple[Any, ...], scope: Any, dialect: Any) -> dict[int, Typed]:
-    """An array's initialized elements by position: each item in turn, or where its designator says (`[2] = 5`, GNU's
-    `[0 ... 2] = 5`); a character array's string, its code units and its terminating zero."""
-    element = array.element
-    first = Terms.kind_of(items[0])[0] if len(items) == 1 else None
-    if first in (Kinds.LITERAL, Kinds.CONCATENATEDSTRING) and element.kind == "integer" and element.width == 8:
-        text = rules.evaluate(items[0], scope).value
-        if type(text) is str:  # its terminating zero dropped where the array's length leaves no room for it
-            codes = [*text.encode("utf-8"), 0]
-            if array.length is not None and len(codes) - 1 > array.length:
-                raise TypeError("initializer-string for an array is too long")
-            int_ = _types(items[0], dialect).named("int")
-            return {i: convert(Typed(int_, code), element) for i, code in enumerate(codes[:array.length])}
-    values: dict[int, Typed] = {}
-    position = 0
-    for item in items:
-        first = last = position
-        if Terms.kind_of(item)[0] == Kinds.DESIGNATEDINITIALIZER:
-            designated = Terms.node(*Terms.kind_of(item))
-            designators = designated.helpers.get("designators", ())
-            if len(designators) != 1 or designators[0].kind != "indexdesignator":
-                raise TypeError("an array's element is designated by its index")
-            first = last = _index(rules, designators[0].subterms["index"], scope)
-            if designators[0].subterms.get("last") is not None:
-                last = _index(rules, designators[0].subterms["last"], scope)
-            initializer = designated.helpers["initializer"]
-            if initializer.kind != "equalinitializer":
-                raise _refuse(dialect, "compoundliteralexpression of nested braces")
-            item = initializer.subterms["value"]
-        value = convert(_item(rules, item, scope, dialect), element)
-        for index in range(first, last + 1):
-            if array.length is not None and index >= array.length:
+class _Initializer:
+    """The value an initializer gives an object of an arithmetic type, or of an array of one or of arrays of one, by
+    ISO/IEC 9899's rules (6.7.10), its scalars numbered in order (`leaf` their type): each item initializes the next
+    scalar, its braces elided; an item in braces initializes the next element of the array it is within, or the scalar
+    it reaches (`{}` its zero); a designator (`[1] = x`, `[1][0] = x`, GNU's `[0 ... 2] = x`) names the element an item
+    initializes, and the next item initializes what follows it; a string initializes a character array, its code units
+    and its terminating zero; a later item overrides an earlier one. An element no item initializes is zero, and an
+    array of unknown size is as long as the elements its items initialize."""
+
+    def __init__(self, rules: Rules, scope: Any, dialect: Any, node: Any, leaf: CType):
+        self.rules, self.scope, self.dialect, self.leaf = rules, scope, dialect, leaf
+        self.int_ = _types(node, dialect).named("int")
+        self.zero = convert(Typed(self.int_, 0), leaf)
+
+    def scalar(self, ctype: CType, items: Sequence[Any]) -> Typed:
+        """A scalar's value, of the items in its braces: one expression, or none, its zero."""
+        if len(items) > 1:
+            raise TypeError("excess elements in a scalar initializer")
+        if not items:
+            return self.zero
+        tag = Terms.kind_of(items[0])[0]
+        if tag == Kinds.INITIALIZERLIST:
+            raise TypeError("too many braces around a scalar initializer")
+        if tag == Kinds.DESIGNATEDINITIALIZER:
+            raise TypeError(f"designator in initializer for scalar type '{ctype.name()}'")
+        return convert(self.rules.evaluate(items[0], self.scope), ctype)
+
+    def array(self, array: ArrayType, items: Sequence[Any]) -> Typed:
+        """An array's value, of the items in its braces."""
+        values, extent = self._fill(array, items)
+        stride = _count(array.element)
+        length = array.length if array.length is not None else -(-extent // stride)
+        if length == 0:
+            raise TypeError("an array of unknown size is initialized by an empty initializer")
+        return self._assembled(ArrayType(array.element, length), values, 0)
+
+    def _assembled(self, type_: Any, values: Mapping[int, Typed], base: int) -> Typed:
+        if isinstance(type_, CType):
+            return values.get(base, self.zero)
+        stride = _count(type_.element)
+        return Typed(None, [self._assembled(type_.element, values, base + i * stride) for i in range(type_.length)])
+
+    def _fill(self, target: ArrayType, items: Sequence[Any]) -> tuple[dict[int, Typed], int]:
+        """The scalars the items in an array's braces initialize, by their positions in it, and how many scalars they
+        reach."""
+        codes = self._string(target, items[0]) if len(items) == 1 else None
+        if codes is not None:  # `{"ab"}`, a character array's string in its braces
+            return dict(enumerate(codes)), len(codes)
+        values: dict[int, Typed] = {}
+        cursor = extent = 0
+        for item in items:
+            braced: Sequence[Any] | None = None
+            tag = Terms.kind_of(item)[0]
+            if tag == Kinds.DESIGNATEDINITIALIZER:
+                designated = Terms.node(*Terms.kind_of(item))
+                offsets, sub = self._designated(target, designated.helpers.get("designators", ()))
+                initializer = designated.helpers["initializer"]
+                if initializer.kind == "equalinitializer":
+                    item = initializer.subterms["value"]
+                else:
+                    braced = initializer.many
+            else:
+                offsets, sub = [cursor], self._subobject(target, cursor)
+                if tag == Kinds.INITIALIZERLIST:
+                    braced = Terms.node(*Terms.kind_of(item)).many
+            placed, size = self._placed(sub, item, braced)
+            for offset in offsets:  # what an item initializes, it initializes anew, a later item overriding an earlier
+                for position in range(offset, offset + size):
+                    values.pop(position, None)
+                values.update({offset + position: value for position, value in placed.items()})
+                cursor = offset + size
+            extent = max(extent, cursor)
+        return values, extent
+
+    def _placed(self, sub: Any, item: Any, braced: Sequence[Any] | None) -> tuple[dict[int, Typed], int]:
+        """What an item initializes of the object `sub` it reaches, by position, and how many scalars that is: its
+        braces' items all of it; a string the first character array within it; an expression its first scalar."""
+        if braced is not None:
+            placed = {0: self.scalar(sub, braced)} if isinstance(sub, CType) else self._fill(sub, braced)[0]
+            return placed, _count(sub)
+        string = sub
+        while isinstance(string, ArrayType) and isinstance(string.element, ArrayType):
+            string = string.element
+        codes = self._string(string, item) if isinstance(string, ArrayType) else None
+        if codes is not None:
+            return dict(enumerate(codes)), _count(string)
+        return {0: convert(self.rules.evaluate(item, self.scope), self.leaf)}, 1
+
+    def _subobject(self, target: ArrayType, offset: int) -> Any:
+        """The type of what an item in braces at `offset` initializes: the element of the innermost array that holds
+        the offset past its start, which begins there."""
+        while True:
+            stride = _count(target.element)
+            index, within = divmod(offset, stride)
+            if target.length is not None and index >= target.length:
                 raise TypeError("excess elements in an array initializer")
-            values[index] = value
-        position = last + 1
-    return values
+            if within == 0:
+                return target.element
+            target, offset = target.element, within
+
+    def _designated(self, target: ArrayType, designators: Sequence[Terms.Node]) -> tuple[list[int], Any]:
+        """The offsets a designation names within an array, each of its range, and the type of what it names."""
+        offsets, sub = [0], target
+        for designator in designators:
+            if designator.kind != "indexdesignator":
+                raise TypeError("an array's element is designated by its index")
+            if not isinstance(sub, ArrayType):
+                raise TypeError(f"designator in initializer for scalar type '{sub.name()}'")
+            first = _index(self.rules, designator.subterms["index"], self.scope)
+            last = first if designator.subterms.get("last") is None else _index(
+                self.rules, designator.subterms["last"], self.scope)
+            if sub.length is not None and last >= sub.length:
+                raise TypeError("excess elements in an array initializer")
+            stride = _count(sub.element)
+            offsets = [offset + index * stride for offset in offsets for index in range(first, last + 1)]
+            sub = sub.element
+        return offsets, sub
+
+    def _string(self, array: ArrayType, item: Any) -> list[Typed] | None:
+        """A character array's elements a string initializes, its terminating zero dropped where the array's length
+        leaves no room for it; None where the item is no string, or the array no character array."""
+        element = array.element
+        if not isinstance(element, CType) or element.kind != "integer" or element.width != 8:
+            return None
+        if Terms.kind_of(item)[0] not in (Kinds.LITERAL, Kinds.CONCATENATEDSTRING):
+            return None
+        text = self.rules.evaluate(item, self.scope).value
+        if type(text) is not str:
+            return None
+        codes = [*text.encode("utf-8"), 0]
+        if array.length is not None and len(codes) - 1 > array.length:
+            raise TypeError("initializer-string for an array is too long")
+        return [convert(Typed(self.int_, code), element) for code in codes[:array.length]]
 
 
 def _index(rules: Rules, term: Any, scope: Any) -> int:
@@ -947,7 +1048,7 @@ CATEGORIES: dict[str, dict[str, str]] = {
 """The evaluation inventory's class of what each dialect C reads has no rule for (`a` where none is given): an operand
 whose declaration gives its type `c` (mbse-basis [CAP-232: domains inferred for
 terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)); the object model, a type a declaration names, writes and
-statements `d`; a layout no ABI dialect stores, nested braces and an array of arrays in a compound literal `a`."""
+statements `d`; a layout no ABI dialect stores `a`."""
 
 
 def _literal_of(write: Callable[..., Any], dialect: Any) -> Callable[[Typed], Any]:
@@ -979,6 +1080,85 @@ def _literal_of(write: Callable[..., Any], dialect: Any) -> Callable[[Typed], An
         return write(binary64, suffix or None)
 
     return literal
+
+
+def _written_type(ctype: CType, language_: str, write: Callable[..., Any], declarator: Any = None) -> Any:
+    """The spec of the type name a cast or a compound literal writes for a value of `ctype`, around an abstract
+    `declarator` where given: a bit-precise integer type as C writes it (`_BitInt(4)`); any other its identity's
+    (`Domains.Types.identity`: a typedef's the standard type it is), of its keywords (`unsigned char`), or its name
+    where it is not one (C++'s `wchar_t`)."""
+    if ctype.precise:
+        sign = [] if ctype.signed else [lambda s: s.primitivetypespecifier(lambda p: p.keyword("unsigned"))]
+        specifiers = [*sign, lambda s: s.bitintspecifier(lambda b: b.width(write(ctype.width)))]
+    else:
+        name = ctype.types.identity(ctype, language_)  # type: ignore[union-attr]
+        words = name.split(" ")
+        specifiers = [lambda s, w=w: s.primitivetypespecifier(lambda p: p.keyword(w)) for w in words] if all(
+            word in Domains.KEYWORDS for word in words) else [lambda s: s.namedtypespecifier(
+                lambda n: n.name(lambda m: m.identifier(lambda i: i.spelling(name))))]
+    return lambda t: t.typeid(lambda i: i.specifiers(specifiers) if declarator is None else i.specifiers(
+        specifiers).declarator(declarator))
+
+
+def _construct_of(write: Callable[..., Any], dialect: Any) -> Callable[[Typed], Any]:
+    """The closed constructor expression of a value no literal spells (mbse-basis [VOC-034: closed constructor
+    expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), written by `write`: a value of an arithmetic type a cast
+    of a literal that converts to it exactly (`(short)3`, `(unsigned char)44`, `(_BitInt(4))1`), C's and C++'s alike;
+    in C, an array of such values a compound literal of its elements' literals (`(int[]){1, 2}`, `(short[][2]){{1, 2},
+    {3, 4}}`). None for a value no literal converts to (a `long double` no binary64 literal spells, a non-finite one),
+    `void`, an object, an ordering, a list a variable holds, and an array in C++, which has no compound literals and
+    whose casts name no array type but a declaration's."""
+    literal, written = _literal_of(write, dialect), language(dialect)
+
+    def operand(value: Typed) -> Any:
+        """A literal that converts to `value` exactly: its own; an integer's, of the first of `int`, `long` and
+        `unsigned long` that holds it; else its narrowest bit-precise literal (a `_BitInt(N)` wider than 64 bits)."""
+        own, ctype = literal(value), value.ctype
+        if own is not None or ctype.kind != "integer":  # type: ignore[union-attr]
+            return own
+        types: Domains.Types = ctype.types  # type: ignore[union-attr, assignment]
+        name = Domains.of(value.value, types)
+        return write(value.value, "wb") if name is None else literal(Typed(types.named(name), value.value))
+
+    def items(value: Typed) -> list[Any] | None:
+        """An array's elements, each its literal, or its own elements' in braces."""
+        found = []
+        for element in value.value:
+            if element.ctype is None:
+                inner = items(element)
+                spelled = None if inner is None else dialect.spec(
+                    lambda u, inner=inner: u.initializerlist(lambda r: r.items(inner)))
+            else:
+                spelled = operand(element)
+            if spelled is None:
+                return None
+            found.append(spelled)
+        return found
+
+    def construct(value: Typed) -> Any:
+        held, ctype = value.value, value.ctype
+        if ctype is not None:
+            spelled = operand(value)
+            return None if spelled is None else dialect.spec(lambda u: u.castexpression(
+                lambda r: r.type(_written_type(ctype, written, write)).operand(spelled)))
+        if written != "C" or not isinstance(held, list) or not held or not isinstance(held[0], Typed):
+            return None  # not an array of a compound literal's values
+        found = items(value)
+        if found is None:
+            return None
+        leaf, lengths = held[0], []
+        while leaf.ctype is None:  # an array of arrays: each inner array's length
+            lengths.append(len(leaf.value))
+            leaf = leaf.value[0]
+        declarator = lambda d: d.arraydeclarator(lambda r: r)  # noqa: E731: the outermost, of its elements' length
+        for length in lengths:
+            declarator = lambda d, inner=declarator, length=length: d.arraydeclarator(  # noqa: E731
+                lambda r: r.size(write(length)).declarator(inner))
+        type_ = _written_type(leaf.ctype, written, write, declarator)  # type: ignore[arg-type]
+        return dialect.spec(lambda u: u.compoundliteralexpression(
+            lambda r: r.type(type_).initializer(lambda i: i.items(found))))
+
+    return construct
 
 
 def _simplify(node: Any, results: list[F.Result]) -> F.Result | None:
@@ -1041,7 +1221,8 @@ def simplifier(dialect: Any, folded: frozenset[str], categories: Mapping[str, Ma
     """The simplifier of a dialect of the C family, by `rules(dialect, folded, extend)`, its literals written by
     `write`, what its language may never evaluate `guarded`, by a table as `GUARDED`."""
     return F.Simplifier(rules(dialect, folded, extend), literal=_literal_of(write, dialect), categories=categories,
-                        native=native, simplify=_simplify, guarded=guarding(dialect, guarded))
+                        native=native, simplify=_simplify, construct=_construct_of(write, dialect),
+                        guarded=guarding(dialect, guarded))
 
 
 SIMPLIFIER = simplifier(Expressions.DIALECT, FOLDED, CATEGORIES, Expressions.literal)

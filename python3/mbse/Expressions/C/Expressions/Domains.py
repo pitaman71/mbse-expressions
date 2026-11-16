@@ -69,7 +69,7 @@ from mbse.Expressions.Framework.Domains import Anything
 from mbse.Schemas.Framework import Proxies
 
 __all__ = ["CType", "Types", "NAMES", "String", "Anything", "bit_precise", "layout", "promoted", "common", "of",
-           "literal", "literal_suffix", "out_of_range", "arithmetic", "QUALIFIERS", "NULLPTR", "BINARY", "BINARY_CPP",
+           "literal", "literal_suffix", "out_of_range", "arithmetic", "KEYWORDS", "QUALIFIERS", "NULLPTR", "BINARY", "BINARY_CPP",
            "UNARY", "POSTFIX",
            "ASSIGNMENT", "FOLD", "CASTS", "MEMBER", "SUBSCRIPT", "CALL", "CONDITIONAL", "CAST", "SIZE"]
 
@@ -458,7 +458,9 @@ def out_of_range(attributes: Any, language: str, types: Types) -> str | None:
     return None
 
 
-_KEYWORDS = frozenset({"signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"})
+KEYWORDS = frozenset({"signed", "unsigned", "short", "long", "int", "char", "float", "double", "bool", "_Bool"})
+"""The keywords a type name's specifiers name an arithmetic type with; any other type's name is a name of its own
+(`wchar_t`, `uint8_t`)."""
 QUALIFIERS = frozenset({"const", "volatile", "restrict", "__restrict", "__restrict__"})
 """The cv-qualifiers a type name's specifiers may hold, which name no type."""
 
@@ -468,9 +470,9 @@ def arithmetic(names: Any) -> str | None:
     (`unsigned long int` is `unsigned long`; `uint8_t`, a type's name, is itself), cv-qualifiers aside; None for any
     other type (`void`, several names)."""
     words = [name for name in names if name not in QUALIFIERS]
-    if len(words) == 1 and type(words[0]) is str and words[0] not in _KEYWORDS and words[0] != "void":
+    if len(words) == 1 and type(words[0]) is str and words[0] not in KEYWORDS and words[0] != "void":
         return words[0]  # a type's name, which the store may define
-    if not words or any(word not in _KEYWORDS for word in words):
+    if not words or any(word not in KEYWORDS for word in words):
         return None
     signed, unsigned, longs = "signed" in words, "unsigned" in words, words.count("long")
     rest = sorted(word for word in words if word not in ("signed", "unsigned", "long"))
