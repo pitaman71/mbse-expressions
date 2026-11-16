@@ -364,7 +364,7 @@ function display(value: unknown): unknown {
 
 /** The simplifier of the MATLAB dialect. */
 export const SIMPLIFIER = new F.Simplifier(RULES, {
-  literal: LITERAL, display, guarded: F.guards(Expressions.DIALECT, { "&&": [1], "||": [1] }), // the right operand, by the left
+  literal: LITERAL, construct: display, guarded: F.guards(Expressions.DIALECT, { "&&": [1], "||": [1] }), // the right operand, by the left
 });
 
 /** The simplification of a term in `scope`, or with the variables in an object bound. */

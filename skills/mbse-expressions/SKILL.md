@@ -103,9 +103,10 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
 2. **Simplify on request, three-valued.** *Why*: data is incomplete most of the time, and an answer that treats unknown
    as false, or as true, is a silent mistake. *When*: checking a constraint against data. *How*:
    `Simplifiers.OfAny(expression, scope)`, the scope a mapping of variables to values, simplifies it: what the data
-   decides is folded into literals, and what it doesn't stays, the residual. If the residual's root is a literal, the
-   data decided it: `value` is true, false or a value; otherwise `value` is unknown (none), and `evaluate()` says why
-   (a name not bound, a subterm the dialect has no rule for, a value with no literal)
+   decides is folded into literals, and what it doesn't stays, the residual. If the residual's root is a closed
+   constructor expression (a literal, or a display or a cast of literals), the data decided it: `value` is true, false
+   or a value; otherwise `value` is unknown (none), and `evaluate()` says why (a name not bound, a subterm the dialect
+   has no rule for, a value with no closed constructor expression)
    ([PRI-046: simplification, not evaluation](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-046)). An absent property is unknown; `has(x, name)` asks whether it is present, which always has an
    answer. `and`, `or`, `not` and `implies` follow Kleene's logic, so an operand that decides makes the other's
    unknown not matter. The program asking decides what unknown means, where it acts: compare `value` with true or

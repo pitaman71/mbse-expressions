@@ -142,27 +142,27 @@ subset of their languages; completing them adds kinds, which is not this invento
 Refused kinds, each counted once, in the dialect that owns it; then the refusals within evaluated kinds (shapes and
 operators, one row each in the tables below). The counts are as simplification reads them in 0.11.0: "evaluated" is a
 kind its dialect folds, and "refused" one that stays in the residual, named; Python3's, TypeScript5's, C's, C++'s and
-SystemVerilog's class (a) rows are folded since. Where a question below is open, the kinds it covers are counted as its
+SystemVerilog's class (a) rows fold, but for the shapes that the last column counts as (a). Where a question below is open, the kinds it covers are counted as its
 recommendation has them, marked †.
 
 | Dialect | Kinds | Evaluated | Refused | (a) | (b) | (c) | (d) | Within evaluated kinds: (a), (c), (d) |
 |---|---|---|---|---|---|---|---|---|
 | Patterns | 7 | 7 | 0 | | | | | |
-| Python3 | 33 | 30 | 3 | | | | 3 | 5, 0, 2 |
+| Python3 | 33 | 30 | 3 | | | | 3 | 4, 0, 2 |
 | Python Types | 3 | 0 | 3 | | 3 | | | |
 | Python Patterns | 8 | 0 | 8 | | 8 | | | |
 | Python RegExp | 15 | 0 | 15 | | 15 | | | |
-| TypeScript5 | 41 | 27 | 14 | | 4 (3†) | | 10 (2†) | 1, 140, 3 |
+| TypeScript5 | 41 | 27 | 14 | | 4 (3†) | | 10 (2†) | 0, 140, 3 |
 | TypeScript Types | 38 | 0 | 38 | | 38 | | | |
 | TypeScript Patterns | 5 | 0 | 5 | | 5 | | | |
 | TypeScript RegExp | 18 | 0 | 18 | | 18 | | | |
-| C | 22 | 17 | 5 | | 2 | | 3 (2†) | 6, 3, 9 (1†) |
+| C | 22 | 17 | 5 | | 2 | | 3 (2†) | 4, 3, 9 (1†) |
 | C Types | 2 | 0 | 2 | | 2 | | | |
 | C Preprocessor | 10 | 0 | 10 | 1 | 9 | | | |
 | Cpp | 36 | 23 | 13 | | 2 | 2 | 9 (2†) | 0, 0, 9 (1†), and C's |
 | Cpp Types | 2 | 0 | 2 | | 2 | | | |
 | Cpp RegExp | 16 | 0 | 16 | | 16 | | | |
-| SystemVerilog | 38 | 26 | 12 | | 2 | 4 | 6 (2†) | 1, 3, 4 (1†) |
+| SystemVerilog | 38 | 26 | 12 | | 2 | 4 | 6 (2†) | 0, 4, 4 (1†) |
 | SystemVerilog Types | 10 | 0 | 10 | | 10 | | | |
 | SystemVerilog Patterns | 6 | 0 | 6 | | 6 | | | |
 | SystemVerilog Assertions | 17 | 0 | 17 | | | | 17† | |
@@ -171,13 +171,13 @@ recommendation has them, marked †.
 | MATLAB | 10 | 10 | 0 | | | | | |
 | Excel | 9 | 9 | 0 | | | | | |
 | LaTeX | 8 | 0 | 8 | | 8 | | | |
-| **All** | **373** | **149** | **224** | **8** | **161** | **6** | **49** | **13, 146, 27** |
+| **All** | **373** | **149** | **224** | **8** | **161** | **6** | **49** | **8, 147, 27** |
 
 So of 224 kinds that stay, 8 are gaps by the principle (a), C Preprocessor's `defined` and SystemVerilog Constraints'
 7, 161 have no value of their own (b), 6 wait on domain inference or constraint resolution (c), and 49 need what only
-mbse-programs or a simulator has (d), 25 of those by the recommendations of questions 1 and 2. Within folded kinds, 13
+mbse-programs or a simulator has (d), 25 of those by the recommendations of questions 1 and 2. Within folded kinds, 8
 refusals are gaps, each one the two implementations cannot compute alike yet (a complex power, a locale's format, a
-layout no ABI dialect stores); 146 wait on an open capability, 139 of them ECMAScript's built-in methods on a surrogate
+layout no ABI dialect stores); 147 wait on an open capability, 139 of them ECMAScript's built-in methods on a surrogate
 for the language's runtime, the others on domain inference; and 27 are mbse-programs' or a simulator's, 3 of those by
 question 1's recommendation.
 
@@ -208,8 +208,9 @@ question 1's recommendation.
 | `@` | (a) | Python's rule, `__matmul__` of the operand: a library's (NumPy's) in Python, and a `TypeError` for every value a TypeScript evaluator holds, since no builtin type has one |
 
 Folded in 0.11.0 (suite PYS): every row of class (a) above, by CPython 3.14's semantics, which the TypeScript
-implementation models. `is` between equal immutable values stays, read as (b); a complex power that is no integer one
-stays, as do a locale's format spec and a field whose text is its implementation's.
+implementation models, and an f-string's `\N{...}` escape, by Unicode's character names and aliases (PYS-14). `is`
+between equal immutable values stays, read as (b); a complex power that is no integer one stays, as do a locale's format
+spec and a field whose text is its implementation's.
 
 **Python Types** (`typevar`, `paramspec`, `typevartuple`): (b). A type parameter is declared by a `def`, `class` or
 `type` statement (Language Reference, 8.10, type parameter lists); its object is made when that statement runs. An
@@ -251,8 +252,9 @@ BigInt, an object as an ordered map (integer keys first), an array with holes, a
 | `awaitexpression`, `yieldexpression`, `importexpression` | (d) | a coroutine's or a generator's resumption; `import()` gives a promise, which only `await` reads, within an `async` body or a module |
 | `assignmentexpression`, `updateexpression`, and `unaryexpression`'s `delete` | (d)† | question 1: a write, to a binding or to data |
 
-Folded in 0.11.0 (suite TSS): every row of class (a) above, by `Abstract`'s model of ECMA-262's abstract operations. A
-regular expression is an object of its source and flags; its matching, as every built-in method, is the language's
+Folded in 0.11.0 (suite TSS): every row of class (a) above, by `Abstract`'s model of ECMA-262's abstract operations. An
+object literal's `__proto__` sets the object's prototype (TSS-10); two such keys are an early error, which stays with
+class (b), as invalid syntax does. A regular expression is an object of its source and flags; its matching, as every built-in method, is the language's
 runtime's (c).
 
 **TypeScript Types** (all 38): (b). A type is erased: it has no run-time value (TypeScript's compiler emits none for
@@ -329,6 +331,7 @@ Folded in 0.11.0 (suite CCS): every row of class (a) above, C's and C++'s, by th
 their holder's ABI stores. `sizeof` of a bit-precise integer type and of `nullptr_t` waits on the ABI dialects storing
 those layouts (a); an operand whose declaration gives its type, on
 [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md) (c).
+A compound literal with nested braces, or of an array of arrays, is initialized as C initializes an object (CCS-15).
 The standard library's user-defined literals are the scope's to provide.
 
 **C Types** and **Cpp Types** (`typeid`, `enumerator` each): (b). A type name denotes a type (C, 6.7.7; C++,
@@ -378,6 +381,7 @@ time, its scheduling and the values a signal had at earlier clock ticks are no s
 | a cast to a vector type of constant dimensions (`logic [7:0]'(x)`), to `string`, or `const'(x)` | (a) | the width from the dimensions, a string's bytes; `const'` keeps the value |
 | a scoped name of a package (`pkg::x`, `pkg::f(x)`) | (a) | resolved by the scope, as Python3's scope resolves a module's names |
 | `$typename` | (c) | its operand's type: CAP-232 |
+| `$sformatf`'s `%p` of a structure or a class handle | (c) | the structure's members and their order, a declaration's: CAP-232 |
 | an enumeration's methods (`e.next()`, `e.name()`) | (c) | the enumeration's type: CAP-232, which restores enums |
 | a cast to an enumeration, a structure or a union | (c) | the type's members: CAP-232 |
 | a system function that reads a simulator's state or acts: `$time`, `$realtime`, `$sampled`, `$rose`, `$fell`, `$past`, `$stable`, `$random`, `$urandom`, `$display`, `$fatal`, ... | (d) | a simulator's time, a signal's earlier values, a random seed it keeps, or an effect: a simulation, not an expression's scope |
@@ -387,7 +391,8 @@ time, its scheduling and the values a signal had at earlier clock ticks are no s
 
 Folded in 0.11.0 (suite SVS): every row of class (a) above, but `const'(x)`, which no term writes (`SystemVerilog
 Types` has no `const`); a time literal by the scope's time unit, `min:typ:max` by its choice, a scope-provided
-function's formals and defaults by `Subroutine`.
+function's formals and defaults by `Subroutine`. `$sformatf` folds `%u`, `%z` and `%p` (SVS-16); `%p` of a structure or a
+class handle stays, (c).
 
 **SystemVerilog Types** (all 10): (b). A data type (6) has no value; casts and `$bits` read it.
 

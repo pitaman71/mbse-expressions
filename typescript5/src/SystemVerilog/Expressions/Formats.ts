@@ -10,27 +10,38 @@
  * `sformatf(format, arguments)` writes its arguments as its format says, each specification `%`, then `-` (justified
  * left) or `0` (padded with zeros), a field width and a precision, then its letter, in either case: `%d` a decimal, `%h`
  * (or `%x`), `%o` and `%b` a vector's digits, x and z as their digits (a digit all x `x`, all z `z`, some x `X`, some z
- * `Z`); `%c` a character; `%s` a string; `%e`, `%f` and `%g` a real, as C writes it (`real`); `%%` a percent sign. A
- * field is as wide as its value's type needs, right-justified (a decimal in spaces, other digits in zeros), unless a
- * width is given, the least, `0` for no more than its digits need. `%t`, `%m`, `%l` and `%v` read a simulator's settings
- * and hierarchy, and `%u`, `%z` and `%p` write a value's encoding or its assignment pattern, which no rule writes:
- * `Simplifiers` leaves such a call in the residual, named. An argument a specification does not take, or a
- * specification with no argument, is an error.
+ * `Z`); `%c` a character; `%s` a string; `%e`, `%f` and `%g` a real, as C writes it (`real`); `%u` a vector's 2-state
+ * bits and `%z` its 4-state bits, unformatted (`unformatted`); `%p` a value as an assignment pattern (`pattern`); `%%` a
+ * percent sign. A field is as wide as its value's type needs, right-justified (a decimal in spaces, other digits in
+ * zeros), unless a width is given, the least, `0` for no more than its digits need; the text is a string, and a NUL
+ * byte is no character of it (6.16). `%t`, `%m`, `%l` and `%v` read a simulator's settings and hierarchy, which no rule
+ * writes: `Simplifiers` leaves such a call in the residual, named, as it does `%p` of an object. An argument a
+ * specification does not take, or a specification with no argument, is an error.
+ *
+ * `unformatted(value, states)` writes a vector's bits as `%u` (2 states, x and z as 0) and `%z` (4 states) do (21.3.3):
+ * in units of 32 bits, the unit holding the least significant bit first, each unit's bytes in the byte order of the
+ * ABIs mbse-expressions stores (little-endian, which IEEE 1800 leaves to the host), and for `%z` each unit's `aval`
+ * word, then its `bval` word, as VPI's `s_vpi_vecval` holds them. `pattern(value)` writes a value as `%p` does
+ * (21.2.1.7): an integral value as `%0d` writes it, a real as `%g` does, and an array as an assignment pattern of its
+ * items, `'{1, 2}`; it throws `NoRule` for anything else (a structure's members and a class handle's are a
+ * declaration's).
  *
  * `real(conversion, value, precision)` writes a real as C's `printf` does (C11 7.21.6.1): from its exact binary value
  * (`Ieee754.decode`), rounded half to even, so that both implementations write the same digits.
  */
 
-import { Errors } from "@mbse/schemas/Framework";
+import { Errors, Repr } from "@mbse/schemas/Framework";
 
+import { NoRule } from "../../Framework/Simplifiers.js";
 import * as Ieee754 from "../../Patterns/Expressions/Ieee754.js";
 import { Logic, vector as vectorType } from "./Domains.js";
 
 const { ValueError } = Errors;
+const { typeName } = Repr;
 
 /** The specifications no rule writes: a time (`%t`, by `$timeformat`), a hierarchical name (`%m`), a library binding
- * (`%l`), a net's strength (`%v`), a value's encoding (`%u`, `%z`) and an assignment pattern (`%p`). */
-export const UNWRITTEN: readonly string[] = ["t", "m", "l", "v", "u", "z", "p"];
+ * (`%l`) and a net's strength (`%v`). */
+export const UNWRITTEN: readonly string[] = ["t", "m", "l", "v"];
 
 const SPECIFICATION = /%([-0]*)(\d*)(?:\.(\d+))?(.)/gs;
 
@@ -175,6 +186,31 @@ export function real(conversion: string, value: number, precision: number | null
   return sign + written + suffix;
 }
 
+/** A vector's bits as `%u` (`states` 2: x and z as 0) or `%z` (4: `aval`, then `bval`) write them: 32-bit units, the
+ * least significant first, each word's bytes little-endian, one character each. */
+export function unformatted(value: Logic, states: number): string {
+  const words: bigint[] = [];
+  for (let unit = 0; unit < Math.ceil(value.type.width / 32); unit++) {
+    const shift = BigInt(32 * unit);
+    const [aval, bval] = [(value.aval >> shift) & 0xffffffffn, (value.bval >> shift) & 0xffffffffn];
+    words.push(...(states === 4 ? [aval, bval] : [aval & ~bval]));
+  }
+  let written = "";
+  for (const word of words) {
+    for (let byte = 0n; byte < 4n; byte++) written += String.fromCharCode(Number((word >> (8n * byte)) & 0xffn));
+  }
+  return written;
+}
+
+/** A value as `%p` writes it: an integral value's decimal digits (as `%0d`), a real's as `%g`, an array's items as an
+ * assignment pattern; anything else is a declaration's to write (`NoRule`). */
+export function pattern(value: unknown): string {
+  if (value instanceof Logic) return decimal(value);
+  if (typeof value === "number") return real("g", value);
+  if (Array.isArray(value)) return `'{${value.map(pattern).join(", ")}}`;
+  throw new NoRule("SystemVerilog", "systemcall '$sformatf' %p of an object", "systemcall");
+}
+
 /** The letter of the first specification of `format` that no rule writes (`UNWRITTEN`), lowercase; null if none. */
 export function unwritten(format: string): string | null {
   for (const match of format.matchAll(SPECIFICATION)) {
@@ -202,6 +238,13 @@ export function sformatf(format: string, args: readonly unknown[]): string {
     if (remaining.length === 0) throw new TypeError("$sformatf's format has more specifications than arguments");
     let argument = remaining.shift();
     if (width === "" && flags.includes("0")) width = "0"; // `%0d`: no wider than its digits
+    if (conversion === "p") {
+      written.push(pad(pattern(argument), Number(width || 0), flags.includes("-"), " "));
+      continue;
+    }
+    if (!(argument instanceof Logic || typeof argument === "number")) {
+      throw new TypeError(`$sformatf writes numbers and strings, not a ${typeName(argument)}`);
+    }
     let field: string;
     let fill = " ";
     if (["e", "f", "g"].includes(conversion)) {
@@ -221,6 +264,8 @@ export function sformatf(format: string, args: readonly unknown[]): string {
       field = String.fromCharCode(Number(argument.aval & ~argument.bval & 0xffn));
     } else if (conversion === "s") {
       field = text(argument);
+    } else if (conversion === "u" || conversion === "z") {
+      field = unformatted(argument, conversion === "u" ? 2 : 4);
     } else {
       throw new ValueError(`%${letter} is not a format specification`);
     }
@@ -228,5 +273,5 @@ export function sformatf(format: string, args: readonly unknown[]): string {
   }
   if (remaining.length > 0) throw new TypeError("$sformatf's format has fewer specifications than arguments");
   written.push(format.slice(position));
-  return written.join("");
+  return written.join("").split("\0").join(""); // a string holds no NUL byte (6.16)
 }
