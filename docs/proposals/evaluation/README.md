@@ -226,24 +226,29 @@ differ:
 - **So**: question 1 reads as each dialect simplifying its own expressions completely; question 6, a residual in place
   of a refusal, is the rule itself; questions 2 and 8 stand. [The
   inventory](../dialects/README.md#evaluation-what-is-refused-and-why)'s class (a) is read as simplification: a kind
-  whose value has no literal form (a closure, an object) stays in the residual.
+  whose value has no closed constructor expression (a closure, an object) stays in the residual.
 
 ## As built: the framework (0.11.0)
 
 Step 1 of the decision above, on branch `simplification`: the framework every family's folding rules fill, and
 evaluation retired as a public procedure ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review),
-324 to 333).
+324 to 333). The framework counts a closed constructor expression at the root as an evaluation
+([the port's API](../port/API.md#the-framework-cap-295), 397 to 400).
 
 - **One procedure.** `Framework.Simplifiers.Simplifier` simplifies an expression of its dialect in a scope that binds
   some, all or none of its names, to a residual of the same dialect, by recursive substitution: a new term written, the
   old one never changed. Each dialect's `Simplifiers.OfAny(expression, scope)` is one; what it gives, a `Simplified`,
-  holds the `residual`, whether its root is a `literal` (then its `value`), the names still `free`, and the `residues`.
-  A literal root is a successful evaluation: `evaluate()` gives its value, or raises `NotEvaluated` naming why the root
-  is not a literal.
+  holds the `residual`, whether its root is a `literal`, whether its root is a closed constructor expression
+  (`constructed`, then its `value`), the names still `free`, and the `residues`. A closed constructor expression at the
+  root is a successful evaluation, as [CAP-295: simplification of single-dialect expressions with literal
+  leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-295.md#decided) decides: a literal, or
+  a display or a cast of literals. `evaluate()` gives its value, or raises `NotEvaluated` naming why the root is not a
+  closed constructor expression.
 - **Operator semantics are folding rules.** What each dialect's evaluator computed over literals, its rules fold into
-  literals, every operator it evaluated before (`FOLDED`, the tables of its `Interpreter`, `RULES`); what has no
-  literal form (an object, a closure, a collection, an Excel error, a C `char`) stays a subterm of the residual, its
-  own subterms simplified. SystemVerilog folds a subterm wherever 11.6's sizing of the whole expression keeps its meaning (its own `folds`
+  literals, every operator it evaluated before (`FOLDED`, the tables of its `Interpreter`, `RULES`). A value with no
+  literal is written as a closed constructor expression where the dialect's `construct` writes one, such as a display or
+  a cast of literals. A value with neither (an object, a closure, a Patterns collection, an Excel error) stays a
+  subterm of the residual, its own subterms simplified. SystemVerilog folds a subterm wherever 11.6's sizing of the whole expression keeps its meaning (its own `folds`
   hook).
 - **No refusals** (question 6). Where a dialect has no rule for a kind or an operator, the subterm stays, named by a
   `Residue`: its dialect, its kind, what it has no rule for, and its class in the inventory (`CATEGORIES`, each family's
@@ -261,47 +266,59 @@ evaluation retired as a public procedure ([the port's API](../port/API.md#settle
 Step 2 for the TypeScript family, on branch `simp-typescript5` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 334 to 340):
 TypeScript5 folds every kind the inventory gives class (a), by ECMA-262's semantics, modeled alike in both
 implementations (`ECMAScript`: ToPrimitive, ToNumber, ToString, IsLooselyEqual, IsStrictlyEqual, IsLessThan, UTF-16 code
-units, bigints). A value with a TypeScript literal folds to it; an array or an object of them to its display; a closure,
-a data object and a host value stay. What stays, named: what the inventory gives (b) and (d), `delete` and an async or
-block-bodied arrow's call (d), a literal `__proto__` (a), and ECMAScript's built-in methods and host values (c, waiting
+units, bigints). An object literal's `__proto__: v` sets the new object's prototype (ECMA-262, B.3.1), which `ECMAScript`
+models, so that property reads and `in` walk the chain of prototypes
+([the port's API](../port/API.md#typescript5-cap-295), 382 to 386). A value with a TypeScript literal folds to it; an
+array or an object of them to its display, an object's prototype written as its `__proto__`; a closure, a data object
+and a host value stay. What stays, named: what the inventory gives (b) and (d), `delete` and an async or block-bodied
+arrow's call (d), an object literal with two `__proto__` keys (b), and ECMAScript's built-in methods and host values (c, waiting
 on a surrogate for the language's runtime, [CAP-301: simplification delegated to a surrogate dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-301)).
 
 ## As built: Python3 (0.11.0)
 
-Step 2 for the Python family, on branch `simp-python3` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 341 to 350):
+Step 2 for the Python family, on branch `simp-python3` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 341 to 350, and
+[CAP-295's step](../port/API.md#python3-cap-295), 377 to 381):
 `Python3` simplifies every statement-free expression that involves no other dialect, by CPython 3.14's semantics,
 which Python runs and TypeScript models alike. Folded: the inventory's 14 class (a) kinds and its 5 class (a)
 refusals within the kinds folded before, with Python's constants (`None`, `...`, complex numbers). A value with a
-literal folds to it, a list, a tuple or a dict of them to its display; a set, a slice, a closure, a template and a
-generator stay, with no literal. What stays, named: the inventory's (d), `yield`, `yield from`, `await`, an `async
-for` and a target that writes into data; `is` between equal immutable values (b), which Python leaves to its
-implementation; and, of class (a), what needs the platform or the implementation to be computed alike: a complex power
-that is no integer one, a field whose text is an object's address or a set's order, a locale's format spec, a spec
-Python refuses, and a `\N{...}` escape.
+literal folds to it, and a list, a tuple, a dict or a non-empty set of such values to its display, a closed constructor
+expression; a set's items are written in an order of their values that both implementations compute. An empty set, a
+slice, a closure, a template and a generator stay, since none has a closed constructor expression. A `\N{...}` escape
+folds by Unicode's character names and aliases, as CPython 3.14 reads them; the TypeScript implementation reads them
+from `grammars/python3-unicode-names.json`. What stays, named: the inventory's (d), `yield`, `yield from`, `await`, an
+`async for` and a target that writes into data; `is` between equal immutable values (b), which Python leaves to its
+implementation; a malformed `\N{...}` escape and an unknown name (b), which Python refuses to compile; and, of class
+(a), what needs the platform or the implementation to be computed alike: a complex power that is no integer one, a field
+whose text is an object's address or a set's order, a locale's format spec, and a spec Python refuses.
 
 ## As built: C and C++ (0.11.0)
 
-Step 2 for the C family, on branch `simp-c-family` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 351 to 362): C and C++ fold
+Step 2 for the C family, on branch `simp-c-family` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 351 to 362, and [CAP-295's step](../port/API.md#c-and-c-cap-295), 387 to 391): C and C++ fold
 every kind the inventory gives class (a), and every class (a) refusal within a kind they evaluated, by ISO/IEC 9899
 and ISO/IEC 14882, in the types and layouts their holder's ABI stores
 ([CAP-267: C and C++ terms read under the ABI their holder names](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-267.md)). A value with a literal of its type folds to it (a suffix by the
 type's identity; a floating value a binary64 literal spells exactly; `nullptr`; a `_BitInt` whose narrowest literal is
-of its type); a `char`, a `short`, an array, an ordering and `void` stay. What stays, named: the object model, writes,
-statements, declarations (`d`); an operand whose declaration gives its type (`c`, CAP-232); a layout no ABI dialect
-stores, nested braces and an array of arrays in a compound literal (`a`); an initializer alone, a type name (`b`).
+of its type). A value of a type with no literal, a `char`, a `short` or C++'s `wchar_t`, folds to a cast of a literal
+(`(short)3`), and a C array to a compound literal (`(int[]){1, 2}`), each a closed constructor expression; an ordering,
+`void` and a C++ array stay. What stays, named: the object model, writes, statements, declarations (`d`); an operand
+whose declaration gives its type (`c`, CAP-232); a layout no ABI dialect stores (`a`, [CAP-307: layouts of bit-precise integers and `nullptr_t` stored by the
+ABI dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-307)); an initializer alone, a
+type name (`b`).
 
 ## As built: SystemVerilog (0.11.0)
 
-Step 2 for the SystemVerilog family, on branch `simp-sv` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 363 to 373):
+Step 2 for the SystemVerilog family, on branch `simp-sv` ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 363 to 373, and
+[CAP-295's step](../port/API.md#systemverilog-cap-295), 392 to 396):
 `SystemVerilog` folds every kind and every shape the inventory gives class (a), by IEEE 1800-2023: 4-state values
 through every operator, 11.6's sizing and 11.8's signedness, a cast as an assignment (6.24.1), pattern matching
 (12.6), streaming (11.4.14), the system functions of clauses 20 and 21 that compute a value, and strings' and arrays'
 methods. A subterm folds wherever its literal keeps its meaning: a self-determined one alone, a context-determined one
 once its context's type is known, from the whole expression, the scope's values and the types it declares for the names
-it does not bind; what has no literal (an array, an object, a 2-state or `shortreal` value where its states could
-matter) stays, by rule, naming no residue. What stays, named: what the inventory gives (b), (c) and (d), a time literal
+it does not bind; a 2-state or `shortreal` value where its states could matter folds into a
+cast of a literal to its type (`int'(5)`, `unsigned'(int'(-1))`, `shortreal'(0.1)`); what has neither a literal nor
+such a cast (an array, an object, a 2-state vector as wide as no keyword's type) stays, by rule, naming no residue. What stays, named: what the inventory gives (b), (c) and (d), a time literal
 with no time unit (a, a parameter the scope may give), a call with named or empty arguments of a function whose formals
-the scope does not give (a), and `$sformatf`'s `%u`, `%z`, `%p` (a) and `%t`, `%m`, `%l`, `%v` (d).
+the scope does not give (a), `$sformatf`'s `%p` of a structure or a class handle (c), and its `%t`, `%m`, `%l` and `%v` (d).
 
 ## 6. What it would add or supersede
 

@@ -223,7 +223,7 @@ Next, in 0.11.0 (on branch `simplification`): simplification, not evaluation, as
 ([PRI-046: simplification, not evaluation](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-046)). Its
 framework is built: `Framework.Simplifiers`, the one procedure every dialect implements, simplifies an expression in
 a scope that binds some, all or none of its names, by recursive substitution, to a residual of the same dialect, a
-literal root being its evaluation; each dialect's operator semantics are its folding rules, what it evaluated before
+closed constructor expression at the root (a literal, or a display or a cast of literals) being its evaluation; each dialect's operator semantics are its folding rules, what it evaluated before
 folding into literals; and nothing is refused: what a dialect has no rule for stays in the residual, named with the
 evaluation inventory's class, and Kleene's logic decides what does not depend on it. `Evaluators` and `Partials` are
 gone. Each family's rules are filled next, over literal leaves
@@ -234,17 +234,18 @@ gone. Each family's rules are filled next, over literal leaves
 ([CAP-299: simplification across a sub-dialect](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-299)), as [the evaluation proposal](docs/proposals/evaluation/README.md#as-built-the-framework-0110)
 records it. TypeScript5's are filled: it folds every statement-free expression the evaluation inventory gives a value, by
 ECMA-262's abstract operations modeled alike in both languages, a value with a TypeScript literal folding to it and an
-array or an object of them to its display; built-in methods and host values stay, named. Python3's are filled: it
+array or an object of them to its display, an object's prototype written as its `__proto__`; built-in methods and host values stay, named. Python3's are filled: it
 folds every statement-free expression the evaluation inventory gives a value, by CPython 3.14's semantics, which
 TypeScript models alike (complex numbers, tuples, sets, slices, closures, `format()`'s mini-language and templates
-among them), a value with a Python literal folding to it and a list, a tuple or a dict of them to its display; what
+among them), a value with a Python literal folding to it and a list, a tuple, a dict or a set of them to its display; what
 Python leaves to a statement, its implementation or its platform stays, named. C's and C++'s are filled: they fold every
 statement-free expression the evaluation inventory gives a value, by ISO C and ISO C++ in the types and layouts their
 holder's ABI stores (`sizeof`, `_Generic`, compound literals, `_BitInt`, `nullptr`; C++'s casts, `<=>`, packs, folds and
-`throw`); a value of a type with no literal stays. SystemVerilog's are filled: it folds every statement-free expression
+`throw`); a value of a type with no literal is written as a cast of a literal, and a C array as a compound literal. SystemVerilog's are filled: it folds every statement-free expression
 the evaluation inventory gives a value, by IEEE 1800-2023 (4-state values, sizing by context, casts as assignments,
 pattern matching, streaming, the system functions and methods that compute a value), each subterm wherever its literal
-keeps its meaning, as 11.6 sizes it from the whole expression; what has no literal or no rule stays, named. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
+keeps its meaning, as 11.6 sizes it from the whole expression, and a 2-state or `shortreal` value whose states could
+matter as a cast of a literal to its type; what has neither, and what has no rule, stays, named. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
 conversions) waits for, and the interface through which mbse-schemas will choose union branches and check
 constraints.
 
