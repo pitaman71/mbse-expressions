@@ -9,12 +9,20 @@ variable's empty string is.
 `sformatf(format, arguments)` writes its arguments as its format says, each specification `%`, then `-` (justified
 left) or `0` (padded with zeros), a field width and a precision, then its letter, in either case: `%d` a decimal, `%h`
 (or `%x`), `%o` and `%b` a vector's digits, x and z as their digits (a digit all x `x`, all z `z`, some x `X`, some z
-`Z`); `%c` a character; `%s` a string; `%e`, `%f` and `%g` a real, as C writes it (`real`); `%%` a percent sign. A field
-is as wide as its value's type needs, right-justified (a decimal in spaces, other digits in zeros), unless a width is
-given, the least, `0` for no more than its digits need. `%t`, `%m`, `%l` and `%v` read a simulator's settings and
-hierarchy, and `%u`, `%z` and `%p` write a value's encoding or its assignment pattern, which no rule writes:
-`Simplifiers` leaves such a call in the residual, named. An argument a specification does not take, or a specification
-with no argument, is an error.
+`Z`); `%c` a character; `%s` a string; `%e`, `%f` and `%g` a real, as C writes it (`real`); `%u` a vector's 2-state bits
+and `%z` its 4-state bits, unformatted (`unformatted`); `%p` a value as an assignment pattern (`pattern`); `%%` a
+percent sign. A field is as wide as its value's type needs, right-justified (a decimal in spaces, other digits in
+zeros), unless a width is given, the least, `0` for no more than its digits need; the text is a string, and a NUL byte
+is no character of it (6.16). `%t`, `%m`, `%l` and `%v` read a simulator's settings and hierarchy, which no rule
+writes: `Simplifiers` leaves such a call in the residual, named, as it does `%p` of an object. An argument a
+specification does not take, or a specification with no argument, is an error.
+
+`unformatted(value, states)` writes a vector's bits as `%u` (2 states, x and z as 0) and `%z` (4 states) do (21.3.3):
+in units of 32 bits, the unit holding the least significant bit first, each unit's bytes in the byte order of the ABIs
+mbse-expressions stores (little-endian, which IEEE 1800 leaves to the host), and for `%z` each unit's `aval` word, then
+its `bval` word, as VPI's `s_vpi_vecval` holds them. `pattern(value)` writes a value as `%p` does (21.2.1.7): an
+integral value as `%0d` writes it, a real as `%g` does, and an array as an assignment pattern of its items, `'{1, 2}`;
+it raises `NoRule` for anything else (a structure's members and a class handle's are a declaration's).
 
 `real(conversion, value, precision, ...)` writes a real as C's `printf` does (C11 7.21.6.1): from its exact binary value
 (`Ieee754.decode`), rounded half to even, so that both implementations write the same digits.
@@ -25,15 +33,16 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from mbse.Expressions.Framework.Simplifiers import NoRule
 from mbse.Expressions.Patterns.Expressions import Ieee754
 
 from .Domains import Logic, vector as _vector
 
-__all__ = ["text", "vector", "sformatf", "unwritten", "real", "UNWRITTEN"]
+__all__ = ["text", "vector", "sformatf", "unwritten", "unformatted", "pattern", "real", "UNWRITTEN"]
 
-UNWRITTEN = ("t", "m", "l", "v", "u", "z", "p")
+UNWRITTEN = ("t", "m", "l", "v")
 """The specifications no rule writes: a time (`%t`, by `$timeformat`), a hierarchical name (`%m`), a library binding
-(`%l`), a net's strength (`%v`), a value's encoding (`%u`, `%z`) and an assignment pattern (`%p`)."""
+(`%l`) and a net's strength (`%v`)."""
 
 _SPECIFICATION = re.compile(r"%([-0]*)(\d*)(?:\.(\d+))?(.)", re.S)
 
@@ -185,6 +194,28 @@ def real(conversion: str, value: float, precision: int | None = None) -> str:
     return sign + written + suffix
 
 
+def unformatted(value: Logic, states: int) -> str:
+    """A vector's bits as `%u` (`states` 2: x and z as 0) or `%z` (4: `aval`, then `bval`) write them: 32-bit units, the
+    least significant first, each word's bytes little-endian, one character each."""
+    words: list[int] = []
+    for unit in range(-(-value.type.width // 32)):
+        aval, bval = value.aval >> (32 * unit) & 0xFFFFFFFF, value.bval >> (32 * unit) & 0xFFFFFFFF
+        words += [aval, bval] if states == 4 else [aval & ~bval]
+    return "".join(chr(word >> (8 * byte) & 0xFF) for word in words for byte in range(4))
+
+
+def pattern(value: Any) -> str:
+    """A value as `%p` writes it: an integral value's decimal digits (as `%0d`), a real's as `%g`, an array's items as
+    an assignment pattern; anything else is a declaration's to write (`NoRule`)."""
+    if isinstance(value, Logic):
+        return _decimal(value)
+    if isinstance(value, float):
+        return real("g", value)
+    if isinstance(value, list):
+        return "'{" + ", ".join(pattern(item) for item in value) + "}"
+    raise NoRule("SystemVerilog", "systemcall '$sformatf' %p of an object", "systemcall")
+
+
 def unwritten(format: str) -> str | None:
     """The letter of the first specification of `format` that no rule writes (`UNWRITTEN`), lowercase; None if none."""
     for match in _SPECIFICATION.finditer(format):
@@ -211,6 +242,11 @@ def sformatf(format: str, arguments: list[Any]) -> str:
         argument = remaining.pop(0)
         if width == "" and "0" in flags:  # `%0d`: no wider than its digits
             width = "0"
+        if conversion == "p":
+            written.append(_pad(pattern(argument), int(width or 0), "-" in flags, " "))
+            continue
+        if not isinstance(argument, (Logic, float)):
+            raise TypeError(f"$sformatf writes numbers and strings, not a {type(argument).__name__}")
         if conversion in ("e", "f", "g"):
             if isinstance(argument, Logic):  # an integral value's integer, x and z as 0
                 argument = float(Logic(argument.type, argument.aval & ~argument.bval).integer())
@@ -230,10 +266,12 @@ def sformatf(format: str, arguments: list[Any]) -> str:
             field, fill = chr(argument.aval & ~argument.bval & 0xFF), " "
         elif conversion == "s":
             field, fill = text(argument), " "
+        elif conversion in ("u", "z"):
+            field, fill = unformatted(argument, 2 if conversion == "u" else 4), " "
         else:
             raise ValueError(f"%{letter} is not a format specification")
         written.append(_pad(field, int(width or 0), "-" in flags, fill))
     if remaining:
         raise TypeError("$sformatf's format has fewer specifications than arguments")
     written.append(format[position:])
-    return "".join(written)
+    return "".join(written).replace("\0", "")  # a string holds no NUL byte (6.16)

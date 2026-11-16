@@ -58,14 +58,17 @@
  *   2-state type maps x and z to 0, a real rounds to the nearest integer (ties away from zero), an integer becomes a
  *   real, and a vector becomes a `string` of its bytes, NUL bytes dropped.
  *
- * What stays keeps its meaning: a subterm folds only into a literal that means what it meant there. A self-determined
- * subterm (a concatenation's operand, a shift's count, a condition, an index, a function's argument) folds alone, into
- * the literal of its own type; a context-determined one (an operand of `+`, of a comparison, a conditional's branch),
- * whose width and signedness are its context's, folds once its context is known, as 11.6 sizes it from the whole
- * expression: the types of the scope's values, and of the names it does not bind as its `types` declare them. A
- * subterm whose context's type is not known, or whose type has no literal in SystemVerilog (a 2-state type,
- * `shortreal`), where its states or format could still change what stays around it, is kept, its own subterms
- * simplified; it is the rule, not a gap, and names no residue. The root, whose context is no expression's, always
+ * What stays keeps its meaning: a subterm folds only into a closed constructor expression that means what it meant
+ * there. A self-determined subterm (a concatenation's operand, a shift's count, a condition, an index, a function's
+ * argument) folds alone, into the literal of its own type; a context-determined one (an operand of `+`, of a
+ * comparison, a conditional's branch), whose width and signedness are its context's, folds once its context is known,
+ * as 11.6 sizes it from the whole expression: the types of the scope's values, and of the names it does not bind as its
+ * `types` declare them. A type no literal has (a 2-state type, `shortreal`), where its states or format could change
+ * what stays around it, folds into a cast of a literal to that type (6.24.1), which keeps them: `int'(5)`,
+ * `bit'(1'b1)`, `shortreal'(0.1)`, and for a keyword's type of the other signedness that cast's signing,
+ * `unsigned'(int'(-1))`. A subterm whose context's type is not known, or whose type neither a literal nor such a cast
+ * has (a 2-state vector as wide as no keyword's type), is kept, its own subterms simplified; it is the rule, not a gap,
+ * and names no residue. The root, whose context is no expression's, always
  * folds; an `integer`'s value is written as an unsized decimal integer, any other integral value as a sized vector of
  * its bits and signedness, a real as a real and `null` as itself. `&&` and `||` are decided by an operand that decides
  * them (`y && 0` is `1'b0`), and a conditional by a known condition, where the branch it keeps has the conditional's
@@ -245,6 +248,16 @@ function typeOfValue(value: unknown, types: Types): SvType | null {
  * real's; no literal has a 2-state type, nor `shortreal`. */
 function representable(ctype: SvType): boolean {
   return ctype.kind === "integral" ? ctype.states === 4 : ctype.format === "binary64";
+}
+
+/** The 2-state types SystemVerilog's keywords name, by width: each keyword, and whether its type is signed. */
+const ATOMS: ReadonlyMap<number, [string, boolean]> = new Map([[1, ["bit", false]], [8, ["byte", true]],
+  [16, ["shortint", true]], [32, ["int", true]], [64, ["longint", true]]]);
+
+/** Whether a cast of a literal has the type, where no literal does: a 2-state integral type as wide as a keyword's
+ * (`bit`, `byte`, `shortint`, `int`, `longint`), signed or not, or `shortreal`. */
+function castable(ctype: SvType): boolean {
+  return ctype.kind === "integral" ? ctype.states === 2 && ATOMS.has(ctype.width) : ctype.format === "binary32";
 }
 
 /** A value as messages write it: a Logic as SystemVerilog does, anything else by `repr`. */
@@ -1460,12 +1473,12 @@ class Evaluation {
     const format = Formats.text(values[0]);
     const letter = Formats.unwritten(format);
     if (letter !== null) throw new FS.NoRule("SystemVerilog", `systemcall '$sformatf' %${letter}`, X.SYSTEMCALL);
-    for (const value of values.slice(1)) {
-      if (!(value instanceof Logic || typeof value === "number")) {
-        throw new TypeError(`$sformatf writes numbers and strings, not a ${typeName(value)}`);
-      }
-    }
-    return Formats.vector(Formats.sformatf(format, values.slice(1)));
+    return Formats.vector(Formats.sformatf(format, values.slice(1).map((value) => this.formatted(value))));
+  }
+
+  /** An argument of `$sformatf`: an array's items typed, as an assignment pattern writes them. */
+  private formatted(value: unknown): unknown {
+    return Array.isArray(value) ? value.map((item) => this.formatted(item)) : typed(value, this.stored);
   }
 
   /** An array element's type: it must be integral or real. */
@@ -1548,12 +1561,22 @@ const OWN_TYPE = Symbol("own type");
 const DEFAULT = Symbol("default");
 /** How a term folds that is not a subterm of the expression being simplified: as a root. */
 const ROOT = Symbol("root");
+/** How a subterm folds whose type no literal has: into a cast of a literal to `type`, of its value in that type. */
+class Cast {
+  constructor(readonly type: SvType) {}
+}
+
+/** A value folded where only a cast of a literal keeps its type: its `value`, and its `type`. */
+class Typed {
+  constructor(readonly value: unknown, readonly type: SvType) {}
+}
+
 /** The kinds that have no value of their own, but within the kind that holds them. */
 const NEVER: ReadonlySet<string> = new Set([X.NAMEDCONNECTION, X.EMPTYARGUMENT, X.VALUERANGE, X.DOLLAREXPRESSION,
   X.PATTERNITEM]);
 
 type Position = SvType | null | typeof UNKNOWN_TYPE;
-type How = SvType | null | typeof OWN_TYPE | typeof DEFAULT | typeof ROOT;
+type How = SvType | Cast | null | typeof OWN_TYPE | typeof DEFAULT | typeof ROOT;
 type Child = [any, Evaluation, Position, boolean];
 
 /** How each subterm of an expression may fold, as 11.6 sizes it from the whole expression in a scope: `how` gives, by
@@ -1598,10 +1621,13 @@ class Sizing {
     if (NEVER.has(kindOf(node)) || found === UNKNOWN_TYPE || matched(node.term).size > 0) return null; // a `matches` that binds stays
     if (transparent(node)) { // its value is its context's: of the context's type, when it is known
       const folded = context ?? found;
-      return folded !== UNKNOWN_TYPE && folded !== null && (representable(folded) || !sensitive) ? folded : null;
+      if (folded === UNKNOWN_TYPE || folded === null) return null;
+      if (representable(folded) || !sensitive) return folded;
+      return castable(folded) ? new Cast(folded) : null;
     }
     if (found === null || representable(found) || (context === null && !sensitive)) return OWN_TYPE;
-    return context !== null && context !== UNKNOWN_TYPE && representable(context) ? context : null;
+    if (context !== null && context !== UNKNOWN_TYPE && representable(context)) return context;
+    return castable(found) ? new Cast(found) : null; // its own type's cast means what it does wherever it stands
   }
 
   /** The type context-determined operands share, if the scope determines each one's. */
@@ -1774,9 +1800,12 @@ class Rules implements FS.Rules {
     if (how === ROOT) return evaluation.value(wrapped);
     if (how === DEFAULT) {
       const found = evaluation.type(wrapped);
-      if (transparent(wrapped) || (found !== null && !representable(found))) throw new InContext(String(F.kindOf(node)[0]));
-      how = OWN_TYPE;
+      if (transparent(wrapped) || (found !== null && !(representable(found) || castable(found)))) {
+        throw new InContext(String(F.kindOf(node)[0]));
+      }
+      how = found === null || representable(found) ? OWN_TYPE : new Cast(found);
     }
+    if (how instanceof Cast) return new Typed(evaluation.value(wrapped, how.type), how.type);
     return plain(evaluation.value(wrapped, how === OWN_TYPE ? null : how as SvType));
   }
 
@@ -1833,6 +1862,34 @@ function literalOf(value: unknown): unknown {
   return X.vector(value.bits, value.type.signed);
 }
 
+/** A type of `SystemVerilog Types` its keyword names (`int`, `bit`, `shortreal`), as a cast's type. */
+function keywordType(tag: string, keyword: string): unknown {
+  return (t: any) => t[tag]((n: any) => n.keyword(keyword));
+}
+
+/** The real with the fewest significant digits that a cast to `shortreal` rounds to the `shortreal` value. */
+function shortest(value: number): number {
+  if (!Number.isFinite(value)) return value;
+  let precision = 0; // 17 significant digits spell any binary64 value, and a `shortreal` is one: the search ends
+  while (Ieee754.convert("binary64", Number(Formats.real("e", value, precision)), "binary32", EVEN) !== value) precision++;
+  return Number(Formats.real("e", value, precision));
+}
+
+/** The closed constructor expression of a value whose type no literal has: a cast of a literal to its type (6.24.1),
+ * `int'(5)`, `bit'(1'b1)`, `shortreal'(0.1)`; to a keyword's type of the other signedness, that cast's signing,
+ * `unsigned'(int'(-1))`. Null for any other value. */
+function construct(value: unknown): unknown {
+  if (!(value instanceof Typed)) return null;
+  const ctype = value.type;
+  if (ctype.kind === "real") return X.cast(keywordType(NONINTEGER, "shortreal"), X.literal(shortest(value.value as number)));
+  const [keyword, signed] = ATOMS.get(ctype.width) as [string, boolean];
+  const operand = literalOf(new Logic(Domains.vector(ctype.width, signed, 4), (value.value as Logic).aval));
+  const written = X.cast(keywordType(keyword === "bit" ? VECTOR : ATOM, keyword), operand);
+  if (signed === ctype.signed) return written;
+  const signing = ctype.signed ? "signed" : "unsigned";
+  return X.cast((t: any) => t.implicittype((i: any) => i.signing(signing)), written);
+}
+
 const each = (prefix: string, ...kinds: string[]): string[] => kinds.map((kind) => `${prefix} ${kind}`);
 const classes = (category: string, ...whats: string[]): [string, string][] => whats.map((what) => [what, category]);
 
@@ -1843,16 +1900,16 @@ const classes = (category: string, ...whats: string[]): [string, string][] => wh
  * system function that reads a simulator's state or acts, an array's or a string's method that writes it). What stays
  * by the rules, not for want of one, names no residue: a name or a function the scope does not provide; a time literal
  * with no time unit in the scope is a residue of class `a`, its unit a parameter of simplification the scope may give;
- * and a subterm whose context's type is not known, or whose own type has no literal (a 2-state type, `shortreal`)
- * where its states or format could change what stays around it, stays as written, since a literal of another type
- * would change the residual's meaning (11.6). */
+ * and a subterm whose context's type is not known, or whose own type neither a literal nor a cast of a literal has,
+ * where its states could change what stays around it, stays as written, since a literal of another type would change
+ * the residual's meaning (11.6). */
 export const CATEGORIES: Record<string, Record<string, string>> = {
   SystemVerilog: Object.fromEntries([
-    ...classes("a", ...["u", "z", "p"].map((letter) => `systemcall '$sformatf' %${letter}`)),
     ...classes("b", "valuerange", "patternitem", "namedconnection", "emptyargument", "castexpression to implicittype",
       "systemcall '$bits' of keywordtype"),
     ...classes("c", "assignmentpattern", "taggedexpression", "newarrayexpression", "randomizewithexpression",
       "matchesexpression taggedpattern", "matchesexpression structurepattern", "systemcall '$typename'",
+      "systemcall '$sformatf' %p of an object",
       ...each("castexpression to", "structtype", "enumtype", "typereference"),
       ...each("systemcall '$bits' of", "structtype", "enumtype", "typereference", "namedtype"),
       ...["first", "last", "next", "prev", "num", "name"].map((name) => `callexpression method '${name}'`)),
@@ -1874,7 +1931,7 @@ export const CATEGORIES: Record<string, Record<string, string>> = {
 export const RULES = new Rules();
 
 /** The simplifier of the SystemVerilog dialect. */
-export const SIMPLIFIER = new FS.Simplifier(RULES, { literal: literalOf, categories: CATEGORIES, folds: RULES.folds,
+export const SIMPLIFIER = new FS.Simplifier(RULES, { literal: literalOf, construct, categories: CATEGORIES, folds: RULES.folds,
   simplify: RULES.simplify,
   // what IEEE 1800 may never evaluate (11.4.7, 11.4.11): the right operand, by the left; the branches, by the condition
   guarded: FS.guards(X.DIALECT, { "&&": [1], "||": [1], "->": [1], [X.CONDITIONALEXPRESSION]: [1, 2] }) });
