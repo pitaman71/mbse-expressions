@@ -19,9 +19,10 @@
  * specification does not take, or a specification with no argument, is an error.
  *
  * `unformatted(value, states)` writes a vector's bits as `%u` (2 states, x and z as 0) and `%z` (4 states) do (21.3.3):
- * in units of 32 bits, the unit holding the least significant bit first, each unit's bytes in the byte order of the
- * ABIs mbse-expressions stores (little-endian, which IEEE 1800 leaves to the host), and for `%z` each unit's `aval`
- * word, then its `bval` word, as VPI's `s_vpi_vecval` holds them. `pattern(value)` writes a value as `%p` does
+ * in units of 32 bits, the unit holding the least significant bit first, each unit's bytes in a byte order, which IEEE
+ * 1800 leaves to the host (by default little-endian, the order of the ABIs mbse-expressions stores; big-endian where the
+ * scope's option `byteorder` is `big`), and for `%z` each unit's `aval` word, then its `bval` word, as VPI's
+ * `s_vpi_vecval` holds them. `pattern(value)` writes a value as `%p` does
  * (21.2.1.7): an integral value as `%0d` writes it, a real as `%g` does, and an array as an assignment pattern of its
  * items, `'{1, 2}`; it throws `NoRule` for anything else (a structure's members and a class handle's are a
  * declaration's).
@@ -187,8 +188,9 @@ export function real(conversion: string, value: number, precision: number | null
 }
 
 /** A vector's bits as `%u` (`states` 2: x and z as 0) or `%z` (4: `aval`, then `bval`) write them: 32-bit units, the
- * least significant first, each word's bytes little-endian, one character each. */
-export function unformatted(value: Logic, states: number): string {
+ * least significant first, each word's bytes in `byteorder`, `"little"` (the least significant first) or `"big"`, one
+ * character each. */
+export function unformatted(value: Logic, states: number, byteorder = "little"): string {
   const words: bigint[] = [];
   for (let unit = 0; unit < Math.ceil(value.type.width / 32); unit++) {
     const shift = BigInt(32 * unit);
@@ -196,8 +198,9 @@ export function unformatted(value: Logic, states: number): string {
     words.push(...(states === 4 ? [aval, bval] : [aval & ~bval]));
   }
   let written = "";
+  const order = byteorder === "little" ? [0n, 1n, 2n, 3n] : [3n, 2n, 1n, 0n];
   for (const word of words) {
-    for (let byte = 0n; byte < 4n; byte++) written += String.fromCharCode(Number((word >> (8n * byte)) & 0xffn));
+    for (const byte of order) written += String.fromCharCode(Number((word >> (8n * byte)) & 0xffn));
   }
   return written;
 }
@@ -220,8 +223,9 @@ export function unwritten(format: string): string | null {
   return null;
 }
 
-/** The text `$sformatf` writes: `format`'s characters, each specification replaced by its argument as it says. */
-export function sformatf(format: string, args: readonly unknown[]): string {
+/** The text `$sformatf` writes: `format`'s characters, each specification replaced by its argument as it says, `%u` and
+ * `%z` in `byteorder` (`unformatted`). */
+export function sformatf(format: string, args: readonly unknown[], byteorder = "little"): string {
   const written: string[] = [];
   const remaining = [...args];
   let position = 0;
@@ -265,7 +269,7 @@ export function sformatf(format: string, args: readonly unknown[]): string {
     } else if (conversion === "s") {
       field = text(argument);
     } else if (conversion === "u" || conversion === "z") {
-      field = unformatted(argument, conversion === "u" ? 2 : 4);
+      field = unformatted(argument, conversion === "u" ? 2 : 4, byteorder);
     } else {
       throw new ValueError(`%${letter} is not a format specification`);
     }

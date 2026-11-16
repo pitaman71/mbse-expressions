@@ -18,7 +18,10 @@ Errors the dialect's own semantics define (an operand of the wrong type, a divis
 expression would raise in its language, wherever its language would evaluate them. A subterm its language may never
 evaluate is guarded: a body its parent binds names in, but a let's (a lambda's, a comprehension's element), and an
 argument the dialect's `guarded(node, index)` names (a conditional's branches, the right operand of a short circuit);
-an error folding it, or anything within it, raises leaves it in the residual, to raise where it is evaluated.
+an error folding it, or anything within it, raises leaves it in the residual, to raise where it is evaluated. A scope's
+option `errors` (see `Symbolics.option`) chooses what an error does anywhere else: `"raise"`, the default, raises it, and
+`"stay"` leaves its subterm in the residual, named by a residue of class `b` ("Python3 binop raising ZeroDivisionError is
+not simplified").
 
 A `Simplifier(rules, literal=..., simplify=..., categories=..., native=..., folds=..., construct=..., guarded=...)` simplifies the terms of one
 dialect; each dialect's `Simplifiers.OfAny` is one. Its `rules` are the dialect's folding rules: what the dialect
@@ -175,6 +178,9 @@ class Simplifier:
         """The simplification of a term (see `Terms.term`) in `scope`, or with the variables in a mapping bound."""
         if not isinstance(scope, Symbolics.Scope):
             scope = self.rules.scope(dict(scope or {}))
+        errors = Symbolics.option(scope, "errors", "raise")
+        if errors not in ("raise", "stay"):
+            raise ValueError(f"the option 'errors' is 'raise' or 'stay', not {errors!r}")
         residues: dict[Residue, None] = {}
         result = self.reduce(Terms.term(expression), scope, residues, True)
         literal, constructed = result.literal, result.constructed
@@ -212,9 +218,12 @@ class Simplifier:
                 pass
             except NoRule as refusal:
                 self._note(refusal, residues)
-            except Exception:  # guarded, perhaps never evaluated: it stays (see the module's description)
+            except Exception as error:  # guarded, perhaps never evaluated: it stays (see the module's description)
                 if not guarded:
-                    raise
+                    if Symbolics.option(scope, "errors", "raise") == "raise":
+                        raise
+                    owner = self.dialect.owner(node).name()  # the option `errors` is "stay": it stays, named
+                    residues.setdefault(Residue(owner, tag, f"{tag} raising {type(error).__name__}", "b"), None)
             if known:
                 if kind.role == Terms.LITERAL:  # already a literal: kept as written
                     return Result(node, True, value, True, changed=False)

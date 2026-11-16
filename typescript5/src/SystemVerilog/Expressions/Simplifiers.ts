@@ -12,13 +12,17 @@
  * (`Domains.named`), read once per folding when it is first needed: a lone term is refused where it needs one
  * (mbse-schemas' TypeError), and a store where SystemVerilog's `define` has not run defines none.
  *
- * A `new Scope(variables, { functions, packages, types, timeunit, timeprecision, mintypmax })` gives what an expression
- * may reach, and nothing else is reachable: `variables` (`this` among them, by that name); the `functions` it may call,
- * each a function or a `Subroutine` that names its formals and their defaults; its `packages`, each a `Scope` of a
- * package's variables and functions, which a scoped name reads (`pkg::x`, `pkg::f(x)`, `$unit::x`); the `types` of
- * names it does not bind, as a declaration gives them, which size what stays around them; the time unit and precision
- * a time literal scales to (`"1ns"`, `"100ps"`: `timeunit`, 3.14.2.2, and its precision, the unit's own by default),
- * without which a time literal stays; and which of `min:typ:max` is chosen (11.11; `typ` by default).
+ * A `new Scope(variables, { functions, packages, types, options })` gives what an expression may reach, and nothing
+ * else is reachable: `variables` (`this` among them, by that name); the `functions` it may call, each a function or a
+ * `Subroutine` that names its formals and their defaults; its `packages`, each a `Scope` of a package's variables and
+ * functions, which a scoped name reads (`pkg::x`, `pkg::f(x)`, `$unit::x`); and the `types` of names it does not bind,
+ * as a declaration gives them, which size what stays around them. Its `options` are the parameters of simplification
+ * its caller chooses up front, each a fixed set of values (`OPTIONS`): the time unit and precision a time literal scales
+ * to (`"1ns"`, `"100ps"`: `timeunit`, 3.14.2.2, and `timeprecision`, the unit's own by default), without which a time
+ * literal stays; which of `min:typ:max` is chosen (`mintypmax`, 11.11: `typ` by default); whether a result the host's
+ * math library decides folds by it (`math`: `host` by default) or stays (`stay`: every math function but `EXACT`, and a
+ * real `**`); and the byte order of `%u` and `%z` (`byteorder`: `little` by default, or `big`); the framework's
+ * `errors` among them.
  *
  * The rules (`RULES`) fold every kind the evaluation inventory gives a value (mbse-expressions'
  * [the evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#systemverilog), SystemVerilog),
@@ -146,44 +150,60 @@ function timeUnit(text: string, what: string): [number, number] {
   throw new ValueError(`a ${what} is 1, 10 or 100 of s, ms, us, ns, ps or fs, got ${repr(text)}`);
 }
 
-/** The options of a SystemVerilog `Scope`. */
+/** The values of the options of simplification the dialect's scope takes, each a fixed set, its default among them
+ * (`typ`, `host`, `little`); `timeunit` and `timeprecision` are each 1, 10 or 100 of s, ms, us, ns, ps or fs. */
+export const OPTIONS: Readonly<Record<string, readonly string[]>> = {
+  mintypmax: ["min", "typ", "max"], math: ["host", "stay"], byteorder: ["little", "big"],
+};
+/** The math functions whose results IEEE 754 makes exact, which the option `math` never keeps in the residual. */
+export const EXACT: readonly string[] = ["$sqrt", "$floor", "$ceil"];
+
+/** The options of a SystemVerilog `Scope`: what an expression may reach, and the `options` of simplification. */
 export interface ScopeOptions {
   functions?: Record<string, Fn | Subroutine>;
   packages?: Record<string, Scope>;
   types?: Record<string, SvType>;
-  timeunit?: string;
-  timeprecision?: string;
-  mintypmax?: string;
+  options?: S.Bindings;
 }
 
 /** SystemVerilog's scope for an expression: its `variables`, `functions` and `packages`, the declared `types` of names
- * it does not bind, a time literal's unit and precision, and the choice of `min:typ:max`. */
+ * it does not bind, and its `options`, the parameters of simplification its caller chooses up front (mbse-basis
+ * [CAP-305: simplification's options, chosen up front](mbse:mbse-basis/docs/capabilities/CAP-305.md)): a time literal's
+ * unit and precision (`timeunit`, `timeprecision`), the choice of `min:typ:max` (`mintypmax`), whether a result the
+ * host's math library decides folds (`math`), and the byte order of `%u` and `%z` (`byteorder`). It refuses a value an
+ * option does not take, before anything is simplified in it. */
 export class Scope extends S.Variables {
   readonly functions: ReadonlyMap<string, Fn | Subroutine>;
   readonly packages: ReadonlyMap<string, Scope>;
   readonly types: ReadonlyMap<string, SvType>;
-  readonly mintypmax: string;
   readonly timeunit: [number, number] | null;
   readonly timeprecision: [number, number] | null;
 
   constructor(variables: S.Bindings = {}, options: ScopeOptions = {}) {
-    super(variables);
+    super(variables, options.options ?? {});
     this.functions = new Map(Object.entries(options.functions ?? {}));
     this.packages = new Map(Object.entries(options.packages ?? {}));
     this.types = new Map(Object.entries(options.types ?? {}));
-    const mintypmax = options.mintypmax ?? "typ";
-    if (!["min", "typ", "max"].includes(mintypmax)) {
+    const mintypmax = this.option("mintypmax", "typ");
+    if (!(OPTIONS.mintypmax as readonly unknown[]).includes(mintypmax)) {
       throw new ValueError(`min:typ:max's choice is min, typ or max, got ${repr(mintypmax)}`);
     }
-    this.mintypmax = mintypmax;
-    this.timeunit = options.timeunit === undefined ? null : timeUnit(options.timeunit, "time unit");
-    this.timeprecision = options.timeprecision === undefined ? this.timeunit : timeUnit(options.timeprecision, "time precision");
+    for (const name of ["math", "byteorder"]) {
+      const values = OPTIONS[name] as readonly string[];
+      const chosen = this.option(name, values[0]);
+      if (!(values as readonly unknown[]).includes(chosen)) {
+        throw new ValueError(`the option ${repr(name)} is ${repr(values[0])} or ${repr(values[1])}, not ${repr(chosen)}`);
+      }
+    }
+    const [timeunit, timeprecision] = [this.option("timeunit", null), this.option("timeprecision", null)] as [string | null, string | null];
+    this.timeunit = timeunit === null ? null : timeUnit(timeunit, "time unit");
+    this.timeprecision = timeprecision === null ? this.timeunit : timeUnit(timeprecision, "time precision");
     if (this.timeunit !== null) {
       const [[unit, power], [precision, finer]] = [this.timeunit, this.timeprecision as [number, number]];
       if (BigInt(precision) * 10n ** BigInt(finer + 15) > BigInt(unit) * 10n ** BigInt(power + 15)) {
-        throw new ValueError(`a time precision is at most its unit, got ${options.timeprecision} for ${options.timeunit}`);
+        throw new ValueError(`a time precision is at most its unit, got ${timeprecision} for ${timeunit}`);
       }
-    } else if (options.timeprecision !== undefined) {
+    } else if (timeprecision !== null) {
       throw new ValueError("a time precision needs a time unit");
     }
   }
@@ -725,7 +745,7 @@ class Evaluation {
 
   /** The expression of `min:typ:max` the scope chooses. */
   chosen(node: any): any {
-    return ({ min: node.min, typ: node.typ, max: node.max } as Record<string, any>)[this.scope.mintypmax];
+    return ({ min: node.min, typ: node.typ, max: node.max } as Record<string, any>)[this.scope.option("mintypmax", "typ") as string];
   }
 
   // Operators
@@ -838,10 +858,19 @@ class Evaluation {
     return new Logic(ctype, aval, bval);
   }
 
+  /** Throws `NoRule` for a result the host's math library decides where the scope's option `math` is `stay`: it stays,
+   * "SystemVerilog systemcall '$sin' by the host's math library is not simplified", of class `a`. */
+  private library(kind: string, what: string): void {
+    if (this.scope.option("math", "host") === "stay") throw new FS.NoRule("SystemVerilog", `${what} by the host's math library`, kind);
+  }
+
   arithmetic(op: string, left: any, right: any, ctype: SvType): unknown {
     if (ctype.kind === "real") {
       const names: Record<string, string> = { "+": "add", "-": "sub", "*": "mul", "/": "div" };
-      if (op === "**") return realPower(left, right, ctype);
+      if (op === "**") {
+        this.library(X.BINARYEXPRESSION, "binaryexpression '**'");
+        return realPower(left, right, ctype);
+      }
       if (!(op in names)) throw new TypeError(`${op} expects integral operands, got real`);
       return Ieee754.operate(names[op] as string, ctype.format as string, EVEN, [left, right]);
     }
@@ -1389,9 +1418,11 @@ class Evaluation {
     return values.map((value) => toReal(value, real));
   }
 
-  /** A math function (20.8.2), as C's library computes it: a domain error NaN, a pole an infinity. */
+  /** A math function (20.8.2), as C's library computes it: a domain error NaN, a pole an infinity; where the scope's
+   * option `math` is `stay`, one whose result the host's library decides stays (all but `EXACT`). */
   private math(name: string, values: unknown[]): number {
     const x = this.reals(name, values);
+    if (!EXACT.includes(name)) this.library(X.SYSTEMCALL, `systemcall ${repr(name)}`);
     if (name === "$pow") return realPower(x[0] as number, x[1] as number, this.stored.named("real"));
     return (MATH_FUNCTIONS[name.slice(1)] as (...x: number[]) => number)(...x);
   }
@@ -1473,7 +1504,8 @@ class Evaluation {
     const format = Formats.text(values[0]);
     const letter = Formats.unwritten(format);
     if (letter !== null) throw new FS.NoRule("SystemVerilog", `systemcall '$sformatf' %${letter}`, X.SYSTEMCALL);
-    return Formats.vector(Formats.sformatf(format, values.slice(1).map((value) => this.formatted(value))));
+    return Formats.vector(Formats.sformatf(format, values.slice(1).map((value) => this.formatted(value)),
+      this.scope.option("byteorder", "little") as string));
   }
 
   /** An argument of `$sformatf`: an array's items typed, as an assignment pattern writes them. */
@@ -1905,6 +1937,7 @@ const classes = (category: string, ...whats: string[]): [string, string][] => wh
  * the residual's meaning (11.6). */
 export const CATEGORIES: Record<string, Record<string, string>> = {
   SystemVerilog: Object.fromEntries([
+    ...classes("a", ...MATH.filter((name) => !EXACT.includes(name)).map((name) => `systemcall ${repr(name)} by the host's math library`)),
     ...classes("b", "valuerange", "patternitem", "namedconnection", "emptyargument", "castexpression to implicittype",
       "systemcall '$bits' of keywordtype"),
     ...classes("c", "assignmentpattern", "taggedexpression", "newarrayexpression", "randomizewithexpression",

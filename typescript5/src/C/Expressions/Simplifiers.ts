@@ -4,19 +4,23 @@
  * `rules(..., extend)`), under the ABI the expression's holder names.
  *
  * `Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from, an `Expression`)
- * in a `new Scope(variables, { functions, packs })` (see `Framework/Simplifiers`). Values carry their C type while
- * folding (`Typed`), and a value folds into the literal of its type, its suffix as C writes it, where its type has one
- * (`Domains.literalSuffix`): an `int`, `long` or `long long`, signed or not (`5u`; a typedef's value as the standard
- * type it is, an `int64_t`'s `5l`), a `bool`, a string, `nullptr`, a floating value of a type with a suffix whose
- * binary64 literal rounds back to it exactly (`2.5f`, `3.0L`, `0.3dd`, `1.5f16`; a non-finite one has none), and a
- * bit-precise integer's whose narrowest literal is of its type (`7wb`). A value of an arithmetic type no literal has is
+ * in a `new Scope(variables, { functions, packs, options })` (see `Framework/Simplifiers`). Values carry their C type
+ * while folding (`Typed`), and a value folds into the literal of its type, its suffix as C writes it, where its type
+ * has one (`Domains.literalSuffix`): an `int`, `long` or `long long`, signed or not (`5u`; a typedef's value as the
+ * standard type it is, an `int64_t`'s `5l`), a `bool`, a string, `nullptr`, a floating value of a type with a suffix
+ * whose binary64 literal rounds back to it exactly (`2.5f`, `3.0L`, `0.3dd`, `1.5f16`; a non-finite one has none), and
+ * a bit-precise integer's whose narrowest literal is of its type (`7wb`). A value of an arithmetic type no literal has is
  * written as a closed constructor expression (mbse-basis [VOC-034: closed constructor
  * expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), a cast of a literal that converts to it exactly, in C and
  * C++ alike: a `char`, a `short`, a `wchar_t` in C++, a `_BitInt(N)` wider than its value's literal (`(short)3`,
- * `(_BitInt(4))1`; a typedef's value as the standard type it is, a `uint8_t`'s `(unsigned char)44`). In C, an array of
- * such values is written as a compound literal of its elements' literals (`(int[]){1, 2}`, `(int[][2]){{1, 2}, {3,
- * 4}}`); C++ has no compound literal, and a C++ cast names no array type but a declaration's, so a C++ array stays. What
- * no closed constructor expression spells stays, its subterms simplified: a `long double` that no binary64 literal
+ * `(_BitInt(4))1`; a typedef's value as the standard type it is, a `uint8_t`'s `(unsigned char)44`). The scope's option
+ * `casts` (`Symbolics.option`; mbse-basis [CAP-305: simplification's options, chosen up
+ * front](mbse:mbse-basis/docs/capabilities/CAP-305.md)) chooses whether the simplifier writes that cast: `"write"`, the
+ * default, writes it, and `"stay"` leaves the subterm in the residual, simplified in turn, as it leaves any other value
+ * that no closed constructor expression spells; any other value throws `ValueError`. In C, an array of such values is
+ * written as a compound literal of its elements' literals (`(int[]){1, 2}`, `(int[][2]){{1, 2}, {3, 4}}`); C++
+ * has no compound literal, and a C++ cast names no array type but a declaration's, so a C++ array stays. What no
+ * closed constructor expression spells stays, its subterms simplified: a `long double` that no binary64 literal
  * spells, a non-finite floating value, `void`, an object. Its arithmetic folds all the same, its operands promoted:
  * `(char)200 + 0` is the `int` -56 under x86-64's System V ABI. A simplification whose root is a closed constructor
  * expression gives its native as its value: a bigint, a number (a value of a format whose values are text, as its
@@ -406,15 +410,18 @@ export function native(value: Typed): unknown {
 }
 
 /** C's and C++'s scope for an expression: `variables` (C++'s `this` among them, by that name, and a qualified name's
- * value by its spelling, `ns::x`), the `functions` it may call, and C++'s `packs`, each a function parameter pack's
- * values by its name, which a pack expansion, a fold and `sizeof...` read. */
+ * value by its spelling, `ns::x`), the `functions` it may call, C++'s `packs`, each a function parameter pack's values
+ * by its name, which a pack expansion, a fold and `sizeof...` read, and the `options` of simplification its caller
+ * chooses (`Symbolics.Variables`): the framework's `errors`, and the family's `casts` (see the module's
+ * description). */
 export class Scope extends S.Variables {
   readonly functions: ReadonlyMap<string, Fn>;
   readonly packs: ReadonlyMap<string, readonly unknown[]>;
 
   constructor(variables: S.Bindings = {},
-    options: { functions?: Record<string, Fn>; packs?: Record<string, readonly unknown[]> } = {}) {
-    super(variables);
+    options: { functions?: Record<string, Fn>; packs?: Record<string, readonly unknown[]>; options?: S.Bindings }
+      = {}) {
+    super(variables, options.options ?? {});
     this.functions = new Map(Object.entries(options.functions ?? {}));
     this.packs = new Map(Object.entries(options.packs ?? {}).map(([name, values]) => [name, [...values]]));
   }
@@ -1134,12 +1141,12 @@ function writtenType(ctype: CType, written: string, write: Write, declarator: un
 
 /** The closed constructor expression of a value no literal spells (mbse-basis [VOC-034: closed constructor
  * expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), written by `write`: a value of an arithmetic type a cast of
- * a literal that converts to it exactly (`(short)3`, `(unsigned char)44`, `(_BitInt(4))1`), C's and C++'s alike; in C,
- * an array of such values a compound literal of its elements' literals (`(int[]){1, 2}`, `(short[][2]){{1, 2}, {3,
- * 4}}`). Null for a value no literal converts to (a `long double` no binary64 literal spells, a non-finite one), `void`,
- * an object, an ordering, a list a variable holds, and an array in C++, which has no compound literals and whose casts
- * name no array type but a declaration's. */
-function constructOf(write: Write, dialect: Terms.Dialect): (value: Typed) => unknown {
+ * a literal that converts to it exactly (`(short)3`, `(unsigned char)44`, `(_BitInt(4))1`), C's and C++'s alike, unless
+ * `casts` is false (the option `casts` is `"stay"`); in C, an array of such values a compound literal of its elements'
+ * literals (`(int[]){1, 2}`, `(short[][2]){{1, 2}, {3, 4}}`). Null for a value no literal converts to (a `long
+ * double` no binary64 literal spells, a non-finite one), `void`, an object, an ordering, a list a variable holds, and
+ * an array in C++, which has no compound literals and whose casts name no array type but a declaration's. */
+function constructOf(write: Write, dialect: Terms.Dialect, casts = true): (value: Typed) => unknown {
   const [literal, written] = [literalOf(write, dialect), language(dialect)];
 
   /** A literal that converts to `value` exactly: its own; an integer's, of the first of `int`, `long` and `unsigned
@@ -1172,7 +1179,7 @@ function constructOf(write: Write, dialect: Terms.Dialect): (value: Typed) => un
   return (value) => {
     const [held, ctype] = [value.value, value.ctype];
     if (ctype !== null) {
-      const spelled = operand(value);
+      const spelled = casts ? operand(value) : null;
       return spelled === null ? null : dialect.spec((u: any) => u.castexpression(
         (r: any) => r.type(writtenType(ctype, written, write)).operand(spelled)));
     }
@@ -1257,15 +1264,35 @@ export function guarding(dialect: Terms.Dialect, table: Readonly<Record<string, 
   };
 }
 
+/** The framework's simplifier, which reads the scope's option `casts` before it simplifies: under `"stay"`, a
+ * simplifier of the same rules whose `construct` writes no cast simplifies the expression instead. */
+class FamilySimplifier extends F.Simplifier {
+  private readonly staying: F.Simplifier;
+
+  constructor(rules: Rules, write: Write, options: Omit<F.SimplifierOptions, "construct">) {
+    super(rules, { ...options, construct: constructOf(write, rules.dialect) });
+    this.staying = new F.Simplifier(rules, { ...options, construct: constructOf(write, rules.dialect, false) });
+  }
+
+  override run(expression: unknown, scope: S.Scope | S.Bindings | null = null): F.Simplified {
+    const resolved = S.isScope(scope) ? scope : this.rules.scope({ ...(scope ?? {}) });
+    const casts = S.option(resolved, "casts", "write");
+    if (casts !== "write" && casts !== "stay") {
+      throw new ValueError(`the option 'casts' is 'write' or 'stay', not ${repr(casts)}`);
+    }
+    return casts === "write" ? super.run(expression, resolved) : this.staying.run(expression, resolved);
+  }
+}
+
 /** The simplifier of a dialect of the C family, by `rules(dialect, folded, extend)`, its literals written by `write`,
- * what its language may never evaluate `guarded`, by a table as `GUARDED`. */
+ * what its language may never evaluate `guarded`, by a table as `GUARDED`, a value no literal spells cast as the
+ * scope's option `casts` chooses. */
 export function simplifier(dialect: Terms.Dialect, folded: ReadonlySet<string>,
   categories: Record<string, Record<string, string>>, write: (value: unknown, suffix?: string | null) => unknown,
   extend: ((operations: Map<string, any>, rules: Rules) => void) | null = null,
   guarded: Readonly<Record<string, readonly number[] | null>> = GUARDED): F.Simplifier {
-  return new F.Simplifier(rules(dialect, folded, extend), { literal: literalOf(write, dialect), categories,
-    native: (value: Typed) => native(value), simplify, construct: constructOf(write, dialect),
-    guarded: guarding(dialect, guarded) });
+  return new FamilySimplifier(rules(dialect, folded, extend), write, { literal: literalOf(write, dialect), categories,
+    native: (value: Typed) => native(value), simplify, guarded: guarding(dialect, guarded) });
 }
 
 /** The simplifier of the C dialect. */

@@ -20,7 +20,10 @@
  * would in its language, wherever its language would evaluate them. A subterm its language may never evaluate is
  * guarded: a body its parent binds names in, but a let's (an arrow's, a comprehension's element), and an argument the
  * dialect's `guarded(node, index)` names (a conditional's branches, the right operand of a short circuit); an error
- * folding it, or anything within it, throws leaves it in the residual, to throw where it is evaluated.
+ * folding it, or anything within it, throws leaves it in the residual, to throw where it is evaluated. A scope's option
+ * `errors` (see `Symbolics.option`) chooses what an error does anywhere else: `"raise"`, the default, throws it, and
+ * `"stay"` leaves its subterm in the residual, named by a residue of class `b` ("Python3 binop raising ZeroDivisionError
+ * is not simplified").
  *
  * A `Simplifier(rules, { literal, simplify, categories, native, folds, construct, guarded })` simplifies the terms of one dialect; each
  * dialect's `Simplifiers.OfAny` is one. Its `rules` are the dialect's folding rules: what the dialect computes over
@@ -49,7 +52,7 @@
 
 import { Errors, Repr, Schemas } from "@mbse/schemas/Framework";
 
-import { type Bindings, free as freeNames, isScope, type Scope, scopes, Unbound, UNKNOWN, Variables } from "./Symbolics.js";
+import { type Bindings, free as freeNames, isScope, option, type Scope, scopes, Unbound, UNKNOWN, Variables } from "./Symbolics.js";
 import * as Terms from "./Terms.js";
 
 const { NotImplementedError, ValueError } = Errors;
@@ -175,6 +178,8 @@ export class Simplifier {
    * `__call__`. */
   run(expression: unknown, scope: Scope | Bindings | null = null): Simplified {
     const resolved = isScope(scope) ? scope : this.rules.scope({ ...(scope ?? {}) });
+    const errors = option(resolved, "errors", "raise");
+    if (errors !== "raise" && errors !== "stay") throw new ValueError(`the option 'errors' is 'raise' or 'stay', not ${repr(errors)}`);
     const residues = new Map<string, Residue>();
     const result = this.reduce(Terms.term(expression), resolved, residues, true);
     return new Simplified(this.dialect.spec(result.expression), result.literal,
@@ -201,7 +206,7 @@ export class Simplifier {
   /** A subterm simplified in `scope`, noting in `residues` each subterm its dialect has no rule for; an error folding it
    * throws unless it is `guarded`, one its language may never evaluate. */
   reduce(node: any, scope: any, residues: Map<string, Residue>, root = false, guarded = false): Result {
-    const [, record, kind] = this.dialect.kind(node);
+    const [tag, record, kind] = this.dialect.kind(node);
     let known = false; // a value its rules computed, with no literal
     let value: unknown = null;
     if (this.folds === null || this.folds(node, root)) {
@@ -210,7 +215,13 @@ export class Simplifier {
         known = true;
       } catch (error) {
         if (error instanceof NoRule) this.note(error, residues);
-        else if (!(error instanceof Unbound) && !guarded) throw error; // guarded, perhaps never evaluated: it stays
+        else if (!(error instanceof Unbound) && !guarded) { // guarded, perhaps never evaluated: it stays
+          if (option(scope, "errors", "raise") === "raise") throw error;
+          const owner = this.dialect.owner(node).name(); // the option `errors` is "stay": it stays, named
+          const residue = new Residue(owner, tag, `${tag} raising ${(error as Error).name}`, "b");
+          const key = JSON.stringify([residue.dialect, residue.kind, residue.what, residue.category]);
+          if (!residues.has(key)) residues.set(key, residue);
+        }
       }
       if (known) {
         if (kind.role === Terms.LITERAL) return new Result(node, true, value, true, new Set(), false); // kept as written

@@ -294,6 +294,27 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-07) · TypeScript: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-07)
    - Python: [DOM-09: Signatures take the natives' domains and collections, so inference follows the domains an environment gives](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-09) · TypeScript: [DOM-09: Signatures take the natives' domains and collections, so inference follows the domains an environment gives](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-09)
    - Python: [COL-07: Collections have domains for inference: a quantifier's name has the items' domain](mbse:mbse-expressions/python3/tests/10_Collections.ipynb#COL-07) · TypeScript: [COL-07: Collections have domains for inference: a quantifier's name has the items' domain](mbse:mbse-expressions/typescript5/tests/10_Collections.ipynb#COL-07)
+13. **Choose simplification's options up front, in the scope.** *Why*: where a dialect's simplifier could follow either
+   of two defensible behaviors, such as raising an error or leaving its subterm in the residual, the choice is the
+   caller's decision, not the library's
+   ([CAP-305: simplification's options, chosen up front](mbse:mbse-basis/docs/capabilities/CAP-305.md),
+   [PRI-014: every ambiguity a decision](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-014)). *When*: a residual keeps a
+   subterm that the caller would rather fold, or a simplification folds or raises where the caller would rather keep
+   the subterm. *How*: an option is a named parameter of simplification, and the scope carries it:
+   `Symbolics.Variables(variables, options)`, or a dialect's `Scope(..., options=...)` (TypeScript: `{ options }`).
+   The caller chooses each option before simplifying. A binding keeps the scope's options. An option that the scope
+   does not set takes its default, which is the behavior that the rest of this skill describes.
+   The simplifier refuses a value that an option does not take, with a `ValueError`, before it simplifies anything.
+   The framework's option `errors` applies to every dialect: `"raise"`, the default, raises an error in a subterm
+   that the language evaluates, and `"stay"` leaves that subterm in the residual, named, of class (b). The Python3
+   dialect's scope takes five options, `specs`, `identity`, `math`, `locale` and `text`, each of which leaves its
+   subterm in the residual by default. The C family's scope takes `casts`, which writes a value of a type with no
+   literal as a cast of a literal by default. The SystemVerilog dialect's scope takes `timeunit`, `timeprecision`,
+   `mintypmax`, `math` and `byteorder`.
+   - Python: [PAR-04: The residual agrees with the term's simplification in every scope that completes the known one, and is stored as any term](mbse:mbse-expressions/python3/tests/11_Residuals.ipynb#PAR-04) · TypeScript: [PAR-04: The residual agrees with the term's simplification in every scope that completes the known one, and is stored as any term](mbse:mbse-expressions/typescript5/tests/11_Residuals.ipynb#PAR-04)
+   - Python: [PYS-15: A format spec Python refuses stays, named; the scope's option `specs` "raise" raises Python's `ValueError`, with CPython's message](mbse:mbse-expressions/python3/tests/28_Python3.ipynb#PYS-15) · TypeScript: [PYS-15: A format spec Python refuses stays, named; the scope's option `specs` "raise" raises Python's `ValueError`, with CPython's message](mbse:mbse-expressions/typescript5/tests/28_Python3.ipynb#PYS-15)
+   - Python: [CCS-16: The scope's option `casts`: `"write"`, the default, writes a value no literal spells as a cast of a literal; `"stay"` leaves it in the residual; any other value is refused](mbse:mbse-expressions/python3/tests/30_C_Cpp.ipynb#CCS-16) · TypeScript: [CCS-16: The scope's option `casts`: `"write"`, the default, writes a value no literal spells as a cast of a literal; `"stay"` leaves it in the residual; any other value is refused](mbse:mbse-expressions/typescript5/tests/30_C_Cpp.ipynb#CCS-16)
+   - Python: [SVS-17: The scope's option `math`: `stay` keeps a result the host's math library decides in the residual, named; what IEEE 754 makes exact folds](mbse:mbse-expressions/python3/tests/31_SystemVerilog.ipynb#SVS-17) · TypeScript: [SVS-17: The scope's option `math`: `stay` keeps a result the host's math library decides in the residual, named; what IEEE 754 makes exact folds](mbse:mbse-expressions/typescript5/tests/31_SystemVerilog.ipynb#SVS-17)
 
 ## Load the reference for your task
 <!-- no case: a table routing each task to its reference -->

@@ -2077,8 +2077,8 @@ every family's folding rules fill, evaluation retired as a public procedure.
      class `b`) and a kind of another dialect of its family stay in the residual, named; a subterm of a term the rules
      computed (a cast's type) needs no rule, and is not named. What the dialect's own semantics make an error still
      raises, as the expression would in its language (an operand of the wrong type, a wrong number of arguments, a
-     division by zero, an overflow, a member a value lacks), wherever its language evaluates the subterm; one it may
-     never evaluate stays (item 374). A malformed term raises too (a literal with no value, a let with no body).
+     division by zero, an overflow, a member a value lacks), wherever its language evaluates the subterm, unless the
+     scope's option `errors` is `"stay"` (item 402); one it may never evaluate stays (item 374). A malformed term raises too (a literal with no value, a let with no body).
 329. **Scopes** *(agent)*: what a scope does not resolve raises `Symbolics.Unbound`, which the simplifier catches: a
      name it does not bind, or binds to `UNKNOWN`; a function, a module or an import it does not provide. So
      `KeyError` "variable 'x' is not bound", Python's `NameError` and `ImportError`, MATLAB's "Unrecognized function or
@@ -2187,6 +2187,7 @@ every family's folding rules fill, evaluation retired as a public procedure.
      value (a list, an object, a closure), False across types or for unequal values; whether two equal immutable values
      (`1 is 1`, `'a' is 'a'`, `(1,) is (1,)`, two NaNs) are one object Python leaves to the implementation, so it stays,
      "Python3 compare 'is' of equal immutable values is not simplified", of class `b`, no value of the language's own.
+     The scope's option `identity` chooses otherwise (item 405).
 345. **f-strings and t-strings** *(agent)*: a field converted (`!r`, `!s`, `!a`) and formatted by `format()`'s
      mini-language for a str, an int, a bool, a float and a complex number, correctly rounded in TypeScript as CPython
      rounds. A complex number's format is composed as CPython 3.14's `format_complex_internal` composes it: each part a
@@ -2196,7 +2197,8 @@ every family's folding rules fill, evaluation retired as a public procedure.
      What stays, named, of class `a`: a field of a value whose text is its implementation's (a set's order, an object's,
      a generator's, a function's or a template's address: "joinedstr's field of set"); a format of such a value; a spec
      a locale decides (`n`); and a spec Python refuses (a sign for a str, zero padding for a complex number, an int's
-     code for a float), which stays rather than raising Python's `ValueError` (open below). Item 379 states how a
+     code for a float), which stays rather than raising Python's `ValueError` (item 404 makes it an option). The scope's options
+     `locale` and `text` choose otherwise for a locale's spec and for a field whose text is its implementation's (items 404 and 407). Item 379 states how a
      `\N{...}` escape folds. A t-string's value is a template, as Python 3.14's `string.templatelib` has it (`strings`,
      `interpolations`, `values`; an interpolation's `value`, `expression`, `conversion`, `format_spec`), with no
      literal; its residual keeps its text as written, which is its value's.
@@ -2208,7 +2210,8 @@ every family's folding rules fill, evaluation retired as a public procedure.
      (`(1-0j) + 1.0` is `(2-0j)`), division by Smith's algorithm, products and quotients recovering infinities as C11's
      Annex G does, and a power by repeated multiplication where its exponent is an integer of at most 100; any other
      complex power, and a real power whose value is complex (`(-8) ** 0.5`), needs the platform's `pow`, `atan2`, `cos`
-     and `sin`, so it stays, "Python3 binop '**' of a complex power is not simplified", of class `a`. `abs` of a complex
+     and `sin`, so it stays, "Python3 binop '**' of a complex power is not simplified", of class `a`, unless the scope's
+     option `math` is `"host"` (item 406). `abs` of a complex
      number is the correctly rounded `hypot` in both languages, which CPython's libm need not give: a deliberate
      difference from CPython in its last bit, where libm's `hypot` is not correctly rounded.
 348. **Targets** *(agent)*: a comprehension's targets are checked when it folds: a target that writes into data
@@ -2366,10 +2369,12 @@ every family's folding rules fill, evaluation retired as a public procedure.
      Kleene's `and` of its conditions, left to right. A tagged or a structure pattern stays, "SystemVerilog
      matchesexpression taggedpattern is not simplified", class `c` (its type, CAP-232).
 367. **Parameters of simplification in the scope** *(agent)*: `Scope(variables, functions, packages=, types=,
-     timeunit=, timeprecision=, mintypmax=)` (TypeScript: an options object). A time literal is its magnitude in
-     `timeunit` (`"1ns"`, `"100ps"`: 1, 10 or 100 of a unit), rounded to `timeprecision` (the unit by default) and
-     scaled back, a `real`; with no time unit it stays, "SystemVerilog time literal without a time unit is not
-     simplified", class `a` (no default: IEEE 1800 leaves it to the tool). `min:typ:max` is `typ` by default (11.11).
+     options=)` (TypeScript: `new Scope(variables, { functions, packages, types, options })`). A time literal is its
+     magnitude in the option `timeunit` (`"1ns"`, `"100ps"`: 1, 10 or 100 of a unit), rounded to the option
+     `timeprecision` (the unit by default) and scaled back, a `real`. A time literal stays where the scope gives no time
+     unit, "SystemVerilog time literal without a time unit is not simplified", class `a`, because IEEE 1800 leaves the
+     default to the tool. `min:typ:max` is the expression that the option `mintypmax` chooses, `typ` by default (11.11).
+     Item 410 states how the scope holds its options.
 368. **Calls by name and with defaults** *(agent)*: a function the scope provides may be a `Subroutine(implementation,
      formals, defaults)`; a call binds its positional arguments, then its named ones (`.b(2)`, `.b` the caller's `b`,
      `.b()` the default), an empty argument its formal's default; errors are `TypeError`s ("f's argument 'a' has no
@@ -2388,7 +2393,8 @@ every family's folding rules fill, evaluation retired as a public procedure.
      `sort`, ...); an enumeration's (`next`, `name`, ...) class `c`; a class handle's, class `d`.
 371. **System functions** *(agent)*: the math functions (`$ln` ... `$atanh`, `$pow`, `$atan2`, `$hypot`) as C's
      library computes them, a domain error NaN and a pole an infinity, each host's library's last bit its own (item
-     373); `$rtoi`, `$itor`, `$realtobits`, `$bitstoreal`, `$shortrealtobits`, `$bitstoshortreal` (IEEE 754's
+     373), where the scope's option `math` is `host`, its default; where the option is `stay`, each one but `$sqrt`,
+     `$floor` and `$ceil` stays (item 411). The simplifier also folds `$rtoi`, `$itor`, `$realtobits`, `$bitstoreal`, `$shortrealtobits`, `$bitstoshortreal` (IEEE 754's
      encodings, x and z as 0); `$countbits` (each control's least significant bit); `$isunbounded`; the array queries
      (`$left` ... `$unpacked_dimensions`, of a value: an array's or a queue's `[0:n-1]`, then its first item's, then a
      vector's `[width-1:0]`, a scalar `bit`, `logic` or `reg` none; of a type: its declared packed dimensions; a
@@ -2429,14 +2435,15 @@ every family's folding rules fill, evaluation retired as a public procedure.
      parameter's default applying to it; `value` has no default now, so `void 0`, and a variable bound to `undefined`,
      simplify to `undefined` (TSS-01). Python's `Result` had no such bug, `A.UNDEFINED` being a value of its own.
 376. **Suites** *(coordinator)*: each family's suite numbered after POSIX's two, in the inventory's partition's order:
-     `28_Python3` (PYS, 14), `29_TypeScript5` (TSS, 10), `30_C_Cpp` (CCS, 15), `31_SystemVerilog` (SVS, 16); 305 cases
+     `28_Python3` (PYS, 19), `29_TypeScript5` (TSS, 10), `30_C_Cpp` (CCS, 16), `31_SystemVerilog` (SVS, 18); 313 cases
      in each language. The families' API items numbered in that order too: TypeScript5's 334 to 340 (merged first),
      Python3's 341 to 350, C's and C++'s 351 to 362, SystemVerilog's 363 to 373.
 
 ## Settled in CAP-295's step, for the user's review
 
-This step builds the Design of mbse-basis [CAP-295: simplification of single-dialect expressions with literal
-leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-295.md#design) in 0.11.0. A
+This step builds mbse-basis [CAP-295: simplification of single-dialect expressions with literal
+leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-295.md#as-built-mbse-expressions) in
+0.11.0, as its As built records. A
 simplification is an evaluation when its root is a closed constructor expression (mbse-basis [VOC-034: closed
 constructor expression](https://github.com/pitaman71/mbse-basis/blob/main/docs/VOCABULARY.md#VOC-034)). Each family
 writes a value that has no literal as a closed constructor expression wherever its language has one, and five class (a)
@@ -2556,7 +2563,8 @@ them.
      is already of a literal is rewritten to its value's (`(char)200` folds to `(char)-56` under AMD64 and stays
      `(char)200` under AAPCS64). The residual's root is then `constructed`, not `literal`, and `evaluate()` gives the
      value's native. A floating value that no binary64 literal spells, and a non-finite one, stay, because no cast of a
-     literal converts to them exactly; `void`, an object and a C++ ordering stay too.
+     literal converts to them exactly; `void`, an object and a C++ ordering stay too. The scope's option `casts` leaves a
+     value of a type with no literal in the residual instead, where the caller chooses `"stay"` (item 408).
 388. **The Cpp dialect's simplifier writes C's cast** *(agent)*: when the Cpp dialect's simplifier writes a value that
      has no literal, it writes the C-style cast `(T)x`, as the C dialect's simplifier does, and not the functional cast
      `T(x)`. In C++, a functional cast's type is one simple type specifier, so `unsigned char(5)` is ill-formed C++,
@@ -2593,8 +2601,9 @@ them.
      `Formats.unformatted(value, states)`. Both write a value's bits in units of 32 bits, and the unit that holds the
      least significant bit comes first. `%u` writes each unit's 2-state bits as one word, with x and z as 0. `%z` writes
      each unit's `aval` word and then its `bval` word, as VPI's `s_vpi_vecval` holds them. Each word is written as four
-     bytes, least significant byte first. IEEE 1800 leaves the byte order to the host's native order. The simplifier
-     takes little-endian because both ABI dialects that mbse-expressions stores, AMD64 and AAPCS64, are little-endian.
+     bytes, in the byte order that the scope's option `byteorder` gives (item 412). IEEE 1800 leaves the byte order to
+     the host's native order. The SystemVerilog dialect's simplifier takes little-endian by default, because both ABI
+     dialects that mbse-expressions stores, AMD64 and AAPCS64, are little-endian.
      `$sformatf("%u", 32'h41424344)` is `"DCBA"`. A real argument raises "%u expects an integral argument, got real".
      A width pads the field as it pads `%s`.
 393. **`%p`** *(agent)*: `$sformatf` folds `%p` by 21.2.1.7, through `Formats.pattern(value)`. An integral value is
@@ -2657,6 +2666,172 @@ them.
      a literal term gives, from `known`, a `Result` that is `constructed` and not `literal`, and gives, from a
      simplification, a `Simplified` that is `constructed`, is not `literal`, and evaluates. EVL-06 covers the
      framework's `construct` branches in both languages, without depending on a dialect's `construct`.
+
+## Settled in CAP-305's options, for the user's review
+
+This step builds the Design of mbse-basis [CAP-305: simplification's options, chosen up
+front](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-305.md#design) in 0.11.0. Where a
+dialect's simplifier could follow either of two defensible behaviors, the caller chooses one before simplifying, as an
+option of the scope. Each option's default is the behavior that the earlier items state. A scope that sets no option
+therefore gives the results that those items' cases assert. The framework's items come first, and the families' items follow in
+the inventory's partition's order.
+
+### The framework (CAP-305)
+
+401. **A scope's options** *(coordinator)*: `Symbolics.Variables(variables, options)` (TypeScript: `new
+     Variables(variables, options)`) takes the options of simplification, a mapping by name (TypeScript: an object),
+     which its caller chooses up front. `Variables.option(name, default)` gives an option's value, or `default` where
+     the scope does not set it. A scope that `bind` makes keeps the options of the scope that it binds in.
+     `Symbolics.option(scope, name, default)` reads an option from any scope, and gives `default` for a scope that has
+     no options. Each dialect's scope that takes options passes them to `Variables` (items 403, 408 and 410).
+402. **The option `errors`** *(coordinator)*: the framework's simplifier reads the option `errors` before it
+     simplifies, so every dialect's simplifier takes it. Under `"raise"`, the default, an error that folding a subterm
+     raises, where its language evaluates the subterm, raises as item 328 states. Under `"stay"`, the simplifier leaves
+     that subterm in the residual, named by a residue of class `b` whose `what` names the error's class: "Patterns call
+     raising TypeError is not simplified". A guarded subterm stays under either value, and it names no residue (item
+     374). The simplifier refuses any other value with a `ValueError`, "the option 'errors' is 'raise' or 'stay', not
+     'ignore'", before it simplifies anything. PAR-04 asserts the option, a binding that keeps it, a scope with no
+     options, and the refusal, in both languages.
+
+### Python3 (CAP-305)
+
+403. **The scope's options** *(agent)*: the Python3 dialect's `Scope` takes the options of simplification,
+     `Scope(variables, modules=..., builtins=..., options=...)` (TypeScript: `new Scope(variables, { modules,
+     builtins, options })`), and passes them to `Symbolics.Variables`. `Simplifiers.OPTIONS` maps each option that
+     takes a string to its two values, its default first: `specs` (`"stay"`, `"raise"`), `identity` (`"stay"`,
+     `"cpython"`), `math` (`"stay"`, `"host"`) and `text` (`"stay"`, `"cpython"`). The option `locale` takes `"stay"`,
+     its default, or a locale given as data (item 404). The Python3 dialect's simplifier refuses, before it simplifies,
+     a value that an option does not take, with a `ValueError` such as "the option 'specs' is 'stay' or 'raise', not
+     'strict'", as the framework's simplifier refuses a value of `errors` (item 402). A scope that chooses no option
+     gives every default, which is the behavior that items 344, 345 and 347 state. A closure keeps the options of the
+     scope that it is made in. PYS-15 asserts `OPTIONS` and a refused value, and PYS-16 to PYS-19 assert one option
+     each.
+404. **`specs` and `locale`: a format spec that Python refuses, and one that a locale decides** *(agent)*: by default,
+     a field whose format spec Python refuses stays in the residual, named "Python3 joinedstr's format spec '+s' of str
+     is not simplified", of class (a), as item 345 states. Under `specs: "raise"`, the Python3 dialect's simplifier
+     raises Python's `ValueError` with CPython 3.14's message ("Sign not allowed in string format specifier"). The
+     Python implementation takes the message from Python's own `format`. The TypeScript implementation models CPython's
+     parser of a spec (`parse_internal_render_format_spec`) and its checks by the value's type, in the private
+     functions `parse` and `refusal`: an invalid specifier, both `,` and `_`, a missing precision, too many decimal
+     digits, a thousands separator with a type that refuses it (the separator of a fraction's digits, new in Python
+     3.14, among them), an unknown format code (written as `\x` and its code point where it is not printable ASCII),
+     "precision too big", and the checks of a str, an int, a float and a complex number. A spec that Python accepts and
+     the simplifier does not format, such as one that groups a fraction's digits (`.3,f`), stays under `"raise"` too.
+     Both implementations read a spec as CPython reads it, so a width written in another script's digits (`٣`) folds
+     in both, and a precision beyond a C `int` stays in both. The TypeScript implementation writes a point before the
+     exponent of a float that `#` formats with no type (`1.e+16`), as CPython does. Under `locale`, a mapping of
+     `decimal_point`, `thousands_sep` and `grouping` as Python's `locale.localeconv()` gives them (other keys are
+     ignored, so that `localeconv()` itself serves), the Python3 dialect's simplifier formats a spec of type `n` as
+     CPython formats one under that locale: an int as `d` writes it, a float and each part of a complex number as `g`
+     writes them, the integer digits grouped as `grouping` says, and the decimal point the locale's. `grouping` lists
+     each group's size from the right: 0 repeats the last size, and 127, C's `CHAR_MAX` where `char` is signed, ends
+     the grouping; each size is an int from 0 to 127. Both implementations group the digits, and pad them with zeros
+     where the spec asks, by CPython's `_PyUnicode_InsertThousandsGrouping` (Python `_grouped`, TypeScript `grouped`,
+     which groups `,` and `_` too). The simplifier refuses any other value of `locale` with `ValueError` "the option
+     'locale' is 'stay' or a mapping of 'decimal_point', 'thousands_sep' and 'grouping', not 'de'", or "the option
+     'locale' maps 'decimal_point' and 'thousands_sep' to strs, and 'grouping' to a list of ints from 0 to 127". A spec
+     that Python refuses stays under a locale too, a str's `n` and `,n` among them (item 345). Cross-checked: 60,000
+     generated values and specs, under each option, gave the same results, residues and messages in both
+     implementations, and 83,200 specs of type `n` formatted in the C locale and with `,` grouping by three gave what
+     Python's own `format` gives. PYS-15 asserts 31 refusals, and PYS-18 18 locales' results; the Python suite checks
+     both against Python's own `format`.
+405. **`identity`: `is` between equal immutable values** *(agent)*: by default, `is` between equal immutable values
+     stays (item 344). Under `identity: "cpython"`, the Python3 dialect's simplifier answers True where CPython 3.14
+     keeps one object of the value however the value is made: an int from -5 to 256 (CPython's small ints), the empty
+     tuple, the empty str and the empty bytes. Any other pair of equal immutable values still stays, named as by
+     default, because whether CPython makes the two one object depends on how they were made: CPython's compiler merges
+     the equal constants of one code object, so that `1000 is 1000` is True, while two equal ints computed apart are two
+     objects. A one-character str is not among the cached values, because CPython 3.14 makes some of them apart
+     (`'a'.upper() is 'A'` is False). PYS-16 asserts it.
+406. **`math`: a complex power that needs the platform's functions** *(agent)*: by default, a complex power whose
+     exponent is no integer of at most 100, and a real power whose value is complex, stay (item 347). Under `math:
+     "host"`, the Python3 dialect's simplifier folds them by the host's math library. The Python implementation computes
+     them by Python's own `**`. The TypeScript implementation computes them as CPython's `_Py_c_pow` does, by
+     JavaScript's `Math.hypot`, `Math.pow` (with 1 to any power 1, as C's `pow` gives it), `Math.atan2`, `Math.exp`,
+     `Math.log`, `Math.cos` and `Math.sin`, and raises `OverflowError` "complex exponentiation" where a part is
+     infinite, as CPython's `_Py_ADJUST_ERANGE2` does. Each host's library may round a result's last bit apart
+     (EQUIVALENCE), so the cases assert exact results only: `(-1) ** 0.5` is `(6.123233995736766e-17+1j)` in both. The
+     option's name and values are the SystemVerilog family's too, whose math functions fold by the host's library by
+     default (CAP-305's sixth row; item 411); each family's refusal names its own default first ("the option 'math' is
+     'stay' or 'host', not 'libm'"). Both implementations fold a negative infinity to a fractional power to an
+     infinity. PYS-17 asserts it.
+407. **`text`: a field whose text is the implementation's** *(agent)*: by default, such a field stays (item 345). Under
+     `text: "cpython"`, the Python implementation writes the field as CPython writes it: a set's `str` in its hash
+     table's order, a lambda's `<function <lambda> at 0x...>` and a generator's `<generator object <genexpr> at 0x...>`
+     with their addresses, a template's and an interpolation's `repr` (`Template(strings=('a', ''),
+     interpolations=(Interpolation(1, 'x', None, ''),))`), and the `TypeError` that `object.__format__` raises for a
+     format spec ("unsupported format string passed to set.__format__"). The TypeScript implementation writes what does
+     not depend on CPython's objects: a template's and an interpolation's `repr`, and the `TypeError` of a format spec of
+     a set, a lambda, a generator, a module, a template or an interpolation. In the TypeScript implementation, a field of
+     a set, a lambda, a generator, a module, a data object or a host value still stays, named as by default, because its
+     text is an address or the order of CPython's hash table, which no JavaScript value has; a format spec of a data
+     object or a host value stays too, because the TypeScript implementation does not know its `__format__` *(agent)*.
+     In both implementations, a lambda's value has CPython's type name, `function`. The Python implementation names a
+     generator expression's value as CPython does, `<genexpr>`. PYS-19 asserts each implementation's results under the same ID.
+
+### C and C++ (CAP-305)
+
+408. **The C family's option `casts`** *(agent)*: the C family's `Scope` (`C.Simplifiers.Scope`, which the Cpp dialect
+     shares) takes `options` and passes them to `Symbolics.Variables`: `Scope(variables, functions=..., packs=...,
+     options=...)` (TypeScript: `new Scope(variables, { functions, packs, options })`). The C family's simplifier reads
+     the option `casts` before it simplifies. Under `"write"`, the default, the simplifier writes a value of a type
+     that has no literal of its own as a cast of a literal (item 387). Under `"stay"`, the simplifier leaves that
+     subterm in the residual, simplified in turn: `(char)200` stays `(char)200`, `(short)(1 + 2)` becomes
+     `(short)3`, and `(uint8_t)300` stays `(uint8_t)300`. The simplifier names no residue for such a subterm, as it
+     names none for any other value that no closed constructor expression spells (item 378). A root that stays is not
+     `constructed`, so `evaluate()` raises `NotEvaluated`, "the root is not a closed constructor expression: its value
+     has no closed constructor expression". Any other value raises `ValueError`, "the option 'casts' is 'write' or
+     'stay', not 'keep'", before the simplifier simplifies anything. A scope that sets no option gives the results that
+     items 387 to 391 state.
+409. **What the option `casts` changes** *(agent)*: the option changes only the casts that the C family's `construct`
+     writes, which are the closed constructor expressions of values that have no literal of their own (`char`,
+     `signed char`, `unsigned char`, `short`, `unsigned short`, C++'s `wchar_t`, `char8_t`, `char16_t` and `char32_t`,
+     a typedef of one of them, and a `_BitInt(N)` whose narrowest literal is of a narrower type). A value that has a
+     literal folds under either value, so `(char)200 + 0` still folds to `-56`. C's compound literal of an array
+     (item 389) is written under either value, because its elements are written as literals and not as casts. The
+     C family's simplifier is a subclass of the framework's `Simplifier` that reads the option and, under `"stay"`,
+     hands the expression to a second `Simplifier` of the same rules whose `construct` writes no cast. The framework's
+     `construct(value)` hook therefore takes no scope. The option and the framework's option `errors` (item 402)
+     combine: under both `"stay"`, `(char)200 + 1 / 0` stays `(char)200 + 1 / 0`, named "C binaryexpression raising
+     ZeroDivisionError is not simplified", of class `b`. Test CCS-16 asserts the option in both languages.
+
+### SystemVerilog (CAP-305)
+
+410. **The scope's options** *(agent)*: the SystemVerilog dialect's `Scope` takes `options`, a mapping (TypeScript: an
+     object), and passes it to `Symbolics.Variables`, so that `option(name, default)` reads each option and a binding
+     keeps them (item 401). The scope's options are `timeunit`, `timeprecision` and `mintypmax` (item 367), `math`
+     (item 411), `byteorder` (item 412), and the framework's `errors` (item 402). `Simplifiers.OPTIONS` gives the
+     values of `mintypmax`, `math` and `byteorder`, each a fixed set whose first value is the default but `mintypmax`'s,
+     whose default is `typ`. `timeunit` and `timeprecision` each take 1, 10 or 100 of s, ms, us, ns, ps or fs. The
+     scope refuses a value that an option does not take when it is made, before anything is simplified in it, by a
+     `ValueError`: "the option 'math' is 'host' or 'stay', not 'fold'", "the option 'byteorder' is 'little' or 'big',
+     not 'native'", and, for `mintypmax`, `timeunit` and `timeprecision`, the messages that item 367's cases assert
+     ("min:typ:max's choice is min, typ or max, got 'all'", "a time unit is 1, 10 or 100 of s, ms, us, ns, ps or fs,
+     got '2ns'"). `timeunit`, `timeprecision` and `mintypmax` are options rather than keyword parameters *(agent)*, so
+     that the scope holds every parameter of simplification by one mechanism, the framework's, which
+     `Symbolics.option` reads from any scope. The scope takes no alias of such keyword parameters, because 0.11.0 is
+     unreleased. The scope keeps a time unit's magnitude and power, read from its option, as `timeunit` and
+     `timeprecision`.
+411. **The option `math`** *(agent)*: under `host`, the default, the SystemVerilog dialect's simplifier folds each
+     result that the host's math library decides, as item 371 states. Under `stay`, the simplifier keeps each such
+     result in the residual: every math function but those that `Simplifiers.EXACT` lists (`$sqrt`, `$floor` and
+     `$ceil`, whose results IEEE 754 makes exact), and a `**` whose operands make it real, which C's `pow` computes as
+     `$pow` does. Each stays named, "SystemVerilog systemcall '$sin' by the host's math library is not simplified" or
+     "SystemVerilog binaryexpression '**' by the host's math library is not simplified", of class `a`, which
+     `CATEGORIES` gives each math function's. An integral `**` folds under either value, because its result is exact.
+     An argument's error raises before the simplifier reads the option, as it would in the language. The name `math`
+     *(agent)* fits the Python3 family's option of the same name (item 406), a complex power that is no integer one,
+     whose default is `stay`.
+412. **The option `byteorder`** *(agent)*: under `little`, the default, the SystemVerilog dialect's simplifier writes
+     each 32-bit word of `%u` and `%z` least significant byte first, as item 392 states; under `big`, it writes each
+     word most significant byte first. The words keep their order, the unit holding the least significant bit first,
+     under either value. `Formats.unformatted(value, states, byteorder)` and `Formats.sformatf(format, arguments,
+     byteorder)` take the byte order, `"little"` by default. The name `byteorder` and its values *(agent)* are those of
+     Python's `sys.byteorder`. **Tests**: suite SVS has 18 cases, the same in both languages. SVS-01 and SVS-07 give
+     `timeunit`, `timeprecision` and `mintypmax` as options, with the same results and messages. SVS-17 ("The scope's
+     option `math`: `stay` keeps a result the host's math library decides in the residual, named; what IEEE 754 makes
+     exact folds") and SVS-18 ("The scope's option `byteorder`: `big` writes `%u`'s and `%z`'s words most significant
+     byte first") assert the new options, a binding keeping an option, and each refusal.
 
 ## What stage 2b needed (done)
 

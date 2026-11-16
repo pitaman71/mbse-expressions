@@ -45,6 +45,25 @@
  * object's address), a format spec of a locale (`n`), or one Python refuses; a complex power other than an integer
  * one, and a real power whose value is complex, which need the platform's `pow`, `atan2`, `cos` and `sin`.
  * `CATEGORIES` gives each the evaluation inventory's class.
+ *
+ * Each of those five stays by default, and the scope's options choose otherwise (mbse-basis [CAP-305: simplification's
+ * options, chosen up front](mbse:mbse-basis/docs/capabilities/CAP-305.md)): `new Scope(variables, { options })`, each
+ * option by its name in `OPTIONS`, whose first value is its default. The simplifier refuses, before it simplifies, a
+ * value that an option does not take.
+ *
+ * - `specs`: `"raise"` throws the `ValueError` that Python raises for a format spec it refuses, with CPython's message,
+ *   which `parse` and `refusal` model.
+ * - `identity`: `"cpython"` answers `is` between equal immutable values as CPython 3.14 answers it where the values
+ *   decide it: True for the values CPython keeps one object of (an int from -5 to 256, `()`, `''` and `b''`). Any other
+ *   pair stays, since whether two such values are one object depends on how they were made.
+ * - `math`: `"host"` folds a complex power by the host's math library, as CPython's `_Py_c_pow` computes it.
+ * - `locale`: an object that gives `decimal_point`, `thousands_sep` and `grouping`, as Python's `locale.localeconv()`
+ *   gives them, formats a spec of type `n` under that locale (`grouping` an array of group sizes from the right, 0
+ *   repeating the last and 127, C's `CHAR_MAX`, ending the grouping).
+ * - `text`: `"cpython"` writes a field whose text is the implementation's as CPython writes it where that text does not
+ *   depend on CPython's objects: a template's `repr`, and the `TypeError` that a format spec of a set, a function, a
+ *   generator or a module raises. A field of a set, a function, a generator, a module, a data object or a host value
+ *   still stays, since its text is an address or the order of CPython's hash table, which no JavaScript value has.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -67,6 +86,18 @@ type Tuple = Repr.Tuple;
 const Complex = Domains.ComplexValue;
 type Complex = Domains.ComplexValue;
 const ELLIPSIS = Domains.ELLIPSIS;
+
+/** The options of the scope that take a string, each by its name, with its values, its default first; the option
+ * `locale` takes `"stay"`, its default, or a locale (see the module's description). */
+export const OPTIONS: Readonly<Record<string, readonly [string, string]>> = {
+  specs: ["stay", "raise"], identity: ["stay", "cpython"], math: ["stay", "host"], text: ["stay", "cpython"],
+};
+
+/** The group size that ends a locale's grouping, C's `CHAR_MAX` where `char` is signed. */
+const CHAR_MAX = 127;
+
+/** The value of the option `name` of a scope, its default where the scope does not set it. */
+const chosen = (scope: unknown, name: string): unknown => S.option(scope, name, "stay");
 
 /** A module an expression may import: named members, which may be functions, values or submodules. */
 export class Module {
@@ -156,6 +187,10 @@ function repr(value: unknown): string {
   if (value instanceof Set) return value.size === 0 ? "set()" : `{${[...value].map(repr).join(", ")}}`;
   if (isDict(value)) return `{${entries(value).map(([k, v]) => `${repr(k)}: ${repr(v)}`).join(", ")}}`;
   if (value instanceof Slice) return `slice(${repr(value.start)}, ${repr(value.stop)}, ${repr(value.step)})`;
+  if (value instanceof Template) return `Template(strings=${repr(value.strings)}, interpolations=${repr(value.interpolations)})`;
+  if (value instanceof Interpolation) {
+    return `Interpolation(${[value.value, value.expression, value.conversion, value.format_spec].map(repr).join(", ")})`;
+  }
   return Repr.repr(value);
 }
 
@@ -517,8 +552,8 @@ function realQuotient(a: number, b: Complex): Complex {
 
 /** A complex power, as CPython computes it: by an integer exponent of at most 100, by multiplication (`c_powi`); else
  * by `_Py_c_pow`, which needs the platform's transcendental functions but where its base or its exponent is zero, and
- * so stays in the residual. */
-function power(a: Complex, b: Complex): Complex {
+ * so stays in the residual, unless the scope's option `math` is `"host"` (`host`), which computes it by the host's. */
+function power(a: Complex, b: Complex, host: boolean): Complex {
   let r: Complex | null;
   if (b.imag === 0 && b.real === Math.floor(b.real) && Math.abs(b.real) <= 100) {
     const n = Math.abs(b.real);
@@ -530,7 +565,17 @@ function power(a: Complex, b: Complex): Complex {
     }
     r = b.real > 0 ? result : quotientOrZero(new Complex(1, 0), result);
   } else if (a.real === 0 && a.imag === 0) r = b.imag !== 0 || b.real < 0 ? null : new Complex(0, 0);
-  else throw refuse("binop '**' of a complex power");
+  else if (host) { // `_Py_c_pow`, by the host's `hypot`, `pow`, `atan2`, `exp`, `log`, `cos` and `sin`
+    const magnitude = Math.hypot(a.real, a.imag);
+    let length = magnitude === 1 ? 1 : Math.pow(magnitude, b.real); // C's `pow`, where JavaScript's differs: 1 to any power is 1
+    const angle = Math.atan2(a.imag, a.real);
+    let phase = angle * b.real;
+    if (b.imag !== 0) {
+      length /= Math.exp(angle * b.imag);
+      phase += b.imag * Math.log(magnitude);
+    }
+    r = new Complex(length * Math.cos(phase), length * Math.sin(phase));
+  } else throw refuse("binop '**' of a complex power");
   if (r === null) throw new ZeroDivisionError("zero to a negative or complex power");
   if (!Number.isFinite(r.real) && !Number.isNaN(r.real) || !Number.isFinite(r.imag) && !Number.isNaN(r.imag)) {
     throw new OverflowError("complex exponentiation");
@@ -538,8 +583,9 @@ function power(a: Complex, b: Complex): Complex {
   return r;
 }
 
-/** Python's arithmetic of complex numbers, mixed with reals as CPython 3.14 mixes them (a real is not made complex). */
-function complexArithmetic(operator: string, a: unknown, b: unknown): Complex {
+/** Python's arithmetic of complex numbers, mixed with reals as CPython 3.14 mixes them (a real is not made complex); a
+ * power by the host's math library where `host` says so. */
+function complexArithmetic(operator: string, a: unknown, b: unknown, host: boolean): Complex {
   if (!(a instanceof Complex || isNumeric(a)) || !(b instanceof Complex || isNumeric(b)) || ["//", "%"].includes(operator)) {
     throw unsupported(operator, a, b);
   }
@@ -564,7 +610,7 @@ function complexArithmetic(operator: string, a: unknown, b: unknown): Complex {
       }
       return quotient(x, y);
     default:
-      return power(both(x), both(y));
+      return power(both(x), both(y), host);
   }
 }
 
@@ -608,9 +654,9 @@ function isqrt(n: bigint): bigint {
   }
 }
 
-/** Python's arithmetic operators. */
-function arithmetic(operator: string, a: unknown, b: unknown): unknown {
-  if (a instanceof Complex || b instanceof Complex) return complexArithmetic(operator, a, b);
+/** Python's arithmetic operators; a power whose value is complex by the host's math library where `host` says so. */
+function arithmetic(operator: string, a: unknown, b: unknown, host = false): unknown {
+  if (a instanceof Complex || b instanceof Complex) return complexArithmetic(operator, a, b, host);
   if (operator === "+" && isSequence(a)) return joined(a, b);
   if (operator === "*" && isSequence(a)) return repeat(a, b);
   if (operator === "*" && isSequence(b) && isIntegral(a)) return repeat(b, a);
@@ -642,7 +688,9 @@ function arithmetic(operator: string, a: unknown, b: unknown): unknown {
     }
     default:
       if (x === 0 && y < 0) throw new ZeroDivisionError("zero to a negative power");
-      if (x < 0 && y !== Math.floor(y) && Number.isFinite(y)) throw refuse("binop '**' of a complex power"); // its value is complex
+      if (x < 0 && Number.isFinite(x) && y !== Math.floor(y) && Number.isFinite(y)) { // its value is complex
+        return power(new Complex(x, 0), new Complex(y, 0), host);
+      }
       return x ** y;
   }
 }
@@ -984,13 +1032,15 @@ function modulesOf(module: Module): Module[] {
   return [module, ...[...module.members.values()].filter((m): m is Module => m instanceof Module).flatMap(modulesOf)];
 }
 
-/** Python's scope for an expression: `variables`, the `modules` imports may bring in, and `builtins`. */
+/** Python's scope for an expression: `variables`, the `modules` imports may bring in, `builtins`, and the `options` of
+ * simplification (`OPTIONS`, and `locale`). */
 export class Scope extends S.Variables {
   readonly modules: ReadonlyMap<string, Module>;
   readonly builtins: ReadonlyMap<string, unknown>;
 
-  constructor(variables: S.Bindings = {}, options: { modules?: Record<string, Module>; builtins?: Record<string, unknown> } = {}) {
-    super(variables);
+  constructor(variables: S.Bindings = {},
+    options: { modules?: Record<string, Module>; builtins?: Record<string, unknown>; options?: S.Bindings } = {}) {
+    super(variables, options.options ?? {});
     this.modules = new Map(Object.entries(options.modules ?? {}));
     this.builtins = options.builtins === undefined ? BUILTINS : new Map(Object.entries(options.builtins));
   }
@@ -1434,22 +1484,28 @@ function named(spelling: string, i: number): [string, number] {
 
 /** Whether Python's `repr` and `str` of a value are its language's, not an implementation's: a basic scalar, a
  * constant, a slice, and lists, tuples and dicts of them; not a set (its order is its hash table's), nor an object, a
- * generator, a module, a function or a template (their addresses). */
-function representable(value: unknown): boolean {
-  if (Array.isArray(value) || value instanceof Tuple) return itemsOf(value).every(representable);
-  if (isDict(value)) return entries(value).every(([key, item]) => representable(key) && representable(item));
-  if (value instanceof Slice) return [value.start, value.stop, value.step].every(representable);
+ * generator, a module, a function or a template (their addresses). Where the scope's option `text` is `"cpython"`
+ * (`cpython`), a template's and an interpolation's text is CPython's `repr` of them, its language's where their values'
+ * is. */
+function representable(value: unknown, cpython = false): boolean {
+  if (Array.isArray(value) || value instanceof Tuple) return itemsOf(value).every((item) => representable(item, cpython));
+  if (isDict(value)) return entries(value).every(([key, item]) => representable(key, cpython) && representable(item, cpython));
+  if (value instanceof Slice) return [value.start, value.stop, value.step].every((part) => representable(part, cpython));
+  if (cpython && value instanceof Template) return representable(value.values, cpython);
+  if (cpython && value instanceof Interpolation) return representable(value.value, cpython);
   return value === null || value === ELLIPSIS || value instanceof Complex || value instanceof Uint8Array
     || ["boolean", "bigint", "number", "string"].includes(typeof value);
 }
 
+/** Whether the scope's option `text` writes a field whose text is the implementation's as CPython writes it. */
+const texts = (scope: unknown): boolean => chosen(scope, "text") === "cpython";
+
 /** A field's value converted: `!r` its `repr`, `!s` its `str`, `!a` its `ascii`. */
-function converted(value: unknown, conversion: string): string {
-  if (!representable(value)) throw refuse(`joinedstr's field of ${typeName(value)}`);
+function converted(value: unknown, conversion: string, scope: unknown): string {
+  if (!representable(value, texts(scope))) throw refuse(`joinedstr's field of ${typeName(value)}`);
   return conversion === "r" ? repr(value) : conversion === "s" ? str(value) : ascii(value);
 }
 
-const SPEC = /^(?:([\s\S])?([<>=^]))?([-+ ])?(z)?(#)?(0)?(\d+)?([,_])?(?:\.(\d+))?([bcdeEfFgGosxX%])?$/u;
 const FLOATS = "eEfFgG%";
 /** Whether a format type is a float's. */
 const isFloatType = (type: string): boolean => type !== "" && FLOATS.includes(type);
@@ -1464,27 +1520,165 @@ interface Spec {
   width: number;
   grouping: string | undefined;
   precision: number | undefined;
+  fraction: string | undefined;
   type: string;
 }
 
-function parse(spec: string): Spec | null {
-  const found = SPEC.exec(spec);
-  if (found === null) return null;
-  const [, fill, align, sign, z, alt, zero, width, grouping, precision, type] = found;
-  return { fill, align, sign, z: z !== undefined, alt: alt !== undefined, zero: zero !== undefined,
-    width: width === undefined ? 0 : Number(width), grouping, precision: precision === undefined ? undefined : Number(precision),
-    type: type ?? "" };
+const ALIGNS = ["<", ">", "=", "^"];
+/** The largest `Py_ssize_t`, beyond which CPython refuses a width or a precision. */
+const SSIZE_MAX = (1n << 63n) - 1n;
+/** The largest C `int`, beyond which CPython refuses a float's precision. */
+const INT_MAX = 2 ** 31 - 1;
+
+/** The value of a decimal digit, as Unicode gives it (`Nd`, whose digits come in runs of ten from 0), or -1. */
+function digitValue(char: string | undefined): number {
+  const digit = /^\p{Nd}$/u;
+  if (char === undefined || !digit.test(char)) return -1;
+  let [point, value] = [char.codePointAt(0) as number, 0];
+  while (digit.test(String.fromCodePoint(point - 1))) [point, value] = [point - 1, value + 1];
+  return value % 10;
 }
 
-/** Whether a format spec is one of `format()`'s mini-language for a str, an int or a bool, a float, or a complex
- * number, that Python formats without error: where it would raise (a sign for a str, `,` with `x`, zero padding for a
- * complex number), or its locale decides (`n`), it stays in the residual. */
+/** A format type as CPython's messages write it: itself where it is printable ASCII, else `\x` and its code point. */
+function code(type: string): string {
+  const point = type.codePointAt(0) as number;
+  return point > 32 && point < 128 ? type : `\\x${point.toString(16)}`;
+}
+
+/** CPython's message refusing a thousands separator with a format type. */
+const cannot = (separator: string, type: string): string => `Cannot specify '${separator}' with '${code(type)}'.`;
+
+/** A format spec, as CPython 3.14 parses it (`parse_internal_render_format_spec`) for a value of the type `owner`
+ * whose format type is `type` by default (`s` for a str, `d` for an int, none for a float or a complex number): its
+ * fields, or the message of the `ValueError` CPython raises. Its `fill` and `align` are undefined where it gives none,
+ * `zero` says whether a `0` stands before its width, and `fraction` is the separator of its fraction's digits. */
+function parse(spec: string, owner: string, type: string): Spec | string {
+  const chars = [...spec];
+  let at = 0;
+  const f: Spec = { fill: undefined, align: undefined, sign: undefined, z: false, alt: false, zero: false, width: 0,
+    grouping: undefined, precision: undefined, fraction: undefined, type };
+  const next = (...options: string[]): string | undefined => { // the next character, where it is one of `options`
+    const char = chars[at];
+    if (char === undefined || !options.includes(char)) return undefined;
+    at += 1;
+    return char;
+  };
+  const integer = (): [number, number] | string => { // how many digits it reads, and their value
+    let [value, count] = [0n, 0];
+    for (let digit = digitValue(chars[at]); digit >= 0; digit = digitValue(chars[at])) {
+      if (value > (SSIZE_MAX - BigInt(digit)) / 10n) return "Too many decimal digits in format string";
+      [value, count, at] = [value * 10n + BigInt(digit), count + 1, at + 1];
+    }
+    return [count, Number(value)];
+  };
+  const both = "Cannot specify both ',' and '_'.";
+  if (chars.length >= 2 && ALIGNS.includes(chars[1] as string)) [f.fill, f.align, at] = [chars[0], chars[1], 2];
+  else f.align = next(...ALIGNS);
+  f.sign = next("+", "-", " ");
+  f.z = next("z") !== undefined;
+  f.alt = next("#") !== undefined;
+  f.zero = next("0") !== undefined;
+  const width = integer();
+  if (typeof width === "string") return width;
+  f.width = width[1];
+  f.grouping = next(",");
+  if (next("_") !== undefined) {
+    if (f.grouping !== undefined) return both;
+    f.grouping = "_";
+  }
+  if (f.grouping === "_" && chars[at] === ",") return both;
+  if (next(".") !== undefined) {
+    const precision = integer();
+    if (typeof precision === "string") return precision;
+    if (precision[0] > 0) f.precision = precision[1];
+    f.fraction = next(",");
+    if (next("_") !== undefined) {
+      if (f.fraction !== undefined) return both;
+      f.fraction = "_";
+    }
+    if (f.fraction === "_" && chars[at] === ",") return both;
+    if (precision[0] === 0 && f.fraction === undefined) return "Format specifier missing precision";
+  }
+  if (chars.length - at > 1) return `Invalid format specifier '${spec}' for object of type '${owner}'`;
+  if (chars.length - at === 1) f.type = chars[at] as string;
+  const decimal = ["", "d", "e", "f", "g", "E", "G", "%", "F"].includes(f.type);
+  if (f.grouping !== undefined && !decimal && !(f.grouping === "_" && ["b", "o", "x", "X"].includes(f.type))) {
+    return cannot(f.grouping, f.type);
+  }
+  return f.type === "n" && f.fraction !== undefined ? cannot(f.fraction, f.type) : f;
+}
+
+/** The message of the `ValueError` CPython raises formatting a value by a spec it parsed, by the value's type
+ * (`format_string_internal`, `format_long_internal`, `format_float_internal`, `format_complex_internal`), or null. */
+function refusal(value: unknown, f: Spec): string | null {
+  const unknown = (): string => `Unknown format code '${code(f.type)}' for object of type '${typeName(value)}'`;
+  const big = f.precision !== undefined && f.precision > INT_MAX ? "precision too big" : null;
+  if (typeof value === "string") {
+    if (f.type !== "s") return unknown();
+    if (f.sign !== undefined) return `${f.sign === " " ? "Space" : "Sign"} not allowed in string format specifier`;
+    if (f.z) return "Negative zero coercion (z) not allowed in string format specifier";
+    if (f.alt) return "Alternate form (#) not allowed in string format specifier";
+    return f.align === "=" ? "'=' alignment not allowed in string format specifier" : null;
+  }
+  if (value instanceof Complex) {
+    if (!["", "e", "E", "f", "F", "g", "G", "n"].includes(f.type)) return unknown();
+    if (big !== null) return big;
+    if ((f.fill ?? (f.zero ? "0" : " ")) === "0") return "Zero padding is not allowed in complex format specifier";
+    return f.align === "=" ? "'=' alignment flag is not allowed in complex format specifier" : null;
+  }
+  if (isIntegral(value) && ["b", "c", "d", "o", "x", "X", "n"].includes(f.type)) {
+    if (f.precision !== undefined) return "Precision not allowed in integer format specifier";
+    if (f.z) return "Negative zero coercion (z) not allowed in integer format specifier";
+    if (f.type === "c" && f.sign !== undefined) return "Sign not allowed with integer format specifier 'c'";
+    return f.type === "c" && f.alt ? "Alternate form (#) not allowed with integer format specifier 'c'" : null;
+  }
+  return ["", "e", "E", "f", "F", "g", "G", "n", "%"].includes(f.type) ? big : unknown();
+}
+
+/** Whether a format spec that Python accepts is one this implementation formats, for a str, an int or a bool, a float,
+ * or a complex number: not one that a locale decides (`n`), nor one that groups a fraction's digits, which stay in the
+ * residual. */
 function supported(value: unknown, f: Spec): boolean {
+  if (f.type === "n" || f.fraction !== undefined) return false;
   if (value instanceof Complex) return ["", ..."eEfFgG"].includes(f.type) && !f.zero && f.fill !== "0" && f.align !== "=";
   if (typeof value === "string") return ["", "s"].includes(f.type) && !(f.sign || f.z || f.alt || f.grouping) && f.align !== "=";
   if (isFloatType(f.type) || typeof value === "number") return f.type === "" || isFloatType(f.type);
   if (f.type === "c") return !(f.sign || f.alt || f.grouping || f.precision !== undefined || f.z);
   return f.type !== "s" && !(f.precision !== undefined || f.z) && (f.grouping !== "," || ["", "d"].includes(f.type));
+}
+
+/** How a number's digits are written: its integer digits grouped as `grouping` says, with `separator` between groups,
+ * and `point` its decimal point. */
+interface Numbers {
+  grouping: readonly number[];
+  separator: string;
+  point: string;
+}
+
+/** How a spec that is not `n` writes a number's digits: grouped by its `,` every three, or by its `_` every three (every
+ * four in binary, octal and hexadecimal), with a `.` for a decimal point. */
+function numbersOf(f: Spec): Numbers {
+  if (f.grouping === undefined) return { grouping: [], separator: "", point: "." };
+  return { grouping: [f.grouping === "_" && ["b", "o", "x", "X"].includes(f.type) ? 4 : 3], separator: f.grouping, point: "." };
+}
+
+/** The locale the option `locale` gives, as the `Numbers` it writes; null for `"stay"`. Throws `ValueError` for any
+ * other value. */
+function localeOf(value: unknown): Numbers | null {
+  if (value === "stay") return null;
+  if (!isDict(value)) {
+    throw new ValueError("the option 'locale' is 'stay' or a mapping of 'decimal_point', 'thousands_sep' and 'grouping', "
+      + `not ${repr(value)}`);
+  }
+  const fields = new Map(entries(value));
+  const [point, separator, grouping] = ["decimal_point", "thousands_sep", "grouping"].map((key) => fields.get(key));
+  const size = (n: unknown): boolean => (typeof n === "bigint" || (typeof n === "number" && Number.isInteger(n)))
+    && Number(n) >= 0 && Number(n) <= CHAR_MAX;
+  if (typeof point !== "string" || typeof separator !== "string" || !Array.isArray(grouping) || !grouping.every(size)) {
+    throw new ValueError("the option 'locale' maps 'decimal_point' and 'thousands_sep' to strs, and 'grouping' to a list "
+      + `of ints from 0 to ${CHAR_MAX}`);
+  }
+  return { grouping: grouping.map(Number), separator, point };
 }
 
 /** `round(n / d)`, halves to even. */
@@ -1532,10 +1726,11 @@ function floatBody(x: number, type: string, precision: number | undefined, alt: 
     const rest = places > 0 ? `.${digits.slice(digits.length - places)}` : alt ? "." : "";
     return [whole, rest];
   };
-  if (type === "" && precision === undefined) { // repr's shortest digits
+  if (type === "" && precision === undefined) { // repr's shortest digits, a point before an exponent where `alt`
     const shown = pyFloat(Math.abs(x));
     const cut = shown.search(/[.e]/);
-    return [shown.slice(0, cut), shown.slice(cut)];
+    const rest = shown.slice(cut);
+    return [shown.slice(0, cut), alt && !rest.startsWith(".") ? `.${rest}` : rest];
   }
   if (type === "f" || type === "F" || type === "%") {
     const places = precision ?? 6;
@@ -1566,27 +1761,40 @@ function floatBody(x: number, type: string, precision: number | undefined, alt: 
   return [whole, rest];
 }
 
-/** Digits grouped by `separator` every `size`, padded with zeros to `width` where `pad`, never starting with a
- * separator, as CPython inserts them. */
-function grouped(digits: string, separator: string | undefined, size: number, width: number, pad: boolean): string {
+/** `digits` with `separator` inserted as `grouping` says (each group's size from the right, 0 repeating the last, and
+ * `CHAR_MAX` ending the grouping), padded with zeros to `width`, as CPython inserts them
+ * (`_PyUnicode_InsertThousandsGrouping`). */
+function grouped(digits: string, grouping: readonly number[], separator: string, width: number): string {
   const out: string[] = [];
-  let count = 0;
-  const push = (digit: string) => {
-    if (separator !== undefined && count === size) {
-      out.push(separator);
-      count = 0;
-    }
-    out.push(digit);
-    count += 1;
+  let [remaining, end, at, previous] = [digits.length, digits.length, 0, 0];
+  const take = (size: number): void => {
+    const chars = Math.max(0, Math.min(remaining, size));
+    out.push("0".repeat(Math.max(0, size - remaining)) + digits.slice(end - chars, end) + (out.length > 0 ? separator : ""));
+    [remaining, end] = [remaining - chars, end - chars];
   };
-  for (const digit of [...digits].reverse()) push(digit);
-  while (pad && out.length < width) push("0");
+  for (;;) {
+    let size: number;
+    if (at === grouping.length || grouping[at] === 0) size = previous;
+    else if (grouping[at] === CHAR_MAX) size = 0;
+    else [size, previous, at] = [grouping[at] as number, grouping[at] as number, at + 1];
+    if (size <= 0) break;
+    size = Math.min(size, Math.max(remaining, width, 1));
+    take(size);
+    width -= size;
+    if (remaining <= 0 && width <= 0) return out.reverse().join("");
+    width -= [...separator].length;
+  }
+  take(Math.max(remaining, width, 1));
   return out.reverse().join("");
 }
 
+/** A number's text with its decimal point written as `numbers` writes it. */
+const pointed = (rest: string, numbers: Numbers): string => (rest.startsWith(".") ? numbers.point + rest.slice(1) : rest);
+
 /** A part of a complex number formatted as CPython writes it (`format_complex_internal`): a float's, by `type`, or
- * by `r` a repr's shortest digits, without `.0`; signed by `sign`, its digits grouped, unpadded. */
-function complexPart(x: number, f: Spec, type: string, sign: string | undefined): string {
+ * by `r` a repr's shortest digits, without `.0`; signed by `sign`, its digits grouped and its decimal point as
+ * `numbers` writes them, unpadded. */
+function complexPart(x: number, f: Spec, type: string, sign: string | undefined, numbers: Numbers): string {
   const negative = x < 0 || Object.is(x, -0);
   let [whole, rest] = ["", ""];
   if (!Number.isFinite(x)) whole = Number.isNaN(x) ? "nan" : "inf";
@@ -1599,39 +1807,66 @@ function complexPart(x: number, f: Spec, type: string, sign: string | undefined)
   if (["E", "F", "G"].includes(type)) whole = whole.toUpperCase();
   const zeroed = negative && f.z && /^[0.]*$/.test(whole + rest.replace(/[eE].*/, ""));
   const signed = negative && !zeroed ? "-" : sign === "+" ? "+" : sign === " " ? " " : ""; // a NaN is never negative
-  if (/^[0-9]+$/.test(whole)) whole = grouped(whole, f.grouping, 3, 0, false);
-  return signed + whole + rest;
+  if (/^[0-9]+$/.test(whole)) whole = grouped(whole, numbers.grouping, numbers.separator, 0);
+  return signed + whole + pointed(rest, numbers);
 }
 
 /** `format(value, spec)` of a complex number, as CPython composes it: each part a float's, the imaginary part signed
  * `+` unless the real part is left out, then `j`; with no type, a repr's digits (or `g`'s, with a precision), in
  * parentheses unless the real part is +0, which is left out; then padded as a whole. */
-function complexFormatted(value: Complex, f: Spec): string {
+function complexFormatted(value: Complex, f: Spec, numbers: Numbers): string {
   const omitted = f.type === "";
   const skip = omitted && Object.is(value.real, 0);
   const type = omitted ? (f.precision === undefined ? "r" : "g") : f.type;
-  const imaginary = `${complexPart(value.imag, f, type, skip ? f.sign : "+")}j`;
-  const body = skip ? imaginary : omitted ? `(${complexPart(value.real, f, type, f.sign)}${imaginary})`
-    : complexPart(value.real, f, type, f.sign) + imaginary;
+  const imaginary = `${complexPart(value.imag, f, type, skip ? f.sign : "+", numbers)}j`;
+  const body = skip ? imaginary : omitted ? `(${complexPart(value.real, f, type, f.sign, numbers)}${imaginary})`
+    : complexPart(value.real, f, type, f.sign, numbers) + imaginary;
   const [fill, padding] = [f.fill ?? " ", Math.max(0, f.width - [...body].length)];
   if (f.align === "<") return body + fill.repeat(padding);
   if (f.align === "^") return fill.repeat(Math.floor(padding / 2)) + body + fill.repeat(padding - Math.floor(padding / 2));
   return fill.repeat(padding) + body;
 }
 
-/** `format(value, spec)`, as Python's mini-language has it for a str, an int, a bool, a float or a complex number. */
-function formatted(value: unknown, spec: string): string {
+/** CPython's name of the type of a value whose `__format__` is `object`'s, which refuses any spec: a set's, a lambda's,
+ * a generator's, a module's, a template's and an interpolation's; null for a value whose `__format__` this
+ * implementation does not know (a data object, a host value). */
+function formatName(value: unknown): string | null {
+  if (value instanceof Template || value instanceof Interpolation) return `string.templatelib.${typeName(value)}`;
+  const known = value instanceof Set || value instanceof PyGenerator || value instanceof Module || CLOSURES.has(value as object);
+  return known ? typeName(value) : null;
+}
+
+/** `format(value, spec)`, as Python's mini-language has it for a str, an int, a bool, a float or a complex number;
+ * with no spec, its `str`. A spec Python refuses throws its `ValueError` where the scope's option `specs` is
+ * `"raise"`, and a spec of type `n` is formatted under the scope's option `locale` where it gives one. */
+function formatted(value: unknown, spec: string, scope: unknown): string {
   if (spec === "") {
-    if (!representable(value)) throw refuse(`joinedstr's field of ${typeName(value)}`);
+    if (!representable(value, texts(scope))) throw refuse(`joinedstr's field of ${typeName(value)}`);
     return str(value);
   }
   if (!(typeof value === "string" || isNumeric(value) || value instanceof Complex)) {
-    if (!representable(value)) throw refuse(`joinedstr's format of ${typeName(value)}`);
-    throw new TypeError(`unsupported format string passed to ${typeName(value)}.__format__`);
+    if (representable(value)) throw new TypeError(`unsupported format string passed to ${typeName(value)}.__format__`);
+    const name = texts(scope) ? formatName(value) : null;
+    if (name === null) throw refuse(`joinedstr's format of ${typeName(value)}`);
+    throw new TypeError(`unsupported format string passed to ${name}.__format__`);
   }
-  const f = parse(spec);
-  if (f === null || !supported(value, f)) throw refuse(`joinedstr's format spec ${repr(spec)} of ${typeName(value)}`);
-  if (value instanceof Complex) return complexFormatted(value, f);
+  const parsed = parse(spec, typeName(value), typeof value === "string" ? "s" : isIntegral(value) ? "d" : "");
+  const refused = typeof parsed === "string" ? parsed : refusal(value, parsed);
+  if (refused !== null) {
+    if (chosen(scope, "specs") === "raise") throw new ValueError(refused);
+    throw refuse(`joinedstr's format spec ${repr(spec)} of ${typeName(value)}`);
+  }
+  const f = parsed as Spec;
+  const locale = localeOf(chosen(scope, "locale"));
+  if (f.type === "n" && locale !== null) return written(value, { ...f, type: isIntegral(value) ? "d" : "g" }, locale);
+  if (!supported(value, f)) throw refuse(`joinedstr's format spec ${repr(spec)} of ${typeName(value)}`);
+  return written(value, f, numbersOf(f));
+}
+
+/** A str, an int, a bool, a float or a complex number written by a spec this implementation formats, its digits as
+ * `numbers` writes them. */
+function written(value: unknown, f: Spec, numbers: Numbers): string {
+  if (value instanceof Complex) return complexFormatted(value, f, numbers);
   const numeric = typeof value !== "string";
   const fill = f.fill ?? (f.zero ? "0" : " ");
   const align = f.align ?? (f.zero && numeric ? "=" : numeric ? ">" : "<");
@@ -1656,15 +1891,14 @@ function formatted(value: unknown, spec: string): string {
     if (Number.isFinite(x)) [whole, rest] = floatBody(x, f.type, f.precision, f.alt);
     else whole = Number.isNaN(x) ? "nan" : "inf";
     if (["E", "F", "G"].includes(f.type)) whole = whole.toUpperCase();
-    if (f.type === "%") rest += "%";
     const zeroed = negative && f.z && /^[0.]*$/.test(whole + rest.replace(/[eE].*|%/, ""));
+    rest = pointed(rest, numbers);
+    if (f.type === "%") rest += "%";
     sign = negative && !zeroed && !Number.isNaN(x) ? "-" : f.sign === "+" ? "+" : f.sign === " " ? " " : "";
   }
-  const groupSize = ["b", "o", "x", "X"].includes(f.type) ? 4 : 3;
-  const isDigits = numeric && f.type !== "c" && /^[0-9a-fA-F]+$/.test(whole);
-  if (isDigits) {
+  if (numeric && f.type !== "c" && /^[0-9a-fA-F]+$/.test(whole)) {
     const pad = fill === "0" && align === "=";
-    whole = grouped(whole, f.grouping, groupSize, f.width - [...sign + prefix + rest].length, pad);
+    whole = grouped(whole, numbers.grouping, numbers.separator, pad ? f.width - [...sign + prefix + rest].length : 0);
   }
   const body = whole + rest;
   const length = [...sign + prefix + body].length;
@@ -1677,35 +1911,35 @@ function formatted(value: unknown, spec: string): string {
 
 /** A replacement field's text (an f-string's) or its interpolation (a t-string's): its value, then its format spec's
  * own fields. */
-function field(part: Terms.Part, thunks: Iterator<F.Thunk>, raw: boolean, template: boolean): unknown {
+function field(part: Terms.Part, thunks: Iterator<F.Thunk>, raw: boolean, template: boolean, scope: unknown): unknown {
   let value = (thunks.next().value as F.Thunk)();
   const specPart = part.attributes.get("format_spec") as Terms.Part | undefined;
   const spec = specPart === undefined ? "" : ((specPart.attributes.get("values") ?? []) as Terms.Part[])
-    .map((inner) => piece(inner, thunks, raw, false)).join("");
+    .map((inner) => piece(inner, thunks, raw, false, scope)).join("");
   let conversion = (part.attributes.get("conversion") ?? null) as string | null;
   const debug = part.attributes.get("debug") === true;
   if (debug && conversion === null && specPart === undefined) conversion = "r"; // `{x=}`: its repr
-  const written = (part.attributes.get("text") ?? "") as string;
-  if (template) return new Interpolation(value, debug ? written.trimEnd().slice(0, -1).trimEnd() : written, conversion, spec);
-  if (conversion !== null) value = converted(value, conversion);
-  return (debug ? written : "") + formatted(value, spec);
+  const shown = (part.attributes.get("text") ?? "") as string;
+  if (template) return new Interpolation(value, debug ? shown.trimEnd().slice(0, -1).trimEnd() : shown, conversion, spec);
+  if (conversion !== null) value = converted(value, conversion, scope);
+  return (debug ? shown : "") + formatted(value, spec, scope);
 }
 
-function piece(part: Terms.Part, thunks: Iterator<F.Thunk>, raw: boolean, template: boolean): unknown {
+function piece(part: Terms.Part, thunks: Iterator<F.Thunk>, raw: boolean, template: boolean, scope: unknown): unknown {
   if (part.kind === "stringtext") return text(part.attributes.get("spelling") as string, raw);
-  return field(part, thunks, raw, template);
+  return field(part, thunks, raw, template, scope);
 }
 
 /** An f-string: its text, and each field formatted, in order. */
-function joinedstr(args: F.Thunk[], node: any): string {
+function joinedstr(args: F.Thunk[], node: any, scope: Scope): string {
   const attributes = attributesOf(node);
   const [raw, thunks] = [((attributes.get("prefix") ?? "") as string).toLowerCase().includes("r"), args[Symbol.iterator]()];
-  return ((attributes.get("values") ?? []) as Terms.Part[]).map((part) => piece(part, thunks, raw, false)).join("");
+  return ((attributes.get("values") ?? []) as Terms.Part[]).map((part) => piece(part, thunks, raw, false, scope)).join("");
 }
 
 /** A t-string: its strings, one more than its interpolations, a field's debug text (`{x=}`) ending the string before
  * it. */
-function templatestr(args: F.Thunk[], node: any): Template {
+function templatestr(args: F.Thunk[], node: any, scope: Scope): Template {
   const attributes = attributesOf(node);
   const [raw, thunks] = [((attributes.get("prefix") ?? "") as string).toLowerCase().includes("r"), args[Symbol.iterator]()];
   const strings = [""];
@@ -1716,7 +1950,7 @@ function templatestr(args: F.Thunk[], node: any): Template {
       continue;
     }
     if (part.attributes.get("debug") === true) strings[strings.length - 1] += (part.attributes.get("text") ?? "") as string;
-    interpolations.push(field(part, thunks, raw, true) as Interpolation);
+    interpolations.push(field(part, thunks, raw, true, scope) as Interpolation);
     strings.push("");
   }
   return new Template(new Tuple(strings), new Tuple(interpolations));
@@ -1736,21 +1970,32 @@ const IMMUTABLE = new Set(["int", "float", "complex", "str", "bytes", "tuple"]);
 
 /** `a is b`, as Python defines identity: the singletons `None`, `...`, `True` and `False` are themselves; values of
  * different types, or unequal ones, are not each other; any other value is itself alone. Whether two equal immutable
- * values (`1` and `1`, `'a'` and `'a'`) are one object Python leaves to the implementation: it stays in the residual. */
-function is(a: unknown, b: unknown): boolean {
+ * values (`1` and `1`, `'a'` and `'a'`) are one object Python leaves to the implementation: it stays in the residual,
+ * but where the scope's option `identity` is `"cpython"` and CPython keeps one object of the value (`cached`). */
+function is(a: unknown, b: unknown, scope: unknown): boolean {
   const singleton = (v: unknown) => v === null || v === undefined || v === ELLIPSIS || typeof v === "boolean";
   if (singleton(a) || singleton(b)) return a === b;
   if (typeName(a) !== typeName(b)) return false;
   if (IMMUTABLE.has(typeName(a))) {
-    if (equals(a, b) || (typeof a === "number" && typeof b === "number" && Number.isNaN(a) && Number.isNaN(b))) throw refuse("compare 'is' of equal immutable values");
+    if (equals(a, b) || (typeof a === "number" && typeof b === "number" && Number.isNaN(a) && Number.isNaN(b))) {
+      if (chosen(scope, "identity") === "cpython" && cached(a)) return true;
+      throw refuse("compare 'is' of equal immutable values");
+    }
     return false;
   }
   return a === b;
 }
 
+/** Whether CPython 3.14 keeps one object of an immutable value, however it is made: an int from -5 to 256 (its small
+ * ints), and the empty tuple, str and bytes. */
+function cached(value: unknown): boolean {
+  if (typeof value === "bigint") return -5n <= value && value <= 256n;
+  return value === "" || (value instanceof Uint8Array && value.length === 0) || (value instanceof Tuple && value.items.length === 0);
+}
+
 /** A comparison chain, as Python evaluates one: each operand once, left to right, stopping at the first link that is
  * false, whose result it gives, else the last link's. */
-function compare(args: F.Thunk[], node: any): unknown {
+function compare(args: F.Thunk[], node: any, scope: Scope): unknown {
   const operators = (attributesOf(node).get("comparisons") as Terms.Part[]).map((part) => part.attributes.get("op") as string);
   for (const op of operators) {
     if (!COMPARISONS.has(op)) {
@@ -1761,19 +2006,21 @@ function compare(args: F.Thunk[], node: any): unknown {
   let result: unknown = null;
   for (const [i, op] of operators.entries()) {
     const right = (args[i + 1] as F.Thunk)();
-    result = (COMPARISONS.get(op) as (a: unknown, b: unknown) => unknown)(left, right);
+    result = (COMPARISONS.get(op) as Comparison)(left, right, scope);
     if (!result) return result;
     left = right;
   }
   return result;
 }
 
-const COMPARISONS = new Map<string, (a: unknown, b: unknown) => unknown>([
+/** A comparison operator's rule, of its operands in a scope. */
+type Comparison = (a: unknown, b: unknown, scope: unknown) => unknown;
+
+const COMPARISONS = new Map<string, Comparison>([
   ["==", (a, b) => equals(a, b)], ["!=", (a, b) => !equals(a, b)],
   ["in", (a, b) => contains(b, a)], ["not in", (a, b) => !contains(b, a)],
-  ["is", (a, b) => is(a, b)], ["is not", (a, b) => !is(a, b)],
-  ...Object.keys(ORDERS).map((operator) =>
-    [operator, (a: unknown, b: unknown) => ordered(operator, a, b)] as [string, (a: unknown, b: unknown) => unknown]),
+  ["is", (a, b, scope) => is(a, b, scope)], ["is not", (a, b, scope) => !is(a, b, scope)],
+  ...Object.keys(ORDERS).map((operator) => [operator, (a: unknown, b: unknown) => ordered(operator, a, b)] as [string, Comparison]),
 ]);
 
 function strict(fn: (...values: unknown[]) => unknown): F.Implementation {
@@ -1870,8 +2117,10 @@ export const RULES: F.Interpreter = new Rules(P.DIALECT, new Map<string, any>([
     return value;
   }]))],
   [P.BINOP, new Map<string, F.Implementation>([
-    ...["+", "*", "/", "//", "%", "**"].map((operator) =>
+    ...["+", "*", "/", "//", "%"].map((operator) =>
       [operator, strict((a, b) => arithmetic(operator, a, b))] as [string, F.Implementation]),
+    ["**", (args: F.Thunk[], node: any, scope: Scope) =>
+      arithmetic("**", (args[0] as F.Thunk)(), (args[1] as F.Thunk)(), chosen(scope, "math") === "host")],
     ["-", strict((a, b) => subtract(a, b))],
     ...["&", "|", "^", "<<", ">>"].map((operator) =>
       [operator, strict((a, b) => bitwise(operator, a, b))] as [string, F.Implementation]),
@@ -2004,8 +2253,24 @@ function guarded(node: any, index: number): boolean {
     || (tag === P.LAMBDA && index === 1);
 }
 
+/** The framework's simplifier, refusing, before it simplifies, a value that an option of the scope does not take
+ * (`OPTIONS`, and `locale`). */
+class Simplifier extends F.Simplifier {
+  override run(expression: unknown, scope: S.Scope | S.Bindings | null = null): F.Simplified {
+    const resolved = S.isScope(scope) ? scope : this.rules.scope({ ...(scope ?? {}) });
+    for (const [name, values] of Object.entries(OPTIONS)) {
+      const value = S.option(resolved, name, values[0]);
+      if (!values.includes(value as string)) {
+        throw new ValueError(`the option '${name}' is ${repr(values[0])} or ${repr(values[1])}, not ${repr(value)}`);
+      }
+    }
+    localeOf(chosen(resolved, "locale"));
+    return super.run(expression, resolved);
+  }
+}
+
 /** The simplifier of the Python3 dialect. */
-export const SIMPLIFIER = new F.Simplifier(RULES, { literal, simplify, categories: CATEGORIES, construct: display, guarded });
+export const SIMPLIFIER: F.Simplifier = new Simplifier(RULES, { literal, simplify, categories: CATEGORIES, construct: display, guarded });
 
 /** The simplification of a term (or anything `Terms.term` reads one from) in `scope`, or with the variables in an
  * object bound. */
