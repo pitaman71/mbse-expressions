@@ -1,7 +1,8 @@
 /**
  * Simplifiers of the Cpp dialect: simplify an expression by ISO/IEC 14882's rules, which are C's for the kinds C++
- * shares with C (see `C/Simplifiers`, `Scope` among them), under the ABI the expression's holder names:
- * `Simplifiers.OfAny(term, scope)` simplifies a term value in a `new Scope(variables, { functions, packs })`.
+ * shares with C (see `C/Simplifiers`, `Scope` and its option `casts` among them), under the ABI the expression's holder
+ * names: `Simplifiers.OfAny(term, scope)` simplifies a term value in a
+ * `new Scope(variables, { functions, packs, options })`.
  *
  * A name used as an expression is an `idexpression`: an identifier's value is the scope's variable of its name, a
  * qualified name's (`ns::x`, `::x`) the variable of its spelling; `this` is the scope's variable `this`. C++'s own

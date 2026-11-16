@@ -3,7 +3,7 @@ has C's kinds (`Cpp`'s simplifier is `simplifier(Cpp.Expressions.DIALECT, ...)`,
 `rules(..., extend)`), under the ABI the expression's holder names.
 
 `Simplifiers.OfAny(term, scope)` simplifies a term value (or anything `Terms.term` reads one from, an `Expression`) in a
-`Scope(variables, functions, packs)` (see `mbse.Expressions.Framework.Simplifiers`). Values carry their C type while
+`Scope(variables, functions, packs, options)` (see `Framework.Simplifiers`). Values carry their C type while
 folding (`Typed`), and a value folds into the literal of its type, its suffix as C writes it, where its type has one
 (`Domains.literal_suffix`): an `int`, `long` or `long long`, signed or not (`5u`; a typedef's value as the standard type
 it is, an `int64_t`'s `5l`), a `bool`, a string, `nullptr`, a floating value of a type with a suffix whose binary64
@@ -12,7 +12,11 @@ integer's whose narrowest literal is of its type (`7wb`). A value of an arithmet
 closed constructor expression (mbse-basis [VOC-034: closed constructor
 expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), a cast of a literal that converts to it exactly, in C and
 C++ alike: a `char`, a `short`, a `wchar_t` in C++, a `_BitInt(N)` wider than its value's literal (`(short)3`,
-`(_BitInt(4))1`; a typedef's value as the standard type it is, a `uint8_t`'s `(unsigned char)44`). In C, an array of
+`(_BitInt(4))1`; a typedef's value as the standard type it is, a `uint8_t`'s `(unsigned char)44`). The scope's option
+`casts` (`Symbolics.option`; mbse-basis [CAP-305: simplification's options, chosen up
+front](mbse:mbse-basis/docs/capabilities/CAP-305.md)) chooses whether the simplifier writes that cast: `"write"`, the
+default, writes it, and `"stay"` leaves the subterm in the residual, simplified in turn, as it leaves any other value
+that no closed constructor expression spells; any other value raises `ValueError`. In C, an array of
 such values is written as a compound literal of its elements' literals (`(int[]){1, 2}`, `(int[][2]){{1, 2}, {3, 4}}`);
 C++ has no compound literal, and a C++ cast names no array type but a declaration's, so a C++ array stays. What no
 closed constructor expression spells stays, its subterms simplified: a `long double` that no binary64 literal spells, a
@@ -416,13 +420,16 @@ def native(value: Typed) -> Any:
 
 class Scope(S.Variables):
     """C's and C++'s scope for an expression: `variables` (C++'s `this` among them, by that name, and a qualified name's
-    value by its spelling, `ns::x`), the `functions` it may call, and C++'s `packs`, each a function parameter pack's
-    values by its name, which a pack expansion, a fold and `sizeof...` read."""
+    value by its spelling, `ns::x`), the `functions` it may call, C++'s `packs`, each a function parameter pack's
+    values by its name, which a pack expansion, a fold and `sizeof...` read, and the `options` of simplification its
+    caller chooses (`Symbolics.Variables`): the framework's `errors`, and the family's `casts` (see the module's
+    description)."""
 
     def __init__(self, variables: Mapping[str, Any] | None = None,
                  functions: Mapping[str, Callable[..., Any]] | None = None,
-                 packs: Mapping[str, Sequence[Any]] | None = None):
-        super().__init__(variables)
+                 packs: Mapping[str, Sequence[Any]] | None = None,
+                 options: Mapping[str, Any] | None = None):
+        super().__init__(variables, options)
         self.functions = dict(functions or {})
         self.packs = {name: tuple(values) for name, values in (packs or {}).items()}
 
@@ -1100,14 +1107,15 @@ def _written_type(ctype: CType, language_: str, write: Callable[..., Any], decla
         specifiers).declarator(declarator))
 
 
-def _construct_of(write: Callable[..., Any], dialect: Any) -> Callable[[Typed], Any]:
+def _construct_of(write: Callable[..., Any], dialect: Any, casts: bool = True) -> Callable[[Typed], Any]:
     """The closed constructor expression of a value no literal spells (mbse-basis [VOC-034: closed constructor
     expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)), written by `write`: a value of an arithmetic type a cast
-    of a literal that converts to it exactly (`(short)3`, `(unsigned char)44`, `(_BitInt(4))1`), C's and C++'s alike;
-    in C, an array of such values a compound literal of its elements' literals (`(int[]){1, 2}`, `(short[][2]){{1, 2},
-    {3, 4}}`). None for a value no literal converts to (a `long double` no binary64 literal spells, a non-finite one),
-    `void`, an object, an ordering, a list a variable holds, and an array in C++, which has no compound literals and
-    whose casts name no array type but a declaration's."""
+    of a literal that converts to it exactly (`(short)3`, `(unsigned char)44`, `(_BitInt(4))1`), C's and C++'s alike,
+    unless `casts` is false (the option `casts` is `"stay"`); in C, an array of such values a compound literal of its
+    elements' literals (`(int[]){1, 2}`, `(short[][2]){{1, 2}, {3, 4}}`). None for a value no literal converts to (a
+    `long double` no binary64 literal spells, a non-finite one), `void`, an object, an ordering, a list a variable
+    holds, and an array in C++, which has no compound literals and whose casts name no array type but a
+    declaration's."""
     literal, written = _literal_of(write, dialect), language(dialect)
 
     def operand(value: Typed) -> Any:
@@ -1138,7 +1146,7 @@ def _construct_of(write: Callable[..., Any], dialect: Any) -> Callable[[Typed], 
     def construct(value: Typed) -> Any:
         held, ctype = value.value, value.ctype
         if ctype is not None:
-            spelled = operand(value)
+            spelled = operand(value) if casts else None
             return None if spelled is None else dialect.spec(lambda u: u.castexpression(
                 lambda r: r.type(_written_type(ctype, written, write)).operand(spelled)))
         if written != "C" or not isinstance(held, list) or not held or not isinstance(held[0], Typed):
@@ -1214,15 +1222,32 @@ def guarding(dialect: Any, table: Mapping[str, frozenset[int] | None]) -> Callab
     return guarded
 
 
+class _Simplifier(F.Simplifier):
+    """The framework's simplifier, which reads the scope's option `casts` before it simplifies: under `"stay"`, a
+    simplifier of the same rules whose `construct` writes no cast simplifies the expression instead."""
+
+    def __init__(self, rules: Rules, write: Callable[..., Any], **options: Any):
+        super().__init__(rules, construct=_construct_of(write, rules.dialect), **options)
+        self._staying = F.Simplifier(rules, construct=_construct_of(write, rules.dialect, False), **options)
+
+    def __call__(self, expression: Any, scope: S.Scope | Mapping[str, Any] | None = None) -> F.Simplified:
+        if not isinstance(scope, S.Scope):
+            scope = self.rules.scope(dict(scope or {}))
+        casts = S.option(scope, "casts", "write")
+        if casts not in ("write", "stay"):
+            raise ValueError(f"the option 'casts' is 'write' or 'stay', not {casts!r}")
+        return super().__call__(expression, scope) if casts == "write" else self._staying(expression, scope)
+
+
 def simplifier(dialect: Any, folded: frozenset[str], categories: Mapping[str, Mapping[str, str]],
                write: Callable[..., Any],
                extend: Callable[[dict[str, Any], Rules], None] | None = None,
                guarded: Mapping[str, frozenset[int] | None] = GUARDED) -> F.Simplifier:
     """The simplifier of a dialect of the C family, by `rules(dialect, folded, extend)`, its literals written by
-    `write`, what its language may never evaluate `guarded`, by a table as `GUARDED`."""
-    return F.Simplifier(rules(dialect, folded, extend), literal=_literal_of(write, dialect), categories=categories,
-                        native=native, simplify=_simplify, construct=_construct_of(write, dialect),
-                        guarded=guarding(dialect, guarded))
+    `write`, what its language may never evaluate `guarded`, by a table as `GUARDED`, a value no literal spells cast
+    as the scope's option `casts` chooses."""
+    return _Simplifier(rules(dialect, folded, extend), write, literal=_literal_of(write, dialect),
+                       categories=categories, native=native, simplify=_simplify, guarded=guarding(dialect, guarded))
 
 
 SIMPLIFIER = simplifier(Expressions.DIALECT, FOLDED, CATEGORIES, Expressions.literal)
