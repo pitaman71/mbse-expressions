@@ -28,7 +28,7 @@ from typing import Any, Protocol, runtime_checkable
 
 from . import Terms
 
-__all__ = ["Scope", "Variables", "Unbound", "UNKNOWN", "free", "imports", "scopes"]
+__all__ = ["Scope", "Variables", "Unbound", "UNKNOWN", "free", "imports", "option", "scopes"]
 
 
 class Unbound(Exception):
@@ -60,10 +60,17 @@ class Scope(Protocol):
 class Variables:
     """A scope of named values: a reference's value is its name's innermost binding, then the variable of that name;
     a reference to neither, or to a name bound to `UNKNOWN`, raises `Unbound`. It has no imports: entering one raises
-    `Unbound` too, the import left in the residual."""
+    `Unbound` too, the import left in the residual. Its `options` are the parameters of simplification that its caller
+    chooses up front (mbse-basis [CAP-305: simplification's options, chosen up
+    front](mbse:mbse-basis/docs/capabilities/CAP-305.md)), by name; `option(name, default)` reads one."""
 
-    def __init__(self, variables: Mapping[str, Any] | None = None):
+    def __init__(self, variables: Mapping[str, Any] | None = None, options: Mapping[str, Any] | None = None):
         self.values: ChainMap[str, Any] = ChainMap({}, dict(variables or {}))
+        self.options: dict[str, Any] = dict(options or {})
+
+    def option(self, name: str, default: Any) -> Any:
+        """The value of the option `name`, or `default` where the scope does not set it."""
+        return self.options.get(name, default)
 
     def lookup(self, reference: Any) -> Any:
         return self.value(Terms.name_of(reference))
@@ -87,6 +94,12 @@ class Variables:
         inner = object.__new__(type(self))
         inner.__dict__.update(self.__dict__)
         return inner
+
+
+def option(scope: Any, name: str, default: Any) -> Any:
+    """The value of the option `name` that `scope` sets, or `default` where it sets none or has no options."""
+    read = getattr(scope, "option", None)
+    return default if read is None else read(name, default)
 
 
 def scopes(node: Any, dialect: Terms.Dialect) -> list[frozenset[str]]:

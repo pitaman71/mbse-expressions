@@ -55,12 +55,21 @@ export function isScope(value: unknown): value is Scope {
 
 /** A scope of named values: a reference's value is its name's innermost binding, then the variable of that name; a
  * reference to neither, or to a name bound to `UNKNOWN`, throws `Unbound`. It has no imports: entering one throws
- * `Unbound` too, the import left in the residual. */
+ * `Unbound` too, the import left in the residual. Its `options` are the parameters of simplification that its caller
+ * chooses up front (mbse-basis [CAP-305: simplification's options, chosen up
+ * front](mbse:mbse-basis/docs/capabilities/CAP-305.md)), by name; `option(name, default)` reads one. */
 export class Variables implements Scope {
   protected values: Map<string, unknown>[];
+  readonly options: ReadonlyMap<string, unknown>;
 
-  constructor(variables: Bindings = {}) {
+  constructor(variables: Bindings = {}, options: Bindings = {}) {
     this.values = [new Map(Object.entries(variables))];
+    this.options = new Map(Object.entries(options));
+  }
+
+  /** The value of the option `name`, or `fallback` where the scope does not set it. */
+  option(name: string, fallback: unknown): unknown {
+    return this.options.has(name) ? this.options.get(name) : fallback;
   }
 
   /** Whether `name` is bound, and its value. */
@@ -93,6 +102,12 @@ export class Variables implements Scope {
   protected copy(): this {
     return Object.assign(Object.create(Object.getPrototypeOf(this)), this);
   }
+}
+
+/** The value of the option `name` that `scope` sets, or `fallback` where it sets none or has no options. */
+export function option(scope: unknown, name: string, fallback: unknown): unknown {
+  const read = (scope as { option?: (name: string, fallback: unknown) => unknown } | null)?.option;
+  return typeof read === "function" ? read.call(scope, name, fallback) : fallback;
 }
 
 /** The names a term binds for each of its arguments (`Terms.argumentsOf`), its kind read as `dialect` reads it: a
