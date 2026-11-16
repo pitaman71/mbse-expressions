@@ -18,9 +18,10 @@ writes: `Simplifiers` leaves such a call in the residual, named, as it does `%p`
 specification does not take, or a specification with no argument, is an error.
 
 `unformatted(value, states)` writes a vector's bits as `%u` (2 states, x and z as 0) and `%z` (4 states) do (21.3.3):
-in units of 32 bits, the unit holding the least significant bit first, each unit's bytes in the byte order of the ABIs
-mbse-expressions stores (little-endian, which IEEE 1800 leaves to the host), and for `%z` each unit's `aval` word, then
-its `bval` word, as VPI's `s_vpi_vecval` holds them. `pattern(value)` writes a value as `%p` does (21.2.1.7): an
+in units of 32 bits, the unit holding the least significant bit first, each unit's bytes in a byte order, which IEEE
+1800 leaves to the host (by default little-endian, the order of the ABIs mbse-expressions stores; big-endian where the
+scope's option `byteorder` is `big`), and for `%z` each unit's `aval` word, then its `bval` word, as VPI's
+`s_vpi_vecval` holds them. `pattern(value)` writes a value as `%p` does (21.2.1.7): an
 integral value as `%0d` writes it, a real as `%g` does, and an array as an assignment pattern of its items, `'{1, 2}`;
 it raises `NoRule` for anything else (a structure's members and a class handle's are a declaration's).
 
@@ -194,14 +195,16 @@ def real(conversion: str, value: float, precision: int | None = None) -> str:
     return sign + written + suffix
 
 
-def unformatted(value: Logic, states: int) -> str:
+def unformatted(value: Logic, states: int, byteorder: str = "little") -> str:
     """A vector's bits as `%u` (`states` 2: x and z as 0) or `%z` (4: `aval`, then `bval`) write them: 32-bit units, the
-    least significant first, each word's bytes little-endian, one character each."""
+    least significant first, each word's bytes in `byteorder`, `"little"` (the least significant first) or `"big"`, one
+    character each."""
     words: list[int] = []
     for unit in range(-(-value.type.width // 32)):
         aval, bval = value.aval >> (32 * unit) & 0xFFFFFFFF, value.bval >> (32 * unit) & 0xFFFFFFFF
         words += [aval, bval] if states == 4 else [aval & ~bval]
-    return "".join(chr(word >> (8 * byte) & 0xFF) for word in words for byte in range(4))
+    order = range(4) if byteorder == "little" else range(3, -1, -1)
+    return "".join(chr(word >> (8 * byte) & 0xFF) for word in words for byte in order)
 
 
 def pattern(value: Any) -> str:
@@ -224,8 +227,9 @@ def unwritten(format: str) -> str | None:
     return None
 
 
-def sformatf(format: str, arguments: list[Any]) -> str:
-    """The text `$sformatf` writes: `format`'s characters, each specification replaced by its argument as it says."""
+def sformatf(format: str, arguments: list[Any], byteorder: str = "little") -> str:
+    """The text `$sformatf` writes: `format`'s characters, each specification replaced by its argument as it says, `%u`
+    and `%z` in `byteorder` (`unformatted`)."""
     written: list[str] = []
     remaining = list(arguments)
     position = 0
@@ -267,7 +271,7 @@ def sformatf(format: str, arguments: list[Any]) -> str:
         elif conversion == "s":
             field, fill = text(argument), " "
         elif conversion in ("u", "z"):
-            field, fill = unformatted(argument, 2 if conversion == "u" else 4), " "
+            field, fill = unformatted(argument, 2 if conversion == "u" else 4, byteorder), " "
         else:
             raise ValueError(f"%{letter} is not a format specification")
         written.append(_pad(field, int(width or 0), "-" in flags, fill))

@@ -11,13 +11,17 @@ bool a `bit`, an int an `integer` (or a `longint` beyond 32 bits), a float a `re
 read once per folding when it is first needed: a lone term is refused where it needs one (mbse-schemas' TypeError), and
 a store where SystemVerilog's `define` has not run defines none.
 
-A `Scope(variables, functions, packages=..., types=..., timeunit=..., timeprecision=..., mintypmax=...)` gives what an
-expression may reach, and nothing else is reachable: `variables` (`this` among them, by that name); the `functions` it
-may call, each a callable or a `Subroutine` that names its formals and their defaults; its `packages`, each a `Scope`
-of a package's variables and functions, which a scoped name reads (`pkg::x`, `pkg::f(x)`, `$unit::x`); the `types` of
-names it does not bind, as a declaration gives them, which size what stays around them; the time unit and precision a
-time literal scales to (`"1ns"`, `"100ps"`: `timeunit`, 3.14.2.2, and its precision, the unit's own by default), without
-which a time literal stays; and which of `min:typ:max` is chosen (11.11; `typ` by default).
+A `Scope(variables, functions, packages=..., types=..., options=...)` gives what an expression may reach, and nothing
+else is reachable: `variables` (`this` among them, by that name); the `functions` it may call, each a callable or a
+`Subroutine` that names its formals and their defaults; its `packages`, each a `Scope` of a package's variables and
+functions, which a scoped name reads (`pkg::x`, `pkg::f(x)`, `$unit::x`); and the `types` of names it does not bind, as
+a declaration gives them, which size what stays around them. Its `options` are the parameters of simplification its
+caller chooses up front, each a fixed set of values (`OPTIONS`): the time unit and precision a time literal scales to
+(`"1ns"`, `"100ps"`: `timeunit`, 3.14.2.2, and `timeprecision`, the unit's own by default), without which a time
+literal stays; which of `min:typ:max` is chosen (`mintypmax`, 11.11: `typ` by default); whether a result the host's
+math library decides folds by it (`math`: `host` by default) or stays (`stay`: every math function but `EXACT`, and a
+real `**`); and the byte order of `%u` and `%z` (`byteorder`: `little` by default, or `big`); the framework's `errors`
+among them.
 
 The rules (`RULES`) fold every kind the evaluation inventory gives a value (mbse-expressions'
 [the evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#systemverilog), SystemVerilog),
@@ -87,7 +91,7 @@ from . import Domains, Expressions as X, Formats
 from .Domains import Logic, SvType
 
 __all__ = ["OfAny", "Scope", "Subroutine", "RULES", "SIMPLIFIER", "FOLDED", "CATEGORIES", "SYSTEM", "METHODS",
-           "STRING_METHODS", "LOCATORS"]
+           "STRING_METHODS", "LOCATORS", "OPTIONS", "EXACT"]
 
 _EVEN = "roundTiesToEven"
 _ONE = Domains.vector(1)
@@ -140,20 +144,36 @@ def _time_unit(text: str, what: str) -> tuple[int, int]:
     raise ValueError(f"a {what} is 1, 10 or 100 of s, ms, us, ns, ps or fs, got {text!r}")
 
 
+OPTIONS = {"mintypmax": ("min", "typ", "max"), "math": ("host", "stay"), "byteorder": ("little", "big")}
+"""The values of the options of simplification the dialect's scope takes, each a fixed set, its default among them
+(`typ`, `host`, `little`); `timeunit` and `timeprecision` are each 1, 10 or 100 of s, ms, us, ns, ps or fs."""
+EXACT = ("$sqrt", "$floor", "$ceil")
+"""The math functions whose results IEEE 754 makes exact, which the option `math` never keeps in the residual."""
+
+
 class Scope(S.Variables):
     """SystemVerilog's scope for an expression: its `variables`, `functions` and `packages`, the declared `types` of
-    names it does not bind, a time literal's unit and precision, and the choice of `min:typ:max`."""
+    names it does not bind, and its `options`, the parameters of simplification its caller chooses up front (mbse-basis
+    [CAP-305: simplification's options, chosen up front](mbse:mbse-basis/docs/capabilities/CAP-305.md)): a time
+    literal's unit and precision (`timeunit`, `timeprecision`), the choice of `min:typ:max` (`mintypmax`), whether a
+    result the host's math library decides folds (`math`), and the byte order of `%u` and `%z` (`byteorder`). It refuses
+    a value an option does not take, before anything is simplified in it."""
 
     def __init__(self, variables: Mapping[str, Any] | None = None,
                  functions: Mapping[str, Callable[..., Any]] | None = None, *,
                  packages: Mapping[str, Scope] | None = None, types: Mapping[str, SvType] | None = None,
-                 timeunit: str | None = None, timeprecision: str | None = None, mintypmax: str = "typ"):
-        super().__init__(variables)
+                 options: Mapping[str, Any] | None = None):
+        super().__init__(variables, options)
         self.functions = dict(functions or {})
         self.packages, self.types = dict(packages or {}), dict(types or {})
-        if mintypmax not in ("min", "typ", "max"):
+        mintypmax = self.option("mintypmax", "typ")
+        if mintypmax not in OPTIONS["mintypmax"]:
             raise ValueError(f"min:typ:max's choice is min, typ or max, got {mintypmax!r}")
-        self.mintypmax = mintypmax
+        for name in ("math", "byteorder"):
+            chosen, (first, second) = self.option(name, OPTIONS[name][0]), OPTIONS[name]
+            if chosen not in OPTIONS[name]:
+                raise ValueError(f"the option {name!r} is {first!r} or {second!r}, not {chosen!r}")
+        timeunit, timeprecision = self.option("timeunit", None), self.option("timeprecision", None)
         self.timeunit = None if timeunit is None else _time_unit(timeunit, "time unit")
         self.timeprecision = self.timeunit if timeprecision is None else _time_unit(timeprecision, "time precision")
         if self.timeunit is not None:
@@ -694,7 +714,7 @@ class _Evaluation:
 
     def _chosen(self, node: Any) -> Any:
         """The expression of `min:typ:max` the scope chooses."""
-        return {"min": node.min, "typ": node.typ, "max": node.max}[self.scope.mintypmax]
+        return {"min": node.min, "typ": node.typ, "max": node.max}[self.scope.option("mintypmax", "typ")]
 
     # Operators
 
@@ -809,6 +829,7 @@ class _Evaluation:
         if ctype.kind == "real":
             names = {"+": "add", "-": "sub", "*": "mul", "/": "div"}
             if op == "**":
+                self._library(X.BINARYEXPRESSION, "binaryexpression '**'")
                 return _real_power(left, right, ctype)
             if op not in names:
                 raise TypeError(f"{op} expects integral operands, got real")
@@ -834,6 +855,12 @@ class _Evaluation:
             quotient = abs(x) // abs(y) * (1 if (x < 0) == (y < 0) else -1)  # truncated toward zero
             return Logic.number(ctype, quotient if op == "/" else x - y * quotient)
         return Logic.number(ctype, {"+": x + y, "-": x - y, "*": x * y}[op])
+
+    def _library(self, kind: str, what: str) -> None:
+        """Raises `NoRule` for a result the host's math library decides where the scope's option `math` is `stay`: it
+        stays, "SystemVerilog systemcall '$sin' by the host's math library is not simplified", of class `a`."""
+        if self.scope.option("math", "host") == "stay":
+            raise FS.NoRule("SystemVerilog", f"{what} by the host's math library", kind)
 
     def _power(self, base: int, exponent: int, ctype: SvType) -> Logic:
         """IEEE 1800's table 11-4 for a negative exponent; otherwise the power, in the width."""
@@ -1362,8 +1389,11 @@ class _Evaluation:
         return [_to_real(value, real) for value in values]
 
     def _math(self, name: str, values: list[Any]) -> float:
-        """A math function (20.8.2), as C's library computes it: a domain error NaN, a pole an infinity."""
+        """A math function (20.8.2), as C's library computes it: a domain error NaN, a pole an infinity; where the
+        scope's option `math` is `stay`, one whose result the host's library decides stays (all but `EXACT`)."""
         x = self._reals(name, values)
+        if name not in EXACT:
+            self._library(X.SYSTEMCALL, f"systemcall {name!r}")
         if name == "$pow":
             return _real_power(x[0], x[1], self.stored.named("real"))
         if name in ("$floor", "$ceil"):
@@ -1452,7 +1482,8 @@ class _Evaluation:
         letter = Formats.unwritten(format)
         if letter is not None:
             raise FS.NoRule("SystemVerilog", f"systemcall '$sformatf' %{letter}", X.SYSTEMCALL)
-        return Formats.vector(Formats.sformatf(format, [self._formatted(value) for value in values[1:]]))
+        return Formats.vector(Formats.sformatf(format, [self._formatted(value) for value in values[1:]],
+                                               self.scope.option("byteorder", "little")))
 
     def _formatted(self, value: Any) -> Any:
         """An argument of `$sformatf`: an array's items typed, as an assignment pattern writes them."""
@@ -1894,6 +1925,7 @@ def _what(prefix: str, *kinds: str) -> list[str]:
 
 CATEGORIES: dict[str, dict[str, str]] = {
     "SystemVerilog": {
+        **dict.fromkeys((f"systemcall {name!r} by the host's math library" for name in MATH if name not in EXACT), "a"),
         **dict.fromkeys(("valuerange", "patternitem", "namedconnection", "emptyargument",
                          "castexpression to implicittype",
                          "systemcall '$bits' of keywordtype"), "b"),
