@@ -3,12 +3,14 @@ reach.
 
 `Simplifiers.OfAny(expression, scope)` simplifies in a `Scope`, or in one made from a mapping of variables (see
 `mbse.Expressions.Framework.Simplifiers`): what the scope determines is folded into the literal of its value, a basic
-scalar's or a constant's (`None`, `...`, a complex number), or, for a list, a tuple or a dict of such values, into its
-display (`[1, 2]`); a value with no literal stays, its subterm kept and its own subterms simplified: an object, a
-generator, a set (whose order is its hash table's), a slice, a closure (a `lambda`'s value) and a template (a
-t-string's). The rest stays a Python3 expression. Python's rules apply, not Patterns': `and` and `or` give one of their
-operands, `1 == 1.0` is True, `True + 1` is 2, and a missing attribute raises `AttributeError`. Data objects, read
-through mbse-schemas' readers (`Framework.Objects`), have their properties as attributes.
+scalar's or a constant's (`None`, `...`, a complex number), or, for a list, a tuple, a dict or a non-empty set of such
+values, into its display (`[1, 2]`, a set's items in an order of their values, `{1, 'a'}`), each a closed constructor
+expression (mbse-basis [VOC-034: closed constructor expression](mbse:mbse-basis/docs/VOCABULARY.md#VOC-034)); a value
+with none stays, its subterm kept and its own subterms simplified: an object, a generator, an empty set, a frozenset, a
+slice, a closure (a `lambda`'s value) and a template (a t-string's). The rest stays a Python3 expression. Python's
+rules apply, not Patterns': `and` and `or` give one of their operands, `1 == 1.0` is True, `True + 1` is 2, and a
+missing attribute raises `AttributeError`. Data objects, read through mbse-schemas' readers (`Framework.Objects`), have
+their properties as attributes.
 
 A `Scope(variables, modules, builtins)` resolves names as Python does, innermost first: names bound by lets and
 imports, then `variables`, then `builtins` (by default a few that read values: `abs`, `all`, `any`, `bool`, `float`,
@@ -29,18 +31,21 @@ simplification in every binding state](mbse:mbse-basis/docs/capabilities/README.
 (`FOLDED`): constants, displays and their `*` and `**` unpacking, comprehensions of any number of clauses over targets
 that unpack, f-strings by `format()`'s mini-language (a complex number's among them) and t-strings, slices, calls with
 keywords and unpacking, lambdas called with Python's binding of parameters, named expressions, `is` and `is not` by
-identity, and `@`. What stays in the residual, named, is what has no value outside a statement (`yield`, `yield from`,
-`await`, an `async for`, a target that writes into data), a kind of its family's other dialects and invalid syntax, by
-the name of the dialect that owns it ("Python Types typevar is not simplified"; a type expression of Python3's kinds
-simplifies as Python3's), and what Python leaves to its implementation or its platform, each named where it is decided:
-`is` between equal immutable values; an f-string's field whose text is an implementation's (a set's order, an object's
-address), a format spec of a locale (`n`), or one Python refuses, and a `\\N{...}` escape (Unicode's names); a complex
-power other than an integer one, and a real power whose value is complex, which need the platform's `pow`, `atan2`,
-`cos` and `sin`. `CATEGORIES` gives each the evaluation inventory's class.
+identity, `@`, and a `\\N{...}` escape by Unicode's character names and aliases, as CPython reads them. What stays in
+the residual, named, is what has no value outside a statement (`yield`, `yield from`, `await`, an `async for`, a target
+that writes into data), a kind of its family's other dialects and invalid syntax, by the name of the dialect that owns
+it ("Python Types typevar is not simplified"; a type expression of Python3's kinds simplifies as Python3's), a
+`\\N{...}` escape Python refuses to compile (malformed, or of an unknown name), and what Python leaves to its
+implementation or its platform, each named where it is decided: `is` between equal immutable values; an f-string's
+field whose text is an implementation's (a set's order, an object's address), a format spec of a locale (`n`), or one
+Python refuses; a complex power other than an integer one, and a real power whose value is complex, which need the
+platform's `pow`, `atan2`, `cos` and `sin`. `CATEGORIES` gives each the evaluation inventory's class.
 """
 
 from __future__ import annotations
 
+import codecs
+import functools
 import math
 import operator
 import re
@@ -536,7 +541,7 @@ _HEX = {"x": 2, "u": 4, "U": 8}
 
 def _text(spelling: str, raw: bool) -> str:
     """An f-string's or a t-string's text as written, as Python reads it: `{{` and `}}` one brace each, and, unless it
-    is raw, its escapes; `\\N{name}` stays in the residual (its names are Unicode's data)."""
+    is raw, its escapes, `\\N{name}` among them."""
     out, i = [], 0
     while i < len(spelling):
         char = spelling[i]
@@ -560,11 +565,25 @@ def _text(spelling: str, raw: bool) -> str:
             out.append(chr(int(hexdigits, 16)))
             i += 2 + _HEX[code]
         elif code == "N":
-            raise _refuse("joinedstr's \\N escape")
+            named, i = _named(spelling, i)
+            out.append(named)
         else:  # not an escape: kept as written
             out.append(char)
             i += 1
     return "".join(out)
+
+
+def _named(spelling: str, i: int) -> tuple[str, int]:
+    """The character the `\\N{name}` escape at `i` names, and the index after it: a name or an alias of Unicode's, its
+    case ignored, as CPython's `unicodeescape` codec looks it up, which its compiler reads a string with. A malformed
+    escape and an unknown name, which Python refuses to compile, stay in the residual, of class (b)."""
+    end = spelling.find("}", i + 3)
+    if spelling[i + 2:i + 3] != "{" or end <= i + 3:
+        raise _refuse("joinedstr's malformed \\N character escape")
+    try:
+        return codecs.decode(spelling[i:end + 1].encode("ascii"), "unicode_escape"), end + 1
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        raise _refuse("joinedstr's unknown Unicode character name") from None
 
 
 def _representable(value: Any) -> bool:
@@ -793,15 +812,17 @@ FOLDED = frozenset({_P.LITERAL, _P.CONSTANT, _P.NAME, _P.LET, _P.LIST, _P.TUPLE,
 
 CATEGORIES: dict[str, dict[str, str]] = {
     "Python3": {"yield": "d", "yieldfrom": "d", "await": "d", "async comprehension": "d", "attribute target": "d",
-                "subscript target": "d", "starred target": "b", "compare 'is' of equal immutable values": "b"},
+                "subscript target": "d", "starred target": "b", "compare 'is' of equal immutable values": "b",
+                "joinedstr's malformed \\N character escape": "b", "joinedstr's unknown Unicode character name": "b"},
     "Python Types": {"*": "b"}, "Python Patterns": {"*": "b"}, "Python RegExp": {"*": "b"},
 }
 """The evaluation inventory's class of what each dialect of the family has no rule for (`a` where none is given):
 `yield`, `yield from`, `await` and an `async for` need a statement body (d), as does a target that writes into data;
 a lone starred target, or two, is invalid syntax (b); whether equal immutable values are one object Python leaves to
-the implementation (b). The rest is (a): a format or a field whose text Python leaves to its platform or its
-implementation, a complex power, and a `\\N{...}` escape. A value with no literal (a set, a slice, a closure, a
-template, an object, a generator) is no gap: its rule computes it, its subterm stays, and nothing is named."""
+the implementation (b); a `\\N{...}` escape Python refuses to compile, malformed or of an unknown name (b). The rest is
+(a): a format or a field whose text Python leaves to its platform or its implementation, and a complex power. A value
+with no closed constructor expression (an empty set, a frozenset, a slice, a closure, a template, an object, a
+generator) is no gap: its rule computes it, its subterm stays, and nothing is named."""
 
 
 class _Rules(F.Interpreter):
@@ -858,11 +879,53 @@ def _literal(value: Any) -> Any:
     return _NATIVE(value)
 
 
+_RANKS = {type(None): 0, type(Ellipsis): 1, bool: 2, int: 2, float: 2, complex: 3, str: 4, bytes: 5, tuple: 6}
+"""The order of the kinds of item a set's display writes: None, `...`, real numbers, complex numbers, strs, bytes and
+tuples."""
+
+
+def _real(a: Any, b: Any) -> int:
+    """-1, 0 or 1 ordering two real numbers by value, as Python compares them, a NaN after every other."""
+    if a != a or b != b:
+        return (a != a) - (b != b)
+    return (a > b) - (a < b)
+
+
+def _compare(a: Any, b: Any) -> int:
+    """-1, 0 or 1 ordering two items of a set's display (`_RANKS`): real numbers by value, a NaN last; complex numbers
+    by their real parts, then their imaginary ones; strs by code point and bytes by byte, as Python orders them; tuples
+    item by item, then by length. Values that compare 0 are written alike."""
+    ranks = _RANKS[type(a)], _RANKS[type(b)]
+    if ranks[0] != ranks[1]:
+        return -1 if ranks[0] < ranks[1] else 1
+    if ranks[0] < 2:  # None and `...`, each one value
+        return 0
+    if type(a) is complex:
+        return _real(a.real, b.real) or _real(a.imag, b.imag)
+    if type(a) is tuple:
+        for x, y in zip(a, b):
+            order = _compare(x, y)
+            if order:
+                return order
+        return (len(a) > len(b)) - (len(a) < len(b))
+    if ranks[0] == 2:
+        return _real(a, b)
+    return (a > b) - (a < b)
+
+
 def _display(value: Any) -> Any:
-    """A list's, a tuple's or a dict's display, of its items' literals and displays; None where an item has neither."""
+    """A list's, a tuple's, a dict's or a non-empty set's display, of its items' literals and displays; None where an
+    item has neither. A set's items are written in an order both implementations compute (`_compare`), not its hash
+    table's: an empty set has no display (`{}` is a dict, and `set()` calls a name), nor has a frozenset."""
     if type(value) in (list, tuple):
         items = [_literal(item) or _display(item) for item in value]
         return None if None in items else (_P.list_ if type(value) is list else _P.tuple_)(*items)
+    if type(value) is set and value:  # its items hashable: each written is one of `_RANKS`
+        items = [(item, _literal(item) or _display(item)) for item in value]
+        if any(written is None for _, written in items):
+            return None
+        items.sort(key=functools.cmp_to_key(lambda a, b: _compare(a[0], b[0])))
+        return _P.set_(*(written for _, written in items))
     if type(value) is dict:
         keys = [_literal(key) or _display(key) for key in value]
         items = [_literal(item) or _display(item) for item in value.values()]
