@@ -257,7 +257,12 @@ evaluation retired as a public procedure ([the port's API](../port/API.md#settle
   `false`). What a scope does not provide stays too (`Symbolics.Unbound`). What the dialect's semantics make an error
   still raises, as the expression would in its language, wherever its language evaluates the subterm; one it may
   never evaluate (an untaken branch, a short circuit's right operand, a lambda's body, `sizeof`'s operand) is guarded,
-  and stays ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 374).
+  and stays ([the port's API](../port/API.md#settled-in-simplification-for-the-users-review), 374). The scope's option
+  `errors`, one of the options of simplification that a caller chooses up front
+  ([CAP-305: simplification's options, chosen up front](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-305.md)),
+  chooses what an error in a subterm that the language evaluates does: `"raise"`, the default, raises it, and
+  `"stay"` leaves its subterm in the residual, named, of class (b) ([the port's
+  API](../port/API.md#the-framework-cap-305), 401 and 402).
 - **What it leaves to the families.** Each family's class (a) is the next step's: a kind or an operator gains a rule by
   an implementation in its family's `RULES` and its tag in `FOLDED`; its residues then disappear. Type parameters, a
   sub-dialect's terms and the deferred capabilities (type algebra, a surrogate dialect, statements) are later steps.
@@ -290,7 +295,11 @@ from `grammars/python3-unicode-names.json`. What stays, named: the inventory's (
 `async for` and a target that writes into data; `is` between equal immutable values (b), which Python leaves to its
 implementation; a malformed `\N{...}` escape and an unknown name (b), which Python refuses to compile; and, of class
 (a), what needs the platform or the implementation to be computed alike: a complex power that is no integer one, a field
-whose text is an object's address or a set's order, a locale's format spec, and a spec Python refuses.
+whose text is an object's address or a set's order, a locale's format spec, and a spec Python refuses. The Python3
+dialect's simplifier leaves `is` between equal immutable values and each of these class (a) subterms in the residual
+by default. The scope's options `specs`, `identity`, `math`, `locale` and `text` let the caller choose otherwise
+([CAP-305: simplification's options, chosen up front](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-305.md);
+[the port's API](../port/API.md#python3-cap-305), 403 to 407).
 
 ## As built: C and C++ (0.11.0)
 
@@ -301,7 +310,10 @@ and ISO/IEC 14882, in the types and layouts their holder's ABI stores
 type's identity; a floating value a binary64 literal spells exactly; `nullptr`; a `_BitInt` whose narrowest literal is
 of its type). A value of a type with no literal, a `char`, a `short` or C++'s `wchar_t`, folds to a cast of a literal
 (`(short)3`), and a C array to a compound literal (`(int[]){1, 2}`), each a closed constructor expression; an ordering,
-`void` and a C++ array stay. What stays, named: the object model, writes, statements, declarations (`d`); an operand
+`void` and a C++ array stay. Where the caller chooses `"stay"` for the scope's option `casts`, the C family's
+simplifier leaves a value of a type with no literal in the residual instead of writing a cast ([the port's
+API](../port/API.md#c-and-c-cap-305), 408 and 409). What stays, named: the object model, writes, statements,
+declarations (`d`); an operand
 whose declaration gives its type (`c`, CAP-232); a layout no ABI dialect stores (`a`, [CAP-307: layouts of bit-precise integers and `nullptr_t` stored by the
 ABI dialects](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/README.md#CAP-307)); an initializer alone, a
 type name (`b`).
@@ -318,8 +330,11 @@ once its context's type is known, from the whole expression, the scope's values 
 it does not bind; a 2-state or `shortreal` value where its states could matter folds into a
 cast of a literal to its type (`int'(5)`, `unsigned'(int'(-1))`, `shortreal'(0.1)`); what has neither a literal nor
 such a cast (an array, an object, a 2-state vector as wide as no keyword's type) stays, by rule, naming no residue. What stays, named: what the inventory gives (b), (c) and (d), a time literal
-with no time unit (a, a parameter the scope may give), a call with named or empty arguments of a function whose formals
+with no time unit (a, an option the scope may give), a call with named or empty arguments of a function whose formals
 the scope does not give (a), `$sformatf`'s `%p` of a structure or a class handle (c), and its `%t`, `%m`, `%l` and `%v` (d).
+The scope's option `math` chooses whether a result that the host's math library decides folds ([the port's
+API](../port/API.md#systemverilog-cap-305), 410 and 411). The scope's option `byteorder` chooses the byte order in
+which `%u` and `%z` write a word (412).
 
 ## 6. What it would add or supersede
 

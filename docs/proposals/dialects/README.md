@@ -210,7 +210,10 @@ question 1's recommendation.
 Folded in 0.11.0 (suite PYS): every row of class (a) above, by CPython 3.14's semantics, which the TypeScript
 implementation models, and an f-string's `\N{...}` escape, by Unicode's character names and aliases (PYS-14). `is`
 between equal immutable values stays, read as (b); a complex power that is no integer one stays, as do a locale's format
-spec and a field whose text is its implementation's.
+spec and a field whose text is its implementation's. Each of these stays by default. The scope's options `specs`,
+`identity`, `math`, `locale` and `text` let the caller choose otherwise
+([CAP-305: simplification's options, chosen up front](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-305.md);
+[the port's API](../port/API.md#python3-cap-305), 403 to 407).
 
 **Python Types** (`typevar`, `paramspec`, `typevartuple`): (b). A type parameter is declared by a `def`, `class` or
 `type` statement (Language Reference, 8.10, type parameter lists); its object is made when that statement runs. An
@@ -358,7 +361,7 @@ time, its scheduling and the values a signal had at earlier clock ticks are no s
 |---|---|---|
 | `dollarexpression` (`q[$]`) | (a) | the last index of the queue or array its select indexes |
 | `streamingconcatenation` (`{<< 8 {x}}`) | (a) | the stream's bits reordered by its slice size (11.4.14), over the evaluator's integral values |
-| `mintypmaxexpression` (`a:b:c`) | (a) | which of the three the tool selects (11.11, typical by default): a parameter of evaluation, every ambiguity a decision ([PRI-014: every ambiguity a decision](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-014)) |
+| `mintypmaxexpression` (`a:b:c`) | (a) | which of the three the tool selects (11.11, typical by default): an option of simplification, the scope's `mintypmax`, every ambiguity a decision ([PRI-014: every ambiguity a decision](https://github.com/pitaman71/mbse-basis/blob/main/docs/PRINCIPLES.md#PRI-014)) |
 | `emptyqueue` (`{}`) | (a) | an empty queue, as `min()` gives one today |
 | `namedconnection` (`.name(x)`), `emptyargument` | (a) | a scope-provided function's formals, by name, and its defaults |
 | `matchesexpression`, `predicateexpression` (`&&&`) | (a) | pattern matching (12.6) of SystemVerilog Patterns: a constant, a wildcard or a variable pattern against an integral value, its variables bound in the branch; a tagged or structure pattern needs a tagged union's or a structure's value, which is (c), [CAP-232: domains inferred for terms](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-232.md) |
@@ -371,7 +374,7 @@ time, its scheduling and the values a signal had at earlier clock ticks are no s
 | `superexpression`, `newexpression`, `newcopyexpression` | (d) | a class's declaration: its members and constructor |
 | `rootexpression` (`$root`) | (d) | the elaborated design hierarchy: modules and instances, mbse-programs' |
 | `incrementexpression`, `assignmentexpression` | (d)† | question 1 |
-| a time literal (`10ns`) | (a) | the time unit and precision it scales to (`timeunit`, `` `timescale ``, 3.14): a parameter of evaluation, as `a:b:c`'s choice is |
+| a time literal (`10ns`) | (a) | the time unit and precision it scales to (`timeunit`, `` `timescale ``, 3.14): an option of simplification, the scope's `timeunit` and `timeprecision` |
 | `constant`'s `null` | (a) | the null class handle, which compares with handles |
 | `rangeselect`'s `+:`, `-:` | (a) | an indexed part-select, its width a constant |
 | `valuerange`'s `+/-`, `+%-` (1800-2023) | (a) | a tolerance range, absolute or by percent, within `inside` |

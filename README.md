@@ -245,7 +245,12 @@ holder's ABI stores (`sizeof`, `_Generic`, compound literals, `_BitInt`, `nullpt
 the evaluation inventory gives a value, by IEEE 1800-2023 (4-state values, sizing by context, casts as assignments,
 pattern matching, streaming, the system functions and methods that compute a value), each subterm wherever its literal
 keeps its meaning, as 11.6 sizes it from the whole expression, and a 2-state or `shortreal` value whose states could
-matter as a cast of a literal to its type; what has neither, and what has no rule, stays, named. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
+matter as a cast of a literal to its type; what has neither, and what has no rule, stays, named. Where a dialect's
+simplifier could follow either of two defensible behaviors, the caller chooses one up front, as an option of the scope
+whose default is the behavior stated above
+([CAP-305: simplification's options, chosen up front](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-305.md)):
+the framework's `errors`, Python3's `specs`, `identity`, `math`, `locale` and `text`, C's and C++'s `casts`, and
+SystemVerilog's `timeunit`, `timeprecision`, `mintypmax`, `math` and `byteorder`. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
 conversions) waits for, and the interface through which mbse-schemas will choose union branches and check
 constraints.
 
