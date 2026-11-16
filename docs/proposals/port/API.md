@@ -2043,16 +2043,16 @@ Step 1 of [PRI-046: simplification, not evaluation](https://github.com/pitaman71
 every family's folding rules fill, evaluation retired as a public procedure.
 
 324. **`Framework.Simplifiers`**, the one procedure: `Simplifier(rules, literal=..., simplify=..., categories=...,
-     native=..., folds=..., display=...)`, called (TypeScript: `run`) with an expression and a scope, or a mapping of
-     variables, gives a `Simplified`: its `residual` (a `Writer` of a term of the dialect), whether its root is a
-     `literal`, then its `value` (else none: three-valued, a residual reads as unknown), the names it still needs
-     (`free`), and its `residues`; `evaluate()` gives the value, or raises `NotEvaluated` (a `ValueError`) naming why
-     the root is not a literal: "the root is not a literal: Python3 lambda is not simplified", "... x is not bound",
-     "... its value has no literal". A `Residue` names a subterm left for want of a rule: its `dialect`, its `kind`,
-     `what` it has no rule for, and its `category`, the evaluation inventory's class (`a` to `d`); its `reason` is "D
-     what is not simplified". `NoRule(dialect, what, kind)`, a `NotImplementedError`, is what rules raise where they
-     have none. `natives(dialect)` writes a native's literal as the dialect does. The name *(agent)*: `Simplifiers`,
-     as `Evaluators` was, a module of procedures; `Simplified` for what it gives.
+     native=..., folds=..., construct=..., guarded=...)`, called (TypeScript: `run`) with an expression and a scope, or
+     a mapping of variables, gives a `Simplified`: its `residual` (a `Writer` of a term of the dialect), whether its
+     root is a `literal`, whether its root is a closed constructor expression (`constructed`, item 397), then its
+     `value` (else none: three-valued, a residual reads as unknown), the names it still needs (`free`), and its
+     `residues`; `evaluate()` gives the value, or raises `NotEvaluated` (a `ValueError`) naming why the root is not a
+     closed constructor expression (item 399). A `Residue` names a subterm left for want of a rule: its `dialect`, its
+     `kind`, `what` it has no rule for, and its `category`, the evaluation inventory's class (`a` to `d`); its `reason`
+     is "D what is not simplified". `NoRule(dialect, what, kind)`, a `NotImplementedError`, is what rules raise where
+     they have none. `natives(dialect)` writes a native's literal as the dialect does. The name *(agent)*:
+     `Simplifiers`, as `Evaluators` was, a module of procedures; `Simplified` for what it gives.
 325. **Each dialect's `Simplifiers`** *(agent)*: `OfAny(expression, scope)` gives a `Simplified`; `SIMPLIFIER` is its
      simplifier, `RULES` its folding rules (C's and C++'s through `rules(dialect, folded)` and `simplifier(...)`),
      `FOLDED` the kinds its rules fold (`EVALUATED` renamed), `CATEGORIES` the inventory's classes of what its family
@@ -2065,9 +2065,10 @@ every family's folding rules fill, evaluation retired as a public procedure.
 327. **The algorithm** *(agent)*: recursive substitution over immutable terms, a new term written, the old one never
      changed. At each subterm (each one `folds` allows: every one, but where SystemVerilog's sizing keeps a subterm,
      item 364), the rules compute its value in the scope; a value with a literal replaces the subterm, a literal subterm
-     stays as written, a value with none (an object, a collection, unknown) keeps the subterm, simplified in turn, its
-     value known to its parent's `simplify`; a container of values with literals is written as its display where the
-     dialect has one (Python3's list and dict, MATLAB's concatenation), not a literal. Where the scope does not resolve
+     stays as written, a value with no literal is written as its closed constructor expression where the dialect writes
+     one (`construct`, item 398: a display, such as Python3's list, dict and set or MATLAB's concatenation, or a cast of
+     a literal, such as C's `(short)3`), and a value with neither (an object, a closure, unknown) keeps the subterm,
+     simplified in turn, its value known to its parent's `simplify`. Where the scope does not resolve
      a reference the subterm is rebuilt from its simplified arguments, each in the scope its names are bound in: a let's
      of a known value bound to it, any other hidden (`Symbolics.UNKNOWN`), an import's among them: its root not having
      folded, its module is not entered again. A let whose body no longer refers to its name is its body. A subterm
@@ -2086,20 +2087,22 @@ every family's folding rules fill, evaluation retired as a public procedure.
      have, and a function neither built in nor an add-in, in the residual, where they were `#NAME?` and `#REF!`; a
      blank cell of a sheet it has is still 0. `Symbolics.scopes(node, dialect)` gives what a term binds for each
      argument, which `free` reads too.
-330. **Literals** *(agent)*: Patterns', TypeScript5's, MATLAB's and Excel's a native's; Python3's a basic scalar's, a
-     list's and a dict's display; C's and C++'s a value of `int`, `long` or `long long`, signed or not, a finite
-     `float` or `double`, `bool` or a string, with the suffix of its type (`3u`, `2.5f`), any other type's (`char`,
-     `short`, `long double`, the decimal types, `_BitInt`) and a non-finite float staying; SystemVerilog's an
-     `integer`'s value an unsized decimal integer, any other integral value a sized 4-state vector of its bits and
-     signedness, a real a real, `null` the constant (where a subterm folds, item 364). C's simplification gives
-     its native (`native`).
+330. **Literals** *(agent)*: Patterns', TypeScript5's, MATLAB's and Excel's a native's; Python3's a basic scalar's,
+     with a list, a tuple, a dict and a non-empty set written as their displays (item 377); C's and C++'s a value of
+     `int`, `long` or `long long`, signed or not, a finite `float` or `double`, `bool` or a string, with the suffix of
+     its type (`3u`, `2.5f`), and the types item 352 adds; a value of another arithmetic type is a cast of a literal
+     (item 387), and a non-finite float stays; SystemVerilog's an `integer`'s value an unsized decimal integer, any
+     other integral value a sized 4-state vector of its bits and signedness, a real a real, `null` the constant (where a
+     subterm folds, item 364). A 2-state or `shortreal` subterm whose states could matter is a cast of a literal (item
+     395). A display and a cast of a literal are closed constructor expressions, not literals (item 397). C's
+     simplification gives its native (`native`).
 331. **Categories** *(agent)*: each family's module holds its dialects' classes, from the evaluation inventory, keyed
      by `what`, then by kind, then `*`; invalid syntax is `b`; anything not listed `a`.
-332. **Tests**: `02_Evaluators` is `02_Simplifiers` and `11_Partials` `11_Residuals`, their suites' IDs kept (EVL,
-     PAR); every value assertion of a value with a literal asserts it through `value` or `evaluate()`, a value with
-     none (an Excel error, an array, a `char`) through the dialect's folding rules (`SIMPLIFIER.rules`) or the
-     residual's text; every "is not evaluated" refusal asserts a residue ("is not simplified") or `NotEvaluated`.
-     Titles naming evaluation follow; the skill's links follow them.
+332. **Tests**: `02_Evaluators` is `02_Simplifiers` and `11_Partials` `11_Residuals`, their suites' IDs kept (EVL, PAR);
+     every value assertion of a value with a closed constructor expression asserts it through `value` or `evaluate()`, a
+     value with none (an Excel error, a C++ array) through the dialect's folding rules (`SIMPLIFIER.rules`) or the
+     residual's text; every "is not evaluated" refusal asserts a residue ("is not simplified") or `NotEvaluated`. Titles
+     naming evaluation follow; the skill's links follow them.
 333. **Tutorials**: 10 and 12 teach simplification, unknown a residual and the residual the question left; 3, 4 and
      tutorial 8's pages teach a kind with no rule left in the residual, named; 9's, 10's and 14's steps renamed under
      their anchors (T09.2, T09.4, T10.5, T14.2).
@@ -2108,28 +2111,29 @@ every family's folding rules fill, evaluation retired as a public procedure.
 
 334. **TypeScript5's folding rules** *(agent)*: `TypeScript/TypeScript5/Simplifiers` folds every kind the evaluation
      inventory gives class (a), 26, and its literal (`FOLDED`, 27 kinds): `identifier` (a `Scope`'s variables, then the
-     global object's `undefined`, `NaN` and `Infinity`, `GLOBALS`), `thisexpression` (the scope's `this`, by that
-     name), `constant` (`null`; a regular expression a new object of its source and flags, as its text has them), the
-     templates (a tagged one's tag called with a strings array, its `raw` beside it, `undefined` where a quasi's escape
-     is invalid), arrays (holes, spreads by iteration), objects (keys in ECMAScript's order, computed keys, shorthands,
-     spreads; a literal `__proto__: v` stays, "TypeScript5 objectexpression __proto__ is not simplified", an object
-     having no prototype here), member access (`?.` short-circuiting its chain), calls and `new` (of what the scope
-     provides, or an arrow's closure), arrows with an expression body (closures binding their parameters by TypeScript
-     Patterns' destructuring: defaults, rests, array and object patterns), the unary, binary, logical, conditional and
-     sequence operators, parentheses, and TypeScript's five assertions, erased to their operand. The rules subclass the
-     framework's `Interpreter` for `constant` and `this` only.
+     global object's `undefined`, `NaN` and `Infinity`, `GLOBALS`), `thisexpression` (the scope's `this`, by that name),
+     `constant` (`null`; a regular expression a new object of its source and flags, as its text has them), the templates
+     (a tagged one's tag called with a strings array, its `raw` beside it, `undefined` where a quasi's escape is
+     invalid), arrays (holes, spreads by iteration), objects (keys in ECMAScript's order, computed keys, shorthands,
+     spreads, and a literal `__proto__: v`, which sets the object's prototype, item 382), member access (`?.`
+     short-circuiting its chain), calls and `new` (of what the scope provides, or an arrow's closure), arrows with an
+     expression body (closures binding their parameters by TypeScript Patterns' destructuring: defaults, rests, array
+     and object patterns), the unary, binary, logical, conditional and sequence operators, parentheses, and TypeScript's
+     five assertions, erased to their operand. The rules subclass the framework's `Interpreter` for `constant` and
+     `this` only.
 335. **ECMAScript's values and abstract operations, `TypeScript/TypeScript5/ECMAScript`** *(agent, as the inventory's
      partition proposed; the module takes the name of the standard it models, ECMA-262, by mbse-basis PRI-012)*: the
      value model both implementations share, and ECMA-262's operations over it, named as the standard names them
      (`type_of`/`typeOf`, `to_boolean`, `to_primitive`, `to_number`, `to_numeric`, `to_string`, `to_property_key`,
      `string_to_number`, `string_to_bigint`, `is_strictly_equal`, `is_loosely_equal`, `is_less_than`, `binary`, `unary`,
-     `get`, `has_property`, `iterate`, `own_entries`, `ordered`, `call`, `construct`, `instance_of`, `cook`,
-     `is_array_index`), with `UNDEFINED` and `HOLE` (Python), `RegExp`, `Closure`, `TemplateStrings` (Python; TypeScript
-     `templateStrings`/`isTemplateStrings`), `BUILTINS`, `MAX_BIGINT_BITS`, `kind` and `is_primitive`. TypeScript
-     computes over its natives where ECMAScript's operation is JavaScript's own (number arithmetic, string order,
-     bigints), Python models it (UTF-16 code units, ToInt32, Number::remainder and ::exponentiate, truncating bigint
-     division); every error both raise is thrown by the module's own code, by the same class and message (TypeError,
-     RangeError: Python's `ECMAScript.RangeError`, a `ValueError`).
+     `get`, `has_property`, `iterate`, `own_entries`, `ordinary_object_create` (TypeScript `ordinaryObjectCreate`),
+     `get_prototype_of` (TypeScript `getPrototypeOf`), `ordered`, `call`, `construct`, `instance_of`, `cook`,
+     `is_array_index`), with `UNDEFINED` and `HOLE` (Python), `OBJECT_PROTOTYPE` (item 383), `RegExp`, `Closure`,
+     `TemplateStrings` (Python; TypeScript `templateStrings`/`isTemplateStrings`), `BUILTINS`, `MAX_BIGINT_BITS`, `kind`
+     and `is_primitive`. TypeScript computes over its natives where ECMAScript's operation is JavaScript's own (number
+     arithmetic, string order, bigints), Python models it (UTF-16 code units, ToInt32, Number::remainder and
+     ::exponentiate, truncating bigint division); every error both raise is thrown by the module's own code, by the same
+     class and message (TypeError, RangeError: Python's `ECMAScript.RangeError`, a `ValueError`).
 336. **What is reachable** *(agent)*: nothing beyond the scope, since expressions may come from data. A call calls only
      a function the scope provides or a closure the expression makes; `new`, a class the scope provides (Python: a
      `type`; TypeScript: a constructor); a host function is called without `this`. ECMAScript's built-in methods are
@@ -2143,7 +2147,8 @@ every family's folding rules fill, evaluation retired as a public procedure.
      negative one as `-` of its magnitude (a negative literal is no TypeScript source, and `(-3) ** x` needs the
      unary); NaN, Infinity and `undefined` by their global names, -0 as `-0`; `null` and a regular expression a
      `constant`. An array of such values is its display, a hole an elision; an object its display, a key an identifier
-     where it is `[A-Za-z_$][A-Za-z0-9_$]*`, an array index a number, else a string, `__proto__` computed. A
+     where it is `[A-Za-z_$][A-Za-z0-9_$]*`, an array index a number, else a string, an own property named `__proto__` a
+     computed key, and a prototype other than %Object.prototype% a `__proto__` key (item 385). A
      closure, a data object, a host value and a tagged template's strings have none.
 338. **Short circuits** *(agent)*: `true && x`, `false || x` and `null ?? x` are `x`; `c ? a : b` its chosen branch
      when `c` is known; a sequence whose leading terms are known its last; parentheses kept as written.
@@ -2151,9 +2156,9 @@ every family's folding rules fill, evaluation retired as a public procedure.
      RangeError "Maximum BigInt size exceeded" before it is computed; any other result is computed (Python's ints are
      unbounded, V8 throws beyond its limit with the same message).
 340. **Tests**: suite TSS, `29_TypeScript5` *(agent: the inventory's partition numbered TypeScript5's suite 27, after
-     Python3's; with POSIX's at 26 and 27, the order shifts by two)*, nine cases, the same in both languages; DIA-21's
-     simplification assertions follow (its title: "simplification by ECMAScript's semantics (TSS)"); tutorials 8.0,
-     8.04, 8.05 and 8.06 show the folds (`x as Reading` with `x = 5` folds to 5; a regular expression constant is a
+     Python3's; with POSIX's at 26 and 27, the order shifts by two)*, TSS-01 to TSS-09, the same in both languages;
+     DIA-21's simplification assertions follow (its title: "simplification by ECMAScript's semantics (TSS)"); tutorials
+     8.0, 8.04, 8.05 and 8.06 show the folds (`x as Reading` with `x = 5` folds to 5; a regular expression constant is a
      literal, its value an object; a pattern's name resolves in a scope).
 
 ### Python3 (step 2)
@@ -2166,8 +2171,8 @@ every family's folding rules fill, evaluation retired as a public procedure.
      one `*starred`, parentheses), `is` and `is not`, and `@`. Python 3.15's `*` element of a comprehension and `**` of
      a dict comprehension fold too. The rules subclass the framework's `Interpreter` for `constant` only. A `None`,
      `...` or complex value folds to a `constant` (`P.constant(value)`); a tuple to its display, as a list's and a
-     dict's are; a set (its order is its hash table's), a slice, a closure, a template and a generator have no literal:
-     their subterms are simplified, and nothing is named.
+     dict's are, and a non-empty set to its display (item 377); an empty set, a slice, a closure, a template and a
+     generator have no closed constructor expression: their subterms are simplified, and nothing is named (item 378).
 342. **Closures** *(agent)*: a `lambda`'s value is a closure over the scope it is made in, its defaults evaluated then,
      callable by `call` in any scope (the scope allows what the expression made), binding Python's parameters
      (positional-only, defaults, `*args`, keyword-only, `**kwargs`) with CPython's messages ("<lambda>() missing 1
@@ -2190,9 +2195,9 @@ every family's folding rules fill, evaluation retired as a public procedure.
      (cross-checked, the TypeScript model against CPython, on 16,728 generated values and specs, 7,008 of them folded).
      What stays, named, of class `a`: a field of a value whose text is its implementation's (a set's order, an object's,
      a generator's, a function's or a template's address: "joinedstr's field of set"); a format of such a value; a spec
-     a locale decides (`n`); a spec Python refuses (a sign for a str, zero padding for a complex number, an int's code
-     for a float), which stays rather than raising Python's `ValueError` (open below); and a `\N{...}` escape (Unicode's
-     names). A t-string's value is a template, as Python 3.14's `string.templatelib` has it (`strings`,
+     a locale decides (`n`); and a spec Python refuses (a sign for a str, zero padding for a complex number, an int's
+     code for a float), which stays rather than raising Python's `ValueError` (open below). Item 379 states how a
+     `\N{...}` escape folds. A t-string's value is a template, as Python 3.14's `string.templatelib` has it (`strings`,
      `interpolations`, `values`; an interpolation's `value`, `expression`, `conversion`, `format_spec`), with no
      literal; its residual keeps its text as written, which is its value's.
 346. **A residual f-string** *(agent)*: a field whose term simplified loses its text as written, so that it prints its
@@ -2213,11 +2218,11 @@ every family's folding rules fill, evaluation retired as a public procedure.
      in insertion order, a dict a `Map` (or an object of variables), a complex number a `Domains.ComplexValue`, a slice
      and a template private classes whose type names are Python's; `@` raises Python's `TypeError` for every value, none
      having `__matmul__`.
-350. **Tests**: suite PYS, `28_Python3` (the number the coordinator assigned, before TypeScript5's 29), twelve cases,
-     the same in both languages, from the earlier draft's DIA-31, split by construct; `06_Dialects` is DIA-01 to DIA-30
-     again, DIA-02's tables keeping three rows the step added (a `*` argument, a chain with `is`, `None`) and asserting
-     `@`'s TypeError and the builtins' keywords where they named residues; PYT-08 asserts a lambda's value has no
-     literal. Tutorial 3's T03.7 shows the constants fold (`2j`, `None` and `...` literal roots), re-run with its
+350. **Tests**: suite PYS, `28_Python3` (the number the coordinator assigned, before TypeScript5's 29), PYS-01 to
+     PYS-12, the same in both languages, from the earlier draft's DIA-31, split by construct; `06_Dialects` is DIA-01 to
+     DIA-30 again, DIA-02's tables keeping three rows the step added (a `*` argument, a chain with `is`, `None`) and
+     asserting `@`'s TypeError and the builtins' keywords where they named residues; PYT-08 asserts a lambda's value has
+     no literal. Tutorial 3's T03.7 shows the constants fold (`2j`, `None` and `...` literal roots), re-run with its
      outputs in both languages; no other tutorial's outputs change.
 
 ### C and C++ (step 2)
@@ -2244,11 +2249,9 @@ every family's folding rules fill, evaluation retired as a public procedure.
      (`f16`, `bf16`), where the binary64 value of its literal rounds back to it exactly (`3.0L`, `0.3dd`; a long double
      third stays); a bit-precise integer where its narrowest literal is of its type (`7wb`, not a `_BitInt(4)` 1); a
      string; `nullptr` its `constant`. A typedef's value is the standard integer type it is (`(int64_t)5 + 1` is `6l`).
-     A value of a type with no suffix stays: `char`, `short`, `wchar_t` in C++ (a type of its own there), a
-     `uint8_t`; its promoted arithmetic folds (`(char)200 + 0` is `-56`). This supersedes API 330's list of types that
-     stay (`long double` and the decimal types now fold where a literal spells them exactly; `_BitInt` where its
-     narrowest literal does). Writing a value of no literal as a cast of a literal was considered and not done: its
-     root would be a cast, not a literal, against "a literal root is a successful evaluation".
+     A value of a type with no suffix (`char`, `short`, `wchar_t` in C++, which is a type of its own there, a
+     `uint8_t`) is written as a cast of a literal (item 387), and its promoted arithmetic folds (`(char)200 + 0` is
+     `-56`). A `_BitInt` whose narrowest literal is of a narrower type is written as a cast of a literal too.
 353. **Unevaluated operands** *(agent)*: `sizeof`'s, `alignof`'s, `_Generic`'s controlling operand and the
      conditional's other operand are typed, not evaluated (`sizeof(1 / 0)` is `4ul`), by their kinds: a literal's,
      a cast's, the promotions and the usual arithmetic conversions, a comparison's (C's `int`, C++'s `bool`: C's
@@ -2299,16 +2302,17 @@ every family's folding rules fill, evaluation retired as a public procedure.
      array of one, an array value (its type's length or its initializer's, designators and GNU's ranges, a character
      array's string with its zero, unset elements zero), which has no literal, whose elements a subscript reads in
      their type; a structure's or a union's members are a declaration's, which the term does not hold: it stays,
-     class `d`; nested braces and an array of arrays stay, class `a`.
+     class `d`; an array of arrays, and an initializer with nested braces, are initialized as C initializes them (item
+     390). An array value has no literal; in C, the simplifier writes it as a compound literal (item 389).
 361. **What stays, named** *(agent)*: `CATEGORIES` gains, for C (and C++, which copies C's): `sizeofexpression`,
      `alignofexpression` and `genericselection` "of an operand of unknown type" `c`; "of a type that is not
      arithmetic" (`sizeof`, `alignof`, `_Generic`'s), "genericselection of an association of a type a declaration
      names" and "compoundliteralexpression of a type that is not arithmetic" `d`; for C++, the named casts but
      `static_cast`, "namedcastexpression to a type that is not arithmetic", "functionalcastexpression to a type that is
      not arithmetic", "throwexpression without an operand", "idexpression of a name that is not an identifier", and
-     a fold over each assignment operator, `.*` and `->*`, `d`. What a layout no ABI dialect stores, nested braces and
-     an array of arrays leave is `a` by default.
-362. **Tests**: suite CCS, `30_C_Cpp`, fourteen cases, the same in both languages (*agent*: 28 is the Python3
+     a fold over each assignment operator, `.*` and `->*`, `d`. What a layout no ABI dialect stores leaves is `a` by
+     default.
+362. **Tests**: suite CCS, `30_C_Cpp`, CCS-01 to CCS-14, the same in both languages (*agent*: 28 is the Python3
      family's). Existing cases follow: DIA-11 (a `wb` literal's type `_BitInt(4)`), DIA-12 (the conditional's common
      type; what now folds removed from what stays: `sizeof`, parentheses, the comma, a `_BitInt` literal, GNU's `?:`),
      DIA-24 (`FOLDED` a superset; a qualified name resolved by the scope; `operator+` stays), CTY-09 (`sizeof(int)` is
@@ -2343,9 +2347,10 @@ every family's folding rules fill, evaluation retired as a public procedure.
      `min:typ:max`, the conditional, unary `+ - ~`, the binary arithmetic, bitwise and shift operators: *transparent*)
      folds into the literal of its value in its context's type, once that type is known; any other term (a name, a
      concatenation, a comparison, a call, a cast, a select, ...) folds into its own type's literal, sound wherever it
-     stands. A type no literal has (a 2-state type, `shortreal`) folds only where its states or format cannot change
-     what stays around it: a self-determined position whose parent ignores them (a condition, a logical operand, a
-     reduction, a shift count, an index, a count), or a context whose type is known and has a literal. What a binding
+     stands. A type no literal has (a 2-state type, `shortreal`) folds into a literal where its states or format cannot
+     change what stays around it: a self-determined position whose parent ignores them (a condition, a logical operand,
+     a reduction, a shift count, an index, a count), or a context whose type is known and has a literal. Elsewhere it
+     folds into a cast of a literal to its type (item 395). What a binding
      `matches` binds stays bound: it never folds; a type and a pattern have no value of their own and are not folded;
      in a sublanguage's term no rule reads, a term folds only where its own type's literal is sound. What stays by these
      rules names no residue. `&&` and `||` are decided by a deciding operand, `->` by a true consequent (Kleene), a
@@ -2390,12 +2395,12 @@ every family's folding rules fill, evaluation retired as a public procedure.
      dimension beyond them `'x`); `$sformatf` (item 372). Any other system function stays, class `d` by default (a
      simulator's or a PLI's), `$typename` class `c`.
 372. **`Formats`** *(agent)*: a new family module in both languages, exported from the package: `text` and `vector`
-     (strings as byte vectors), `sformatf` (`%d %h %x %o %b %c %s %e %f %g %%`, case-insensitive, with `-`, `0`, a width
-     and a precision; a field as wide as the value's type needs, a decimal in spaces, digits in zeros; x and z digits
-     `x`, `z`, `X`, `Z`; a mismatch of specifications and arguments a `TypeError`), `real` (C's `printf` of a real,
-     from its exact value by `Ieee754.decode`, rounded half to even, the same digits in both languages), `unwritten`
-     and `UNWRITTEN`: `%t %m %l %v` stay (class `d`), `%u %z %p` (class `a`).
-373. **Tests**: suite SVS, `31_SystemVerilog`, 14 cases, the same in both languages (SVS-13 also checks
+     (strings as byte vectors), `sformatf` (`%d %h %x %o %b %c %s %e %f %g %u %z %p %%`, case-insensitive, with `-`,
+     `0`, a width and a precision; a field as wide as the value's type needs, a decimal in spaces, digits in zeros; x
+     and z digits `x`, `z`, `X`, `Z`; a mismatch of specifications and arguments a `TypeError`), `real` (C's `printf` of
+     a real, from its exact value by `Ieee754.decode`, rounded half to even, the same digits in both languages),
+     `unformatted` and `pattern` (items 392 and 393), `unwritten` and `UNWRITTEN`: `%t %m %l %v` stay (class `d`).
+373. **Tests**: suite SVS, `31_SystemVerilog`, SVS-01 to SVS-14, the same in both languages (SVS-13 also checks
      `Formats.real` against Python's own `%`, in Python only, as DIA-02 checks against Python); DIA-14's residues and
      SVP-08 follow what now folds (SVP-08's title: "Simplification leaves each of its kinds alone in the residual,
      named; a `matches` folds what it can match, binding its variable in its conditional's consequence"); FRM-01
@@ -2424,9 +2429,233 @@ every family's folding rules fill, evaluation retired as a public procedure.
      parameter's default applying to it; `value` has no default now, so `void 0`, and a variable bound to `undefined`,
      simplify to `undefined` (TSS-01). Python's `Result` had no such bug, `A.UNDEFINED` being a value of its own.
 376. **Suites** *(coordinator)*: each family's suite numbered after POSIX's two, in the inventory's partition's order:
-     `28_Python3` (PYS, 12), `29_TypeScript5` (TSS, 9), `30_C_Cpp` (CCS, 14), `31_SystemVerilog` (SVS, 14); 299 cases
+     `28_Python3` (PYS, 14), `29_TypeScript5` (TSS, 10), `30_C_Cpp` (CCS, 15), `31_SystemVerilog` (SVS, 16); 305 cases
      in each language. The families' API items numbered in that order too: TypeScript5's 334 to 340 (merged first),
      Python3's 341 to 350, C's and C++'s 351 to 362, SystemVerilog's 363 to 373.
+
+## Settled in CAP-295's step, for the user's review
+
+This step builds the Design of mbse-basis [CAP-295: simplification of single-dialect expressions with literal
+leaves](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-295.md#design) in 0.11.0. A
+simplification is an evaluation when its root is a closed constructor expression (mbse-basis [VOC-034: closed
+constructor expression](https://github.com/pitaman71/mbse-basis/blob/main/docs/VOCABULARY.md#VOC-034)). Each family
+writes a value that has no literal as a closed constructor expression wherever its language has one, and five class (a)
+shapes fold. The families' items are numbered in the inventory's partition's order, and the framework's items follow
+them.
+
+### Python3 (CAP-295)
+
+377. **Sets written as displays** *(agent)*: Python3's `construct` option writes a non-empty set as its display
+     (`{1, 2}`), a closed constructor expression, so that `Simplified.constructed` is true, `literal` is false, and
+     `evaluate()` gives the set. Both implementations write the items in one order of their values, which neither takes
+     from its own set: CPython's iteration order is its hash table's (and a str's hash is seeded per process), and
+     TypeScript's `Set` keeps insertion order. The order ranks the kinds of item first: `None`, then `...`, then real
+     numbers (bool, int and float, by value, a NaN after every other), then complex numbers (by the real part, then by
+     the imaginary part, each as a real number is ordered), then strs (by code point), then bytes (by byte), then tuples
+     (item by item in this same order, then by length). Items that this order ranks alike are written alike, so that
+     the order of two such items never changes the text. A set display that a residual holds is written again in this
+     order (`{3, 1, 1 + 1}` becomes `{1, 2, 3}`). A set's field in an f-string stays (item 345), because `str` of a set
+     is CPython's iteration order, not this display.
+378. **What has no closed constructor expression in Python3** *(agent)*: An empty set has none, because `{}` is a dict
+     display and `set()` calls the name `set`, which is free. A frozenset has none, because `frozenset(...)` calls a
+     name; a frozenset is reachable only from a scope's variables in Python, and TypeScript models no frozenset. A slice
+     has none, because `slice(...)` calls a name. A template and its interpolations have identity, because CPython
+     3.14's `Template` and `Interpolation` define no equality. A closure has identity, a generator has an intermediate
+     state, and a module and a data object come from outside the dialect. Each of these values stays, its subterm kept,
+     and the simplifier names no residue. A set that holds any of them stays too.
+379. **`\N{...}`** *(agent)*: An f-string's or a t-string's `\N{name}` escape folds to the character that the name
+     names, as CPython 3.14's `unicodeescape` codec looks it up, which its compiler reads a string with. The lookup
+     ignores the case of ASCII's letters. It reads every name that Unicode's character database gives a character,
+     every alias of `NameAliases.txt`, and the names that it derives by rule: Hangul's syllables, and the names of the
+     CJK unified and compatibility ideographs, the Egyptian hieroglyphs, the Tangut ideographs, the Khitan small script
+     characters and the Nüshu characters, each a prefix and the code point in at least four uppercase hexadecimal
+     digits. CPython's lookup reads the Tangut ideographs' names although `unicodedata.name` gives none. The lookup
+     reads no named sequence. Python refuses to compile a malformed escape (no `{`, no `}`, or an empty name) and an
+     unknown name. Each stays, named "Python3 joinedstr's malformed \N character escape is not simplified" or "Python3
+     joinedstr's unknown Unicode character name is not simplified", of class `b`, as invalid syntax is. The Python
+     implementation reads the escape with `codecs.decode(..., "unicode_escape")`; the TypeScript implementation reads
+     it with the data of item 380.
+380. **The names as data** *(agent)*: `grammars/python3-unicode-names.json` holds the names that item 379 reads, about
+     498 KB, generated from CPython 3.14.7's `unicodedata` (Unicode 16.0.0) and Unicode's `NameAliases.txt` 16.0.0. Its
+     keys are `grammar` (what it holds), `checked`, `unicode`, `ranges` (19 ranges, each a prefix, a first and a last
+     code point), `hangul` (the prefix, the first code point and the jamo's short names), `aliases` (477, each a code
+     point and an alias) and `characters` (34,137 names in 14,512 runs, each run the names of consecutive code points
+     that differ in their last word alone, its first name sharing its leading words with the run before). The
+     TypeScript implementation imports it as a JSON module (`import ... with { type: "json" }`, which `tsconfig.json`'s
+     `resolveJsonModule` allows), so that the library reads no file at run time and runs where there is no file system;
+     it builds its map of names when an escape first needs them. The Python implementation does not read it at run
+     time. The file lives in `grammars/` beside the other data that both suites read.
+381. **Tests**: suite PYS has 14 cases, the same in both languages. PYS-13 writes sets as displays in the order of item
+     377 and keeps an empty set; it also asserts that the framework's `Simplifier.known` writes a set's display. PYS-14
+     folds `\N{...}` and leaves a malformed escape and an unknown name named. Python's PYS-14 also checks the data file
+     against the running Python's `unicodedata` and codec: every name and alias that the file holds resolves to its code
+     point, every name of each range resolves, the code points beside each range resolve to nothing, and every name that
+     `unicodedata.name` gives is among the file's. TypeScript's PYS-14 checks the file's content alone (Unicode 16.0.0,
+     45,786 names, 19 ranges). PYS-01 writes a set as its display, PYS-04 is titled "f-strings: conversions, debug
+     fields, nested format specs and escapes; a residual's fields respelled; a field whose text is an implementation's
+     stays, named", and PYS-09's set comprehension folds to `{1}`. Tutorials 3, 5, 7, 8.00 to 8.03 and 14, re-executed
+     in Python, give their committed outputs.
+
+### TypeScript5 (CAP-295)
+
+382. **An object literal's `__proto__`** *(agent)*: a property sets the object's prototype, as ECMA-262's B.3.1 defines
+     it, when its key is `__proto__`, written as an identifier or as a string, and when it is neither computed, a
+     shorthand, a method nor an accessor. When its value is an object or `null`, the new object's prototype is that
+     value; when its value is any other value, the property is ignored. The property is not one of the object's own
+     properties, so a spread of the object does not copy it. A computed `["__proto__"]: v`, a shorthand `{ __proto__ }`
+     and a method `__proto__() {}` define an own property. An object with two properties that set its prototype is an
+     early error in ECMA-262, so no such object exists: the expression stays in the residual, "TypeScript5
+     objectexpression duplicate __proto__ is not simplified", with class `b`, as invalid syntax does.
+383. **Prototypes in `ECMAScript`** *(agent)*: `ECMAScript.ordinary_object_create(prototype, properties)` (TypeScript
+     `ordinaryObjectCreate`) is ECMA-262's OrdinaryObjectCreate (10.1.12). It makes an object of the properties, in
+     ECMAScript's order, whose prototype is `OBJECT_PROTOTYPE`, `null` or an object. A primitive prototype raises
+     TypeError "Object prototype may only be an Object or null: 1", V8's message. `get_prototype_of(object)`
+     (TypeScript `getPrototypeOf`) gives an object's [[Prototype]]: `OBJECT_PROTOTYPE`, which stands for
+     %Object.prototype%, unless `ordinary_object_create` gave the object another. In Python, an object whose prototype
+     is not %Object.prototype% is a private subclass of `dict` that holds its prototype. In TypeScript, such an object
+     has no prototype of JavaScript's own (`Object.create(null)`), and the module records its prototype in a `WeakMap`,
+     so that nothing JavaScript inherits reaches it. A scope's object with no prototype in TypeScript
+     (`Object.create(null)`) therefore reads as an object whose prototype is `null`, with no built-in properties.
+384. **Reads through the chain of prototypes** *(agent)*: `get` and `has_property` read an object's own property first,
+     then its prototype's, and a prototype `null` ends the chain with nothing inherited. ToPrimitive finds `valueOf` and
+     `toString` the same way, so that an object with a `null` prototype and no such methods raises TypeError "Cannot
+     convert object to primitive value". `instanceof` asks whether a class the scope provides made the first object in
+     the chain that is not an object this module made. The simplifier does not run a built-in method on an object of
+     another kind: an object that inherits from an array or a regular expression and is converted to a primitive stays
+     in the residual, "TypeScript5 Array.prototype.toString is not simplified" or "TypeScript5
+     RegExp.prototype.toString is not simplified", and an object that inherits from an array and is iterated stays,
+     "TypeScript5 Array.prototype.values is not simplified", each with class `c`, as every built-in method has. A host
+     value in the chain stays, "TypeScript5 host value is not simplified", with class `c`.
+385. **Written back as a closed constructor expression** *(agent)*: the simplifier's `construct` writes an object whose
+     prototype is not %Object.prototype% as its display with a `__proto__` key first, an identifier that is neither
+     computed nor a shorthand, whose value is the prototype's literal (`null`, a regular expression) or display:
+     `({ __proto__: null, a: 1 })`, `({ __proto__: { a: 1 }, b: 2 })`. Such a residual is `constructed`, and
+     `evaluate()` gives the object. An object whose prototype has neither a literal nor a display, such as a closure or
+     a host value, stays, its subterms simplified.
+386. **Tests, and the values that stay** *(agent)*: suite TSS has 10 cases, TSS-10 among them, the same in both
+     languages. No other value of the TypeScript5 simplifier
+     has a closed constructor expression that the simplifier does not write. A boolean, a number, a bigint, a string,
+     `undefined`, `null` and a regular expression have literals; an array and an object of such values have displays. A
+     closure stays, because the value that an arrow makes depends on the scope in which it was made, which the closure
+     does not keep as a term. A tagged template's strings array stays, because only a call of a tag function makes it.
+     A data object and a host value stay, because they come from outside the dialect. A value made by a constructor
+     that the scope provides, such as `new Map(...)`, stays, because its constructor is a free name.
+
+### C and C++ (CAP-295)
+
+387. **A value no literal spells, as a cast of a literal** *(agent)*: the C family's simplifier passes `construct` to
+     the framework's `Simplifier`. A value of an arithmetic type that has no literal (`char`, `signed char`, `unsigned
+     char`, `short`, `unsigned short`, C++'s `wchar_t`, `char8_t`, `char16_t` and `char32_t`, and a `_BitInt(N)` whose
+     narrowest literal is of a narrower type) is written as `(T)literal`, a closed constructor expression. `T` is the
+     type's identity (`Domains.Types.identity`), so a typedef's value is written as the standard type it is:
+     `(uint8_t)300` folds to `(unsigned char)44`. `T` is written with its keywords where each word is one of
+     `C.Domains.KEYWORDS` (TypeScript `KEYWORDS`), which is public, and as a named type otherwise (C++'s `wchar_t`); a
+     bit-precise integer type is written `_BitInt(N)` or `unsigned _BitInt(N)`. The literal is the value's own where it
+     has one, else the literal of the first of `int`, `long` and `unsigned long` that holds the value, else the value's
+     narrowest `wb` literal (`(_BitInt(70))36893488147419103232wb`). The cast is written from the value, so a cast that
+     is already of a literal is rewritten to its value's (`(char)200` folds to `(char)-56` under AMD64 and stays
+     `(char)200` under AAPCS64). The residual's root is then `constructed`, not `literal`, and `evaluate()` gives the
+     value's native. A floating value that no binary64 literal spells, and a non-finite one, stay, because no cast of a
+     literal converts to them exactly; `void`, an object and a C++ ordering stay too.
+388. **C++ writes C's cast** *(agent)*: C++ writes a value with no literal as the C-style cast `(T)x`, as C does, and
+     not as the functional cast `T(x)`. A functional cast's type is one simple type specifier, so `unsigned char(5)` is
+     ill-formed C++, while `(unsigned char)5` is valid in both languages; one form serves the whole family.
+389. **A C array as a compound literal** *(agent)*: in C, an array whose elements a compound literal gave is written as
+     a compound literal of its elements: `(int[]){10, 3}`, and an array of arrays `(int[][2]){{1, 2}, {3, 0}}`. The
+     outer length is left to the items, every element is written (zeros too), and each inner length is written. Each
+     element is written as its literal, or as the literal that converts to it (item 387), so a character array's
+     elements are integers, not a string (`(char[]){104, 105, 0}`). An array whose elements no literal converts to stays
+     (`(long double[]){1.0L / 3}`). A list that a variable holds stays, because its elements carry no C type. A C++
+     array stays, because C++ has no compound literal and its casts name an array type only through a typedef, which a
+     declaration gives.
+390. **Initialization by ISO/IEC 9899, 6.7.10** *(agent)*: a compound literal of an arithmetic type, of an array of
+     one, or of an array of arrays of one is initialized as C initializes an object. Each item initializes the next
+     scalar, its braces elided; an item in braces initializes the next element of the array it is within, or the scalar
+     it reaches (`{1}`, and `{}` its zero); a designation of one or more designators (`[1][0] = 5`) names what its item
+     initializes, and the next item initializes what follows it; GNU's range (`[0 ... 1] = {1, 2}`) repeats one item; a
+     string initializes the first character array that it reaches; a later item overrides an earlier one, and braces
+     initialize all of their object anew. What C leaves undefined or makes a constraint violation raises `TypeError`:
+     "too many braces around a scalar initializer", "designator in initializer for scalar type 'int'", "an array of
+     unknown size is initialized by an empty initializer" (C23's constraint), "array has incomplete element type", and
+     "excess elements in an array initializer", which a designator beyond its array's bound raises at its own level.
+     `CATEGORIES` and its descriptions name neither nested braces nor an array of arrays, and no residue names them.
+391. **Tests**: suite CCS has 15 cases, the same in both languages. CCS-01, CCS-07, CCS-08 and CCS-10 assert the casts
+     of literals and the compound literals, and CCS-15 asserts arrays of arrays and nested braces, initialized as C
+     initializes them, each written as a compound literal, and what has no closed constructor expression. DIA-12 and
+     CTY-05 assert that `(uint8_t)300` folds to `(unsigned char)44`, and `(uint8_t)(x + 1)` with `x` 255 to `(unsigned
+     char)0`. Tutorial pages 8.07 (08.07.5) and 8.09 (08.09.5) teach the cast of a literal, re-run in both languages;
+     tutorial 8's step T08.1, re-run in both languages, gives the value of `(uint8_t)200`, 200, on its C line.
+
+### SystemVerilog (CAP-295)
+
+392. **`%u` and `%z`** *(agent)*: `$sformatf` folds `%u` and `%z` by IEEE 1800-2023's 21.2.1 and 21.3.3, through
+     `Formats.unformatted(value, states)`. Both write a value's bits in units of 32 bits, and the unit that holds the
+     least significant bit comes first. `%u` writes each unit's 2-state bits as one word, with x and z as 0. `%z` writes
+     each unit's `aval` word and then its `bval` word, as VPI's `s_vpi_vecval` holds them. Each word is written as four
+     bytes, least significant byte first. IEEE 1800 leaves the byte order to the host's native order. The simplifier
+     takes little-endian because both ABI dialects that mbse-expressions stores, AMD64 and AAPCS64, are little-endian.
+     `$sformatf("%u", 32'h41424344)` is `"DCBA"`. A real argument raises "%u expects an integral argument, got real".
+     A width pads the field as it pads `%s`.
+393. **`%p`** *(agent)*: `$sformatf` folds `%p` by 21.2.1.7, through `Formats.pattern(value)`. An integral value is
+     written as `%0d` writes it, so that a value with x or z bits is written as `x`, `X`, `z` or `Z`. A real is written
+     as `%g` writes it. An array or a queue is written as an assignment pattern of its items, `'{1, '{2.5, 1}, '{}}`,
+     with ", " between items, which is a choice that 21.2.1.7 leaves to the implementation. A structure's value and a
+     class handle, `null` among them, stay in the residual, because their members are a declaration's: "SystemVerilog
+     systemcall '$sformatf' %p of an object is not simplified", class `c`. A string is a vector of bytes in the
+     dialect's values, so `%p` writes it as its integral value.
+394. **A string holds no NUL byte** *(agent)*: the text that `$sformatf` folds to drops every NUL byte, as a cast to
+     `string` does (6.16). `%u` and `%z` write NUL bytes often, and `%c` of 0 writes one. A width counts the field's
+     bytes before the NUL bytes are dropped. `Formats.sformatf`, not the simplifier, checks `$sformatf`'s arguments,
+     because `%p` takes an array and every other specification refuses one: "$sformatf writes numbers and strings, not
+     a list".
+395. **Casts of literals** *(agent)*: SystemVerilog's simplifier passes `construct` to the framework. Wherever item 364
+     keeps a subterm from folding into a literal because its type has no literal (a 2-state type, `shortreal`) and its
+     states or its format could change what stays around it, the subterm folds into a cast of a literal to its type, by
+     6.24.1: `int'(5)`, `int'(-3)`, `byte'(8'sb00101100)`, `longint'(64'sb...)`, `bit'(1'b1)` and `shortreal'(0.1)`. The
+     cast keeps the subterm's meaning under 11.6, because a cast is self-determined and has the subterm's own type. A
+     context-determined subterm folds into a cast to its context's type once the context's type is known, and it stays
+     while the context's type is unknown, because a wider context could keep the carries that its own type drops. A
+     keyword's type of the other signedness is written as that cast's signing, `unsigned'(int'(-1))` and
+     `signed'(bit'(1'b1))`. A `shortreal` is written by the fewest significant digits that a cast rounds to the value,
+     which `Formats.real` finds alike in both languages, and an infinity as a division. A subterm of a term that no rule
+     reads (a sublanguage's term) folds alone into such a cast where its own type has one. The cast's operand is a
+     literal of the keyword type's width and signedness with 4 states. IEEE 1800's `casting_type` admits no packed
+     dimensions, so a 2-state vector as wide as no keyword's type (`bit [3:0]`) stays. The root folds into a literal:
+     its context is no expression's, and item 330 writes a 2-state value at the root as a 4-state vector of its bits.
+     Simplifying such a residual again gives the same residual.
+396. **Tests**: suite SVS has 16 cases, the same in both languages. SVS-15 ("A value whose type no literal has
+     (2-state, `shortreal`) folds into a cast of a literal to its type, where its states could matter") and SVS-16
+     ("`$sformatf`'s `%u` and `%z` write a value's bits unformatted, and `%p` writes it as an assignment pattern
+     (21.2.1)") are among them. SVS-15 also asserts `Simplifier.known`'s three outcomes: a value that neither a literal
+     nor a cast writes, a simplifier with no `construct`, and a value that `construct` writes *(agent)*. SVS-02 asserts
+     that a `bit` bound to `x` in `x + y` folds to `bit'(1'b1) + y`. Tutorial pages 8.13 to 8.17, tutorial 8 and
+     tutorial 15, re-executed in Python, give their committed outputs.
+
+### The framework (CAP-295)
+
+397. **A closed constructor expression at the root is an evaluation** *(coordinator)*: the user decided this as
+     CAP-295's acceptance criterion
+     ([CAP-295](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-295.md#decided), Decided).
+     `Simplified.constructed` is true when the residual's root is a closed constructor expression: a literal, or what
+     the dialect's `construct` writes (item 398). `Result.constructed` says the same of a simplified subterm. Every
+     literal is `constructed`. A display or a cast of literals is `constructed` and not `literal`. When the root is
+     `constructed`, `value` holds its value (through `native`), and `evaluate()` gives that value.
+398. **`construct`, the hook for a value with no literal** *(coordinator)*: `Simplifier(rules, ..., construct=...)`
+     (TypeScript: the option `construct`) takes `construct(value)`, which writes a value that has no literal as a closed
+     constructor expression of literals, or gives none where the dialect has none. Where `literal(value)` gives none,
+     `known` and the reduction of each subterm call `construct`; a value with neither keeps its subterm, simplified in
+     turn. `Simplifier` takes no `display` option, and no alias of one, because 0.11.0 is unreleased. MATLAB (its
+     concatenation), Python3 (its displays, item 377), TypeScript5 (its array and object displays, item 385), C and C++
+     (casts of literals and C's compound literals, items 387 to 389) and SystemVerilog (casts of literals, item 395)
+     pass `construct`. Patterns and Excel pass none.
+399. **`NotEvaluated`'s message** *(coordinator)*: `evaluate()` raises `NotEvaluated`, "the root is not a closed
+     constructor expression: ", followed by why: the first residue's reason ("Python3 lambda is not simplified"), else
+     the first free name ("x is not bound"), else "its value has no closed constructor expression". The suites that
+     assert the message, and tutorial 8 and its pages, which print it, read this text.
+400. **Tests** *(coordinator)*: EVL-06 asserts that a simplifier whose `literal` gives none and whose `construct` writes
+     a literal term gives, from `known`, a `Result` that is `constructed` and not `literal`, and gives, from a
+     simplification, a `Simplified` that is `constructed`, is not `literal`, and evaluates. EVL-06 covers the
+     framework's `construct` branches in both languages, without depending on a dialect's `construct`.
 
 ## What stage 2b needed (done)
 
