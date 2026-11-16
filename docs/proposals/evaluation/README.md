@@ -247,9 +247,10 @@ evaluation retired as a public procedure ([the port's API](../port/API.md#settle
 - **Operator semantics are folding rules.** What each dialect's evaluator computed over literals, its rules fold into
   literals, every operator it evaluated before (`FOLDED`, the tables of its `Interpreter`, `RULES`). A value with no
   literal is written as a closed constructor expression where the dialect's `construct` writes one, such as a display or
-  a cast of literals. A value with neither (an object, a closure, a Patterns collection, an Excel error) stays a
-  subterm of the residual, its own subterms simplified. SystemVerilog folds a subterm wherever 11.6's sizing of the whole expression keeps its meaning (its own `folds`
-  hook).
+  a cast of literals. A value with neither (an object, a closure, a Patterns collection, an Excel error) stays a subterm
+  of the residual, its own subterms simplified. The SystemVerilog dialect's simplifier folds a subterm wherever IEEE
+  1800's clause 11.6, sizing the whole expression, keeps the subterm's meaning; the dialect's own `folds` hook decides
+  where.
 - **No refusals** (question 6). Where a dialect has no rule for a kind or an operator, the subterm stays, named by a
   `Residue`: its dialect, its kind, what it has no rule for, and its class in the inventory (`CATEGORIES`, each family's
   module). Kleene's logic still decides what does not depend on it, as `simplify` does in Patterns (`false and x` is

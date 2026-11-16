@@ -2557,9 +2557,10 @@ them.
      `(char)200` under AAPCS64). The residual's root is then `constructed`, not `literal`, and `evaluate()` gives the
      value's native. A floating value that no binary64 literal spells, and a non-finite one, stay, because no cast of a
      literal converts to them exactly; `void`, an object and a C++ ordering stay too.
-388. **C++ writes C's cast** *(agent)*: C++ writes a value with no literal as the C-style cast `(T)x`, as C does, and
-     not as the functional cast `T(x)`. A functional cast's type is one simple type specifier, so `unsigned char(5)` is
-     ill-formed C++, while `(unsigned char)5` is valid in both languages; one form serves the whole family.
+388. **The Cpp dialect's simplifier writes C's cast** *(agent)*: when the Cpp dialect's simplifier writes a value that
+     has no literal, it writes the C-style cast `(T)x`, as the C dialect's simplifier does, and not the functional cast
+     `T(x)`. In C++, a functional cast's type is one simple type specifier, so `unsigned char(5)` is ill-formed C++,
+     while `(unsigned char)5` is valid in both languages. The two dialects' simplifiers therefore write the same form.
 389. **A C array as a compound literal** *(agent)*: in C, an array whose elements a compound literal gave is written as
      a compound literal of its elements: `(int[]){10, 3}`, and an array of arrays `(int[][2]){{1, 2}, {3, 0}}`. The
      outer length is left to the items, every element is written (zeros too), and each inner length is written. Each
