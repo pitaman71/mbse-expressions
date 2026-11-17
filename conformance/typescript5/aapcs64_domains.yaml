@@ -4,7 +4,8 @@ mutations:
     - symbols:
         '0':
           schema:
-          - $ref:
+          - $schema: References.OfObject
+            path:
               singleton: '.'
               next:
                 entry:
@@ -44,7 +45,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -65,7 +66,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -86,7 +87,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -107,7 +108,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -128,7 +129,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -149,7 +150,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -170,7 +171,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -191,7 +192,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -212,7 +213,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -233,7 +234,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -254,7 +255,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -275,7 +276,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -296,7 +297,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -317,7 +318,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -338,7 +339,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -359,7 +360,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -380,7 +381,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -401,7 +402,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -422,7 +423,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -443,7 +444,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -464,7 +465,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -485,7 +486,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -506,7 +507,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -527,7 +528,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -548,7 +549,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -569,7 +570,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -590,7 +591,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -611,7 +612,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -632,7 +633,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -653,7 +654,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -674,7 +675,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -695,7 +696,7 @@ mutations:
                       name: domain
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:
@@ -721,7 +722,7 @@ mutations:
                       name: standard
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.Arm.AAPCS64
                               next:

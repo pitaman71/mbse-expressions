@@ -88,7 +88,12 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    `.and_(...)`). A writer builds data and simplifies nothing. Write it within a transaction, as the root of an
    expression (`Expressions.Patterns.Expressions.Expression`, whose root holds Patterns' terms only, or
    `Expressions.Framework.Expression`, any dialect's), or as a term alone (`Expressions.Framework.Term`). A value of the
-   program becomes a literal, so the constraint never refers back to it.
+   program becomes a literal, so the constraint never refers back to it. Every read of the store is made within a
+   transaction too, validation and simplification among them, and what a transaction writes, an expression or an
+   object, and the terms read through it, live only within it: used after it ends, they are refused
+   ([CAP-315: every read within a transaction or through a follow](mbse:mbse-basis/docs/capabilities/CAP-315.md)). An expression is a counted object, found
+   again by nothing: keep its writer, the program's own data, and write the expression within each transaction that
+   reads it; keep what you read out of it (a value, a residual's text, its JSON), which is the program's.
    [FEA-024: expressions as data](mbse:mbse-basis/docs/features/FEA-024.md),
    [CAP-095: Basic terms as data](mbse:mbse-basis/docs/capabilities/CAP-095.md).
    - Python: [T01.1: A store that holds domains](mbse:mbse-expressions/python3/tutorials/01_Values_And_Their_Domains.ipynb#T01.1) · TypeScript: [T01.1: A store that holds domains](mbse:mbse-expressions/typescript5/tutorials/01_Values_And_Their_Domains.ipynb#T01.1)
@@ -338,8 +343,9 @@ each case shows its own:
   - Python: [T10.1: Absent is unknown](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.1) · TypeScript: [T10.1: Absent is unknown](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.1)
   - Python: [T10.4: No coercion](mbse:mbse-expressions/python3/tutorials/10_Answers_You_Can_Trust.ipynb#T10.4) · TypeScript: [T10.4: No coercion](mbse:mbse-expressions/typescript5/tutorials/10_Answers_You_Can_Trust.ipynb#T10.4)
   - Python: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/python3/tests/02_Simplifiers.ipynb#EVL-02) · TypeScript: [EVL-02: Comparisons are three-valued and never coerce](mbse:mbse-expressions/typescript5/tests/02_Simplifiers.ipynb#EVL-02)
-- **Transactions and arguments.** Python writes within `with store.transaction():`; TypeScript within
-  `store.transaction(() => ...)`, which gives back what its function returns. Python passes options by keyword
+- **Transactions and arguments.** Python writes, and reads, within `with store.transaction():`; TypeScript within
+  `store.transaction(() => ...)`, which gives back what its function returns: a value, since a visitor it gives back,
+  an expression or a term, is refused once the transaction ends. Python passes options by keyword
   (`validate(term, bound={"x"})`, `Scope(variables, modules={...})`); TypeScript positionally (`validate(term,
   ["x"])`) or in an options object (`new Scope(variables, { modules })`).
   - Python: [T09.1: Writing a constraint](mbse:mbse-expressions/python3/tutorials/09_Constraints_As_Data.ipynb#T09.1) · TypeScript: [T09.1: Writing a constraint](mbse:mbse-expressions/typescript5/tutorials/09_Constraints_As_Data.ipynb#T09.1)
@@ -347,7 +353,9 @@ each case shows its own:
   - Python: [T14.4: What a constraint may reach](mbse:mbse-expressions/python3/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4) · TypeScript: [T14.4: What a constraint may reach](mbse:mbse-expressions/typescript5/tutorials/14_One_Constraint_Many_Languages.ipynb#T14.4)
 - **Mappings and frames.** A mapping's entries are tuples in Python (`E.mapping(("lo", 0.5))`), arrays in TypeScript
   (`E.mapping(["lo", 0.5])`); a mapping given as data is a `dict` in Python, a `Map` or a plain object in TypeScript,
-  and a transaction's frame is a `dict` in Python, a `Map` in TypeScript (`.get("octet")`).
+  and a transaction's frame is a `dict` in Python, a `Map` in TypeScript (`.get("octet")`), each symbol bound to its
+  object's reference, data, not to the object: within a transaction, read a dialect's domain from its singleton
+  (`Domains.domains(store.singleton("Expressions.ISOIEC11404.Expressions"))["octet"]`).
   - Python: [T11.5: Building a list or a mapping](mbse:mbse-expressions/python3/tutorials/11_Constraints_Over_Collections.ipynb#T11.5) · TypeScript: [T11.5: Building a list or a mapping](mbse:mbse-expressions/typescript5/tutorials/11_Constraints_Over_Collections.ipynb#T11.5)
   - Python: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/python3/tests/10_Collections.ipynb#COL-08) · TypeScript: [COL-08: list and mapping construct collections from terms, which the collection operations and quantifiers read](mbse:mbse-expressions/typescript5/tests/10_Collections.ipynb#COL-08)
   - Python: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-13) · TypeScript: [EXP-13: Dialects, operations and domains are data: Patterns' singleton names its operations, and a standard dialect's owns its domains](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-13)

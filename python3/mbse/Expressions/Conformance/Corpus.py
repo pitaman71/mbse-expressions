@@ -1,8 +1,9 @@
 """The conformance corpus: the same cases, built statement for statement in every implementation.
 
-`build()` returns `{case: (root schema, root, store)}`: each case but the data cases a term value of
-`Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
-dialect's, and each dialect's `define`, written nested. `DIALECTS` names the dialect that reads each case other than
+`build()` returns the one store that holds the framework's install and every dialect's, and each dialect's `define`;
+`cases(store)`, called within a transaction open on it, returns `{case: (root schema, root)}`, each root a visitor of
+that transaction, refused once it ends ([CAP-315](mbse:mbse-basis/docs/capabilities/CAP-315.md#decided)): each case but
+the data cases a term value of `Expressions.Framework.Term`, its dialect then its kind, written nested. `DIALECTS` names the dialect that reads each case other than
 Patterns'. The `domains` case and the `<dialect>_domains` cases are data (`DOMAINS`): each a dialect's singleton, owning
 its domains by name, each kind its dialect's then its own, and the editions of the standards it covers by designation,
 written as one document; `domains` is ISO/IEC 11404's dialect, the singleton `Expressions.ISOIEC11404.Expressions`
@@ -25,6 +26,7 @@ same order of statements. """
 from __future__ import annotations
 
 from mbse.Expressions import Framework
+from mbse.Expressions.Framework import Domains as FD
 from mbse.Expressions.C import Expressions as C
 from mbse.Expressions.Cpp import Expressions as Cpp
 from mbse.Expressions.Excel import Expressions as Excel
@@ -92,7 +94,8 @@ STANDARD = {"standards": ("Expressions.C.Expressions", "ISO/IEC 9899:2024")}
 `Expressions.Framework.Standard`."""
 
 def build():
-    E = Expressions
+    """The corpus's store: the framework's install and every dialect's, each dialect's `define`, and two domains added to
+    ISO/IEC 11404's dialect. `cases(store)` reads the cases from it, within a transaction."""
     store = Builders.Store()
     store.transaction(Framework.install)
     store.transaction(ISOIEC11404.install)  # the standard dialects, before the dialects that use them
@@ -114,11 +117,9 @@ def build():
     for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor,
                    PythonRegExp, TypeScriptRegExp, CppRegExp, PosixBRE, PosixERE):
         store.transaction(module.install)  # the retrofit's new dialects, each after its family's, POSIX's after C++'s
-    defined = store.transaction(ISOIEC11404.define)[0]  # ISO/IEC 11404's dialect and its domains
-    stored = {case: store.transaction(module.define)[0]["dialect"] for case, module in [  # each dialect's stored domains
-        ("systemverilog_domains", SystemVerilog), ("python3_domains", Python3), ("typescript5_domains", TypeScript5),
-        ("matlab_domains", Matlab), ("excel_domains", Excel), ("c_domains", C), ("cpp_domains", Cpp),
-        ("amd64_domains", AMD64), ("aapcs64_domains", AAPCS64)]}
+    store.transaction(ISOIEC11404.define)  # ISO/IEC 11404's dialect and its domains
+    for module in (SystemVerilog, Python3, TypeScript5, Matlab, Excel, C, Cpp, AMD64, AAPCS64):  # each one's stored domains
+        store.transaction(module.define)
     for module in (SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor):  # the editions they cover
         store.transaction(module.define)
     for module in (PythonTypes, PythonPatterns, TypeScriptTypes, TypeScriptPatterns, CTypes, CppTypes, CPreprocessor,
@@ -128,14 +129,22 @@ def build():
     # --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
     # added ---
     with store.transaction():
+        iso = store.singleton(DOMAINS["domains"])  # the dialect, read within the transaction
         state = store.Expressions.Framework.Domain(lambda d: d.kind(lambda k: k.as_value(lambda a: a.as_union(
             lambda u: u.isoiec11404(lambda v: v.state(lambda e: e.members(["IDLE", "RUN"]).ordered(False)))))))
         mode = store.Expressions.Framework.Domain(lambda d: d.kind(lambda k: k.as_value(lambda a: a.as_union(
             lambda u: u.isoiec11404(lambda v: v.packed(lambda e: e.codes([0, 1]).ordered(True)))))).packs(lambda a: a.insert(
-            lambda e: e.domain(state).representation(defined["octet"]))))
-        store.Expressions.ISOIEC11404.Expressions.Dialect(defined["dialect"], lambda b: b.domains({
+            lambda e: e.domain(state).representation(FD.domains(iso)["octet"]))))
+        store.Expressions.ISOIEC11404.Expressions.Dialect(iso, lambda b: b.domains({
             "state": lambda e: e.domain(state), "mode": lambda e: e.domain(mode)}))
 
+    return store
+
+
+def cases(store):
+    """`{case: (root schema, root)}`, each root a visitor of the transaction open on `store`, which `build()` made: read
+    within it, as every read of a store's data is."""
+    E = Expressions
     # --- expression: every kind and literal type, a let and its variable, a list ---
     record, age = E.variable("record"), E.variable("age")
     expression = E.let_("age", record.age, age.ge(18).and_(
@@ -717,23 +726,21 @@ def build():
             lambda r: r.text("08").problems(["leading zeros in a decimal integer literal are not permitted"]))),
         lambda e: e.missing(lambda r: r.kind("expression")))
 
-    with store.transaction():
-        terms = {case: store.Expressions.Framework.Term(writer) for case, writer in [
-            ("expression", expression), ("python3", python3), ("matlab", matlab), ("excel", excel), ("latex", latex),
-            ("collections", collections), ("c", c), ("cpp", cpp), ("systemverilog", systemverilog),
-            ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid), ("systemverilog_patterns", patterns),
-            ("systemverilog_assertions", assertions), ("systemverilog_constraints", constraints),
-            ("systemverilog_preprocessor", preprocessor), ("python_types", python_types), ("python_patterns", python_patterns),
-            ("typescript_types", TypeScriptTypes.Expressions.DIALECT.spec(typescript_types)),
-            ("typescript_patterns", TypeScriptPatterns.Expressions.DIALECT.spec(typescript_patterns)),
-            ("c_types", enumeration(CT, CE)), ("cpp_types", enumeration(XT, CPP)), ("c_preprocessor", c_preprocessor),
-            ("python_regexp", python_regexp),
-            ("typescript_regexp", TypeScriptRegExp.Expressions.DIALECT.spec(typescript_regexp)), ("cpp_regexp", cpp_regexp),
-            ("posix_bre", posix_bre), ("posix_ere", posix_ere)]}
-    terms["domains"] = defined["dialect"]
-    terms.update(stored)
+    terms = {case: store.Expressions.Framework.Term(writer) for case, writer in [
+        ("expression", expression), ("python3", python3), ("matlab", matlab), ("excel", excel), ("latex", latex),
+        ("collections", collections), ("c", c), ("cpp", cpp), ("systemverilog", systemverilog),
+        ("typescript5", TS.DIALECT.spec(typescript5)), ("invalid", invalid), ("systemverilog_patterns", patterns),
+        ("systemverilog_assertions", assertions), ("systemverilog_constraints", constraints),
+        ("systemverilog_preprocessor", preprocessor), ("python_types", python_types), ("python_patterns", python_patterns),
+        ("typescript_types", TypeScriptTypes.Expressions.DIALECT.spec(typescript_types)),
+        ("typescript_patterns", TypeScriptPatterns.Expressions.DIALECT.spec(typescript_patterns)),
+        ("c_types", enumeration(CT, CE)), ("cpp_types", enumeration(XT, CPP)), ("c_preprocessor", c_preprocessor),
+        ("python_regexp", python_regexp),
+        ("typescript_regexp", TypeScriptRegExp.Expressions.DIALECT.spec(typescript_regexp)), ("cpp_regexp", cpp_regexp),
+        ("posix_bre", posix_bre), ("posix_ere", posix_ere)]}
+    terms.update({case: store.singleton(path) for case, path in DOMAINS.items()})  # each dialect, its domains
     terms.update({case: store.singleton(path).standards({"designation": designation})  # an edition, by its path
                   for case, (path, designation) in STANDARD.items()})
     Term, Standard = store.registered("Expressions.Framework.Term"), store.registered("Expressions.Framework.Standard")
     return {case: (store.registered(f"{DOMAINS[case]}.Dialect") if case in DOMAINS else Standard if case in STANDARD
-                   else Term, terms[case], store) for case in CASES}
+                   else Term, terms[case]) for case in CASES}

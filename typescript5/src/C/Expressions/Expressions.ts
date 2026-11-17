@@ -307,7 +307,9 @@ export function install(txn: any): any {
  * covers, by designation (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts,
  * its common name and the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing.
  * Its frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each domain by its name:
- * `store.transaction(C.define)[0].get("int32_t")`. */
+ * `store.transaction(C.define)[0].get("int32_t")`, each object by its reference (a `References.OfObject`), not a
+ * visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.C.Expressions")).get("int32_t")`. */
 export function define(txn: any): any {
   const OWN = txn.Expressions.C.Expressions;
   const Domain = txn.Expressions.Framework.Domain, Standard = txn.Expressions.Framework.Standard;

@@ -125,10 +125,12 @@ export function install(txn: any): any {
 
 /** Excel's domains as data: the singleton `Expressions.Excel.Expressions` owning its domains by name (`domains`,
  * through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its
- * schema (`Expressions.Excel.Expressions.number`) by `Expressions.Framework.HasDomain`: `number`, `logical`, `text`
- * and `error`, its `members` Excel's error codes, in the order `ERROR.TYPE` numbers them, then those Excel added
- * since. Run after the installs, in a transaction of its own; run again, it writes nothing. Its frame binds the
- * dialect (`dialect`) and each domain by its name: `store.transaction(Excel.define)[0].get("number")`. */
+ * schema (`Expressions.Excel.Expressions.number`) by `Expressions.Framework.HasDomain`: `number`, `logical`, `text` and
+ * `error`, its `members` Excel's error codes, in the order `ERROR.TYPE` numbers them, then those Excel added since. Run
+ * after the installs, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
+ * (`dialect`) and each domain by its name: `store.transaction(Excel.define)[0].get("number")`, each object by its
+ * reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.Excel.Expressions")).get("number")`. */
 export function define(txn: any): any {
   const [Excel, Domain] = [txn.Expressions.Excel.Expressions, txn.Expressions.Framework.Domain];
   return txn.uid("mbse.Expressions.Excel.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p

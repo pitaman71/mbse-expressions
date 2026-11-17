@@ -362,14 +362,16 @@ export function install(txn: any): any {
     ])]))]);
 }
 
-/** Python3's domains as data: the singleton `Expressions.Python.Python3` owning its domains by name (`domains`,
- * through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each but a
- * token's related to its schema (`Expressions.Python.Python3.int`) by `Expressions.Framework.HasDomain`: `bool`,
- * `int`, `float`, `str` and `bytes`, and the tokens `NoneType` and `ellipsis`. And the versions of Python 3 it covers,
- * by their published names (`standards`, through `Expressions.Framework.Covers`), Python 3.0 to 3.15, each with its
- * body, its version and the kinds it has. Run after the installs, in a transaction of its own; run again, it writes
- * nothing. Its frame binds the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_8`)
- * and each domain by its name: `store.transaction(Python3.define)[0].get("int")`. */
+/** Python3's domains as data: the singleton `Expressions.Python.Python3` owning its domains by name (`domains`, through
+ * `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each but a token's
+ * related to its schema (`Expressions.Python.Python3.int`) by `Expressions.Framework.HasDomain`: `bool`, `int`,
+ * `float`, `str` and `bytes`, and the tokens `NoneType` and `ellipsis`. And the versions of Python 3 it covers, by
+ * their published names (`standards`, through `Expressions.Framework.Covers`), Python 3.0 to 3.15, each with its body,
+ * its version and the kinds it has. Run after the installs, in a transaction of its own; run again, it writes nothing.
+ * Its frame binds the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_8`) and each
+ * domain by its name: `store.transaction(Python3.define)[0].get("int")`, each object by its reference (a
+ * `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.Python.Python3")).get("int")`. */
 export function define(txn: any): any {
   const [Python3, Domain, Standard] = [txn.Expressions.Python.Python3, txn.Expressions.Framework.Domain,
     txn.Expressions.Framework.Standard];

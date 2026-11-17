@@ -63,7 +63,9 @@ def define(txn: Any) -> Any:
     edition of the standard it covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its
     formal reference's parts held apart. Run after `install`, in a transaction of its own; run again, it writes nothing.
     Its frame binds the dialect (`dialect`), its edition (`standard`) and each domain by its name:
-    `store.transaction(IEEE754.define)[0]["binary32"]`."""
+    `store.transaction(IEEE754.define)[0]["binary32"]`, each object by its reference (a `References.OfObject`), not a
+    visitor. Within a transaction, a domain is read from the dialect:
+    `Framework.Domains.domains(store.singleton("Expressions.IEEE754.Expressions"))["binary32"]`."""
     IEEE754, Domain = txn.Expressions.IEEE754.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     return txn.uid("mbse.Expressions.IEEE754.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p

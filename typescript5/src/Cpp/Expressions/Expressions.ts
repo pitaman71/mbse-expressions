@@ -519,7 +519,9 @@ export function install(txn: any): any {
  * (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts, its common name and
  * the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
  * dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`) and each domain by
- * its name, spelled as its schema's is: `store.transaction(Cpp.define)[0].get("std_bfloat16_t")`. */
+ * its name, spelled as its schema's is: `store.transaction(Cpp.define)[0].get("std_bfloat16_t")`, each object by its
+ * reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.Cpp.Expressions")).get("std::bfloat16_t")`. */
 export function define(txn: any): any {
   const OWN = txn.Expressions.Cpp.Expressions;
   const Domain = txn.Expressions.Framework.Domain, Standard = txn.Expressions.Framework.Standard;

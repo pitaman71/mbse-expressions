@@ -86,7 +86,8 @@ def unsized(value: int, signed: bool = False) -> SvType:
 
 def named(store: Any, name: str) -> SvType:
     """The type SystemVerilog defines in `store` by `name`: the domain its dialect's singleton owns by that name, read as
-    an `SvType`; raises ValueError where it defines none (its `define` has not run, or no type has the name)."""
+    an `SvType` within the transaction open on `store`, as every read of its data is; raises ValueError where it
+    defines none (its `define` has not run, or no type has the name)."""
     domain = D.domains(store.Instances.Expressions.SystemVerilog.Expressions).get(name)
     if domain is None:
         raise ValueError(f"{name!r} is not a type SystemVerilog defines")

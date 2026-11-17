@@ -8,7 +8,8 @@
               "0": {
                 "schema": [
                   {
-                    "$ref": {
+                    "$schema": "References.OfObject",
+                    "path": {
                       "singleton": ".",
                       "next": {
                         "entry": {
@@ -72,7 +73,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.ISOIEC11404.Expressions",
                                                 "next": {
@@ -116,7 +117,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.ISOIEC11404.Expressions",
                                                 "next": {
@@ -160,7 +161,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.ISOIEC11404.Expressions",
                                                 "next": {
@@ -204,7 +205,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.ISOIEC11404.Expressions",
                                                 "next": {
@@ -248,7 +249,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.ISOIEC11404.Expressions",
                                                 "next": {
@@ -292,7 +293,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.ISOIEC11404.Expressions",
                                                 "next": {
@@ -336,7 +337,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.ISOIEC11404.Expressions",
                                                 "next": {
@@ -393,7 +394,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.ISOIEC11404.Expressions",
                                                 "next": {

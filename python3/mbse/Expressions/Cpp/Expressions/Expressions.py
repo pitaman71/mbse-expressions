@@ -525,16 +525,17 @@ def define(txn: Any) -> Any:
     """C++'s dialect as data: the singleton `Expressions.Cpp.Expressions` owning its domains by name (`domains`, through
     `Expressions.Framework.Defines`), the types C++'s standard fixes, each with its parameters and its inferred
     properties, and each but `nullptr_t`'s related to its schema (`Expressions.Cpp.Expressions.std_float16_t`) by
-    `Expressions.Framework.HasDomain`: `bool` (11404's `boolean`); `int8_t` to `int64_t` and `uint8_t` to `uint64_t`,
-    as C's (C++'s `<cstdint>` is C's, under C's names); C++23's `std::float16_t`, `std::float32_t`, `std::float64_t`
-    and `std::float128_t` (IEEE 754's `binary16` to `binary128`) and `std::bfloat16_t` (IEEE 754's kind with no
-    format: 16 bits, radix 2, precision 8, emax 127), each rounding ties to even; and `nullptr_t`, of C++'s own kind.
-    What C++ leaves to the implementation is each ABI dialect's, as C's is. And the editions of C++ it covers, by
-    designation (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts, its
-    common name and the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing.
-    Its frame binds the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as
-    `Cpp17`) and each domain by its name, spelled as its schema's is:
-    `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`."""
+    `Expressions.Framework.HasDomain`: `bool` (11404's `boolean`); `int8_t` to `int64_t` and `uint8_t` to `uint64_t`, as
+    C's (C++'s `<cstdint>` is C's, under C's names); C++23's `std::float16_t`, `std::float32_t`, `std::float64_t` and
+    `std::float128_t` (IEEE 754's `binary16` to `binary128`) and `std::bfloat16_t` (IEEE 754's kind with no format: 16
+    bits, radix 2, precision 8, emax 127), each rounding ties to even; and `nullptr_t`, of C++'s own kind. What C++
+    leaves to the implementation is each ABI dialect's, as C's is. And the editions of C++ it covers, by designation
+    (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts, its common name and
+    the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+    the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`) and each
+    domain by its name, spelled as its schema's is: `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`, each object by
+    its reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+    `Framework.Domains.domains(store.singleton("Expressions.Cpp.Expressions"))["std::bfloat16_t"]`."""
     OWN, Domain = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each of its own kinds' schema,

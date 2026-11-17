@@ -202,7 +202,9 @@ export function install(txn: any): any {
 
 /** Patterns' dialect as data: the singleton `Expressions.Patterns.Expressions` naming its operations (`operations`,
  * through `Expressions.Framework.Operates`); it owns no domains. Run after `install`, in a transaction of its own; run
- * again, it writes nothing. Its frame binds the dialect: `store.transaction(Patterns.define)[0].get("dialect")`. */
+ * again, it writes nothing. Its frame binds the dialect by its reference (a `References.OfObject`), not a visitor:
+ * `store.transaction(Patterns.define)[0].get("dialect")`. Within a transaction, the dialect is read as
+ * `store.singleton("Expressions.Patterns.Expressions")`, as validation reads its operations. */
 export function define(txn: any): any {
   const Patterns = txn.Expressions.Patterns.Expressions;
   return txn.uid("mbse.Expressions.Patterns.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p

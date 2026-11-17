@@ -1,9 +1,10 @@
 /**
  * The conformance corpus: the same cases, built statement for statement in every implementation.
  *
- * `build()` returns the cases, name -> [root schema, root, store]: each case but the data cases a term value of
- * `Expressions.Framework.Term`, its dialect then its kind, built in one store holding the framework's install and every
- * dialect's, and each dialect's `define`, written nested. `DIALECTS` names the dialect that reads each case other than
+ * `build()` returns the one store that holds the framework's install and every dialect's, and each dialect's `define`;
+ * `cases(store)`, called within a transaction open on it, returns the cases, name -> [root schema, root], each root a
+ * visitor of that transaction, refused once it ends ([CAP-315](mbse:mbse-basis/docs/capabilities/CAP-315.md#decided)):
+ * each case but the data cases a term value of `Expressions.Framework.Term`, its dialect then its kind, written nested. `DIALECTS` names the dialect that reads each case other than
  * Patterns'. The `domains` case and the `<dialect>_domains` cases are data (`DOMAINS`): each a dialect's singleton,
  * owning its domains by name, each kind its dialect's then its own, and the editions of the standards it covers by
  * designation, written as one document; `domains` is ISO/IEC 11404's dialect, the singleton
@@ -109,11 +110,12 @@ export const STANDARD: ReadonlyMap<string, readonly [string, string]> = new Map(
   ["standards", ["Expressions.C.Expressions", "ISO/IEC 9899:2024"]],
 ]);
 
-/** A case: its root schema, its root term, and the store it is built in. */
-export type Case = [any, any, any];
+/** A case: its root schema and its root, a visitor of the transaction open on the corpus's store. */
+export type Case = [any, any];
 
-export function build(): Map<string, Case> {
-  const E = Expressions;
+/** The corpus's store: the framework's install and every dialect's, each dialect's `define`, and two domains added to
+ * ISO/IEC 11404's dialect. `cases(store)` reads the cases from it, within a transaction. */
+export function build(): any {
   const store: any = new Builders.Store();
   store.transaction(Framework.install);
   store.transaction(ISOIEC11404.install); // the standard dialects, before the dialects that use them
@@ -137,12 +139,10 @@ export function build(): Map<string, Case> {
     PythonRegExp, TypeScriptRegExp, CppRegExp, PosixBRE, PosixERE];
   for (const module of retrofit) store.transaction(module.install); // the retrofit's new dialects, each after its family's,
   // POSIX's after C++'s
-  const defined = store.transaction(ISOIEC11404.define)[0]; // ISO/IEC 11404's dialect and its domains
-  const stored = new Map<string, any>(([ // each dialect's stored domains
-    ["systemverilog_domains", SystemVerilog], ["python3_domains", Python3], ["typescript5_domains", TypeScript5],
-    ["matlab_domains", Matlab], ["excel_domains", Excel], ["c_domains", C], ["cpp_domains", Cpp],
-    ["amd64_domains", AMD64], ["aapcs64_domains", AAPCS64]] as [string, any][]).map(
-    ([name, module]) => [name, store.transaction(module.define)[0].get("dialect")]));
+  store.transaction(ISOIEC11404.define); // ISO/IEC 11404's dialect and its domains
+  for (const module of [SystemVerilog, Python3, TypeScript5, Matlab, Excel, C, Cpp, AMD64, AAPCS64]) { // each one's
+    store.transaction(module.define); // stored domains
+  }
   for (const module of [SVTypes, SVPatterns, SVAssertions, SVConstraints, SVPreprocessor]) { // the editions they cover
     store.transaction(module.define);
   }
@@ -151,15 +151,22 @@ export function build(): Map<string, Case> {
   // --- domains: ISO/IEC 11404's dialect and its domains, owned by name; a state domain and a domain packing it into octet
   // added ---
   store.transaction(() => {
+    const iso = store.singleton(DOMAINS.get("domains")); // the dialect, read within the transaction
     const state = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
       (u: any) => u.isoiec11404((v: any) => v.state((e: any) => e.members(["IDLE", "RUN"]).ordered(false)))))));
     const mode = store.Expressions.Framework.Domain((d: any) => d.kind((k: any) => k.as_value((a: any) => a.as_union(
       (u: any) => u.isoiec11404((v: any) => v.packed((e: any) => e.codes([0n, 1n]).ordered(true)))))).packs((a: any) => a.insert(
-      (e: any) => e.domain(state).representation(defined.get("octet")))));
-    store.Expressions.ISOIEC11404.Expressions.Dialect(defined.get("dialect"), (b: any) => b.domains({
+      (e: any) => e.domain(state).representation(Framework.Domains.domains(iso).get("octet")))));
+    store.Expressions.ISOIEC11404.Expressions.Dialect(iso, (b: any) => b.domains({
       state: (e: any) => e.domain(state), mode: (e: any) => e.domain(mode) }));
   });
+  return store;
+}
 
+/** The cases, name -> [root schema, root], each root a visitor of the transaction open on `store`, which `build()`
+ * made: read within it, as every read of a store's data is. */
+export function cases(store: any): Map<string, Case> {
+  const E = Expressions;
   // --- expression: every kind and literal type, a let and its variable, a list ---
   const [self, age] = [E.variable("record"), E.variable("age")];
   const expression = E.let_("age", self.age, age.ge(18n).and_(
@@ -733,7 +740,7 @@ export function build(): Map<string, Case> {
     (r: any) => r.text("08").problems(["leading zeros in a decimal integer literal are not permitted"]))),
   (e: any) => e.missing((r: any) => r.kind("expression")));
 
-  const terms = store.transaction(() => new Map<string, any>(([
+  const terms = new Map<string, any>(([
     ["expression", expression], ["python3", python3], ["matlab", matlab], ["excel", excel], ["latex", latex],
     ["collections", collections], ["c", c], ["cpp", cpp], ["systemverilog", systemverilog],
     ["typescript5", TS.DIALECT.spec(typescript5)], ["invalid", invalid], ["systemverilog_patterns", patterns],
@@ -744,9 +751,8 @@ export function build(): Map<string, Case> {
     ["c_types", enumeration(CT, CE)], ["cpp_types", enumeration(XT, CPP)], ["c_preprocessor", cPreprocessor],
     ["python_regexp", pythonRegExp], ["typescript_regexp", TypeScriptRegExp.Expressions.DIALECT.spec(typescriptRegExp)],
     ["cpp_regexp", cppRegexp], ["posix_bre", posixBre], ["posix_ere", posixEre],
-  ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)])));
-  terms.set("domains", defined.get("dialect"));
-  for (const [name, dialect] of stored) terms.set(name, dialect);
+  ] as [string, Framework.Terms.Writer][]).map(([name, writer]) => [name, store.Expressions.Framework.Term(writer)]));
+  for (const [name, path] of DOMAINS) terms.set(name, store.singleton(path)); // each dialect, its domains
   for (const [name, [path, designation]] of STANDARD) { // an edition, by its path
     terms.set(name, store.singleton(path).standards({ designation }));
   }
@@ -754,5 +760,5 @@ export function build(): Map<string, Case> {
     store.registered("Expressions.Framework.Standard")];
   return new Map<string, Case>(CASES.map((name) => [name, [
     DOMAINS.has(name) ? store.registered(`${DOMAINS.get(name)}.Dialect`) : STANDARD.has(name) ? Standard : Term,
-    terms.get(name), store]]));
+    terms.get(name)]]));
 }

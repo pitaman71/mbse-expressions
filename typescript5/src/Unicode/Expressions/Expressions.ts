@@ -58,7 +58,9 @@ export function install(txn: any): any {
  * covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its formal reference's parts held
  * apart. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
  * (`dialect`), its edition (`standard`) and its domain by its name:
- * `store.transaction(Unicode.define)[0].get("string")`. */
+ * `store.transaction(Unicode.define)[0].get("string")`, each object by its reference (a `References.OfObject`), not a
+ * visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.Unicode.Expressions")).get("string")`. */
 export function define(txn: any): any {
   const [Unicode, Domain, Standard] = [txn.Expressions.Unicode.Expressions, txn.Expressions.Framework.Domain,
     txn.Expressions.Framework.Standard];

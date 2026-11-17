@@ -127,7 +127,9 @@ export function install(txn: any): any {
  * through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and related to its
  * schema (`Expressions.MATLAB.Expressions.double`) by `Expressions.Framework.HasDomain`: `double`, `logical` and
  * `string`. Run after the installs, in a transaction of its own; run again, it writes nothing. Its frame binds the
- * dialect (`dialect`) and each domain by its name: `store.transaction(Matlab.define)[0].get("double")`. */
+ * dialect (`dialect`) and each domain by its name: `store.transaction(Matlab.define)[0].get("double")`, each object by
+ * its reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.MATLAB.Expressions")).get("double")`. */
 export function define(txn: any): any {
   const [Matlab, Domain] = [txn.Expressions.MATLAB.Expressions, txn.Expressions.Framework.Domain];
   return txn.uid("mbse.Expressions.MATLAB.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p

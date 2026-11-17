@@ -8,7 +8,8 @@
               "0": {
                 "schema": [
                   {
-                    "$ref": {
+                    "$schema": "References.OfObject",
+                    "path": {
                       "singleton": ".",
                       "next": {
                         "entry": {
@@ -72,7 +73,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -116,7 +117,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -160,7 +161,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -204,7 +205,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -248,7 +249,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -292,7 +293,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -336,7 +337,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -380,7 +381,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -424,7 +425,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -468,7 +469,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -512,7 +513,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -556,7 +557,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -600,7 +601,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -644,7 +645,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -688,7 +689,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -732,7 +733,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -776,7 +777,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -820,7 +821,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -864,7 +865,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -908,7 +909,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -952,7 +953,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -996,7 +997,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1040,7 +1041,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1084,7 +1085,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1128,7 +1129,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1172,7 +1173,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1216,7 +1217,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1260,7 +1261,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1304,7 +1305,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1348,7 +1349,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1392,7 +1393,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1436,7 +1437,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {
@@ -1493,7 +1494,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.Arm.AAPCS64",
                                                 "next": {

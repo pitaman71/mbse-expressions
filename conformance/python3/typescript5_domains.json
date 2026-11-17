@@ -8,7 +8,8 @@
               "0": {
                 "schema": [
                   {
-                    "$ref": {
+                    "$schema": "References.OfObject",
+                    "path": {
                       "singleton": ".",
                       "next": {
                         "entry": {
@@ -72,7 +73,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -116,7 +117,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -160,7 +161,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -204,7 +205,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -248,7 +249,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -305,7 +306,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -349,7 +350,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -393,7 +394,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -437,7 +438,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -481,7 +482,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -525,7 +526,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -569,7 +570,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -613,7 +614,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -657,7 +658,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {
@@ -701,7 +702,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.TypeScript.TypeScript5",
                                                 "next": {

@@ -419,7 +419,9 @@ def define(txn: Any) -> Any:
     TypeScript 5.0 to 5.9, each with its body, its version and the kinds it has. Run after the installs, in a
     transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its
     name spelled as an identifier (`TypeScript_5_0`) and each domain by its name:
-    `store.transaction(TypeScript5.define)[0]["number"]`."""
+    `store.transaction(TypeScript5.define)[0]["number"]`, each object by its reference (a `References.OfObject`), not a
+    visitor. Within a transaction, a domain is read from the dialect:
+    `Framework.Domains.domains(store.singleton("Expressions.TypeScript.TypeScript5"))["number"]`."""
     TypeScript5, Domain = txn.Expressions.TypeScript.TypeScript5, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     own = DIALECT.kinds()  # its own kinds: not `TypeScript Patterns`' its `Term` lists
