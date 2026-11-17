@@ -436,12 +436,13 @@ export function install(txn: any): any {
 /** TypeScript5's domains as data: the singleton `Expressions.TypeScript.TypeScript5` owning its domains by name
  * (`domains`, through `Expressions.Framework.Defines`), each with its parameters and its inferred properties, and each
  * but a token's related to its schema (`Expressions.TypeScript.TypeScript5.number`) by
- * `Expressions.Framework.HasDomain`: `boolean`, `number`, `bigint` and `string`, and the token `null`. And the
- * versions of TypeScript 5 it covers, by their published names (`standards`, through `Expressions.Framework.Covers`),
- * TypeScript 5.0 to 5.9, each with its body, its version and the kinds it has. Run after the installs, in a
- * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its
- * name spelled as an identifier (`TypeScript_5_0`) and each domain by its name:
- * `store.transaction(TypeScript5.define)[0].get("number")`. */
+ * `Expressions.Framework.HasDomain`: `boolean`, `number`, `bigint` and `string`, and the token `null`. And the versions
+ * of TypeScript 5 it covers, by their published names (`standards`, through `Expressions.Framework.Covers`), TypeScript
+ * 5.0 to 5.9, each with its body, its version and the kinds it has. Run after the installs, in a transaction of its
+ * own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its name spelled as an
+ * identifier (`TypeScript_5_0`) and each domain by its name: `store.transaction(TypeScript5.define)[0].get("number")`,
+ * each object by its reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from
+ * the dialect: `Framework.Domains.domains(store.singleton("Expressions.TypeScript.TypeScript5")).get("number")`. */
 export function define(txn: any): any {
   const [TypeScript5, Domain] = [txn.Expressions.TypeScript.TypeScript5, txn.Expressions.Framework.Domain];
   const Standard = txn.Expressions.Framework.Standard;

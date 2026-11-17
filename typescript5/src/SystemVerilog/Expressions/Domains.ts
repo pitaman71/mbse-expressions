@@ -82,7 +82,8 @@ export function unsized(value: bigint, signed = false): SvType {
 }
 
 /** The type SystemVerilog defines in `store` by `name`: the domain its dialect's singleton owns by that name, read as
- * an `SvType`; throws ValueError where it defines none (its `define` has not run, or no type has the name). */
+ * an `SvType` within the transaction open on `store`, as every read of its data is; throws ValueError where it defines
+ * none (its `define` has not run, or no type has the name). */
 export function named(store: any, name: string): SvType {
   const domain = D.domains(store.Instances.Expressions.SystemVerilog.Expressions).get(name);
   if (domain === undefined) throw new ValueError(`${repr(name)} is not a type SystemVerilog defines`);

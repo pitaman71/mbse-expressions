@@ -912,7 +912,8 @@ export interface KindOptions {
  * accepts any name, with `signature`), and whether it is `closed`, its dialect defining its operations and no others,
  * so that simplification leaves any other in the residual; where its operations are data, those its dialect defines in a store
  * (`operations(store)`, by name, each its `Schemas.OfExpression`), which validation reads in place of its vocabulary
- * from the store of the term's holder (`Proxies.store_of`: a lone term belongs to no store), refusing any other whether
+ * from the store of the term's holder (`Proxies.store_of`: a lone term belongs to no store), within the transaction open
+ * on it, as every read of a store's data is (mbse-basis CAP-315), refusing any other whether
  * or not it asks for the core, its vocabulary left to `infer`; the properties it requires
  * (`required`); for a reference, whether it is `lexical` and the `ambient` names bound without a declaration; for an
  * import, the names it binds, of its attributes (`names(attributes)`); its own problems (`check(record)`); the domain

@@ -8,7 +8,8 @@
               "0": {
                 "schema": [
                   {
-                    "$ref": {
+                    "$schema": "References.OfObject",
+                    "path": {
                       "singleton": ".",
                       "next": {
                         "entry": {
@@ -72,7 +73,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.MATLAB.Expressions",
                                                 "next": {
@@ -116,7 +117,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.MATLAB.Expressions",
                                                 "next": {
@@ -160,7 +161,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.MATLAB.Expressions",
                                                 "next": {

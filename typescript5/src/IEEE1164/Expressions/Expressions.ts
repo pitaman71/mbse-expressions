@@ -58,7 +58,9 @@ export function install(txn: any): any {
  * it covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its formal reference's parts
  * held apart. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
  * dialect (`dialect`), its edition (`standard`) and its domain by its name:
- * `store.transaction(IEEE1164.define)[0].get("std_logic")`. */
+ * `store.transaction(IEEE1164.define)[0].get("std_logic")`, each object by its reference (a `References.OfObject`), not
+ * a visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.IEEE1164.Expressions")).get("std_logic")`. */
 export function define(txn: any): any {
   const [IEEE1164, Domain, Standard] = [txn.Expressions.IEEE1164.Expressions, txn.Expressions.Framework.Domain,
     txn.Expressions.Framework.Standard];

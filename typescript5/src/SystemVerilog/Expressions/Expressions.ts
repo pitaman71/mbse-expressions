@@ -464,7 +464,9 @@ export function install(txn: any): any {
  * invalid syntax in none and the Preprocessor's `macrousage` the Preprocessor's. Run after `install`, in a transaction
  * of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its common name
  * spelled as an identifier (`SystemVerilog_2023`) and each domain by its name:
- * `store.transaction(SystemVerilog.define)[0].get("int")`. */
+ * `store.transaction(SystemVerilog.define)[0].get("int")`, each object by its reference (a `References.OfObject`), not
+ * a visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.SystemVerilog.Expressions")).get("int")`. */
 export function define(txn: any): any {
   const [SV, Domain] = [txn.Expressions.SystemVerilog.Expressions, txn.Expressions.Framework.Domain];
   const Standard = txn.Expressions.Framework.Standard;

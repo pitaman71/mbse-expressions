@@ -114,7 +114,9 @@ export function install(txn: any): any {
  * edition of the standard it covers, by its designation (`standards`, through `Expressions.Framework.Covers`), its
  * formal reference's parts held apart. Run after `install`, in a transaction of its own; run again, it writes nothing.
  * Its frame binds the dialect (`dialect`), its edition (`standard`) and each domain by its name, spelled as its
- * schema's is (`modulo(256)` as `modulo_256`): `store.transaction(ISOIEC11404.define)[0].get("octet")`. */
+ * schema's is (`modulo(256)` as `modulo_256`): `store.transaction(ISOIEC11404.define)[0].get("octet")`, each object by
+ * its reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.ISOIEC11404.Expressions")).get("octet")`. */
 export function define(txn: any): any {
   const [ISOIEC11404, Domain, Standard] = [txn.Expressions.ISOIEC11404.Expressions, txn.Expressions.Framework.Domain,
     txn.Expressions.Framework.Standard];

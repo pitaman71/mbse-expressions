@@ -4,7 +4,8 @@ mutations:
     - symbols:
         '0':
           schema:
-          - $ref:
+          - $schema: References.OfObject
+            path:
               singleton: '.'
               next:
                 entry:
@@ -62,7 +63,7 @@ mutations:
                       name: dialect
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: Expressions.C.Expressions
                               next:
@@ -82,7 +83,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -116,7 +117,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -150,7 +151,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -184,7 +185,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -212,7 +213,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -246,7 +247,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -280,7 +281,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -314,7 +315,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -348,7 +349,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -382,7 +383,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -416,7 +417,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -450,7 +451,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -484,7 +485,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -518,7 +519,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -552,7 +553,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -586,7 +587,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -620,7 +621,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -654,7 +655,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -688,7 +689,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:
@@ -722,7 +723,7 @@ mutations:
                       name: kind
                       mutations:
                       - set:
-                          ref:
+                          reference:
                             path:
                               singleton: '.'
                               next:

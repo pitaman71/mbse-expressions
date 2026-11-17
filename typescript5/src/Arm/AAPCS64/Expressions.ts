@@ -95,7 +95,9 @@ export function install(txn: any): any {
  * through `Expressions.Framework.Covers`), its formal reference's parts held apart. Run after `install`, in a
  * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), its edition
  * (`standard`) and each domain by its name, spelled as its schema's is (`unsigned long` as `unsigned_long`):
- * `store.transaction(AAPCS64.define)[0].get("unsigned_long")`. */
+ * `store.transaction(AAPCS64.define)[0].get("unsigned_long")`, each object by its reference (a `References.OfObject`),
+ * not a visitor. Within a transaction, a domain is read from the dialect:
+ * `Framework.Domains.domains(store.singleton("Expressions.Arm.AAPCS64")).get("unsigned long")`. */
 export function define(txn: any): any {
   const ABI = txn.Expressions.Arm.AAPCS64, Domain = txn.Expressions.Framework.Domain;
   const Standard = txn.Expressions.Framework.Standard;
