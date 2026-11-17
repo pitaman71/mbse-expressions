@@ -25,8 +25,15 @@ carries no domain. Its kinds:
 - Displays: `arrayexpression`, the framework's `list` (its `elements`, any term: an `elision` for a hole, a
   `spreadelement` for `...x`), `objectexpression` (`properties`, each a `property` or a `spreadelement`).
 - Functions and classes: `functionexpression`, `arrowfunctionexpression`, `classexpression`,
-  `tsemptybodyfunctionexpression`; a body of statements is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not part of the term"): it is absent, and mbse-programs relates its statements to what holds the expression. An arrow whose body is an
-  expression holds it as its `body`, a term; one whose `body` is absent has a block of statements. Each is a binder,
+  `tsemptybodyfunctionexpression`. The statements a function, an arrow or a class holds are mbse-programs' grammar,
+  not this dialect's, and a property of the term holds them, as the user decided: "For any dialect A if term T_A has a clause(s) that crosses over to another dialect's expression language, the crossover should be modeled as a property of T_A" (mbse-programs, [the port](mbse:mbse-programs/docs/proposals/port/README.md#stage-3-the-whole-tree-as-values)).
+  A function's and an arrow's block is its `block`, of the open union `Expressions.TypeScript.TypeScript5.Block`, a
+  class's members its `classBody`, of the open union `Expressions.TypeScript.TypeScript5.ClassBody`: unions with no
+  branch of their own, which mbse-programs' install extends with its block and its class body, the grammar's two
+  nonterminals ("if the grammar has different nonterminals I see no reason to conflate them"). Each is named apart
+  from `body`, which `Let` gives a term *(agent)*. An arrow whose body is an expression holds it as its `body`, a term;
+  one whose body is a block holds it as its `block`. This dialect reads neither union's branches: a block and a class
+  body are no terms of it, its printer writes each `{}`, and its walks and checks do not enter them. Each is a binder,
   refining the framework's `Let`, Let's `name` and `value` unset: what it binds, its scopes say.
 - Operators and access: `metaproperty`, `memberexpression`, `callexpression`, `chainexpression`, `newexpression`,
   `importexpression`, `updateexpression`, `unaryexpression`, `awaitexpression`, `binaryexpression`,
@@ -139,6 +146,8 @@ def install(txn: Any) -> Any:
                   # its family's types and patterns, by name: their installs', created here where they have not run
                   "Types": S.OfUnion, "Patterns": S.OfUnion, "ArrayPattern": S.OfObject, "ObjectPattern": S.OfObject,
                   "AssignmentPattern": S.OfObject, "RegExp": S.OfUnion,
+                  # the statements a term holds: mbse-programs' grammar, which extends these by schema extension
+                  "Block": S.OfUnion, "ClassBody": S.OfUnion,
                   "JSXTagNameExpression": S.OfUnion, "JSXAttributeName": S.OfUnion, "JSXAttributeValue": S.OfUnion,
                   "JSXAttributeItem": S.OfUnion, "JSXChild": S.OfUnion, "Expression": S.OfObject,
                   "Identifier": S.OfObject, "PrivateIdentifier": S.OfObject, "Literal": S.OfObject,
@@ -230,6 +239,10 @@ def install(txn: Any) -> Any:
             lambda _: _.ObjectPattern.name("Expressions.TypeScript.Patterns.ObjectPattern"),
             lambda _: _.AssignmentPattern.name("Expressions.TypeScript.Patterns.AssignmentPattern"),
             lambda _: _.RegExp.name("Expressions.TypeScript.RegExp.Term"),  # a constant's regexp: its install's
+            # the statements a term holds, open unions with no branch of their own: mbse-programs' statement grammar adds
+            # its block and its class body to them by schema extension
+            lambda _: _.Block.name("Expressions.TypeScript.TypeScript5.Block"),
+            lambda _: _.ClassBody.name("Expressions.TypeScript.TypeScript5.ClassBody"),
             # names and literals
             lambda _: _.Identifier.name("Expressions.TypeScript.TypeScript5.Identifier").properties({
                 "decorators": many(_.Decorator), "name": S.OfStr, "optional": S.OfBool,
@@ -265,22 +278,21 @@ def install(txn: Any) -> Any:
                 "method": S.OfBool, "shorthand": S.OfBool, "value": _.Term}),
             lambda _: _.ObjectExpression.name("Expressions.TypeScript.TypeScript5.ObjectExpression").properties({
                 "properties": many(_.Term)}),
-            # functions and classes: a body of statements is not part of the term
+            # functions and classes: the statements each holds, mbse-programs' grammar, its `block` or its `classBody`
             # binders: `Let`, Let's properties first, `name` and `value` unset (a name is an `Identifier`), an arrow's
-            # expression body its `body`, a function's and a class's unset (a body of statements is not part of the term);
-            # their scopes say what each binds
+            # expression body its `body`, a function's and a class's unset; their scopes say what each binds
             lambda _: _.FunctionExpression.name("Expressions.TypeScript.TypeScript5.FunctionExpression").refines([Framework.Let]).properties({
                 "isAsync": S.OfBool, "generator": S.OfBool, "id": _.Identifier,
                 "typeParameters": _.TSTypeParameterDeclaration, "params": many(_.Patterns),
-                "returnType": _.TSTypeAnnotation}),
+                "returnType": _.TSTypeAnnotation, "block": _.Block}),
             lambda _: _.ArrowFunctionExpression.name("Expressions.TypeScript.TypeScript5.ArrowFunctionExpression").refines([Framework.Let]).properties({
-                "body": _.Term,  # absent: a body of statements
+                "body": _.Term,  # absent: a block of statements, its `block`
                 "isAsync": S.OfBool, "typeParameters": _.TSTypeParameterDeclaration, "params": many(_.Patterns),
-                "returnType": _.TSTypeAnnotation}),
+                "returnType": _.TSTypeAnnotation, "block": _.Block}),
             lambda _: _.ClassExpression.name("Expressions.TypeScript.TypeScript5.ClassExpression").refines([Framework.Let]).properties({
                 "decorators": many(_.Decorator), "id": _.Identifier, "typeParameters": _.TSTypeParameterDeclaration,
                 "superClass": _.Term, "superTypeArguments": _.TSTypeParameterInstantiation,
-                "implements": many(_.TSClassImplements)}),
+                "implements": many(_.TSClassImplements), "classBody": _.ClassBody}),
             lambda _: _.TSEmptyBodyFunctionExpression.name("Expressions.TypeScript.TypeScript5.TSEmptyBodyFunctionExpression").refines([Framework.Let]).properties({
                 "isAsync": S.OfBool, "generator": S.OfBool, "typeParameters": _.TSTypeParameterDeclaration,
                 "params": many(_.Patterns), "returnType": _.TSTypeAnnotation}),

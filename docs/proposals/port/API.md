@@ -690,6 +690,9 @@ Built as the user decided, the decisions now recorded in mbse-basis [CAP-226: co
     `classexpression` and `tsemptybodyfunctionexpression` have no body property, and an arrow's `body` subterm, optional,
     holds an expression body as a term, as Python3's lambda's (item 54), and is absent for a block. A printer writes an
     absent body `{}`, where mbse-programs writes the statements it relates; a class's members are its body's.
+    Superseded for TypeScript5 by the user's rule that a crossover is a property of the term (mbse-programs' port,
+    Stage 3): a function's and an arrow's block is its `block`, a class's members its `classBody`, of the open unions
+    `Expressions.TypeScript.TypeScript5.Block` and `ClassBody`, which mbse-programs extends; printed `{}` here.
 76. **Concrete syntax kept**: `parenthesizedexpression` and `tsparenthesizedtype`, written and printed as written; an
     array's hole is an `elision`, as mbse-programs has it (typescript-estree writes `null`). An empty value object
     held as a property (a fragment's opening and closing, an empty template) read back absent in mbse-schemas 0.26.8;

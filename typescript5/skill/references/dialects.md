@@ -46,8 +46,8 @@ to analyze it.
    and a name used as an expression as each grammar makes it: C's the framework's `variable`, C++'s an `idexpression`
    holding its `Name`); SystemVerilog's sized literals, casts and system functions. Each dialect's `Text.ToText` writes an
    expression as its source. TypeScript5 has no writers: write its terms through the builders, a sublanguage's value
-   where a type or a pattern goes; its `ToText` writes TypeScript, a body of statements, which is not part of a term,
-   as `{}`.
+   where a type or a pattern goes; its `ToText` writes TypeScript, a function's or a class's statements (its `block` or
+   `classBody`, mbse-programs' grammar) as `{}`.
    - Python: [T03.3: The same literal in each language](mbse:mbse-expressions/python3/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.3) · TypeScript: [T03.3: The same literal in each language](mbse:mbse-expressions/typescript5/tutorials/03_The_Smallest_Expression_A_Literal.ipynb#T03.3)
    - Python: [T04.2: A name in each language](mbse:mbse-expressions/python3/tutorials/04_Names.ipynb#T04.2) · TypeScript: [T04.2: A name in each language](mbse:mbse-expressions/typescript5/tutorials/04_Names.ipynb#T04.2)
    - Python: [T05.2: The same tree in each language](mbse:mbse-expressions/python3/tutorials/05_Operators.ipynb#T05.2) · TypeScript: [T05.2: The same tree in each language](mbse:mbse-expressions/typescript5/tutorials/05_Operators.ipynb#T05.2)
