@@ -7,8 +7,8 @@ type, where a function, conditional or union type is an operand). It is written 
 parenthesized where it would start with `{`, `function`, `class` or `let [`. A literal is written in its spelling where it
 has one (`text`), else in its value's default spelling: a number as JavaScript's `String(number)` writes it, a bigint
 with its `n`, a string in its quote (a double quote by default) with its escapes. Invalid syntax is written as written
-(`Terms.invalid_text`), refused by the name of the dialect whose `Term` holds it. A body of statements, not part of the
-term, is written `{}`, where mbse-programs writes the statements it relates. An arrow's lone type parameter without a
+(`Terms.invalid_text`), refused by the name of the dialect whose `Term` holds it. A function's, an arrow's or a class's statements,
+mbse-programs' grammar that its `block` or `classBody` holds, are written `{}`, where mbse-programs' printer writes them. An arrow's lone type parameter without a
 constraint is written `<T,>`, so that the text reads alike in a `.ts` and a `.tsx` file. Its `Printer` writes
 TypeScript5's kinds and helpers itself, and dispatches the types', the patterns' and the regular expressions' to their
 dialects' `Text.TEXTS`, as SystemVerilog's family printer does. A regular expression's constant is written in its
@@ -251,7 +251,7 @@ class Printer:
             return "{}"
         return "{ " + ", ".join(self.text(member) for member in node.many) + " }"
 
-    # Functions and classes: a body of statements is not the term's, and is written `{}`
+    # Functions and classes: the statements each holds, mbse-programs' grammar, are written `{}`
 
     def signature(self, node: T.Node, arrow: bool = False) -> str:
         """`<typeParameters>(params): returnType`, or with `arrow` `... => returnType` for a function type."""
