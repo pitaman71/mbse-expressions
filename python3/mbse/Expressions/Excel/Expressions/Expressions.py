@@ -131,7 +131,9 @@ def define(txn: Any) -> Any:
     schema (`Expressions.Excel.Expressions.number`) by `Expressions.Framework.HasDomain`: `number`, `logical`, `text`
     and `error`, its `members` Excel's error codes, in the order `ERROR.TYPE` numbers them, then those Excel added
     since. Run after the installs, in a transaction of its own; run again, it writes nothing. Its frame binds the
-    dialect (`dialect`) and each domain by its name: `store.transaction(Excel.define)[0]["number"]`."""
+    dialect (`dialect`) and each domain by its name: `store.transaction(Excel.define)[0]["number"]`, each object by its
+    reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+    `Framework.Domains.domains(store.singleton("Expressions.Excel.Expressions"))["number"]`."""
     Excel, Domain = txn.Expressions.Excel.Expressions, txn.Expressions.Framework.Domain
     return txn.uid("mbse.Expressions.Excel.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": Excel.Dialect, "number": Domain, "logical": Domain, "text": Domain, "error": Domain})

@@ -301,15 +301,17 @@ def define(txn: Any) -> Any:
     """C's dialect as data: the singleton `Expressions.C.Expressions` owning its domains by name (`domains`, through
     `Expressions.Framework.Defines`), the types C's standard fixes, each with its parameters and its inferred
     properties, and each but `nullptr_t`'s related to its schema (`Expressions.C.Expressions.int32_t`) by
-    `Expressions.Framework.HasDomain`: `bool` (11404's `boolean`); `int8_t` to `int64_t` (11404's `integer`, raising
-    on overflow, as C leaves it undefined) and `uint8_t` to `uint64_t` (11404's `modulo`, wrapping); `_Float16`,
+    `Expressions.Framework.HasDomain`: `bool` (11404's `boolean`); `int8_t` to `int64_t` (11404's `integer`, raising on
+    overflow, as C leaves it undefined) and `uint8_t` to `uint64_t` (11404's `modulo`, wrapping); `_Float16`,
     `_Float32`, `_Float64` and `_Float128` (IEEE 754's `binary16` to `binary128`) and `_Decimal32`, `_Decimal64` and
     `_Decimal128` (its decimal formats), each rounding ties to even; and `nullptr_t`, of C's own kind. What C leaves to
-    the implementation (`int`, `long`, `char`, `long double`, `size_t`, ...) is each ABI dialect's. And the editions
-    of C it covers, by designation (`standards`, through `Expressions.Framework.Covers`), each with its formal
-    reference's parts, its common name and the kinds it has. Run after `install`, in a transaction of its own; run
-    again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each
-    domain by its name: `store.transaction(C.define)[0]["int32_t"]`."""
+    the implementation (`int`, `long`, `char`, `long double`, `size_t`, ...) is each ABI dialect's. And the editions of
+    C it covers, by designation (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's
+    parts, its common name and the kinds it has. Run after `install`, in a transaction of its own; run again, it writes
+    nothing. Its frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each domain by its
+    name: `store.transaction(C.define)[0]["int32_t"]`, each object by its reference (a `References.OfObject`), not a
+    visitor. Within a transaction, a domain is read from the dialect:
+    `Framework.Domains.domains(store.singleton("Expressions.C.Expressions"))["int32_t"]`."""
     OWN, Domain = txn.Expressions.C.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each of its own kinds' schema,

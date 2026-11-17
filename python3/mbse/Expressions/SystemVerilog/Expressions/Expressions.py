@@ -441,14 +441,16 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """SystemVerilog's dialect as data: the singleton `Expressions.SystemVerilog.Expressions` owning its domains, IEEE
     1800's built-in types, by name (`domains`, through `Expressions.Framework.Defines`), each with its parameters and
-    its inferred properties, and each 2-state one related to its schema (`Expressions.SystemVerilog.Expressions.int`)
-    by `Expressions.Framework.HasDomain`; and the editions it covers, by designation (`standards`, through
+    its inferred properties, and each 2-state one related to its schema (`Expressions.SystemVerilog.Expressions.int`) by
+    `Expressions.Framework.HasDomain`; and the editions it covers, by designation (`standards`, through
     `Expressions.Framework.Covers`): Verilog's IEEE Std 1364-1995, 2001 and 2005 and SystemVerilog's IEEE Std 1800-2005,
     2009, 2012, 2017 and 2023, each with its formal reference's parts, its common name and the kinds it has (`SINCE`),
     invalid syntax in none and the Preprocessor's `macrousage` the Preprocessor's. Run after `install`, in a transaction
     of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its common name
     spelled as an identifier (`SystemVerilog_2023`) and each domain by its name:
-    `store.transaction(SystemVerilog.define)[0]["int"]`."""
+    `store.transaction(SystemVerilog.define)[0]["int"]`, each object by its reference (a `References.OfObject`), not a
+    visitor. Within a transaction, a domain is read from the dialect:
+    `Framework.Domains.domains(store.singleton("Expressions.SystemVerilog.Expressions"))["int"]`."""
     SV, Domain = txn.Expressions.SystemVerilog.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in SV.Term.as_schema().branches if branch.name in TAGS}

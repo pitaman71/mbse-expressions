@@ -30,10 +30,10 @@ for module in (Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns):  #
     store.transaction(module.install)
 store.transaction(Patterns.define)  # Patterns' operations, which validation reads
 contact = Expressions.variable("contact")
-with store.transaction():
+with store.transaction():  # every write and every read of the store is made within a transaction
     senior = store.Expressions.Patterns.Expressions.Expression(lambda e: e.root(
         contact.age.ge(65).and_(contact.has("email"))))
-Simplifiers.OfAny(senior, {'contact': ada}).value   # True, False, or None when a value is unknown
+    Simplifiers.OfAny(senior, {'contact': ada}).value   # True, False, or None when a value is unknown
 ```
 
 ```typescript
@@ -50,9 +50,11 @@ const store: any = new Builders.Store(); // expressions are stored in an mbse-sc
 for (const module of [Framework, ISOIEC11404, IEEE754, IEEE1164, Unicode, Patterns]) store.transaction(module.install);
 store.transaction(Patterns.define); // Patterns' operations, which validation reads
 const contact = Expressions.variable("contact");
-const senior = store.transaction(() => store.Expressions.Patterns.Expressions.Expression((e: any) => e.root(
-  contact.age.ge(65n).and_(contact.has("email")))));
-Simplifiers.OfAny(senior, { contact: ada }).value;
+store.transaction(() => { // every write and every read of the store is made within a transaction
+  const senior = store.Expressions.Patterns.Expressions.Expression((e: any) => e.root(
+    contact.age.ge(65n).and_(contact.has("email"))));
+  Simplifiers.OfAny(senior, { contact: ada }).value;
+});
 ```
 
 Like mbse-schemas, it has two equivalent implementations, in Python and TypeScript, with the same API, the same
@@ -250,7 +252,13 @@ simplifier could follow either of two defensible behaviors, the caller chooses o
 whose default is the behavior stated above
 ([CAP-305: simplification's options, chosen up front](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-305.md)):
 the framework's `errors`, Python3's `specs`, `identity`, `math`, `locale` and `text`, C's and C++'s `casts`, and
-SystemVerilog's `timeunit`, `timeprecision`, `mintypmax`, `math` and `byteorder`. Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
+SystemVerilog's `timeunit`, `timeprecision`, `mintypmax`, `math` and `byteorder`. It is built on mbse-schemas 0.27.0, a
+breaking change: every read of a store, validation and simplification among them, is made within a transaction, and an
+expression, a counted object, and the terms read through it live only within the transaction that wrote them
+([CAP-315: every read within a transaction or through a follow](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-315.md)), so that a program keeps a constraint's
+writer and writes it again where it reads it; a `define`'s frame binds each object by its reference; the conformance
+corpus's `build()` gives its store, whose cases `cases(store)` reads within a transaction; and a reference is written in
+one form, `{"path": ...}` ([CAP-316: one written form for references](https://github.com/pitaman71/mbse-basis/blob/main/docs/capabilities/CAP-316.md)). Not built yet: domain inference, which giving terms domains (widths, overflow, IEEE 754 formats,
 conversions) waits for, and the interface through which mbse-schemas will choose union branches and check
 constraints.
 

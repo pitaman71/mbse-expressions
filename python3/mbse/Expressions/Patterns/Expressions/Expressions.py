@@ -210,7 +210,9 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """Patterns' dialect as data: the singleton `Expressions.Patterns.Expressions` naming its operations (`operations`,
     through `Expressions.Framework.Operates`); it owns no domains. Run after `install`, in a transaction of its own; run
-    again, it writes nothing. Its frame binds the dialect: `store.transaction(Patterns.define)[0]["dialect"]`."""
+    again, it writes nothing. Its frame binds the dialect by its reference (a `References.OfObject`), not a visitor:
+    `store.transaction(Patterns.define)[0]["dialect"]`. Within a transaction, the dialect is read as
+    `store.singleton("Expressions.Patterns.Expressions")`, as validation reads its operations."""
     Patterns = txn.Expressions.Patterns.Expressions
     return txn.uid("mbse.Expressions.Patterns.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": Patterns.Dialect})

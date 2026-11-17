@@ -8,7 +8,8 @@
               "0": {
                 "schema": [
                   {
-                    "$ref": {
+                    "$schema": "References.OfObject",
+                    "path": {
                       "singleton": ".",
                       "next": {
                         "entry": {
@@ -72,7 +73,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -116,7 +117,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -160,7 +161,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -204,7 +205,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -248,7 +249,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -292,7 +293,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -336,7 +337,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -380,7 +381,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -424,7 +425,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -468,7 +469,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -512,7 +513,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -556,7 +557,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -600,7 +601,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -644,7 +645,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -688,7 +689,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -732,7 +733,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -776,7 +777,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -833,7 +834,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -877,7 +878,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
@@ -921,7 +922,7 @@
                                       "mutations": [
                                         {
                                           "set": {
-                                            "ref": {
+                                            "reference": {
                                               "path": {
                                                 "singleton": "Expressions.C.Expressions",
                                                 "next": {
