@@ -854,6 +854,12 @@ expression only as `idexpression`" and "C++'s init capture holds its name as a `
     expression's, which always have one, are not held at all, and printed `{}`; a struct's, a union's or an enum's,
     which may be absent (`struct S` names a type, `struct S {}` defines one), is said by `body`, a bool, printed `{}`
     where it is true.
+    Superseded for the C family by the user's rule that a crossover is a property of the term (mbse-programs' port,
+    Stage 4): a lambda's and a statement expression's compound statement is its `block`, of the open unions
+    `Expressions.C.Expressions.Block` and `Expressions.Cpp.Expressions.Block`; a struct's, a union's or a class's member
+    declarations its specifier's `members`, of `Expressions.C.Types.Members` and `Expressions.Cpp.Expressions.Members`,
+    `body` still saying whether a body is written; and a conditional directive's group its `group`, of
+    `Expressions.C.Preprocessor.Group`. mbse-programs extends each; printed `{}`, a group not at all.
 94. **Writers kept, writing the complete kinds** (PRI-019 for every other term): `literal(value, suffix)`,
     `identifier`, `unary`, `binary`, `conditional`, `cast(type, operand)`, `member(object, name, operator=".")`,
     `subscript(object, *indices)` and `call(function, *arguments)`, as a `Writers(dialect, writer)` each dialect has;

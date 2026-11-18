@@ -37,8 +37,16 @@
  * - Initializers: `initializerlist` (`{items}`, with `trailing_comma`), whose items may be `designatedinitializer`s
  *   (`.x = 1`, `[2].y = 3`).
  * - GNU extensions, outside every standard as mbse-programs marks them (`EXTENSIONS`): `statementexpression` (`({ ...
- *   })`, whose body of statements is not part of the term: mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not part of the term") and
- *   `extensionexpression` (`__extension__ operand`).
+ *   })`) and `extensionexpression` (`__extension__ operand`). The compound statement a statement expression holds is
+ *   mbse-programs' grammar, not this dialect's, and a property of the term holds it, as the user decided: "For any
+ *   dialect A if term T_A has a clause(s) that crosses over to another dialect's expression language, the crossover
+ *   should be modeled as a property of T_A" (mbse-programs, [the port](mbse:mbse-programs/docs/proposals/port/README.md#stage-3-the-whole-tree-as-values)), since "mbse-expressions defines a dialect
+ *   for expression grammar and mbse-programs defines a dialect for statement, definition, and file grammar". It is its
+ *   `block`, of the open union `Expressions.C.Expressions.Block`, C's compound statement: a union with no branch of its
+ *   own, which mbse-programs' install extends with its compound statement (`Programs.C`'s grammar, not C++'s: "if the
+ *   grammar has different nonterminals I see no reason to conflate them"). This dialect reads none of its branches: a
+ *   block is no term of it, its printer writes it `{}` (`Text.Printer.statements`, which a printer of the statements
+ *   overrides), and the framework's readers do not enter it, as it declares the union a boundary (`Terms.boundaries`).
  * - C Types' `typeid`, a type name, where a subterm may be an expression or a type alike (`sizeof(int)`, `_Generic`'s
  *   controlling operand, `offsetof(struct s, m)`'s first argument), and C Preprocessor's `definedexpression`,
  *   `defined(name)`, a preprocessing condition's term, which its install adds: kinds of the dialects C reads, which this
@@ -107,6 +115,9 @@ export { // the family's shared reading of its kinds, re-exported
 } from "./Kinds.js";
 export type { Suffixes } from "./Kinds.js";
 
+// where its grammar hands off to mbse-programs' statements: the framework's readers do not enter it
+F.boundaries("Expressions.C.Expressions.Block");
+
 /** C's union of its kinds, added to the framework's terms as the branch `c`, its own kinds, its union of binding
  * targets (`Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
  * `Expressions.C.Expressions`: run after `Framework.install`, in a transaction of its own, before or after its family's
@@ -133,6 +144,8 @@ export function install(txn: any): any {
       DesignatedInitializer: S.OfObject, FieldDesignator: S.OfObject, IndexDesignator: S.OfObject,
       EqualInitializer: S.OfObject, CompoundLiteralExpression: S.OfObject,
       StatementExpression: S.OfObject, ExtensionExpression: S.OfObject, Identifier: S.OfObject,
+      // the statements a term holds: mbse-programs' grammar, which extends it by schema extension
+      Block: S.OfUnion,
       // C Types' `Term` and its `typeid`, by name; FrameworkTerm: the framework's, by name
       TypesTerm: S.OfUnion, TypeId: S.OfObject,
       bool: S.OfAny, int8_t: S.OfAny, int16_t: S.OfAny, int32_t: S.OfAny, int64_t: S.OfAny, // its domains' schemas
@@ -250,10 +263,14 @@ export function install(txn: any): any {
       (_: any) => _.IndexDesignator.name("Expressions.C.Expressions.IndexDesignator").properties({
         index: _.Term, last: _.Term}), // last: GNU's range, `[index ... last]`
       (_: any) => _.EqualInitializer.name("Expressions.C.Expressions.EqualInitializer").properties({value: _.Term}),
-      // GNU's extensions: a statement expression's body of statements is not part of the term
-      (_: any) => _.StatementExpression.name("Expressions.C.Expressions.StatementExpression"),
+      // GNU's extensions: a statement expression's compound statement, mbse-programs' grammar, its `block`
+      (_: any) => _.StatementExpression.name("Expressions.C.Expressions.StatementExpression")
+          .properties({block: _.Block}),
       (_: any) => _.ExtensionExpression.name("Expressions.C.Expressions.ExtensionExpression")
           .properties({operand: _.Term}),
+      // the statements a term holds, an open union with no branch of its own: mbse-programs' statement grammar adds its
+      // compound statement to it by schema extension
+      (_: any) => _.Block.name("Expressions.C.Expressions.Block"),
       // names
       (_: any) => _.Identifier.name("Expressions.C.Expressions.Identifier").properties({spelling: S.OfStr}),
       // a type name, C Types' kind, which `Term` lists for the subterms that may be an expression or a type alike, and

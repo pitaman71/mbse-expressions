@@ -25,8 +25,18 @@ after mbse-programs' category: `Specifier` (keywords, a named type, a struct, un
 `Declarator` (an identifier, a pointer, an array, a function, parentheses), `Parameter` and `AttributeSpecifier`. A
 name is C's `Name` (`Expressions.C.Expressions.Name`), and a term a type name holds (an array's size, `typeof`'s
 operand, an attribute's arguments, an enumerator's value) is C's `Term`, each read through `reads`. A struct's or a
-union's body, its member declarations, is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not part of the term"): `body` says
-whether it has one. An enumeration's `body` says whether it has one too (`enum E` against `enum E {}`), and its
+union's member declarations, its struct-declaration-list, are mbse-programs' grammar, not this dialect's, and a property
+of its specifier holds them, as the user decided: "For any dialect A if term T_A has a clause(s) that crosses over to
+another dialect's expression language, the crossover should be modeled as a property of T_A" (mbse-programs, [the
+port](mbse:mbse-programs/docs/proposals/port/README.md#stage-3-the-whole-tree-as-values)), since "mbse-expressions defines a dialect for expression grammar and mbse-programs defines a
+dialect for statement, definition, and file grammar". They are its `members`, of the open union
+`Expressions.C.Types.Members`, a union with no branch of its own, which mbse-programs' install extends with its
+struct-declaration-list (`Programs.C`'s, apart from C++'s member-specification: "if the grammar has different
+nonterminals I see no reason to conflate them"); `body` still says whether a body is written (`struct S` names a type,
+`struct S {}` defines one), and `members` holds what it declares. This dialect reads none of the union's branches: they
+are no terms of it, its printer writes the body `{}` (`C.Expressions.Text.Printer.members`, which a printer of the
+declarations overrides), and the framework's readers do not enter it, as it declares the union a boundary
+(`Terms.boundaries`). An enumeration's `body` says whether it has one too (`enum E` against `enum E {}`), and its
 `enumerators` hold its body's items, this dialect's terms, with its `trailing_comma`.
 
 The editions it covers are data, which `define` writes, C's (C11, C17, C23), each with its own kinds it has, both in
@@ -66,6 +76,10 @@ SINCE: dict[str, int] = {}
 edition."""
 
 
+F.boundaries("Expressions.C.Types.Members")
+# where its grammar hands off to mbse-programs' declarations: the framework's readers do not enter it
+
+
 def install(txn: Any) -> Any:
     """C Types' union of its kinds, added to the framework's terms as the branch `c_types`, its own kinds, the helpers
     they hold, and its dialect's schema, whose singleton is `Expressions.C.Types`: run after `Framework.install`, in a
@@ -91,6 +105,8 @@ def install(txn: Any) -> Any:
                   "EllipsisParameter": S.OfObject, "StandardAttributeSpecifier": S.OfObject,
                   "Attribute": S.OfObject, "AlignasSpecifier": S.OfObject, "GnuAttributeSpecifier": S.OfObject,
                   "DeclspecSpecifier": S.OfObject,
+                  # the declarations a struct or a union holds: mbse-programs' grammar, which extends it by schema extension
+                  "Members": S.OfUnion,
                   # C's `Term`, `Name` and `Identifier`, by name
                   "CTerm": S.OfUnion, "Name": S.OfUnion, "Identifier": S.OfObject})
         .spec([
@@ -109,6 +125,9 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             lambda _: _.CTerm.name("Expressions.C.Expressions.Term"),
+            # the declarations a struct or a union holds, an open union with no branch of its own: mbse-programs'
+            # grammar adds its struct-declaration-list to it by schema extension
+            lambda _: _.Members.name("Expressions.C.Types.Members"),
             lambda _: _.Name.name("Expressions.C.Expressions.Name"),
             lambda _: _.Identifier.name("Expressions.C.Expressions.Identifier"),
             # a type name's specifiers, the attribute specifiers among them (mbse-programs' `Specifier`)
@@ -159,7 +178,8 @@ def install(txn: Any) -> Any:
                 .properties({"name": _.Name}),
             lambda _: _.ClassSpecifier.name("Expressions.C.Types.ClassSpecifier").properties({
                 "key": S.OfStr, "attributes": many(_.AttributeSpecifier), "name": _.Name,
-                "body": S.OfBool}),  # whether it has a body, whose member declarations are not part of the term
+                "body": S.OfBool,  # whether it has a body, `{ members }`
+                "members": _.Members}),  # what its body declares, mbse-programs' grammar
             lambda _: _.EnumSpecifier.name("Expressions.C.Types.EnumSpecifier").properties({
                 "key": S.OfStr, "attributes": many(_.AttributeSpecifier), "name": _.Name, "base": _.Term,
                 "body": S.OfBool,  # whether it has a body, `{ enumerators }`
