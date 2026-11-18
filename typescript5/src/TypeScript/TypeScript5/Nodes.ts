@@ -1,7 +1,7 @@
 /**
  * How the TypeScript family reads a node, shared by its three dialects, `TypeScript5`, `TypeScript Types` and
  * `TypeScript Patterns` (mbse-basis [CAP-277: TypeScript's types and destructuring patterns as data](mbse:mbse-basis/docs/capabilities/CAP-277.md)): a node's own checks, as mbse-programs has them, and
- * its helpers' in turn; the names a pattern binds; and the names each of a kind's arguments has bound. It imports only
+ * its helpers' in turn; the names a pattern binds, or a type parameter declares; and the names each of a kind's arguments has bound. It imports only
  * the framework, so that the family's dialects, which read each other's terms, each import it without a cycle.
  */
 
@@ -20,6 +20,7 @@ const PROPERTY = "property";
 const MEMBEREXPRESSION = "memberexpression";
 const TEMPLATELITERAL = "templateliteral";
 const SEQUENCEEXPRESSION = "sequenceexpression";
+const TYPEPARAMETER = "tstypeparameter";
 
 /** `TypeScript5`'s functions, which bind their parameters within them. */
 const FUNCTIONS: readonly string[] = ["arrowfunctionexpression", "functionexpression", "tsemptybodyfunctionexpression"];
@@ -51,16 +52,28 @@ export function nodeOf(value: any): Node {
 
 // --- What a pattern binds ---
 
-/** The names a pattern binds, a term's or a `Node`'s: an identifier's, and those within an array, an object, a default,
- * a rest or a parameter property; a member, or any other target, binds none. */
+/** A term's, a `Node`'s or a record's `Node`: a record, a kind's or a helper's value object, read as `Terms.node` reads
+ * it, its kind its schema's name in lower case, as the family names its kinds and helpers. */
+function read(value: any): Node {
+  if (value instanceof Node || F.isTerm(value)) return nodeOf(value);
+  const schema = typeof value.as_schema === "function" ? value.as_schema() : null;
+  if (typeof schema?.name !== "string") throw new TypeError(`not a term, a Node or a record: ${repr(value)}`);
+  return F.node(schema.name.split(".").pop().toLowerCase(), value);
+}
+
+/** The names a pattern binds, or a type parameter declares, of a term, a `Node` or a record (a kind's or a helper's, as
+ * a statement holds it *(agent)*): an identifier's, and those within an array, an object, a default, a rest or a
+ * parameter property; a type parameter's name, and a declaration's type parameters'; a member, or any other target,
+ * binds none. Anything else is refused, TypeError. */
 export function boundNames(node: any): ReadonlySet<string> {
   if (node === null || node === undefined) return new Set();
-  node = nodeOf(node);
+  node = read(node);
   if (node.kind === IDENTIFIER) return new Set(node.attributes.has("name") ? [node.attributes.get("name")] : []);
   if (node.kind === PROPERTY) return boundNames(node.subterms.get("value"));
+  if (node.kind === TYPEPARAMETER) return boundNames(node.helpers.get("name"));
   const found = new Set<string>();
   for (const inner of [...node.lists.get("elements") ?? [], ...node.lists.get("properties") ?? [],
-    ...["left", "argument", "parameter"].map((name) => node.subterms.get(name))]) {
+    ...["left", "argument", "parameter"].map((name) => node.subterms.get(name)), ...nodes(node.helpers.get("params"))]) {
     for (const bound of boundNames(inner)) found.add(bound);
   }
   return found;
@@ -76,15 +89,8 @@ function parameters(node: Node): Set<string> {
 }
 
 /** The names a node's type parameters declare (each a `TSTypeParameter`'s `name`). */
-function typeParameters(node: Node): Set<string> {
-  const declaration = node.helpers.get("typeParameters") as Node | undefined;
-  const found = new Set<string>();
-  if (declaration === undefined) return found;
-  for (const parameter of nodes(declaration.helpers.get("params"))) {
-    const name = parameter.helpers.get("name") as Node | undefined;
-    if (name !== undefined && name.attributes.has("name")) found.add(name.attributes.get("name"));
-  }
-  return found;
+function typeParameters(node: Node): ReadonlySet<string> {
+  return boundNames(node.helpers.get("typeParameters"));
 }
 
 /** The names the `infer` types within a conditional type's `extendsType` declare, but those of a conditional type
@@ -93,11 +99,7 @@ function infers(value: any): Set<string> {
   if (value === null || value === undefined) return new Set();
   const node = nodeOf(value);
   if (node.kind === "tsconditionaltype") return new Set();
-  if (node.kind === "tsinfertype") {
-    const parameter = node.helpers.get("typeParameter") as Node | undefined;
-    const name = parameter?.helpers.get("name") as Node | undefined;
-    return new Set(name !== undefined && name.attributes.has("name") ? [name.attributes.get("name")] : []);
-  }
+  if (node.kind === "tsinfertype") return new Set(boundNames(node.helpers.get("typeParameter")));
   const found = new Set<string>();
   for (const inner of [...node.subterms.values(), ...node.many]) for (const name of infers(inner)) found.add(name);
   return found;

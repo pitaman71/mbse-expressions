@@ -61,8 +61,9 @@ export const HELPERS: readonly string[] = [];
 /** The version each of its kinds arrived in: none, every kind being older than TypeScript 5.0. */
 export const SINCE: ReadonlyMap<string, number> = new Map();
 
-/** The names a pattern binds, a term's or a `Node`'s (`Nodes.boundNames`): an identifier's, and those within an
- * array, an object, a default, a rest or a parameter property; a member, or any other target, binds none. */
+/** The names a pattern binds, or a type parameter declares, of a term, a `Node` or a record (`Nodes.boundNames`): an
+ * identifier's, and those within an array, an object, a default, a rest or a parameter property; a type parameter's
+ * name, and a declaration's type parameters'; a member, or any other target, binds none. */
 export const boundNames = Nodes.boundNames;
 
 /** The schemas of `TypeScript5` it names, created where its install has not run. */

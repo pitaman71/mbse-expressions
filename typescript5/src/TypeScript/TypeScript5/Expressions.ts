@@ -34,7 +34,8 @@
  *   nonterminals ("if the grammar has different nonterminals I see no reason to conflate them"). Each is named apart
  *   from `body`, which `Let` gives a term *(agent)*. An arrow whose body is an expression holds it as its `body`, a
  *   term; one whose body is a block holds it as its `block`. This dialect reads neither union's branches: a block and a
- *   class body are no terms of it, its printer writes each `{}`, and the framework's
+ *   class body are no terms of it, its printer writes each `{}` (`Text.Printer.statements`, which a printer of the
+ *   statements overrides), and the framework's
  *   readers do not enter them, as it declares both unions boundaries (`Terms.boundaries`). Each is a
  *   binder, refining the framework's `Let`, Let's `name` and `value` unset: what it binds, its scopes say.
  * - Operators and access: `metaproperty`, `memberexpression`, `callexpression`, `chainexpression`, `newexpression`,
@@ -529,7 +530,7 @@ export function tree(term: any): Node {
   return F.node(tag, record);
 }
 
-/** The names a pattern binds (`Nodes.boundNames`). */
+/** The names a pattern binds, or a type parameter declares (`Nodes.boundNames`). */
 export const boundNames = Nodes.boundNames;
 
 /** A constant's text: as written (`text`), else its default spelling, `null` or a regular expression (`/a+/g`), or,
