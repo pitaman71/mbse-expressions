@@ -34,7 +34,8 @@
  *   nonterminals ("if the grammar has different nonterminals I see no reason to conflate them"). Each is named apart
  *   from `body`, which `Let` gives a term *(agent)*. An arrow whose body is an expression holds it as its `body`, a
  *   term; one whose body is a block holds it as its `block`. This dialect reads neither union's branches: a block and a
- *   class body are no terms of it, its printer writes each `{}`, and its walks and checks do not enter them. Each is a
+ *   class body are no terms of it, its printer writes each `{}`, and the framework's
+ *   readers do not enter them, as it declares both unions boundaries (`Terms.boundaries`). Each is a
  *   binder, refining the framework's `Let`, Let's `name` and `value` unset: what it binds, its scopes say.
  * - Operators and access: `metaproperty`, `memberexpression`, `callexpression`, `chainexpression`, `newexpression`,
  *   `importexpression`, `updateexpression`, `unaryexpression`, `awaitexpression`, `binaryexpression`,
@@ -149,6 +150,9 @@ export const QUOTES: readonly string[] = Nodes.QUOTES;
 
 /** A regular expression's flags, as ECMAScript 2026 has them. */
 export const FLAGS = "dgimsuvy";
+
+// where its grammar hands off to mbse-programs' statements: the framework's readers do not enter them
+F.boundaries("Expressions.TypeScript.TypeScript5.Block", "Expressions.TypeScript.TypeScript5.ClassBody");
 
 /** TypeScript5's union of its kinds, added to the framework's terms as the branch `typescript5`, its own kinds, the
  * helpers they hold, and its dialect's schema, whose singleton is `Expressions.TypeScript.TypeScript5`: run after
