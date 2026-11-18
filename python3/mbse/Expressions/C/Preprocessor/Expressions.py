@@ -26,11 +26,23 @@ order, each a value object `Expressions.C.Preprocessor.<Kind>`:
 A name is C's `Identifier` (`Expressions.C.Expressions.Identifier`), a preprocessing token the same in both
 standards. A condition and an include's `macro` hold `Expressions.Framework.Term`: a C or a C++ term, as the
 framework's shared kinds hold any dialect's (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The framework's kinds with subterms stay shared"), each standard defining its own
-condition's grammar. A directive's `items` hold `Expressions.Framework.Term` too, where a value holds the directive:
-an enumeration's body, whose items are C Types' or Cpp Types' terms (their enumerators, and this dialect's directives
-and comments, which its install adds to both `Term`s); elsewhere mbse-programs relates its items. Which language a
-condition or an item is of is the reading dialect's: from an enumeration, its own (a C++ term in a C enumeration is
-refused), from this dialect's holder, either. A condition's macros' names, C's variables and C++'s identifiers, are
+condition's grammar. A conditional's `items` hold `Expressions.Framework.Term` too, where it stands in an enumeration's
+body, whose items are C Types' or Cpp Types' terms (their enumerators, and this dialect's directives and comments, which
+its install adds to both `Term`s). Where it stands between statements or declarations, the lines it governs, the
+standard's group, are mbse-programs' grammar, not this dialect's, and a property of the directive holds them, as the
+user decided: "For any dialect A if term T_A has a clause(s) that crosses over to another dialect's expression
+language, the crossover should be modeled as a property of T_A" (mbse-programs, [the
+port](mbse:mbse-programs/docs/proposals/port/README.md#stage-3-the-whole-tree-as-values)), since "mbse-expressions defines a dialect for expression grammar and mbse-programs defines a
+dialect for statement, definition, and file grammar"; for C and C++, "3(a)" ([the port's Stage 4](mbse:mbse-programs/docs/proposals/port/README.md#stage-4-c-and-cpp)): "a preprocessor
+directive between statements is a statement holding the directive term, and a conditional's statements a property of
+that term, typed by an open union mbse-programs extends". Each conditional's (`ifdirective`, `ifdefdirective`,
+`elifdirective`, `elifdefdirective`, `elsedirective`) is its `group`, of the open union
+`Expressions.C.Preprocessor.Group`, a union with no branch of its own, which both of mbse-programs' languages, C's and
+C++'s, extend with the statements or declarations a group holds in each. This dialect reads none of its branches: a
+group is no term of it, its printer writes none of it (`C.Expressions.Text.Printer.group`, which a printer of the
+statements overrides), and the framework's readers do not enter it, as it declares the union a boundary
+(`Terms.boundaries`). Which language a condition or an item is of is the reading dialect's: from an enumeration, its
+own (a C++ term in a C enumeration is refused), from this dialect's holder, either. A condition's macros' names, C's variables and C++'s identifiers, are
 bound within it (`Kind.scopes`), as each names a macro, defined or not, never a value, and so are an include's macro's:
 nothing refines `Let`.
 
@@ -85,6 +97,10 @@ _ALTERNATIVES = frozenset({ELIFDIRECTIVE, ELIFDEFDIRECTIVE, ELSEDIRECTIVE})
 _ITEMS = frozenset({"enumerator", *DIRECTIVES, COMMENT, *F.INVALID_KINDS})
 
 
+F.boundaries("Expressions.C.Preprocessor.Group")
+# where its grammar hands off to mbse-programs' statements and declarations: the framework's readers do not enter it
+
+
 def install(txn: Any) -> Any:
     """C Preprocessor's union of its kinds, added to the framework's terms as the branch `c_preprocessor`, its own kinds,
     and its dialect's schema, whose singleton is `Expressions.C.Preprocessor`: run after `Framework.install`, in a
@@ -117,6 +133,8 @@ def install(txn: Any) -> Any:
                   "IfDirective": S.OfObject, "IfdefDirective": S.OfObject, "ElifDirective": S.OfObject,
                   "ElifdefDirective": S.OfObject, "ElseDirective": S.OfObject, "OtherDirective": S.OfObject,
                   "DefinedExpression": S.OfObject, "Comment": S.OfObject,
+                  # the lines a conditional governs: mbse-programs' grammar, which extends it by schema extension
+                  "Group": S.OfUnion,
                   # C's and C++'s `Term`s, C Types' and Cpp Types', and C's `Identifier`, by name
                   "CTerm": S.OfUnion, "CppTerm": S.OfUnion, "CTypesTerm": S.OfUnion, "CppTypesTerm": S.OfUnion,
                   "Identifier": S.OfObject})
@@ -138,6 +156,9 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             lambda _: _.Identifier.name("Expressions.C.Expressions.Identifier"),
+            # the lines a conditional governs between statements or declarations, an open union with no branch of its
+            # own: mbse-programs' C and C++ grammars add their groups to it by schema extension
+            lambda _: _.Group.name("Expressions.C.Preprocessor.Group"),
             # `defined(name)`, a condition's term: in C's and C++'s `Term`s
             lambda _: _.CTerm.name("Expressions.C.Expressions.Term").branches([
                 lambda t: t.name("definedexpression").schema([_.DefinedExpression])]),
@@ -148,22 +169,27 @@ def install(txn: Any) -> Any:
                 *held(_), lambda t: t.name("comment").schema([_.Comment])]),
             lambda _: _.CppTypesTerm.name("Expressions.Cpp.Types.Term").branches([
                 *held(_), lambda t: t.name("comment").schema([_.Comment])]),
-            # the directives ([cpp]); a conditional's `items`, where a value holds it, an enumeration's items
+            # the directives ([cpp]); a conditional's `items`, in an enumeration, its enumeration's items, and its
+            # `group`, between statements or declarations, mbse-programs' grammar
             lambda _: _.IncludeDirective.name("Expressions.C.Preprocessor.IncludeDirective").properties({
                 "directive": S.OfStr, "path": S.OfStr, "system": S.OfBool, "macro": Framework.Term}),
             lambda _: _.DefineDirective.name("Expressions.C.Preprocessor.DefineDirective").properties({
                 "name": _.Identifier, "function_like": S.OfBool, "parameters": many(_.Identifier),
                 "variadic": S.OfBool, "replacement": S.OfStr}),  # replacement: the text of its tokens
             lambda _: _.IfDirective.name("Expressions.C.Preprocessor.IfDirective").properties({
-                "condition": Framework.Term, "items": many(Framework.Term), "alternative": _.Term}),
+                "condition": Framework.Term, "items": many(Framework.Term), "group": _.Group,
+                "alternative": _.Term}),
             lambda _: _.IfdefDirective.name("Expressions.C.Preprocessor.IfdefDirective").properties({
-                "negated": S.OfBool, "name": _.Identifier, "items": many(Framework.Term), "alternative": _.Term}),
+                "negated": S.OfBool, "name": _.Identifier, "items": many(Framework.Term), "group": _.Group,
+                "alternative": _.Term}),
             lambda _: _.ElifDirective.name("Expressions.C.Preprocessor.ElifDirective").properties({
-                "condition": Framework.Term, "items": many(Framework.Term), "alternative": _.Term}),
+                "condition": Framework.Term, "items": many(Framework.Term), "group": _.Group,
+                "alternative": _.Term}),
             lambda _: _.ElifdefDirective.name("Expressions.C.Preprocessor.ElifdefDirective").properties({
-                "negated": S.OfBool, "name": _.Identifier, "items": many(Framework.Term), "alternative": _.Term}),
+                "negated": S.OfBool, "name": _.Identifier, "items": many(Framework.Term), "group": _.Group,
+                "alternative": _.Term}),
             lambda _: _.ElseDirective.name("Expressions.C.Preprocessor.ElseDirective").properties({
-                "items": many(Framework.Term)}),
+                "items": many(Framework.Term), "group": _.Group}),
             lambda _: _.OtherDirective.name("Expressions.C.Preprocessor.OtherDirective").properties({
                 "directive": S.OfStr, "text": S.OfStr}),
             # `defined(name)` ([cpp.cond])

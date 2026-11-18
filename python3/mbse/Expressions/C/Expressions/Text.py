@@ -8,12 +8,15 @@ C++'s being C's and its own: the family's one printer, which its dialects' `Text
 A literal is written in its spelling where it has one (`text`), else in its value's default spelling, with what it
 encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
 (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal as
-`INFINITY` or `NAN`. A body of statements or declarations, not part of the term (a lambda's, a statement expression's,
-a struct's), is written `{}`, where mbse-programs writes what it relates. An enumeration's body, its data, is written as
+`INFINITY` or `NAN`. What a term holds of mbse-programs' grammar, which the family does not read, is written by its
+`Printer`'s methods, which mbse-programs' printer overrides to write it: a lambda's or a statement expression's compound
+statement, its `block`, by `statements`, `{}`; a struct's, a union's or a class's member declarations, its `members`,
+by `members`, `{}`, where its `body` says one is written; and a conditional directive's group, its `group`, by `group`,
+nothing, so that the directive is written with its items alone. An enumeration's body, its data, is written as
 mbse-programs writes it, its enumerators, directives and comments each on lines of its own, one level deeper, an
 enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment ending the line
 before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`, `#elif`, `#elifdef`,
-`#else`) on a line of its own, its items on the lines between, and `#endif`. Invalid syntax is written as written
+`#else`) on a line of its own, its items and its group on the lines between, and `#endif`. Invalid syntax is written as written
 (`Terms.invalid_text`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`). Reading C (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'")."""
 
 from __future__ import annotations
@@ -26,7 +29,7 @@ from mbse.Expressions.Framework import Terms as F
 
 from . import Expressions as E
 
-__all__ = ["ToText", "text"]
+__all__ = ["Printer", "ToText", "text"]
 
 COMMA, ASSIGNMENT, CONDITIONAL, UNARY, POSTFIX, PRIMARY = 0, 1, 2, 15, 16, 17
 """Precedence, loosest first, as mbse-programs' printer numbers it: an operand is parenthesized when its precedence is
@@ -114,9 +117,10 @@ def _declared(specifiers: str, declarator: str, abstract: bool) -> str:
     return f"{specifiers} {declarator}"
 
 
-class _Printer:
-    """Writes a term's source from its `Node`: its kind as C and C++ write it, its type names and other helpers
-    nested."""
+class Printer:
+    """Writes a term's source from its `Node`, a term of `dialect`, a dialect of the C family: its kind as C and C++
+    write it, its type names and other helpers nested; what it holds of mbse-programs' grammar by `statements`,
+    `members` and `group`, which a printer of that grammar overrides."""
 
     def __init__(self, dialect: F.Dialect):
         self.dialect, self.depth = dialect, 0  # the depth of the enumeration being written
@@ -315,7 +319,7 @@ class _Printer:
         written += self.attributes_after(node)
         if "declarator" in node.helpers:  # without a declarator, the lambda has no parameter list: `[] { ... }`
             written += (" " if requires is not None else "") + self.text(node.helpers["declarator"])
-        return written + " {}"  # its body of statements, not part of the term
+        return written + " " + self.statements(node)
 
     def lambda_declarator(self, node: F.Node) -> str:
         written = "(" + ", ".join(self.text(p) for p in _nodes(node.helpers.get("parameters"))) + ")"
@@ -369,6 +373,24 @@ class _Printer:
         pattern = self.node(node.subterms["pattern"])
         return (self.text(pattern) if pattern.kind == E.TYPEID else self.expression(pattern, POSTFIX)) + "..."
 
+    # What a term holds of mbse-programs' grammar, which the family does not read: each written by its own method
+
+    def statements(self, node: F.Node) -> str:
+        """The compound statement a lambda's or a statement expression's `Node` holds, its `block`, mbse-programs'
+        grammar: `{}`. A printer of that grammar overrides it to write the statements."""
+        return "{}"
+
+    def members(self, node: F.Node) -> str:
+        """The member declarations a struct's, a union's or a class's specifier holds, its `members`, mbse-programs'
+        grammar, written where its `body` says it has one: `{}`. A printer of that grammar overrides it to write them."""
+        return "{}"
+
+    def group(self, node: F.Node) -> str:
+        """The lines a conditional directive's branch governs between statements or declarations, its `group`,
+        mbse-programs' grammar, written on the lines after its items: none, `""`, so that the branch is written with its
+        items alone. A printer of that grammar overrides it to write them, each line as it is to stand."""
+        return ""
+
     # Names
 
     def name_text(self, node: F.Node) -> str:
@@ -420,7 +442,7 @@ class _Printer:
         bases = _nodes(node.helpers.get("bases"))
         if bases:
             written += " : " + ", ".join(self.text(b) for b in bases)
-        return written + (" {}" if attributes.get("body") else "")  # its member declarations, not part of the term
+        return written + (" " + self.members(node) if attributes.get("body") else "")
 
     def base(self, node: F.Node) -> str:
         attributes = node.attributes
@@ -487,7 +509,8 @@ class _Printer:
         text = node.attributes.get("text", "")
         return f"/*{text}*/" if node.attributes.get("block") else f"//{text}"
 
-    # Directives, as mbse-programs writes them: each starting its line, a conditional one's items on the lines between
+    # Directives, as mbse-programs writes them: each starting its line, a conditional one's items and group on the lines
+    # between
 
     def directive(self, node: F.Node, depth: int, enumerators: bool) -> str:
         kind, attributes = node.kind, node.attributes
@@ -511,7 +534,7 @@ class _Printer:
         return self.branch(node, depth, enumerators) + "\n#endif"
 
     def branch(self, node: F.Node, depth: int, enumerators: bool) -> str:
-        """A conditional directive's branch, its items, and the branches after it (`alternative`)."""
+        """A conditional directive's branch, its items, its group (`group`), and the branches after it (`alternative`)."""
         kind = node.kind
         if kind in ("ifdirective", "elifdirective"):
             head = f"#{'if' if kind == 'ifdirective' else 'elif'} {self.expression(node.subterms['condition'], COMMA)}"
@@ -522,6 +545,8 @@ class _Printer:
             head = "#else"
         items = [self.node(item) for item in node.many]
         body = "".join("\n" + line for line in self.lines(items, lambda i, item: self.item(item, depth, enumerators)))
+        group = self.group(node)
+        body += "\n" + group if group else ""
         alternative = node.subterms.get("alternative")
         tail = "" if alternative is None else "\n" + self.branch(self.node(alternative), depth, enumerators)
         return head + body + tail
@@ -667,7 +692,7 @@ class _Printer:
         "fielddesignator": designator, "indexdesignator": designator,
         "compoundliteralexpression": lambda self, node: (f"({self.term(node.subterms['type'])})"
                                                          + self.initializer_list(node.helpers["initializer"])),
-        "statementexpression": lambda self, node: "({})",  # its body of statements, not part of the term
+        "statementexpression": lambda self, node: f"({self.statements(node)})",
         "extensionexpression": lambda self, node: "__extension__ " + self.expression(node.subterms["operand"], UNARY),
         "typeid": type_id,
         "identifier": name_text, "operatorname": name_text, "conversionname": name_text,
@@ -704,5 +729,5 @@ def ToText(expression: Any) -> str:
 
 def text(expression: Any, dialect: F.Dialect) -> str:
     """A term of `dialect`, a dialect of the C family, as its source, parenthesized only where precedence requires."""
-    printer = _Printer(dialect)
+    printer = Printer(dialect)
     return printer.text(printer.node(F.term(expression)))
