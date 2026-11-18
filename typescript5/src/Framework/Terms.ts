@@ -295,6 +295,24 @@ function holdsTerms(schema: unknown): boolean {
 type Parts = readonly [readonly string[], readonly string[], readonly string[]];
 const PARTS = new WeakMap<object, readonly [Parts, readonly string[]]>();
 
+/** The unions where an expression grammar hands off to another grammar, by name (`boundaries`). */
+const BOUNDARIES = new Set<string>();
+
+/** Declares the unions `names` boundaries of an expression grammar: where a term holds another grammar's values, as a
+ * TypeScript5 function's statements, mbse-programs' (its `block`, of `Expressions.TypeScript.TypeScript5.Block`). What a
+ * property typed by one holds is no part of the term to these readers: neither a subterm nor a helper nor an attribute,
+ * never walked, validated, compared or read as an argument. The dialect whose grammar it is declares it, once, when its
+ * module is imported. */
+export function boundaries(...names: string[]): void {
+  for (const name of names) BOUNDARIES.add(name);
+}
+
+/** Whether a property's schema is a boundary (`boundaries`), or a container of one. */
+function isBoundary(schema: any): boolean {
+  const held = schema instanceof Schemas.OfContainer.Data ? schema.element : schema;
+  return held instanceof Schemas.OfUnion.Data && BOUNDARIES.has(held.name as string);
+}
+
 /** Whether a schema is a value object whose properties are all terms, such as a mapping's pair. */
 function isPair(schema: any): boolean {
   return schema instanceof Schemas.OfObject.Data && !schema.ref && schema.properties.size > 0
@@ -324,6 +342,7 @@ export function _parts(schema: any): Parts {
   const helpers: string[] = [];
   const variadic: string[] = [];
   for (const [name, prop] of schema.properties as Map<string, Schemas.OfProperty.Data>) {
+    if (isBoundary(prop.schema)) continue; // another grammar's: no part of the term
     if (holdsTerms(prop.schema)) subterms.push(name);
     else if (prop.schema instanceof Schemas.OfContainer.Data && (holdsTerms(prop.schema.element)
       || isPair(prop.schema.element))) variadic.push(name);

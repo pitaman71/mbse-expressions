@@ -127,6 +127,7 @@ __all__ = [
     "INVALID", "INVALID_KINDS", "invalid_text", "invalid_term_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
     "spec", "term", "is_term", "is_expression", "is_binder", "holder_of", "kind_of", "dialect_of", "dialect_name",
     "dialect_tag", "SUBLANGUAGES", "form", "node", "name_of", "reference_name", "operator_of", "walk", "fold", "same",
+    "boundaries",
 ]
 
 TERM = "Expressions.Framework.Term"
@@ -291,6 +292,26 @@ def _holds_terms(schema: Any) -> bool:
         name.startswith("Expressions.") and name.endswith(".Term"))
 
 
+_BOUNDARIES: set[str] = set()
+"""The unions where an expression grammar hands off to another grammar, by name (`boundaries`)."""
+
+
+def boundaries(*names: str) -> None:
+    """Declares the unions `names` boundaries of an expression grammar: where a term holds another grammar's values, as
+    a TypeScript5 function's statements, mbse-programs' (its `block`, of `Expressions.TypeScript.TypeScript5.Block`).
+    What a property typed by one holds is no part of the term to these readers: neither a subterm nor a helper nor an
+    attribute, never walked, validated, compared or read as an argument. The dialect whose grammar it is declares it,
+    once, when its module is imported."""
+    _BOUNDARIES.update(names)
+
+
+def _is_boundary(schema: Any) -> bool:
+    """Whether a property's schema is a boundary (`boundaries`), or a container of one."""
+    if isinstance(schema, Schemas.OfContainer.Data):
+        schema = schema.element
+    return isinstance(schema, Schemas.OfUnion.Data) and getattr(schema, "name", None) in _BOUNDARIES
+
+
 def _is_pair(schema: Any) -> bool:
     """Whether a schema is a value object whose properties are all terms, such as a mapping's pair."""
     return (isinstance(schema, Schemas.OfObject.Data) and not schema.ref and bool(schema.properties)
@@ -316,6 +337,8 @@ def _parts(schema: Any) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ..
         return cached[1][0]
     subterms, variadic, attributes, helpers = [], [], [], []
     for name, prop in schema.properties.items():
+        if _is_boundary(prop.schema):
+            continue  # another grammar's: no part of the term
         if _holds_terms(prop.schema):
             subterms.append(name)
         elif isinstance(prop.schema, Schemas.OfContainer.Data) and (
