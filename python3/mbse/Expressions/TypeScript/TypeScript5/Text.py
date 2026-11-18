@@ -8,9 +8,11 @@ parenthesized where it would start with `{`, `function`, `class` or `let [`. A l
 has one (`text`), else in its value's default spelling: a number as JavaScript's `String(number)` writes it, a bigint
 with its `n`, a string in its quote (a double quote by default) with its escapes. Invalid syntax is written as written
 (`Terms.invalid_text`), refused by the name of the dialect whose `Term` holds it. A function's, an arrow's or a class's statements,
-mbse-programs' grammar that its `block` or `classBody` holds, are written `{}`, where mbse-programs' printer writes them. An arrow's lone type parameter without a
-constraint is written `<T,>`, so that the text reads alike in a `.ts` and a `.tsx` file. Its `Printer` writes
-TypeScript5's kinds and helpers itself, and dispatches the types', the patterns' and the regular expressions' to their
+mbse-programs' grammar that its `block` or `classBody` holds, are written by its `Printer`'s `statements`, `{}`, which
+mbse-programs' printer overrides to write them. An object type with comments is written on its members' lines, one level
+in from the `level` of the statement it is printed in, its closing brace at that level (0 unless set, four spaces a
+level). An arrow's lone type parameter without a constraint is written `<T,>`, so that the text reads alike in a `.ts`
+and a `.tsx` file. Its `Printer` writes TypeScript5's kinds and helpers itself, and dispatches the types', the patterns' and the regular expressions' to their
 dialects' `Text.TEXTS`, as SystemVerilog's family printer does. A regular expression's constant is written in its
 spelling, `/pattern/flags`, else, where it has none, as its `regexp` is written. Reading TypeScript (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'")."""
 
@@ -124,6 +126,7 @@ class Printer:
         self.texts = {**Types.TEXTS, **Patterns.TEXTS, **RegExp.TEXTS}
         self.types = Types
         self.invalid: dict[int, tuple[T.Node, Any]] = {}  # each node of invalid syntax read, and the dialect holding it
+        self.level = 0  # the level of the statement a term is printed in, where lines within it indent from
 
     def node(self, value: Any) -> T.Node:
         """A term's `Node`, or a `Node` as it is; a node of invalid syntax remembers the dialect that owns it, whose
@@ -243,7 +246,7 @@ class Printer:
             prefix += ("async " if value.attributes.get("isAsync") else "") + ("*" if value.attributes.get("generator") else "")
             if value.kind == T.TSEMPTYBODYFUNCTIONEXPRESSION:
                 return f"{prefix}{key}{self.signature(value)}"
-            return f"{prefix}{key}{'?' if attributes.get('optional') else ''}{self.signature(value)} {{}}"
+            return f"{prefix}{key}{'?' if attributes.get('optional') else ''}{self.signature(value)} {self.statements(value)}"
         return f"{key}: {self.e(value, ASSIGN)}"
 
     def _objectexpression(self, node: T.Node) -> str:
@@ -251,7 +254,12 @@ class Printer:
             return "{}"
         return "{ " + ", ".join(self.text(member) for member in node.many) + " }"
 
-    # Functions and classes: the statements each holds, mbse-programs' grammar, are written `{}`
+    # Functions and classes: the statements each holds, mbse-programs' grammar, are written by `statements`
+
+    def statements(self, node: T.Node) -> str:
+        """The statements a function's, an arrow's or a class's `Node` holds, its `block` or `classBody`, mbse-programs'
+        grammar, which this dialect does not read: `{}`. A printer of that grammar overrides it to write them."""
+        return "{}"
 
     def signature(self, node: T.Node, arrow: bool = False) -> str:
         """`<typeParameters>(params): returnType`, or with `arrow` `... => returnType` for a function type."""
@@ -266,7 +274,7 @@ class Printer:
         attributes = node.attributes
         keyword = ("async " if attributes.get("isAsync") else "") + "function" + ("*" if attributes.get("generator") else "")
         name = "" if "id" not in node.helpers else " " + self.text(node.helpers["id"])
-        return f"{keyword}{name}{self.signature(node)} {{}}"
+        return f"{keyword}{name}{self.signature(node)} {self.statements(node)}"
 
     def _tsemptybodyfunctionexpression(self, node: T.Node) -> str:
         attributes = node.attributes
@@ -282,7 +290,7 @@ class Printer:
                 head = head.replace(written, written[:-1] + ",>", 1)
         body = node.subterms["body"]
         if body is None:
-            return head + " => {}"
+            return head + " => " + self.statements(node)
         text = self.e(body, ASSIGN)
         if self.leftmost(body).kind in (T.OBJECTEXPRESSION, T.OBJECTPATTERN):
             text = f"({text})"
@@ -301,7 +309,7 @@ class Printer:
         implements = _nodes(node.helpers.get("implements"))
         if implements:
             head += " implements " + ", ".join(self.heritage(heritage) for heritage in implements)
-        return self.decorators(node) + head + " {}"
+        return self.decorators(node) + head + " " + self.statements(node)
 
     def _metaproperty(self, node: T.Node) -> str:
         return f"{self.text(node.helpers['meta'])}.{self.text(node.helpers['property'])}"

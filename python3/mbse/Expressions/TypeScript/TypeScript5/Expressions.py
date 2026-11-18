@@ -33,7 +33,8 @@ carries no domain. Its kinds:
   nonterminals ("if the grammar has different nonterminals I see no reason to conflate them"). Each is named apart
   from `body`, which `Let` gives a term *(agent)*. An arrow whose body is an expression holds it as its `body`, a term;
   one whose body is a block holds it as its `block`. This dialect reads neither union's branches: a block and a class
-  body are no terms of it, its printer writes each `{}`, and the framework's readers
+  body are no terms of it, its printer writes each `{}` (`Text.Printer.statements`, which a printer of the statements
+  overrides), and the framework's readers
   do not enter them, as it declares both unions boundaries (`Terms.boundaries`). Each is a binder,
   refining the framework's `Let`, Let's `name` and `value` unset: what it binds, its scopes say.
 - Operators and access: `metaproperty`, `memberexpression`, `callexpression`, `chainexpression`, `newexpression`,
@@ -510,7 +511,7 @@ def tree(term: Any) -> Node:
 
 
 bound_names = Nodes.bound_names
-"""The names a pattern binds (`Nodes.bound_names`)."""
+"""The names a pattern binds, or a type parameter declares (`Nodes.bound_names`)."""
 
 
 def constant_text(attributes: Mapping[str, Any], regexp: Callable[[], str] | None = None) -> str:

@@ -3,8 +3,8 @@
 (`TypeScript5.Text.ToText`) dispatches to: `TEXTS`, each kind's or helper's writer, given the printer and its
 `Terms.Node`; and `PRECEDENCE`, a type's precedence by its kind, loosest first (`FUNCTION` to `PRIMARY`), a type
 parenthesized where it binds less than its place needs (a function, conditional or union type as an operand). An object
-type is written on one line, or with comments on its members' lines. `ToText` writes a term of the family, as
-`TypeScript5.Text.ToText` does."""
+type is written on one line, or with comments on its members' lines, at the level of the statement it is printed in
+(the printer's `level`). `ToText` writes a term of the family, as `TypeScript5.Text.ToText` does."""
 
 from __future__ import annotations
 
@@ -38,6 +38,9 @@ _KEYWORDS = {
     "tsthistype": "this",
 }
 """The kinds written as one word."""
+
+_INDENT = "    "
+"""A level's indentation."""
 
 
 def _nodes(value: Any) -> tuple[F.Node, ...]:
@@ -110,7 +113,8 @@ def _member(p: X.Printer, node: F.Node) -> str:
 
 
 def _typeliteral(p: X.Printer, node: F.Node) -> str:
-    """`{ a: A; b(): B }` on one line, or with comments its members' lines, a trailing comment on its member's."""
+    """`{ a: A; b(): B }` on one line, or with comments its members' lines, one level in from the printer's `level`, its
+    closing brace at it, a trailing comment on its member's."""
     members = _nodes(node.helpers.get("members"))
     if not members:
         return "{}"
@@ -121,8 +125,8 @@ def _typeliteral(p: X.Printer, node: F.Node) -> str:
         if member.kind == "comment" and member.attributes.get("trailing") and lines:
             lines[-1] += " " + _member(p, member)
         else:
-            lines.append("    " + _member(p, member))
-    return "{\n" + "\n".join(lines) + "\n}"
+            lines.append(_INDENT * (p.level + 1) + _member(p, member))
+    return "{\n" + "\n".join(lines) + "\n" + _INDENT * p.level + "}"
 
 
 def _propertysignature(p: X.Printer, node: F.Node) -> str:
