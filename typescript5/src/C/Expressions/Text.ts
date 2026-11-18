@@ -9,12 +9,15 @@
  * A literal is written in its spelling where it has one (`text`), else in its value's default spelling, with what it
  * encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
  * (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal
- * as `INFINITY` or `NAN`. A body of statements or declarations, not part of the term (a lambda's, a statement
- * expression's, a struct's), is written `{}`, where mbse-programs writes what it relates. An enumeration's body, its
+ * as `INFINITY` or `NAN`. What a term holds of mbse-programs' grammar, which the family does not read, is written by
+ * its `Printer`'s methods, which mbse-programs' printer overrides to write it: a lambda's or a statement expression's
+ * compound statement, its `block`, by `statements`, `{}`; a struct's, a union's or a class's member declarations, its
+ * `members`, by `members`, `{}`, where its `body` says one is written; and a conditional directive's group, its
+ * `group`, by `group`, nothing, so that the directive is written with its items alone. An enumeration's body, its
  * data, is written as mbse-programs writes it, its enumerators, directives and comments each on lines of its own, one
  * level deeper, an enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment
  * ending the line before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`,
- * `#elif`, `#elifdef`, `#else`) on a line of its own, its items on the lines between, and `#endif`. Invalid syntax is
+ * `#elif`, `#elifdef`, `#else`) on a line of its own, its items and its group on the lines between, and `#endif`. Invalid syntax is
  * written as written (`Terms.invalidText`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`).
  * Reading C (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'").
  */
@@ -121,8 +124,10 @@ function declaredText(specifiers: string, declarator: string, isAbstract: boolea
 
 type Text = (printer: Printer, node: F.Node) => string;
 
-/** Writes a term's source from its `Node`: its kind as C and C++ write it, its type names and other helpers nested. */
-class Printer {
+/** Writes a term's source from its `Node`, a term of `dialect`, a dialect of the C family: its kind as C and C++ write
+ * it, its type names and other helpers nested; what it holds of mbse-programs' grammar by `statements`, `members` and
+ * `group`, which a printer of that grammar overrides. */
+export class Printer {
   depth = 0; // the depth of the enumeration being written
   readonly owners = new Map<F.Node, F.Dialect>(); // each node of invalid syntax read, and the dialect that owns it
 
@@ -349,7 +354,7 @@ class Printer {
     // without a declarator, the lambda has no parameter list: `[] { ... }`
     if (node.helpers.has("declarator")) written += (requires !== null ? " " : "")
       + this.text(one(node.helpers.get("declarator")) as F.Node);
-    return written + " {}"; // its body of statements, not part of the term
+    return written + " " + this.statements(node);
   }
 
   lambdaDeclarator(node: F.Node): string {
@@ -398,6 +403,27 @@ class Printer {
     return (pattern.kind === E.TYPEID ? this.text(pattern) : this.expression(pattern, POSTFIX)) + "...";
   }
 
+  // What a term holds of mbse-programs' grammar, which the family does not read: each written by its own method
+
+  /** The compound statement a lambda's or a statement expression's `Node` holds, its `block`, mbse-programs' grammar:
+   * `{}`. A printer of that grammar overrides it to write the statements. */
+  statements(_node: F.Node): string {
+    return "{}";
+  }
+
+  /** The member declarations a struct's, a union's or a class's specifier holds, its `members`, mbse-programs' grammar,
+   * written where its `body` says it has one: `{}`. A printer of that grammar overrides it to write them. */
+  members(_node: F.Node): string {
+    return "{}";
+  }
+
+  /** The lines a conditional directive's branch governs between statements or declarations, its `group`, mbse-programs'
+   * grammar, written on the lines after its items: none, `""`, so that the branch is written with its items alone. A
+   * printer of that grammar overrides it to write them, each line as it is to stand. */
+  group(_node: F.Node): string {
+    return "";
+  }
+
   // Names
 
   nameText(node: F.Node): string {
@@ -444,7 +470,7 @@ class Printer {
     if (attributes.get("final")) written += " final";
     const bases = nodes(node.helpers.get("bases"));
     if (bases.length > 0) written += " : " + bases.map((b) => this.text(b)).join(", ");
-    return written + (attributes.get("body") ? " {}" : ""); // its member declarations, not part of the term
+    return written + (attributes.get("body") ? " " + this.members(node) : "");
   }
 
   base(node: F.Node): string {
@@ -520,7 +546,8 @@ class Printer {
     return node.attributes.get("block") ? `/*${text}*/` : `//${text}`;
   }
 
-  // Directives, as mbse-programs writes them: each starting its line, a conditional one's items on the lines between
+  // Directives, as mbse-programs writes them: each starting its line, a conditional one's items and group on the lines
+  // between
 
   directive(node: F.Node, depth: number, enumerators: boolean): string {
     const { kind, attributes } = node;
@@ -547,7 +574,7 @@ class Printer {
     return this.branch(node, depth, enumerators) + "\n#endif";
   }
 
-  /** A conditional directive's branch, its items, and the branches after it (`alternative`). */
+  /** A conditional directive's branch, its items, its group (`group`), and the branches after it (`alternative`). */
   branch(node: F.Node, depth: number, enumerators: boolean): string {
     const kind = node.kind;
     let head: string;
@@ -558,7 +585,9 @@ class Printer {
       head = `#${keyword}${node.attributes.get("negated") ? "ndef" : "def"} ${this.name(node, "name")}`;
     } else head = "#else";
     const items = node.many.map((item) => this.node(item));
-    const body = this.lines(items, (i, item) => this.item(item, depth, enumerators)).map((line) => "\n" + line).join("");
+    let body = this.lines(items, (i, item) => this.item(item, depth, enumerators)).map((line) => "\n" + line).join("");
+    const group = this.group(node);
+    body += group ? "\n" + group : "";
     const alternative = node.subterms.get("alternative") ?? null;
     const tail = alternative === null ? "" : "\n" + this.branch(this.node(alternative), depth, enumerators);
     return head + body + tail;
@@ -719,7 +748,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   indexdesignator: (p, n) => p.designator(n),
   compoundliteralexpression: (p, n) => `(${p.term(n.subterms.get("type"))})`
     + p.initializerList(one(n.helpers.get("initializer")) as F.Node),
-  statementexpression: () => "({})", // its body of statements, not part of the term
+  statementexpression: (p, n) => `(${p.statements(n)})`,
   extensionexpression: (p, n) => "__extension__ " + p.expression(n.subterms.get("operand"), UNARY),
   typeid: (p, n) => p.typeId(n),
   identifier: (p, n) => p.nameText(n), operatorname: (p, n) => p.nameText(n), conversionname: (p, n) => p.nameText(n),

@@ -23,11 +23,9 @@
  *   `operator+`), as C++'s grammar makes it: C++ has no `variable` (the user's decision of 2026-11-04, in the dialects
  * proposal's Decided), and an `idexpression` of an identifier is a lexical reference to its spelling, which validation
  *   requires bound and simplification resolves; `thisexpression`;
- * - `lambdaexpression` (`captures`, `template_parameters`, `template_requires`, `attributes`, `declarator`), whose body
- *   of
- *   statements is not part of the term (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Bodies within expressions are not part of the term"); `foldexpression`;
- *   `requiresexpression` (`parameters`, `requirements`). A lambda and a requires expression are binders, refining the
- *   framework's `Let`, Let's `name`, `value` and `body` unset: what each binds, its scopes say;
+ * - `lambdaexpression` (`captures`, `template_parameters`, `template_requires`, `attributes`, `declarator`, `block`);
+ *   `foldexpression`; `requiresexpression` (`parameters`, `requirements`). A lambda and a requires expression are
+ *   binders, refining the framework's `Let`, Let's `name`, `value` and `body` unset: what each binds, its scopes say;
  * - casts: `functionalcastexpression` (`T(x)`, `T{x}`), `namedcastexpression` (`static_cast<T>(x)` and its siblings),
  *   `typeidexpression`;
  * - `awaitexpression` (`co_await`), `yieldexpression` (`co_yield`), `sizeofpackexpression` (`sizeof...(pack)`),
@@ -47,6 +45,23 @@
  * `Parameter`, `TemplateParameter`, `Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and
  * `AttributeSpecifier`. An enumeration's body is data, Cpp Types' terms: its `EnumSpecifier` holds its `enumerators` and
  * `trailing_comma`.
+ *
+ * The statements and declarations a C++ term holds are mbse-programs' grammar, not this dialect's, and a property of the
+ * term holds them, as the user decided: "For any dialect A if term T_A has a clause(s) that crosses over to another
+ * dialect's expression language, the crossover should be modeled as a property of T_A" (mbse-programs, [the
+ * port](mbse:mbse-programs/docs/proposals/port/README.md#stage-3-the-whole-tree-as-values)), since "mbse-expressions defines a dialect for expression grammar and mbse-programs defines a
+ * dialect for statement, definition, and file grammar". A lambda's and a GNU statement expression's compound statement
+ * is its `block`, of the open union `Expressions.Cpp.Expressions.Block`; a class's, a struct's or a union's member
+ * declarations, its member-specification, are its `ClassSpecifier`'s `members`, of the open union
+ * `Expressions.Cpp.Expressions.Members`, beside its `body`, which still says whether a body is written (`struct S` names
+ * a type, `struct S {}` defines one), `members` holding what the body declares. Each union has no branch of its own;
+ * mbse-programs' install extends it with its compound statement or its member-specification, `Programs.Cpp`'s grammar,
+ * apart from C's (`Expressions.C.Expressions.Block`, `Expressions.C.Types.Members`), as the grammars differ ("if the
+ * grammar has different nonterminals I see no reason to conflate them"). The block is named apart from `body`, which
+ * `Let` gives a term *(agent)*, as TypeScript5's is. This dialect reads neither union's branches: a block and members
+ * are no terms of it, its printer writes each `{}` (`C.Expressions.Text.Printer`'s `statements` and `members`, which a
+ * printer of the statements overrides), and the framework's readers do not enter them, as it declares both unions
+ * boundaries (`Terms.boundaries`).
  *
  * The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
  * (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
@@ -94,6 +109,9 @@ export const PREFIXES: readonly string[] = C.PREFIXES;
 /** The suffixes C++ writes, by the type of the literal's value: an integer's (`u`, `l`, `ll`, C++23's `z`, in either
  * case and order) and a floating literal's (`f`, `l`, C++23's extended types' `f16` to `f128` and `bf16`). */
 export const SUFFIXES: C.Suffixes = C.CPP_SUFFIXES;
+
+// where its grammar hands off to mbse-programs' statements and declarations: the framework's readers do not enter them
+F.boundaries("Expressions.Cpp.Expressions.Block", "Expressions.Cpp.Expressions.Members");
 
 /** Cpp's union of its kinds, added to the framework's terms as the branch `cpp`, its own kinds, its union of binding
  * targets (`Pattern`) and the helpers they hold, and its dialect's schema, whose singleton is
@@ -151,6 +169,8 @@ export function install(txn: any): any {
       DeclspecSpecifier: S.OfObject,
       // Cpp Types' `Term` and its `typeid`, by name; FrameworkTerm: the framework's, by name
       TypesTerm: S.OfUnion, TypeId: S.OfObject,
+      // the statements and declarations a term holds: mbse-programs' grammar, which extends these by schema extension
+      Block: S.OfUnion, Members: S.OfUnion,
       bool: S.OfAny, int8_t: S.OfAny, int16_t: S.OfAny, int32_t: S.OfAny, int64_t: S.OfAny, // its domains' schemas
       uint8_t: S.OfAny, uint16_t: S.OfAny, uint32_t: S.OfAny, uint64_t: S.OfAny,
       std_float16_t: S.OfAny, std_float32_t: S.OfAny, std_float64_t: S.OfAny, std_float128_t: S.OfAny,
@@ -312,12 +332,12 @@ export function install(txn: any): any {
       (_: any) => _.ThisExpression.name("Expressions.Cpp.Expressions.ThisExpression"),
       (_: any) => _.ParenthesizedExpression.name("Expressions.Cpp.Expressions.ParenthesizedExpression").properties({
         expression: _.Term}),
-      // binders: `Let`, Let's `name`, `value` and `body` unset (a body of statements is not part of the term), its
-      // scopes saying what it binds
+      // binders: `Let`, Let's `name`, `value` and `body` unset (a lambda's compound statement its `block`), its scopes
+      // saying what it binds
       (_: any) => _.LambdaExpression.name("Expressions.Cpp.Expressions.LambdaExpression").refines([Framework.Let]).properties({
         captures: many(_.Capture), template_parameters: many(_.TemplateParameter),
         template_requires: _.Term, attributes: many(_.AttributeSpecifier),
-        declarator: _.LambdaDeclarator}), // its body of statements is not part of the term
+        declarator: _.LambdaDeclarator, block: _.Block}),
       (_: any) => _.LambdaDeclarator.name("Expressions.Cpp.Expressions.LambdaDeclarator").properties({
         parameters: many(_.Parameter), specifiers: many(_.Specifier),
         exception: _.ExceptionSpecification, attributes: many(_.AttributeSpecifier),
@@ -391,10 +411,15 @@ export function install(txn: any): any {
       (_: any) => _.EqualInitializer.name("Expressions.Cpp.Expressions.EqualInitializer").properties({value: _.Term}),
       (_: any) => _.ParenthesizedInitializer.name("Expressions.Cpp.Expressions.ParenthesizedInitializer").properties({
         arguments: many(_.Term)}),
-      // GNU's extensions: a statement expression's body of statements is not part of the term
-      (_: any) => _.StatementExpression.name("Expressions.Cpp.Expressions.StatementExpression"),
+      // GNU's extensions: a statement expression's compound statement, mbse-programs' grammar, its `block`
+      (_: any) => _.StatementExpression.name("Expressions.Cpp.Expressions.StatementExpression")
+          .properties({block: _.Block}),
       (_: any) => _.ExtensionExpression.name("Expressions.Cpp.Expressions.ExtensionExpression").properties({
         operand: _.Term}),
+      // the statements and declarations a term holds, open unions with no branch of their own: mbse-programs' grammar
+      // adds its compound statement and its member-specification to them by schema extension
+      (_: any) => _.Block.name("Expressions.Cpp.Expressions.Block"),
+      (_: any) => _.Members.name("Expressions.Cpp.Expressions.Members"),
       // names
       (_: any) => _.Identifier.name("Expressions.Cpp.Expressions.Identifier").properties({spelling: S.OfStr}),
       (_: any) => _.OperatorName.name("Expressions.Cpp.Expressions.OperatorName").properties({operator: S.OfStr}),
@@ -416,7 +441,8 @@ export function install(txn: any): any {
       (_: any) => _.ClassSpecifier.name("Expressions.Cpp.Expressions.ClassSpecifier").properties({
         key: S.OfStr, attributes: many(_.AttributeSpecifier), name: _.Name, final: S.OfBool,
         bases: many(_.BaseSpecifier),
-        body: S.OfBool}), // whether it has a body, whose member declarations are not part of the term
+        body: S.OfBool, // whether it has a body, `{ members }`
+        members: _.Members}), // what its body declares, mbse-programs' grammar
       (_: any) => _.BaseSpecifier.name("Expressions.Cpp.Expressions.BaseSpecifier").properties({
         attributes: many(_.AttributeSpecifier), virtual: S.OfBool, access: S.OfStr, type: _.Name,
         pack: S.OfBool}),
