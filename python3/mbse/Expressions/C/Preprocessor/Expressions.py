@@ -291,9 +291,9 @@ def _label(kind: str) -> str:
 
 def problems(node: F.Node) -> list[str]:
     """A node's checks, and its helpers' in turn: an include's or a `__has_include`'s path or macro, an include's
-    directive, a conditional's branch
-    after it and its items (an enumeration's: enumerators, directives, pragmas and comments), each as mbse-programs
-    checks it, a pragma's operand a string literal, and a name's spelling, as C's identifiers are checked."""
+    directive, a conditional's branch after it and its items (an enumeration's: enumerators, directives, pragmas and
+    comments), each as mbse-programs checks it, a pragma's operand a string literal, and a name's spelling, as C's
+    identifiers are checked."""
     kind, attributes = node.kind, node.attributes
     found: list[str] = []
     header = {INCLUDEDIRECTIVE: "an IncludeDirective", HASINCLUDEEXPRESSION: "a HasIncludeExpression"}.get(kind)
