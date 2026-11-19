@@ -30,20 +30,26 @@ carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own litera
 - `awaitexpression` (`co_await`), `yieldexpression` (`co_yield`), `sizeofpackexpression` (`sizeof...(pack)`),
   `noexceptexpression`, `newexpression`, `deleteexpression`, `throwexpression`, `packexpansion` (`pattern...`).
 
+Its GNU extensions are C's (`EXTENSIONS`): `statementexpression`, `extensionexpression` and `labeladdressexpression`
+(`&&label`, its `label` C++'s identifier). An identifier's declarator holds GNU's asm label (`asm`, an `AsmLabel`: its
+`keyword`, `asm`, `__asm__` or `__asm`, and its `label`, a string literal), the assembler name of what it declares
+(`int x asm("r1")`, `int f() asm("f2")`), as C's does; the printer writes it after the whole declarator.
+
 Its sublanguages are dialects of their own, which it reads (`reads`; mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `Cpp
 Types`, C++'s type-ids (`Expressions.Cpp.Types.Term`), which every type subterm is of (a cast's, a named cast's,
 `new`'s, a conversion function's name's, a trailing return type, an enumeration's fixed type, a type parameter's
-default), and C's `C Preprocessor`, the directives C and C++ share; `Term` lists their `typeid` and `definedexpression`
-("(b)"). `Expressions.Cpp.Expressions.Pattern` is its union for binding targets ("(ii)"): an init capture's name (`[n =
-1]`), an `identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a
-branch of the union of every subterm it may be: `Term` lists `designatedinitializer`, as C's does, `Pattern` lists
+default), and C's `C Preprocessor`, the directives C and C++ share; `Term` lists their `typeid`, and
+`definedexpression` and `pragmaexpression` (`_Pragma("...")`, which may stand within an expression) ("(b)").
+`Expressions.Cpp.Expressions.Pattern` is its union for binding targets ("(ii)"): an init capture's name (`[n = 1]`), an
+`identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a branch
+of the union of every subterm it may be: `Term` lists `designatedinitializer`, as C's does, `Pattern` lists
 `identifier`, `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a
 `parameterdeclaration` and `Initializer` an `initializerlist`. A type-id's and a lambda's parts are its helpers, as a
 lambda's declarator holds parameters with their specifiers and declarators (so they stay this dialect's, read by `Cpp
 Types` through its `reads`), each union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`,
 `Parameter`, `TemplateParameter`, `Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and
-`AttributeSpecifier`. An enumeration's body is data, Cpp Types' terms: its `EnumSpecifier` holds its `enumerators` and
-`trailing_comma`.
+`AttributeSpecifier`; and an asm label (`AsmLabel`), which an identifier's declarator holds. An enumeration's body is
+data, Cpp Types' terms: its `EnumSpecifier` holds its `enumerators` and `trailing_comma`.
 
 The statements and declarations a C++ term holds are mbse-programs' grammar, not this dialect's, and a property of the
 term holds them, as the user decided: "For any dialect A if term T_A has a clause(s) that crosses over to another
@@ -153,14 +159,16 @@ def install(txn: Any) -> Any:
                   "ThrowExpression": S.OfObject, "YieldExpression": S.OfObject, "PackExpansion": S.OfObject,
                   "InitializerList": S.OfObject, "DesignatedInitializer": S.OfObject, "FieldDesignator": S.OfObject,
                   "EqualInitializer": S.OfObject, "ParenthesizedInitializer": S.OfObject,
-                  "StatementExpression": S.OfObject, "ExtensionExpression": S.OfObject, "Identifier": S.OfObject,
+                  "StatementExpression": S.OfObject, "ExtensionExpression": S.OfObject,
+                  "LabelAddressExpression": S.OfObject, "Identifier": S.OfObject,
                   "OperatorName": S.OfObject, "ConversionName": S.OfObject, "LiteralOperatorName": S.OfObject,
                   "DestructorName": S.OfObject, "TemplateId": S.OfObject, "QualifiedName": S.OfObject,
                   "DeclSpecifier": S.OfObject, "CvQualifier": S.OfObject,
                   "PrimitiveTypeSpecifier": S.OfObject, "NamedTypeSpecifier": S.OfObject,
                   "TypenameSpecifier": S.OfObject, "ClassSpecifier": S.OfObject, "BaseSpecifier": S.OfObject,
                   "EnumSpecifier": S.OfObject, "DecltypeSpecifier": S.OfObject,
-                  "PlaceholderTypeSpecifier": S.OfObject, "IdDeclarator": S.OfObject, "PackDeclarator": S.OfObject,
+                  "PlaceholderTypeSpecifier": S.OfObject, "IdDeclarator": S.OfObject, "AsmLabel": S.OfObject,
+                  "PackDeclarator": S.OfObject,
                   "PointerDeclarator": S.OfObject, "ReferenceDeclarator": S.OfObject, "ArrayDeclarator": S.OfObject,
                   "FunctionDeclarator": S.OfObject, "ParenthesizedDeclarator": S.OfObject,
                   "ParameterDeclaration": S.OfObject, "EllipsisParameter": S.OfObject, "TypeParameter": S.OfObject,
@@ -225,6 +233,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("designatedinitializer").schema([_.DesignatedInitializer]),
                 lambda t: t.name("statementexpression").schema([_.StatementExpression]),
                 lambda t: t.name("extensionexpression").schema([_.ExtensionExpression]),
+                lambda t: t.name("labeladdressexpression").schema([_.LabelAddressExpression]),
                 lambda t: t.name("typeid").schema([_.TypeId]),
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
@@ -427,6 +436,8 @@ def install(txn: Any) -> Any:
                 .properties({"block": _.Block}),
             lambda _: _.ExtensionExpression.name("Expressions.Cpp.Expressions.ExtensionExpression").properties({
                 "operand": _.Term}),
+            lambda _: _.LabelAddressExpression.name("Expressions.Cpp.Expressions.LabelAddressExpression")
+                .properties({"label": _.Identifier}),  # `&&label`: a label's name
             # the statements and declarations a term holds, open unions with no branch of their own: mbse-programs'
             # grammar adds its compound statement and its member-specification to them by schema extension
             lambda _: _.Block.name("Expressions.Cpp.Expressions.Block"),
@@ -469,7 +480,10 @@ def install(txn: Any) -> Any:
                 .properties({
                 "constraint": _.Name, "decltype": S.OfBool}),
             lambda _: _.IdDeclarator.name("Expressions.Cpp.Expressions.IdDeclarator").properties({
-                "name": _.Name, "attributes": many(_.AttributeSpecifier)}),
+                "name": _.Name, "attributes": many(_.AttributeSpecifier),
+                "asm": _.AsmLabel}),  # GNU's: the assembler name of what it declares
+            lambda _: _.AsmLabel.name("Expressions.Cpp.Expressions.AsmLabel").properties({
+                "keyword": S.OfStr, "label": _.Term}),  # `asm("name")`: its keyword as written, and a string literal
             lambda _: _.PackDeclarator.name("Expressions.Cpp.Expressions.PackDeclarator")
                 .properties({"declarator": _.Declarator}),
             lambda _: _.PointerDeclarator.name("Expressions.Cpp.Expressions.PointerDeclarator").properties({
@@ -674,9 +688,10 @@ _TAGS = (C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CONCATENATEDSTRING, IDEXPR
          TYPEIDEXPRESSION, C.UNARYEXPRESSION, AWAITEXPRESSION, C.SIZEOFEXPRESSION, SIZEOFPACKEXPRESSION,
          C.ALIGNOFEXPRESSION, NOEXCEPTEXPRESSION, NEWEXPRESSION, DELETEEXPRESSION, C.CASTEXPRESSION,
          C.BINARYEXPRESSION, C.CONDITIONALEXPRESSION, C.ASSIGNMENTEXPRESSION, THROWEXPRESSION, YIELDEXPRESSION,
-         PACKEXPANSION, C.INITIALIZERLIST, C.DESIGNATEDINITIALIZER, C.STATEMENTEXPRESSION, C.EXTENSIONEXPRESSION)
+         PACKEXPANSION, C.INITIALIZERLIST, C.DESIGNATEDINITIALIZER, C.STATEMENTEXPRESSION, C.EXTENSIONEXPRESSION,
+         C.LABELADDRESSEXPRESSION)
 """Its own kinds, in its `Term`'s order: its `Term` lists Cpp Types' `typeid` after them, and C Preprocessor's
-`definedexpression` after invalid syntax, each read as the dialect that declares it reads it."""
+`definedexpression` and `pragmaexpression` after invalid syntax, each read as the dialect that declares it reads it."""
 
 _SINCE_20 = frozenset({REQUIRESEXPRESSION, AWAITEXPRESSION, YIELDEXPRESSION, C.DESIGNATEDINITIALIZER})
 """The kinds C++20 added: C++17 has every other kind but the extensions."""

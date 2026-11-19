@@ -15,7 +15,8 @@ invalid syntax and literals with their spelling. The `systemverilog_patterns`, `
 `systemverilog_constraints` and `systemverilog_preprocessor` cases are each a term of SystemVerilog's sublanguage of every
 kind, written through the builders, the `python_types` and `python_patterns` cases a term of Python's, the
 `typescript_types` and `typescript_patterns` cases each a term of TypeScript's, the `c_types`, `cpp_types` and
-`c_preprocessor` cases each a term of the C family's new dialects of every kind, the `python_regexp`,
+`c_preprocessor` cases each a term of the C family's new dialects of every kind (C Preprocessor's but
+`pragmaexpression`, which suite CPD holds), the `python_regexp`,
 `typescript_regexp` and `cpp_regexp` cases each a regular expression of every kind of its family's RegExp dialect, and
 the `posix_bre` and `posix_ere` cases each grep's list of patterns of every kind of POSIX's dialect. Each
 implementation writes its snapshots to

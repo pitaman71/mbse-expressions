@@ -17,8 +17,8 @@
  *   enumeration's body holds as data (mbse-basis [CAP-278: C's and C++'s type names and preprocessor directives as data](mbse:mbse-basis/docs/capabilities/CAP-278.md)): C++'s `EnumSpecifier` holds
  *   them, its `enumerators`. C++ defines no enumeration in a type-id an expression holds ([dcl.type.general]), so an
  *   enumeration's data is held only through a holder, by mbse-programs' alias declarations.
- * - C Preprocessor's directives and `comment`, which its install adds to this dialect's `Term`, as an enumeration's
- *   body holds them among its enumerators.
+ * - C Preprocessor's directives, `pragmaexpression` (`_Pragma("...")`) and `comment`, which its install adds to this
+ *   dialect's `Term`, as an enumeration's body holds them among its enumerators.
  * - The framework's kinds of invalid syntax, `error` and `missing`.
  *
  * Its helpers are none (`HELPERS`): a type-id's parts, its specifiers, declarators and parameters, are C++'s

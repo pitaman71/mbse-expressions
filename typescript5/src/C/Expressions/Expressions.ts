@@ -37,7 +37,9 @@
  * - Initializers: `initializerlist` (`{items}`, with `trailing_comma`), whose items may be `designatedinitializer`s
  *   (`.x = 1`, `[2].y = 3`).
  * - GNU extensions, outside every standard as mbse-programs marks them (`EXTENSIONS`): `statementexpression` (`({ ...
- *   })`) and `extensionexpression` (`__extension__ operand`). The compound statement a statement expression holds is
+ *   })`), `extensionexpression` (`__extension__ operand`) and `labeladdressexpression` (`&&label`, a label's address,
+ *   labels as values, which `goto *p` jumps to; its `label` an identifier, a label's name, not a variable, as labels
+ *   are names of their own, which no scope binds). The compound statement a statement expression holds is
  *   mbse-programs' grammar, not this dialect's, and a property of the term holds it, as the user decided: "For any
  *   dialect A if term T_A has a clause(s) that crosses over to another dialect's expression language, the crossover
  *   should be modeled as a property of T_A" (mbse-programs, [the port](mbse:mbse-programs/docs/proposals/port/README.md#stage-3-the-whole-tree-as-values)), since "mbse-expressions defines a dialect
@@ -49,8 +51,9 @@
  *   overrides), and the framework's readers do not enter it, as it declares the union a boundary (`Terms.boundaries`).
  * - C Types' `typeid`, a type name, where a subterm may be an expression or a type alike (`sizeof(int)`, `_Generic`'s
  *   controlling operand, `offsetof(struct s, m)`'s first argument), and C Preprocessor's `definedexpression`,
- *   `defined(name)`, a preprocessing condition's term, which its install adds: kinds of the dialects C reads, which this
- *   dialect's `Term` lists ("(b)").
+ *   `defined(name)`, a preprocessing condition's term, and `pragmaexpression`, `_Pragma("...")`, which may stand within
+ *   an expression, both of which its install adds: kinds of the dialects C reads, which this dialect's `Term` lists
+ *   ("(b)").
  * - The framework's kinds of invalid syntax, `error` and `missing`.
  *
  * Its sublanguages are dialects of their own, which it reads (`reads`; mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `C
@@ -102,16 +105,16 @@ import {
   PARENTHESIZEDEXPRESSION, GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION, MEMBEREXPRESSION, POSTFIXEXPRESSION,
   UNARYEXPRESSION, SIZEOFEXPRESSION, ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION,
   ASSIGNMENTEXPRESSION, INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION,
-  EXTENSIONEXPRESSION,
+  EXTENSIONEXPRESSION, LABELADDRESSEXPRESSION,
 } from "./Kinds.js";
 
 export { // the family's shared reading of its kinds, re-exported
   ALIGNOFEXPRESSION, ASSIGNMENTEXPRESSION, BINARYEXPRESSION, CALLEXPRESSION, CASTEXPRESSION, COMPOUNDLITERALEXPRESSION,
   CONCATENATEDSTRING, CONDITIONALEXPRESSION, CONSTANT, DESIGNATEDINITIALIZER, EXTENSIONS, EXTENSIONEXPRESSION,
-  GENERICSELECTION, INITIALIZERLIST, LITERAL, MEMBEREXPRESSION, OPTIONAL, PARENTHESIZEDEXPRESSION, POSTFIXEXPRESSION,
-  PREFIXES, QUOTES, SIZEOFEXPRESSION, SPELLING, STATEMENTEXPRESSION, SUBSCRIPTEXPRESSION, SUFFIXES, TYPEID,
-  UNARYEXPRESSION, VARIABLE, Writers, boundNames, castType, constantText, kinds, problems, scopes, size, spelling,
-  truth, typeName, untyped,
+  GENERICSELECTION, INITIALIZERLIST, LABELADDRESSEXPRESSION, LITERAL, MEMBEREXPRESSION, OPTIONAL,
+  PARENTHESIZEDEXPRESSION, POSTFIXEXPRESSION, PREFIXES, QUOTES, SIZEOFEXPRESSION, SPELLING, STATEMENTEXPRESSION,
+  SUBSCRIPTEXPRESSION, SUFFIXES, TYPEID, UNARYEXPRESSION, VARIABLE, Writers, boundNames, castType, constantText, kinds,
+  problems, scopes, size, spelling, stringLiteral, truth, typeName, untyped,
 } from "./Kinds.js";
 export type { Suffixes } from "./Kinds.js";
 
@@ -143,7 +146,8 @@ export function install(txn: any): any {
       AssignmentExpression: S.OfObject, InitializerList: S.OfObject,
       DesignatedInitializer: S.OfObject, FieldDesignator: S.OfObject, IndexDesignator: S.OfObject,
       EqualInitializer: S.OfObject, CompoundLiteralExpression: S.OfObject,
-      StatementExpression: S.OfObject, ExtensionExpression: S.OfObject, Identifier: S.OfObject,
+      StatementExpression: S.OfObject, ExtensionExpression: S.OfObject, LabelAddressExpression: S.OfObject,
+      Identifier: S.OfObject,
       // the statements a term holds: mbse-programs' grammar, which extends it by schema extension
       Block: S.OfUnion,
       // C Types' `Term` and its `typeid`, by name; FrameworkTerm: the framework's, by name
@@ -186,6 +190,7 @@ export function install(txn: any): any {
         (t: any) => t.name("compoundliteralexpression").schema([_.CompoundLiteralExpression]),
         (t: any) => t.name("statementexpression").schema([_.StatementExpression]),
         (t: any) => t.name("extensionexpression").schema([_.ExtensionExpression]),
+        (t: any) => t.name("labeladdressexpression").schema([_.LabelAddressExpression]),
         (t: any) => t.name("typeid").schema([_.TypeId]),
         (t: any) => t.name("error").schema([Framework.Error]),
         (t: any) => t.name("missing").schema([Framework.Missing]),
@@ -268,6 +273,8 @@ export function install(txn: any): any {
           .properties({block: _.Block}),
       (_: any) => _.ExtensionExpression.name("Expressions.C.Expressions.ExtensionExpression")
           .properties({operand: _.Term}),
+      (_: any) => _.LabelAddressExpression.name("Expressions.C.Expressions.LabelAddressExpression")
+          .properties({label: _.Identifier}), // `&&label`: a label's name
       // the statements a term holds, an open union with no branch of its own: mbse-programs' statement grammar adds its
       // compound statement to it by schema extension
       (_: any) => _.Block.name("Expressions.C.Expressions.Block"),
@@ -447,11 +454,13 @@ export function define(txn: any): any {
 }
 
 /** Its own kinds, in its `Term`'s order: its `Term` lists C Types' `typeid` after them, and C Preprocessor's
- * `definedexpression` after invalid syntax, each read as the dialect that declares it reads it. */
+ * `definedexpression` and `pragmaexpression` after invalid syntax, each read as the dialect that declares it reads
+ * it. */
 const C_TAGS: readonly string[] = [LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE, PARENTHESIZEDEXPRESSION,
   GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION, MEMBEREXPRESSION, POSTFIXEXPRESSION, UNARYEXPRESSION,
   SIZEOFEXPRESSION, ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION, ASSIGNMENTEXPRESSION,
-  INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION, EXTENSIONEXPRESSION];
+  INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION, EXTENSIONEXPRESSION,
+  LABELADDRESSEXPRESSION];
 
 /** The literal of a native value: a number, a bool or a string; a bytes has none. */
 function native(value: unknown): Writer | null {

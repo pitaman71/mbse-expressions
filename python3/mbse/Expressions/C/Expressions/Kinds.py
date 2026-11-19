@@ -17,9 +17,9 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from . import Domains
 
-__all__ = ["EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "CPP_SUFFIXES", "OPTIONAL", "SPELLING", "Writers", "type_name", "cast_type",
-           "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds", "identifier_problems",
-           "constant_text"]
+__all__ = ["EXTENSIONS", "ASM_KEYWORDS", "PREFIXES", "QUOTES", "SUFFIXES", "CPP_SUFFIXES", "OPTIONAL", "SPELLING",
+           "Writers", "type_name", "cast_type", "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds",
+           "identifier_problems", "constant_text", "string_literal"]
 
 LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE = "literal", "constant", "concatenatedstring", "variable"
 PARENTHESIZEDEXPRESSION, GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION = (
@@ -30,11 +30,16 @@ ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION = (
     "alignofexpression", "castexpression", "binaryexpression", "conditionalexpression")
 ASSIGNMENTEXPRESSION, INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION = (
     "assignmentexpression", "initializerlist", "designatedinitializer", "compoundliteralexpression")
-STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID = "statementexpression", "extensionexpression", "typeid"
+STATEMENTEXPRESSION, EXTENSIONEXPRESSION, LABELADDRESSEXPRESSION, TYPEID = (
+    "statementexpression", "extensionexpression", "labeladdressexpression", "typeid")
 ENUMERATOR = "enumerator"
 
-EXTENSIONS = frozenset({STATEMENTEXPRESSION, EXTENSIONEXPRESSION})
-"""GNU's extensions, outside every standard, as mbse-programs marks them."""
+EXTENSIONS = frozenset({STATEMENTEXPRESSION, EXTENSIONEXPRESSION, LABELADDRESSEXPRESSION})
+"""GNU's extensions, outside every standard, as mbse-programs marks them: statement expressions, `__extension__` and
+labels as values (`&&label`)."""
+
+ASM_KEYWORDS = ("asm", "__asm__", "__asm")
+"""What an asm label's `keyword` may be, GNU's spellings, as mbse-programs' `AsmKeyword` lists them."""
 
 PREFIXES = ("L", "u8", "u", "U")
 """A character's or a string's encoding prefixes."""
@@ -188,18 +193,37 @@ def _constant_problems(attributes: Mapping[str, Any]) -> list[str]:
     return [] if singleton == "nullptr" else [f"a constant's singleton must be nullptr, got {singleton!r}"]
 
 
+def string_literal(term: Any) -> bool:
+    """Whether a term is a string literal, a `literal` whose value is a str, or invalid syntax, whose own problems are
+    said."""
+    tag, record = F.kind_of(term)
+    return tag in F.INVALID_KINDS or tag == LITERAL and type(F.attributes_of(record).get("value")) is str
+
+
+def _asm_problems(node: F.Node) -> list[str]:
+    """An asm label's checks: its keyword GNU's, and its label a string literal, or several, adjacent; where it has
+    none, the framework says so."""
+    found, keyword, label = [], node.attributes.get("keyword"), node.subterms["label"]
+    if keyword is not None and keyword not in ASM_KEYWORDS:
+        found.append(f"AsmLabel.keyword cannot be {keyword!r}")
+    if label is not None and not (F.kind_of(label)[0] == CONCATENATEDSTRING or string_literal(label)):
+        found.append("an AsmLabel's label is a string literal")
+    return found
+
+
 def problems(node: F.Node, types: Domains.Types, suffixes: Mapping[type, re.Pattern[str]] = SUFFIXES,
              prefixes: tuple[str, ...] = PREFIXES, language: str = "C") -> list[str]:
     """A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
     identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), its type
     read through `types`, a member's operator, invalid syntax in a sublanguage, an enumeration's enumerators within its
-    body."""
+    body, an asm label's keyword and label."""
     kind, attributes = node.kind, node.attributes
     found = F.invalid_problems(kind, attributes) if kind in ("error", "missing") else []
     found += identifier_problems(attributes.get(_NAMES.get(kind, "")))
     if kind == MEMBEREXPRESSION and attributes.get("operator") not in (None, ".", "->"):
         found.append(f"a memberexpression's operator must be '.' or '->', got {attributes['operator']!r}")
     found += _constant_problems(attributes) if kind == CONSTANT else []
+    found += _asm_problems(node) if kind == "asmlabel" else []
     if kind == "enumspecifier" and not attributes.get("body") and (node.many or attributes.get("trailing_comma")):
         found.append("an EnumSpecifier with enumerators has a body")
     found += _literal_problems(attributes, prefixes, suffixes, language, types) if kind == LITERAL else []
@@ -315,6 +339,7 @@ def kinds(language: str, tags: tuple[str, ...], prefixes: tuple[str, ...],
         COMPOUNDLITERALEXPRESSION: lambda: application(COMPOUNDLITERALEXPRESSION, required=("initializer",)),
         STATEMENTEXPRESSION: lambda: application(STATEMENTEXPRESSION),
         EXTENSIONEXPRESSION: lambda: application(EXTENSIONEXPRESSION, _ANY1),
+        LABELADDRESSEXPRESSION: lambda: application(LABELADDRESSEXPRESSION, required=("label",)),
         TYPEID: lambda: application(TYPEID),
         ENUMERATOR: lambda: application(ENUMERATOR, required=("name",), optional=("value",)),
     }
