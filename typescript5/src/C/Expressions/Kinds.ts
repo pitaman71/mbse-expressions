@@ -30,12 +30,17 @@ export const [ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEX
   "alignofexpression", "castexpression", "binaryexpression", "conditionalexpression"] as const;
 export const [ASSIGNMENTEXPRESSION, INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION] = [
   "assignmentexpression", "initializerlist", "designatedinitializer", "compoundliteralexpression"] as const;
-export const [STATEMENTEXPRESSION, EXTENSIONEXPRESSION, TYPEID] = ["statementexpression", "extensionexpression",
-    "typeid"] as const;
+export const [STATEMENTEXPRESSION, EXTENSIONEXPRESSION, LABELADDRESSEXPRESSION, TYPEID] = [
+  "statementexpression", "extensionexpression", "labeladdressexpression", "typeid"] as const;
 export const ENUMERATOR = "enumerator";
 
-/** GNU's extensions, outside every standard, as mbse-programs marks them. */
-export const EXTENSIONS: ReadonlySet<string> = new Set([STATEMENTEXPRESSION, EXTENSIONEXPRESSION]);
+/** GNU's extensions, outside every standard, as mbse-programs marks them: statement expressions, `__extension__` and
+ * labels as values (`&&label`). */
+export const EXTENSIONS: ReadonlySet<string> = new Set([STATEMENTEXPRESSION, EXTENSIONEXPRESSION,
+  LABELADDRESSEXPRESSION]);
+
+/** What an asm label's `keyword` may be, GNU's spellings, as mbse-programs' `AsmKeyword` lists them. */
+export const ASM_KEYWORDS: readonly string[] = ["asm", "__asm__", "__asm"];
 
 /** A character's or a string's encoding prefixes. */
 export const PREFIXES: readonly string[] = ["L", "u8", "u", "U"];
@@ -199,10 +204,30 @@ function constantProblems(attributes: ReadonlyMap<string, any>): string[] {
   return singleton === "nullptr" ? [] : [`a constant's singleton must be nullptr, got ${repr(singleton)}`];
 }
 
+/** Whether a term is a string literal, a `literal` whose value is a string, or invalid syntax, whose own problems are
+ * said. */
+export function stringLiteral(term: any): boolean {
+  const [tag, record] = F.kindOf(term);
+  return F.INVALID_KINDS.has(tag) || (tag === LITERAL && typeof F.attributesOf(record).get("value") === "string");
+}
+
+/** An asm label's checks: its keyword GNU's, and its label a string literal, or several, adjacent; where it has none,
+ * the framework says so. */
+function asmProblems(node: F.Node): string[] {
+  const found: string[] = [];
+  const keyword = node.attributes.get("keyword");
+  const label = node.subterms.get("label");
+  if (keyword !== undefined && !ASM_KEYWORDS.includes(keyword)) found.push(`AsmLabel.keyword cannot be ${repr(keyword)}`);
+  if (label !== null && !(F.kindOf(label)[0] === CONCATENATEDSTRING || stringLiteral(label))) {
+    found.push("an AsmLabel's label is a string literal");
+  }
+  return found;
+}
+
 /** A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
  * identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), its type
  * read through `types`, a member's operator, invalid syntax in a sublanguage, an enumeration's enumerators within its
- * body. */
+ * body, an asm label's keyword and label. */
 export function problems(node: F.Node, types: Domains.Types, suffixes: Suffixes = SUFFIXES,
   prefixes: readonly string[] = PREFIXES, language = "C"): string[] {
   const { kind, attributes } = node;
@@ -213,6 +238,7 @@ export function problems(node: F.Node, types: Domains.Types, suffixes: Suffixes 
     found.push(`a memberexpression's operator must be '.' or '->', got ${repr(operator)}`);
   }
   if (kind === CONSTANT) found.push(...constantProblems(attributes));
+  if (kind === "asmlabel") found.push(...asmProblems(node));
   if (kind === "enumspecifier" && attributes.get("body") !== true && (node.many.length > 0
     || attributes.get("trailing_comma") === true)) {
     found.push("an EnumSpecifier with enumerators has a body");
@@ -320,6 +346,7 @@ export function kinds(language: string, tags: readonly string[], prefixes: reado
       { required: ["initializer"] }),
     [STATEMENTEXPRESSION]: () => application(STATEMENTEXPRESSION),
     [EXTENSIONEXPRESSION]: () => application(EXTENSIONEXPRESSION, ANY1),
+    [LABELADDRESSEXPRESSION]: () => application(LABELADDRESSEXPRESSION, new FD.Opaque(), { required: ["label"] }),
     [TYPEID]: () => application(TYPEID),
     [ENUMERATOR]: () => application(ENUMERATOR, new FD.Opaque(), { required: ["name"], optional: ["value"] }),
   };
