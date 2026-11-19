@@ -45,8 +45,11 @@
  * dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md#decided)): an integer's by its suffix and its base, the first
  * of the types they allow that holds its value (an `unsigned int` for `5u`; a decimal integer without a suffix is its
  * value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double` for `L`, `_Float16` for `f16` in C
- * and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in C and `char` in C++,
- * its encoding prefix's type otherwise (`wchar_t`, `char8_t`); a bool's `bool`; a string's `String`. An integer literal
+ * and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in C, and in C++ `char`,
+ * or `int` for a multicharacter literal, of more than one c-char ([lex.ccon]: `'ab'`, whose value is the
+ * implementation's), as its text counts them (`cChars(text)`, an escape sequence one; a literal without text holds one
+ * *(agent)*); its encoding prefix's type otherwise (`wchar_t`, `char8_t`), of one c-char or several; a bool's `bool`; a
+ * string's `String`. An integer literal
  * with C23's `wb` suffix is of the narrowest bit-precise integer type that holds it (`bitPrecise`, `_BitInt(N)`, of a
  * sign bit and N >= 2; `unsigned _BitInt(N)` with `uwb`), which no domain stores; a prefix no language has encodes a
  * domain named by it, which no folding rule has values of; a suffix the language does not write gives `Anything`, its
@@ -434,6 +437,9 @@ export const SIZE = new D.Opaque();
 
 const ENCODINGS: ReadonlyMap<string, string> = new Map([
   ["L", "wchar_t"], ["u8", "char8_t"], ["u", "char16_t"], ["U", "char32_t"]]);
+/** One c-char of a character literal: an escape sequence (simple, octal, hexadecimal, delimited, conditional) or a
+ * universal character name, else one character. */
+const C_CHAR = /\\(?:[0-7]{1,3}|[xuUNo]\{[^}]*\}?|x[0-9A-Fa-f]*|u[0-9A-Fa-f]{0,4}|U[0-9A-Fa-f]{0,8}|.?)|./gsu;
 const FLOATING: ReadonlyMap<string, string> = new Map([
   ["f", "float"], ["F", "float"], ["l", "long double"], ["L", "long double"]]);
 /** The extended floating suffixes each language writes, and the types they name. */
@@ -474,7 +480,22 @@ function integerSuffix(suffix: string): string {
   return lower.includes("u") ? "u" + lower.replaceAll("u", "") : lower;
 }
 
-/** A literal's type, by what its text encodes (its `prefix`, `quote`, `base` and `suffix`) and its value, in
+/** How many c-chars a character literal's spelling (`text`, as `'ab'`, `u8'a'`, `'\x61'`) holds between its first
+ * quote and its last: an escape sequence or a universal character name one, any other character one (C++23
+ * [lex.ccon]); 0 where it holds none, or has no two quotes. */
+export function cChars(text: string): number {
+  const first = text.indexOf("'");
+  const last = text.lastIndexOf("'");
+  return first < last ? (text.slice(first + 1, last).match(C_CHAR) ?? []).length : 0;
+}
+
+/** Whether a character literal holds more than one c-char: its text says so; a literal without text holds one. */
+function multicharacter(attributes: ReadonlyMap<string, any>): boolean {
+  return attributes.has("text") && cChars(attributes.get("text")) > 1;
+}
+
+/** A literal's type, by what its text encodes (its `prefix`, `quote`, `base` and `suffix`, and, for a C++ character
+ * literal without a prefix, how many c-chars its `text` holds) and its value, in
  * `language` (`C` or `C++`), found through `types`; null where its value has none (a bigint no type holds, or no
  * value). A domain of a type no folding rule has values of is named by it (a prefix no language has). */
 export function literal(attributes: ReadonlyMap<string, any>, language: string, types: Types): D.Domain | null {
@@ -493,7 +514,9 @@ export function literal(attributes: ReadonlyMap<string, any>, language: string, 
   }
   if (typeof value !== "bigint") return null;
   if (attributes.get("quote") === "'") { // a character literal: its code
-    if (prefix === undefined) return types.named(language === "C" ? "int" : "char");
+    if (prefix === undefined) { // C's `int`; C++'s `char`, a multicharacter literal's `int` ([lex.ccon])
+      return types.named(language === "C" || multicharacter(attributes) ? "int" : "char");
+    }
     if (prefix === "u8" && language === "C") return types.named("unsigned char");
     const encoded = ENCODINGS.get(prefix);
     return encoded === undefined ? new D.OfTypes(prefix, BigInt) : types.named(encoded);
