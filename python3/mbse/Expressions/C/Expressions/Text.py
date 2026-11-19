@@ -8,19 +8,20 @@ C++'s being C's and its own: the family's one printer, which its dialects' `Text
 A literal is written in its spelling where it has one (`text`), else in its value's default spelling, with what it
 encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
 (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal as
-`INFINITY` or `NAN`. An identifier's asm label, GNU's, is written after the whole declarator that holds it, before the
-GNU attributes that end it, where GCC reads it (`f(void) asm("f2")`, `*p asm("p") __attribute__((unused))`). What a term
-holds of mbse-programs' grammar, which the family does not read, is written by its `Printer`'s methods, which
-mbse-programs' printer overrides to write it: a lambda's or a statement expression's compound statement, its `block`, by
-`statements`, `{}`; a struct's, a union's or a class's member declarations, its `members`, by `members`, `{}`, where its
-`body` says one is written; and a conditional directive's group, its `group`, by `group`, nothing, so that the directive
-is written with its items alone. An enumeration's body, its data, is written as mbse-programs writes it, its
-enumerators, directives, pragmas (`_Pragma("...")`) and comments each on lines of its own, one level deeper, an
-enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment ending the line
-before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`, `#elif`, `#elifdef`,
-`#else`) on a line of its own, its items and its group on the lines between, and `#endif`. Invalid syntax is written as
-written (`Terms.invalid_text`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`). Reading C
-(`FromText`) is mbse-programs' (mbse-basis
+`INFINITY` or `NAN`; a user-defined literal, its literal or its adjacent strings, then its suffix (`"a" "b"_s`). A
+structured binding is written `[a, b]`, and C++20's conditional `explicit` `explicit(condition)`. An identifier's asm
+label, GNU's, is written after the whole declarator that holds it, before the GNU attributes that end it, where GCC
+reads it (`f(void) asm("f2")`, `*p asm("p") __attribute__((unused))`). What a term holds of mbse-programs' grammar,
+which the family does not read, is written by its `Printer`'s methods, which mbse-programs' printer overrides to write
+it: a lambda's or a statement expression's compound statement, its `block`, by `statements`, `{}`; a struct's, a union's
+or a class's member declarations, its `members`, by `members`, `{}`, where its `body` says one is written; and a
+conditional directive's group, its `group`, by `group`, nothing, so that the directive is written with its items alone.
+An enumeration's body, its data, is written as mbse-programs writes it, its enumerators, directives, pragmas
+(`_Pragma("...")`) and comments each on lines of its own, one level deeper, an enumerator followed by a comma but the
+last, unless it has a trailing comma, and a trailing comment ending the line before it. A directive starts its line, a
+conditional one each of its branches (`#if`, `#ifdef`, `#elif`, `#elifdef`, `#else`) on a line of its own, its items and
+its group on the lines between, and `#endif`. Invalid syntax is written as written (`Terms.invalid_text`), refused by
+the name of the dialect that owns it (`Terms.Dialect.owner`). Reading C (`FromText`) is mbse-programs' (mbse-basis
 [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers
 here, the parsers mbse-programs'")."""
 from __future__ import annotations
@@ -451,6 +452,9 @@ class Printer:
             return constraint + ("decltype(auto)" if node.attributes.get("decltype") else "auto")
         if kind == "typeofspecifier":
             return self.keyword_call(node.attributes["keyword"], node.subterms["operand"])
+        if kind == "explicitspecifier":
+            condition = node.subterms["condition"]
+            return "explicit" + (f"({self.expression(condition, COMMA)})" if condition is not None else "")
         if kind == "atomictypespecifier":
             return f"_Atomic({self.term(node.subterms['type'])})"
         return f"_BitInt({self.expression(node.subterms['width'], ASSIGNMENT)})"
@@ -535,17 +539,19 @@ class Printer:
     # Directives, as mbse-programs writes them: each starting its line, a conditional one's items and group on the lines
     # between
 
+    def header(self, node: F.Node) -> str:
+        """An include's or a `__has_include`'s header: `<path>` where `system`, `"path"`, or a macro."""
+        macro, attributes = node.subterms["macro"], node.attributes
+        if macro is not None:
+            return self.expression(macro, COMMA)
+        if "path" not in attributes:
+            raise ValueError(f"{self.dialect.name()} {node.kind} has no path or macro to print")
+        return f"<{attributes['path']}>" if attributes.get("system") else f'"{attributes["path"]}"'
+
     def directive(self, node: F.Node, depth: int, enumerators: bool) -> str:
         kind, attributes = node.kind, node.attributes
         if kind == "includedirective":
-            macro = node.subterms["macro"]
-            if macro is not None:
-                target = self.expression(macro, COMMA)
-            elif "path" not in attributes:
-                raise ValueError(f"{self.dialect.name()} includedirective has no path or macro to print")
-            else:
-                target = f"<{attributes['path']}>" if attributes.get("system") else f'"{attributes["path"]}"'
-            return f"#{attributes.get('directive', 'include')} {target}"
+            return f"#{attributes.get('directive', 'include')} {self.header(node)}"
         if kind == "definedirective":
             head = "#define " + self.name(node, "name")
             if attributes.get("function_like"):
@@ -607,6 +613,8 @@ class Printer:
             return written + " ".join(parts) + (" " + inner if parts and inner else inner)
         if kind == "parenthesizeddeclarator":
             return f"({inner})"
+        if kind == "structuredbindingdeclarator":
+            return "[" + ", ".join(self.text(b) for b in _nodes(node.helpers.get("bindings"))) + "]"
         if node.helpers.get("declarator") is not None and node.helpers["declarator"].kind in (
                 "pointerdeclarator", "referencedeclarator"):
             inner = f"({inner})"
@@ -697,7 +705,9 @@ class Printer:
     TEXTS: dict[str, Any] = {
         "error": invalid, "missing": invalid, "literal": literal,
         "constant": lambda self, node: E.constant_text(node.attributes),
-        "userdefinedliteral": lambda self, node: self.literal(node.helpers["literal"]) + node.attributes["suffix"],
+        "userdefinedliteral": lambda self, node: (  # its literal, or its adjacent strings, and its suffix
+            self.literal(node.helpers["literal"]) if "literal" in node.helpers
+            else self.text(node.helpers["concatenation"])) + node.attributes["suffix"],
         "concatenatedstring": lambda self, node: " ".join(self.expression(p, PRIMARY) for p in node.many),
         "variable": lambda self, node: node.attributes["name"],
         "idexpression": lambda self, node: self.text(node.helpers["name"]),
@@ -741,11 +751,12 @@ class Printer:
         "cvqualifier": lambda self, node: node.attributes["keyword"],
         "primitivetypespecifier": lambda self, node: node.attributes["keyword"],
         "namedtypespecifier": specifier, "typenamespecifier": specifier, "decltypespecifier": specifier,
-        "placeholdertypespecifier": specifier, "typeofspecifier": specifier, "atomictypespecifier": specifier,
+        "placeholdertypespecifier": specifier, "explicitspecifier": specifier, "typeofspecifier": specifier,
+        "atomictypespecifier": specifier,
         "bitintspecifier": specifier, "classspecifier": class_, "basespecifier": base, "enumspecifier": enum,
         "iddeclarator": declarator, "packdeclarator": declarator, "pointerdeclarator": declarator,
         "referencedeclarator": declarator, "arraydeclarator": declarator, "functiondeclarator": declarator,
-        "parenthesizeddeclarator": declarator, "asmlabel": asm_label,
+        "parenthesizeddeclarator": declarator, "structuredbindingdeclarator": declarator, "asmlabel": asm_label,
         "parameterdeclaration": parameter, "ellipsisparameter": parameter,
         "typeparameter": template_parameter, "templatetemplateparameter": template_parameter,
         "noexceptspecifier": exception, "throwspecifier": exception,
@@ -755,6 +766,7 @@ class Printer:
         "enumerator": enumerator, "comment": comment, "definedexpression": lambda self, node: (
             f"defined({self.name(node, 'name')})"),
         "pragmaexpression": lambda self, node: self.keyword_call("_Pragma", node.subterms["operand"]),
+        "hasincludeexpression": lambda self, node: f"__has_include({self.header(node)})",
         **{kind: lambda self, node: self.directive(node, 0, False) for kind in (
             "includedirective", "definedirective", "ifdirective", "ifdefdirective", "elifdirective", "elifdefdirective",
             "elsedirective", "otherdirective")},

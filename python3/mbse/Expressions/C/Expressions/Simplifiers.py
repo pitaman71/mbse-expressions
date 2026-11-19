@@ -1052,7 +1052,7 @@ CATEGORIES: dict[str, dict[str, str]] = {
                            "genericselection of a type that is not arithmetic",
                            "genericselection of an association of a type a declaration names",
                            "compoundliteralexpression of a type that is not arithmetic"), _D)},
-    "C Types": {"*": "b"}, "C Preprocessor": {"*": "b", "definedexpression": "a"},
+    "C Types": {"*": "b"}, "C Preprocessor": {"*": "b", "definedexpression": "a", "hasincludeexpression": "a"},
 }
 """The evaluation inventory's class of what each dialect C reads has no rule for (`a` where none is given): an operand
 whose declaration gives its type `c` (mbse-basis [CAP-232: domains inferred for

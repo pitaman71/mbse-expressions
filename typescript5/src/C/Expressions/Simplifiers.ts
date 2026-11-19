@@ -1084,7 +1084,7 @@ export const CATEGORIES: Record<string, Record<string, string>> = {
       "genericselection of an association of a type a declaration names",
       "compoundliteralexpression of a type that is not arithmetic"].map((what) => [what, "d"])),
   },
-  "C Types": { "*": "b" }, "C Preprocessor": { "*": "b", definedexpression: "a" },
+  "C Types": { "*": "b" }, "C Preprocessor": { "*": "b", definedexpression: "a", hasincludeexpression: "a" },
 };
 
 /** The literal of a value of its type, written by `write`, `nullptr` C's or C++'s `constant`; null for a type no

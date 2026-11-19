@@ -17,7 +17,9 @@ Where mbse-programs holds a `Name`, Cpp holds its `Name` union (`identifier`, `q
 carries no domain. Beyond C's kinds (see `C.Expressions`), with C++'s own literal
 (`Expressions.Cpp.Expressions.Literal`, also a raw string's `raw` and `delimiter`) and `constant` (`nullptr`):
 
-- `userdefinedliteral` (`literal`, a `literal`'s value object, and its `suffix`, `10_km`);
+- `userdefinedliteral` (`literal`, a `literal`'s value object, or `concatenation`, adjacent strings, a
+  `concatenatedstring`'s value object, `"a" "b"_s`, its suffix applying to their concatenation, as C++ joins them
+  before it applies it; and its `suffix`, `10_km`);
 - names: `idexpression`, every name used as an expression, holding its `Name` (`x`, `std::cout`, `f<int>`,
   `operator+`), as C++'s grammar makes it: C++ has no `variable` (the user's decision of 2026-11-04, in the dialects
   proposal's Decided), and an `idexpression` of an identifier is a lexical reference to its spelling, which validation
@@ -49,8 +51,13 @@ of the union of every subterm it may be: `Term` lists `designatedinitializer`, a
 lambda's declarator holds parameters with their specifiers and declarators (so they stay this dialect's, read by `Cpp
 Types` through its `reads`), each union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`,
 `Parameter`, `TemplateParameter`, `Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and
-`AttributeSpecifier`; and an asm label (`AsmLabel`), which an identifier's declarator holds. An enumeration's body is
-data, Cpp Types' terms: its `EnumSpecifier` holds its `enumerators` and `trailing_comma`.
+`AttributeSpecifier`; and an asm label (`AsmLabel`), which an identifier's declarator holds. Among them, a structured
+binding (C++17), `[a, b]`, is a `Declarator` of its own, `StructuredBindingDeclarator`, its `bindings` the identifiers
+it binds, C++17's to C++23's identifier list (C++26's attributes and packs there outside it), which a reference's
+declarator holds (`auto &[k, v]`) and mbse-programs' declarations hold; and `explicit` is a `Specifier` of its own,
+`ExplicitSpecifier`, holding C++20's `condition` (`explicit(N > 1)`) or none, as [dcl.fct.spec] has one
+explicit-specifier, never a `DeclSpecifier` *(agent)*. An enumeration's body is data, Cpp Types' terms: its
+`EnumSpecifier` holds its `enumerators` and `trailing_comma`.
 
 The statements and declarations a C++ term holds are mbse-programs' grammar, not this dialect's, and a property of the
 term holds them, as the user decided: "For any dialect A if term T_A has a clause(s) that crosses over to another
@@ -71,9 +78,10 @@ boundaries (`Terms.boundaries`).
 
 The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
 (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
-(`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone, and an extension in none.
-`DIALECT` reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a
-name used as an expression an `idexpression` (`identifier("x")`, and a callee named by a string):
+(`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone, and an extension in none;
+what a helper has from an edition on (C++20's `explicit(condition)`) is a feature, not recorded. `DIALECT` reads the
+kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
+expression an `idexpression` (`identifier("x")`, and a callee named by a string):
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
 
 Its kind of domain, the branch of its union `Expressions.Cpp.Expressions.DomainKind`, which `install` adds to the
@@ -168,11 +176,12 @@ def install(txn: Any) -> Any:
                   "PrimitiveTypeSpecifier": S.OfObject, "NamedTypeSpecifier": S.OfObject,
                   "TypenameSpecifier": S.OfObject, "ClassSpecifier": S.OfObject, "BaseSpecifier": S.OfObject,
                   "EnumSpecifier": S.OfObject, "DecltypeSpecifier": S.OfObject,
-                  "PlaceholderTypeSpecifier": S.OfObject, "IdDeclarator": S.OfObject, "AsmLabel": S.OfObject,
-                  "PackDeclarator": S.OfObject,
+                  "PlaceholderTypeSpecifier": S.OfObject, "ExplicitSpecifier": S.OfObject,
+                  "IdDeclarator": S.OfObject, "AsmLabel": S.OfObject, "PackDeclarator": S.OfObject,
                   "PointerDeclarator": S.OfObject, "ReferenceDeclarator": S.OfObject, "ArrayDeclarator": S.OfObject,
                   "FunctionDeclarator": S.OfObject, "ParenthesizedDeclarator": S.OfObject,
-                  "ParameterDeclaration": S.OfObject, "EllipsisParameter": S.OfObject, "TypeParameter": S.OfObject,
+                  "StructuredBindingDeclarator": S.OfObject, "ParameterDeclaration": S.OfObject,
+                  "EllipsisParameter": S.OfObject, "TypeParameter": S.OfObject,
                   "TemplateTemplateParameter": S.OfObject, "NoexceptSpecifier": S.OfObject,
                   "ThrowSpecifier": S.OfObject, "StandardAttributeSpecifier": S.OfObject, "Attribute": S.OfObject,
                   "AlignasSpecifier": S.OfObject, "GnuAttributeSpecifier": S.OfObject,
@@ -287,6 +296,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("enumspecifier").schema([_.EnumSpecifier]),
                 lambda t: t.name("decltypespecifier").schema([_.DecltypeSpecifier]),
                 lambda t: t.name("placeholdertypespecifier").schema([_.PlaceholderTypeSpecifier]),
+                lambda t: t.name("explicitspecifier").schema([_.ExplicitSpecifier]),
                 lambda t: t.name("standardattributespecifier").schema([_.StandardAttributeSpecifier]),
                 lambda t: t.name("alignasspecifier").schema([_.AlignasSpecifier]),
                 lambda t: t.name("gnuattributespecifier").schema([_.GnuAttributeSpecifier]),
@@ -300,6 +310,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("arraydeclarator").schema([_.ArrayDeclarator]),
                 lambda t: t.name("functiondeclarator").schema([_.FunctionDeclarator]),
                 lambda t: t.name("parenthesizeddeclarator").schema([_.ParenthesizedDeclarator]),
+                lambda t: t.name("structuredbindingdeclarator").schema([_.StructuredBindingDeclarator]),
             ]),
             lambda _: _.Parameter.name("Expressions.Cpp.Expressions.Parameter").branches([
                 lambda t: t.name("parameterdeclaration").schema([_.ParameterDeclaration]),
@@ -336,7 +347,9 @@ def install(txn: Any) -> Any:
                 "problems": many(S.OfStr),  # what is wrong with it
             }),
             lambda _: _.UserDefinedLiteral.name("Expressions.Cpp.Expressions.UserDefinedLiteral").properties({
-                "literal": _.Literal, "suffix": S.OfStr}),
+                "literal": _.Literal,
+                "concatenation": _.ConcatenatedString,  # adjacent strings, `"a" "b"_s`, in place of one literal
+                "suffix": S.OfStr}),
             lambda _: _.ConcatenatedString.name("Expressions.Cpp.Expressions.ConcatenatedString").properties({
                 "parts": many(_.Term)}),
             # primary expressions
@@ -480,6 +493,8 @@ def install(txn: Any) -> Any:
             lambda _: _.PlaceholderTypeSpecifier.name("Expressions.Cpp.Expressions.PlaceholderTypeSpecifier")
                 .properties({
                 "constraint": _.Name, "decltype": S.OfBool}),
+            lambda _: _.ExplicitSpecifier.name("Expressions.Cpp.Expressions.ExplicitSpecifier").properties({
+                "condition": _.Term}),  # `explicit`, or C++20's `explicit(condition)`
             lambda _: _.IdDeclarator.name("Expressions.Cpp.Expressions.IdDeclarator").properties({
                 "name": _.Name, "attributes": many(_.AttributeSpecifier),
                 "asm": _.AsmLabel}),  # GNU's: the assembler name of what it declares
@@ -500,6 +515,8 @@ def install(txn: Any) -> Any:
                 "attributes": many(_.AttributeSpecifier), "trailing_return": _.TypesTerm}),
             lambda _: _.ParenthesizedDeclarator.name("Expressions.Cpp.Expressions.ParenthesizedDeclarator").properties({
                 "declarator": _.Declarator}),
+            lambda _: _.StructuredBindingDeclarator.name("Expressions.Cpp.Expressions.StructuredBindingDeclarator")
+                .properties({"bindings": many(_.Identifier)}),  # `[a, b]`: the names it binds
             lambda _: _.ParameterDeclaration.name("Expressions.Cpp.Expressions.ParameterDeclaration").properties({
                 "attributes": many(_.AttributeSpecifier), "this_keyword": S.OfBool, "specifiers": many(_.Specifier),
                 "declarator": _.Declarator, "default": _.Term}),
@@ -712,7 +729,7 @@ def _check(tag: str) -> Any:
 
 
 _OWN = {
-    USERDEFINEDLITERAL: _application(USERDEFINEDLITERAL, required=("literal", "suffix")),
+    USERDEFINEDLITERAL: _application(USERDEFINEDLITERAL, required=("suffix",)),
     IDEXPRESSION: F.Kind(F.REFERENCE, required=("name",), check=_check(IDEXPRESSION),
                          scopes=C.scopes(IDEXPRESSION), optional=C.OPTIONAL),
     THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False),

@@ -850,6 +850,10 @@
   {
    "kind": "Preprocessor.pragmaexpression",
    "reason": "the pragma operator, `_Pragma(\"...\")`, which tree-sitter-c reads as a `call_expression` of the identifier `_Pragma`"
+  },
+  {
+   "kind": "Preprocessor.hasincludeexpression",
+   "reason": "`__has_include(<header>)` and `__has_include(\"header\")`, which tree-sitter-c cannot parse: an `ERROR` node within the condition"
   }
  ]
 }
