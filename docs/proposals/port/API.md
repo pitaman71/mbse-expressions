@@ -2920,6 +2920,81 @@ port/README.md`, Stage 4, Decided 4). A program's terms are held by statements w
      within a reading), DIA-25 (the asm label's order, a round trip), DOM-19 (`Types` within a reading), the same in
      both languages. Conformance is unchanged.
 
+## Settled in closing C++'s gaps, for the user's review
+
+The user's rule, as for C's: "if there are any gaps in the dialect as modeled in
+`mbse-expressions.Dialects.<lang_ver>`, they should be added into `mbse-expressions`. There is no reason for an
+expression dialect to exist that is a subset of the corresponding node of AST in the real language." mbse-programs' C++
+parser found four (`mbse:mbse-programs/python3/mbse/Programs/Cpp/Parse.py`, its departures 38 to 41): structured
+bindings, a conditional `explicit`, `__has_include`, and a user-defined literal of adjacent strings.
+
+423. **Structured bindings** (C++17): `Expressions.Cpp.Expressions.StructuredBindingDeclarator`, the `Declarator`
+     branch `structuredbindingdeclarator`, `[a, b]`: its `bindings`, C++'s `Identifier`s, the names it binds, as
+     C++17's to C++23's grammar has an identifier list there (C++26's attributes on a binding and its packs, which 0.3's
+     `StructuredBindingDeclarator` held as `IdDeclarator`s and `PackDeclarator`s, are outside the dialect, as C++26
+     is) *(agent)*. A reference's declarator holds it (`auto &[k, v]`, as tree-sitter-cpp reads it), and
+     mbse-programs' declarations, a range `for`'s and a condition's hold it; no declarator of the dialect's own
+     kinds binds what it names. Its check: "a StructuredBindingDeclarator binds a name or more". Printed `[a, b]`.
+424. **A conditional `explicit`** (C++20) *(agent)*: `Expressions.Cpp.Expressions.ExplicitSpecifier`, the
+     `Specifier` branch `explicitspecifier`, holding its `condition`, a C++ term (`explicit(N > 1)`), or none
+     (`explicit`), which `OPTIONAL`'s `*.condition` lets be empty, as a `noexceptspecifier`'s is. `explicit` alone is
+     this specifier too, not a `DeclSpecifier` of keyword `explicit` as it was: [dcl.fct.spec] has one
+     explicit-specifier, tree-sitter-cpp one `explicit_function_specifier` and 0.3 one `ExplicitSpecifier`, and one
+     spelling should have one model; so C++'s check refuses the other ("explicit is an ExplicitSpecifier, not a
+     DeclSpecifier"), which mbse-programs' converter, writing a `declspecifier` today, follows. Printed `explicit`, or
+     `explicit(condition)`.
+425. **`__has_include`** (C23, C++17): `hasincludeexpression`, C Preprocessor's kind, beside `definedexpression`,
+     whose install adds it to C's and C++'s `Term`s, a condition's terms: `__has_include(<path>)` where `system`,
+     `__has_include("path")`, or `__has_include(macro)`, its `path`, `system` and `macro` as an include directive's
+     ([cpp.cond]'s header-name and its tokens a macro replaces). Its check, an include's: "a HasIncludeExpression has a
+     path or a macro"; its macro's names are bound within it, as an include's are (`_header_scopes`, TypeScript's
+     `headerScopes`). Its editions (`SINCE`): C23's and C++17's, so C23, C++17, C++20 and C++23. Simplification leaves
+     it named, class (a) *(agent)*, as `defined` is: 1 or 0 by whether the header is found, the headers found a scope.
+     The printer writes an include's and its header by one method, `Printer.header`.
+426. **A user-defined literal of adjacent strings** *(agent)*: `UserDefinedLiteral` holds its `literal` or its
+     `concatenation`, a `ConcatenatedString`'s value object, `"a" "b"_s`, as tree-sitter-cpp reads it and as C++ joins
+     the strings before it applies the suffix ([lex.ext]); the brief's "let it hold a concatenation" is a property of
+     its own, beside `literal`, so that one literal's shape, the corpus's, is unchanged. The kind requires its `suffix`
+     alone; its check: "a UserDefinedLiteral has a literal or a concatenation". The strings' parts are its arguments:
+     simplification calls the literal operator with them joined (`"ab" "c"_len` is 3), refusing a part that is no string
+     as C's concatenation does. Printed as its parts, then its suffix.
+427. **Completeness**: `structured_binding_declarator` maps to `Expressions.StructuredBindingDeclarator` and
+     `explicit_function_specifier` to `Expressions.ExplicitSpecifier`, each listed before as not an expression; neither
+     tree-sitter grammar parses `__has_include` (an `ERROR` node), so each file's `unwritten` lists
+     `Preprocessor.hasincludeexpression`.
+428. **The corpus** is unchanged: `c_preprocessor` holds no `hasincludeexpression`, nor `cpp` a structured binding, an
+     `ExplicitSpecifier` or a concatenation; FRM-02's samples, DIA-24, CCS-09 and suite CPD hold them.
+429. **Tests**: a cell of DIA-24 (the schemas, their checks, round trips, a concatenation's arguments), DIA-24's
+     required properties, DIA-25 (printing), DIA-26 (the mappings), CCS-09 (a literal operator of adjacent strings),
+     CPD-01 to CPD-05 and CPD-07 to CPD-09 (`__has_include`), FRM-01, FRM-02 and FRM-13 (unions, samples, editions), the
+     same in both languages; no case is added.
+
+## Settled in typing C++'s multicharacter literals, for the user's review
+
+A C++ character literal of more than one c-char without a prefix, a multicharacter literal (`'ab'`), is an `int` whose
+value is the implementation's ([lex.ccon]); one of one c-char is a `char`, so validation under an ABI does not report
+`'ab'` ("integer literal 24930 does not fit 'char'"), as mbse-programs' cross-check needs. C types every character
+constant without a prefix `int`.
+
+430. **A character literal's c-chars**: `C.Domains.c_chars(text)` (TypeScript `cChars`) counts the c-chars a character
+     literal's spelling holds between its first quote and its last, an escape sequence (simple, octal, hexadecimal,
+     C++23's delimited `\x{...}` and `\o{...}`) or a universal character name (`\u`, `\U`, `\N{...}`) one, any
+     other character one; 0 where it holds none or has no two quotes.
+431. **C++'s typing** (`Domains.literal`): a C++ character literal without a prefix is an `int` where its `text`
+     holds more than one c-char, a `char` otherwise; a literal without `text` holds one c-char *(agent)*, as no
+     other attribute says how many it held. Its `text` stays a literal's spelling, which a translation does not carry,
+     so a multicharacter literal translated is one of one c-char *(agent)*. A literal with a prefix keeps its prefix's
+     type (`char8_t`, `char16_t`, `char32_t`, `wchar_t`), of one c-char or several; C's typing is unchanged.
+432. **A multicharacter literal with a prefix** *(agent)*: validation reports it, as it reports a literal's other
+     encoded properties: "a character literal with prefix 'u' cannot have more than one c-char". In C++17 and C++20,
+     [lex.ccon] makes one of `u8`, `u` or `U` ill-formed and one of `L` of an implementation-defined value; C++23 (P2362)
+     makes every one ill-formed. The dialect validates without an edition, and none of these has a portable value, so
+     it reports all four. C's own prefixes are not C++'s to check.
+433. **Tests**: a cell of DIA-24 (`'ab'` an `int`, inferred, valid and evaluated to 24930; `'a'` and `'\x61'` `char`s;
+     C's both `int`s; `c_chars` of escapes and of spellings with no c-char; each prefix's multicharacter literal
+     reported, of its prefix's type, and one without text not) and of DIA-31 (`'ab'` an `int` that fits under AMD64 and AAPCS64), the same in
+     both languages; no case is added. Conformance is unchanged.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,

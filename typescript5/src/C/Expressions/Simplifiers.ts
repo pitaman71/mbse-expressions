@@ -26,10 +26,10 @@
  * expression gives its native as its value: a bigint, a number (a value of a format whose values are text, as its
  * text, as `Patterns.Ieee754` writes it), a boolean, a string, null for `nullptr`, an array of its elements' for an
  * array. A literal's type is what its
- * text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, `5wb` a
- * `_BitInt(4)`), else its value's; a variable's type is its value's: a boolean is a `bool`, a bigint an `int`, `long`
- * or `unsigned long` as the first that holds it, a number a `double`, null `nullptr` (a value carries no domain: a
- * variable of another type waits for domain inference, mbse-basis [CAP-232: domains inferred for
+ * text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, C++'s
+ * `'ab'` an `int`, `5wb` a `_BitInt(4)`), else its value's; a variable's type is its value's: a boolean is a `bool`, a
+ * bigint an `int`, `long` or `unsigned long` as the first that holds it, a number a `double`, null `nullptr` (a value
+ * carries no domain: a variable of another type waits for domain inference, mbse-basis [CAP-232: domains inferred for
  * terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)). Every named type it computes in is a stored domain, read
  * through the term's holder (`Domains.Types`): among its dialect's domains, then its holder's ABI's, so the same term
  * folds as each ABI says (`(char)200` is -56 under x86-64's System V ABI, where `char` is signed, and 200 under
@@ -1084,7 +1084,7 @@ export const CATEGORIES: Record<string, Record<string, string>> = {
       "genericselection of an association of a type a declaration names",
       "compoundliteralexpression of a type that is not arithmetic"].map((what) => [what, "d"])),
   },
-  "C Types": { "*": "b" }, "C Preprocessor": { "*": "b", definedexpression: "a" },
+  "C Types": { "*": "b" }, "C Preprocessor": { "*": "b", definedexpression: "a", hasincludeexpression: "a" },
 };
 
 /** The literal of a value of its type, written by `write`, `nullptr` C's or C++'s `constant`; null for a type no

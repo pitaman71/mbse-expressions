@@ -164,8 +164,10 @@ export function identifierProblems(value: unknown): string[] {
   return IDENTIFIER.test(ascii) ? [] : [`${repr(value)} is not an identifier`];
 }
 
-/** A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes, and its
- * value, one of its type (`Domains.outOfRange`), read through `types`; a type neither its dialect nor its holder's ABI
+/** A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes, a C++
+ * character literal with a prefix of one c-char ([lex.ccon]: of several, `u8`'s, `u`'s and `U`'s are ill-formed in
+ * C++17 to C++23, and `L`'s in C++23, its value the implementation's in C++17 and C++20 *(agent)*), and its value, one
+ * of its type (`Domains.outOfRange`), read through `types`; a type neither its dialect nor its holder's ABI
  * defines is reported by name, but within a `Domains.Reading`, where the check waits for an ABI. */
 function literalProblems(attributes: ReadonlyMap<string, any>, prefixes: readonly string[], suffixes: Suffixes,
   language: string, types: Domains.Types): string[] {
@@ -175,6 +177,10 @@ function literalProblems(attributes: ReadonlyMap<string, any>, prefixes: readonl
   if (quote !== undefined && !QUOTES.includes(quote)) problems.push(`a literal's quote cannot be ${repr(quote)}`);
   if (base !== undefined && ![2n, 8n, 10n, 16n].includes(base)) {
     problems.push(`a literal's base cannot be ${repr(base)}`);
+  }
+  if (language === "C++" && quote === "'" && prefixes.includes(prefix)
+    && Domains.cChars(attributes.get("text") ?? "") > 1) {
+    problems.push(`a character literal with prefix ${repr(prefix)} cannot have more than one c-char`);
   }
   if (suffix !== undefined) {
     const value = attributes.get("value");
@@ -231,7 +237,8 @@ function asmProblems(node: F.Node): string[] {
 /** A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
  * identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), its type
  * read through `types`, a member's operator, invalid syntax in a sublanguage, an enumeration's enumerators within its
- * body, an asm label's keyword and label. */
+ * body, an asm label's keyword and label; and C++'s: a user-defined literal's one literal or adjacent strings, a
+ * structured binding's names, and `explicit`, an `ExplicitSpecifier`, not a `DeclSpecifier`. */
 export function problems(node: F.Node, types: Domains.Types, suffixes: Suffixes = SUFFIXES,
   prefixes: readonly string[] = PREFIXES, language = "C"): string[] {
   const { kind, attributes } = node;
@@ -243,6 +250,15 @@ export function problems(node: F.Node, types: Domains.Types, suffixes: Suffixes 
   }
   if (kind === CONSTANT) found.push(...constantProblems(attributes));
   if (kind === "asmlabel") found.push(...asmProblems(node));
+  if (kind === "userdefinedliteral" && node.helpers.has("literal") === node.helpers.has("concatenation")) {
+    found.push("a UserDefinedLiteral has a literal or a concatenation");
+  }
+  if (kind === "structuredbindingdeclarator" && nodes(node.helpers.get("bindings")).length === 0) {
+    found.push("a StructuredBindingDeclarator binds a name or more");
+  }
+  if (kind === "declspecifier" && language === "C++" && attributes.get("keyword") === "explicit") {
+    found.push("explicit is an ExplicitSpecifier, not a DeclSpecifier");
+  }
   if (kind === "enumspecifier" && attributes.get("body") !== true && (node.many.length > 0
     || attributes.get("trailing_comma") === true)) {
     found.push("an EnumSpecifier with enumerators has a body");
@@ -297,7 +313,8 @@ function operatorTruth(language: string): (record: any) => FD.Domain | null {
 
 /** A literal's spelling, in each language: what its text writes beside its value, not what it is. A character's quote
  * is C's spelling, `'a'` an `int` as `97` is, and not C++'s, where `'a'` is a `char`: there it is what the literal
- * is. */
+ * is. A C++ character literal's text still says whether it is a multicharacter literal, an `int` (`Domains.literal`); a
+ * translation, which carries no spelling, gives a literal of one c-char *(agent)*. */
 export const SPELLING: { readonly C: readonly string[]; readonly "C++": readonly string[] } = {
   C: ["text", "problems", "quote", "base", "separators"],
   "C++": ["text", "problems", "base", "separators", "raw", "delimiter"],

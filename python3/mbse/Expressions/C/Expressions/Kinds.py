@@ -157,7 +157,9 @@ def identifier_problems(value: Any) -> list[str]:
 
 def _literal_problems(attributes: Mapping[str, Any], prefixes: tuple[str, ...],
                       suffixes: Mapping[type, re.Pattern[str]], language: str, types: Domains.Types) -> list[str]:
-    """A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes, and
+    """A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes, a
+    C++ character literal with a prefix of one c-char ([lex.ccon]: of several, `u8`'s, `u`'s and `U`'s are ill-formed
+    in C++17 to C++23, and `L`'s in C++23, its value the implementation's in C++17 and C++20 *(agent)*), and
     its value, one of its type (`Domains.out_of_range`), read through `types`; a type neither its dialect nor its
     holder's ABI defines is reported by name, but within a `Domains.Reading`, where the check waits for an ABI."""
     problems = []
@@ -168,6 +170,8 @@ def _literal_problems(attributes: Mapping[str, Any], prefixes: tuple[str, ...],
         problems.append(f"a literal's quote cannot be {quote!r}")
     if base is not None and base not in (2, 8, 10, 16):
         problems.append(f"a literal's base cannot be {base!r}")
+    if language == "C++" and quote == "'" and prefix in prefixes and Domains.c_chars(attributes.get("text", "")) > 1:
+        problems.append(f"a character literal with prefix {prefix!r} cannot have more than one c-char")
     if suffix is not None:
         allowed = suffixes.get(type(attributes.get("value")))
         if allowed is None or not allowed.fullmatch(suffix):
@@ -218,7 +222,8 @@ def problems(node: F.Node, types: Domains.Types, suffixes: Mapping[type, re.Patt
     """A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
     identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), its type
     read through `types`, a member's operator, invalid syntax in a sublanguage, an enumeration's enumerators within its
-    body, an asm label's keyword and label."""
+    body, an asm label's keyword and label; and C++'s: a user-defined literal's one literal or adjacent strings, a
+    structured binding's names, and `explicit`, an `ExplicitSpecifier`, not a `DeclSpecifier`."""
     kind, attributes = node.kind, node.attributes
     found = F.invalid_problems(kind, attributes) if kind in ("error", "missing") else []
     found += identifier_problems(attributes.get(_NAMES.get(kind, "")))
@@ -226,6 +231,12 @@ def problems(node: F.Node, types: Domains.Types, suffixes: Mapping[type, re.Patt
         found.append(f"a memberexpression's operator must be '.' or '->', got {attributes['operator']!r}")
     found += _constant_problems(attributes) if kind == CONSTANT else []
     found += _asm_problems(node) if kind == "asmlabel" else []
+    if kind == "userdefinedliteral" and ("literal" in node.helpers) == ("concatenation" in node.helpers):
+        found.append("a UserDefinedLiteral has a literal or a concatenation")
+    if kind == "structuredbindingdeclarator" and not node.helpers.get("bindings"):
+        found.append("a StructuredBindingDeclarator binds a name or more")
+    if kind == "declspecifier" and language == "C++" and attributes.get("keyword") == "explicit":
+        found.append("explicit is an ExplicitSpecifier, not a DeclSpecifier")
     if kind == "enumspecifier" and not attributes.get("body") and (node.many or attributes.get("trailing_comma")):
         found.append("an EnumSpecifier with enumerators has a body")
     found += _literal_problems(attributes, prefixes, suffixes, language, types) if kind == LITERAL else []
@@ -285,7 +296,9 @@ def _operator_truth(language: str) -> Callable[[Any], FD.Domain | None]:
 SPELLING = {"C": ("text", "problems", "quote", "base", "separators"),
             "C++": ("text", "problems", "base", "separators", "raw", "delimiter")}
 """A literal's spelling, in each language: what its text writes beside its value, not what it is. A character's quote is
-C's spelling, `'a'` an `int` as `97` is, and not C++'s, where `'a'` is a `char`: there it is what the literal is."""
+C's spelling, `'a'` an `int` as `97` is, and not C++'s, where `'a'` is a `char`: there it is what the literal is. A C++
+character literal's text still says whether it is a multicharacter literal, an `int` (`Domains.literal`); a
+translation, which carries no spelling, gives a literal of one c-char *(agent)*."""
 
 
 def kinds(language: str, tags: tuple[str, ...], prefixes: tuple[str, ...],

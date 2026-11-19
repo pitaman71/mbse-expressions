@@ -393,7 +393,9 @@
   },
   {
    "node": "explicit_function_specifier",
-   "not": "a declaration, which mbse-programs holds as an owned reference object, not a term"
+   "helpers": [
+    "Expressions.ExplicitSpecifier"
+   ]
   },
   {
    "node": "expression_statement",
@@ -990,7 +992,9 @@
    "supertypes": [
     "_declarator"
    ],
-   "not": "a structured binding, a declaration's, not an expression's"
+   "helpers": [
+    "Expressions.StructuredBindingDeclarator"
+   ]
   },
   {
    "node": "subscript_argument_list",
@@ -1360,6 +1364,10 @@
   {
    "kind": "Preprocessor.pragmaexpression",
    "reason": "the pragma operator, `_Pragma(\"...\")`, which tree-sitter-cpp reads as a `call_expression` of the identifier `_Pragma`"
+  },
+  {
+   "kind": "Preprocessor.hasincludeexpression",
+   "reason": "`__has_include(<header>)` and `__has_include(\"header\")`, which tree-sitter-cpp cannot parse: an `ERROR` node within the condition"
   }
  ]
 }
