@@ -93,10 +93,11 @@ def install(txn: Any) -> Any:
             ]),
             lambda _: _.Kinds.name("Expressions.Framework.DomainKind").branches([  # a branch added: schema extension
                 lambda t: t.name("isoiec11404").schema([_.DomainKind])]),
-            # a packed domain's state domain and representation are domains, which a value cannot hold: `Packs` links them
+            # a packed domain's state domain and representation are domains, which a value cannot hold: `Packs` links them,
+            # one of each per packed domain
             lambda _: _.Packs.name("Expressions.ISOIEC11404.Expressions.Packs").links([
                 lambda t: t.name("packed"), lambda t: t.name("domain").schema([_.Domain]),
-                lambda t: t.name("representation").schema([_.Domain])]).uniques([["packed"]]),
+                lambda t: t.name("representation").schema([_.Domain])]).uniques([["domain", "representation"]]),
             lambda _: _.Domain.name("Expressions.Framework.Domain").adjacencies({
                 "packs": lambda a: a.relation([_.Packs]).me("packed")}),
 
