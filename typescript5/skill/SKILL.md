@@ -79,7 +79,10 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    dialects', SystemVerilog's, which write the types they read; a sublanguage dialect's writes the editions it covers. A C or C++ expression names the ABI its terms are read
    under, through its adjacency `abi`, given the ABI dialect's singleton (`store.Instances.Expressions.SystemV.AMD64`),
    one at most; a term whose holder names none is refused where it reads a type the ABI defines ("'int' is not a type C defines, and
-   its expression names no ABI"). The
+   its expression names no ABI"). To apply an ABI at the call instead, writing nothing, read within a reading
+   (`C.Domains.Reading(abi).run(lambda: C.DIALECT.validate(term))`; TypeScript `new Reading(abi).run(() => ...)`), which
+   validation, inference and simplification read alike; `Reading(None)` (`null`) applies none, and a check that needs
+   one is deferred, listed in the reading's `deferred`, not a problem. The
    package exports the framework alone (`Framework`); import each
    dialect from its own path, Patterns' writers from `mbse.Expressions.Patterns.Expressions` (TypeScript:
    `@mbse/expressions/Patterns/Expressions`), as `E`. Build a constraint with writers: `E.variable(name)`,
@@ -105,6 +108,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [EXP-05: The framework's schemas are an install: ordinary, registered schemas, which Patterns' install extends](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-05) · TypeScript: [EXP-05: The framework's schemas are an install: ordinary, registered schemas, which Patterns' install extends](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-05)
    - Python: [EXP-10: Variables and lets](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-10) · TypeScript: [EXP-10: Variables and lets](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-10)
    - Python: [EXP-11: Writers build terms with methods](mbse:mbse-expressions/python3/tests/01_Expressions.ipynb#EXP-11) · TypeScript: [EXP-11: Writers build terms with methods](mbse:mbse-expressions/typescript5/tests/01_Expressions.ipynb#EXP-11)
+   - Python: [DIA-31: C and C++ read under an ABI the caller applies, the holder naming none](mbse:mbse-expressions/python3/tests/06_Dialects.ipynb#DIA-31) · TypeScript: [DIA-31: C and C++ read under an ABI the caller applies, the holder naming none](mbse:mbse-expressions/typescript5/tests/06_Dialects.ipynb#DIA-31)
 2. **Simplify on request, three-valued.** *Why*: data is incomplete most of the time, and an answer that treats unknown
    as false, or as true, is a silent mistake. *When*: checking a constraint against data. *How*:
    `Simplifiers.OfAny(expression, scope)`, the scope a mapping of variables to values, simplifies it: what the data

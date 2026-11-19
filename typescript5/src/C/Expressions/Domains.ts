@@ -18,7 +18,11 @@
  * its kind (11404's `integer`; `modulo`, unsigned, of the width its modulus gives; `boolean`), a floating type's format
  * and width from IEEE 754's. A type neither dialect defines is refused by name: "'int' is not a type C defines, and its
  * expression names no ABI", or "'int' is not a type C or AMD64 defines"; `find(name)` gives null instead where the
- * holder names an ABI (a cast to a type a program declares).
+ * holder names an ABI (a cast to a type a program declares). A `Types` built within a `Reading` (`new
+ * Reading(abi).run(read)`) reads under the ABI the caller applies, an ABI dialect's singleton, in place of the
+ * holder's, and writes nothing; within `new Reading(null)`, under the holder's, and where the holder names none, a type
+ * only an ABI defines is deferred: the reading lists it (`deferred`), validation reports no problem for it, and a read
+ * that needs its value throws `Deferred`, a ValueError.
  *
  * `promoted(type)` applies the integer promotions (a narrower integer or a bool becomes `int`; a bit-precise integer
  * type stays) and `common(a, b)` the usual arithmetic conversions: the wider floating type if either is floating,
