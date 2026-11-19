@@ -165,7 +165,8 @@ export function identifierProblems(value: unknown): string[] {
 }
 
 /** A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes, and its
- * value, one of its type (`Domains.outOfRange`). */
+ * value, one of its type (`Domains.outOfRange`), read through `types`; a type neither its dialect nor its holder's ABI
+ * defines is reported by name, but within a `Domains.Reading`, where the check waits for an ABI. */
 function literalProblems(attributes: ReadonlyMap<string, any>, prefixes: readonly string[], suffixes: Suffixes,
   language: string, types: Domains.Types): string[] {
   const problems: string[] = [];
@@ -185,7 +186,8 @@ function literalProblems(attributes: ReadonlyMap<string, any>, prefixes: readonl
     out = Domains.outOfRange(attributes, language, types);
   } catch (error) {
     if (!(error instanceof ValueError)) throw error;
-    out = error.message; // its type is not defined in its holder's store
+    // its type is the ABI's, and none is applied: the reading lists it; else, not defined in its holder's store
+    out = error instanceof Domains.Deferred ? null : error.message;
   }
   if (out !== null) problems.push(out);
   return problems;

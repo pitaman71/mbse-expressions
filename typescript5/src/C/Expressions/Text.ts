@@ -9,19 +9,18 @@
  * A literal is written in its spelling where it has one (`text`), else in its value's default spelling, with what it
  * encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
  * (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal
- * as `INFINITY` or `NAN`. An identifier's asm label, GNU's, is written after the whole declarator that holds it, where
- * C and C++ write it (`f(void) asm("f2")`). What a term holds of mbse-programs' grammar, which the family does not
- * read, is written by its `Printer`'s methods, which mbse-programs' printer overrides to write it: a lambda's or a
- * statement expression's compound statement, its `block`, by `statements`, `{}`; a struct's, a union's or a class's
- * member declarations, its `members`, by `members`, `{}`, where its `body` says one is written; and a conditional
- * directive's group, its
- * `group`, by `group`, nothing, so that the directive is written with its items alone. An enumeration's body, its
- * data, is written as mbse-programs writes it, its enumerators, directives, pragmas (`_Pragma("...")`) and comments
- * each on lines of its own, one level deeper, an enumerator followed by a comma but the last, unless it has a trailing
- * comma, and a trailing comment ending the line before it. A directive starts its line, a conditional one each of its
- * branches (`#if`, `#ifdef`, `#elif`, `#elifdef`, `#else`) on a line of its own, its items and its group on the lines
- * between, and `#endif`. Invalid syntax is written as written (`Terms.invalidText`), refused by the name of the dialect
- * that owns it (`Terms.Dialect.owner`).
+ * as `INFINITY` or `NAN`. An identifier's asm label, GNU's, is written after the whole declarator that holds it, before
+ * the GNU attributes that end it, where GCC reads it (`f(void) asm("f2")`, `*p asm("p") __attribute__((unused))`). What
+ * a term holds of mbse-programs' grammar, which the family does not read, is written by its `Printer`'s methods, which
+ * mbse-programs' printer overrides to write it: a lambda's or a statement expression's compound statement, its `block`,
+ * by `statements`, `{}`; a struct's, a union's or a class's member declarations, its `members`, by `members`, `{}`,
+ * where its `body` says one is written; and a conditional directive's group, its `group`, by `group`, nothing, so that
+ * the directive is written with its items alone. An enumeration's body, its data, is written as mbse-programs writes
+ * it, its enumerators, directives, pragmas (`_Pragma("...")`) and comments each on lines of its own, one level deeper,
+ * an enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment ending the
+ * line before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`, `#elif`,
+ * `#elifdef`, `#else`) on a line of its own, its items and its group on the lines between, and `#endif`. Invalid syntax
+ * is written as written (`Terms.invalidText`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`).
  * Reading C (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'").
  */
 
@@ -114,6 +113,24 @@ function named(declarator: F.Node | undefined): F.Node | undefined {
     declarator = one(declarator.helpers.get("declarator"));
   }
   return declarator;
+}
+
+/** The GNU attributes that end a declarator, which GCC writes after an asm label: the last of the attributes of the
+ * declarator written last, within its pointers, references and packs (an identifier's, an array's, a function's
+ * without a trailing return type), that are GNU's; none where it ends with a parenthesis or a type. */
+function trailingGnu(declarator: F.Node): readonly F.Node[] {
+  while (["pointerdeclarator", "referencedeclarator", "packdeclarator"].includes(declarator.kind)) {
+    declarator = one(declarator.helpers.get("declarator")) as F.Node;
+  }
+  if (declarator.kind === "parenthesizeddeclarator" || (declarator.subterms.get("trailing_return") ?? null) !== null) {
+    return [];
+  }
+  const attributes = nodes(declarator.helpers.get("attributes"));
+  let count = 0;
+  while (count < attributes.length && attributes[attributes.length - 1 - count]!.kind === "gnuattributespecifier") {
+    count++;
+  }
+  return attributes.slice(attributes.length - count);
 }
 
 /** Whether a declarator declares no name. */
@@ -605,10 +622,14 @@ export class Printer {
 
   // Declarators
 
-  /** A declarator, and after it, where C writes it, the asm label its identifier holds, GNU's. */
+  /** A declarator, and after it, where GCC writes it, the asm label its identifier holds, GNU's: before the GNU
+   * attributes that end the declarator (`int *p asm("p") __attribute__((unused))`). */
   declarator(node: F.Node | undefined): string {
     const label = one(named(node)?.helpers.get("asm"));
-    return this.nested(node) + (label !== undefined ? " " + this.text(label) : "");
+    const written = this.nested(node);
+    if (label === undefined) return written;
+    const tail = trailingGnu(node as F.Node).map((a) => " " + this.text(a)).join("");
+    return written.slice(0, written.length - tail.length) + " " + this.text(label) + tail;
   }
 
   /** A declarator, its declarators within it nested. */

@@ -8,18 +8,19 @@ C++'s being C's and its own: the family's one printer, which its dialects' `Text
 A literal is written in its spelling where it has one (`text`), else in its value's default spelling, with what it
 encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
 (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal as
-`INFINITY` or `NAN`. An identifier's asm label, GNU's, is written after the whole declarator that holds it, where C
-and C++ write it (`f(void) asm("f2")`). What a term holds of mbse-programs' grammar, which the family does not read, is
-written by its `Printer`'s methods, which mbse-programs' printer overrides to write it: a lambda's or a statement
-expression's compound statement, its `block`, by `statements`, `{}`; a struct's, a union's or a class's member
-declarations, its `members`, by `members`, `{}`, where its `body` says one is written; and a conditional directive's
-group, its `group`, by `group`, nothing, so that the directive is written with its items alone. An enumeration's body,
-its data, is written as mbse-programs writes it, its enumerators, directives, pragmas (`_Pragma("...")`) and comments
-each on lines of its own, one level deeper, an enumerator followed by a comma but the last, unless it has a trailing
-comma, and a trailing comment ending the line before it. A directive starts its line, a conditional one each of its
-branches (`#if`, `#ifdef`, `#elif`, `#elifdef`, `#else`) on a line of its own, its items and its group on the lines
-between, and `#endif`. Invalid syntax is written as written (`Terms.invalid_text`), refused by the name of the dialect
-that owns it (`Terms.Dialect.owner`). Reading C (`FromText`) is mbse-programs' (mbse-basis
+`INFINITY` or `NAN`. An identifier's asm label, GNU's, is written after the whole declarator that holds it, before the
+GNU attributes that end it, where GCC reads it (`f(void) asm("f2")`, `*p asm("p") __attribute__((unused))`). What a term
+holds of mbse-programs' grammar, which the family does not read, is written by its `Printer`'s methods, which
+mbse-programs' printer overrides to write it: a lambda's or a statement expression's compound statement, its `block`, by
+`statements`, `{}`; a struct's, a union's or a class's member declarations, its `members`, by `members`, `{}`, where its
+`body` says one is written; and a conditional directive's group, its `group`, by `group`, nothing, so that the directive
+is written with its items alone. An enumeration's body, its data, is written as mbse-programs writes it, its
+enumerators, directives, pragmas (`_Pragma("...")`) and comments each on lines of its own, one level deeper, an
+enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment ending the line
+before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`, `#elif`, `#elifdef`,
+`#else`) on a line of its own, its items and its group on the lines between, and `#endif`. Invalid syntax is written as
+written (`Terms.invalid_text`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`). Reading C
+(`FromText`) is mbse-programs' (mbse-basis
 [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers
 here, the parsers mbse-programs'")."""
 from __future__ import annotations
@@ -105,6 +106,21 @@ def _named(declarator: F.Node | None) -> F.Node | None:
     while declarator is not None and declarator.kind != "iddeclarator":
         declarator = declarator.helpers.get("declarator")
     return declarator
+
+
+def _trailing_gnu(declarator: F.Node) -> tuple[F.Node, ...]:
+    """The GNU attributes that end a declarator, which GCC writes after an asm label: the last of the attributes of the
+    declarator written last, within its pointers, references and packs (an identifier's, an array's, a function's
+    without a trailing return type), that are GNU's; none where it ends with a parenthesis or a type."""
+    while declarator.kind in ("pointerdeclarator", "referencedeclarator", "packdeclarator"):
+        declarator = declarator.helpers["declarator"]
+    if declarator.kind == "parenthesizeddeclarator" or declarator.subterms.get("trailing_return") is not None:
+        return ()
+    attributes = _nodes(declarator.helpers.get("attributes"))
+    count = 0
+    while count < len(attributes) and attributes[-1 - count].kind == "gnuattributespecifier":
+        count += 1
+    return attributes[len(attributes) - count:]
 
 
 def _abstract(declarator: F.Node | None) -> bool:
@@ -561,10 +577,15 @@ class Printer:
     # Declarators
 
     def declarator(self, node: F.Node | None) -> str:
-        """A declarator, and after it, where C writes it, the asm label its identifier holds, GNU's."""
+        """A declarator, and after it, where GCC writes it, the asm label its identifier holds, GNU's: before the GNU
+        attributes that end the declarator (`int *p asm("p") __attribute__((unused))`)."""
         named = _named(node)
         label = named.helpers.get("asm") if named is not None else None
-        return self.nested(node) + (" " + self.text(label) if label is not None else "")
+        written = self.nested(node)
+        if label is None:
+            return written
+        tail = "".join(" " + self.text(a) for a in _trailing_gnu(node))  # type: ignore[arg-type]
+        return written[:len(written) - len(tail)] + " " + self.text(label) + tail
 
     def nested(self, node: F.Node | None) -> str:
         """A declarator, its declarators within it nested."""

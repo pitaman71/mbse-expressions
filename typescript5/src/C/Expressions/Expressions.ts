@@ -92,7 +92,11 @@
  * type, a cast's, a comparison's `bool`, `sizeof`'s `size_t`; and evaluation (see `Simplifiers`). A lone term reaches no
  * store: reading a type, it is refused (mbse-schemas' TypeError, "the value does not belong to a store"); and a type
  * neither dialect defines is refused by name, "'int' is not a type C defines, and its expression names no ABI", which
- * validation reports as a problem.
+ * validation reports as a problem. A caller applies an ABI at the call instead, writing nothing, by reading within a
+ * `Domains.Reading`: `new Domains.Reading(abi).run(() => DIALECT.validate(term))` reads the term under `abi`, an ABI
+ * dialect's singleton; `new Domains.Reading(null)` applies none, and a check that needs one is deferred, listed in the
+ * reading's `deferred`, not a problem. The user, for mbse-programs' C language: "Of course C and C++ need a ABI, but if
+ * we can model programs in an abi-agnostic form and apply the ABI at the last minute, that would be advantageous".
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

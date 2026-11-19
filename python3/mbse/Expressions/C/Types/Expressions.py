@@ -25,8 +25,8 @@ after mbse-programs' category: `Specifier` (keywords, a named type, a struct, un
 `Declarator` (an identifier, a pointer, an array, a function, parentheses), `Parameter` and `AttributeSpecifier`; and
 GNU's asm label, `AsmLabel`, an extension, which an identifier's declarator holds (`asm`): its `keyword` as written
 (`asm`, `__asm__` or `__asm`) and its `label`, a string literal, or several, adjacent, the assembler name of what it
-declares (`int x asm("r1")`, `int f(void) __asm__("f2")`), which the printer writes after the whole declarator, where C
-writes it. A
+declares (`int x asm("r1")`, `int f(void) __asm__("f2")`), which the printer writes after the whole declarator, before
+the GNU attributes that end it, where GCC reads it. A
 name is C's `Name` (`Expressions.C.Expressions.Name`), and a term a type name holds (an array's size, `typeof`'s
 operand, an attribute's arguments, an enumerator's value) is C's `Term`, each read through `reads`. A struct's or a
 union's member declarations, its struct-declaration-list, are mbse-programs' grammar, not this dialect's, and a property

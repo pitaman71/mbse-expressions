@@ -2862,7 +2862,8 @@ Programs/C/Parse.py`, its departure 34): GNU's labels as values, an asm label on
      literal, or several, adjacent, a C or a C++ term. The identifier's declarator holds it, not the outermost
      declarator, as the assembler name is the declared entity's, and so an abstract declarator, a type name's, holds
      none; GCC writes it after the whole declarator (`int f(void) asm("f2")`), and the printer writes it there
-     (`Printer.declarator`, the declarators within written by `nested`). Its checks: "AsmLabel.keyword cannot be '_asm'",
+     (`Printer.declarator`, the declarators within written by `nested`), before the GNU attributes that end it (item
+     421). Its checks: "AsmLabel.keyword cannot be '_asm'",
      and "an AsmLabel's label is a string literal". No edition records a helper: it is GNU's, as `GnuAttributeSpecifier`
      is, which its documentation says.
 415. **The pragma operator** *(agent)*: `pragmaexpression`, `_Pragma(operand)` (ISO/IEC 9899, 6.10.9, since C99;
@@ -2884,6 +2885,40 @@ Programs/C/Parse.py`, its departure 34): GNU's labels as values, an asm label on
      DIA-25 (printing), DIA-26 (the mappings), CPD-01 to CPD-03, CPD-05, CPD-07 to CPD-09 (`_Pragma`), CTY-01, CTY-02 and
      XTY-01 (the Types' `Term`s and `HELPERS`), FRM-01, FRM-02, FRM-12 and FRM-13 (unions, samples, printing, editions),
      the same in both languages; no case is added.
+
+## Settled in applying an ABI at the call, for the user's review
+
+The user, for mbse-programs' C language: "Of course C and C++ need a ABI, but if we can model programs in an
+abi-agnostic form and apply the ABI at the last minute, that would be advantageous" (`mbse:mbse-programs/docs/proposals/
+port/README.md`, Stage 4, Decided 4). A program's terms are held by statements whose holder names no ABI.
+
+419. **A reading** *(agent)*: `C.Domains.Reading(abi)` (TypeScript `new Reading(abi)`), `abi` an ABI dialect's
+     singleton, read within the transaction open (`store.Instances.Expressions.SystemV.AMD64`,
+     `store.Instances.Expressions.Arm.AAPCS64`), or None (`null`); `reading.run(read)` gives `read()`, every `Types` built
+     within it (and so every validation, inference and simplification of a C or C++ term) reading under `abi`, in place
+     of any ABI the holder names, and writing nothing. A reading context rather than a parameter on `validate`, `infer`
+     or a simplifier: those calls keep their signatures, the framework's, which every dialect shares, and one reading
+     serves each of them. A reading within another reads under its own. Python keeps the reading in a `ContextVar`,
+     TypeScript in a module's variable, restored by `run` in either.
+420. **Deferred checks** *(agent)*: within `Reading(None)`, a term whose holder names an ABI reads under it; where it
+     names none, a type only an ABI defines (`int`, `wchar_t`, `size_t`) is deferred: `Types.find` lists it in the
+     reading's `deferred`, by type, each once, in the order read ("'int' is not a type C defines, and no ABI is
+     applied"), and raises `C.Domains.Deferred`, a `ValueError`. Validation leaves a deferred check out of its problems
+     (a literal's range); inference and simplification, which need the type's value, raise it. Outside a reading,
+     nothing changes: a holder naming no ABI gives the problem "'int' is not a type C defines, and its expression names
+     no ABI", which DIA-11, DOM-19 and the tutorials assert. mbse-programs may now read its terms within
+     `Reading(None)` in place of filtering that message by its text, and apply an ABI with `Reading(abi)`.
+421. **An asm label before the GNU attributes that end its declarator**: GCC reads `declarator asm("name")
+     __attribute__((...))`, the asm label first; the printer wrote the identifier's or the function declarator's GNU
+     attributes before it. `Printer.declarator` now writes the label before the GNU attribute specifiers that end the
+     declarator, those last among the attributes of the declarator written last, within its pointers, references and
+     packs (an identifier's, an array's, a function's): `int *p asm("p") __attribute__((unused))`, `int f() asm("f2")
+     __attribute__((cold))`. A standard attribute (`[[x]]`) stays where it is, as do GNU attributes followed by one,
+     within parentheses or before a trailing return type *(agent)*.
+422. **Tests**: DIA-31 (C and C++ under each ABI applied, the holder naming none: `L'\xffffffff'` and C++'s `'\xc8'` out
+     of range under AMD64 and within under AAPCS64, inference and simplification, the deferred checks, a reading
+     within a reading), DIA-25 (the asm label's order, a round trip), DOM-19 (`Types` within a reading), the same in
+     both languages. Conformance is unchanged.
 
 ## What stage 2b needed (done)
 

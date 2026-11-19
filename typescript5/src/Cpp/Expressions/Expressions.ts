@@ -34,7 +34,8 @@
  * Its GNU extensions are C's (`EXTENSIONS`): `statementexpression`, `extensionexpression` and `labeladdressexpression`
  * (`&&label`, its `label` C++'s identifier). An identifier's declarator holds GNU's asm label (`asm`, an `AsmLabel`: its
  * `keyword`, `asm`, `__asm__` or `__asm`, and its `label`, a string literal), the assembler name of what it declares
- * (`int x asm("r1")`, `int f() asm("f2")`), as C's does; the printer writes it after the whole declarator.
+ * (`int x asm("r1")`, `int f() asm("f2")`), as C's does; the printer writes it after the whole declarator,
+ * before the GNU attributes that end it.
  *
  * Its sublanguages are dialects of their own, which it reads (`reads`; mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `Cpp
  * Types`, C++'s type-ids (`Expressions.Cpp.Types.Term`), which every type subterm is of (a cast's, a named cast's,

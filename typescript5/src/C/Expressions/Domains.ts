@@ -18,7 +18,11 @@
  * its kind (11404's `integer`; `modulo`, unsigned, of the width its modulus gives; `boolean`), a floating type's format
  * and width from IEEE 754's. A type neither dialect defines is refused by name: "'int' is not a type C defines, and its
  * expression names no ABI", or "'int' is not a type C or AMD64 defines"; `find(name)` gives null instead where the
- * holder names an ABI (a cast to a type a program declares).
+ * holder names an ABI (a cast to a type a program declares). A `Types` built within a `Reading` (`new
+ * Reading(abi).run(read)`) reads under the ABI the caller applies, an ABI dialect's singleton, in place of the
+ * holder's, and writes nothing; within `new Reading(null)`, under the holder's, and where the holder names none, a type
+ * only an ABI defines is deferred: the reading lists it (`deferred`), validation reports no problem for it, and a read
+ * that needs its value throws `Deferred`, a ValueError.
  *
  * `promoted(type)` applies the integer promotions (a narrower integer or a bool becomes `int`; a bit-precise integer
  * type stays) and `common(a, b)` the usual arithmetic conversions: the wider floating type if either is floating,
@@ -132,11 +136,47 @@ export const NAMES: readonly string[] = ["bool", "char", "signed char", "unsigne
 
 type Stored = [Map<string, Readers.OfObject>, Map<string, Readers.OfObject>, string | null];
 
+/** A type read where no ABI is, within a `Reading` that gives none: the check that reads it waits for an ABI, and the
+ * reading lists it (`Reading.deferred`). */
+export class Deferred extends ValueError {
+  override name = "Deferred";
+}
+
+/** How C's and C++'s terms read the types their standards leave to the implementation, within `run(read)`: each
+ * `Types` built within it reads them under `abi`, the ABI the caller applies, in place of any the holder names; with
+ * none (`new Reading(null)`), under the ABI the holder names, and where it names none, a check that needs one is
+ * deferred, not a problem. `abi` is an ABI dialect's singleton, read within the transaction open
+ * (`Expressions.SystemV.AMD64`, `store.Instances.Expressions.SystemV.AMD64`, or `Expressions.Arm.AAPCS64`). A deferred
+ * check is listed in `deferred` by the type it reads, each once, in the order read ("'int' is not a type C defines, and
+ * no ABI is applied"): validation leaves it out of its problems, and inference and simplification, which need the
+ * type, throw it as `Deferred`, a ValueError. Nothing is written: a term's holder keeps whatever ABI it names. */
+export class Reading {
+  readonly deferred: string[] = [];
+
+  constructor(readonly abi: Readers.OfObject | null) {}
+
+  /** `read()`, its terms read under this reading; a reading within it reads its own terms under its own. */
+  run<T>(read: () => T): T {
+    const outer = current;
+    current = this;
+    try {
+      return read();
+    } finally {
+      current = outer;
+    }
+  }
+}
+
+/** The reading `Reading.run` runs within, if any. */
+let current: Reading | null = null;
+
 /** The types a term of C or C++ reads, by name: among the domains its dialect (`path`, `C.Expressions` or
- * `Cpp.Expressions`) stores, then among those of the ABI its holder names, in the store of the holder of `value` (a
- * term, or anything within one), read when first needed, each once. */
+ * `Cpp.Expressions`) stores, then among those of the ABI its holder names, or of the ABI the `Reading` it is built
+ * within applies, in the store of the holder of `value` (a term, or anything within one), read when first needed, each
+ * once. */
 export class Types {
   private readonly dialect: string;
+  private readonly reading = current;
   private readonly read = new Map<string, CType | null>();
   private domains: Stored | null = null;
 
@@ -144,13 +184,14 @@ export class Types {
     this.dialect = Terms.dialectName(path);
   }
 
-  /** Its dialect's domains, its holder's ABI's, and the ABI's name (null where the holder names none). */
+  /** Its dialect's domains, its ABI's, and the ABI's name (null where neither its reading nor its holder names one). */
   private stored(): Stored {
     if (this.domains === null) {
       const holder = Terms.holderOf(this.value) as any;
       let dialect: any = (Proxies.store_of(holder) as any).Instances.Expressions;
       for (const part of this.path.split(".")) dialect = dialect[part];
-      const abis = Objects.entries(holder, "abi").map((entry) => entry.targets.get("abi") as Readers.OfObject);
+      let abis = Objects.entries(holder, "abi").map((entry) => entry.targets.get("abi") as Readers.OfObject);
+      if (this.reading !== null && this.reading.abi !== null) abis = [this.reading.abi];
       const abi = abis[0] ?? null;
       const name = abi === null ? null
         : Terms.dialectName((abi.as_schema() as { name: string }).name
@@ -193,11 +234,16 @@ export class Types {
   }
 
   /** The arithmetic type defined by `name`, or null where neither dialect defines one; throws ValueError where its
-   * dialect does not and its holder names no ABI. */
+   * dialect does not and no ABI is named, `Deferred` within a `Reading`, which lists it. */
   find(name: string): CType | null {
     const [own, , abi] = this.stored();
     if (!own.has(name) && abi === null) {
-      throw new ValueError(`${repr(name)} is not a type ${this.dialect} defines, and its expression names no ABI`);
+      if (this.reading === null) {
+        throw new ValueError(`${repr(name)} is not a type ${this.dialect} defines, and its expression names no ABI`);
+      }
+      const deferred = `${repr(name)} is not a type ${this.dialect} defines, and no ABI is applied`;
+      if (!this.reading.deferred.includes(deferred)) this.reading.deferred.push(deferred);
+      throw new Deferred(deferred);
     }
     return this.lookup(name);
   }
