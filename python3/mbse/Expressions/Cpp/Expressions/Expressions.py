@@ -168,11 +168,12 @@ def install(txn: Any) -> Any:
                   "PrimitiveTypeSpecifier": S.OfObject, "NamedTypeSpecifier": S.OfObject,
                   "TypenameSpecifier": S.OfObject, "ClassSpecifier": S.OfObject, "BaseSpecifier": S.OfObject,
                   "EnumSpecifier": S.OfObject, "DecltypeSpecifier": S.OfObject,
-                  "PlaceholderTypeSpecifier": S.OfObject, "IdDeclarator": S.OfObject, "AsmLabel": S.OfObject,
-                  "PackDeclarator": S.OfObject,
+                  "PlaceholderTypeSpecifier": S.OfObject, "ExplicitSpecifier": S.OfObject,
+                  "IdDeclarator": S.OfObject, "AsmLabel": S.OfObject, "PackDeclarator": S.OfObject,
                   "PointerDeclarator": S.OfObject, "ReferenceDeclarator": S.OfObject, "ArrayDeclarator": S.OfObject,
                   "FunctionDeclarator": S.OfObject, "ParenthesizedDeclarator": S.OfObject,
-                  "ParameterDeclaration": S.OfObject, "EllipsisParameter": S.OfObject, "TypeParameter": S.OfObject,
+                  "StructuredBindingDeclarator": S.OfObject, "ParameterDeclaration": S.OfObject,
+                  "EllipsisParameter": S.OfObject, "TypeParameter": S.OfObject,
                   "TemplateTemplateParameter": S.OfObject, "NoexceptSpecifier": S.OfObject,
                   "ThrowSpecifier": S.OfObject, "StandardAttributeSpecifier": S.OfObject, "Attribute": S.OfObject,
                   "AlignasSpecifier": S.OfObject, "GnuAttributeSpecifier": S.OfObject,
@@ -287,6 +288,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("enumspecifier").schema([_.EnumSpecifier]),
                 lambda t: t.name("decltypespecifier").schema([_.DecltypeSpecifier]),
                 lambda t: t.name("placeholdertypespecifier").schema([_.PlaceholderTypeSpecifier]),
+                lambda t: t.name("explicitspecifier").schema([_.ExplicitSpecifier]),
                 lambda t: t.name("standardattributespecifier").schema([_.StandardAttributeSpecifier]),
                 lambda t: t.name("alignasspecifier").schema([_.AlignasSpecifier]),
                 lambda t: t.name("gnuattributespecifier").schema([_.GnuAttributeSpecifier]),
@@ -300,6 +302,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("arraydeclarator").schema([_.ArrayDeclarator]),
                 lambda t: t.name("functiondeclarator").schema([_.FunctionDeclarator]),
                 lambda t: t.name("parenthesizeddeclarator").schema([_.ParenthesizedDeclarator]),
+                lambda t: t.name("structuredbindingdeclarator").schema([_.StructuredBindingDeclarator]),
             ]),
             lambda _: _.Parameter.name("Expressions.Cpp.Expressions.Parameter").branches([
                 lambda t: t.name("parameterdeclaration").schema([_.ParameterDeclaration]),
@@ -336,7 +339,9 @@ def install(txn: Any) -> Any:
                 "problems": many(S.OfStr),  # what is wrong with it
             }),
             lambda _: _.UserDefinedLiteral.name("Expressions.Cpp.Expressions.UserDefinedLiteral").properties({
-                "literal": _.Literal, "suffix": S.OfStr}),
+                "literal": _.Literal,
+                "concatenation": _.ConcatenatedString,  # adjacent strings, `"a" "b"_s`, in place of one literal
+                "suffix": S.OfStr}),
             lambda _: _.ConcatenatedString.name("Expressions.Cpp.Expressions.ConcatenatedString").properties({
                 "parts": many(_.Term)}),
             # primary expressions
@@ -480,6 +485,8 @@ def install(txn: Any) -> Any:
             lambda _: _.PlaceholderTypeSpecifier.name("Expressions.Cpp.Expressions.PlaceholderTypeSpecifier")
                 .properties({
                 "constraint": _.Name, "decltype": S.OfBool}),
+            lambda _: _.ExplicitSpecifier.name("Expressions.Cpp.Expressions.ExplicitSpecifier").properties({
+                "condition": _.Term}),  # `explicit`, or C++20's `explicit(condition)`
             lambda _: _.IdDeclarator.name("Expressions.Cpp.Expressions.IdDeclarator").properties({
                 "name": _.Name, "attributes": many(_.AttributeSpecifier),
                 "asm": _.AsmLabel}),  # GNU's: the assembler name of what it declares
@@ -500,6 +507,8 @@ def install(txn: Any) -> Any:
                 "attributes": many(_.AttributeSpecifier), "trailing_return": _.TypesTerm}),
             lambda _: _.ParenthesizedDeclarator.name("Expressions.Cpp.Expressions.ParenthesizedDeclarator").properties({
                 "declarator": _.Declarator}),
+            lambda _: _.StructuredBindingDeclarator.name("Expressions.Cpp.Expressions.StructuredBindingDeclarator")
+                .properties({"bindings": many(_.Identifier)}),  # `[a, b]`: the names it binds
             lambda _: _.ParameterDeclaration.name("Expressions.Cpp.Expressions.ParameterDeclaration").properties({
                 "attributes": many(_.AttributeSpecifier), "this_keyword": S.OfBool, "specifiers": many(_.Specifier),
                 "declarator": _.Declarator, "default": _.Term}),
@@ -712,7 +721,7 @@ def _check(tag: str) -> Any:
 
 
 _OWN = {
-    USERDEFINEDLITERAL: _application(USERDEFINEDLITERAL, required=("literal", "suffix")),
+    USERDEFINEDLITERAL: _application(USERDEFINEDLITERAL, required=("suffix",)),
     IDEXPRESSION: F.Kind(F.REFERENCE, required=("name",), check=_check(IDEXPRESSION),
                          scopes=C.scopes(IDEXPRESSION), optional=C.OPTIONAL),
     THISEXPRESSION: F.Kind(F.REFERENCE, lexical=False),

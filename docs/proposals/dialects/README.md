@@ -344,8 +344,9 @@ The standard library's user-defined literals are the scope's to provide.
 one is a name, resolved by the scope.
 
 **C Preprocessor**: `definedexpression` (`defined(X)`) is (a): 1 or 0 by whether a macro is defined (6.10.1), the
-defined macros' names a scope. The other 10 (`includedirective` to `otherdirective`, `pragmaexpression` and
-`comment`) are (b): preprocessing directives are lines processed before translation, with no value (6.10), and
+defined macros' names a scope; so is `hasincludeexpression` (`__has_include(<h>)`, C23's and C++17's) *(agent)*: 1 or 0
+by whether a header is found (6.10.1, [cpp.cond]), the headers found a scope, as the defined macros' names are. The other
+10 (`includedirective` to `otherdirective`, `pragmaexpression` and `comment`) are (b): preprocessing directives are lines processed before translation, with no value (6.10), and
 `_Pragma("...")` is a `#pragma` directive written as an operator (6.10.9).
 
 **Cpp RegExp** (all 16): (b). A [re.grammar] pattern is the argument a `std::basic_regex` compiles; matching is a call

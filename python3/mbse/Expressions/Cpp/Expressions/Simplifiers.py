@@ -9,8 +9,9 @@ fold by its rules:
 - `T(x)` and `T{x}`, a functional cast to an arithmetic type, convert as a cast does (`T()` and `T{}` its zero), a
   braced one refusing a narrowing conversion, one that does not keep its value (`TypeError`); `static_cast<T>(x)` is a
   cast. `const_cast`, `dynamic_cast` and `reinterpret_cast`, and a cast to a class type, stay (class `d`).
-- `12_km` calls the literal operator `operator""_km` the scope provides, by that name, with its literal's value, the
-  standard library's (`1s`, `"a"s`) among them; one the scope does not provide stays.
+- `12_km` calls the literal operator `operator""_km` the scope provides, by that name, with its literal's value, or
+  with its adjacent strings joined (`"a" "b"_s`, `"ab"`), the standard library's (`1s`, `"a"s`) among them; one the
+  scope does not provide stays.
 - `a <=> b` compares two arithmetic values, after the usual arithmetic conversions (refusing one that narrows an
   integer's value, as C++ refuses a narrowing conversion there), into a value of `<compare>`'s comparison categories
   (`Ordering`): `std::strong_ordering` for integers, `std::partial_ordering` for floating values, unordered where one is
@@ -199,11 +200,22 @@ def _static(rules: Rules) -> F.Implementation:
 
 
 def _user_defined(arguments: list[F.Thunk], node: Any, scope: Any) -> Typed:
-    """A user-defined literal: its literal operator, the scope's, called with its literal's value."""
+    """A user-defined literal: its literal operator, the scope's, called with its literal's value, or with its adjacent
+    strings' joined, its arguments."""
     attributes = Terms.attributes_of(Terms.kind_of(node)[1])
     function = scope.function(f'operator""{attributes["suffix"]}')
-    return typed(function(attributes["literal"].attributes.get("value")), Domains.Types(node,
-                                                                                         Expressions.DIALECT.path))
+    literal = attributes.get("literal")
+    value = literal.attributes.get("value") if literal is not None else _joined(arguments)
+    return typed(function(value), Domains.Types(node, Expressions.DIALECT.path))
+
+
+def _joined(arguments: list[F.Thunk]) -> str:
+    """Adjacent strings, one string, as C joins them."""
+    parts = [argument() for argument in arguments]
+    for part in parts:
+        if type(part.value) is not str:
+            raise TypeError(f"invalid operand to a string concatenation: '{describe(part)}'")
+    return "".join(part.value for part in parts)
 
 
 # --- Packs ---

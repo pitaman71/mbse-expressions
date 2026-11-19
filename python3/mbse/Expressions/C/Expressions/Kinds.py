@@ -218,7 +218,8 @@ def problems(node: F.Node, types: Domains.Types, suffixes: Mapping[type, re.Patt
     """A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
     identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), its type
     read through `types`, a member's operator, invalid syntax in a sublanguage, an enumeration's enumerators within its
-    body, an asm label's keyword and label."""
+    body, an asm label's keyword and label; and C++'s: a user-defined literal's one literal or adjacent strings, a
+    structured binding's names, and `explicit`, an `ExplicitSpecifier`, not a `DeclSpecifier`."""
     kind, attributes = node.kind, node.attributes
     found = F.invalid_problems(kind, attributes) if kind in ("error", "missing") else []
     found += identifier_problems(attributes.get(_NAMES.get(kind, "")))
@@ -226,6 +227,12 @@ def problems(node: F.Node, types: Domains.Types, suffixes: Mapping[type, re.Patt
         found.append(f"a memberexpression's operator must be '.' or '->', got {attributes['operator']!r}")
     found += _constant_problems(attributes) if kind == CONSTANT else []
     found += _asm_problems(node) if kind == "asmlabel" else []
+    if kind == "userdefinedliteral" and ("literal" in node.helpers) == ("concatenation" in node.helpers):
+        found.append("a UserDefinedLiteral has a literal or a concatenation")
+    if kind == "structuredbindingdeclarator" and not node.helpers.get("bindings"):
+        found.append("a StructuredBindingDeclarator binds a name or more")
+    if kind == "declspecifier" and language == "C++" and attributes.get("keyword") == "explicit":
+        found.append("explicit is an ExplicitSpecifier, not a DeclSpecifier")
     if kind == "enumspecifier" and not attributes.get("body") and (node.many or attributes.get("trailing_comma")):
         found.append("an EnumSpecifier with enumerators has a body")
     found += _literal_problems(attributes, prefixes, suffixes, language, types) if kind == LITERAL else []
