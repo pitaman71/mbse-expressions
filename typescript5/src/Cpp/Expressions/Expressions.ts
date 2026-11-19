@@ -40,16 +40,17 @@
  * Types`, C++'s type-ids (`Expressions.Cpp.Types.Term`), which every type subterm is of (a cast's, a named cast's,
  * `new`'s, a conversion function's name's, a trailing return type, an enumeration's fixed type, a type parameter's
  * default), and C's `C Preprocessor`, the directives C and C++ share; `Term` lists their `typeid`, and
- * `definedexpression` and `pragmaexpression` (`_Pragma("...")`, which may stand within an expression) ("(b)"). `Expressions.Cpp.Expressions.Pattern` is its union for binding targets ("(ii)"): an init capture's name (`[n =
- * 1]`), an `identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a
+ * `definedexpression` and `pragmaexpression` (`_Pragma("...")`, which may stand within an expression) ("(b)").
+ * `Expressions.Cpp.Expressions.Pattern` is its union for binding targets ("(ii)"): an init capture's name (`[n = 1]`),
+ * an `identifier`, or invalid syntax, as the user decided (2026-11-04). As the user decided ("(b)"), one schema is a
  * branch of the union of every subterm it may be: `Term` lists `designatedinitializer`, as C's does, `Pattern` lists
  * `identifier`, `Name` lists `decltypespecifier`, `Specifier` the attribute specifiers, `TemplateParameter` a
  * `parameterdeclaration` and `Initializer` an `initializerlist`. A type-id's and a lambda's parts are its helpers, as a
  * lambda's declarator holds parameters with their specifiers and declarators (so they stay this dialect's, read by `Cpp
  * Types` through its `reads`), each union named after mbse-programs' category: `Name`, `Specifier`, `Declarator`,
  * `Parameter`, `TemplateParameter`, `Capture`, `Requirement`, `Designator`, `Initializer`, `ExceptionSpecification` and
- * `AttributeSpecifier`; and an asm label (`AsmLabel`), which an identifier's declarator holds. An enumeration's body is data, Cpp Types' terms: its `EnumSpecifier` holds its `enumerators` and
- * `trailing_comma`.
+ * `AttributeSpecifier`; and an asm label (`AsmLabel`), which an identifier's declarator holds. An enumeration's body is
+ * data, Cpp Types' terms: its `EnumSpecifier` holds its `enumerators` and `trailing_comma`.
  *
  * The statements and declarations a C++ term holds are mbse-programs' grammar, not this dialect's, and a property of the
  * term holds them, as the user decided: "For any dialect A if term T_A has a clause(s) that crosses over to another
@@ -667,7 +668,8 @@ export function define(txn: any): any {
 }
 
 /** Its own kinds, in its `Term`'s order: its `Term` lists Cpp Types' `typeid` after them, and C Preprocessor's
- * `definedexpression` and `pragmaexpression` after invalid syntax, each read as the dialect that declares it reads it. */
+ * `definedexpression` and `pragmaexpression` after invalid syntax, each read as the dialect that declares it reads
+ * it. */
 const TAGS: readonly string[] = [C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CONCATENATEDSTRING, IDEXPRESSION,
   THISEXPRESSION, C.PARENTHESIZEDEXPRESSION, LAMBDAEXPRESSION, FOLDEXPRESSION, REQUIRESEXPRESSION,
     C.SUBSCRIPTEXPRESSION,

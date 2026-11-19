@@ -454,7 +454,8 @@ export function define(txn: any): any {
 }
 
 /** Its own kinds, in its `Term`'s order: its `Term` lists C Types' `typeid` after them, and C Preprocessor's
- * `definedexpression` and `pragmaexpression` after invalid syntax, each read as the dialect that declares it reads it. */
+ * `definedexpression` and `pragmaexpression` after invalid syntax, each read as the dialect that declares it reads
+ * it. */
 const C_TAGS: readonly string[] = [LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE, PARENTHESIZEDEXPRESSION,
   GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION, MEMBEREXPRESSION, POSTFIXEXPRESSION, UNARYEXPRESSION,
   SIZEOFEXPRESSION, ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION, ASSIGNMENTEXPRESSION,

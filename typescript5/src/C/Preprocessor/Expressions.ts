@@ -124,9 +124,10 @@ F.boundaries("Expressions.C.Preprocessor.Group");
  * its dialect's schema, whose singleton is `Expressions.C.Preprocessor`: run after `Framework.install`, in a transaction
  * of its own, before or after its family's other installs; run again, it writes nothing. `definedexpression` and
  * `pragmaexpression` are added to C's and C++'s `Term`s, a condition's terms and an expression's, and the directives,
- * `pragmaexpression` and `comment` to C Types' and Cpp Types' `Term`s, whose enumerations' bodies hold them; each created where its install has not run, as C's `Identifier`, a macro's name, is.
- * Its holder, `Expressions.C.Preprocessor.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed
- * to its `Term`.
+ * `pragmaexpression` and `comment` to C Types' and Cpp Types' `Term`s, whose enumerations' bodies hold them; each
+ * created where its install has not run, as C's `Identifier`, a macro's name, is. Its holder,
+ * `Expressions.C.Preprocessor.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
+ * `Term`.
  */
 export function install(txn: any): any {
   const S = txn.Schemas;

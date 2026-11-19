@@ -217,7 +217,9 @@ function asmProblems(node: F.Node): string[] {
   const found: string[] = [];
   const keyword = node.attributes.get("keyword");
   const label = node.subterms.get("label");
-  if (keyword !== undefined && !ASM_KEYWORDS.includes(keyword)) found.push(`AsmLabel.keyword cannot be ${repr(keyword)}`);
+  if (keyword !== undefined && !ASM_KEYWORDS.includes(keyword)) {
+    found.push(`AsmLabel.keyword cannot be ${repr(keyword)}`);
+  }
   if (label !== null && !(F.kindOf(label)[0] === CONCATENATEDSTRING || stringLiteral(label))) {
     found.push("an AsmLabel's label is a string literal");
   }

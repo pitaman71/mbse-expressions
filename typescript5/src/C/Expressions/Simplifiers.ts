@@ -73,10 +73,11 @@
  * `FOLDED` names the kinds its rules fold, every kind of class (a) in the evaluation inventory (mbse-expressions' [the
  * evaluation inventory](mbse:mbse-expressions/docs/proposals/dialects/README.md#c-and-c), C and C++). What stays,
  * named, with its class (`CATEGORIES`): writes, statements, the object model (`*`, `&`, GNU's `&&label`, a cast to a
- * type that is not arithmetic, a call of a callee that is not a function's name), class `d`; an initializer list alone, class `b`; an
- * operand whose type its declaration gives (`sizeof(x.a)`), class `c`; a layout no ABI dialect stores (a bit-precise
- * integer's, `nullptr_t`'s), class `a`; a term of `C Types` or `C Preprocessor`, by the dialect that owns it; and invalid syntax ("C error is not simplified"), where a cast's
- * type stands too. A name the scope does not bind, or a function it does not provide, stays.
+ * type that is not arithmetic, a call of a callee that is not a function's name), class `d`; an initializer list alone,
+ * class `b`; an operand whose type its declaration gives (`sizeof(x.a)`), class `c`; a layout no ABI dialect stores (a
+ * bit-precise integer's, `nullptr_t`'s), class `a`; a term of `C Types` or `C Preprocessor`, by the dialect that owns
+ * it; and invalid syntax ("C error is not simplified"), where a cast's type stands too. A name the scope does not bind,
+ * or a function it does not provide, stays.
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

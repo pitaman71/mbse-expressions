@@ -10,16 +10,18 @@
  * encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
  * (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal
  * as `INFINITY` or `NAN`. An identifier's asm label, GNU's, is written after the whole declarator that holds it, where
- * C and C++ write it (`f(void) asm("f2")`). What a term holds of mbse-programs' grammar, which the family does not read,
- * is written by its `Printer`'s methods, which mbse-programs' printer overrides to write it: a lambda's or a statement expression's
- * compound statement, its `block`, by `statements`, `{}`; a struct's, a union's or a class's member declarations, its
- * `members`, by `members`, `{}`, where its `body` says one is written; and a conditional directive's group, its
+ * C and C++ write it (`f(void) asm("f2")`). What a term holds of mbse-programs' grammar, which the family does not
+ * read, is written by its `Printer`'s methods, which mbse-programs' printer overrides to write it: a lambda's or a
+ * statement expression's compound statement, its `block`, by `statements`, `{}`; a struct's, a union's or a class's
+ * member declarations, its `members`, by `members`, `{}`, where its `body` says one is written; and a conditional
+ * directive's group, its
  * `group`, by `group`, nothing, so that the directive is written with its items alone. An enumeration's body, its
  * data, is written as mbse-programs writes it, its enumerators, directives, pragmas (`_Pragma("...")`) and comments
  * each on lines of its own, one level deeper, an enumerator followed by a comma but the last, unless it has a trailing
- * comma, and a trailing comment ending the line before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`,
- * `#elif`, `#elifdef`, `#else`) on a line of its own, its items and its group on the lines between, and `#endif`. Invalid syntax is
- * written as written (`Terms.invalidText`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`).
+ * comma, and a trailing comment ending the line before it. A directive starts its line, a conditional one each of its
+ * branches (`#if`, `#ifdef`, `#elif`, `#elifdef`, `#else`) on a line of its own, its items and its group on the lines
+ * between, and `#endif`. Invalid syntax is written as written (`Terms.invalidText`), refused by the name of the dialect
+ * that owns it (`Terms.Dialect.owner`).
  * Reading C (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'").
  */
 
