@@ -872,8 +872,8 @@ expression only as `idexpression`" and "C++'s init capture holds its name as a `
     bytes has none).
 95. **Standards as data**: `STANDARDS` names C11, C17 and C23, and C++17, C++20 and C++23; each kind's `standards` names
     those that have it (C's `constant` C23's alone; C++'s `requiresexpression`, `awaitexpression`,
-    `yieldexpression` and `designatedinitializer` C++20's and C++23's; GNU's `statementexpression` and
-    `extensionexpression`, `EXTENSIONS`, none). A feature within a kind or a helper (C23's `typeof`, `alignof` beside
+    `yieldexpression` and `designatedinitializer` C++20's and C++23's; GNU's `statementexpression`,
+    `extensionexpression` and `labeladdressexpression`, `EXTENSIONS`, none). A feature within a kind or a helper (C23's `typeof`, `alignof` beside
     `_Alignof`, C++20's lambda template parameters, C++23's `a[i, j]`) is not recorded: whether a term is in a
     standard is a constraint, to come. C++26 (pack indexing, reflection, splices, contracts) is outside `Cpp`.
 96. **Evaluation keeps what C evaluated** (Decided, 8): `Evaluators.EVALUATED` names the kinds that replaced C's
@@ -1703,11 +1703,12 @@ install lists.
      argument 1; invalid syntax where the type stands is refused by its owner's name.
 257. **Completeness** *(agent)*: `grammars/c-tree-sitter.json` and `grammars/cpp-tree-sitter.json` are rewritten in
      DIA-29's form, each entry's kinds qualified by its dialect's tag; DIA-26 is rewritten in DIA-29's style, checking
-     each dialect's kinds exactly (its helpers not).
-258. **Where its terms are subterms** *(agent)*: C Preprocessor's install adds `definedexpression` to C's and C++'s `Term`, and its
-     directives and `comment` to C Types' and Cpp Types' `Term`s; C's and C++'s `Term`s list `typeid` (their Types')
-     and `definedexpression` (the preprocessor's) beside their own kinds.
-259. **The corpus**: `c_types`, `cpp_types` and `c_preprocessor`, each of every kind; `standards` regenerated (C23 lists
+     each dialect's kinds exactly (its helpers not), but those no node type is, which each file lists (item 416).
+258. **Where its terms are subterms** *(agent)*: C Preprocessor's install adds `definedexpression` and `pragmaexpression`
+     to C's and C++'s `Term`, and its directives, `pragmaexpression` and `comment` to C Types' and Cpp Types' `Term`s;
+     C's and C++'s `Term`s list `typeid` (their Types') and `definedexpression` and `pragmaexpression` (the
+     preprocessor's) beside their own kinds (item 415).
+259. **The corpus**: `c_types`, `cpp_types` and `c_preprocessor`, each of every kind, but `pragmaexpression` (item 417); `standards` regenerated (C23 lists
      20 kinds).
 260. **Tests**: suites CTY (22), XTY (23) and CPD (24), nine cases each; FRM-01, FRM-02, FRM-11, FRM-13, DIA-24 (its
      title), DIA-26 (rewritten), CONF-04 under their IDs.
@@ -2841,6 +2842,48 @@ the inventory's partition's order.
      option `math`: `stay` keeps a result the host's math library decides in the residual, named; what IEEE 754 makes
      exact folds") and SVS-18 ("The scope's option `byteorder`: `big` writes `%u`'s and `%z`'s words most significant
      byte first") assert the new options, a binding keeping an option, and each refusal.
+
+## Settled in closing the C family's gaps, for the user's review
+
+The user's rule: "if there are any gaps in the dialect as modeled in `mbse-expressions.Dialects.<lang_ver>`, they
+should be added into `mbse-expressions`. There is no reason for an expression dialect to exist that is a subset of the
+corresponding node of AST in the real language." mbse-programs' C parser found three (`mbse:mbse-programs/python3/mbse/
+Programs/C/Parse.py`, its departure 34): GNU's labels as values, an asm label on a declarator, and `_Pragma`.
+
+413. **Labels as values** (GNU): `labeladdressexpression`, `&&label`, a kind of C's and C++'s
+     (`Expressions.C.Expressions.LabelAddressExpression`, `Expressions.Cpp.Expressions.LabelAddressExpression`), its
+     `label` its language's `Identifier`: a label's name, not a variable, as labels are names of their own (ISO/IEC
+     9899, 6.2.3), which no scope binds, so validation requires none bound. An extension, in `EXTENSIONS`, and so in no
+     edition. Printed at a unary operator's precedence (`&&done`, `& &&done`); its value is an address, the object
+     model's, so simplification leaves it in the residual, named, class (d).
+414. **Asm labels** (GNU) *(agent)*: an identifier's declarator holds `asm`, an `AsmLabel` (C Types'
+     `Expressions.C.Types.AsmLabel`, among its `HELPERS`; C++'s `Expressions.Cpp.Expressions.AsmLabel`): its `keyword`
+     as written (`asm`, `__asm__` or `__asm`, `ASM_KEYWORDS`; written `asm` where it has none) and its `label`, a string
+     literal, or several, adjacent, a C or a C++ term. The identifier's declarator holds it, not the outermost
+     declarator, as the assembler name is the declared entity's, and so an abstract declarator, a type name's, holds
+     none; GCC writes it after the whole declarator (`int f(void) asm("f2")`), and the printer writes it there
+     (`Printer.declarator`, the declarators within written by `nested`). Its checks: "AsmLabel.keyword cannot be '_asm'",
+     and "an AsmLabel's label is a string literal". No edition records a helper: it is GNU's, as `GnuAttributeSpecifier`
+     is, which its documentation says.
+415. **The pragma operator** *(agent)*: `pragmaexpression`, `_Pragma(operand)` (ISO/IEC 9899, 6.10.9, since C99;
+     ISO/IEC 14882, [cpp.pragma.op], since C++11), is C Preprocessor's kind, not C's and C++'s: the standards specify
+     it among the preprocessing directives, translation phase 4 runs it as the `#pragma` its operand spells, and no
+     expression's parser sees it, as no parser sees `defined`. Its `operand` is an `Expressions.Framework.Term`, a
+     string literal, C's or C++'s, and one ("a PragmaExpression's operand is a string literal"), as phase 4 runs before
+     adjacent strings are joined. Its install adds it to C's and C++'s `Term`s, where it stands within an expression,
+     and to C Types' and Cpp Types' `Term`s, among an enumeration's items, printed on a line of its own; between
+     statements and declarations, mbse-programs holds it as it holds a directive there. Every edition the dialect covers
+     has it (C11 to C23, C++17 to C++23). Simplification leaves it named, class (b), as the directives.
+416. **Completeness**: `gnu_asm_expression` maps to `Types.AsmLabel` and `Expressions.AsmLabel`, the node tree-sitter
+     writes after a declarator; inline assembly's other nodes stay listed as not expressions. tree-sitter reads neither
+     `&&label` (`&(&label)`) nor `_Pragma` (a call) as a node of its own: each grammar file's `unwritten` lists those
+     kinds, each with its reason, and DIA-26 accepts each of a dialect's kinds as mapped or unwritten.
+417. **The corpus** is unchanged: its `c` and `cpp` cases hold neither new kind nor `AsmLabel`, and `c_preprocessor` no
+     `pragmaexpression`; FRM-02's samples, DIA-24 and suite CPD hold them.
+418. **Tests**: a cell of DIA-24 (the kinds, the helper, their checks, what they bind, simplification, round trips),
+     DIA-25 (printing), DIA-26 (the mappings), CPD-01 to CPD-03, CPD-05, CPD-07 to CPD-09 (`_Pragma`), CTY-01, CTY-02 and
+     XTY-01 (the Types' `Term`s and `HELPERS`), FRM-01, FRM-02, FRM-12 and FRM-13 (unions, samples, printing, editions),
+     the same in both languages; no case is added.
 
 ## What stage 2b needed (done)
 

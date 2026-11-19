@@ -297,6 +297,7 @@ declarations; an evaluator of values bound by name has no object to point at, so
 | a cast to `void` | (a) | its operand evaluated, no value |
 | GNU's `x ?: y` | (a) | `x` evaluated once, and `y` when it is zero |
 | `unaryexpression`'s `*`, `&` | (d) | the object model: an object's address, and the object at one |
+| `labeladdressexpression` (GNU `&&label`) | (d) | the object model: a label's address, which `goto *p` jumps to |
 | a cast to a pointer type | (d) | the object model |
 | a cast to a type a declaration names (a `typedef`, a structure, union or enumeration tag) | (d) | that declaration, mbse-programs' |
 | a call of a callee that is not a function's name (`(*fp)(x)`) | (d) | a function pointer: the object model |
@@ -323,6 +324,7 @@ declarations; an evaluator of values bound by name has no object to point at, so
 | `assignmentexpression`, `postfixexpression` | (d)† | question 1 |
 | `namedcastexpression`'s `const_cast`, `dynamic_cast`, `reinterpret_cast` | (d) | pointers and references, a polymorphic class, a bit pattern in an object: the object model |
 | `binaryexpression`'s `,`, `unaryexpression`'s `*`, `&`, `++`, `--`, and C's other refusals within evaluated kinds | as C's | as C's, counted there |
+| `labeladdressexpression` (GNU `&&label`) | (d) | as C's |
 | `binaryexpression`'s `<=>` | (a) | `std::strong_ordering`, `std::weak_ordering` and `std::partial_ordering` values ([cmp.categories]), compared with `0` |
 | an `idexpression` of a qualified name (`ns::x`) | (a) | the name resolved by the scope, as Python3's scope resolves a module's names |
 | `binaryexpression`'s `.*`, `->*` | (d) | pointers to members: the object model and class declarations |
@@ -342,8 +344,9 @@ The standard library's user-defined literals are the scope's to provide.
 one is a name, resolved by the scope.
 
 **C Preprocessor**: `definedexpression` (`defined(X)`) is (a): 1 or 0 by whether a macro is defined (6.10.1), the
-defined macros' names a scope. The other 9 (`includedirective` to `otherdirective`, and `comment`) are (b):
-preprocessing directives are lines processed before translation, with no value (6.10).
+defined macros' names a scope. The other 10 (`includedirective` to `otherdirective`, `pragmaexpression` and
+`comment`) are (b): preprocessing directives are lines processed before translation, with no value (6.10), and
+`_Pragma("...")` is a `#pragma` directive written as an operator (6.10.9).
 
 **Cpp RegExp** (all 16): (b). A [re.grammar] pattern is the argument a `std::basic_regex` compiles; matching is a call
 of `std::regex_match` and its kin, a library's.
