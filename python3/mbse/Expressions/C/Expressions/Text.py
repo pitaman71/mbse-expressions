@@ -107,6 +107,21 @@ def _named(declarator: F.Node | None) -> F.Node | None:
     return declarator
 
 
+def _trailing_gnu(declarator: F.Node) -> tuple[F.Node, ...]:
+    """The GNU attributes that end a declarator, which GCC writes after an asm label: the last of the attributes of the
+    declarator written last, within its pointers, references and packs (an identifier's, an array's, a function's
+    without a trailing return type), that are GNU's; none where it ends with a parenthesis or a type."""
+    while declarator.kind in ("pointerdeclarator", "referencedeclarator", "packdeclarator"):
+        declarator = declarator.helpers["declarator"]
+    if declarator.kind == "parenthesizeddeclarator" or declarator.subterms.get("trailing_return") is not None:
+        return ()
+    attributes = _nodes(declarator.helpers.get("attributes"))
+    count = 0
+    while count < len(attributes) and attributes[-1 - count].kind == "gnuattributespecifier":
+        count += 1
+    return attributes[len(attributes) - count:]
+
+
 def _abstract(declarator: F.Node | None) -> bool:
     """Whether a declarator declares no name."""
     return _named(declarator) is None
@@ -561,10 +576,15 @@ class Printer:
     # Declarators
 
     def declarator(self, node: F.Node | None) -> str:
-        """A declarator, and after it, where C writes it, the asm label its identifier holds, GNU's."""
+        """A declarator, and after it, where GCC writes it, the asm label its identifier holds, GNU's: before the GNU
+        attributes that end the declarator (`int *p asm("p") __attribute__((unused))`)."""
         named = _named(node)
         label = named.helpers.get("asm") if named is not None else None
-        return self.nested(node) + (" " + self.text(label) if label is not None else "")
+        written = self.nested(node)
+        if label is None:
+            return written
+        tail = "".join(" " + self.text(a) for a in _trailing_gnu(node))  # type: ignore[arg-type]
+        return written[:len(written) - len(tail)] + " " + self.text(label) + tail
 
     def nested(self, node: F.Node | None) -> str:
         """A declarator, its declarators within it nested."""

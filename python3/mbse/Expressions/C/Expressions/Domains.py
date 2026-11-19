@@ -60,16 +60,17 @@ from __future__ import annotations
 
 import functools
 from collections.abc import Callable, Sequence
+from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 from mbse.Expressions.Patterns.Expressions import Ieee754
 from mbse.Expressions.Framework import Domains as D, Objects, Terms
 from mbse.Expressions.Framework.Domains import Anything
 from mbse.Schemas.Framework import Proxies
 
-__all__ = ["CType", "Types", "NAMES", "String", "Anything", "bit_precise", "layout", "promoted", "common", "of",
-           "literal", "literal_suffix", "out_of_range", "arithmetic", "KEYWORDS", "QUALIFIERS", "NULLPTR", "BINARY", "BINARY_CPP",
+__all__ = ["CType", "Types", "Reading", "Deferred", "NAMES", "String", "Anything", "bit_precise", "layout", "promoted",
+           "common", "of", "literal", "literal_suffix", "out_of_range", "arithmetic", "KEYWORDS", "QUALIFIERS", "NULLPTR", "BINARY", "BINARY_CPP",
            "UNARY", "POSTFIX",
            "ASSIGNMENT", "FOLD", "CASTS", "MEMBER", "SUBSCRIPT", "CALL", "CONDITIONAL", "CAST", "SIZE"]
 
@@ -127,22 +128,62 @@ NAMES = ("bool", "char", "signed char", "unsigned char", "short", "unsigned shor
 types define equal to it, else by its own."""
 
 
+_T = TypeVar("_T")
+
+
+class Deferred(ValueError):
+    """A type read where no ABI is, within a `Reading` that gives none: the check that reads it waits for an ABI, and
+    the reading lists it (`Reading.deferred`)."""
+
+
+class Reading:
+    """How C's and C++'s terms read the types their standards leave to the implementation, within `run(read)`: each
+    `Types` built within it reads them under `abi`, the ABI the caller applies, in place of any the holder names; with
+    none (`Reading(None)`), under the ABI the holder names, and where it names none, a check that needs one is deferred,
+    not a problem. `abi` is an ABI dialect's singleton, read within the transaction open (`Expressions.SystemV.AMD64`,
+    `store.Instances.Expressions.SystemV.AMD64`, or `Expressions.Arm.AAPCS64`). A deferred check is listed in `deferred`
+    by the type it reads, each once, in the order read ("'int' is not a type C defines, and no ABI is applied"):
+    validation leaves it out of its problems, and inference and simplification, which need the type, raise it as
+    `Deferred`, a ValueError. Nothing is written: a term's holder keeps whatever ABI it names."""
+
+    def __init__(self, abi: Any):
+        self.abi = abi
+        self.deferred: list[str] = []
+
+    def run(self, read: Callable[[], _T]) -> _T:
+        """`read()`, its terms read under this reading; a reading within it reads its own terms under its own."""
+        token = _READING.set(self)
+        try:
+            return read()
+        finally:
+            _READING.reset(token)
+
+
+_READING: ContextVar[Reading | None] = ContextVar("Reading", default=None)
+"""The reading `Reading.run` runs within, if any."""
+
+
 class Types:
     """The types a term of C or C++ reads, by name: among the domains its dialect (`path`, `C.Expressions` or
-    `Cpp.Expressions`) stores, then among those of the ABI its holder names, in the store of the holder of `value` (a
-    term, or anything within one), read when first needed, each once."""
+    `Cpp.Expressions`) stores, then among those of the ABI its holder names, or of the ABI the `Reading` it is built
+    within applies, in the store of the holder of `value` (a term, or anything within one), read when first needed,
+    each once."""
 
     def __init__(self, value: Any, path: str = "C.Expressions"):
         self._value, self._path, self._name = value, path, Terms.dialect_name(path)
+        self._reading = _READING.get()
         self._read: dict[str, CType | None] = {}
         self._domains: tuple[dict[str, Any], dict[str, Any], str | None] | None = None
 
     def _stored(self) -> tuple[dict[str, Any], dict[str, Any], str | None]:
-        """Its dialect's domains, its holder's ABI's, and the ABI's name (None where the holder names none)."""
+        """Its dialect's domains, its ABI's, and the ABI's name (None where neither its reading nor its holder names
+        one)."""
         if self._domains is None:
             holder = Terms.holder_of(self._value)
             dialect = functools.reduce(getattr, self._path.split("."), Proxies.store_of(holder).Instances.Expressions)
             abis = [entry.targets["abi"] for entry in Objects.entries(holder, "abi")]
+            if self._reading is not None and self._reading.abi is not None:
+                abis = [self._reading.abi]
             abi = abis[0] if abis else None
             name = None if abi is None else Terms.dialect_name(abi.as_schema()
                 .name[len("Expressions."):-len(".Dialect")])
@@ -176,10 +217,15 @@ class Types:
 
     def find(self, name: str) -> CType | None:
         """The arithmetic type defined by `name`, or None where neither dialect defines one; raises ValueError where its
-        dialect does not and its holder names no ABI."""
+        dialect does not and no ABI is named, `Deferred` within a `Reading`, which lists it."""
         own, _, abi = self._stored()
         if name not in own and abi is None:
-            raise ValueError(f"{name!r} is not a type {self._name} defines, and its expression names no ABI")
+            if self._reading is None:
+                raise ValueError(f"{name!r} is not a type {self._name} defines, and its expression names no ABI")
+            deferred = f"{name!r} is not a type {self._name} defines, and no ABI is applied"
+            if deferred not in self._reading.deferred:
+                self._reading.deferred.append(deferred)
+            raise Deferred(deferred)
         return self._lookup(name)
 
     def named(self, name: str) -> CType:

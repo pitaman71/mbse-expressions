@@ -116,6 +116,24 @@ function named(declarator: F.Node | undefined): F.Node | undefined {
   return declarator;
 }
 
+/** The GNU attributes that end a declarator, which GCC writes after an asm label: the last of the attributes of the
+ * declarator written last, within its pointers, references and packs (an identifier's, an array's, a function's
+ * without a trailing return type), that are GNU's; none where it ends with a parenthesis or a type. */
+function trailingGnu(declarator: F.Node): readonly F.Node[] {
+  while (["pointerdeclarator", "referencedeclarator", "packdeclarator"].includes(declarator.kind)) {
+    declarator = one(declarator.helpers.get("declarator")) as F.Node;
+  }
+  if (declarator.kind === "parenthesizeddeclarator" || (declarator.subterms.get("trailing_return") ?? null) !== null) {
+    return [];
+  }
+  const attributes = nodes(declarator.helpers.get("attributes"));
+  let count = 0;
+  while (count < attributes.length && attributes[attributes.length - 1 - count]!.kind === "gnuattributespecifier") {
+    count++;
+  }
+  return attributes.slice(attributes.length - count);
+}
+
 /** Whether a declarator declares no name. */
 function abstract(declarator: F.Node | undefined): boolean {
   return named(declarator) === undefined;
@@ -605,10 +623,14 @@ export class Printer {
 
   // Declarators
 
-  /** A declarator, and after it, where C writes it, the asm label its identifier holds, GNU's. */
+  /** A declarator, and after it, where GCC writes it, the asm label its identifier holds, GNU's: before the GNU
+   * attributes that end the declarator (`int *p asm("p") __attribute__((unused))`). */
   declarator(node: F.Node | undefined): string {
     const label = one(named(node)?.helpers.get("asm"));
-    return this.nested(node) + (label !== undefined ? " " + this.text(label) : "");
+    const written = this.nested(node);
+    if (label === undefined) return written;
+    const tail = trailingGnu(node as F.Node).map((a) => " " + this.text(a)).join("");
+    return written.slice(0, written.length - tail.length) + " " + this.text(label) + tail;
   }
 
   /** A declarator, its declarators within it nested. */

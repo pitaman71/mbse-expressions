@@ -159,7 +159,7 @@ def _literal_problems(attributes: Mapping[str, Any], prefixes: tuple[str, ...],
                       suffixes: Mapping[type, re.Pattern[str]], language: str, types: Domains.Types) -> list[str]:
     """A literal's encoded properties: its prefix, its quote, its base and its suffix, each one its dialect writes, and
     its value, one of its type (`Domains.out_of_range`), read through `types`; a type neither its dialect nor its
-    holder's ABI defines is reported by name."""
+    holder's ABI defines is reported by name, but within a `Domains.Reading`, where the check waits for an ABI."""
     problems = []
     prefix, quote, base, suffix = (attributes.get(name) for name in ("prefix", "quote", "base", "suffix"))
     if prefix is not None and prefix not in prefixes:
@@ -174,6 +174,8 @@ def _literal_problems(attributes: Mapping[str, Any], prefixes: tuple[str, ...],
             problems.append(f"a literal's suffix cannot be {suffix!r}")
     try:
         out = Domains.out_of_range(attributes, language, types)
+    except Domains.Deferred:  # its type is the ABI's, and none is applied: the reading lists it
+        out = None
     except ValueError as error:  # its type is not defined in its holder's store
         out = str(error)
     return problems + ([out] if out is not None else [])
