@@ -11,8 +11,9 @@
  * - `T(x)` and `T{x}`, a functional cast to an arithmetic type, convert as a cast does (`T()` and `T{}` its zero), a
  *   braced one refusing a narrowing conversion, one that does not keep its value (`TypeError`); `static_cast<T>(x)` is
  *   a cast. `const_cast`, `dynamic_cast` and `reinterpret_cast`, and a cast to a class type, stay (class `d`).
- * - `12_km` calls the literal operator `operator""_km` the scope provides, by that name, with its literal's value, the
- *   standard library's (`1s`, `"a"s`) among them; one the scope does not provide stays.
+ * - `12_km` calls the literal operator `operator""_km` the scope provides, by that name, with its literal's value, or
+ *   with its adjacent strings joined (`"a" "b"_s`, `"ab"`), the standard library's (`1s`, `"a"s`) among them; one the
+ *   scope does not provide stays.
  * - `a <=> b` compares two arithmetic values, after the usual arithmetic conversions (refusing one that narrows an
  *   integer's value, as C++ refuses a narrowing conversion there), into a value of `<compare>`'s comparison categories
  *   (`Ordering`): `std::strong_ordering` for integers, `std::partial_ordering` for floating values, unordered where one
@@ -193,12 +194,26 @@ function staticCast(rules: Rules): F.Implementation {
   };
 }
 
-/** A user-defined literal: its literal operator, the scope's, called with its literal's value. */
-const userDefined: F.Implementation = (_args, node, scope) => {
+/** A user-defined literal: its literal operator, the scope's, called with its literal's value, or with its adjacent
+ * strings' joined, its arguments. */
+const userDefined: F.Implementation = (args, node, scope) => {
   const held = Terms.attributesOf(Terms.kindOf(node)[1]);
   const fn = (scope as Scope).function(`operator""${held.get("suffix")}`);
-  return typed(fn((held.get("literal") as Terms.Part).attributes.get("value")), typesOf(node));
+  const literal = held.get("literal") as Terms.Part | undefined;
+  const value = literal !== undefined ? literal.attributes.get("value") : joined(args);
+  return typed(fn(value), typesOf(node));
 };
+
+/** Adjacent strings, one string, as C joins them. */
+function joined(args: F.Thunk[]): string {
+  const parts = args.map((argument) => argument() as Typed);
+  for (const part of parts) {
+    if (typeof part.value !== "string") {
+      throw new TypeError(`invalid operand to a string concatenation: '${describe(part)}'`);
+    }
+  }
+  return parts.map((part) => part.value).join("");
+}
 
 // --- Packs ---
 

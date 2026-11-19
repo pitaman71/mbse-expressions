@@ -231,7 +231,8 @@ function asmProblems(node: F.Node): string[] {
 /** A node's checks, and its helpers' in turn, which the framework's validation does not read within a helper: an
  * identifier's spelling, a literal's encoded properties and its value's range, in `language` (`C` or `C++`), its type
  * read through `types`, a member's operator, invalid syntax in a sublanguage, an enumeration's enumerators within its
- * body, an asm label's keyword and label. */
+ * body, an asm label's keyword and label; and C++'s: a user-defined literal's one literal or adjacent strings, a
+ * structured binding's names, and `explicit`, an `ExplicitSpecifier`, not a `DeclSpecifier`. */
 export function problems(node: F.Node, types: Domains.Types, suffixes: Suffixes = SUFFIXES,
   prefixes: readonly string[] = PREFIXES, language = "C"): string[] {
   const { kind, attributes } = node;
@@ -243,6 +244,15 @@ export function problems(node: F.Node, types: Domains.Types, suffixes: Suffixes 
   }
   if (kind === CONSTANT) found.push(...constantProblems(attributes));
   if (kind === "asmlabel") found.push(...asmProblems(node));
+  if (kind === "userdefinedliteral" && node.helpers.has("literal") === node.helpers.has("concatenation")) {
+    found.push("a UserDefinedLiteral has a literal or a concatenation");
+  }
+  if (kind === "structuredbindingdeclarator" && nodes(node.helpers.get("bindings")).length === 0) {
+    found.push("a StructuredBindingDeclarator binds a name or more");
+  }
+  if (kind === "declspecifier" && language === "C++" && attributes.get("keyword") === "explicit") {
+    found.push("explicit is an ExplicitSpecifier, not a DeclSpecifier");
+  }
   if (kind === "enumspecifier" && attributes.get("body") !== true && (node.many.length > 0
     || attributes.get("trailing_comma") === true)) {
     found.push("an EnumSpecifier with enumerators has a body");

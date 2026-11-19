@@ -1,8 +1,8 @@
 /**
  * Expressions of the C Preprocessor dialect: the preprocessing directives C and C++ share, each standard defining its own
- * (ISO/IEC 9899, 6.10; ISO/IEC 14882, [cpp]), `defined(name)` within their conditions, and the comments kept among them,
- * as mbse-programs has them, one set of directives for both languages (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/
- * Syntax.py`, "Preprocessing directives [cpp]").
+ * (ISO/IEC 9899, 6.10; ISO/IEC 14882, [cpp]), `defined(name)` and `__has_include(header)` within their conditions,
+ * and the comments kept among them, as mbse-programs has them, one set of directives for both languages
+ * (`mbse:mbse-programs/python3/mbse/Programs/Ccpp/Syntax.py`, "Preprocessing directives [cpp]").
  *
  * It is the C family's dialect that both C and C++ read (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Macros, and a preprocessor per family": "the
  * preprocessor is a dialect per family (C's, shared by C and C++ as each standard defines it ...)"), named `C
@@ -21,6 +21,10 @@
  *   `#warning`, `#line`, `#embed`, and the null directive).
  * - `definedexpression`, `defined(name)`, mbse-programs' expression kind of a condition: its install adds it to C's and
  *   C++'s `Term`s, a condition's terms.
+ * - `hasincludeexpression`, `__has_include(<path>)` where `system`, `__has_include("path")`, or
+ *   `__has_include(macro)`, its header as an include directive holds it (ISO/IEC 9899, 6.10.1 in C23; ISO/IEC 14882,
+ *   [cpp.cond], C++17's): 1 or 0 by whether the header is found, a condition's term, which its install adds to C's and
+ *   C++'s `Term`s, as `defined`'s.
  * - `pragmaexpression`, `_Pragma(operand)`, the pragma operator (ISO/IEC 9899, 6.10.9 in C11, C99's; ISO/IEC 14882,
  *   [cpp.pragma.op], C++11's), its `operand` a string literal, a C or a C++ term: a `#pragma` directive written as a
  *   unary operator, which translation phase 4 runs as the directive its operand's text spells, so that a macro can
@@ -58,10 +62,11 @@
  *
  * The editions it covers are data, which `define` writes: C's and C++'s (C11, C17, C23, C++17, C++20 and C++23), each
  * with its own kinds it has, every kind in every edition but `elifdefdirective`, C23's and C++23's (`SINCE`: mbse-
- * programs' `both(2023, 2023)`); a directive's name within `otherdirective` (`#warning`, `#embed`) is a feature, not
- * recorded. `DIALECT` reads its kinds and the terms of C's and C++'s expressions and types, which its conditions and items
- * hold. Simplification leaves each of its kinds in the residual, named. Its terms are written through the builders (mbse-basis [PRI-019:
- * fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
+ * programs' `both(2023, 2023)`), and `hasincludeexpression`, C23's and C++17's; a directive's name within
+ * `otherdirective` (`#warning`, `#embed`) is a feature, not recorded. `DIALECT` reads its kinds and the terms of C's
+ * and C++'s expressions and types, which its conditions and items hold. Simplification leaves each of its kinds in the
+ * residual, named. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
+ * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
  * `(t) => t.ifdefdirective((d) => d.name((i) => i.spelling("NDEBUG")))`.
  */
 
@@ -87,6 +92,7 @@ export const ELIFDEFDIRECTIVE = "elifdefdirective";
 export const ELSEDIRECTIVE = "elsedirective";
 export const OTHERDIRECTIVE = "otherdirective";
 export const DEFINEDEXPRESSION = "definedexpression";
+export const HASINCLUDEEXPRESSION = "hasincludeexpression";
 export const PRAGMAEXPRESSION = "pragmaexpression";
 export const COMMENT = "comment";
 
@@ -96,7 +102,8 @@ export const DIRECTIVES: readonly string[] = [INCLUDEDIRECTIVE, DEFINEDIRECTIVE,
   ELIFDIRECTIVE, ELIFDEFDIRECTIVE, ELSEDIRECTIVE, OTHERDIRECTIVE];
 
 /** Its own kinds, in its `Term`'s order, before invalid syntax. */
-export const TAGS: readonly string[] = [...DIRECTIVES, DEFINEDEXPRESSION, PRAGMAEXPRESSION, COMMENT];
+export const TAGS: readonly string[] = [...DIRECTIVES, DEFINEDEXPRESSION, HASINCLUDEEXPRESSION, PRAGMAEXPRESSION,
+  COMMENT];
 
 /** Its own helpers, the value object schemas its kinds hold that are no kind: none. */
 export const HELPERS: readonly string[] = [];
@@ -106,7 +113,8 @@ export const EDITIONS: readonly string[] = ["C11", "C17", "C23", "C++17", "C++20
 
 /** The editions each of its kinds arrived in, the first of each language's (C's, then C++'s), from mbse-programs'
  * `SINCE`; a kind not listed is in every edition. */
-export const SINCE: ReadonlyMap<string, readonly [string, string]> = new Map([[ELIFDEFDIRECTIVE, ["C23", "C++23"]]]);
+export const SINCE: ReadonlyMap<string, readonly [string, string]> = new Map([[ELIFDEFDIRECTIVE, ["C23", "C++23"]],
+  [HASINCLUDEEXPRESSION, ["C23", "C++17"]]]);
 
 /** What an include directive's `directive` may be: `#include`, and the extensions `#include_next` and `#import`, as
  * mbse-programs' `IncludeKeyword` lists them. */
@@ -120,14 +128,14 @@ const ITEMS: ReadonlySet<string> = new Set([K.ENUMERATOR, ...DIRECTIVES, PRAGMAE
 F.boundaries("Expressions.C.Preprocessor.Group");
 
 /**
- * C Preprocessor's union of its kinds, added to the framework's terms as the branch `c_preprocessor`, its own kinds, and
- * its dialect's schema, whose singleton is `Expressions.C.Preprocessor`: run after `Framework.install`, in a transaction
- * of its own, before or after its family's other installs; run again, it writes nothing. `definedexpression` and
- * `pragmaexpression` are added to C's and C++'s `Term`s, a condition's terms and an expression's, and the directives,
- * `pragmaexpression` and `comment` to C Types' and Cpp Types' `Term`s, whose enumerations' bodies hold them; each
- * created where its install has not run, as C's `Identifier`, a macro's name, is. Its holder,
- * `Expressions.C.Preprocessor.Expression`, refines `Expressions.Framework.Expression`, its `root` narrowed to its
- * `Term`.
+ * C Preprocessor's union of its kinds, added to the framework's terms as the branch `c_preprocessor`, its own kinds,
+ * and its dialect's schema, whose singleton is `Expressions.C.Preprocessor`: run after `Framework.install`, in a
+ * transaction of its own, before or after its family's other installs; run again, it writes nothing.
+ * `definedexpression`, `hasincludeexpression` and `pragmaexpression` are added to C's and C++'s `Term`s, a condition's
+ * terms and an expression's, and the directives, `pragmaexpression` and `comment` to C Types' and Cpp Types' `Term`s,
+ * whose enumerations' bodies hold them; each created where its install has not run, as C's `Identifier`, a macro's
+ * name, is. Its holder, `Expressions.C.Preprocessor.Expression`, refines `Expressions.Framework.Expression`, its `root`
+ * narrowed to its `Term`.
  */
 export function install(txn: any): any {
   const S = txn.Schemas;
@@ -150,7 +158,8 @@ export function install(txn: any): any {
       Expression: S.OfObject, IncludeDirective: S.OfObject, DefineDirective: S.OfObject,
       IfDirective: S.OfObject, IfdefDirective: S.OfObject, ElifDirective: S.OfObject,
       ElifdefDirective: S.OfObject, ElseDirective: S.OfObject, OtherDirective: S.OfObject,
-      DefinedExpression: S.OfObject, PragmaExpression: S.OfObject, Comment: S.OfObject,
+      DefinedExpression: S.OfObject, HasIncludeExpression: S.OfObject, PragmaExpression: S.OfObject,
+      Comment: S.OfObject,
       // the lines a conditional governs: mbse-programs' grammar, which extends it by schema extension
       Group: S.OfUnion,
       // C's and C++'s `Term`s, C Types' and Cpp Types', and C's `Identifier`, by name
@@ -170,6 +179,7 @@ export function install(txn: any): any {
       (_: any) => _.Term.name("Expressions.C.Preprocessor.Term").branches([
           ...held(_),
           (t: any) => t.name("definedexpression").schema([_.DefinedExpression]),
+          (t: any) => t.name("hasincludeexpression").schema([_.HasIncludeExpression]),
           (t: any) => t.name("pragmaexpression").schema([_.PragmaExpression]),
           (t: any) => t.name("comment").schema([_.Comment]),
           (t: any) => t.name("error").schema([Framework.Error]),
@@ -179,12 +189,15 @@ export function install(txn: any): any {
       // the lines a conditional governs between statements or declarations, an open union with no branch of its own:
       // mbse-programs' C and C++ grammars add their groups to it by schema extension
       (_: any) => _.Group.name("Expressions.C.Preprocessor.Group"),
-      // `defined(name)`, a condition's term, and `_Pragma("...")`, within an expression: in C's and C++'s `Term`s
+      // `defined(name)` and `__has_include(header)`, a condition's terms, and `_Pragma("...")`, within an expression:
+      // in C's and C++'s `Term`s
       (_: any) => _.CTerm.name("Expressions.C.Expressions.Term").branches([
           (t: any) => t.name("definedexpression").schema([_.DefinedExpression]),
+          (t: any) => t.name("hasincludeexpression").schema([_.HasIncludeExpression]),
           (t: any) => t.name("pragmaexpression").schema([_.PragmaExpression])]),
       (_: any) => _.CppTerm.name("Expressions.Cpp.Expressions.Term").branches([
           (t: any) => t.name("definedexpression").schema([_.DefinedExpression]),
+          (t: any) => t.name("hasincludeexpression").schema([_.HasIncludeExpression]),
           (t: any) => t.name("pragmaexpression").schema([_.PragmaExpression])]),
       // an enumeration's items: its directives, pragmas and comments too
       (_: any) => _.CTypesTerm.name("Expressions.C.Types.Term").branches([
@@ -217,6 +230,9 @@ export function install(txn: any): any {
       // `defined(name)` ([cpp.cond])
       (_: any) => _.DefinedExpression.name("Expressions.C.Preprocessor.DefinedExpression").properties({
           name: _.Identifier}),
+      // `__has_include(header)` ([cpp.cond]): its header as an include's
+      (_: any) => _.HasIncludeExpression.name("Expressions.C.Preprocessor.HasIncludeExpression").properties({
+          path: S.OfStr, system: S.OfBool, macro: Framework.Term}),
       // `_Pragma(operand)` ([cpp.pragma.op]): a string literal, a C or a C++ term
       (_: any) => _.PragmaExpression.name("Expressions.C.Preprocessor.PragmaExpression").properties({
           operand: Framework.Term}),
@@ -283,14 +299,19 @@ function label(kind: string): string {
     Record<string, string>)[kind] as string;
 }
 
-/** A node's checks, and its helpers' in turn: an include's path or macro and its directive, a conditional's branch after
- * it and its items (an enumeration's: enumerators, directives, pragmas and comments), each as mbse-programs checks it, a
- * pragma's operand a string literal, and a name's spelling, as C's identifiers are checked. */
+/** A node's checks, and its helpers' in turn: an include's or a `__has_include`'s path or macro, an include's directive,
+ * a conditional's branch after it and its items (an enumeration's: enumerators, directives, pragmas and comments), each
+ * as mbse-programs checks it, a pragma's operand a string literal, and a name's spelling, as C's identifiers are
+ * checked. */
 export function problems(node: F.Node): string[] {
   const { kind, attributes } = node;
   const found: string[] = [];
+  const header = new Map([[INCLUDEDIRECTIVE, "an IncludeDirective"], [HASINCLUDEEXPRESSION, "a HasIncludeExpression"]])
+    .get(kind);
+  if (header !== undefined && attributes.has("path") === (node.subterms.get("macro") !== null)) {
+    found.push(`${header} has a path or a macro`);
+  }
   if (kind === INCLUDEDIRECTIVE) {
-    if (attributes.has("path") === (node.subterms.get("macro") !== null)) found.push("an IncludeDirective has a path or a macro");
     const directive = attributes.get("directive");
     if (directive !== undefined && !INCLUDES.includes(directive)) {
       found.push(`IncludeDirective.directive cannot be ${repr(directive)}`);
@@ -340,9 +361,9 @@ function conditionScopes(tag: string): (record: any) => ReadonlySet<string>[] {
   };
 }
 
-/** What an include's macro has bound: its macros' names, as a condition's. */
-function includeScopes(record: any): ReadonlySet<string>[] {
-  return [macros(F.node(INCLUDEDIRECTIVE, record).subterms.get("macro"))];
+/** What an include's or a `__has_include`'s macro has bound: its macros' names, as a condition's. */
+function headerScopes(tag: string): (record: any) => ReadonlySet<string>[] {
+  return (record) => [macros(F.node(tag, record).subterms.get("macro"))];
 }
 
 /** How the framework reads its own kinds. */
@@ -350,7 +371,7 @@ function kinds(): Record<string, F.Kind> {
   const application = (tag: string, options: F.KindOptions = {}) =>
     new F.Kind(F.APPLICATION, { signature: new FD.Opaque(), check: check(tag), ...options });
   return {
-    [INCLUDEDIRECTIVE]: application(INCLUDEDIRECTIVE, { optional: ["macro"], scopes: includeScopes }),
+    [INCLUDEDIRECTIVE]: application(INCLUDEDIRECTIVE, { optional: ["macro"], scopes: headerScopes(INCLUDEDIRECTIVE) }),
     [DEFINEDIRECTIVE]: application(DEFINEDIRECTIVE, { required: ["name"] }),
     [IFDIRECTIVE]: application(IFDIRECTIVE, { optional: ["alternative"], scopes: conditionScopes(IFDIRECTIVE) }),
     [IFDEFDIRECTIVE]: application(IFDEFDIRECTIVE, { required: ["name"], optional: ["alternative"] }),
@@ -359,6 +380,8 @@ function kinds(): Record<string, F.Kind> {
     [ELSEDIRECTIVE]: application(ELSEDIRECTIVE),
     [OTHERDIRECTIVE]: application(OTHERDIRECTIVE),
     [DEFINEDEXPRESSION]: application(DEFINEDEXPRESSION, { required: ["name"] }),
+    [HASINCLUDEEXPRESSION]: application(HASINCLUDEEXPRESSION, { optional: ["macro"],
+      scopes: headerScopes(HASINCLUDEEXPRESSION) }),
     [PRAGMAEXPRESSION]: application(PRAGMAEXPRESSION),
     [COMMENT]: application(COMMENT),
   };

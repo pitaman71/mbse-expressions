@@ -9,18 +9,20 @@
  * A literal is written in its spelling where it has one (`text`), else in its value's default spelling, with what it
  * encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
  * (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal
- * as `INFINITY` or `NAN`. An identifier's asm label, GNU's, is written after the whole declarator that holds it, before
- * the GNU attributes that end it, where GCC reads it (`f(void) asm("f2")`, `*p asm("p") __attribute__((unused))`). What
- * a term holds of mbse-programs' grammar, which the family does not read, is written by its `Printer`'s methods, which
- * mbse-programs' printer overrides to write it: a lambda's or a statement expression's compound statement, its `block`,
- * by `statements`, `{}`; a struct's, a union's or a class's member declarations, its `members`, by `members`, `{}`,
- * where its `body` says one is written; and a conditional directive's group, its `group`, by `group`, nothing, so that
- * the directive is written with its items alone. An enumeration's body, its data, is written as mbse-programs writes
- * it, its enumerators, directives, pragmas (`_Pragma("...")`) and comments each on lines of its own, one level deeper,
- * an enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment ending the
- * line before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`, `#elif`,
- * `#elifdef`, `#else`) on a line of its own, its items and its group on the lines between, and `#endif`. Invalid syntax
- * is written as written (`Terms.invalidText`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`).
+ * as `INFINITY` or `NAN`; a user-defined literal, its literal or its adjacent strings, then its suffix (`"a" "b"_s`). A
+ * structured binding is written `[a, b]`, and C++20's conditional `explicit` `explicit(condition)`. An identifier's asm
+ * label, GNU's, is written after the whole declarator that holds it, before the GNU attributes that end it, where GCC
+ * reads it (`f(void) asm("f2")`, `*p asm("p") __attribute__((unused))`). What a term holds of mbse-programs' grammar,
+ * which the family does not read, is written by its `Printer`'s methods, which mbse-programs' printer overrides to
+ * write it: a lambda's or a statement expression's compound statement, its `block`, by `statements`, `{}`; a struct's,
+ * a union's or a class's member declarations, its `members`, by `members`, `{}`, where its `body` says one is written;
+ * and a conditional directive's group, its `group`, by `group`, nothing, so that the directive is written with its
+ * items alone. An enumeration's body, its data, is written as mbse-programs writes it, its enumerators, directives,
+ * pragmas (`_Pragma("...")`) and comments each on lines of its own, one level deeper, an enumerator followed by a comma
+ * but the last, unless it has a trailing comma, and a trailing comment ending the line before it. A directive starts
+ * its line, a conditional one each of its branches (`#if`, `#ifdef`, `#elif`, `#elifdef`, `#else`) on a line of its
+ * own, its items and its group on the lines between, and `#endif`. Invalid syntax is written as written
+ * (`Terms.invalidText`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`).
  * Reading C (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'").
  */
 
@@ -485,6 +487,10 @@ export class Printer {
       return constraint + (node.attributes.get("decltype") ? "decltype(auto)" : "auto");
     }
     if (kind === "typeofspecifier") return this.keywordCall(node.attributes.get("keyword"), node.subterms.get("operand"));
+    if (kind === "explicitspecifier") {
+      const condition = node.subterms.get("condition");
+      return "explicit" + (condition !== null ? `(${this.expression(condition, COMMA)})` : "");
+    }
     if (kind === "atomictypespecifier") return `_Atomic(${this.term(node.subterms.get("type"))})`;
     return `_BitInt(${this.expression(node.subterms.get("width"), ASSIGNMENT)})`;
   }
@@ -576,17 +582,19 @@ export class Printer {
   // Directives, as mbse-programs writes them: each starting its line, a conditional one's items and group on the lines
   // between
 
+  /** An include's or a `__has_include`'s header: `<path>` where `system`, `"path"`, or a macro. */
+  header(node: F.Node): string {
+    const [macro, attributes] = [node.subterms.get("macro"), node.attributes];
+    if (macro !== null) return this.expression(macro, COMMA);
+    if (!attributes.has("path")) {
+      throw new ValueError(`${this.dialect.name()} ${node.kind} has no path or macro to print`);
+    }
+    return attributes.get("system") ? `<${attributes.get("path")}>` : `"${attributes.get("path")}"`;
+  }
+
   directive(node: F.Node, depth: number, enumerators: boolean): string {
     const { kind, attributes } = node;
-    if (kind === "includedirective") {
-      const macro = node.subterms.get("macro");
-      let target: string;
-      if (macro !== null) target = this.expression(macro, COMMA);
-      else if (!attributes.has("path")) {
-        throw new ValueError(`${this.dialect.name()} includedirective has no path or macro to print`);
-      } else target = attributes.get("system") ? `<${attributes.get("path")}>` : `"${attributes.get("path")}"`;
-      return `#${attributes.get("directive") ?? "include"} ${target}`;
-    }
+    if (kind === "includedirective") return `#${attributes.get("directive") ?? "include"} ${this.header(node)}`;
     if (kind === "definedirective") {
       let head = "#define " + this.name(node, "name");
       if (attributes.get("function_like")) {
@@ -651,6 +659,9 @@ export class Printer {
       return written + parts.join(" ") + (parts.length > 0 && inner !== "" ? " " + inner : inner);
     }
     if (kind === "parenthesizeddeclarator") return `(${inner})`;
+    if (kind === "structuredbindingdeclarator") {
+      return "[" + nodes(node.helpers.get("bindings")).map((b) => this.text(b)).join(", ") + "]";
+    }
     const held = one(node.helpers.get("declarator"));
     if (held !== undefined && (held.kind === "pointerdeclarator"
       || held.kind === "referencedeclarator")) inner = `(${inner})`;
@@ -752,7 +763,8 @@ const TEXTS: Readonly<Record<string, Text>> = {
   error: (p, n) => p.invalid(n), missing: (p, n) => p.invalid(n),
   literal: (p, n) => p.literal(n),
   constant: (p, n) => E.constantText(n.attributes),
-  userdefinedliteral: (p, n) => p.literal(one(n.helpers.get("literal")) as F.Node) + n.attributes.get("suffix"),
+  userdefinedliteral: (p, n) => (n.helpers.has("literal") ? p.literal(one(n.helpers.get("literal")) as F.Node)
+    : p.text(one(n.helpers.get("concatenation")) as F.Node)) + n.attributes.get("suffix"), // or its adjacent strings
   concatenatedstring: (p, n) => n.many.map((part) => p.expression(part, PRIMARY)).join(" "),
   variable: (p, n) => n.attributes.get("name"),
   idexpression: (p, n) => p.text(one(n.helpers.get("name")) as F.Node),
@@ -802,6 +814,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   primitivetypespecifier: (p, n) => n.attributes.get("keyword"),
   namedtypespecifier: (p, n) => p.specifier(n), typenamespecifier: (p, n) => p.specifier(n),
   decltypespecifier: (p, n) => p.specifier(n), placeholdertypespecifier: (p, n) => p.specifier(n),
+  explicitspecifier: (p, n) => p.specifier(n),
   typeofspecifier: (p, n) => p.specifier(n), atomictypespecifier: (p, n) => p.specifier(n),
   bitintspecifier: (p, n) => p.specifier(n), classspecifier: (p, n) => p.classText(n), basespecifier: (p,
     n) => p.base(n),
@@ -809,7 +822,8 @@ const TEXTS: Readonly<Record<string, Text>> = {
   iddeclarator: (p, n) => p.declarator(n), packdeclarator: (p, n) => p.declarator(n),
   pointerdeclarator: (p, n) => p.declarator(n), referencedeclarator: (p, n) => p.declarator(n),
   arraydeclarator: (p, n) => p.declarator(n), functiondeclarator: (p, n) => p.declarator(n),
-  parenthesizeddeclarator: (p, n) => p.declarator(n), asmlabel: (p, n) => p.asmLabel(n),
+  parenthesizeddeclarator: (p, n) => p.declarator(n), structuredbindingdeclarator: (p, n) => p.declarator(n),
+  asmlabel: (p, n) => p.asmLabel(n),
   parameterdeclaration: (p, n) => p.parameter(n), ellipsisparameter: (p, n) => p.parameter(n),
   typeparameter: (p, n) => p.templateParameter(n), templatetemplateparameter: (p, n) => p.templateParameter(n),
   noexceptspecifier: (p, n) => p.exception(n), throwspecifier: (p, n) => p.exception(n),
@@ -819,6 +833,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   enumerator: (p, n) => p.enumerator(n), comment: (p, n) => p.comment(n),
   definedexpression: (p, n) => `defined(${p.name(n, "name")})`,
   pragmaexpression: (p, n) => p.keywordCall("_Pragma", n.subterms.get("operand")),
+  hasincludeexpression: (p, n) => `__has_include(${p.header(n)})`,
   ...Object.fromEntries(["includedirective", "definedirective", "ifdirective", "ifdefdirective", "elifdirective",
     "elifdefdirective", "elsedirective", "otherdirective"].map((kind) => [kind, (p: Printer, n: F.Node) => p.directive(n,
     0, false)])),
