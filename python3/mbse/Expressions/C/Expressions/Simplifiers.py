@@ -24,8 +24,8 @@ non-finite floating value, `void`, an object. Its arithmetic folds all the same,
 is the `int` -56 under x86-64's System V ABI. A simplification whose root is a closed constructor expression gives its
 native as its value: an int, a float, a bool, a string, None for `nullptr`, a list of its elements' for an array. A
 literal's type is what
-its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, `5wb` a
-`_BitInt(4)`), else its value's; a variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or
+its text encodes (`Domains.literal`: `5u` an `unsigned int`, `1.5f` a `float`, `'a'` C's `int` and C++'s `char`, C++'s
+`'ab'` an `int`, `5wb` a `_BitInt(4)`), else its value's; a variable's type is its value's: a bool is a `bool`, an int an `int`, `long` or
 `unsigned long` as the first that holds it, a float a `double`, None `nullptr` (a value carries no domain: a variable of
 another type waits for domain inference, mbse-basis [CAP-232: domains inferred for
 terms](mbse:mbse-basis/docs/capabilities/CAP-232.md)). Every named type it computes in is a stored domain, read through

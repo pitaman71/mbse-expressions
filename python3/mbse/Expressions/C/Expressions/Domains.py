@@ -43,8 +43,11 @@ a stored domain found by name (mbse-basis [CAP-229: the C expression
 dialect](mbse:mbse-basis/docs/capabilities/CAP-229.md#decided)): an integer's by its suffix and its base, the first of
 the types they allow that holds its value (an `unsigned int` for `5u`; a decimal integer without a suffix is its
 value's, `of`); a floating literal's by its suffix (`float` for `f`, `long double` for `L`, `_Float16` for `f16` in C
-and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in C and `char` in C++, its
-encoding prefix's type otherwise (`wchar_t`, `char8_t`); a bool's `bool`; a string's `String`. An integer literal with
+and `std::float16_t` in C++), else `double`; a character literal's (an int, its code) `int` in C, and in C++ `char`, or
+`int` for a multicharacter literal, of more than one c-char ([lex.ccon]: `'ab'`, whose value is the implementation's),
+as its text counts them (`c_chars(text)`, an escape sequence one; a literal without text holds one *(agent)*); its
+encoding prefix's type otherwise (`wchar_t`, `char8_t`), of one c-char or several; a bool's `bool`; a string's
+`String`. An integer literal with
 C23's `wb` suffix is of the narrowest bit-precise integer type that holds it (`bit_precise`, `_BitInt(N)`, of a sign bit
 and N >= 2; `unsigned _BitInt(N)` with `uwb`), which no domain stores; a prefix no language has encodes a domain named
 by it, which no folding rule has values of; a suffix the language does not write gives `Anything`, its type unknown.
@@ -62,6 +65,7 @@ have signatures that say only how many operands each takes; the folding rules co
 from __future__ import annotations
 
 import functools
+import re
 from collections.abc import Callable, Sequence
 from contextvars import ContextVar
 from dataclasses import dataclass, field
@@ -73,7 +77,7 @@ from mbse.Expressions.Framework.Domains import Anything
 from mbse.Schemas.Framework import Proxies
 
 __all__ = ["CType", "Types", "Reading", "Deferred", "NAMES", "String", "Anything", "bit_precise", "layout", "promoted",
-           "common", "of", "literal", "literal_suffix", "out_of_range", "arithmetic", "KEYWORDS", "QUALIFIERS", "NULLPTR", "BINARY", "BINARY_CPP",
+           "common", "of", "literal", "literal_suffix", "c_chars", "out_of_range", "arithmetic", "KEYWORDS", "QUALIFIERS", "NULLPTR", "BINARY", "BINARY_CPP",
            "UNARY", "POSTFIX",
            "ASSIGNMENT", "FOLD", "CASTS", "MEMBER", "SUBSCRIPT", "CALL", "CONDITIONAL", "CAST", "SIZE"]
 
@@ -420,6 +424,10 @@ SIZE = D.Opaque()
 """`sizeof` and `alignof`, of an expression or a type: a `size_t`, which the dialect's kinds read from the store."""
 
 _ENCODINGS = {"L": "wchar_t", "u8": "char8_t", "u": "char16_t", "U": "char32_t"}
+_C_CHAR = re.compile(r"\\(?:[0-7]{1,3}|[xuUNo]\{[^}]*\}?|x[0-9A-Fa-f]*|u[0-9A-Fa-f]{0,4}|U[0-9A-Fa-f]{0,8}|.?)|.", re.S)
+"""One c-char of a character literal: an escape sequence (simple, octal, hexadecimal, delimited, conditional) or a
+universal character name, else one character."""
+
 _FLOATING = {"f": "float", "F": "float", "l": "long double", "L": "long double"}
 _EXTENDED = {
     "C": {"f16": "_Float16", "f32": "_Float32", "f64": "_Float64", "f128": "_Float128", "f32x": "_Float32x",
@@ -455,8 +463,22 @@ def _integer_suffix(suffix: str) -> str:
     return "u" + lower.replace("u", "") if "u" in lower else lower
 
 
+def c_chars(text: str) -> int:
+    """How many c-chars a character literal's spelling (`text`, as `'ab'`, `u8'a'`, `'\\x61'`) holds between its first
+    quote and its last: an escape sequence or a universal character name one, any other character one (C++23
+    [lex.ccon]); 0 where it holds none, or has no two quotes."""
+    first, last = text.find("'"), text.rfind("'")
+    return len(_C_CHAR.findall(text[first + 1:last])) if first < last else 0
+
+
+def _multicharacter(attributes: Any) -> bool:
+    """Whether a character literal holds more than one c-char: its text says so; a literal without text holds one."""
+    return "text" in attributes and c_chars(attributes["text"]) > 1
+
+
 def literal(attributes: Any, language: str, types: Types) -> D.Domain | None:
-    """A literal's type, by what its text encodes (its `prefix`, `quote`, `base` and `suffix`) and its value, in
+    """A literal's type, by what its text encodes (its `prefix`, `quote`, `base` and `suffix`, and, for a C++ character
+    literal without a prefix, how many c-chars its `text` holds) and its value, in
     `language` (`C` or `C++`), found through `types`; None where its value has none (an int no type holds, or no
     value). A domain of a type no folding rule has values of is named by it (a prefix no language has)."""
     value, prefix, suffix = attributes.get("value"), attributes.get("prefix"), attributes.get("suffix")
@@ -472,8 +494,8 @@ def literal(attributes: Any, language: str, types: Types) -> D.Domain | None:
     if type(value) is not int:
         return None
     if attributes.get("quote") == "'":  # a character literal: its code
-        if prefix is None:
-            return types.named("int" if language == "C" else "char")
+        if prefix is None:  # C's `int`; C++'s `char`, a multicharacter literal's `int` ([lex.ccon])
+            return types.named("int" if language == "C" or _multicharacter(attributes) else "char")
         if prefix == "u8" and language == "C":
             return types.named("unsigned char")
         return types.named(_ENCODINGS[prefix]) if prefix in _ENCODINGS else D.OfTypes(prefix, int)
