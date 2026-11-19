@@ -15,14 +15,18 @@ value object `Expressions.C.Types.<Kind>`, named as mbse-programs names them, lo
 - `enumerator`, an enumeration's enumerator (`name`, an identifier, `attributes`, and its `value`, a C term), which an
   enumeration's body holds as data: mbse-programs models it as nodes (`EnumeratorList` of `Enumerator`s, directives
   and comments), so it is data of the family's `Types` (mbse-basis [CAP-278: C's and C++'s type names and preprocessor directives as data](mbse:mbse-basis/docs/capabilities/CAP-278.md)).
-- C Preprocessor's directives and `comment`, which its install adds to this dialect's `Term`, as an enumeration's
-  body holds them among its enumerators.
+- C Preprocessor's directives, `pragmaexpression` (`_Pragma("...")`) and `comment`, which its install adds to this
+  dialect's `Term`, as an enumeration's body holds them among its enumerators.
 - The framework's kinds of invalid syntax, `error` and `missing`.
 
 Its helpers, by name under its path (`HELPERS`), are a type name's parts, which no expression holds, each union named
 after mbse-programs' category: `Specifier` (keywords, a named type, a struct, union or enum, C23's `typeof`,
 `_Atomic(type)`, C23's `_BitInt(width)`, and, as `TypeId` lists them among its specifiers, the attribute specifiers),
-`Declarator` (an identifier, a pointer, an array, a function, parentheses), `Parameter` and `AttributeSpecifier`. A
+`Declarator` (an identifier, a pointer, an array, a function, parentheses), `Parameter` and `AttributeSpecifier`; and
+GNU's asm label, `AsmLabel`, an extension, which an identifier's declarator holds (`asm`): its `keyword` as written
+(`asm`, `__asm__` or `__asm`) and its `label`, a string literal, or several, adjacent, the assembler name of what it
+declares (`int x asm("r1")`, `int f(void) __asm__("f2")`), which the printer writes after the whole declarator, where C
+writes it. A
 name is C's `Name` (`Expressions.C.Expressions.Name`), and a term a type name holds (an array's size, `typeof`'s
 operand, an attribute's arguments, an enumerator's value) is C's `Term`, each read through `reads`. A struct's or a
 union's member declarations, its struct-declaration-list, are mbse-programs' grammar, not this dialect's, and a property
@@ -67,7 +71,7 @@ HELPERS = ("DeclSpecifier", "CvQualifier", "PrimitiveTypeSpecifier", "NamedTypeS
            "EnumSpecifier", "PlaceholderTypeSpecifier", "TypeofSpecifier", "AtomicTypeSpecifier", "BitIntSpecifier",
            "IdDeclarator", "PointerDeclarator", "ArrayDeclarator", "FunctionDeclarator", "ParenthesizedDeclarator",
            "ParameterDeclaration", "EllipsisParameter", "StandardAttributeSpecifier", "Attribute", "AlignasSpecifier",
-           "GnuAttributeSpecifier", "DeclspecSpecifier")
+           "GnuAttributeSpecifier", "DeclspecSpecifier", "AsmLabel")
 """Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
 completeness data (`grammars/c-tree-sitter.json`) names them."""
 
@@ -104,7 +108,7 @@ def install(txn: Any) -> Any:
                   "ParenthesizedDeclarator": S.OfObject, "ParameterDeclaration": S.OfObject,
                   "EllipsisParameter": S.OfObject, "StandardAttributeSpecifier": S.OfObject,
                   "Attribute": S.OfObject, "AlignasSpecifier": S.OfObject, "GnuAttributeSpecifier": S.OfObject,
-                  "DeclspecSpecifier": S.OfObject,
+                  "DeclspecSpecifier": S.OfObject, "AsmLabel": S.OfObject,
                   # the declarations a struct or a union holds: mbse-programs' grammar, which extends it by schema extension
                   "Members": S.OfUnion,
                   # C's `Term`, `Name` and `Identifier`, by name
@@ -191,7 +195,10 @@ def install(txn: Any) -> Any:
                 .properties({"type": _.Term}),
             lambda _: _.BitIntSpecifier.name("Expressions.C.Types.BitIntSpecifier").properties({"width": _.CTerm}),
             lambda _: _.IdDeclarator.name("Expressions.C.Types.IdDeclarator").properties({
-                "name": _.Name, "attributes": many(_.AttributeSpecifier)}),
+                "name": _.Name, "attributes": many(_.AttributeSpecifier),
+                "asm": _.AsmLabel}),  # GNU's: the assembler name of what it declares
+            lambda _: _.AsmLabel.name("Expressions.C.Types.AsmLabel").properties({
+                "keyword": S.OfStr, "label": _.CTerm}),  # `asm("name")`: its keyword as written, and a string literal
             lambda _: _.PointerDeclarator.name("Expressions.C.Types.PointerDeclarator").properties({
                 "attributes": many(_.AttributeSpecifier), "qualifiers": many(_.CvQualifier),
                 "declarator": _.Declarator}),

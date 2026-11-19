@@ -35,7 +35,9 @@ name), a `str`. A term carries no domain. Its kinds:
 - Initializers: `initializerlist` (`{items}`, with `trailing_comma`), whose items may be `designatedinitializer`s
   (`.x = 1`, `[2].y = 3`).
 - GNU extensions, outside every standard as mbse-programs marks them (`EXTENSIONS`): `statementexpression` (`({ ...
-  })`) and `extensionexpression` (`__extension__ operand`). The compound statement a statement expression holds is
+  })`), `extensionexpression` (`__extension__ operand`) and `labeladdressexpression` (`&&label`, a label's address,
+  labels as values, which `goto *p` jumps to; its `label` an identifier, a label's name, not a variable, as labels are
+  names of their own, which no scope binds). The compound statement a statement expression holds is
   mbse-programs' grammar, not this dialect's, and a property of the term holds it, as the user decided: "For any
   dialect A if term T_A has a clause(s) that crosses over to another dialect's expression language, the crossover
   should be modeled as a property of T_A" (mbse-programs, [the port](mbse:mbse-programs/docs/proposals/port/README.md#stage-3-the-whole-tree-as-values)), since "mbse-expressions defines a dialect
@@ -47,8 +49,9 @@ name), a `str`. A term carries no domain. Its kinds:
   overrides), and the framework's readers do not enter it, as it declares the union a boundary (`Terms.boundaries`).
 - C Types' `typeid`, a type name, where a subterm may be an expression or a type alike (`sizeof(int)`, `_Generic`'s
   controlling operand, `offsetof(struct s, m)`'s first argument), and C Preprocessor's `definedexpression`,
-  `defined(name)`, a preprocessing condition's term, which its install adds: kinds of the dialects C reads, which this
-  dialect's `Term` lists ("(b)").
+  `defined(name)`, a preprocessing condition's term, and `pragmaexpression`, `_Pragma("...")`, which may stand within
+  an expression, both of which its install adds: kinds of the dialects C reads, which this dialect's `Term` lists
+  ("(b)").
 - The framework's kinds of invalid syntax, `error` and `missing`.
 
 Its sublanguages are dialects of their own, which it reads (`reads`; mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"): `C
@@ -100,15 +103,15 @@ from mbse.Expressions.Framework import Terms as F
 from .Kinds import (  # the family's shared reading of its kinds, re-exported
     ALIGNOFEXPRESSION, ASSIGNMENTEXPRESSION, BINARYEXPRESSION, CALLEXPRESSION, CASTEXPRESSION,
     COMPOUNDLITERALEXPRESSION, CONCATENATEDSTRING, CONDITIONALEXPRESSION, CONSTANT, DESIGNATEDINITIALIZER, EXTENSIONS,
-    EXTENSIONEXPRESSION, GENERICSELECTION, INITIALIZERLIST, LITERAL, MEMBEREXPRESSION, OPTIONAL, PARENTHESIZEDEXPRESSION,
-    POSTFIXEXPRESSION, PREFIXES, QUOTES, SIZEOFEXPRESSION, SPELLING, STATEMENTEXPRESSION, SUBSCRIPTEXPRESSION, SUFFIXES,
-    TYPEID, UNARYEXPRESSION, VARIABLE, Writers, bound_names, cast_type, constant_text, kinds, problems, scopes, size,
-    truth, type_name, untyped)
+    EXTENSIONEXPRESSION, GENERICSELECTION, INITIALIZERLIST, LABELADDRESSEXPRESSION, LITERAL, MEMBEREXPRESSION,
+    OPTIONAL, PARENTHESIZEDEXPRESSION, POSTFIXEXPRESSION, PREFIXES, QUOTES, SIZEOFEXPRESSION, SPELLING,
+    STATEMENTEXPRESSION, SUBSCRIPTEXPRESSION, SUFFIXES, TYPEID, UNARYEXPRESSION, VARIABLE, Writers, bound_names,
+    cast_type, constant_text, kinds, problems, scopes, size, string_literal, truth, type_name, untyped)
 
 __all__ = ["install", "define", "DIALECT", "EXTENSIONS", "PREFIXES", "QUOTES", "SUFFIXES", "Writer",
            "Writers", "literal", "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call",
            "type_name", "cast_type", "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds",
-           "SPELLING", "OPTIONAL", "constant_text"]
+           "SPELLING", "OPTIONAL", "constant_text", "string_literal"]
 
 
 F.boundaries("Expressions.C.Expressions.Block")
@@ -141,7 +144,8 @@ def install(txn: Any) -> Any:
                   "AssignmentExpression": S.OfObject, "InitializerList": S.OfObject,
                   "DesignatedInitializer": S.OfObject, "FieldDesignator": S.OfObject, "IndexDesignator": S.OfObject,
                   "EqualInitializer": S.OfObject, "CompoundLiteralExpression": S.OfObject,
-                  "StatementExpression": S.OfObject, "ExtensionExpression": S.OfObject, "Identifier": S.OfObject,
+                  "StatementExpression": S.OfObject, "ExtensionExpression": S.OfObject,
+                  "LabelAddressExpression": S.OfObject, "Identifier": S.OfObject,
                   # the statements a term holds: mbse-programs' grammar, which extends it by schema extension
                   "Block": S.OfUnion,
                   # C Types' `Term` and its `typeid`, by name; FrameworkTerm: the framework's, by name
@@ -184,6 +188,7 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("compoundliteralexpression").schema([_.CompoundLiteralExpression]),
                 lambda t: t.name("statementexpression").schema([_.StatementExpression]),
                 lambda t: t.name("extensionexpression").schema([_.ExtensionExpression]),
+                lambda t: t.name("labeladdressexpression").schema([_.LabelAddressExpression]),
                 lambda t: t.name("typeid").schema([_.TypeId]),
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
@@ -270,6 +275,8 @@ def install(txn: Any) -> Any:
                 .properties({"block": _.Block}),
             lambda _: _.ExtensionExpression.name("Expressions.C.Expressions.ExtensionExpression")
                 .properties({"operand": _.Term}),
+            lambda _: _.LabelAddressExpression.name("Expressions.C.Expressions.LabelAddressExpression")
+                .properties({"label": _.Identifier}),  # `&&label`: a label's name
             # the statements a term holds, an open union with no branch of its own: mbse-programs' statement grammar
             # adds its compound statement to it by schema extension
             lambda _: _.Block.name("Expressions.C.Expressions.Block"),
@@ -447,9 +454,9 @@ _C_TAGS = (LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE, PARENTHESIZEDEXPRESS
            SUBSCRIPTEXPRESSION, CALLEXPRESSION, MEMBEREXPRESSION, POSTFIXEXPRESSION, UNARYEXPRESSION, SIZEOFEXPRESSION,
            ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION, ASSIGNMENTEXPRESSION,
            INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION,
-           EXTENSIONEXPRESSION)
+           EXTENSIONEXPRESSION, LABELADDRESSEXPRESSION)
 """Its own kinds, in its `Term`'s order: its `Term` lists C Types' `typeid` after them, and C Preprocessor's
-`definedexpression` after invalid syntax, each read as the dialect that declares it reads it."""
+`definedexpression` and `pragmaexpression` after invalid syntax, each read as the dialect that declares it reads it."""
 
 def _native(value: Any) -> Writer | None:
     """The literal of a native value: a number, a bool or a string; a bytes has none."""

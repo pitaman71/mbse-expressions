@@ -1,5 +1,5 @@
 {
- "grammar": "tree-sitter-c's named node types: every node an expression, a type name or a literal is, or holds, or a preprocessing directive is, mapped to the kinds of the C family's dialects that read tree-sitter-c (`kinds`, each `<Dialect>.<tag>`, a branch of `Expressions.C.<Dialect>.Term`, or of `Expressions.C.Preprocessor.Term`, the C family's preprocessor, which C++ reads) or their helpers (`helpers`, each `<Dialect>.<schema>`, the value object schema of that dialect), each with the supertypes the grammar puts it in (`supertypes`); every other node listed as not an expression, with its reason",
+ "grammar": "tree-sitter-c's named node types: every node an expression, a type name or a literal is, or holds, or a preprocessing directive is, mapped to the kinds of the C family's dialects that read tree-sitter-c (`kinds`, each `<Dialect>.<tag>`, a branch of `Expressions.C.<Dialect>.Term`, or of `Expressions.C.Preprocessor.Term`, the C family's preprocessor, which C++ reads) or their helpers (`helpers`, each `<Dialect>.<schema>`, the value object schema of that dialect), each with the supertypes the grammar puts it in (`supertypes`); every other node listed as not an expression, with its reason; `unwritten` lists the kinds no node type is, those tree-sitter-c does not read as their own nodes, each with its reason",
  "checked": "tree-sitter-c 0.23.6, as mbse-programs installs it (the grammar tree-sitter-cpp 0.23.4 extends; mbse-programs reads C with tree-sitter-cpp): its 125 named node types",
  "nodes": [
   {
@@ -332,7 +332,9 @@
    "supertypes": [
     "expression"
    ],
-   "not": "GNU's inline assembly, which mbse-programs reads as an AsmDeclaration, a declaration, not a term"
+   "helpers": [
+    "Types.AsmLabel"
+   ]
   },
   {
    "node": "gnu_asm_goto_list",
@@ -838,6 +840,16 @@
    "helpers": [
     "Types.NamedTypeSpecifier"
    ]
+  }
+ ],
+ "unwritten": [
+  {
+   "kind": "Expressions.labeladdressexpression",
+   "reason": "GNU's labels as values, `&&label`, which tree-sitter-c reads as `&(&label)`, two `pointer_expression`s"
+  },
+  {
+   "kind": "Preprocessor.pragmaexpression",
+   "reason": "the pragma operator, `_Pragma(\"...\")`, which tree-sitter-c reads as a `call_expression` of the identifier `_Pragma`"
   }
  ]
 }
