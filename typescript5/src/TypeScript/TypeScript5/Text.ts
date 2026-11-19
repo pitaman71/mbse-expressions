@@ -8,8 +8,10 @@
  * where it has one (`text`), else in its value's default spelling: a number as JavaScript's `String(number)` writes it,
  * a bigint with its `n`, a string in its quote (a double quote by default) with its escapes. Invalid syntax is written
  * as written (`Terms.invalidText`), refused by the name of the dialect whose `Term` holds it. A function's, an arrow's or
- * a class's statements, mbse-programs' grammar that its `block` or `classBody` holds, are written `{}`, where
- * mbse-programs' printer writes them. An arrow's lone type
+ * a class's statements, mbse-programs' grammar that its `block` or `classBody` holds, are written by its `Printer`'s
+ * `statements`, `{}`, which mbse-programs' printer overrides to write them. An object type with comments is written on
+ * its members' lines, one level in from the `level` of the statement it is printed in, its closing brace at that level
+ * (0 unless set, four spaces a level). An arrow's lone type
  * parameter without a constraint is written `<T,>`, so that the text reads alike in a `.ts` and a `.tsx` file. Its
  * `Printer` writes TypeScript5's kinds and helpers itself, and dispatches the types', the patterns' and the regular
  * expressions' to their dialects' `Text.TEXTS`, as SystemVerilog's family printer does. A regular expression's constant
@@ -108,6 +110,8 @@ export class Printer {
   readonly texts: ReadonlyMap<string, Text> = new Map([...TypesText.TEXTS, ...PatternsText.TEXTS, ...RegExpText.TEXTS]);
   /** Each node of invalid syntax read, and the dialect holding it. */
   readonly invalid = new Map<T.Node, F.Dialect>();
+  /** The level of the statement a term is printed in, where lines within it indent from. */
+  level = 0;
 
   /** A term's `Node`, or a `Node` as it is; a node of invalid syntax remembers the dialect that owns it, whose name its
    * refusal gives. */
@@ -243,7 +247,7 @@ export class Printer {
       let prefix = accessor ? attributes.get("propertyKind") + " " : "";
       prefix += (value.attributes.get("isAsync") ? "async " : "") + (value.attributes.get("generator") ? "*" : "");
       if (value.kind === T.TSEMPTYBODYFUNCTIONEXPRESSION) return `${prefix}${key}${this.signature(value)}`;
-      return `${prefix}${key}${attributes.get("optional") ? "?" : ""}${this.signature(value)} {}`;
+      return `${prefix}${key}${attributes.get("optional") ? "?" : ""}${this.signature(value)} ${this.statements(value)}`;
     }
     return `${key}: ${this.e(value, ASSIGN)}`;
   }
@@ -253,7 +257,13 @@ export class Printer {
     return "{ " + node.many.map((member) => this.text(member)).join(", ") + " }";
   }
 
-  // Functions and classes: the statements each holds, mbse-programs' grammar, are written `{}`
+  // Functions and classes: the statements each holds, mbse-programs' grammar, are written by `statements`
+
+  /** The statements a function's, an arrow's or a class's `Node` holds, its `block` or `classBody`, mbse-programs'
+   * grammar, which this dialect does not read: `{}`. A printer of that grammar overrides it to write them. */
+  statements(_node: T.Node): string {
+    return "{}";
+  }
 
   /** `<typeParameters>(params): returnType`, or with `arrow` `... => returnType` for a function type. */
   signature(node: T.Node, arrow = false): string {
@@ -269,7 +279,7 @@ export class Printer {
     const { attributes } = node;
     const keyword = (attributes.get("isAsync") ? "async " : "") + "function" + (attributes.get("generator") ? "*" : "");
     const name = node.helpers.has("id") ? " " + this.text(one(node, "id")) : "";
-    return `${keyword}${name}${this.signature(node)} {}`;
+    return `${keyword}${name}${this.signature(node)} ${this.statements(node)}`;
   }
 
   _tsemptybodyfunctionexpression(node: T.Node): string {
@@ -288,7 +298,7 @@ export class Printer {
       }
     }
     const body = node.subterms.get("body");
-    if (body === null) return head + " => {}";
+    if (body === null) return head + " => " + this.statements(node);
     let text = this.e(body, ASSIGN);
     if ([T.OBJECTEXPRESSION, T.OBJECTPATTERN].includes(this.leftmost(body).kind)) text = `(${text})`;
     return `${head} => ${text}`;
@@ -307,7 +317,7 @@ export class Printer {
     }
     const implemented = nodes(node.helpers.get("implements"));
     if (implemented.length > 0) head += " implements " + implemented.map((heritage) => this.heritage(heritage)).join(", ");
-    return this.decorators(node) + head + " {}";
+    return this.decorators(node) + head + " " + this.statements(node);
   }
 
   _metaproperty(node: T.Node): string {

@@ -58,8 +58,9 @@ SINCE: dict[str, int] = {}
 """The version each of its kinds arrived in: none, every kind being older than TypeScript 5.0."""
 
 bound_names = Nodes.bound_names
-"""The names a pattern binds, a term's or a `Node`'s (`Nodes.bound_names`): an identifier's, and those within an
-array, an object, a default, a rest or a parameter property; a member, or any other target, binds none."""
+"""The names a pattern binds, or a type parameter declares, of a term, a `Node` or a record (`Nodes.bound_names`): an
+identifier's, and those within an array, an object, a default, a rest or a parameter property; a type parameter's name,
+and a declaration's type parameters'; a member, or any other target, binds none."""
 
 
 def install(txn: Any) -> Any:

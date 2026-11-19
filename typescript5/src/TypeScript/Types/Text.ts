@@ -3,7 +3,7 @@
  * dispatches to: `TEXTS`, each kind's or helper's writer, given the printer and its `Terms.Node`; and `PRECEDENCE`, a
  * type's precedence by its kind, loosest first (`FUNCTION` to `PRIMARY`), a type parenthesized where it binds less than
  * its place needs (a function, conditional or union type as an operand). An object type is written on one line, or with
- * comments on its members' lines. `ToText` writes a term of the family, as `TypeScript5.Text.ToText` does. */
+ * comments on its members' lines, at the level of the statement it is printed in (the printer's `level`). `ToText` writes a term of the family, as `TypeScript5.Text.ToText` does. */
 
 import type * as F from "../../Framework/Terms.js";
 import type { Printer, Text } from "../TypeScript5/Text.js";
@@ -29,6 +29,9 @@ const KEYWORDS: readonly [string, string][] = [
   ["tsundefinedkeyword", "undefined"], ["tsnullkeyword", "null"], ["tsintrinsickeyword", "intrinsic"],
   ["tsthistype", "this"],
 ];
+
+/** A level's indentation. */
+const INDENT = "    ";
 
 function nodes(value: F.Node | readonly F.Node[] | undefined): readonly F.Node[] {
   return (value ?? []) as readonly F.Node[];
@@ -106,7 +109,8 @@ function member(p: Printer, node: F.Node): string {
   return p.text(node) + ";";
 }
 
-/** `{ a: A; b(): B }` on one line, or with comments its members' lines, a trailing comment on its member's. */
+/** `{ a: A; b(): B }` on one line, or with comments its members' lines, one level in from the printer's `level`, its
+ * closing brace at it, a trailing comment on its member's. */
 function typeLiteral(p: Printer, node: F.Node): string {
   const members = nodes(node.helpers.get("members"));
   if (members.length === 0) return "{}";
@@ -116,10 +120,10 @@ function typeLiteral(p: Printer, node: F.Node): string {
     if (held.kind === "comment" && held.attributes.get("trailing") && lines.length > 0) {
       lines[lines.length - 1] += " " + member(p, held);
     } else {
-      lines.push("    " + member(p, held));
+      lines.push(INDENT.repeat(p.level + 1) + member(p, held));
     }
   }
-  return "{\n" + lines.join("\n") + "\n}";
+  return "{\n" + lines.join("\n") + "\n" + INDENT.repeat(p.level) + "}";
 }
 
 function propertySignature(p: Printer, node: F.Node): string {

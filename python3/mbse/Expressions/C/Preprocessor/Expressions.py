@@ -20,17 +20,38 @@ order, each a value object `Expressions.C.Preprocessor.<Kind>`:
   `#warning`, `#line`, `#embed`, and the null directive).
 - `definedexpression`, `defined(name)`, mbse-programs' expression kind of a condition: its install adds it to C's and
   C++'s `Term`s, a condition's terms.
+- `pragmaexpression`, `_Pragma(operand)`, the pragma operator (ISO/IEC 9899, 6.10.9 in C11, C99's; ISO/IEC 14882,
+  [cpp.pragma.op], C++11's), its `operand` a string literal, a C or a C++ term: a `#pragma` directive written as a
+  unary operator, which translation phase 4 runs as the directive its operand's text spells, so that a macro can
+  expand to one. It is this dialect's *(agent)*, not C's and C++'s, as the standards specify it among the
+  preprocessing directives, the preprocessor executes it, and its tokens are gone before any expression is parsed, as
+  `defined`'s are: what it is is a directive's. As tokens it may stand anywhere, where an expression, a declaration, a
+  statement or an enumerator may: its install adds it to C's and C++'s `Term`s, where it stands within an expression,
+  and to C Types' and Cpp Types' `Term`s, among an enumeration's items, as the directives are; between statements or
+  declarations, mbse-programs holds it as it holds a directive there, a term of this dialect.
 - `comment`: `// text`, or with `block` `/* text */`, kept where mbse-programs keeps it, among an enumeration's
   enumerators and the directives; a `trailing` one ends the line of the item before it.
 
 A name is C's `Identifier` (`Expressions.C.Expressions.Identifier`), a preprocessing token the same in both
 standards. A condition and an include's `macro` hold `Expressions.Framework.Term`: a C or a C++ term, as the
 framework's shared kinds hold any dialect's (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The framework's kinds with subterms stay shared"), each standard defining its own
-condition's grammar. A directive's `items` hold `Expressions.Framework.Term` too, where a value holds the directive:
-an enumeration's body, whose items are C Types' or Cpp Types' terms (their enumerators, and this dialect's directives
-and comments, which its install adds to both `Term`s); elsewhere mbse-programs relates its items. Which language a
-condition or an item is of is the reading dialect's: from an enumeration, its own (a C++ term in a C enumeration is
-refused), from this dialect's holder, either. A condition's macros' names, C's variables and C++'s identifiers, are
+condition's grammar. A conditional's `items` hold `Expressions.Framework.Term` too, where it stands in an enumeration's
+body, whose items are C Types' or Cpp Types' terms (their enumerators, and this dialect's directives and comments, which
+its install adds to both `Term`s). Where it stands between statements or declarations, the lines it governs, the
+standard's group, are mbse-programs' grammar, not this dialect's, and a property of the directive holds them, as the
+user decided: "For any dialect A if term T_A has a clause(s) that crosses over to another dialect's expression
+language, the crossover should be modeled as a property of T_A" (mbse-programs, [the
+port](mbse:mbse-programs/docs/proposals/port/README.md#stage-3-the-whole-tree-as-values)), since "mbse-expressions defines a dialect for expression grammar and mbse-programs defines a
+dialect for statement, definition, and file grammar"; for C and C++, "3(a)" ([the port's Stage 4](mbse:mbse-programs/docs/proposals/port/README.md#stage-4-c-and-cpp)): "a preprocessor
+directive between statements is a statement holding the directive term, and a conditional's statements a property of
+that term, typed by an open union mbse-programs extends". Each conditional's (`ifdirective`, `ifdefdirective`,
+`elifdirective`, `elifdefdirective`, `elsedirective`) is its `group`, of the open union
+`Expressions.C.Preprocessor.Group`, a union with no branch of its own, which both of mbse-programs' languages, C's and
+C++'s, extend with the statements or declarations a group holds in each. This dialect reads none of its branches: a
+group is no term of it, its printer writes none of it (`C.Expressions.Text.Printer.group`, which a printer of the
+statements overrides), and the framework's readers do not enter it, as it declares the union a boundary
+(`Terms.boundaries`). Which language a condition or an item is of is the reading dialect's: from an enumeration, its
+own (a C++ term in a C enumeration is refused), from this dialect's holder, either. A condition's macros' names, C's variables and C++'s identifiers, are
 bound within it (`Kind.scopes`), as each names a macro, defined or not, never a value, and so are an include's macro's:
 nothing refines `Let`.
 
@@ -58,13 +79,14 @@ INCLUDEDIRECTIVE, DEFINEDIRECTIVE, IFDIRECTIVE, IFDEFDIRECTIVE = (
     "includedirective", "definedirective", "ifdirective", "ifdefdirective")
 ELIFDIRECTIVE, ELIFDEFDIRECTIVE, ELSEDIRECTIVE, OTHERDIRECTIVE = (
     "elifdirective", "elifdefdirective", "elsedirective", "otherdirective")
-DEFINEDEXPRESSION, COMMENT = "definedexpression", "comment"
+DEFINEDEXPRESSION, PRAGMAEXPRESSION, COMMENT = "definedexpression", "pragmaexpression", "comment"
 
 DIRECTIVES = (INCLUDEDIRECTIVE, DEFINEDIRECTIVE, IFDIRECTIVE, IFDEFDIRECTIVE, ELIFDIRECTIVE, ELIFDEFDIRECTIVE,
               ELSEDIRECTIVE, OTHERDIRECTIVE)
-"""The directives, in its `Term`'s order: with `comment`, what its install adds to C Types' and Cpp Types' `Term`s."""
+"""The directives, in its `Term`'s order: with `pragmaexpression` and `comment`, what its install adds to C Types' and
+Cpp Types' `Term`s."""
 
-TAGS = (*DIRECTIVES, DEFINEDEXPRESSION, COMMENT)
+TAGS = (*DIRECTIVES, DEFINEDEXPRESSION, PRAGMAEXPRESSION, COMMENT)
 """Its own kinds, in its `Term`'s order, before invalid syntax."""
 
 HELPERS: tuple[str, ...] = ()
@@ -82,15 +104,20 @@ INCLUDES = ("include", "include_next", "import")
 mbse-programs' `IncludeKeyword` lists them."""
 
 _ALTERNATIVES = frozenset({ELIFDIRECTIVE, ELIFDEFDIRECTIVE, ELSEDIRECTIVE})
-_ITEMS = frozenset({"enumerator", *DIRECTIVES, COMMENT, *F.INVALID_KINDS})
+_ITEMS = frozenset({"enumerator", *DIRECTIVES, PRAGMAEXPRESSION, COMMENT, *F.INVALID_KINDS})
+
+
+F.boundaries("Expressions.C.Preprocessor.Group")
+# where its grammar hands off to mbse-programs' statements and declarations: the framework's readers do not enter it
 
 
 def install(txn: Any) -> Any:
     """C Preprocessor's union of its kinds, added to the framework's terms as the branch `c_preprocessor`, its own kinds,
     and its dialect's schema, whose singleton is `Expressions.C.Preprocessor`: run after `Framework.install`, in a
     transaction of its own, before or after its family's other installs; run again, it writes nothing.
-    `definedexpression` is added to C's and C++'s `Term`s, a condition's terms, and the directives and `comment` to C
-    Types' and Cpp Types' `Term`s, whose enumerations' bodies hold them; each created where its install has not run, as
+    `definedexpression` and `pragmaexpression` are added to C's and C++'s `Term`s, a condition's terms and an
+    expression's, and the directives, `pragmaexpression` and `comment` to C Types' and Cpp Types' `Term`s, whose
+    enumerations' bodies hold them; each created where its install has not run, as
     C's `Identifier`, a macro's name, is. Its holder, `Expressions.C.Preprocessor.Expression`, refines
     `Expressions.Framework.Expression`, its `root` narrowed to its `Term`."""
     S, Framework = txn.Schemas, txn.Expressions.Framework
@@ -99,7 +126,7 @@ def install(txn: Any) -> Any:
         return S.OfContainer(lambda c: c.index([S.OfInt]).element([element]))
 
     def held(_: Any) -> list[Any]:
-        """The directives and `comment`, as a union's branches: its own `Term`'s, and C Types' and Cpp Types'."""
+        """The directives, as a union's branches: its own `Term`'s, and C Types' and Cpp Types'."""
         return [
             lambda t: t.name("includedirective").schema([_.IncludeDirective]),
             lambda t: t.name("definedirective").schema([_.DefineDirective]),
@@ -116,7 +143,9 @@ def install(txn: Any) -> Any:
                   "Expression": S.OfObject, "IncludeDirective": S.OfObject, "DefineDirective": S.OfObject,
                   "IfDirective": S.OfObject, "IfdefDirective": S.OfObject, "ElifDirective": S.OfObject,
                   "ElifdefDirective": S.OfObject, "ElseDirective": S.OfObject, "OtherDirective": S.OfObject,
-                  "DefinedExpression": S.OfObject, "Comment": S.OfObject,
+                  "DefinedExpression": S.OfObject, "PragmaExpression": S.OfObject, "Comment": S.OfObject,
+                  # the lines a conditional governs: mbse-programs' grammar, which extends it by schema extension
+                  "Group": S.OfUnion,
                   # C's and C++'s `Term`s, C Types' and Cpp Types', and C's `Identifier`, by name
                   "CTerm": S.OfUnion, "CppTerm": S.OfUnion, "CTypesTerm": S.OfUnion, "CppTypesTerm": S.OfUnion,
                   "Identifier": S.OfObject})
@@ -133,42 +162,58 @@ def install(txn: Any) -> Any:
             lambda _: _.Term.name("Expressions.C.Preprocessor.Term").branches([
                 *held(_),
                 lambda t: t.name("definedexpression").schema([_.DefinedExpression]),
+                lambda t: t.name("pragmaexpression").schema([_.PragmaExpression]),
                 lambda t: t.name("comment").schema([_.Comment]),
                 lambda t: t.name("error").schema([Framework.Error]),
                 lambda t: t.name("missing").schema([Framework.Missing]),
             ]),
             lambda _: _.Identifier.name("Expressions.C.Expressions.Identifier"),
-            # `defined(name)`, a condition's term: in C's and C++'s `Term`s
+            # the lines a conditional governs between statements or declarations, an open union with no branch of its
+            # own: mbse-programs' C and C++ grammars add their groups to it by schema extension
+            lambda _: _.Group.name("Expressions.C.Preprocessor.Group"),
+            # `defined(name)`, a condition's term, and `_Pragma("...")`, within an expression: in C's and C++'s `Term`s
             lambda _: _.CTerm.name("Expressions.C.Expressions.Term").branches([
-                lambda t: t.name("definedexpression").schema([_.DefinedExpression])]),
+                lambda t: t.name("definedexpression").schema([_.DefinedExpression]),
+                lambda t: t.name("pragmaexpression").schema([_.PragmaExpression])]),
             lambda _: _.CppTerm.name("Expressions.Cpp.Expressions.Term").branches([
-                lambda t: t.name("definedexpression").schema([_.DefinedExpression])]),
-            # an enumeration's items: its directives and comments too
+                lambda t: t.name("definedexpression").schema([_.DefinedExpression]),
+                lambda t: t.name("pragmaexpression").schema([_.PragmaExpression])]),
+            # an enumeration's items: its directives, pragmas and comments too
             lambda _: _.CTypesTerm.name("Expressions.C.Types.Term").branches([
-                *held(_), lambda t: t.name("comment").schema([_.Comment])]),
+                *held(_), lambda t: t.name("pragmaexpression").schema([_.PragmaExpression]),
+                lambda t: t.name("comment").schema([_.Comment])]),
             lambda _: _.CppTypesTerm.name("Expressions.Cpp.Types.Term").branches([
-                *held(_), lambda t: t.name("comment").schema([_.Comment])]),
-            # the directives ([cpp]); a conditional's `items`, where a value holds it, an enumeration's items
+                *held(_), lambda t: t.name("pragmaexpression").schema([_.PragmaExpression]),
+                lambda t: t.name("comment").schema([_.Comment])]),
+            # the directives ([cpp]); a conditional's `items`, in an enumeration, its enumeration's items, and its
+            # `group`, between statements or declarations, mbse-programs' grammar
             lambda _: _.IncludeDirective.name("Expressions.C.Preprocessor.IncludeDirective").properties({
                 "directive": S.OfStr, "path": S.OfStr, "system": S.OfBool, "macro": Framework.Term}),
             lambda _: _.DefineDirective.name("Expressions.C.Preprocessor.DefineDirective").properties({
                 "name": _.Identifier, "function_like": S.OfBool, "parameters": many(_.Identifier),
                 "variadic": S.OfBool, "replacement": S.OfStr}),  # replacement: the text of its tokens
             lambda _: _.IfDirective.name("Expressions.C.Preprocessor.IfDirective").properties({
-                "condition": Framework.Term, "items": many(Framework.Term), "alternative": _.Term}),
+                "condition": Framework.Term, "items": many(Framework.Term), "group": _.Group,
+                "alternative": _.Term}),
             lambda _: _.IfdefDirective.name("Expressions.C.Preprocessor.IfdefDirective").properties({
-                "negated": S.OfBool, "name": _.Identifier, "items": many(Framework.Term), "alternative": _.Term}),
+                "negated": S.OfBool, "name": _.Identifier, "items": many(Framework.Term), "group": _.Group,
+                "alternative": _.Term}),
             lambda _: _.ElifDirective.name("Expressions.C.Preprocessor.ElifDirective").properties({
-                "condition": Framework.Term, "items": many(Framework.Term), "alternative": _.Term}),
+                "condition": Framework.Term, "items": many(Framework.Term), "group": _.Group,
+                "alternative": _.Term}),
             lambda _: _.ElifdefDirective.name("Expressions.C.Preprocessor.ElifdefDirective").properties({
-                "negated": S.OfBool, "name": _.Identifier, "items": many(Framework.Term), "alternative": _.Term}),
+                "negated": S.OfBool, "name": _.Identifier, "items": many(Framework.Term), "group": _.Group,
+                "alternative": _.Term}),
             lambda _: _.ElseDirective.name("Expressions.C.Preprocessor.ElseDirective").properties({
-                "items": many(Framework.Term)}),
+                "items": many(Framework.Term), "group": _.Group}),
             lambda _: _.OtherDirective.name("Expressions.C.Preprocessor.OtherDirective").properties({
                 "directive": S.OfStr, "text": S.OfStr}),
             # `defined(name)` ([cpp.cond])
             lambda _: _.DefinedExpression.name("Expressions.C.Preprocessor.DefinedExpression").properties({
                 "name": _.Identifier}),
+            # `_Pragma(operand)` ([cpp.pragma.op]): a string literal, a C or a C++ term
+            lambda _: _.PragmaExpression.name("Expressions.C.Preprocessor.PragmaExpression").properties({
+                "operand": Framework.Term}),
             # a comment: `text` excludes its delimiters; a `trailing` one ends the line of the item before it
             lambda _: _.Comment.name("Expressions.C.Preprocessor.Comment").properties({
                 "block": S.OfBool, "text": S.OfStr, "trailing": S.OfBool}),
@@ -233,8 +278,8 @@ def _label(kind: str) -> str:
 
 def problems(node: F.Node) -> list[str]:
     """A node's checks, and its helpers' in turn: an include's path or macro and its directive, a conditional's branch
-    after it and its items (an enumeration's: enumerators, directives and comments), each as mbse-programs checks it,
-    and a name's spelling, as C's identifiers are checked."""
+    after it and its items (an enumeration's: enumerators, directives, pragmas and comments), each as mbse-programs
+    checks it, a pragma's operand a string literal, and a name's spelling, as C's identifiers are checked."""
     kind, attributes = node.kind, node.attributes
     found: list[str] = []
     if kind == INCLUDEDIRECTIVE:
@@ -248,7 +293,10 @@ def problems(node: F.Node) -> list[str]:
         found.append(f"an {_label(kind)}'s alternative is an elifdirective, an elifdefdirective or an elsedirective")
     if kind in _ALTERNATIVES or kind in (IFDIRECTIVE, IFDEFDIRECTIVE):
         if any(F.kind_of(item)[0] not in _ITEMS for item in node.many):
-            found.append(f"an {_label(kind)}'s items are enumerators, directives and comments")
+            found.append(f"an {_label(kind)}'s items are enumerators, directives, pragmas and comments")
+    operand = node.subterms.get("operand")  # a pragma's; where it has none, the framework says so
+    if kind == PRAGMAEXPRESSION and operand is not None and not K.string_literal(operand):
+        found.append("a PragmaExpression's operand is a string literal")
     if kind == "identifier":
         found += K.identifier_problems(attributes.get("spelling"))
     for value in node.helpers.values():
@@ -305,6 +353,7 @@ def _kinds() -> dict[str, F.Kind]:
         ELSEDIRECTIVE: application(ELSEDIRECTIVE),
         OTHERDIRECTIVE: application(OTHERDIRECTIVE),
         DEFINEDEXPRESSION: application(DEFINEDEXPRESSION, required=("name",)),
+        PRAGMAEXPRESSION: application(PRAGMAEXPRESSION),
         COMMENT: application(COMMENT),
     }
 

@@ -9,13 +9,18 @@
  * A literal is written in its spelling where it has one (`text`), else in its value's default spelling, with what it
  * encodes: its prefix, its base and its suffix (`5u`, `0x1fu`, `1.5f`, `u8"s"`), a character as its code's character
  * (`'a'`), a string with C's escapes, a raw string between its delimiter's parentheses, and a float that has no literal
- * as `INFINITY` or `NAN`. A body of statements or declarations, not part of the term (a lambda's, a statement
- * expression's, a struct's), is written `{}`, where mbse-programs writes what it relates. An enumeration's body, its
- * data, is written as mbse-programs writes it, its enumerators, directives and comments each on lines of its own, one
- * level deeper, an enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment
- * ending the line before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`,
- * `#elif`, `#elifdef`, `#else`) on a line of its own, its items on the lines between, and `#endif`. Invalid syntax is
- * written as written (`Terms.invalidText`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`).
+ * as `INFINITY` or `NAN`. An identifier's asm label, GNU's, is written after the whole declarator that holds it, before
+ * the GNU attributes that end it, where GCC reads it (`f(void) asm("f2")`, `*p asm("p") __attribute__((unused))`). What
+ * a term holds of mbse-programs' grammar, which the family does not read, is written by its `Printer`'s methods, which
+ * mbse-programs' printer overrides to write it: a lambda's or a statement expression's compound statement, its `block`,
+ * by `statements`, `{}`; a struct's, a union's or a class's member declarations, its `members`, by `members`, `{}`,
+ * where its `body` says one is written; and a conditional directive's group, its `group`, by `group`, nothing, so that
+ * the directive is written with its items alone. An enumeration's body, its data, is written as mbse-programs writes
+ * it, its enumerators, directives, pragmas (`_Pragma("...")`) and comments each on lines of its own, one level deeper,
+ * an enumerator followed by a comma but the last, unless it has a trailing comma, and a trailing comment ending the
+ * line before it. A directive starts its line, a conditional one each of its branches (`#if`, `#ifdef`, `#elif`,
+ * `#elifdef`, `#else`) on a line of its own, its items and its group on the lines between, and `#endif`. Invalid syntax
+ * is written as written (`Terms.invalidText`), refused by the name of the dialect that owns it (`Terms.Dialect.owner`).
  * Reading C (`FromText`) is mbse-programs' (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "The model and printers here, the parsers mbse-programs'").
  */
 
@@ -42,7 +47,8 @@ const PRECEDENCE: Readonly<Record<string, number>> = {
   assignmentexpression: ASSIGNMENT, throwexpression: ASSIGNMENT, yieldexpression: ASSIGNMENT,
   conditionalexpression: CONDITIONAL, unaryexpression: UNARY, castexpression: UNARY, sizeofexpression: UNARY,
   alignofexpression: UNARY, newexpression: UNARY, deleteexpression: UNARY, awaitexpression: UNARY,
-  noexceptexpression: UNARY, extensionexpression: UNARY, sizeofpackexpression: UNARY, callexpression: POSTFIX,
+  noexceptexpression: UNARY, extensionexpression: UNARY, labeladdressexpression: UNARY, sizeofpackexpression: UNARY,
+  callexpression: POSTFIX,
   subscriptexpression: POSTFIX, memberexpression: POSTFIX, postfixexpression: POSTFIX, namedcastexpression: POSTFIX,
   typeidexpression: POSTFIX, functionalcastexpression: POSTFIX, compoundliteralexpression: POSTFIX,
   packexpansion: POSTFIX,
@@ -100,13 +106,36 @@ function one(value: Held): F.Node | undefined {
   return value as F.Node | undefined;
 }
 
-/** Whether a declarator declares no name. */
-function abstract(declarator: F.Node | undefined): boolean {
-  while (declarator !== undefined) {
-    if (declarator.kind === "iddeclarator") return false;
+/** The identifier's declarator a declarator holds, within its pointers, arrays, functions and parentheses: undefined,
+ * if it is abstract. */
+function named(declarator: F.Node | undefined): F.Node | undefined {
+  while (declarator !== undefined && declarator.kind !== "iddeclarator") {
     declarator = one(declarator.helpers.get("declarator"));
   }
-  return true;
+  return declarator;
+}
+
+/** The GNU attributes that end a declarator, which GCC writes after an asm label: the last of the attributes of the
+ * declarator written last, within its pointers, references and packs (an identifier's, an array's, a function's
+ * without a trailing return type), that are GNU's; none where it ends with a parenthesis or a type. */
+function trailingGnu(declarator: F.Node): readonly F.Node[] {
+  while (["pointerdeclarator", "referencedeclarator", "packdeclarator"].includes(declarator.kind)) {
+    declarator = one(declarator.helpers.get("declarator")) as F.Node;
+  }
+  if (declarator.kind === "parenthesizeddeclarator" || (declarator.subterms.get("trailing_return") ?? null) !== null) {
+    return [];
+  }
+  const attributes = nodes(declarator.helpers.get("attributes"));
+  let count = 0;
+  while (count < attributes.length && attributes[attributes.length - 1 - count]!.kind === "gnuattributespecifier") {
+    count++;
+  }
+  return attributes.slice(attributes.length - count);
+}
+
+/** Whether a declarator declares no name. */
+function abstract(declarator: F.Node | undefined): boolean {
+  return named(declarator) === undefined;
 }
 
 /** Specifiers and a declarator: separated by a space, unless the declarator is abstract and starts with a pointer,
@@ -121,8 +150,10 @@ function declaredText(specifiers: string, declarator: string, isAbstract: boolea
 
 type Text = (printer: Printer, node: F.Node) => string;
 
-/** Writes a term's source from its `Node`: its kind as C and C++ write it, its type names and other helpers nested. */
-class Printer {
+/** Writes a term's source from its `Node`, a term of `dialect`, a dialect of the C family: its kind as C and C++ write
+ * it, its type names and other helpers nested; what it holds of mbse-programs' grammar by `statements`, `members` and
+ * `group`, which a printer of that grammar overrides. */
+export class Printer {
   depth = 0; // the depth of the enumeration being written
   readonly owners = new Map<F.Node, F.Dialect>(); // each node of invalid syntax read, and the dialect that owns it
 
@@ -349,7 +380,7 @@ class Printer {
     // without a declarator, the lambda has no parameter list: `[] { ... }`
     if (node.helpers.has("declarator")) written += (requires !== null ? " " : "")
       + this.text(one(node.helpers.get("declarator")) as F.Node);
-    return written + " {}"; // its body of statements, not part of the term
+    return written + " " + this.statements(node);
   }
 
   lambdaDeclarator(node: F.Node): string {
@@ -398,6 +429,27 @@ class Printer {
     return (pattern.kind === E.TYPEID ? this.text(pattern) : this.expression(pattern, POSTFIX)) + "...";
   }
 
+  // What a term holds of mbse-programs' grammar, which the family does not read: each written by its own method
+
+  /** The compound statement a lambda's or a statement expression's `Node` holds, its `block`, mbse-programs' grammar:
+   * `{}`. A printer of that grammar overrides it to write the statements. */
+  statements(_node: F.Node): string {
+    return "{}";
+  }
+
+  /** The member declarations a struct's, a union's or a class's specifier holds, its `members`, mbse-programs' grammar,
+   * written where its `body` says it has one: `{}`. A printer of that grammar overrides it to write them. */
+  members(_node: F.Node): string {
+    return "{}";
+  }
+
+  /** The lines a conditional directive's branch governs between statements or declarations, its `group`, mbse-programs'
+   * grammar, written on the lines after its items: none, `""`, so that the branch is written with its items alone. A
+   * printer of that grammar overrides it to write them, each line as it is to stand. */
+  group(_node: F.Node): string {
+    return "";
+  }
+
   // Names
 
   nameText(node: F.Node): string {
@@ -444,7 +496,7 @@ class Printer {
     if (attributes.get("final")) written += " final";
     const bases = nodes(node.helpers.get("bases"));
     if (bases.length > 0) written += " : " + bases.map((b) => this.text(b)).join(", ");
-    return written + (attributes.get("body") ? " {}" : ""); // its member declarations, not part of the term
+    return written + (attributes.get("body") ? " " + this.members(node) : "");
   }
 
   base(node: F.Node): string {
@@ -485,7 +537,8 @@ class Printer {
   /** An item, starting with its indentation (a directive, at its line's start); among `enumerators`, an enumerator ends
    * with a comma. */
   item(node: F.Node, depth: number, enumerators: boolean): string {
-    if (node.kind === "comment" || F.INVALID_KINDS.has(node.kind)) { // a comment, or invalid syntax as written
+    if (node.kind === "comment" || node.kind === "pragmaexpression" || F.INVALID_KINDS.has(node.kind)) {
+      // a comment, a pragma, or invalid syntax as written
       return INDENT.repeat(depth) + this.text(node);
     }
     if (node.kind !== "enumerator") return this.directive(node, depth, enumerators);
@@ -520,7 +573,8 @@ class Printer {
     return node.attributes.get("block") ? `/*${text}*/` : `//${text}`;
   }
 
-  // Directives, as mbse-programs writes them: each starting its line, a conditional one's items on the lines between
+  // Directives, as mbse-programs writes them: each starting its line, a conditional one's items and group on the lines
+  // between
 
   directive(node: F.Node, depth: number, enumerators: boolean): string {
     const { kind, attributes } = node;
@@ -547,7 +601,7 @@ class Printer {
     return this.branch(node, depth, enumerators) + "\n#endif";
   }
 
-  /** A conditional directive's branch, its items, and the branches after it (`alternative`). */
+  /** A conditional directive's branch, its items, its group (`group`), and the branches after it (`alternative`). */
   branch(node: F.Node, depth: number, enumerators: boolean): string {
     const kind = node.kind;
     let head: string;
@@ -558,7 +612,9 @@ class Printer {
       head = `#${keyword}${node.attributes.get("negated") ? "ndef" : "def"} ${this.name(node, "name")}`;
     } else head = "#else";
     const items = node.many.map((item) => this.node(item));
-    const body = this.lines(items, (i, item) => this.item(item, depth, enumerators)).map((line) => "\n" + line).join("");
+    let body = this.lines(items, (i, item) => this.item(item, depth, enumerators)).map((line) => "\n" + line).join("");
+    const group = this.group(node);
+    body += group ? "\n" + group : "";
     const alternative = node.subterms.get("alternative") ?? null;
     const tail = alternative === null ? "" : "\n" + this.branch(this.node(alternative), depth, enumerators);
     return head + body + tail;
@@ -566,10 +622,21 @@ class Printer {
 
   // Declarators
 
+  /** A declarator, and after it, where GCC writes it, the asm label its identifier holds, GNU's: before the GNU
+   * attributes that end the declarator (`int *p asm("p") __attribute__((unused))`). */
   declarator(node: F.Node | undefined): string {
+    const label = one(named(node)?.helpers.get("asm"));
+    const written = this.nested(node);
+    if (label === undefined) return written;
+    const tail = trailingGnu(node as F.Node).map((a) => " " + this.text(a)).join("");
+    return written.slice(0, written.length - tail.length) + " " + this.text(label) + tail;
+  }
+
+  /** A declarator, its declarators within it nested. */
+  nested(node: F.Node | undefined): string {
     if (node === undefined) return "";
     const { kind, attributes } = node;
-    let inner = this.declarator(one(node.helpers.get("declarator")));
+    let inner = this.nested(one(node.helpers.get("declarator")));
     if (kind === "iddeclarator") return this.name(node, "name") + this.attributesAfter(node);
     if (kind === "packdeclarator") return "..." + inner;
     if (kind === "pointerdeclarator" || kind === "referencedeclarator") {
@@ -603,6 +670,10 @@ class Printer {
     const trailing = node.subterms.get("trailing_return") ?? null; // C++'s
     if (trailing !== null) written += " -> " + this.term(trailing);
     return written;
+  }
+
+  asmLabel(node: F.Node): string {
+    return (node.attributes.get("keyword") ?? "asm") + `(${this.expression(node.subterms.get("label"), COMMA)})`;
   }
 
   specifiers(node: F.Node): string {
@@ -719,8 +790,9 @@ const TEXTS: Readonly<Record<string, Text>> = {
   indexdesignator: (p, n) => p.designator(n),
   compoundliteralexpression: (p, n) => `(${p.term(n.subterms.get("type"))})`
     + p.initializerList(one(n.helpers.get("initializer")) as F.Node),
-  statementexpression: () => "({})", // its body of statements, not part of the term
+  statementexpression: (p, n) => `(${p.statements(n)})`,
   extensionexpression: (p, n) => "__extension__ " + p.expression(n.subterms.get("operand"), UNARY),
+  labeladdressexpression: (p, n) => "&&" + p.name(n, "label"),
   typeid: (p, n) => p.typeId(n),
   identifier: (p, n) => p.nameText(n), operatorname: (p, n) => p.nameText(n), conversionname: (p, n) => p.nameText(n),
   literaloperatorname: (p, n) => p.nameText(n), destructorname: (p, n) => p.nameText(n), templateid: (p,
@@ -737,7 +809,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   iddeclarator: (p, n) => p.declarator(n), packdeclarator: (p, n) => p.declarator(n),
   pointerdeclarator: (p, n) => p.declarator(n), referencedeclarator: (p, n) => p.declarator(n),
   arraydeclarator: (p, n) => p.declarator(n), functiondeclarator: (p, n) => p.declarator(n),
-  parenthesizeddeclarator: (p, n) => p.declarator(n),
+  parenthesizeddeclarator: (p, n) => p.declarator(n), asmlabel: (p, n) => p.asmLabel(n),
   parameterdeclaration: (p, n) => p.parameter(n), ellipsisparameter: (p, n) => p.parameter(n),
   typeparameter: (p, n) => p.templateParameter(n), templatetemplateparameter: (p, n) => p.templateParameter(n),
   noexceptspecifier: (p, n) => p.exception(n), throwspecifier: (p, n) => p.exception(n),
@@ -746,6 +818,7 @@ const TEXTS: Readonly<Record<string, Text>> = {
   attribute: (p, n) => p.attribute(n),
   enumerator: (p, n) => p.enumerator(n), comment: (p, n) => p.comment(n),
   definedexpression: (p, n) => `defined(${p.name(n, "name")})`,
+  pragmaexpression: (p, n) => p.keywordCall("_Pragma", n.subterms.get("operand")),
   ...Object.fromEntries(["includedirective", "definedirective", "ifdirective", "ifdefdirective", "elifdirective",
     "elifdefdirective", "elsedirective", "otherdirective"].map((kind) => [kind, (p: Printer, n: F.Node) => p.directive(n,
     0, false)])),

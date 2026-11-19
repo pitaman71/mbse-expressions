@@ -1,6 +1,6 @@
 """How the TypeScript family reads a node, shared by its three dialects, `TypeScript5`, `TypeScript Types` and
 `TypeScript Patterns` (mbse-basis [CAP-277: TypeScript's types and destructuring patterns as data](mbse:mbse-basis/docs/capabilities/CAP-277.md)): a node's own checks, as mbse-programs has them, and its
-helpers' in turn; the names a pattern binds; and the names each of a kind's arguments has bound. It imports only the
+helpers' in turn; the names a pattern binds, or a type parameter declares; and the names each of a kind's arguments has bound. It imports only the
 framework, so that the family's dialects, which read each other's terms, each import it without a cycle."""
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ __all__ = ["QUOTES", "SIGNATURES", "Node", "nodes", "bound_names", "check", "bou
 
 IDENTIFIER, PRIVATEIDENTIFIER, LITERAL, PROPERTY, MEMBEREXPRESSION = (
     "identifier", "privateidentifier", "literal", "property", "memberexpression")
-TEMPLATELITERAL, SEQUENCEEXPRESSION = "templateliteral", "sequenceexpression"
+TEMPLATELITERAL, SEQUENCEEXPRESSION, TYPEPARAMETER = "templateliteral", "sequenceexpression", "tstypeparameter"
 FUNCTIONS = ("arrowfunctionexpression", "functionexpression", "tsemptybodyfunctionexpression")
 """`TypeScript5`'s functions, which bind their parameters within them."""
 
@@ -46,19 +46,35 @@ def node_of(value: Any) -> Node:
 # --- What a pattern binds ---
 
 
+def _read(value: Any) -> Node:
+    """A term's, a `Node`'s or a record's `Node`: a record, a kind's or a helper's value object, read as `Terms.node`
+    reads it, its kind its schema's name in lower case, as the family names its kinds and helpers."""
+    if isinstance(value, Node) or F.is_term(value):
+        return node_of(value)
+    schema = value.as_schema() if callable(getattr(value, "as_schema", None)) else None
+    if type(getattr(schema, "name", None)) is not str:
+        raise TypeError(f"not a term, a Node or a record: {value!r}")
+    return F.node(schema.name.rsplit(".", 1)[-1].lower(), value)
+
+
 def bound_names(node: Any) -> frozenset[str]:
-    """The names a pattern binds, a term's or a `Node`'s: an identifier's, and those within an array, an object, a
-    default, a rest or a parameter property; a member, or any other target, binds none."""
+    """The names a pattern binds, or a type parameter declares, of a term, a `Node` or a record (a kind's or a helper's,
+    as a statement holds it *(agent)*): an identifier's, and those within an array, an object, a default, a rest or a
+    parameter property; a type parameter's name, and a declaration's type parameters'; a member, or any other target,
+    binds none. Anything else is refused, TypeError."""
     if node is None:
         return frozenset()
-    node = node_of(node)
+    node = _read(node)
     if node.kind == IDENTIFIER:
         return frozenset({node.attributes["name"]}) if "name" in node.attributes else frozenset()
     if node.kind == PROPERTY:
         return bound_names(node.subterms.get("value"))
+    if node.kind == TYPEPARAMETER:
+        return bound_names(node.helpers.get("name"))
     found: frozenset[str] = frozenset()
     for inner in (*node.lists.get("elements", ()), *node.lists.get("properties", ()),
-                  *(node.subterms.get(name) for name in ("left", "argument", "parameter"))):
+                  *(node.subterms.get(name) for name in ("left", "argument", "parameter")),
+                  *nodes(node.helpers.get("params"))):
         found |= bound_names(inner)
     return found
 
@@ -73,11 +89,7 @@ def _parameters(node: Node) -> frozenset[str]:
 
 def _type_parameters(node: Node) -> frozenset[str]:
     """The names a node's type parameters declare (each a `TSTypeParameter`'s `name`)."""
-    declaration = node.helpers.get("typeParameters")
-    if declaration is None:
-        return frozenset()
-    return frozenset(parameter.helpers["name"].attributes["name"] for parameter in nodes(declaration.helpers.get("params"))
-                     if "name" in parameter.helpers and "name" in parameter.helpers["name"].attributes)
+    return bound_names(node.helpers.get("typeParameters"))
 
 
 def _infers(value: Any) -> frozenset[str]:
@@ -89,8 +101,7 @@ def _infers(value: Any) -> frozenset[str]:
     if node.kind == "tsconditionaltype":
         return frozenset()
     if node.kind == "tsinfertype":
-        name = node.helpers["typeParameter"].helpers.get("name") if "typeParameter" in node.helpers else None
-        return frozenset({name.attributes["name"]}) if name is not None and "name" in name.attributes else frozenset()
+        return bound_names(node.helpers.get("typeParameter"))
     found: frozenset[str] = frozenset()
     for inner in (*node.subterms.values(), *node.many):
         found |= _infers(inner)
