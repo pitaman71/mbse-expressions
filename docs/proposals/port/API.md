@@ -2992,7 +2992,7 @@ constant without a prefix `int`.
      it reports all four. C's own prefixes are not C++'s to check.
 433. **Tests**: a cell of DIA-24 (`'ab'` an `int`, inferred, valid and evaluated to 24930; `'a'` and `'\x61'` `char`s;
      C's both `int`s; `c_chars` of escapes and of spellings with no c-char; each prefix's multicharacter literal
-     reported, of its prefix's type) and of DIA-31 (`'ab'` an `int` that fits under AMD64 and AAPCS64), the same in
+     reported, of its prefix's type, and one without text not) and of DIA-31 (`'ab'` an `int` that fits under AMD64 and AAPCS64), the same in
      both languages; no case is added. Conformance is unchanged.
 
 ## What stage 2b needed (done)
