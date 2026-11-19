@@ -2969,6 +2969,32 @@ bindings, a conditional `explicit`, `__has_include`, and a user-defined literal 
      CPD-01 to CPD-05 and CPD-07 to CPD-09 (`__has_include`), FRM-01, FRM-02 and FRM-13 (unions, samples, editions), the
      same in both languages; no case is added.
 
+## Settled in typing C++'s multicharacter literals, for the user's review
+
+A C++ character literal of more than one c-char without a prefix, a multicharacter literal (`'ab'`), is an `int` whose
+value is the implementation's ([lex.ccon]); one of one c-char is a `char`, so validation under an ABI does not report
+`'ab'` ("integer literal 24930 does not fit 'char'"), as mbse-programs' cross-check needs. C types every character
+constant without a prefix `int`.
+
+430. **A character literal's c-chars**: `C.Domains.c_chars(text)` (TypeScript `cChars`) counts the c-chars a character
+     literal's spelling holds between its first quote and its last, an escape sequence (simple, octal, hexadecimal,
+     C++23's delimited `\x{...}` and `\o{...}`) or a universal character name (`\u`, `\U`, `\N{...}`) one, any
+     other character one; 0 where it holds none or has no two quotes.
+431. **C++'s typing** (`Domains.literal`): a C++ character literal without a prefix is an `int` where its `text`
+     holds more than one c-char, a `char` otherwise; a literal without `text` holds one c-char *(agent)*, as no
+     other attribute says how many it held. Its `text` stays a literal's spelling, which a translation does not carry,
+     so a multicharacter literal translated is one of one c-char *(agent)*. A literal with a prefix keeps its prefix's
+     type (`char8_t`, `char16_t`, `char32_t`, `wchar_t`), of one c-char or several; C's typing is unchanged.
+432. **A multicharacter literal with a prefix** *(agent)*: validation reports it, as it reports a literal's other
+     encoded properties: "a character literal with prefix 'u' cannot have more than one c-char". In C++17 and C++20,
+     [lex.ccon] makes one of `u8`, `u` or `U` ill-formed and one of `L` of an implementation-defined value; C++23 (P2362)
+     makes every one ill-formed. The dialect validates without an edition, and none of these has a portable value, so
+     it reports all four. C's own prefixes are not C++'s to check.
+433. **Tests**: a cell of DIA-24 (`'ab'` an `int`, inferred, valid and evaluated to 24930; `'a'` and `'\x61'` `char`s;
+     C's both `int`s; `c_chars` of escapes and of spellings with no c-char; each prefix's multicharacter literal
+     reported, of its prefix's type) and of DIA-31 (`'ab'` an `int` that fits under AMD64 and AAPCS64), the same in
+     both languages; no case is added. Conformance is unchanged.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,
