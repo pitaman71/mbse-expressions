@@ -457,7 +457,16 @@ class Node {
   [member: string]: any;
 
   constructor(readonly term: any) {
+    if (F.isParameter(term)) { // a leaf, its value the scope's (mbse-basis CAP-296)
+      [this.tag, this.held] = [F.PARAMETER, null];
+      return;
+    }
     const [tag, record] = X.DIALECT.kind(term);
+    const held = tag === X.LITERAL ? F.valueParameter(record) : null;
+    if (held !== null) { // a literal whose value a parameter gives, as its scope holds it
+      [this.tag, this.held] = [F.PARAMETER, held];
+      return;
+    }
     const node = F.node(tag, record);
     const [, , names] = F._parts(record.as_schema());
     for (const name of names) this[name] = null;
@@ -504,7 +513,7 @@ class Evaluation {
 
   /** The term's self-determined type (null for an object); a kind it does not fold is refused by name. */
   type(node: any): SvType | null {
-    if (!FOLDED.has(kindOf(node))) throw new FS.NoRule(owner(node), kindOf(node), kindOf(node));
+    if (!FOLDED.has(kindOf(node)) && kindOf(node) !== F.PARAMETER) throw new FS.NoRule(owner(node), kindOf(node), kindOf(node));
     if (!this.types.has(node)) this.types.set(node, this.typeOf(node));
     return this.types.get(node) as SvType | null;
   }
@@ -535,7 +544,7 @@ class Evaluation {
         return declared;
       }
     }
-    if (OWN_KINDS.has(kind)) return typeOfValue(this.own(node), this.stored);
+    if (OWN_KINDS.has(kind) || kind === F.PARAMETER) return typeOfValue(this.own(node), this.stored);
     if (kind === X.PARENTHESIZEDEXPRESSION) return this.type(node.expression);
     if (kind === X.MINTYPMAXEXPRESSION) return this.type(this.chosen(node));
     if (kind === X.UNARYEXPRESSION) {
@@ -634,6 +643,8 @@ class Evaluation {
       case X.LITERAL: return this.literal(node);
       case X.CONSTANT: return this.vector(node);
       case X.NAMEEXPRESSION: return this.name(node);
+      case F.PARAMETER: // its value the scope's, apart from its variables
+        return typed(node.held === null ? this.scope.lookup(node.term) : S.held(this.scope, node.held), this.stored);
       case X.THISEXPRESSION: return typed(this.scope.value("this"), this.stored);
       case X.EMPTYQUEUE: return [];
       case X.DOLLAREXPRESSION: return this.dollar();

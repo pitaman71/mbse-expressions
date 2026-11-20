@@ -78,6 +78,14 @@ kind is read, is a `Kind`: its role, and which properties name what it binds and
   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers nested,
   as a dialect whose kinds hold sublanguages reads them to print and check them.
 - `name_of(term)`, `reference_name(name)`, `operator_of(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
+- `is_parameter(x)`: whether a value read at a term's place is a parameter reference, mbse-schemas'
+  `References.OfParameter`, standing there in place of a term (mbse-basis [CAP-312: a parameter reference in place of
+  anything with a schema](mbse:mbse-basis/docs/capabilities/CAP-312.md)). The readers (`arguments_of`, `form`,
+  `node`'s subterms, `term`) give it among a term's arguments, so that no reader drops it; `kind_of` reads it as
+  `PARAMETER`, and every dialect as a leaf of `PARAMETER_KIND`, its scope's to resolve; `node` of it raises
+  `Symbolics.Unbound`, since it has no structure until its context gives it one; `spec` writes it back through the
+  place's `as_parameter`; `same` compares two by name. Within `substituting(resolver)`, the readers give the term a
+  resolver gives in its place (`holds`, `substituted`).
 - `Dialect`: a dialect's kinds by tag, with `validate`, `infer` and `make(form)`, the `Writer` of a form.
 - `Writer`: a spec that writes a term of its dialect through the builders; `spec(x)` makes one of a writer, a native
   value (a literal), a term value (copied) or a callable taking the `Visitors.OfUnion` of a term value.
@@ -115,6 +123,8 @@ from __future__ import annotations
 
 import math
 from collections.abc import Callable, Iterable, Iterator, Mapping
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -127,13 +137,17 @@ __all__ = [
     "INVALID", "INVALID_KINDS", "invalid_text", "invalid_term_text", "invalid_problems", "Form", "Part", "Node", "Kind", "Dialect", "Writer",
     "spec", "term", "is_term", "is_expression", "is_binder", "holder_of", "kind_of", "dialect_of", "dialect_name",
     "dialect_tag", "SUBLANGUAGES", "form", "node", "name_of", "reference_name", "operator_of", "walk", "fold", "same",
-    "boundaries",
+    "boundaries", "PARAMETER", "PARAMETER_KIND", "PARAMETER_REFERENCE", "is_parameter", "parameter_name",
+    "substituting", "substituted", "holds", "value_parameter", "parameters_in",
 ]
 
 TERM = "Expressions.Framework.Term"
 EXPRESSION = "Expressions.Framework.Expression"
+PARAMETER_REFERENCE = "References.OfParameter"
 LITERAL, REFERENCE, APPLICATION, BINDING, IMPORT = "literal", "reference", "application", "binding", "import"
 QUANTIFIER, INVALID = "quantifier", "invalid"
+PARAMETER = "parameter"
+"""The tag a parameter reference is read by, at a term place: a leaf of every dialect, of the kind `PARAMETER_KIND`."""
 
 
 def install(txn: Any) -> Any:
@@ -375,6 +389,71 @@ def _is_any(visitor: Any) -> bool:
     return callable(getattr(type(visitor), "as_union", None))
 
 
+def is_parameter(value: Any) -> bool:
+    """Whether `value` is a parameter reference read at a term place: the `Visitors.OfObject` of the
+    `References.OfParameter` that stands there in place of a term (mbse-basis [CAP-312: a parameter reference in place
+    of anything with a schema](mbse:mbse-basis/docs/capabilities/CAP-312.md))."""
+    schema = getattr(value, "as_schema", None)
+    return callable(schema) and not isinstance(value, type) and _named(schema(), PARAMETER_REFERENCE)
+
+
+def parameter_name(value: Any) -> str:
+    """The name of the parameter a parameter reference designates."""
+    return value.name.get()
+
+
+_RESOLVER: ContextVar[Callable[[str, Any], Any] | None] = ContextVar("resolver", default=None)
+_SUBSTITUTED: ContextVar[dict[int, Any] | None] = ContextVar("substituted", default=None)
+
+
+@contextmanager
+def substituting(resolver: Callable[[str, Any], Any]) -> Iterator[None]:
+    """Within it, a reader of a term place that holds a parameter reference gives the term that `resolver(name, union)`
+    gives for the parameter `name` at a place that holds terms of `union`, a union schema (`holds`), where it gives one,
+    in place of the reference
+    (a type parameter's type term, mbse-basis [CAP-298: simplification over type
+    parameters](mbse:mbse-basis/docs/capabilities/CAP-298.md)); `substituted(term)` tells such a term. A simplifier
+    given a context reads its terms within it, so that a dialect's rules, whatever route they read terms by, read the
+    term in the reference's place."""
+    resolving, substituted = _RESOLVER.set(resolver), _SUBSTITUTED.set({})
+    try:
+        yield
+    finally:
+        _RESOLVER.reset(resolving)
+        _SUBSTITUTED.reset(substituted)
+
+
+def holds(union: Any, term_: Any) -> bool:
+    """Whether a place holding terms of `union` (a union schema: `Expressions.Framework.Term` or a dialect's `Term`)
+    holds a term value: any dialect's term, where it is `Term`; else a term of that union, or of a kind the union lists
+    (C's `Term` lists C Types' `typeid`, for a subterm that may be an expression or a type alike)."""
+    if _named(union, TERM) or _named(union, dialect_of(term_)):
+        return True
+    tag, record = kind_of(term_)
+    return any(branch.name == tag and branch.schema is record.as_schema() for branch in union.branches)
+
+
+def substituted(term_: Any) -> bool:
+    """Whether a reader gave `term_` in place of a parameter reference (`substituting`)."""
+    found = _SUBSTITUTED.get()
+    return found is not None and found.get(id(term_)) is term_
+
+
+def _place(a: Any, union: Any) -> Any:
+    """What a term place holds, read through its `Visitors.OfAny` `a`, where it holds no term: the parameter reference
+    standing there, or the term that the resolver gives for it (`substituting`); None where it holds neither."""
+    found: list[Any] = []
+    a.as_parameter(lambda p: found.extend([p] if p.as_schema() is not None else []) or p)
+    if not found:
+        return None
+    resolver = _RESOLVER.get()
+    term_ = None if resolver is None else resolver(parameter_name(found[0]), union)
+    if term_ is None:
+        return found[0]
+    _SUBSTITUTED.get()[id(term_)] = term_  # type: ignore[index]
+    return term_
+
+
 def is_expression(schema: Any) -> bool:
     """Whether `schema` is `Expressions.Framework.Expression` or refines it, as each dialect's holder does
     (`Expressions.Python.Python3.Expression`): an expression, whose `root` holds its root term."""
@@ -410,14 +489,14 @@ def term(value: Any) -> Any:
     if is_expression(schema):
         return term(value.root)
     if isinstance(schema, Schemas.OfProperty.Data) and _holds_terms(schema.schema):
-        value.as_value(lambda a: a.as_union(lambda u: found.append(u) or u))
+        value.as_value(lambda a: found.append(_held_term(a, schema.schema)) or a)
     elif _is_any(value) and _holds_terms(schema):
-        value.as_union(lambda u: found.append(u) or u)
-    elif is_term(value):
+        found.append(_held_term(value, schema))
+    elif is_term(value) or is_parameter(value):
         return value
     else:
         raise TypeError(f"not a term: {value!r}")
-    if found[0].as_schema() is None:
+    if found[0] is None:
         raise ValueError("no term is set")
     return found[0]
 
@@ -442,44 +521,104 @@ def _dialect_value(term_: Any) -> Any:
 
 
 def dialect_of(term_: Any) -> str:
-    """The name of the `Term` of the dialect a term value is of: `Expressions.Python.Python3.Term`."""
+    """The name of the `Term` of the dialect a term value is of: `Expressions.Python.Python3.Term`; of a parameter
+    reference, the name of the `Term` of the dialect whose term holds it, or `TERM` where no term holds it (an
+    expression's root)."""
+    if is_parameter(term_):
+        holding = _holding(term_)
+        return TERM if holding is None else dialect_of(holding)
     return _dialect_value(term_).as_schema().name
 
 
+def _holding(parameter: Any) -> Any:
+    """The term that holds a parameter reference: the first of its owners, in turn, that is a term value; None where
+    none is."""
+    owner = Proxies.owner_of(parameter)
+    while owner is not None and not is_term(owner):
+        owner = Proxies.owner_of(owner)
+    return owner
+
+
 def kind_of(term_: Any) -> tuple[str, Any]:
-    """The branch of its dialect's `Term` a term value holds: its tag, and its record (a `Readers.OfObject`)."""
+    """The branch of its dialect's `Term` a term value holds: its tag, and its record (a `Readers.OfObject`); of a
+    parameter reference, `PARAMETER` and the reference itself."""
+    if is_parameter(term_):
+        return PARAMETER, term_
     held = _held(_dialect_value(term_))
     if held is None:
         raise ValueError("a term holds no kind")
     return held
 
 
-def _scalar(record: Any, name: str) -> Any:
-    """A record's property's value: a scalar, or what `Objects.held` reads of any other value; None when absent."""
+def _standing(a: Any) -> bool:
+    """Whether a parameter reference stands in the place a `Visitors.OfAny` visits."""
     found: list[Any] = []
-    getattr(record, name).as_value(lambda a: found.append(Objects.held(a)) or a)
+    a.as_parameter(lambda p: found.extend([p] if p.as_schema() is not None else []) or p)
+    return bool(found)
+
+
+def value_parameter(record: Any) -> Any:
+    """The parameter reference standing in a literal's `value`, a place of any value, or None: a place that holds an
+    object's reference as it holds any value, where a term's place holds terms alone."""
+    if "value" not in record.as_schema().properties:
+        return None
+    found: list[Any] = []
+    record.value.as_value(lambda a: a.as_parameter(lambda p: found.extend([p] if p.as_schema() is not None else []) or p))
     return found[0] if found else None
 
 
-def _subterm(record: Any, name: str) -> Any:
-    """The subterm a property holds, or None."""
+def parameters_in(term_: Any) -> list[Any]:
+    """The parameter references within a term, in the order `walk` visits them: each standing in a term's place, or in a
+    literal's `value`."""
     found: list[Any] = []
-    getattr(record, name).as_value(lambda a: a.as_union(lambda u: found.append(u) or u))
-    return found[0] if found and found[0].as_schema() is not None else None
+    for node in walk(term_):
+        if is_parameter(node):
+            found.append(node)
+        else:
+            held = value_parameter(kind_of(node)[1])
+            found.extend([] if held is None else [held])
+    return found
+
+
+def _scalar(record: Any, name: str) -> Any:
+    """A record's property's value: a scalar, or what `Objects.held` reads of any other value; None when absent, or
+    where a parameter reference stands in its place (`value_parameter`)."""
+    found: list[Any] = []
+    getattr(record, name).as_value(lambda a: found.append(None if _standing(a) else Objects.held(a)) or a)
+    return found[0] if found else None
+
+
+def _held_term(a: Any, union: Any) -> Any:
+    """The term a term place holds, read through its `Visitors.OfAny`: a term value, else a parameter reference standing
+    in its place, or the term a resolver gives for one (`_place`); None where it holds nothing."""
+    found: list[Any] = []
+    a.as_union(lambda u: found.append(u) or u)
+    if found and found[0].as_schema() is not None:
+        return found[0]
+    return _place(a, union)
+
+
+def _subterm(record: Any, name: str) -> Any:
+    """The subterm a property holds, a parameter reference in its place among them (`is_parameter`), or None."""
+    found: list[Any] = []
+    getattr(record, name).as_value(lambda a: found.append(_held_term(a, record.as_schema().properties[name].schema)) or a)
+    return found[0] if found else None
 
 
 def _variadic(record: Any, name: str) -> tuple[Any, ...]:
-    """The terms a container holds, in index order: its elements, or each element's terms in turn (`_members`), None
-    where one is empty."""
+    """The terms a container holds, in index order, a parameter reference in a term's place among them: its elements,
+    or each element's terms in turn (`_members`), None where one is empty."""
     pairs: list[tuple[Any, Any]] = []
     getattr(record, name).as_value(lambda a: a.as_container(lambda c: c.as_entries(pairs.extend)))
-    members = _members(record.as_schema(), name)
+    schema = record.as_schema()
+    members = _members(schema, name)
+    union = schema.properties[name].schema.element
     found: list[Any] = []
     for _, element in pairs:
         if members:
             element.as_object(lambda o: found.extend(_subterm(o, member) for member in members) or o)
         else:
-            element.as_union(lambda u: found.append(u) or u)
+            found.append(_held_term(element, union))
     return tuple(found)
 
 
@@ -613,7 +752,12 @@ def _nest(schema: Any, kind: str, attributes: Mapping[str, Any], arguments: tupl
 
 
 def node(tag: str, record: Any) -> Node:
-    """A record's `Node`, a term's (its tag and record, as `kind_of` gives them) or a helper's, its helpers nested."""
+    """A record's `Node`, a term's (its tag and record, as `kind_of` gives them) or a helper's, its helpers nested. A
+    parameter reference has no structure to read until its context gives it one: reading its node raises
+    `Symbolics.Unbound`, so that a dialect's rules that read it leave its term in the residual."""
+    if is_parameter(record):
+        from .Symbolics import Unbound
+        raise Unbound(parameter_name(record))
     return _nest(record.as_schema(), tag, attributes_of(record), arguments_of(record))
 
 
@@ -627,7 +771,11 @@ def reference_name(value: Any) -> Any:
 
 def name_of(term_: Any) -> Any:
     """The name a reference refers to, or a binding, quantifier or import binds: its `name`, a string, or the spelling
-    of the identifier its name node is (C++'s `idexpression`); None if it has none, or its name is not an identifier."""
+    of the identifier its name node is (C++'s `idexpression`); None if it has none, or its name is not an identifier.
+    A parameter reference refers to itself, a key no variable has, so that a scope's `lookup` gives it to `value`,
+    which reads its parameter apart from its variables (`Symbolics.Variables`)."""
+    if is_parameter(term_):
+        return term_
     _, record = kind_of(term_)
     schema = record.as_schema()
     if "name" not in schema.properties:
@@ -676,11 +824,16 @@ def _same_native(a: Any, b: Any) -> bool:
 
 def same(a: Any, b: Any) -> bool:
     """Whether two terms have the same structure: their dialects, kinds, attributes (scalars of one type by value; NaN
-    is NaN, and -0.0 is not 0.0) and arguments in order."""
+    is NaN, and -0.0 is not 0.0) and arguments in order. Two parameter references are the same where their parameters'
+    names are, as mbse-basis [CAP-296: simplification over literals, variables and
+    parameters](mbse:mbse-basis/docs/capabilities/CAP-296.md#decided-by-an-agent-for-review) records it: sameness asks
+    whether two terms are written alike, not whether their values are equal."""
 
     def visit(x: Any, y: Any) -> bool:
         if x is None or y is None:
             return x is y
+        if is_parameter(x) or is_parameter(y):
+            return is_parameter(x) and is_parameter(y) and parameter_name(x) == parameter_name(y)
         fx, fy = form(x), form(y)
         return (dialect_of(x) == dialect_of(y) and fx.kind == fy.kind and fx.attributes.keys() == fy.attributes.keys()
                 and all(_same_native(fx.attributes[k], fy.attributes[k]) for k in fx.attributes)
@@ -733,14 +886,31 @@ def _copy(value: Any) -> Writer:
     return Writer(write)
 
 
+class _Parameter(Writer):
+    """The writer of a parameter reference, written in a term's place through the place's `as_parameter`."""
+
+    __slots__ = ()
+
+    def __call__(self, visitor: Any) -> Any:
+        if isinstance(visitor.as_schema(), Schemas.OfProperty.Data):
+            return visitor.as_value(self)
+        if not _is_any(visitor):
+            raise TypeError("a parameter reference is written in a term's place, not as a term's value")
+        return visitor.as_parameter(self.write)
+
+
 def spec(value: Any, literal: Callable[[Any], Writer | None] | None = None, dialect: str | None = None) -> Writer:
-    """The writer of a term: a writer as it is, a term value's (copied), a native value's as `literal` writes it (when
-    it gives one), or a callable's that takes the `Visitors.OfUnion` of a term value: of the union of `dialect` (its
-    branch of `Term`, `python3`) where one is given, else of what is written."""
+    """The writer of a term: a writer as it is, a term value's (copied), a parameter reference's (written back where it
+    stood, through the place's `as_parameter`), a native value's as `literal` writes it (when it gives one), or a
+    callable's that takes the `Visitors.OfUnion` of a term value: of the union of `dialect` (its branch of `Term`,
+    `python3`) where one is given, else of what is written."""
     if isinstance(value, Writer):
         return value
     if is_term(value):
         return _copy(value)
+    if is_parameter(value):
+        name = parameter_name(value)
+        return _Parameter(lambda p: p.name(name))
     if literal is not None and type(value) in Schemas.SCALAR_TYPES:
         written = literal(value)
         if written is not None:
@@ -802,6 +972,8 @@ def _fill(r: Any, kind: str, attributes: Mapping[str, Any], arguments: list[Any]
                 parts.append((name, part))
         elif isinstance(value, Objects.Listed):  # a container of scalars, such as a literal's problems
             getattr(r, name)(list(value.values))
+        elif callable(getattr(value, "as_schema", None)):  # a value object, such as an object's reference: as it is
+            getattr(r, name)(value)
         else:
             getattr(r, name)(lambda p, value=value: p.as_scalar(value))
     held = sum(part.size for _, part in parts)
@@ -900,6 +1072,21 @@ class Kind:
     unfold: Callable[[Form], Form | None] | None = None
     spelling: tuple[str, ...] = ("text", "problems")
     shown: Callable[[Mapping[str, Any]], str] | None = None
+
+
+def _checked(kind: Kind, record: Any) -> list[str]:
+    """A kind's own problems with a record; none where a parameter reference stands among its arguments, whose
+    structure its check would read, though it has none until its context gives it one (`node`): validation of
+    parameter references is mbse-schemas' (mbse-basis [CAP-313: parameter references valid where their parameters are
+    assigned or bound](mbse:mbse-basis/docs/capabilities/CAP-313.md))."""
+    if value_parameter(record) is not None or any(is_parameter(argument) for argument in arguments_of(record)):
+        return []
+    return kind.check(record)  # type: ignore[misc]
+
+
+PARAMETER_KIND = Kind(REFERENCE, lexical=False)
+"""How every dialect reads a parameter reference at a term place (`PARAMETER`): a reference that its scope resolves
+apart from its variables (`Symbolics.Variables.value`), never one that a binding within the term binds."""
 
 
 def invalid_problems(tag: str, attributes: Mapping[str, Any]) -> list[str]:
@@ -1028,13 +1215,15 @@ class Dialect:
         return self._read
 
     def kind_named(self, tag: str) -> Kind:
-        """The `Kind` of a tag, as this dialect reads it: its own, else the first that a dialect it reads declares;
-        raises `ValueError` for a tag none of them has."""
+        """The `Kind` of a tag, as this dialect reads it: its own, else the first that a dialect it reads declares, else
+        the framework's `PARAMETER_KIND` for `PARAMETER`; raises `ValueError` for a tag none of them has."""
         if tag in self._kinds:
             return self._kinds[tag]
         for other in self.reads():
             if tag in other._kinds:
                 return other._kinds[tag]
+        if tag == PARAMETER:
+            return PARAMETER_KIND
         raise ValueError(f"{self._name} has no kind {tag!r}")
 
     def __repr__(self) -> str:
@@ -1047,15 +1236,15 @@ class Dialect:
         of any other dialect, this one. Decided by the retrofit's coordinator: every family names the owner, as mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review) records it ("Python Patterns matchas is not simplified")."""
         reader = self._reader(term_)
         tag = kind_of(term_)[0]
-        if reader is None or tag in reader._kinds:  # another dialect's term, or its reader's own kind
-            return reader or self
+        if reader is None or tag in reader._kinds or tag == PARAMETER:  # another dialect's term, or its reader's own
+            return reader or self  # kind: a parameter reference is its holder's dialect's
         return next(other for other in reader.reads() if tag in other._kinds)  # `kind` refuses a tag none declares
 
     def _reader(self, term_: Any) -> Dialect | None:
         """The dialect that reads a term value: this one, for a term of its `Term`; one it reads, for a term of that
         one's; or None, for a term of any other dialect."""
         union = dialect_of(term_)
-        if union == self.union:
+        if union == self.union or union == TERM and is_parameter(term_):  # a parameter no term holds: any dialect's
             return self
         return next((other for other in self.reads() if other.union == union), None)
 
@@ -1117,9 +1306,9 @@ class Dialect:
         declared = record.as_schema().properties
         if kind.role == LITERAL:  # its problems, as its text's reader found them; a value it needs, where it has one
             found = list(attributes["problems"].values) if "problems" in attributes else []
-            if "value" in declared and attributes.get("value") is None:
+            if "value" in declared and attributes.get("value") is None and value_parameter(record) is None:
                 return found or [f"{what} needs a value"]
-            return found + (kind.check(record) if kind.check is not None else [])
+            return found + (_checked(kind, record) if kind.check is not None else [])
         if kind.role == INVALID:
             return kind.check(record)  # type: ignore[misc]
         problems = [f"{what} needs {_article(name)}" for name in kind.required if attributes.get(name) in (None, "")]
@@ -1128,7 +1317,7 @@ class Dialect:
             if isinstance(scalar, Schemas.OfScalar.Data) and type(value) is not scalar.type:
                 problems.append(f"{what}'s {name} must be a {scalar.type.__name__}, got {_type_name(value)}")
         if kind.check is not None:
-            problems += kind.check(record)
+            problems += _checked(kind, record)
         name = reference_name(attributes.get("name"))
         if kind.role == REFERENCE:
             if kind.lexical and not problems and name is not None and name not in bound and name not in kind.ambient:

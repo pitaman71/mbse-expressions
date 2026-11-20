@@ -75,6 +75,14 @@
  *   `form(term)`: its `Form`, `kind`, `attributes` and `arguments`; `node(tag, record)`: its `Node`, its helpers
  *   nested, as a dialect whose kinds hold sublanguages reads them to print and check them.
  * - `nameOf(term)`, `referenceName(name)`, `operatorOf(term, kind)`; `walk`, `fold`, `same`: traversal of a nested value.
+ * - `isParameter(x)`: whether a value read at a term's place is a parameter reference, mbse-schemas'
+ *   `References.OfParameter`, standing there in place of a term (mbse-basis [CAP-312: a parameter reference in place
+ *   of anything with a schema](mbse:mbse-basis/docs/capabilities/CAP-312.md)). The readers (`argumentsOf`, `form`,
+ *   `node`'s subterms, `term`) give it among a term's arguments, so that no reader drops it; `kindOf` reads it as
+ *   `PARAMETER`, and every dialect as a leaf of `PARAMETER_KIND`, its scope's to resolve; `node` of it throws
+ *   `Symbolics.Unbound`, since it has no structure until its context gives it one; `spec` writes it back through the
+ *   place's `as_parameter`; `same` compares two by name. Within `substituting(resolver, run)`, the readers give the
+ *   term a resolver gives in its place (`holds`, `substituted`).
  * - `Dialect`: a dialect's kinds by tag, with `validate`, `infer` and `make(form)`, the `Writer` of a form.
  * - `Writer`: a spec that writes a term of its dialect through the builders; `spec(x)` makes one of a writer, a native
  *   value (a literal), a term value (copied) or a callable taking the `Visitors.OfUnion` of a term value.
@@ -114,12 +122,16 @@ import { Errors, Proxies, Repr, Schemas } from "@mbse/schemas/Framework";
 
 import * as Domains from "./Domains.js";
 import * as Objects from "./Objects.js";
+import { Unbound } from "./Symbolics.js";
 
 const { ValueError } = Errors;
 const { repr, typeName, Tuple } = Repr;
 
 export const TERM = "Expressions.Framework.Term";
 export const EXPRESSION = "Expressions.Framework.Expression";
+export const PARAMETER_REFERENCE = "References.OfParameter";
+/** The tag a parameter reference is read by, at a term place: a leaf of every dialect, of the kind `PARAMETER_KIND`. */
+export const PARAMETER = "parameter";
 export const LITERAL = "literal";
 export const REFERENCE = "reference";
 export const APPLICATION = "application";
@@ -383,6 +395,79 @@ function schemaOf(value: any): unknown {
   return typeof value.as_schema === "function" && !Repr.isClassLike(value) ? value.as_schema() : null;
 }
 
+/** Whether `value` is a parameter reference read at a term place: the `Visitors.OfObject` of the
+ * `References.OfParameter` that stands there in place of a term (mbse-basis [CAP-312: a parameter reference in place of
+ * anything with a schema](mbse:mbse-basis/docs/capabilities/CAP-312.md)). */
+export function isParameter(value: unknown): boolean {
+  return named(schemaOf(value), PARAMETER_REFERENCE);
+}
+
+/** The name of the parameter a parameter reference designates. */
+export function parameterName(value: any): string {
+  return value.name.get() as string;
+}
+
+let resolving: ((name: string, union: any) => any) | null = null;
+let substitutes: Set<unknown> | null = null;
+
+/** Within it, `run` reads a term place that holds a parameter reference as the term that `resolver(name, union)` gives
+ * for the parameter `name` at a place that holds terms of `union`, a union schema (`holds`), where it gives one, in
+ * place of the reference (a type parameter's type term, mbse-basis [CAP-298: simplification over type
+ * parameters](mbse:mbse-basis/docs/capabilities/CAP-298.md)); `substituted(term)` tells such a term. A simplifier given
+ * a context reads its terms within it, so that a dialect's rules, whatever route they read terms by, read the term in
+ * the reference's place: Python's `with substituting(resolver):`. */
+export function substituting<R>(resolver: (name: string, union: any) => any, run: () => R): R {
+  const [outer, outerSubstitutes] = [resolving, substitutes];
+  [resolving, substitutes] = [resolver, new Set()];
+  try {
+    return run();
+  } finally {
+    [resolving, substitutes] = [outer, outerSubstitutes];
+  }
+}
+
+/** Whether a place holding terms of `union` (a union schema: `Expressions.Framework.Term` or a dialect's `Term`) holds a
+ * term value: any dialect's term, where it is `Term`; else a term of that union, or of a kind the union lists (C's
+ * `Term` lists C Types' `typeid`, for a subterm that may be an expression or a type alike). */
+export function holds(union: any, term_: any): boolean {
+  if (named(union, TERM) || named(union, dialectOf(term_))) return true;
+  const [tag, record] = kindOf(term_);
+  return (union.branches as readonly Schemas.OfUnion.Branch[]).some(
+    (branch: any) => branch.name === tag && branch.schema === record.as_schema());
+}
+
+/** Whether a reader gave `term_` in place of a parameter reference (`substituting`). */
+export function substituted(term_: unknown): boolean {
+  return substitutes !== null && substitutes.has(term_);
+}
+
+/** What a term place holds, read through its `Visitors.OfAny` `a`, where it holds no term: the parameter reference
+ * standing there, or the term that the resolver gives for it (`substituting`); null where it holds neither. */
+function place(a: any, union: any): any {
+  const found: any[] = [];
+  a.as_parameter((p: any) => {
+    if (p.as_schema() !== null) found.push(p);
+    return p;
+  });
+  if (found.length === 0) return null;
+  const substitute = resolving === null ? null : resolving(parameterName(found[0]), union);
+  if (substitute === null) return found[0];
+  (substitutes as Set<unknown>).add(substitute);
+  return substitute;
+}
+
+/** The term a term place holds, read through its `Visitors.OfAny`: a term value, else a parameter reference standing in
+ * its place, or the term a resolver gives for one (`place`); null where it holds nothing. */
+function heldTerm(a: any, union: any): any {
+  const found: any[] = [];
+  a.as_union((u: any) => {
+    found.push(u);
+    return u;
+  });
+  if (found.length > 0 && found[0].as_schema() !== null) return found[0];
+  return place(a, union);
+}
+
 /** Whether `schema` is `Expressions.Framework.Expression` or refines it, as each dialect's holder does
  * (`Expressions.Python.Python3.Expression`): an expression, whose `root` holds its root term. */
 export function isExpression(schema: unknown): boolean {
@@ -417,21 +502,18 @@ export function term(value: any): any {
   const found: any[] = [];
   if (isExpression(schema)) return term(value.root);
   if (schema instanceof Schemas.OfProperty.Data && holdsTerms(schema.schema)) {
-    value.as_value((a: any) => a.as_union((u: any) => {
-      found.push(u);
-      return u;
-    }));
-  } else if (isAny(value) && holdsTerms(schema)) {
-    value.as_union((u: any) => {
-      found.push(u);
-      return u;
+    value.as_value((a: any) => {
+      found.push(heldTerm(a, schema.schema));
+      return a;
     });
-  } else if (isTerm(value)) {
+  } else if (isAny(value) && holdsTerms(schema)) {
+    found.push(heldTerm(value, schema));
+  } else if (isTerm(value) || isParameter(value)) {
     return value;
   } else {
     throw new TypeError(`not a term: ${repr(value)}`);
   }
-  if (found[0].as_schema() === null) throw new ValueError("no term is set");
+  if (found[0] === null) throw new ValueError("no term is set");
   return found[0];
 }
 
@@ -452,46 +534,101 @@ function dialectValue(term_: any): any {
   return held[1];
 }
 
-/** The name of the `Term` of the dialect a term value is of: `Expressions.Python.Python3.Term`. */
+/** The name of the `Term` of the dialect a term value is of: `Expressions.Python.Python3.Term`; of a parameter
+ * reference, the name of the `Term` of the dialect whose term holds it, or `TERM` where no term holds it (an
+ * expression's root). */
 export function dialectOf(term_: any): string {
+  if (isParameter(term_)) {
+    const holding = holdingOf(term_);
+    return holding === null ? TERM : dialectOf(holding);
+  }
   return dialectValue(term_).as_schema().name;
 }
 
-/** The branch of its dialect's `Term` a term value holds: its tag, and its record (a `Readers.OfObject`). */
+/** The term that holds a parameter reference: the first of its owners, in turn, that is a term value; null where none
+ * is. */
+function holdingOf(parameter: unknown): unknown {
+  let owner = Proxies.owner_of(parameter);
+  while (owner !== null && !isTerm(owner)) owner = Proxies.owner_of(owner);
+  return owner;
+}
+
+/** The branch of its dialect's `Term` a term value holds: its tag, and its record (a `Readers.OfObject`); of a
+ * parameter reference, `PARAMETER` and the reference itself. */
 export function kindOf(term_: any): [string, any] {
+  if (isParameter(term_)) return [PARAMETER, term_];
   const held = heldBranch(dialectValue(term_));
   if (held === null) throw new ValueError("a term holds no kind");
   return held;
 }
 
-/** A record's property's value: a scalar, or what `Objects.held` reads of any other value; null when absent. */
+/** The parameter reference standing in a literal's `value`, a place of any value, or null: a place that holds an
+ * object's reference as it holds any value, where a term's place holds terms alone. */
+export function valueParameter(record: any): any {
+  if (!record.as_schema().properties.has("value")) return null;
+  const found: any[] = [];
+  record.value.as_value((a: any) => a.as_parameter((p: any) => {
+    if (p.as_schema() !== null) found.push(p);
+    return p;
+  }));
+  return found.length > 0 ? found[0] : null;
+}
+
+/** The parameter references within a term, in the order `walk` visits them: each standing in a term's place, or in a
+ * literal's `value`. */
+export function parametersIn(term_: unknown): any[] {
+  const found: any[] = [];
+  for (const node of walk(term_)) {
+    if (isParameter(node)) found.push(node);
+    else {
+      const held = valueParameter(kindOf(node)[1]);
+      if (held !== null) found.push(held);
+    }
+  }
+  return found;
+}
+
+/** Whether a parameter reference stands in the place a `Visitors.OfAny` visits. */
+function standing(a: any): boolean {
+  let found = false;
+  a.as_parameter((p: any) => {
+    found ||= p.as_schema() !== null;
+    return p;
+  });
+  return found;
+}
+
+/** A record's property's value: a scalar, or what `Objects.held` reads of any other value; null when absent, or where a
+ * parameter reference stands in its place (`valueParameter`). */
 function scalar(record: any, name: string): any {
   const found: unknown[] = [];
   record[name].as_value((a: any) => { // every callback is called: an absent value's reader holds nothing
-    found.push(Objects.held(a));
+    found.push(standing(a) ? null : Objects.held(a));
     return a;
   });
   return found[0];
 }
 
-/** The subterm a property holds, or null. */
+/** The subterm a property holds, a parameter reference in its place among them (`isParameter`), or null. */
 function subterm(record: any, name: string): any {
   const found: any[] = [];
-  record[name].as_value((a: any) => a.as_union((u: any) => {
-    found.push(u);
-    return u;
-  }));
-  return found.length > 0 && found[0].as_schema() !== null ? found[0] : null;
+  record[name].as_value((a: any) => {
+    found.push(heldTerm(a, record.as_schema().properties.get(name).schema));
+    return a;
+  });
+  return found[0]; // every callback is called: an absent value's reader holds nothing
 }
 
-/** The terms a container holds, in index order: its elements, or each element's terms in turn (`_members`), null where
- * one is empty. */
+/** The terms a container holds, in index order, a parameter reference in a term's place among them: its elements, or
+ * each element's terms in turn (`_members`), null where one is empty. */
 function variadicOf(record: any, name: string): any[] {
   const pairs: [unknown, any][] = [];
   record[name].as_value((a: any) => a.as_container((c: any) => c.as_entries((it: Iterator<[unknown, any]>) => {
     for (let next = it.next(); !next.done; next = it.next()) pairs.push(next.value);
   })));
-  const members = _members(record.as_schema(), name);
+  const schema = record.as_schema();
+  const members = _members(schema, name);
+  const union = schema.properties.get(name).schema.element;
   const found: any[] = [];
   for (const [, element] of pairs) {
     if (members.length > 0) {
@@ -500,10 +637,7 @@ function variadicOf(record: any, name: string): any[] {
         return o;
       });
     } else {
-      element.as_union((u: any) => {
-        found.push(u);
-        return u;
-      });
+      found.push(heldTerm(element, union));
     }
   }
   return found;
@@ -644,8 +778,11 @@ function nest(schema: any, kind: string, attributes: ReadonlyMap<string, any>, a
   return new Node(kind, plain, subterms, many, helpers, variadic.length > 0 ? split(variadic, attributes, many, kind) : new Map());
 }
 
-/** A record's `Node`, a term's (its tag and record, as `kindOf` gives them) or a helper's, its helpers nested. */
+/** A record's `Node`, a term's (its tag and record, as `kindOf` gives them) or a helper's, its helpers nested. A
+ * parameter reference has no structure to read until its context gives it one: reading its node throws
+ * `Symbolics.Unbound`, so that a dialect's rules that read it leave its term in the residual. */
 export function node(tag: string, record: any): Node {
+  if (isParameter(record)) throw new Unbound(parameterName(record));
   return nest(record.as_schema(), tag, attributesOf(record), argumentsOf(record));
 }
 
@@ -657,8 +794,11 @@ export function referenceName(value: unknown): any {
 }
 
 /** The name a reference refers to, or a binding, quantifier or import binds: its `name`, a string, or the spelling of
- * the identifier its name node is (C++'s `idexpression`); null if it has none, or its name is not an identifier. */
+ * the identifier its name node is (C++'s `idexpression`); null if it has none, or its name is not an identifier. A
+ * parameter reference refers to itself, a key no variable has, so that a scope's `lookup` gives it to `value`, which
+ * reads its parameter apart from its variables (`Symbolics.Variables`). */
 export function nameOf(term_: any): any {
+  if (isParameter(term_)) return term_;
   const [, record] = kindOf(term_);
   const schema = record.as_schema();
   if (!schema.properties.has("name")) return null;
@@ -718,10 +858,14 @@ export function sameNative(a: unknown, b: unknown): boolean {
 }
 
 /** Whether two terms have the same structure: their dialects, kinds, attributes (scalars of one type by value; NaN is
- * NaN, and -0.0 is not 0.0) and arguments in order. */
+ * NaN, and -0.0 is not 0.0) and arguments in order. Two parameter references are the same where their parameters'
+ * names are, as mbse-basis [CAP-296: simplification over literals, variables and
+ * parameters](mbse:mbse-basis/docs/capabilities/CAP-296.md#decided-by-an-agent-for-review) records it: sameness asks
+ * whether two terms are written alike, not whether their values are equal. */
 export function same(a: unknown, b: unknown): boolean {
   const visit = (x: any, y: any): boolean => {
     if (x === null || y === null) return x === y;
+    if (isParameter(x) || isParameter(y)) return isParameter(x) && isParameter(y) && parameterName(x) === parameterName(y);
     const [fx, fy] = [form(x), form(y)];
     const keys = [...fx.attributes.keys()];
     return dialectOf(x) === dialectOf(y) && fx.kind === fy.kind && keys.length === fy.attributes.size && keys.every((k) => fy.attributes.has(k))
@@ -736,6 +880,10 @@ export function same(a: unknown, b: unknown): boolean {
 /** The visitor a spec is given: a property's, an element's (`OfAny`) or a union value's. */
 function dispatch(writer: Writer, visitor: any): any {
   if (visitor.as_schema() instanceof Schemas.OfProperty.Data) return visitor.as_value(writer);
+  if (writer instanceof ParameterWriter) { // a parameter reference, written through the place's `as_parameter`
+    if (!isAny(visitor)) throw new TypeError("a parameter reference is written in a term's place, not as a term's value");
+    return visitor.as_parameter(writer.write);
+  }
   if (isAny(visitor)) return visitor.as_union((union: any) => inUnion(writer, union));
   inUnion(writer, visitor);
   return visitor;
@@ -776,6 +924,9 @@ export class Writer {
   }
 }
 
+/** The writer of a parameter reference, written in a term's place through the place's `as_parameter`. */
+class ParameterWriter extends Writer {}
+
 /** The writer of a copy of a term value, in its dialect. */
 function copy(value: any): Writer {
   const union = dialectOf(value);
@@ -790,13 +941,18 @@ function copy(value: any): Writer {
   });
 }
 
-/** The writer of a term: a writer as it is, a term value's (copied), a native value's as `literal` writes it (when it
- * gives one), or a callable's that takes the `Visitors.OfUnion` of a term value: of the union of `dialect` (its branch
- * of `Term`, `python3`) where one is given, else of what is written. */
+/** The writer of a term: a writer as it is, a term value's (copied), a parameter reference's (written back where it
+ * stood, through the place's `as_parameter`), a native value's as `literal` writes it (when it gives one), or a
+ * callable's that takes the `Visitors.OfUnion` of a term value: of the union of `dialect` (its branch of `Term`,
+ * `python3`) where one is given, else of what is written. */
 export function spec(value: unknown, literal: ((value: unknown) => Writer | null) | null = null,
   dialect: string | null = null): Writer {
   if (value instanceof Writer) return value;
   if (isTerm(value)) return copy(value);
+  if (isParameter(value)) {
+    const name = parameterName(value);
+    return new ParameterWriter((p: any) => p.name(name));
+  }
   if (literal !== null && Schemas.hostOf(value) !== null) {
     const written = literal(value);
     if (written !== null) return written;
@@ -853,6 +1009,7 @@ function fill(r: any, kind: string, attributes: ReadonlyMap<string, unknown>, ar
     if (helpers.includes(name)) {
       for (const part of Array.isArray(value) ? value as Part[] : [value as Part]) parts.push([name, part]);
     } else if (value instanceof Objects.Listed) r[name]([...value.values]); // a container of scalars: a literal's problems
+    else if (schemaOf(value) !== null) r[name](value); // a value object, such as an object's reference: as it is
     else r[name]((p: any) => p.as_scalar(value));
   }
   const held = parts.reduce((total, [, part]) => total + part.size, 0);
@@ -990,6 +1147,19 @@ export class Kind {
     Object.freeze(this);
   }
 }
+
+/** A kind's own problems with a record; none where a parameter reference stands among its arguments, whose structure
+ * its check would read, though it has none until its context gives it one (`node`): validation of parameter references
+ * is mbse-schemas' (mbse-basis [CAP-313: parameter references valid where their parameters are assigned or
+ * bound](mbse:mbse-basis/docs/capabilities/CAP-313.md)). */
+function checked(kind: Kind, record: any): string[] {
+  if (valueParameter(record) !== null || argumentsOf(record).some(isParameter)) return [];
+  return (kind.check as (record: any) => string[])(record);
+}
+
+/** How every dialect reads a parameter reference at a term place (`PARAMETER`): a reference that its scope resolves
+ * apart from its variables (`Symbolics.Variables.value`), never one that a binding within the term binds. */
+export const PARAMETER_KIND = new Kind(REFERENCE, { lexical: false });
 
 /** What invalid syntax is, `error` or `missing` by its tag: an error, the source it spans; a missing term, the kind the
  * parser expected. Where a sublanguage's union holds invalid syntax (a dialect's `Type` or `Pattern`), the dialect's
@@ -1158,6 +1328,7 @@ export class Dialect {
       const theirs = other.byTag.get(tag);
       if (theirs !== undefined) return theirs;
     }
+    if (tag === PARAMETER) return PARAMETER_KIND;
     throw new ValueError(`${this.own} has no kind ${repr(tag)}`);
   }
 
@@ -1173,7 +1344,7 @@ export class Dialect {
     const reader = this.reader(term_);
     const tag = kindOf(term_)[0];
     if (reader === null) return this; // another dialect's term
-    if (reader.byTag.has(tag)) return reader;
+    if (reader.byTag.has(tag) || tag === PARAMETER) return reader; // a parameter reference is its holder's dialect's
     return reader.reads().find((other) => other.byTag.has(tag)) as Dialect; // `kind` refuses a tag none declares
   }
 
@@ -1185,7 +1356,7 @@ export class Dialect {
    * or null, for a term of any other dialect. */
   reader(term_: any): Dialect | null {
     const union = dialectOf(term_);
-    if (union === this.union) return this;
+    if (union === this.union || (union === TERM && isParameter(term_))) return this; // a parameter no term holds: any dialect's
     return this.reads().find((other) => other.union === union) ?? null;
   }
 
@@ -1245,10 +1416,10 @@ export class Dialect {
     const declared = record.as_schema().properties as Map<string, Schemas.OfProperty.Data>;
     if (kind.role === LITERAL) { // its problems, as its text's reader found them; a value it needs, where it has one
       const found = attributes.has("problems") ? [...(attributes.get("problems") as Objects.Listed).values as string[]] : [];
-      if (declared.has("value") && (attributes.get("value") ?? null) === null) {
+      if (declared.has("value") && (attributes.get("value") ?? null) === null && valueParameter(record) === null) {
         return found.length > 0 ? found : [`${what} needs a value`];
       }
-      return [...found, ...(kind.check !== null ? kind.check(record) : [])];
+      return [...found, ...(kind.check !== null ? checked(kind, record) : [])];
     }
     if (kind.role === INVALID) return (kind.check as (record: any) => string[])(record);
     const problems = kind.required.filter((name) => [null, undefined, ""].includes(attributes.get(name)))
@@ -1259,7 +1430,7 @@ export class Dialect {
         problems.push(`${what}'s ${name} must be a ${Repr.tokenName(held.type)}, got ${typeName(value)}`);
       }
     }
-    if (kind.check !== null) problems.push(...kind.check(record));
+    if (kind.check !== null) problems.push(...checked(kind, record));
     const name = referenceName(attributes.get("name"));
     if (kind.role === REFERENCE) {
       if (kind.lexical && problems.length === 0 && name !== null && !bound.has(name) && !kind.ambient.has(name)) {

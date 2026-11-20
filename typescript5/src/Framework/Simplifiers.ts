@@ -25,6 +25,20 @@
  * `"stay"` leaves its subterm in the residual, named by a residue of class `b` ("Python3 binop raising ZeroDivisionError
  * is not simplified").
  *
+ * A simplifier takes a context, mbse-schemas' `Contexts.OfContext`, where it takes a scope (`Simplifier.scope`), and a
+ * scope within a context (`Symbolics.Variables.within`) gives each parameter the value assigned to it or the object
+ * bound to it, apart from the variables (mbse-basis [CAP-296: simplification over literals, variables and
+ * parameters](mbse:mbse-basis/docs/capabilities/CAP-296.md)). A parameter reference standing in a term's place is a
+ * leaf of every dialect (`Terms.PARAMETER_KIND`): a parameter assigned a value is written as the value's literal, as a
+ * variable's value is; a parameter assigned a term is read in the reference's place, where the place holds the term's
+ * kind (`Terms.substituting`), so that every dialect's rules, whatever route they read terms by, read the term there; a
+ * parameter that the context neither assigns nor binds stays where it stood, written back through the place's
+ * `as_parameter`, and the result names it in `parameters`, beside `free`, where no ancestor folds it away; a parameter
+ * bound to an object is replaced by the object's reference, put as it is where the parameter stands in a literal's
+ * `value`, a place of any value (`Terms.valueParameter`), the object neither resolved nor read; a parameter bound to an
+ * object where its place, a term's, holds no reference, or assigned a term that its place does not hold, stays, named
+ * by a residue of class (b).
+ *
  * A `Simplifier(rules, { literal, simplify, categories, native, folds, construct, guarded })` simplifies the terms of one dialect; each
  * dialect's `Simplifiers.OfAny` is one. Its `rules` are the dialect's folding rules: what the dialect computes over
  * values, `rules.evaluate(node, scope)` giving a subterm's value or throwing `NoRule` where it has none, over a scope
@@ -52,7 +66,10 @@
 
 import { Errors, Repr, Schemas } from "@mbse/schemas/Framework";
 
-import { type Bindings, free as freeNames, isScope, option, type Scope, scopes, Unbound, UNKNOWN, Variables } from "./Symbolics.js";
+import {
+  type Bindings, contextScope, free as freeNames, given, held, isContext, isScope, option, type Scope, scopes, Unbound, UNKNOWN,
+  Variables,
+} from "./Symbolics.js";
 import * as Terms from "./Terms.js";
 
 const { NotImplementedError, ValueError } = Errors;
@@ -92,10 +109,13 @@ export class Residue {
 /** What simplification gives: the `residual`, a `Writer` of a term of the dialect, which its caller writes where it
  * wants it (in a transaction); whether its root is a `literal`, simplification having evaluated the expression, and
  * then its `value` (null otherwise: three-valued, a residual reads as unknown); the names it still needs (`free`);
- * and the `residues`, each subterm that stayed for want of a rule, in the order they were found. */
+ * the `residues`, each subterm that stayed for want of a rule, in the order they were found; and the parameters it
+ * still needs (`parameters`), each a parameter that a reference within it designates and that its context neither
+ * assigns nor binds. */
 export class Simplified {
   constructor(readonly residual: Terms.Writer, readonly literal: boolean, readonly value: unknown,
-    readonly free: ReadonlySet<string>, readonly residues: readonly Residue[], readonly constructed: boolean = false) {}
+    readonly free: ReadonlySet<string>, readonly residues: readonly Residue[], readonly constructed: boolean = false,
+    readonly parameters: ReadonlySet<string> = new Set()) {}
 
   /** The value of the closed constructor expression at the residual's root; throws `NotEvaluated` naming why the root is
    * not one: a subterm the dialect has no rule for, a name the scope does not bind, or a value the dialect does not
@@ -105,6 +125,7 @@ export class Simplified {
     let why = "its value has no closed constructor expression";
     if (this.residues.length > 0) why = (this.residues[0] as Residue).reason;
     else if (this.free.size > 0) why = `${[...this.free].sort()[0]} is not bound`;
+    else if (this.parameters.size > 0) why = `parameter ${repr([...this.parameters].sort()[0])} is neither assigned nor bound`;
     throw new NotEvaluated(`the root is not a closed constructor expression: ${why}`);
   }
 }
@@ -120,13 +141,37 @@ export interface Rules {
 
 /** A simplified subterm: its `expression` (a term value, or a `Writer`), whether it is `known`, a value its dialect
  * computed, and then its `value`; whether it is a `literal`; the names it refers to that nothing within it binds
- * (`free`); and whether it differs from the subterm it simplified (`changed`). */
+ * (`free`); whether it differs from the subterm it simplified (`changed`); whether it is a closed constructor expression
+ * (`constructed`), as every literal is; and the parameters of the references within it that its context neither
+ * assigns nor binds (`parameters`). */
 export class Result {
   // `value` has no default, which would apply to a known `undefined` too; a literal is the simplest closed constructor
   // expression, so `constructed` is true wherever `literal` is
   constructor(readonly expression: unknown, readonly known: boolean = false, readonly value?: unknown,
     readonly literal: boolean = false, readonly free: ReadonlySet<string> = new Set(),
-    readonly changed: boolean = true, readonly constructed: boolean = literal) {}
+    readonly changed: boolean = true, readonly constructed: boolean = literal,
+    readonly parameters: ReadonlySet<string> = new Set()) {}
+}
+
+/** The scope of the simplification running, which `parametersOf` reads. */
+let running: unknown = null;
+
+/** The term a scope's context assigns the parameter `name`, where it assigns a term that a place holding terms of
+ * `union` holds (`Terms.holds`). */
+function substitute(scope: unknown, name: string, union: any): any {
+  const found = given(scope, name);
+  if (found === null || found[0] !== "value" || !Terms.isTerm(found[1])) return null;
+  return Terms.holds(union, found[1]) ? found[1] : null;
+}
+
+/** The parameters of the references within a term that the context of the simplification running neither assigns nor
+ * binds. */
+export function parametersOf(expression: unknown): ReadonlySet<string> {
+  const found = new Set<string>();
+  for (const parameter of Terms.parametersIn(expression)) {
+    if (given(running, Terms.parameterName(parameter)) === null) found.add(Terms.parameterName(parameter));
+  }
+  return found;
 }
 
 /** The options of a `Simplifier` (see the module's description). */
@@ -174,16 +219,37 @@ export class Simplifier {
     this.guarded = options.guarded ?? null;
   }
 
-  /** The simplification of a term (see `Terms.term`) in `scope`, or with the variables in an object bound: Python's
-   * `__call__`. */
-  run(expression: unknown, scope: Scope | Bindings | null = null): Simplified {
-    const resolved = isScope(scope) ? scope : this.rules.scope({ ...(scope ?? {}) });
+  /** The scope a caller gives: a context, a `Contexts.OfContext`, as the scope of its variables within it
+   * (`Symbolics.contextScope`), so that its parameters are the context's; a scope as it is; else the scope that the
+   * rules make of an object of variables, or of none. */
+  scope(given_: unknown = null): Scope {
+    if (isContext(given_)) return contextScope(given_, (variables) => this.rules.scope(variables));
+    if (isScope(given_)) return given_;
+    return this.rules.scope({ ...(given_ as Bindings | null ?? {}) });
+  }
+
+  /** The simplification of a term (see `Terms.term`) in `scope`, a scope, a context (`Contexts.OfContext`) or an object
+   * of variables (`scope`): Python's `__call__`. Where the scope has parameters, its terms are read within
+   * `Terms.substituting`, a type parameter's term read in its reference's place. */
+  run(expression: unknown, scope: unknown = null): Simplified {
+    const resolved = this.scope(scope);
     const errors = option(resolved, "errors", "raise");
     if (errors !== "raise" && errors !== "stay") throw new ValueError(`the option 'errors' is 'raise' or 'stay', not ${repr(errors)}`);
     const residues = new Map<string, Residue>();
-    const result = this.reduce(Terms.term(expression), resolved, residues, true);
+    const outer = running;
+    running = resolved;
+    let result: Result;
+    try {
+      const reduce = (): Result => this.reduce(Terms.term(expression), resolved, residues, true);
+      const parameters = (resolved as { parameters?: ReadonlyMap<string, unknown> }).parameters;
+      result = parameters !== undefined && parameters.size > 0
+        ? Terms.substituting((name, union) => substitute(resolved, name, union), reduce) : reduce();
+    } finally {
+      running = outer;
+    }
     return new Simplified(this.dialect.spec(result.expression), result.literal,
-      result.constructed ? this.native(result.value) : null, result.free, [...residues.values()], result.constructed);
+      result.constructed ? this.native(result.value) : null, result.free, [...residues.values()], result.constructed,
+      result.parameters);
   }
 
   /** The evaluation inventory's class of what a dialect has no rule for: by `what`, then by its kind, then `b` for
@@ -200,7 +266,8 @@ export class Simplifier {
     if (written !== null) return new Result(written, true, value, true);
     const built = this.construct !== null ? this.construct(value) : null;
     if (built !== null) return new Result(built, true, value, false, new Set(), true, true);
-    return new Result(expression, true, value, false, freeNames(expression, this.dialect));
+    return new Result(expression, true, value, false, freeNames(expression, this.dialect), true, false,
+      parametersOf(expression));
   }
 
   /** A subterm simplified in `scope`, noting in `residues` each subterm its dialect has no rule for; an error folding it
@@ -224,7 +291,11 @@ export class Simplifier {
         }
       }
       if (known) {
-        if (kind.role === Terms.LITERAL) return new Result(node, true, value, true, new Set(), false); // kept as written
+        const parameter = kind.role === Terms.LITERAL ? Terms.valueParameter(record) : null;
+        // its value its context's: written as a literal, or put in place as it is
+        if (parameter !== null) return this.heldBy(node, tag, record, value);
+        // kept as written, unless it stands for a parameter
+        if (kind.role === Terms.LITERAL) return new Result(node, true, value, true, new Set(), Terms.substituted(node));
         const written = this.literal(value);
         if (written !== null) return new Result(written, true, value, true);
         const built = this.construct !== null ? this.construct(value) : null;
@@ -232,9 +303,11 @@ export class Simplifier {
         if (built !== null) return new Result(built, true, value, false, new Set(), true, true);
       }
     }
+    if (Terms.isParameter(node)) return this.parameter(node, scope, residues, known, value);
     if ((kind.role === Terms.LITERAL || kind.role === Terms.REFERENCE || kind.role === Terms.INVALID)
       && Terms.argumentsOf(record).length === 0) {
-      return new Result(node, known, value, false, freeNames(node, this.dialect), false);
+      return new Result(node, known, value, false, freeNames(node, this.dialect), Terms.substituted(node), false,
+        parametersOf(node));
     }
     // a subterm of a term its rules computed (a cast's type) needs no rule of its own: what it lacks is not noted
     return this.rebuild(node, record, kind, scope, known ? new Map() : residues, known, value, guarded);
@@ -269,14 +342,45 @@ export class Simplifier {
     results.forEach((result, i) => {
       if (result !== null) for (const n of result.free) if (!(bound[i] as ReadonlySet<string>).has(n)) free.add(n);
     });
+    const parameters = new Set<string>();
+    for (const result of results) if (result !== null) for (const p of result.parameters) parameters.add(p);
     const simplified = this.simplify !== null ? this.simplify(node, results.filter((r): r is Result => r !== null)) : null;
     if (simplified !== null) return simplified;
-    if (!results.some((result) => result !== null && result.changed)) return new Result(node, known, value, false, free, false);
+    if (!results.some((result) => result !== null && result.changed)) {
+      return new Result(node, known, value, false, free, Terms.substituted(node), false, parameters);
+    }
     const form = Terms.form(node);
     const reader = this.dialect.reader(node) as Terms.Dialect; // the dialect whose `Term` holds it: this one, or one it reads
     const written = reader.make(new Terms.Form(form.kind, form.attributes,
       results.map((result) => (result === null ? null : result.expression))));
-    return new Result(written, known, value, false, free);
+    return new Result(written, known, value, false, free, true, false, parameters);
+  }
+
+  /** A literal whose value a parameter gave: the literal the dialect writes of the value, where it writes one; else the
+   * literal written again with the value in the parameter's place, as it is (an object's reference). */
+  private heldBy(node: any, tag: string, record: any, value: unknown): Result {
+    const written = this.literal(value);
+    if (written !== null) return new Result(written, true, value, true);
+    const reader = this.dialect.reader(node) as Terms.Dialect;
+    const attributes = new Map([...Terms.attributesOf(record), ["value", value]]);
+    return new Result(reader.make(new Terms.Form(tag, attributes)), true, value, true);
+  }
+
+  /** A parameter reference that stays: its value known, where it has no closed constructor expression; else free,
+   * where its context neither assigns nor binds its parameter; else given what no term's place takes, an object or a
+   * term of a dialect the place does not hold, named by a residue of class (b). */
+  private parameter(node: any, scope: any, residues: Map<string, Residue>, known: boolean, value: unknown): Result {
+    const name = Terms.parameterName(node);
+    const found = given(scope, name);
+    if (found === null) return new Result(node, false, null, false, new Set(), false, false, new Set([name]));
+    if (!known) {
+      const what = found[0] === "object" ? "bound to an object, which its place does not hold"
+        : "assigned a term its place does not hold";
+      const residue = new Residue(this.dialect.owner(node).name(), Terms.PARAMETER, `parameter ${repr(name)} ${what}`, "b");
+      const key = JSON.stringify([residue.dialect, residue.kind, residue.what, residue.category]);
+      if (!residues.has(key)) residues.set(key, residue);
+    }
+    return new Result(node, known, value, false, new Set(), false);
   }
 
   private static hide(scope: any, names: ReadonlySet<string>): any {
@@ -336,10 +440,13 @@ export class Interpreter implements Rules {
   private fold(node: any, scope: Scope): any {
     const [tag, record, kind] = this.dialect.kind(node);
     const owner = this.dialect.owner(node); // whose name a refusal gives
-    if (kind.role === Terms.INVALID || owner !== this.dialect || (this.folded !== null && !this.folded.has(tag))) {
+    if (kind.role === Terms.INVALID || owner !== this.dialect || (this.folded !== null && !this.folded.has(tag) && tag !== Terms.PARAMETER)) {
       throw new NoRule(owner.name(), tag);
     }
     if (kind.role === Terms.LITERAL) {
+      const parameter = Terms.valueParameter(record);
+      // its value its context's: a value assigned, or an object's reference, as it is
+      if (parameter !== null) return held(scope, parameter);
       const value = Terms.attributesOf(record).get("value") ?? null;
       if (value === null) throw new ValueError(`${Terms.article(tag)} needs a value`);
       const typed = kind.typed !== null ? kind.typed(record) : null;

@@ -2234,15 +2234,19 @@ function respelled(part: Terms.Part, changed: Iterator<boolean>): Terms.Part[] {
 function simplify(node: any, results: F.Result[]): F.Result | null {
   const tag = Terms.kindOf(node)[0];
   if ((tag !== P.JOINEDSTR && tag !== P.TEMPLATESTR) || !results.some((result) => result.changed)) return null;
-  if (tag === P.TEMPLATESTR) return new F.Result(node, false, null, false, S.free(node, P.DIALECT), false);
+  if (tag === P.TEMPLATESTR) {
+    return new F.Result(node, false, null, false, S.free(node, P.DIALECT), false, false, F.parametersOf(node));
+  }
   const form = Terms.form(node);
   const changed = results.map((result) => result.changed)[Symbol.iterator]();
   const values = (form.attributes.get("values") as Terms.Part[]).flatMap((part) => respelled(part, changed)); // a term changed: it has a field
   const written = P.DIALECT.make(new Terms.Form(tag, new Map([...form.attributes, ["values", values]]),
     results.map((result) => result.expression)));
   const free = new Set<string>();
+  const parameters = new Set<string>();
   for (const result of results) for (const name of result.free) free.add(name);
-  return new F.Result(written, false, null, false, free);
+  for (const result of results) for (const name of result.parameters) parameters.add(name);
+  return new F.Result(written, false, null, false, free, true, false, parameters);
 }
 
 /** What Python may never evaluate: a conditional's branches, by its test; an `and`'s or an `or`'s operands after the
@@ -2256,8 +2260,8 @@ function guarded(node: any, index: number): boolean {
 /** The framework's simplifier, refusing, before it simplifies, a value that an option of the scope does not take
  * (`OPTIONS`, and `locale`). */
 class Simplifier extends F.Simplifier {
-  override run(expression: unknown, scope: S.Scope | S.Bindings | null = null): F.Simplified {
-    const resolved = S.isScope(scope) ? scope : this.rules.scope({ ...(scope ?? {}) });
+  override run(expression: unknown, scope: unknown = null): F.Simplified {
+    const resolved = this.scope(scope);
     for (const [name, values] of Object.entries(OPTIONS)) {
       const value = S.option(resolved, name, values[0]);
       if (!values.includes(value as string)) {

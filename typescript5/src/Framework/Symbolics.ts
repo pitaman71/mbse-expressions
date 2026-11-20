@@ -15,6 +15,17 @@
  * dialect's scope from it, so `Simplifiers.OfAny(expression, { person: value })` binds `person`. A scope decides what an
  * import may bring in: imports resolve only what the caller's scope allows, never by loading code.
  *
+ * A scope resolves parameter references apart from its variables, so that a parameter and a variable of one name never
+ * collide (mbse-basis [CAP-296: simplification over literals, variables and
+ * parameters](mbse:mbse-basis/docs/capabilities/CAP-296.md)). `within(context)` gives a scope whose parameters are those
+ * of a context, a `Contexts.OfContext` of mbse-schemas (mbse-basis [CAP-319: contexts as schema
+ * data](mbse:mbse-basis/docs/capabilities/README.md#CAP-319)), each assigned a value or bound to an object; a scope
+ * within a context within another is within a copy of the outer context, the inner one's parameters replacing the
+ * outer one's of their names, as `Contexts.within` copies a sub-context. A scope's `lookup` gives a parameter reference
+ * to `value`, as it gives a variable's name (`Terms.nameOf`), so that each dialect's scope lifts a parameter's value as
+ * it lifts a variable's. `given(scope, name)` tells what a scope's context gives a parameter, and
+ * `contextScope(context, make)` makes a scope of a context's variables and parameters.
+ *
  * What a scope does not bind is not an error: a reference it cannot resolve (an unbound name, a function or an import
  * it does not provide) throws `Unbound`, which the simplifier catches, leaving the reference in the residual (see
  * `Simplifiers`); a name bound to `UNKNOWN` is unbound too, as a binding hides a name its simplifier does not know the
@@ -22,7 +33,16 @@
  * arguments, which `free` and the simplifier read alike.
  */
 
+import { Repr } from "@mbse/schemas/Framework";
+
+import * as Objects from "./Objects.js";
 import * as Terms from "./Terms.js";
+
+const CONTEXT = "Contexts.OfContext";
+
+/** What a context gives a parameter: `["object", reference]`, where it binds the parameter to an object, or
+ * `["value", value]`, where it assigns it one. */
+export type Given = readonly ["value" | "object", unknown];
 
 /** Thrown by a scope for a reference it does not resolve: a name it does not bind (or binds to `UNKNOWN`), a function
  * or an import it does not provide. The simplifier catches it, leaving the reference in the residual. */
@@ -61,6 +81,8 @@ export function isScope(value: unknown): value is Scope {
 export class Variables implements Scope {
   protected values: Map<string, unknown>[];
   readonly options: ReadonlyMap<string, unknown>;
+  /** What its context gives each parameter, read once. */
+  parameters: ReadonlyMap<string, Given> = new Map();
 
   constructor(variables: Bindings = {}, options: Bindings = {}) {
     this.values = [new Map(Object.entries(variables))];
@@ -82,8 +104,17 @@ export class Variables implements Scope {
     return this.value(Terms.nameOf(reference) as string);
   }
 
-  /** The value bound to `name`; throws `Unbound` when there is none, or it is `UNKNOWN`. */
-  value(name: string): any {
+  /** The value bound to `name`; throws `Unbound` when there is none, or it is `UNKNOWN`. Given a parameter reference
+   * (`Terms.isParameter`), the value its context assigns its parameter, a value to compute with; throws `Unbound`
+   * where it assigns none, or assigns a term (which a reader puts in the reference's place instead,
+   * `Terms.substituting`), or binds the parameter to an object, which no term's place takes. */
+  value(name: any): any {
+    if (Terms.isParameter(name)) {
+      const parameter = Terms.parameterName(name);
+      const given = this.parameters.get(parameter);
+      if (given === undefined || given[0] !== "value" || Terms.isTerm(given[1])) throw new Unbound(parameter);
+      return given[1];
+    }
     const [found, value] = this.find(name);
     if (!found || value === UNKNOWN) throw new Unbound(name);
     return value;
@@ -99,9 +130,103 @@ export class Variables implements Scope {
     throw new Unbound(Terms.kindOf(declaration)[0]);
   }
 
+  /** This scope within a context, a `Contexts.OfContext`: its parameters, each the value assigned to it or the object
+   * bound to it, replacing this scope's of their names. Its variables and options are this scope's. */
+  within(context: unknown): this {
+    const inner = this.copy();
+    inner.parameters = new Map([...this.parameters, ...parametersOf(context)]);
+    return inner;
+  }
+
   protected copy(): this {
     return Object.assign(Object.create(Object.getPrototypeOf(this)), this);
   }
+}
+
+/** Whether `value` is a context, a value of mbse-schemas' `Contexts.OfContext`. */
+export function isContext(value: unknown): boolean {
+  const schema = (value as { as_schema?: () => any } | null)?.as_schema;
+  return typeof schema === "function" && (schema.call(value) as { name?: unknown } | null)?.name === CONTEXT;
+}
+
+/** The entries of a context's `variables` or `parameters`, by name, each as its visitor. */
+function entriesOf(context: any, container: string): Map<string, any> {
+  const pairs: [string, any][] = [];
+  context[container].as_value((a: any) => a.as_container((c: any) => c.as_entries((it: Iterator<[string, any]>) => {
+    for (let next = it.next(); !next.done; next = it.next()) pairs.push(next.value);
+  })));
+  const found = new Map<string, any>();
+  for (const [name, element] of pairs) {
+    element.as_object((entry: any) => {
+      if (!found.has(name)) found.set(name, entry);
+      return entry;
+    });
+  }
+  return found;
+}
+
+/** The reference an entry's property holds (a `References.OfValue` or `References.OfObject`), or null. */
+function referenceOf(prop: any): any {
+  const found: any[] = [];
+  prop.as_value((a: any) => a.as_object((o: any) => {
+    if (o.as_schema() !== null) found.push(o);
+    return o;
+  }));
+  return found.length > 0 ? found[0] : null;
+}
+
+/** The value an entry's `References.OfValue` holds, as evaluators read it (`Objects.held`); null where it holds none. */
+function assigned(entry: any): unknown {
+  const held = referenceOf(entry.value);
+  const found: unknown[] = [];
+  if (held !== null) {
+    held.value.as_value((a: any) => {
+      found.push(Objects.held(a));
+      return a;
+    });
+  }
+  return found.length > 0 ? found[0] : null;
+}
+
+/** What a context gives each parameter it names: `["object", reference]`, where it binds the parameter to an object,
+ * else `["value", value]`, where it assigns it one; a parameter it names but neither assigns nor binds is left out. */
+function parametersOf(context: unknown): Map<string, Given> {
+  if (!isContext(context)) throw new TypeError(`a scope is within a context (${CONTEXT}), not ${Repr.repr(context)}`);
+  const found = new Map<string, Given>();
+  for (const [name, entry] of entriesOf(context, "parameters")) {
+    const [bound, value] = [referenceOf(entry.object), assigned(entry)];
+    if (bound !== null) found.set(name, ["object", bound]);
+    else if (value !== null) found.set(name, ["value", value]);
+  }
+  return found;
+}
+
+/** What a scope's context gives the parameter `name`: `["value", value]`, `["object", reference]`, or null where it
+ * neither assigns nor binds it, or the scope has no context. */
+export function given(scope: unknown, name: string): Given | null {
+  const parameters = (scope as { parameters?: ReadonlyMap<string, Given> } | null)?.parameters;
+  return parameters?.get(name) ?? null;
+}
+
+/** What a parameter reference standing in a place of any value (a literal's `value`) holds in a scope: the value its
+ * context assigns it, or the reference (`References.OfObject`) of the object its context binds it to, as it is, the
+ * object neither resolved nor read; throws `Unbound` where its context does neither. */
+export function held(scope: unknown, parameter: any): unknown {
+  const name = Terms.parameterName(parameter);
+  const found = given(scope, name);
+  if (found === null) throw new Unbound(name);
+  return found[1];
+}
+
+/** The scope of a context: the scope that `make(variables)` makes of the values its variables are assigned, within the
+ * context, so that its parameters are the context's. */
+export function contextScope(context: unknown, make: (variables: Bindings) => Scope): Scope {
+  const variables: Bindings = {};
+  for (const [name, entry] of entriesOf(context, "variables")) {
+    const value = assigned(entry);
+    if (value !== null) variables[name] = value;
+  }
+  return (make(variables) as Variables).within(context);
 }
 
 /** The value of the option `name` that `scope` sets, or `fallback` where it sets none or has no options. */
