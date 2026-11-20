@@ -38,10 +38,10 @@
  * then the framework's kinds of invalid syntax, `error` and `missing`. No helpers. What a kind's terms may be is checked
  * (`holds`), as the grammar has it: a BRE's quantifier repeats no quantifier and no anchor (`nondupl_BRE
  * BRE_dupl_symbol`), an ERE's may (`ERE_expression ERE_dupl_symbol`); a BRE's anchor stands only where a BRE begins or
- * ends (`L_ANCHOR`, `R_ANCHOR`, 9.3.8), an ERE's anywhere. What POSIX.1-2024 added within a kind, a BRE's alternation
- * (`\|`), `\?` and `\+`, which it leaves to the implementation, and an ERE's repetition modifier, is not recorded, as
- * a feature within a kind is not for any dialect; C++, which cites earlier editions, checks it under a `regex`
- * (`Cpp/RegExp`'s `FEATURES`).
+ * ends (`L_ANCHOR`, `R_ANCHOR`, 9.3.8), an ERE's anywhere. What POSIX.1-2024 added within a kind is an ERE's grammar
+ * clause (`GRAMMAR_CLAUSES`), its repetition modifier, a quantifier not `greedy`; a BRE's alternation (`\|`), `\?` and
+ * `\+`, which it leaves to the implementation, are no grammar clause of its *(agent)*. C++, which cites earlier
+ * editions, checks them under a `regex` (`Cpp/RegExp`'s `FEATURES`).
  *
  * No kind binds a name a term scopes: a subexpression is numbered, and a backreference resolves it by its number. Its
  * kinds are applications of no domain known statically, each left in the residual by simplification, named by its dialect ("POSIX BRE
@@ -52,6 +52,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Repr } from "@mbse/schemas/Framework";
 import * as FD from "../Framework/Domains.js";
+import * as FS from "../Framework/Standards.js";
 import * as F from "../Framework/Terms.js";
 
 const { repr } = Repr;
@@ -86,6 +87,11 @@ export const EDITIONS: readonly (readonly [string, bigint, readonly string[], st
   ["IEEE Std 1003.1-2017", 2017n, ["POSIX.1-2017"], "POSIX_2017"],
   ["IEEE Std 1003.1-2024", 2024n, ["POSIX.1-2024"], "POSIX_2024"],
 ];
+
+/** Each dialect's grammar clauses, each with the editions that allow it, every other forbidding it: an ERE's
+ * repetition modifier (POSIX.1-2024). */
+export const GRAMMAR_CLAUSES: ReadonlyMap<string, readonly FS.GrammarClause[]> = new Map([[BRE, []], [ERE, [
+  FS.values("quantifier.greedy false", "quantifier", "greedy", [false], ["POSIX_2024"])]]]);
 
 /** A dialect's kinds' schema names, in its `Term`'s order: an ERE's without `Backreference`. */
 export function names(which: string): readonly string[] {
@@ -237,21 +243,27 @@ export function install(which: string, txn: any): any {
 
 /**
  * A dialect as data: its singleton owning the editions it covers, by designation (`standards`), POSIX.1's, each with its
- * formal reference's parts, its common names and its own kinds it has (every kind in each). Its frame binds the dialect
- * (`dialect`) and each edition by its frame symbol (`POSIX_2008`).
+ * formal reference's parts, its common names and its own kinds it has (every kind in each), and its grammar clauses
+ * by name (`grammar_clauses`, `GRAMMAR_CLAUSES`). Its frame binds the dialect (`dialect`), each edition by its frame
+ * symbol (`POSIX_2008`) and each grammar clause by its index (`grammar_clause_0`).
  */
 export function define(which: string, txn: any): any {
   const [OWN, Standard] = [txn.Expressions.POSIX[which], txn.Expressions.Framework.Standard];
   const own = tags(which);
   const every = (OWN.Term.as_schema().branches as readonly any[]).filter((branch) => own.includes(branch.name))
     .map((branch) => branch.schema);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES.get(which)!, new Map(
+    (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
+  [EDITIONS.map(([, , , symbol]) => symbol)]);
   return txn.uid(`mbse.Expressions.POSIX.${which}.define/1`).mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(EDITIONS.map(([, , , symbol]) => [symbol, Standard])) })
+    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(EDITIONS.map(([, , , symbol]) => [symbol, Standard])),
+      ...clauses })
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(EDITIONS.map(([designation, , , symbol]) =>
         [designation, (e: any) => e.standard(_[symbol])]))),
       ...EDITIONS.map(([, year, common, symbol]) => (_: any) => _[symbol].bodies(["org.ieee"]).number("1003.1").revision(
         (r: any) => r.year(year)).names([...common]).kinds(every)),
+      ...specs,
     ])]))]);
 }
 
