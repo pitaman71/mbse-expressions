@@ -3084,7 +3084,7 @@ no representation. And a grammar clause that has no `Allows` or `Forbids` should
      assert membership (`ONLY`) where they asserted `SINCE`, and DOM-17's, DOM-19's and FRM-01's dialects their adjacency
      `grammar_clauses`.
 443. **The corpus**: the dialects' singletons' documents (`c_domains`, `cpp_domains`, `python3_domains`,
-     `typescript5_domains`, `systemverilog_domains`) hold their grammar clauses, and `standards`, C23's edition, its
+     `typescript5_domains`) hold their grammar clauses, and `standards`, C23's edition, its
      `Allows` and `Forbids`; regenerated, byte-identical in both languages.
 444. **The version**: 0.14.0, a breaking change (PRI-031): every `SINCE` removed, and the standards' data changed;
      origin/main took 0.13.0 for mbse-schemas 0.33.0 meanwhile, merged here, so this is the next minor.
