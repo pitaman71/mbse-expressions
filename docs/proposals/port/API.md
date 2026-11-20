@@ -2995,6 +2995,99 @@ constant without a prefix `int`.
      reported, of its prefix's type, and one without text not) and of DIA-31 (`'ab'` an `int` that fits under AMD64 and AAPCS64), the same in
      both languages; no case is added. Conformance is unchanged.
 
+## Settled in grammar clauses by version, stage 1, for the user's review
+
+Stage 1 of mbse-basis' [grammar clauses by version](https://github.com/pitaman71/mbse-basis/blob/main/proposals/GRAMMAR-CLAUSES.md):
+what changes from one edition to the next within a kind is data, as the user decided: "PEP 614 removing a restriction
+is still a conditional clause just with an opposite sense of version progression. That excludes having a "minimum
+version" annotation which is hacky anyway"; on `Allows` and `Forbids`, "Add two optional properties on `Allows` and
+`Forbids` : 'before' and 'after' which are only used by the system to guess support in the case that an edition has
+no representation. And a grammar clause that has no `Allows` or `Forbids` should default to allows."
+
+434. **The model** (the framework's install): `Expressions.Framework.GrammarClause`, a reference object, its properties
+     `property` (the name of its kind's property it is about), `present` (a bool: set, or unset) and `values` (a
+     container of any scalars); `Expressions.Framework.Specifies(dialect, name, clause)` owns it by name, unique
+     `[dialect, name]` and `[clause]`, as `Defines` owns a domain; `Expressions.Framework.HasGrammarClause(kind,
+     clause)`, one kind each, links its kind's schema, which reads its grammar clauses through `Schemas.OfObject`'s
+     extension adjacency `grammar_clauses`; `Expressions.Framework.Holds(clause, kind)`, a set, the kinds of term its
+     property may hold, and `Expressions.Framework.Nests(clause, nested)`, a set, the grammar clauses a held term takes
+     where it is of their kind; `Expressions.Framework.Allows(standard, clause)` and `Forbids(standard, clause)`, each
+     with the optional bools `before` and `after`, one entry an edition and a grammar clause. `Standard`'s adjacencies
+     `allows` and `forbids`, `GrammarClause`'s `dialect` (its owner), `kind`, `kinds`, `nested`, `allowed` and
+     `forbidden`; every dialect's schema has the adjacency `grammar_clauses` beside `domains`, `operations` and
+     `standards`. What a grammar clause holds is one of three, by what is set: `values`, else `present`, else its
+     `kinds` *(agent: three properties and a relation, where a union could not hold the kinds, which are links)*. The
+     names `Specifies`, `HasGrammarClause`, `Holds` and `Nests` are *(agent)*'s.
+435. **What a term takes** *(agent)*: `Framework.Standards.takes(dialect, term)`, the grammar clauses of the dialect of
+     the term's kind (or a helper's: `comprehension`, `arguments`) whose property holds what they say: a value among
+     `values` (of the same type: `True` is not `1`, as in TypeScript), set or unset (a container empty is unset), or a
+     term of one of `kinds` that takes each nested grammar clause of its kind. A container holds what one of its
+     elements does. Nothing within the term is read but what its grammar clauses' properties hold: a caller walks the
+     tree, as mbse-programs' `Check` walks it. A nested grammar clause is a grammar clause like any, owned by its
+     dialect and taken where its kind's term is read alone; one no edition names is allowed by every edition.
+436. **Whether an edition allows one** *(agent, building the user's decision)*: `Framework.Standards.allows(standard,
+     clause)`: its own `Allows` (true) or `Forbids` (false); where it has neither, the data not representing it, the
+     entries of its neighbours by revision, of its standard's number and revision branch (C's from C++'s, an ECMA-262
+     edition from its 5.1 Edition's version): the nearest edition before it whose entry is flagged `after`, the nearest
+     after it flagged `before`; one verdict where those give one, else allowed. A version orders by its dotted numbers
+     (`3.16` after `3.15`), a year or an edition by itself; an edition with no revision is allowed.
+437. **The reading's other functions**: `grammar_clauses(dialect)` by name (TypeScript `grammarClauses`, a `Map`),
+     `grammar_clause_name(clause)` (`grammarClauseName`, or null), and `grammar_clause(clause)` (`grammarClause`, a
+     `Map`): its `kind`'s schema, its `property`, `values` (a tuple), `present` or `kinds` (a tuple of schemas), and
+     `nested` where it has any.
+438. **How a define writes them** *(agent)*: each dialect's table, `GRAMMAR_CLAUSES`, of `Framework.Standards`'
+     `present`, `absent`, `values` and `kinds_of` (TypeScript `kindsOf`), each its name, its kind (by tag, a helper by its
+     schema's name lowercased), its property, what it holds, its nested grammar clauses' names and the editions that
+     allow it by frame symbol (None, `null`, for one only nested); `grammar_clauses_spec(txn, clauses, schemas,
+     editions)` (`grammarClausesSpec`) gives the define's symbols (`grammar_clause_<index>`) and specs: each covered
+     edition allows it or forbids it, explicitly, and each standard's oldest edition's entry is flagged `before` and its
+     newest's `after` (`editions` grouped by standard: C Preprocessor's C's then C++'s, SystemVerilog Preprocessor's
+     IEEE 1364's then IEEE 1800's), so an edition outside the data is guessed as its nearest is.
+439. **Kinds by membership**: every `SINCE` is gone, Python3's `_SINCE` and C++'s `_SINCE_20` with them. A dialect whose
+     editions do not all have every kind has `ONLY`, each such kind with the editions that have it, by frame symbol
+     (Python3's `yieldfrom` in `VERSIONS[3:]`, C Preprocessor's `elifdefdirective` in `("C23", "Cpp23")`), a kind not
+     listed in every edition it covers; the families' editions by frame symbol are data constants in their
+     cycle-free modules *(agent)*: `Python3.Domains.VERSIONS`, `TypeScript5.Domains.VERSIONS`,
+     `C.Expressions.Kinds.C_EDITIONS` and `CPP_EDITIONS`, `SystemVerilog.Expressions.Domains.SYMBOLS` (and
+     `TypeScript RegExp`'s `SYMBOLS`); `SystemVerilog.Expressions.editions(every, only, covered)` replaces
+     `editions(every, since, first)`, its defaulted `first` gone.
+440. **The data**, each named as mbse-programs' `Check` names the language feature, from its `FEATURES` where it has
+     one: Python3's 10 (`binop.op '@'` 3.5, `comprehension.is_async` 3.6, `formattedvalue.debug` and
+     `arguments.posonlyargs` 3.8, `subscript with an unpacked index` 3.11, its index a `starred` or a `tuple` taking the
+     nested `tuple with an unpacked element`, the list, set and generator comprehensions of unpacked elements and
+     `dictcomp of unpacked mappings` 3.15); Python Types' 3 (each type parameter's `default_value`, 3.13); Python
+     RegExp's 2 (a possessive quantifier 3.11, scoped flags 3.6); TypeScript5's 2 (`importexpression.options` 5.3,
+     `importexpression.phase 'defer'` 5.9); TypeScript Types' 1 (`tsimporttype.options` 5.3); TypeScript RegExp's 8
+     (the flags `u` and `y` ES2015, `s` ES2018, `d` ES2022, `v` ES2024; a named group, a lookbehind and a property
+     escape, ES2018); C's 7 (C23's digit separators, binary integers, the suffix `wb` in each spelling, the decimal
+     floating suffixes, `true` and `false`, an empty initializer, `alignof`); C Types' 31 (C23's keywords, one grammar
+     clause each: `thread_local`, `constexpr`, `bool`, `_Decimal32` to `_Decimal128`, `_Float16` to `_Float128x`,
+     `typeof`, `typeof_unqual`, `alignas`; `_BitInt`, `auto` and `[[ ]]` where a type name's or a parameter's specifiers
+     hold them, `[[ ]]` where any of eight kinds' attributes hold it; an enumeration's underlying type); C Preprocessor's
+     2 (`#warning` C23 and C++23, `#embed` C23); C++'s 19 (C++20's and C++23's from mbse-programs' `FEATURES`, a
+     lambda's `static` nested, its declarator's specifiers holding a `declspecifier` whose keyword is `static`); and,
+     beyond the `FEATURES` tables, recorded where a docstring named a feature within a kind *(agent)*: SystemVerilog
+     Constraints' 2 (`soft` IEEE 1800-2012, a default distribution item 2023), SystemVerilog Preprocessor's 1 (an
+     `` `ifdef ``'s `` `elsif `` branches, IEEE 1364-2001) and POSIX ERE's 1 (a repetition modifier, POSIX.1-2024).
+     Python Patterns, TypeScript Patterns, C++ Types, C++ RegExp, POSIX BRE and SystemVerilog's other four have none.
+441. **What stays code**, as no grammar clause, one property's holding, says it *(agent)*: C's `u8` character literal
+     (its `prefix` and its `quote` together); C++23's subscript of several indices (a count); Python RegExp's `\N{...}`
+     and `\z` (no property tells them: a character's spelling, and `\z` an assertion `stringend` as `\Z` is); POSIX
+     BRE's `\|`, `\?` and `\+`, which POSIX.1-2024 leaves to the implementation; and every statement's language
+     feature, mbse-programs' `STATEMENT_FEATURES`, stage 2's, PEP 614's decorator among them, a statement's. C++17's
+     structured binding is every edition's, so none.
+442. **Tests**: FRM-14, new, in both languages: the model's schemas and relations, Python3's grammar clauses (what each
+     says, read from either side), the editions that allow each, what a term and a helper take (a value, a kind, nested,
+     absence), the guess for an edition the data does not represent (Python 3.16 and 2.7, a neighbour unflagged, two
+     disagreeing), the default, every dialect's table against its stored data, and C's, C Types' and C++'s samples;
+     FRM-13 and the dialects' suites (PYT, PYP, PYR, TST, TSP, TSR, CTY, XTY, CPD, XRX, BRE, ERE, SVP, SVA, SVC, SVD)
+     assert membership (`ONLY`) where they asserted `SINCE`, and DOM-17's, DOM-19's and FRM-01's dialects their adjacency
+     `grammar_clauses`.
+443. **The corpus**: the dialects' singletons' documents (`c_domains`, `cpp_domains`, `python3_domains`,
+     `typescript5_domains`, `systemverilog_domains`) hold their grammar clauses, and `standards`, C23's edition, its
+     `Allows` and `Forbids`; regenerated, byte-identical in both languages.
+444. **The version**: 0.13.0, a breaking change (PRI-031): every `SINCE` removed, and the standards' data changed.
+
 ## What stage 2b needed (done)
 
 - Each dialect: an `install(txn)` adding its kinds to `Expressions.Framework.Term` (a value object schema per kind,
