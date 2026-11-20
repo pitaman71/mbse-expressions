@@ -3078,7 +3078,7 @@ no representation. And a grammar clause that has no `Allows` or `Forbids` should
      structured binding is every edition's, so none.
 442. **Tests**: FRM-14, new, in both languages: the model's schemas and relations, Python3's grammar clauses (what each
      says, read from either side), the editions that allow each, what a term and a helper take (a value, a kind, nested,
-     absence), the guess for an edition the data does not represent (Python 3.16 and 2.7, a neighbour unflagged, two
+     presence and absence), the guess for an edition the data does not represent (Python 3.16 and 2.7, a neighbour unflagged, two
      disagreeing), the default, every dialect's table against its stored data, and C's, C Types' and C++'s samples;
      FRM-13 and the dialects' suites (PYT, PYP, PYR, TST, TSP, TSR, CTY, XTY, CPD, XRX, BRE, ERE, SVP, SVA, SVC, SVD)
      assert membership (`ONLY`) where they asserted `SINCE`, and DOM-17's, DOM-19's and FRM-01's dialects their adjacency
