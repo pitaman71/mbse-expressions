@@ -147,7 +147,7 @@ export const EXTENSIONS: ReadonlySet<string> = new Set([LET, IMPORT, IMPORTFROM]
 
 /** The versions of Python 3 it covers, oldest first, each by its name spelled as an identifier, as `define`'s frame
  * binds it (`Python_3_8`). */
-export const VERSIONS: readonly string[] = Array.from({ length: 16 }, (_, minor) => `Python_3_${minor}`);
+export const VERSIONS: readonly string[] = Domains.VERSIONS;
 
 /** The kinds that are not in every version, each with the versions that have it, from which `define` writes the kinds
  * each version has: membership, no minimum version (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions"). */

@@ -49,8 +49,10 @@ structure, of no domain known statically, and are not simplified: Python3's rule
 RegExp pattern is not evaluated"); a pattern is matched by `re`, a library call.
 
 The versions of Python it covers are data, which `define` writes: Python 3.0 to 3.15, each with its own kinds it has
-(`SINCE`: `atomicgroup` since Python 3.11, every other since 3.0; a possessive quantifier, 3.11, a scoped flags, 3.6,
-`\\N{...}`, 3.8, and `\\z`, 3.14, features within a kind, not recorded). Its completeness is data:
+by membership (`ONLY`: `atomicgroup` in Python 3.11 to 3.15, every other in each), and its grammar clauses
+(`GRAMMAR_CLAUSES`), each allowed or forbidden by each version: a possessive quantifier (3.11) and scoped flags (3.6).
+`\\N{...}` (3.8) and `\\z` (3.14) stay unrecorded: no property of a term tells them, a character's spelling being
+any text and `\\z` an assertion `stringend`, as `\\Z` is *(agent)*. Its completeness is data:
 `grammars/python3-re.json` lists the codes `re`'s parser writes, each mapped to its kinds. `DIALECT` reads its kinds
 and its family's other dialects' terms. `Text` writes its kinds as `re`'s syntax, as the family's printer
 (`Python3.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis
@@ -62,11 +64,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
 from ..Python3 import Domains as _family, Expressions as P
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "ASSERTIONS", "LOOKAROUNDS", "SETS", "FLAG_LETTERS",
+__all__ = ["install", "define", "DIALECT", "ONLY", "GRAMMAR_CLAUSES", "TAGS", "HELPERS", "ASSERTIONS", "LOOKAROUNDS", "SETS", "FLAG_LETTERS",
            "spells", "spelling", "problems"]
 
 (PATTERN, ALTERNATIVE, GROUP, CAPTURINGGROUP, QUANTIFIER, CHARACTERCLASS, CHARACTERCLASSRANGE, CHARACTERSET, CHARACTER,
@@ -81,9 +83,15 @@ TAGS = (PATTERN, ALTERNATIVE, GROUP, CAPTURINGGROUP, QUANTIFIER, CHARACTERCLASS,
 HELPERS: tuple[str, ...] = ()
 """Its own helpers, the value object schemas its kinds hold that are no kind: none."""
 
-SINCE = {**dict.fromkeys(TAGS, 0), ATOMICGROUP: 11}
-"""The minor version of Python 3 each of its kinds arrived in, as `re`'s parser first wrote it (`ATOMIC_GROUP`, 3.11),
-from which `define` writes the kinds each version has."""
+ONLY = {ATOMICGROUP: _family.VERSIONS[11:]}
+"""The kinds that are not in every version, each with the versions that have it, as `re`'s parser writes it
+(`ATOMIC_GROUP`, from 3.11), from which `define` writes the kinds each version has: membership, no minimum version."""
+
+GRAMMAR_CLAUSES = (
+    FS.values("quantifier.possessive", QUANTIFIER, "possessive", (True,), _family.VERSIONS[11:]),
+    FS.present("flags.alternatives", FLAGS, "alternatives", _family.VERSIONS[6:]),  # scoped, `(?i:...)`
+)
+"""Its grammar clauses, each with the versions that allow it, every other forbidding it."""
 
 ASSERTIONS = ("start", "end", "stringstart", "stringend", "word", "lookahead", "lookbehind")
 """An assertion's kinds: `^`, `$`, `\\A`, `\\Z`, `\\b`, and the lookarounds."""
@@ -202,23 +210,27 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """Python RegExp's dialect as data: the singleton `Expressions.Python.RegExp` owning the versions of Python 3 it
     covers, by their published names (`standards`), Python 3.0 to 3.15, each with its body, its version and its own
-    kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame
-    binds the dialect (`dialect`) and each version by its name spelled as an identifier (`Python_3_11`)."""
+    kinds it has (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each
+    version (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame
+    binds the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_11`) and each grammar clause by its
+    index (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.Python.RegExp, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
     minors = range(16)
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, every, [_family.VERSIONS])
 
     def version(minor: int) -> Callable[[Any], Any]:
-        kinds = [schema for tag, schema in every.items() if SINCE[tag] <= minor]
+        kinds = [schema for tag, schema in every.items() if _family.VERSIONS[minor] in ONLY.get(tag, _family.VERSIONS)]
         return lambda _: getattr(_, f"Python_3_{minor}").bodies(["org.python"]).revision(
             lambda r: r.version(f"3.{minor}")).kinds(kinds)
 
     return txn.uid("mbse.Expressions.Python.RegExp.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": OWN.Dialect, **{f"Python_3_{minor}": Standard for minor in minors}})
+        .symbols({"dialect": OWN.Dialect, **{f"Python_3_{minor}": Standard for minor in minors}, **clauses})
         .spec([
             lambda _: _.dialect.standards({f"Python 3.{minor}": lambda e, minor=minor: e.standard(
                 getattr(_, f"Python_3_{minor}")) for minor in minors}),
             *(version(minor) for minor in minors),
+            *specs,
         ])]))])
 
 

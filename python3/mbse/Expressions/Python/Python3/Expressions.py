@@ -117,7 +117,7 @@ COMPREHENSIONS = (LISTCOMP, SETCOMP, DICTCOMP, GENERATOREXP)
 EXTENSIONS = frozenset({LET, IMPORT, IMPORTFROM})
 """The kinds with no counterpart in Python's grammar, kept as extensions (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "mbse-programs' kinds, names and shapes")."""
 
-VERSIONS = tuple(f"Python_3_{minor}" for minor in range(16))
+VERSIONS = Domains.VERSIONS
 """The versions of Python 3 it covers, oldest first, each by its name spelled as an identifier, as `define`'s frame
 binds it (`Python_3_8`)."""
 

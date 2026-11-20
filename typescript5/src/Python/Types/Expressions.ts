@@ -28,7 +28,8 @@
  * evaluated"); a type expression of `Python3`'s kinds evaluates as `Python3` evaluates it.
  *
  * The versions of Python it covers are data, which `define` writes: Python 3.0 to 3.15, as `Python3`'s, each with its
- * own kinds it has (`SINCE`: every one since Python 3.12; a default, 3.13, a feature within a kind, not recorded).
+ * own kinds it has, by membership (`ONLY`: each in Python 3.12 to 3.15), and its grammar clauses (`GRAMMAR_CLAUSES`),
+ * each allowed or forbidden by each version: a type parameter's default (3.13).
  * `DIALECT` reads its kinds and its family's other dialects' terms. `Text` writes its kinds as Python source, as the
  * family's printer (`Python3.Text.ToText`) dispatches them to it. Its terms are written through the builders
  * (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)), a type expression of
@@ -38,6 +39,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as Family from "../Python3/Domains.js";
 import * as P from "../Python3/Expressions.js";
@@ -54,9 +56,14 @@ export const TAGS: readonly string[] = [TYPEVAR, PARAMSPEC, TYPEVARTUPLE];
 /** Its own helpers, the value object schemas its kinds hold that are no kind: none, its names being strings. */
 export const HELPERS: readonly string[] = [];
 
-/** The minor version of Python 3 each of its kinds arrived in, as mbse-programs' `SINCE` has them (`py(12)`, every one),
- * from which `define` writes the kinds each version has. */
-export const SINCE: ReadonlyMap<string, number> = new Map(TAGS.map((tag) => [tag, 12]));
+/** The kinds that are not in every version, each with the versions that have it (every one, Python 3.12 to 3.15, as
+ * mbse-programs has them), from which `define` writes the kinds each version has: membership, no minimum version. */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map(TAGS.map((tag) => [tag, Family.VERSIONS.slice(12)]));
+
+/** Its grammar clauses, each with the versions that allow it, every other forbidding it, named as mbse-programs'
+ * `Check` names the language feature: a type parameter's default (PEP 696). */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = TAGS.map((tag) =>
+  FS.present(`${tag}.default_value`, tag, "default_value", Family.VERSIONS.slice(13)));
 
 /**
  * Python Types' union of its kinds, added to the framework's terms as the branch `python_types`, its own kinds, and its
@@ -107,21 +114,26 @@ export function install(txn: any): any {
 /**
  * Python Types' dialect as data: the singleton `Expressions.Python.Types` owning the versions of Python 3 it covers, by
  * their published names (`standards`), Python 3.0 to 3.15, each with its body, its version and its own kinds it has
- * (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
- * (`dialect`) and each version by its name spelled as an identifier (`Python_3_12`).
+ * (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each version
+ * (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
+ * dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_12`) and each grammar clause by its
+ * index (`grammar_clause_0`).
  */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.Python.Types, txn.Expressions.Framework.Standard];
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).filter((b) => TAGS.includes(b.name));
   const minors = Array.from({ length: 16 }, (_, minor) => minor);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES,
+    new Map(every.map((b) => [b.name, b.schema])), [Family.VERSIONS]);
   const version = (minor: number) => (_: any) => _[`Python_3_${minor}`].bodies(["org.python"]).revision(
-    (r: any) => r.version(`3.${minor}`)).kinds(every.filter((b) => (SINCE.get(b.name) as number) <= minor).map((b) => b.schema));
+    (r: any) => r.version(`3.${minor}`)).kinds(every.filter((b) => ONLY.get(b.name)!.includes(Family.VERSIONS[minor]!)).map((b) => b.schema));
   return txn.uid("mbse.Expressions.Python.Types.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])) })
+    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])), ...clauses })
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(minors.map((minor) => [`Python 3.${minor}`,
         (e: any) => e.standard(_[`Python_3_${minor}`])]))),
       ...minors.map(version),
+      ...specs,
     ])]))]);
 }
 
