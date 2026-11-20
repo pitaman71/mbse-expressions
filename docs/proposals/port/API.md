@@ -3086,8 +3086,9 @@ no representation. And a grammar clause that has no `Allows` or `Forbids` should
 443. **The corpus**: the dialects' singletons' documents (`c_domains`, `cpp_domains`, `python3_domains`,
      `typescript5_domains`) hold their grammar clauses, and `standards`, C23's edition, its
      `Allows` and `Forbids`; regenerated, byte-identical in both languages.
-444. **The version**: 0.14.0, a breaking change (PRI-031): every `SINCE` removed, and the standards' data changed;
-     origin/main took 0.13.0 for mbse-schemas 0.33.0 meanwhile, merged here, so this is the next minor.
+444. **The version**: 0.15.0, a breaking change (PRI-031): every `SINCE` removed, and the standards' data changed.
+     0.13.0 is mbse-schemas 0.33.0's move and 0.14.0 mbse-schemas 0.34.0's (#80), which merged before the grammar
+     clauses (#79), so these are the next minor.
 
 ## What stage 2b needed (done)
 
