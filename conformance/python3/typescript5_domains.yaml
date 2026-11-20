@@ -360,3 +360,50 @@ mutations:
                       mutations:
                       - set:
                           value: TypeScript 5.9
+        - as_adjacency:
+            name: grammar_clauses
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.TypeScript.TypeScript5
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: importexpression.options
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: importexpression.options
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.TypeScript.TypeScript5
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: importexpression.phase 'defer'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: importexpression.phase 'defer'

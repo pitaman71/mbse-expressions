@@ -141,6 +141,8 @@ export function install(txn: any): any {
       OfExpression: S.OfObject, Domain: S.OfObject, DomainKind: S.OfUnion, HasDomain: S.OfRelation, OfAny: S.OfObject,
       Dialect: S.OfUnion, Defines: S.OfRelation, Operates: S.OfRelation,
       Standard: S.OfObject, Revision: S.OfUnion, Covers: S.OfRelation, HasStandard: S.OfRelation,
+      GrammarClause: S.OfObject, Specifies: S.OfRelation, HasGrammarClause: S.OfRelation,
+      Holds: S.OfRelation, Nests: S.OfRelation, Allows: S.OfRelation, Forbids: S.OfRelation,
       OfObject: S.OfObject, // mbse-schemas' own, by name
     })
     .spec([
@@ -225,14 +227,55 @@ export function install(txn: any): any {
         names: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfStr])), // its common names
       }).adjacencies({
         dialect: (a: any) => a.relation([_.Covers]).me("standard").owner(true), // its dialect's, its designation
-        kinds: (a: any) => a.relation([_.HasStandard]).me("standard") }),
+        kinds: (a: any) => a.relation([_.HasStandard]).me("standard"),
+        allows: (a: any) => a.relation([_.Allows]).me("standard"), // the grammar clauses it allows
+        forbids: (a: any) => a.relation([_.Forbids]).me("standard") }), // and those it forbids
       (_: any) => _.Covers.name("Expressions.Framework.Covers").links([
         (t: any) => t.name("dialect").schema([_.Dialect]), (t: any) => t.name("standard")]).properties({
         designation: S.OfStr }).uniques([["dialect", "designation"], ["standard"]]),
       (_: any) => _.HasStandard.name("Expressions.Framework.HasStandard").links([
         (t: any) => t.name("kind").schema([_.OfObject]), (t: any) => t.name("standard")]).uniques([]), // a set
+      // A grammar clause: an alternative within a production of a dialect's grammar, owned by the dialect by name: a
+      // kind, one of its properties, and what that property may hold there, present or absent (`present`), one of these
+      // values (`values`), or a term of one of these kinds (`kinds`), each kind's own subterms held as the nested
+      // grammar clauses of that kind say (`nested`). Each edition allows or forbids it (`Allows`, `Forbids`), `before`
+      // and `after` extending the entry to the editions before or after its own that the data does not represent, only
+      // to guess support for one; a grammar clause no edition names is allowed (mbse-basis
+      // [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)).
+      (_: any) => _.GrammarClause.name("Expressions.Framework.GrammarClause").ref(true).properties({
+        property: S.OfStr, // the property of its kind it is about, by name
+        present: S.OfBool, // set, or (false) unset
+        values: S.OfContainer((c: any) => c.index([S.OfInt]).element([S.OfAny((a: any) => a)])), // one of these
+      }).adjacencies({
+        dialect: (a: any) => a.relation([_.Specifies]).me("clause").owner(true), // its dialect's, then its name
+        kind: (a: any) => a.relation([_.HasGrammarClause]).me("clause"),
+        kinds: (a: any) => a.relation([_.Holds]).me("clause"), // a term of one of these kinds
+        nested: (a: any) => a.relation([_.Nests]).me("clause"), // what that term's own properties hold
+        allowed: (a: any) => a.relation([_.Allows]).me("clause"),
+        forbidden: (a: any) => a.relation([_.Forbids]).me("clause") }),
+      (_: any) => _.Specifies.name("Expressions.Framework.Specifies").links([
+        (t: any) => t.name("dialect").schema([_.Dialect]), (t: any) => t.name("clause")]).properties({
+        name: S.OfStr }).uniques([["dialect", "name"], ["clause"]]),
+      (_: any) => _.HasGrammarClause.name("Expressions.Framework.HasGrammarClause").links([
+        (t: any) => t.name("kind").schema([_.OfObject]), (t: any) => t.name("clause"),
+      ]).uniques("kind"), // one kind each
+      (_: any) => _.Holds.name("Expressions.Framework.Holds").links([
+        (t: any) => t.name("clause").schema([_.GrammarClause]), (t: any) => t.name("kind").schema([_.OfObject]),
+      ]).uniques([]), // a set
+      (_: any) => _.Nests.name("Expressions.Framework.Nests").links([
+        (t: any) => t.name("clause").schema([_.GrammarClause]), (t: any) => t.name("nested").schema([_.GrammarClause]),
+      ]).uniques([]), // a set
+      (_: any) => _.Allows.name("Expressions.Framework.Allows").links([
+        (t: any) => t.name("standard").schema([_.Standard]), (t: any) => t.name("clause").schema([_.GrammarClause]),
+      ]).properties({ before: S.OfBool, after: S.OfBool }).uniques([["before", "after"]]), // one entry an edition and
+      // a grammar clause
+      (_: any) => _.Forbids.name("Expressions.Framework.Forbids").links([
+        (t: any) => t.name("standard").schema([_.Standard]), (t: any) => t.name("clause").schema([_.GrammarClause]),
+      ]).properties({ before: S.OfBool, after: S.OfBool }).uniques([["before", "after"]]), // one entry an edition and
+      // a grammar clause
       (_: any) => _.OfObject.name("Schemas.OfObject").adjacencies({
-        standards: (a: any) => a.relation([_.HasStandard]).me("kind") }),
+        standards: (a: any) => a.relation([_.HasStandard]).me("kind"),
+        grammar_clauses: (a: any) => a.relation([_.HasGrammarClause]).me("kind") }),
     ])]))]);
 }
 

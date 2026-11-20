@@ -68,12 +68,17 @@
  *
  * The editions C covers are data, which `define` writes, each owned by its designation and holding the kinds it has
  * (`Framework.Standards`): ISO/IEC 9899:2011, 2018 and 2024, C11, C17 and C23 (C17 is C11's corrigenda, with no new
- * syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. `DIALECT` reads the
- * kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated
- * before it was complete through the builders, in a transaction, a cast's type a spec of C Types' `Term`, written
- * through the builders too: `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written
- * through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)).
- * `Text.ToText` writes an expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
+ * syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. What an edition
+ * changes within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition,
+ * C23's: a literal's digit separators, a binary integer, the suffix `wb` and the decimal floating suffixes, `true` and
+ * `false`, an empty initializer, `{}`, and `alignof` spelled so. A `u8` character literal, C23's, stays unrecorded: it
+ * is two properties' values together, `prefix` and `quote`, where a grammar clause is about one *(agent)*. `DIALECT`
+ * reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C
+ * evaluated before it was complete through the builders, in a transaction, a cast's type a spec of C Types' `Term`,
+ * written through the builders too: `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other
+ * term is written through the builders (mbse-basis [PRI-019: fluent builder
+ * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an expression as C source, with C's
+ * precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
  *
  * Its kind of domain, the branch of its union `Expressions.C.Expressions.DomainKind`, which `install` adds to the
  * framework's `Expressions.Framework.DomainKind` as the branch `c`: the token `nullptr_t` (`OfNullptr`), C23's, with
@@ -101,6 +106,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as CPreprocessor from "../Preprocessor/Expressions.js";
 import * as CTypes from "../Types/Expressions.js";
@@ -109,7 +115,7 @@ import {
   PARENTHESIZEDEXPRESSION, GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION, MEMBEREXPRESSION, POSTFIXEXPRESSION,
   UNARYEXPRESSION, SIZEOFEXPRESSION, ALIGNOFEXPRESSION, CASTEXPRESSION, BINARYEXPRESSION, CONDITIONALEXPRESSION,
   ASSIGNMENTEXPRESSION, INITIALIZERLIST, DESIGNATEDINITIALIZER, COMPOUNDLITERALEXPRESSION, STATEMENTEXPRESSION,
-  EXTENSIONEXPRESSION, LABELADDRESSEXPRESSION,
+  EXTENSIONEXPRESSION, LABELADDRESSEXPRESSION, C_EDITIONS,
 } from "./Kinds.js";
 
 export { // the family's shared reading of its kinds, re-exported
@@ -121,6 +127,20 @@ export { // the family's shared reading of its kinds, re-exported
   problems, scopes, size, spelling, stringLiteral, truth, typeName, untyped,
 } from "./Kinds.js";
 export type { Suffixes } from "./Kinds.js";
+
+const C23 = ["C23"];
+/** Its grammar clauses, each with the editions that allow it, every other forbidding it, named as mbse-programs'
+ * `Check` names the language feature. */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  FS.values("literal with digit separators", LITERAL, "separators", [true], C23),
+  FS.values("literal.base 2", LITERAL, "base", [2n], C23),
+  FS.values("literal.suffix 'wb'", LITERAL, "suffix", ["wb", "WB"].flatMap(
+    (wb) => [wb, `u${wb}`, `U${wb}`, `${wb}u`, `${wb}U`]), C23),
+  FS.values("literal with a decimal floating suffix", LITERAL, "suffix", ["df", "dd", "dl", "DF", "DD", "DL"], C23),
+  FS.values("literal true or false", LITERAL, "value", [true, false], C23),
+  FS.absent("initializerlist without items", INITIALIZERLIST, "items", C23),
+  FS.values("alignofexpression.keyword 'alignof'", ALIGNOFEXPRESSION, "keyword", ["alignof"], C23),
+];
 
 // where its grammar hands off to mbse-programs' statements: the framework's readers do not enter it
 F.boundaries("Expressions.C.Expressions.Block");
@@ -166,7 +186,8 @@ export function install(txn: any): any {
           .adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("c").schema([_.Dialect])]),
       // its union of its kinds: its own, the framework's it reuses, a type name, an initializer list's
@@ -333,8 +354,10 @@ export function install(txn: any): any {
  * (its decimal formats), each rounding ties to even; and `nullptr_t`, of C's own kind. What C leaves to the
  * implementation (`int`, `long`, `char`, `long double`, `size_t`, ...) is each ABI dialect's. And the editions of C it
  * covers, by designation (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts,
- * its common name and the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing.
- * Its frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each domain by its name:
+ * its common name and the kinds it has, and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden
+ * by each edition (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing.
+ * Its frame binds the dialect (`dialect`), each edition by its common name (`C11`), each grammar clause by its index
+ * (`grammar_clause_0`) and each domain by its name:
  * `store.transaction(C.define)[0].get("int32_t")`, each object by its reference (a `References.OfObject`), not a
  * visitor. Within a transaction, a domain is read from the dialect:
  * `Framework.Domains.domains(store.singleton("Expressions.C.Expressions")).get("int32_t")`. */
@@ -344,6 +367,9 @@ export function define(txn: any): any {
   const every = new Map((OWN.Term.as_schema().branches as { name: string; schema: unknown }[]) // each of its own
     .filter((b) => C_TAGS.includes(b.name) && !EXTENSIONS.has(b.name)) // kinds' schema, by its tag, but an extension
     .map((b) => [b.name, b.schema]));
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+    (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
+  [C_EDITIONS]);
   return txn.uid("mbse.Expressions.C.Expressions.define/1")
       .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
@@ -351,7 +377,7 @@ export function define(txn: any): any {
       bool: Domain, int8_t: Domain, int16_t: Domain, int32_t: Domain, int64_t: Domain,
       uint8_t: Domain, uint16_t: Domain, uint32_t: Domain, uint64_t: Domain,
       Float16: Domain, Float32: Domain, Float64: Domain, Float128: Domain,
-      Decimal32: Domain, Decimal64: Domain, Decimal128: Domain, nullptr_t: Domain,
+      Decimal32: Domain, Decimal64: Domain, Decimal128: Domain, nullptr_t: Domain, ...clauses,
     })
     .spec([
       // --- the editions C covers, each by its designation, with the kinds it has: every kind but GNU's extensions and
@@ -368,6 +394,8 @@ export function define(txn: any): any {
       (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(
         ["C23"]).kinds(
         [...every.values()]),
+      // --- its grammar clauses, each allowed or forbidden by each edition ---
+      ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({
         "bool": (e: any) => e.domain(_.bool),

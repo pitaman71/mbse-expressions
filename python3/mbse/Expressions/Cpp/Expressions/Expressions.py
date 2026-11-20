@@ -78,8 +78,14 @@ boundaries (`Terms.boundaries`).
 
 The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
 (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
-(`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone, and an extension in none;
-what a helper has from an edition on (C++20's `explicit(condition)`) is a feature, not recorded. `DIALECT` reads the
+(`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone (`ONLY`), and an extension
+in none. What an edition changes within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or
+forbidden by each edition: C++20's `consteval`, `constinit`, `char8_t`, `<=>` and `operator<=>`, `operator co_await`,
+a lambda's template parameters and `requires`, a pack init-capture, a constrained placeholder (`Number auto`), a type
+parameter's constraint, a template template parameter's `requires` and `explicit(condition)`; C++23's lambda's
+attributes and `static`, an explicit object parameter, `auto(x)` and `auto{x}`, and the literal suffixes `z` and `uz`.
+A subscript of several indices, C++23's, stays unrecorded: it is a count of what a property holds, not what it holds
+*(agent)*. `DIALECT` reads the
 kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
 expression an `idexpression` (`identifier("x")`, and a callee named by a string):
 `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++ source.
@@ -100,10 +106,10 @@ from typing import Any
 
 from mbse.Expressions.C.Expressions import Domains
 from mbse.Expressions.C.Expressions import Kinds as C
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
-__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "PREFIXES", "SUFFIXES", "Writer", "literal",
-           "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
+__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "ONLY", "GRAMMAR_CLAUSES", "PREFIXES", "SUFFIXES", "Writer",
+           "literal", "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
 
 USERDEFINEDLITERAL, IDEXPRESSION, THISEXPRESSION, LAMBDAEXPRESSION = (
     "userdefinedliteral", "idexpression", "thisexpression", "lambdaexpression")
@@ -201,7 +207,8 @@ def install(txn: Any) -> Any:
                 .singleton("Expressions.Cpp.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("cpp").schema([_.Dialect])]),
             # its union of its kinds: its own, the framework's it reuses, a type name, an initializer list's
@@ -592,22 +599,32 @@ def define(txn: Any) -> Any:
     bits, radix 2, precision 8, emax 127), each rounding ties to even; and `nullptr_t`, of C++'s own kind. What C++
     leaves to the implementation is each ABI dialect's, as C's is. And the editions of C++ it covers, by designation
     (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts, its common name and
-    the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
-    the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`) and each
-    domain by its name, spelled as its schema's is: `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`, each object by
-    its reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+    the kinds it has, and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each edition
+    (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+    the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`), each grammar
+    clause by its index (`grammar_clause_0`) and each domain by its name, spelled as its schema's is:
+    `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`, each object by its reference (a `References.OfObject`), not a
+    visitor. Within a transaction, a domain is read from the dialect:
     `Framework.Domains.domains(store.singleton("Expressions.Cpp.Expressions"))["std::bfloat16_t"]`."""
     OWN, Domain = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each of its own kinds' schema,
              if branch.name in _TAGS and branch.name not in EXTENSIONS}  # by its tag, but an extension
+    schemas = {**{branch.name: branch.schema for branch in OWN.Term.as_schema().branches},
+               **{name.lower(): getattr(OWN, name).as_schema() for name in _CLAUSE_HELPERS}}
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [C.CPP_EDITIONS])
+
+    def has(edition: str) -> list[Any]:
+        """The kinds an edition has, by its frame symbol: each not in `ONLY`, and each that lists it there."""
+        return [schema for tag, schema in every.items() if edition in ONLY.get(tag, (edition,))]
+
     return txn.uid("mbse.Expressions.Cpp.Expressions.define/1").mutations([lambda mu: mu.upsert(
         lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "Cpp17": Standard, "Cpp20": Standard, "Cpp23": Standard,
                   "bool": Domain, "int8_t": Domain, "int16_t": Domain, "int32_t": Domain, "int64_t": Domain,
                   "uint8_t": Domain, "uint16_t": Domain, "uint32_t": Domain, "uint64_t": Domain,
                   "std_float16_t": Domain, "std_float32_t": Domain, "std_float64_t": Domain, "std_float128_t": Domain,
-                  "std_bfloat16_t": Domain, "nullptr_t": Domain})
+                  "std_bfloat16_t": Domain, "nullptr_t": Domain, **clauses})
         .spec([
             # --- the editions C++ covers, each by its designation, with the kinds it has: every kind but GNU's
             # extensions and invalid syntax, C++20's own in C++20 and C++23 alone ---
@@ -616,11 +633,13 @@ def define(txn: Any) -> Any:
                 "ISO/IEC 14882:2020": lambda e: e.standard(_.Cpp20),
                 "ISO/IEC 14882:2024": lambda e: e.standard(_.Cpp23)}),
             lambda _: _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2017)).names(
-                ["C++17"]).kinds([schema for tag, schema in every.items() if tag not in _SINCE_20]),
+                ["C++17"]).kinds(has("Cpp17")),
             lambda _: _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2020)).names(
-                ["C++20"]).kinds(list(every.values())),
+                ["C++20"]).kinds(has("Cpp20")),
             lambda _: _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision(lambda r: r.year(2024)).names(
-                ["C++23"]).kinds(list(every.values())),
+                ["C++23"]).kinds(has("Cpp23")),
+            # --- its grammar clauses, each allowed or forbidden by each edition ---
+            *specs,
             # --- its domains ---
             lambda _: _.dialect.domains({
                 "bool": lambda e: e.domain(_.bool),
@@ -711,8 +730,43 @@ _TAGS = (C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CONCATENATEDSTRING, IDEXPR
 """Its own kinds, in its `Term`'s order: its `Term` lists Cpp Types' `typeid` after them, and C Preprocessor's
 `definedexpression` and `pragmaexpression` after invalid syntax, each read as the dialect that declares it reads it."""
 
-_SINCE_20 = frozenset({REQUIRESEXPRESSION, AWAITEXPRESSION, YIELDEXPRESSION, C.DESIGNATEDINITIALIZER})
-"""The kinds C++20 added: C++17 has every other kind but the extensions."""
+ONLY = dict.fromkeys((REQUIRESEXPRESSION, AWAITEXPRESSION, YIELDEXPRESSION, C.DESIGNATEDINITIALIZER),
+                     ("Cpp20", "Cpp23"))
+"""The kinds that are not in every edition, each with the editions that have it, by their frame symbols: C++20's, in
+C++20 and C++23; membership, no minimum edition."""
+
+_CPP20, _CPP23 = ("Cpp20", "Cpp23"), ("Cpp23",)
+_CLAUSE_HELPERS = ("DeclSpecifier", "PrimitiveTypeSpecifier", "OperatorName", "LambdaDeclarator", "InitCapture",
+                   "PlaceholderTypeSpecifier", "TypeParameter", "TemplateTemplateParameter", "ParameterDeclaration",
+                   "ExplicitSpecifier")
+"""The helpers its grammar clauses are about, each keyed by its schema's name, lowercased."""
+
+GRAMMAR_CLAUSES = (
+    FS.values("declspecifier.keyword 'consteval'", "declspecifier", "keyword", ("consteval",), _CPP20),
+    FS.values("declspecifier.keyword 'constinit'", "declspecifier", "keyword", ("constinit",), _CPP20),
+    FS.values("primitivetypespecifier.keyword 'char8_t'", "primitivetypespecifier", "keyword", ("char8_t",), _CPP20),
+    FS.values("binaryexpression.operator '<=>'", C.BINARYEXPRESSION, "operator", ("<=>",), _CPP20),
+    FS.values("operatorname.operator '<=>'", "operatorname", "operator", ("<=>",), _CPP20),
+    FS.values("operatorname.operator 'co_await'", "operatorname", "operator", ("co_await",), _CPP20),
+    FS.present("lambdaexpression.template_parameters", LAMBDAEXPRESSION, "template_parameters", _CPP20),
+    FS.present("lambdaexpression.attributes", LAMBDAEXPRESSION, "attributes", _CPP23),
+    FS.present("lambdadeclarator.requires", "lambdadeclarator", "requires", _CPP20),
+    FS.kinds_of("lambdadeclarator static", "lambdadeclarator", "specifiers", ("declspecifier",),
+                ("declspecifier.keyword 'static'",), _CPP23),
+    FS.values("declspecifier.keyword 'static'", "declspecifier", "keyword", ("static",), None),  # nested
+    FS.values("initcapture.pack", "initcapture", "pack", (True,), _CPP20),
+    FS.present("placeholdertypespecifier.constraint", "placeholdertypespecifier", "constraint", _CPP20),
+    FS.present("typeparameter.constraint", "typeparameter", "constraint", _CPP20),
+    FS.present("templatetemplateparameter.requires", "templatetemplateparameter", "requires", _CPP20),
+    FS.values("parameterdeclaration.this_keyword", "parameterdeclaration", "this_keyword", (True,), _CPP23),
+    FS.kinds_of("functionalcastexpression of auto", FUNCTIONALCASTEXPRESSION, "type", ("placeholdertypespecifier",),
+                (), _CPP23),
+    FS.values("literal.suffix 'z' or 'uz'", C.LITERAL, "suffix", tuple(
+        spelling for z in ("z", "Z") for spelling in (z, f"u{z}", f"U{z}", f"{z}u", f"{z}U")), _CPP23),
+    FS.present("explicitspecifier.condition", "explicitspecifier", "condition", _CPP20),
+)
+"""Its grammar clauses, each with the editions that allow it, every other forbidding it, named as mbse-programs'
+`Check` names the language feature; `static` among a lambda's specifiers is a nested grammar clause."""
 
 _ANY1 = FD.Function((FD.Anything,), FD.Anything)
 

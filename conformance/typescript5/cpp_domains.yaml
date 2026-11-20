@@ -423,3 +423,407 @@ mutations:
                       mutations:
                       - set:
                           value: 'ISO/IEC 14882:2024'
+        - as_adjacency:
+            name: grammar_clauses
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'binaryexpression.operator ''<=>'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'binaryexpression.operator ''<=>'''
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'declspecifier.keyword ''consteval'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'declspecifier.keyword ''consteval'''
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'declspecifier.keyword ''constinit'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'declspecifier.keyword ''constinit'''
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'declspecifier.keyword ''static'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'declspecifier.keyword ''static'''
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: explicitspecifier.condition
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: explicitspecifier.condition
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: functionalcastexpression of auto
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: functionalcastexpression of auto
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: initcapture.pack
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: initcapture.pack
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: lambdadeclarator static
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: lambdadeclarator static
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: lambdadeclarator.requires
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: lambdadeclarator.requires
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: lambdaexpression.attributes
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: lambdaexpression.attributes
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: lambdaexpression.template_parameters
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: lambdaexpression.template_parameters
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'literal.suffix ''z'' or ''uz'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'literal.suffix ''z'' or ''uz'''
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'operatorname.operator ''<=>'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'operatorname.operator ''<=>'''
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'operatorname.operator ''co_await'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'operatorname.operator ''co_await'''
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: parameterdeclaration.this_keyword
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: parameterdeclaration.this_keyword
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: placeholdertypespecifier.constraint
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: placeholdertypespecifier.constraint
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'primitivetypespecifier.keyword ''char8_t'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'primitivetypespecifier.keyword ''char8_t'''
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: templatetemplateparameter.requires
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: templatetemplateparameter.requires
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.Cpp.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: typeparameter.constraint
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: typeparameter.constraint

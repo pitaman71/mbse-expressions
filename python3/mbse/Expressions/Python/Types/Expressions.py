@@ -27,7 +27,8 @@ are not simplified: Python3's rules leave each in the residual, named ("Python T
 expression of `Python3`'s kinds simplifies as `Python3` simplifies it.
 
 The versions of Python it covers are data, which `define` writes: Python 3.0 to 3.15, as `Python3`'s, each with its own
-kinds it has (`SINCE`: every one since Python 3.12; a default, 3.13, a feature within a kind, not recorded).
+kinds it has, by membership (`ONLY`: each in Python 3.12 to 3.15), and its grammar clauses (`GRAMMAR_CLAUSES`), each
+allowed or forbidden by each version: a type parameter's default (3.13).
 `DIALECT` reads its kinds and its family's other dialects' terms. `Text` writes its kinds as Python source, as the
 family's printer (`Python3.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis
 [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)), a type expression of `Python3`'s kinds
@@ -38,11 +39,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
 from ..Python3 import Domains as _family, Expressions as P
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS"]
+__all__ = ["install", "define", "DIALECT", "ONLY", "GRAMMAR_CLAUSES", "TAGS", "HELPERS"]
 
 TYPEVAR, PARAMSPEC, TYPEVARTUPLE = "typevar", "paramspec", "typevartuple"
 
@@ -52,9 +53,13 @@ TAGS = (TYPEVAR, PARAMSPEC, TYPEVARTUPLE)
 HELPERS: tuple[str, ...] = ()
 """Its own helpers, the value object schemas its kinds hold that are no kind: none, its names being `str`s."""
 
-SINCE = dict.fromkeys(TAGS, 12)
-"""The minor version of Python 3 each of its kinds arrived in, as mbse-programs' `SINCE` has them (`py(12)`, every
-one), from which `define` writes the kinds each version has."""
+ONLY = dict.fromkeys(TAGS, _family.VERSIONS[12:])
+"""The kinds that are not in every version, each with the versions that have it (every one, Python 3.12 to 3.15, as
+mbse-programs has them), from which `define` writes the kinds each version has: membership, no minimum version."""
+
+GRAMMAR_CLAUSES = tuple(FS.present(f"{tag}.default_value", tag, "default_value", _family.VERSIONS[13:]) for tag in TAGS)
+"""Its grammar clauses, each with the versions that allow it, every other forbidding it, named as mbse-programs'
+`Check` names the language feature: a type parameter's default (PEP 696)."""
 
 
 def install(txn: Any) -> Any:
@@ -72,7 +77,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Python.Types.Dialect").ref(True).singleton("Expressions.Python.Types").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("python_types").schema([_.Dialect])]),
             # its union of its kinds: `Python3`'s branches, which that dialect's install adds, its own, and invalid syntax
@@ -102,23 +108,27 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """Python Types' dialect as data: the singleton `Expressions.Python.Types` owning the versions of Python 3 it covers,
     by their published names (`standards`), Python 3.0 to 3.15, each with its body, its version and its own kinds it has
-    (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
-    dialect (`dialect`) and each version by its name spelled as an identifier (`Python_3_12`)."""
+    (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each version
+    (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+    the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_12`) and each grammar clause
+    by its index (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.Python.Types, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
     minors = range(16)
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, every, [_family.VERSIONS])
 
     def version(minor: int) -> Callable[[Any], Any]:
-        kinds = [schema for tag, schema in every.items() if SINCE[tag] <= minor]
+        kinds = [schema for tag, schema in every.items() if _family.VERSIONS[minor] in ONLY[tag]]
         return lambda _: getattr(_, f"Python_3_{minor}").bodies(["org.python"]).revision(
             lambda r: r.version(f"3.{minor}")).kinds(kinds)
 
     return txn.uid("mbse.Expressions.Python.Types.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": OWN.Dialect, **{f"Python_3_{minor}": Standard for minor in minors}})
+        .symbols({"dialect": OWN.Dialect, **{f"Python_3_{minor}": Standard for minor in minors}, **clauses})
         .spec([
             lambda _: _.dialect.standards({f"Python 3.{minor}": lambda e, minor=minor: e.standard(
                 getattr(_, f"Python_3_{minor}")) for minor in minors}),
             *(version(minor) for minor in minors),
+            *specs,
         ])]))])
 
 

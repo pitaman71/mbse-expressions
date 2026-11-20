@@ -34,7 +34,8 @@
  * it.
  *
  * The versions of TypeScript 5 it covers are data, which `define` writes, as `TypeScript5`'s are: TypeScript 5.0 to 5.9,
- * each with its kinds, every one older than 5.0 (`SINCE` is empty). `DIALECT` reads its kinds and its family's other
+ * each with its kinds, every one older than 5.0, and its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or
+ * forbidden by each version: an import type's `options` (5.3). `DIALECT` reads its kinds and its family's other
  * dialects' terms (`reads`). `Text` writes its kinds as TypeScript source, as the family's printer
  * (`TypeScript5.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
  * fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.tsarraytype((a) =>
@@ -43,6 +44,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as TypeScriptPatterns from "../Patterns/Expressions.js";
 import * as TypeScriptRegExp from "../RegExp/Expressions.js";
@@ -71,8 +73,10 @@ export const TERMS: readonly string[] = ["identifier", "thisexpression", "litera
 export const HELPERS: readonly string[] = ["TSPropertySignature", "TSMethodSignature", "TSCallSignatureDeclaration",
   "TSConstructSignatureDeclaration", "TSIndexSignature", "Comment"];
 
-/** The version each of its kinds arrived in: none, every kind being older than TypeScript 5.0. */
-export const SINCE: ReadonlyMap<string, number> = new Map();
+/** Its grammar clauses, each with the versions that allow it, every other forbidding it, named as mbse-programs'
+ * `Check` names the language feature. */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  FS.present("tsimporttype.options", "tsimporttype", "options", Family.VERSIONS.slice(3))];
 
 /** Its kinds' schemas' names under its path, in `TAGS`' order: mbse-programs' names. */
 const SCHEMAS: readonly string[] = ["TSAnyKeyword", "TSUnknownKeyword", "TSNumberKeyword", "TSBigIntKeyword",
@@ -114,7 +118,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.TypeScript.Types.Dialect").ref(true).singleton("Expressions.TypeScript.Types").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("typescript_types").schema([_.Dialect])]),
       // its union of its kinds: its own, the terms a type holds, and invalid syntax
@@ -232,23 +237,27 @@ export function install(txn: any): any {
 /**
  * TypeScript Types' dialect as data: the singleton `Expressions.TypeScript.Types` and the versions of TypeScript 5 it
  * covers, by their published names (`standards`, through `Expressions.Framework.Covers`), TypeScript 5.0 to 5.9, each
- * with its body, its version and its kinds, every one in each. Run after `install`, in a transaction of its own; run
- * again, it writes nothing. Its frame binds the dialect (`dialect`) and each version by its name spelled as an
- * identifier (`TypeScript_5_0`).
- */
+ * with its body, its version and its kinds, every one in each, and its grammar clauses by name (`grammar_clauses`),
+ * each allowed or forbidden by each version (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run
+ * again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its name spelled as an identifier
+ * (`TypeScript_5_0`) and each grammar clause by its index (`grammar_clause_0`). */
 export function define(txn: any): any {
   const OWN = txn.Expressions.TypeScript.Types;
   const Standard = txn.Expressions.Framework.Standard;
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[])
     .filter((b) => TAGS.includes(b.name)).map((b) => b.schema);
-  const versions = Array.from({ length: 10 }, (_, minor) => `TypeScript_5_${minor}`);
+  const versions = Family.VERSIONS;
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+    (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])), [versions]);
   return txn.uid("mbse.Expressions.TypeScript.Types.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(versions.map((version) => [version, Standard])) })
+    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(versions.map((version) => [version, Standard])),
+      ...clauses })
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(versions.map((version, minor) => [
         `TypeScript 5.${minor}`, (e: any) => e.standard(_[version])]))),
       ...versions.map((version, minor) => (_: any) => _[version].bodies(["com.microsoft"]).revision(
         (r: any) => r.version(`5.${minor}`)).kinds(every)),
+      ...specs,
     ])]))]);
 }
 

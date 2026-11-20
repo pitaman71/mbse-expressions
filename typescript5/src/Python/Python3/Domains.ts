@@ -13,6 +13,11 @@ import { Repr } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
 
+/** The versions of Python 3 the family's dialects cover, oldest first, each by its name spelled as an identifier, as
+ * their `define`s' frames bind it (`Python_3_8`): Python3's, Python Types' and Python RegExp's all, Python Patterns'
+ * from 3.10. */
+export const VERSIONS: readonly string[] = Array.from({ length: 16 }, (_, minor) => `Python_3_${minor}`);
+
 export const Anything = D.Anything;
 export const Bool = new D.OfTypes("bool", Boolean);
 export const Int = new D.OfTypes("int", BigInt);

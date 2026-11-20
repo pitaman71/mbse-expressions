@@ -61,9 +61,10 @@
  * nothing refines `Let`.
  *
  * The editions it covers are data, which `define` writes: C's and C++'s (C11, C17, C23, C++17, C++20 and C++23), each
- * with its own kinds it has, every kind in every edition but `elifdefdirective`, C23's and C++23's (`SINCE`: mbse-
- * programs' `both(2023, 2023)`), and `hasincludeexpression`, C23's and C++17's; a directive's name within
- * `otherdirective` (`#warning`, `#embed`) is a feature, not recorded. `DIALECT` reads its kinds and the terms of C's
+ * with its own kinds it has, by membership (`ONLY`), every kind in every edition but `elifdefdirective`, C23's and
+ * C++23's (mbse-programs' `both(2023, 2023)`), and `hasincludeexpression`, C23's and C++17's to C++23's; and its
+ * grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: a directive's name within
+ * `otherdirective`, `#warning` (C23, C++23) and `#embed` (C23). `DIALECT` reads its kinds and the terms of C's
  * and C++'s expressions and types, which its conditions and items hold. Simplification leaves each of its kinds in the
  * residual, named. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
@@ -74,6 +75,7 @@
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as Cpp from "../../Cpp/Expressions/Expressions.js";
 import * as CppTypes from "../../Cpp/Types/Expressions.js";
@@ -111,10 +113,16 @@ export const HELPERS: readonly string[] = [];
 /** The editions it covers, by their common names, C's then C++'s. */
 export const EDITIONS: readonly string[] = ["C11", "C17", "C23", "C++17", "C++20", "C++23"];
 
-/** The editions each of its kinds arrived in, the first of each language's (C's, then C++'s), from mbse-programs'
- * `SINCE`; a kind not listed is in every edition. */
-export const SINCE: ReadonlyMap<string, readonly [string, string]> = new Map([[ELIFDEFDIRECTIVE, ["C23", "C++23"]],
-  [HASINCLUDEEXPRESSION, ["C23", "C++17"]]]);
+/** The kinds that are not in every edition, each with the editions that have it, by their frame symbols (`Cpp17`),
+ * from which `define` writes the kinds each edition has: membership, no minimum edition. */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([[ELIFDEFDIRECTIVE, ["C23", "Cpp23"]],
+  [HASINCLUDEEXPRESSION, ["C23", "Cpp17", "Cpp20", "Cpp23"]]]);
+
+/** Its grammar clauses, each with the editions that allow it, every other forbidding it. */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  FS.values("otherdirective.directive 'warning'", OTHERDIRECTIVE, "directive", ["warning"], ["C23", "Cpp23"]),
+  FS.values("otherdirective.directive 'embed'", OTHERDIRECTIVE, "directive", ["embed"], ["C23"]),
+];
 
 /** What an include directive's `directive` may be: `#include`, and the extensions `#include_next` and `#import`, as
  * mbse-programs' `IncludeKeyword` lists them. */
@@ -172,7 +180,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.C.Preprocessor.Dialect").ref(true).singleton("Expressions.C.Preprocessor").adjacencies({
           domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
           operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-          standards: (a: any) => a.relation([Framework.Covers]).me("dialect")}),
+          standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+          grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect")}),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
           (t: any) => t.name("c_preprocessor").schema([_.Dialect])]),
       // its union of its kinds, and invalid syntax
@@ -251,21 +260,23 @@ export function install(txn: any): any {
 /**
  * C Preprocessor's dialect as data: the singleton `Expressions.C.Preprocessor` owning the editions it covers, by
  * designation (`standards`), C's ISO/IEC 9899:2011, 2018 and 2024 and C++'s ISO/IEC 14882:2017, 2020 and 2024, each with
- * its formal reference's parts, its common name and its own kinds it has (`SINCE`). Run after `install`, in a
- * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each edition by its
- * common name spelled as an identifier (`C11`, `Cpp17`).
+ * its formal reference's parts, its common name and its own kinds it has (`ONLY`), and its grammar clauses by name
+ * (`grammar_clauses`), each allowed or forbidden by each edition (`GRAMMAR_CLAUSES`). Run after `install`, in a
+ * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its
+ * common name spelled as an identifier (`C11`, `Cpp17`) and each grammar clause by its index (`grammar_clause_0`).
  */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.C.Preprocessor, txn.Expressions.Framework.Standard];
   const every = (OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name));
-  /** The kinds an edition has: each but those arriving in a later edition of its language. */
-  const kinds = (edition: string): any[] => every.filter((branch) => {
-    const since = SINCE.get(branch.name);
-    return since === undefined || EDITIONS.indexOf(edition) >= EDITIONS.indexOf(since[edition.includes("++") ? 1 : 0]);
-  }).map((branch) => branch.schema);
+  /** The kinds an edition has, by its frame symbol: each not in `ONLY`, and each that lists it there. */
+  const kinds = (edition: string): any[] => every.filter((branch) => (ONLY.get(branch.name) ?? [edition])
+    .includes(edition)).map((branch) => branch.schema);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+    (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
+  [K.C_EDITIONS, K.CPP_EDITIONS]);
   return txn.uid("mbse.Expressions.C.Preprocessor.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, C11: Standard, C17: Standard, C23: Standard, Cpp17: Standard, Cpp20: Standard,
-      Cpp23: Standard })
+      Cpp23: Standard, ...clauses })
     .spec([
       (_: any) => _.dialect.standards({
         "ISO/IEC 9899:2011": (e: any) => e.standard(_.C11), "ISO/IEC 9899:2018": (e: any) => e.standard(_.C17),
@@ -279,11 +290,12 @@ export function define(txn: any): any {
       (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(
         ["C23"]).kinds(kinds("C23")),
       (_: any) => _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2017n)).names(
-        ["C++17"]).kinds(kinds("C++17")),
+        ["C++17"]).kinds(kinds("Cpp17")),
       (_: any) => _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2020n)).names(
-        ["C++20"]).kinds(kinds("C++20")),
+        ["C++20"]).kinds(kinds("Cpp20")),
       (_: any) => _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2024n)).names(
-        ["C++23"]).kinds(kinds("C++23")),
+        ["C++23"]).kinds(kinds("Cpp23")),
+      ...specs,
     ])]))]);
 }
 

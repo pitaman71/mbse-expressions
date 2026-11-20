@@ -276,7 +276,10 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    name with `Domains.domains`, and its operations with `Domains.operations` and `Domains.arity`. The editions of the
    standards a dialect covers are data too, each owned by its designation as its standards body writes it
    (`ISO/IEC 9899:2011`) and holding its common names (`C11`) and the kinds it has: find one by either tag with
-   `Standards.find`, and read it with `Standards.properties` and `Standards.kinds`.
+   `Standards.find`, and read it with `Standards.properties` and `Standards.kinds`. What an edition changes within a
+   kind is data as well, a grammar clause each edition allows or forbids (a binop's `@`, C23's digit separators): ask
+   which a term takes with `Standards.takes` and whether an edition allows one with `Standards.allows` (mbse-basis
+   [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md)).
    `DIALECT.infer(expression, domains)` finds a term's domain from its
    vocabulary's signatures, in code, and the domains its variables are given; a quantifier's name has its items'
    domain. For Patterns these are its values' natives' domains (`int`, `float`, ...) until domain inference reads the
@@ -299,6 +302,7 @@ repositories exist, and this one's part: [Why the mbse repositories exist](mbse:
    - Python: [DOM-20: SystemVerilog's domains are stored: its define writes IEEE 1800's built-in types, by name, of its kinds logic and bit or IEEE 754's, with their properties and, for the 2-state ones, their schemas](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-20) · TypeScript: [DOM-20: SystemVerilog's domains are stored: its define writes IEEE 1800's built-in types, by name, of its kinds logic and bit or IEEE 754's, with their properties and, for the 2-state ones, their schemas](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-20)
    - Python: [DOM-21: Python3's, TypeScript5's, MATLAB's and Excel's domains are stored: each define writes its dialect's, by name, with their kinds, properties and schemas](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-21) · TypeScript: [DOM-21: Python3's, TypeScript5's, MATLAB's and Excel's domains are stored: each define writes its dialect's, by name, with their kinds, properties and schemas](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-21)
    - Python: [FRM-13: Standards are data: each dialect covers its editions by designation, each found by its designation or its common names, and records the kinds it has](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-13) · TypeScript: [FRM-13: Standards are data: each dialect covers its editions by designation, each found by its designation or its common names, and records the kinds it has](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-13)
+   - Python: [FRM-14: Grammar clauses are data: each dialect owns its own by name, each allowed or forbidden by its editions, a term taking those its properties hold](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-14) · TypeScript: [FRM-14: Grammar clauses are data: each dialect owns its own by name, each allowed or forbidden by its editions, a term taking those its properties hold](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-14)
    - Python: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-03) · TypeScript: [DOM-03: Domains are data: a dialect owns each by name, and each one's schema, an OfAny of its scalar, reads it](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-03)
    - Python: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/python3/tests/05_Framework.ipynb#FRM-07) · TypeScript: [FRM-07: `infer` finds an expression's domain from its vocabulary's signatures](mbse:mbse-expressions/typescript5/tests/05_Framework.ipynb#FRM-07)
    - Python: [DOM-09: Signatures take the natives' domains and collections, so inference follows the domains an environment gives](mbse:mbse-expressions/python3/tests/09_Domains.ipynb#DOM-09) · TypeScript: [DOM-09: Signatures take the natives' domains and collections, so inference follows the domains an environment gives](mbse:mbse-expressions/typescript5/tests/09_Domains.ipynb#DOM-09)
@@ -366,7 +370,7 @@ each case shows its own:
 - **Names.** The API is the same name for name, snake_case included (`Domains.items_of`), except the framework's
   reads, camelCase in TypeScript: of terms, `Terms.name_of`, `kind_of`, `dialect_of` and `attributes_of` are
   `Terms.nameOf`, `kindOf`, `dialectOf` and `attributesOf` (a `Map`); of domains, `Domains.kind_of` and `name_of` are
-  `Domains.kindOf` and `nameOf`; of standards, `Standards.designation_of` is `Standards.designationOf`. A translator's pattern takes its attributes by keyword in Python
+  `Domains.kindOf` and `nameOf`; of standards, `Standards.designation_of` is `Standards.designationOf` and `Standards.grammar_clause_name` `Standards.grammarClauseName`. A translator's pattern takes its attributes by keyword in Python
   (`Pattern("call", A, B, callable="eq")`), first in TypeScript (`new Pattern("call", { callable: "eq" }, A, B)`).
   TypeScript makes an object of a class with `new` (`new Hole("A")`, `new Pairwise(...)`, `new Scope(...)`), where
   Python calls the class.

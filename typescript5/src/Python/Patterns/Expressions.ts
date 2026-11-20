@@ -39,7 +39,7 @@
  * is not evaluated").
  *
  * The versions of Python it covers are data, which `define` writes: Python 3.10 to 3.15, each with its own kinds it has
- * (`SINCE`: every one since Python 3.10). `DIALECT` reads its kinds and its family's other dialects' terms. `Text`
+ * (every one in each). `DIALECT` reads its kinds and its family's other dialects' terms. `Text`
  * writes its kinds as Python source, as the family's printer (`Python3.Text.ToText`) dispatches them to it. Its terms
  * are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(u) => u.matchas((m) => m.name("x"))`.
@@ -75,10 +75,6 @@ export const TAGS: readonly string[] = [MATCHVALUE, MATCHSINGLETON, MATCHSEQUENC
 /** Its own helpers, the value object schemas its kinds hold that are no kind: none, its names being strings. */
 export const HELPERS: readonly string[] = [];
 
-/** The minor version of Python 3 each of its kinds arrived in, as mbse-programs' `SINCE` has them (`py(10)`, every one),
- * from which `define` writes the kinds each version has. */
-export const SINCE: ReadonlyMap<string, number> = new Map(TAGS.map((tag) => [tag, 10]));
-
 /** What a `matchsingleton` compares by identity, as mbse-programs' `Singleton` has them. */
 export const SINGLETONS: readonly string[] = ["None", "True", "False"];
 
@@ -107,7 +103,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.Python.Patterns.Dialect").ref(true).singleton("Expressions.Python.Patterns").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("python_patterns").schema([_.Dialect])]),
       // its union of its kinds: its own, and invalid syntax
@@ -147,17 +144,16 @@ export function install(txn: any): any {
 }
 
 /**
- * Python Patterns' dialect as data: the singleton `Expressions.Python.Patterns` owning the versions of Python 3 it covers,
- * by their published names (`standards`), Python 3.10 to 3.15, each with its body, its version and its own kinds it has
- * (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
- * (`dialect`) and each version by its name spelled as an identifier (`Python_3_10`).
- */
+ * Python Patterns' dialect as data: the singleton `Expressions.Python.Patterns` owning the versions of Python 3 it
+ * covers, by their published names (`standards`), Python 3.10 to 3.15, each with its body, its version and its own
+ * kinds it has, every one in each. Run after `install`, in a transaction of its own; run again, it writes nothing. Its
+ * frame binds the dialect (`dialect`) and each version by its name spelled as an identifier (`Python_3_10`). */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.Python.Patterns, txn.Expressions.Framework.Standard];
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).filter((b) => TAGS.includes(b.name));
   const minors = Array.from({ length: 6 }, (_, i) => 10 + i);
   const version = (minor: number) => (_: any) => _[`Python_3_${minor}`].bodies(["org.python"]).revision(
-    (r: any) => r.version(`3.${minor}`)).kinds(every.filter((b) => (SINCE.get(b.name) as number) <= minor).map((b) => b.schema));
+    (r: any) => r.version(`3.${minor}`)).kinds(every.map((b) => b.schema));
   return txn.uid("mbse.Expressions.Python.Patterns.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])) })
     .spec([

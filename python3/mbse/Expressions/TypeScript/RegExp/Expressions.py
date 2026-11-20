@@ -43,24 +43,25 @@ holder too.
 
 The editions of ECMA-262 it covers are data, which `define` writes, each owned by its designation as Ecma International
 writes it (`ECMA-262 6th Edition`), from the 5.1 Edition to the 17th (ECMAScript 2026), each with its body, its number,
-its edition and its common names (`ECMAScript 2015`, `ES2015`), and the kinds it has: the `v` flag's five from the 15th
-(ES2024), `modifiers` from the 16th, every other in each (`SINCE`), the 17th's pattern grammar (22.2.1) the 16th's
-*(agent)*; a feature within a kind (a named group, a
-lookbehind, a property escape, ES2018) is not recorded. `DIALECT` reads its kinds and its family's other dialects'
-terms (`reads`). `Text` writes its kinds as ECMAScript source, as the family's printer (`TypeScript5.Text.ToText`)
-dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
-syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda r: r.character(lambda c: c.value(97))`."""
+its edition and its common names (`ECMAScript 2015`, `ES2015`), and the kinds it has, by membership (`ONLY`): the `v`
+flag's five in the 15th (ES2024) to the 17th, `modifiers` in the 16th and the 17th, every other in each, the 17th's
+pattern grammar (22.2.1) the 16th's *(agent)*. What an edition changes within a kind is data, its grammar clauses
+(`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: the flags `u` and `y` (ES2015), `s` (ES2018), `d`
+(ES2022) and `v` (ES2024), and a named group, a lookbehind and a property escape (ES2018). `DIALECT` reads its kinds and
+its family's other dialects' terms (`reads`). `Text` writes its kinds as ECMAScript source, as the family's printer
+(`TypeScript5.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
+fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda r: r.character(lambda c: c.value(97))`."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
 from ..TypeScript5 import Domains as _family
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "EDITIONS", "ASSERTIONS", "CHARACTERSETS",
-           "FLAGS", "MODIFIERS"]
+__all__ = ["install", "define", "DIALECT", "ONLY", "GRAMMAR_CLAUSES", "SYMBOLS", "TAGS", "HELPERS", "EDITIONS",
+           "ASSERTIONS", "CHARACTERSETS", "FLAGS", "MODIFIERS"]
 
 REGEXPLITERAL, PATTERN, ALTERNATIVE, GROUP, CAPTURINGGROUP, QUANTIFIER = (
     "regexpliteral", "pattern", "alternative", "group", "capturinggroup", "quantifier")
@@ -101,10 +102,23 @@ EDITIONS = (
 """The editions of ECMA-262 it covers, the 5.1 Edition to the 17th, each its designation, its revision (an edition, but
 the 5.1 Edition's, a version), its common names and its frame symbol *(agent)*."""
 
-SINCE = {CLASSINTERSECTION: 10, CLASSSUBTRACTION: 10, CLASSSTRINGDISJUNCTION: 10, STRINGALTERNATIVE: 10,
-         EXPRESSIONCHARACTERCLASS: 10, MODIFIERS_: 11}
-"""The edition each of its kinds arrived in, by its index in `EDITIONS`: the `v` flag's five in the 15th (ES2024),
-`modifiers` in the 16th (ES2025); a kind not listed is in every edition."""
+SYMBOLS = tuple(symbol for *_, symbol in EDITIONS)
+"""The editions it covers, oldest first, each by its frame symbol (`ES5_1`, `ES2015`, ... `ES2026`)."""
+
+ONLY = {**dict.fromkeys((CLASSINTERSECTION, CLASSSUBTRACTION, CLASSSTRINGDISJUNCTION, STRINGALTERNATIVE,
+                         EXPRESSIONCHARACTERCLASS), SYMBOLS[10:]), MODIFIERS_: SYMBOLS[11:]}
+"""The kinds that are not in every edition, each with the editions that have it: the `v` flag's five from ES2024,
+`modifiers` from ES2025, from which `define` writes the kinds each edition has: membership, no minimum edition."""
+
+GRAMMAR_CLAUSES = (
+    *(FS.values(f"flags.{flag}", "flags", flag, (True,), SYMBOLS[since:])
+      for flag, since in (("unicode", 1), ("sticky", 1), ("dotAll", 4), ("hasIndices", 8), ("unicodeSets", 10))),
+    FS.present("capturinggroup.name", CAPTURINGGROUP, "name", SYMBOLS[4:]),
+    FS.values("assertion.assertionKind 'lookbehind'", ASSERTION, "assertionKind", ("lookbehind",), SYMBOLS[4:]),
+    FS.values("characterset.setKind 'property'", CHARACTERSET, "setKind", ("property",), SYMBOLS[4:]),
+)
+"""Its grammar clauses, each with the editions that allow it, every other forbidding it: a literal's flags, a named
+group, a lookbehind and a property escape."""
 
 
 def install(txn: Any) -> Any:
@@ -132,7 +146,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.TypeScript.RegExp.Dialect").ref(True).singleton("Expressions.TypeScript.RegExp").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("typescript_regexp").schema([_.Dialect])]),
             # its union of its kinds, regexpp's node types, and invalid syntax
@@ -197,23 +212,28 @@ def define(txn: Any) -> Any:
     """TypeScript RegExp's dialect as data: the singleton `Expressions.TypeScript.RegExp` owning the editions of ECMA-262
     it covers, by designation (`standards`, through `Expressions.Framework.Covers`), the 5.1 Edition to the 17th, each
     with its body, `org.ecma-international`, its number, `262`, its revision, its common names and its own kinds it has
-    (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
-    dialect (`dialect`) and each edition by its last common name spelled as an identifier (`ES5_1`, `ES2015`)."""
+    (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each edition
+    (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+    the dialect (`dialect`), each edition by its last common name spelled as an identifier (`ES5_1`, `ES2015`) and each
+    grammar clause by its index (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.TypeScript.RegExp, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
 
     def edition(index: int, revision: tuple[str, Any], names: tuple[str, ...]) -> Any:
-        kinds = [schema for tag, schema in every.items() if SINCE.get(tag, 0) <= index]
+        kinds = [schema for tag, schema in every.items() if SYMBOLS[index] in ONLY.get(tag, SYMBOLS)]
         return lambda e: e.bodies(["org.ecma-international"]).number("262").revision(
             lambda r: getattr(r, revision[0])(revision[1])).names(list(names)).kinds(kinds)
 
+    schemas = {**every, "flags": OWN.Flags.as_schema()}
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [SYMBOLS])
     return txn.uid("mbse.Expressions.TypeScript.RegExp.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": OWN.Dialect, **{symbol: Standard for *_, symbol in EDITIONS}})
+        .symbols({"dialect": OWN.Dialect, **{symbol: Standard for symbol in SYMBOLS}, **clauses})
         .spec([
             lambda _: _.dialect.standards({designation: lambda e, symbol=symbol: e.standard(getattr(_, symbol))
                                            for designation, *_rest, symbol in EDITIONS}),
             *[lambda _, i=i, revision=revision, names=names, symbol=symbol: edition(i, revision, names)(getattr(_, symbol))
               for i, (_designation, revision, names, symbol) in enumerate(EDITIONS)],
+            *specs,
         ])]))])
 
 

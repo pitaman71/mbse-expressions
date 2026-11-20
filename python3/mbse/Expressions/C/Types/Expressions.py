@@ -44,23 +44,26 @@ declarations overrides), and the framework's readers do not enter it, as it decl
 `enumerators` hold its body's items, this dialect's terms, with its `trailing_comma`.
 
 The editions it covers are data, which `define` writes, C's (C11, C17, C23), each with its own kinds it has, both in
-each (`SINCE`). No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads its type
-from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
-syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
-`lambda t: t.typeid(lambda i: i.specifiers([lambda s: s.primitivetypespecifier(lambda p: p.keyword("int"))]))`.
-`DIALECT` reads its kinds and the terms of its family's other dialects, `C` and `C Preprocessor` (`reads`); none of
-it is a reason to reinstate `Uses` (mbse-basis [CAP-098: dialects over one
-framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided))."""
+each, and its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition, C23's: the keywords
+`thread_local`, `constexpr`, `bool`, `_Decimal32` to `_Decimal128` and `_Float16` to `_Float128x` (Annex H), `typeof`
+and `typeof_unqual`, and `alignas` spelled so; `_BitInt`, `auto` as a type specifier and attributes in `[[ ]]`, each
+where a type name, a parameter or a declarator holds it; and an enumeration's underlying type. No kind binds a name a
+term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads its type from it
+(`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
+syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t: t.typeid(lambda i: i.specifiers([lambda s:
+s.primitivetypespecifier(lambda p: p.keyword("int"))]))`. `DIALECT` reads its kinds and the terms of its family's other
+dialects, `C` and `C Preprocessor` (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis [CAP-098: dialects
+over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided))."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from mbse.Expressions.Framework import Terms as F
+from mbse.Expressions.Framework import Standards as FS, Terms as F
 
 from ..Expressions import Kinds as K
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "ENUMERATOR"]
+__all__ = ["install", "define", "DIALECT", "GRAMMAR_CLAUSES", "TAGS", "HELPERS", "ENUMERATOR"]
 
 ENUMERATOR = "enumerator"
 
@@ -75,9 +78,31 @@ HELPERS = ("DeclSpecifier", "CvQualifier", "PrimitiveTypeSpecifier", "NamedTypeS
 """Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
 completeness data (`grammars/c-tree-sitter.json`) names them."""
 
-SINCE: dict[str, int] = {}
-"""The edition each of its kinds arrived in, by its index in C's editions (C11, C17, C23): none, so each is in every
-edition."""
+_C23 = ("C23",)
+_HOLDERS = {"specifiers": (K.TYPEID, "parameterdeclaration"),
+            "attributes": (ENUMERATOR, "classspecifier", "enumspecifier", "iddeclarator", "pointerdeclarator",
+                           "arraydeclarator", "functiondeclarator", "parameterdeclaration")}
+"""The kinds and helpers that hold specifiers, and those that hold attribute specifiers, by the property that holds
+them."""
+_KEYWORDS = {"declspecifier": ("thread_local", "constexpr"),
+             "primitivetypespecifier": ("bool", "_Decimal32", "_Decimal64", "_Decimal128", "_Float16", "_Float32",
+                                        "_Float64", "_Float128", "_Float32x", "_Float64x", "_Float128x"),
+             "typeofspecifier": ("typeof", "typeof_unqual"), "alignasspecifier": ("alignas",)}
+"""C23's keywords, by the helper whose `keyword` spells it."""
+
+GRAMMAR_CLAUSES = (
+    *(FS.values(f"{helper}.keyword {word!r}", helper, "keyword", (word,), _C23)
+      for helper, words in _KEYWORDS.items() for word in words),
+    *(FS.kinds_of(f"{holder}.specifiers holding a {helper}", holder, "specifiers", (helper,), (), _C23)
+      for holder in _HOLDERS["specifiers"]
+      for helper in ("bitintspecifier", "placeholdertypespecifier", "standardattributespecifier")),
+    *(FS.kinds_of(f"{holder}.attributes holding a standardattributespecifier", holder, "attributes",
+                  ("standardattributespecifier",), (), _C23) for holder in _HOLDERS["attributes"]),
+    FS.present("enumspecifier.base", "enumspecifier", "base", _C23),
+)
+"""Its grammar clauses, each with the editions that allow it, every other forbidding it, named as mbse-programs'
+`Check` names the language feature, a helper that arrived in C23 by what holds it. A kind is keyed by its tag, a
+helper by its schema's name, lowercased (`bitintspecifier`)."""
 
 
 F.boundaries("Expressions.C.Types.Members")
@@ -118,7 +143,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.C.Types.Dialect").ref(True).singleton("Expressions.C.Types").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("c_types").schema([_.Dialect])]),
             # its union of its kinds, and invalid syntax
@@ -237,12 +263,17 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """C Types' dialect as data: the singleton `Expressions.C.Types` owning the editions it covers, by designation
     (`standards`), C's ISO/IEC 9899:2011, 2018 and 2024, each with its formal reference's parts, its common name and its
-    own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame
-    binds the dialect (`dialect`) and each edition by its common name (`C11`)."""
+    own kinds it has, both in each, and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by
+    each edition (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing.
+    Its frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each grammar clause by its
+    index (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.C.Types, txn.Expressions.Framework.Standard
     every = [branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS]
+    schemas = {**{branch.name: branch.schema for branch in OWN.Term.as_schema().branches},
+               **{name.lower(): getattr(OWN, name).as_schema() for name in HELPERS}}
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [K.C_EDITIONS])
     return txn.uid("mbse.Expressions.C.Types.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": OWN.Dialect, "C11": Standard, "C17": Standard, "C23": Standard})
+        .symbols({"dialect": OWN.Dialect, "C11": Standard, "C17": Standard, "C23": Standard, **clauses})
         .spec([
             lambda _: _.dialect.standards({
                 "ISO/IEC 9899:2011": lambda e: e.standard(_.C11), "ISO/IEC 9899:2018": lambda e: e.standard(_.C17),
@@ -253,6 +284,7 @@ def define(txn: Any) -> Any:
                 ["C17"]).kinds(every),
             lambda _: _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision(lambda r: r.year(2024)).names(
                 ["C23"]).kinds(every),
+            *specs,
         ])]))])
 
 

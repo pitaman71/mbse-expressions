@@ -66,10 +66,12 @@
  *
  * The versions of TypeScript 5 the dialect covers are data, which `define` writes, each owned by its published name,
  * TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each
- * has all its own, the patterns its `Term` lists being `TypeScript Patterns`', and an extension none. `DIALECT` reads the kinds (`Terms.Dialect`). There are no writers: a TypeScript5
- * term is written through the builders, in a transaction (mbse-basis [PRI-019: fluent builder
- * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its helpers nested, as its
- * printer and its checks read it.
+ * has all its own, the patterns its `Term` lists being `TypeScript Patterns`', and an extension none. What a version
+ * changes within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each version: an
+ * import expression's `options` (5.3) and its phase `defer` (5.9). `DIALECT` reads the kinds (`Terms.Dialect`). There
+ * are no writers: a TypeScript5 term is written through the builders, in a transaction (mbse-basis [PRI-019: fluent
+ * builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its helpers nested, as
+ * its printer and its checks read it.
  *
  * Its kinds of domain, the branches of its union `Expressions.TypeScript.TypeScript5.DomainKind`, which `install` adds
  * to the framework's `Expressions.Framework.DomainKind` as the branch `typescript5`, each with the inferred `ordered`:
@@ -88,6 +90,7 @@
 import { Errors, Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as TypeScriptPatterns from "../Patterns/Expressions.js";
 import * as TypeScriptRegExp from "../RegExp/Expressions.js";
@@ -155,6 +158,13 @@ export const FLAGS = "dgimsuvy";
 // where its grammar hands off to mbse-programs' statements: the framework's readers do not enter them
 F.boundaries("Expressions.TypeScript.TypeScript5.Block", "Expressions.TypeScript.TypeScript5.ClassBody");
 
+/** Its grammar clauses, each with the versions that allow it, every other forbidding it, named as mbse-programs'
+ * `Check` names the language feature. */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  FS.present("importexpression.options", IMPORTEXPRESSION, "options", Domains.VERSIONS.slice(3)),
+  FS.values("importexpression.phase 'defer'", IMPORTEXPRESSION, "phase", ["defer"], Domains.VERSIONS.slice(9)),
+];
+
 /** TypeScript5's union of its kinds, added to the framework's terms as the branch `typescript5`, its own kinds, the
  * helpers they hold, and its dialect's schema, whose singleton is `Expressions.TypeScript.TypeScript5`: run after
  * `Framework.install`, in a transaction of its own, before or after its family's other installs; run again, it writes
@@ -206,7 +216,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.TypeScript.TypeScript5.Dialect").ref(true).singleton("Expressions.TypeScript.TypeScript5").adjacencies({
           domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
           operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-          standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+          standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+          grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
           (t: any) => t.name("typescript5").schema([_.Dialect])]),
       // its union of its kinds: its own, the framework's it reuses, the patterns expressions hold, JSX, and
@@ -456,9 +467,11 @@ export function install(txn: any): any {
  * but a token's related to its schema (`Expressions.TypeScript.TypeScript5.number`) by
  * `Expressions.Framework.HasDomain`: `boolean`, `number`, `bigint` and `string`, and the token `null`. And the versions
  * of TypeScript 5 it covers, by their published names (`standards`, through `Expressions.Framework.Covers`), TypeScript
- * 5.0 to 5.9, each with its body, its version and the kinds it has. Run after the installs, in a transaction of its
- * own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its name spelled as an
- * identifier (`TypeScript_5_0`) and each domain by its name: `store.transaction(TypeScript5.define)[0].get("number")`,
+ * 5.0 to 5.9, each with its body, its version and the kinds it has, and its grammar clauses by name
+ * (`grammar_clauses`), each allowed or forbidden by each version (`GRAMMAR_CLAUSES`). Run after the installs, in a
+ * transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its
+ * name spelled as an identifier (`TypeScript_5_0`), each grammar clause by its index (`grammar_clause_0`) and each
+ * domain by its name: `store.transaction(TypeScript5.define)[0].get("number")`,
  * each object by its reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from
  * the dialect: `Framework.Domains.domains(store.singleton("Expressions.TypeScript.TypeScript5")).get("number")`. */
 export function define(txn: any): any {
@@ -469,10 +482,13 @@ export function define(txn: any): any {
     .filter((b) => own.has(b.name) && !EXTENSIONS.has(b.name) && !F.INVALID_KINDS.has(b.name)) // every version's,
     .map((b) => b.schema); // but an extension and invalid syntax
   const MICROSOFT = ["com.microsoft"];
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+    (TypeScript5.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
+  [Domains.VERSIONS]);
   const versions = Object.fromEntries(Array.from({ length: 10 }, (_, minor) => [`TypeScript_5_${minor}`, Standard]));
   return txn.uid("mbse.Expressions.TypeScript.TypeScript5.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: TypeScript5.Dialect, ...versions, boolean: Domain, number: Domain, bigint: Domain,
-      string: Domain, null: Domain })
+      string: Domain, null: Domain, ...clauses })
     .spec([
       // --- the versions of TypeScript 5 it covers, each by its published name, with the kinds it has: all ---
       (_: any) => _.dialect.standards({
@@ -497,6 +513,8 @@ export function define(txn: any): any {
       (_: any) => _.TypeScript_5_7.bodies(MICROSOFT).revision((r: any) => r.version("5.7")).kinds(every),
       (_: any) => _.TypeScript_5_8.bodies(MICROSOFT).revision((r: any) => r.version("5.8")).kinds(every),
       (_: any) => _.TypeScript_5_9.bodies(MICROSOFT).revision((r: any) => r.version("5.9")).kinds(every),
+      // --- its grammar clauses, each allowed or forbidden by each version ---
+      ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({
         boolean: (e: any) => e.domain(_.boolean), number: (e: any) => e.domain(_.number),

@@ -16,7 +16,12 @@ from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 
 __all__ = ["Bool", "Int", "Float", "Str", "Bytes", "NoneType", "Ellipsis", "Complex", "Integral", "Numeric",
-           "Anything", "COMPARE", "BOOLOP", "BINOP", "UNARYOP", "GENERATOR", "of", "constant"]
+           "Anything", "COMPARE", "BOOLOP", "BINOP", "UNARYOP", "GENERATOR", "of", "constant", "VERSIONS"]
+
+VERSIONS = tuple(f"Python_3_{minor}" for minor in range(16))
+"""The versions of Python 3 the family's dialects cover, oldest first, each by its name spelled as an identifier, as
+their `define`s' frames bind it (`Python_3_8`): Python3's, Python Types' and Python RegExp's all, Python Patterns' from
+3.10."""
 
 Bool, Int, Float, Str, Bytes = (D.OfTypes(t.__name__, t) for t in (bool, int, float, str, bytes))
 NoneType, Ellipsis, Complex = D.OfTypes("NoneType", type(None)), D.OfTypes("ellipsis", type(...)), D.OfTypes(

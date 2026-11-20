@@ -38,7 +38,7 @@ domain known statically, and are not simplified: Python3's rules leave each in t
 not evaluated").
 
 The versions of Python it covers are data, which `define` writes: Python 3.10 to 3.15, each with its own kinds it has
-(`SINCE`: every one since Python 3.10). `DIALECT` reads its kinds and its family's other dialects' terms. `Text` writes
+(every one in each). `DIALECT` reads its kinds and its family's other dialects' terms. `Text` writes
 its kinds as Python source, as the family's printer (`Python3.Text.ToText`) dispatches them to it. Its terms are
 written through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
 `lambda u: u.matchas(lambda m: m.name("x"))`."""
@@ -52,7 +52,7 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from ..Python3 import Domains as _family, Expressions as P
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "SINGLETONS", "DELIMITERS", "bound_names",
+__all__ = ["install", "define", "DIALECT", "TAGS", "HELPERS", "SINGLETONS", "DELIMITERS", "bound_names",
            "problems"]
 
 MATCHVALUE, MATCHSINGLETON, MATCHSEQUENCE, MATCHMAPPING, MATCHCLASS, MATCHSTAR, MATCHAS, MATCHOR = (
@@ -63,10 +63,6 @@ TAGS = (MATCHVALUE, MATCHSINGLETON, MATCHSEQUENCE, MATCHMAPPING, MATCHCLASS, MAT
 
 HELPERS: tuple[str, ...] = ()
 """Its own helpers, the value object schemas its kinds hold that are no kind: none, its names being `str`s."""
-
-SINCE = dict.fromkeys(TAGS, 10)
-"""The minor version of Python 3 each of its kinds arrived in, as mbse-programs' `SINCE` has them (`py(10)`, every
-one), from which `define` writes the kinds each version has."""
 
 SINGLETONS = ("None", "True", "False")
 """What a `matchsingleton` compares by identity, as mbse-programs' `Singleton` has them."""
@@ -100,7 +96,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Python.Patterns.Dialect").ref(True).singleton("Expressions.Python.Patterns").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("python_patterns").schema([_.Dialect])]),
             # its union of its kinds: its own, and invalid syntax
@@ -142,14 +139,14 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """Python Patterns' dialect as data: the singleton `Expressions.Python.Patterns` owning the versions of Python 3 it
     covers, by their published names (`standards`), Python 3.10 to 3.15, each with its body, its version and its own
-    kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame
-    binds the dialect (`dialect`) and each version by its name spelled as an identifier (`Python_3_10`)."""
+    kinds it has, every one in each. Run after `install`, in a transaction of its own; run again, it writes nothing. Its
+    frame binds the dialect (`dialect`) and each version by its name spelled as an identifier (`Python_3_10`)."""
     OWN, Standard = txn.Expressions.Python.Patterns, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
     minors = range(10, 16)
 
     def version(minor: int) -> Callable[[Any], Any]:
-        kinds = [schema for tag, schema in every.items() if SINCE[tag] <= minor]
+        kinds = list(every.values())
         return lambda _: getattr(_, f"Python_3_{minor}").bodies(["org.python"]).revision(
             lambda r: r.version(f"3.{minor}")).kinds(kinds)
 

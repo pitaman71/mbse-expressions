@@ -32,24 +32,24 @@ items and statements). A conditional directive's condition holds `Expressions`' 
 `nameexpression`s, which name macros, defined or not, never values: they are bound within it (`Kind.scopes`). Nothing
 else binds.
 
-The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are, each
-with its own kinds it has, every one of them in every edition (mbse-programs gives none of them a `SINCE`; an
-`elsif`'s, IEEE 1364-2001's, is its helper's, and a feature within a kind, as a system include's and a condition's
-are, is not recorded). `DIALECT` reads its kinds and the five other dialects' terms. Simplification leaves each of its
-kinds by name. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
-syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
-`lambda t: t.undefdirective(lambda d: d.name(lambda i: i.spelling("WIDTH")))`."""
+The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are, each with
+its own kinds it has, every one of them in every edition, as mbse-programs has them, and its grammar clauses
+(`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: `` `elsif ``, an `` `ifdef ``'s branches (IEEE
+1364-2001). A system include's and a condition's features stay unrecorded, as they were *(agent)*. `DIALECT` reads its
+kinds and the five other dialects' terms. Simplification leaves each of its kinds by name. Its terms are written through
+the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t:
+t.undefdirective(lambda d: d.name(lambda i: i.spelling("WIDTH")))`."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
-from ..Expressions import Expressions as X
+from ..Expressions import Domains as _family, Expressions as X
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "DIRECTIVES", "NET_TYPES", "problems"]
+__all__ = ["install", "define", "DIALECT", "GRAMMAR_CLAUSES", "TAGS", "HELPERS", "DIRECTIVES", "NET_TYPES", "problems"]
 
 MACROUSAGE, INCLUDEDIRECTIVE, DEFINEDIRECTIVE, UNDEFDIRECTIVE, TIMESCALEDIRECTIVE = (
     "macrousage", "includedirective", "definedirective", "undefdirective", "timescaledirective")
@@ -67,9 +67,10 @@ HELPERS = ("ElsifDirective",)
 """Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
 completeness data (`grammars/systemverilog-slang.json`) names them."""
 
-SINCE: dict[str, int] = {}
-"""The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`: none
-of its kinds has one, so each is in every edition."""
+GRAMMAR_CLAUSES = (
+    FS.present("ifdefdirective.branches", IFDEFDIRECTIVE, "branches", _family.SYMBOLS[1:]),  # `elsif`
+)
+"""Its grammar clauses, each with the editions that allow it, every other forbidding it."""
 
 NET_TYPES = ("wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor", "uwire", "none")
 """What `` `default_nettype `` may name (22.8), as mbse-programs' `DefaultNettype` lists them."""
@@ -118,7 +119,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.SystemVerilog.Preprocessor.Dialect").ref(True).singleton("Expressions.SystemVerilog.Preprocessor").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("systemverilog_preprocessor").schema([_.Dialect])]),
             # its union of its kinds, and invalid syntax
@@ -182,16 +184,21 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """SystemVerilog Preprocessor's dialect as data: the singleton `Expressions.SystemVerilog.Preprocessor` owning the
     editions it covers, by designation (`standards`), Verilog's IEEE Std 1364-1995, 2001 and 2005 and SystemVerilog's
-    IEEE Std 1800-2005 to 2023, each with its formal reference's parts, its common name and its own kinds it has
-    (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
-    dialect (`dialect`) and each edition by its common name spelled as an identifier (`SystemVerilog_2023`)."""
+    IEEE Std 1800-2005 to 2023, each with its formal reference's parts, its common name and its own kinds it has, and
+    its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each edition (`GRAMMAR_CLAUSES`). Run
+    after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`),
+    each edition by its common name spelled as an identifier (`SystemVerilog_2023`) and each grammar clause by its index
+    (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.SystemVerilog.Preprocessor, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
-    kinds = X.editions(every, SINCE)
+    kinds = X.editions(every, {}, _family.SYMBOLS)
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {
+        branch.name: branch.schema for branch in OWN.Term.as_schema().branches},
+        [_family.SYMBOLS[:3], _family.SYMBOLS[3:]])
     return txn.uid("mbse.Expressions.SystemVerilog.Preprocessor.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "Verilog_1995": Standard, "Verilog_2001": Standard, "Verilog_2005": Standard,
                   "SystemVerilog_2005": Standard, "SystemVerilog_2009": Standard, "SystemVerilog_2012": Standard,
-                  "SystemVerilog_2017": Standard, "SystemVerilog_2023": Standard})
+                  "SystemVerilog_2017": Standard, "SystemVerilog_2023": Standard, **clauses})
         .spec([
             lambda _: _.dialect.standards({
                 "IEEE Std 1364-1995": lambda e: e.standard(_.Verilog_1995),
@@ -218,6 +225,7 @@ def define(txn: Any) -> Any:
                 ["SystemVerilog-2017"]).kinds(kinds[6]),
             lambda _: _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision(lambda r: r.year(2023)).names(
                 ["SystemVerilog-2023"]).kinds(kinds[7]),
+            *specs,
         ])]))])
 
 

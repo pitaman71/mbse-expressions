@@ -25,10 +25,11 @@ bounds are `Expressions`' terms. A name is `Expressions`' `Name`, an identifier 
 `AttributeInstance`: the family's helpers, one schema each.
 
 The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are
-(`Expressions.EDITIONS`), each with the kinds it has (`SINCE`). `DIALECT` reads its kinds and the five other dialects'
-terms. `Text` writes its kinds as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches
-them to it. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
-syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t: t.integeratomtype(lambda a: a.keyword("int"))`."""
+(`Expressions.EDITIONS`), each with the kinds it has, by membership (`ONLY`). `DIALECT` reads its kinds and the five
+other dialects' terms. `Text` writes its kinds as SystemVerilog source, as the family's printer
+(`Expressions.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
+fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t: t.integeratomtype(lambda a:
+a.keyword("int"))`."""
 
 from __future__ import annotations
 
@@ -37,9 +38,9 @@ from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 
-from ..Expressions import Expressions as X
+from ..Expressions import Domains as _family, Expressions as X
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "problems"]
+__all__ = ["install", "define", "DIALECT", "ONLY", "TAGS", "HELPERS", "problems"]
 
 INTEGERVECTORTYPE, INTEGERATOMTYPE, NONINTEGERTYPE, KEYWORDTYPE, NAMEDTYPE = (
     "integervectortype", "integeratomtype", "nonintegertype", "keywordtype", "namedtype")
@@ -55,9 +56,9 @@ HELPERS = ("StructMember", "EnumMember", "VariableDeclarator", "RangeDimension",
 """Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
 completeness data (`grammars/systemverilog-slang.json`) names them."""
 
-SINCE = {NAMEDTYPE: 3, VIRTUALINTERFACETYPE: 3, STRUCTTYPE: 3, ENUMTYPE: 3, TYPEREFERENCE: 3}
-"""The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`
-(`sv()`, IEEE 1800-2005); a kind not listed is in every edition."""
+ONLY = dict.fromkeys((NAMEDTYPE, VIRTUALINTERFACETYPE, STRUCTTYPE, ENUMTYPE, TYPEREFERENCE), _family.SYMBOLS[3:])
+"""The kinds that are not in every edition, each with the editions that have it, as mbse-programs has them (`sv()`:
+IEEE 1800's): membership, no minimum edition."""
 
 _CHOICES = {
     INTEGERVECTORTYPE: ("IntegerVectorType", {"keyword": ("bit", "logic", "reg"), "signing": ("signed", "unsigned")}),
@@ -103,7 +104,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.SystemVerilog.Types.Dialect").ref(True).singleton("Expressions.SystemVerilog.Types").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("systemverilog_types").schema([_.Dialect])]),
             # its union of its kinds: `Expressions`' branches, which that dialect's install adds, and its own
@@ -184,12 +186,12 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """SystemVerilog Types' dialect as data: the singleton `Expressions.SystemVerilog.Types` owning the editions it
     covers, by designation (`standards`), Verilog's IEEE Std 1364-1995, 2001 and 2005 and SystemVerilog's IEEE Std
-    1800-2005 to 2023, each with its formal reference's parts, its common name and its own kinds it has (`SINCE`). Run
+    1800-2005 to 2023, each with its formal reference's parts, its common name and its own kinds it has (`ONLY`). Run
     after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`)
     and each edition by its common name spelled as an identifier (`SystemVerilog_2023`)."""
     OWN, Standard = txn.Expressions.SystemVerilog.Types, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
-    kinds = X.editions(every, SINCE)
+    kinds = X.editions(every, ONLY, _family.SYMBOLS)
     return txn.uid("mbse.Expressions.SystemVerilog.Types.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "Verilog_1995": Standard, "Verilog_2001": Standard, "Verilog_2005": Standard,
                   "SystemVerilog_2005": Standard, "SystemVerilog_2009": Standard, "SystemVerilog_2012": Standard,

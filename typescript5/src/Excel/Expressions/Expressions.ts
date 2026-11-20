@@ -69,7 +69,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.Excel.Expressions.Dialect").ref(true).singleton("Expressions.Excel.Expressions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("excel").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, and invalid syntax

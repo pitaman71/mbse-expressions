@@ -30,10 +30,6 @@ export const TAGS: readonly string[] = K.tags(K.BRE);
 /** Its own helpers, the value object schemas its kinds hold that are no kind: none. */
 export const HELPERS: readonly string[] = [];
 
-/** The edition each of its kinds arrived in, by its index in POSIX.1's editions (`EDITIONS`): none, so each is in
- * every edition. */
-export const SINCE: ReadonlyMap<string, number> = new Map();
-
 /** What each kind's terms may be, by property, besides invalid syntax: a quantifier's element no quantifier and no
  * anchor (`nondupl_BRE BRE_dupl_symbol`). */
 export const HOLDS: ReadonlyMap<string, ReadonlyMap<string, readonly string[]>> = K.holds(K.BRE);
