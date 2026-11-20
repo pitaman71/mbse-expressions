@@ -279,18 +279,20 @@ def kinds_of(name: str, kind: str, prop: str, held: tuple[str, ...], nested: tup
 
 
 def grammar_clauses_spec(txn: Any, clauses: Sequence[GrammarClause], schemas: Mapping[str, Any],
-                         editions: Sequence[str]) -> tuple[dict[str, Any], list[Callable[[Any], Any]]]:
+                         editions: Sequence[Sequence[str]]) -> tuple[dict[str, Any], list[Callable[[Any], Any]]]:
     """The symbols and the specs a dialect's `define` writes its grammar clauses with, in a frame binding its dialect
     (`dialect`) and its editions: each grammar clause by `grammar_clause_<its index>`, owned by its name, its kind's
-    and its kinds' schemas by key (`schemas`), and each edition (`editions`, by symbol, oldest first) allowing it where
-    `allowed` lists it, else forbidding it, the oldest edition's entry flagged `before` and the newest's `after`, so
-    that an edition the data does not represent is guessed to have what its nearest neighbour has."""
+    and its kinds' schemas by key (`schemas`), and each edition (`editions`, by symbol, each standard's oldest first:
+    Python 3's, or C's then C++'s) allowing it where `allowed` lists it, else forbidding it, each standard's oldest
+    edition's entry flagged `before` and its newest's `after`, so that an edition the data does not represent is
+    guessed to have what its nearest neighbour has."""
     symbol = {clause.name: f"grammar_clause_{index}" for index, clause in enumerate(clauses)}
     GC = txn.Expressions.Framework.GrammarClause
+    flagged = {edition: {"before": index == 0, "after": index == len(standard) - 1}
+               for standard in editions for index, edition in enumerate(standard)}
 
-    def entry(_: Any, index: int) -> Any:
-        standard = getattr(_, editions[index])
-        flags = {"before": index == 0, "after": index == len(editions) - 1}
+    def entry(_: Any, edition: str) -> Any:
+        standard, flags = getattr(_, edition), flagged[edition]
         if not any(flags.values()):
             return standard
         return lambda t: [getattr(t.standard(standard), flag)(True) for flag, on in flags.items() if on]
@@ -307,8 +309,8 @@ def grammar_clauses_spec(txn: Any, clauses: Sequence[GrammarClause], schemas: Ma
                     [getattr(_, symbol[name]) for name in clause.nested])
             if clause.allowed is None:
                 return built
-            return built.allowed([entry(_, i) for i, edition in enumerate(editions) if edition in clause.allowed]).forbidden(
-                [entry(_, i) for i, edition in enumerate(editions) if edition not in clause.allowed])
+            return built.allowed([entry(_, edition) for edition in flagged if edition in clause.allowed]).forbidden(
+                [entry(_, edition) for edition in flagged if edition not in clause.allowed])
         return spec
 
     return ({symbol[clause.name]: GC for clause in clauses},

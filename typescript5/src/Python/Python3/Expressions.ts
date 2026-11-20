@@ -411,7 +411,7 @@ export function define(txn: any): any {
   const schemas = new Map<string, unknown>([
     ...(Python3.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema] as [string, unknown]),
     ...["Comprehension", "FormattedValue", "Arguments"].map((name) => [name.toLowerCase(), Python3[name].as_schema()] as [string, unknown])]);
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, VERSIONS);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, [VERSIONS]);
   const PSF = ["org.python"];
   const versions = Object.fromEntries(VERSIONS.map((version) => [version, Standard]));
   return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p

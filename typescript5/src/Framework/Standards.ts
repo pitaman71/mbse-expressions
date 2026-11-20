@@ -282,16 +282,19 @@ export function kindsOf(name: string, kind: string, property: string, held: read
 
 /** The symbols and the specs a dialect's `define` writes its grammar clauses with, in a frame binding its dialect
  * (`dialect`) and its editions: each grammar clause by `grammar_clause_<its index>`, owned by its name, its kind's and
- * its kinds' schemas by key (`schemas`), and each edition (`editions`, by symbol, oldest first) allowing it where
- * `allowed` lists it, else forbidding it, the oldest edition's entry flagged `before` and the newest's `after`, so that
- * an edition the data does not represent is guessed to have what its nearest neighbour has. */
+ * its kinds' schemas by key (`schemas`), and each edition (`editions`, by symbol, each standard's oldest first: Python
+ * 3's, or C's then C++'s) allowing it where `allowed` lists it, else forbidding it, each standard's oldest edition's
+ * entry flagged `before` and its newest's `after`, so that an edition the data does not represent is guessed to have
+ * what its nearest neighbour has. */
 export function grammarClausesSpec(txn: any, clauses: readonly GrammarClause[], schemas: ReadonlyMap<string, unknown>,
-                                   editions: readonly string[]): [Record<string, unknown>, ((_: any) => any)[]] {
+                                   editions: readonly (readonly string[])[]): [Record<string, unknown>, ((_: any) => any)[]] {
   const symbol = new Map(clauses.map((clause, index) => [clause.name, `grammar_clause_${index}`]));
   const GC = txn.Expressions.Framework.GrammarClause;
-  const entry = (_: any, index: number): unknown => {
-    const standard = _[editions[index]!];
-    const flags = [["before", index === 0], ["after", index === editions.length - 1]] as const;
+  const flagged = new Map(editions.flatMap((standard) => standard.map((edition, index) =>
+    [edition, [["before", index === 0], ["after", index === standard.length - 1]] as const] as const)));
+  const entry = (_: any, edition: string): unknown => {
+    const standard = _[edition];
+    const flags = flagged.get(edition)!;
     if (!flags.some(([, on]) => on)) return standard;
     return (t: any) => flags.filter(([, on]) => on).map(([flag]) => t.standard(standard)[flag](true));
   };
@@ -303,8 +306,9 @@ export function grammarClausesSpec(txn: any, clauses: readonly GrammarClause[], 
       clause.nested.map((name) => _[symbol.get(name)!]));
     if (clause.allowed === null) return built;
     const allowed = clause.allowed;
-    return built.allowed(editions.flatMap((edition, i) => allowed.includes(edition) ? [entry(_, i)] : [])).forbidden(
-      editions.flatMap((edition, i) => allowed.includes(edition) ? [] : [entry(_, i)]));
+    const all = [...flagged.keys()];
+    return built.allowed(all.filter((edition) => allowed.includes(edition)).map((edition) => entry(_, edition))).forbidden(
+      all.filter((edition) => !allowed.includes(edition)).map((edition) => entry(_, edition)));
   };
   return [Object.fromEntries(clauses.map((clause) => [symbol.get(clause.name)!, GC])),
     [(_: any) => _.dialect.grammar_clauses(Object.fromEntries(clauses.map((clause) =>

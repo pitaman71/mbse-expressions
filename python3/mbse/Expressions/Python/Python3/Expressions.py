@@ -399,7 +399,7 @@ def define(txn: Any) -> Any:
 
     schemas = {**{branch.name: branch.schema for branch in Python3.Term.as_schema().branches},
                **{name.lower(): getattr(Python3, name).as_schema() for name in ("Comprehension", "FormattedValue", "Arguments")}}
-    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, VERSIONS)
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [VERSIONS])
 
     PSF = ["org.python"]
     return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
