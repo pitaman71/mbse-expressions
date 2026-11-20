@@ -71,7 +71,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Excel.Expressions.Dialect").ref(True).singleton("Expressions.Excel.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("excel").schema([_.Dialect])]),
             # its union of its kinds: the framework's it reuses, its own, and invalid syntax

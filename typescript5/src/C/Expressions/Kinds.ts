@@ -70,6 +70,12 @@ export const CPP_SUFFIXES: Suffixes = {
   floating: /^(?:[fFlL]|[fF](?:16|32|64|128)|bf16|BF16)$/,
 };
 
+/** C's editions, oldest first, each by its common name, as the family's `define`s' frames bind it. */
+export const C_EDITIONS: readonly string[] = ["C11", "C17", "C23"];
+/** C++'s editions, oldest first, each by its common name spelled as an identifier (`C++17` as `Cpp17`), as the
+ * family's `define`s' frames bind it. */
+export const CPP_EDITIONS: readonly string[] = ["Cpp17", "Cpp20", "Cpp23"];
+
 // --- Reading a term's type name, and what its helpers bind and check ---
 
 type Held = F.Node | readonly F.Node[] | undefined;

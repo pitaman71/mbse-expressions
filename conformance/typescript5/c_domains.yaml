@@ -465,3 +465,155 @@ mutations:
                       mutations:
                       - set:
                           value: 'ISO/IEC 9899:2024'
+        - as_adjacency:
+            name: grammar_clauses
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'alignofexpression.keyword ''alignof'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'alignofexpression.keyword ''alignof'''
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: initializerlist without items
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: initializerlist without items
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: literal true or false
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: literal true or false
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: literal with a decimal floating suffix
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: literal with a decimal floating suffix
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: literal with digit separators
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: literal with digit separators
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: literal.base 2
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: literal.base 2
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: 'literal.suffix ''wb'''
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: name
+                      mutations:
+                      - set:
+                          value: 'literal.suffix ''wb'''

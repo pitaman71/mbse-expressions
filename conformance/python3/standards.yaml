@@ -752,3 +752,155 @@ mutations:
                                                 name: CompoundLiteralExpression
                                               next:
                                                 target: {}
+        - as_adjacency:
+            name: allows
+            mutations:
+            - insert:
+                entries:
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: literal with digit separators
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: literal.base 2
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: literal.suffix 'wb'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: literal with a decimal floating suffix
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: literal true or false
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: initializerlist without items
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true
+                - mutations:
+                  - as_link:
+                      name: clause
+                      mutations:
+                      - set:
+                          reference:
+                            path:
+                              singleton: Expressions.C.Expressions
+                              next:
+                                entry:
+                                  i: grammar_clauses
+                                  o: dialect
+                                  properties:
+                                    name: alignofexpression.keyword 'alignof'
+                                  next:
+                                    target: {}
+                  - as_property:
+                      name: after
+                      mutations:
+                      - set:
+                          value: true

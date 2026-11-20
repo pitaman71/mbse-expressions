@@ -36,24 +36,25 @@ its own copy), and as [re.grammar] names the class atoms POSIX's bracket express
 then the framework's kinds of invalid syntax, `error` and `missing`. No helpers. What a kind's terms may be is checked
 (`HOLDS`), as the grammar has it: a BRE's quantifier repeats no quantifier and no anchor (`nondupl_BRE
 BRE_dupl_symbol`), an ERE's may (`ERE_expression ERE_dupl_symbol`); a BRE's anchor stands only where a BRE begins or
-ends (`L_ANCHOR`, `R_ANCHOR`, 9.3.8), an ERE's anywhere. What POSIX.1-2024 added within a kind, a BRE's alternation
-(`\\|`), `\\?` and `\\+`, which it leaves to the implementation, and an ERE's repetition modifier, is not recorded, as
-a feature within a kind is not for any dialect; C++, which cites earlier editions, checks it under a `regex`
-(`Cpp.RegExp.FEATURES`).
+ends (`L_ANCHOR`, `R_ANCHOR`, 9.3.8), an ERE's anywhere. What POSIX.1-2024 added within a kind is an ERE's grammar
+clause (`GRAMMAR_CLAUSES`), its repetition modifier, a quantifier not `greedy`; a BRE's alternation (`\\|`), `\\?` and
+`\\+`, which it leaves to the implementation, are no grammar clause of its *(agent)*. C++, which cites earlier editions,
+checks them under a `regex` (`Cpp.RegExp.FEATURES`).
 
 No kind binds a name a term scopes: a subexpression is numbered, and a backreference resolves it by its number. Its
 kinds are applications of no domain known statically, each left in the residual by simplification, named by its dialect ("POSIX BRE
 pattern is not simplified"). The editions each covers are data, which `define` writes: POSIX.1's, IEEE Std 1003.1-2001,
--2008, -2017 and -2024, every kind in each (`SINCE`)."""
+-2008, -2017 and -2024, every kind in each."""
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
-__all__ = ["BRE", "ERE", "names", "tags", "holds", "problems", "kinds", "install", "define", "EDITIONS", "Printer"]
+__all__ = ["BRE", "ERE", "names", "tags", "holds", "problems", "kinds", "install", "define", "EDITIONS",
+           "GRAMMAR_CLAUSES", "Printer"]
 
 BRE, ERE = "BRE", "ERE"
 
@@ -82,6 +83,11 @@ EDITIONS = (("IEEE Std 1003.1-2001", 2001, ("POSIX.1-2001", "ISO/IEC 9945:2003")
 """POSIX.1's editions, each by IEEE's designation, its year, its common names (the ISO/IEC designation C++ cites,
 [intro.refs], among them: ISO/IEC 9945:2003 in C++17 and C++20, ISO/IEC/IEEE 9945:2009 in C++23) and its frame symbol
 *(agent)*; an edition that incorporates technical corrigenda (2004, 2013, 2016) is not one of its own."""
+
+GRAMMAR_CLAUSES = {BRE: (), ERE: (
+    FS.values("quantifier.greedy false", "quantifier", "greedy", (False,), ("POSIX_2024",)),)}
+"""Each dialect's grammar clauses, each with the editions that allow it, every other forbidding it: an ERE's
+repetition modifier (POSIX.1-2024)."""
 
 
 def names(which: str) -> tuple[str, ...]:
@@ -204,7 +210,8 @@ def install(which: str, txn: Any) -> Any:
             lambda _: _.Dialect.name(f"{path}.Dialect").ref(True).singleton(path).adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name(tag).schema([_.Dialect])]),
             # its union of its kinds, and invalid syntax
@@ -226,20 +233,24 @@ def install(which: str, txn: Any) -> Any:
 
 def define(which: str, txn: Any) -> Any:
     """A dialect as data: its singleton owning the editions it covers, by designation (`standards`), POSIX.1's, each
-    with its formal reference's parts, its common names and its own kinds it has (every kind in each). Its frame binds
-    the dialect (`dialect`) and each edition by its frame symbol (`POSIX_2008`)."""
+    with its formal reference's parts, its common names and its own kinds it has (every kind in each), and its grammar
+    clauses by name (`grammar_clauses`, `GRAMMAR_CLAUSES`). Its frame binds the dialect (`dialect`), each edition by its
+    frame symbol (`POSIX_2008`) and each grammar clause by its index (`grammar_clause_0`)."""
     OWN, Standard = getattr(txn.Expressions.POSIX, which), txn.Expressions.Framework.Standard
     own = tags(which)
     every = [branch.schema for branch in OWN.Term.as_schema().branches if branch.name in own]
     edition = lambda _, year, common, symbol: getattr(_, symbol).bodies(["org.ieee"]).number("1003.1").revision(  # noqa: E731
         lambda r: r.year(year)).names(list(common)).kinds(every)
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES[which], {
+        branch.name: branch.schema for branch in OWN.Term.as_schema().branches}, [[symbol for *_, symbol in EDITIONS]])
     return txn.uid(f"mbse.Expressions.POSIX.{which}.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": OWN.Dialect, **{symbol: Standard for *_, symbol in EDITIONS}})
+        .symbols({"dialect": OWN.Dialect, **{symbol: Standard for *_, symbol in EDITIONS}, **clauses})
         .spec([
             lambda _: _.dialect.standards({designation: lambda e, symbol=symbol: e.standard(getattr(_, symbol))
                                            for designation, _year, _names, symbol in EDITIONS}),
             *(lambda _, year=year, common=common, symbol=symbol: edition(_, year, common, symbol)
               for _designation, year, common, symbol in EDITIONS),
+            *specs,
         ])]))])
 
 

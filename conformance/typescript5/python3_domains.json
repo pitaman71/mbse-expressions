@@ -1095,6 +1095,459 @@
                         }
                       ]
                     }
+                  },
+                  {
+                    "as_adjacency": {
+                      "name": "grammar_clauses",
+                      "mutations": [
+                        {
+                          "insert": {
+                            "entries": [
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "arguments.posonlyargs"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "arguments.posonlyargs"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "binop.op '@'"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "binop.op '@'"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "comprehension.is_async"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "comprehension.is_async"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "dictcomp of unpacked mappings"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "dictcomp of unpacked mappings"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "formattedvalue.debug"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "formattedvalue.debug"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "generatorexp of unpacked elements"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "generatorexp of unpacked elements"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "listcomp of unpacked elements"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "listcomp of unpacked elements"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "setcomp of unpacked elements"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "setcomp of unpacked elements"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "subscript with an unpacked index"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "subscript with an unpacked index"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              },
+                              {
+                                "mutations": [
+                                  {
+                                    "as_link": {
+                                      "name": "clause",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "reference": {
+                                              "path": {
+                                                "singleton": "Expressions.Python.Python3",
+                                                "next": {
+                                                  "entry": {
+                                                    "i": "grammar_clauses",
+                                                    "o": "dialect",
+                                                    "properties": {
+                                                      "name": "tuple with an unpacked element"
+                                                    },
+                                                    "next": {
+                                                      "target": {}
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  {
+                                    "as_property": {
+                                      "name": "name",
+                                      "mutations": [
+                                        {
+                                          "set": {
+                                            "value": "tuple with an unpacked element"
+                                          }
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
                   }
                 ]
               }

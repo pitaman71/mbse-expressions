@@ -50,20 +50,21 @@
  * RegExp pattern is not evaluated"); a pattern is matched by `re`, a library call.
  *
  * The versions of Python it covers are data, which `define` writes: Python 3.0 to 3.15, each with its own kinds it has
- * (`SINCE`: `atomicgroup` since Python 3.11, every other since 3.0; a possessive quantifier, 3.11, a scoped flags, 3.6,
- * `\N{...}`, 3.8, and `\z`, 3.14, features within a kind, not recorded). Its completeness is data:
+ * by membership (`ONLY`: `atomicgroup` in Python 3.11 to 3.15, every other in each), and its grammar clauses
+ * (`GRAMMAR_CLAUSES`), each allowed or forbidden by each version: a possessive quantifier (3.11) and scoped flags
+ * (3.6). `\N{...}` (3.8) and `\z` (3.14) stay unrecorded: no property of a term tells them, a character's spelling
+ * being any text and `\z` an assertion `stringend`, as `\Z` is *(agent)*. Its completeness is data:
  * `grammars/python3-re.json` lists the codes `re`'s parser writes, each mapped to its kinds. `DIALECT` reads its kinds
  * and its family's other dialects' terms. `Text` writes its kinds as `re`'s syntax, as the family's printer
- * (`Python3.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis
- * [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
- * `(u) => u.character((c) => c.value(97n))`.
- */
+ * (`Python3.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
+ * fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(u) => u.character((c) => c.value(97n))`. */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as Family from "../Python3/Domains.js";
 import * as P from "../Python3/Expressions.js";
@@ -95,9 +96,16 @@ export const TAGS: readonly string[] = [PATTERN, ALTERNATIVE, GROUP, CAPTURINGGR
 /** Its own helpers, the value object schemas its kinds hold that are no kind: none. */
 export const HELPERS: readonly string[] = [];
 
-/** The minor version of Python 3 each of its kinds arrived in, as `re`'s parser first wrote it (`ATOMIC_GROUP`, 3.11),
- * from which `define` writes the kinds each version has. */
-export const SINCE: ReadonlyMap<string, number> = new Map(TAGS.map((tag) => [tag, tag === ATOMICGROUP ? 11 : 0]));
+/** The kinds that are not in every version, each with the versions that have it, as `re`'s parser writes it
+ * (`ATOMIC_GROUP`, from 3.11), from which `define` writes the kinds each version has: membership, no minimum version.
+ * */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([[ATOMICGROUP, Family.VERSIONS.slice(11)]]);
+
+/** Its grammar clauses, each with the versions that allow it, every other forbidding it. */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  FS.values("quantifier.possessive", QUANTIFIER, "possessive", [true], Family.VERSIONS.slice(11)),
+  FS.present("flags.alternatives", FLAGS, "alternatives", Family.VERSIONS.slice(6)), // scoped, `(?i:...)`
+];
 
 /** An assertion's kinds: `^`, `$`, `\A`, `\Z`, `\b`, and the lookarounds. */
 export const ASSERTIONS: readonly string[] = ["start", "end", "stringstart", "stringend", "word", "lookahead", "lookbehind"];
@@ -144,7 +152,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.Python.RegExp.Dialect").ref(true).singleton("Expressions.Python.RegExp").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("python_regexp").schema([_.Dialect])]),
       // its union of its kinds: its own, and invalid syntax
@@ -209,20 +218,27 @@ export function install(txn: any): any {
 
 /** Python RegExp's dialect as data: the singleton `Expressions.Python.RegExp` owning the versions of Python 3 it covers,
  * by their published names (`standards`), Python 3.0 to 3.15, each with its body, its version and its own kinds it has
- * (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
- * dialect (`dialect`) and each version by its name spelled as an identifier (`Python_3_11`). */
+ * (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each version
+ * (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+ * the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_11`) and each grammar clause by
+ * its index (`grammar_clause_0`). */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.Python.RegExp, txn.Expressions.Framework.Standard];
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).filter((b) => TAGS.includes(b.name));
   const minors = Array.from({ length: 16 }, (_, minor) => minor);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES,
+    new Map(every.map((b) => [b.name, b.schema])), [Family.VERSIONS]);
   const version = (minor: number) => (_: any) => _[`Python_3_${minor}`].bodies(["org.python"]).revision(
-    (r: any) => r.version(`3.${minor}`)).kinds(every.filter((b) => (SINCE.get(b.name) as number) <= minor).map((b) => b.schema));
+    (r: any) => r.version(`3.${minor}`)).kinds(every.filter(
+      (b) => (ONLY.get(b.name) ?? Family.VERSIONS).includes(Family.VERSIONS[minor]!)).map((b) => b.schema));
   return txn.uid("mbse.Expressions.Python.RegExp.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])) })
+    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])),
+      ...clauses })
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(minors.map((minor) => [`Python 3.${minor}`,
         (e: any) => e.standard(_[`Python_3_${minor}`])]))),
       ...minors.map(version),
+      ...specs,
     ])]))]);
 }
 

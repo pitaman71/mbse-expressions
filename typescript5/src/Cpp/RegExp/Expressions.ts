@@ -47,7 +47,7 @@
  * group), and a backreference resolves it by its number. Its kinds are applications the framework reads by their
  * structure, of no domain known statically, and are not evaluated, each refused by its dialect's name ("Cpp RegExp regex
  * is not evaluated"). The editions it covers are data, which `define` writes, C++'s (C++17, C++20, C++23), every kind in
- * each (`SINCE`): [re.grammar] is the same in the three. `DIALECT` reads its kinds, its family's other dialects' terms,
+ * each: [re.grammar] is the same in the three. `DIALECT` reads its kinds, its family's other dialects' terms,
  * as each family's dialects read one another (mbse-basis [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided-by-an-agent-for-review), "A dialect reads other dialects' terms"), and POSIX's, which a regex holds (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis
  * [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)). Its terms are written
  * through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
@@ -82,9 +82,6 @@ export const TAGS: readonly string[] = [REGEX, PATTERN, ALTERNATIVE, GROUP, CAPT
 /** Its own helpers, the value object schemas its kinds hold that are no kind: none. */
 export const HELPERS: readonly string[] = [];
 
-/** The edition each of its kinds arrived in, by its index in C++'s editions (C++17, C++20, C++23): none, so each is in
- * every edition. */
-export const SINCE: ReadonlyMap<string, number> = new Map();
 
 export const ECMASCRIPT = "ECMAScript";
 
@@ -170,7 +167,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.Cpp.RegExp.Dialect").ref(true).singleton("Expressions.Cpp.RegExp").adjacencies({
           domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
           operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-          standards: (a: any) => a.relation([Framework.Covers]).me("dialect")}),
+          standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+          grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect")}),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
           (t: any) => t.name("cpp_regexp").schema([_.Dialect])]),
       // its union of its kinds, and invalid syntax
@@ -214,8 +212,9 @@ export function install(txn: any): any {
 /**
  * Cpp RegExp's dialect as data: the singleton `Expressions.Cpp.RegExp` owning the editions it covers, by designation
  * (`standards`), C++'s ISO/IEC 14882:2017, 2020 and 2024, each with its formal reference's parts, its common name and
- * its own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
- * frame binds the dialect (`dialect`) and each edition by its common name spelled as an identifier (`Cpp17`).
+ * its own kinds it has, every one in each. Run after `install`, in a transaction of its own; run again, it writes
+ * nothing. Its frame binds the dialect (`dialect`) and each edition by its common name spelled as an identifier
+ * (`Cpp17`).
  */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.Cpp.RegExp, txn.Expressions.Framework.Standard];

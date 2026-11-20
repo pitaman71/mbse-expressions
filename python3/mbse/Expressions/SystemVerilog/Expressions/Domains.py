@@ -33,7 +33,13 @@ from mbse.Schemas.Framework import Proxies
 
 __all__ = ["SvType", "Logic", "Anything", "NAMES", "named", "vector", "unsized", "common", "of", "BINARY", "UNARY",
            "INCREMENT", "ASSIGNMENT", "CONDITIONAL", "SELECT", "RANGE", "INSIDE", "SPAN", "CAST", "MEMBER",
-           "PARENTHESIZED"]
+           "PARENTHESIZED", "SYMBOLS"]
+
+SYMBOLS = ("Verilog_1995", "Verilog_2001", "Verilog_2005", "SystemVerilog_2005", "SystemVerilog_2009",
+           "SystemVerilog_2012", "SystemVerilog_2017", "SystemVerilog_2023")
+"""The editions of Verilog (IEEE 1364) and SystemVerilog (IEEE 1800) the family's dialects cover, oldest first, each by
+its common name spelled as an identifier, as their `define`s' frames bind it: `Expressions`', `Types`' and the
+Preprocessor's all, `Patterns`', `Assertions`' and `Constraints`' IEEE 1800's, from the fourth."""
 
 NAMES = ("logic", "reg", "integer", "time", "bit", "byte", "shortint", "int", "longint", "real", "shortreal")
 """The types SystemVerilog's keywords name that its dialect stores as domains, in its `define`'s order: a cast to one

@@ -28,8 +28,8 @@ in the residual, named ("SystemVerilog Patterns variablepattern is not simplifie
 wildcard and a variable pattern (`Expressions.Simplifiers`).
 
 The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
-(`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: every one since IEEE 1800-2005, as
-mbse-programs' `sv()` has them). `DIALECT` reads its kinds and the five other dialects' terms. `Text` writes its kinds
+(`Expressions.EDITIONS` from the fourth), each with its own kinds it has, every one in each, as
+mbse-programs' `sv()` has them. `DIALECT` reads its kinds and the five other dialects' terms. `Text` writes its kinds
 as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches them to it. Its terms are
 written through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
 `lambda u: u.variablepattern(lambda v: v.name(lambda i: i.spelling("x")))`."""
@@ -41,9 +41,9 @@ from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 
-from ..Expressions import Expressions as X
+from ..Expressions import Domains as _family, Expressions as X
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "bound_names", "problems"]
+__all__ = ["install", "define", "DIALECT", "TAGS", "HELPERS", "bound_names", "problems"]
 
 VARIABLEPATTERN, WILDCARDPATTERN, TAGGEDPATTERN, STRUCTUREPATTERN, PATTERNMEMBER, PARENTHESIZEDPATTERN = (
     "variablepattern", "wildcardpattern", "taggedpattern", "structurepattern", "patternmember", "parenthesizedpattern")
@@ -55,11 +55,6 @@ TAGS = (VARIABLEPATTERN, WILDCARDPATTERN, TAGGEDPATTERN, STRUCTUREPATTERN, PATTE
 HELPERS: tuple[str, ...] = ()
 """Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
 completeness data (`grammars/systemverilog-slang.json`) names them: none, its names being `Expressions`' `Identifier`."""
-
-SINCE = dict.fromkeys(TAGS, 3)
-"""The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`
-(`sv()`, IEEE 1800-2005, 3, every one; a pattern's parentheses, which mbse-programs omits, are IEEE 1800-2005's
-grammar's too)."""
 
 
 def install(txn: Any) -> Any:
@@ -88,7 +83,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.SystemVerilog.Patterns.Dialect").ref(True).singleton("Expressions.SystemVerilog.Patterns").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("systemverilog_patterns").schema([_.Dialect])]),
             # its union of its kinds: `Expressions`' branches, which that dialect's install adds, and its own
@@ -125,12 +121,13 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """SystemVerilog Patterns' dialect as data: the singleton `Expressions.SystemVerilog.Patterns` owning the editions it
     covers, by designation (`standards`), IEEE Std 1800-2005 to 2023, each with its formal reference's parts, its
-    common name and its own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it
+    common name and its own kinds it has, every one in each (a pattern's parentheses, which mbse-programs omits,
+    IEEE 1800-2005's grammar's too). Run after `install`, in a transaction of its own; run again, it
     writes nothing. Its frame binds the dialect (`dialect`) and each edition by its common name spelled as an
     identifier (`SystemVerilog_2023`)."""
     OWN, Standard = txn.Expressions.SystemVerilog.Patterns, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
-    kinds = X.editions(every, SINCE, 3)
+    kinds = X.editions(every, {}, _family.SYMBOLS[3:])
     return txn.uid("mbse.Expressions.SystemVerilog.Patterns.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "SystemVerilog_2005": Standard, "SystemVerilog_2009": Standard,
                   "SystemVerilog_2012": Standard, "SystemVerilog_2017": Standard, "SystemVerilog_2023": Standard})

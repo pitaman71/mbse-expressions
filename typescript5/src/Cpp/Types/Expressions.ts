@@ -26,13 +26,12 @@
  * name (`Expressions.Cpp.Expressions.Name`) and a term (`Expressions.Cpp.Expressions.Term`) are.
  *
  * The editions it covers are data, which `define` writes, C++'s (C++17, C++20, C++23), each with its own kinds it has,
- * both in each (`SINCE`). No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads
- * its type from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
- * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.typeid((i) => i.specifiers([(s) =>
+ * both in each. No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a
+ * cast reads its type from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019:
+ * fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.typeid((i) => i.specifiers([(s) =>
  * s.primitivetypespecifier((p) => p.keyword("int"))]))`. `DIALECT` reads its kinds and the terms of the dialects whose
  * terms are its subterms, `Cpp` and `C Preprocessor` (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis
- * [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)).
- */
+ * [CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)). */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as F from "../../Framework/Terms.js";
@@ -48,10 +47,6 @@ export const TAGS: readonly string[] = [K.TYPEID, ENUMERATOR];
 
 /** Its own helpers, the value object schemas its kinds hold that are no kind: none, a type-id's parts being C++'s. */
 export const HELPERS: readonly string[] = [];
-
-/** The edition each of its kinds arrived in, by its index in C++'s editions (C++17, C++20, C++23): none, so each is in
- * every edition. */
-export const SINCE: ReadonlyMap<string, number> = new Map();
 
 /**
  * Cpp Types' union of its kinds, added to the framework's terms as the branch `cpp_types`, its own kinds, and its
@@ -78,7 +73,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.Cpp.Types.Dialect").ref(true).singleton("Expressions.Cpp.Types").adjacencies({
           domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
           operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-          standards: (a: any) => a.relation([Framework.Covers]).me("dialect")}),
+          standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+          grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect")}),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
           (t: any) => t.name("cpp_types").schema([_.Dialect])]),
       // its union of its kinds, and invalid syntax
@@ -111,8 +107,9 @@ export function install(txn: any): any {
 /**
  * Cpp Types' dialect as data: the singleton `Expressions.Cpp.Types` owning the editions it covers, by designation
  * (`standards`), C++'s ISO/IEC 14882:2017, 2020 and 2024, each with its formal reference's parts, its common name and
- * its own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
- * frame binds the dialect (`dialect`) and each edition by its common name spelled as an identifier (`Cpp17`).
+ * its own kinds it has, every one in each. Run after `install`, in a transaction of its own; run again, it writes
+ * nothing. Its frame binds the dialect (`dialect`) and each edition by its common name spelled as an identifier
+ * (`Cpp17`).
  */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.Cpp.Types, txn.Expressions.Framework.Standard];

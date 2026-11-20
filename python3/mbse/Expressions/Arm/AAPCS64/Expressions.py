@@ -49,7 +49,8 @@ def install(txn: Any) -> Any:
                 "Expressions.Arm.AAPCS64").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}).adjacencies([
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}).adjacencies([
                 lambda t: t.relation([Framework.HasAbi]).me("abi")]),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("aapcs64").schema([_.Dialect])]),

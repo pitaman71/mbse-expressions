@@ -49,6 +49,7 @@ export function install(txn: any): any {
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
         standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect"),
       }).adjacencies([(t: any) => t.relation([Framework.HasAbi]).me("abi")]),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("aapcs64").schema([_.Dialect])]),

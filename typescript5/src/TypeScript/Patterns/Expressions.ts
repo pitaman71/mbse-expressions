@@ -25,7 +25,7 @@
  * pattern binds. Within an assignment's target, a name is a reference to what it assigns.
  *
  * The versions of TypeScript 5 it covers are data, which `define` writes, as `TypeScript5`'s are: TypeScript 5.0 to 5.9,
- * each with its kinds, every one older than 5.0 (`SINCE` is empty). `DIALECT` reads its kinds and its family's other
+ * each with its kinds, every one older than 5.0. `DIALECT` reads its kinds and its family's other
  * dialects' terms (`reads`). `Text` writes its kinds as TypeScript source, as the family's printer
  * (`TypeScript5.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
  * fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(p) => p.restelement((r) =>
@@ -58,8 +58,6 @@ export const TERMS: readonly string[] = ["identifier", "memberexpression", "pare
 /** Its own helpers: none, a pattern's decorators and annotation being `TypeScript5`'s. */
 export const HELPERS: readonly string[] = [];
 
-/** The version each of its kinds arrived in: none, every kind being older than TypeScript 5.0. */
-export const SINCE: ReadonlyMap<string, number> = new Map();
 
 /** The names a pattern binds, or a type parameter declares, of a term, a `Node` or a record (`Nodes.boundNames`): an
  * identifier's, and those within an array, an object, a default, a rest or a parameter property; a type parameter's
@@ -95,7 +93,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.TypeScript.Patterns.Dialect").ref(true).singleton("Expressions.TypeScript.Patterns").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("typescript_patterns").schema([_.Dialect])]),
       // its union of its kinds: its patterns, the terms a target may be, a parameter property, and invalid syntax

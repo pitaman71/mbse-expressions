@@ -57,7 +57,8 @@ hold this dialect's `Term`; its iterator, its call's one argument (`item` where 
 bound_names`) within its conditional's consequence and the conditions after it in a `&&&` (12.6.2, 12.6.3).
 
 The editions of the standards it covers are data, which `define` writes, each owned by its designation (`IEEE Std
-1364-1995` to `IEEE Std 1800-2023`) and holding the kinds it has, by mbse-programs' `SINCE`. `DIALECT` reads the kinds
+1364-1995` to `IEEE Std 1800-2023`) and holding the kinds it has, by membership (`ONLY`), as mbse-programs has them.
+`DIALECT` reads the kinds
 (`Terms.Dialect`), and the five other dialects' terms (`reads`). The writers (`literal`, `vector`, `identifier`,
 `binary`, `cast`, ...) write the kinds SystemVerilog folded before it was complete through the builders, a cast's
 type a spec of `Types`' `Term`, written through the builders too; every other term is written through the builders
@@ -85,7 +86,7 @@ not belong to a store"), and a term that reads none, a sized vector's, is read a
 from __future__ import annotations
 
 import re
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
@@ -93,10 +94,10 @@ from mbse.Schemas.Framework import Proxies
 
 from . import Domains
 
-__all__ = ["install", "define", "DIALECT", "EDITIONS", "SINCE", "editions", "Writer", "literal", "vector", "identifier",
-           "unary", "binary", "conditional", "concatenation", "replication", "select", "range_", "inside", "span",
-           "cast", "member", "call", "method", "iterate", "type_name", "problems", "SYSTEM", "METHODS", "REDUCTIONS",
-           "BASES", "UNITS", "SPELLING", "TAGS", "HELPERS", "constant_text"]
+__all__ = ["install", "define", "DIALECT", "EDITIONS", "SYMBOLS", "ONLY", "editions", "Writer", "literal", "vector",
+           "identifier", "unary", "binary", "conditional", "concatenation", "replication", "select", "range_", "inside",
+           "span", "cast", "member", "call", "method", "iterate", "type_name", "problems", "SYSTEM", "METHODS",
+           "REDUCTIONS", "BASES", "UNITS", "SPELLING", "TAGS", "HELPERS", "constant_text"]
 
 LITERAL, CONSTANT, NAMEEXPRESSION, MEMBEREXPRESSION, INDEXEXPRESSION, RANGESELECT = (
     "literal", "constant", "nameexpression", "memberexpression", "indexexpression", "rangeselect")
@@ -165,21 +166,22 @@ writes it, its standard's number, its year, its common name, as mbse-programs la
 identifier, by which a define's frame binds it. IEEE 1800-2009 merged IEEE 1364: every edition of IEEE 1800 has what
 the last of IEEE 1364 has."""
 
-SINCE = {
-    INCREMENTEXPRESSION: 3, INSIDEEXPRESSION: 3, VALUERANGE: 3, ASSIGNMENTPATTERN: 3, THISEXPRESSION: 3,
-    SUPEREXPRESSION: 3, NEWEXPRESSION: 3, NEWCOPYEXPRESSION: 3, NEWARRAYEXPRESSION: 3, RANDOMIZEWITHEXPRESSION: 3,
-    ARRAYMETHODWITHEXPRESSION: 3, CASTEXPRESSION: 3, DOLLAREXPRESSION: 3, TAGGEDEXPRESSION: 3, MATCHESEXPRESSION: 3,
-    PREDICATEEXPRESSION: 3, STREAMINGCONCATENATION: 3, ROOTEXPRESSION: 3, EMPTYQUEUE: 3,
-}
-"""The edition each of its kinds arrived in, by its index in `EDITIONS`, from mbse-programs' `SINCE` (`sv()`, IEEE
-1800-2005, 3); a kind not listed is in every edition."""
+SYMBOLS = Domains.SYMBOLS
+"""The editions it covers, oldest first, each by its frame symbol (`SystemVerilog_2023`)."""
+
+ONLY = dict.fromkeys((
+    INCREMENTEXPRESSION, INSIDEEXPRESSION, VALUERANGE, ASSIGNMENTPATTERN, THISEXPRESSION, SUPEREXPRESSION,
+    NEWEXPRESSION, NEWCOPYEXPRESSION, NEWARRAYEXPRESSION, RANDOMIZEWITHEXPRESSION, ARRAYMETHODWITHEXPRESSION,
+    CASTEXPRESSION, DOLLAREXPRESSION, TAGGEDEXPRESSION, MATCHESEXPRESSION, PREDICATEEXPRESSION, STREAMINGCONCATENATION,
+    ROOTEXPRESSION, EMPTYQUEUE), SYMBOLS[3:])
+"""The kinds that are not in every edition, each with the editions that have it, as mbse-programs has them (`sv()`:
+IEEE 1800's): membership, no minimum edition."""
 
 
-def editions(every: Mapping[str, Any], since: Mapping[str, int], first: int = 0) -> list[list[Any]]:
-    """The kinds each edition from `EDITIONS[first]` on has, of a dialect's kinds (`every`, each schema by its tag):
-    those whose edition (`since`, by index; the first where not listed) is no later than it."""
-    return [[schema for tag, schema in every.items() if since.get(tag, first) <= index]
-            for index in range(first, len(EDITIONS))]
+def editions(every: Mapping[str, Any], only: Mapping[str, Sequence[str]], covered: Sequence[str]) -> list[list[Any]]:
+    """The kinds each edition a dialect covers has (`covered`, by frame symbol, oldest first), of its kinds (`every`,
+    each schema by its tag): each not in `only`, and each that lists the edition there."""
+    return [[schema for tag, schema in every.items() if symbol in only.get(tag, covered)] for symbol in covered]
 
 
 def install(txn: Any) -> Any:
@@ -273,7 +275,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.SystemVerilog.Expressions.Dialect").ref(True).singleton("Expressions.SystemVerilog.Expressions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("systemverilog").schema([_.Dialect])]),
             # its union of its kinds: its own, and invalid syntax (the Preprocessor's install adds `macrousage`)
@@ -444,7 +447,7 @@ def define(txn: Any) -> Any:
     its inferred properties, and each 2-state one related to its schema (`Expressions.SystemVerilog.Expressions.int`) by
     `Expressions.Framework.HasDomain`; and the editions it covers, by designation (`standards`, through
     `Expressions.Framework.Covers`): Verilog's IEEE Std 1364-1995, 2001 and 2005 and SystemVerilog's IEEE Std 1800-2005,
-    2009, 2012, 2017 and 2023, each with its formal reference's parts, its common name and the kinds it has (`SINCE`),
+    2009, 2012, 2017 and 2023, each with its formal reference's parts, its common name and the kinds it has (`ONLY`),
     invalid syntax in none and the Preprocessor's `macrousage` the Preprocessor's. Run after `install`, in a transaction
     of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its common name
     spelled as an identifier (`SystemVerilog_2023`) and each domain by its name:
@@ -454,7 +457,7 @@ def define(txn: Any) -> Any:
     SV, Domain = txn.Expressions.SystemVerilog.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in SV.Term.as_schema().branches if branch.name in TAGS}
-    kinds = editions(every, SINCE)
+    kinds = editions(every, ONLY, SYMBOLS)
     return txn.uid("mbse.Expressions.SystemVerilog.Expressions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": SV.Dialect, "Verilog_1995": Standard, "Verilog_2001": Standard, "Verilog_2005": Standard,
                   "SystemVerilog_2005": Standard, "SystemVerilog_2009": Standard, "SystemVerilog_2012": Standard,

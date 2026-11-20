@@ -27,6 +27,12 @@ import type { Readers } from "@mbse/schemas/Framework";
 
 import * as D from "../../Framework/Domains.js";
 
+/** The editions of Verilog (IEEE 1364) and SystemVerilog (IEEE 1800) the family's dialects cover, oldest first, each by
+ * its common name spelled as an identifier, as their `define`s' frames bind it: `Expressions`', `Types`' and the
+ * Preprocessor's all, `Patterns`', `Assertions`' and `Constraints`' IEEE 1800's, from the fourth. */
+export const SYMBOLS: readonly string[] = ["Verilog_1995", "Verilog_2001", "Verilog_2005", "SystemVerilog_2005",
+  "SystemVerilog_2009", "SystemVerilog_2012", "SystemVerilog_2017", "SystemVerilog_2023"];
+
 const { ValueError } = Errors;
 const { repr } = Repr;
 export const Anything = D.Anything;
