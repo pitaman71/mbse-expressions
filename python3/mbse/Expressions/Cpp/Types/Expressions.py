@@ -25,7 +25,7 @@ Its helpers are none (`HELPERS`): a type-id's parts, its specifiers, declarators
 name (`Expressions.Cpp.Expressions.Name`) and a term (`Expressions.Cpp.Expressions.Term`) are.
 
 The editions it covers are data, which `define` writes, C++'s (C++17, C++20, C++23), each with its own kinds it has,
-both in each (`SINCE`). No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads
+both in each. No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads
 its type from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
 syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t: t.typeid(lambda i: i.specifiers([lambda s:
 s.primitivetypespecifier(lambda p: p.keyword("int"))]))`. `DIALECT` reads its kinds and the terms of the dialects whose
@@ -40,7 +40,7 @@ from mbse.Expressions.Framework import Terms as F
 
 from ...C.Expressions import Kinds as K
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "ENUMERATOR"]
+__all__ = ["install", "define", "DIALECT", "TAGS", "HELPERS", "ENUMERATOR"]
 
 ENUMERATOR = K.ENUMERATOR
 
@@ -49,10 +49,6 @@ TAGS = (K.TYPEID, ENUMERATOR)
 
 HELPERS: tuple[str, ...] = ()
 """Its own helpers, the value object schemas its kinds hold that are no kind: none, a type-id's parts being C++'s."""
-
-SINCE: dict[str, int] = {}
-"""The edition each of its kinds arrived in, by its index in C++'s editions (C++17, C++20, C++23): none, so each is in
-every edition."""
 
 
 def install(txn: Any) -> Any:
@@ -112,8 +108,9 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """Cpp Types' dialect as data: the singleton `Expressions.Cpp.Types` owning the editions it covers, by designation
     (`standards`), C++'s ISO/IEC 14882:2017, 2020 and 2024, each with its formal reference's parts, its common name and
-    its own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
-    frame binds the dialect (`dialect`) and each edition by its common name spelled as an identifier (`Cpp17`)."""
+    its own kinds it has, every one in each. Run after `install`, in a transaction of its own; run again, it writes
+    nothing. Its frame binds the dialect (`dialect`) and each edition by its common name spelled as an identifier
+    (`Cpp17`)."""
     OWN, Standard = txn.Expressions.Cpp.Types, txn.Expressions.Framework.Standard
     every = [branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS]
     return txn.uid("mbse.Expressions.Cpp.Types.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p

@@ -79,8 +79,14 @@
  *
  * The editions C++ covers are data, which `define` writes, each owned by its designation and holding the kinds it has
  * (`Framework.Standards`): ISO/IEC 14882:2017, 2020 and 2024, C++17, C++20 and C++23, every kind in each but C++20's
- * (`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone, and an extension in none;
- * what a helper has from an edition on (C++20's `explicit(condition)`) is a feature, not recorded. `DIALECT` reads the
+ * (`co_await`, `co_yield`, `requires` and designated initializers), in C++20 and C++23 alone (`ONLY`), and an
+ * extension in none. What an edition changes within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each
+ * allowed or forbidden by each edition: C++20's `consteval`, `constinit`, `char8_t`, `<=>` and `operator<=>`, `operator
+ * co_await`, a lambda's template parameters and `requires`, a pack init-capture, a constrained placeholder (`Number
+ * auto`), a type parameter's constraint, a template template parameter's `requires` and `explicit(condition)`; C++23's
+ * lambda's attributes and `static`, an explicit object parameter, `auto(x)` and `auto{x}`, and the literal suffixes `z`
+ * and `uz`. A subscript of several indices, C++23's, stays unrecorded: it is a count of what a property holds, not what
+ * it holds *(agent)*. `DIALECT` reads the
  * kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, ...) are C's, writing C++'s terms, a name used as an
  * expression an `idexpression` (`identifier("x")`, and a callee named by a string):
  * `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`. `Text.ToText` writes an expression as C++
@@ -99,6 +105,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as Domains from "../../C/Expressions/Domains.js";
 import * as C from "../../C/Expressions/Kinds.js";
@@ -576,9 +583,10 @@ export function install(txn: any): any {
  * bits, radix 2, precision 8, emax 127), each rounding ties to even; and `nullptr_t`, of C++'s own kind. What C++
  * leaves to the implementation is each ABI dialect's, as C's is. And the editions of C++ it covers, by designation
  * (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts, its common name and
- * the kinds it has. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
- * dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`) and each domain by
- * its name, spelled as its schema's is: `store.transaction(Cpp.define)[0].get("std_bfloat16_t")`, each object by its
+ * the kinds it has, and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each edition
+ * (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+ * the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`), each grammar
+ * clause by its index (`grammar_clause_0`) and each domain by its name, spelled as its schema's is: `store.transaction(Cpp.define)[0].get("std_bfloat16_t")`, each object by its
  * reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
  * `Framework.Domains.domains(store.singleton("Expressions.Cpp.Expressions")).get("std::bfloat16_t")`. */
 export function define(txn: any): any {
@@ -587,6 +595,13 @@ export function define(txn: any): any {
   const every = new Map((OWN.Term.as_schema().branches as { name: string; schema: unknown }[]) // each of its own
     .filter((b) => TAGS.includes(b.name) && !EXTENSIONS.has(b.name)) // kinds' schema, by its tag, but an extension
     .map((b) => [b.name, b.schema]));
+  const schemas = new Map<string, unknown>([
+    ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema] as [string, unknown]),
+    ...CLAUSE_HELPERS.map((name) => [name.toLowerCase(), OWN[name].as_schema()] as [string, unknown])]);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, [C.CPP_EDITIONS]);
+  /** The kinds an edition has, by its frame symbol: each not in `ONLY`, and each that lists it there. */
+  const has = (edition: string): unknown[] => [...every].filter(([tag]) => (ONLY.get(tag) ?? [edition]).includes(edition))
+    .map(([, schema]) => schema);
   return txn.uid("mbse.Expressions.Cpp.Expressions.define/1")
       .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
@@ -594,7 +609,7 @@ export function define(txn: any): any {
       bool: Domain, int8_t: Domain, int16_t: Domain, int32_t: Domain, int64_t: Domain,
       uint8_t: Domain, uint16_t: Domain, uint32_t: Domain, uint64_t: Domain,
       std_float16_t: Domain, std_float32_t: Domain, std_float64_t: Domain, std_float128_t: Domain,
-      std_bfloat16_t: Domain, nullptr_t: Domain,
+      std_bfloat16_t: Domain, nullptr_t: Domain, ...clauses,
     })
     .spec([
       // --- the editions C++ covers, each by its designation, with the kinds it has: every kind but GNU's extensions
@@ -603,11 +618,13 @@ export function define(txn: any): any {
         "ISO/IEC 14882:2017": (e: any) => e.standard(_.Cpp17), "ISO/IEC 14882:2020": (e: any) => e.standard(_.Cpp20),
         "ISO/IEC 14882:2024": (e: any) => e.standard(_.Cpp23) }),
       (_: any) => _.Cpp17.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2017n)).names(
-        ["C++17"]).kinds([...every].filter(([tag]) => !SINCE_20.has(tag)).map(([, schema]) => schema)),
+        ["C++17"]).kinds(has("Cpp17")),
       (_: any) => _.Cpp20.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2020n)).names(
-        ["C++20"]).kinds([...every.values()]),
+        ["C++20"]).kinds(has("Cpp20")),
       (_: any) => _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2024n)).names(
-        ["C++23"]).kinds([...every.values()]),
+        ["C++23"]).kinds(has("Cpp23")),
+      // --- its grammar clauses, each allowed or forbidden by each edition ---
+      ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({
         "bool": (e: any) => e.domain(_.bool),
@@ -699,9 +716,43 @@ const TAGS: readonly string[] = [C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CO
   C.ASSIGNMENTEXPRESSION, THROWEXPRESSION, YIELDEXPRESSION, PACKEXPANSION, C.INITIALIZERLIST, C.DESIGNATEDINITIALIZER,
   C.STATEMENTEXPRESSION, C.EXTENSIONEXPRESSION, C.LABELADDRESSEXPRESSION];
 
-/** The kinds C++20 added: C++17 has every other kind but the extensions. */
-const SINCE_20: ReadonlySet<string> = new Set([REQUIRESEXPRESSION, AWAITEXPRESSION, YIELDEXPRESSION,
-  C.DESIGNATEDINITIALIZER]);
+/** The kinds that are not in every edition, each with the editions that have it, by their frame symbols: C++20's, in
+ * C++20 and C++23; membership, no minimum edition. */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([REQUIRESEXPRESSION, AWAITEXPRESSION,
+  YIELDEXPRESSION, C.DESIGNATEDINITIALIZER].map((tag) => [tag, ["Cpp20", "Cpp23"]]));
+
+const CPP20 = ["Cpp20", "Cpp23"], CPP23 = ["Cpp23"];
+/** The helpers its grammar clauses are about, each keyed by its schema's name, lowercased. */
+const CLAUSE_HELPERS: readonly string[] = ["DeclSpecifier", "PrimitiveTypeSpecifier", "OperatorName", "LambdaDeclarator",
+  "InitCapture", "PlaceholderTypeSpecifier", "TypeParameter", "TemplateTemplateParameter", "ParameterDeclaration",
+  "ExplicitSpecifier"];
+
+/** Its grammar clauses, each with the editions that allow it, every other forbidding it, named as mbse-programs'
+ * `Check` names the language feature; `static` among a lambda's specifiers is a nested grammar clause. */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  FS.values("declspecifier.keyword 'consteval'", "declspecifier", "keyword", ["consteval"], CPP20),
+  FS.values("declspecifier.keyword 'constinit'", "declspecifier", "keyword", ["constinit"], CPP20),
+  FS.values("primitivetypespecifier.keyword 'char8_t'", "primitivetypespecifier", "keyword", ["char8_t"], CPP20),
+  FS.values("binaryexpression.operator '<=>'", C.BINARYEXPRESSION, "operator", ["<=>"], CPP20),
+  FS.values("operatorname.operator '<=>'", "operatorname", "operator", ["<=>"], CPP20),
+  FS.values("operatorname.operator 'co_await'", "operatorname", "operator", ["co_await"], CPP20),
+  FS.present("lambdaexpression.template_parameters", LAMBDAEXPRESSION, "template_parameters", CPP20),
+  FS.present("lambdaexpression.attributes", LAMBDAEXPRESSION, "attributes", CPP23),
+  FS.present("lambdadeclarator.requires", "lambdadeclarator", "requires", CPP20),
+  FS.kindsOf("lambdadeclarator static", "lambdadeclarator", "specifiers", ["declspecifier"],
+    ["declspecifier.keyword 'static'"], CPP23),
+  FS.values("declspecifier.keyword 'static'", "declspecifier", "keyword", ["static"], null), // nested
+  FS.values("initcapture.pack", "initcapture", "pack", [true], CPP20),
+  FS.present("placeholdertypespecifier.constraint", "placeholdertypespecifier", "constraint", CPP20),
+  FS.present("typeparameter.constraint", "typeparameter", "constraint", CPP20),
+  FS.present("templatetemplateparameter.requires", "templatetemplateparameter", "requires", CPP20),
+  FS.values("parameterdeclaration.this_keyword", "parameterdeclaration", "this_keyword", [true], CPP23),
+  FS.kindsOf("functionalcastexpression of auto", FUNCTIONALCASTEXPRESSION, "type", ["placeholdertypespecifier"], [],
+    CPP23),
+  FS.values("literal.suffix 'z' or 'uz'", C.LITERAL, "suffix", ["z", "Z"].flatMap(
+    (z) => [z, `u${z}`, `U${z}`, `${z}u`, `${z}U`]), CPP23),
+  FS.present("explicitspecifier.condition", "explicitspecifier", "condition", CPP20),
+];
 
 const ANY1 = new FD.Function([FD.Anything], FD.Anything);
 

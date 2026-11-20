@@ -24,17 +24,13 @@ from mbse.Expressions.Framework import Domains as FD, Terms as F
 
 from .. import Kinds as K
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "HOLDS", "EDITIONS"]
+__all__ = ["install", "define", "DIALECT", "TAGS", "HELPERS", "HOLDS", "EDITIONS"]
 
 TAGS = K.tags(K.BRE)
 """Its own kinds, in its `Term`'s order, before invalid syntax."""
 
 HELPERS: tuple[str, ...] = ()
 """Its own helpers, the value object schemas its kinds hold that are no kind: none."""
-
-SINCE: dict[str, int] = {}
-"""The edition each of its kinds arrived in, by its index in POSIX.1's editions (`EDITIONS`): none, so each is in
-every edition."""
 
 HOLDS = K.holds(K.BRE)
 """What each kind's terms may be, by property, besides invalid syntax: a quantifier's element no quantifier and no

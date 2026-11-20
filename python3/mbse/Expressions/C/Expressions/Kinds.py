@@ -19,7 +19,13 @@ from . import Domains
 
 __all__ = ["EXTENSIONS", "ASM_KEYWORDS", "PREFIXES", "QUOTES", "SUFFIXES", "CPP_SUFFIXES", "OPTIONAL", "SPELLING",
            "Writers", "type_name", "cast_type", "truth", "size", "untyped", "bound_names", "problems", "scopes", "kinds",
-           "identifier_problems", "constant_text", "string_literal"]
+           "identifier_problems", "constant_text", "string_literal", "C_EDITIONS", "CPP_EDITIONS"]
+
+C_EDITIONS = ("C11", "C17", "C23")
+"""C's editions, oldest first, each by its common name, as the family's `define`s' frames bind it."""
+CPP_EDITIONS = ("Cpp17", "Cpp20", "Cpp23")
+"""C++'s editions, oldest first, each by its common name spelled as an identifier (`C++17` as `Cpp17`), as the
+family's `define`s' frames bind it."""
 
 LITERAL, CONSTANT, CONCATENATEDSTRING, VARIABLE = "literal", "constant", "concatenatedstring", "variable"
 PARENTHESIZEDEXPRESSION, GENERICSELECTION, SUBSCRIPTEXPRESSION, CALLEXPRESSION = (

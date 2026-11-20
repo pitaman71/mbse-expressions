@@ -45,7 +45,10 @@
  * `enumerators` hold its body's items, this dialect's terms, with its `trailing_comma`.
  *
  * The editions it covers are data, which `define` writes, C's (C11, C17, C23), each with its own kinds it has, both in
- * each (`SINCE`). No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads its type
+ * each, and its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition, C23's: the keywords
+ * `thread_local`, `constexpr`, `bool`, `_Decimal32` to `_Decimal128` and `_Float16` to `_Float128x` (Annex H),
+ * `typeof` and `typeof_unqual`, and `alignas` spelled so; `_BitInt`, `auto` as a type specifier and attributes in
+ * `[[ ]]`, each where a type name, a parameter or a declarator holds it; and an enumeration's underlying type. No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads its type
  * from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
  * `(t) => t.typeid((i) => i.specifiers([(s) => s.primitivetypespecifier((p) => p.keyword("int"))]))`.
@@ -55,6 +58,7 @@
  */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as C from "../Expressions/Expressions.js";
 import * as K from "../Expressions/Kinds.js";
@@ -73,9 +77,34 @@ export const HELPERS: readonly string[] = ["DeclSpecifier", "CvQualifier", "Prim
   "ParenthesizedDeclarator", "ParameterDeclaration", "EllipsisParameter", "StandardAttributeSpecifier", "Attribute",
   "AlignasSpecifier", "GnuAttributeSpecifier", "DeclspecSpecifier", "AsmLabel"];
 
-/** The edition each of its kinds arrived in, by its index in C's editions (C11, C17, C23): none, so each is in every
- * edition. */
-export const SINCE: ReadonlyMap<string, number> = new Map();
+const C23 = ["C23"];
+/** The kinds and helpers that hold specifiers, and those that hold attribute specifiers, by the property that holds
+ * them. */
+const HOLDERS = {
+  specifiers: [K.TYPEID, "parameterdeclaration"],
+  attributes: [ENUMERATOR, "classspecifier", "enumspecifier", "iddeclarator", "pointerdeclarator", "arraydeclarator",
+    "functiondeclarator", "parameterdeclaration"],
+};
+/** C23's keywords, by the helper whose `keyword` spells it. */
+const KEYWORDS: ReadonlyMap<string, readonly string[]> = new Map([
+  ["declspecifier", ["thread_local", "constexpr"]],
+  ["primitivetypespecifier", ["bool", "_Decimal32", "_Decimal64", "_Decimal128", "_Float16", "_Float32", "_Float64",
+    "_Float128", "_Float32x", "_Float64x", "_Float128x"]],
+  ["typeofspecifier", ["typeof", "typeof_unqual"]], ["alignasspecifier", ["alignas"]]]);
+
+/** Its grammar clauses, each with the editions that allow it, every other forbidding it, named as mbse-programs'
+ * `Check` names the language feature, a helper that arrived in C23 by what holds it. A kind is keyed by its tag, a
+ * helper by its schema's name, lowercased (`bitintspecifier`). */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  ...[...KEYWORDS].flatMap(([helper, words]) =>
+    words.map((word) => FS.values(`${helper}.keyword '${word}'`, helper, "keyword", [word], C23))),
+  ...HOLDERS.specifiers.flatMap((holder) =>
+    ["bitintspecifier", "placeholdertypespecifier", "standardattributespecifier"].map((helper) =>
+      FS.kindsOf(`${holder}.specifiers holding a ${helper}`, holder, "specifiers", [helper], [], C23))),
+  ...HOLDERS.attributes.map((holder) => FS.kindsOf(`${holder}.attributes holding a standardattributespecifier`, holder,
+    "attributes", ["standardattributespecifier"], [], C23)),
+  FS.present("enumspecifier.base", "enumspecifier", "base", C23),
+];
 
 // where its grammar hands off to mbse-programs' declarations: the framework's readers do not enter it
 F.boundaries("Expressions.C.Types.Members");
@@ -236,15 +265,21 @@ export function install(txn: any): any {
 /**
  * C Types' dialect as data: the singleton `Expressions.C.Types` owning the editions it covers, by designation
  * (`standards`), C's ISO/IEC 9899:2011, 2018 and 2024, each with its formal reference's parts, its common name and its
- * own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame
- * binds the dialect (`dialect`) and each edition by its common name (`C11`).
+ * own kinds it has, both in each, and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by
+ * each edition (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
+ * frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each grammar clause by its index
+ * (`grammar_clause_0`).
  */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.C.Types, txn.Expressions.Framework.Standard];
   const every = (OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => branch.schema);
+  const schemas = new Map<string, unknown>([
+    ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema] as [string, unknown]),
+    ...HELPERS.map((name) => [name.toLowerCase(), OWN[name].as_schema()] as [string, unknown])]);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, [K.C_EDITIONS]);
   return txn.uid("mbse.Expressions.C.Types.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: OWN.Dialect, C11: Standard, C17: Standard, C23: Standard })
+    .symbols({ dialect: OWN.Dialect, C11: Standard, C17: Standard, C23: Standard, ...clauses })
     .spec([
       (_: any) => _.dialect.standards({
         "ISO/IEC 9899:2011": (e: any) => e.standard(_.C11), "ISO/IEC 9899:2018": (e: any) => e.standard(_.C17),
@@ -255,6 +290,7 @@ export function define(txn: any): any {
         ["C17"]).kinds(every),
       (_: any) => _.C23.bodies(["org.iso", "ch.iec"]).number("9899").revision((r: any) => r.year(2024n)).names(
         ["C23"]).kinds(every),
+      ...specs,
     ])]))]);
 }
 

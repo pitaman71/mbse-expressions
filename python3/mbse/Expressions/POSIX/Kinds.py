@@ -44,7 +44,7 @@ a feature within a kind is not for any dialect; C++, which cites earlier edition
 No kind binds a name a term scopes: a subexpression is numbered, and a backreference resolves it by its number. Its
 kinds are applications of no domain known statically, each left in the residual by simplification, named by its dialect ("POSIX BRE
 pattern is not simplified"). The editions each covers are data, which `define` writes: POSIX.1's, IEEE Std 1003.1-2001,
--2008, -2017 and -2024, every kind in each (`SINCE`)."""
+-2008, -2017 and -2024, every kind in each."""
 
 from __future__ import annotations
 
