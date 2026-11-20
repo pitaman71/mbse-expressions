@@ -1232,9 +1232,8 @@ class _Simplifier(F.Simplifier):
         super().__init__(rules, construct=_construct_of(write, rules.dialect), **options)
         self._staying = F.Simplifier(rules, construct=_construct_of(write, rules.dialect, False), **options)
 
-    def __call__(self, expression: Any, scope: S.Scope | Mapping[str, Any] | None = None) -> F.Simplified:
-        if not isinstance(scope, S.Scope):
-            scope = self.rules.scope(dict(scope or {}))
+    def __call__(self, expression: Any, scope: Any = None) -> F.Simplified:
+        scope = self.scope(scope)
         casts = S.option(scope, "casts", "write")
         if casts not in ("write", "stay"):
             raise ValueError(f"the option 'casts' is 'write' or 'stay', not {casts!r}")

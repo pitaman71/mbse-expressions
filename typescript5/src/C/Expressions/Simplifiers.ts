@@ -1275,8 +1275,8 @@ class FamilySimplifier extends F.Simplifier {
     this.staying = new F.Simplifier(rules, { ...options, construct: constructOf(write, rules.dialect, false) });
   }
 
-  override run(expression: unknown, scope: S.Scope | S.Bindings | null = null): F.Simplified {
-    const resolved = S.isScope(scope) ? scope : this.rules.scope({ ...(scope ?? {}) });
+  override run(expression: unknown, scope: unknown = null): F.Simplified {
+    const resolved = this.scope(scope);
     const casts = S.option(resolved, "casts", "write");
     if (casts !== "write" && casts !== "stay") {
       throw new ValueError(`the option 'casts' is 'write' or 'stay', not ${repr(casts)}`);

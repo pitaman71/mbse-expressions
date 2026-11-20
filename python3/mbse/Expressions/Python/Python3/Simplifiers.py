@@ -1135,12 +1135,14 @@ def _simplify(node: Any, results: list[F.Result]) -> F.Result | None:
     if tag not in (_P.JOINEDSTR, _P.TEMPLATESTR) or not any(result.changed for result in results):
         return None
     if tag == _P.TEMPLATESTR:
-        return F.Result(node, free=frozenset(S.free(node, _P.DIALECT)), changed=False)
+        return F.Result(node, free=frozenset(S.free(node, _P.DIALECT)), changed=False,
+                        parameters=F.parameters_of(node))
     form, changed = Terms.form(node), iter([result.changed for result in results])
     values = tuple(p for part in form.attributes.get("values", ()) for p in _respelled(part, changed))
     written = _P.DIALECT.make(Terms.Form(tag, {**form.attributes, "values": values},
                                          tuple(result.expression for result in results)))
-    return F.Result(written, free=frozenset().union(*(result.free for result in results)))
+    return F.Result(written, free=frozenset().union(*(result.free for result in results)),
+                    parameters=frozenset().union(*(result.parameters for result in results)))
 
 
 def _guarded(node: Any, index: int) -> bool:
@@ -1155,9 +1157,8 @@ class _Simplifier(F.Simplifier):
     """The framework's simplifier, refusing, before it simplifies, a value that an option of the scope does not take
     (`OPTIONS`, and `locale`)."""
 
-    def __call__(self, expression: Any, scope: S.Scope | Mapping[str, Any] | None = None) -> F.Simplified:
-        if not isinstance(scope, S.Scope):
-            scope = self.rules.scope(dict(scope or {}))
+    def __call__(self, expression: Any, scope: Any = None) -> F.Simplified:
+        scope = self.scope(scope)
         for name, values in OPTIONS.items():
             chosen = S.option(scope, name, values[0])
             if chosen not in values:

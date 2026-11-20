@@ -23,6 +23,20 @@ option `errors` (see `Symbolics.option`) chooses what an error does anywhere els
 `"stay"` leaves its subterm in the residual, named by a residue of class `b` ("Python3 binop raising ZeroDivisionError is
 not simplified").
 
+A simplifier takes a context, mbse-schemas' `Contexts.OfContext`, where it takes a scope (`Simplifier.scope`), and a
+scope within a context (`Symbolics.Variables.within`) gives each parameter the value assigned to it or the object bound
+to it, apart from the variables (mbse-basis [CAP-296: simplification over literals, variables and
+parameters](mbse:mbse-basis/docs/capabilities/CAP-296.md)). A parameter reference standing in a term's place is a
+leaf of every dialect (`Terms.PARAMETER_KIND`): a parameter assigned a value is written as the value's literal, as a
+variable's value is; a parameter assigned a term is read in the reference's place, where the place holds the term's
+kind (`Terms.substituting`), so that every dialect's rules, whatever route they read terms by, read the term there; a
+parameter that the context neither assigns nor binds stays where it stood, written back through the place's
+`as_parameter`, and the result names it in `parameters`, beside `free`, where no ancestor folds it away; a parameter
+bound to an object is replaced by the object's reference, put as it is where the parameter stands in a literal's
+`value`, a place of any value (`Terms.value_parameter`), the object neither resolved nor read; a parameter bound to an
+object where its place, a term's, holds no reference, or assigned a term that its place does not hold, stays, named by a
+residue of class (b).
+
 A `Simplifier(rules, literal=..., simplify=..., categories=..., native=..., folds=..., construct=..., guarded=...)` simplifies the terms of one
 dialect; each dialect's `Simplifiers.OfAny` is one. Its `rules` are the dialect's folding rules: what the dialect
 computes over values, `rules.evaluate(node, scope)` giving a subterm's value or raising `NoRule` where it has none, over
@@ -51,6 +65,7 @@ reports: wrong numbers of arguments and missing values.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any, Protocol
 
@@ -60,7 +75,7 @@ from . import Symbolics, Terms
 from .Symbolics import Scope, Variables
 
 __all__ = ["Simplifier", "Simplified", "Residue", "NotEvaluated", "NoRule", "Rules", "Interpreter", "Result", "Thunk",
-           "Implementation", "natives", "guards"]
+           "Implementation", "natives", "guards", "parameters_of"]
 
 Thunk = Callable[[], Any]
 Implementation = Callable[[list[Thunk], Any, Any], Any]
@@ -103,7 +118,9 @@ class Simplified:
     wants it (in a transaction); whether its root is a `literal`; whether its root is a closed constructor expression
     (`constructed`: a literal, a display or a cast of literals), simplification having evaluated the expression, and
     then its `value` (None otherwise: three-valued, a residual reads as unknown); the names it still needs (`free`);
-    and the `residues`, each subterm that stayed for want of a rule, in the order they were found."""
+    the `residues`, each subterm that stayed for want of a rule, in the order they were found; and the parameters it
+    still needs (`parameters`), each a parameter that a reference within it designates and that its context
+    neither assigns nor binds."""
 
     residual: Terms.Writer
     literal: bool
@@ -111,6 +128,7 @@ class Simplified:
     free: frozenset[str]
     residues: tuple[Residue, ...]
     constructed: bool = False
+    parameters: frozenset[str] = frozenset()
 
     def evaluate(self) -> Any:
         """The value of the closed constructor expression at the residual's root; raises `NotEvaluated` naming why the
@@ -122,6 +140,8 @@ class Simplified:
             why = self.residues[0].reason
         elif self.free:
             why = f"{sorted(self.free)[0]} is not bound"
+        elif self.parameters:
+            why = f"parameter {sorted(self.parameters)[0]!r} is neither assigned nor bound"
         else:
             why = "its value has no closed constructor expression"
         raise NotEvaluated(f"the root is not a closed constructor expression: {why}")
@@ -143,8 +163,9 @@ class Rules(Protocol):
 class Result:
     """A simplified subterm: its `expression` (a term value, or a `Writer`), whether it is `known`, a value its
     dialect computed, and then its `value`; whether it is a `literal`; the names it refers to that nothing within it
-    binds (`free`); whether it differs from the subterm it simplified (`changed`); and whether it is a closed
-    constructor expression (`constructed`), as every literal is."""
+    binds (`free`); whether it differs from the subterm it simplified (`changed`); whether it is a closed
+    constructor expression (`constructed`), as every literal is; and the parameters of the references within it that
+    its context neither assigns nor binds (`parameters`)."""
 
     expression: Any
     known: bool = False
@@ -153,6 +174,7 @@ class Result:
     free: frozenset[str] = frozenset()
     changed: bool = True
     constructed: bool = False
+    parameters: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         if self.literal and not self.constructed:  # a literal is the simplest closed constructor expression
@@ -174,18 +196,38 @@ class Simplifier:
         self._construct, self._guarded = construct, guarded
         self._categories = dict(categories or {})
 
-    def __call__(self, expression: Any, scope: Scope | Mapping[str, Any] | None = None) -> Simplified:
-        """The simplification of a term (see `Terms.term`) in `scope`, or with the variables in a mapping bound."""
-        if not isinstance(scope, Symbolics.Scope):
-            scope = self.rules.scope(dict(scope or {}))
+    def scope(self, given: Any = None) -> Any:
+        """The scope a caller gives: a context, a `Contexts.OfContext`, as the scope of its variables within it
+        (`Symbolics.context_scope`), so that its parameters are the context's; a scope as it is; else the scope that the
+        rules make of a mapping of variables, or of none."""
+        if Symbolics.is_context(given):
+            return Symbolics.context_scope(given, self.rules.scope)
+        if isinstance(given, Symbolics.Scope):
+            return given
+        return self.rules.scope(dict(given or {}))
+
+    def __call__(self, expression: Any, scope: Any = None) -> Simplified:
+        """The simplification of a term (see `Terms.term`) in `scope`, a scope, a context (`Contexts.OfContext`) or a
+        mapping of variables (`scope`). Where the scope has parameters, its terms are read within
+        `Terms.substituting`, a type parameter's term read in its reference's place (`_substitute`)."""
+        scope = self.scope(scope)
         errors = Symbolics.option(scope, "errors", "raise")
         if errors not in ("raise", "stay"):
             raise ValueError(f"the option 'errors' is 'raise' or 'stay', not {errors!r}")
         residues: dict[Residue, None] = {}
-        result = self.reduce(Terms.term(expression), scope, residues, True)
+        given = _SCOPE.set(scope)
+        try:
+            if getattr(scope, "parameters", None):
+                with Terms.substituting(lambda name, union: _substitute(scope, name, union)):
+                    result = self.reduce(Terms.term(expression), scope, residues, True)
+            else:
+                result = self.reduce(Terms.term(expression), scope, residues, True)
+        finally:
+            _SCOPE.reset(given)
         literal, constructed = result.literal, result.constructed
         return Simplified(self.dialect.spec(result.expression), literal,
-                          self._native(result.value) if constructed else None, result.free, tuple(residues), constructed)
+                          self._native(result.value) if constructed else None, result.free, tuple(residues), constructed,
+                          result.parameters)
 
     def category(self, dialect: str, what: str, kind: str) -> str:
         """The evaluation inventory's class of what a dialect has no rule for: by `what`, then by its kind, then `b` for
@@ -203,7 +245,8 @@ class Simplifier:
         built = self._construct(value) if self._construct is not None else None
         if built is not None:
             return Result(built, True, value, constructed=True)
-        return Result(expression, True, value, free=frozenset(Symbolics.free(expression, self.dialect)))
+        return Result(expression, True, value, free=frozenset(Symbolics.free(expression, self.dialect)),
+                      parameters=parameters_of(expression))
 
     def reduce(self, node: Any, scope: Any, residues: dict[Residue, None], root: bool = False,
                guarded: bool = False) -> Result:
@@ -225,17 +268,22 @@ class Simplifier:
                     owner = self.dialect.owner(node).name()  # the option `errors` is "stay": it stays, named
                     residues.setdefault(Residue(owner, tag, f"{tag} raising {type(error).__name__}", "b"), None)
             if known:
-                if kind.role == Terms.LITERAL:  # already a literal: kept as written
-                    return Result(node, True, value, True, changed=False)
+                parameter = Terms.value_parameter(record) if kind.role == Terms.LITERAL else None
+                if parameter is not None:  # its value its context's: written as a literal, or put in place as it is
+                    return self._held(node, tag, record, value)
+                if kind.role == Terms.LITERAL:  # already a literal: kept as written, unless it stands for a parameter
+                    return Result(node, True, value, True, changed=Terms.substituted(node))
                 written = self._literal(value)
                 if written is not None:
                     return Result(written, True, value, True)
                 built = self._construct(value) if self._construct is not None else None
                 if built is not None:  # a value with no literal: its closed constructor expression
                     return Result(built, True, value, constructed=True)
+        if Terms.is_parameter(node):
+            return self._parameter(node, scope, residues, known, value)
         if kind.role in (Terms.LITERAL, Terms.REFERENCE, Terms.INVALID) and not Terms.arguments_of(record):
             free = frozenset(Symbolics.free(node, self.dialect))
-            return Result(node, known, value, free=free, changed=False)
+            return Result(node, known, value, free=free, changed=Terms.substituted(node), parameters=parameters_of(node))
         # a subterm of a term its rules computed (a cast's type) needs no rule of its own: what it lacks is not noted
         return self._rebuild(node, record, kind, scope, {} if known else residues, known, value, guarded)
 
@@ -263,16 +311,42 @@ class Simplifier:
         if lets and len(results) > 1 and results[1] is not None and name not in results[1].free:
             return results[1]
         free = frozenset().union(*(r.free - names for r, names in zip(results, bound) if r is not None))
+        parameters = frozenset().union(*(r.parameters for r in results if r is not None))
         simplified = self._simplify(node, [r for r in results if r is not None]) if self._simplify else None
         if simplified is not None:
             return simplified
         if not any(r is not None and r.changed for r in results):
-            return Result(node, known, value, free=free, changed=False)
+            return Result(node, known, value, free=free, changed=Terms.substituted(node), parameters=parameters)
         form = Terms.form(node)
         reader = self.dialect._reader(node)  # the dialect whose `Term` holds it: this one, or one it reads
         written = reader.make(Terms.Form(form.kind, form.attributes,
                                          tuple(None if r is None else r.expression for r in results)))
-        return Result(written, known, value, free=free)
+        return Result(written, known, value, free=free, parameters=parameters)
+
+    def _held(self, node: Any, tag: str, record: Any, value: Any) -> Result:
+        """A literal whose value a parameter gave: the literal the dialect writes of the value, where it writes one; else
+        the literal written again with the value in the parameter's place, as it is (an object's reference)."""
+        written = self._literal(value)
+        if written is not None:
+            return Result(written, True, value, True)
+        reader = self.dialect._reader(node)
+        attributes = {**Terms.attributes_of(record), "value": value}
+        return Result(reader.make(Terms.Form(tag, attributes)), True, value, True)
+
+    def _parameter(self, node: Any, scope: Any, residues: dict[Residue, None], known: bool, value: Any) -> Result:
+        """A parameter reference that stays: its value known, where it has no closed constructor expression; else free,
+        where its context neither assigns nor binds its parameter; else given what no term's place takes, an object or a
+        term of a dialect the place does not hold, named by a residue of class (b)."""
+        name = Terms.parameter_name(node)
+        found = Symbolics.given(scope, name)
+        if found is None:
+            return Result(node, changed=False, parameters=frozenset({name}))
+        if not known:
+            what = "bound to an object, which its place does not hold" if found[0] == "object" else (
+            "assigned a term its place does not hold")
+            owner = self.dialect.owner(node).name()
+            residues.setdefault(Residue(owner, Terms.PARAMETER, f"parameter {name!r} {what}", "b"), None)
+        return Result(node, known, value, changed=False)
 
     @staticmethod
     def _hide(scope: Any, names: frozenset[str]) -> Any:
@@ -283,6 +357,27 @@ class Simplifier:
     def _note(self, refusal: NoRule, residues: dict[Residue, None]) -> None:
         kind, what = refusal.kind or "", refusal.what  # its kind set by the rules, for the term they have no rule for
         residues.setdefault(Residue(refusal.dialect, kind, what, self.category(refusal.dialect, what, kind)), None)
+
+
+_SCOPE: ContextVar[Any] = ContextVar("scope", default=None)
+"""The scope of the simplification running, which `parameters_of` reads."""
+
+
+def _substitute(scope: Any, name: str, union: Any) -> Any:
+    """The term a scope's context assigns the parameter `name`, where it assigns a term that a place holding terms of
+    `union` holds (`Terms.holds`)."""
+    found = Symbolics.given(scope, name)
+    if found is None or found[0] != "value" or not Terms.is_term(found[1]):
+        return None
+    return found[1] if Terms.holds(union, found[1]) else None
+
+
+def parameters_of(expression: Any) -> frozenset[str]:
+    """The parameters of the references within a term that the context of the simplification running neither assigns
+    nor binds."""
+    scope = _SCOPE.get()
+    names = (Terms.parameter_name(parameter) for parameter in Terms.parameters_in(expression))
+    return frozenset(name for name in names if Symbolics.given(scope, name) is None)
 
 
 def natives(dialect: Terms.Dialect) -> Callable[[Any], Any]:
@@ -327,9 +422,13 @@ class Interpreter:
     def _evaluate(self, node: Any, scope: Any) -> Any:
         tag, record, kind = self.dialect.kind(node)
         owner = self.dialect.owner(node)  # whose name a refusal gives
-        if kind.role == Terms.INVALID or owner is not self.dialect or self._folded is not None and tag not in self._folded:
+        if kind.role == Terms.INVALID or owner is not self.dialect or (
+                self._folded is not None and tag not in self._folded and tag != Terms.PARAMETER):
             raise NoRule(owner.name(), tag)
         if kind.role == Terms.LITERAL:
+            parameter = Terms.value_parameter(record)
+            if parameter is not None:  # its value its context's: a value assigned, or an object's reference, as it is
+                return Symbolics.held(scope, parameter)
             value = Terms.attributes_of(record).get("value")
             if value is None:
                 raise ValueError(f"{Terms._article(tag)} needs a value")

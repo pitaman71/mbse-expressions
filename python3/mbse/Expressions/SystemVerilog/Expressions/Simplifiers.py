@@ -396,7 +396,14 @@ class _Node:
     value read."""
 
     def __init__(self, term: Any):
+        if F.is_parameter(term):  # a leaf, its value the scope's (mbse-basis CAP-296)
+            self.term, self.kind, self.held = term, F.PARAMETER, None
+            return
         tag, record, _ = X.DIALECT.kind(term)
+        held = F.value_parameter(record) if tag == X.LITERAL else None
+        if held is not None:  # a literal whose value a parameter gives, as its scope holds it
+            self.term, self.kind, self.held = term, F.PARAMETER, held
+            return
         node = F.node(tag, record)
         _, _, names = F._parts(record.as_schema())
         members: dict[str, Any] = dict.fromkeys(names)
@@ -445,7 +452,7 @@ class _Evaluation:
 
     def type(self, node: Any) -> SvType | None:
         """The term's self-determined type (None for an object); a kind it does not fold is refused by name."""
-        if node.kind not in FOLDED:
+        if node.kind not in FOLDED and node.kind != F.PARAMETER:
             raise FS.NoRule(_owner(node), node.kind, node.kind)
         if id(node) not in self._types:
             self._types[id(node)] = self._type_of(node)
@@ -479,7 +486,7 @@ class _Evaluation:
                 if declared is None:
                     raise
                 return declared
-        if kind in _OWN_KINDS:
+        if kind in _OWN_KINDS or kind == F.PARAMETER:
             return _type(self.own(node), self.stored)
         if kind == X.PARENTHESIZEDEXPRESSION:
             return self.type(node.expression)
@@ -585,6 +592,8 @@ class _Evaluation:
             return self._vector(node)
         if kind == X.NAMEEXPRESSION:
             return self._name(node)
+        if kind == F.PARAMETER:  # its value the scope's, apart from its variables
+            return typed(self.scope.lookup(node.term) if node.held is None else S.held(self.scope, node.held), self.stored)
         if kind == X.THISEXPRESSION:
             return typed(self.scope.value("this"), self.stored)
         if kind == X.EMPTYQUEUE:
