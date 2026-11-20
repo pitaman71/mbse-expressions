@@ -72,7 +72,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Python.Types.Dialect").ref(True).singleton("Expressions.Python.Types").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("python_types").schema([_.Dialect])]),
             # its union of its kinds: `Python3`'s branches, which that dialect's install adds, its own, and invalid syntax

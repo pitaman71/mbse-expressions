@@ -148,7 +148,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.TypeScript.RegExp.Dialect").ref(true).singleton("Expressions.TypeScript.RegExp").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("typescript_regexp").schema([_.Dialect])]),
       // its union of its kinds, regexpp's node types, and invalid syntax

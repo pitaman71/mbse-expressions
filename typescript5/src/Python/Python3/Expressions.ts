@@ -59,8 +59,11 @@
  * them) beside its own kinds; a lambda's parameters have none, but mbse-programs' function definitions share the helper.
  *
  * The versions of Python 3 the dialect covers are data, which `define` writes, each owned by its published name, Python
- * 3.0 to 3.15, and holding the kinds it has, from the version each arrived in (`Framework.Standards`); an extension is
- * in none. A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
+ * 3.0 to 3.15, and holding the kinds it has, by membership (`ONLY`, `Framework.Standards`); an extension is in none.
+ * What a version changes within a kind is data too, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden
+ * by each version: a binop's `@` (3.5), an `async` comprehension (3.6), a formatted value's `=` and positional-only
+ * parameters (3.8), a subscript whose index is unpacked, alone or in a tuple (3.11), and a list, set or generator
+ * comprehension of unpacked elements and a dict comprehension of unpacked mappings (3.15). A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
  * calls, not a dialect.
  *
  * `DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types`, `Python
@@ -90,6 +93,7 @@
 import { Repr, Schemas } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as PythonPatterns from "../Patterns/Expressions.js";
 import * as PythonRegExp from "../RegExp/Expressions.js";
@@ -141,10 +145,31 @@ export const COMPREHENSIONS: readonly string[] = [LISTCOMP, SETCOMP, DICTCOMP, G
 /** The kinds with no counterpart in Python's grammar, kept as extensions (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "mbse-programs' kinds, names and shapes"). */
 export const EXTENSIONS: ReadonlySet<string> = new Set([LET, IMPORT, IMPORTFROM]);
 
-/** The minor version of Python 3 each kind arrived in, where it is not 3.0, from which `define` writes the kinds each
- * version has. */
-const SINCE: ReadonlyMap<string, number> = new Map([[YIELDFROM, 3], [AWAIT, 5], [JOINEDSTR, 6], [NAMEDEXPR, 8],
-  [TEMPLATESTR, 14]]);
+/** The versions of Python 3 it covers, oldest first, each by its name spelled as an identifier, as `define`'s frame
+ * binds it (`Python_3_8`). */
+export const VERSIONS: readonly string[] = Array.from({ length: 16 }, (_, minor) => `Python_3_${minor}`);
+
+/** The kinds that are not in every version, each with the versions that have it, from which `define` writes the kinds
+ * each version has: membership, no minimum version (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions"). */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([[YIELDFROM, VERSIONS.slice(3)],
+  [AWAIT, VERSIONS.slice(5)], [JOINEDSTR, VERSIONS.slice(6)], [NAMEDEXPR, VERSIONS.slice(8)],
+  [TEMPLATESTR, VERSIONS.slice(14)]]);
+
+/** Its grammar clauses, each with the versions that allow it, every other forbidding it, named as mbse-programs'
+ * `Check` names the language feature: what a property's value makes available within a kind (`Framework.Standards`).
+ * A kind is keyed by its tag, a helper by its schema's name, lowercased (`comprehension`). */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  FS.values("binop.op '@'", BINOP, "op", ["@"], VERSIONS.slice(5)),
+  FS.values("comprehension.is_async", "comprehension", "is_async", [true], VERSIONS.slice(6)),
+  FS.values("formattedvalue.debug", "formattedvalue", "debug", [true], VERSIONS.slice(8)),
+  FS.present("arguments.posonlyargs", "arguments", "posonlyargs", VERSIONS.slice(8)),
+  FS.kindsOf("subscript with an unpacked index", SUBSCRIPT, "slice", [STARRED, TUPLE],
+    ["tuple with an unpacked element"], VERSIONS.slice(11)),
+  FS.kindsOf("tuple with an unpacked element", TUPLE, "elts", [STARRED], [], null), // nested: no version names it
+  ...[LISTCOMP, SETCOMP, GENERATOREXP].map((kind) =>
+    FS.kindsOf(`${kind} of unpacked elements`, kind, "body", [STARRED], [], VERSIONS.slice(15))),
+  FS.absent("dictcomp of unpacked mappings", DICTCOMP, "body", VERSIONS.slice(15)),
+];
 
 /** Python3's union of its kinds, added to the framework's terms as the branch `python3`, its own kinds and the helpers
  * they hold, and its dialect's schema, whose singleton is `Expressions.Python.Python3`: run after `Framework.install` and
@@ -220,7 +245,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.Python.Python3.Dialect").ref(true).singleton("Expressions.Python.Python3").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("python3").schema([_.Dialect])]),
       // its union of its kinds: the framework's it reuses, its own, its extensions, and invalid syntax
@@ -367,9 +393,11 @@ export function install(txn: any): any {
  * related to its schema (`Expressions.Python.Python3.int`) by `Expressions.Framework.HasDomain`: `bool`, `int`,
  * `float`, `str` and `bytes`, and the tokens `NoneType` and `ellipsis`. And the versions of Python 3 it covers, by
  * their published names (`standards`, through `Expressions.Framework.Covers`), Python 3.0 to 3.15, each with its body,
- * its version and the kinds it has. Run after the installs, in a transaction of its own; run again, it writes nothing.
- * Its frame binds the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_8`) and each
- * domain by its name: `store.transaction(Python3.define)[0].get("int")`, each object by its reference (a
+ * its version and the kinds it has, and its grammar clauses by name (`grammar_clauses`, through
+ * `Expressions.Framework.Specifies`), each allowed or forbidden by each version (`GRAMMAR_CLAUSES`). Run after the
+ * installs, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each
+ * version by its name spelled as an identifier (`Python_3_8`), each grammar clause by its index (`grammar_clause_0`)
+ * and each domain by its name: `store.transaction(Python3.define)[0].get("int")`, each object by its reference (a
  * `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
  * `Framework.Domains.domains(store.singleton("Expressions.Python.Python3")).get("int")`. */
 export function define(txn: any): any {
@@ -377,14 +405,18 @@ export function define(txn: any): any {
     txn.Expressions.Framework.Standard];
   const every = (Python3.Term.as_schema().branches as { name: string; schema: unknown }[]) // each kind's schema, by its
     .filter((b) => !EXTENSIONS.has(b.name) && !F.INVALID_KINDS.has(b.name)); // tag, but an extension and invalid syntax
-  /** The kinds Python 3.`minor` has: each from the version it arrived in. */
-  const since = (minor: number): unknown[] => every.filter((b) => (SINCE.get(b.name) ?? 0) <= minor)
+  /** The kinds Python 3.`minor` has: each not in `ONLY`, and each that lists it there. */
+  const has = (minor: number): unknown[] => every.filter((b) => (ONLY.get(b.name) ?? VERSIONS).includes(VERSIONS[minor]!))
     .map((b) => b.schema);
+  const schemas = new Map<string, unknown>([
+    ...(Python3.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema] as [string, unknown]),
+    ...["Comprehension", "FormattedValue", "Arguments"].map((name) => [name.toLowerCase(), Python3[name].as_schema()] as [string, unknown])]);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, VERSIONS);
   const PSF = ["org.python"];
-  const versions = Object.fromEntries(Array.from({ length: 16 }, (_, minor) => [`Python_3_${minor}`, Standard]));
+  const versions = Object.fromEntries(VERSIONS.map((version) => [version, Standard]));
   return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: Python3.Dialect, ...versions, bool: Domain, int: Domain, float: Domain, str: Domain,
-      bytes: Domain, NoneType: Domain, ellipsis: Domain })
+      bytes: Domain, NoneType: Domain, ellipsis: Domain, ...clauses })
     .spec([
       // --- the versions of Python 3 it covers, each by its published name, with the kinds it has ---
       (_: any) => _.dialect.standards({
@@ -397,22 +429,24 @@ export function define(txn: any): any {
         "Python 3.12": (e: any) => e.standard(_.Python_3_12), "Python 3.13": (e: any) => e.standard(_.Python_3_13),
         "Python 3.14": (e: any) => e.standard(_.Python_3_14), "Python 3.15": (e: any) => e.standard(_.Python_3_15),
       }),
-      (_: any) => _.Python_3_0.bodies(PSF).revision((r: any) => r.version("3.0")).kinds(since(0)),
-      (_: any) => _.Python_3_1.bodies(PSF).revision((r: any) => r.version("3.1")).kinds(since(1)),
-      (_: any) => _.Python_3_2.bodies(PSF).revision((r: any) => r.version("3.2")).kinds(since(2)),
-      (_: any) => _.Python_3_3.bodies(PSF).revision((r: any) => r.version("3.3")).kinds(since(3)),
-      (_: any) => _.Python_3_4.bodies(PSF).revision((r: any) => r.version("3.4")).kinds(since(4)),
-      (_: any) => _.Python_3_5.bodies(PSF).revision((r: any) => r.version("3.5")).kinds(since(5)),
-      (_: any) => _.Python_3_6.bodies(PSF).revision((r: any) => r.version("3.6")).kinds(since(6)),
-      (_: any) => _.Python_3_7.bodies(PSF).revision((r: any) => r.version("3.7")).kinds(since(7)),
-      (_: any) => _.Python_3_8.bodies(PSF).revision((r: any) => r.version("3.8")).kinds(since(8)),
-      (_: any) => _.Python_3_9.bodies(PSF).revision((r: any) => r.version("3.9")).kinds(since(9)),
-      (_: any) => _.Python_3_10.bodies(PSF).revision((r: any) => r.version("3.10")).kinds(since(10)),
-      (_: any) => _.Python_3_11.bodies(PSF).revision((r: any) => r.version("3.11")).kinds(since(11)),
-      (_: any) => _.Python_3_12.bodies(PSF).revision((r: any) => r.version("3.12")).kinds(since(12)),
-      (_: any) => _.Python_3_13.bodies(PSF).revision((r: any) => r.version("3.13")).kinds(since(13)),
-      (_: any) => _.Python_3_14.bodies(PSF).revision((r: any) => r.version("3.14")).kinds(since(14)),
-      (_: any) => _.Python_3_15.bodies(PSF).revision((r: any) => r.version("3.15")).kinds(since(15)),
+      (_: any) => _.Python_3_0.bodies(PSF).revision((r: any) => r.version("3.0")).kinds(has(0)),
+      (_: any) => _.Python_3_1.bodies(PSF).revision((r: any) => r.version("3.1")).kinds(has(1)),
+      (_: any) => _.Python_3_2.bodies(PSF).revision((r: any) => r.version("3.2")).kinds(has(2)),
+      (_: any) => _.Python_3_3.bodies(PSF).revision((r: any) => r.version("3.3")).kinds(has(3)),
+      (_: any) => _.Python_3_4.bodies(PSF).revision((r: any) => r.version("3.4")).kinds(has(4)),
+      (_: any) => _.Python_3_5.bodies(PSF).revision((r: any) => r.version("3.5")).kinds(has(5)),
+      (_: any) => _.Python_3_6.bodies(PSF).revision((r: any) => r.version("3.6")).kinds(has(6)),
+      (_: any) => _.Python_3_7.bodies(PSF).revision((r: any) => r.version("3.7")).kinds(has(7)),
+      (_: any) => _.Python_3_8.bodies(PSF).revision((r: any) => r.version("3.8")).kinds(has(8)),
+      (_: any) => _.Python_3_9.bodies(PSF).revision((r: any) => r.version("3.9")).kinds(has(9)),
+      (_: any) => _.Python_3_10.bodies(PSF).revision((r: any) => r.version("3.10")).kinds(has(10)),
+      (_: any) => _.Python_3_11.bodies(PSF).revision((r: any) => r.version("3.11")).kinds(has(11)),
+      (_: any) => _.Python_3_12.bodies(PSF).revision((r: any) => r.version("3.12")).kinds(has(12)),
+      (_: any) => _.Python_3_13.bodies(PSF).revision((r: any) => r.version("3.13")).kinds(has(13)),
+      (_: any) => _.Python_3_14.bodies(PSF).revision((r: any) => r.version("3.14")).kinds(has(14)),
+      (_: any) => _.Python_3_15.bodies(PSF).revision((r: any) => r.version("3.15")).kinds(has(15)),
+      // --- its grammar clauses, each allowed or forbidden by each version ---
+      ...specs,
       // --- its domains ---
       (_: any) => _.dialect.domains({
         bool: (e: any) => e.domain(_.bool), int: (e: any) => e.domain(_.int),

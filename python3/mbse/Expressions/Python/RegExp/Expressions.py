@@ -135,7 +135,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Python.RegExp.Dialect").ref(True).singleton("Expressions.Python.RegExp").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("python_regexp").schema([_.Dialect])]),
             # its union of its kinds: its own, and invalid syntax

@@ -114,7 +114,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.TypeScript.Types.Dialect").ref(true).singleton("Expressions.TypeScript.Types").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("typescript_types").schema([_.Dialect])]),
       // its union of its kinds: its own, the terms a type holds, and invalid syntax

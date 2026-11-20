@@ -58,8 +58,11 @@ family's dialect of type expressions, which lists every branch of Python3's `Ter
 own kinds; a lambda's parameters have none, but mbse-programs' function definitions share the helper.
 
 The versions of Python 3 the dialect covers are data, which `define` writes, each owned by its published name, Python
-3.0 to 3.15, and holding the kinds it has, from the version each arrived in (`Framework.Standards`); an
-extension is in none. A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
+3.0 to 3.15, and holding the kinds it has, by membership (`ONLY`, `Framework.Standards`); an extension is in none.
+What a version changes within a kind is data too, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by
+each version: a binop's `@` (3.5), an `async` comprehension (3.6), a formatted value's `=` and positional-only
+parameters (3.8), a subscript whose index is unpacked, alone or in a tuple (3.11), and a list, set or generator
+comprehension of unpacked elements and a dict comprehension of unpacked mappings (3.15). A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
 calls, not a dialect.
 
 `DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types`, `Python
@@ -88,12 +91,12 @@ import keyword as _keyword
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 from mbse.Schemas.Framework import Schemas
 
 from . import Domains
 
-__all__ = ["install", "define", "DIALECT", "BUILTINS", "EXTENSIONS", "Writer", "Helper", "constant", "constant_text",
+__all__ = ["install", "define", "DIALECT", "BUILTINS", "EXTENSIONS", "VERSIONS", "ONLY", "GRAMMAR_CLAUSES", "Writer", "Helper", "constant", "constant_text",
            "name", "concatenatedstring", "joinedstr", "templatestr", "stringtext", "formattedvalue", "interpolation",
            "parenthesized", "tuple_", "list_", "set_", "dict_", "listcomp", "setcomp", "dictcomp", "generatorexp",
            "comprehension", "yield_", "yieldfrom", "await_", "attribute", "subscript", "slice_", "call", "keyword",
@@ -114,9 +117,30 @@ COMPREHENSIONS = (LISTCOMP, SETCOMP, DICTCOMP, GENERATOREXP)
 EXTENSIONS = frozenset({LET, IMPORT, IMPORTFROM})
 """The kinds with no counterpart in Python's grammar, kept as extensions (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "mbse-programs' kinds, names and shapes")."""
 
-_SINCE = {YIELDFROM: 3, AWAIT: 5, JOINEDSTR: 6, NAMEDEXPR: 8, TEMPLATESTR: 14}
-"""The minor version of Python 3 each kind arrived in, where it is not 3.0, from which `define` writes the kinds each
-version has."""
+VERSIONS = tuple(f"Python_3_{minor}" for minor in range(16))
+"""The versions of Python 3 it covers, oldest first, each by its name spelled as an identifier, as `define`'s frame
+binds it (`Python_3_8`)."""
+
+ONLY = {YIELDFROM: VERSIONS[3:], AWAIT: VERSIONS[5:], JOINEDSTR: VERSIONS[6:], NAMEDEXPR: VERSIONS[8:],
+        TEMPLATESTR: VERSIONS[14:]}
+"""The kinds that are not in every version, each with the versions that have it, from which `define` writes the kinds
+each version has: membership, no minimum version (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions")."""
+
+GRAMMAR_CLAUSES = (
+    FS.values("binop.op '@'", BINOP, "op", ("@",), VERSIONS[5:]),
+    FS.values("comprehension.is_async", "comprehension", "is_async", (True,), VERSIONS[6:]),
+    FS.values("formattedvalue.debug", "formattedvalue", "debug", (True,), VERSIONS[8:]),
+    FS.present("arguments.posonlyargs", "arguments", "posonlyargs", VERSIONS[8:]),
+    FS.kinds_of("subscript with an unpacked index", SUBSCRIPT, "slice", (STARRED, TUPLE),
+                ("tuple with an unpacked element",), VERSIONS[11:]),
+    FS.kinds_of("tuple with an unpacked element", TUPLE, "elts", (STARRED,), (), None),  # nested: no version names it
+    *(FS.kinds_of(f"{kind} of unpacked elements", kind, "body", (STARRED,), (), VERSIONS[15:])
+      for kind in (LISTCOMP, SETCOMP, GENERATOREXP)),
+    FS.absent("dictcomp of unpacked mappings", DICTCOMP, "body", VERSIONS[15:]),
+)
+"""Its grammar clauses, each with the versions that allow it, every other forbidding it, named as mbse-programs'
+`Check` names the language feature: what a property's value makes available within a kind (`Framework.Standards`).
+A kind is keyed by its tag, a helper by its schema's name, lowercased (`comprehension`)."""
 
 
 def install(txn: Any) -> Any:
@@ -195,7 +219,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.Python.Python3.Dialect").ref(True).singleton("Expressions.Python.Python3").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("python3").schema([_.Dialect])]),
             # its union of its kinds: the framework's it reuses, its own, its extensions, and invalid syntax
@@ -355,8 +380,10 @@ def define(txn: Any) -> Any:
     token's related to its schema (`Expressions.Python.Python3.int`) by `Expressions.Framework.HasDomain`: `bool`,
     `int`, `float`, `str` and `bytes`, and the tokens `NoneType` and `ellipsis`. And the versions of Python 3 it covers,
     by their published names (`standards`, through `Expressions.Framework.Covers`), Python 3.0 to 3.15, each with its
-    body, its version and the kinds it has. Run after the installs, in a transaction of its own; run again, it writes
-    nothing. Its frame binds the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_8`)
+    body, its version and the kinds it has, and its grammar clauses by name (`grammar_clauses`, through
+    `Expressions.Framework.Specifies`), each allowed or forbidden by each version (`GRAMMAR_CLAUSES`). Run after the
+    installs, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each
+    version by its name spelled as an identifier (`Python_3_8`), each grammar clause by its index (`grammar_clause_0`)
     and each domain by its name: `store.transaction(Python3.define)[0]["int"]`, each object by its reference (a
     `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
     `Framework.Domains.domains(store.singleton("Expressions.Python.Python3"))["int"]`."""
@@ -366,15 +393,19 @@ def define(txn: Any) -> Any:
              if branch.name not in EXTENSIONS and branch.name not in F.INVALID_KINDS}  # tag, but an extension and
     # invalid syntax
 
-    def since(minor: int) -> list[Any]:
-        """The kinds Python 3.`minor` has: each from the version it arrived in."""
-        return [schema for tag, schema in every.items() if _SINCE.get(tag, 0) <= minor]
+    def has(minor: int) -> list[Any]:
+        """The kinds Python 3.`minor` has: each not in `ONLY`, and each that lists it there."""
+        return [schema for tag, schema in every.items() if VERSIONS[minor] in ONLY.get(tag, VERSIONS)]
+
+    schemas = {**{branch.name: branch.schema for branch in Python3.Term.as_schema().branches},
+               **{name.lower(): getattr(Python3, name).as_schema() for name in ("Comprehension", "FormattedValue", "Arguments")}}
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, VERSIONS)
 
     PSF = ["org.python"]
     return txn.uid("mbse.Expressions.Python.Python3.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": Python3.Dialect, **{f"Python_3_{minor}": Standard for minor in range(16)},
                   "bool": Domain, "int": Domain, "float": Domain, "str": Domain,
-                  "bytes": Domain, "NoneType": Domain, "ellipsis": Domain})
+                  "bytes": Domain, "NoneType": Domain, "ellipsis": Domain, **clauses})
         .spec([
             # --- the versions of Python 3 it covers, each by its published name, with the kinds it has ---
             lambda _: _.dialect.standards({
@@ -387,22 +418,24 @@ def define(txn: Any) -> Any:
                 "Python 3.12": lambda e: e.standard(_.Python_3_12), "Python 3.13": lambda e: e.standard(_.Python_3_13),
                 "Python 3.14": lambda e: e.standard(_.Python_3_14), "Python 3.15": lambda e: e.standard(_.Python_3_15),
             }),
-            lambda _: _.Python_3_0.bodies(PSF).revision(lambda r: r.version("3.0")).kinds(since(0)),
-            lambda _: _.Python_3_1.bodies(PSF).revision(lambda r: r.version("3.1")).kinds(since(1)),
-            lambda _: _.Python_3_2.bodies(PSF).revision(lambda r: r.version("3.2")).kinds(since(2)),
-            lambda _: _.Python_3_3.bodies(PSF).revision(lambda r: r.version("3.3")).kinds(since(3)),
-            lambda _: _.Python_3_4.bodies(PSF).revision(lambda r: r.version("3.4")).kinds(since(4)),
-            lambda _: _.Python_3_5.bodies(PSF).revision(lambda r: r.version("3.5")).kinds(since(5)),
-            lambda _: _.Python_3_6.bodies(PSF).revision(lambda r: r.version("3.6")).kinds(since(6)),
-            lambda _: _.Python_3_7.bodies(PSF).revision(lambda r: r.version("3.7")).kinds(since(7)),
-            lambda _: _.Python_3_8.bodies(PSF).revision(lambda r: r.version("3.8")).kinds(since(8)),
-            lambda _: _.Python_3_9.bodies(PSF).revision(lambda r: r.version("3.9")).kinds(since(9)),
-            lambda _: _.Python_3_10.bodies(PSF).revision(lambda r: r.version("3.10")).kinds(since(10)),
-            lambda _: _.Python_3_11.bodies(PSF).revision(lambda r: r.version("3.11")).kinds(since(11)),
-            lambda _: _.Python_3_12.bodies(PSF).revision(lambda r: r.version("3.12")).kinds(since(12)),
-            lambda _: _.Python_3_13.bodies(PSF).revision(lambda r: r.version("3.13")).kinds(since(13)),
-            lambda _: _.Python_3_14.bodies(PSF).revision(lambda r: r.version("3.14")).kinds(since(14)),
-            lambda _: _.Python_3_15.bodies(PSF).revision(lambda r: r.version("3.15")).kinds(since(15)),
+            lambda _: _.Python_3_0.bodies(PSF).revision(lambda r: r.version("3.0")).kinds(has(0)),
+            lambda _: _.Python_3_1.bodies(PSF).revision(lambda r: r.version("3.1")).kinds(has(1)),
+            lambda _: _.Python_3_2.bodies(PSF).revision(lambda r: r.version("3.2")).kinds(has(2)),
+            lambda _: _.Python_3_3.bodies(PSF).revision(lambda r: r.version("3.3")).kinds(has(3)),
+            lambda _: _.Python_3_4.bodies(PSF).revision(lambda r: r.version("3.4")).kinds(has(4)),
+            lambda _: _.Python_3_5.bodies(PSF).revision(lambda r: r.version("3.5")).kinds(has(5)),
+            lambda _: _.Python_3_6.bodies(PSF).revision(lambda r: r.version("3.6")).kinds(has(6)),
+            lambda _: _.Python_3_7.bodies(PSF).revision(lambda r: r.version("3.7")).kinds(has(7)),
+            lambda _: _.Python_3_8.bodies(PSF).revision(lambda r: r.version("3.8")).kinds(has(8)),
+            lambda _: _.Python_3_9.bodies(PSF).revision(lambda r: r.version("3.9")).kinds(has(9)),
+            lambda _: _.Python_3_10.bodies(PSF).revision(lambda r: r.version("3.10")).kinds(has(10)),
+            lambda _: _.Python_3_11.bodies(PSF).revision(lambda r: r.version("3.11")).kinds(has(11)),
+            lambda _: _.Python_3_12.bodies(PSF).revision(lambda r: r.version("3.12")).kinds(has(12)),
+            lambda _: _.Python_3_13.bodies(PSF).revision(lambda r: r.version("3.13")).kinds(has(13)),
+            lambda _: _.Python_3_14.bodies(PSF).revision(lambda r: r.version("3.14")).kinds(has(14)),
+            lambda _: _.Python_3_15.bodies(PSF).revision(lambda r: r.version("3.15")).kinds(has(15)),
+            # --- its grammar clauses, each allowed or forbidden by each version ---
+            *specs,
             # --- its domains ---
             lambda _: _.dialect.domains({
                 "bool": lambda e: e.domain(_.bool), "int": lambda e: e.domain(_.int),

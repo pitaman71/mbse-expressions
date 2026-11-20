@@ -127,7 +127,8 @@ def install(txn: Any) -> Any:
             lambda _: _.Dialect.name("Expressions.SystemVerilog.Assertions.Dialect").ref(True).singleton("Expressions.SystemVerilog.Assertions").adjacencies({
                 "domains": lambda a: a.relation([Framework.Defines]).me("dialect"),
                 "operations": lambda a: a.relation([Framework.Operates]).me("dialect"),
-                "standards": lambda a: a.relation([Framework.Covers]).me("dialect")}),
+                "standards": lambda a: a.relation([Framework.Covers]).me("dialect"),
+                "grammar_clauses": lambda a: a.relation([Framework.Specifies]).me("dialect")}),
             lambda _: _.Dialects.name("Expressions.Framework.Dialect").branches([
                 lambda t: t.name("systemverilog_assertions").schema([_.Dialect])]),
             # its union of its kinds: `Expressions`' branches, which that dialect's install adds, and its own

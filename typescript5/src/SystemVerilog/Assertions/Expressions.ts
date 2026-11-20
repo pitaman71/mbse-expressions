@@ -138,7 +138,8 @@ export function install(txn: any): any {
       (_: any) => _.Dialect.name("Expressions.SystemVerilog.Assertions.Dialect").ref(true).singleton("Expressions.SystemVerilog.Assertions").adjacencies({
         domains: (a: any) => a.relation([Framework.Defines]).me("dialect"),
         operations: (a: any) => a.relation([Framework.Operates]).me("dialect"),
-        standards: (a: any) => a.relation([Framework.Covers]).me("dialect") }),
+        standards: (a: any) => a.relation([Framework.Covers]).me("dialect"),
+        grammar_clauses: (a: any) => a.relation([Framework.Specifies]).me("dialect") }),
       (_: any) => _.Dialects.name("Expressions.Framework.Dialect").branches([
         (t: any) => t.name("systemverilog_assertions").schema([_.Dialect])]),
       // its union of its kinds: `Expressions`' branches, which that dialect's install adds, and its own
