@@ -257,7 +257,7 @@ export function install(txn: any): any {
         (t: any) => t.name("dialect").schema([_.Dialect]), (t: any) => t.name("clause")]).properties({
         name: S.OfStr }).uniques([["dialect", "name"], ["clause"]]),
       (_: any) => _.HasGrammarClause.name("Expressions.Framework.HasGrammarClause").links([
-        (t: any) => t.name("kind").schema([_.OfObject]), (t: any) => t.name("clause")]).uniques("clause"),
+        (t: any) => t.name("kind").schema([_.OfObject]), (t: any) => t.name("clause")]).uniques("kind"),  # one kind each
       (_: any) => _.Holds.name("Expressions.Framework.Holds").links([
         (t: any) => t.name("clause").schema([_.GrammarClause]), (t: any) => t.name("kind").schema([_.OfObject]),
       ]).uniques([]), // a set
@@ -266,10 +266,10 @@ export function install(txn: any): any {
       ]).uniques([]), // a set
       (_: any) => _.Allows.name("Expressions.Framework.Allows").links([
         (t: any) => t.name("standard").schema([_.Standard]), (t: any) => t.name("clause").schema([_.GrammarClause]),
-      ]).properties({ before: S.OfBool, after: S.OfBool }).uniques([["standard", "clause"]]),
+      ]).properties({ before: S.OfBool, after: S.OfBool }).uniques([["before", "after"]]),  # one entry an edition and a grammar clause
       (_: any) => _.Forbids.name("Expressions.Framework.Forbids").links([
         (t: any) => t.name("standard").schema([_.Standard]), (t: any) => t.name("clause").schema([_.GrammarClause]),
-      ]).properties({ before: S.OfBool, after: S.OfBool }).uniques([["standard", "clause"]]),
+      ]).properties({ before: S.OfBool, after: S.OfBool }).uniques([["before", "after"]]),  # one entry an edition and a grammar clause
       (_: any) => _.OfObject.name("Schemas.OfObject").adjacencies({
         standards: (a: any) => a.relation([_.HasStandard]).me("kind"),
         grammar_clauses: (a: any) => a.relation([_.HasGrammarClause]).me("kind") }),
