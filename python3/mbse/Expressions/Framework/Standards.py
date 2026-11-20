@@ -21,12 +21,14 @@ The reading interface, over a dialect's or an edition's `Readers.OfObject`, foun
   entries from its side, through its extension adjacency `standards`.
 
 What changes from one edition to the next within a kind is data too: a grammar clause, an alternative within a
-production of the dialect's grammar, a language feature (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions": "PEP 614 removing a restriction is still a conditional clause just with an opposite sense of version progression").
-A dialect owns each by name (`Expressions.Framework.Specifies`); an `Expressions.Framework.GrammarClause` is a kind
+production of the dialect's grammar, a language feature (mbse-basis [grammar clauses by
+version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions": "PEP 614 removing a restriction is still
+a conditional clause just with an opposite sense of version progression"). A dialect owns each by name
+(`Expressions.Framework.Specifies`); an `Expressions.Framework.GrammarClause` is a kind
 (`Expressions.Framework.HasGrammarClause`, which the kind's schema reads through its extension adjacency
-`grammar_clauses`), one of its properties, and what that property may hold there: present or absent (`present`), one
-of these values (`values`), or a term of one of these kinds (`Expressions.Framework.Holds`), each kind's term holding
-what the nested grammar clauses of that kind say (`Expressions.Framework.Nests`). An edition allows or forbids it
+`grammar_clauses`), one of its properties, and what that property may hold there: present or absent (`present`), one of
+these values (`values`), or a term of one of these kinds (`Expressions.Framework.Holds`), each kind's term holding what
+the nested grammar clauses of that kind say (`Expressions.Framework.Nests`). An edition allows or forbids it
 (`Expressions.Framework.Allows`, `Expressions.Framework.Forbids`), each entry with the optional flags `before` and
 `after`, as the user decided: "Add two optional properties on `Allows` and `Forbids` : 'before' and 'after' which are
 only used by the system to guess support in the case that an edition has no representation. And a grammar clause that
@@ -198,7 +200,8 @@ def takes(dialect: Readers.OfObject, term: Any) -> list[Readers.OfObject]:
     kind. Nothing within the term is read but what its grammar clauses' properties hold: a caller walks the tree."""
     record = _record(term)
     schema = record.as_schema()
-    return [clause for clause in grammar_clauses(dialect).values() if _kind(clause) is schema and _takes(clause, record)]
+    return [clause for clause in grammar_clauses(dialect).values()
+            if _kind(clause) is schema and _takes(clause, record)]
 
 
 def _verdicts(clause: Readers.OfObject) -> list[tuple[Readers.OfObject, bool, dict[str, Any]]]:
@@ -215,7 +218,8 @@ def _order(standard: Readers.OfObject) -> tuple[Any, ...] | None:
     if "revision" not in found:
         return None
     branch, value = found["revision"]
-    return (found.get("number"), branch), tuple(int(part) for part in value.split(".")) if branch == "version" else (value,)
+    at = tuple(int(part) for part in value.split(".")) if branch == "version" else (value,)
+    return (found.get("number"), branch), at
 
 
 def allows(standard: Readers.OfObject, clause: Readers.OfObject) -> bool:
@@ -233,7 +237,8 @@ def allows(standard: Readers.OfObject, clause: Readers.OfObject) -> bool:
     before = [at for at, _, _ in placed if at < order[1]] if placed else []
     after = [at for at, _, _ in placed if at > order[1]] if placed else []
     guesses = {allowed for at, allowed, flags in placed
-               if (before and at == max(before) and flags.get("after")) or (after and at == min(after) and flags.get("before"))}
+               if (before and at == max(before) and flags.get("after"))
+               or (after and at == min(after) and flags.get("before"))}
     return guesses.pop() if len(guesses) == 1 else True
 
 
@@ -314,5 +319,6 @@ def grammar_clauses_spec(txn: Any, clauses: Sequence[GrammarClause], schemas: Ma
         return spec
 
     return ({symbol[clause.name]: GC for clause in clauses},
-            [lambda _: _.dialect.grammar_clauses({clause.name: lambda e, clause=clause: e.clause(getattr(_, symbol[clause.name]))
-                                                  for clause in clauses}), *(write(clause) for clause in clauses)])
+            [lambda _: _.dialect.grammar_clauses({
+                clause.name: lambda e, clause=clause: e.clause(getattr(_, symbol[clause.name])) for clause in clauses}),
+             *(write(clause) for clause in clauses)])

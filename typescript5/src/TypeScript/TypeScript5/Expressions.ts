@@ -68,10 +68,10 @@
  * TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each
  * has all its own, the patterns its `Term` lists being `TypeScript Patterns`', and an extension none. What a version
  * changes within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each version: an
- * import expression's `options` (5.3) and its phase `defer` (5.9). `DIALECT` reads the kinds (`Terms.Dialect`). There are no writers: a TypeScript5
- * term is written through the builders, in a transaction (mbse-basis [PRI-019: fluent builder
- * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its helpers nested, as its
- * printer and its checks read it.
+ * import expression's `options` (5.3) and its phase `defer` (5.9). `DIALECT` reads the kinds (`Terms.Dialect`). There
+ * are no writers: a TypeScript5 term is written through the builders, in a transaction (mbse-basis [PRI-019: fluent
+ * builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its helpers nested, as
+ * its printer and its checks read it.
  *
  * Its kinds of domain, the branches of its union `Expressions.TypeScript.TypeScript5.DomainKind`, which `install` adds
  * to the framework's `Expressions.Framework.DomainKind` as the branch `typescript5`, each with the inferred `ordered`:

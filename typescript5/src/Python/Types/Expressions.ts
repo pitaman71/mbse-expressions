@@ -58,7 +58,8 @@ export const HELPERS: readonly string[] = [];
 
 /** The kinds that are not in every version, each with the versions that have it (every one, Python 3.12 to 3.15, as
  * mbse-programs has them), from which `define` writes the kinds each version has: membership, no minimum version. */
-export const ONLY: ReadonlyMap<string, readonly string[]> = new Map(TAGS.map((tag) => [tag, Family.VERSIONS.slice(12)]));
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map(
+  TAGS.map((tag) => [tag, Family.VERSIONS.slice(12)]));
 
 /** Its grammar clauses, each with the versions that allow it, every other forbidding it, named as mbse-programs'
  * `Check` names the language feature: a type parameter's default (PEP 696). */
@@ -115,10 +116,9 @@ export function install(txn: any): any {
  * Python Types' dialect as data: the singleton `Expressions.Python.Types` owning the versions of Python 3 it covers, by
  * their published names (`standards`), Python 3.0 to 3.15, each with its body, its version and its own kinds it has
  * (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each version
- * (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
- * dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_12`) and each grammar clause by its
- * index (`grammar_clause_0`).
- */
+ * (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+ * the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_12`) and each grammar clause by
+ * its index (`grammar_clause_0`). */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.Python.Types, txn.Expressions.Framework.Standard];
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).filter((b) => TAGS.includes(b.name));
@@ -126,9 +126,11 @@ export function define(txn: any): any {
   const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES,
     new Map(every.map((b) => [b.name, b.schema])), [Family.VERSIONS]);
   const version = (minor: number) => (_: any) => _[`Python_3_${minor}`].bodies(["org.python"]).revision(
-    (r: any) => r.version(`3.${minor}`)).kinds(every.filter((b) => ONLY.get(b.name)!.includes(Family.VERSIONS[minor]!)).map((b) => b.schema));
+    (r: any) => r.version(`3.${minor}`)).kinds(every.filter(
+      (b) => ONLY.get(b.name)!.includes(Family.VERSIONS[minor]!)).map((b) => b.schema));
   return txn.uid("mbse.Expressions.Python.Types.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])), ...clauses })
+    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])),
+      ...clauses })
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(minors.map((minor) => [`Python 3.${minor}`,
         (e: any) => e.standard(_[`Python_3_${minor}`])]))),

@@ -265,19 +265,23 @@ def install(txn: Any) -> Any:
                 lambda t: t.name("dialect").schema([_.Dialect]), lambda t: t.name("clause")]).properties({
                 "name": S.OfStr}).uniques([["dialect", "name"], ["clause"]]),
             lambda _: _.HasGrammarClause.name("Expressions.Framework.HasGrammarClause").links([
-                lambda t: t.name("kind").schema([_.OfObject]), lambda t: t.name("clause")]).uniques("kind"),  # one kind each
+                lambda t: t.name("kind").schema([_.OfObject]), lambda t: t.name("clause")
+            ]).uniques("kind"),  # one kind each
             lambda _: _.Holds.name("Expressions.Framework.Holds").links([
                 lambda t: t.name("clause").schema([_.GrammarClause]), lambda t: t.name("kind").schema([_.OfObject])
             ]).uniques([]),  # a set
             lambda _: _.Nests.name("Expressions.Framework.Nests").links([
-                lambda t: t.name("clause").schema([_.GrammarClause]), lambda t: t.name("nested").schema([_.GrammarClause])
+                lambda t: t.name("clause").schema([_.GrammarClause]),
+                lambda t: t.name("nested").schema([_.GrammarClause])
             ]).uniques([]),  # a set
             lambda _: _.Allows.name("Expressions.Framework.Allows").links([
                 lambda t: t.name("standard").schema([_.Standard]), lambda t: t.name("clause").schema([_.GrammarClause])
-            ]).properties({"before": S.OfBool, "after": S.OfBool}).uniques([["before", "after"]]),  # one entry an edition and a grammar clause
+            ]).properties({"before": S.OfBool, "after": S.OfBool}).uniques([["before", "after"]]),  # one entry an
+            # edition and a grammar clause
             lambda _: _.Forbids.name("Expressions.Framework.Forbids").links([
                 lambda t: t.name("standard").schema([_.Standard]), lambda t: t.name("clause").schema([_.GrammarClause])
-            ]).properties({"before": S.OfBool, "after": S.OfBool}).uniques([["before", "after"]]),  # one entry an edition and a grammar clause
+            ]).properties({"before": S.OfBool, "after": S.OfBool}).uniques([["before", "after"]]),  # one entry an
+            # edition and a grammar clause
             lambda _: _.OfObject.name("Schemas.OfObject").adjacencies({
                 "standards": lambda a: a.relation([_.HasStandard]).me("kind"),
                 "grammar_clauses": lambda a: a.relation([_.HasGrammarClause]).me("kind")}),

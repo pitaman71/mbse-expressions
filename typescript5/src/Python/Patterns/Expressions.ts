@@ -144,11 +144,10 @@ export function install(txn: any): any {
 }
 
 /**
- * Python Patterns' dialect as data: the singleton `Expressions.Python.Patterns` owning the versions of Python 3 it covers,
- * by their published names (`standards`), Python 3.10 to 3.15, each with its body, its version and its own kinds it has,
- * every one in each. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
- * (`dialect`) and each version by its name spelled as an identifier (`Python_3_10`).
- */
+ * Python Patterns' dialect as data: the singleton `Expressions.Python.Patterns` owning the versions of Python 3 it
+ * covers, by their published names (`standards`), Python 3.10 to 3.15, each with its body, its version and its own
+ * kinds it has, every one in each. Run after `install`, in a transaction of its own; run again, it writes nothing. Its
+ * frame binds the dialect (`dialect`) and each version by its name spelled as an identifier (`Python_3_10`). */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.Python.Patterns, txn.Expressions.Framework.Standard];
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).filter((b) => TAGS.includes(b.name));

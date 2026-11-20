@@ -586,8 +586,9 @@ export function install(txn: any): any {
  * the kinds it has, and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each edition
  * (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
  * the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`), each grammar
- * clause by its index (`grammar_clause_0`) and each domain by its name, spelled as its schema's is: `store.transaction(Cpp.define)[0].get("std_bfloat16_t")`, each object by its
- * reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+ * clause by its index (`grammar_clause_0`) and each domain by its name, spelled as its schema's is:
+ * `store.transaction(Cpp.define)[0].get("std_bfloat16_t")`, each object by its reference (a `References.OfObject`), not
+ * a visitor. Within a transaction, a domain is read from the dialect:
  * `Framework.Domains.domains(store.singleton("Expressions.Cpp.Expressions")).get("std::bfloat16_t")`. */
 export function define(txn: any): any {
   const OWN = txn.Expressions.Cpp.Expressions;
@@ -596,11 +597,13 @@ export function define(txn: any): any {
     .filter((b) => TAGS.includes(b.name) && !EXTENSIONS.has(b.name)) // kinds' schema, by its tag, but an extension
     .map((b) => [b.name, b.schema]));
   const schemas = new Map<string, unknown>([
-    ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema] as [string, unknown]),
+    ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map(
+      (b) => [b.name, b.schema] as [string, unknown]),
     ...CLAUSE_HELPERS.map((name) => [name.toLowerCase(), OWN[name].as_schema()] as [string, unknown])]);
   const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, [C.CPP_EDITIONS]);
   /** The kinds an edition has, by its frame symbol: each not in `ONLY`, and each that lists it there. */
-  const has = (edition: string): unknown[] => [...every].filter(([tag]) => (ONLY.get(tag) ?? [edition]).includes(edition))
+  const has = (edition: string): unknown[] => [...every]
+    .filter(([tag]) => (ONLY.get(tag) ?? [edition]).includes(edition))
     .map(([, schema]) => schema);
   return txn.uid("mbse.Expressions.Cpp.Expressions.define/1")
       .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
@@ -723,9 +726,9 @@ export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([REQUIRESEXP
 
 const CPP20 = ["Cpp20", "Cpp23"], CPP23 = ["Cpp23"];
 /** The helpers its grammar clauses are about, each keyed by its schema's name, lowercased. */
-const CLAUSE_HELPERS: readonly string[] = ["DeclSpecifier", "PrimitiveTypeSpecifier", "OperatorName", "LambdaDeclarator",
-  "InitCapture", "PlaceholderTypeSpecifier", "TypeParameter", "TemplateTemplateParameter", "ParameterDeclaration",
-  "ExplicitSpecifier"];
+const CLAUSE_HELPERS: readonly string[] = ["DeclSpecifier", "PrimitiveTypeSpecifier", "OperatorName",
+  "LambdaDeclarator", "InitCapture", "PlaceholderTypeSpecifier", "TypeParameter", "TemplateTemplateParameter",
+  "ParameterDeclaration", "ExplicitSpecifier"];
 
 /** Its grammar clauses, each with the editions that allow it, every other forbidding it, named as mbse-programs'
  * `Check` names the language feature; `static` among a lambda's specifiers is a nested grammar clause. */

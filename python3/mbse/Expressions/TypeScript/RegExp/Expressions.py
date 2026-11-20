@@ -47,10 +47,10 @@ its edition and its common names (`ECMAScript 2015`, `ES2015`), and the kinds it
 flag's five in the 15th (ES2024) to the 17th, `modifiers` in the 16th and the 17th, every other in each, the 17th's
 pattern grammar (22.2.1) the 16th's *(agent)*. What an edition changes within a kind is data, its grammar clauses
 (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: the flags `u` and `y` (ES2015), `s` (ES2018), `d`
-(ES2022) and `v` (ES2024), and a named group, a lookbehind and a property escape (ES2018). `DIALECT` reads its kinds and its family's other dialects'
-terms (`reads`). `Text` writes its kinds as ECMAScript source, as the family's printer (`TypeScript5.Text.ToText`)
-dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
-syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda r: r.character(lambda c: c.value(97))`."""
+(ES2022) and `v` (ES2024), and a named group, a lookbehind and a property escape (ES2018). `DIALECT` reads its kinds and
+its family's other dialects' terms (`reads`). `Text` writes its kinds as ECMAScript source, as the family's printer
+(`TypeScript5.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
+fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda r: r.character(lambda c: c.value(97))`."""
 
 from __future__ import annotations
 
@@ -60,8 +60,8 @@ from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as 
 
 from ..TypeScript5 import Domains as _family
 
-__all__ = ["install", "define", "DIALECT", "ONLY", "GRAMMAR_CLAUSES", "SYMBOLS", "TAGS", "HELPERS", "EDITIONS", "ASSERTIONS", "CHARACTERSETS",
-           "FLAGS", "MODIFIERS"]
+__all__ = ["install", "define", "DIALECT", "ONLY", "GRAMMAR_CLAUSES", "SYMBOLS", "TAGS", "HELPERS", "EDITIONS",
+           "ASSERTIONS", "CHARACTERSETS", "FLAGS", "MODIFIERS"]
 
 REGEXPLITERAL, PATTERN, ALTERNATIVE, GROUP, CAPTURINGGROUP, QUANTIFIER = (
     "regexpliteral", "pattern", "alternative", "group", "capturinggroup", "quantifier")

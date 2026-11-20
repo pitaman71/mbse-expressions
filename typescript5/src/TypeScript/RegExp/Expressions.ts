@@ -44,16 +44,15 @@
  *
  * The editions of ECMA-262 it covers are data, which `define` writes, each owned by its designation as Ecma
  * International writes it (`ECMA-262 6th Edition`), from the 5.1 Edition to the 17th (ECMAScript 2026), each with its
- * body, its number, its edition and its common names (`ECMAScript 2015`, `ES2015`), and the kinds it has, by
- * membership (`ONLY`): the `v` flag's five in the 15th (ES2024) to the 17th, `modifiers` in the 16th and the 17th, every
- * other in each, the 17th's pattern grammar (22.2.1) the 16th's *(agent)*. What an edition changes within a kind is
- * data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: the flags `u` and `y`
- * (ES2015), `s` (ES2018), `d` (ES2022) and `v` (ES2024), and a named group, a lookbehind and a property escape
- * (ES2018). `DIALECT` reads its kinds and its family's other
- * dialects' terms (`reads`). `Text` writes its kinds as ECMAScript source, as the family's printer
- * (`TypeScript5.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
- * fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(r) => r.character((c) => c.value(97n))`.
- */
+ * body, its number, its edition and its common names (`ECMAScript 2015`, `ES2015`), and the kinds it has, by membership
+ * (`ONLY`): the `v` flag's five in the 15th (ES2024) to the 17th, `modifiers` in the 16th and the 17th, every other in
+ * each, the 17th's pattern grammar (22.2.1) the 16th's *(agent)*. What an edition changes within a kind is data, its
+ * grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: the flags `u` and `y` (ES2015), `s`
+ * (ES2018), `d` (ES2022) and `v` (ES2024), and a named group, a lookbehind and a property escape (ES2018). `DIALECT`
+ * reads its kinds and its family's other dialects' terms (`reads`). `Text` writes its kinds as ECMAScript source, as
+ * the family's printer (`TypeScript5.Text.ToText`) dispatches them to it. Its terms are written through the builders
+ * (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(r) => r.character((c) =>
+ * c.value(97n))`. */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Repr } from "@mbse/schemas/Framework";

@@ -67,8 +67,8 @@ The versions of TypeScript 5 the dialect covers are data, which `define` writes,
 TypeScript 5.0 to 5.9, and holding the kinds it has (`Framework.Standards`): every kind is older than 5.0, so each has
 all its own, the patterns its `Term` lists being `TypeScript Patterns`', and an extension none. What a version changes
 within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each version: an import
-expression's `options` (5.3) and its phase `defer` (5.9). `DIALECT` reads the kinds (`Terms.Dialect`). There are no writers: a TypeScript5 term
-is written through the builders, in a transaction (mbse-basis [PRI-019: fluent builder
+expression's `options` (5.3) and its phase `defer` (5.9). `DIALECT` reads the kinds (`Terms.Dialect`). There are no
+writers: a TypeScript5 term is written through the builders, in a transaction (mbse-basis [PRI-019: fluent builder
 syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `tree(term)` reads a term with its helpers nested, as its printer
 and its checks read it.
 
@@ -93,8 +93,8 @@ from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as 
 
 from . import Domains, Nodes
 
-__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "GRAMMAR_CLAUSES", "QUOTES", "FLAGS", "TYPE_PARAMETERS", "Node", "tree",
-           "bound_names", "constant_text"]
+__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "GRAMMAR_CLAUSES", "QUOTES", "FLAGS", "TYPE_PARAMETERS",
+           "Node", "tree", "bound_names", "constant_text"]
 
 IDENTIFIER, PRIVATEIDENTIFIER, LITERAL, CONSTANT = "identifier", "privateidentifier", "literal", "constant"
 TEMPLATELITERAL, TAGGEDTEMPLATEEXPRESSION, THISEXPRESSION, SUPER = (

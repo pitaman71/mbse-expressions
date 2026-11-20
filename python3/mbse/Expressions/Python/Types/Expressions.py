@@ -109,9 +109,9 @@ def define(txn: Any) -> Any:
     """Python Types' dialect as data: the singleton `Expressions.Python.Types` owning the versions of Python 3 it covers,
     by their published names (`standards`), Python 3.0 to 3.15, each with its body, its version and its own kinds it has
     (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each version
-    (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the
-    dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_12`) and each grammar clause by its
-    index (`grammar_clause_0`)."""
+    (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+    the dialect (`dialect`), each version by its name spelled as an identifier (`Python_3_12`) and each grammar clause
+    by its index (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.Python.Types, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
     minors = range(16)

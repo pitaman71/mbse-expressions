@@ -70,13 +70,12 @@ syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an exte
 within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition, C23's: a
 literal's digit separators, a binary integer, the suffix `wb` and the decimal floating suffixes, `true` and `false`, an
 empty initializer, `{}`, and `alignof` spelled so. A `u8` character literal, C23's, stays unrecorded: it is two
-properties' values together, `prefix` and `quote`, where a grammar clause is about one *(agent)*. `DIALECT` reads the kinds
-(`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C folded before it
+properties' values together, `prefix` and `quote`, where a grammar clause is about one *(agent)*. `DIALECT` reads the
+kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C folded before it
 was complete through the builders, in a transaction, a cast's type a spec of C Types' `Term`, written through the
-builders too:
-`store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through the builders
-(mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an
-expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
+builders too: `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written through
+the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText`
+writes an expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
 
 Its kind of domain, the branch of its union `Expressions.C.Expressions.DomainKind`, which `install` adds to the
 framework's `Expressions.Framework.DomainKind` as the branch `c`: the token `nullptr_t` (`OfNullptr`), C23's, with the
@@ -359,9 +358,9 @@ def define(txn: Any) -> Any:
     parts, its common name and the kinds it has, and its grammar clauses by name (`grammar_clauses`), each allowed or
     forbidden by each edition (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it
     writes nothing. Its frame binds the dialect (`dialect`), each edition by its common name (`C11`), each grammar
-    clause by its index (`grammar_clause_0`) and each domain by its name: `store.transaction(C.define)[0]["int32_t"]`, each object by its reference (a `References.OfObject`), not a
-    visitor. Within a transaction, a domain is read from the dialect:
-    `Framework.Domains.domains(store.singleton("Expressions.C.Expressions"))["int32_t"]`."""
+    clause by its index (`grammar_clause_0`) and each domain by its name: `store.transaction(C.define)[0]["int32_t"]`,
+    each object by its reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from
+    the dialect: `Framework.Domains.domains(store.singleton("Expressions.C.Expressions"))["int32_t"]`."""
     OWN, Domain = txn.Expressions.C.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches  # each of its own kinds' schema,

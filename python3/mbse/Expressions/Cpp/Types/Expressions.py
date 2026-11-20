@@ -25,12 +25,12 @@ Its helpers are none (`HELPERS`): a type-id's parts, its specifiers, declarators
 name (`Expressions.Cpp.Expressions.Name`) and a term (`Expressions.Cpp.Expressions.Term`) are.
 
 The editions it covers are data, which `define` writes, C++'s (C++17, C++20, C++23), each with its own kinds it has,
-both in each. No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads
-its type from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
-syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t: t.typeid(lambda i: i.specifiers([lambda s:
+both in each. No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast
+reads its type from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent
+builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t: t.typeid(lambda i: i.specifiers([lambda s:
 s.primitivetypespecifier(lambda p: p.keyword("int"))]))`. `DIALECT` reads its kinds and the terms of the dialects whose
-terms are its subterms, `Cpp` and `C Preprocessor` (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis [CAP-098:
-dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided))."""
+terms are its subterms, `Cpp` and `C Preprocessor` (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis
+[CAP-098: dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided))."""
 
 from __future__ import annotations
 

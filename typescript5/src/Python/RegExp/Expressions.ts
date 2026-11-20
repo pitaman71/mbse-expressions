@@ -51,15 +51,13 @@
  *
  * The versions of Python it covers are data, which `define` writes: Python 3.0 to 3.15, each with its own kinds it has
  * by membership (`ONLY`: `atomicgroup` in Python 3.11 to 3.15, every other in each), and its grammar clauses
- * (`GRAMMAR_CLAUSES`), each allowed or forbidden by each version: a possessive quantifier (3.11) and scoped flags (3.6).
- * `\N{...}` (3.8) and `\z` (3.14) stay unrecorded: no property of a term tells them, a character's spelling being any
- * text and `\z` an assertion `stringend`, as `\Z` is *(agent)*. Its completeness is data:
+ * (`GRAMMAR_CLAUSES`), each allowed or forbidden by each version: a possessive quantifier (3.11) and scoped flags
+ * (3.6). `\N{...}` (3.8) and `\z` (3.14) stay unrecorded: no property of a term tells them, a character's spelling
+ * being any text and `\z` an assertion `stringend`, as `\Z` is *(agent)*. Its completeness is data:
  * `grammars/python3-re.json` lists the codes `re`'s parser writes, each mapped to its kinds. `DIALECT` reads its kinds
  * and its family's other dialects' terms. `Text` writes its kinds as `re`'s syntax, as the family's printer
- * (`Python3.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis
- * [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
- * `(u) => u.character((c) => c.value(97n))`.
- */
+ * (`Python3.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
+ * fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(u) => u.character((c) => c.value(97n))`. */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -99,7 +97,8 @@ export const TAGS: readonly string[] = [PATTERN, ALTERNATIVE, GROUP, CAPTURINGGR
 export const HELPERS: readonly string[] = [];
 
 /** The kinds that are not in every version, each with the versions that have it, as `re`'s parser writes it
- * (`ATOMIC_GROUP`, from 3.11), from which `define` writes the kinds each version has: membership, no minimum version. */
+ * (`ATOMIC_GROUP`, from 3.11), from which `define` writes the kinds each version has: membership, no minimum version.
+ * */
 export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([[ATOMICGROUP, Family.VERSIONS.slice(11)]]);
 
 /** Its grammar clauses, each with the versions that allow it, every other forbidding it. */
@@ -230,9 +229,11 @@ export function define(txn: any): any {
   const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES,
     new Map(every.map((b) => [b.name, b.schema])), [Family.VERSIONS]);
   const version = (minor: number) => (_: any) => _[`Python_3_${minor}`].bodies(["org.python"]).revision(
-    (r: any) => r.version(`3.${minor}`)).kinds(every.filter((b) => (ONLY.get(b.name) ?? Family.VERSIONS).includes(Family.VERSIONS[minor]!)).map((b) => b.schema));
+    (r: any) => r.version(`3.${minor}`)).kinds(every.filter(
+      (b) => (ONLY.get(b.name) ?? Family.VERSIONS).includes(Family.VERSIONS[minor]!)).map((b) => b.schema));
   return txn.uid("mbse.Expressions.Python.RegExp.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])), ...clauses })
+    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(minors.map((minor) => [`Python_3_${minor}`, Standard])),
+      ...clauses })
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(minors.map((minor) => [`Python 3.${minor}`,
         (e: any) => e.standard(_[`Python_3_${minor}`])]))),

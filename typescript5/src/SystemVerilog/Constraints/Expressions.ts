@@ -35,14 +35,14 @@
  * term; `Let`'s `name` stays unset, as a loop binds several names, which its kind's scopes give (`Kind.scopes`).
  *
  * The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
- * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has, by membership (`ONLY`: `disablesoftconstraint`
- * and `uniqueconstraint` in IEEE 1800-2012 to 2023, every other in each), and its grammar clauses (`GRAMMAR_CLAUSES`),
- * each allowed or forbidden by each edition: `soft` (2012) and a default distribution item (2023). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
- * writes its kinds as SystemVerilog source, as `randomize() with` writes them, on one line. No kind of it is folded
- * (Q11): SystemVerilog's rules leave each in the residual, named. Its terms are written through the builders (mbse-basis
- * [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
- * `(c) => c.expressionconstraint((e) => e.soft(true).expression(...))`.
- */
+ * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has, by membership (`ONLY`:
+ * `disablesoftconstraint` and `uniqueconstraint` in IEEE 1800-2012 to 2023, every other in each), and its grammar
+ * clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: `soft` (2012) and a default distribution item
+ * (2023). `DIALECT` reads its kinds and the five other dialects' terms. `Text` writes its kinds as SystemVerilog
+ * source, as `randomize() with` writes them, on one line. No kind of it is folded (Q11): SystemVerilog's rules leave
+ * each in the residual, named. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
+ * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(c) => c.expressionconstraint((e) =>
+ * e.soft(true).expression(...))`. */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -191,7 +191,8 @@ export function define(txn: any): any {
     .map((branch) => [branch.name, branch.schema] as [string, any]));
   const kinds = X.editions(every, ONLY, Family.SYMBOLS.slice(3));
   const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map<string, unknown>([
-    ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema] as [string, unknown]),
+    ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map(
+      (b) => [b.name, b.schema] as [string, unknown]),
     ["distitem", OWN.DistItem.as_schema()]]), [Family.SYMBOLS.slice(3)]);
   return txn.uid("mbse.Expressions.SystemVerilog.Constraints.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, SystemVerilog_2005: Standard, SystemVerilog_2009: Standard,

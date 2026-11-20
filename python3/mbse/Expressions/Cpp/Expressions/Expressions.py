@@ -108,8 +108,8 @@ from mbse.Expressions.C.Expressions import Domains
 from mbse.Expressions.C.Expressions import Kinds as C
 from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
-__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "ONLY", "GRAMMAR_CLAUSES", "PREFIXES", "SUFFIXES", "Writer", "literal",
-           "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
+__all__ = ["install", "define", "DIALECT", "EXTENSIONS", "ONLY", "GRAMMAR_CLAUSES", "PREFIXES", "SUFFIXES", "Writer",
+           "literal", "identifier", "unary", "binary", "conditional", "cast", "member", "subscript", "call"]
 
 USERDEFINEDLITERAL, IDEXPRESSION, THISEXPRESSION, LAMBDAEXPRESSION = (
     "userdefinedliteral", "idexpression", "thisexpression", "lambdaexpression")
@@ -601,9 +601,10 @@ def define(txn: Any) -> Any:
     (`standards`, through `Expressions.Framework.Covers`), each with its formal reference's parts, its common name and
     the kinds it has, and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each edition
     (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
-    the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`), each
-    grammar clause by its index (`grammar_clause_0`) and each domain by its name, spelled as its schema's is: `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`, each object by
-    its reference (a `References.OfObject`), not a visitor. Within a transaction, a domain is read from the dialect:
+    the dialect (`dialect`), each edition by its common name spelled as an identifier (`C++17` as `Cpp17`), each grammar
+    clause by its index (`grammar_clause_0`) and each domain by its name, spelled as its schema's is:
+    `store.transaction(Cpp.define)[0]["std_bfloat16_t"]`, each object by its reference (a `References.OfObject`), not a
+    visitor. Within a transaction, a domain is read from the dialect:
     `Framework.Domains.domains(store.singleton("Expressions.Cpp.Expressions"))["std::bfloat16_t"]`."""
     OWN, Domain = txn.Expressions.Cpp.Expressions, txn.Expressions.Framework.Domain
     Standard = txn.Expressions.Framework.Standard
@@ -729,7 +730,8 @@ _TAGS = (C.LITERAL, C.CONSTANT, USERDEFINEDLITERAL, C.CONCATENATEDSTRING, IDEXPR
 """Its own kinds, in its `Term`'s order: its `Term` lists Cpp Types' `typeid` after them, and C Preprocessor's
 `definedexpression` and `pragmaexpression` after invalid syntax, each read as the dialect that declares it reads it."""
 
-ONLY = dict.fromkeys((REQUIRESEXPRESSION, AWAITEXPRESSION, YIELDEXPRESSION, C.DESIGNATEDINITIALIZER), ("Cpp20", "Cpp23"))
+ONLY = dict.fromkeys((REQUIRESEXPRESSION, AWAITEXPRESSION, YIELDEXPRESSION, C.DESIGNATEDINITIALIZER),
+                     ("Cpp20", "Cpp23"))
 """The kinds that are not in every edition, each with the editions that have it, by their frame symbols: C++20's, in
 C++20 and C++23; membership, no minimum edition."""
 

@@ -139,8 +139,8 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """Python Patterns' dialect as data: the singleton `Expressions.Python.Patterns` owning the versions of Python 3 it
     covers, by their published names (`standards`), Python 3.10 to 3.15, each with its body, its version and its own
-    kinds it has, every one in each. Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame
-    binds the dialect (`dialect`) and each version by its name spelled as an identifier (`Python_3_10`)."""
+    kinds it has, every one in each. Run after `install`, in a transaction of its own; run again, it writes nothing. Its
+    frame binds the dialect (`dialect`) and each version by its name spelled as an identifier (`Python_3_10`)."""
     OWN, Standard = txn.Expressions.Python.Patterns, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
     minors = range(10, 16)

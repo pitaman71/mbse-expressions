@@ -32,13 +32,13 @@ items and statements). A conditional directive's condition holds `Expressions`' 
 `nameexpression`s, which name macros, defined or not, never values: they are bound within it (`Kind.scopes`). Nothing
 else binds.
 
-The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are, each
-with its own kinds it has, every one of them in every edition, as mbse-programs has them, and its grammar clauses
+The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are, each with
+its own kinds it has, every one of them in every edition, as mbse-programs has them, and its grammar clauses
 (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: `` `elsif ``, an `` `ifdef ``'s branches (IEEE
-1364-2001). A system include's and a condition's features stay unrecorded, as they were *(agent)*. `DIALECT` reads its kinds and the five other dialects' terms. Simplification leaves each of its
-kinds by name. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
-syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
-`lambda t: t.undefdirective(lambda d: d.name(lambda i: i.spelling("WIDTH")))`."""
+1364-2001). A system include's and a condition's features stay unrecorded, as they were *(agent)*. `DIALECT` reads its
+kinds and the five other dialects' terms. Simplification leaves each of its kinds by name. Its terms are written through
+the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t:
+t.undefdirective(lambda d: d.name(lambda i: i.spelling("WIDTH")))`."""
 
 from __future__ import annotations
 
@@ -193,7 +193,8 @@ def define(txn: Any) -> Any:
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
     kinds = X.editions(every, {}, _family.SYMBOLS)
     clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {
-        branch.name: branch.schema for branch in OWN.Term.as_schema().branches}, [_family.SYMBOLS[:3], _family.SYMBOLS[3:]])
+        branch.name: branch.schema for branch in OWN.Term.as_schema().branches},
+        [_family.SYMBOLS[:3], _family.SYMBOLS[3:]])
     return txn.uid("mbse.Expressions.SystemVerilog.Preprocessor.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "Verilog_1995": Standard, "Verilog_2001": Standard, "Verilog_2005": Standard,
                   "SystemVerilog_2005": Standard, "SystemVerilog_2009": Standard, "SystemVerilog_2012": Standard,

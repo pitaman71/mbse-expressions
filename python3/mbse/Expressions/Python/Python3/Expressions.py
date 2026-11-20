@@ -58,12 +58,12 @@ family's dialect of type expressions, which lists every branch of Python3's `Ter
 own kinds; a lambda's parameters have none, but mbse-programs' function definitions share the helper.
 
 The versions of Python 3 the dialect covers are data, which `define` writes, each owned by its published name, Python
-3.0 to 3.15, and holding the kinds it has, by membership (`ONLY`, `Framework.Standards`); an extension is in none.
-What a version changes within a kind is data too, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by
-each version: a binop's `@` (3.5), an `async` comprehension (3.6), a formatted value's `=` and positional-only
-parameters (3.8), a subscript whose index is unpacked, alone or in a tuple (3.11), and a list, set or generator
-comprehension of unpacked elements and a dict comprehension of unpacked mappings (3.15). A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
-calls, not a dialect.
+3.0 to 3.15, and holding the kinds it has, by membership (`ONLY`, `Framework.Standards`); an extension is in none. What
+a version changes within a kind is data too, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each
+version: a binop's `@` (3.5), an `async` comprehension (3.6), a formatted value's `=` and positional-only parameters
+(3.8), a subscript whose index is unpacked, alone or in a tuple (3.11), and a list, set or generator comprehension of
+unpacked elements and a dict comprehension of unpacked mappings (3.15). A NumPy expression is a Python expression that
+imports numpy: NumPy is a vocabulary of calls, not a dialect.
 
 `DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types`, `Python
 Patterns` and `Python RegExp` (`reads`), so that a tree mixing them is validated, inferred and printed from any of their holders. The
@@ -96,12 +96,12 @@ from mbse.Schemas.Framework import Schemas
 
 from . import Domains
 
-__all__ = ["install", "define", "DIALECT", "BUILTINS", "EXTENSIONS", "VERSIONS", "ONLY", "GRAMMAR_CLAUSES", "Writer", "Helper", "constant", "constant_text",
-           "name", "concatenatedstring", "joinedstr", "templatestr", "stringtext", "formattedvalue", "interpolation",
-           "parenthesized", "tuple_", "list_", "set_", "dict_", "listcomp", "setcomp", "dictcomp", "generatorexp",
-           "comprehension", "yield_", "yieldfrom", "await_", "attribute", "subscript", "slice_", "call", "keyword",
-           "starred", "unaryop", "binop", "compare", "comparison", "boolop", "namedexpr", "ifexp", "lambda_", "arg",
-           "let_", "import_", "importfrom"]
+__all__ = ["install", "define", "DIALECT", "BUILTINS", "EXTENSIONS", "VERSIONS", "ONLY", "GRAMMAR_CLAUSES", "Writer",
+           "Helper", "constant", "constant_text", "name", "concatenatedstring", "joinedstr", "templatestr",
+           "stringtext", "formattedvalue", "interpolation", "parenthesized", "tuple_", "list_", "set_", "dict_",
+           "listcomp", "setcomp", "dictcomp", "generatorexp", "comprehension", "yield_", "yieldfrom", "await_",
+           "attribute", "subscript", "slice_", "call", "keyword", "starred", "unaryop", "binop", "compare",
+           "comparison", "boolop", "namedexpr", "ifexp", "lambda_", "arg", "let_", "import_", "importfrom"]
 
 LITERAL, CONSTANT, NAME = "literal", "constant", "variable"
 CONCATENATEDSTRING, JOINEDSTR, TEMPLATESTR, PARENTHESIZED = "concatenatedstring", "joinedstr", "templatestr", "parenthesized"
@@ -124,7 +124,8 @@ binds it (`Python_3_8`)."""
 ONLY = {YIELDFROM: VERSIONS[3:], AWAIT: VERSIONS[5:], JOINEDSTR: VERSIONS[6:], NAMEDEXPR: VERSIONS[8:],
         TEMPLATESTR: VERSIONS[14:]}
 """The kinds that are not in every version, each with the versions that have it, from which `define` writes the kinds
-each version has: membership, no minimum version (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions")."""
+each version has: membership, no minimum version (mbse-basis [grammar clauses by
+version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions")."""
 
 GRAMMAR_CLAUSES = (
     FS.values("binop.op '@'", BINOP, "op", ("@",), VERSIONS[5:]),
@@ -398,7 +399,8 @@ def define(txn: Any) -> Any:
         return [schema for tag, schema in every.items() if VERSIONS[minor] in ONLY.get(tag, VERSIONS)]
 
     schemas = {**{branch.name: branch.schema for branch in Python3.Term.as_schema().branches},
-               **{name.lower(): getattr(Python3, name).as_schema() for name in ("Comprehension", "FormattedValue", "Arguments")}}
+               **{name.lower(): getattr(Python3, name).as_schema()
+                  for name in ("Comprehension", "FormattedValue", "Arguments")}}
     clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, schemas, [VERSIONS])
 
     PSF = ["org.python"]

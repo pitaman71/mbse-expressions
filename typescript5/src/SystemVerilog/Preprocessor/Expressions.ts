@@ -36,11 +36,10 @@
  * The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are, each
  * with its own kinds it has, every one of them in every edition, as mbse-programs has them, and its grammar clauses
  * (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: `` `elsif ``, an `` `ifdef ``'s branches (IEEE
- * 1364-2001). A system include's and a condition's features stay unrecorded, as they were *(agent)*. `DIALECT` reads its kinds and the five other dialects' terms. Simplification leaves each of its
- * kinds by name. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
- * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
- * `(t) => t.undefdirective((d) => d.name((i) => i.spelling("WIDTH")))`.
- */
+ * 1364-2001). A system include's and a condition's features stay unrecorded, as they were *(agent)*. `DIALECT` reads
+ * its kinds and the five other dialects' terms. Simplification leaves each of its kinds by name. Its terms are written
+ * through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t)
+ * => t.undefdirective((d) => d.name((i) => i.spelling("WIDTH")))`. */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { Repr } from "@mbse/schemas/Framework";

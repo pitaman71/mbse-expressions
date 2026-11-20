@@ -26,11 +26,11 @@
  * `AttributeInstance`: the family's helpers, one schema each.
  *
  * The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are
- * (`Expressions.EDITIONS`), each with the kinds it has, by membership (`ONLY`). `DIALECT` reads its kinds and the five other dialects'
- * terms. `Text` writes its kinds as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches
- * them to it. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
- * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.integeratomtype((a) => a.keyword("int"))`.
- */
+ * (`Expressions.EDITIONS`), each with the kinds it has, by membership (`ONLY`). `DIALECT` reads its kinds and the five
+ * other dialects' terms. `Text` writes its kinds as SystemVerilog source, as the family's printer
+ * (`Expressions.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
+ * fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.integeratomtype((a) =>
+ * a.keyword("int"))`. */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

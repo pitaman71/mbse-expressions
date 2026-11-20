@@ -36,10 +36,10 @@ term; `Let`'s `name` stays unset, as a loop binds several names, which its kind'
 The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
 (`Expressions.EDITIONS` from the fourth), each with its own kinds it has, by membership (`ONLY`: `disablesoftconstraint`
 and `uniqueconstraint` in IEEE 1800-2012 to 2023, every other in each), and its grammar clauses (`GRAMMAR_CLAUSES`),
-each allowed or forbidden by each edition: `soft` (2012) and a default distribution item (2023). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
-writes its kinds as SystemVerilog source, as `randomize() with` writes them, on one line. No kind of it is folded
-(Q11): SystemVerilog's rules leave each in the residual, named. Its terms are written through the builders (mbse-basis
-[PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
+each allowed or forbidden by each edition: `soft` (2012) and a default distribution item (2023). `DIALECT` reads its
+kinds and the five other dialects' terms. `Text` writes its kinds as SystemVerilog source, as `randomize() with` writes
+them, on one line. No kind of it is folded (Q11): SystemVerilog's rules leave each in the residual, named. Its terms are
+written through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
 `lambda c: c.expressionconstraint(lambda e: e.soft(True).expression(...))`."""
 
 from __future__ import annotations
@@ -188,7 +188,8 @@ def define(txn: Any) -> Any:
         "distitem": OWN.DistItem.as_schema()}, [_family.SYMBOLS[3:]])
     return txn.uid("mbse.Expressions.SystemVerilog.Constraints.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "SystemVerilog_2005": Standard, "SystemVerilog_2009": Standard,
-                  "SystemVerilog_2012": Standard, "SystemVerilog_2017": Standard, "SystemVerilog_2023": Standard, **clauses})
+                  "SystemVerilog_2012": Standard, "SystemVerilog_2017": Standard, "SystemVerilog_2023": Standard,
+                  **clauses})
         .spec([
             lambda _: _.dialect.standards({
                 "IEEE Std 1800-2005": lambda e: e.standard(_.SystemVerilog_2005),

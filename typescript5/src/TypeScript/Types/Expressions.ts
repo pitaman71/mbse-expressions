@@ -237,11 +237,10 @@ export function install(txn: any): any {
 /**
  * TypeScript Types' dialect as data: the singleton `Expressions.TypeScript.Types` and the versions of TypeScript 5 it
  * covers, by their published names (`standards`, through `Expressions.Framework.Covers`), TypeScript 5.0 to 5.9, each
- * with its body, its version and its kinds, every one in each, and its grammar clauses by name (`grammar_clauses`), each
- * allowed or forbidden by each version (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run
+ * with its body, its version and its kinds, every one in each, and its grammar clauses by name (`grammar_clauses`),
+ * each allowed or forbidden by each version (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run
  * again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its name spelled as an identifier
- * (`TypeScript_5_0`) and each grammar clause by its index (`grammar_clause_0`).
- */
+ * (`TypeScript_5_0`) and each grammar clause by its index (`grammar_clause_0`). */
 export function define(txn: any): any {
   const OWN = txn.Expressions.TypeScript.Types;
   const Standard = txn.Expressions.Framework.Standard;
@@ -251,7 +250,8 @@ export function define(txn: any): any {
   const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
     (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])), [versions]);
   return txn.uid("mbse.Expressions.TypeScript.Types.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(versions.map((version) => [version, Standard])), ...clauses })
+    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(versions.map((version) => [version, Standard])),
+      ...clauses })
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(versions.map((version, minor) => [
         `TypeScript 5.${minor}`, (e: any) => e.standard(_[version])]))),

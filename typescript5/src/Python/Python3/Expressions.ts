@@ -63,8 +63,8 @@
  * What a version changes within a kind is data too, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden
  * by each version: a binop's `@` (3.5), an `async` comprehension (3.6), a formatted value's `=` and positional-only
  * parameters (3.8), a subscript whose index is unpacked, alone or in a tuple (3.11), and a list, set or generator
- * comprehension of unpacked elements and a dict comprehension of unpacked mappings (3.15). A NumPy expression is a Python expression that imports numpy: NumPy is a vocabulary of
- * calls, not a dialect.
+ * comprehension of unpacked elements and a dict comprehension of unpacked mappings (3.15). A NumPy expression is a
+ * Python expression that imports numpy: NumPy is a vocabulary of calls, not a dialect.
  *
  * `DIALECT` reads them (`Terms.Dialect`), and the terms of its family's other dialects, `Python Types`, `Python
  * Patterns` and `Python RegExp` (`reads`), so that a tree mixing them is validated, inferred and printed from any of their holders. The
@@ -150,7 +150,8 @@ export const EXTENSIONS: ReadonlySet<string> = new Set([LET, IMPORT, IMPORTFROM]
 export const VERSIONS: readonly string[] = Domains.VERSIONS;
 
 /** The kinds that are not in every version, each with the versions that have it, from which `define` writes the kinds
- * each version has: membership, no minimum version (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions"). */
+ * each version has: membership, no minimum version (mbse-basis [grammar clauses by
+ * version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions"). */
 export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([[YIELDFROM, VERSIONS.slice(3)],
   [AWAIT, VERSIONS.slice(5)], [JOINEDSTR, VERSIONS.slice(6)], [NAMEDEXPR, VERSIONS.slice(8)],
   [TEMPLATESTR, VERSIONS.slice(14)]]);
@@ -406,11 +407,14 @@ export function define(txn: any): any {
   const every = (Python3.Term.as_schema().branches as { name: string; schema: unknown }[]) // each kind's schema, by its
     .filter((b) => !EXTENSIONS.has(b.name) && !F.INVALID_KINDS.has(b.name)); // tag, but an extension and invalid syntax
   /** The kinds Python 3.`minor` has: each not in `ONLY`, and each that lists it there. */
-  const has = (minor: number): unknown[] => every.filter((b) => (ONLY.get(b.name) ?? VERSIONS).includes(VERSIONS[minor]!))
+  const has = (minor: number): unknown[] => every
+    .filter((b) => (ONLY.get(b.name) ?? VERSIONS).includes(VERSIONS[minor]!))
     .map((b) => b.schema);
   const schemas = new Map<string, unknown>([
-    ...(Python3.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema] as [string, unknown]),
-    ...["Comprehension", "FormattedValue", "Arguments"].map((name) => [name.toLowerCase(), Python3[name].as_schema()] as [string, unknown])]);
+    ...(Python3.Term.as_schema().branches as { name: string; schema: unknown }[]).map(
+      (b) => [b.name, b.schema] as [string, unknown]),
+    ...["Comprehension", "FormattedValue", "Arguments"].map(
+      (name) => [name.toLowerCase(), Python3[name].as_schema()] as [string, unknown])]);
   const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, [VERSIONS]);
   const PSF = ["org.python"];
   const versions = Object.fromEntries(VERSIONS.map((version) => [version, Standard]));

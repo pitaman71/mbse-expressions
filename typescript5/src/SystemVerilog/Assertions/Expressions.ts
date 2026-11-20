@@ -35,13 +35,14 @@
  *
  * The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
  * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has, by membership (`ONLY`: `strengthproperty`,
- * `abortproperty` and `caseproperty` in IEEE 1800-2009 to 2023, every other in each). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
- * writes its kinds as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches them to it, by
- * IEEE 1800's precedence of sequence and property operators (Table 16-3). Simplification leaves each of its kinds in the residual, named
- * (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
+ * `abortproperty` and `caseproperty` in IEEE 1800-2009 to 2023, every other in each). `DIALECT` reads its kinds and the
+ * five other dialects' terms. `Text` writes its kinds as SystemVerilog source, as the family's printer
+ * (`Expressions.Text.ToText`) dispatches them to it, by IEEE 1800's precedence of sequence and property operators
+ * (Table 16-3). Simplification leaves each of its kinds in the residual, named (mbse-basis [CAP-226: complete
+ * expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11). Its
+ * terms are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.repetitionsequence((r) => r.sequence(a)
- * .operator("*").count(two))`.
- */
+ * .operator("*").count(two))`. */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 

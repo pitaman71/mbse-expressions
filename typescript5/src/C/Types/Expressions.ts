@@ -46,16 +46,15 @@
  *
  * The editions it covers are data, which `define` writes, C's (C11, C17, C23), each with its own kinds it has, both in
  * each, and its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition, C23's: the keywords
- * `thread_local`, `constexpr`, `bool`, `_Decimal32` to `_Decimal128` and `_Float16` to `_Float128x` (Annex H),
- * `typeof` and `typeof_unqual`, and `alignas` spelled so; `_BitInt`, `auto` as a type specifier and attributes in
- * `[[ ]]`, each where a type name, a parameter or a declarator holds it; and an enumeration's underlying type. No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads its type
- * from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
- * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
- * `(t) => t.typeid((i) => i.specifiers([(s) => s.primitivetypespecifier((p) => p.keyword("int"))]))`.
- * `DIALECT` reads its kinds and the terms of its family's other dialects, `C` and `C Preprocessor` (`reads`); none of
- * it is a reason to reinstate `Uses` (mbse-basis [CAP-098: dialects over one
- * framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)).
- */
+ * `thread_local`, `constexpr`, `bool`, `_Decimal32` to `_Decimal128` and `_Float16` to `_Float128x` (Annex H), `typeof`
+ * and `typeof_unqual`, and `alignas` spelled so; `_BitInt`, `auto` as a type specifier and attributes in `[[ ]]`, each
+ * where a type name, a parameter or a declarator holds it; and an enumeration's underlying type. No kind binds a name a
+ * term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads its type from it
+ * (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
+ * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.typeid((i) => i.specifiers([(s) =>
+ * s.primitivetypespecifier((p) => p.keyword("int"))]))`. `DIALECT` reads its kinds and the terms of its family's other
+ * dialects, `C` and `C Preprocessor` (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis [CAP-098:
+ * dialects over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided)). */
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as FS from "../../Framework/Standards.js";
@@ -275,7 +274,8 @@ export function define(txn: any): any {
   const every = (OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => branch.schema);
   const schemas = new Map<string, unknown>([
-    ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema] as [string, unknown]),
+    ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map(
+      (b) => [b.name, b.schema] as [string, unknown]),
     ...HELPERS.map((name) => [name.toLowerCase(), OWN[name].as_schema()] as [string, unknown])]);
   const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, schemas, [K.C_EDITIONS]);
   return txn.uid("mbse.Expressions.C.Types.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p

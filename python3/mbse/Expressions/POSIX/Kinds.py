@@ -53,7 +53,8 @@ from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
-__all__ = ["BRE", "ERE", "names", "tags", "holds", "problems", "kinds", "install", "define", "EDITIONS", "GRAMMAR_CLAUSES", "Printer"]
+__all__ = ["BRE", "ERE", "names", "tags", "holds", "problems", "kinds", "install", "define", "EDITIONS",
+           "GRAMMAR_CLAUSES", "Printer"]
 
 BRE, ERE = "BRE", "ERE"
 

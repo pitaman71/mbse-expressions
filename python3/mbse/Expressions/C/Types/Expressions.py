@@ -45,15 +45,15 @@ declarations overrides), and the framework's readers do not enter it, as it decl
 
 The editions it covers are data, which `define` writes, C's (C11, C17, C23), each with its own kinds it has, both in
 each, and its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition, C23's: the keywords
-`thread_local`, `constexpr`, `bool`, `_Decimal32` to `_Decimal128` and `_Float16` to `_Float128x` (Annex H),
-`typeof` and `typeof_unqual`, and `alignas` spelled so; `_BitInt`, `auto` as a type specifier and attributes in `[[ ]]`,
-each where a type name, a parameter or a declarator holds it; and an enumeration's underlying type. No kind binds a name a term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads its type
-from it (`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
-syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
-`lambda t: t.typeid(lambda i: i.specifiers([lambda s: s.primitivetypespecifier(lambda p: p.keyword("int"))]))`.
-`DIALECT` reads its kinds and the terms of its family's other dialects, `C` and `C Preprocessor` (`reads`); none of
-it is a reason to reinstate `Uses` (mbse-basis [CAP-098: dialects over one
-framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided))."""
+`thread_local`, `constexpr`, `bool`, `_Decimal32` to `_Decimal128` and `_Float16` to `_Float128x` (Annex H), `typeof`
+and `typeof_unqual`, and `alignas` spelled so; `_BitInt`, `auto` as a type specifier and attributes in `[[ ]]`, each
+where a type name, a parameter or a declarator holds it; and an enumeration's underlying type. No kind binds a name a
+term scopes. Simplification leaves each of its kinds in the residual, named; a cast reads its type from it
+(`C.Simplifiers`). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
+syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t: t.typeid(lambda i: i.specifiers([lambda s:
+s.primitivetypespecifier(lambda p: p.keyword("int"))]))`. `DIALECT` reads its kinds and the terms of its family's other
+dialects, `C` and `C Preprocessor` (`reads`); none of it is a reason to reinstate `Uses` (mbse-basis [CAP-098: dialects
+over one framework](mbse:mbse-basis/docs/capabilities/CAP-098.md#decided))."""
 
 from __future__ import annotations
 
@@ -263,10 +263,10 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """C Types' dialect as data: the singleton `Expressions.C.Types` owning the editions it covers, by designation
     (`standards`), C's ISO/IEC 9899:2011, 2018 and 2024, each with its formal reference's parts, its common name and its
-    own kinds it has, both in each, and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each
-    edition (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
-    frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each grammar clause by its index
-    (`grammar_clause_0`)."""
+    own kinds it has, both in each, and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by
+    each edition (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing.
+    Its frame binds the dialect (`dialect`), each edition by its common name (`C11`) and each grammar clause by its
+    index (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.C.Types, txn.Expressions.Framework.Standard
     every = [branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS]
     schemas = {**{branch.name: branch.schema for branch in OWN.Term.as_schema().branches},

@@ -23,16 +23,18 @@
  *   entries from its side, through its extension adjacency `standards`.
  *
  * What changes from one edition to the next within a kind is data too: a grammar clause, an alternative within a
- * production of the dialect's grammar, a language feature (mbse-basis [grammar clauses by version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions": "PEP 614 removing a restriction is still a conditional clause just with an opposite sense of version progression").
- * A dialect owns each by name (`Expressions.Framework.Specifies`); an `Expressions.Framework.GrammarClause` is a kind
+ * production of the dialect's grammar, a language feature (mbse-basis [grammar clauses by
+ * version](mbse:mbse-basis/proposals/GRAMMAR-CLAUSES.md), "No minimum versions": "PEP 614 removing a restriction is
+ * still a conditional clause just with an opposite sense of version progression"). A dialect owns each by name
+ * (`Expressions.Framework.Specifies`); an `Expressions.Framework.GrammarClause` is a kind
  * (`Expressions.Framework.HasGrammarClause`, which the kind's schema reads through its extension adjacency
  * `grammar_clauses`), one of its properties, and what that property may hold there: present or absent (`present`), one
  * of these values (`values`), or a term of one of these kinds (`Expressions.Framework.Holds`), each kind's term holding
  * what the nested grammar clauses of that kind say (`Expressions.Framework.Nests`). An edition allows or forbids it
  * (`Expressions.Framework.Allows`, `Expressions.Framework.Forbids`), each entry with the optional flags `before` and
  * `after`, as the user decided: "Add two optional properties on `Allows` and `Forbids` : 'before' and 'after' which are
- * only used by the system to guess support in the case that an edition has no representation. And a grammar clause
- * that has no `Allows` or `Forbids` should default to allows." The reading:
+ * only used by the system to guess support in the case that an edition has no representation. And a grammar clause that
+ * has no `Allows` or `Forbids` should default to allows." The reading:
  *
  * - `grammarClauses(dialect)`: a dialect's grammar clauses by name, in the order the store holds the entries;
  *   `grammarClauseName(clause)`: the name its dialect owns it by, or null.
@@ -152,8 +154,8 @@ function holds(clause: Readers.OfObject): [string, unknown] {
 export function grammarClause(clause: Readers.OfObject): Map<string, unknown> {
   const [held, value] = holds(clause);
   const nested = nestedOf(clause);
-  const found = new Map<string, unknown>([["kind", kindOf(clause)], ["property", Objects.properties(clause).get("property")],
-    [held, value]]);
+  const found = new Map<string, unknown>([["kind", kindOf(clause)],
+    ["property", Objects.properties(clause).get("property")], [held, value]]);
   if (nested.length > 0) found.set("nested", nested);
   return found;
 }
@@ -191,11 +193,14 @@ export function takes(dialect: Readers.OfObject, term: unknown): Readers.OfObjec
   return [...grammarClauses(dialect).values()].filter((clause) => kindOf(clause) === schema && taken(clause, record));
 }
 
+/** An edition that names a grammar clause, whether it allows it, and its entry's flags. */
+type Verdict = [Readers.OfObject, boolean, ReadonlyMap<string, unknown>];
+
 /** Each edition that names a grammar clause, whether it allows it, and its entry's flags. */
-function verdicts(clause: Readers.OfObject): [Readers.OfObject, boolean, ReadonlyMap<string, unknown>][] {
+function verdicts(clause: Readers.OfObject): Verdict[] {
   return ([["allowed", true], ["forbidden", false]] as const).flatMap(([adjacency, allowed]) =>
     Objects.entries(clause, adjacency).map((entry) =>
-      [entry.targets.get("standard") as Readers.OfObject, allowed, entry.values] as [Readers.OfObject, boolean, ReadonlyMap<string, unknown>]));
+      [entry.targets.get("standard") as Readers.OfObject, allowed, entry.values] as Verdict));
 }
 
 /** Where an edition stands among its standard's editions: its number and its revision's branch, then its value, a
@@ -258,7 +263,8 @@ export interface GrammarClause {
 }
 
 /** A grammar clause: a kind's property set (a container not empty). */
-export function present(name: string, kind: string, property: string, allowed: readonly string[] | null): GrammarClause {
+export function present(name: string, kind: string, property: string,
+                        allowed: readonly string[] | null): GrammarClause {
   return { name, kind, property, holds: "present", held: true, nested: [], allowed };
 }
 
@@ -275,8 +281,8 @@ export function values(name: string, kind: string, property: string, held: reado
 
 /** A grammar clause: a kind's property holding a term of one of these kinds (a container, one of its elements), which
  * takes each of the `nested` grammar clauses of its kind. */
-export function kindsOf(name: string, kind: string, property: string, held: readonly string[], nested: readonly string[],
-                        allowed: readonly string[] | null): GrammarClause {
+export function kindsOf(name: string, kind: string, property: string, held: readonly string[],
+                        nested: readonly string[], allowed: readonly string[] | null): GrammarClause {
   return { name, kind, property, holds: "kinds", held, nested, allowed };
 }
 
@@ -286,8 +292,10 @@ export function kindsOf(name: string, kind: string, property: string, held: read
  * 3's, or C's then C++'s) allowing it where `allowed` lists it, else forbidding it, each standard's oldest edition's
  * entry flagged `before` and its newest's `after`, so that an edition the data does not represent is guessed to have
  * what its nearest neighbour has. */
-export function grammarClausesSpec(txn: any, clauses: readonly GrammarClause[], schemas: ReadonlyMap<string, unknown>,
-                                   editions: readonly (readonly string[])[]): [Record<string, unknown>, ((_: any) => any)[]] {
+export function grammarClausesSpec(
+  txn: any, clauses: readonly GrammarClause[], schemas: ReadonlyMap<string, unknown>,
+  editions: readonly (readonly string[])[],
+): [Record<string, unknown>, ((_: any) => any)[]] {
   const symbol = new Map(clauses.map((clause, index) => [clause.name, `grammar_clause_${index}`]));
   const GC = txn.Expressions.Framework.GrammarClause;
   const flagged = new Map(editions.flatMap((standard) => standard.map((edition, index) =>
@@ -307,8 +315,8 @@ export function grammarClausesSpec(txn: any, clauses: readonly GrammarClause[], 
     if (clause.allowed === null) return built;
     const allowed = clause.allowed;
     const all = [...flagged.keys()];
-    return built.allowed(all.filter((edition) => allowed.includes(edition)).map((edition) => entry(_, edition))).forbidden(
-      all.filter((edition) => !allowed.includes(edition)).map((edition) => entry(_, edition)));
+    return built.allowed(all.filter((edition) => allowed.includes(edition)).map((edition) => entry(_, edition)))
+      .forbidden(all.filter((edition) => !allowed.includes(edition)).map((edition) => entry(_, edition)));
   };
   return [Object.fromEntries(clauses.map((clause) => [symbol.get(clause.name)!, GC])),
     [(_: any) => _.dialect.grammar_clauses(Object.fromEntries(clauses.map((clause) =>

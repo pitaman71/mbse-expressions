@@ -77,8 +77,8 @@ from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as 
 
 from ..Expressions import Kinds as K
 
-__all__ = ["install", "define", "DIALECT", "ONLY", "GRAMMAR_CLAUSES", "TAGS", "HELPERS", "DIRECTIVES", "EDITIONS", "INCLUDES",
-           "problems", "macros"]
+__all__ = ["install", "define", "DIALECT", "ONLY", "GRAMMAR_CLAUSES", "TAGS", "HELPERS", "DIRECTIVES", "EDITIONS",
+           "INCLUDES", "problems", "macros"]
 
 INCLUDEDIRECTIVE, DEFINEDIRECTIVE, IFDIRECTIVE, IFDEFDIRECTIVE = (
     "includedirective", "definedirective", "ifdirective", "ifdefdirective")
@@ -250,8 +250,8 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """C Preprocessor's dialect as data: the singleton `Expressions.C.Preprocessor` owning the editions it covers, by
     designation (`standards`), C's ISO/IEC 9899:2011, 2018 and 2024 and C++'s ISO/IEC 14882:2017, 2020 and 2024, each
-    with its formal reference's parts, its common name and its own kinds it has (`ONLY`), and its grammar clauses by name
-    (`grammar_clauses`), each allowed or forbidden by each edition (`GRAMMAR_CLAUSES`). Run after `install`, in a
+    with its formal reference's parts, its common name and its own kinds it has (`ONLY`), and its grammar clauses by
+    name (`grammar_clauses`), each allowed or forbidden by each edition (`GRAMMAR_CLAUSES`). Run after `install`, in a
     transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its
     common name spelled as an identifier (`C11`, `Cpp17`) and each grammar clause by its index (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.C.Preprocessor, txn.Expressions.Framework.Standard

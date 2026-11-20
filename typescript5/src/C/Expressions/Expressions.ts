@@ -68,16 +68,17 @@
  *
  * The editions C covers are data, which `define` writes, each owned by its designation and holding the kinds it has
  * (`Framework.Standards`): ISO/IEC 9899:2011, 2018 and 2024, C11, C17 and C23 (C17 is C11's corrigenda, with no new
- * syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. What an edition changes
- * within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition, C23's: a
- * literal's digit separators, a binary integer, the suffix `wb` and the decimal floating suffixes, `true` and `false`,
- * an empty initializer, `{}`, and `alignof` spelled so. A `u8` character literal, C23's, stays unrecorded: it is two
- * properties' values together, `prefix` and `quote`, where a grammar clause is about one *(agent)*. `DIALECT` reads the
- * kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C evaluated
- * before it was complete through the builders, in a transaction, a cast's type a spec of C Types' `Term`, written
- * through the builders too: `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other term is written
- * through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)).
- * `Text.ToText` writes an expression as C source, with C's precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
+ * syntax), every kind in each but `constant` (`nullptr`), C23's alone, and an extension in none. What an edition
+ * changes within a kind is data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition,
+ * C23's: a literal's digit separators, a binary integer, the suffix `wb` and the decimal floating suffixes, `true` and
+ * `false`, an empty initializer, `{}`, and `alignof` spelled so. A `u8` character literal, C23's, stays unrecorded: it
+ * is two properties' values together, `prefix` and `quote`, where a grammar clause is about one *(agent)*. `DIALECT`
+ * reads the kinds (`Terms.Dialect`). The writers (`literal`, `identifier`, `binary`, `cast`, ...) write the kinds C
+ * evaluated before it was complete through the builders, in a transaction, a cast's type a spec of C Types' `Term`,
+ * written through the builders too: `store.Expressions.Framework.Term(binary("+", identifier("x"), 1))`; every other
+ * term is written through the builders (mbse-basis [PRI-019: fluent builder
+ * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)). `Text.ToText` writes an expression as C source, with C's
+ * precedence, e.g. `x.width >= 8u && (uint8_t)(a + b) == 0`.
  *
  * Its kind of domain, the branch of its union `Expressions.C.Expressions.DomainKind`, which `install` adds to the
  * framework's `Expressions.Framework.DomainKind` as the branch `c`: the token `nullptr_t` (`OfNullptr`), C23's, with
@@ -367,7 +368,8 @@ export function define(txn: any): any {
     .filter((b) => C_TAGS.includes(b.name) && !EXTENSIONS.has(b.name)) // kinds' schema, by its tag, but an extension
     .map((b) => [b.name, b.schema]));
   const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
-    (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])), [C_EDITIONS]);
+    (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
+  [C_EDITIONS]);
   return txn.uid("mbse.Expressions.C.Expressions.define/1")
       .mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({
