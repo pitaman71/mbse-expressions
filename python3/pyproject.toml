@@ -4,15 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mbse-expressions"
-version = "0.12.7"
+version = "0.13.0"
 description = "Constraints as language-neutral data: validated, evaluated, stored as JSON/YAML, and translated to and from Python, MATLAB and Excel"
 keywords = ["expressions", "constraints", "predicates", "mbse", "sysml", "interface", "translation", "excel", "matlab"]
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ["mbse-schemas>=0.28.0,<0.29"]
+dependencies = ["mbse-schemas>=0.33.0,<0.34"]
 
 [project.optional-dependencies]
-yaml = ["mbse-schemas[yaml]>=0.28.0,<0.29"]
+yaml = ["mbse-schemas[yaml]>=0.33.0,<0.34"]
 numpy = ["numpy>=2.4.6"]
 
 [tool.setuptools.package-data]

@@ -92,10 +92,11 @@ export function install(txn: any): any {
       ]),
       (_: any) => _.Kinds.name("Expressions.Framework.DomainKind").branches([ // a branch added: schema extension
         (t: any) => t.name("isoiec11404").schema([_.DomainKind])]),
-      // a packed domain's state domain and representation are domains, which a value cannot hold: `Packs` links them
+      // a packed domain's state domain and representation are domains, which a value cannot hold: `Packs` links them,
+      // one of each per packed domain
       (_: any) => _.Packs.name("Expressions.ISOIEC11404.Expressions.Packs").links([
         (t: any) => t.name("packed"), (t: any) => t.name("domain").schema([_.Domain]),
-        (t: any) => t.name("representation").schema([_.Domain])]).uniques([["packed"]]),
+        (t: any) => t.name("representation").schema([_.Domain])]).uniques([["domain", "representation"]]),
       (_: any) => _.Domain.name("Expressions.Framework.Domain").adjacencies({
         packs: (a: any) => a.relation([_.Packs]).me("packed") }),
 
