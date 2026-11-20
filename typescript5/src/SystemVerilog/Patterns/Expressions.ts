@@ -29,8 +29,8 @@
  * constant, a wildcard and a variable pattern (`Expressions.Simplifiers`).
  *
  * The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
- * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: every one since IEEE 1800-2005, as
- * mbse-programs' `sv()` has them). `DIALECT` reads its kinds and the five other dialects' terms. `Text` writes its kinds
+ * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has, every one in each, as
+ * mbse-programs' `sv()` has them. `DIALECT` reads its kinds and the five other dialects' terms. `Text` writes its kinds
  * as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches them to it. Its terms are
  * written through the builders (mbse-basis [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
  * `(u) => u.variablepattern((v) => v.name((i) => i.spelling("x")))`.
@@ -40,6 +40,7 @@
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
+import * as Family from "../Expressions/Domains.js";
 import * as X from "../Expressions/Expressions.js";
 import * as Assertions from "../Assertions/Expressions.js";
 import * as Constraints from "../Constraints/Expressions.js";
@@ -61,11 +62,6 @@ export const TAGS: readonly string[] = [VARIABLEPATTERN, WILDCARDPATTERN, TAGGED
 /** Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
  * completeness data (`grammars/systemverilog-slang.json`) names them: none, its names being `Expressions`' `Identifier`. */
 export const HELPERS: readonly string[] = [];
-
-/** The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`
- * (`sv()`, IEEE 1800-2005, 3, every one; a pattern's parentheses, which mbse-programs omits, are IEEE 1800-2005's
- * grammar's too). */
-export const SINCE: ReadonlyMap<string, number> = new Map(TAGS.map((tag) => [tag, 3]));
 
 /** SystemVerilog Patterns' union of its kinds, added to the framework's terms as the branch `systemverilog_patterns`, its
  * own kinds, and its dialect's schema, whose singleton is `Expressions.SystemVerilog.Patterns`: run after
@@ -125,14 +121,15 @@ export function install(txn: any): any {
 
 /** SystemVerilog Patterns' dialect as data: the singleton `Expressions.SystemVerilog.Patterns` owning the editions it covers,
  * by designation (`standards`), IEEE Std 1800-2005 to 2023, each with its formal reference's parts, its common name and
- * its own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
+ * its own kinds it has, every one in each (a pattern's parentheses, which mbse-programs omits, IEEE 1800-2005's
+ * grammar's too). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
  * frame binds the dialect (`dialect`) and each edition by its common name spelled as an identifier
  * (`SystemVerilog_2023`). */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.SystemVerilog.Patterns, txn.Expressions.Framework.Standard];
   const every = new Map((OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => [branch.name, branch.schema] as [string, any]));
-  const kinds = X.editions(every, SINCE, 3);
+  const kinds = X.editions(every, new Map(), Family.SYMBOLS.slice(3));
   return txn.uid("mbse.Expressions.SystemVerilog.Patterns.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, SystemVerilog_2005: Standard, SystemVerilog_2009: Standard,
       SystemVerilog_2012: Standard, SystemVerilog_2017: Standard, SystemVerilog_2023: Standard })

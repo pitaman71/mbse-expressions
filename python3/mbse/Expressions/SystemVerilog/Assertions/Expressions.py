@@ -33,8 +33,8 @@ event's expression and condition hold `Expressions`' `Term`. None of its kinds b
 variables are its declaration's, a statement's.
 
 The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
-(`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: `strengthproperty`, `abortproperty`
-and `caseproperty` arrived in IEEE 1800-2009). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
+(`Expressions.EDITIONS` from the fourth), each with its own kinds it has, by membership (`ONLY`: `strengthproperty`,
+`abortproperty` and `caseproperty` in IEEE 1800-2009 to 2023, every other in each). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
 writes its kinds as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches them to it, by
 IEEE 1800's precedence of sequence and property operators (Table 16-3). Simplification leaves each of its kinds in the residual, named
 (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
@@ -48,9 +48,9 @@ from typing import Any
 
 from mbse.Expressions.Framework import Domains as FD, Terms as F
 
-from ..Expressions import Expressions as X
+from ..Expressions import Domains as _family, Expressions as X
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "SEQUENCES", "PROPERTIES", "problems"]
+__all__ = ["install", "define", "DIALECT", "ONLY", "TAGS", "HELPERS", "SEQUENCES", "PROPERTIES", "problems"]
 
 DELAYSEQUENCE, REPETITIONSEQUENCE, BINARYSEQUENCE, PARENTHESIZEDSEQUENCE, FIRSTMATCHSEQUENCE, CLOCKEDSEQUENCE = (
     "delaysequence", "repetitionsequence", "binarysequence", "parenthesizedsequence", "firstmatchsequence",
@@ -75,9 +75,9 @@ HELPERS = ("DelayStep", "PropertyCaseItem", "EventControl", "EventExpression")
 """Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
 completeness data (`grammars/systemverilog-slang.json`) names them."""
 
-SINCE = {STRENGTHPROPERTY: 4, ABORTPROPERTY: 4, CASEPROPERTY: 4}
-"""The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`
-(`sv(2009)`, IEEE 1800-2009); a kind not listed is in every edition of IEEE 1800 (`sv()`, its first, 3)."""
+ONLY = dict.fromkeys((STRENGTHPROPERTY, ABORTPROPERTY, CASEPROPERTY), _family.SYMBOLS[4:])
+"""The kinds that are not in every edition, each with the editions that have it, as mbse-programs has them
+(`sv(2009)`): membership, no minimum edition."""
 
 _CHOICES = {
     REPETITIONSEQUENCE: ("RepetitionSequence", {"operator": ("*", "->", "=")}),
@@ -208,12 +208,12 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """SystemVerilog Assertions' dialect as data: the singleton `Expressions.SystemVerilog.Assertions` owning the editions it
     covers, by designation (`standards`), IEEE Std 1800-2005 to 2023, each with its formal reference's parts, its
-    common name and its own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it
+    common name and its own kinds it has (`ONLY`). Run after `install`, in a transaction of its own; run again, it
     writes nothing. Its frame binds the dialect (`dialect`) and each edition by its common name spelled as an
     identifier (`SystemVerilog_2023`)."""
     OWN, Standard = txn.Expressions.SystemVerilog.Assertions, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
-    kinds = X.editions(every, SINCE, 3)
+    kinds = X.editions(every, ONLY, _family.SYMBOLS[3:])
     return txn.uid("mbse.Expressions.SystemVerilog.Assertions.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "SystemVerilog_2005": Standard, "SystemVerilog_2009": Standard,
                   "SystemVerilog_2012": Standard, "SystemVerilog_2017": Standard, "SystemVerilog_2023": Standard})

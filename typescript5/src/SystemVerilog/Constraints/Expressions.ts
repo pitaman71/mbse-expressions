@@ -35,9 +35,9 @@
  * term; `Let`'s `name` stays unset, as a loop binds several names, which its kind's scopes give (`Kind.scopes`).
  *
  * The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
- * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: `disablesoftconstraint` and
- * `uniqueconstraint` from IEEE 1800-2012). A feature within a kind (`soft`, 2012; a default distribution item, 2023) is
- * not recorded, as for C's: a constraint, to come. `DIALECT` reads its kinds and the five other dialects' terms. `Text`
+ * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has, by membership (`ONLY`: `disablesoftconstraint`
+ * and `uniqueconstraint` in IEEE 1800-2012 to 2023, every other in each), and its grammar clauses (`GRAMMAR_CLAUSES`),
+ * each allowed or forbidden by each edition: `soft` (2012) and a default distribution item (2023). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
  * writes its kinds as SystemVerilog source, as `randomize() with` writes them, on one line. No kind of it is folded
  * (Q11): SystemVerilog's rules leave each in the residual, named. Its terms are written through the builders (mbse-basis
  * [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
@@ -49,7 +49,9 @@
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
+import * as Family from "../Expressions/Domains.js";
 import * as X from "../Expressions/Expressions.js";
 import * as Assertions from "../Assertions/Expressions.js";
 import * as Patterns from "../Patterns/Expressions.js";
@@ -76,9 +78,16 @@ export const TAGS: readonly string[] = [CONSTRAINTBLOCK, EXPRESSIONCONSTRAINT, I
  * completeness data (`grammars/systemverilog-slang.json`) names them. */
 export const HELPERS: readonly string[] = ["DistItem"];
 
-/** The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`
- * (`sv(2012)`, IEEE 1800-2012); a kind not listed is in every edition of IEEE 1800 (its first, 3). */
-export const SINCE: ReadonlyMap<string, number> = new Map([[DISABLESOFTCONSTRAINT, 5], [UNIQUECONSTRAINT, 5]]);
+/** The kinds that are not in every edition, each with the editions that have it, as mbse-programs has them
+ * (`sv(2012)`): membership, no minimum edition. */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([DISABLESOFTCONSTRAINT, UNIQUECONSTRAINT].map(
+  (tag) => [tag, Family.SYMBOLS.slice(5)]));
+
+/** Its grammar clauses, each with the editions that allow it, every other forbidding it. */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  FS.values("expressionconstraint.soft", EXPRESSIONCONSTRAINT, "soft", [true], Family.SYMBOLS.slice(5)),
+  FS.absent("distitem without a value", "distitem", "value", Family.SYMBOLS.slice(7)), // `default :/ weight`
+];
 
 /** A distribution item's operators: each value of its range weighs its weight (`:=`), or the range does (`:/`). */
 export const OPERATORS: readonly string[] = [":=", ":/"];
@@ -172,17 +181,21 @@ export function install(txn: any): any {
 
 /** SystemVerilog Constraints' dialect as data: the singleton `Expressions.SystemVerilog.Constraints` owning the editions it covers,
  * by designation (`standards`), IEEE Std 1800-2005 to 2023, each with its formal reference's parts, its common name and
- * its own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
- * frame binds the dialect (`dialect`) and each edition by its common name spelled as an identifier
- * (`SystemVerilog_2023`). */
+ * its own kinds it has (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each
+ * edition (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
+ * frame binds the dialect (`dialect`), each edition by its common name spelled as an identifier (`SystemVerilog_2023`)
+ * and each grammar clause by its index (`grammar_clause_0`). */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.SystemVerilog.Constraints, txn.Expressions.Framework.Standard];
   const every = new Map((OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => [branch.name, branch.schema] as [string, any]));
-  const kinds = X.editions(every, SINCE, 3);
+  const kinds = X.editions(every, ONLY, Family.SYMBOLS.slice(3));
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map<string, unknown>([
+    ...(OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema] as [string, unknown]),
+    ["distitem", OWN.DistItem.as_schema()]]), [Family.SYMBOLS.slice(3)]);
   return txn.uid("mbse.Expressions.SystemVerilog.Constraints.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, SystemVerilog_2005: Standard, SystemVerilog_2009: Standard,
-      SystemVerilog_2012: Standard, SystemVerilog_2017: Standard, SystemVerilog_2023: Standard })
+      SystemVerilog_2012: Standard, SystemVerilog_2017: Standard, SystemVerilog_2023: Standard, ...clauses })
     .spec([
       (_: any) => _.dialect.standards({
         "IEEE Std 1800-2005": (e: any) => e.standard(_.SystemVerilog_2005),
@@ -200,6 +213,7 @@ export function define(txn: any): any {
         ["SystemVerilog-2017"]).kinds(kinds[3]),
       (_: any) => _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2023n)).names(
         ["SystemVerilog-2023"]).kinds(kinds[4]),
+      ...specs,
     ])]))]);
 }
 

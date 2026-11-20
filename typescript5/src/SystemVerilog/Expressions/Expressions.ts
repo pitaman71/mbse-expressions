@@ -58,7 +58,8 @@
  * bound_names`) within its conditional's consequence and the conditions after it in a `&&&` (12.6.2, 12.6.3).
  *
  * The editions of the standards it covers are data, which `define` writes, each owned by its designation (`IEEE Std
- * 1364-1995` to `IEEE Std 1800-2023`) and holding the kinds it has, by mbse-programs' `SINCE`. `DIALECT` reads the kinds
+ * 1364-1995` to `IEEE Std 1800-2023`) and holding the kinds it has, by membership (`ONLY`), as mbse-programs has them.
+ * `DIALECT` reads the kinds
  * (`Terms.Dialect`), and the five other dialects' terms (`reads`). The writers (`literal`, `vector`, `identifier`,
  * `binary`, `cast`, ...) write the kinds SystemVerilog folded before it was complete through the builders, a cast's
  * type a spec of `Types`' `Term`, written through the builders too; every other term is written through the builders
@@ -186,21 +187,22 @@ export const EDITIONS: readonly (readonly [string, string, number, string, strin
   ["IEEE Std 1800-2023", "1800", 2023, "SystemVerilog-2023", "SystemVerilog_2023"],
 ];
 
-/** The edition each of its kinds arrived in, by its index in `EDITIONS`, from mbse-programs' `SINCE` (`sv()`, IEEE
- * 1800-2005, 3); a kind not listed is in every edition. */
-export const SINCE: ReadonlyMap<string, number> = new Map([INCREMENTEXPRESSION, INSIDEEXPRESSION, VALUERANGE,
+/** The editions it covers, oldest first, each by its frame symbol (`SystemVerilog_2023`). */
+export const SYMBOLS: readonly string[] = Domains.SYMBOLS;
+
+/** The kinds that are not in every edition, each with the editions that have it, as mbse-programs has them (`sv()`:
+ * IEEE 1800's): membership, no minimum edition. */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([INCREMENTEXPRESSION, INSIDEEXPRESSION, VALUERANGE,
   ASSIGNMENTPATTERN, THISEXPRESSION, SUPEREXPRESSION, NEWEXPRESSION, NEWCOPYEXPRESSION, NEWARRAYEXPRESSION,
   RANDOMIZEWITHEXPRESSION, ARRAYMETHODWITHEXPRESSION, CASTEXPRESSION, DOLLAREXPRESSION, TAGGEDEXPRESSION, MATCHESEXPRESSION,
-  PREDICATEEXPRESSION, STREAMINGCONCATENATION, ROOTEXPRESSION, EMPTYQUEUE].map((tag) => [tag, 3]));
+  PREDICATEEXPRESSION, STREAMINGCONCATENATION, ROOTEXPRESSION, EMPTYQUEUE].map((tag) => [tag, SYMBOLS.slice(3)]));
 
-/** The kinds each edition from `EDITIONS[first]` on has, of a dialect's kinds (`every`, each schema by its tag): those
- * whose edition (`since`, by index; the first where not listed) is no later than it. */
-export function editions(every: ReadonlyMap<string, any>, since: ReadonlyMap<string, number>, first = 0): any[][] {
-  const found: any[][] = [];
-  for (let index = first; index < EDITIONS.length; index++) {
-    found.push([...every].filter(([tag]) => (since.get(tag) ?? first) <= index).map(([, schema]) => schema));
-  }
-  return found;
+/** The kinds each edition a dialect covers has (`covered`, by frame symbol, oldest first), of its kinds (`every`, each
+ * schema by its tag): each not in `only`, and each that lists the edition there. */
+export function editions(every: ReadonlyMap<string, any>, only: ReadonlyMap<string, readonly string[]>,
+                         covered: readonly string[]): any[][] {
+  return covered.map((symbol) => [...every].filter(([tag]) => (only.get(tag) ?? covered).includes(symbol))
+    .map(([, schema]) => schema));
 }
 
 /** SystemVerilog's union of its kinds, added to the framework's terms as the branch `systemverilog`, its own kinds, the
@@ -461,7 +463,7 @@ export function install(txn: any): any {
  * inferred properties, and each 2-state one related to its schema (`Expressions.SystemVerilog.Expressions.int`) by
  * `Expressions.Framework.HasDomain`; and the editions it covers, by designation (`standards`, through
  * `Expressions.Framework.Covers`): Verilog's IEEE Std 1364-1995, 2001 and 2005 and SystemVerilog's IEEE Std 1800-2005,
- * 2009, 2012, 2017 and 2023, each with its formal reference's parts, its common name and the kinds it has (`SINCE`),
+ * 2009, 2012, 2017 and 2023, each with its formal reference's parts, its common name and the kinds it has (`ONLY`),
  * invalid syntax in none and the Preprocessor's `macrousage` the Preprocessor's. Run after `install`, in a transaction
  * of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its common name
  * spelled as an identifier (`SystemVerilog_2023`) and each domain by its name:
@@ -473,7 +475,7 @@ export function define(txn: any): any {
   const Standard = txn.Expressions.Framework.Standard;
   const every = new Map((SV.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => [branch.name, branch.schema] as [string, any]));
-  const kinds = editions(every, SINCE);
+  const kinds = editions(every, ONLY, SYMBOLS);
   return txn.uid("mbse.Expressions.SystemVerilog.Expressions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: SV.Dialect, Verilog_1995: Standard, Verilog_2001: Standard, Verilog_2005: Standard,
       SystemVerilog_2005: Standard, SystemVerilog_2009: Standard, SystemVerilog_2012: Standard,

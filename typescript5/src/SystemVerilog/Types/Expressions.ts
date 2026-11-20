@@ -26,7 +26,7 @@
  * `AttributeInstance`: the family's helpers, one schema each.
  *
  * The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are
- * (`Expressions.EDITIONS`), each with the kinds it has (`SINCE`). `DIALECT` reads its kinds and the five other dialects'
+ * (`Expressions.EDITIONS`), each with the kinds it has, by membership (`ONLY`). `DIALECT` reads its kinds and the five other dialects'
  * terms. `Text` writes its kinds as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches
  * them to it. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(t) => t.integeratomtype((a) => a.keyword("int"))`.
@@ -40,6 +40,7 @@ import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
 import * as Assertions from "../Assertions/Expressions.js";
 import * as Constraints from "../Constraints/Expressions.js";
+import * as Family from "../Expressions/Domains.js";
 import * as X from "../Expressions/Expressions.js";
 import * as Patterns from "../Patterns/Expressions.js";
 import * as Preprocessor from "../Preprocessor/Expressions.js";
@@ -66,10 +67,10 @@ export const TAGS: readonly string[] = [INTEGERVECTORTYPE, INTEGERATOMTYPE, NONI
 export const HELPERS: readonly string[] = ["StructMember", "EnumMember", "VariableDeclarator", "RangeDimension", "SizeDimension", "UnsizedDimension",
   "AssociativeDimension", "QueueDimension"];
 
-/** The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`
- * (`sv()`, IEEE 1800-2005); a kind not listed is in every edition. */
-export const SINCE: ReadonlyMap<string, number> = new Map([NAMEDTYPE, VIRTUALINTERFACETYPE, STRUCTTYPE, ENUMTYPE,
-  TYPEREFERENCE].map((tag) => [tag, 3]));
+/** The kinds that are not in every edition, each with the editions that have it, as mbse-programs has them (`sv()`:
+ * IEEE 1800's): membership, no minimum edition. */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([NAMEDTYPE, VIRTUALINTERFACETYPE, STRUCTTYPE,
+  ENUMTYPE, TYPEREFERENCE].map((tag) => [tag, Family.SYMBOLS.slice(3)]));
 
 const SIGNINGS = ["signed", "unsigned"];
 
@@ -194,14 +195,14 @@ export function install(txn: any): any {
 
 /** SystemVerilog Types' dialect as data: the singleton `Expressions.SystemVerilog.Types` owning the editions it covers,
  * by designation (`standards`), Verilog's IEEE Std 1364-1995, 2001 and 2005 and SystemVerilog's IEEE Std 1800-2005 to
- * 2023, each with its formal reference's parts, its common name and its own kinds it has (`SINCE`). Run after
+ * 2023, each with its formal reference's parts, its common name and its own kinds it has (`ONLY`). Run after
  * `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and each
  * edition by its common name spelled as an identifier (`SystemVerilog_2023`). */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.SystemVerilog.Types, txn.Expressions.Framework.Standard];
   const every = new Map((OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => [branch.name, branch.schema] as [string, any]));
-  const kinds = X.editions(every, SINCE);
+  const kinds = X.editions(every, ONLY, Family.SYMBOLS);
   return txn.uid("mbse.Expressions.SystemVerilog.Types.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
       .symbols({dialect: OWN.Dialect, Verilog_1995: Standard, Verilog_2001: Standard, Verilog_2005: Standard,
                 SystemVerilog_2005: Standard, SystemVerilog_2009: Standard, SystemVerilog_2012: Standard,

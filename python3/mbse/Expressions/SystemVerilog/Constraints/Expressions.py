@@ -34,9 +34,9 @@ Its helpers: `distitem` (`Expressions.SystemVerilog.Constraints.DistItem`), and 
 term; `Let`'s `name` stays unset, as a loop binds several names, which its kind's scopes give (`Kind.scopes`).
 
 The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
-(`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: `disablesoftconstraint` and
-`uniqueconstraint` from IEEE 1800-2012). A feature within a kind (`soft`, 2012; a default distribution item, 2023) is
-not recorded, as for C's: a constraint, to come. `DIALECT` reads its kinds and the five other dialects' terms. `Text`
+(`Expressions.EDITIONS` from the fourth), each with its own kinds it has, by membership (`ONLY`: `disablesoftconstraint`
+and `uniqueconstraint` in IEEE 1800-2012 to 2023, every other in each), and its grammar clauses (`GRAMMAR_CLAUSES`),
+each allowed or forbidden by each edition: `soft` (2012) and a default distribution item (2023). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
 writes its kinds as SystemVerilog source, as `randomize() with` writes them, on one line. No kind of it is folded
 (Q11): SystemVerilog's rules leave each in the residual, named. Its terms are written through the builders (mbse-basis
 [PRI-019: fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
@@ -47,11 +47,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
-from ..Expressions import Expressions as X
+from ..Expressions import Domains as _family, Expressions as X
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS", "OPERATORS", "problems"]
+__all__ = ["install", "define", "DIALECT", "ONLY", "GRAMMAR_CLAUSES", "TAGS", "HELPERS", "OPERATORS", "problems"]
 
 CONSTRAINTBLOCK, EXPRESSIONCONSTRAINT, IMPLICATIONCONSTRAINT, CONDITIONALCONSTRAINT = (
     "constraintblock", "expressionconstraint", "implicationconstraint", "conditionalconstraint")
@@ -66,9 +66,15 @@ HELPERS = ("DistItem",)
 """Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
 completeness data (`grammars/systemverilog-slang.json`) names them."""
 
-SINCE = {DISABLESOFTCONSTRAINT: 5, UNIQUECONSTRAINT: 5}
-"""The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`
-(`sv(2012)`, IEEE 1800-2012); a kind not listed is in every edition of IEEE 1800 (its first, 3)."""
+ONLY = dict.fromkeys((DISABLESOFTCONSTRAINT, UNIQUECONSTRAINT), _family.SYMBOLS[5:])
+"""The kinds that are not in every edition, each with the editions that have it, as mbse-programs has them
+(`sv(2012)`): membership, no minimum edition."""
+
+GRAMMAR_CLAUSES = (
+    FS.values("expressionconstraint.soft", EXPRESSIONCONSTRAINT, "soft", (True,), _family.SYMBOLS[5:]),
+    FS.absent("distitem without a value", "distitem", "value", _family.SYMBOLS[7:]),  # `default :/ weight`
+)
+"""Its grammar clauses, each with the editions that allow it, every other forbidding it."""
 
 OPERATORS = (":=", ":/")
 """A distribution item's operators: each value of its range weighs its weight (`:=`), or the range does (`:/`)."""
@@ -170,15 +176,19 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """SystemVerilog Constraints' dialect as data: the singleton `Expressions.SystemVerilog.Constraints` owning the
     editions it covers, by designation (`standards`), IEEE Std 1800-2005 to 2023, each with its formal reference's
-    parts, its common name and its own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run
-    again, it writes nothing. Its frame binds the dialect (`dialect`) and each edition by its common name spelled as an
-    identifier (`SystemVerilog_2023`)."""
+    parts, its common name and its own kinds it has (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each
+    allowed or forbidden by each edition (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run
+    again, it writes nothing. Its frame binds the dialect (`dialect`), each edition by its common name spelled as an
+    identifier (`SystemVerilog_2023`) and each grammar clause by its index (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.SystemVerilog.Constraints, txn.Expressions.Framework.Standard
     every = {branch.name: branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS}
-    kinds = X.editions(every, SINCE, 3)
+    kinds = X.editions(every, ONLY, _family.SYMBOLS[3:])
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {
+        **{branch.name: branch.schema for branch in OWN.Term.as_schema().branches},
+        "distitem": OWN.DistItem.as_schema()}, [_family.SYMBOLS[3:]])
     return txn.uid("mbse.Expressions.SystemVerilog.Constraints.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
         .symbols({"dialect": OWN.Dialect, "SystemVerilog_2005": Standard, "SystemVerilog_2009": Standard,
-                  "SystemVerilog_2012": Standard, "SystemVerilog_2017": Standard, "SystemVerilog_2023": Standard})
+                  "SystemVerilog_2012": Standard, "SystemVerilog_2017": Standard, "SystemVerilog_2023": Standard, **clauses})
         .spec([
             lambda _: _.dialect.standards({
                 "IEEE Std 1800-2005": lambda e: e.standard(_.SystemVerilog_2005),
@@ -196,6 +206,7 @@ def define(txn: Any) -> Any:
                 ["SystemVerilog-2017"]).kinds(kinds[3]),
             lambda _: _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision(lambda r: r.year(2023)).names(
                 ["SystemVerilog-2023"]).kinds(kinds[4]),
+            *specs,
         ])]))])
 
 

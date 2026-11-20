@@ -34,9 +34,9 @@
  * else binds.
  *
  * The editions it covers are data, which `define` writes: Verilog's and SystemVerilog's, as `Expressions`' are, each
- * with its own kinds it has, every one of them in every edition (mbse-programs gives none of them a `SINCE`; an
- * `elsif`'s, IEEE 1364-2001's, is its helper's, and a feature within a kind, as a system include's and a condition's
- * are, is not recorded). `DIALECT` reads its kinds and the five other dialects' terms. Simplification leaves each of its
+ * with its own kinds it has, every one of them in every edition, as mbse-programs has them, and its grammar clauses
+ * (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: `` `elsif ``, an `` `ifdef ``'s branches (IEEE
+ * 1364-2001). A system include's and a condition's features stay unrecorded, as they were *(agent)*. `DIALECT` reads its kinds and the five other dialects' terms. Simplification leaves each of its
  * kinds by name. Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
  * syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)):
  * `(t) => t.undefdirective((d) => d.name((i) => i.spelling("WIDTH")))`.
@@ -46,9 +46,11 @@
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as Assertions from "../Assertions/Expressions.js";
 import * as Constraints from "../Constraints/Expressions.js";
+import * as Family from "../Expressions/Domains.js";
 import * as X from "../Expressions/Expressions.js";
 import * as Patterns from "../Patterns/Expressions.js";
 import * as Types from "../Types/Expressions.js";
@@ -77,9 +79,10 @@ export const TAGS: readonly string[] = [MACROUSAGE, ...DIRECTIVES, COMMENT];
  * completeness data (`grammars/systemverilog-slang.json`) names them. */
 export const HELPERS: readonly string[] = ["ElsifDirective"];
 
-/** The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`: none
- * of its kinds has one, so each is in every edition. */
-export const SINCE: ReadonlyMap<string, number> = new Map();
+/** Its grammar clauses, each with the editions that allow it, every other forbidding it. */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  FS.present("ifdefdirective.branches", IFDEFDIRECTIVE, "branches", Family.SYMBOLS.slice(1)), // `elsif`
+];
 
 /** What `` `default_nettype `` may name (22.8), as mbse-programs' `DefaultNettype` lists them. */
 export const NET_TYPES: readonly string[] = ["wire", "tri", "tri0", "tri1", "triand", "trior", "trireg", "wand", "wor",
@@ -188,18 +191,23 @@ export function install(txn: any): any {
 
 /** SystemVerilog Preprocessor's dialect as data: the singleton `Expressions.SystemVerilog.Preprocessor` owning the
  * editions it covers, by designation (`standards`), Verilog's IEEE Std 1364-1995, 2001 and 2005 and SystemVerilog's IEEE
- * Std 1800-2005 to 2023, each with its formal reference's parts, its common name and its own kinds it has (`SINCE`). Run
- * after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`) and
- * each edition by its common name spelled as an identifier (`SystemVerilog_2023`). */
+ * Std 1800-2005 to 2023, each with its formal reference's parts, its common name and its own kinds it has, and its
+ * grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each edition (`GRAMMAR_CLAUSES`). Run after
+ * `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each
+ * edition by its common name spelled as an identifier (`SystemVerilog_2023`) and each grammar clause by its index
+ * (`grammar_clause_0`). */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.SystemVerilog.Preprocessor, txn.Expressions.Framework.Standard];
   const every = new Map((OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => [branch.name, branch.schema] as [string, any]));
-  const kinds = X.editions(every, SINCE);
+  const kinds = X.editions(every, new Map(), Family.SYMBOLS);
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map(
+    (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
+  [Family.SYMBOLS.slice(0, 3), Family.SYMBOLS.slice(3)]);
   return txn.uid("mbse.Expressions.SystemVerilog.Preprocessor.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
       .symbols({dialect: OWN.Dialect, Verilog_1995: Standard, Verilog_2001: Standard, Verilog_2005: Standard,
                 SystemVerilog_2005: Standard, SystemVerilog_2009: Standard, SystemVerilog_2012: Standard,
-                SystemVerilog_2017: Standard, SystemVerilog_2023: Standard})
+                SystemVerilog_2017: Standard, SystemVerilog_2023: Standard, ...clauses})
       .spec([
           (_: any) => _.dialect.standards({
               "IEEE Std 1364-1995": (e: any) => e.standard(_.Verilog_1995),
@@ -226,6 +234,7 @@ export function define(txn: any): any {
               ["SystemVerilog-2017"]).kinds(kinds[6]),
           (_: any) => _.SystemVerilog_2023.bodies(["org.ieee"]).number("1800").revision((r: any) => r.year(2023n)).names(
               ["SystemVerilog-2023"]).kinds(kinds[7]),
+          ...specs,
       ])]))]);
 }
 

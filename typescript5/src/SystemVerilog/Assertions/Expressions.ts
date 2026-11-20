@@ -34,8 +34,8 @@
  * sequence's local variables are its declaration's, a statement's.
  *
  * The editions it covers are data, which `define` writes: IEEE 1800's, IEEE Std 1800-2005 to 1800-2023
- * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has (`SINCE`: `strengthproperty`, `abortproperty`
- * and `caseproperty` arrived in IEEE 1800-2009). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
+ * (`Expressions.EDITIONS` from the fourth), each with its own kinds it has, by membership (`ONLY`: `strengthproperty`,
+ * `abortproperty` and `caseproperty` in IEEE 1800-2009 to 2023, every other in each). `DIALECT` reads its kinds and the five other dialects' terms. `Text`
  * writes its kinds as SystemVerilog source, as the family's printer (`Expressions.Text.ToText`) dispatches them to it, by
  * IEEE 1800's precedence of sequence and property operators (Table 16-3). Simplification leaves each of its kinds in the residual, named
  * (mbse-basis [CAP-226: complete expression dialects](mbse:mbse-basis/docs/capabilities/CAP-226.md#decided), "Stage 6 extends no evaluator", Q11). Its terms are written through the builders (mbse-basis [PRI-019: fluent builder
@@ -49,6 +49,7 @@ import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
 import * as F from "../../Framework/Terms.js";
+import * as Family from "../Expressions/Domains.js";
 import * as X from "../Expressions/Expressions.js";
 import * as Constraints from "../Constraints/Expressions.js";
 import * as Patterns from "../Patterns/Expressions.js";
@@ -90,9 +91,10 @@ export const TAGS: readonly string[] = [...SEQUENCES, ...PROPERTIES, PROPERTYSPE
  * completeness data (`grammars/systemverilog-slang.json`) names them. */
 export const HELPERS: readonly string[] = ["DelayStep", "PropertyCaseItem", "EventControl", "EventExpression"];
 
-/** The edition each of its kinds arrived in, by its index in `Expressions.EDITIONS`, from mbse-programs' `SINCE`
- * (`sv(2009)`, IEEE 1800-2009); a kind not listed is in every edition of IEEE 1800 (`sv()`, its first, 3). */
-export const SINCE: ReadonlyMap<string, number> = new Map([STRENGTHPROPERTY, ABORTPROPERTY, CASEPROPERTY].map((tag) => [tag, 4]));
+/** The kinds that are not in every edition, each with the editions that have it, as mbse-programs has them
+ * (`sv(2009)`): membership, no minimum edition. */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([STRENGTHPROPERTY, ABORTPROPERTY, CASEPROPERTY].map(
+  (tag) => [tag, Family.SYMBOLS.slice(4)]));
 
 /** The attributes that are one of a few choices, by kind: mbse-programs' kind, and each attribute's choices. */
 const CHOICES: ReadonlyMap<string, readonly [string, Readonly<Record<string, readonly string[]>>]> = new Map([
@@ -219,14 +221,14 @@ export function install(txn: any): any {
 
 /** SystemVerilog Assertions' dialect as data: the singleton `Expressions.SystemVerilog.Assertions` owning the editions it covers,
  * by designation (`standards`), IEEE Std 1800-2005 to 2023, each with its formal reference's parts, its common name and
- * its own kinds it has (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
+ * its own kinds it has (`ONLY`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its
  * frame binds the dialect (`dialect`) and each edition by its common name spelled as an identifier
  * (`SystemVerilog_2023`). */
 export function define(txn: any): any {
   const [OWN, Standard] = [txn.Expressions.SystemVerilog.Assertions, txn.Expressions.Framework.Standard];
   const every = new Map((OWN.Term.as_schema().branches as readonly any[]).filter((branch) => TAGS.includes(branch.name))
     .map((branch) => [branch.name, branch.schema] as [string, any]));
-  const kinds = X.editions(every, SINCE, 3);
+  const kinds = X.editions(every, ONLY, Family.SYMBOLS.slice(3));
   return txn.uid("mbse.Expressions.SystemVerilog.Assertions.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
     .symbols({ dialect: OWN.Dialect, SystemVerilog_2005: Standard, SystemVerilog_2009: Standard,
       SystemVerilog_2012: Standard, SystemVerilog_2017: Standard, SystemVerilog_2023: Standard })
