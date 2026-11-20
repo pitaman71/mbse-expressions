@@ -44,10 +44,12 @@
  *
  * The editions of ECMA-262 it covers are data, which `define` writes, each owned by its designation as Ecma
  * International writes it (`ECMA-262 6th Edition`), from the 5.1 Edition to the 17th (ECMAScript 2026), each with its
- * body, its number, its edition and its common names (`ECMAScript 2015`, `ES2015`), and the kinds it has: the `v` flag's
- * five from the 15th (ES2024), `modifiers` from the 16th, every other in each (`SINCE`), the 17th's pattern grammar
- * (22.2.1) the 16th's *(agent)*; a feature within a kind (a named
- * group, a lookbehind, a property escape, ES2018) is not recorded. `DIALECT` reads its kinds and its family's other
+ * body, its number, its edition and its common names (`ECMAScript 2015`, `ES2015`), and the kinds it has, by
+ * membership (`ONLY`): the `v` flag's five in the 15th (ES2024) to the 17th, `modifiers` in the 16th and the 17th, every
+ * other in each, the 17th's pattern grammar (22.2.1) the 16th's *(agent)*. What an edition changes within a kind is
+ * data, its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden by each edition: the flags `u` and `y`
+ * (ES2015), `s` (ES2018), `d` (ES2022) and `v` (ES2024), and a named group, a lookbehind and a property escape
+ * (ES2018). `DIALECT` reads its kinds and its family's other
  * dialects' terms (`reads`). `Text` writes its kinds as ECMAScript source, as the family's printer
  * (`TypeScript5.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
  * fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `(r) => r.character((c) => c.value(97n))`.
@@ -57,6 +59,7 @@
 import { Repr } from "@mbse/schemas/Framework";
 
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as TypeScriptPatterns from "../Patterns/Expressions.js";
 import * as Family from "../TypeScript5/Domains.js";
@@ -119,10 +122,24 @@ export const EDITIONS: readonly Edition[] = [
   }),
 ];
 
-/** The edition each of its kinds arrived in, by its index in `EDITIONS`: the `v` flag's five in the 15th (ES2024),
- * `modifiers` in the 16th (ES2025); a kind not listed is in every edition. */
-export const SINCE: ReadonlyMap<string, number> = new Map([[CLASSINTERSECTION, 10], [CLASSSUBTRACTION, 10],
-  [CLASSSTRINGDISJUNCTION, 10], [STRINGALTERNATIVE, 10], [EXPRESSIONCHARACTERCLASS, 10], [MODIFIERS_, 11]]);
+/** The editions it covers, oldest first, each by its frame symbol (`ES5_1`, `ES2015`, ... `ES2026`). */
+export const SYMBOLS: readonly string[] = EDITIONS.map(([, , , symbol]) => symbol);
+
+/** The kinds that are not in every edition, each with the editions that have it: the `v` flag's five from ES2024,
+ * `modifiers` from ES2025, from which `define` writes the kinds each edition has: membership, no minimum edition. */
+export const ONLY: ReadonlyMap<string, readonly string[]> = new Map([
+  ...[CLASSINTERSECTION, CLASSSUBTRACTION, CLASSSTRINGDISJUNCTION, STRINGALTERNATIVE, EXPRESSIONCHARACTERCLASS].map(
+    (tag) => [tag, SYMBOLS.slice(10)] as [string, readonly string[]]), [MODIFIERS_, SYMBOLS.slice(11)]]);
+
+/** Its grammar clauses, each with the editions that allow it, every other forbidding it: a literal's flags, a named
+ * group, a lookbehind and a property escape. */
+export const GRAMMAR_CLAUSES: readonly FS.GrammarClause[] = [
+  ...([["unicode", 1], ["sticky", 1], ["dotAll", 4], ["hasIndices", 8], ["unicodeSets", 10]] as const).map(
+    ([flag, since]) => FS.values(`flags.${flag}`, "flags", flag, [true], SYMBOLS.slice(since))),
+  FS.present("capturinggroup.name", CAPTURINGGROUP, "name", SYMBOLS.slice(4)),
+  FS.values("assertion.assertionKind 'lookbehind'", ASSERTION, "assertionKind", ["lookbehind"], SYMBOLS.slice(4)),
+  FS.values("characterset.setKind 'property'", CHARACTERSET, "setKind", ["property"], SYMBOLS.slice(4)),
+];
 
 const KINDS: readonly string[] = ["RegExpLiteral", "Pattern", "Alternative", "Group", "CapturingGroup", "Quantifier",
   "CharacterClass", "CharacterClassRange", "ClassIntersection", "ClassSubtraction", "ClassStringDisjunction",
@@ -212,8 +229,10 @@ export function install(txn: any): any {
  * TypeScript RegExp's dialect as data: the singleton `Expressions.TypeScript.RegExp` owning the editions of ECMA-262 it
  * covers, by designation (`standards`, through `Expressions.Framework.Covers`), the 5.1 Edition to the 17th, each with
  * its body, `org.ecma-international`, its number, `262`, its revision, its common names and its own kinds it has
- * (`SINCE`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds the dialect
- * (`dialect`) and each edition by its last common name spelled as an identifier (`ES5_1`, `ES2015`).
+ * (`ONLY`), and its grammar clauses by name (`grammar_clauses`), each allowed or forbidden by each edition
+ * (`GRAMMAR_CLAUSES`). Run after `install`, in a transaction of its own; run again, it writes nothing. Its frame binds
+ * the dialect (`dialect`), each edition by its last common name spelled as an identifier (`ES5_1`, `ES2015`) and each
+ * grammar clause by its index (`grammar_clause_0`).
  */
 export function define(txn: any): any {
   const OWN = txn.Expressions.TypeScript.RegExp;
@@ -221,13 +240,16 @@ export function define(txn: any): any {
   const every = (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).filter((b) => TAGS.includes(b.name));
   const edition = (index: number, [revision, value]: Edition[1], names: readonly string[]) => (e: any) => e
     .bodies(["org.ecma-international"]).number("262").revision((r: any) => r[revision](value)).names([...names])
-    .kinds(every.filter((b) => (SINCE.get(b.name) ?? 0) <= index).map((b) => b.schema));
+    .kinds(every.filter((b) => (ONLY.get(b.name) ?? SYMBOLS).includes(SYMBOLS[index]!)).map((b) => b.schema));
+  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES, new Map<string, unknown>([
+    ...every.map((b) => [b.name, b.schema] as [string, unknown]), ["flags", OWN.Flags.as_schema()]]), [SYMBOLS]);
   return txn.uid("mbse.Expressions.TypeScript.RegExp.define/1").mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
-    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(EDITIONS.map(([, , , symbol]) => [symbol, Standard])) })
+    .symbols({ dialect: OWN.Dialect, ...Object.fromEntries(SYMBOLS.map((symbol) => [symbol, Standard])), ...clauses })
     .spec([
       (_: any) => _.dialect.standards(Object.fromEntries(EDITIONS.map(([designation, , , symbol]) => [
         designation, (e: any) => e.standard(_[symbol])]))),
       ...EDITIONS.map(([, revision, names, symbol], i) => (_: any) => edition(i, revision, names)(_[symbol])),
+      ...specs,
     ])]))]);
 }
 

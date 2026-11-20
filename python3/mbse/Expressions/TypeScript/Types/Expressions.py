@@ -32,7 +32,8 @@ parameters within them. A `tsconditionaltype` binds its `infer` declarations wit
 does not refine `Let` *(agent)*; a signature binds its parameters through the type literal that holds it.
 
 The versions of TypeScript 5 it covers are data, which `define` writes, as `TypeScript5`'s are: TypeScript 5.0 to 5.9,
-each with its kinds, every one older than 5.0 (`SINCE` is empty). `DIALECT` reads its kinds and its family's other
+each with its kinds, every one older than 5.0, and its grammar clauses (`GRAMMAR_CLAUSES`), each allowed or forbidden
+by each version: an import type's `options` (5.3). `DIALECT` reads its kinds and its family's other
 dialects' terms (`reads`). `Text` writes its kinds as TypeScript source, as the family's printer
 (`TypeScript5.Text.ToText`) dispatches them to it. Its terms are written through the builders (mbse-basis [PRI-019:
 fluent builder syntax](mbse:mbse-basis/docs/PRINCIPLES.md#PRI-019)): `lambda t: t.tsarraytype(lambda a:
@@ -42,11 +43,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from mbse.Expressions.Framework import Domains as FD, Terms as F
+from mbse.Expressions.Framework import Domains as FD, Standards as FS, Terms as F
 
 from ..TypeScript5 import Domains as _family, Nodes
 
-__all__ = ["install", "define", "DIALECT", "SINCE", "TAGS", "HELPERS"]
+__all__ = ["install", "define", "DIALECT", "GRAMMAR_CLAUSES", "TAGS", "HELPERS"]
 
 KEYWORDS = ("tsanykeyword", "tsunknownkeyword", "tsnumberkeyword", "tsbigintkeyword", "tsbooleankeyword",
             "tsstringkeyword", "tssymbolkeyword", "tsobjectkeyword", "tsneverkeyword", "tsvoidkeyword",
@@ -68,8 +69,9 @@ HELPERS = ("TSPropertySignature", "TSMethodSignature", "TSCallSignatureDeclarati
 """Its own helpers, the value object schemas its kinds hold that are no kind, by name under its path, as the
 completeness data (`grammars/typescript5-estree.json`) names them: an object type's members."""
 
-SINCE: dict[str, int] = {}
-"""The version each of its kinds arrived in: none, every kind being older than TypeScript 5.0."""
+GRAMMAR_CLAUSES = (FS.present("tsimporttype.options", "tsimporttype", "options", _family.VERSIONS[3:]),)
+"""Its grammar clauses, each with the versions that allow it, every other forbidding it, named as mbse-programs'
+`Check` names the language feature."""
 
 _SCHEMAS = ("TSAnyKeyword", "TSUnknownKeyword", "TSNumberKeyword", "TSBigIntKeyword", "TSBooleanKeyword",
             "TSStringKeyword", "TSSymbolKeyword", "TSObjectKeyword", "TSNeverKeyword", "TSVoidKeyword",
@@ -235,19 +237,23 @@ def install(txn: Any) -> Any:
 def define(txn: Any) -> Any:
     """TypeScript Types' dialect as data: the singleton `Expressions.TypeScript.Types` and the versions of TypeScript 5
     it covers, by their published names (`standards`, through `Expressions.Framework.Covers`), TypeScript 5.0 to 5.9,
-    each with its body, its version and its kinds, every one in each. Run after `install`, in a transaction of its own;
-    run again, it writes nothing. Its frame binds the dialect (`dialect`) and each version by its name spelled as an
-    identifier (`TypeScript_5_0`)."""
+    each with its body, its version and its kinds, every one in each, and its grammar clauses by name
+    (`grammar_clauses`), each allowed or forbidden by each version (`GRAMMAR_CLAUSES`). Run after `install`, in a
+    transaction of its own; run again, it writes nothing. Its frame binds the dialect (`dialect`), each version by its
+    name spelled as an identifier (`TypeScript_5_0`) and each grammar clause by its index (`grammar_clause_0`)."""
     OWN, Standard = txn.Expressions.TypeScript.Types, txn.Expressions.Framework.Standard
     every = [branch.schema for branch in OWN.Term.as_schema().branches if branch.name in TAGS]
-    versions = [f"TypeScript_5_{minor}" for minor in range(10)]
+    versions = _family.VERSIONS
+    clauses, specs = FS.grammar_clauses_spec(txn, GRAMMAR_CLAUSES, {
+        branch.name: branch.schema for branch in OWN.Term.as_schema().branches}, [versions])
     return txn.uid("mbse.Expressions.TypeScript.Types.define/1").mutations([lambda mu: mu.upsert(lambda u: u.exists([lambda p: p
-        .symbols({"dialect": OWN.Dialect, **{version: Standard for version in versions}})
+        .symbols({"dialect": OWN.Dialect, **{version: Standard for version in versions}, **clauses})
         .spec([
             lambda _: _.dialect.standards({f"TypeScript 5.{minor}": lambda e, v=version: e.standard(getattr(_, v))
                                            for minor, version in enumerate(versions)}),
             *[lambda _, minor=minor, version=version: getattr(_, version).bodies(["com.microsoft"]).revision(
                 lambda r: r.version(f"5.{minor}")).kinds(every) for minor, version in enumerate(versions)],
+            *specs,
         ])]))])
 
 

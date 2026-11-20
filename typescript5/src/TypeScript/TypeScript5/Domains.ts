@@ -10,6 +10,10 @@
 
 import * as D from "../../Framework/Domains.js";
 
+/** The versions of TypeScript 5 the family's dialects cover, oldest first, each by its name spelled as an identifier,
+ * as their `define`s' frames bind it (`TypeScript_5_0`). */
+export const VERSIONS: readonly string[] = Array.from({ length: 10 }, (_, minor) => `TypeScript_5_${minor}`);
+
 export const Anything = D.Anything;
 // Named as Python names them; JavaScript's own `Boolean`, `Number`, `BigInt`, `String` and `RegExp` are the types they hold.
 const Boolean_ = new D.OfTypes("boolean", Boolean);

@@ -16,7 +16,11 @@ from mbse.Expressions.Framework import Domains as D
 from mbse.Expressions.Framework.Domains import Anything
 
 __all__ = ["Boolean", "Number", "BigInt", "String", "Null", "RegExp", "Anything", "UNARY", "UPDATE", "BINARY",
-           "LOGICAL", "ASSIGNMENT", "of", "constant"]
+           "LOGICAL", "ASSIGNMENT", "of", "constant", "VERSIONS"]
+
+VERSIONS = tuple(f"TypeScript_5_{minor}" for minor in range(10))
+"""The versions of TypeScript 5 the family's dialects cover, oldest first, each by its name spelled as an identifier,
+as their `define`s' frames bind it (`TypeScript_5_0`)."""
 
 Boolean, Number, BigInt, String = (D.OfTypes(name, t) for name, t in (
     ("boolean", bool), ("number", float), ("bigint", int), ("string", str)))
