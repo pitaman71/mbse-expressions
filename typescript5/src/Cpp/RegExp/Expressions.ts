@@ -59,6 +59,7 @@ import { Repr } from "@mbse/schemas/Framework";
 import * as CPreprocessor from "../../C/Preprocessor/Expressions.js";
 import * as FD from "../../Framework/Domains.js";
 import type { Listed } from "../../Framework/Objects.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as BRE from "../../POSIX/BRE/Expressions.js";
 import * as ERE from "../../POSIX/ERE/Expressions.js";
@@ -233,6 +234,8 @@ export function define(txn: any): any {
         ["C++20"]).kinds(every),
       (_: any) => _.Cpp23.bodies(["org.iso", "ch.iec"]).number("14882").revision((r: any) => r.year(2024n)).names(
         ["C++23"]).kinds(every),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([["Cpp17", "Cpp20", "Cpp23"]]),
     ])]))]);
 }
 

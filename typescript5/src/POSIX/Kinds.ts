@@ -252,7 +252,7 @@ export function define(which: string, txn: any): any {
   const own = tags(which);
   const every = (OWN.Term.as_schema().branches as readonly any[]).filter((branch) => own.includes(branch.name))
     .map((branch) => branch.schema);
-  const [clauses, specs] = FS.grammarClausesSpec(txn, GRAMMAR_CLAUSES.get(which)!, new Map(
+  const [clauses, specs] = FS.grammarClausesSpec(txn, "dialect", GRAMMAR_CLAUSES.get(which)!, new Map(
     (OWN.Term.as_schema().branches as { name: string; schema: unknown }[]).map((b) => [b.name, b.schema])),
   [EDITIONS.map(([, , , symbol]) => symbol)]);
   return txn.uid(`mbse.Expressions.POSIX.${which}.define/1`).mutations([(mu: any) => mu.upsert((u: any) => u.exists([(p: any) => p
@@ -263,6 +263,8 @@ export function define(which: string, txn: any): any {
         [designation, (e: any) => e.standard(_[symbol])]))),
       ...EDITIONS.map(([, year, common, symbol]) => (_: any) => _[symbol].bodies(["org.ieee"]).number("1003.1").revision(
         (r: any) => r.year(year)).names([...common]).kinds(every)),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([EDITIONS.map(([, , , symbol]) => symbol)]),
       ...specs,
     ])]))]);
 }

@@ -34,6 +34,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as FD from "../../Framework/Domains.js";
+import * as FS from "../../Framework/Standards.js";
 import * as F from "../../Framework/Terms.js";
 import * as TypeScriptRegExp from "../RegExp/Expressions.js";
 import * as Family from "../TypeScript5/Domains.js";
@@ -163,6 +164,8 @@ export function define(txn: any): any {
         `TypeScript 5.${minor}`, (e: any) => e.standard(_[version])]))),
       ...versions.map((version, minor) => (_: any) => _[version].bodies(["com.microsoft"]).revision(
         (r: any) => r.version(`5.${minor}`)).kinds(every)),
+      // --- each standard's oldest edition flagged `before`, its newest `after` ---
+      ...FS.editionsSpec([versions]),
     ])]))]);
 }
 
